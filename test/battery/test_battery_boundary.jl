@@ -561,7 +561,7 @@ function test_battery(name)
             end_step = i
         end
     end
-    end_step=1
+    #end_step=28
     linear_solver = nothing
     #slinear_solver = battery_linsolve(model,:ilu0; verbose = 1)
     timesteps = alltimesteps[1:end_step]
@@ -570,11 +570,11 @@ function test_battery(name)
     cfg[:linear_solver] = linear_solver
     cfg[:info_level] = 5
     cfg[:debug_level] = 0
-    cfg[:max_timestep_cuts] = 0
+    #cfg[:max_timestep_cuts] = 0
     cfg[:max_residual] = 1e20
     cfg[:min_nonlinear_iterations] = 1
     cfg[:extra_timing] = false
-    cfg[:max_nonlinear_iterations] = 4
+    cfg[:max_nonlinear_iterations] = 5
 ##
 
     states, report = simulate(sim, timesteps, forces = forces, config = cfg)
