@@ -1,4 +1,6 @@
-
+#using Jutul
+#using JutulDarcy
+using MAT
 export get_cc_grid, get_boundary, get_tensorprod, get_simple_elyte_model
 export exported_model_to_domain, get_ref_states, get_simple_elyte_sim
 
@@ -16,7 +18,7 @@ function get_boundary(name)
 end
 
 function get_tensorprod(name="square_current_collector")
-    fn = string(dirname(pathof(Jutul)), "/../data/testgrids/", name, "_P.mat")
+    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, "_P.mat")
     exported = MAT.matread(fn)
 
     exported
@@ -29,7 +31,7 @@ end
 function get_cc_grid(
     ;name="square_current_collector", extraout = false, bc=[], b_T_hf=[], tensor_map=false
     )
-    fn = string(dirname(pathof(Jutul)), "/../data/testgrids/", name, ".mat")
+    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
     exported = MAT.matread(fn)
 
     N = exported["G"]["faces"]["neighbors"]
@@ -52,10 +54,10 @@ function get_cc_grid(
     # Different constants for different potential means this cannot be included in T
     one = ones(size((exported["rock"]["perm"])'))
     
-    T_hf = compute_half_face_trans(
+    T_hf = JutulDarcy.compute_half_face_trans(
     cell_centroids, face_centroids, face_normals, face_areas, one, N
         )
-    T = compute_face_trans(T_hf, N) * 2
+    T = JutulDarcy.compute_face_trans(T_hf, N) * 2
 
     # TODO: move P, S, boundary to discretization
     P, S = get_tensorprod(name)

@@ -1,4 +1,4 @@
-export Grafite, NMC111, OCD, nChargeCarriers, cMax, volumetricSurfaceArea
+export Grafite, NMC111, ocd, nChargeCarriers, cMax, volumetricSurfaceArea
 
 struct Grafite <: ActiveMaterial end
 struct NMC111 <: ActiveMaterial end

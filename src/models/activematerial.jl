@@ -1,4 +1,5 @@
 export ActiveMaterial, ACMaterial, ActiveMaterialModel
+
 abstract type ActiveMaterial <: ElectroChemicalComponent end
 struct ACMaterial <: ActiveMaterial end
 struct Ocd <: ScalarVariable end
@@ -45,7 +46,7 @@ function select_equations_system!(
 end
 
 # ? Does this maybe look better ?
-@terv_secondary(
+@jutul_secondary(
 function update_as_secondary!(
     vocd, tv::Ocd, model::SimulationModel{<:Any, MaterialType, <:Any, <:Any}, param, C
     ) where   {MaterialType <:ActiveMaterial}
@@ -58,7 +59,7 @@ end
 
 
 
-@terv_secondary(
+@jutul_secondary(
 function update_as_secondary!(
     vdiffusion, tv::Diffusion, model::SimulationModel{<:Any, MaterialType, <:Any, <:Any}, param, C
     ) where   {MaterialType <:ActiveMaterial}
@@ -69,7 +70,7 @@ end
 )
 
 
-@terv_secondary(
+@jutul_secondary(
 function update_as_secondary!(
     vReactionRateConst, tv::ReactionRateConst, model::SimulationModel{<:Any, MaterialType, <:Any, <:Any}, param, C
     ) where   {MaterialType <:ActiveMaterial}

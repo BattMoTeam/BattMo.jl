@@ -199,8 +199,8 @@ function fill_jac_flux_and_acc!(nz, r, model, acc, cell_flux, cpos)
     First loop: Adds diagonal elements to r and jacobian
     Second loop: Adds off-diagonal terms to jacobian
     """
-    nc, ne, np = ad_dims(acc)
-    nu, _ = ad_dims(cell_flux)
+    nc, ne, np = Jutul.ad_dims(acc)
+    nu, _ = Jutul.ad_dims(cell_flux)
     centries = acc.entries
     fentries = cell_flux.entries
     cp = acc.jacobian_positions
@@ -226,7 +226,7 @@ function fill_jac_flux_and_acc!(nz, r, model, acc, cell_flux, cpos)
     # Fill of-diagonal flux
     Threads.@threads for i in 1:nu
         for e in 1:ne
-            a = get_entry(cell_flux, i, e, fentries)
+            a = Jutul.get_entry(cell_flux, i, e, fentries)
             for d in 1:np
                 apos = get_jacobian_pos(cell_flux, i, e, d, jp)
                 @inbounds nz[apos] = a.partials[d]
@@ -283,7 +283,7 @@ end
 ############################
 
 
-@terv_secondary function update_as_secondary!(
+@jutul_secondary function update_as_secondary!(
     kGrad, sv::TPkGrad{Phi}, model::ECModel, param, Phi, Conductivity
     )
     mf = model.domain.discretizations.charge_flow
@@ -291,7 +291,7 @@ end
     @tullio kGrad[i] = half_face_two_point_kgrad(conn_data[i], Phi, Conductivity)
 end
 
-@terv_secondary function update_as_secondary!(
+@jutul_secondary function update_as_secondary!(
     kGrad, sv::TPkGrad{C}, model::ECModel, param, C, Diffusivity
     )
     mf = model.domain.discretizations.charge_flow
@@ -299,7 +299,7 @@ end
     @tullio kGrad[i] = half_face_two_point_kgrad(conn_data[i], C, Diffusivity)
 end
 
-@terv_secondary function update_as_secondary!(
+@jutul_secondary function update_as_secondary!(
     kGrad, sv::TPkGrad{T}, model::ECModel, param, T, ThermalConductivity
     )
     mf = model.domain.discretizations.charge_flow
@@ -308,7 +308,7 @@ end
 end
 
 
-@terv_secondary function update_as_secondary!(
+@jutul_secondary function update_as_secondary!(
     acc, tv::Mass, model, param, C
     )
     V = fluid_volume(model.domain.grid)
@@ -316,7 +316,7 @@ end
     @tullio acc[i] = C[i] * V[i] * vf[i]
 end
 
-@terv_secondary function update_as_secondary!(
+@jutul_secondary function update_as_secondary!(
     acc, tv::Energy, model, param, T
     )
     V = fluid_volume(model.domain.grid)
@@ -324,7 +324,7 @@ end
     @tullio acc[i] = T[i] * V[i] * vf[i]
 end
 
-@terv_secondary function update_as_secondary!(
+@jutul_secondary function update_as_secondary!(
     acc, tv::Charge, model, param, Phi # only for the graph
     )
     @tullio acc[i] = 0 # Charge neutrality

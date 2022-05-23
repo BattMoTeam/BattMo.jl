@@ -71,7 +71,7 @@ function update_density!(law::Conservation{Energy}, storage, model::CCT)
 end
 
 
-@terv_secondary(
+@jutul_secondary(
 function update_as_secondary!(j_cell, sc::kGradPhiCell, model, param, TPkGrad_Phi)
     nc = number_of_cells(model.domain)
     for c in 1:nc
@@ -80,7 +80,7 @@ function update_as_secondary!(j_cell, sc::kGradPhiCell, model, param, TPkGrad_Ph
 end
 )
 
-@terv_secondary(
+@jutul_secondary(
 function update_as_secondary!(ρ, sc::EDensity, model, param, kGradPhiCell, Conductivity)
     cctbl = model.domain.discretizations.charge_flow.cellcell.tbl
     κ = Conductivity
@@ -102,7 +102,7 @@ function update_as_secondary!(ρ, sc::EDensity, model, param, kGradPhiCell, Cond
 end
 )
 
-@terv_secondary(
+@jutul_secondary(
 function update_as_secondary!(ρ_diag, sc::EDensityDiag, model, param, EDensity)
     """ Carries the diagonal velues of ρ """
     mf = model.domain.discretizations.charge_flow

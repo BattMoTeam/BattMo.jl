@@ -2,3 +2,11 @@ name = "BattMo"
 uuid = "6f0c0536-3c2c-4762-a987-c605a8a6f898"
 authors = ["Olav Møyner <olav.moyner@gmail.com>"]
 version = "0.1.0"
+
+[deps]
+Jutul = "2b460a1a-8a2b-45b2-b125-b5c536396eb9"
+JutulDarcy = "82210473-ab04-4dce-b31b-11573c4f8e0a"
+JutulViz = "04276eb3-add5-4ac7-8b2a-1bd9f0edb6e2"
+MAT = "23992714-dd62-5051-b70f-ba57cb901cac"
+Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
+Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"

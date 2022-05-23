@@ -1,4 +1,4 @@
-
+using Jutul
 export ElectroChemicalComponent, CurrentCollector, Electectrolyte, TestElyte
 export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
 export ChargeFlow, Conservation, BoundaryPotential, BoundaryCurrent
