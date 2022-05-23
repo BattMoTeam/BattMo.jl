@@ -87,7 +87,7 @@ function corr_type(::Conservation{T}) return T() end
 
 
 # Called from uppdate_state_dependents
-function apply_boundary_conditions!(storage, parameters, model::ECModel)
+function Jutul.apply_boundary_conditions!(storage, parameters, model::ECModel)
     equations = storage.equations
     for eq in equations
         apply_bc_to_equation!(storage, parameters, model, eq)

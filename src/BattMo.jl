@@ -49,7 +49,6 @@ module BattMo
     get_jacobian_pos,
     DiagonalEquation
 
-
 import Jutul: setup_parameters_domain!, setup_parameters_system!, setup_parameters_context!, setup_parameters_formulation!
 import Jutul: fill_equation_entries!, update_linearized_system_equation!, check_convergence, update!, linear_operator, transfer, operator_nrows, matrix_layout, apply!
 import Jutul: apply_forces_to_equation!, convergence_criterion
