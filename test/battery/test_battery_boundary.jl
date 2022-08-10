@@ -6,14 +6,13 @@ and conductivity, diffusivity is constant.
 =#
 using Jutul, BattMo
 using MAT
-include("mrstTestUtils")
+include("mrstTestUtils.jl")
 ENV["JULIA_DEBUG"] = 0;
 
 ##
-name="model1d_notemp"
+#name="model1d_notemp"
 #name="model1D_50"
 #name="model1D_500"
-name="model1D_5000"
 #name="model2D_1100"
 #name="model3D_492"#.mat
 #name="model3D_3936"
