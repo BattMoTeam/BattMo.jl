@@ -563,8 +563,10 @@ function test_battery(name)
     #cfg[:max_timestep_cuts] = 0
     cfg[:max_residual] = 1e20
     cfg[:min_nonlinear_iterations] = 1
-    cfg[:extra_timing] = false
+    cfg[:extra_timing] = true
     cfg[:max_nonlinear_iterations] = 5
+    cfg[:safe_mode] = false
+    cfg[:info_level] = 0
 ##
 
     states, report = simulate(sim, timesteps, forces = forces, config = cfg)

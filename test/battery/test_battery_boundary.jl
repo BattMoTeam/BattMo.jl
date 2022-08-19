@@ -10,14 +10,13 @@ include("mrstTestUtils.jl")
 ENV["JULIA_DEBUG"] = 0;
 
 ##
-#name="model1d_notemp"
-#name="model1D_50"
+name="model1d_notemp"
+name="model1D_50"
 #name="model1D_500"
-#name="model2D_1100"
-#name="model3D_492"#.mat
+#name="model2D_1100" # give error
 #name="model3D_3936"
 #name="sector_1656"
-#name="sector_55200" #Tobig for direct linear_solver
+#name="sector_55200" #To big for direct linear_solver
 #name="spiral_16560"
 #name="spiral_16560_org"
 #name ="sector_1656_org"
@@ -30,6 +29,7 @@ for step in 1:steps
     phi_ref = stateref[step]["PositiveElectrode"]["CurrentCollector"]["E"]
     E[step,2] = phi_ref
 end
+timesteps = timesteps[1:steps]
 using Plots
 plot1 = Plots.plot([], []; title = "E", size=(1000, 800))
 plot!(plot1,cumsum(timesteps),E)
