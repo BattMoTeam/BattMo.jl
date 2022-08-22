@@ -556,7 +556,6 @@ function test_battery(name)
     #slinear_solver = battery_linsolve(model,:ilu0; verbose = 1)
     timesteps = alltimesteps[1:end_step]
     cfg = simulator_config(sim)
-    cfg = simulator_config(sim)
     cfg[:linear_solver] = linear_solver
     cfg[:info_level] = 5
     cfg[:debug_level] = 0
