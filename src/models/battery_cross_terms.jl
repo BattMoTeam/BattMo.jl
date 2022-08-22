@@ -1,28 +1,24 @@
 # interface flux between current conductors
 # 1e7 should be the harmonic mean of hftrans/conductivity
-function ccinterfaceflux!(src, phi_1,phi_2,trans)
-    for i in eachindex(phi_1)
-        src[i] = (phi_2[i] - phi_1[i])
-        src[i] *= -trans[i]
-    end
+
+struct TPFAInterfaceFluxCT{T, F} <: Jutul.AdditiveCrossTerm
+    target_cells::T
+    source_cells::T
+    trans::F
 end
 
-function update_cross_term!(
-    ct::InjectiveCrossTerm, eq::EQS, 
-    target_storage,
-    source_storage,
-    target_model::SimulationModel{<:Any, TT, <:Any, <:Any}, 
-    source_model::SimulationModel{<:Any, TS, <:Any, <:Any}, 
-    target, source, dt
-    ) where {TT <: Union{CurrentCollector, CurrentAndVoltageSystem, ActiveMaterial},TS <: Union{CurrentCollector, CurrentAndVoltageSystem, ActiveMaterial},EQS <: Union{Conservation{Charge},CurrentEquation}} # or TS <: CurrentCollector
-    trans = ct.properties[:trans]
-    phi_t = target_storage.state.Phi[ct.impact.target]
-    phi_s = source_storage.state.Phi[ct.impact.source]
-
-    ccinterfaceflux!(ct.crossterm_source, phi_s, value.(phi_t),trans)
-    ccinterfaceflux!(ct.crossterm_target, value.(phi_s), phi_t,trans)
+function update_cross_term_in_entity!(out, ind,
+    state_t, state0_t,
+    state_s, state0_s, 
+    model_t, model_s,
+    ct::TPFAInterFaceFluxCT, eq, dt, ldisc = local_discretization(ct, i))
+    trans = ct[:trans][ind]
+    t_c = ct[:target_cells][ind]
+    t_s = ct[:source_cells][ind]
+    phi_t = state_t.Phi[t_c]
+    phi_s = state_s.Phi[t_s]
+    out[] = trans*(phi_t - phi_s)
 end
-
 # function update_cross_term!(
 #     ct::InjectiveCrossTerm, eq::EQS, 
 #     target_storage,
@@ -99,154 +95,65 @@ function sourceElectricMaterial!(
     return (eS, eM)
 end
 
-
-function update_cross_term!(
-    ct::InjectiveCrossTerm, eq::Conservation{Charge}, 
-    target_storage, source_storage, 
-    target_model::SimulationModel{<:Any, TS, <:Any, <:Any}, 
-    source_model::SimulationModel{<:Any, SS, <:Any, <:Any}, 
-    target, source, dt
-    ) where {SS <: ActiveMaterial, TS <: Electrolyte} 
-
-    activematerial = source_model.system
-    electrolyte = target_model.system
-    phi_e = target_storage.state.Phi[ct.impact.target]
-    phi_a = source_storage.state.Phi[ct.impact.source]  
-    ocd = source_storage.state.Ocd[ct.impact.source]
-    R = source_storage.state.ReactionRateConst[ct.impact.source]
-    c_e = target_storage.state.C[ct.impact.target]
-    c_a = source_storage.state.C[ct.impact.source]
-    volume = source_model.domain.grid.volumes[ct.impact.source]
-    T = source_storage.state.T[ct.impact.source]
-
-    eM  = similar(ct.crossterm_source)
-    sourceElectricMaterial!(
-        ct.crossterm_source, eM, volume, T,
-        phi_a, c_a, R, ocd,
-        value.(phi_e), value.(c_e),
-        activematerial, electrolyte  
+function source_electric_material(
+    vols, T,
+    phi_a, c_a, R0,  ocd,
+    phi_e, c_e, activematerial, electrolyte
     )
 
-    eM = similar(ct.crossterm_target)
-    sourceElectricMaterial!(
-        ct.crossterm_target, eM, volume, T,
-        value.(phi_a), value.(c_a), value.(R), value.(ocd),
-        phi_e, c_e,
-        activematerial, electrolyte  
-    )
-    ct.crossterm_target .*= -1.0
-    ct.crossterm_source .*= -1.0
- end
-
-function update_cross_term!(
-    ct::InjectiveCrossTerm, eq::Conservation{Charge}, 
-    target_storage, source_storage, 
-    target_model::SimulationModel{<:Any, TS, <:Any, <:Any}, 
-    source_model::SimulationModel{<:Any, SS, <:Any, <:Any}, 
-    target, source, dt
-    ) where {TS <: ActiveMaterial, SS <:Electrolyte}
+    n = nChargeCarriers(activematerial)
+    # for (i, val) in enumerate(phi_a)
+        # ! Hack, as we get error in ForwardDiff without .value
+        # ! This will cause errors if T is not just constant
+        R = reaction_rate(
+            phi_a, c_a, R0, ocd, T,
+            phi_e, c_e, activematerial, electrolyte
+            )
     
-    activematerial = target_model.system
-    electrolyte = source_model.system 
-    phi_e = source_storage.state.Phi[ct.impact.source]
-    phi_a = target_storage.state.Phi[ct.impact.target]  
-    ocd = target_storage.state.Ocd[ct.impact.target]
-    R = target_storage.state.ReactionRateConst[ct.impact.target]
-    c_e = source_storage.state.C[ct.impact.source]
-    c_a = target_storage.state.C[ct.impact.target]
-    volume = target_model.domain.grid.volumes[ct.impact.target]
-    T = target_storage.state.T[ct.impact.target]
-
-    eM = similar(ct.crossterm_target)
-    
-    sourceElectricMaterial!(
-        ct.crossterm_target, eM, volume, T,
-        phi_a,c_a,R,ocd,
-        value.(phi_e),value.(c_e),
-        activematerial,electrolyte  
-    )
-
-    eM = similar(ct.crossterm_source)
-    sourceElectricMaterial!(
-        ct.crossterm_source, eM, volume, T,
-        value.(phi_a), value.(c_a), value.(R), value.(ocd),
-        phi_e, c_e,
-        activematerial, electrolyte  
-    )
+        eS = -1.0 * vols * R * n * FARADAY_CONST
+        eM = +1.0 * vols * R 
+    # end
+    return (eS, eM)
 end
 
-function update_cross_term!(
-    ct::InjectiveCrossTerm, eq::Conservation{Mass}, 
-    target_storage, source_storage, 
-    target_model::SimulationModel{<:Any, TS, <:Any, <:Any}, 
-    source_model::SimulationModel{<:Any, SS, <:Any, <:Any}, 
-    target, source, dt
-    ) where {TS <: ActiveMaterial, SS <:Electrolyte}
-
-    activematerial = target_model.system
-    electrolyte = source_model.system
-    phi_e = source_storage.state.Phi[ct.impact.source]
-    phi_a = target_storage.state.Phi[ct.impact.target]  
-    ocd = target_storage.state.Ocd[ct.impact.target]
-    R = target_storage.state.ReactionRateConst[ct.impact.target]
-    c_e = source_storage.state.C[ct.impact.source]
-    c_a = target_storage.state.C[ct.impact.target]
-    volume = target_model.domain.grid.volumes[ct.impact.target]
-    T = target_storage.state.T[ct.impact.target]
-
-    eE = similar(ct.crossterm_target)
-    sourceElectricMaterial!(
-        eE, ct.crossterm_target, volume, T,
-        phi_a, c_a, R, ocd,
-        value.(phi_e), value.(c_e),
-        activematerial, electrolyte  
-    )
-
-
-    eE = similar(ct.crossterm_source)
-    sourceElectricMaterial!(
-        eE, ct.crossterm_source, volume, T,
-        value.(phi_a), value.(c_a), value.(R), value.(ocd),
-        phi_e, c_e,
-        activematerial,electrolyte  
-    )
- end
-
-function update_cross_term!(
-    ct::InjectiveCrossTerm, eq::Conservation{Mass}, 
-    target_storage, source_storage, 
-    target_model::SimulationModel{<:Any, TS, <:Any, <:Any}, 
-    source_model::SimulationModel{<:Any, SS, <:Any, <:Any}, 
-    target, source, dt
-    ) where {SS <: ActiveMaterial, TS <:Electrolyte}
-
-    activematerial = source_model.system
-    electrolyte = target_model.system
-    phi_e = target_storage.state.Phi[ct.impact.target]
-    phi_a = source_storage.state.Phi[ct.impact.source]
-    ocd = source_storage.state.Ocd[ct.impact.source]
-    R = source_storage.state.ReactionRateConst[ct.impact.source]
-    c_a = source_storage.state.C[ct.impact.source]
-    c_e = target_storage.state.C[ct.impact.target]
-    volume = source_model.domain.grid.volumes[ct.impact.source]
-    T = source_storage.state.T[ct.impact.source]
-
-    eE = similar(ct.crossterm_source)
-    sourceElectricMaterial!(
-        eE, ct.crossterm_source, volume, T,
-        phi_a, c_a, R, ocd,
-        value.(phi_e), value.(c_e),
-        activematerial, electrolyte  
-    )
-
-    eE = similar(ct.crossterm_target)
-    sourceElectricMaterial!(
-        eE, ct.crossterm_target, volume, T,
-        value.(phi_a), value.(c_a), value.(R), value.(ocd),
-        phi_e, c_e,
-        activematerial,electrolyte  
-    )
-    ct.crossterm_target .*= -1.0
-    ct.crossterm_source .*= -1.0  
-    #ct.crossterm_target = eM
+struct ButlerVolmerInterFaceFluxCT{T} <: Jutul.AdditiveCrossTerm
+    target_cells::T
+    source_cells::T
 end
+
+function update_cross_term_in_entity!(out, ind,
+    state_t, state0_t,
+    state_s, state0_s, 
+    model_t, model_s,
+    ct::ButlerVolmerInterFaceFluxCT, eq, dt, ldisc = local_discretization(ct, i))
+
+    activematerial = model_s.system
+    electrolyte = target_model.system
+
+    t_c = ct[:target_cells][ind]
+    s_c = ct[:source_cells][ind]
+
+    phi_e = state_t.Phi[t_c]
+    phi_a = state_s.Phi[s_c]  
+    ocd = state_s.Ocd[s_c]
+    R = state_s.ReactionRateConst[s_c]
+    c_e = state_t.C[t_c]
+    c_a = state_s.C[s_c]
+    vols = model_s.domain.grid.volumes[s_c]
+    T = state_s.T[s_c]
+
+    eS, eM = source_electric_material(
+        vols, T,
+        phi_a, c_a, R,  ocd,
+        phi_e, c_e, activematerial, electrolyte
+        )
+    if corr_type(eq) == Mass()
+        v = eM
+    else
+        @assert corr_type(eq) == Charge()
+        v = eS
+    end
+    out[] = -v
+end
+
+
