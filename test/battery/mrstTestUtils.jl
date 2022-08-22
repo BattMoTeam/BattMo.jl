@@ -164,7 +164,7 @@ function setup_model(exported_all)
     domain_bpp = CurrentAndVoltageDomain()
     model_bpp = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
     parm_bpp = setup_parameters(model_bpp)
-    parm_bpp[:tolerances][:default] = 1e-8
+    # parm_bpp[:tolerances][:default] = 1e-8
     # Setup model
     
 

@@ -8,24 +8,27 @@ function minimum_output_variables(
     [:TPkGrad_Phi, :Charge]
 end
 
-function select_primary_variables_system!(
-    S, domain, system::CurrentCollector, formulation
+function select_primary_variables!(
+    S, system::CurrentCollector, model
     )
     S[:Phi] = Phi()
 end
 
-function select_secondary_variables_system!(
-    S, domain, system::CurrentCollector, formulation
+function select_secondary_variables!(
+    S, system::CurrentCollector, model
     )
     S[:TPkGrad_Phi] = TPkGrad{Phi}()
     S[:Charge] = Charge()
     S[:Conductivity] = Conductivity()
 end
 
-function select_equations_system!(
-    eqs, domain, system::CurrentCollector, formulation    )
-    charge_cons = (arg...; kwarg...) -> Conservation(Charge(), arg...; kwarg...)
-    eqs[:charge_conservation] = (charge_cons, 1)
+function select_equations!(
+    eqs, system::CurrentCollector, model)
+    #charge_cons = (arg...; kwarg...) -> Conservation(Charge(), arg...; kwarg...)
+    disc = model.domain.discretizations.charge_flow
+    T = typeof(disc)
+
+    eqs[:charge_conservation] = Conservation{Charge, T}(Charge())#(charge_cons, 1)
 end
 
 function apply_forces_to_equation!(storage, 

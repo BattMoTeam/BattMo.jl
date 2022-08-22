@@ -130,7 +130,7 @@ end
 #     @. ct.crossterm_target = f(value(X_S), X_T)
 # end
 
-function select_primary_variables!(S, domain, system::CurrentAndVoltageSystem, formulation)
+function select_primary_variables!(S, system::CurrentAndVoltageSystem, model)
     S[:Phi] = VoltVar()
     #S[:Current] = CurrentVar()
 end

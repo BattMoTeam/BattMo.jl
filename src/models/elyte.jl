@@ -30,14 +30,14 @@ function select_equations_system!(eqs, domain, system::Electrolyte, formulation)
     eqs[:energy_conservation] = (energy_cons, 1)
 end
 
-function select_primary_variables_system!(S, domain, system::Electrolyte, formulation)
+function select_primary_variables!(S, system::Electrolyte, model)
     S[:Phi] = Phi()
     S[:C] = C()
     S[:T] = T()
 end
 
 
-function select_secondary_variables_system!(S, domain, system::Electrolyte, formulation)
+function select_secondary_variables!(S, system::Electrolyte, model)
     S[:TPkGrad_Phi] = TPkGrad{Phi}()
     S[:TPkGrad_C] = TPkGrad{C}()
     S[:TPDGrad_C] = TPDGrad{C}()

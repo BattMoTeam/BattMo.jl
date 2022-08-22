@@ -8,21 +8,21 @@ struct SimpleElyte <: Electrolyte end
 const SimpleElyteModel = SimulationModel{<:Any, <:SimpleElyte, <:Any, <:Any}
 
 
-function select_primary_variables_system!(S, domain, system::SimpleElyte, formulation)
+function select_primary_variables!(S, system::SimpleElyte, model)
     S[:Phi] = Phi()
     S[:C] = C()
 end
 
-function select_equations_system!(eqs, domain, system::SimpleElyte, formulation)
-    charge_cons = (arg...; kwarg...) -> Conservation(Charge(), arg...; kwarg...)
-    mass_cons = (arg...; kwarg...) -> Conservation(Mass(), arg...; kwarg...)
-    
-    eqs[:charge_conservation] = (charge_cons, 1)
-    eqs[:mass_conservation] = (mass_cons, 1)
+function select_equations!(eqs, system::SimpleElyte, model)
+    disc = model.domain.discretizations.charge_flow
+    T = typeof(disc)
+
+    eqs[:charge_conservation] =  Conservation{Charge, T}(Charge())
+    eqs[:mass_conservation] = Conservation{Mass, T}(Mass())
 end
 
 
-function select_secondary_variables_system!(S, domain, system::SimpleElyte, formulation)
+function select_secondary_variables!(S, system::SimpleElyte, model)
     S[:TPkGrad_Phi] = TPkGrad{Phi}()
     S[:TPkGrad_C] = TPkGrad{C}()
     S[:TPDGrad_C] = TPDGrad{C}()

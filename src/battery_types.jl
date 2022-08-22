@@ -100,7 +100,7 @@ struct MinimalECTPFAGrid{R<:AbstractFloat, I<:Integer} <: ElectroChemicalGrid
 end
 
 import Jutul: FlowDiscretization
-struct TPFlow{F} <: FlowDiscretization
+struct TPFlow <: FlowDiscretization
     # TODO: Declare types ?
     conn_pos
     conn_data
@@ -124,7 +124,7 @@ function TPFlow(grid::AbstractJutulMesh, T; tensor_map = false)
     if !isnothing(T)
         @assert length(T) == nhf ÷ 2
     end
-    get_el = (face, cell) -> get_connection(face, cell, faces, N, T, nothing, nothing, false)
+    get_el = (face, cell) -> Jutul.get_connection(face, cell, faces, N, T, nothing, nothing, false)
     el_type = typeof(get_el(1, 1))
     
     conn_data = Vector{el_type}(undef, nhf)

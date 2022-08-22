@@ -13,15 +13,15 @@ function minimum_output_variables(
     [:Charge, :Energy, :EDensityDiag]
 end
 
-function select_primary_variables_system!(
-    S, domain, system::CurrentCollectorT, formulation
+function select_primary_variables!(
+    S, system::CurrentCollectorT, model
     )
     S[:Phi] = Phi()
     S[:T] = T()
 end
 
-function select_secondary_variables_system!(
-    S, domain, system::CurrentCollectorT, formulation
+function select_secondary_variables!(
+    S, system::CurrentCollectorT, model
     )
     S[:TPkGrad_Phi] = TPkGrad{Phi}()
     S[:TPkGrad_T] = TPkGrad{T}()
