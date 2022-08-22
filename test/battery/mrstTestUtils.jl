@@ -255,13 +255,16 @@ function setup_coupling!(model, exported_all)
     couplingfaces = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingfaces"])
     couplingcells = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"])
     trans = getTrans(msource, mtarget, couplingfaces, couplingcells,"EffectiveElectricalConductivity")
+
+    ct = TPFAInterfaceFluxCT(trange, srange, trans)
+    setup_cross_term(ct, target = :NAM, source = :CC, equation = :charge_conservation)
    
     properties = Dict(:trans => trans) #NB    
     intersection = ( srange, trange, Cells(), Cells())
     crosstermtype = InjectiveCrossTerm
     issym = true
-    coupling = MultiModelCoupling(source, target, intersection; crosstype = crosstermtype, properties = properties, issym = issym)
-    push!(model.couplings, coupling)
+    # coupling = MultiModelCoupling(source, target, intersection; crosstype = crosstermtype, properties = properties, issym = issym)
+    # push!(model.couplings, coupling)
 
     # setup coupling NAM <-> ELYTE charge
     target = Dict( 

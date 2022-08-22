@@ -219,3 +219,14 @@ end
 function acc_symbol(::Energy)
     return :Energy
 end
+
+struct TPFAInterfaceFluxCT{T, F} <: Jutul.AdditiveCrossTerm
+    target_cells::T
+    source_cells::T
+    trans::F
+end
+
+struct ButlerVolmerInterFaceFluxCT{T} <: Jutul.AdditiveCrossTerm
+    target_cells::T
+    source_cells::T
+end

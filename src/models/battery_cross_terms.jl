@@ -1,11 +1,6 @@
 # interface flux between current conductors
 # 1e7 should be the harmonic mean of hftrans/conductivity
 
-struct TPFAInterfaceFluxCT{T, F} <: Jutul.AdditiveCrossTerm
-    target_cells::T
-    source_cells::T
-    trans::F
-end
 
 Jutul.symmetry(::TPFAInterfaceFluxCT) = Jutul.CTSkewSymmetry()
 
@@ -119,11 +114,6 @@ function source_electric_material(
         eM = +1.0 * vols * R 
     # end
     return (eS, eM)
-end
-
-struct ButlerVolmerInterFaceFluxCT{T} <: Jutul.AdditiveCrossTerm
-    target_cells::T
-    source_cells::T
 end
 
 Jutul.cross_term_entities(ct::ButlerVolmerInterFaceFluxCT, eq, model) = ct.target_cells
