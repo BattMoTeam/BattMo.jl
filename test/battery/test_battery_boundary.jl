@@ -13,10 +13,10 @@ ENV["JULIA_DEBUG"] = 0;
 ##
 modelnames =[
     "model1D_50",
-    "model1D_500",
-    "model3D_3936",
+    #"model1D_500",
+    #"model3D_3936",
     #"sector_1656",
-    "sector_1656_org"
+    #"sector_1656_org"
     ]
 
 allfine = Vector{Bool}();

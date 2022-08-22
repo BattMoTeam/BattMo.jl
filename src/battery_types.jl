@@ -13,7 +13,7 @@ abstract type ElectroChemicalComponent <: JutulSystem end
 # Alias for a genereal Electro Chemical Model
 const ECModel = SimulationModel{<:Any, <:ElectroChemicalComponent, <:Any, <:Any}
 
-abstract type ElectroChemicalGrid <: JutulGrid end
+abstract type ElectroChemicalGrid <: AbstractJutulMesh end
 
 # Potentials
 abstract type Potential <: ScalarVariable end
@@ -25,12 +25,15 @@ struct Conductivity <: ScalarVariable end
 struct Diffusivity <: ScalarVariable end
 struct ThermalConductivity <: ScalarVariable end
 
-struct Conservation{T} <: JutulEquation
+struct Conservation{T, F} <: JutulEquation
+    flow_discretization::F
+end
+
+struct ConservationTPFAStorage{T} <: JutulEquation
     accumulation::JutulAutoDiffCache
     accumulation_symbol::Symbol
     half_face_flux_cells::JutulAutoDiffCache
     density::JutulAutoDiffCache
-    flow_discretization::FlowDiscretization
 end
 
 # Accumulation variables
@@ -54,8 +57,8 @@ function corr_type(::Conservation{Energy}) Energy() end
 abstract type KGrad{T} <: ScalarVariable end
 struct TPkGrad{T} <: KGrad{T} end
 
-abstract type ECFlow <: FlowType end
-struct ChargeFlow <: ECFlow end
+# abstract type ECFlow <: FlowType end
+# struct ChargeFlow <: ECFlow end
 
 
 struct BoundaryPotential{T} <: ScalarVariable end
@@ -96,6 +99,7 @@ struct MinimalECTPFAGrid{R<:AbstractFloat, I<:Integer} <: ElectroChemicalGrid
     vol_frac::AbstractVector{R}
 end
 
+import Jutul: FlowDiscretization
 struct TPFlow{F} <: FlowDiscretization
     # TODO: Declare types ?
     conn_pos
@@ -111,7 +115,7 @@ end
 # Constructors #
 ################
 
-function TPFlow(grid::JutulGrid, T; tensor_map = false)
+function TPFlow(grid::AbstractJutulMesh, T; tensor_map = false)
     N = get_neighborship(grid)
     faces, face_pos = get_facepos(N)
 
@@ -148,7 +152,7 @@ function TPFlow(grid::JutulGrid, T; tensor_map = false)
         )
     end
 
-    TPFlow{ChargeFlow}(face_pos, conn_data, cfcv, ccv, cc, map)
+    TPFlow(face_pos, conn_data, cfcv, ccv, cc, map)
 end
 
 
