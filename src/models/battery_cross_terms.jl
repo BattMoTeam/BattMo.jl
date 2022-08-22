@@ -7,6 +7,11 @@ struct TPFAInterfaceFluxCT{T, F} <: Jutul.AdditiveCrossTerm
     trans::F
 end
 
+Jutul.symmetry(::TPFAInterfaceFluxCT) = Jutul.CTSkewSymmetry()
+
+Jutul.cross_term_entities(ct::TPFAInterfaceFluxCT, eq, model) = ct.target_cells
+Jutul.cross_term_entities_source(ct::TPFAInterfaceFluxCT, eq, model) = ct.source_cells
+
 function update_cross_term_in_entity!(out, ind,
     state_t, state0_t,
     state_s, state0_s, 
@@ -120,6 +125,11 @@ struct ButlerVolmerInterFaceFluxCT{T} <: Jutul.AdditiveCrossTerm
     target_cells::T
     source_cells::T
 end
+
+Jutul.cross_term_entities(ct::ButlerVolmerInterFaceFluxCT, eq, model) = ct.target_cells
+Jutul.cross_term_entities_source(ct::ButlerVolmerInterFaceFluxCT, eq, model) = ct.source_cells
+
+Jutul.symmetry(::ButlerVolmerInterFaceFluxCT) = Jutul.CTSkewSymmetry()
 
 function update_cross_term_in_entity!(out, ind,
     state_t, state0_t,
