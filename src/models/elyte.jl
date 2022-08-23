@@ -21,9 +21,9 @@ struct EnergyDensity <: ScalarNonDiagVaraible end
 struct EDDiag <: ScalarVariable end
 
 function select_equations_system!(eqs, domain, system::Electrolyte, formulation)
-    charge_cons = (arg...; kwarg...) -> Conservation(Charge(), arg...; kwarg...)
-    mass_cons = (arg...; kwarg...) -> Conservation(Mass(), arg...; kwarg...)
-    energy_cons = (arg...; kwarg...) -> Conservation(Energy(), arg...; kwarg...)
+    charge_cons = (arg...; kwarg...) -> Conservation(Charge, arg...; kwarg...)
+    mass_cons = (arg...; kwarg...) -> Conservation(Mass, arg...; kwarg...)
+    energy_cons = (arg...; kwarg...) -> Conservation(Energy, arg...; kwarg...)
     
     eqs[:charge_conservation] = (charge_cons, 1)
     eqs[:mass_conservation] = (mass_cons, 1)

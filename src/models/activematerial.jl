@@ -43,8 +43,8 @@ function select_equations!(
     # mass_cons = (arg...; kwarg...) -> Conservation(Mass(), arg...; kwarg...)
     disc = model.domain.discretizations.charge_flow
     T = typeof(disc)
-    eqs[:charge_conservation] = Conservation{Charge(), T}(disc)# (charge_cons, 1)
-    eqs[:mass_conservation] = Conservation{Mass(), T}(disc)# (mass_cons, 1)
+    eqs[:charge_conservation] = Conservation{Charge, T}(disc)# (charge_cons, 1)
+    eqs[:mass_conservation] = Conservation{Mass, T}(disc)# (mass_cons, 1)
 end
 
 # ? Does this maybe look better ?

@@ -36,6 +36,10 @@ struct ConservationTPFAStorage{T} <: JutulEquation
     density::JutulAutoDiffCache
 end
 
+function setup_equation_storage(model, eq::ConservationLaw{<:TwoPointPotentialFlowHardCoded}, storage; kwarg...)
+    return ConservationLawTPFAStorage(model, eq; kwarg...)
+end
+
 # Accumulation variables
 abstract type Conserved <: ScalarVariable end
 struct Charge <: Conserved end
@@ -49,9 +53,8 @@ const BOUNDARY_CURRENT = Dict(
     Energy() => :BCEnergy,
 )
 # TODO: Can this not be automated????
-function corr_type(::Conservation{Charge}) Charge() end
-function corr_type(::Conservation{Mass}) Mass() end
-function corr_type(::Conservation{Energy}) Energy() end
+corr_type(::Conservation{T}) where T = T()
+
 
 # Represents k∇T, where k is a tensor, T a potential
 abstract type KGrad{T} <: ScalarVariable end
@@ -174,14 +177,13 @@ function MinimalECTPFAGrid(pv, N, bc=[], T_hf=[], P=[], S=[], vf=[])
     MinimalECTPFAGrid{eltype(pv), eltype(N)}(pv, N, bc, T_hf, P, S, vf)
 end
 
-function Conservation(
-    acc_type, model, number_of_equations;
-    flow_discretization = model.domain.discretizations[1], kwarg...
-    )
+function ConservationTPFAStorage(
+        model, eq::Conservation{C, <:Any}; kwarg...
+    ) where C
     """
     A conservation law corresponding to a conserved charge acc_type
     """
-
+    acc_type = C()
     accumulation_symbol = acc_symbol(acc_type)
 
     D = model.domain
@@ -192,9 +194,10 @@ function Conservation(
     nhf = 2 * nf
     nn = size(get_neighborship(D.grid), 2)
     n_tot = nc + 2 * nn
+    neq = Jutul.number_of_equations(model, eq)
 
     alloc = (n, entity, n_entities_pos) -> CompactAutoDiffCache(
-        number_of_equations, n, model, entity = entity, n_entities_pos = n_entities_pos,
+        neq, n, model, entity = entity, n_entities_pos = n_entities_pos,
         context = model.context; kwarg...
     )
 
@@ -202,11 +205,14 @@ function Conservation(
     hf_cells = alloc(nhf, cell_entity, nhf)
     density = alloc(n_tot, cell_entity, n_tot)
 
-    Conservation{typeof(acc_type)}(
-        acc, accumulation_symbol, hf_cells, density, flow_discretization
+    ConservationTPFAStorage{C}(
+        acc, accumulation_symbol, hf_cells, density
     )
 end
 
+function Jutul.setup_equation_storage(model, eq::Conservation, storage; kwarg...)
+    return ConservationTPFAStorage(model, eq; kwarg...)
+end
 
 function acc_symbol(::Charge)
     return :Charge
