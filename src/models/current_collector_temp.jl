@@ -118,7 +118,7 @@ end
 )
 
 function align_to_jacobian!(
-    law::Conservation, jac, model::CCT, u::Cells; equation_offset = 0, 
+    law::ConservationTPFAStorage, eq::Conservation, jac, model::CCT, u::Cells; equation_offset = 0, 
     variable_offset = 0
     )
     fd = law.flow_discretization

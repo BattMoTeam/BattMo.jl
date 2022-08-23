@@ -95,10 +95,10 @@ end
 
 
 function align_to_jacobian!(
-    law::Conservation, jac, model, u::Cells; equation_offset = 0, 
+    law::ConservationTPFAStorage, eq::Conservation, jac, model, u::Cells; equation_offset = 0, 
     variable_offset = 0
     )
-    fd = law.flow_discretization
+    fd = eq.flow_discretization
     M = global_map(model.domain)
 
     acc = law.accumulation
@@ -156,7 +156,7 @@ function density_alignment!(
 end
 
 
-function declare_pattern(model, e::Conservation, ::Cells)
+function declare_pattern(model, e::Conservation, e_s::ConservationTPFAStorage, ::Cells)
     df = e.flow_discretization
     hfd = Array(df.conn_data)
     n = number_of_entities(model, e)
@@ -172,7 +172,7 @@ function declare_pattern(model, e::Conservation, ::Cells)
     return (I, J)
 end
 
-function declare_pattern(model, e::Conservation, ::Faces)
+function declare_pattern(model, e::Conservation, e_s::ConservationTPFAStorage, ::Faces)
     df = e.flow_discretization
     cd = df.conn_data
     I = map(x -> x.self, cd)

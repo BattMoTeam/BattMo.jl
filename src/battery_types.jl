@@ -60,8 +60,9 @@ corr_type(::Conservation{T}) where T = T()
 
 # Represents k∇T, where k is a tensor, T a potential
 abstract type KGrad{T} <: ScalarVariable end
+Jutul.associated_entity(::KGrad) = Faces()
+
 struct TPkGrad{T} <: KGrad{T} end
-Jutul.associated_entity(::TPkGrad) = Faces()
 
 # abstract type ECFlow <: FlowType end
 # struct ChargeFlow <: ECFlow end
@@ -78,6 +79,8 @@ Jutul.associated_entity(::BoundaryCurrent) = BoundaryFaces()
 
 
 abstract type Current <: ScalarVariable end
+Jutul.associated_entity(::Current) = Faces()
+
 struct TotalCurrent <: Current end
 struct ChargeCarrierFlux <: Current end
 struct EnergyFlux <: Current end
