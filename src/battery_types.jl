@@ -4,7 +4,7 @@ export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
 export ChargeFlow, Conservation, BoundaryPotential, BoundaryCurrent
 export Phi, C, T, Charge, Mass, Energy, KGrad
 export BOUNDARY_CURRENT, corr_type
-
+export TPFAInterfaceFluxCT,ButlerVolmerInterfaceFluxCT
 ###########
 # Classes #
 ###########
@@ -220,13 +220,13 @@ function acc_symbol(::Energy)
     return :Energy
 end
 
-struct TPFAInterfaceFluxCT{T, F} <: Jutul.AdditiveCrossTerm
+struct TPFAInterfaceFluxCT{T,F} <: Jutul.AdditiveCrossTerm
     target_cells::T
     source_cells::T
     trans::F
 end
 
-struct ButlerVolmerInterFaceFluxCT{T} <: Jutul.AdditiveCrossTerm
+struct ButlerVolmerInterfaceFluxCT{T} <: Jutul.AdditiveCrossTerm
     target_cells::T
     source_cells::T
 end

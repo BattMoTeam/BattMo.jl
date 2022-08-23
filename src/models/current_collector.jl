@@ -28,7 +28,7 @@ function select_equations!(
     disc = model.domain.discretizations.charge_flow
     T = typeof(disc)
 
-    eqs[:charge_conservation] = Conservation{Charge, T}(Charge())#(charge_cons, 1)
+    eqs[:charge_conservation] = Conservation{Charge, T}(disc)#(charge_cons, 1)
 end
 
 function apply_forces_to_equation!(storage, 

@@ -235,15 +235,7 @@ end
 ##
 
 function setup_coupling!(model, exported_all)
-    # setup coupling CC <-> NAM charge
-    target = Dict( 
-        :model => :NAM,
-        :equation => :charge_conservation
-    )
-    source = Dict( 
-        :model => :CC,
-        :equation => :charge_conservation
-        )
+    # setup coupling CC <-> NAM :charge_conservation
     srange = Int64.(
         exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:,1]
         )
@@ -257,7 +249,8 @@ function setup_coupling!(model, exported_all)
     trans = getTrans(msource, mtarget, couplingfaces, couplingcells,"EffectiveElectricalConductivity")
 
     ct = TPFAInterfaceFluxCT(trange, srange, trans)
-    setup_cross_term(ct, target = :NAM, source = :CC, equation = :charge_conservation)
+    ct_pair = setup_cross_term(ct, target = :NAM, source = :CC, equation = :charge_conservation)
+    add_cross_term!(model, ct_pair)
    
     properties = Dict(:trans => trans) #NB    
     intersection = ( srange, trange, Cells(), Cells())

@@ -17,8 +17,8 @@ function select_equations!(eqs, system::SimpleElyte, model)
     disc = model.domain.discretizations.charge_flow
     T = typeof(disc)
 
-    eqs[:charge_conservation] =  Conservation{Charge, T}(Charge())
-    eqs[:mass_conservation] = Conservation{Mass, T}(Mass())
+    eqs[:charge_conservation] =  Conservation{Charge, T}(disc)
+    eqs[:mass_conservation] = Conservation{Mass, T}(disc)
 end
 
 

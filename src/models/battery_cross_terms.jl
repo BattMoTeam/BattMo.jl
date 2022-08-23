@@ -11,7 +11,7 @@ function update_cross_term_in_entity!(out, ind,
     state_t, state0_t,
     state_s, state0_s, 
     model_t, model_s,
-    ct::TPFAInterFaceFluxCT, eq, dt, ldisc = local_discretization(ct, i))
+    ct::TPFAInterfaceFluxCT, eq, dt, ldisc = local_discretization(ct, i))
     trans = ct[:trans][ind]
     t_c = ct[:target_cells][ind]
     t_s = ct[:source_cells][ind]
@@ -116,16 +116,16 @@ function source_electric_material(
     return (eS, eM)
 end
 
-Jutul.cross_term_entities(ct::ButlerVolmerInterFaceFluxCT, eq, model) = ct.target_cells
-Jutul.cross_term_entities_source(ct::ButlerVolmerInterFaceFluxCT, eq, model) = ct.source_cells
+Jutul.cross_term_entities(ct::ButlerVolmerInterfaceFluxCT, eq, model) = ct.target_cells
+Jutul.cross_term_entities_source(ct::ButlerVolmerInterfaceFluxCT, eq, model) = ct.source_cells
 
-Jutul.symmetry(::ButlerVolmerInterFaceFluxCT) = Jutul.CTSkewSymmetry()
+Jutul.symmetry(::ButlerVolmerInterfaceFluxCT) = Jutul.CTSkewSymmetry()
 
 function update_cross_term_in_entity!(out, ind,
     state_t, state0_t,
     state_s, state0_s, 
     model_t, model_s,
-    ct::ButlerVolmerInterFaceFluxCT, eq, dt, ldisc = local_discretization(ct, i))
+    ct::ButlerVolmerInterfaceFluxCT, eq, dt, ldisc = local_discretization(ct, i))
 
     activematerial = model_s.system
     electrolyte = target_model.system
