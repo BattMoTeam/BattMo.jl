@@ -10,7 +10,7 @@ const ActiveMaterialModel = SimulationModel{<:Any, <:ActiveMaterial, <:Any, <:An
 function minimum_output_variables(
     system::ActiveMaterial, primary_variables
     )
-    [:Charge, :Mass, :Ocd, :T, :TPkGrad_Phi]
+    [:Charge, :Mass, :Ocd, :T]#, :TPkGrad_Phi]
 end
 
 function select_primary_variables!(

@@ -92,6 +92,8 @@ function make_system(exported,sys,bcfaces,srccells)
     init = Dict(
         :Phi                    => phi0,
         :C                      => C0,
+        :Charge                 => 0.0*phi0,
+        :Mass                 => C0
         :T                      => T0,
         :Conductivity           => σ,
         :Diffusivity            => D,
