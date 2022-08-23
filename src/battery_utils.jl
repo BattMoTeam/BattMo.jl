@@ -1,4 +1,5 @@
 using Jutul
+using Tullio
 export fluid_volume
 
 #########
@@ -62,9 +63,9 @@ function degrees_of_freedom_per_entity(model, sf::NonDiagCellVariables)
 end
 
 # ?Why not faces?
-function associated_entity(::KGrad)
-    Cells()
-end
+#function associated_entity(::KGrad)
+#    Cells()
+#end
 
 @inline function get_diagonal_cache(eq::Conservation)
     return eq.accumulation

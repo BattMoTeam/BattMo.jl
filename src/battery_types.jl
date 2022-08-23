@@ -31,7 +31,7 @@ struct Conservation{T, F} <: JutulEquation
     flow_discretization::F
 end
 
-struct ConservationTPFAStorage{T} <: JutulEquation
+struct ConservationTPFAStorage{T} # <: Jutul.JutulStorage
     accumulation::JutulAutoDiffCache
     accumulation_symbol::Symbol
     half_face_flux_cells::JutulAutoDiffCache
@@ -81,9 +81,9 @@ Jutul.associated_entity(::BoundaryCurrent) = BoundaryFaces()
 abstract type Current <: ScalarVariable end
 Jutul.associated_entity(::Current) = Faces()
 
-struct TotalCurrent <: Current end
-struct ChargeCarrierFlux <: Current end
-struct EnergyFlux <: Current end
+#struct TotalCurrent <: Current end
+#struct ChargeCarrierFlux <: Current end
+#struct EnergyFlux <: Current end
 
 function number_of_entities(model, pv::Current)
     return 2*count_entities(model.domain, Faces())

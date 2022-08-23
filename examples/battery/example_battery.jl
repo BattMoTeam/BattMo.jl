@@ -4,6 +4,7 @@ A component with electric potential, concentration and temperature
 The different potentials are independent (diagonal onsager matrix),
 and conductivity, diffusivity is constant.
 =#
+using Revise
 using Jutul, BattMo
 using MAT
 include("../../test/battery/mrstTestUtils.jl")

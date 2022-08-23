@@ -32,8 +32,8 @@ function select_secondary_variables!(S, system::SimpleElyte, model)
     S[:DmuDc] = DmuDc()
     S[:ConsCoeff] = ConsCoeff()
 
-    S[:TotalCurrent] = TotalCurrent()
-    S[:ChargeCarrierFlux] = ChargeCarrierFlux()
+    #S[:TotalCurrent] = TotalCurrent()
+    #S[:ChargeCarrierFlux] = ChargeCarrierFlux()
 
     S[:Charge] = Charge()
     S[:Mass] = Mass()
@@ -41,7 +41,6 @@ end
 
 function minimum_output_variables(system::SimpleElyte, primary_variables)
     return [
-        :Charge, :Mass, :Conductivity, :Diffusivity,
-        :TotalCurrent, :ChargeCarrierFlux
+        :Charge, :Mass, :Conductivity, :Diffusivity
         ]
 end

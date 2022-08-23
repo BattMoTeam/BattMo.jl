@@ -60,7 +60,7 @@ import Jutul: declare_pattern, select_primary_variables!
     include("physical_constants.jl")
     include("battery_types.jl")
     include("tensor_tools.jl")
-    include("physics.jl")
+  
     include("battery_utils.jl")
     include("test_setup.jl")
 
@@ -73,4 +73,5 @@ import Jutul: declare_pattern, select_primary_variables!
     include("models/simple_elyte.jl")
     include("models/CurrentAndVoltageBoundary.jl")
     include("models/battery_cross_terms.jl") # Works now
+    include("physics.jl")
 end # module

@@ -30,33 +30,41 @@ end
     return  harm_av(c_self, c_other, T, k) * grad(c_self, c_other, phi)
 end
 
-function update_equation!(law::Conservation, storage, model, dt)
-    update_accumulation!(law, storage, model, dt)
-    update_half_face_flux!(law, storage, model, dt)
-    update_density!(law, storage, model)
+function Jutul.update_equation!(eq_s,law::Conservation, storage, model, dt)
+    update_accumulation!(eq_s,law, storage, model, dt)
+    update_half_face_flux!(eq_s,law, storage, model, dt)
+    #update_density!(eq_s,law, storage, model)
 end
 
 
-function update_accumulation!(law::Conservation, storage, model, dt)
-    conserved = law.accumulation_symbol
-    acc = get_entries(law.accumulation)
+function update_accumulation!(eq_s,law::Conservation, storage, model, dt)
+    conserved = eq_s.accumulation_symbol
+    acc = get_entries(eq_s.accumulation)
     m = storage.state[conserved]
     m0 = storage.state0[conserved]
     @tullio acc[c] = (m[c] - m0[c])/dt
     return acc
 end
 
-function update_half_face_flux!(
+# function update_accumulation!(eq_s,law::Conservation{Charge}, storage, model, dt)
+#     conserved = eq_s.accumulation_symbol
+#     acc = get_entries(eq_s.accumulation)
+#     #m = storage.state[conserved]
+#     #m0 = storage.state0[conserved]
+#     @tullio acc[c] = 0#(m[c] - m0[c])/dt
+#     return acc
+# end
+
+function update_half_face_flux!(eq_s,    
     law::Conservation, storage, model, dt
     )
     fd = law.flow_discretization
-    update_half_face_flux!(law, storage, model, dt, fd)
+    update_half_face_flux!(eq_s, law, storage, model, dt, fd)
 end
 
-
-function update_half_face_flux!(law::Conservation, storage, model, dt, flow::TPFlow)
-    f = get_entries(law.half_face_flux_cells)
-    internal_flux!(f, model, law, model, flow.conn_data)
+function update_half_face_flux!(eq_s, law::Conservation, storage, model, dt, flow::TPFlow)
+    f = get_entries(eq_s.half_face_flux_cells)
+    internal_flux!(f, model, law, storage.state, flow.conn_data)
 end
 
 function internal_flux!(kGrad, model::ECModel, law::Conservation{Mass}, state, conn_data)
