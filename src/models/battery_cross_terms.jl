@@ -7,26 +7,26 @@ Jutul.symmetry(::TPFAInterfaceFluxCT) = Jutul.CTSkewSymmetry()
 Jutul.cross_term_entities(ct::TPFAInterfaceFluxCT, eq, model) = ct.target_cells
 Jutul.cross_term_entities_source(ct::TPFAInterfaceFluxCT, eq, model) = ct.source_cells
 
-function update_cross_term_in_entity!(out, ind,
+function Jutul.update_cross_term_in_entity!(out, ind,
     state_t, state0_t,
     state_s, state0_s, 
     model_t, model_s,
-    ct::TPFAInterfaceFluxCT, eq, dt, ldisc = local_discretization(ct, i))
-    trans = ct[:trans][ind]
-    t_c = ct[:target_cells][ind]
-    t_s = ct[:source_cells][ind]
+    ct::TPFAInterfaceFluxCT, eq, dt, ldisc = Jutul.local_discretization(ct, ind))
+    trans = ct.trans[ind]
+    t_c = ct.target_cells[ind]
+    t_s = ct.source_cells[ind]
     phi_t = state_t.Phi[t_c]
     phi_s = state_s.Phi[t_s]
     out[] = trans*(phi_t - phi_s)
 end
 
-function update_cross_term_in_entity!(out, ind,
+function Jutul.update_cross_term_in_entity!(out, ind,
     state_t, state0_t,
     state_s, state0_s, 
     model_t, model_s,
-    ct::AccumulatorInterfaceFluxCT, eq, dt, ldisc = local_discretization(ct, i))
-    trans = ct[:trans]
-    t_c = ct[:target_cell]
+    ct::AccumulatorInterfaceFluxCT, eq, dt, ldisc = Jutul.local_discretization(ct, ind))
+    trans = ct.trans
+    t_c = ct.target_cell
     phi_t = state_t.Phi[t_c]
     phi_s = state_s.Phi
     v = 0
@@ -141,17 +141,17 @@ Jutul.cross_term_entities_source(ct::ButlerVolmerInterfaceFluxCT, eq, model) = c
 
 Jutul.symmetry(::ButlerVolmerInterfaceFluxCT) = Jutul.CTSkewSymmetry()
 
-function update_cross_term_in_entity!(out, ind,
+function Jutul.update_cross_term_in_entity!(out, ind,
     state_t, state0_t,
     state_s, state0_s, 
     model_t, model_s,
-    ct::ButlerVolmerInterfaceFluxCT, eq, dt, ldisc = local_discretization(ct, i))
+    ct::ButlerVolmerInterfaceFluxCT, eq, dt, ldisc = Jutul.local_discretization(ct, ind))
 
     activematerial = model_s.system
     electrolyte = target_model.system
 
-    t_c = ct[:target_cells][ind]
-    s_c = ct[:source_cells][ind]
+    t_c = ct.target_cells[ind]
+    s_c = ct.source_cells[ind]
 
     phi_e = state_t.Phi[t_c]
     phi_a = state_s.Phi[s_c]  
