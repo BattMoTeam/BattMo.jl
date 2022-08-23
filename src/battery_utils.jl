@@ -284,7 +284,7 @@ end
 
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::TPkGrad{Phi}, model::ECModel, param, Phi, Conductivity
+    kGrad, sv::TPkGrad{Phi}, model::ECModel, Phi, Conductivity
     )
     mf = model.domain.discretizations.charge_flow
     conn_data = mf.conn_data
@@ -292,7 +292,7 @@ end
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::TPkGrad{C}, model::ECModel, param, C, Diffusivity
+    kGrad, sv::TPkGrad{C}, model::ECModel, C, Diffusivity
     )
     mf = model.domain.discretizations.charge_flow
     conn_data = mf.conn_data
@@ -300,7 +300,7 @@ end
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::TPkGrad{T}, model::ECModel, param, T, ThermalConductivity
+    kGrad, sv::TPkGrad{T}, model::ECModel, T, ThermalConductivity
     )
     mf = model.domain.discretizations.charge_flow
     conn_data = mf.conn_data
@@ -309,7 +309,7 @@ end
 
 
 @jutul_secondary function update_as_secondary!(
-    acc, tv::Mass, model, param, C
+    acc, tv::Mass, model, C
     )
     V = fluid_volume(model.domain.grid)
     vf = model.domain.grid.vol_frac
@@ -317,7 +317,7 @@ end
 end
 
 @jutul_secondary function update_as_secondary!(
-    acc, tv::Energy, model, param, T
+    acc, tv::Energy, model, T
     )
     V = fluid_volume(model.domain.grid)
     vf = model.domain.grid.vol_frac
@@ -325,7 +325,7 @@ end
 end
 
 @jutul_secondary function update_as_secondary!(
-    acc, tv::Charge, model, param, Phi # only for the graph
+    acc, tv::Charge, model, Phi # only for the graph
     )
     @tullio acc[i] = 0 # Charge neutrality
 end

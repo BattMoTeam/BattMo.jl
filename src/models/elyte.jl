@@ -139,7 +139,7 @@ end
 
 
 @jutul_secondary(
-function update_as_secondary!(dmudc, sv::DmuDc, model, param, T, C)
+function update_as_secondary!(dmudc, sv::DmuDc, model, T, C)
     R = GAS_CONSTANT
     @tullio dmudc[i] = R * (T[i] / C[i])
 end
@@ -148,7 +148,7 @@ end
 # ? Does this maybe look better ?
 @jutul_secondary(
 function update_as_secondary!(
-    con, tv::Conductivity, model::ElectrolyteModel, param, T, C
+    con, tv::Conductivity, model::ElectrolyteModel, T, C
     )
     s = model.system
     vf = model.domain.grid.vol_frac
@@ -157,7 +157,7 @@ end
 )
 
 @jutul_secondary function update_as_secondary!(
-    D, sv::Diffusivity, model::ElectrolyteModel, param, C, T
+    D, sv::Diffusivity, model::ElectrolyteModel, C, T
     )
     s = model.system
     vf = model.domain.grid.vol_frac
@@ -166,7 +166,7 @@ end
 
 
 @jutul_secondary function update_as_secondary!(
-    coeff, tv::ConsCoeff, model::ElectrolyteModel, param, Conductivity, DmuDc
+    coeff, tv::ConsCoeff, model::ElectrolyteModel, Conductivity, DmuDc
     )
     t = param.t
     z = param.z
@@ -175,7 +175,7 @@ end
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad_C, tv::TPkGrad{C}, model::ElectrolyteModel, param, C, ConsCoeff
+    kGrad_C, tv::TPkGrad{C}, model::ElectrolyteModel, C, ConsCoeff
     )
     mf = model.domain.discretizations.charge_flow
     conn_data = mf.conn_data
@@ -183,7 +183,7 @@ end
 end
 
 @jutul_secondary function update_as_secondary!(
-    DGrad_C, tv::TPDGrad{C}, model::ElectrolyteModel, param, C, Diffusivity
+    DGrad_C, tv::TPDGrad{C}, model::ElectrolyteModel, C, Diffusivity
     )
     mf = model.domain.discretizations.charge_flow
     conn_data = mf.conn_data
@@ -192,13 +192,13 @@ end
 
 
 @jutul_secondary function update_as_secondary!(
-    j, tv::TotalCurrent, model, param, TPkGrad_C, TPkGrad_Phi
+    j, tv::TotalCurrent, model, TPkGrad_C, TPkGrad_Phi
     )
     @tullio j[i] =  - TPkGrad_C[i] - TPkGrad_Phi[i]
 end
 
 @jutul_secondary function update_as_secondary!(
-    N, tv::ChargeCarrierFlux, model, param, TPDGrad_C, TotalCurrent
+    N, tv::ChargeCarrierFlux, model, TPDGrad_C, TotalCurrent
     )
     t = param.t
     z = param.z
@@ -207,7 +207,7 @@ end
 end
 
 @jutul_secondary(
-function update_as_secondary!(j_cell, sc::JCell, model, param, TotalCurrent)
+function update_as_secondary!(j_cell, sc::JCell, model, TotalCurrent)
     for c in 1:number_of_cells(model.domain)
         face_to_cell!(j_cell, TotalCurrent, c, model)
     end
@@ -215,7 +215,7 @@ end
 )
 
 @jutul_secondary(
-function update_as_secondary!(jsq, sc::JSq, model, param, JCell)
+function update_as_secondary!(jsq, sc::JSq, model, JCell)
     for c in 1:number_of_cells(model.domain)
         vec_to_scalar!(jsq, JCell, c, model)
     end
@@ -223,7 +223,7 @@ end
 )
 
 @jutul_secondary(
-function update_as_secondary!(j_cell, sc::DGradCCell, model, param, TPDGrad_C)
+function update_as_secondary!(j_cell, sc::DGradCCell, model, TPDGrad_C)
     for c in 1:number_of_cells(model.domain)
         face_to_cell!(j_cell, TPDGrad_C, c, model)
     end
@@ -231,7 +231,7 @@ end
 )
 
 @jutul_secondary(
-function update_as_secondary!(jsq, sc::DGradCSq, model, param, DGradCCell)
+function update_as_secondary!(jsq, sc::DGradCSq, model, DGradCCell)
     for c in 1:number_of_cells(model.domain)
         vec_to_scalar!(jsq, DGradCCell, c, model)
     end
@@ -240,7 +240,7 @@ end
 
 @jutul_secondary(
 function update_as_secondary!(
-    ρ, sc::EnergyDensity, model, param, DGradCSq, JSq, Diffusivity, Conductivity, DmuDc
+    ρ, sc::EnergyDensity, model, DGradCSq, JSq, Diffusivity, Conductivity, DmuDc
     )
     κ = Conductivity
     D = Diffusivity
@@ -259,7 +259,7 @@ end
 )
 
 @jutul_secondary(
-function update_as_secondary!(jsq_diag, sc::JSqDiag, model, param, JSq)
+function update_as_secondary!(jsq_diag, sc::JSqDiag, model, JSq)
     """ Carries the diagonal velues of JSq """
     mf = model.domain.discretizations.charge_flow
     cc = mf.cellcell
@@ -273,7 +273,7 @@ end
 )
 
 @jutul_secondary(
-function update_as_secondary!(jsq_diag, sc::DGradCSqDiag, model, param, DGradCSq)
+function update_as_secondary!(jsq_diag, sc::DGradCSqDiag, model, DGradCSq)
     mf = model.domain.discretizations.charge_flow
     cc = mf.cellcell
     nc = number_of_cells(model.domain)
@@ -286,7 +286,7 @@ end
 )
 
 @jutul_secondary(
-function update_as_secondary!(ρ_diag, sc::EDDiag, model, param, EnergyDensity)
+function update_as_secondary!(ρ_diag, sc::EDDiag, model, EnergyDensity)
     mf = model.domain.discretizations.charge_flow
     cc = mf.cellcell
     nc = number_of_cells(model.domain)
@@ -349,7 +349,7 @@ end
 
 
 function apply_boundary_potential!(
-    acc, state, parameters, model::ElectrolyteModel, eq::Conservation{Charge}
+    acc, stateeters, model::ElectrolyteModel, eq::Conservation{Charge}
     )
     # values
     Phi = state[:Phi]
@@ -373,7 +373,7 @@ end
 
 
 function apply_boundary_potential!(
-    acc, state, parameters, model::ElectrolyteModel, eq::Conservation{Mass}
+    acc, stateeters, model::ElectrolyteModel, eq::Conservation{Mass}
     )
     # values
     Phi = state[:Phi]
@@ -405,7 +405,7 @@ function apply_boundary_potential!(
 end
 
 function apply_boundary_potential!(
-    acc, state, parameters, model::ElectrolyteModel, eq::Conservation{Energy}
+    acc, stateeters, model::ElectrolyteModel, eq::Conservation{Energy}
     )
     # values
     T = state[:T]

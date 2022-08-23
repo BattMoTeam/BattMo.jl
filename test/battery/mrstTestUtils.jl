@@ -470,14 +470,14 @@ function setup_sim(name)
     )
     for (k, p) in parameters
         #p[:tolerances][:default] = 1e-10
-        p[:tolerances][:default] = 1e-3
+        # p[:tolerances][:default] = 1e-3
     end
     #parameters[:ELYTE][:tolerances][:charge_conservation]=1e-9
     #parameters[:PAM][:tolerances][:charge_conservation]=1e-6
     #parameters[:PP][:tolerances][:charge_conservation]=1e-3
     #parameters[:BPP][:tolerances][:charge_conservation]=1e-8
-    parameters[:BPP][:tolerances][:charge_conservation]=1e-2
-    parameters[:PP][:tolerances][:charge_conservation]=1e-2
+    # parameters[:BPP][:tolerances][:charge_conservation]=1e-2
+    # parameters[:PP][:tolerances][:charge_conservation]=1e-2
     sim = Simulator(model, state0 = state0, parameters = parameters, copy_state = true)
     return sim, forces, grids, state0, parameters, exported_all, model
 end

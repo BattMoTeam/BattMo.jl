@@ -55,41 +55,41 @@ function apply_forces_to_equation!(storage,
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::Conductivity, model, param
+    kGrad, sv::Conductivity, model
     )
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::BoundaryPotential{Phi}, model, param
+    kGrad, sv::BoundaryPotential{Phi}, model
     )
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::BoundaryPotential{T}, model, param
+    kGrad, sv::BoundaryPotential{T}, model
     )
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::BoundaryCurrent{Charge}, model, param
+    kGrad, sv::BoundaryCurrent{Charge}, model
     )
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::BoundaryCurrent{Mass}, model, param
+    kGrad, sv::BoundaryCurrent{Mass}, model
     )
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::BoundaryCurrent{Energy}, model, param
+    kGrad, sv::BoundaryCurrent{Energy}, model
     )
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::Diffusivity, model, param
+    kGrad, sv::Diffusivity, model
     )
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::T, model, param
+    kGrad, sv::T, model
     )
 end

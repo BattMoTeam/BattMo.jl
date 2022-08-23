@@ -73,7 +73,7 @@ end
 
 
 @jutul_secondary(
-function update_as_secondary!(j_cell, sc::kGradPhiCell, model, param, TPkGrad_Phi)
+function update_as_secondary!(j_cell, sc::kGradPhiCell, model, TPkGrad_Phi)
     nc = number_of_cells(model.domain)
     for c in 1:nc
         face_to_cell!(j_cell, TPkGrad_Phi, c, model)
@@ -82,7 +82,7 @@ end
 )
 
 @jutul_secondary(
-function update_as_secondary!(ρ, sc::EDensity, model, param, kGradPhiCell, Conductivity)
+function update_as_secondary!(ρ, sc::EDensity, model, kGradPhiCell, Conductivity)
     cctbl = model.domain.discretizations.charge_flow.cellcell.tbl
     κ = Conductivity
 
@@ -104,7 +104,7 @@ end
 )
 
 @jutul_secondary(
-function update_as_secondary!(ρ_diag, sc::EDensityDiag, model, param, EDensity)
+function update_as_secondary!(ρ_diag, sc::EDensityDiag, model, EDensity)
     """ Carries the diagonal velues of ρ """
     mf = model.domain.discretizations.charge_flow
     cc = mf.cellcell
