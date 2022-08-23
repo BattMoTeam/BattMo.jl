@@ -15,7 +15,8 @@ function declare_entities(G::MinimalECTPFAGrid)
     c = (entity = Cells(), count = length(G.volumes))
     # Faces
     f = (entity = Faces(), count = size(G.neighborship, 2))
-    return [c, f]
+    bf = (entity = BoundaryFaces(), count = length(G.boundary_cells))
+    return [c, f, bf]
 end
 
 ################

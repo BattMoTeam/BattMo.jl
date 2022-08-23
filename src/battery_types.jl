@@ -9,6 +9,8 @@ export TPFAInterfaceFluxCT,ButlerVolmerInterfaceFluxCT
 # Classes #
 ###########
 
+struct BoundaryFaces <: Jutul.JutulEntity end
+
 abstract type ElectroChemicalComponent <: JutulSystem end
 # Alias for a genereal Electro Chemical Model
 const ECModel = SimulationModel{<:Any, <:ElectroChemicalComponent, <:Any, <:Any}
@@ -59,15 +61,21 @@ corr_type(::Conservation{T}) where T = T()
 # Represents k∇T, where k is a tensor, T a potential
 abstract type KGrad{T} <: ScalarVariable end
 struct TPkGrad{T} <: KGrad{T} end
+Jutul.associated_entity(::TPkGrad) = Faces()
 
 # abstract type ECFlow <: FlowType end
 # struct ChargeFlow <: ECFlow end
 
 
 struct BoundaryPotential{T} <: ScalarVariable end
+Jutul.associated_entity(::BoundaryPotential) = BoundaryFaces()
+
 struct BoundaryCurrent{T} <: ScalarVariable 
     cells
 end
+
+Jutul.associated_entity(::BoundaryCurrent) = BoundaryFaces()
+
 
 abstract type Current <: ScalarVariable end
 struct TotalCurrent <: Current end
