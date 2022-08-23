@@ -22,7 +22,7 @@ end
 # Equations
 struct CurrentEquation <: DiagonalEquation end
 
-function setup_equation_storage(model, e::CurrentEquation, storage; kwarg...)
+function Jutul.setup_equation_storage(model, e::CurrentEquation, storage; kwarg...)
     Ω = model.domain
     nc = number_of_cells(Ω)
     @assert nc == 1 # We use nc for clarity of the interface - but it should always be one!
@@ -44,7 +44,7 @@ function select_equations!(eqs, system::CurrentAndVoltageSystem, model)
     eqs[:charge_conservation] = CurrentEquation()
 end
 
-function update_equation!(eq_s::CompactAutoDiffCache, eq::CurrentEquation, storage, model, dt)
+function Jutul.update_equation!(eq_s::CompactAutoDiffCache, eq::CurrentEquation, storage, model, dt)
     phi = storage.state.Phi
     equation = get_entries(eq)
     @. equation = phi*1e-10

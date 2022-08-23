@@ -37,7 +37,7 @@ function update_cross_term_in_entity!(out, ind,
     out[] = v
 end
 
-Jutul.cross_term_entities(ct::TPFAInterfaceFluxCT, eq, model) = [ct.target_cell]
+Jutul.cross_term_entities(ct::AccumulatorInterfaceFluxCT, eq, model) = [ct.target_cell]
 
 # function update_cross_term!(
 #     ct::InjectiveCrossTerm, eq::EQS, 
