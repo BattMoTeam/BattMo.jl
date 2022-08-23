@@ -105,7 +105,7 @@ function align_to_jacobian!(
     hflux_cells = law.half_face_flux_cells
 
     diagonal_alignment!(
-        acc, jac, u, model.context;
+        acc, eq, jac, u, model.context;
         target_offset = equation_offset, source_offset = variable_offset
         )
     half_face_flux_cells_alignment!(
