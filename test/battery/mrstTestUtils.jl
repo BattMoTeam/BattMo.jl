@@ -271,31 +271,23 @@ function setup_coupling!(model, exported_all)
 
     srange=Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:,1])
     trange=Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:,2])
-    intersection = ( srange, trange, Cells(), Cells())
-    crosstermtype = InjectiveCrossTerm
-    issym = true
-    coupling = MultiModelCoupling(source, target, intersection; crosstype = crosstermtype, issym = issym)
-    push!(model.couplings, coupling)
+    ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+    ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :charge_conservation)
+    add_cross_term!(model, ct_pair)
+
+    # crosstermtype = InjectiveCrossTerm
+    # issym = true
+    # coupling = MultiModelCoupling(source, target, intersection; crosstype = crosstermtype, issym = issym)
+    # push!(model.couplings, coupling)
 
     # setup coupling NAM <-> ELYTE mass
-    target = Dict( 
-        :model => :ELYTE,
-        :equation => :mass_conservation
-    )
-    source = Dict( 
-        :model => :NAM,
-        :equation => :mass_conservation
-        )
-
     srange=Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:,1])
     trange=Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:,2])
-    intersection = ( srange, trange, Cells(), Cells())
-    crosstermtype = InjectiveCrossTerm
-    issym = true
-    coupling = MultiModelCoupling(source, target, intersection; crosstype = crosstermtype, issym = issym)
-    push!(model.couplings, coupling)
+    ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+    ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :mass_conservation)
+    add_cross_term!(model, ct_pair)
 
-    # setup coupling PAM <-> ELYTE charge
+    # setup coupling ELYTE <-> PAM charge
     target = Dict( 
         :model => :ELYTE,
         :equation => :charge_conservation
@@ -306,11 +298,9 @@ function setup_coupling!(model, exported_all)
         )
     srange=Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,1])
     trange=Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,2])
-    intersection = ( srange, trange, Cells(), Cells())
-    crosstermtype = InjectiveCrossTerm
-    issym = true
-    coupling = MultiModelCoupling(source, target, intersection; crosstype = crosstermtype, issym = issym)
-    push!(model.couplings,coupling)
+    ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+    ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :charge_conservation)
+    add_cross_term!(model, ct_pair)
 
     # setup coupling PAM <-> ELYTE mass
     target = Dict( 
@@ -323,11 +313,9 @@ function setup_coupling!(model, exported_all)
         )
     srange=Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,1])
     trange=Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,2])
-    intersection = ( srange, trange, Cells(), Cells())
-    crosstermtype = InjectiveCrossTerm
-    issym = true
-    coupling = MultiModelCoupling(source, target, intersection; crosstype = crosstermtype, issym = issym)
-    push!(model.couplings, coupling)
+    ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+    ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :mass_conservation)
+    add_cross_term!(model, ct_pair)
 
     # setup coupling PP <-> PAM charge
     target = Dict( 
@@ -349,13 +337,10 @@ function setup_coupling!(model, exported_all)
     couplingfaces = Int64.(exported_all["model"]["PositiveElectrode"]["couplingTerm"]["couplingfaces"])
     couplingcells = Int64.(exported_all["model"]["PositiveElectrode"]["couplingTerm"]["couplingcells"])
     trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "EffectiveElectricalConductivity")
-    properties = Dict(:trans => trans)    
-    intersection = (srange, trange, Cells(), Cells())
-    crosstermtype = InjectiveCrossTerm
-    issym = true
-    coupling = MultiModelCoupling(source,target, intersection; crosstype = crosstermtype, properties = properties, issym = issym)
-    push!(model.couplings, coupling)
-    
+    ct = TPFAInterfaceFluxCT(trange, srange, trans)
+    ct_pair = setup_cross_term(ct, target = :PAM, source = :PP, equation = :charge_conservation)
+    add_cross_term!(model, ct_pair)
+
     #setup coupling PP <-> PAM charge
     target = Dict( 
         :model => :PP,
@@ -363,7 +348,7 @@ function setup_coupling!(model, exported_all)
         )
     source = Dict( 
         :model => :BPP,
-        :equation => :current_equation
+        :equation => :charge_conservation
         )
     trange = convertToIntVector(
             exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["couplingTerm"]["couplingcells"]
@@ -374,45 +359,10 @@ function setup_coupling!(model, exported_all)
     couplingcells = Int64.(exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["couplingTerm"]["couplingcells"])
     #effcond = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["EffectiveElectricalConductivity"]
     trans = getHalfTrans(msource, couplingfaces, couplingcells, "EffectiveElectricalConductivity")
-    properties = Dict(:trans => trans)    
-    intersection = (srange, trange, Cells(), Cells())
-    crosstermtype = InjectiveCrossTerm  
-    #T_all = exported["operators"]["T_all"]
-    #N_all = Int64.(exported["G"]["faces"]["neighbors"])
-    #isboundary = (N_all[bcfaces,1].==0) .| (N_all[bcfaces,2].==0)
-    #@assert all(isboundary)
-    #bcfaces = exported_all["model"]["NegativeElectrode"]["CurrentCollector"]["couplingTerm"]["couplingcells"]
-    #bccells = N_all[bcfaces,1] + N_all[bcfaces,2]
-    #T_hf   = T_all[bcfaces]
-   
-    intersection = (srange, trange, Cells(), Cells())
-    crosstermtype = InjectiveCrossTerm
-    issym = true
-    coupling = MultiModelCoupling(source,target, intersection; crosstype = crosstermtype, properties = properties, issym = issym)
-    
-    push!(model.couplings, coupling)
 
-    # source = Dict( 
-    #     :model => :PP,
-    #     :equation => :charge_conservation
-    #     )
-    # target = Dict( 
-    #     :model => :BPP,
-    #     :equation => :current_equation
-    #     )
-    # srange = Int64.(
-    #     Vector{Float64}([10.0])
-    #     )
-    # trange = Int64.(
-    #     Vector{Float64}([1])
-    #     )
-    # intersection = (srange, trange, Cells(), Cells())
-    # crosstermtype = InjectiveCrossTerm
-    # issym = false
-    # coupling = MultiModelCoupling(source,target, intersection; crosstype = crosstermtype, issym = issym)
-    
-    
-    #push!(model.couplings, coupling)
+    ct = TPFAInterfaceFluxCT(trange, srange, trans)
+    ct_pair = setup_cross_term(ct, target = :PP, source = :BPP, equation = :charge_conservation)
+    add_cross_term!(model, ct_pair)
 end
 
 
@@ -525,8 +475,8 @@ function setup_sim(name)
     #parameters[:ELYTE][:tolerances][:charge_conservation]=1e-9
     #parameters[:PAM][:tolerances][:charge_conservation]=1e-6
     #parameters[:PP][:tolerances][:charge_conservation]=1e-3
-    #parameters[:BPP][:tolerances][:current_equation]=1e-8
-    parameters[:BPP][:tolerances][:current_equation]=1e-2
+    #parameters[:BPP][:tolerances][:charge_conservation]=1e-8
+    parameters[:BPP][:tolerances][:charge_conservation]=1e-2
     parameters[:PP][:tolerances][:charge_conservation]=1e-2
     sim = Simulator(model, state0 = state0, parameters = parameters, copy_state = true)
     return sim, forces, grids, state0, parameters, exported_all, model

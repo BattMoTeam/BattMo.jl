@@ -57,7 +57,8 @@ struct VoltVar <: ScalarVariable end
 struct CurrentVar <: ScalarVariable end
 
 function select_equations_system!(eqs, domain, system::CurrentAndVoltageSystem, formulation)
-    eqs[:current_equation] = (CurrentEquation, 1)
+    
+    eqs[:charge_conservation] = (CurrentEquation, 1)
     #eqs[:control_equation] = (ControlEquation, 1)
 end
 
@@ -68,7 +69,7 @@ function update_equation!(eq::CurrentEquation, storage, model, dt)
     phi = storage.state.Phi
     equation = get_entries(eq)
     @. equation = phi*1e-10
-    #equation[:current_equation] = current
+    #equation[:charge_conservation] = current
     #equation[:control_equation] = 0.0 
 end
 

@@ -41,13 +41,14 @@ function select_secondary_variables!(
 end
 
 
-function select_equations_system!(
-    eqs, domain, system::CurrentCollectorT, formulation
+function select_equations!(
+    eqs, system::CurrentCollectorT, model
     )
-    charge_cons = (arg...; kwarg...) -> Conservation(Charge(), arg...; kwarg...)
-    energy_cons = (arg...; kwarg...) -> Conservation(Energy(), arg...; kwarg...)
-    eqs[:charge_conservation] = (charge_cons, 1)
-    eqs[:energy_conservation] = (energy_cons, 1)
+    disc = model.domain.discretizations.charge_flow
+    T = typeof(disc)
+
+    eqs[:charge_conservation] =  Conservation{Charge, T}(disc)
+    eqs[:energy_conservation] = Conservation{Energy, T}(disc)
 end
 
 function update_linearized_system_equation!(
