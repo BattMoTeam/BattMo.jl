@@ -205,7 +205,7 @@ function ConservationTPFAStorage(
     nhf = 2 * nf
     nn = size(get_neighborship(D.grid), 2)
     n_tot = nc + 2 * nn
-    neq = Jutul.number_of_equations(model, eq)
+    neq = Jutul.number_of_equations_per_entity(model, eq)
 
     alloc = (n, entity, n_entities_pos) -> CompactAutoDiffCache(
         neq, n, model, entity = entity, n_entities_pos = n_entities_pos,
