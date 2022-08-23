@@ -360,8 +360,13 @@ function setup_coupling!(model, exported_all)
     #effcond = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["EffectiveElectricalConductivity"]
     trans = getHalfTrans(msource, couplingfaces, couplingcells, "EffectiveElectricalConductivity")
 
-    ct = TPFAInterfaceFluxCT(trange, srange, trans)
+    ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
     ct_pair = setup_cross_term(ct, target = :PP, source = :BPP, equation = :charge_conservation)
+    add_cross_term!(model, ct_pair)
+
+    # Accmulation of charge
+    ct = AccumulatorInterfaceFluxCT(1, trange, trans)
+    ct_pair = setup_cross_term(ct, target = :BPP, source = :PP, equation = :charge_conservation)
     add_cross_term!(model, ct_pair)
 end
 

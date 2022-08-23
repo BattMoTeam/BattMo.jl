@@ -224,6 +224,22 @@ struct TPFAInterfaceFluxCT{T,F} <: Jutul.AdditiveCrossTerm
     target_cells::T
     source_cells::T
     trans::F
+    is_symmetric::Bool
+    function TPFAInterfaceFluxCT(target::T, source::T, trans::F; symmetric = true) where {T, F}
+        new{T, F}(target, source, trans, symmetric)
+    end
+end
+
+Jutul.has_symmetry(ct::TPFAInterfaceFluxCT) = ct.is_symmetric
+
+export AccumulatorInterfaceFluxCT
+struct AccumulatorInterfaceFluxCT{T,F} <: Jutul.AdditiveCrossTerm
+    target_cell::Integer
+    source_cells::T
+    trans::F
+    function AccumulatorInterfaceFluxCT(target::Integer, source::T, trans::F) where {T, F}
+        new{T, F}(target, source, trans)
+    end
 end
 
 struct ButlerVolmerInterfaceFluxCT{T} <: Jutul.AdditiveCrossTerm

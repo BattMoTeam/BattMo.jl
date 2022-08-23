@@ -19,6 +19,26 @@ function update_cross_term_in_entity!(out, ind,
     phi_s = state_s.Phi[t_s]
     out[] = trans*(phi_t - phi_s)
 end
+
+function update_cross_term_in_entity!(out, ind,
+    state_t, state0_t,
+    state_s, state0_s, 
+    model_t, model_s,
+    ct::AccumulatorInterfaceFluxCT, eq, dt, ldisc = local_discretization(ct, i))
+    trans = ct[:trans]
+    t_c = ct[:target_cell]
+    phi_t = state_t.Phi[t_c]
+    phi_s = state_s.Phi
+    v = 0
+    for (i, s_c) in enumerate(ct[:source_cells])
+        v += trans[i]*(phi_t - phi_s[s_c])
+    end
+
+    out[] = v
+end
+
+Jutul.cross_term_entities(ct::TPFAInterfaceFluxCT, eq, model) = [ct.target_cell]
+
 # function update_cross_term!(
 #     ct::InjectiveCrossTerm, eq::EQS, 
 #     target_storage,
