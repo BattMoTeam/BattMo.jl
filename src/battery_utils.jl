@@ -283,32 +283,6 @@ end
 # Standard implementations #
 ############################
 
-
-@jutul_secondary function update_as_secondary!(
-    kGrad, sv::TPkGrad{Phi}, model::ECModel, Phi, Conductivity
-    )
-    mf = model.domain.discretizations.charge_flow
-    conn_data = mf.conn_data
-    @tullio kGrad[i] = half_face_two_point_kgrad(conn_data[i], Phi, Conductivity)
-end
-
-@jutul_secondary function update_as_secondary!(
-    kGrad, sv::TPkGrad{C}, model::ECModel, C, Diffusivity
-    )
-    mf = model.domain.discretizations.charge_flow
-    conn_data = mf.conn_data
-    @tullio kGrad[i] = half_face_two_point_kgrad(conn_data[i], C, Diffusivity)
-end
-
-@jutul_secondary function update_as_secondary!(
-    kGrad, sv::TPkGrad{T}, model::ECModel, T, ThermalConductivity
-    )
-    mf = model.domain.discretizations.charge_flow
-    conn_data = mf.conn_data
-    @tullio kGrad[i] = half_face_two_point_kgrad(conn_data[i], T, ThermalConductivity)
-end
-
-
 @jutul_secondary function update_as_secondary!(
     acc, tv::Mass, model, C
     )

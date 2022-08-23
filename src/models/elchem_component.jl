@@ -19,9 +19,9 @@ end
 function select_secondary_variables!(
     S, system::ElectroChemicalComponent, model
     )
-    S[:TPkGrad_Phi] = TPkGrad{Phi}()
-    S[:TPkGrad_C] = TPkGrad{C}()
-    S[:TPkGrad_T] = TPkGrad{T}()
+    # S[:TPkGrad_Phi] = TPkGrad{Phi}()
+    # S[:TPkGrad_C] = TPkGrad{C}()
+    # S[:TPkGrad_T] = TPkGrad{T}()
     
     S[:Charge] = Charge()
     S[:Mass] = Mass()

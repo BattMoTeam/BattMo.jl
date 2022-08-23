@@ -23,9 +23,8 @@ end
 
 
 function select_secondary_variables!(S, system::SimpleElyte, model)
-    S[:TPkGrad_Phi] = TPkGrad{Phi}()
-    S[:TPkGrad_C] = TPkGrad{C}()
-    S[:TPDGrad_C] = TPDGrad{C}()
+    # S[:TPkGrad_Phi] = TPkGrad{Phi}()
+    # S[:TPkGrad_C] = TPkGrad{C}()
 
     S[:T] = T()
     S[:Conductivity] = Conductivity()

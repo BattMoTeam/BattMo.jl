@@ -38,10 +38,10 @@ end
 
 
 function select_secondary_variables!(S, system::Electrolyte, model)
-    S[:TPkGrad_Phi] = TPkGrad{Phi}()
-    S[:TPkGrad_C] = TPkGrad{C}()
-    S[:TPDGrad_C] = TPDGrad{C}()
-    S[:TPkGrad_T] = TPkGrad{T}()
+    # S[:TPkGrad_Phi] = TPkGrad{Phi}()
+    # S[:TPkGrad_C] = TPkGrad{C}()
+    # S[:TPDGrad_C] = TPDGrad{C}()
+    # S[:TPkGrad_T] = TPkGrad{T}()
     
     S[:Conductivity] = Conductivity()
     S[:ThermalConductivity] = Conductivity()
@@ -49,8 +49,8 @@ function select_secondary_variables!(S, system::Electrolyte, model)
     S[:DmuDc] = DmuDc()
     S[:ConsCoeff] = ConsCoeff()
 
-    S[:TotalCurrent] = TotalCurrent()
-    S[:ChargeCarrierFlux] = ChargeCarrierFlux()
+    # S[:TotalCurrent] = TotalCurrent()
+    # S[:ChargeCarrierFlux] = ChargeCarrierFlux()
 
     S[:JCell] = JCell()
     S[:JSq] = JSq()
@@ -168,8 +168,8 @@ end
 @jutul_secondary function update_as_secondary!(
     coeff, tv::ConsCoeff, model::ElectrolyteModel, Conductivity, DmuDc
     )
-    t = param.t
-    z = param.z
+    t = 1#param.t
+    z = 1#param.z
     F = FARADAY_CONST
     @tullio coeff[i] = Conductivity[i]*DmuDc[i] * t/(F*z)
 end
@@ -192,16 +192,10 @@ end
 
 
 @jutul_secondary function update_as_secondary!(
-    j, tv::TotalCurrent, model, TPkGrad_C, TPkGrad_Phi
-    )
-    @tullio j[i] =  - TPkGrad_C[i] - TPkGrad_Phi[i]
-end
-
-@jutul_secondary function update_as_secondary!(
     N, tv::ChargeCarrierFlux, model, TPDGrad_C, TotalCurrent
     )
-    t = param.t
-    z = param.z
+    t = 1#param.t
+    z = 1#param.z
     F = FARADAY_CONST
     @tullio N[i] =  + TPDGrad_C[i] + t / (F * z) * TotalCurrent[i]
 end

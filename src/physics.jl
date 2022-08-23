@@ -54,24 +54,38 @@ function update_half_face_flux!(
 end
 
 
-function get_flux(storage,  model::ECModel, law::Conservation{Charge})
-    return - storage.state.TPkGrad_Phi
-end
-
-function get_flux(storage,  model::ECModel, law::Conservation{Mass})
-    return - storage.state.TPkGrad_C
-end
-
-function get_flux(storage, model::ECModel, law::Conservation{Energy})
-    return - storage.state.TPkGrad_T
-end
-
 function update_half_face_flux!(law::Conservation, storage, model, dt, flow::TPFlow)
-
-    flux = get_flux(storage, model, law)
     f = get_entries(law.half_face_flux_cells)
-    @tullio f[i] = flux[i]
+    internal_flux!(f, model, law, model, flow.conn_data)
 end
+
+function internal_flux!(kGrad, model::ECModel, law::Conservation{Mass}, state, conn_data)
+    @tullio kGrad[i] = -half_face_two_point_kgrad(conn_data[i], state.C, state.Diffusivity)
+end
+
+function internal_flux!(kGrad, model, law::Conservation{Charge}, state, conn_data)
+    @tullio kGrad[i] = -half_face_two_point_kgrad(conn_data[i], state.Phi, state.Conductivity)
+end
+
+function internal_flux!(kGrad, model::ElectrolyteModel, law::Conservation{Mass}, state, conn_data)
+    t = 1#param.t
+    z = 1#param.z
+    F = FARADAY_CONST
+
+    for i in eachindex(kGrad)
+        TPDGrad_C = half_face_two_point_kgrad(conn_data[i], state.T, state.ThermalConductivity)
+        TPDGrad_Phi = half_face_two_point_kgrad(conn_data[i], state.Phi, state.Conductivity)
+        TotalCurrent = -TPkGrad_C - TPDGrad_Phi
+        ChargeCarrierFlux = TPDGrad_C + t / (F * z) * TotalCurrent
+        kGrad[i] = ChargeCarrierFlux
+    end
+end
+
+# @jutul_secondary function update_as_secondary!(
+#     j, tv::TotalCurrent, model, param, TPkGrad_C, TPkGrad_Phi
+#     )
+#     @tullio j[i] =  - TPkGrad_C[i] - TPkGrad_Phi[i]
+# end
 
 function update_density!(law::Conservation, storage, model)
     nothing

@@ -17,7 +17,7 @@ end
 function select_secondary_variables!(
     S, system::CurrentCollector, model
     )
-    S[:TPkGrad_Phi] = TPkGrad{Phi}()
+    # S[:TPkGrad_Phi] = TPkGrad{Phi}()
     S[:Charge] = Charge()
     S[:Conductivity] = Conductivity()
 end
