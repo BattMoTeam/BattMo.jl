@@ -31,16 +31,15 @@ function select_equations!(
     eqs[:charge_conservation] = Conservation{Charge, T}(disc)#(charge_cons, 1)
 end
 
-function apply_forces_to_equation!(storage, 
+function apply_forces_to_equation!(acc, storage,
     model::SimulationModel{<:Any, <:CurrentCollector, <:Any, <:Any},
-    law::Conservation{Charge}, force, time)
+    law::Conservation{Charge}, eq_s, force, time)
     cell = force.cell
     rate = force.src
     tup = 0.1
     #inputI = 9.4575
     inputI = rate
     #equation = get_entries(eq)
-    acc = get_entries(law.accumulation)
     #t = time
     #if ( t<= tup)
     #    val = sineup(0, inputI, 0, tup, t) 

@@ -54,11 +54,8 @@ function build_forces(model::SimulationModel{G, S}; sources = nothing) where {G<
     return (sources = sources,)
 end
 
-function apply_forces_to_equation!(storage, model, eq::CurrentEquation, currentFun, time)
-    #current = storage.state.Current
-    equation = get_entries(eq)
-    @. equation -= currentFun(time)
-    #equation[:control_equations] = current-currentVal(time)
+function apply_forces_to_equation!(diag, storage, model, eq::CurrentEquation, eq_s, currentFun, time)
+    @. diag -= currentFun(time)
 end
 
 function select_primary_variables!(S, system::CurrentAndVoltageSystem, model)
