@@ -2,7 +2,6 @@
 Simple current collector
 A conductro with constant conductivity
 =#
-using JutulDarcy
 using Jutul
 using BattMo
 using MAT
