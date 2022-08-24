@@ -201,8 +201,6 @@ function fill_jac_flux_and_acc!(nz, r, model, acc, cell_flux, cpos)
     """
     nc, ne, np = Jutul.ad_dims(acc)
     nu, _ = Jutul.ad_dims(cell_flux)
-    centries = acc.entries
-    fentries = cell_flux.entries
     cp = acc.jacobian_positions
     jp = cell_flux.jacobian_positions
 

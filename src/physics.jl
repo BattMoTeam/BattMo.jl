@@ -17,7 +17,7 @@ end
 @inline function harm_av(
     c_self::I, c_other::I, T::R, k::AbstractArray
     ) where {R<:Real, I<:Integer}
-    return T * (k[c_self]^-1 + k[c_other]^-1)^-1
+    return T * (k[c_self]^-1 + value(k[c_other])^-1)^-1
 end
 
 @inline function grad(c_self, c_other, p::AbstractArray)
@@ -27,7 +27,9 @@ end
 @inline function half_face_two_point_kgrad(
     c_self::I, c_other::I, T::R, phi::AbstractArray, k::AbstractArray
     ) where {R<:Real, I<:Integer}
-    return  harm_av(c_self, c_other, T, k) * grad(c_self, c_other, phi)
+    k_av = harm_av(c_self, c_other, T, k)
+    grad_phi = grad(c_self, c_other, phi)
+    return k_av * grad_phi
 end
 
 function Jutul.update_equation!(eq_s,law::Conservation, storage, model, dt)
@@ -84,7 +86,7 @@ function internal_flux!(kGrad, model::ElectrolyteModel, law::Conservation{Mass},
     F = FARADAY_CONST
 
     for i in eachindex(kGrad)
-        TPDGrad_C = half_face_two_point_kgrad(conn_data[i], state.T, state.Diffusivity)
+        TPDGrad_C = half_face_two_point_kgrad(conn_data[i], state.C, state.Diffusivity)
         TPDGrad_Phi = half_face_two_point_kgrad(conn_data[i], state.Phi, state.Conductivity)
         TotalCurrent = -TPDGrad_C - TPDGrad_Phi
         ChargeCarrierFlux = TPDGrad_C + t / (F * z) * TotalCurrent
