@@ -115,9 +115,10 @@ function corr_type(::Conservation{T}) return T() end
 
 # Called from uppdate_state_dependents
 function Jutul.apply_boundary_conditions!(storage, parameters, model::ECModel)
-    equations = storage.equations
-    for eq in equations
-        apply_bc_to_equation!(storage, parameters, model, eq)
+    equations_storage = storage.equations
+    equations = model.equations
+    for (eq, eq_s) in zip(values(equations), equations_storage)
+        apply_bc_to_equation!(storage, parameters, model, eq, eq_s)
     end
 end
 
@@ -172,8 +173,8 @@ function apply_boundary_potential!(
 end
 
 
-function apply_bc_to_equation!(storage, parameters, model, eq::Conservation)
-    acc = get_entries(eq.accumulation)
+function apply_bc_to_equation!(storage, parameters, model, eq::Conservation, eq_s)
+    acc = get_entries(eq_s.accumulation)
     state = storage.state
 
     apply_boundary_potential!(acc, state, parameters, model, eq)
