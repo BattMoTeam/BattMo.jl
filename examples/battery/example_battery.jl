@@ -13,8 +13,8 @@ using MAT
 ENV["JULIA_DEBUG"] = 0;
 
 ##
-name="model1d_notemp"
-name="model1D_50"
+#name="model1d_notemp"
+name="model1DNew_50"
 #name="model1D_500"
 #name="model2D_1100" # give error
 #name="model3D_3936"
@@ -23,13 +23,17 @@ name="model1D_50"
 #name="spiral_16560"
 #name="spiral_16560_org"
 #name ="sector_1656_org"
-states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim = test_battery(name);
+fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
+exported_all = MAT.matread(fn)
+model, state0, parameters, grids = BattMo.setup_model(exported_all);    
+sim, forces, grids, state0, parameters, exported_all, model = BattMo.setup_sim(name);
+states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim = test_battery(name,info_level = 5, max_step = nothing);
 steps = size(states, 1)
 E = Matrix{Float64}(undef,steps,2)
 for step in 1:steps
     phi = states[step][:BPP][:Phi][1]
     E[step,1] = phi
-    phi_ref = stateref[step]["PositiveElectrode"]["CurrentCollector"]["E"]
+    phi_ref = stateref[step]["Control"]["E"]
     E[step,2] = phi_ref
 end
 timesteps = timesteps[1:steps]

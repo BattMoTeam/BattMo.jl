@@ -43,7 +43,7 @@ function make_system(exported,sys,bcfaces,srccells)
     N_all = Int64.(exported["G"]["faces"]["neighbors"])
     isboundary = (N_all[bcfaces,1].==0) .| (N_all[bcfaces,2].==0)
     @assert all(isboundary)
-    #bcfaces = exported_all["model"]["NegativeElectrode"]["CurrentCollector"]["couplingTerm"]["couplingcells"]
+    #bcfaces = exported_all["model"]["NegativeElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingcells"]
     bccells = N_all[bcfaces,1] + N_all[bcfaces,2]
     #T_hf   = -T_all[bcfaces]
     msource = exported  
@@ -127,12 +127,12 @@ function setup_model(exported_all)
 
     sys_cc = CurrentCollector()
     
-    bcfaces = convertToIntVector(exported_all["model"]["NegativeElectrode"]["CurrentCollector"]["couplingTerm"]["couplingfaces"])
+    bcfaces = convertToIntVector(exported_all["model"]["NegativeElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingfaces"])
     srccells = []
     (model_cc, G_cc, state0_cc, parm_cc,init_cc) = make_system(exported_cc, sys_cc, bcfaces, srccells)
     
     sys_nam = Grafite()
-    exported_nam = exported_all["model"]["NegativeElectrode"]["ElectrodeActiveComponent"];
+    exported_nam = exported_all["model"]["NegativeElectrode"]["ActiveMaterial"];
     bcfaces=[]
     srccells = []
     (model_nam, G_nam, state0_nam, parm_nam, init_nam) = 
@@ -147,7 +147,7 @@ function setup_model(exported_all)
 
 
     sys_pam = NMC111()
-    exported_pam = exported_all["model"]["PositiveElectrode"]["ElectrodeActiveComponent"];
+    exported_pam = exported_all["model"]["PositiveElectrode"]["ActiveMaterial"];
     bcfaces=[]
     srccells = []
     (model_pam, G_pam, state0_pam, parm_pam, init_pam) = 
@@ -184,11 +184,11 @@ function setup_model(exported_all)
 
     init_cc[:Phi] = state0["NegativeElectrode"]["CurrentCollector"]["phi"][1]           #*0
     init_pp[:Phi] = state0["PositiveElectrode"]["CurrentCollector"]["phi"][1]           #*0
-    init_nam[:Phi] = state0["NegativeElectrode"]["ElectrodeActiveComponent"]["phi"][1]  #*0
+    init_nam[:Phi] = state0["NegativeElectrode"]["ActiveMaterial"]["phi"][1]  #*0
     init_elyte[:Phi] = state0["Electrolyte"]["phi"][1]
-    init_pam[:Phi] = state0["PositiveElectrode"]["ElectrodeActiveComponent"]["phi"][1]  #*0
-    init_nam[:C] = state0["NegativeElectrode"]["ElectrodeActiveComponent"]["c"][1] 
-    init_pam[:C] = state0["PositiveElectrode"]["ElectrodeActiveComponent"]["c"][1]
+    init_pam[:Phi] = state0["PositiveElectrode"]["ActiveMaterial"]["phi"][1]  #*0
+    init_nam[:C] = state0["NegativeElectrode"]["ActiveMaterial"]["c"][1] 
+    init_pam[:C] = state0["PositiveElectrode"]["ActiveMaterial"]["c"][1]
     #init_elyte[:C] = state0["Electrolyte"]["cs"][1][1]
     if haskey(state0["Electrolyte"],"cs")
         init_elyte[:C] = state0["Electrolyte"]["cs"][1][1]# for compatibility to old
@@ -243,7 +243,7 @@ function setup_coupling!(model, exported_all)
         exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:,2]
         )
     msource =   exported_all["model"]["NegativeElectrode"]["CurrentCollector"]
-    mtarget =   exported_all["model"]["NegativeElectrode"]["ElectrodeActiveComponent"]
+    mtarget =   exported_all["model"]["NegativeElectrode"]["ActiveMaterial"]
     couplingfaces = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingfaces"])
     couplingcells = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"])
     trans = getTrans(msource, mtarget, couplingfaces, couplingcells,"EffectiveElectricalConductivity")
@@ -333,7 +333,6 @@ function setup_coupling!(model, exported_all)
         exported_all["model"]["PositiveElectrode"]["couplingTerm"]["couplingcells"][:,2]
         )
     msource =   exported_all["model"]["PositiveElectrode"]["CurrentCollector"]
-    mtarget =   exported_all["model"]["PositiveElectrode"]["ElectrodeActiveComponent"]
     couplingfaces = Int64.(exported_all["model"]["PositiveElectrode"]["couplingTerm"]["couplingfaces"])
     couplingcells = Int64.(exported_all["model"]["PositiveElectrode"]["couplingTerm"]["couplingcells"])
     trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "EffectiveElectricalConductivity")
@@ -351,12 +350,12 @@ function setup_coupling!(model, exported_all)
         :equation => :charge_conservation
         )
     trange = convertToIntVector(
-            exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["couplingTerm"]["couplingcells"]
+            exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingcells"]
         )    
     srange = Int64.(ones(size(trange)))
     msource =   exported_all["model"]["PositiveElectrode"]["CurrentCollector"]
-    couplingfaces = Int64.(exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["couplingTerm"]["couplingfaces"])
-    couplingcells = Int64.(exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["couplingTerm"]["couplingcells"])
+    couplingfaces = Int64.(exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingfaces"])
+    couplingcells = Int64.(exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingcells"])
     #effcond = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["EffectiveElectricalConductivity"]
     trans = getHalfTrans(msource, couplingfaces, couplingcells, "EffectiveElectricalConductivity")
 
@@ -457,8 +456,8 @@ function setup_sim(name)
     minE = 10
     steps = size(exported_all["states"],1)
     for i = 1:steps
-        inputI = max(inputI,exported_all["states"][i]["PositiveElectrode"]["CurrentCollector"]["I"])
-        minE = min(minE,exported_all["states"][i]["PositiveElectrode"]["CurrentCollector"]["E"])
+        inputI = max(inputI,exported_all["states"][i]["Control"]["I"])
+        minE = min(minE,exported_all["states"][i]["Control"]["E"])
     end
 
     cFun(time) = currentFun(time, inputI)
@@ -500,7 +499,7 @@ function test_battery(name; extra_timing = false, info_level = 0, max_step = not
     for i = 1:steps
         alltimesteps[i] =  exported_all["states"][i]["time"]-time
         time = exported_all["states"][i]["time"]
-        E = exported_all["states"][i]["PositiveElectrode"]["CurrentCollector"]["E"]
+        E = exported_all["states"][i]["Control"]["E"]
         if (E > minE+0.001)
             end_step = i
         end
@@ -510,6 +509,7 @@ function test_battery(name; extra_timing = false, info_level = 0, max_step = not
     end
     #end_step=33
     linear_solver = nothing
+    linear_solver = LUSolver()
     #slinear_solver = battery_linsolve(model,:ilu0; verbose = 1)
     timesteps = alltimesteps[1:end_step]
     cfg = simulator_config(sim, info_level = info_level)
@@ -528,9 +528,9 @@ function test_battery(name; extra_timing = false, info_level = 0, max_step = not
         cfg[:max_timestep_cuts] = 0
     end
 
-    t = cfg[:tolerances]
-    # t[:NAM] = (default = 1e-3)
-    # t[:NAM] = (default = 1e-3)
+    cfg[:tolerances][:PP][:default] = 1e-1
+    cfg[:tolerances][:BPP][:default] = 1e-1
+  
 
 ##
 
