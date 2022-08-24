@@ -17,7 +17,7 @@ function Jutul.update_cross_term_in_entity!(out, ind,
     t_s = ct.source_cells[ind]
     phi_t = state_t.Phi[t_c]
     phi_s = state_s.Phi[t_s]
-    out[] = trans*(phi_t - phi_s)
+    out[] = -trans*(phi_t - phi_s)
 end
 
 function Jutul.update_cross_term_in_entity!(out, ind,
@@ -31,7 +31,7 @@ function Jutul.update_cross_term_in_entity!(out, ind,
     phi_s = state_s.Phi
     v = 0
     for (i, s_c) in enumerate(ct.source_cells)
-        v += trans[i]*(phi_t - phi_s[s_c])
+        v -= trans[i]*(phi_t - phi_s[s_c])
     end
 
     out[] = v
