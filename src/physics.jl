@@ -84,9 +84,9 @@ function internal_flux!(kGrad, model::ElectrolyteModel, law::Conservation{Mass},
     F = FARADAY_CONST
 
     for i in eachindex(kGrad)
-        TPDGrad_C = half_face_two_point_kgrad(conn_data[i], state.T, state.ThermalConductivity)
+        TPDGrad_C = half_face_two_point_kgrad(conn_data[i], state.T, state.Diffusivity)
         TPDGrad_Phi = half_face_two_point_kgrad(conn_data[i], state.Phi, state.Conductivity)
-        TotalCurrent = -TPkGrad_C - TPDGrad_Phi
+        TotalCurrent = -TPDGrad_C - TPDGrad_Phi
         ChargeCarrierFlux = TPDGrad_C + t / (F * z) * TotalCurrent
         kGrad[i] = ChargeCarrierFlux
     end

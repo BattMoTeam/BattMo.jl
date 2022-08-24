@@ -54,16 +54,16 @@ function select_equations!(
 end
 
 function update_linearized_system_equation!(
-    nz, r, model::CCT, law::Conservation{Energy}
+    nz, r, model::CCT, law::Conservation{Energy}, eq_s
     )
     
-    acc = get_diagonal_cache(law)
-    cell_flux = law.half_face_flux_cells
+    acc = get_diagonal_cache(eq_s)
+    cell_flux = eq_s.half_face_flux_cells
     cpos = law.flow_discretization.conn_pos
-    density = law.density
+    # density = eq_s.density
 
     fill_jac_flux_and_acc!(nz, r, model, acc, cell_flux, cpos)
-    fill_jac_density!(nz, r, model, density)
+    # fill_jac_density!(nz, r, model, density)
 end
 
 

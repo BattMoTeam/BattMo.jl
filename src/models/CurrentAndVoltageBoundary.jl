@@ -46,7 +46,7 @@ end
 
 function Jutul.update_equation!(eq_s::CompactAutoDiffCache, eq::CurrentEquation, storage, model, dt)
     phi = storage.state.Phi
-    equation = get_entries(eq)
+    equation = get_entries(eq_s)
     @. equation = phi*1e-10
 end
 

@@ -67,7 +67,7 @@ end
 #    Cells()
 #end
 
-@inline function get_diagonal_cache(eq::Conservation)
+@inline function get_diagonal_cache(eq::ConservationTPFAStorage)
     return eq.accumulation
 end
 
@@ -186,13 +186,11 @@ end
 #####################
 
 
-function update_linearized_system_equation!(nz, r, model, law::Conservation)
-    acc = get_diagonal_cache(law)
-    cell_flux = law.half_face_flux_cells
+function update_linearized_system_equation!(nz, r, model, law::Conservation, eq_s::ConservationTPFAStorage)
+    acc = get_diagonal_cache(eq_s)
+    cell_flux = eq_s.half_face_flux_cells
     cpos = law.flow_discretization.conn_pos
-    @sync begin
-        @async fill_jac_flux_and_acc!(nz, r, model, acc, cell_flux, cpos)
-    end
+    fill_jac_flux_and_acc!(nz, r, model, acc, cell_flux, cpos)
 end
 
 function fill_jac_flux_and_acc!(nz, r, model, acc, cell_flux, cpos)
@@ -211,10 +209,10 @@ function fill_jac_flux_and_acc!(nz, r, model, acc, cell_flux, cpos)
     # Fill accumulation + diag flux
     Threads.@threads for cell = 1:nc
         for e in 1:ne
-            diag_entry = get_entry(acc, cell, e, centries)
+            diag_entry = get_entry(acc, cell, e)
 
             @inbounds for i = cpos[cell]:(cpos[cell + 1] - 1)
-                diag_entry -= get_entry(cell_flux, i, e, fentries)
+                diag_entry -= get_entry(cell_flux, i, e)
             end
             
             @inbounds r[e, cell] = diag_entry.value
@@ -228,7 +226,7 @@ function fill_jac_flux_and_acc!(nz, r, model, acc, cell_flux, cpos)
     # Fill of-diagonal flux
     Threads.@threads for i in 1:nu
         for e in 1:ne
-            a = Jutul.get_entry(cell_flux, i, e, fentries)
+            a = Jutul.get_entry(cell_flux, i, e)
             for d in 1:np
                 apos = get_jacobian_pos(cell_flux, i, e, d, jp)
                 @inbounds nz[apos] = a.partials[d]
