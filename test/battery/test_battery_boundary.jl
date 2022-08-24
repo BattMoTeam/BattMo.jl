@@ -7,7 +7,7 @@ and conductivity, diffusivity is constant.
 using Jutul, BattMo
 using MAT
 using Test
-include("mrstTestUtils.jl")
+# include("mrstTestUtils.jl")
 ENV["JULIA_DEBUG"] = 0;
 
 ##

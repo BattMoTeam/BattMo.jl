@@ -7,10 +7,12 @@ struct kGradPhiCell <: CellVector end
 struct EDensity <: ScalarNonDiagVaraible end
 struct EDensityDiag <: ScalarVariable end
 
-function minimum_output_variables(
-    system::CurrentCollectorT, primary_variables
+function select_minimum_output_variables!(out,
+    system::CurrentCollectorT, model
     )
-    [:Charge, :Energy, :EDensityDiag]
+    for k in [:Charge, :Energy]#, :EDensityDiag]
+        push!(out, k)
+    end
 end
 
 function select_primary_variables!(

@@ -78,10 +78,10 @@ end
 #     ]
 # end
 
-function minimum_output_variables(system::Electrolyte, primary_variables)
-    [
-        :Charge, :Mass, :Energy, :Conductivity, :Diffusivity
-    ]
+function select_minimum_output_variables!(out, system::Electrolyte, model)
+    for k in [:Charge, :Mass, :Energy, :Conductivity, :Diffusivity]
+        push!(out, k)
+    end
 end
 
 function update_linearized_system_equation!(

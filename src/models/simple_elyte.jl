@@ -39,8 +39,8 @@ function select_secondary_variables!(S, system::SimpleElyte, model)
     S[:Mass] = Mass()
 end
 
-function minimum_output_variables(system::SimpleElyte, primary_variables)
-    return [
-        :Charge, :Mass, :Conductivity, :Diffusivity
-        ]
+function select_minimum_output_variables!(out, system::SimpleElyte, model)
+    for k in [:Charge, :Mass, :Conductivity, :Diffusivity]
+        push!(out, k)
+    end
 end

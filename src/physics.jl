@@ -40,8 +40,11 @@ end
 function update_accumulation!(eq_s,law::Conservation, storage, model, dt)
     conserved = eq_s.accumulation_symbol
     acc = get_entries(eq_s.accumulation)
-    m = storage.state[conserved]
-    m0 = storage.state0[conserved]
+    state = storage.state
+    state0 = storage.state0
+    m = state[conserved]
+    m0 = state0[conserved]
+
     @tullio acc[c] = (m[c] - m0[c])/dt
     return acc
 end

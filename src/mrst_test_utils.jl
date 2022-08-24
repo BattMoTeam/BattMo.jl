@@ -92,8 +92,6 @@ function make_system(exported,sys,bcfaces,srccells)
     init = Dict(
         :Phi                    => phi0,
         :C                      => C0,
-        :Charge                 => 0.0*phi0,
-        :Mass                 => C0
         :T                      => T0,
         :Conductivity           => σ,
         :Diffusivity            => D,
@@ -488,7 +486,10 @@ function setup_sim(name)
     sim = Simulator(model, state0 = state0, parameters = parameters, copy_state = true)
     return sim, forces, grids, state0, parameters, exported_all, model
 end
-function test_battery(name)   
+
+export test_battery
+
+function test_battery(name; extra_timing = false)   
     #timesteps = exported_all["schedule"]["step"]["val"][1:27]
     sim, forces, grids, state0, parameters, exported_all, model = setup_sim(name)
     steps = size(exported_all["states"],1)
@@ -515,7 +516,7 @@ function test_battery(name)
     #cfg[:max_timestep_cuts] = 0
     cfg[:max_residual] = 1e20
     cfg[:min_nonlinear_iterations] = 1
-    cfg[:extra_timing] = true
+    cfg[:extra_timing] = extra_timing
     cfg[:max_nonlinear_iterations] = 5
     cfg[:safe_mode] = false
     cfg[:info_level] = 0

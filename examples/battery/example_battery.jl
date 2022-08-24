@@ -4,10 +4,12 @@ A component with electric potential, concentration and temperature
 The different potentials are independent (diagonal onsager matrix),
 and conductivity, diffusivity is constant.
 =#
-using Revise
+# using Revise
+# ENV["JULIA_STACKTRACE_MINIMAL"] = true
+# using AbbreviatedStackTraces
 using Jutul, BattMo
 using MAT
-include("../../test/battery/mrstTestUtils.jl")
+# include("../../test/battery/mrstTestUtils.jl")
 ENV["JULIA_DEBUG"] = 0;
 
 ##

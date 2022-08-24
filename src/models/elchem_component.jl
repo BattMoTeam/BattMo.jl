@@ -2,10 +2,12 @@ export ECComponent
 
 struct ECComponent <: ElectroChemicalComponent end # Not a good name
 
-function minimum_output_variables(
-    system::ElectroChemicalComponent, primary_variables
+function select_minimum_output_variables!(out, 
+    system::ElectroChemicalComponent, model
     )
-    [:Charge, :Mass, :Energy]
+    for k in [:Charge, :Mass, :Energy]
+        push!(out, k)
+    end
 end
 
 function select_primary_variables!(

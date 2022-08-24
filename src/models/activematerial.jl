@@ -7,10 +7,13 @@ struct Diffusion <: ScalarVariable end
 struct ReactionRateConst <: ScalarVariable end
 
 const ActiveMaterialModel = SimulationModel{<:Any, <:ActiveMaterial, <:Any, <:Any}
-function minimum_output_variables(
-    system::ActiveMaterial, primary_variables
+function select_minimum_output_variables!(out,
+    system::ActiveMaterial, model
     )
-    [:Charge, :Mass, :Ocd, :T]#, :TPkGrad_Phi]
+    push!(out, :Charge)
+    push!(out, :Mass)
+    push!(out, :Ocd)
+    push!(out, :T)
 end
 
 function select_primary_variables!(

@@ -2,10 +2,10 @@ export CurrentCollector
 
 struct CurrentCollector <: ElectroChemicalComponent end
 
-function minimum_output_variables(
-    system::CurrentCollector, primary_variables
+function select_minimum_output_variables!(out,
+    system::CurrentCollector, model
     )
-    [:Charge]
+    push!(out, :Charge)
 end
 
 function select_primary_variables!(

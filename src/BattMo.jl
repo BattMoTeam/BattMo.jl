@@ -48,6 +48,7 @@ import Jutul: apply_forces_to_equation!, convergence_criterion
 import Jutul: get_dependencies
 import Jutul: setup_forces, setup_state, setup_state!
 import Jutul: declare_pattern, select_primary_variables!
+import Jutul: select_minimum_output_variables!
 #using Jutul
 #using ForwardDiff, StaticArrays, SparseArrays, LinearAlgebra, Statistics
 #using AlgebraicMultigrid, Krylov
@@ -74,4 +75,5 @@ import Jutul: declare_pattern, select_primary_variables!
     include("models/CurrentAndVoltageBoundary.jl")
     include("models/battery_cross_terms.jl") # Works now
     include("physics.jl")
+    include("mrst_test_utils.jl")
 end # module
