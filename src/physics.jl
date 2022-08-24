@@ -81,8 +81,8 @@ function internal_flux!(kGrad, model, law::Conservation{Charge}, state, conn_dat
 end
 
 function internal_flux!(kGrad, model::ElectrolyteModel, law::Conservation{Mass}, state, conn_data)
-    t = 1#param.t
-    z =-0.202#param.z
+    t = -0.202#param.t
+    z =1#param.z
     F = FARADAY_CONST
 
     for i in eachindex(kGrad)

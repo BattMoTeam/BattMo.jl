@@ -34,8 +34,8 @@ for step in 1:steps
 end
 timesteps = timesteps[1:steps]
 using Plots
-plot1 = Plots.plot([], []; title = "E", size=(1000, 800))
-plot!(plot1,cumsum(timesteps),E)
+plot1 = Plots.plot(cumsum(timesteps),E; title = "E", size=(1000, 800))
+# plot!(plot1,)
 closeall()
 display(plot1)
 
@@ -144,10 +144,10 @@ for i in 1:1
         if haskey(states[sim_step][key], :TotalCurrent)
             j = states[sim_step][key][:TotalCurrent][1:2:end-1]
         else
-            j = -states[sim_step][key][:TPkGrad_Phi][1:2:end-1]
+#            j = -states[sim_step][key][:TPkGrad_Phi][1:2:end-1]
         end
         
-        Plots.plot!(p2, xfi, j; markershape=:circle,linestyle=:dot, seriestype = :scatter)
+        #Plots.plot!(p2, xfi, j; markershape=:circle,linestyle=:dot, seriestype = :scatter)
         if(haskey(states[sim_step][key], :C))
             cc = states[sim_step][key][:C]
             Plots.plot!(p3, x, cc; markershape=:circle, linestyle=:dot, seriestype = :scatter)

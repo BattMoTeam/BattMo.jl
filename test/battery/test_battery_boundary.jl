@@ -11,19 +11,19 @@ using Test
 ENV["JULIA_DEBUG"] = 0;
 
 ##
-modelnames =[
-    "model1D_50",
-    #"model1D_500",
-    #"model3D_3936",
-    #"sector_1656",
-    #"sector_1656_org"
+testcases  =[
+    ("model1D_50", nothing),
+    ("model1D_500", nothing),
+    ("model3D_3936", 50),
+    ("sector_1656", nothing),
+    ("sector_1656_org", nothing)
     ]
 
 allfine = Vector{Bool}();
 @testset "battery" begin
-    for modelname in modelnames
+    for (modelname, max_step) in testcases
         @testset "$modelname" begin
-            states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim = test_battery(modelname);
+            states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim = test_battery(modelname, max_step = max_step, info_level = -1);
             steps = size(states, 1)
             E = Matrix{Float64}(undef,steps,2)
             for step in 1:steps

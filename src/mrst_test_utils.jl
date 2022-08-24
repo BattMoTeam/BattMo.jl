@@ -489,7 +489,7 @@ end
 
 export test_battery
 
-function test_battery(name; extra_timing = false)   
+function test_battery(name; extra_timing = false, info_level = 0, max_step = nothing)   
     #timesteps = exported_all["schedule"]["step"]["val"][1:27]
     sim, forces, grids, state0, parameters, exported_all, model = setup_sim(name)
     steps = size(exported_all["states"],1)
@@ -505,13 +505,15 @@ function test_battery(name; extra_timing = false)
             end_step = i
         end
     end
-    #end_step=28
+    if !isnothing(max_step)
+        end_step = min(max_step, end_step)
+    end
+    #end_step=33
     linear_solver = nothing
     #slinear_solver = battery_linsolve(model,:ilu0; verbose = 1)
     timesteps = alltimesteps[1:end_step]
-    cfg = simulator_config(sim)
+    cfg = simulator_config(sim, info_level = info_level)
     cfg[:linear_solver] = linear_solver
-    cfg[:info_level] = 5
     cfg[:debug_level] = 0
     #cfg[:max_timestep_cuts] = 0
     cfg[:max_residual] = 1e20
@@ -519,7 +521,17 @@ function test_battery(name; extra_timing = false)
     cfg[:extra_timing] = extra_timing
     cfg[:max_nonlinear_iterations] = 5
     cfg[:safe_mode] = false
-    cfg[:info_level] = 0
+    cfg[:error_on_incomplete] = true
+    if false
+        cfg[:info_level] = 5
+        cfg[:max_nonlinear_iterations] = 1
+        cfg[:max_timestep_cuts] = 0
+    end
+
+    t = cfg[:tolerances]
+    # t[:NAM] = (default = 1e-3)
+    # t[:NAM] = (default = 1e-3)
+
 ##
 
     states, report = simulate(sim, timesteps, forces = forces, config = cfg)
