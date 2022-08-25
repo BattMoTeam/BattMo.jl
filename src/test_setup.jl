@@ -54,10 +54,10 @@ function get_cc_grid(
     # Different constants for different potential means this cannot be included in T
     one = ones(size((exported["rock"]["perm"])'))
     
-    T_hf = JutulDarcy.compute_half_face_trans(
+    T_hf = Jutul.compute_half_face_trans(
     cell_centroids, face_centroids, face_normals, face_areas, one, N
         )
-    T = JutulDarcy.compute_face_trans(T_hf, N) * 2
+    T = Jutul.compute_face_trans(T_hf, N) * 2
 
     # TODO: move P, S, boundary to discretization
     P, S = get_tensorprod(name)
