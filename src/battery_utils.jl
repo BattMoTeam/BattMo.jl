@@ -200,7 +200,7 @@ function fill_jac_density!(nz, r, model, density)
     First loop: Adds the contribution from density terms to the loop
     Second loop: Adds contributions from density to r.
     """
-
+    error("Function intentionally disabled - be careful before enabling.")
     # Cells, equations, partials
     nud, ne, np = ad_dims(density)
     dentries = density.entries
