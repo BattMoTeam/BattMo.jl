@@ -22,7 +22,7 @@ end
 # Equations
 struct CurrentEquation <: DiagonalEquation end
 
-function Jutul.setup_equation_storage(model, e::CurrentEquation, storage; kwarg...)
+function Jutul.setup_equation_storage(model, e::CurrentEquation, storage; extra_sparsity = nothing, kwarg...)
     Ω = model.domain
     nc = number_of_cells(Ω)
     @assert nc == 1 # We use nc for clarity of the interface - but it should always be one!

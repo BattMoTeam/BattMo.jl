@@ -221,7 +221,7 @@ function ConservationTPFAStorage(
     )
 end
 
-function Jutul.setup_equation_storage(model, eq::Conservation, storage; kwarg...)
+function Jutul.setup_equation_storage(model, eq::Conservation, storage; extra_sparsity = nothing, kwarg...)
     return ConservationTPFAStorage(model, eq; kwarg...)
 end
 
