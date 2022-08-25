@@ -190,48 +190,7 @@ function update_linearized_system_equation!(nz, r, model, law::Conservation, eq_
     acc = get_diagonal_cache(eq_s)
     cell_flux = eq_s.half_face_flux_cells
     cpos = law.flow_discretization.conn_pos
-    fill_jac_flux_and_acc!(nz, r, model, acc, cell_flux, cpos)
-end
-
-function fill_jac_flux_and_acc!(nz, r, model, acc, cell_flux, cpos)
-    """
-    Fills the entries of the Jacobian from accumulation term and flux
-    First loop: Adds diagonal elements to r and jacobian
-    Second loop: Adds off-diagonal terms to jacobian
-    """
-    nc, ne, np = Jutul.ad_dims(acc)
-    nu, _ = Jutul.ad_dims(cell_flux)
-    cp = acc.jacobian_positions
-    jp = cell_flux.jacobian_positions
-
-    # Fill accumulation + diag flux
-    Threads.@threads for cell = 1:nc
-        for e in 1:ne
-            diag_entry = get_entry(acc, cell, e)
-
-            @inbounds for i = cpos[cell]:(cpos[cell + 1] - 1)
-                diag_entry -= get_entry(cell_flux, i, e)
-            end
-            
-            @inbounds r[e, cell] = diag_entry.value
-            for d = 1:np
-                apos = get_jacobian_pos(acc, cell, e, d, cp)
-                @inbounds nz[apos] = diag_entry.partials[d]
-            end
-        end
-    end
-
-    # Fill of-diagonal flux
-    Threads.@threads for i in 1:nu
-        for e in 1:ne
-            a = Jutul.get_entry(cell_flux, i, e)
-            for d in 1:np
-                apos = get_jacobian_pos(cell_flux, i, e, d, jp)
-                @inbounds nz[apos] = a.partials[d]
-            end
-        end
-    end
-
+    Jutul.update_linearized_system_subset_conservation_accumulation!(nz, r, model, acc, cell_flux, cpos, model.context)
 end
 
 
