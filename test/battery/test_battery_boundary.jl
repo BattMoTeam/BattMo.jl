@@ -13,10 +13,11 @@ ENV["JULIA_DEBUG"] = 0;
 ##
 testcases  =[
     ("model1D_50", nothing),
-    ("model1D_500", nothing),
-    ("model3D_3936", 50),
-    ("sector_1656", nothing),
-    ("sector_1656_org", nothing)
+    ("model1Dmod_50", nothing),
+    ("model1Dmod_500", nothing),
+    ("model3D_492", 50),
+    ("sector_7920", nothing),
+  #  ("sector_1656_org", nothing)
     ]
 
 allfine = Vector{Bool}();
@@ -29,7 +30,7 @@ allfine = Vector{Bool}();
             for step in 1:steps
                 phi = states[step][:BPP][:Phi][1]
                 E[step,1] = phi
-                phi_ref = stateref[step]["PositiveElectrode"]["CurrentCollector"]["E"]
+                phi_ref = stateref[step]["Control"]["E"]
                 E[step,2] = phi_ref
             end
             #append!(allfine,steps == 65)

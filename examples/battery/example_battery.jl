@@ -14,8 +14,11 @@ ENV["JULIA_DEBUG"] = 0;
 
 ##
 #name="model1d_notemp"
-name="model1DNew_50"
-#name="model1D_500"
+name="model1D_50"
+name="model1Dmod_50"
+name="model1Dmod_500"
+name="sector_7920"
+name="model3D_492"
 #name="model2D_1100" # give error
 #name="model3D_3936"
 #name="sector_1656"
