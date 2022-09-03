@@ -4,7 +4,7 @@ export VoltageVAr, CurrentVar, sineup
 struct CurrentAndVoltageSystem <: JutulSystem end
 
 struct CurrentAndVoltageDomain <: JutulDomain end
-active_entities(d::CurrentAndVoltageDomain, ::Any) = [1]
+active_entities(d::CurrentAndVoltageDomain, ::Any) = 2
 
 const CurrentAndVoltageModel  = SimulationModel{CurrentAndVoltageDomain,CurrentAndVoltageSystem}
 function number_of_cells(::CurrentAndVoltageDomain) 1 end
@@ -20,11 +20,13 @@ struct VoltageForce
 end
 #abstract type DiagonalEquation <: JutulEquation end
 # Equations
-struct CurrentEquation <: DiagonalEquation end
+abstract type  ControlEquation <:DiagonalEquation end
+struct CurrentEquation <: ControlEquation end
+struct VoltageEquation <: ControlEquation end
 
-function Jutul.setup_equation_storage(model, e::CurrentEquation, storage; extra_sparsity = nothing, kwarg...)
-    Ω = model.domain
-    nc = number_of_cells(Ω)
+function Jutul.setup_equation_storage(model, e::ControlEquation, storage; extra_sparsity = nothing, kwarg...)
+    omega = model.domain
+    nc = number_of_cells(omega)
     @assert nc == 1 # We use nc for clarity of the interface - but it should always be one!
     ne = 1 # Single, scalar equation
     npartials = number_of_equations_per_entity(model, e)
@@ -32,7 +34,7 @@ function Jutul.setup_equation_storage(model, e::CurrentEquation, storage; extra_
     return e
 end
 
-function declare_pattern(model, e::CurrentEquation, eq_storage::CompactAutoDiffCache, unit)
+function declare_pattern(model, e::ControlEquation, eq_storage::CompactAutoDiffCache, unit)
     @assert unit == Cells()
     return ([1], [1])
 end
@@ -40,8 +42,9 @@ end
 struct VoltVar <: ScalarVariable end
 struct CurrentVar <: ScalarVariable end
 
-function select_equations!(eqs, system::CurrentAndVoltageSystem, model)
+function Jutul.select_equations!(eqs, system::CurrentAndVoltageSystem, model)
     eqs[:charge_conservation] = CurrentEquation()
+    eqs[:charge_conservation] = VoltageEquation()
 end
 
 function Jutul.update_equation!(eq_s::CompactAutoDiffCache, eq::CurrentEquation, storage, model, dt)
@@ -50,17 +53,25 @@ function Jutul.update_equation!(eq_s::CompactAutoDiffCache, eq::CurrentEquation,
     @. equation = phi*1e-10
 end
 
+function Jutul.update_equation!(eq_s::CompactAutoDiffCache, eq::VoltageEquation, storage, model, dt)
+    I = storage.state.Current
+    equation = get_entries(eq_s)
+    @. equation = I 
+end
+
 function build_forces(model::SimulationModel{G, S}; sources = nothing) where {G<:CurrentAndVoltageDomain, S<:CurrentAndVoltageSystem}
     return (sources = sources,)
 end
 
-function apply_forces_to_equation!(diag, storage, model, eq::CurrentEquation, eq_s, currentFun, time)
+function Jutul.apply_forces_to_equation!(diag, storage, model, eq::CurrentEquation, eq_s, currentFun, time)
     @. diag -= currentFun(time)
 end
-
-function select_primary_variables!(S, system::CurrentAndVoltageSystem, model)
+function Jutul.apply_forces_to_equation!(diag, storage, model, eq::VoltageEquation, eq_s, currentFun, time)
+    @. diag -= currentFun(time)
+end
+function Jutul.select_primary_variables!(S, system::CurrentAndVoltageSystem, model)
     S[:Phi] = VoltVar()
-    #S[:Current] = CurrentVar()
+    S[:Current] = CurrentVar()
 end
 
 #function select_secondary_variables_system!(S, domain, system::CurrentAndVoltageSystem, formulation)

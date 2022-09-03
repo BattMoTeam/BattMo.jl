@@ -5,10 +5,13 @@ The different potentials are independent (diagonal onsager matrix),
 and conductivity, diffusivity is constant.
 =#
 # using Revise
-# ENV["JULIA_STACKTRACE_MINIMAL"] = true
-# using AbbreviatedStackTraces
+#ENV["JULIA_STACKTRACE_MINIMAL"] = true
+#using AbbreviatedStackTraces
 using Jutul, BattMo
 using MAT
+#import TimerOutputs: timer_expr
+#function timer_expr(m::Module, is_debug::Bool, to::Symbol, label::String, ex::Expr)
+#end
 # include("../../test/battery/mrstTestUtils.jl")
 ENV["JULIA_DEBUG"] = 0;
 
@@ -30,7 +33,40 @@ fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
 exported_all = MAT.matread(fn)
 model, state0, parameters, grids = BattMo.setup_model(exported_all);    
 sim, forces, grids, state0, parameters, exported_all, model = BattMo.setup_sim(name);
-states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim = test_battery(name,info_level = 5, max_step = nothing);
+steps = size(exported_all["states"],1)
+alltimesteps = Vector{Float64}(undef,steps)
+#stime = 0;
+end_step = 0
+minE=2.5
+end_step=10
+linear_solver = nothing
+linear_solver = LUSolver()
+#slinear_solver = battery_linsolve(model,:ilu0; verbose = 1)
+timesteps = alltimesteps[1:end_step]
+cfg = simulator_config(sim, info_level = 0)
+cfg[:linear_solver] = linear_solver
+cfg[:debug_level] = 0
+#cfg[:max_timestep_cuts] = 0
+cfg[:max_residual] = 1e20
+cfg[:min_nonlinear_iterations] = 1
+cfg[:extra_timing] = false
+cfg[:max_nonlinear_iterations] = 5
+cfg[:safe_mode] = false
+cfg[:error_on_incomplete] = true
+if false
+    cfg[:info_level] = 5
+    cfg[:max_nonlinear_iterations] = 1
+    cfg[:max_timestep_cuts] = 0
+end
+
+cfg[:tolerances][:PP][:default] = 1e-1
+cfg[:tolerances][:BPP][:default] = 1e-1
+
+
+##
+
+states, report = simulate(sim, timesteps, forces = forces, config = cfg)
+stateref = exported_all["states"]
 steps = size(states, 1)
 E = Matrix{Float64}(undef,steps,2)
 for step in 1:steps
@@ -46,69 +82,8 @@ plot1 = Plots.plot(cumsum(timesteps),E; title = "E", size=(1000, 800))
 closeall()
 display(plot1)
 
-##
+
 error()
-
-function plot_phi()
-    plot1 = Plots.plot([], []; title = "Phi", size=(1000, 800))
-
-    p = plot!(plot1, legend = false)
-    submodels = (:CC, :NAM, :ELYTE, :PAM, :PP)
-    # submodels = (:NAM, :ELYTE, :PAM)
-    # submodels = (:CC, :NAM)
-    # submodels = (:ELYTE,)
-    # submodels = (:PP, :PAM)
-
-    var = :Phi
-    steps = size(states, 1)
-    for i in 1:steps
-        for mod in submodels
-            x = grids[mod]["cells"]["centroids"]
-            plot!(plot1, x, states[i][mod][var], lw=2, color=RGBA(0.5, 0.5, 0.5, 0.5))
-        end
-    end
-    return plot1
-end
-plot1 = plot_phi()
-closeall()
-display(plot1)
-
-##
-
-#for (i, dt) in enumerate(timesteps)
-for i in 1:1   
-    refstep=i
-    sim_step=i
-
-    p1 = Plots.plot(title="Phi", size=(1000, 800))
-    p2 = Plots.plot(title="Flux", size=(1000, 800))
-    p3 = Plots.plot(title="C", size=(1000, 800))
-
-    fields = ["CurrentCollector","ElectrodeActiveComponent"]
-    components = ["NegativeElectrode","PositiveElectrode"]
-    #components = ["NegativeElectrode"]
-    #components = ["PositiveElectrode"]
-    #components = []
-    for component = components
-        for field in fields
-            G = exported_all["model"][component][field]["G"]
-            x = G["cells"]["centroids"]
-            xf= G["faces"]["centroids"][end]
-            xfi= G["faces"]["centroids"][2:end-1]
-
-            state = stateref[refstep][component]
-            phi_ref = state[field]["phi"]
-            j_ref = state[field]["j"]
-
-            Plots.plot!(p1,x,phi_ref;linecolor="red")
-            Plots.plot!(p2,xfi,j_ref;linecolor="red")
-            if haskey(state[field],"c")
-                c = state[field]["c"]
-                Plots.plot!(p3,x,c;linecolor="red")
-            end
-        end
-    end
-
     fields = [] 
     fields = ["Electrolyte"]
 

@@ -64,6 +64,7 @@ function make_system(exported,sys,bcfaces,srccells)
 
     # State is dict with pressure in each cell
     phi0 = 1.0
+    I0 = Vector([1.0])
     C0 = 1.
     T0 = 298.15
     #D = -0.7e-10 # ???
@@ -91,6 +92,7 @@ function make_system(exported,sys,bcfaces,srccells)
 
     init = Dict(
         :Phi                    => phi0,
+        :Current                => I0,
         :C                      => C0,
         :T                      => T0,
         :Conductivity           => σ,
@@ -195,7 +197,7 @@ function setup_model(exported_all)
     else
         init_elyte[:C] = state0["Electrolyte"]["c"][1]
     end
-    init_bpp = Dict(:Phi => 1.0)
+    init_bpp = Dict(:Phi => 1.0,:Current => 1.0)
 
     init = Dict(
         :CC => init_cc,
