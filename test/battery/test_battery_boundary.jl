@@ -16,7 +16,7 @@ testcases  =[
     ("model1Dmod_50", nothing),
     ("model1Dmod_500", nothing),
     ("model3D_492", 50),
-    ("sector_7920", nothing),
+  #  ("sector_7920", nothing),
   #  ("sector_1656_org", nothing)
     ]
 

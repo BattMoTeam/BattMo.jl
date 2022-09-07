@@ -93,7 +93,7 @@ function update_linearized_system_equation!(
     cpos = law.flow_discretization.conn_pos
     # density = eq_s.density
 
-    fill_jac_flux_and_acc!(nz, r, model, acc, cell_flux, cpos)
+    update_linearized_system_subset_conservation_accumulation!(nz, r, model, acc, cell_flux, cpos, model.context)
     # fill_jac_density!(nz, r, model, density)
 end
 

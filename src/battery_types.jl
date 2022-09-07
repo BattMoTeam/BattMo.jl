@@ -54,7 +54,6 @@ const BOUNDARY_CURRENT = Dict(
     Mass()   => :BCMass,
     Energy() => :BCEnergy,
 )
-# TODO: Can this not be automated????
 corr_type(::Conservation{T}) where T = T()
 
 
@@ -100,17 +99,17 @@ struct JSq <: ScalarNonDiagVaraible end
 
 struct JSqDiag <: ScalarVariable end
 
-struct MinimalECTPFAGrid{R<:AbstractFloat, I<:Integer} <: ElectroChemicalGrid
+struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
     """
     Simple grid for a electro chemical component
     """
-    volumes::AbstractVector{R}
-    neighborship::AbstractArray{I}
-    boundary_cells::AbstractArray{I}
-    boundary_T_hf::AbstractArray{R}
-    P::AbstractArray{R} # Tensor to map from cells to faces
-    S::AbstractArray{R} # Tensor map cell vector to cell scalar
-    vol_frac::AbstractVector{R}
+    volumes::V
+    neighborship::N
+    boundary_cells::B
+    boundary_T_hf::BT
+    P::M # Tensor to map from cells to faces
+    S::M # Tensor map cell vector to cell scalar
+    vol_frac::V
 end
 
 import Jutul: FlowDiscretization
@@ -185,7 +184,7 @@ function MinimalECTPFAGrid(pv, N, bc=[], T_hf=[], P=[], S=[], vf=[])
         vf = ones(nc)
     end
 
-    MinimalECTPFAGrid{eltype(pv), eltype(N)}(pv, N, bc, T_hf, P, S, vf)
+    MinimalECTPFAGrid{typeof(pv), typeof(N), typeof(bc), typeof(T_hf), typeof(P)}(pv, N, bc, T_hf, P, S, vf)
 end
 
 function ConservationTPFAStorage(
@@ -221,7 +220,7 @@ function ConservationTPFAStorage(
     )
 end
 
-function Jutul.setup_equation_storage(model, eq::Conservation, storage; kwarg...)
+function Jutul.setup_equation_storage(model, eq::Conservation, storage; extra_sparsity = nothing, kwarg...)
     return ConservationTPFAStorage(model, eq; kwarg...)
 end
 
