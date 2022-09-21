@@ -22,19 +22,11 @@ end
 # Equations
 struct CurrentEquation <: DiagonalEquation end
 
-function Jutul.setup_equation_storage(model, e::CurrentEquation, storage; extra_sparsity = nothing, kwarg...)
-    Ω = model.domain
-    nc = number_of_cells(Ω)
-    @assert nc == 1 # We use nc for clarity of the interface - but it should always be one!
-    ne = 1 # Single, scalar equation
-    npartials = number_of_equations_per_entity(model, e)
-    e = CompactAutoDiffCache(ne, nc, npartials, context = model.context; kwarg...)
-    return e
-end
+Jutul.local_discretization(::CurrentEquation, i) = nothing
 
-function declare_pattern(model, e::CurrentEquation, eq_storage::CompactAutoDiffCache, unit)
-    @assert unit == Cells()
-    return ([1], [1])
+function Jutul.update_equation_in_entity!(v, i, state, state0, eq::CurrentEquation, model, dt, ldisc = Jutul.local_discretization(eq, i))
+    phi = state.Phi[1]
+    v[] = phi*1e-10
 end
 
 struct VoltVar <: ScalarVariable end
@@ -42,12 +34,6 @@ struct CurrentVar <: ScalarVariable end
 
 function select_equations!(eqs, system::CurrentAndVoltageSystem, model)
     eqs[:charge_conservation] = CurrentEquation()
-end
-
-function Jutul.update_equation!(eq_s::CompactAutoDiffCache, eq::CurrentEquation, storage, model, dt)
-    phi = storage.state.Phi
-    equation = get_entries(eq_s)
-    @. equation = phi*1e-10
 end
 
 function build_forces(model::SimulationModel{G, S}; sources = nothing) where {G<:CurrentAndVoltageDomain, S<:CurrentAndVoltageSystem}
