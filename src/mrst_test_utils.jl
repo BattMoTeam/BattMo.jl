@@ -81,13 +81,13 @@ function make_system(exported,sys,bcfaces,srccells)
     λ = exported["thermalConductivity"][1]
 
     S = model.secondary_variables
-    S[:BoundaryPhi] = BoundaryPotential{Phi}()
-    S[:BoundaryC] = BoundaryPotential{Phi}()
-    S[:BoundaryT] = BoundaryPotential{T}()
+    S[:BoundaryPhi] = BoundaryPotential(:Phi)
+    S[:BoundaryC] = BoundaryPotential(:Phi)
+    S[:BoundaryT] = BoundaryPotential(:T)
 
-    S[:BCCharge] = BoundaryCurrent{Charge}(srccells)
-    S[:BCMass] = BoundaryCurrent{Mass}(srccells)
-    S[:BCEnergy] = BoundaryCurrent{Energy}(srccells)
+    S[:BCCharge] = BoundaryCurrent(srccells, :Charge)
+    S[:BCMass] = BoundaryCurrent(srccells, :Mass)
+    S[:BCEnergy] = BoundaryCurrent(srccells, :Charge)
 
     init = Dict(
         :Phi                    => phi0,

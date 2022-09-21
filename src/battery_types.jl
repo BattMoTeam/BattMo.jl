@@ -50,11 +50,18 @@ struct TPkGrad{T} <: KGrad{T} end
 # struct ChargeFlow <: ECFlow end
 
 
-struct BoundaryPotential{T} <: ScalarVariable end
+struct BoundaryPotential{T} <: ScalarVariable
+    function BoundaryPotential(b_label::Symbol)
+        return new{b_label}()
+    end
+end
 Jutul.associated_entity(::BoundaryPotential) = BoundaryFaces()
 
-struct BoundaryCurrent{T} <: ScalarVariable 
-    cells
+struct BoundaryCurrent{T, C} <: ScalarVariable 
+    cells::C
+    function BoundaryCurrent(cells::TC, b_label::Symbol) where TC
+        new{b_label, TC}(cells)
+    end
 end
 
 Jutul.associated_entity(::BoundaryCurrent) = BoundaryFaces()

@@ -23,7 +23,7 @@ function test_cc(name="square_current_collector")
     phi = 1.
     boudary_phi = [1., 2.]
     S = model.secondary_variables
-    S[:BoundaryPhi] = BoundaryPotential{Phi}()
+    S[:BoundaryPhi] = BoundaryPotential(:Phi)
 
     # Inital values for variable. Variables w/o update_as_secondary must be set here
     init = Dict(:Phi => phi, :BoundaryPhi=>boudary_phi, :Conductivity=>1.)
@@ -70,8 +70,8 @@ function test_mixed_bc()
     one = ones(size(bcells))
 
     S = model.secondary_variables
-    S[:BoundaryPhi] = BoundaryPotential{Phi}()
-    S[:BCCharge] = BoundaryCurrent{Charge}(2 .+bcells)
+    S[:BoundaryPhi] = BoundaryPotential(:Phi)
+    S[:BCCharge] = BoundaryCurrent(2 .+bcells, :Charge)
 
     phi0 = 1.
     init = Dict(

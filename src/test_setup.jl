@@ -137,8 +137,8 @@ function get_simple_elyte_model(name="modelElectrolyte")
     model = SimulationModel(domain, sys, context = DefaultContext())
 
     S = model.secondary_variables
-    S[:BoundaryPhi] = BoundaryPotential{Phi}()
-    S[:BoundaryC] = BoundaryPotential{C}()
+    S[:BoundaryPhi] = BoundaryPotential(:Phi)
+    S[:BoundaryC] = BoundaryPotential(:C)
 
     return model, exported
 end

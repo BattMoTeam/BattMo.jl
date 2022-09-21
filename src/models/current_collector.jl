@@ -57,27 +57,27 @@ end
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::BoundaryPotential{Phi}, model
+    kGrad, sv::BoundaryPotential{:Phi}, model
     )
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::BoundaryPotential{T}, model
+    kGrad, sv::BoundaryPotential{:T}, model
     )
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::BoundaryCurrent{Charge}, model
+    kGrad, sv::BoundaryCurrent{:Charge}, model
     )
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::BoundaryCurrent{Mass}, model
+    kGrad, sv::BoundaryCurrent{:Mass}, model
     )
 end
 
 @jutul_secondary function update_as_secondary!(
-    kGrad, sv::BoundaryCurrent{Energy}, model
+    kGrad, sv::BoundaryCurrent{:Energy}, model
     )
 end
 

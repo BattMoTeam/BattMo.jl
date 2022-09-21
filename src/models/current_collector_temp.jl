@@ -34,8 +34,8 @@ function select_secondary_variables!(
     S[:Conductivity] = Conductivity()
     S[:ThermalConductivity] = ThermalConductivity()
 
-    S[:BoundaryPhi] = BoundaryPotential{Phi}()
-    S[:BoundaryT] = BoundaryPotential{T}()
+    S[:BoundaryPhi] = BoundaryPotential(:Phi)
+    S[:BoundaryT] = BoundaryPotential(:T)
     
     S[:kGradPhiCell] = kGradPhiCell()    
     S[:EDensity] = EDensity()
