@@ -170,55 +170,6 @@ function MinimalECTPFAGrid(pv, N, bc=[], T_hf=[], P=[], S=[], vf=[])
     MinimalECTPFAGrid{typeof(pv), typeof(N), typeof(bc), typeof(T_hf), typeof(P)}(pv, N, bc, T_hf, P, S, vf)
 end
 
-# function ConservationTPFAStorage(
-#         model, eq::Conservation{C, <:Any}; kwarg...
-#     ) where C
-#     """
-#     A conservation law corresponding to a conserved charge acc_type
-#     """
-#     acc_type = C()
-#     accumulation_symbol = acc_symbol(acc_type)
-
-#     D = model.domain
-#     cell_entity = Cells()
-#     face_entity = Faces()
-#     nc = count_entities(D, cell_entity)
-#     nf = count_entities(D, face_entity)
-#     nhf = 2 * nf
-#     nn = size(get_neighborship(D.grid), 2)
-#     n_tot = nc + 2 * nn
-#     neq = Jutul.number_of_equations_per_entity(model, eq)
-
-#     alloc = (n, entity, n_entities_pos) -> CompactAutoDiffCache(
-#         neq, n, model, entity = entity, n_entities_pos = n_entities_pos,
-#         context = model.context; kwarg...
-#     )
-
-#     acc = alloc(nc, cell_entity, nc)
-#     hf_cells = alloc(nhf, cell_entity, nhf)
-#     density = alloc(n_tot, cell_entity, n_tot)
-
-#     ConservationTPFAStorage{C}(
-#         acc, accumulation_symbol, hf_cells, density
-#     )
-# end
-
-# function Jutul.setup_equation_storage(model, eq::Conservation, storage; extra_sparsity = nothing, kwarg...)
-#     return ConservationTPFAStorage(model, eq; kwarg...)
-# end
-
-# function acc_symbol(::Charge)
-#     return :Charge
-# end
-
-# function acc_symbol(::Mass)
-#     return :Mass
-# end
-
-# function acc_symbol(::Energy)
-#     return :Energy
-# end
-
 struct TPFAInterfaceFluxCT{T,F} <: Jutul.AdditiveCrossTerm
     target_cells::T
     source_cells::T

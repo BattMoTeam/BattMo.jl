@@ -40,11 +40,6 @@ end
 
 
 function select_secondary_variables!(S, system::Electrolyte, model)
-    # S[:TPkGrad_Phi] = TPkGrad{Phi}()
-    # S[:TPkGrad_C] = TPkGrad{C}()
-    # S[:TPDGrad_C] = TPDGrad{C}()
-    # S[:TPkGrad_T] = TPkGrad{T}()
-    
     S[:Conductivity] = Conductivity()
     S[:ThermalConductivity] = Conductivity()
     S[:Diffusivity] = Diffusivity()
@@ -71,32 +66,11 @@ function select_secondary_variables!(S, system::Electrolyte, model)
     S[:EDDiag] = EDDiag()
 end
 
-# Must be available to evaluate time derivatives
-# function minimum_output_variables(system::Electrolyte, primary_variables)
-#     [
-#         :Charge, :Mass, :Energy, :Conductivity, :Diffusivity,
-#         :TotalCurrent, :DGradCSqDiag, :JSqDiag, :EnergyDensity
-#     ]
-# end
-
 function select_minimum_output_variables!(out, system::Electrolyte, model)
     for k in [:Charge, :Mass, :Energy, :Conductivity, :Diffusivity]
         push!(out, k)
     end
 end
-
-# function update_linearized_system_equation!(
-#     nz, r, model::TestElyteModel, law::Conservation{Energy}, eq_s
-#     )
-    
-#     acc = get_diagonal_cache(eq_s)
-#     cell_flux = eq_s.half_face_flux_cells
-#     cpos = law.flow_discretization.conn_pos
-#     # density = eq_s.density
-
-#     update_linearized_system_subset_conservation_accumulation!(nz, r, model, acc, cell_flux, cpos, model.context)
-#     # fill_jac_density!(nz, r, model, density)
-# end
 
 
 #######################
@@ -178,149 +152,6 @@ end
     F = FARADAY_CONST
     @tullio coeff[i] = Conductivity[i]*DmuDc[i] * t/(F*z)
 end
-
-# @jutul_secondary function update_as_secondary!(
-#     kGrad_C, tv::TPkGrad{C}, model::ElectrolyteModel, C, ConsCoeff
-#     )
-#     mf = model.domain.discretizations.charge_flow
-#     conn_data = mf.conn_data
-#     @tullio kGrad_C[i] = half_face_two_point_kgrad(conn_data[i], C, ConsCoeff)
-# end
-
-# @jutul_secondary function update_as_secondary!(
-#     DGrad_C, tv::TPDGrad{C}, model::ElectrolyteModel, C, Diffusivity
-#     )
-#     mf = model.domain.discretizations.charge_flow
-#     conn_data = mf.conn_data
-#     @tullio DGrad_C[i] = half_face_two_point_kgrad(conn_data[i], C, Diffusivity)
-# end
-
-
-# @jutul_secondary function update_as_secondary!(
-#     N, tv::ChargeCarrierFlux, model, TPDGrad_C, TotalCurrent
-#     )
-#     t = 1#param.t
-#     z = 1#param.z
-#     F = FARADAY_CONST
-#     @tullio N[i] =  + TPDGrad_C[i] + t / (F * z) * TotalCurrent[i]
-# end
-
-# @jutul_secondary(
-# function update_as_secondary!(j_cell, sc::JCell, model, TotalCurrent)
-#     for c in 1:number_of_cells(model.domain)
-#         face_to_cell!(j_cell, TotalCurrent, c, model)
-#     end
-# end
-# )
-
-# @jutul_secondary(
-# function update_as_secondary!(jsq, sc::JSq, model, JCell)
-#     for c in 1:number_of_cells(model.domain)
-#         vec_to_scalar!(jsq, JCell, c, model)
-#     end
-# end
-# )
-
-# @jutul_secondary(
-# function update_as_secondary!(j_cell, sc::DGradCCell, model, TPDGrad_C)
-#     for c in 1:number_of_cells(model.domain)
-#         face_to_cell!(j_cell, TPDGrad_C, c, model)
-#     end
-# end
-# )
-
-# @jutul_secondary(
-# function update_as_secondary!(jsq, sc::DGradCSq, model, DGradCCell)
-#     for c in 1:number_of_cells(model.domain)
-#         vec_to_scalar!(jsq, DGradCCell, c, model)
-#     end
-# end
-# )
-
-# @jutul_secondary(
-# function update_as_secondary!(
-#     ρ, sc::EnergyDensity, model, DGradCSq, JSq, Diffusivity, Conductivity, DmuDc
-#     )
-#     κ = Conductivity
-#     D = Diffusivity
-
-#     mf = model.domain.discretizations.charge_flow
-#     cc = mf.cellcell
-#     nc = number_of_cells(model.domain)
-#     v = (a, c, n) -> (c == n) ? a[c] : value(a[c])
-#     for c = 1:nc
-#         for cn in cc.pos[c]:(cc.pos[c+1]-1)
-#             c, n = cc.tbl[cn]
-#             ρ[cn] = JSq[cn] / v(κ, c, n) + v(DmuDc, c, n) * DGradCSq[cn] / v(D, c, n)
-#         end
-#     end
-# end
-# )
-
-# @jutul_secondary(
-# function update_as_secondary!(jsq_diag, sc::JSqDiag, model, JSq)
-#     """ Carries the diagonal velues of JSq """
-#     mf = model.domain.discretizations.charge_flow
-#     cc = mf.cellcell
-#     nc = number_of_cells(model.domain)
-#     for cn in cc.pos[1:end-1] # The diagonal elements
-#         c, n = cc.tbl[cn]
-#         @assert c == n
-#         jsq_diag[c] = JSq[cn]
-#     end
-# end
-# )
-
-# @jutul_secondary(
-# function update_as_secondary!(jsq_diag, sc::DGradCSqDiag, model, DGradCSq)
-#     mf = model.domain.discretizations.charge_flow
-#     cc = mf.cellcell
-#     nc = number_of_cells(model.domain)
-#     for cn in cc.pos[1:end-1] # The diagonal elements
-#         c, n = cc.tbl[cn]
-#         @assert c == n
-#         jsq_diag[c] = DGradCSq[cn]
-#     end
-# end
-# )
-
-# @jutul_secondary(
-# function update_as_secondary!(ρ_diag, sc::EDDiag, model, EnergyDensity)
-#     mf = model.domain.discretizations.charge_flow
-#     cc = mf.cellcell
-#     nc = number_of_cells(model.domain)
-#     for cn in cc.pos[1:end-1] # The diagonal elements
-#         c, n = cc.tbl[cn]
-#         @assert c == n
-#         ρ_diag[c] = EnergyDensity[cn]
-#     end
-# end
-# )
-
-# function update_density!(law::Conservation{Energy}, storage, model::ElectrolyteModel)
-#     ρ = storage.state.EnergyDensity
-#     ρ_law = get_entries(law.density)
-#     @tullio ρ[c] = ρ_law[i]
-# end
-
-# function get_flux(
-#     storage,  model::ElectrolyteModel, law::Conservation{Charge}
-#     )
-#     return storage.state.TotalCurrent
-# end
-
-# function get_flux(
-#     storage,  model::ElectrolyteModel, law::Conservation{Mass}
-#     )
-#     return storage.state.ChargeCarrierFlux
-# end
-
-# function get_flux(
-#     storage,  model::ElectrolyteModel, law::Conservation{Energy}
-#     )
-#     return - storage.state.TPkGrad_T
-# end
-
 
 function apply_boundary_potential!(
     acc, stateeters, model::ElectrolyteModel, eq::ConservationLaw{:Charge}
