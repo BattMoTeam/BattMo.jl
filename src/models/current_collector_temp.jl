@@ -47,14 +47,12 @@ function select_equations!(
     eqs, system::CurrentCollectorT, model
     )
     disc = model.domain.discretizations.charge_flow
-    T = typeof(disc)
-
-    eqs[:charge_conservation] =  Conservation{Charge, T}(disc)
-    eqs[:energy_conservation] = Conservation{Energy, T}(disc)
+    eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
+    eqs[:mass_conservation] = ConservationLaw(disc, :Mass)
 end
 
 function update_linearized_system_equation!(
-    nz, r, model::CCT, law::Conservation{Energy}, eq_s
+    nz, r, model::CCT, law::ConservationLaw{:Energy}, eq_s
     )
     
     acc = get_diagonal_cache(eq_s)
@@ -67,11 +65,11 @@ function update_linearized_system_equation!(
 end
 
 
-function update_density!(law::Conservation{Energy}, storage, model::CCT)
-    ρ = storage.state.EDensity
-    ρ_law = get_entries(law.density)
-    @tullio ρ_law[i] = ρ[i]
-end
+# function update_density!(law::ConservationLaw{:Energy}, storage, model::CCT)
+#     ρ = storage.state.EDensity
+#     ρ_law = get_entries(law.density)
+#     @tullio ρ_law[i] = ρ[i]
+# end
 
 
 @jutul_secondary(
@@ -118,28 +116,3 @@ function update_as_secondary!(ρ_diag, sc::EDensityDiag, model, EDensity)
     end
 end
 )
-
-function align_to_jacobian!(
-    law::ConservationTPFAStorage, eq::Conservation, jac, model::CCT, u::Cells; equation_offset = 0, 
-    variable_offset = 0
-    )
-    fd = law.flow_discretization
-    M = global_map(model.domain)
-
-    acc = law.accumulation
-    hflux_cells = law.half_face_flux_cells
-    density = law.density
-
-    diagonal_alignment!(
-        acc, eq, jac, u, model.context;
-        target_offset = equation_offset, source_offset = variable_offset
-        )
-    half_face_flux_cells_alignment!(
-        hflux_cells, acc, jac, model.context, M, fd, 
-        target_offset = equation_offset, source_offset = variable_offset
-        )
-    density_alignment!(
-        density, acc, jac, model.context, fd;
-        target_offset = equation_offset, source_offset = variable_offset
-        )
-end

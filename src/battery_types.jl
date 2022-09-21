@@ -1,9 +1,9 @@
 using Jutul
 export ElectroChemicalComponent, CurrentCollector, Electectrolyte, TestElyte
 export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
-export ChargeFlow, Conservation, BoundaryPotential, BoundaryCurrent
+export ChargeFlow, BoundaryPotential, BoundaryCurrent
 export Phi, C, T, Charge, Mass, Energy, KGrad
-export BOUNDARY_CURRENT, corr_type
+export BOUNDARY_CURRENT
 export TPFAInterfaceFluxCT,ButlerVolmerInterfaceFluxCT
 ###########
 # Classes #
@@ -27,21 +27,6 @@ struct Conductivity <: ScalarVariable end
 struct Diffusivity <: ScalarVariable end
 struct ThermalConductivity <: ScalarVariable end
 
-struct Conservation{T, F} <: JutulEquation
-    flow_discretization::F
-end
-
-struct ConservationTPFAStorage{T} # <: Jutul.JutulStorage
-    accumulation::JutulAutoDiffCache
-    accumulation_symbol::Symbol
-    half_face_flux_cells::JutulAutoDiffCache
-    density::JutulAutoDiffCache
-end
-
-function setup_equation_storage(model, eq::ConservationLaw{<:TwoPointPotentialFlowHardCoded}, storage; kwarg...)
-    return ConservationLawTPFAStorage(model, eq; kwarg...)
-end
-
 # Accumulation variables
 abstract type Conserved <: ScalarVariable end
 struct Charge <: Conserved end
@@ -50,12 +35,10 @@ struct Energy <: Conserved end
 
 # Currents corresponding to a accumulation type
 const BOUNDARY_CURRENT = Dict(
-    Charge() => :BCCharge,
-    Mass()   => :BCMass,
-    Energy() => :BCEnergy,
+    :Charge => :BCCharge,
+    :Mass   => :BCMass,
+    :Energy => :BCEnergy,
 )
-corr_type(::Conservation{T}) where T = T()
-
 
 # Represents k∇T, where k is a tensor, T a potential
 abstract type KGrad{T} <: ScalarVariable end
@@ -187,54 +170,54 @@ function MinimalECTPFAGrid(pv, N, bc=[], T_hf=[], P=[], S=[], vf=[])
     MinimalECTPFAGrid{typeof(pv), typeof(N), typeof(bc), typeof(T_hf), typeof(P)}(pv, N, bc, T_hf, P, S, vf)
 end
 
-function ConservationTPFAStorage(
-        model, eq::Conservation{C, <:Any}; kwarg...
-    ) where C
-    """
-    A conservation law corresponding to a conserved charge acc_type
-    """
-    acc_type = C()
-    accumulation_symbol = acc_symbol(acc_type)
+# function ConservationTPFAStorage(
+#         model, eq::Conservation{C, <:Any}; kwarg...
+#     ) where C
+#     """
+#     A conservation law corresponding to a conserved charge acc_type
+#     """
+#     acc_type = C()
+#     accumulation_symbol = acc_symbol(acc_type)
 
-    D = model.domain
-    cell_entity = Cells()
-    face_entity = Faces()
-    nc = count_entities(D, cell_entity)
-    nf = count_entities(D, face_entity)
-    nhf = 2 * nf
-    nn = size(get_neighborship(D.grid), 2)
-    n_tot = nc + 2 * nn
-    neq = Jutul.number_of_equations_per_entity(model, eq)
+#     D = model.domain
+#     cell_entity = Cells()
+#     face_entity = Faces()
+#     nc = count_entities(D, cell_entity)
+#     nf = count_entities(D, face_entity)
+#     nhf = 2 * nf
+#     nn = size(get_neighborship(D.grid), 2)
+#     n_tot = nc + 2 * nn
+#     neq = Jutul.number_of_equations_per_entity(model, eq)
 
-    alloc = (n, entity, n_entities_pos) -> CompactAutoDiffCache(
-        neq, n, model, entity = entity, n_entities_pos = n_entities_pos,
-        context = model.context; kwarg...
-    )
+#     alloc = (n, entity, n_entities_pos) -> CompactAutoDiffCache(
+#         neq, n, model, entity = entity, n_entities_pos = n_entities_pos,
+#         context = model.context; kwarg...
+#     )
 
-    acc = alloc(nc, cell_entity, nc)
-    hf_cells = alloc(nhf, cell_entity, nhf)
-    density = alloc(n_tot, cell_entity, n_tot)
+#     acc = alloc(nc, cell_entity, nc)
+#     hf_cells = alloc(nhf, cell_entity, nhf)
+#     density = alloc(n_tot, cell_entity, n_tot)
 
-    ConservationTPFAStorage{C}(
-        acc, accumulation_symbol, hf_cells, density
-    )
-end
+#     ConservationTPFAStorage{C}(
+#         acc, accumulation_symbol, hf_cells, density
+#     )
+# end
 
-function Jutul.setup_equation_storage(model, eq::Conservation, storage; extra_sparsity = nothing, kwarg...)
-    return ConservationTPFAStorage(model, eq; kwarg...)
-end
+# function Jutul.setup_equation_storage(model, eq::Conservation, storage; extra_sparsity = nothing, kwarg...)
+#     return ConservationTPFAStorage(model, eq; kwarg...)
+# end
 
-function acc_symbol(::Charge)
-    return :Charge
-end
+# function acc_symbol(::Charge)
+#     return :Charge
+# end
 
-function acc_symbol(::Mass)
-    return :Mass
-end
+# function acc_symbol(::Mass)
+#     return :Mass
+# end
 
-function acc_symbol(::Energy)
-    return :Energy
-end
+# function acc_symbol(::Energy)
+#     return :Energy
+# end
 
 struct TPFAInterfaceFluxCT{T,F} <: Jutul.AdditiveCrossTerm
     target_cells::T

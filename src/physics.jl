@@ -32,55 +32,20 @@ end
     return k_av * grad_phi
 end
 
-function Jutul.update_equation!(eq_s,law::Conservation, storage, model, dt)
-    update_accumulation!(eq_s,law, storage, model, dt)
-    update_half_face_flux!(eq_s,law, storage, model, dt)
-    #update_density!(eq_s,law, storage, model)
-end
-
-
-function update_accumulation!(eq_s,law::Conservation, storage, model, dt)
-    conserved = eq_s.accumulation_symbol
-    acc = get_entries(eq_s.accumulation)
-    state = storage.state
-    state0 = storage.state0
-    m = state[conserved]
-    m0 = state0[conserved]
-
-    @tullio acc[c] = (m[c] - m0[c])/dt
-    return acc
-end
-
-# function update_accumulation!(eq_s,law::Conservation{Charge}, storage, model, dt)
-#     conserved = eq_s.accumulation_symbol
-#     acc = get_entries(eq_s.accumulation)
-#     #m = storage.state[conserved]
-#     #m0 = storage.state0[conserved]
-#     @tullio acc[c] = 0#(m[c] - m0[c])/dt
-#     return acc
-# end
-
-function update_half_face_flux!(eq_s,    
-    law::Conservation, storage, model, dt
-    )
-    fd = law.flow_discretization
-    update_half_face_flux!(eq_s, law, storage, model, dt, fd)
-end
-
-function update_half_face_flux!(eq_s, law::Conservation, storage, model, dt, flow::TPFlow)
+function Jutul.update_half_face_flux!(eq_s::ConservationLawTPFAStorage, law::ConservationLaw, state, model::ECModel, dt, flow::TwoPointPotentialFlowHardCoded)
     f = get_entries(eq_s.half_face_flux_cells)
-    internal_flux!(f, model, law, storage.state, flow.conn_data)
+    internal_flux!(f, model, law, state, flow.conn_data)
 end
 
-function internal_flux!(kGrad, model::ECModel, law::Conservation{Mass}, state, conn_data)
+function internal_flux!(kGrad, model::ECModel, law::ConservationLaw{:Mass, <:Any}, state, conn_data)
     @tullio kGrad[i] = -half_face_two_point_kgrad(conn_data[i], state.C, state.Diffusivity)
 end
 
-function internal_flux!(kGrad, model, law::Conservation{Charge}, state, conn_data)
+function internal_flux!(kGrad, model, law::ConservationLaw{:Charge, <:Any}, state, conn_data)
     @tullio kGrad[i] = -half_face_two_point_kgrad(conn_data[i], state.Phi, state.Conductivity)
 end
 
-function internal_flux!(kGrad, model::ElectrolyteModel, law::Conservation{Mass}, state, conn_data)
+function internal_flux!(kGrad, model::ElectrolyteModel, law::ConservationLaw{:Mass, <:Any}, state, conn_data)
     t = -0.202#param.t
     z =1#param.z
     F = FARADAY_CONST
@@ -94,24 +59,10 @@ function internal_flux!(kGrad, model::ElectrolyteModel, law::Conservation{Mass},
     end
 end
 
-# @jutul_secondary function update_as_secondary!(
-#     j, tv::TotalCurrent, model, param, TPkGrad_C, TPkGrad_Phi
-#     )
-#     @tullio j[i] =  - TPkGrad_C[i] - TPkGrad_Phi[i]
-# end
-
-function update_density!(law::Conservation, storage, model)
-    nothing
-end
-
-
 #######################
 # Boundary conditions #
 #######################
 # TODO: Add possibilites for different potentials to have different boundary cells
-
-function corr_type(::Conservation{T}) return T() end
-
 
 # Called from uppdate_state_dependents
 function Jutul.apply_boundary_conditions!(storage, parameters, model::ECModel)
@@ -124,7 +75,7 @@ end
 
 
 function apply_boundary_potential!(
-    acc, state, parameters, model, eq::Conservation{Charge}
+    acc, state, parameters, model, eq::ConservationLaw{:Charge}
     )
     # values
     Phi = state[:Phi]
@@ -140,7 +91,7 @@ function apply_boundary_potential!(
 end
 
 function apply_boundary_potential!(
-    acc, state, parameters, model, eq::Conservation{Mass}
+    acc, state, parameters, model, eq::ConservationLaw{:Mass}
     )
     # values
     C = state[:C]
@@ -157,7 +108,7 @@ function apply_boundary_potential!(
 end
 
 function apply_boundary_potential!(
-    acc, state, parameters, model, eq::Conservation{Energy}
+    acc, state, parameters, model, eq::ConservationLaw{:Energy}
     )
     # values
     T = state[:T]
@@ -173,19 +124,19 @@ function apply_boundary_potential!(
 end
 
 
-function apply_bc_to_equation!(storage, parameters, model, eq::Conservation, eq_s)
+function apply_bc_to_equation!(storage, parameters, model, eq::ConservationLaw, eq_s)
     acc = get_entries(eq_s.accumulation)
     state = storage.state
 
     apply_boundary_potential!(acc, state, parameters, model, eq)
 
-    jkey = BOUNDARY_CURRENT[corr_type(eq)]
+    jkey = BOUNDARY_CURRENT[conserved_symbol(eq)]
     if haskey(state, jkey)
         apply_boundary_current!(acc, state, jkey, model, eq)
     end
 end
 
-function apply_boundary_current!(acc, state, jkey, model, eq::Conservation)
+function apply_boundary_current!(acc, state, jkey, model, eq::ConservationLaw)
     J = state[jkey]
 
     jb = model.secondary_variables[jkey]

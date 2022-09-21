@@ -24,11 +24,6 @@ end
 # All EC-comps #
 ################
 
-# ? Is this necessary?
-function single_unique_potential(model::ECModel)
-    return false
-end
-
 function number_of_entities(model, pv::KGrad)
     """ Two fluxes per face """
     return 2*count_entities(model.domain, Faces())
@@ -62,15 +57,6 @@ function degrees_of_freedom_per_entity(model, sf::NonDiagCellVariables)
     return values_per_entity(model, sf) 
 end
 
-# ?Why not faces?
-#function associated_entity(::KGrad)
-#    Cells()
-#end
-
-@inline function get_diagonal_cache(eq::ConservationTPFAStorage)
-    return eq.accumulation
-end
-
 function initialize_variable_value(
     model, pvar::NonDiagCellVariables, val; perform_copy=true
     )
@@ -93,147 +79,6 @@ function initialize_variable_value!(
     V = repeat([val], num_val)
     return initialize_variable_value!(state, model, pvar, symb, V)
 end
-
-
-function align_to_jacobian!(
-    law::ConservationTPFAStorage, eq::Conservation, jac, model, u::Cells; equation_offset = 0, 
-    variable_offset = 0
-    )
-    fd = eq.flow_discretization
-    M = global_map(model.domain)
-
-    acc = law.accumulation
-    hflux_cells = law.half_face_flux_cells
-
-    diagonal_alignment!(
-        acc, eq, jac, u, model.context;
-        target_offset = equation_offset, source_offset = variable_offset
-        )
-    half_face_flux_cells_alignment!(
-        hflux_cells, acc, jac, model.context, M, fd, 
-        target_offset = equation_offset, source_offset = variable_offset
-        )
-end
-
-function find_and_place_density!(
-    jac, target, source, nu, ne, np, index, density, context
-    )
-    for e in 1:ne
-        for d = 1:np
-            pos = find_jac_position(
-                jac, target, source, 
-                e, d, 
-                nu, nu, 
-                ne, np, 
-                context
-                )
-            set_jacobian_pos!(density, index, e, d, pos)
-        end
-    end
-end
-
-function density_alignment!(
-    density, acc_cache, jac, context, flow_disc;
-    target_offset = 0, source_offset = 0
-    )
-    
-    nu, ne, np = ad_dims(acc_cache)
-    facepos = flow_disc.conn_pos
-    nc = length(facepos) - 1
-    cc = flow_disc.cellcell
-
-    Threads.@threads for cell in 1:nc
-        for cn in cc.pos[cell]:(cc.pos[cell+1]-1)
-            c, n = cc.tbl[cn]
-            @assert c == cell
-            other = n
-            index = cn
-            find_and_place_density!(
-                jac, other + target_offset, cell + source_offset, nu, ne, np, index, 
-                density, context
-                )
-        end
-    end
-end
-
-
-function declare_pattern(model, e::Conservation, e_s::ConservationTPFAStorage, ::Cells)
-    df = e.flow_discretization
-    hfd = Array(df.conn_data)
-    n = number_of_entities(model, e)
-    # Fluxes
-    I = map(x -> x.self, hfd)
-    J = map(x -> x.other, hfd)
-    # Diagonals
-    D = [i for i in 1:n]
-
-    I = vcat(I, D)
-    J = vcat(J, D)
-
-    return (I, J)
-end
-
-function declare_pattern(model, e::Conservation, e_s::ConservationTPFAStorage, ::Faces)
-    df = e.flow_discretization
-    cd = df.conn_data
-    I = map(x -> x.self, cd)
-    J = map(x -> x.face, cd)
-    return (I, J)
-end
-
-#####################
-# Updating Jacobian #
-#####################
-
-
-function update_linearized_system_equation!(nz, r, model, law::Conservation, eq_s::ConservationTPFAStorage)
-    acc = get_diagonal_cache(eq_s)
-    cell_flux = eq_s.half_face_flux_cells
-    cpos = law.flow_discretization.conn_pos
-    Jutul.update_linearized_system_subset_conservation_accumulation!(nz, r, model, acc, cell_flux, cpos, model.context)
-end
-
-
-function fill_jac_density!(nz, r, model, density)
-    """
-    Fills the entries of the Jacobian.
-    First loop: Adds the contribution from density terms to the loop
-    Second loop: Adds contributions from density to r.
-    """
-    error("Function intentionally disabled - be careful before enabling.")
-    # Cells, equations, partials
-    nud, ne, np = ad_dims(density)
-    dentries = density.entries
-    dp = density.jacobian_positions
-
-    # Fill density term
-    Threads.@threads for i = 1:nud
-        for e in 1:ne
-            entry = get_entry(density, i, e, dentries)
-
-            for d = 1:np
-                pos = get_jacobian_pos(density, i, e, d, dp)
-                @inbounds nz[pos] -= entry.partials[d]
-            end
-        end
-    end
-
-    nc = number_of_cells(model.domain)
-    # Add value from densities
-    mf = model.domain.discretizations.charge_flow
-    cc = mf.cellcell
-    nc = number_of_cells(model.domain)
-    Threads.@threads for cn in cc.pos[1:end-1] # The diagonal elements
-        for e in 1:ne
-            @inbounds c, n = cc.tbl[cn]
-            @assert c == n
-            entry = get_entry(density, cn, e, dentries)
-            @inbounds r[e, c] -= entry.value
-        end
-    end
-
-end
-
 
 ############################
 # Standard implementations #

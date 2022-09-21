@@ -22,9 +22,10 @@ struct EnergyDensity <: ScalarNonDiagVaraible end
 struct EDDiag <: ScalarVariable end
 
 function select_equations_system!(eqs, domain, system::Electrolyte, formulation)
-    charge_cons = (arg...; kwarg...) -> Conservation(Charge, arg...; kwarg...)
-    mass_cons = (arg...; kwarg...) -> Conservation(Mass, arg...; kwarg...)
-    energy_cons = (arg...; kwarg...) -> Conservation(Energy, arg...; kwarg...)
+    # TODO: FIXME.
+    charge_cons = (arg...; kwarg...) -> Conservation(:Charge, arg...; kwarg...)
+    mass_cons = (arg...; kwarg...) -> Conservation(:Mass, arg...; kwarg...)
+    energy_cons = (arg...; kwarg...) -> Conservation(:Energy, arg...; kwarg...)
     
     eqs[:charge_conservation] = (charge_cons, 1)
     eqs[:mass_conservation] = (mass_cons, 1)
@@ -84,18 +85,18 @@ function select_minimum_output_variables!(out, system::Electrolyte, model)
     end
 end
 
-function update_linearized_system_equation!(
-    nz, r, model::TestElyteModel, law::Conservation{Energy}, eq_s
-    )
+# function update_linearized_system_equation!(
+#     nz, r, model::TestElyteModel, law::Conservation{Energy}, eq_s
+#     )
     
-    acc = get_diagonal_cache(eq_s)
-    cell_flux = eq_s.half_face_flux_cells
-    cpos = law.flow_discretization.conn_pos
-    # density = eq_s.density
+#     acc = get_diagonal_cache(eq_s)
+#     cell_flux = eq_s.half_face_flux_cells
+#     cpos = law.flow_discretization.conn_pos
+#     # density = eq_s.density
 
-    update_linearized_system_subset_conservation_accumulation!(nz, r, model, acc, cell_flux, cpos, model.context)
-    # fill_jac_density!(nz, r, model, density)
-end
+#     update_linearized_system_subset_conservation_accumulation!(nz, r, model, acc, cell_flux, cpos, model.context)
+#     # fill_jac_density!(nz, r, model, density)
+# end
 
 
 #######################
@@ -320,34 +321,9 @@ end
 #     return - storage.state.TPkGrad_T
 # end
 
-function align_to_jacobian!(
-    law::ConservationTPFAStorage, eq::Conservation, jac, model::TestElyteModel, u::Cells; equation_offset = 0, 
-    variable_offset = 0
-    )
-    fd = law.flow_discretization
-    M = global_map(model.domain)
-
-    acc = law.accumulation
-    hflux_cells = law.half_face_flux_cells
-    density = law.density
-
-    diagonal_alignment!(
-        acc, eq, jac, u, model.context;
-        target_offset = equation_offset, source_offset = variable_offset
-        )
-    half_face_flux_cells_alignment!(
-        hflux_cells, acc, jac, model.context, M, fd, 
-        target_offset = equation_offset, source_offset = variable_offset
-        )
-    density_alignment!(
-        density, acc, jac, model.context, fd;
-        target_offset = equation_offset, source_offset = variable_offset
-        )
-end
-
 
 function apply_boundary_potential!(
-    acc, stateeters, model::ElectrolyteModel, eq::Conservation{Charge}
+    acc, stateeters, model::ElectrolyteModel, eq::ConservationLaw{:Charge}
     )
     # values
     Phi = state[:Phi]
@@ -371,7 +347,7 @@ end
 
 
 function apply_boundary_potential!(
-    acc, stateeters, model::ElectrolyteModel, eq::Conservation{Mass}
+    acc, stateeters, model::ElectrolyteModel, eq::ConservationLaw{:Mass}
     )
     # values
     Phi = state[:Phi]
@@ -403,7 +379,7 @@ function apply_boundary_potential!(
 end
 
 function apply_boundary_potential!(
-    acc, stateeters, model::ElectrolyteModel, eq::Conservation{Energy}
+    acc, stateeters, model::ElectrolyteModel, eq::ConservationLaw{:Energy}
     )
     # values
     T = state[:T]

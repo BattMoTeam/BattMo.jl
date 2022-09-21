@@ -32,7 +32,8 @@ module BattMo
     update_cross_term!,
     get_entry,
     get_jacobian_pos,
-    DiagonalEquation
+    DiagonalEquation,
+    ConservationLawTPFAStorage
 
 import Jutul: fill_equation_entries!, update_linearized_system_equation!, check_convergence, update!, linear_operator, transfer, operator_nrows, matrix_layout, apply!
 import Jutul: apply_forces_to_equation!, convergence_criterion

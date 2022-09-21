@@ -40,8 +40,8 @@ function select_equations!(
     disc = model.domain.discretizations.charge_flow
     T = typeof(disc)
 
-    eqs[:charge_conservation] =  Conservation{Charge, T}(Charge())
-    eqs[:mass_conservation] =  Conservation{Mass, T}(Mass())
-    eqs[:energy_conservation] =  Conservation{Energy, T}(Energy())
+    eqs[:charge_conservation] =  ConservationLaw(disc, :Charge)
+    eqs[:mass_conservation] =  ConservationnLaw(disc, :Mass)
+    eqs[:energy_conservation] =  ConservationnLaw(disc, :Energy)
 end
 

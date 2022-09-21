@@ -24,16 +24,14 @@ end
 
 function select_equations!(
     eqs, system::CurrentCollector, model)
-    #charge_cons = (arg...; kwarg...) -> Conservation(Charge(), arg...; kwarg...)
     disc = model.domain.discretizations.charge_flow
-    T = typeof(disc)
 
-    eqs[:charge_conservation] = Conservation{Charge, T}(disc)#(charge_cons, 1)
+    eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 end
 
 function apply_forces_to_equation!(acc, storage,
     model::SimulationModel{<:Any, <:CurrentCollector, <:Any, <:Any},
-    law::Conservation{Charge}, eq_s, force, time)
+    law::ConservationLaw{:Charge}, eq_s, force, time)
     cell = force.cell
     rate = force.src
     tup = 0.1

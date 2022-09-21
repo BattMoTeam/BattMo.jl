@@ -63,7 +63,9 @@ function get_cc_grid(
     P, S = get_tensorprod(name)
     G = MinimalECTPFAGrid(volumes, N, bc, b_T_hf, P, S)
 
-    flow = TPFlow(G, T; tensor_map=tensor_map)
+    # flow = TPFlow(G, T; tensor_map=tensor_map)
+    @assert !tensor_map
+    flow = TwoPointPotentialFlowHardCoded(G, T, nothing, nothing)
     disc = (charge_flow = flow,)
     D = DiscretizedDomain(G, disc)
 
@@ -95,7 +97,9 @@ function exported_model_to_domain(exported; bc=[], b_T_hf=[], tensor_map=false, 
     G = MinimalECTPFAGrid(volumes, N, bc, b_T_hf, P, S, vf)
 
     T = exported["operators"]["T"].*2.0*-1.0
-    flow = TPFlow(G, T, tensor_map=tensor_map)
+    # flow = TPFlow(G, T, tensor_map=tensor_map)
+    @assert !tensor_map
+    flow = TwoPointPotentialFlowHardCoded(G, T, nothing, nothing)
     disc = (charge_flow = flow,)
     D = DiscretizedDomain(G, disc)
 

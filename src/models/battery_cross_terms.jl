@@ -167,10 +167,11 @@ function Jutul.update_cross_term_in_entity!(out, ind,
         phi_a, c_a, R,  ocd,
         phi_e, c_e, activematerial, electrolyte
         )
-    if corr_type(eq) == Mass()
+    cs = conserved_symbol(eq)
+    if cs == :Mass
         v = eM
     else
-        @assert corr_type(eq) == Charge()
+        @assert cs == :Charge
         v = eS
     end
     out[] = -v
