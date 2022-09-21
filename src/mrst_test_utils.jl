@@ -552,7 +552,7 @@ function setup_sim(name)
     cFun(time) = currentFun(time, inputI)
     forces_pp = nothing 
     #forces_pp = (src = SourceAtCell(10,9.4575*0.0),)
-    currents = Dict( :current => cFun)
+    currents = setup_forces(model[:BPP], current = cFun)
     forces = Dict(
         :CC => nothing,
         :NAM => nothing,

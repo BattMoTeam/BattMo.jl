@@ -52,18 +52,20 @@ function select_equations!(eqs, system::CurrentAndVoltageSystem, model)
     eqs[:control] = ControlEquation()
 end
 
-function build_forces(model::SimulationModel{G, S}; sources = nothing) where {G<:CurrentAndVoltageDomain, S<:CurrentAndVoltageSystem}
-    return (sources = sources,)
+function Jutul.setup_forces(model::SimulationModel{G, S}; current = nothing) where {G<:CurrentAndVoltageDomain, S<:CurrentAndVoltageSystem}
+    return (current = current,)
 end
 
 function apply_forces_to_equation!(diag, storage, model, eq::ControlEquation, eq_s, currentFun, time)
-    # @info "Applying to ctrl" diag currentFun(time)
     @. diag -= currentFun(time)
 end
 
 function select_primary_variables!(S, system::CurrentAndVoltageSystem, model)
     S[:Phi] = VoltVar()
     S[:Current] = CurrentVar()
+end
+
+function Jutul.update_before_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces)
 end
 
 #function select_secondary_variables_system!(S, domain, system::CurrentAndVoltageSystem, formulation)
