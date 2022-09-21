@@ -28,11 +28,7 @@ function policy_to_control(p::SimpleCVPolicy, state, model, dt, time0)
     end
     phi_p = p.voltage
     phi = only(state.Phi)
-    I = only(state.Current)
     is_voltage_ctrl = phi <= phi_p
-    # @info is_voltage_ctrl phi phi_p I_p I time0 + dt
-
-    is_voltage_ctrl = false
     if is_voltage_ctrl
         target = phi_p
     else

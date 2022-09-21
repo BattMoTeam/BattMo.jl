@@ -548,7 +548,8 @@ function setup_sim(name)
         inputI = max(inputI,exported_all["states"][i]["Control"]["I"])
         minE = min(minE,exported_all["states"][i]["Control"]["E"])
     end
-    @info inputI minE
+    # Set initial voltage above the threshold for switching
+    @. state0[:BPP][:Phi] = minE*1.5
     cFun(time) = currentFun(time, inputI)
     forces_pp = nothing 
     #forces_pp = (src = SourceAtCell(10,9.4575*0.0),)
