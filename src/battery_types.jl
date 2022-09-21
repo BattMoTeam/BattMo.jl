@@ -95,62 +95,14 @@ struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
     vol_frac::V
 end
 
-import Jutul: FlowDiscretization
-struct TPFlow <: FlowDiscretization
-    # TODO: Declare types ?
-    conn_pos
-    conn_data
-    cellfacecellvec
-    cellcellvec
-    cellcell
-    maps # Maps between indices
-end
+Base.show(io::IO, g::MinimalECTPFAGrid) = print(io, "MinimalECTPFAGrid ($(number_of_cells(g)) cells, $(number_of_faces(g)) faces)")
 
+
+import Jutul: FlowDiscretization
 
 ################
 # Constructors #
 ################
-
-function TPFlow(grid::AbstractJutulMesh, T; tensor_map = false)
-    N = get_neighborship(grid)
-    faces, face_pos = get_facepos(N)
-
-    nhf = length(faces)
-    nc = length(face_pos) - 1
-    if !isnothing(T)
-        @assert length(T) == nhf ÷ 2
-    end
-    get_el = (face, cell) -> Jutul.get_connection(face, cell, faces, N, T, nothing, nothing, false)
-    el_type = typeof(get_el(1, 1))
-    
-    conn_data = Vector{el_type}(undef, nhf)
-    Threads.@threads for cell = 1:nc
-        @inbounds for fpos = face_pos[cell]:(face_pos[cell+1]-1)
-            conn_data[fpos] = get_el(faces[fpos], cell)
-        end
-    end
-
-    cfcv, ccv, cc, map = [[], [], [], []]
-    if tensor_map
-        cfcv = get_cellfacecellvec_tbl(conn_data, face_pos)
-        ccv = get_cellcellvec_tbl(conn_data, face_pos)
-        cc = get_cellcell_tbl(conn_data, face_pos)
-
-        cfcv2ccv = get_cfcv2ccv_map(cfcv, ccv)
-        ccv2cc = get_ccv2cc_map(ccv, cc)
-        cfcv2fc, cfcv2fc_bool = get_cfcv2fc_map(cfcv, conn_data)
-
-        map = (
-            cfcv2ccv = cfcv2ccv, 
-            ccv2cc = ccv2cc, 
-            cfcv2fc = cfcv2fc,
-            cfcv2fc_bool = cfcv2fc_bool
-        )
-    end
-
-    TPFlow(face_pos, conn_data, cfcv, ccv, cc, map)
-end
-
 
 function MinimalECTPFAGrid(pv, N, bc=[], T_hf=[], P=[], S=[], vf=[])
     nc = length(pv)
