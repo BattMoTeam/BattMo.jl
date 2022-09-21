@@ -151,7 +151,11 @@ function setup_model(exported_all)
         (model_nam, G_nam, state0_nam, parm_nam, init_nam) = 
             make_system(exported_nam, sys_nam, bcfaces, srccells)
     end
-    sys_elyte = SimpleElyte()
+    t1, t2 = exported_all["model"]["Electrolyte"]["sp"]["t"]
+    z1, z2 = exported_all["model"]["Electrolyte"]["sp"]["z"]
+    tDivz_eff = (t1/z1 + t2/z2)
+
+    sys_elyte = SimpleElyte(t = tDivz_eff, z = 1)
     exported_elyte = exported_all["model"]["Electrolyte"]
     bcfaces=[]
     srccells = []
@@ -264,11 +268,6 @@ function setup_model(exported_all)
             :BPP => parm_bpp
         )
     end
-    t1, t2 = exported_all["model"]["Electrolyte"]["sp"]["t"]
-    z1, z2 = exported_all["model"]["Electrolyte"]["sp"]["z"]
-    tDivz_eff = (t1/z1 + t2/z2)
-    parameters[:ELYTE][:t] = tDivz_eff
-    parameters[:ELYTE][:z] = 1
     if skip_cc
         grids = Dict(
             :NAM =>G_nam,

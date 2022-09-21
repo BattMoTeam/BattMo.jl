@@ -147,8 +147,9 @@ end
 @jutul_secondary function update_as_secondary!(
     coeff, tv::ConsCoeff, model::ElectrolyteModel, Conductivity, DmuDc
     )
-    t = 1#param.t
-    z = 1#param.z
+    sys = model.system
+    t = sys.t
+    z = sys.z
     F = FARADAY_CONST
     @tullio coeff[i] = Conductivity[i]*DmuDc[i] * t/(F*z)
 end
@@ -187,8 +188,10 @@ function apply_boundary_potential!(
     D = state[:Diffusivity]
 
     F = FARADAY_CONST
-    z = parameters.z
-    t = parameters.t
+    sys = model.system
+    t = sys.t
+    z = sys.z
+
     coeff = state[:ConsCoeff]
 
     BPhi = state[:BoundaryPhi]

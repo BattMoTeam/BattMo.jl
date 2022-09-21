@@ -4,7 +4,14 @@ A simple model of electrolyte without energy conservation
 
 export SimpleElyte
 
-struct SimpleElyte <: Electrolyte end
+struct SimpleElyte <: Electrolyte
+    t::Float64
+    z::Float64
+    function SimpleElyte(; t = 1, z = 1)
+        new(t, z)
+    end
+end
+
 const SimpleElyteModel = SimulationModel{<:Any, <:SimpleElyte, <:Any, <:Any}
 
 
