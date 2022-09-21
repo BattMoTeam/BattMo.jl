@@ -55,9 +55,9 @@ import Jutul: select_minimum_output_variables!
     include("models/current_collector.jl")
     include("models/current_collector_temp.jl")
     include("models/activematerial.jl")
-    include("models/ocd.jl")
+    include("models/ocp.jl")
     include("models/simple_elyte.jl")
-    include("models/CurrentAndVoltageBoundary.jl")
+    include("models/current_and_voltage_boundary.jl")
     include("models/battery_cross_terms.jl") # Works now
     include("physics.jl")
     include("mrst_test_utils.jl")
