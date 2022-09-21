@@ -111,13 +111,13 @@ function make_system(exported,sys,bcfaces,srccells)
 end
 
 ##
-function convertToIntVector(x::Float64)
+function convert_to_int_vector(x::Float64)
     vec = Int64.(
         Vector{Float64}([x])
     )
     return vec
 end
- function convertToIntVector(x::Matrix{Float64})
+ function convert_to_int_vector(x::Matrix{Float64})
     vec = Int64.(   
     Vector{Float64}(x[:,1])
     )
@@ -132,7 +132,7 @@ function setup_model(exported_all)
 
         sys_cc = CurrentCollector()
     
-        bcfaces = convertToIntVector(exported_all["model"]["NegativeElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingfaces"])
+        bcfaces = convert_to_int_vector(exported_all["model"]["NegativeElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingfaces"])
         srccells = []
         (model_cc, G_cc, state0_cc, parm_cc,init_cc) = make_system(exported_cc, sys_cc, bcfaces, srccells)
     end
@@ -142,7 +142,7 @@ function setup_model(exported_all)
     
     if  skip_cc
         srccells = []
-        bcfaces = convertToIntVector(exported_all["model"]["NegativeElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingfaces"])
+        bcfaces = convert_to_int_vector(exported_all["model"]["NegativeElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingfaces"])
         (model_nam, G_nam, state0_nam, parm_nam, init_nam) = 
             make_system(exported_nam, sys_nam, bcfaces, srccells)
     else
@@ -215,8 +215,8 @@ function setup_model(exported_all)
     init_pam[:Phi] = state0["PositiveElectrode"]["ActiveMaterial"]["phi"][1]  #*0
 
     if skip_cc
-        init_nam[:C] = exported_all["state0"]["NegativeElectrode"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
-        init_pam[:C] = exported_all["state0"]["PositiveElectrode"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
+        init_nam[:C] = state0["NegativeElectrode"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
+        init_pam[:C] = state0["PositiveElectrode"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
     else
         init_nam[:C] = state0["NegativeElectrode"]["ActiveMaterial"]["c"][1] 
         init_pam[:C] = state0["PositiveElectrode"]["ActiveMaterial"]["c"][1]
@@ -311,13 +311,6 @@ function setup_coupling!(model, exported_all)
         ct_pair = setup_cross_term(ct, target = :NAM, source = :CC, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
     end
-    #properties = Dict(:trans => trans) #NB    
-    #intersection = ( srange, trange, Cells(), Cells())
-    #crosstermtype = InjectiveCrossTerm
-    #issym = true
-    # coupling = MultiModelCoupling(source, target, intersection; crosstype = crosstermtype, properties = properties, issym = issym)
-    # push!(model.couplings, coupling)
-
     # setup coupling NAM <-> ELYTE charge
     target = Dict( 
         :model => :ELYTE,
@@ -334,14 +327,7 @@ function setup_coupling!(model, exported_all)
     ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :charge_conservation)
     add_cross_term!(model, ct_pair)
 
-    # crosstermtype = InjectiveCrossTerm
-    # issym = true
-    # coupling = MultiModelCoupling(source, target, intersection; crosstype = crosstermtype, issym = issym)
-    # push!(model.couplings, coupling)
-
-    # setup coupling NAM <-> ELYTE mass
-    srange=Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:,1])
-    trange=Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:,2])
+    # setup coupling NAM <-> ELYTE mass (same cells as NAM <-> ELYTE)
     ct = ButlerVolmerInterfaceFluxCT(trange, srange)
     ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :mass_conservation)
     add_cross_term!(model, ct_pair)
@@ -370,8 +356,6 @@ function setup_coupling!(model, exported_all)
         :model => :PAM,
         :equation => :mass_conservation
         )
-    srange=Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,1])
-    trange=Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,2])
     ct = ButlerVolmerInterfaceFluxCT(trange, srange)
     ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :mass_conservation)
     add_cross_term!(model, ct_pair)
@@ -391,9 +375,10 @@ function setup_coupling!(model, exported_all)
         trange = Int64.(
             exported_all["model"]["PositiveElectrode"]["couplingTerm"]["couplingcells"][:,2]
             )
-        msource =   exported_all["model"]["PositiveElectrode"]["CurrentCollector"]
-        couplingfaces = Int64.(exported_all["model"]["PositiveElectrode"]["couplingTerm"]["couplingfaces"])
-        couplingcells = Int64.(exported_all["model"]["PositiveElectrode"]["couplingTerm"]["couplingcells"])
+        msource = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]
+        ct = exported_all["model"]["PositiveElectrode"]["couplingTerm"]
+        couplingfaces = Int64.(ct["couplingfaces"])
+        couplingcells = Int64.(ct["couplingcells"])
         trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "EffectiveElectricalConductivity")
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
         ct_pair = setup_cross_term(ct, target = :PAM, source = :PP, equation = :charge_conservation)
@@ -406,13 +391,13 @@ function setup_coupling!(model, exported_all)
             :equation => :charge_conservation
             )
 
-        trange = convertToIntVector(
+        trange = convert_to_int_vector(
                 exported_all["model"]["PositiveElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingcells"]
-            )    
+            )
         srange = Int64.(ones(size(trange)))
-        msource =   exported_all["model"]["PositiveElectrode"]["ActiveMaterial"]
-        couplingfaces = Int64.(exported_all["model"]["PositiveElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingfaces"])
-        couplingcells = Int64.(exported_all["model"]["PositiveElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingcells"]) 
+        msource = exported_all["model"]["PositiveElectrode"]["ActiveMaterial"]
+        couplingfaces = Int64.(msource["externalCouplingTerm"]["couplingfaces"])
+        couplingcells = Int64.(msource["externalCouplingTerm"]["couplingcells"]) 
     else    
         #setup coupling PP <-> BPP charge
         target = Dict( 
@@ -420,13 +405,13 @@ function setup_coupling!(model, exported_all)
             :equation => :charge_conservation
             )
 
-        trange = convertToIntVector(
+        trange = convert_to_int_vector(
                 exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingcells"]
             )    
         srange = Int64.(ones(size(trange)))
-        msource =   exported_all["model"]["PositiveElectrode"]["CurrentCollector"]
-        couplingfaces = Int64.(exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingfaces"])
-        couplingcells = Int64.(exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingcells"])
+        msource = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]
+        couplingfaces = Int64.(msource["externalCouplingTerm"]["couplingfaces"])
+        couplingcells = Int64.(msource["externalCouplingTerm"]["couplingcells"])
     end
     source = Dict( 
         :model => :BPP,
