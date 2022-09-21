@@ -25,6 +25,7 @@ struct T <: Potential end
 
 struct Conductivity <: ScalarVariable end
 struct Diffusivity <: ScalarVariable end
+Jutul.variable_scale(::Diffusivity) = 1e-10
 struct ThermalConductivity <: ScalarVariable end
 
 # Accumulation variables
