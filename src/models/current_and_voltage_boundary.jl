@@ -7,7 +7,7 @@ struct CurrentAndVoltageDomain <: JutulDomain end
 active_entities(d::CurrentAndVoltageDomain, ::Any) = [1]
 
 const CurrentAndVoltageModel  = SimulationModel{CurrentAndVoltageDomain,CurrentAndVoltageSystem}
-function number_of_cells(::CurrentAndVoltageDomain) 1 end
+number_of_cells(::CurrentAndVoltageDomain) = 1
 
 # Driving force for the test equation
 struct CurrentForce
@@ -20,33 +20,50 @@ struct VoltageForce
 end
 #abstract type DiagonalEquation <: JutulEquation end
 # Equations
-struct CurrentEquation <: DiagonalEquation end
-
+struct CurrentEquation <: JutulEquation end
 Jutul.local_discretization(::CurrentEquation, i) = nothing
 
-function Jutul.update_equation_in_entity!(v, i, state, state0, eq::CurrentEquation, model, dt, ldisc = Jutul.local_discretization(eq, i))
-    phi = state.Phi[1]
-    v[] = phi*1e-10
+struct ControlEquation <: JutulEquation end
+Jutul.local_discretization(::ControlEquation, i) = nothing
+
+function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquation, model, dt, ldisc = Jutul.local_discretization(eq, i))
+    I = only(state.Current)
+    phi = only(state.Phi)
+    voltage_control = true
+    if voltage_control
+        v[] = -I
+    else
+        v[] = phi
+    end
 end
+
+function Jutul.update_equation_in_entity!(v, i, state, state0, eq::CurrentEquation, model, dt, ldisc = Jutul.local_discretization(eq, i))
+    I = only(state.Current)
+    phi = only(state.Phi)
+    v[] = I + phi*1e-10
+end
+
 
 struct VoltVar <: ScalarVariable end
 struct CurrentVar <: ScalarVariable end
 
 function select_equations!(eqs, system::CurrentAndVoltageSystem, model)
     eqs[:charge_conservation] = CurrentEquation()
+    eqs[:control] = ControlEquation()
 end
 
 function build_forces(model::SimulationModel{G, S}; sources = nothing) where {G<:CurrentAndVoltageDomain, S<:CurrentAndVoltageSystem}
     return (sources = sources,)
 end
 
-function apply_forces_to_equation!(diag, storage, model, eq::CurrentEquation, eq_s, currentFun, time)
+function apply_forces_to_equation!(diag, storage, model, eq::ControlEquation, eq_s, currentFun, time)
+    # @info "Applying to ctrl" diag currentFun(time)
     @. diag -= currentFun(time)
 end
 
 function select_primary_variables!(S, system::CurrentAndVoltageSystem, model)
     S[:Phi] = VoltVar()
-    #S[:Current] = CurrentVar()
+    S[:Current] = CurrentVar()
 end
 
 #function select_secondary_variables_system!(S, domain, system::CurrentAndVoltageSystem, formulation)

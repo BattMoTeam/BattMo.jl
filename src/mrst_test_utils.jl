@@ -66,6 +66,7 @@ function make_system(exported,sys,bcfaces,srccells)
     phi0 = 1.0
     C0 = 1.
     T0 = 298.15
+    I0 = 1.0
     #D = -0.7e-10 # ???
     # D = - exported_all["model"]["NegativeElectrode"]["ElectrodeActiveComponent"]["InterDiffusionCoefficient"]
     if haskey(exported,"InterDiffusionCoefficient")
@@ -91,6 +92,7 @@ function make_system(exported,sys,bcfaces,srccells)
 
     init = Dict(
         :Phi                    => phi0,
+        :Current                => I0,
         :C                      => C0,
         :T                      => T0,
         :Conductivity           => σ,
@@ -225,7 +227,7 @@ function setup_model(exported_all)
     else
         init_elyte[:C] = state0["Electrolyte"]["c"][1]
     end
-    init_bpp = Dict(:Phi => 1.0)
+    init_bpp = Dict(:Phi => 1.0, :Current => 1.0)
     if skip_cc
         init = Dict(     
             :NAM => init_nam,
