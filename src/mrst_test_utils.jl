@@ -460,14 +460,14 @@ end
 
 
 ##
-function currentFun(t::T,inputI::T) where {T<:Any}
+function currentFun(t::T,inputI::T) where T
     #inputI = 9.4575
     tup = 0.1
     val::T = 0.0
-    if ( t<= tup)
+    if  t <= tup
         val = sineup(0.0, inputI, 0.0, tup, t) 
     else
-        val = inputI;
+        val = inputI
     end
     return val
 end
@@ -548,11 +548,12 @@ function setup_sim(name)
         inputI = max(inputI,exported_all["states"][i]["Control"]["I"])
         minE = min(minE,exported_all["states"][i]["Control"]["E"])
     end
-
+    @info inputI minE
     cFun(time) = currentFun(time, inputI)
     forces_pp = nothing 
     #forces_pp = (src = SourceAtCell(10,9.4575*0.0),)
-    currents = setup_forces(model[:BPP], current = cFun)
+
+    currents = setup_forces(model[:BPP], policy = SimpleCVPolicy(cFun, minE))
     forces = Dict(
         :CC => nothing,
         :NAM => nothing,

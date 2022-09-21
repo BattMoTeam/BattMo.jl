@@ -1,13 +1,62 @@
 export CurrentAndVoltageSystem, CurrentAndVoltageDomain, CurrentForce, VoltageForce
-export VoltageVAr, CurrentVar, sineup
+export VoltageVar, CurrentVar, sineup
 
 struct CurrentAndVoltageSystem <: JutulSystem end
 
 struct CurrentAndVoltageDomain <: JutulDomain end
-active_entities(d::CurrentAndVoltageDomain, ::Any) = [1]
 
 const CurrentAndVoltageModel  = SimulationModel{CurrentAndVoltageDomain,CurrentAndVoltageSystem}
 number_of_cells(::CurrentAndVoltageDomain) = 1
+
+abstract type AbstractCVPolicy end
+
+struct SimpleCVPolicy{R} <: AbstractCVPolicy
+    current_function
+    voltage::R
+    function SimpleCVPolicy(current, voltage::T = 2.5) where T<:Real
+        new{T}(current, voltage)
+    end
+end
+
+function policy_to_control(p::SimpleCVPolicy, state, model, dt, time0)
+    cf = p.current_function
+    if cf isa Real
+        I_p = cf
+    else
+        # Function of time at the end of interval
+        I_p = cf(dt + time0)
+    end
+    phi_p = p.voltage
+    phi = only(state.Phi)
+    I = only(state.Current)
+    is_voltage_ctrl = phi <= phi_p
+    # @info is_voltage_ctrl phi phi_p I_p I time0 + dt
+
+    is_voltage_ctrl = false
+    if is_voltage_ctrl
+        target = phi_p
+    else
+        target = I_p
+    end
+    return (target, is_voltage_ctrl)
+end
+
+struct NoPolicy <: AbstractCVPolicy end
+
+function policy_to_control(::NoPolicy, state, model, dt, time0)
+    return (2.0, true)
+end
+
+mutable struct ControllerCV
+    policy::AbstractCVPolicy
+    time::Real
+    target::Real
+    target_is_voltage::Bool
+end
+
+function select_control_cv!(cv::ControllerCV, state, model, dt)
+    cv.target, cv.target_is_voltage = policy_to_control(cv.policy, state, model, dt, cv.time)
+end
 
 # Driving force for the test equation
 struct CurrentForce
@@ -29,16 +78,17 @@ Jutul.local_discretization(::ControlEquation, i) = nothing
 function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquation, model, dt, ldisc = Jutul.local_discretization(eq, i))
     I = only(state.Current)
     phi = only(state.Phi)
-    voltage_control = true
-    if voltage_control
-        v[] = -I
+    ctrl = state[:ControllerCV]
+    if ctrl.target_is_voltage
+        v[] = phi - ctrl.target
     else
-        v[] = phi
+        v[] = I - ctrl.target
     end
 end
 
 function Jutul.update_equation_in_entity!(v, i, state, state0, eq::CurrentEquation, model, dt, ldisc = Jutul.local_discretization(eq, i))
-    I = only(state.Current)
+    # Sign is strange here due to cross term?
+    I = -only(state.Current)
     phi = only(state.Phi)
     v[] = I + phi*1e-10
 end
@@ -52,12 +102,8 @@ function select_equations!(eqs, system::CurrentAndVoltageSystem, model)
     eqs[:control] = ControlEquation()
 end
 
-function Jutul.setup_forces(model::SimulationModel{G, S}; current = nothing) where {G<:CurrentAndVoltageDomain, S<:CurrentAndVoltageSystem}
-    return (current = current,)
-end
-
-function apply_forces_to_equation!(diag, storage, model, eq::ControlEquation, eq_s, currentFun, time)
-    @. diag -= currentFun(time)
+function Jutul.setup_forces(model::SimulationModel{G, S}; policy = NoPolicy()) where {G<:CurrentAndVoltageDomain, S<:CurrentAndVoltageSystem}
+    return (policy = policy,)
 end
 
 function select_primary_variables!(S, system::CurrentAndVoltageSystem, model)
@@ -65,7 +111,18 @@ function select_primary_variables!(S, system::CurrentAndVoltageSystem, model)
     S[:Current] = CurrentVar()
 end
 
-function Jutul.update_before_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces)
+function Jutul.update_before_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces; time = NaN)
+    ctrl = storage.state[:ControllerCV]
+    ctrl.policy = forces.policy
+    ctrl.time = time
+end
+
+function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVoltageModel)
+    state[:ControllerCV] = ControllerCV(NoPolicy(), 0.0, 2.0, true)
+end
+
+function Jutul.prepare_equation_in_entity!(i, eq::ControlEquation, eq_s, state, state0, model::CurrentAndVoltageModel, dt)
+    select_control_cv!(state.ControllerCV, state, model, dt)
 end
 
 #function select_secondary_variables_system!(S, domain, system::CurrentAndVoltageSystem, formulation)
