@@ -156,3 +156,20 @@ struct ButlerVolmerInterfaceFluxCT{T} <: Jutul.AdditiveCrossTerm
     target_cells::T
     source_cells::T
 end
+
+struct ECTransmissibilities <: ScalarVariable end
+Jutul.variable_scale(::ECTransmissibilities) = 1e-10
+Jutul.minimum_value(::ECTransmissibilities) = 0.0
+
+Jutul.associated_entity(::ECTransmissibilities) = Faces()
+function Jutul.default_values(model, ::ECTransmissibilities)
+    d = model.domain
+    nf = number_of_faces(d)
+    T = zeros(nf)
+    conn_data = d.discretizations.charge_flow.conn_data
+    for cd in conn_data
+        T[cd.face] = cd.T
+    end
+    @info "" T
+    return T
+end

@@ -76,16 +76,6 @@ end
 #######################
 # Secondary Variables #
 #######################
-
-function setup_parameters(::ElectrolyteModel)
-    d = Dict{Symbol, Any}()
-    d[:tolerances] = Dict{Symbol, Any}()
-    d[:tolerances][:default] = 1e-3
-    d[:t] = 1.
-    d[:z] = 1.
-    return d
-end
-
 const poly_param = [
     -10.5       0.074       -6.96e-5    ;
     0.668e-3    -1.78e-5    2.80e-8     ;

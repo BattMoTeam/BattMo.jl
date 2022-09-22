@@ -9,7 +9,6 @@ module BattMo
     select_secondary_variables!,
     update_secondary_variable!,
     default_value,
-    initialize_variable_value!,
     initialize_variable_ad,
     update_half_face_flux!,
     update_accumulation!,
@@ -35,12 +34,12 @@ module BattMo
     DiagonalEquation,
     ConservationLawTPFAStorage
 
-import Jutul: fill_equation_entries!, update_linearized_system_equation!, check_convergence, update!, linear_operator, transfer, operator_nrows, matrix_layout, apply!
-import Jutul: apply_forces_to_equation!, convergence_criterion
-import Jutul: get_dependencies
-import Jutul: setup_forces, setup_state, setup_state!
-import Jutul: declare_pattern, select_primary_variables!
-import Jutul: select_minimum_output_variables!
+    import Jutul: fill_equation_entries!, update_linearized_system_equation!, check_convergence, update!, linear_operator, transfer, operator_nrows, matrix_layout, apply!
+    import Jutul: apply_forces_to_equation!, convergence_criterion
+    import Jutul: get_dependencies
+    import Jutul: setup_forces, setup_state, setup_state!
+    import Jutul: declare_pattern, select_primary_variables!
+    import Jutul: select_minimum_output_variables!
 
     #include("battery.jl")
     include("physical_constants.jl")

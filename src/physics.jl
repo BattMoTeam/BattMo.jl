@@ -6,12 +6,23 @@ export half_face_two_point_kgrad
 # Gradient operator #
 #####################
 
-@inline function half_face_two_point_kgrad(
+@inline function half_face_two_point_kgrad_onesided(
     conn_data::NamedTuple, p::AbstractArray, k::AbstractArray
     )
-    half_face_two_point_kgrad(
+    half_face_two_point_kgrad_onesided(
         conn_data.self, conn_data.other, conn_data.T, p, k
         )
+end
+
+@inline harmonic_average(c1, c2, T, k) = T * (k[c1]^-1 + k[c2]^-1)^-1
+@inline grad(c_self, c_other, p::AbstractArray) = +(p[c_self] - p[c_other])
+
+@inline function half_face_two_point_kgrad(
+    c_self::I, c_other::I, T::R, phi::AbstractArray, k::AbstractArray
+    ) where {R<:Real, I<:Integer}
+    k_av = harmonic_average(c_self, c_other, T, k)
+    grad_phi = grad(c_self, c_other, phi)
+    return k_av * grad_phi
 end
 
 @inline function harm_av(
@@ -20,15 +31,15 @@ end
     return T * (k[c_self]^-1 + value(k[c_other])^-1)^-1
 end
 
-@inline function grad(c_self, c_other, p::AbstractArray)
+@inline function grad_onesided(c_self, c_other, p::AbstractArray)
     return +(p[c_self] - value(p[c_other]))
 end
 
-@inline function half_face_two_point_kgrad(
+@inline function half_face_two_point_kgrad_onesided(
     c_self::I, c_other::I, T::R, phi::AbstractArray, k::AbstractArray
     ) where {R<:Real, I<:Integer}
     k_av = harm_av(c_self, c_other, T, k)
-    grad_phi = grad(c_self, c_other, phi)
+    grad_phi = grad_onesided(c_self, c_other, phi)
     return k_av * grad_phi
 end
 
@@ -38,11 +49,36 @@ function Jutul.update_half_face_flux!(eq_s::ConservationLawTPFAStorage, law::Con
 end
 
 function internal_flux!(kGrad, model::ECModel, law::ConservationLaw{:Mass, <:Any}, state, conn_data)
-    @tullio kGrad[i] = -half_face_two_point_kgrad(conn_data[i], state.C, state.Diffusivity)
+    @tullio kGrad[i] = -half_face_two_point_kgrad_onesided(conn_data[i], state.C, state.Diffusivity)
 end
 
 function internal_flux!(kGrad, model, law::ConservationLaw{:Charge, <:Any}, state, conn_data)
-    @tullio kGrad[i] = -half_face_two_point_kgrad(conn_data[i], state.Phi, state.Conductivity)
+    @tullio kGrad[i] = -half_face_two_point_kgrad_onesided(conn_data[i], state.Phi, state.Conductivity)
+end
+
+function Jutul.compute_tpfa_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model, dt, flow_disc) where T
+    trans = state.ECTransmissibilities[face]
+    q = -half_face_two_point_kgrad(c, other, trans, state.C, state.Diffusivity)
+    return T(q)
+end
+
+function Jutul.compute_tpfa_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model, dt, flow_disc) where T
+    trans = state.ECTransmissibilities[face]
+    q = -half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
+    return T(q)
+end
+
+function Jutul.compute_tpfa_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
+    sys = model.system
+    z = sys.z
+    t = sys.t
+    F = FARADAY_CONST
+    trans = state.ECTransmissibilities[face]
+    TPDGrad_C = half_face_two_point_kgrad(c, other, trans, state.C, state.Diffusivity)
+    TPDGrad_Phi = half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
+    TotalCurrent = -TPDGrad_C - TPDGrad_Phi
+    ChargeCarrierFlux = TPDGrad_C + t / (F * z) * TotalCurrent
+    return T(ChargeCarrierFlux)
 end
 
 function internal_flux!(kGrad, model::ElectrolyteModel, law::ConservationLaw{:Mass, <:Any}, state, conn_data)
@@ -53,8 +89,8 @@ function internal_flux!(kGrad, model::ElectrolyteModel, law::ConservationLaw{:Ma
 
     @inbounds for i in eachindex(kGrad)
         cd = conn_data[i]
-        TPDGrad_C = half_face_two_point_kgrad(cd, state.C, state.Diffusivity)
-        TPDGrad_Phi = half_face_two_point_kgrad(cd, state.Phi, state.Conductivity)
+        TPDGrad_C = half_face_two_point_kgrad_onesided(cd, state.C, state.Diffusivity)
+        TPDGrad_Phi = half_face_two_point_kgrad_onesided(cd, state.Phi, state.Conductivity)
         TotalCurrent = -TPDGrad_C - TPDGrad_Phi
         ChargeCarrierFlux = TPDGrad_C + t / (F * z) * TotalCurrent
         kGrad[i] = ChargeCarrierFlux
@@ -145,4 +181,8 @@ function apply_boundary_current!(acc, state, jkey, model, eq::ConservationLaw)
     for (i, c) in enumerate(jb.cells)
         @inbounds acc[c] -= J[i]
     end
+end
+
+function Jutul.select_parameters!(prm, D::TwoPointPotentialFlowHardCoded, model::Union{ECModel, SimpleElyteModel})
+    prm[:ECTransmissibilities] = ECTransmissibilities()
 end
