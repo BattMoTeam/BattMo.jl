@@ -1,10 +1,10 @@
-export CurrentCollectorT
+export CurrentCollectorTemperature
 
 struct CurrentCollectorTemperature <: ElectroChemicalComponent end
-const CCT = SimulationModel{<:Any, <:CurrentCollectorT, <:Any, <:Any}
+const CCT = SimulationModel{<:Any, <:CurrentCollectorTemperature, <:Any, <:Any}
 
 function select_minimum_output_variables!(out,
-    system::CurrentCollectorT, model
+    system::CurrentCollectorTemperature, model
     )
     for k in [:Charge, :Energy]#, :EDensityDiag]
         push!(out, k)
@@ -12,14 +12,14 @@ function select_minimum_output_variables!(out,
 end
 
 function select_primary_variables!(
-    S, system::CurrentCollectorT, model
+    S, system::CurrentCollectorTemperature, model
     )
     S[:Phi] = Phi()
     S[:Temperature] = Temperature()
 end
 
 function select_secondary_variables!(
-    S, system::CurrentCollectorT, model
+    S, system::CurrentCollectorTemperature, model
     )
     S[:Charge] = Charge()
     S[:Energy] = Energy()
@@ -33,7 +33,7 @@ end
 
 
 function select_equations!(
-    eqs, system::CurrentCollectorT, model
+    eqs, system::CurrentCollectorTemperature, model
     )
     disc = model.domain.discretizations.charge_flow
     eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
