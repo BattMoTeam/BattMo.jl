@@ -94,14 +94,14 @@ function apply_boundary_potential!(
     )
     # values
     T = state[:T]
-    BoundaryT = state[:BoundaryT]
+    BoundaryTemperature = state[:BoundaryTemperature]
     λ = state[:ThermalConductivity]
 
     bc = model.domain.grid.boundary_cells
     T_hf = model.domain.grid.boundary_T_hf
 
     for (i, c) in enumerate(bc)
-        @inbounds acc[c] += - λ[c]*T_hf[i]*(T[c] - BoundaryT[i])
+        @inbounds acc[c] += - λ[c]*T_hf[i]*(T[c] - BoundaryTemperature[i])
     end
 end
 

@@ -82,7 +82,7 @@ function make_system(exported,sys,bcfaces,srccells)
     S = model.parameters
     S[:BoundaryPhi] = BoundaryPotential(:Phi)
     S[:BoundaryC] = BoundaryPotential(:Phi)
-    S[:BoundaryT] = BoundaryPotential(:T)
+    S[:BoundaryTemperature] = BoundaryPotential(:Temperature)
 
     S[:BCCharge] = BoundaryCurrent(srccells, :Charge)
     S[:BCMass] = BoundaryCurrent(srccells, :Mass)
@@ -92,7 +92,6 @@ function make_system(exported,sys,bcfaces,srccells)
         :Phi                    => phi0,
         :Current                => I0,
         :C                      => C0,
-        :T                      => T0,
         :Conductivity           => σ,
         :Diffusivity            => D,
         :ThermalConductivity    => λ
@@ -101,7 +100,8 @@ function make_system(exported,sys,bcfaces,srccells)
     init_prm = Dict(
         :BoundaryPhi            => bcvaluephi, 
         :BoundaryC              => bcvaluephi, 
-        :BoundaryT              => bcvaluephi,
+        :BoundaryTemperature    => bcvaluephi,
+        :Temperature            => T0,
         :BCCharge               => bcvaluesrc.*0,#0.0227702,
         :BCMass                 => bcvaluesrc,
         :BCEnergy               => bcvaluesrc,

@@ -60,8 +60,3 @@ end
     kGrad, sv::Diffusivity, model
     )
 end
-
-@jutul_secondary function update_as_secondary!(
-    kGrad, sv::T, model
-    )
-end

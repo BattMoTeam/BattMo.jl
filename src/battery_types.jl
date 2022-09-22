@@ -2,7 +2,7 @@ using Jutul
 export ElectroChemicalComponent, CurrentCollector, Electectrolyte, TestElyte
 export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
 export ChargeFlow, BoundaryPotential, BoundaryCurrent
-export Phi, C, T, Charge, Mass, Energy, KGrad
+export Phi, C, Temperature, Charge, Mass, Energy, KGrad
 export BOUNDARY_CURRENT
 export TPFAInterfaceFluxCT,ButlerVolmerInterfaceFluxCT
 ###########
@@ -21,7 +21,7 @@ abstract type ElectroChemicalGrid <: AbstractJutulMesh end
 abstract type Potential <: ScalarVariable end
 struct Phi <: Potential end
 struct C <: Potential end
-struct T <: Potential end
+struct Temperature <: Potential end
 
 struct Conductivity <: ScalarVariable end
 struct Diffusivity <: ScalarVariable end

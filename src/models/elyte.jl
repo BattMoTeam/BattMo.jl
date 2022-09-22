@@ -29,7 +29,7 @@ end
 function select_primary_variables!(S, system::Electrolyte, model)
     S[:Phi] = Phi()
     S[:C] = C()
-    S[:T] = T()
+    S[:Temperature] = Temperature()
 end
 
 
@@ -102,29 +102,29 @@ end
 
 
 @jutul_secondary(
-function update_as_secondary!(dmudc, sv::DmuDc, model, T, C)
+function update_as_secondary!(dmudc, sv::DmuDc, model, Temperature, C)
     R = GAS_CONSTANT
-    @tullio dmudc[i] = R * (T[i] / C[i])
+    @tullio dmudc[i] = R * (Temperature[i] / C[i])
 end
 )
 
 # ? Does this maybe look better ?
 @jutul_secondary(
 function update_as_secondary!(
-    con, tv::Conductivity, model::ElectrolyteModel, T, C
+    con, tv::Conductivity, model::ElectrolyteModel, Temperature, C
     )
     s = model.system
     vf = model.domain.grid.vol_frac
-    @tullio con[i] = cond(T[i], C[i], s) * vf[i]^1.5
+    @tullio con[i] = cond(Temperature[i], C[i], s) * vf[i]^1.5
 end
 )
 
 @jutul_secondary function update_as_secondary!(
-    D, sv::Diffusivity, model::ElectrolyteModel, C, T
+    D, sv::Diffusivity, model::ElectrolyteModel, C, Temperature
     )
     s = model.system
     vf = model.domain.grid.vol_frac
-    @tullio D[i] = diffusivity(T[i], C[i], s)  * vf[i]^1.5
+    @tullio D[i] = diffusivity(Temperature[i], C[i], s)  * vf[i]^1.5
 end
 
 
@@ -202,7 +202,7 @@ function apply_boundary_potential!(
     # values
     T = state[:T]
     λ = state[:ThermalConductivity]
-    BT = state[:BoundaryT]
+    BT = state[:BoundaryTemperature]
 
 
     # Type

@@ -13,7 +13,7 @@ function select_minimum_output_variables!(out,
     push!(out, :Charge)
     push!(out, :Mass)
     push!(out, :Ocd)
-    push!(out, :T)
+    push!(out, :Temperature)
 end
 
 function select_primary_variables!(
@@ -25,11 +25,7 @@ end
 
 function select_secondary_variables!(
     S, system::ActiveMaterial, model
-    )
-    # S[:TPkGrad_Phi] = TPkGrad{Phi}()
-    # S[:TPkGrad_C] = TPkGrad{C}()
-    S[:T] = T()
-    
+    )    
     S[:Charge] = Charge()
     S[:Mass] = Mass()
 
@@ -37,6 +33,10 @@ function select_secondary_variables!(
     S[:Diffusivity] = Diffusivity()
     S[:Ocd] = Ocd()
     S[:ReactionRateConst] = ReactionRateConst()
+end
+
+function Jutul.select_parameters!(S, system::ActiveMaterial, model)
+    S[:Temperature] = Temperature()
 end
 
 function select_equations!(

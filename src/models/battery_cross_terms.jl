@@ -160,7 +160,7 @@ function Jutul.update_cross_term_in_entity!(out, ind,
     c_e = state_t.C[t_c]
     c_a = state_s.C[s_c]
     vols = model_s.domain.grid.volumes[s_c]
-    T = state_s.T[s_c]
+    T = state_s.Temperature[s_c]
 
     eS, eM = source_electric_material(
         vols, T,

@@ -15,16 +15,12 @@ function select_primary_variables!(
     )
     S[:Phi] = Phi()
     S[:C] = C()
-    S[:T] = T()
+    S[:Temperature] = Temperature()
 end
 
 function select_secondary_variables!(
     S, system::ElectroChemicalComponent, model
     )
-    # S[:TPkGrad_Phi] = TPkGrad{Phi}()
-    # S[:TPkGrad_C] = TPkGrad{C}()
-    # S[:TPkGrad_T] = TPkGrad{T}()
-    
     S[:Charge] = Charge()
     S[:Mass] = Mass()
     S[:Energy] = Mass()
@@ -38,7 +34,6 @@ function select_equations!(
     eqs, system::ElectroChemicalComponent, model
     )
     disc = model.domain.discretizations.charge_flow
-    T = typeof(disc)
 
     eqs[:charge_conservation] =  ConservationLaw(disc, :Charge)
     eqs[:mass_conservation] =  ConservationnLaw(disc, :Mass)

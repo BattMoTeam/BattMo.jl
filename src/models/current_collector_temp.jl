@@ -1,6 +1,6 @@
 export CurrentCollectorT
 
-struct CurrentCollectorT <: ElectroChemicalComponent end
+struct CurrentCollectorTemperature <: ElectroChemicalComponent end
 const CCT = SimulationModel{<:Any, <:CurrentCollectorT, <:Any, <:Any}
 
 function select_minimum_output_variables!(out,
@@ -15,7 +15,7 @@ function select_primary_variables!(
     S, system::CurrentCollectorT, model
     )
     S[:Phi] = Phi()
-    S[:T] = T()
+    S[:Temperature] = Temperature()
 end
 
 function select_secondary_variables!(
@@ -28,7 +28,7 @@ function select_secondary_variables!(
     S[:ThermalConductivity] = ThermalConductivity()
 
     S[:BoundaryPhi] = BoundaryPotential(:Phi)
-    S[:BoundaryT] = BoundaryPotential(:T)
+    S[:BoundaryTemperature] = BoundaryPotential(:Temperature)
 end
 
 
