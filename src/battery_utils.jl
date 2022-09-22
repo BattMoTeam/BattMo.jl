@@ -45,19 +45,15 @@ end
 ############################
 
 @jutul_secondary function update_as_secondary!(
-    acc, tv::Mass, model, C
+    acc, tv::Mass, model, C, Volume, VolumeFraction
     )
-    V = fluid_volume(model.domain.grid)
-    vf = model.domain.grid.vol_frac
-    @tullio acc[i] = C[i] * V[i] * vf[i]
+    @tullio acc[i] = C[i] * Volume[i] * VolumeFraction[i]
 end
 
 @jutul_secondary function update_as_secondary!(
-    acc, tv::Energy, model, T
+    acc, tv::Energy, model, T, Volume, VolumeFraction
     )
-    V = fluid_volume(model.domain.grid)
-    vf = model.domain.grid.vol_frac
-    @tullio acc[i] = T[i] * V[i] * vf[i]
+    @tullio acc[i] = T[i] * Volume[i] * VolumeFraction[i]
 end
 
 @jutul_secondary function update_as_secondary!(

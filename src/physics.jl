@@ -130,3 +130,8 @@ end
 function Jutul.select_parameters!(prm, D::TwoPointPotentialFlowHardCoded, model::Union{ECModel, SimpleElyteModel})
     prm[:ECTransmissibilities] = ECTransmissibilities()
 end
+
+function Jutul.select_parameters!(prm, D::MinimalECTPFAGrid, model::Union{ECModel, SimpleElyteModel})
+    prm[:Volume] = Volume()
+    prm[:VolumeFraction] = VolumeFraction()
+end

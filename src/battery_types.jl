@@ -160,3 +160,11 @@ function Jutul.default_values(model, ::ECTransmissibilities)
     end
     return T
 end
+
+struct Volume <: ScalarVariable end
+Jutul.default_values(model, ::Volume) = fluid_volume(model.domain.grid)
+Jutul.minimum_value(::Volume) = eps()
+
+struct VolumeFraction <: ScalarVariable end
+Jutul.default_values(model, ::VolumeFraction) = model.domain.grid.vol_frac
+Jutul.minimum_value(::VolumeFraction) = eps(Float64)
