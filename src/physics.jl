@@ -41,6 +41,28 @@ function Jutul.compute_tpfa_flux!(::T, c, other, face, face_sign, eq::Conservati
     return T(ChargeCarrierFlux)
 end
 
+
+export output_flux
+function output_flux(model, state, parameters, eqname = :mass_conservation)
+    grid = model.domain.grid
+    n = number_of_faces(grid)
+    N = grid.neighborship
+    out = zeros(n)
+    fd = model.domain.discretizations.charge_flow
+    dt = NaN
+    state_t = convert_to_immutable_storage(merge(state, parameters))
+    if haskey(model.equations, eqname)
+        eq = model.equations[eqname]
+        for i in eachindex(out)
+            l = N[1, i]
+            r = N[2, i]
+            out[i] = Jutul.compute_tpfa_flux!(1.0, l, r, i, 1, eq, state_t, model, dt, fd)
+        end
+    else
+        @. out = NaN
+    end
+    return out
+end
 #######################
 # Boundary conditions #
 #######################

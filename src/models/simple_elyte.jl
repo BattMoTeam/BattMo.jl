@@ -43,7 +43,7 @@ function Jutul.select_parameters!(S, system::SimpleElyte, model)
 end
 
 function select_minimum_output_variables!(out, system::SimpleElyte, model)
-    for k in [:Charge, :Mass]
+    for k in [:Charge, :Mass, :Diffusivity, :Conductivity]
         push!(out, k)
     end
 end
