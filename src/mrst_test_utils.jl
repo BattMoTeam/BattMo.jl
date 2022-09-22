@@ -60,7 +60,6 @@ function make_system(exported,sys,bcfaces,srccells)
     G = exported["G"]    
     model = SimulationModel(domain, sys, context = DefaultContext())
     parameters = setup_parameters(model)
-    parameters[:boundary_currents] = (:BCCharge, :BCMass)
 
     # State is dict with pressure in each cell
     phi0 = 1.0
