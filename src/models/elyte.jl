@@ -15,12 +15,6 @@ struct TPDGrad{T} <: KGrad{T} end
 struct DmuDc <: ScalarVariable end
 struct ConsCoeff <: ScalarVariable end
 
-struct DGradCCell <: CellVector end
-struct DGradCSq <: ScalarNonDiagVaraible end
-struct DGradCSqDiag <: ScalarVariable end
-struct EnergyDensity <: ScalarNonDiagVaraible end
-struct EDDiag <: ScalarVariable end
-
 function select_equations_system!(eqs, domain, system::Electrolyte, formulation)
     # TODO: FIXME.
     charge_cons = (arg...; kwarg...) -> Conservation(:Charge, arg...; kwarg...)

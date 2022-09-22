@@ -3,10 +3,6 @@ export CurrentCollectorT
 struct CurrentCollectorT <: ElectroChemicalComponent end
 const CCT = SimulationModel{<:Any, <:CurrentCollectorT, <:Any, <:Any}
 
-struct kGradPhiCell <: CellVector end
-struct EDensity <: ScalarNonDiagVaraible end
-struct EDensityDiag <: ScalarVariable end
-
 function select_minimum_output_variables!(out,
     system::CurrentCollectorT, model
     )
@@ -25,9 +21,6 @@ end
 function select_secondary_variables!(
     S, system::CurrentCollectorT, model
     )
-    # S[:TPkGrad_Phi] = TPkGrad{Phi}()
-    # S[:TPkGrad_T] = TPkGrad{T}()
-
     S[:Charge] = Charge()
     S[:Energy] = Energy()
 
@@ -36,10 +29,6 @@ function select_secondary_variables!(
 
     S[:BoundaryPhi] = BoundaryPotential(:Phi)
     S[:BoundaryT] = BoundaryPotential(:T)
-    
-    S[:kGradPhiCell] = kGradPhiCell()    
-    S[:EDensity] = EDensity()
-    S[:EDensityDiag] = EDensityDiag() # For plotting
 end
 
 
@@ -50,69 +39,3 @@ function select_equations!(
     eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
     eqs[:mass_conservation] = ConservationLaw(disc, :Mass)
 end
-
-function update_linearized_system_equation!(
-    nz, r, model::CCT, law::ConservationLaw{:Energy}, eq_s
-    )
-    
-    acc = get_diagonal_cache(eq_s)
-    cell_flux = eq_s.half_face_flux_cells
-    cpos = law.flow_discretization.conn_pos
-    # density = eq_s.density
-
-    update_linearized_system_subset_conservation_accumulation!(nz, r, model, acc, cell_flux, cpos, model.context)
-    # fill_jac_density!(nz, r, model, density)
-end
-
-
-# function update_density!(law::ConservationLaw{:Energy}, storage, model::CCT)
-#     ρ = storage.state.EDensity
-#     ρ_law = get_entries(law.density)
-#     @tullio ρ_law[i] = ρ[i]
-# end
-
-
-@jutul_secondary(
-function update_as_secondary!(j_cell, sc::kGradPhiCell, model, TPkGrad_Phi)
-    nc = number_of_cells(model.domain)
-    for c in 1:nc
-        face_to_cell!(j_cell, TPkGrad_Phi, c, model)
-    end
-end
-)
-
-@jutul_secondary(
-function update_as_secondary!(ρ, sc::EDensity, model, kGradPhiCell, Conductivity)
-    cctbl = model.domain.discretizations.charge_flow.cellcell.tbl
-    κ = Conductivity
-
-    nc = number_of_cells(model.domain)
-    for c in 1:nc
-        vec_to_scalar!(ρ, kGradPhiCell, c, model)
-    end
-
-    mf = model.domain.discretizations.charge_flow
-    cc = mf.cellcell
-    for c = 1:nc
-        for cn in cc.pos[c]:(cc.pos[c+1]-1)
-            c, n = cc.tbl[cn]
-            κc = (c == n) ? κ[c] : value(κ[c])
-            ρ[cn] *= 1 / κc
-        end
-    end
-end
-)
-
-@jutul_secondary(
-function update_as_secondary!(ρ_diag, sc::EDensityDiag, model, EDensity)
-    """ Carries the diagonal velues of ρ """
-    mf = model.domain.discretizations.charge_flow
-    cc = mf.cellcell
-    nc = number_of_cells(model.domain)
-    for cn in cc.pos[1:end-1] # The diagonal elements
-        c, n = cc.tbl[cn]
-        @assert c == n
-        ρ_diag[c] = EDensity[cn]
-    end
-end
-)

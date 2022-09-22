@@ -40,46 +40,6 @@ function number_of_entities(model, BP::BoundaryCurrent)
     return size(BP.cells)[1]
 end
 
-function number_of_entities(model, pv::NonDiagCellVariables)
-    """ Each value depends on a cell and all its neighbours """
-    return size(model.domain.discretizations.charge_flow.cellcell.tbl, 1) #! Assumes 2D
-end
-
-function values_per_entity(model, u::CellVector)
-    return 2
-end
-
-function values_per_entity(model, u::ScalarNonDiagVaraible)
-    return 1
-end
-
-function degrees_of_freedom_per_entity(model, sf::NonDiagCellVariables)
-    return values_per_entity(model, sf) 
-end
-
-function initialize_variable_value(
-    model, pvar::NonDiagCellVariables, val; perform_copy=true
-    )
-    nu = number_of_entities(model, pvar)
-    nv = values_per_entity(model, pvar)
-    
-    @assert length(val) == nu * nv "Expected val length $(nu*nv), got $(length(val))"
-    val::AbstractVector
-
-    if perform_copy
-        val = deepcopy(val)
-    end
-    return transfer(model.context, val)
-end
-
-function initialize_variable_value!(
-    state, model, pvar::NonDiagCellVariables, symb::Symbol, val::Number
-    )
-    num_val = number_of_entities(model, pvar)*values_per_entity(model, pvar)
-    V = repeat([val], num_val)
-    return initialize_variable_value!(state, model, pvar, symb, V)
-end
-
 ############################
 # Standard implementations #
 ############################

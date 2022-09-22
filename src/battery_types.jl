@@ -79,17 +79,6 @@ function number_of_entities(model, pv::Current)
     return 2*count_entities(model.domain, Faces())
 end
 
-abstract type NonDiagCellVariables <: JutulVariables end
-
-# Abstract type of a vector that is defined on a cell, from face flux
-abstract type CellVector <: NonDiagCellVariables end
-struct JCell <: CellVector end
-
-abstract type ScalarNonDiagVaraible <: NonDiagCellVariables end
-struct JSq <: ScalarNonDiagVaraible end
-
-struct JSqDiag <: ScalarVariable end
-
 struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
     """
     Simple grid for a electro chemical component
