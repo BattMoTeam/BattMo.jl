@@ -25,18 +25,18 @@ end
 
 function select_secondary_variables!(
     S, system::ActiveMaterial, model
-    )    
+    )
     S[:Charge] = Charge()
     S[:Mass] = Mass()
 
-    S[:Conductivity] = Conductivity()
-    S[:Diffusivity] = Diffusivity()
     S[:Ocd] = Ocd()
     S[:ReactionRateConst] = ReactionRateConst()
 end
 
 function Jutul.select_parameters!(S, system::ActiveMaterial, model)
     S[:Temperature] = Temperature()
+    S[:Conductivity] = Conductivity()
+    S[:Diffusivity] = Diffusivity()
 end
 
 function select_equations!(

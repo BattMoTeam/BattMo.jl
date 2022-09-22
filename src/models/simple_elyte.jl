@@ -29,13 +29,13 @@ end
 
 
 function select_secondary_variables!(S, system::SimpleElyte, model)
-    S[:Conductivity] = Conductivity()
-    S[:Diffusivity] = Diffusivity()
     S[:DmuDc] = DmuDc()
     S[:ConsCoeff] = ConsCoeff()
 
     S[:Charge] = Charge()
     S[:Mass] = Mass()
+    S[:Conductivity] = Conductivity()
+    S[:Diffusivity] = Diffusivity()
 end
 
 function Jutul.select_parameters!(S, system::SimpleElyte, model)
@@ -43,7 +43,7 @@ function Jutul.select_parameters!(S, system::SimpleElyte, model)
 end
 
 function select_minimum_output_variables!(out, system::SimpleElyte, model)
-    for k in [:Charge, :Mass, :Conductivity, :Diffusivity]
+    for k in [:Charge, :Mass]
         push!(out, k)
     end
 end

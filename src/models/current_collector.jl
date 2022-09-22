@@ -19,6 +19,11 @@ function select_secondary_variables!(
     )
     # S[:TPkGrad_Phi] = TPkGrad{Phi}()
     S[:Charge] = Charge()
+end
+
+function Jutul.select_parameters!(
+        S, system::CurrentCollector, model
+    )
     S[:Conductivity] = Conductivity()
 end
 
@@ -49,14 +54,4 @@ function apply_forces_to_equation!(acc, storage,
     #for cell in cells
     #    equation[cell] += rate
     #end
-end
-
-@jutul_secondary function update_as_secondary!(
-    kGrad, sv::Conductivity, model
-    )
-end
-
-@jutul_secondary function update_as_secondary!(
-    kGrad, sv::Diffusivity, model
-    )
 end

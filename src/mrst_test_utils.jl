@@ -92,8 +92,6 @@ function make_system(exported,sys,bcfaces,srccells)
         :Phi                    => phi0,
         :Current                => I0,
         :C                      => C0,
-        :Conductivity           => σ,
-        :Diffusivity            => D,
         :ThermalConductivity    => λ
         )
     
@@ -106,6 +104,13 @@ function make_system(exported,sys,bcfaces,srccells)
         :BCMass                 => bcvaluesrc,
         :BCEnergy               => bcvaluesrc,
         )
+    if model.system isa Electrolyte
+        init[:Conductivity] = σ
+        init[:Diffusivity] = D
+    else
+        init_prm[:Conductivity] = σ
+        init_prm[:Diffusivity] = D
+    end
     state0 = setup_state(model, init)
     parameters = setup_parameters(model, init_prm)
 
