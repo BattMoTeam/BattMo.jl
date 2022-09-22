@@ -148,7 +148,6 @@ end
 
 struct ECTransmissibilities <: ScalarVariable end
 Jutul.variable_scale(::ECTransmissibilities) = 1e-10
-Jutul.minimum_value(::ECTransmissibilities) = 0.0
 
 Jutul.associated_entity(::ECTransmissibilities) = Faces()
 function Jutul.default_values(model, ::ECTransmissibilities)
@@ -159,6 +158,5 @@ function Jutul.default_values(model, ::ECTransmissibilities)
     for cd in conn_data
         T[cd.face] = cd.T
     end
-    @info "" T
     return T
 end
