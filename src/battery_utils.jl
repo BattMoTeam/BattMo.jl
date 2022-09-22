@@ -59,5 +59,5 @@ end
 @jutul_secondary function update_as_secondary!(
     acc, tv::Charge, model, Phi # only for the graph
     )
-    @tullio acc[i] = 0 # Charge neutrality
+    @tullio acc[i] = 0.0 # Charge neutrality
 end

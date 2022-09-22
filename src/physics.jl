@@ -121,7 +121,7 @@ end
 function apply_boundary_current!(acc, state, jkey, model, eq::ConservationLaw)
     J = state[jkey]
 
-    jb = model.secondary_variables[jkey]
+    jb = model.parameters[jkey]
     for (i, c) in enumerate(jb.cells)
         @inbounds acc[c] -= J[i]
     end

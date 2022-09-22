@@ -69,19 +69,21 @@ function test_mixed_bc()
     # set up boundary conditions
     one = ones(size(bcells))
 
-    S = model.secondary_variables
+    S = model.parameters
     S[:BoundaryPhi] = BoundaryPotential(:Phi)
     S[:BCCharge] = BoundaryCurrent(2 .+bcells, :Charge)
 
     phi0 = 1.
     init = Dict(
         :Phi            => phi0, 
-        :BoundaryPhi    => one, 
-        :BCCharge       => one,
         :Conductivity   => 1.
         )
     state0 = setup_state(model, init)
-    parameters = setup_parameters(model)
+    init = Dict(
+        :BoundaryPhi    => one, 
+        :BCCharge       => one,
+        )
+    parameters = setup_parameters(model), init
 
     sim = Simulator(model, state0=state0, parameters=parameters)
     cfg = simulator_config(sim)

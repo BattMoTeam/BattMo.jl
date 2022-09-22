@@ -136,7 +136,7 @@ function get_simple_elyte_model(name="modelElectrolyte")
     sys = SimpleElyte()
     model = SimulationModel(domain, sys, context = DefaultContext())
 
-    S = model.secondary_variables
+    S = model.parameters
     S[:BoundaryPhi] = BoundaryPotential(:Phi)
     S[:BoundaryC] = BoundaryPotential(:C)
 
@@ -144,6 +144,7 @@ function get_simple_elyte_model(name="modelElectrolyte")
 end
 
 function get_simple_elyte_sim(model, exported)
+    error("Not working?")
     boundary = exported["model"]["bcstruct"]["dirichlet"]
     b_phi = boundary["phi"][:, 1]
     b_c = boundary["conc"][:, 1]

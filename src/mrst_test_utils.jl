@@ -59,7 +59,6 @@ function make_system(exported,sys,bcfaces,srccells)
     domain = exported_model_to_domain(exported, bc = bccells, b_T_hf = T_hf, vf=vf)
     G = exported["G"]    
     model = SimulationModel(domain, sys, context = DefaultContext())
-    parameters = setup_parameters(model)
 
     # State is dict with pressure in each cell
     phi0 = 1.0
@@ -80,7 +79,7 @@ function make_system(exported,sys,bcfaces,srccells)
     end
     λ = exported["thermalConductivity"][1]
 
-    S = model.secondary_variables
+    S = model.parameters
     S[:BoundaryPhi] = BoundaryPotential(:Phi)
     S[:BoundaryC] = BoundaryPotential(:Phi)
     S[:BoundaryT] = BoundaryPotential(:T)
@@ -96,7 +95,10 @@ function make_system(exported,sys,bcfaces,srccells)
         :T                      => T0,
         :Conductivity           => σ,
         :Diffusivity            => D,
-        :ThermalConductivity    => λ,
+        :ThermalConductivity    => λ
+        )
+    
+    init_prm = Dict(
         :BoundaryPhi            => bcvaluephi, 
         :BoundaryC              => bcvaluephi, 
         :BoundaryT              => bcvaluephi,
@@ -104,8 +106,9 @@ function make_system(exported,sys,bcfaces,srccells)
         :BCMass                 => bcvaluesrc,
         :BCEnergy               => bcvaluesrc,
         )
-
     state0 = setup_state(model, init)
+    parameters = setup_parameters(model, init_prm)
+
     return model, G, state0, parameters, init
 end
 
