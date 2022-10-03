@@ -38,8 +38,6 @@ function policy_to_control(p::SimpleCVPolicy, is_charging, state, model, dt, tim
     else
         target = I_p
     end
-    # @info target is_voltage_ctrl phi phi_p p
-    @info (target, is_voltage_ctrl, discharge)
     return (target, is_voltage_ctrl, discharge)
 end
 
