@@ -1,6 +1,8 @@
 export CurrentAndVoltageSystem, CurrentAndVoltageDomain, CurrentForce, VoltageForce
 export VoltageVar, CurrentVar, sineup
 
+@enum OperationalMode charge discharge rest
+
 struct CurrentAndVoltageSystem <: JutulSystem end
 
 struct CurrentAndVoltageDomain <: JutulDomain end
@@ -20,13 +22,13 @@ struct SimpleCVPolicy{R} <: AbstractCVPolicy
     end
 end
 
-function policy_to_control(p::SimpleCVPolicy, is_charging, state, model, dt, time0)
+function policy_to_control(p::SimpleCVPolicy, is_charging, state, model, dt, time, ctrl_time)
     cf = p.current_function
     if cf isa Real
         I_p = cf
     else
         # Function of time at the end of interval
-        I_p = cf(dt + time0)
+        I_p = cf(dt + time)
     end
     phi_p = p.voltage
     phi = only(state.Phi)
@@ -36,14 +38,15 @@ function policy_to_control(p::SimpleCVPolicy, is_charging, state, model, dt, tim
     else
         target = I_p
     end
-    @info target is_voltage_ctrl
-    return (target, is_voltage_ctrl, false)
+    # @info target is_voltage_ctrl phi phi_p p
+    @info (target, is_voltage_ctrl, discharge)
+    return (target, is_voltage_ctrl, discharge)
 end
 
 struct NoPolicy <: AbstractCVPolicy end
 
-function policy_to_control(::NoPolicy, is_charging, state, model, dt, time0)
-    return (2.0, true, false)
+function policy_to_control(::NoPolicy, is_charging, state, model, dt, time, ctrl_time)
+    return (2.0, true, rest)
 end
 
 struct CyclingCVPolicy{R} <: AbstractCVPolicy
@@ -51,53 +54,86 @@ struct CyclingCVPolicy{R} <: AbstractCVPolicy
     current_discharge::R
     voltage_charge::R
     voltage_discharge::R
+    hold_time::R
     function CyclingCVPolicy(; current_discharge,
                                current_charge = -current_charge,
                                voltage_discharge::T = 2.5,
-                               voltage_charge=-voltage_discharge) where T<:Real
-        new{T}(current_charge, current_discharge, voltage_charge, voltage_discharge)
+                               voltage_charge=-voltage_discharge,
+                               hold_time = 1.0) where T<:Real
+        new{T}(current_charge, current_discharge, voltage_charge, voltage_discharge, hold_time)
     end
 end
 
-function policy_to_control(p::CyclingCVPolicy, is_charging, state, model, dt, time0)
+function policy_to_control(p::CyclingCVPolicy, mode, state, model, dt, time, ctrl_time)
     phi = only(state.Phi)
-    if is_charging
+    I = only(state.Current)
+    switched = false
+    if mode == charge
         # Keep charging if voltage is above limit
-        is_charging = abs(phi) > abs(p.voltage_charge)
+        if abs(phi) > abs(p.voltage_charge)
+            @info "Switching to discharge"
+            mode = discharge
+            switched = true
+        end
     else
         # Keep discharging if voltage is above limit
-        is_charging = abs(phi) < abs(p.voltage_discharge)
+        if abs(phi) < abs(p.voltage_discharge)
+            @info "Switching to charge"
+            mode = charge
+            switched = true
+        end
     end
-    if is_charging
-        target = p.current_charge
+    if mode == charge
+        # V_t = p.voltage_charge
+        V_t = p.voltage_discharge
+        I_t = p.current_charge
     else
-        target = p.current_discharge
+        # V_t = p.voltage_discharge
+        V_t = p.voltage_charge
+        I_t = p.current_discharge
     end
-    # We are always using current to control since reaching the current limit
-    # means the current gets reversed
-    is_voltage_ctrl = false
-    return (target, is_voltage_ctrl, is_charging)
+    is_voltage_ctrl = ctrl_time <= p.hold_time && time > 0.0 || switched # && mode == discharge
+    # @info "" time ctrl_time time - dt is_voltage_ctrl
+
+    if is_voltage_ctrl
+        @info "Holding at $V_t" phi I
+        target = V_t
+    else
+        target = I_t
+    end
+    # @info mode
+
+    # @info mode target is_voltage_ctrl
+    # @info "" is_charging phi p.voltage_charge p.voltage_discharge target I
+    out = (target, is_voltage_ctrl, mode)
+    # @info out
+    return (target, is_voltage_ctrl, mode)
 end
 
 mutable struct ControllerCV
     policy::AbstractCVPolicy
     time::Real
+    control_time::Real
     target::Real
     target_is_voltage::Bool
-    charging::Bool
+    mode::OperationalMode
 end
 
 function Jutul.update_values!(old::ControllerCV, new::ControllerCV)
     old.policy = new.policy
     old.time = new.time
+    old.control_time = new.control_time
     old.target = new.target
     old.target_is_voltage = new.target_is_voltage
-    old.charging = new.charging
+    old.mode = new.mode
 end
 
 function select_control_cv!(cv::ControllerCV, state, model, dt)
-    ch = cv.charging
-    cv.target, cv.target_is_voltage, cv.charging = policy_to_control(cv.policy, ch, state, model, dt, cv.time)
+    ch = cv.mode
+    cv.target, cv.target_is_voltage, cv.mode = policy_to_control(cv.policy, ch, state, model, dt, cv.time, cv.control_time)
+    if cv.mode != ch
+        cv.control_time = 0.0
+    end
 end
 
 # Driving force for the test equation
@@ -137,7 +173,10 @@ end
 
 
 struct VoltVar <: ScalarVariable end
+# relative_increment_limit(::VoltVar) = 0.2
+
 struct CurrentVar <: ScalarVariable end
+# absolute_increment_limit(::CurrentVar) = 5.0
 
 function select_equations!(eqs, system::CurrentAndVoltageSystem, model)
     eqs[:charge_conservation] = CurrentEquation()
@@ -159,8 +198,13 @@ function Jutul.update_before_step!(storage, domain::CurrentAndVoltageDomain, mod
     ctrl.time = time
 end
 
+function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces; time = NaN)
+    ctrl = storage.state[:ControllerCV]
+    ctrl.control_time += dt
+end
+
 function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVoltageModel)
-    state[:ControllerCV] = ControllerCV(NoPolicy(), 0.0, 2.0, true, false)
+    state[:ControllerCV] = ControllerCV(NoPolicy(), 0.0, 0.0, 2.0, true, discharge)
 end
 
 function Jutul.prepare_equation_in_entity!(i, eq::ControlEquation, eq_s, state, state0, model::CurrentAndVoltageModel, dt)
