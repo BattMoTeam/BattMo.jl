@@ -625,7 +625,7 @@ function test_battery(name; extra_timing = false, info_level = 0, max_step = not
                  :parameters => parameters,
                  :exported => exported_all,
                  :timesteps => timesteps,
-                 :config => :cfg,
+                 :config => cfg,
                  :forces => forces,
                  :simulator => sim)
 

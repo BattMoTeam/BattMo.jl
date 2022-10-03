@@ -8,6 +8,8 @@ struct CurrentAndVoltageDomain <: JutulDomain end
 const CurrentAndVoltageModel  = SimulationModel{CurrentAndVoltageDomain,CurrentAndVoltageSystem}
 number_of_cells(::CurrentAndVoltageDomain) = 1
 
+export SimpleCVPolicy, CyclingCVPolicy
+
 abstract type AbstractCVPolicy end
 
 struct SimpleCVPolicy{R} <: AbstractCVPolicy
@@ -43,11 +45,28 @@ function policy_to_control(::NoPolicy, state, model, dt, time0)
     return (2.0, true)
 end
 
+struct CyclingCVPolicy{R} <: AbstractCVPolicy
+    current_charge::R
+    current_discharge::R
+    voltage_charge::R
+    voltage_discharge::R
+    function SimpleCVPolicy(; current_discharge, current_charge = -current_charge, voltage_discharge::T = 2.5, voltage_charge=2*voltage_charge) where T<:Real
+        new{T}(current_charge, current_discharge, voltage_charge, voltage_discharge)
+    end
+end
+
 mutable struct ControllerCV
     policy::AbstractCVPolicy
     time::Real
     target::Real
     target_is_voltage::Bool
+end
+
+function Jutul.update_values!(old::ControllerCV, new::ControllerCV)
+    old.policy = new.policy
+    old.time = new.time
+    old.target = new.target
+    old.target_is_voltage = new.target_is_voltage
 end
 
 function select_control_cv!(cv::ControllerCV, state, model, dt)
