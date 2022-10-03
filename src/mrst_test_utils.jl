@@ -619,7 +619,18 @@ function test_battery(name; extra_timing = false, info_level = 0, max_step = not
     states, report = simulate(sim, timesteps, forces = forces, config = cfg)
     stateref = exported_all["states"]
 
-    return states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim
+    extra = Dict(:grids => grids,
+                 :state0 => state0,
+                 :states_ref => stateref,
+                 :parameters => parameters,
+                 :exported => exported_all,
+                 :timesteps => timesteps,
+                 :config => :cfg,
+                 :forces => forces,
+                 :simulator => sim)
+
+    return (states = states, reports = report, extra = extra)
+    # return states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim
 end
 function test_mrst_battery(name)
     states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim = test_battery(name);

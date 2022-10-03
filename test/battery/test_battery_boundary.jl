@@ -24,7 +24,8 @@ allfine = Vector{Bool}();
 @testset "battery" begin
     for (modelname, max_step) in testcases
         @testset "$modelname" begin
-            states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim = test_battery(modelname, max_step = max_step, info_level = -1);
+            states, report, extra = test_battery(modelname, max_step = max_step, info_level = -1);
+            stateref = extra[:states_ref]
             steps = size(states, 1)
             E = Matrix{Float64}(undef,steps,2)
             for step in 1:steps
