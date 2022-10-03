@@ -20,7 +20,7 @@ struct SimpleCVPolicy{R} <: AbstractCVPolicy
     end
 end
 
-function policy_to_control(p::SimpleCVPolicy, state, model, dt, time0)
+function policy_to_control(p::SimpleCVPolicy, is_charging, state, model, dt, time0)
     cf = p.current_function
     if cf isa Real
         I_p = cf
@@ -36,13 +36,14 @@ function policy_to_control(p::SimpleCVPolicy, state, model, dt, time0)
     else
         target = I_p
     end
-    return (target, is_voltage_ctrl)
+    @info target is_voltage_ctrl
+    return (target, is_voltage_ctrl, false)
 end
 
 struct NoPolicy <: AbstractCVPolicy end
 
-function policy_to_control(::NoPolicy, state, model, dt, time0)
-    return (2.0, true)
+function policy_to_control(::NoPolicy, is_charging, state, model, dt, time0)
+    return (2.0, true, false)
 end
 
 struct CyclingCVPolicy{R} <: AbstractCVPolicy
@@ -50,9 +51,32 @@ struct CyclingCVPolicy{R} <: AbstractCVPolicy
     current_discharge::R
     voltage_charge::R
     voltage_discharge::R
-    function SimpleCVPolicy(; current_discharge, current_charge = -current_charge, voltage_discharge::T = 2.5, voltage_charge=2*voltage_charge) where T<:Real
+    function CyclingCVPolicy(; current_discharge,
+                               current_charge = -current_charge,
+                               voltage_discharge::T = 2.5,
+                               voltage_charge=-voltage_discharge) where T<:Real
         new{T}(current_charge, current_discharge, voltage_charge, voltage_discharge)
     end
+end
+
+function policy_to_control(p::CyclingCVPolicy, is_charging, state, model, dt, time0)
+    phi = only(state.Phi)
+    if is_charging
+        # Keep charging if voltage is above limit
+        is_charging = abs(phi) > abs(p.voltage_charge)
+    else
+        # Keep discharging if voltage is above limit
+        is_charging = abs(phi) < abs(p.voltage_discharge)
+    end
+    if is_charging
+        target = p.current_charge
+    else
+        target = p.current_discharge
+    end
+    # We are always using current to control since reaching the current limit
+    # means the current gets reversed
+    is_voltage_ctrl = false
+    return (target, is_voltage_ctrl, is_charging)
 end
 
 mutable struct ControllerCV
@@ -60,6 +84,7 @@ mutable struct ControllerCV
     time::Real
     target::Real
     target_is_voltage::Bool
+    charging::Bool
 end
 
 function Jutul.update_values!(old::ControllerCV, new::ControllerCV)
@@ -67,10 +92,12 @@ function Jutul.update_values!(old::ControllerCV, new::ControllerCV)
     old.time = new.time
     old.target = new.target
     old.target_is_voltage = new.target_is_voltage
+    old.charging = new.charging
 end
 
 function select_control_cv!(cv::ControllerCV, state, model, dt)
-    cv.target, cv.target_is_voltage = policy_to_control(cv.policy, state, model, dt, cv.time)
+    ch = cv.charging
+    cv.target, cv.target_is_voltage, cv.charging = policy_to_control(cv.policy, ch, state, model, dt, cv.time)
 end
 
 # Driving force for the test equation
@@ -133,7 +160,7 @@ function Jutul.update_before_step!(storage, domain::CurrentAndVoltageDomain, mod
 end
 
 function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVoltageModel)
-    state[:ControllerCV] = ControllerCV(NoPolicy(), 0.0, 2.0, true)
+    state[:ControllerCV] = ControllerCV(NoPolicy(), 0.0, 2.0, true, false)
 end
 
 function Jutul.prepare_equation_in_entity!(i, eq::ControlEquation, eq_s, state, state0, model::CurrentAndVoltageModel, dt)

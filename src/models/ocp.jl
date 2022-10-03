@@ -98,17 +98,17 @@ function ocd(T,c, ::Grafite)
     refT = 298.15
     refOCP = (
 		0.7222
-        + 0.1387 .* theta
-        + 0.0290 .* theta.^0.5
-        - 0.0172 ./ theta
-        + 0.0019 ./ theta.^1.5
-        + 0.2808 .* exp(0.9 - 15.0*theta)
-        - 0.7984 .* exp(0.4465.*theta - 0.4108)
+        + 0.1387 * theta
+        + 0.0290 * theta^0.5
+        - 0.0172 / theta
+        + 0.0019 / theta^1.5
+        + 0.2808 * exp(0.9 - 15.0*theta)
+        - 0.7984 * exp(0.4465*theta - 0.4108)
 		);
 
-	dUdT = 1e-3.*coeff1(theta)./ coeff2(theta);
+	dUdT = 1e-3*coeff1(theta)/ coeff2(theta);
 
-	vocd = refOCP + (T - refT) .* dUdT;
+	vocd = refOCP + (T - refT) * dUdT;
 	return vocd
 end
 

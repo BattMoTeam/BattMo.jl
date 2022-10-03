@@ -612,14 +612,12 @@ function test_battery(name; extra_timing = false, info_level = 0, max_step = not
 
     cfg[:tolerances][:PP][:default] = 1e-1
     cfg[:tolerances][:BPP][:default] = 1e-1
-  
-
-##
-
+    # Run simulation
     states, report = simulate(sim, timesteps, forces = forces, config = cfg)
     stateref = exported_all["states"]
 
-    extra = Dict(:grids => grids,
+    extra = Dict(:model => model,
+                 :grids => grids,
                  :state0 => state0,
                  :states_ref => stateref,
                  :parameters => parameters,
