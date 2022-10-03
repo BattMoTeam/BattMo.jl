@@ -71,14 +71,14 @@ function policy_to_control(p::CyclingCVPolicy, mode, state, model, dt, time, ctr
     if mode == charge
         # Keep charging if voltage is above limit
         if abs(phi) > abs(p.voltage_charge)
-            @info "Switching to discharge"
+            # @info "Switching to discharge"
             mode = discharge
             switched = true
         end
     else
         # Keep discharging if voltage is above limit
         if abs(phi) < abs(p.voltage_discharge)
-            @info "Switching to charge"
+            # @info "Switching to charge"
             mode = charge
             switched = true
         end
@@ -93,20 +93,12 @@ function policy_to_control(p::CyclingCVPolicy, mode, state, model, dt, time, ctr
         I_t = p.current_discharge
     end
     is_voltage_ctrl = ctrl_time <= p.hold_time && time > 0.0 || switched # && mode == discharge
-    # @info "" time ctrl_time time - dt is_voltage_ctrl
 
     if is_voltage_ctrl
-        @info "Holding at $V_t" phi I
         target = V_t
     else
         target = I_t
     end
-    # @info mode
-
-    # @info mode target is_voltage_ctrl
-    # @info "" is_charging phi p.voltage_charge p.voltage_discharge target I
-    out = (target, is_voltage_ctrl, mode)
-    # @info out
     return (target, is_voltage_ctrl, mode)
 end
 
