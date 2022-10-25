@@ -57,8 +57,9 @@ function make_system(exported,sys,bcfaces,srccells)
         vf = exported["volumeFraction"][:, 1]
     end
     domain = exported_model_to_domain(exported, bc = bccells, b_T_hf = T_hf, vf=vf)
-    G = exported["G"]    
-    model = SimulationModel(domain, sys, context = DefaultContext())
+    G = exported["G"]
+    plot_mesh = MRSTWrapMesh(G)
+    model = SimulationModel(domain, sys, context = DefaultContext(), plot_mesh = plot_mesh)
 
     # State is dict with pressure in each cell
     phi0 = 1.0
