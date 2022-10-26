@@ -91,7 +91,7 @@ function apply_boundary_potential!(
         T_hf = model.domain.grid.boundary_T_hf
 
         for (i, c) in enumerate(bc)
-            @inbounds acc[c] -= - κ[c]*T_hf[i]*(Phi[c] - BoundaryPhi[i])
+            @inbounds acc[c] -= - κ[c]*T_hf[i]*(Phi[c] - value(BoundaryPhi[i]))
         end
     end
 end
@@ -110,7 +110,7 @@ function apply_boundary_potential!(
         T_hf = model.domain.grid.boundary_T_hf
 
         for (i, c) in enumerate(bc)
-            @inbounds acc[c] += - D[c]*T_hf[i]*(C[c] - BoundaryC[i])
+            @inbounds acc[c] += - D[c]*T_hf[i]*(C[c] - value(BoundaryC[i]))
         end
     end
 end
@@ -147,7 +147,7 @@ end
 function apply_boundary_current!(acc, state, jkey, model, eq::ConservationLaw)
     J = state[jkey]
 
-    jb = model.parameters[jkey]
+    jb = get_variable(model, jkey)
     for (i, c) in enumerate(jb.cells)
         @inbounds acc[c] -= J[i]
     end
