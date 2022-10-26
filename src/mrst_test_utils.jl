@@ -49,7 +49,7 @@ function make_system(exported,sys,bcfaces,srccells)
     msource = exported  
     #T_hf = -getHalfTrans(msource, bcfaces, bccells, "EffectiveElectricalConductivity")
     T_hf = -getHalfTrans(msource, bcfaces)#, bccells, "EffectiveElectricalConductivity")
-    bcvaluesrc = ones(size(srccells))
+    bcvaluesrc = zeros(size(bccells))
     bcvaluephi = ones(size(bccells)).*0.0
 
     vf = []
@@ -81,29 +81,32 @@ function make_system(exported,sys,bcfaces,srccells)
     λ = exported["thermalConductivity"][1]
 
     S = model.parameters
-    S[:BoundaryPhi] = BoundaryPotential(:Phi)
-    S[:BoundaryC] = BoundaryPotential(:Phi)
-    S[:BoundaryTemperature] = BoundaryPotential(:Temperature)
+    if count_active_entities(domain, BoundaryFaces()) > 0
+        S[:BoundaryPhi] = BoundaryPotential(:Phi)
+        S[:BoundaryC] = BoundaryPotential(:Phi)
+        S[:BoundaryTemperature] = BoundaryPotential(:Temperature)
 
-    S[:BCCharge] = BoundaryCurrent(srccells, :Charge)
-    S[:BCMass] = BoundaryCurrent(srccells, :Mass)
-    S[:BCEnergy] = BoundaryCurrent(srccells, :Charge)
+        S[:BCCharge] = BoundaryCurrent(srccells, :Charge)
+        S[:BCMass] = BoundaryCurrent(srccells, :Mass)
+        S[:BCEnergy] = BoundaryCurrent(srccells, :Charge)
+        init_prm = Dict{Symbol, Any}(
+            :BoundaryPhi            => bcvaluephi, 
+            :BoundaryC              => bcvaluephi, 
+            :BoundaryTemperature    => bcvaluephi,
+            :BCCharge               => bcvaluesrc.*0,#0.0227702,
+            :BCMass                 => bcvaluesrc,
+            :BCEnergy               => bcvaluesrc,
+            )
+    else
+        init_prm = Dict{Symbol, Any}()
+    end
+    init_prm[:Temperature] = T0
 
     init = Dict(
         :Phi                    => phi0,
         :Current                => I0,
         :C                      => C0,
         :ThermalConductivity    => λ
-        )
-    
-    init_prm = Dict(
-        :BoundaryPhi            => bcvaluephi, 
-        :BoundaryC              => bcvaluephi, 
-        :BoundaryTemperature    => bcvaluephi,
-        :Temperature            => T0,
-        :BCCharge               => bcvaluesrc.*0,#0.0227702,
-        :BCMass                 => bcvaluesrc,
-        :BCEnergy               => bcvaluesrc,
         )
     if model.system isa Electrolyte
         init[:Conductivity] = σ

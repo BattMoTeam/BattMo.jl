@@ -24,21 +24,21 @@ end
 # All EC-comps #
 ################
 
-function number_of_entities(model, pv::KGrad)
-    """ Two fluxes per face """
-    return 2*count_entities(model.domain, Faces())
-end
+# function number_of_entities(model, pv::KGrad)
+#     """ Two fluxes per face """
+#     return 2*count_entities(model.domain, Faces())
+# end
 
-function number_of_entities(model, ::Potential)
-    return count_entities(model.domain, Cells())
-end
+# function number_of_entities(model, ::Potential)
+#     return count_entities(model.domain, Cells())
+# end
 
-function number_of_entities(model, BP::BoundaryPotential)
-    return size(model.domain.grid.boundary_cells)[1]
-end
-function number_of_entities(model, BP::BoundaryCurrent)
-    return size(BP.cells)[1]
-end
+# function number_of_entities(model, BP::BoundaryPotential)
+#     return size(model.domain.grid.boundary_cells)[1]
+# end
+# function number_of_entities(model, BP::BoundaryCurrent)
+#     return size(BP.cells)[1]
+# end
 
 ############################
 # Standard implementations #

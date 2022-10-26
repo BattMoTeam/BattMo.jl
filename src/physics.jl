@@ -82,32 +82,36 @@ function apply_boundary_potential!(
     acc, state, parameters, model, eq::ConservationLaw{:Charge}
     )
     # values
-    Phi = state[:Phi]
-    BoundaryPhi = state[:BoundaryPhi]
-    κ = state[:Conductivity]
-
     bc = model.domain.grid.boundary_cells
-    T_hf = model.domain.grid.boundary_T_hf
+    if length(bc) > 0
+        Phi = state[:Phi]
+        BoundaryPhi = state[:BoundaryPhi]
+        κ = state[:Conductivity]
 
-    for (i, c) in enumerate(bc)
-        @inbounds acc[c] -= - κ[c]*T_hf[i]*(Phi[c] - BoundaryPhi[i])
+        T_hf = model.domain.grid.boundary_T_hf
+
+        for (i, c) in enumerate(bc)
+            @inbounds acc[c] -= - κ[c]*T_hf[i]*(Phi[c] - BoundaryPhi[i])
+        end
     end
 end
 
 function apply_boundary_potential!(
     acc, state, parameters, model, eq::ConservationLaw{:Mass}
     )
-    # values
-    C = state[:C]
-    BoundaryC = state[:BoundaryC]
-    D = state[:Diffusivity]
-
-    # Type
     bc = model.domain.grid.boundary_cells
-    T_hf = model.domain.grid.boundary_T_hf
+    if length(bc) > 0
+        # values
+        C = state[:C]
+        BoundaryC = state[:BoundaryC]
+        D = state[:Diffusivity]
 
-    for (i, c) in enumerate(bc)
-        @inbounds acc[c] += - D[c]*T_hf[i]*(C[c] - BoundaryC[i])
+        # Type
+        T_hf = model.domain.grid.boundary_T_hf
+
+        for (i, c) in enumerate(bc)
+            @inbounds acc[c] += - D[c]*T_hf[i]*(C[c] - BoundaryC[i])
+        end
     end
 end
 
