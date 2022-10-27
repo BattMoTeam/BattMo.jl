@@ -135,7 +135,7 @@ end
     return vec
  end
 
-function setup_model(exported_all)
+function setup_model(exported_all; use_groups = false)
     skip_cc = size(exported_all["model"]["include_current_collectors"]) == (0,0)
     skip_cc = false
     if !skip_cc
@@ -196,7 +196,7 @@ function setup_model(exported_all)
     # parm_bpp[:tolerances][:default] = 1e-8
     # Setup model
     
-    if(skip_cc)
+    if skip_cc
         groups = nothing
         model = MultiModel(
             (
@@ -207,21 +207,28 @@ function setup_model(exported_all)
             ), 
             groups = groups)    
     else
-        groups = nothing
-        model = MultiModel(
-            (
-                CC = model_cc, 
-                NAM = model_nam, 
-                ELYTE = model_elyte, 
-                PAM = model_pam, 
-                PP = model_pp,
-                BPP = model_bpp
-            ), 
-            groups = groups)    
+        models = (
+            CC = model_cc, 
+            NAM = model_nam, 
+            ELYTE = model_elyte, 
+            PAM = model_pam, 
+            PP = model_pp,
+            BPP = model_bpp
+        )
+        if use_groups
+            groups = ones(Int64, length(models))
+            # Should be BPP
+            groups[end] = 2
+            reduction = :schur_apply
+        else
+            groups = nothing
+            reduction = :reduction
+        end
+        model = MultiModel(models, groups = groups, reduction = reduction)
 
     end    
     state0 = exported_all["state0"]
-    if(!skip_cc)
+    if !skip_cc
         init_cc[:Phi] = state0["NegativeElectrode"]["CurrentCollector"]["phi"][1]           #*0
         init_pp[:Phi] = state0["PositiveElectrode"]["CurrentCollector"]["phi"][1]           #*0
     end
@@ -501,13 +508,13 @@ function battery_linsolve(model, method = :ilu0;
     return lsolve
 end
 
-function setup_sim(name)
+function setup_sim(name; use_groups = false)
 ##
     #name="model1d_notemp"
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
     exported_all = MAT.matread(fn)
 
-    model, state0, parameters, grids = setup_model(exported_all)    
+    model, state0, parameters, grids = setup_model(exported_all, use_groups = use_groups)    
     setup_coupling!(model, exported_all)
     #inputI = 9.4575
     inputI = 0;
@@ -548,9 +555,9 @@ end
 
 export test_battery
 
-function test_battery(name; extra_timing = false, info_level = 0, max_step = nothing, linear_solver = :direct)
+function test_battery(name; extra_timing = false, info_level = 0, max_step = nothing, linear_solver = :direct, use_groups = false)
     #timesteps = exported_all["schedule"]["step"]["val"][1:27]
-    sim, forces, grids, state0, parameters, exported_all, model = setup_sim(name)
+    sim, forces, grids, state0, parameters, exported_all, model = setup_sim(name, use_groups = use_groups)
     steps = size(exported_all["states"],1)
     alltimesteps = Vector{Float64}(undef,steps)
     time = 0;
