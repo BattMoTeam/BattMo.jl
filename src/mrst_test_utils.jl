@@ -479,49 +479,23 @@ function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggreg
 end
 
 function battery_linsolve(model, method = :ilu0;
-    rtol = 0.005,
-    verbose = 0,
-    provider = Krylov,
-    solver = Krylov.bicgstab,
-    update_interval = :ministep,
-    amg_type = :smoothed_aggregation,
-    max_coarse = nothing,
-    partial_update = update_interval == :once,
-    kwarg...)
-    ncells = my_number_of_cells(model)
-   
-
+                        rtol = 0.005,
+                        solver = :gmres,
+                        verbose = 0,
+                        kwarg...)
     if method == :amg
-        if isnothing(max_coarse)
-            max_coarse = Int64(ceil(0.05*ncells))
-            max_coarse = min(1000, max_coarse)
-        end
-        prec = amg_precond(max_coarse = max_coarse, type = amg_type)   
+        prec = amg_precond()   
     elseif method == :ilu0
         prec = ILUZeroPreconditioner()
+    elseif method == :direct
+        return LUSolver()
     else
         return nothing
     end
     max_it = 200
-    atol = 0.0#1e-12
-    # v = -1
-    # v = 0
-    # v = 1
-    # if true
-    #     krylov = Krylov.bicgstab
-    #     # krylov = Krylov.gmres
-    #     pv = Krylov
-    # else
-    #     krylov = IterativeSolvers.gmres!
-    #     krylov = IterativeSolvers.bicgstabl!
-    #     pv = IterativeSolvers
-    # end
-    # nl_reltol = 1e-3
-    # relaxed_reltol = 0.25
-    # nonlinear_relative_tolerance = nl_reltol,
-    # relaxed_relative_tolerance = relaxed_reltol,
+    atol = 0.0
 
-    lsolve = GenericKrylov(solver, provider = provider, verbose = verbose, preconditioner = prec, 
+    lsolve = GenericKrylov(solver, verbose = verbose, preconditioner = prec, 
     relative_tolerance = rtol, absolute_tolerance = atol,
     max_iterations = max_it; kwarg...)
     return lsolve
@@ -574,7 +548,7 @@ end
 
 export test_battery
 
-function test_battery(name; extra_timing = false, info_level = 0, max_step = nothing)   
+function test_battery(name; extra_timing = false, info_level = 0, max_step = nothing, linear_solver = :direct)
     #timesteps = exported_all["schedule"]["step"]["val"][1:27]
     sim, forces, grids, state0, parameters, exported_all, model = setup_sim(name)
     steps = size(exported_all["states"],1)
@@ -593,13 +567,9 @@ function test_battery(name; extra_timing = false, info_level = 0, max_step = not
     if !isnothing(max_step)
         end_step = min(max_step, end_step)
     end
-    #end_step=33
-    linear_solver = nothing
-    linear_solver = LUSolver()
-    #slinear_solver = battery_linsolve(model,:ilu0; verbose = 1)
     timesteps = alltimesteps[1:end_step]
     cfg = simulator_config(sim, info_level = info_level)
-    cfg[:linear_solver] = linear_solver
+    cfg[:linear_solver] = battery_linsolve(model, linear_solver)
     cfg[:debug_level] = 0
     #cfg[:max_timestep_cuts] = 0
     cfg[:max_residual] = 1e20
