@@ -496,6 +496,8 @@ function battery_linsolve(model, method = :ilu0;
         prec = ILUZeroPreconditioner()
     elseif method == :direct
         return LUSolver()
+    elseif method == :cphi
+        prec = BatteryCPhiPreconditioner()
     else
         return nothing
     end

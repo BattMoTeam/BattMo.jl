@@ -60,4 +60,5 @@ module BattMo
     include("models/battery_cross_terms.jl") # Works now
     include("physics.jl")
     include("mrst_test_utils.jl")
+    include("linsolve.jl")
 end # module

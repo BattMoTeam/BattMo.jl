@@ -168,3 +168,13 @@ Jutul.minimum_value(::Volume) = eps()
 struct VolumeFraction <: ScalarVariable end
 Jutul.default_values(model, ::VolumeFraction) = model.domain.grid.vol_frac
 Jutul.minimum_value(::VolumeFraction) = eps(Float64)
+
+mutable struct BatteryCPhiPreconditioner <: JutulPreconditioner
+    c_precond
+    p_precond
+    data
+end
+
+function BatteryCPhiPreconditioner(c_precond = AMGPreconditioner(), p_precond = AMGPreconditioner())
+    return BatteryCPhiPreconditioner(c_precond, p_precond, nothing)
+end
