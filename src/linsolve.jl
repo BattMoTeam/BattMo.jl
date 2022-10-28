@@ -75,3 +75,29 @@ end
 
 Jutul.operator_nrows(p::BatteryCPhiPreconditioner) = p.data.n
 
+function battery_linsolve(model, method = :ilu0;
+                                 rtol = 0.005,
+                                 solver = :gmres,
+                                 verbose = 0,
+                                 kwarg...)
+    if method == :amg
+        prec = amg_precond()   
+    elseif method == :ilu0
+        prec = ILUZeroPreconditioner()
+    elseif method == :direct
+        return LUSolver()
+    elseif method == :cphi
+        prec = BatteryCPhiPreconditioner()
+    else
+        return nothing
+    end
+    max_it = 200
+    atol = nothing
+
+    lsolve = GenericKrylov(solver, verbose = verbose,
+                                   preconditioner = prec, 
+                                   relative_tolerance = rtol,
+                                   absolute_tolerance = atol,
+                                   max_iterations = max_it; kwarg...)
+    return lsolve
+end
