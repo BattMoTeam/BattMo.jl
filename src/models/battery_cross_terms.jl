@@ -55,7 +55,7 @@ Jutul.cross_term_entities(ct::AccumulatorInterfaceFluxCT, eq, model) = [ct.targe
 #     ccinterfaceflux!(ct.crossterm_target, value.(phi_s), phi_t)
 # end
 
-function regularizedSqrt(x::T, th::Float64) where {T<:Any}
+function regularized_sqrt(x::T, th::Float64) where {T<:Any}
     #x,th = promote(xi,thi)
     y::T = 0.0
     #ind = (x <= th)
@@ -67,7 +67,7 @@ function regularizedSqrt(x::T, th::Float64) where {T<:Any}
     return y   
 end
 
-function butlerVolmerEquation(j0, alpha, n, eta, T)
+function butler_volmer_equation(j0, alpha, n, eta, T)
     res = j0 * (
         exp(  alpha * n * FARADAY_CONST * eta / (GAS_CONSTANT * T ) ) - 
         exp( -(1-alpha) * n * FARADAY_CONST * eta / ( GAS_CONSTANT * T ) ) 
@@ -80,15 +80,15 @@ function reaction_rate(
     phi_e, c_e, activematerial, electrolyte
     )
 
-    n = nChargeCarriers(activematerial)
-    cmax = cMax(activematerial) # how to get model
-    vsa = volumetricSurfaceArea(activematerial)
+    n = n_charge_carriers(activematerial)
+    cmax = maximum_concentration(activematerial) # how to get model
+    vsa = volumetric_surface_area(activematerial)
 
     # ocd could have beencalculated of only this cells 
     eta = (phi_a - phi_e - ocd);
     th = 1e-3*cmax;
-    j0 = R0*regularizedSqrt(c_e*(cmax - c_a)*c_a, th)*n*FARADAY_CONST;
-    R = vsa*butlerVolmerEquation(j0, 0.5, n, eta, T);
+    j0 = R0*regularized_sqrt(c_e*(cmax - c_a)*c_a, th)*n*FARADAY_CONST;
+    R = vsa*butler_volmer_equation(j0, 0.5, n, eta, T);
 
     return R./(n*FARADAY_CONST);
 end
@@ -99,7 +99,7 @@ function sourceElectricMaterial!(
     phi_e, c_e, activematerial, electrolyte
     )
 
-    n = nChargeCarriers(activematerial)
+    n = n_charge_carriers(activematerial)
     for (i, val) in enumerate(phi_a)
         # ! Hack, as we get error in ForwardDiff without .value
         # ! This will cause errors if T is not just constant
@@ -121,7 +121,7 @@ function source_electric_material(
     phi_e, c_e, activematerial, electrolyte
     )
 
-    n = nChargeCarriers(activematerial)
+    n = n_charge_carriers(activematerial)
     # for (i, val) in enumerate(phi_a)
         # ! Hack, as we get error in ForwardDiff without .value
         # ! This will cause errors if T is not just constant

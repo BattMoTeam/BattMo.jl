@@ -58,6 +58,7 @@ module BattMo
     include("models/simple_elyte.jl")
     include("models/current_and_voltage_boundary.jl")
     include("models/battery_cross_terms.jl") # Works now
+    include("models/convergence.jl")
     include("physics.jl")
     include("mrst_test_utils.jl")
     include("linsolve.jl")

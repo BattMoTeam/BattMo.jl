@@ -76,7 +76,7 @@ end
 Jutul.operator_nrows(p::BatteryCPhiPreconditioner) = p.data.n
 
 function battery_linsolve(model, method = :ilu0;
-                                 rtol = 0.005,
+                                 rtol = 0.001,
                                  solver = :gmres,
                                  verbose = 0,
                                  kwarg...)

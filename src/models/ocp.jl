@@ -1,4 +1,4 @@
-export Grafite, NMC111, ocd, nChargeCarriers, cMax, volumetricSurfaceArea
+export Grafite, NMC111, ocd, n_charge_carriers, cMax, volumetric_surface_area
 
 struct Grafite <: ActiveMaterial end
 struct NMC111 <: ActiveMaterial end
@@ -48,20 +48,18 @@ const coeff2_dUdT = Polynomial([
 	+ 3.048755063
 ])
 
-function ocd(T,c, ::NMC111)
+function ocd(T,c, material::NMC111)
 
 	refT = 298.15
 	#T=300
 	#c=0.1
 	#D0: 1.0000e-14
 	#EaD: 5000
-	cmax = 55554.0
-	theta= c./cmax
-
-	refOCP = coeff1_refOCP(theta)./ coeff2_refOCP(theta);
-
-	dUdT = -1e-3.*coeff1_dUdT(theta)./ coeff2_dUdT(theta);
-	vocd = refOCP + (T - refT) .* dUdT;
+    cmax = maximum_concentration(material)
+	theta = c/cmax
+	refOCP = coeff1_refOCP(theta)/coeff2_refOCP(theta)
+	dUdT = -1e-3*coeff1_dUdT(theta)/coeff2_dUdT(theta)
+	vocd = refOCP + (T - refT) * dUdT
 	return vocd
 end
 ##
@@ -89,8 +87,8 @@ const  coeff2= Polynomial([
 	+ 165705.8597
 ]);
 
-function ocd(T,c, ::Grafite)
-    cmax=30555.0
+function ocd(T,c, material::Grafite)
+    cmax = maximum_concentration(material)
 	# EaD: 5000
 	# D0: 3.9000e-14
   	# cmax: 30555
@@ -112,29 +110,20 @@ function ocd(T,c, ::Grafite)
 	return vocd
 end
 
-function nChargeCarriers(::Grafite)
+function n_charge_carriers(::Grafite)
         return 1
 end
 
-function nChargeCarriers(::NMC111)
+function n_charge_carriers(::NMC111)
         return 1
 end
 
-function cMax(::Grafite)
-        return 30555.0
-end
+maximum_concentration(::ActiveMaterial) = 1000.0
+maximum_concentration(::Grafite) = 30555.0
+maximum_concentration(::NMC111) = 55554.0
 
-function cMax(::NMC111)
-        return 55554.0
-end
-
-function volumetricSurfaceArea(::Grafite)
-        return 723600.0
-end
-
-function volumetricSurfaceArea(::NMC111)
-        return 885000.0
-end
+volumetric_surface_area(::Grafite) =723600.0
+volumetric_surface_area(::NMC111) = 885000.0
 
 function reaction_rate_const(T, c, ::Grafite)
 	refT = 298.15
