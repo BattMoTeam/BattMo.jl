@@ -6,12 +6,14 @@ function Jutul.update!(prec::BatteryCPhiPreconditioner, lsys, model, storage, re
     r = lsys.r
     if isnothing(prec.data)
         # Set up various mappings
-        c_map = setup_subset_residual_map(model, storage, [:ELYTE], :C)
+        c_models = [:ELYTE]
+        c_models = nothing
+        c_map = setup_subset_residual_map(model, storage, c_models, :C)
         phi_map = setup_subset_residual_map(model, storage, nothing, :Phi)
         # @assert length(intersect(c_map, phi_map)) == 0
-        prec.data = (c = storage_chpi_precond(c_map),
+        prec.data = (c   = storage_chpi_precond(c_map),
                      phi = storage_chpi_precond(phi_map),
-                     n = length(r))
+                     n   = length(r))
     end
     (; c, phi) = prec.data
 
@@ -88,6 +90,8 @@ function battery_linsolve(model, method = :ilu0;
         return LUSolver()
     elseif method == :cphi
         prec = BatteryCPhiPreconditioner()
+    elseif method == :cphi_ilu
+        prec = BatteryCPhiPreconditioner(ILUZeroPreconditioner())
     else
         return nothing
     end

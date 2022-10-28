@@ -559,7 +559,7 @@ function test_battery(name; extra_timing = false, info_level = 0, max_step = not
     cfg[:max_residual] = 1e20
     cfg[:min_nonlinear_iterations] = 1
     cfg[:extra_timing] = extra_timing
-    cfg[:max_nonlinear_iterations] = 5
+    # cfg[:max_nonlinear_iterations] = 5
     cfg[:safe_mode] = false
     cfg[:error_on_incomplete] = true
     if false
