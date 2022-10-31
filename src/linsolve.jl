@@ -5,11 +5,17 @@ function Jutul.update!(prec::BatteryCPhiPreconditioner, lsys, model, storage, re
     A = lsys.jac
     r = lsys.r
     if isnothing(prec.data)
+        models_without_bpp = setdiff(keys(model.models), [:BPP])
         # Set up various mappings
+        # Concentration part
         c_models = [:ELYTE]
         c_models = nothing
+        c_models = models_without_bpp
         c_map = setup_subset_residual_map(model, storage, c_models, :C)
-        phi_map = setup_subset_residual_map(model, storage, nothing, :Phi)
+        # Phi part
+        # p_models = nothing
+        p_models = models_without_bpp
+        phi_map = setup_subset_residual_map(model, storage, p_models, :Phi)
         # @assert length(intersect(c_map, phi_map)) == 0
         prec.data = (c   = storage_chpi_precond(c_map),
                      phi = storage_chpi_precond(phi_map),

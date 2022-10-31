@@ -118,7 +118,6 @@ function n_charge_carriers(::NMC111)
         return 1
 end
 
-maximum_concentration(::ActiveMaterial) = 1000.0
 maximum_concentration(::Grafite) = 30555.0
 maximum_concentration(::NMC111) = 55554.0
 
