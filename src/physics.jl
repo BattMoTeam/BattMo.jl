@@ -16,19 +16,19 @@ export half_face_two_point_kgrad
     return k_av * grad_phi
 end
 
-function Jutul.compute_tpfa_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model, dt, flow_disc) where T
+function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model, dt, flow_disc) where T
     @inbounds trans = state.ECTransmissibilities[face]
     q = -half_face_two_point_kgrad(c, other, trans, state.C, state.Diffusivity)
     return T(q)
 end
 
-function Jutul.compute_tpfa_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model, dt, flow_disc) where T
+function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model, dt, flow_disc) where T
     @inbounds trans = state.ECTransmissibilities[face]
     q = -half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
     return T(q)
 end
 
-function Jutul.compute_tpfa_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
+function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
     sys = model.system
     z = sys.z
     t = sys.t
@@ -56,7 +56,7 @@ function output_flux(model, state, parameters, eqname = :mass_conservation)
         for i in eachindex(out)
             l = N[1, i]
             r = N[2, i]
-            out[i] = Jutul.compute_tpfa_flux!(1.0, l, r, i, 1, eq, state_t, model, dt, fd)
+            out[i] = Jutul.face_flux!(1.0, l, r, i, 1, eq, state_t, model, dt, fd)
         end
     else
         @. out = NaN
