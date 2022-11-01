@@ -16,6 +16,14 @@ export half_face_two_point_kgrad
     return k_av * grad_phi
 end
 
+@inline function Jutul.face_flux!(q_i, face, eq::ConservationLaw, state, model::ECModel, dt, flow_disc::PotentialFlow, ldisc)
+    # Inner version, for generic flux
+    kgrad, upw = ldisc.face_disc(face)
+    (; left, right, face_sign) = kgrad
+    return Jutul.face_flux!(q_i, left, right, face, face_sign, eq, state, model, dt, flow_disc)
+end
+
+
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model, dt, flow_disc) where T
     @inbounds trans = state.ECTransmissibilities[face]
     q = -half_face_two_point_kgrad(c, other, trans, state.C, state.Diffusivity)
@@ -133,7 +141,7 @@ end
 
 
 function apply_bc_to_equation!(storage, parameters, model, eq::ConservationLaw, eq_s)
-    acc = get_entries(eq_s.accumulation)
+    acc = get_diagonal_entries(eq, eq_s)
     state = storage.state
 
     apply_boundary_potential!(acc, state, parameters, model, eq)
@@ -153,7 +161,7 @@ function apply_boundary_current!(acc, state, jkey, model, eq::ConservationLaw)
     end
 end
 
-function Jutul.select_parameters!(prm, D::TwoPointPotentialFlowHardCoded, model::Union{ECModel, SimpleElyteModel})
+function Jutul.select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::Union{ECModel, SimpleElyteModel})
     prm[:ECTransmissibilities] = ECTransmissibilities()
 end
 
