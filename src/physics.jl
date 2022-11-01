@@ -5,15 +5,19 @@ export half_face_two_point_kgrad
 #####################
 # Gradient operator #
 #####################
-@inline harmonic_average(c1, c2, T, k) = @inbounds T * (k[c1]^-1 + k[c2]^-1)^-1
+@inline function harmonic_average(c1, c2, k)
+    @inbounds l = k[c1]
+    @inbounds r = k[c2]
+    return 1.0/(1.0/l + 1.0/r)
+end
 @inline grad(c_self, c_other, p::AbstractArray) = @inbounds +(p[c_self] - p[c_other])
 
 @inline function half_face_two_point_kgrad(
     c_self::I, c_other::I, T::R, phi::AbstractArray, k::AbstractArray
     ) where {R<:Real, I<:Integer}
-    k_av = harmonic_average(c_self, c_other, T, k)
+    k_av = harmonic_average(c_self, c_other, k)
     grad_phi = grad(c_self, c_other, phi)
-    return k_av * grad_phi
+    return T * k_av * grad_phi
 end
 
 @inline function Jutul.face_flux!(q_i, face, eq::ConservationLaw, state, model::ECModel, dt, flow_disc::PotentialFlow, ldisc)
