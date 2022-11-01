@@ -61,10 +61,10 @@ function get_cc_grid(
 
     # TODO: move P, S, boundary to discretization
     P, S = get_tensorprod(name)
-    G = MinimalECTPFAGrid(volumes, N, bc, b_T_hf, P, S)
+    G = MinimalECTPFAGrid(volumes, N, vec(T); bc = bc, T_hf = b_T_hf, P = P, S = S)
 
     @assert !tensor_map
-    flow = TwoPointPotentialFlowHardCoded(G, T, nothing, nothing)
+    flow = TwoPointPotentialFlowHardCoded(G)
     disc = (charge_flow = flow,)
     D = DiscretizedDomain(G, disc)
 
@@ -93,11 +93,11 @@ function exported_model_to_domain(exported; bc=[], b_T_hf=[], tensor_map=false, 
     end
     P = exported["operators"]["cellFluxOp"]["P"]
     S = exported["operators"]["cellFluxOp"]["S"]
-    G = MinimalECTPFAGrid(volumes, N, bc, b_T_hf, P, S, vf)
-
     T = exported["operators"]["T"].*2.0*-1.0
+    G = MinimalECTPFAGrid(volumes, N, vec(T); bc = bc, T_hf = b_T_hf, P = P, S = S, vf = vf)
+
     @assert !tensor_map
-    flow = TwoPointPotentialFlowHardCoded(G, T, nothing, nothing)
+    flow = TwoPointPotentialFlowHardCoded(G)
     disc = (charge_flow = flow,)
     D = DiscretizedDomain(G, disc)
 

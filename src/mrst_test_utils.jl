@@ -532,7 +532,7 @@ end
 
 export test_battery
 
-function test_battery(name; extra_timing = false, info_level = 0, max_step = nothing, linear_solver = :direct, use_groups = false)
+function test_battery(name; extra_timing = false, max_step = nothing, linear_solver = :direct, use_groups = false, kwarg...)
     #timesteps = exported_all["schedule"]["step"]["val"][1:27]
     sim, forces, grids, state0, parameters, exported_all, model = setup_sim(name, use_groups = use_groups)
     steps = size(exported_all["states"],1)
@@ -552,7 +552,7 @@ function test_battery(name; extra_timing = false, info_level = 0, max_step = not
         end_step = min(max_step, end_step)
     end
     timesteps = alltimesteps[1:end_step]
-    cfg = simulator_config(sim, info_level = info_level)
+    cfg = simulator_config(sim; kwarg...)
     cfg[:linear_solver] = battery_linsolve(model, linear_solver)
     cfg[:debug_level] = 0
     #cfg[:max_timestep_cuts] = 0

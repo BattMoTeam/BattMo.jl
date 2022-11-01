@@ -90,6 +90,22 @@ struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
     P::M # Tensor to map from cells to faces
     S::M # Tensor map cell vector to cell scalar
     vol_frac::V
+    trans::V
+    function MinimalECTPFAGrid(pv, N, T; bc=[], T_hf=[], P=[], S=[], vf=[])
+        nc = length(pv)
+        pv::AbstractVector
+        @assert size(N, 1) == 2
+        if length(N) > 0
+            @assert minimum(N) > 0
+            @assert maximum(N) <= nc
+        end
+        @assert all(pv .> 0)
+        @assert size(bc) == size(T_hf)
+        if size(vf) != nc
+            vf = ones(nc)
+        end
+        return new{typeof(pv), typeof(N), typeof(bc), typeof(T_hf), typeof(P)}(pv, N, bc, T_hf, P, S, vf, T)
+    end
 end
 
 Base.show(io::IO, g::MinimalECTPFAGrid) = print(io, "MinimalECTPFAGrid ($(number_of_cells(g)) cells, $(number_of_faces(g)) faces)")
@@ -100,25 +116,6 @@ import Jutul: FlowDiscretization
 ################
 # Constructors #
 ################
-
-function MinimalECTPFAGrid(pv, N, bc=[], T_hf=[], P=[], S=[], vf=[])
-    nc = length(pv)
-    pv::AbstractVector
-    @assert size(N, 1) == 2
-    if length(N) > 0
-        @assert minimum(N) > 0
-        @assert maximum(N) <= nc
-    end
-    @assert all(pv .> 0)
-    @assert size(bc) == size(T_hf)
-
-    if size(vf) != nc
-        vf = ones(nc)
-    end
-
-    MinimalECTPFAGrid{typeof(pv), typeof(N), typeof(bc), typeof(T_hf), typeof(P)}(pv, N, bc, T_hf, P, S, vf)
-end
-
 struct TPFAInterfaceFluxCT{T,F} <: Jutul.AdditiveCrossTerm
     target_cells::T
     source_cells::T
@@ -148,18 +145,8 @@ end
 
 struct ECTransmissibilities <: ScalarVariable end
 Jutul.variable_scale(::ECTransmissibilities) = 1e-10
-
 Jutul.associated_entity(::ECTransmissibilities) = Faces()
-function Jutul.default_values(model, ::ECTransmissibilities)
-    d = model.domain
-    nf = number_of_faces(d)
-    T = zeros(nf)
-    conn_data = d.discretizations.charge_flow.conn_data
-    for cd in conn_data
-        T[cd.face] = cd.T
-    end
-    return T
-end
+Jutul.default_values(model, ::ECTransmissibilities) = model.domain.grid.trans
 
 struct Volume <: ScalarVariable end
 Jutul.default_values(model, ::Volume) = fluid_volume(model.domain.grid)
