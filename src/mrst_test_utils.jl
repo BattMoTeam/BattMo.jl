@@ -568,8 +568,8 @@ function test_battery(name; extra_timing = false, max_step = nothing, linear_sol
         cfg[:max_timestep_cuts] = 0
     end
 
-    cfg[:tolerances][:PP][:default] = 1e-3
-    cfg[:tolerances][:BPP][:default] = 1e-3
+    cfg[:tolerances][:PP][:default] = 1e-1
+    cfg[:tolerances][:BPP][:default] = 1e-1
     # Run simulation
     states, report = simulate(sim, timesteps, forces = forces, config = cfg)
     stateref = exported_all["states"]
