@@ -101,7 +101,7 @@ struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
         end
         @assert all(pv .> 0)
         @assert size(bc) == size(T_hf)
-        if size(vf) != nc
+        if length(vf) != nc
             vf = ones(nc)
         end
         return new{typeof(pv), typeof(N), typeof(bc), typeof(T_hf), typeof(P)}(pv, N, bc, T_hf, P, S, vf, T)
