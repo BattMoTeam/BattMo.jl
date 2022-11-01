@@ -29,7 +29,7 @@ function get_tensorprod(name="square_current_collector")
 end
 
 function get_cc_grid(
-    ;name="square_current_collector", extraout = false, bc=[], b_T_hf=[], tensor_map=false
+    ;name="square_current_collector", extraout = false, bc=[], b_T_hf=[], tensor_map=false, general_ad = false
     )
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
     exported = MAT.matread(fn)
@@ -64,7 +64,12 @@ function get_cc_grid(
     G = MinimalECTPFAGrid(volumes, N, vec(T); bc = bc, T_hf = b_T_hf, P = P, S = S)
 
     @assert !tensor_map
-    flow = TwoPointPotentialFlowHardCoded(G)
+    nc = length(volumes)
+    if general_ad
+        flow = PotentialFlow(N, nc)
+    else
+        flow = TwoPointPotentialFlowHardCoded(G, ncells = nc)
+    end
     disc = (charge_flow = flow,)
     D = DiscretizedDomain(G, disc)
 
@@ -75,7 +80,7 @@ function get_cc_grid(
     end
 end
 
-function exported_model_to_domain(exported; bc=[], b_T_hf=[], tensor_map=false, vf=[])
+function exported_model_to_domain(exported; bc=[], b_T_hf=[], tensor_map=false, vf=[], general_ad = false)
     N = exported["G"]["faces"]["neighbors"]
     N = Int64.(N)
     internal_faces = (N[:, 2] .> 0) .& (N[:, 1] .> 0)
@@ -97,7 +102,12 @@ function exported_model_to_domain(exported; bc=[], b_T_hf=[], tensor_map=false, 
     G = MinimalECTPFAGrid(volumes, N, vec(T); bc = bc, T_hf = b_T_hf, P = P, S = S, vf = vf)
 
     @assert !tensor_map
-    flow = TwoPointPotentialFlowHardCoded(G)
+    nc = length(volumes)
+    if general_ad
+        flow = PotentialFlow(N, nc)
+    else
+        flow = TwoPointPotentialFlowHardCoded(G, ncells = nc)
+    end
     disc = (charge_flow = flow,)
     D = DiscretizedDomain(G, disc)
 
@@ -116,7 +126,7 @@ function get_ref_states(j2m, ref_states)
     return rs
 end
 
-function get_simple_elyte_model(name="modelElectrolyte")
+function get_simple_elyte_model(name="modelElectrolyte"; kwarg...)
     fn = string(dirname(pathof(Jutul)), "/../data/models/", name, ".mat")
     exported = MAT.matread(fn)
     ex_model = exported["model"]
@@ -131,7 +141,7 @@ function get_simple_elyte_model(name="modelElectrolyte")
     bc_cells = N_all[b_faces, 1] + N_all[b_faces, 2]
     b_T_hf   = T_all[b_faces]
 
-    domain = exported_model_to_domain(ex_model, bc=bc_cells, b_T_hf=b_T_hf)
+    domain = exported_model_to_domain(ex_model, bc=bc_cells, b_T_hf=b_T_hf; kwarg...)
 
     sys = SimpleElyte()
     model = SimulationModel(domain, sys, context = DefaultContext())

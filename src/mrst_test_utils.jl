@@ -38,7 +38,7 @@ function my_number_of_cells(model::MultiModel)
 end
 
 ##
-function make_system(exported,sys,bcfaces,srccells)
+function make_system(exported, sys, bcfaces, srccells; kwarg...)
     #T_all = exported["operators"]["T_all"]
     N_all = Int64.(exported["G"]["faces"]["neighbors"])
     isboundary = (N_all[bcfaces,1].==0) .| (N_all[bcfaces,2].==0)
@@ -56,7 +56,7 @@ function make_system(exported,sys,bcfaces,srccells)
     if haskey(exported, "volumeFraction")
         vf = exported["volumeFraction"][:, 1]
     end
-    domain = exported_model_to_domain(exported, bc = bccells, b_T_hf = T_hf, vf=vf)
+    domain = exported_model_to_domain(exported, bc = bccells, b_T_hf = T_hf, vf=vf; kwarg...)
     G = exported["G"]
     plot_mesh = MRSTWrapMesh(G)
     model = SimulationModel(domain, sys, context = DefaultContext(), plot_mesh = plot_mesh)
@@ -135,7 +135,7 @@ end
     return vec
  end
 
-function setup_model(exported_all; use_groups = false)
+function setup_model(exported_all; use_groups = false, kwarg...)
     skip_cc = size(exported_all["model"]["include_current_collectors"]) == (0,0)
     skip_cc = false
     if !skip_cc
@@ -145,7 +145,7 @@ function setup_model(exported_all; use_groups = false)
     
         bcfaces = convert_to_int_vector(exported_all["model"]["NegativeElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingfaces"])
         srccells = []
-        (model_cc, G_cc, state0_cc, parm_cc,init_cc) = make_system(exported_cc, sys_cc, bcfaces, srccells)
+        (model_cc, G_cc, state0_cc, parm_cc,init_cc) = make_system(exported_cc, sys_cc, bcfaces, srccells; kwarg...)
     end
 
     sys_nam = Grafite()
@@ -155,12 +155,12 @@ function setup_model(exported_all; use_groups = false)
         srccells = []
         bcfaces = convert_to_int_vector(exported_all["model"]["NegativeElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingfaces"])
         (model_nam, G_nam, state0_nam, parm_nam, init_nam) = 
-            make_system(exported_nam, sys_nam, bcfaces, srccells)
+            make_system(exported_nam, sys_nam, bcfaces, srccells; kwarg...)
     else
         srccells = []
         bcfaces=[]
         (model_nam, G_nam, state0_nam, parm_nam, init_nam) = 
-            make_system(exported_nam, sys_nam, bcfaces, srccells)
+            make_system(exported_nam, sys_nam, bcfaces, srccells; kwarg...)
     end
     t1, t2 = exported_all["model"]["Electrolyte"]["sp"]["t"]
     z1, z2 = exported_all["model"]["Electrolyte"]["sp"]["z"]
@@ -171,7 +171,7 @@ function setup_model(exported_all; use_groups = false)
     bcfaces=[]
     srccells = []
     (model_elyte, G_elyte, state0_elyte, parm_elyte, init_elyte) = 
-        make_system(exported_elyte, sys_elyte, bcfaces, srccells)
+        make_system(exported_elyte, sys_elyte, bcfaces, srccells; kwarg...)
 
 
     sys_pam = NMC111()
@@ -179,7 +179,7 @@ function setup_model(exported_all; use_groups = false)
     bcfaces=[]
     srccells = []
     (model_pam, G_pam, state0_pam, parm_pam, init_pam) = 
-        make_system(exported_pam,sys_pam,bcfaces,srccells)   
+        make_system(exported_pam,sys_pam,bcfaces,srccells; kwarg...)
    
     if !skip_cc    
         exported_pp = exported_all["model"]["PositiveElectrode"]["CurrentCollector"];
@@ -187,7 +187,7 @@ function setup_model(exported_all; use_groups = false)
         bcfaces=[]
         srccells = []
         (model_pp, G_pp, state0_pp, parm_pp,init_pp) = 
-        make_system(exported_pp,sys_pp, bcfaces, srccells)
+        make_system(exported_pp,sys_pp, bcfaces, srccells; kwarg...)
     end
     sys_bpp = CurrentAndVoltageSystem()
     domain_bpp = CurrentAndVoltageDomain()
@@ -485,13 +485,13 @@ function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggreg
     return AMGPreconditioner(m, max_levels = max_levels, max_coarse = max_coarse, presmoother = gs, postsmoother = gs, cycle = cyc)
 end
 
-function setup_sim(name; use_groups = false)
+function setup_sim(name; use_groups = false, general_ad = false)
 ##
     #name="model1d_notemp"
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
     exported_all = MAT.matread(fn)
 
-    model, state0, parameters, grids = setup_model(exported_all, use_groups = use_groups)    
+    model, state0, parameters, grids = setup_model(exported_all, use_groups = use_groups, general_ad = general_ad)
     setup_coupling!(model, exported_all)
     #inputI = 9.4575
     inputI = 0;
@@ -532,9 +532,12 @@ end
 
 export test_battery
 
-function test_battery(name; extra_timing = false, max_step = nothing, linear_solver = :direct, use_groups = false, kwarg...)
-    #timesteps = exported_all["schedule"]["step"]["val"][1:27]
-    sim, forces, grids, state0, parameters, exported_all, model = setup_sim(name, use_groups = use_groups)
+function test_battery(name; extra_timing = false,
+                            max_step = nothing,
+                            linear_solver = :direct,
+                            general_ad = false,
+                            use_groups = false, kwarg...)
+    sim, forces, grids, state0, parameters, exported_all, model = setup_sim(name, use_groups = use_groups, general_ad = general_ad)
     steps = size(exported_all["states"],1)
     alltimesteps = Vector{Float64}(undef,steps)
     time = 0;
