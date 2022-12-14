@@ -44,20 +44,27 @@ end
 # Standard implementations #
 ############################
 
-@jutul_secondary function update_as_secondary!(
-    acc, tv::Mass, model, C, Volume, VolumeFraction
+@jutul_secondary function update_ion_mass!(
+    acc, tv::Mass, model, C, Volume, VolumeFraction, ix
     )
-    @tullio acc[i] = C[i] * Volume[i] * VolumeFraction[i]
+    for i in ix
+        @inbounds acc[i] = C[i] * Volume[i] * VolumeFraction[i]
+    end
+end
+
+@jutul_secondary function update_energy!(
+    acc, tv::Energy, model, T, Volume, VolumeFraction, ix
+    )
+    for i in ix
+        @inbounds acc[i] = T[i] * Volume[i] * VolumeFraction[i]
+    end
 end
 
 @jutul_secondary function update_as_secondary!(
-    acc, tv::Energy, model, T, Volume, VolumeFraction
+    acc, tv::Charge, model, Phi, # only for the graph
+    ix
     )
-    @tullio acc[i] = T[i] * Volume[i] * VolumeFraction[i]
-end
-
-@jutul_secondary function update_as_secondary!(
-    acc, tv::Charge, model, Phi # only for the graph
-    )
-    @tullio acc[i] = 0.0 # Charge neutrality
+    for i in ix
+        @inbounds acc[i] = 0.0
+    end
 end

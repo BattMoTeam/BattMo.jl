@@ -3,7 +3,7 @@ export ECComponent
 struct ECComponent <: ElectroChemicalComponent end # Not a good name
 
 function select_minimum_output_variables!(out, 
-    system::ElectroChemicalComponent, model
+    system::ElectroChemicalComponent, model::SimulationModel
     )
     for k in [:Charge, :Mass, :Energy]
         push!(out, k)
@@ -11,7 +11,7 @@ function select_minimum_output_variables!(out,
 end
 
 function select_primary_variables!(
-    S, system::ElectroChemicalComponent, model
+    S, system::ElectroChemicalComponent, model::SimulationModel
     )
     S[:Phi] = Phi()
     S[:C] = C()
@@ -19,7 +19,7 @@ function select_primary_variables!(
 end
 
 function select_secondary_variables!(
-    S, system::ElectroChemicalComponent, model
+    S, system::ElectroChemicalComponent, model::SimulationModel
     )
     S[:Charge] = Charge()
     S[:Mass] = Mass()
@@ -31,7 +31,7 @@ function select_secondary_variables!(
 end
 
 function select_equations!(
-    eqs, system::ElectroChemicalComponent, model
+    eqs, system::ElectroChemicalComponent, model::SimulationModel
     )
     disc = model.domain.discretizations.charge_flow
 

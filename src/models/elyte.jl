@@ -104,7 +104,7 @@ end
 
 
 @jutul_secondary(
-function update_as_secondary!(dmudc, sv::DmuDc, model, Temperature, C)
+function update_as_secondary!(dmudc, sv::DmuDc, model, Temperature, C, ix)
     R = GAS_CONSTANT
     @tullio dmudc[i] = R * (Temperature[i] / C[i])
 end
@@ -112,32 +112,38 @@ end
 
 # ? Does this maybe look better ?
 @jutul_secondary(
-function update_as_secondary!(
-    con, tv::Conductivity, model::ElectrolyteModel, Temperature, C
+function update_conductivity!(
+    con, tv::Conductivity, model::ElectrolyteModel, Temperature, C, ix
     )
     s = model.system
     vf = model.domain.grid.vol_frac
-    @tullio con[i] = cond(Temperature[i], C[i], s) * vf[i]^1.5
+    for i in ix
+        @inbounds con[i] = cond(Temperature[i], C[i], s) * vf[i]^1.5
+    end
 end
 )
 
-@jutul_secondary function update_as_secondary!(
-    D, sv::Diffusivity, model::ElectrolyteModel, C, Temperature
+@jutul_secondary function update_diffusivity!(
+    D, sv::Diffusivity, model::ElectrolyteModel, C, Temperature, ix
     )
     s = model.system
     vf = model.domain.grid.vol_frac
-    @tullio D[i] = diffusivity(Temperature[i], C[i], s)  * vf[i]^1.5
+    for i in ix
+        @inbounds D[i] = diffusivity(Temperature[i], C[i], s)  * vf[i]^1.5
+    end
 end
 
 
-@jutul_secondary function update_as_secondary!(
-    coeff, tv::ConsCoeff, model::ElectrolyteModel, Conductivity, DmuDc
+@jutul_secondary function update_cons_coeff!(
+    coeff, tv::ConsCoeff, model::ElectrolyteModel, Conductivity, DmuDc, ix
     )
     sys = model.system
     t = sys.t
     z = sys.z
     F = FARADAY_CONST
-    @tullio coeff[i] = Conductivity[i]*DmuDc[i] * t/(F*z)
+    for i in ix
+        @inbounds coeff[i] = Conductivity[i]*DmuDc[i] * t/(F*z)
+    end
 end
 
 function apply_boundary_potential!(

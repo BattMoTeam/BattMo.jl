@@ -168,7 +168,7 @@ struct VoltVar <: ScalarVariable end
 struct CurrentVar <: ScalarVariable end
 # absolute_increment_limit(::CurrentVar) = 5.0
 
-function select_equations!(eqs, system::CurrentAndVoltageSystem, model)
+function select_equations!(eqs, system::CurrentAndVoltageSystem, model::SimulationModel)
     eqs[:charge_conservation] = CurrentEquation()
     eqs[:control] = ControlEquation()
 end
@@ -177,7 +177,7 @@ function Jutul.setup_forces(model::SimulationModel{G, S}; policy = NoPolicy()) w
     return (policy = policy,)
 end
 
-function select_primary_variables!(S, system::CurrentAndVoltageSystem, model)
+function select_primary_variables!(S, system::CurrentAndVoltageSystem, model::SimulationModel)
     S[:Phi] = VoltVar()
     S[:Current] = CurrentVar()
 end
