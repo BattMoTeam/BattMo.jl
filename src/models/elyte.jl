@@ -1,6 +1,8 @@
+# Model for a electrolyte
+
 using Polynomials
 export Electrolyte, TestElyte, DmuDc, ConsCoeff
-export p1, p2, p3, cnst, diffusivity
+export p1, p2, p3, diffusivity
 export ElectrolyteModel
 
 abstract type Electrolyte <: ElectroChemicalComponent end
@@ -18,48 +20,54 @@ struct ConsCoeff <: ScalarVariable end
 maximum_concentration(::Electrolyte) = 1000.0
 
 function select_equations_system!(eqs, domain, system::Electrolyte, formulation)
+    
     # TODO: FIXME.
     charge_cons = (arg...; kwarg...) -> Conservation(:Charge, arg...; kwarg...)
     mass_cons = (arg...; kwarg...) -> Conservation(:Mass, arg...; kwarg...)
     energy_cons = (arg...; kwarg...) -> Conservation(:Energy, arg...; kwarg...)
     
     eqs[:charge_conservation] = (charge_cons, 1)
-    eqs[:mass_conservation] = (mass_cons, 1)
+    eqs[:mass_conservation]   = (mass_cons, 1)
     eqs[:energy_conservation] = (energy_cons, 1)
+    
 end
 
 function select_primary_variables!(S, system::Electrolyte, model)
+    
     S[:Phi] = Phi()
     S[:C] = C()
     S[:Temperature] = Temperature()
+    
 end
 
 
 function select_secondary_variables!(S, system::Electrolyte, model)
-    S[:Conductivity] = Conductivity()
+    
+    S[:Conductivity]        = Conductivity()
     S[:ThermalConductivity] = Conductivity()
-    S[:Diffusivity] = Diffusivity()
-    S[:DmuDc] = DmuDc()
-    S[:ConsCoeff] = ConsCoeff()
+    S[:Diffusivity]         = Diffusivity()
+    S[:DmuDc]               = DmuDc()
+    S[:ConsCoeff]           = ConsCoeff()
 
     # S[:TotalCurrent] = TotalCurrent()
     # S[:ChargeCarrierFlux] = ChargeCarrierFlux()
 
-    S[:JCell] = JCell()
-    S[:JSq] = JSq()
+    S[:JCell]      = JCell()
+    S[:JSq]        = JSq()
     S[:DGradCCell] = DGradCCell()
-    S[:DGradCSq] = DGradCSq()
+    S[:DGradCSq]   = DGradCSq()
 
     S[:EnergyDensity] = EnergyDensity()
 
     S[:Charge] = Charge()
-    S[:Mass] = Mass()
+    S[:Mass]   = Mass()
     S[:Energy] = Energy()
 
     # Variables for plotting
     S[:DGradCSqDiag] = DGradCSqDiag()
-    S[:JSqDiag] = JSqDiag()
-    S[:EDDiag] = EDDiag()
+    S[:JSqDiag]      = JSqDiag()
+    S[:EDDiag]       = EDDiag()
+    
 end
 
 function select_minimum_output_variables!(out, system::Electrolyte, model)
@@ -81,7 +89,9 @@ const p1 = Polynomial(poly_param[1:end, 1])
 const p2 = Polynomial(poly_param[1:end, 2])
 const p3 = Polynomial(poly_param[1:end, 3])
 
-@inline function cond(T::Real, C::Real, ::Electrolyte)
+@inline function conductivity(T::Real, C::Real, ::Electrolyte)
+    """ Compute the electrolyte conductiviy as a function of temperature and concentration
+    """
     fact = 1e-4  # * 500 # fudge factor
     return fact * C * (p1(C) + p2(C) * T + p3(C) * T^2)^2
 end
@@ -93,6 +103,8 @@ const diff_params = [
 const Tgi = [229 5.0]
 
 @inline function diffusivity(T::Real, C::Real, ::Electrolyte)
+    """ Compute the diffusion coefficient as a function of temperature and concentration
+    """
     return (
         1e-4 * 10 ^ ( 
             diff_params[1,1] + 
@@ -112,10 +124,11 @@ end
 
 # ? Does this maybe look better ?
 @jutul_secondary(
-function update_conductivity!(
-    con, tv::Conductivity, model::ElectrolyteModel, Temperature, C, ix
-    )
+function update_conductivity!(con, tv::Conductivity, model::ElectrolyteModel, Temperature, C, ix)
+    """ Register conductivity function
+    """
     s = model.system
+    # We use Bruggeman coefficient
     vf = model.domain.grid.vol_frac
     for i in ix
         @inbounds con[i] = cond(Temperature[i], C[i], s) * vf[i]^1.5
@@ -123,9 +136,9 @@ function update_conductivity!(
 end
 )
 
-@jutul_secondary function update_diffusivity!(
-    D, sv::Diffusivity, model::ElectrolyteModel, C, Temperature, ix
-    )
+@jutul_secondary function update_diffusivity!(D, sv::Diffusivity, model::ElectrolyteModel, C, Temperature, ix)
+    """ Register diffusivity function
+    """
     s = model.system
     vf = model.domain.grid.vol_frac
     for i in ix
@@ -134,9 +147,9 @@ end
 end
 
 
-@jutul_secondary function update_cons_coeff!(
-    coeff, tv::ConsCoeff, model::ElectrolyteModel, Conductivity, DmuDc, ix
-    )
+@jutul_secondary function update_cons_coeff!(coeff, tv::ConsCoeff, model::ElectrolyteModel, Conductivity, DmuDc, ix)
+    """Register constant for chemical flux
+    """
     sys = model.system
     t = sys.t
     z = sys.z
@@ -146,17 +159,15 @@ end
     end
 end
 
-function apply_boundary_potential!(
-    acc, stateeters, model::ElectrolyteModel, eq::ConservationLaw{:Charge}
-    )
+function apply_boundary_potential!(acc, stateeters, model::ElectrolyteModel, eq::ConservationLaw{:Charge})
     # values
-    Phi = state[:Phi]
-    C = state[:C]
-    κ = state[:Conductivity]
+    
+    Phi   = state[:Phi]
+    C     = state[:C]
+    κ     = state[:Conductivity]
     coeff = state[:ConsCoeff]
-
-    BPhi = state[:BoundaryPhi]
-    BC = state[:BoundaryC]
+    BPhi  = state[:BoundaryPhi]
+    BC    = state[:BoundaryC]
 
     bc = model.domain.grid.boundary_cells
     T_hf = model.domain.grid.boundary_T_hf
@@ -170,14 +181,13 @@ function apply_boundary_potential!(
 end
 
 
-function apply_boundary_potential!(
-    acc, stateeters, model::ElectrolyteModel, eq::ConservationLaw{:Mass}
-    )
+function apply_boundary_potential!(acc, stateeters, model::ElectrolyteModel, eq::ConservationLaw{:Mass})
     # values
+    
     Phi = state[:Phi]
-    C = state[:C]
-    κ = state[:Conductivity]
-    D = state[:Diffusivity]
+    C   = state[:C]
+    κ   = state[:Conductivity]
+    D   = state[:Diffusivity]
 
     F = FARADAY_CONST
     sys = model.system
@@ -185,11 +195,10 @@ function apply_boundary_potential!(
     z = sys.z
 
     coeff = state[:ConsCoeff]
+    BPhi  = state[:BoundaryPhi]
+    BC    = state[:BoundaryC]
 
-    BPhi = state[:BoundaryPhi]
-    BC = state[:BoundaryC]
-
-    bc = model.domain.grid.boundary_cells
+    bc   = model.domain.grid.boundary_cells
     T_hf = model.domain.grid.boundary_T_hf
 
     for (i, c) in enumerate(bc)
@@ -208,10 +217,9 @@ function apply_boundary_potential!(
     acc, stateeters, model::ElectrolyteModel, eq::ConservationLaw{:Energy}
     )
     # values
-    T = state[:T]
-    λ = state[:ThermalConductivity]
+    T  = state[:T]
+    λ  = state[:ThermalConductivity]
     BT = state[:BoundaryTemperature]
-
 
     # Type
     bc = model.domain.grid.boundary_cells
