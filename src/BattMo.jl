@@ -1,8 +1,13 @@
 module BattMo
-    import Jutul: number_of_cells, number_of_faces,
+
+import Jutul:
+    number_of_cells, number_of_faces,
     degrees_of_freedom_per_entity,
     values_per_entity,
-    absolute_increment_limit, relative_increment_limit, maximum_value, minimum_value,
+    absolute_increment_limit,
+    relative_increment_limit,
+    maximum_value,
+    minimum_value,
     select_primary_variables!,
     initialize_primary_variable_ad!,
     update_primary_variable!,
@@ -21,9 +26,8 @@ module BattMo
     active_entities,
     number_of_entities,
     declare_entities,
-    get_neighborship
-
-    import Jutul: Faces,
+    get_neighborship,
+    Faces,
     get_diagonal_cache,
     align_to_jacobian!,
     diagonal_alignment!,
@@ -32,34 +36,43 @@ module BattMo
     get_entry,
     get_jacobian_pos,
     DiagonalEquation,
-    ConservationLawTPFAStorage
+    ConservationLawTPFAStorage,
+    fill_equation_entries!,
+    update_linearized_system_equation!,
+    check_convergence,
+    update!,
+    linear_operator,
+    transfer,
+    operator_nrows,
+    matrix_layout,
+    apply!,
+    apply_forces_to_equation!,
+    convergence_criterion,
+    get_dependencies,
+    setup_forces,
+    setup_state,
+    setup_state!,
+    declare_pattern,
+    select_primary_variables!,
+    select_minimum_output_variables!
 
-    import Jutul: fill_equation_entries!, update_linearized_system_equation!, check_convergence, update!, linear_operator, transfer, operator_nrows, matrix_layout, apply!
-    import Jutul: apply_forces_to_equation!, convergence_criterion
-    import Jutul: get_dependencies
-    import Jutul: setup_forces, setup_state, setup_state!
-    import Jutul: declare_pattern, select_primary_variables!
-    import Jutul: select_minimum_output_variables!
+include("physical_constants.jl")
+include("battery_types.jl")
+include("tensor_tools.jl")
+include("battery_utils.jl")
+include("test_setup.jl")
+include("models/elchem_component.jl")
+include("models/elyte.jl")
+include("models/current_collector.jl")
+include("models/current_collector_temp.jl")
+include("models/activematerial.jl")
+include("models/ocp.jl")
+include("models/simple_elyte.jl")
+include("models/current_and_voltage_boundary.jl")
+include("models/battery_cross_terms.jl") # Works now
+include("models/convergence.jl")
+include("physics.jl")
+include("mrst_test_utils.jl")
+include("linsolve.jl")
 
-    #include("battery.jl")
-    include("physical_constants.jl")
-    include("battery_types.jl")
-    include("tensor_tools.jl")
-  
-    include("battery_utils.jl")
-    include("test_setup.jl")
-
-    include("models/elchem_component.jl")
-    include("models/elyte.jl")
-    include("models/current_collector.jl")
-    include("models/current_collector_temp.jl")
-    include("models/activematerial.jl")
-    include("models/ocp.jl")
-    include("models/simple_elyte.jl")
-    include("models/current_and_voltage_boundary.jl")
-    include("models/battery_cross_terms.jl") # Works now
-    include("models/convergence.jl")
-    include("physics.jl")
-    include("mrst_test_utils.jl")
-    include("linsolve.jl")
 end # module

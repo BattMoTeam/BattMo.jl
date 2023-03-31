@@ -2,7 +2,7 @@ export ActiveMaterial, ACMaterial, ActiveMaterialModel
 
 abstract type ActiveMaterial <: ElectroChemicalComponent end
 struct ACMaterial <: ActiveMaterial end
-struct Ocd <: ScalarVariable end
+struct Ocp <: ScalarVariable end
 struct Diffusion <: ScalarVariable end
 struct ReactionRateConst <: ScalarVariable end
 
@@ -12,7 +12,7 @@ function select_minimum_output_variables!(out,
     )
     push!(out, :Charge)
     push!(out, :Mass)
-    push!(out, :Ocd)
+    push!(out, :Ocp)
     push!(out, :Temperature)
 end
 
@@ -29,7 +29,7 @@ function select_secondary_variables!(
     S[:Charge] = Charge()
     S[:Mass] = Mass()
 
-    S[:Ocd] = Ocd()
+    S[:Ocp] = Ocp()
     S[:ReactionRateConst] = ReactionRateConst()
 end
 
@@ -49,14 +49,14 @@ end
 
 # ? Does this maybe look better ?
 @jutul_secondary(
-function update_vocd!(
-    vocd, tv::Ocd, model::SimulationModel{<:Any, MaterialType, <:Any, <:Any}, C, ix
+function update_vocp!(
+    vocp, tv::Ocp, model::SimulationModel{<:Any, MaterialType, <:Any, <:Any}, C, ix
     ) where   {MaterialType <:ActiveMaterial}
     s = model.system
-    # @tullio vocd[i] = ocd(T[i], C[i], s)
+    # @tullio vocp[i] = ocp(T[i], C[i], s)
     refT = 298.15
     for i in ix
-        @inbounds vocd[i] = ocd(refT, C[i], s)
+        @inbounds vocp[i] = ocp(refT, C[i], s)
     end
 end
 )

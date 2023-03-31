@@ -1,7 +1,7 @@
 using BattMo
 name="model1D_50"
 # Run base case and plot the results against BattMo-MRST reference
-states, reports, extra = test_battery(name, info_level = 1, max_step = nothing);
+states, reports, extra = run_battery(name, info_level = 1, max_step = nothing);
 prm = extra[:parameters]
 model = extra[:model]
 timesteps = extra[:timesteps]

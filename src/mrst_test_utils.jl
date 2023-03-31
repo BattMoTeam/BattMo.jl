@@ -1,54 +1,64 @@
 struct SourceAtCell
     cell
     src
-    function SourceAtCell(cell,src)
-        new(cell,src)
+    function SourceAtCell(cell, src)
+        new(cell, src)
     end 
 end
 
 function getTrans(model1, model2, faces, cells, quantity)
+    """ setup transmissibility for coupling between models"""
     T_all1 = model1["operators"]["T_all"][faces[:,1]]
     T_all2 = model2["operators"]["T_all"][faces[:,2]]
-    s1 =   model1[quantity][cells[:,1]]
-    s2 =   model2[quantity][cells[:,2]]
-    T = 1.0./((1.0./(T_all1.*s1))+(1.0./(T_all2.*s2)))
+    s1     = model1[quantity][cells[:,1]]
+    s2     = model2[quantity][cells[:,2]]
+    T      = 1.0./((1.0./(T_all1.*s1))+(1.0./(T_all2.*s2)))
+
     return T
-    #N_all = Int64.(exported["G"]["faces"]["neighbors"])
+    
 end
-function getHalfTrans(model , faces, cells, quantity)
+
+function getHalfTrans(model, faces, cells, quantity)
+    """ recover half transmissibilities for faces and  weight them by the coefficient sent as quantity for the given cells.
+Here, the faces should belong the corresponding cells at the same index"""
     T_all = model["operators"]["T_all"]
     s = model[quantity][cells]
     T = T_all[faces].*s
+
     return T
-    #N_all = Int64.(exported["G"]["faces"]["neighbors"])
+    
 end
-##
-function getHalfTrans(model , faces)
+
+function getHalfTrans(model, faces)
+    """ recover the half transmissibilities for faces"""
     T_all = model["operators"]["T_all"]
-    #s = model[quantity][cells]
-    T = T_all[faces]#.*s
+    T = T_all[faces]
+    
     return T
+    
 end
+
 function my_number_of_cells(model::MultiModel)
+    
     cells = 0
     for smodel in model.models
         cells += number_of_cells(smodel.domain)
     end
+    
     return cells
+    
 end
 
-##
 function make_system(exported, sys, bcfaces, srccells; kwarg...)
-    #T_all = exported["operators"]["T_all"]
+
     N_all = Int64.(exported["G"]["faces"]["neighbors"])
-    isboundary = (N_all[bcfaces,1].==0) .| (N_all[bcfaces,2].==0)
+    isboundary = (N_all[bcfaces, 1].==0) .| (N_all[bcfaces, 2].==0)
     @assert all(isboundary)
-    #bcfaces = exported_all["model"]["NegativeElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingcells"]
+    
     bccells = N_all[bcfaces,1] + N_all[bcfaces,2]
-    #T_hf   = -T_all[bcfaces]
-    msource = exported  
-    #T_hf = -getHalfTrans(msource, bcfaces, bccells, "EffectiveElectricalConductivity")
-    T_hf = -getHalfTrans(msource, bcfaces)#, bccells, "EffectiveElectricalConductivity")
+    msource = exported
+    T_hf = - getHalfTrans(msource, bcfaces)
+    
     bcvaluesrc = zeros(size(bccells))
     bcvaluephi = ones(size(bccells)).*0.0
 
@@ -56,29 +66,28 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
     if haskey(exported, "volumeFraction")
         vf = exported["volumeFraction"][:, 1]
     end
+    
     domain = exported_model_to_domain(exported, bc = bccells, b_T_hf = T_hf, vf=vf; kwarg...)
     G = exported["G"]
     plot_mesh = MRSTWrapMesh(G)
     model = SimulationModel(domain, sys, context = DefaultContext(), plot_mesh = plot_mesh)
 
-    # State is dict with pressure in each cell
+    # State is dict
     phi0 = 1.0
-    C0 = 1.
-    T0 = 298.15
-    I0 = 1.0
-    #D = -0.7e-10 # ???
-    # D = - exported_all["model"]["NegativeElectrode"]["ElectrodeActiveComponent"]["InterDiffusionCoefficient"]
+    C0   = 1.
+    T0   = 298.15
     if haskey(exported,"InterDiffusionCoefficient")
         D = - exported["InterDiffusionCoefficient"]
     else
         D =  -0.0
     end
     if isa(exported["EffectiveElectricalConductivity"], Matrix)
-        σ = exported["EffectiveElectricalConductivity"][1]
+        kappa = exported["EffectiveElectricalConductivity"][1]
     else
-        σ = 1.0
+        kappa = 1.0
     end
-    λ = exported["thermalConductivity"][1]
+    
+    thermal_conductivity = exported["thermalConductivity"][1]
 
     S = model.parameters
     if count_active_entities(domain, BoundaryFaces()) > 0
@@ -106,13 +115,13 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
         :Phi                    => phi0,
         :Current                => I0,
         :C                      => C0,
-        :ThermalConductivity    => λ
+        :ThermalConductivity    => thermal_conductivity
         )
     if model.system isa Electrolyte
-        init[:Conductivity] = σ
+        init[:Conductivity] = kappa
         init[:Diffusivity] = D
     else
-        init_prm[:Conductivity] = σ
+        init_prm[:Conductivity] = kappa
         init_prm[:Diffusivity] = D
     end
     state0 = setup_state(model, init)
@@ -123,21 +132,20 @@ end
 
 ##
 function convert_to_int_vector(x::Float64)
-    vec = Int64.(
-        Vector{Float64}([x])
-    )
+    vec = Int64.(Vector{Float64}([x]))
     return vec
 end
- function convert_to_int_vector(x::Matrix{Float64})
-    vec = Int64.(   
-    Vector{Float64}(x[:,1])
-    )
+
+function convert_to_int_vector(x::Matrix{Float64})
+    vec = Int64.(Vector{Float64}(x[:,1]))
     return vec
- end
+end
 
 function setup_model(exported_all; use_groups = false, kwarg...)
+    
     skip_cc = size(exported_all["model"]["include_current_collectors"]) == (0,0)
     skip_cc = false
+    
     if !skip_cc
         exported_cc = exported_all["model"]["NegativeElectrode"]["CurrentCollector"];
 
@@ -148,31 +156,27 @@ function setup_model(exported_all; use_groups = false, kwarg...)
         (model_cc, G_cc, state0_cc, parm_cc,init_cc) = make_system(exported_cc, sys_cc, bcfaces, srccells; kwarg...)
     end
 
-    sys_nam = Grafite()
+    sys_nam = Graphite()
     exported_nam = exported_all["model"]["NegativeElectrode"]["ActiveMaterial"];
     
     if  skip_cc
         srccells = []
         bcfaces = convert_to_int_vector(exported_all["model"]["NegativeElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingfaces"])
-        (model_nam, G_nam, state0_nam, parm_nam, init_nam) = 
-            make_system(exported_nam, sys_nam, bcfaces, srccells; kwarg...)
+        (model_nam, G_nam, state0_nam, parm_nam, init_nam) = make_system(exported_nam, sys_nam, bcfaces, srccells; kwarg...)
     else
         srccells = []
         bcfaces=[]
-        (model_nam, G_nam, state0_nam, parm_nam, init_nam) = 
-            make_system(exported_nam, sys_nam, bcfaces, srccells; kwarg...)
+        (model_nam, G_nam, state0_nam, parm_nam, init_nam) = make_system(exported_nam, sys_nam, bcfaces, srccells; kwarg...)
     end
     t1, t2 = exported_all["model"]["Electrolyte"]["sp"]["t"]
     z1, z2 = exported_all["model"]["Electrolyte"]["sp"]["z"]
     tDivz_eff = (t1/z1 + t2/z2)
 
-    sys_elyte = SimpleElyte(t = tDivz_eff, z = 1)
+    sys_elyte      = SimpleElyte(t = tDivz_eff, z = 1)
     exported_elyte = exported_all["model"]["Electrolyte"]
-    bcfaces=[]
-    srccells = []
-    (model_elyte, G_elyte, state0_elyte, parm_elyte, init_elyte) = 
-        make_system(exported_elyte, sys_elyte, bcfaces, srccells; kwarg...)
-
+    bcfaces        = []
+    srccells       = []
+    (model_elyte, G_elyte, state0_elyte, parm_elyte, init_elyte) = make_system(exported_elyte, sys_elyte, bcfaces, srccells; kwarg...)
 
     sys_pam = NMC111()
     exported_pam = exported_all["model"]["PositiveElectrode"]["ActiveMaterial"];
@@ -460,8 +464,6 @@ function setup_coupling!(model, exported_all)
     
 end
 
-
-##
 function currentFun(t::T,inputI::T) where T
     #inputI = 9.4575
     tup = 0.1
@@ -473,6 +475,7 @@ function currentFun(t::T,inputI::T) where T
     end
     return val
 end
+
 function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggregation)
     gs_its = 1
     cyc = AlgebraicMultigrid.V()
@@ -486,25 +489,29 @@ function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggreg
 end
 
 function setup_sim(name; use_groups = false, general_ad = false)
-##
-    #name="model1d_notemp"
+
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
     exported_all = MAT.matread(fn)
 
     model, state0, parameters, grids = setup_model(exported_all, use_groups = use_groups, general_ad = general_ad)
+   
     setup_coupling!(model, exported_all)
-    #inputI = 9.4575
+    
     inputI = 0;
-    minE = 10
-    steps = size(exported_all["states"],1)
+    minE   = 10
+    steps  = size(exported_all["states"],1)
+    
     for i = 1:steps
+        
         inputI = max(inputI,exported_all["states"][i]["Control"]["I"])
-        minE = min(minE,exported_all["states"][i]["Control"]["E"])
+        minE   = min(minE,exported_all["states"][i]["Control"]["E"])
+        
     end
+    
     # Set initial voltage above the threshold for switching
     @. state0[:BPP][:Phi] = minE*1.5
     cFun(time) = currentFun(time, inputI)
-    forces_pp = nothing 
+    forces_pp = nothing
     #forces_pp = (src = SourceAtCell(10,9.4575*0.0),)
 
     currents = setup_forces(model[:BPP], policy = SimpleCVPolicy(cFun, minE))
@@ -516,38 +523,36 @@ function setup_sim(name; use_groups = false, general_ad = false)
         :PP => forces_pp,
         :BPP => currents
     )
-    for (k, p) in parameters
-        #p[:tolerances][:default] = 1e-10
-        # p[:tolerances][:default] = 1e-3
-    end
-    #parameters[:ELYTE][:tolerances][:charge_conservation]=1e-9
-    #parameters[:PAM][:tolerances][:charge_conservation]=1e-6
-    #parameters[:PP][:tolerances][:charge_conservation]=1e-3
-    #parameters[:BPP][:tolerances][:charge_conservation]=1e-8
-    # parameters[:BPP][:tolerances][:charge_conservation]=1e-2
-    # parameters[:PP][:tolerances][:charge_conservation]=1e-2
+    
     sim = Simulator(model, state0 = state0, parameters = parameters, copy_state = true)
+    
     return sim, forces, grids, state0, parameters, exported_all, model
+    
 end
 
-export test_battery
+export run_battery
 
-function test_battery(name; extra_timing = false,
-                            max_step = nothing,
-                            linear_solver = :direct,
-                            general_ad = false,
-                            use_groups = false, kwarg...)
+function run_battery(name;
+                     extra_timing  = false,
+                     max_step      = nothing,
+                     linear_solver = :direct,
+                     general_ad    = false,
+                     use_groups    = false,
+                     kwarg...)
+    
     sim, forces, grids, state0, parameters, exported_all, model = setup_sim(name, use_groups = use_groups, general_ad = general_ad)
-    steps = size(exported_all["states"],1)
+    
+    steps        = size(exported_all["states"],1)
     alltimesteps = Vector{Float64}(undef,steps)
-    time = 0;
-    end_step = 0
-    minE=2.5
+    time         = 0;
+    end_step     = 0
+    minE         = 2.5
+    
     for i = 1:steps
         alltimesteps[i] =  exported_all["states"][i]["time"]-time
         time = exported_all["states"][i]["time"]
         E = exported_all["states"][i]["Control"]["E"]
-        if (E > minE+0.001)
+        if (E > minE + 0.001)
             end_step = i
         end
     end
@@ -556,19 +561,19 @@ function test_battery(name; extra_timing = false,
     end
     timesteps = alltimesteps[1:end_step]
     cfg = simulator_config(sim; kwarg...)
-    cfg[:linear_solver] = battery_linsolve(model, linear_solver)
-    cfg[:debug_level] = 0
-    #cfg[:max_timestep_cuts] = 0
-    cfg[:max_residual] = 1e20
-    cfg[:min_nonlinear_iterations] = 1
-    cfg[:extra_timing] = extra_timing
+    cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
+    cfg[:debug_level]                = 0
+    #cfg[:max_timestep_cuts]         = 0
+    cfg[:max_residual]               = 1e20
+    cfg[:min_nonlinear_iterations]   = 1
+    cfg[:extra_timing]               = extra_timing
     # cfg[:max_nonlinear_iterations] = 5
-    cfg[:safe_mode] = false
-    cfg[:error_on_incomplete] = true
+    cfg[:safe_mode]                  = false
+    cfg[:error_on_incomplete]        = true
     if false
-        cfg[:info_level] = 5
+        cfg[:info_level]               = 5
         cfg[:max_nonlinear_iterations] = 1
-        cfg[:max_timestep_cuts] = 0
+        cfg[:max_timestep_cuts]        = 0
     end
 
     cfg[:tolerances][:PP][:default] = 1e-1
@@ -591,8 +596,9 @@ function test_battery(name; extra_timing = false,
     return (states = states, reports = report, extra = extra)
     # return states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim
 end
+
 function test_mrst_battery(name)
-    states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim = test_battery(name);
+    states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim = run_battery(name);
     steps = size(states, 1)
     E = Matrix{Float64}(undef,steps,2)
     for step in 1:steps

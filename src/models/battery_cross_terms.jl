@@ -76,7 +76,7 @@ function butler_volmer_equation(j0, alpha, n, eta, T)
 end
 
 function reaction_rate(
-    phi_a, c_a, R0, ocd, T,
+    phi_a, c_a, R0, ocp, T,
     phi_e, c_e, activematerial, electrolyte
     )
 
@@ -84,8 +84,8 @@ function reaction_rate(
     cmax = maximum_concentration(activematerial) # how to get model
     vsa = volumetric_surface_area(activematerial)
 
-    # ocd could have beencalculated of only this cells 
-    eta = (phi_a - phi_e - ocd);
+    # ocp could have beencalculated of only this cells 
+    eta = (phi_a - phi_e - ocp);
     th = 1e-3*cmax;
     j0 = R0*regularized_sqrt(c_e*(cmax - c_a)*c_a, th)*n*FARADAY_CONST;
     R = vsa*butler_volmer_equation(j0, 0.5, n, eta, T);
@@ -95,7 +95,7 @@ end
 
 function sourceElectricMaterial!(
     eS, eM, vols, T,
-    phi_a, c_a, R0,  ocd,
+    phi_a, c_a, R0,  ocp,
     phi_e, c_e, activematerial, electrolyte
     )
 
@@ -105,7 +105,7 @@ function sourceElectricMaterial!(
         # ! This will cause errors if T is not just constant
         temp = T[i].value
         R = reaction_rate(
-            phi_a[i], c_a[i], R0[i], ocd[i], temp,
+            phi_a[i], c_a[i], R0[i], ocp[i], temp,
             phi_e[i], c_e[i], activematerial, electrolyte
             )
     
@@ -117,7 +117,7 @@ end
 
 function source_electric_material(
     vols, T,
-    phi_a, c_a, R0,  ocd,
+    phi_a, c_a, R0,  ocp,
     phi_e, c_e, activematerial, electrolyte
     )
 
@@ -126,7 +126,7 @@ function source_electric_material(
         # ! Hack, as we get error in ForwardDiff without .value
         # ! This will cause errors if T is not just constant
         R = reaction_rate(
-            phi_a, c_a, R0, ocd, T,
+            phi_a, c_a, R0, ocp, T,
             phi_e, c_e, activematerial, electrolyte
             )
     
@@ -155,7 +155,7 @@ function Jutul.update_cross_term_in_entity!(out, ind,
 
     phi_e = state_t.Phi[t_c]
     phi_a = state_s.Phi[s_c]  
-    ocd = state_s.Ocd[s_c]
+    ocp = state_s.Ocp[s_c]
     R = state_s.ReactionRateConst[s_c]
     c_e = state_t.C[t_c]
     c_a = state_s.C[s_c]
@@ -164,7 +164,7 @@ function Jutul.update_cross_term_in_entity!(out, ind,
 
     eS, eM = source_electric_material(
         vols, T,
-        phi_a, c_a, R,  ocd,
+        phi_a, c_a, R,  ocp,
         phi_e, c_e, activematerial, electrolyte
         )
     cs = conserved_symbol(eq)

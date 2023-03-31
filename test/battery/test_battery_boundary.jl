@@ -25,7 +25,7 @@ allfine = Vector{Bool}();
     for (modelname, max_step) in testcases
         @testset "$modelname" begin
             for use_general_ad in [false, true]
-                states, report, extra = test_battery(modelname, max_step = max_step, info_level = -1, general_ad = use_general_ad);
+                states, report, extra = run_battery(modelname, max_step = max_step, info_level = -1, general_ad = use_general_ad);
                 stateref = extra[:states_ref]
                 steps = size(states, 1)
                 E = Matrix{Float64}(undef,steps,2)
