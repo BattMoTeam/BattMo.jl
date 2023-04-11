@@ -116,6 +116,7 @@ import Jutul: FlowDiscretization
 ################
 # Constructors #
 ################
+
 struct TPFAInterfaceFluxCT{T,F} <: Jutul.AdditiveCrossTerm
     target_cells::T
     source_cells::T

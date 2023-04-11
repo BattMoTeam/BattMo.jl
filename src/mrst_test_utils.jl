@@ -76,6 +76,8 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
     phi0 = 1.0
     C0   = 1.
     T0   = 298.15
+    I0   = 1.0
+    
     if haskey(exported,"InterDiffusionCoefficient")
         D = - exported["InterDiffusionCoefficient"]
     else
@@ -193,10 +195,11 @@ function setup_model(exported_all; use_groups = false, kwarg...)
         (model_pp, G_pp, state0_pp, parm_pp,init_pp) = 
         make_system(exported_pp,sys_pp, bcfaces, srccells; kwarg...)
     end
-    sys_bpp = CurrentAndVoltageSystem()
+
+    sys_bpp    = CurrentAndVoltageSystem()
     domain_bpp = CurrentAndVoltageDomain()
-    model_bpp = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
-    parm_bpp = setup_parameters(model_bpp)
+    model_bpp  = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
+    parm_bpp   = setup_parameters(model_bpp)
     # parm_bpp[:tolerances][:default] = 1e-8
     # Setup model
     
@@ -204,20 +207,20 @@ function setup_model(exported_all; use_groups = false, kwarg...)
         groups = nothing
         model = MultiModel(
             (
-                NAM = model_nam, 
+                NAM   = model_nam, 
                 ELYTE = model_elyte, 
-                PAM = model_pam, 
-                BPP = model_bpp
+                PAM   = model_pam, 
+                BPP   = model_bpp
             ), 
             groups = groups)    
     else
         models = (
-            CC = model_cc, 
-            NAM = model_nam, 
+            CC    = model_cc, 
+            NAM   = model_nam, 
             ELYTE = model_elyte, 
-            PAM = model_pam, 
-            PP = model_pp,
-            BPP = model_bpp
+            PAM   = model_pam, 
+            PP    = model_pp,
+            BPP   = model_bpp
         )
         if use_groups
             groups = ones(Int64, length(models))
@@ -225,7 +228,7 @@ function setup_model(exported_all; use_groups = false, kwarg...)
             groups[end] = 2
             reduction = :schur_apply
         else
-            groups = nothing
+            groups    = nothing
             reduction = :reduction
         end
         model = MultiModel(models, groups = groups, reduction = reduction)
@@ -315,55 +318,46 @@ function setup_coupling!(model, exported_all)
     # setup coupling CC <-> NAM :charge_conservation
     skip_cc = size(exported_all["model"]["include_current_collectors"]) == (0,0)
     skip_cc = false
+    
     if !skip_cc
+        
         srange = Int64.(
-            exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:,1]
+            exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:, 1]
             )
         trange = Int64.(
-            exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:,2]
-            )
-        msource =   exported_all["model"]["NegativeElectrode"]["CurrentCollector"]
-        mtarget =   exported_all["model"]["NegativeElectrode"]["ActiveMaterial"]
+            exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:, 2]
+        )
+        
+        msource = exported_all["model"]["NegativeElectrode"]["CurrentCollector"]
+        mtarget = exported_all["model"]["NegativeElectrode"]["ActiveMaterial"]
         couplingfaces = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingfaces"])
         couplingcells = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"])
-        trans = getTrans(msource, mtarget, couplingfaces, couplingcells,"EffectiveElectricalConductivity")
+        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "EffectiveElectricalConductivity")
 
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
         ct_pair = setup_cross_term(ct, target = :NAM, source = :CC, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
+        
     end
+    
     # setup coupling NAM <-> ELYTE charge
-    target = Dict( 
-        :model => :ELYTE,
-        :equation => :charge_conservation
-    )
-    source = Dict( 
-        :model => :NAM, 
-        :equation => :charge_conservation
-        )
 
-    srange=Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:,1])
-    trange=Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:,2])
+    srange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 1])
+    trange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 2])
     ct = ButlerVolmerInterfaceFluxCT(trange, srange)
     ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :charge_conservation)
     add_cross_term!(model, ct_pair)
 
-    # setup coupling NAM <-> ELYTE mass (same cells as NAM <-> ELYTE)
+    # setup coupling NAM <-> ELYTE mass (same cells as NAM <-> ELYTE charge)
+
     ct = ButlerVolmerInterfaceFluxCT(trange, srange)
     ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :mass_conservation)
     add_cross_term!(model, ct_pair)
 
     # setup coupling ELYTE <-> PAM charge
-    target = Dict( 
-        :model => :ELYTE,
-        :equation => :charge_conservation
-        )
-    source = Dict( 
-        :model => :PAM,
-        :equation => :charge_conservation
-        )
-    srange=Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,1])
-    trange=Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,2])
+
+    srange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,1])
+    trange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,2])
     ct = ButlerVolmerInterfaceFluxCT(trange, srange)
     ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :charge_conservation)
     add_cross_term!(model, ct_pair)
@@ -380,6 +374,7 @@ function setup_coupling!(model, exported_all)
     ct = ButlerVolmerInterfaceFluxCT(trange, srange)
     ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :mass_conservation)
     add_cross_term!(model, ct_pair)
+
     if  !skip_cc
         # setup coupling PP <-> PAM charge
         target = Dict( 
@@ -405,6 +400,7 @@ function setup_coupling!(model, exported_all)
         ct_pair = setup_cross_term(ct, target = :PAM, source = :PP, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
     end
+    
     if skip_cc
         #setup coupling PP <-> BPP charge
         target = Dict( 
@@ -434,6 +430,7 @@ function setup_coupling!(model, exported_all)
         couplingfaces = Int64.(msource["externalCouplingTerm"]["couplingfaces"])
         couplingcells = Int64.(msource["externalCouplingTerm"]["couplingcells"])
     end
+    
     source = Dict( 
         :model => :BPP,
         :equation => :charge_conservation
@@ -443,6 +440,7 @@ function setup_coupling!(model, exported_all)
     trans = getHalfTrans(msource, couplingfaces, couplingcells, "EffectiveElectricalConductivity")
 
     if skip_cc
+        
         ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
         ct_pair = setup_cross_term(ct, target = :PAM, source = :BPP, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
@@ -451,7 +449,9 @@ function setup_coupling!(model, exported_all)
         ct = AccumulatorInterfaceFluxCT(1, trange, trans)
         ct_pair = setup_cross_term(ct, target = :BPP, source = :PAM, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
+        
     else
+        
         ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
         ct_pair = setup_cross_term(ct, target = :PP, source = :BPP, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
@@ -460,6 +460,7 @@ function setup_coupling!(model, exported_all)
         ct = AccumulatorInterfaceFluxCT(1, trange, trans)
         ct_pair = setup_cross_term(ct, target = :BPP, source = :PP, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
+        
     end
     
 end
