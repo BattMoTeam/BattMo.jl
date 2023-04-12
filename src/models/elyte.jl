@@ -142,7 +142,7 @@ end
     z = sys.z
     F = FARADAY_CONST
     for i in ix
-        @inbounds coeff[i] = Conductivity[i]*DmuDc[i] * t/(F*z)
+        @inbounds chemCoef[i] = Conductivity[i]*DmuDc[i] * t/(F*z)
     end
 end
 
