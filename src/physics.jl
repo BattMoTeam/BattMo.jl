@@ -55,21 +55,8 @@ function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:C
     return T(q)
 end
 
-function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
-    sys = model.system
-    z = sys.z
-    t = sys.t
-    F = FARADAY_CONST
-    @inbounds trans = state.ECTransmissibilities[face]
-    TPDGrad_C = half_face_two_point_kgrad(c, other, trans, state.C, state.Diffusivity)
-    TPDGrad_Phi = half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
-    TotalCurrent = -TPDGrad_C - TPDGrad_Phi
-    ChargeCarrierFlux = TPDGrad_C + t / (F * z) * TotalCurrent
-    return T(ChargeCarrierFlux)
-end
-
-
 export output_flux
+
 function output_flux(model, state, parameters, eqname = :mass_conservation)
     grid = model.domain.grid
     n = number_of_faces(grid)

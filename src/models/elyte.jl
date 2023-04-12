@@ -139,10 +139,9 @@ end
     """
     sys = model.system
     t = sys.t
-    z = sys.z
     F = FARADAY_CONST
     for i in ix
-        @inbounds chemCoef[i] = Conductivity[i]*DmuDc[i] * t/(F*z)
+        @inbounds chemCoef[i] = 1/F*(1 - t)*Conductivity[i]*2*DmuDc[i]
     end
 end
 
