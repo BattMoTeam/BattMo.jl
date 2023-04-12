@@ -5,7 +5,7 @@ struct ECComponent <: ElectroChemicalComponent end # Not a good name
 function select_minimum_output_variables!(out,
                                           system::ElectroChemicalComponent,
                                           model::SimulationModel)
-    for k in [:Charge, :Mass, :Energy]
+    for k in [:Charge, :Mass]
         push!(out, k)
     end
 end
@@ -15,8 +15,7 @@ function select_primary_variables!(S,
                                    model::SimulationModel)
     
     S[:Phi] = Phi()
-    S[:C] = C()
-    S[:Temperature] = Temperature()
+    S[:C]   = C()
     
 end
 
@@ -24,13 +23,10 @@ function select_secondary_variables!(S,
                                      system::ElectroChemicalComponent,
                                      model::SimulationModel)
     
-    S[:Charge] = Charge()
-    S[:Mass] = Mass()
-    S[:Energy] = Mass()
-
+    S[:Charge]       = Charge()
+    S[:Mass]         = Mass()
     S[:Conductivity] = Conductivity()
-    S[:Diffusivity] = Diffusivity()
-    S[:ThermalConductivity] = ThermalConductivity()
+    S[:Diffusivity]  = Diffusivity()
     
 end
 
@@ -42,7 +38,6 @@ function select_equations!(eqs,
 
     eqs[:charge_conservation] =  ConservationLaw(disc, :Charge)
     eqs[:mass_conservation]   =  ConservationLaw(disc, :Mass)
-    eqs[:energy_conservation] =  ConservationLaw(disc, :Energy)
     
 end
 

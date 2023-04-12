@@ -36,7 +36,6 @@ import Jutul:
     get_entry,
     get_jacobian_pos,
     DiagonalEquation,
-    ConservationLawTPFAStorage,
     fill_equation_entries!,
     update_linearized_system_equation!,
     check_convergence,

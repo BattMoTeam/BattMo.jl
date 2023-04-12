@@ -37,7 +37,7 @@ end
 function select_secondary_variables!(S, system::SimpleElyte, model::SimulationModel)
 
     S[:DmuDc]        = DmuDc()
-    S[:ConsCoeff]    = ConsCoeff()
+    S[:ChemCoef]     = ChemCoef()
     S[:Charge]       = Charge()
     S[:Mass]         = Mass()
     S[:Conductivity] = Conductivity()

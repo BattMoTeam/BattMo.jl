@@ -3,7 +3,7 @@ export ElectroChemicalComponent, CurrentCollector, Electectrolyte, TestElyte
 export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
 export ChargeFlow, BoundaryPotential, BoundaryCurrent
 export Phi, C, Temperature, Charge, Mass, Energy, KGrad
-export BOUNDARY_CURRENT
+export BCCurrent
 export TPFAInterfaceFluxCT,ButlerVolmerInterfaceFluxCT
 ###########
 # Classes #
@@ -35,7 +35,7 @@ struct Mass <: Conserved end
 struct Energy <: Conserved end
 
 # Currents corresponding to a accumulation type
-const BOUNDARY_CURRENT = Dict(
+const BCCurrent = Dict(
     :Charge => :BCCharge,
     :Mass   => :BCMass,
     :Energy => :BCEnergy,

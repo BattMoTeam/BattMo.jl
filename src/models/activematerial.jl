@@ -7,6 +7,7 @@ struct Diffusion <: ScalarVariable end
 struct ReactionRateConst <: ScalarVariable end
 
 const ActiveMaterialModel = SimulationModel{<:Any, <:ActiveMaterial, <:Any, <:Any}
+
 function select_minimum_output_variables!(out,
     system::ActiveMaterial, model::SimulationModel
     )
@@ -26,17 +27,19 @@ end
 function select_secondary_variables!(
     S, system::ActiveMaterial, model::SimulationModel
     )
-    S[:Charge] = Charge()
-    S[:Mass] = Mass()
-
-    S[:Ocp] = Ocp()
+    S[:Charge]            = Charge()
+    S[:Mass]              = Mass()
+    S[:Ocp]               = Ocp()
     S[:ReactionRateConst] = ReactionRateConst()
+    
 end
 
-function Jutul.select_parameters!(S, system::ActiveMaterial, model::SimulationModel)
-    S[:Temperature] = Temperature()
+function Jutul.select_parameters!(
+    S, system::ActiveMaterial, model::SimulationModel
+    )
+    S[:Temperature]  = Temperature()
     S[:Conductivity] = Conductivity()
-    S[:Diffusivity] = Diffusivity()
+    S[:Diffusivity]  = Diffusivity()
 end
 
 function select_equations!(
@@ -44,14 +47,14 @@ function select_equations!(
     )
     disc = model.domain.discretizations.charge_flow
     eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
-    eqs[:mass_conservation] = ConservationLaw(disc, :Mass)
+    eqs[:mass_conservation]   = ConservationLaw(disc, :Mass)
 end
 
 # ? Does this maybe look better ?
 @jutul_secondary(
 function update_vocp!(
     vocp, tv::Ocp, model::SimulationModel{<:Any, MaterialType, <:Any, <:Any}, C, ix
-    ) where   {MaterialType <:ActiveMaterial}
+    ) where {MaterialType <:ActiveMaterial}
     s = model.system
     # @tullio vocp[i] = ocp(T[i], C[i], s)
     refT = 298.15
@@ -62,11 +65,10 @@ end
 )
 
 
-
 @jutul_secondary(
 function update_diffusion!(
     vdiffusion, tv::Diffusion, model::SimulationModel{<:Any, MaterialType, <:Any, <:Any}, C, ix
-    ) where   {MaterialType <:ActiveMaterial}
+    ) where {MaterialType <:ActiveMaterial}
     s = model.system
     refT = 298.15
     for i in ix
@@ -79,7 +81,7 @@ end
 @jutul_secondary(
 function update_reaction_rate!(
     vReactionRateConst, tv::ReactionRateConst, model::SimulationModel{<:Any, MaterialType, <:Any, <:Any}, C, ix
-    ) where   {MaterialType <:ActiveMaterial}
+    ) where {MaterialType <:ActiveMaterial}
     s = model.system
     refT = 298.15
     for i in ix
