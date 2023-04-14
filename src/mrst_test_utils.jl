@@ -344,13 +344,13 @@ function setup_coupling!(model, exported_all)
 
     srange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 1])
     trange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 2])
-    ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+    ct = ButlerVolmerCT(trange, srange)
     ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :charge_conservation)
     add_cross_term!(model, ct_pair)
 
     # setup coupling NAM <-> ELYTE mass (same cells as NAM <-> ELYTE charge)
 
-    ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+    ct = ButlerVolmerCT(trange, srange)
     ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :mass_conservation)
     add_cross_term!(model, ct_pair)
 
@@ -358,7 +358,7 @@ function setup_coupling!(model, exported_all)
 
     srange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,1])
     trange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,2])
-    ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+    ct = ButlerVolmerCT(trange, srange)
     ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :charge_conservation)
     add_cross_term!(model, ct_pair)
 
@@ -371,7 +371,7 @@ function setup_coupling!(model, exported_all)
         :model => :PAM,
         :equation => :mass_conservation
         )
-    ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+    ct = ButlerVolmerCT(trange, srange)
     ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :mass_conservation)
     add_cross_term!(model, ct_pair)
 

@@ -155,11 +155,10 @@ function source_electric_material(vols          ,
     
 end
 
-Jutul.cross_term_entities(ct::ButlerVolmerInterfaceFluxCT, eq, model) = ct.target_cells
+Jutul.cross_term_entities(ct::ButlerVolmerCT, eq, model) = ct.target_cells
 
-Jutul.cross_term_entities_source(ct::ButlerVolmerInterfaceFluxCT, eq, model) = ct.source_cells
+Jutul.cross_term_entities_source(ct::ButlerVolmerCT, eq, model) = ct.source_cells
 
-Jutul.symmetry(::ButlerVolmerInterfaceFluxCT) = Jutul.CTSkewSymmetry()
 
 function Jutul.update_cross_term_in_entity!(out                            ,
                                             ind                            ,
@@ -169,7 +168,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                                             state0_s                       , 
                                             model_t                        ,
                                             model_s                        ,
-                                            ct::ButlerVolmerInterfaceFluxCT,
+                                            ct::ButlerVolmerCT,
                                             eq                             ,
                                             dt                             ,
                                             ldisc = Jutul.local_discretization(ct, ind)
@@ -186,7 +185,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     ocp   = state_s.Ocp[s_c]
     R     = state_s.ReactionRateConst[s_c]
     c_e   = state_t.C[t_c]
-    c_a   = state_s.C[s_c]
+    c_a   = state_s.Cs[s_c]
     vols  = model_s.domain.grid.volumes[s_c]
     T     = state_s.Temperature[s_c]
 
@@ -213,5 +212,3 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     out[] = -v
     
 end
-
-

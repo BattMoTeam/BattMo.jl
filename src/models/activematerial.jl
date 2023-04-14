@@ -178,32 +178,31 @@ function update_solid_flux!(flux, Cp, D, system::ActiveMaterial)
 end
 
 
-
-function update_equation_in_entity!(eq_buf, self_cell, state, state0, eq::SolidMassCons, model::ActiveMaterialModel, dt, ldisc)
+function update_equation_in_entity!(eq_buf                    ,
+                                    self_cell                 ,
+                                    state                     ,
+                                    state0                    ,
+                                    eq::SolidMassCons         ,
+                                    model::ActiveMaterialModel,
+                                    dt                        ,
+                                    ldisc)
     
     sys  = model.system
     N    = sys.N
-    A    = sys.A
     vols = sys.vols
+    div = sys.div
     
     Cp   = state.Cp[:, self_cell]
     Cp0  = state0.Cp[:, self_cell]
     flux = state.flux[:, self_cell]
     
     for i = 1 : N
-        
-        dUdt = vols[i]*(Cp[i] - Cp0[i])/dt
-        # TODO make sure parsity detection is in order (relevant?)
-        if i == 1
-            div = flux[i]
-        elseif i == N
-            div = -flux[i - 1]
-        else
-            div = flux[i] - flux[i - 1]
-        end
-            
-        eq_buf[i] = dUdt + div
-        
+        eq_buf[i] = vols[i]*(Cp[i] - Cp0[i])/dt
+    end
+
+    for k = 1 : length(div)
+        i, j, sgn = div[k]
+        eq_buf[i] += sgn*flux[j]
     end
     
 end
