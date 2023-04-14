@@ -1,7 +1,54 @@
 export Graphite, NMC111, ocp, n_charge_carriers, volumetric_surface_area
 
-struct Graphite <: ActiveMaterial end
-struct NMC111 <: ActiveMaterial end
+solid_diffusion_discretization_number(system::ActiveMaterial) = system.N
+
+struct Graphite <: ActiveMaterial
+    
+    N::Integer # Discretization size for solid diffusion
+    R::Real # Particle radius
+    A::Vector{Float64} # vector of coefficients for harmonic average (half-transmissibility for spherical coordinate)
+    v::Vector{Float64} # vector of volumes (volume of spherical layer)
+
+    function Graphite(R, N)
+
+        N, R, A, v = setupSolidDiffusionDiscretization(R, N)
+        return new(N, R, A, v)
+        
+    end
+    
+end
+
+struct NMC111 <: ActiveMaterial
+
+    N::Integer # Discretization size for solid diffusion
+    R::Real # Particle radius
+    A::Vector{Float64} # vector of coefficients for harmonic average (half-transmissibility for spherical coordinate)
+    v::Vector{Float64} # vector of volumes (volume of spherical layer)
+
+    function NMC111(R, N)
+
+        N, R, A, v = setupSolidDiffusionDiscretization(R, N)
+        return new(N, R, A, v)
+        
+    end
+end
+
+function setupSolidDiffusionDiscretization(R, N)
+
+    A    = zeros(Float64, N)
+    dr   = R/N
+    rc   = [dr*(i - 1/2) for i  = 1 : N]
+    rf   = [dr*i for i  = 0 : (N + 1)]
+    vols = zeros(Float64, N)
+    for i = 1 : N
+        vols[i] = 4*pi/3*(rf[i + 1]^3 - rf[i]^3)
+        A[i]    = 4*pi*rc[i]^2/dr
+    end
+
+    return (N, R, A, v)
+        
+end
+
 
 ## Define OCP and entropy change (dUdT) for graphite using polynomials
 
