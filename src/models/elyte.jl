@@ -19,17 +19,19 @@ struct ChemCoef <: ScalarVariable end
 
 maximum_concentration(::Electrolyte) = 1000.0
 
-function select_primary_variables!(S, system::Electrolyte, model)
-    
+function select_primary_variables!(S                  ,
+                                   system::Electrolyte,
+                                   model::SimulationModel)
+
     S[:Phi] = Phi()
     S[:C]   = C()
     
 end
 
-function select_parameters!(
-    S, system::Electrolyte, model::SimulationModel
-    )
-    
+function select_parameters!(S                  ,
+                            system::Electrolyte,
+                            model::SimulationModel
+                            )
     S[:Temperature]  = Temperature()
     
 end
@@ -47,7 +49,9 @@ function select_equations!(eqs                ,
     
 end
 
-function select_secondary_variables!(S, system::Electrolyte, model)
+function select_secondary_variables!(S,
+                                     system::Electrolyte,
+                                     model::SimulationModel)
     
     S[:Conductivity] = Conductivity()
     S[:Diffusivity]  = Diffusivity()
@@ -59,10 +63,14 @@ function select_secondary_variables!(S, system::Electrolyte, model)
 
 end
 
-function select_minimum_output_variables!(out, system::Electrolyte, model)
+function select_minimum_output_variables!(out,
+                                          system::Electrolyte,
+                                          model::SimulationModel)
+    
     for k in [:Charge, :Mass, :Energy, :Conductivity, :Diffusivity]
         push!(out, k)
     end
+    
 end
 
 
@@ -103,6 +111,10 @@ const Tgi = [229 5.0]
         )
 end
 
+@inline function transference(::Electrolyte)
+    return 0.601
+end
+
 @jutul_secondary(
 function update_as_secondary!(dmudc, dmudc_def::DmuDc, model, Temperature, C, ix)
     R = GAS_CONSTANT
@@ -138,7 +150,7 @@ end
     """Register constant for chemical flux
     """
     sys = model.system
-    t = sys.t
+    t = transference(sys)
     F = FARADAY_CONST
     for i in ix
         @inbounds chemCoef[i] = 1/F*(1 - t)*Conductivity[i]*2*DmuDc[i]
@@ -146,4 +158,35 @@ end
 end
 
 
+function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
+    
+    @inbounds trans = state.ECTransmissibilities[face]
+    j     = half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
+    jchem = half_face_two_point_kgrad(c, other, trans, state.C, state.ChemCoef)
+    
+    j = j - jchem
 
+    return T(j)
+    
+end
+
+
+function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
+
+    t = transference(model.system)
+    z = 1
+    F = FARADAY_CONST
+    
+    @inbounds trans = state.ECTransmissibilities[face]
+
+    diffFlux = half_face_two_point_kgrad(c, other, trans, state.C, state.Diffusivity)
+    j        = half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
+    jchem    = half_face_two_point_kgrad(c, other, trans, state.C, state.ChemCoef)
+    
+    j = j - jchem
+    
+    massFlux = diffFlux + t/(z*F)*j
+    
+    return T(massFlux)
+    
+end

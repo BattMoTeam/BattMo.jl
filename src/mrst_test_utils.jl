@@ -174,7 +174,7 @@ function setup_model(exported_all; use_groups = false, kwarg...)
     z1, z2 = exported_all["model"]["Electrolyte"]["sp"]["z"]
     tDivz_eff = (t1/z1 + t2/z2)
 
-    sys_elyte      = SimpleElyte(t = tDivz_eff, z = 1)
+    sys_elyte      = TestElyte()
     exported_elyte = exported_all["model"]["Electrolyte"]
     bcfaces        = []
     srccells       = []

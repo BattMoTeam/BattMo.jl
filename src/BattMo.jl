@@ -9,6 +9,7 @@ import Jutul:
     maximum_value,
     minimum_value,
     select_primary_variables!,
+    select_parameters!,
     initialize_primary_variable_ad!,
     update_primary_variable!,
     select_secondary_variables!,

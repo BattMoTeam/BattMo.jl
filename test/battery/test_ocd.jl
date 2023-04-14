@@ -1,7 +1,6 @@
 using Jutul
 using BattMo
 
-ac       = ACMaterial()
 graphite = Graphite()
 nmc111   = NMC111()
 

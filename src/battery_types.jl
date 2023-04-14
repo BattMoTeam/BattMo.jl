@@ -25,7 +25,9 @@ struct Temperature <: Potential end
 
 struct Conductivity <: ScalarVariable end
 struct Diffusivity <: ScalarVariable end
+
 Jutul.variable_scale(::Diffusivity) = 1e-10
+
 struct ThermalConductivity <: ScalarVariable end
 
 # Accumulation variables
@@ -109,7 +111,6 @@ struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
 end
 
 Base.show(io::IO, g::MinimalECTPFAGrid) = print(io, "MinimalECTPFAGrid ($(number_of_cells(g)) cells, $(number_of_faces(g)) faces)")
-
 
 import Jutul: FlowDiscretization
 
