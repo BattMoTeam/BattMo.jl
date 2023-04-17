@@ -56,6 +56,8 @@ import Jutul:
     select_primary_variables!,
     select_minimum_output_variables!
 
+using Debugger
+
 include("physical_constants.jl")
 include("battery_types.jl")
 include("tensor_tools.jl")
