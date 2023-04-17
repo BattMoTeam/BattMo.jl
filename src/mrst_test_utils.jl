@@ -100,7 +100,7 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
         S[:BCCharge] = BoundaryCurrent(srccells, :Charge)
         S[:BCMass] = BoundaryCurrent(srccells, :Mass)
         S[:BCEnergy] = BoundaryCurrent(srccells, :Charge)
-        init_prm = Dict{Symbol, Any}(
+        prm = Dict{Symbol, Any}(
             :BoundaryPhi            => bcvaluephi, 
             :BoundaryC              => bcvaluephi, 
             :BoundaryTemperature    => bcvaluephi,
@@ -109,27 +109,25 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
             :BCEnergy               => bcvaluesrc,
             )
     else
-        init_prm = Dict{Symbol, Any}()
+        prm = Dict{Symbol, Any}()
     end
-    init_prm[:Temperature] = T0
+    prm[:Temperature] = T0
 
     init = Dict(
-        :Phi                    => phi0,
-        :Current                => I0,
-        :C                      => C0,
-        :ThermalConductivity    => thermal_conductivity
+        :Phi     => phi0,
+        :Current => I0,
         )
     if model.system isa Electrolyte
         init[:Conductivity] = kappa
         init[:Diffusivity] = D
     else
-        init_prm[:Conductivity] = kappa
-        init_prm[:Diffusivity] = D
+        prm[:Conductivity] = kappa
+        prm[:Diffusivity] = D
     end
-    state0 = setup_state(model, init)
-    parameters = setup_parameters(model, init_prm)
 
-    return model, G, state0, parameters, init
+    prm = setup_parameters(model, prm)
+    
+    return model, G, prm, init
 end
 
 ##
@@ -155,7 +153,7 @@ function setup_model(exported_all; use_groups = false, kwarg...)
     
         bcfaces = convert_to_int_vector(exported_all["model"]["NegativeElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingfaces"])
         srccells = []
-        (model_cc, G_cc, state0_cc, parm_cc,init_cc) = make_system(exported_cc, sys_cc, bcfaces, srccells; kwarg...)
+        (model_cc, G_cc, parm_cc, init_cc) = make_system(exported_cc, sys_cc, bcfaces, srccells; kwarg...)
     end
 
     sys_nam = Graphite()
@@ -164,11 +162,11 @@ function setup_model(exported_all; use_groups = false, kwarg...)
     if  skip_cc
         srccells = []
         bcfaces = convert_to_int_vector(exported_all["model"]["NegativeElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingfaces"])
-        (model_nam, G_nam, state0_nam, parm_nam, init_nam) = make_system(exported_nam, sys_nam, bcfaces, srccells; kwarg...)
+        (model_nam, G_nam, parm_nam, init_nam) = make_system(exported_nam, sys_nam, bcfaces, srccells; kwarg...)
     else
         srccells = []
         bcfaces=[]
-        (model_nam, G_nam, state0_nam, parm_nam, init_nam) = make_system(exported_nam, sys_nam, bcfaces, srccells; kwarg...)
+        (model_nam, G_nam, parm_nam, init_nam) = make_system(exported_nam, sys_nam, bcfaces, srccells; kwarg...)
     end
     t1, t2 = exported_all["model"]["Electrolyte"]["sp"]["t"]
     z1, z2 = exported_all["model"]["Electrolyte"]["sp"]["z"]
@@ -178,28 +176,27 @@ function setup_model(exported_all; use_groups = false, kwarg...)
     exported_elyte = exported_all["model"]["Electrolyte"]
     bcfaces        = []
     srccells       = []
-    (model_elyte, G_elyte, state0_elyte, parm_elyte, init_elyte) = make_system(exported_elyte, sys_elyte, bcfaces, srccells; kwarg...)
+    (model_elyte, G_elyte, parm_elyte, init_elyte) = make_system(exported_elyte, sys_elyte, bcfaces, srccells; kwarg...)
 
     sys_pam = NMC111()
     exported_pam = exported_all["model"]["PositiveElectrode"]["ActiveMaterial"];
     bcfaces=[]
     srccells = []
-    (model_pam, G_pam, state0_pam, parm_pam, init_pam) = 
-        make_system(exported_pam,sys_pam,bcfaces,srccells; kwarg...)
+    (model_pam, G_pam, parm_pam, init_pam) = make_system(exported_pam,sys_pam,bcfaces,srccells; kwarg...)
    
     if !skip_cc    
         exported_pp = exported_all["model"]["PositiveElectrode"]["CurrentCollector"];
         sys_pp = CurrentCollector()
         bcfaces=[]
         srccells = []
-        (model_pp, G_pp, state0_pp, parm_pp,init_pp) = 
-        make_system(exported_pp,sys_pp, bcfaces, srccells; kwarg...)
+        (model_pp, G_pp, parm_pp, init_pp) = make_system(exported_pp, sys_pp, bcfaces, srccells; kwarg...)
     end
 
     sys_bpp    = CurrentAndVoltageSystem()
     domain_bpp = CurrentAndVoltageDomain()
     model_bpp  = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
     parm_bpp   = setup_parameters(model_bpp)
+    
     # parm_bpp[:tolerances][:default] = 1e-8
     # Setup model
     
@@ -239,9 +236,9 @@ function setup_model(exported_all; use_groups = false, kwarg...)
         init_cc[:Phi] = state0["NegativeElectrode"]["CurrentCollector"]["phi"][1]           #*0
         init_pp[:Phi] = state0["PositiveElectrode"]["CurrentCollector"]["phi"][1]           #*0
     end
-    init_nam[:Phi] = state0["NegativeElectrode"]["ActiveMaterial"]["phi"][1]  #*0
+    init_nam[:Phi]   = state0["NegativeElectrode"]["ActiveMaterial"]["phi"][1]  #*0
     init_elyte[:Phi] = state0["Electrolyte"]["phi"][1]
-    init_pam[:Phi] = state0["PositiveElectrode"]["ActiveMaterial"]["phi"][1]  #*0
+    init_pam[:Phi]   = state0["PositiveElectrode"]["ActiveMaterial"]["phi"][1]  #*0
 
     if skip_cc
         init_nam[:C] = state0["NegativeElectrode"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
@@ -259,53 +256,53 @@ function setup_model(exported_all; use_groups = false, kwarg...)
     init_bpp = Dict(:Phi => 1.0, :Current => 1.0)
     if skip_cc
         init = Dict(     
-            :NAM => init_nam,
+            :NAM   => init_nam,
             :ELYTE => init_elyte,
-            :PAM => init_pam,
-            :BPP => init_bpp
+            :PAM   => init_pam,
+            :BPP   => init_bpp
         )
     else
         init = Dict(
-        :CC => init_cc,
-        :NAM => init_nam,
+        :CC    => init_cc,
+        :NAM   => init_nam,
         :ELYTE => init_elyte,
-        :PAM => init_pam,
-        :PP => init_pp,
-        :BPP => init_bpp
+        :PAM   => init_pam,
+        :PP    => init_pp,
+        :BPP   => init_bpp
     )
     end
 
     state0 = setup_state(model, init)
     if skip_cc
         parameters = Dict(
-            :NAM => parm_nam,
+            :NAM   => parm_nam,
             :ELYTE => parm_elyte,
-            :PAM => parm_pam,
-            :BPP => parm_bpp
+            :PAM   => parm_pam,
+            :BPP   => parm_bpp
         )
     else
         parameters = Dict(
-            :CC => parm_cc,
-            :NAM => parm_nam,
+            :CC    => parm_cc,
+            :NAM   => parm_nam,
             :ELYTE => parm_elyte,
-            :PAM => parm_pam,
-            :PP => parm_pp,
-            :BPP => parm_bpp
+            :PAM   => parm_pam,
+            :PP    => parm_pp,
+            :BPP   => parm_bpp
         )
     end
     if skip_cc
         grids = Dict(
-            :NAM =>G_nam,
+            :NAM   => G_nam,
             :ELYTE => G_elyte,
-            :PAM => G_pam
+            :PAM   => G_pam
         )
     else
         grids = Dict(
          :CC => G_cc,
-            :NAM =>G_nam,
+            :NAM   => G_nam,
             :ELYTE => G_elyte,
-            :PAM => G_pam,
-            :PP => G_pp
+            :PAM   => G_pam,
+            :PP    => G_pp
         )
     end
 
