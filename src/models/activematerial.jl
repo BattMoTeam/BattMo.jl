@@ -144,7 +144,7 @@ number_of_equations_per_entity(model::ActiveMaterial, ::SolidMassCons) = solid_d
 
 @jutul_secondary(
     function update_solid_diffusion_flux!(flux,
-                                          tv::ReactionRateConst,
+                                          tv::SolidDiffFlux,
                                           model::SimulationModel{<:Any, MaterialType, <:Any, <:Any},
                                           Cp,
                                           D,
