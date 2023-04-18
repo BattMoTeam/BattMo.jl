@@ -77,7 +77,7 @@ end
 number_of_equations_per_entity(model::ActiveMaterial, ::SolidMassCons) = solid_diffusion_discretization_number(model.system)
 
 @jutul_secondary(
-    function update_vocp!(vocp,
+    function update_vocp!(Ocp,
                           tv::Ocp,
                           model::SimulationModel{<:Any, MaterialType, <:Any, <:Any},
                           Cs,
@@ -87,7 +87,7 @@ number_of_equations_per_entity(model::ActiveMaterial, ::SolidMassCons) = solid_d
         s = model.system
         refT = 298.15
         for cell in ix
-            @inbounds vocp[cell] = ocp(refT, Cs[cell], s)
+            @inbounds Ocp[cell] = ocp(refT, Cs[cell], s)
         end
         
     end
@@ -126,7 +126,7 @@ number_of_equations_per_entity(model::ActiveMaterial, ::SolidMassCons) = solid_d
 
 
 @jutul_secondary(
-    function update_reaction_rate!(R                                                        ,
+    function update_reaction_rate!(ReactionRateConst                                                        ,
                                    tv::ReactionRateConst                                    ,
                                    model::SimulationModel{<:Any, MaterialType, <:Any, <:Any},
                                    Cs                                                       ,
@@ -135,13 +135,13 @@ number_of_equations_per_entity(model::ActiveMaterial, ::SolidMassCons) = solid_d
         s = model.system
         refT = 298.15
         for i in ix
-            @inbounds R[i] = reaction_rate_const(refT, Cs[i], s)
+            @inbounds ReactionRateConst[i] = reaction_rate_const(refT, Cs[i], s)
         end
     end
 )
 
 @jutul_secondary(
-    function update_solid_diffusion_flux!(flux,
+    function update_solid_diffusion_flux!(SolidDiffFlux,
                                           tv::SolidDiffFlux,
                                           model::SimulationModel{<:Any, MaterialType, <:Any, <:Any},
                                           Cp,
@@ -149,7 +149,7 @@ number_of_equations_per_entity(model::ActiveMaterial, ::SolidMassCons) = solid_d
                                           ix) where {MaterialType <:ActiveMaterial}
     s = model.system
     for cell in ix
-        @inbounds @views update_solid_flux!(flux[:, cell], Cp[:, cell], DiffusionCoef, s)
+        @inbounds @views update_solid_flux!(SolidDiffFlux[:, cell], Cp[:, cell], DiffusionCoef, s)
     end
 end
 )
@@ -176,13 +176,13 @@ function update_solid_flux!(flux, Cp, D, system::ActiveMaterial)
 end
 
 
-function update_equation_in_entity!(eq_buf                    ,
-                                    self_cell                 ,
-                                    state                     ,
-                                    state0                    ,
-                                    eq::SolidMassCons         ,
-                                    model,
-                                    dt)
+function Jutul.update_equation_in_entity!(eq_buf                    ,
+                                          self_cell                 ,
+                                          state                     ,
+                                          state0                    ,
+                                          eq::SolidMassCons         ,
+                                          model,
+                                          dt)
     
     sys  = model.system
     N    = sys[:N]
@@ -191,7 +191,7 @@ function update_equation_in_entity!(eq_buf                    ,
     
     Cp   = state.Cp[:, self_cell]
     Cp0  = state0.Cp[:, self_cell]
-    flux = state.flux[:, self_cell]
+    flux = state.SolidDiffFlux[:, self_cell]
     
     for i = 1 : N
         eq_buf[i] = vols[i]*(Cp[i] - Cp0[i])/dt

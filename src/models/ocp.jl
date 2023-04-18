@@ -118,16 +118,17 @@ const coeff2_dUdT = Polynomial([
 	+ 3.048755063
 ])
 
-function ocp(T,c, material::NMC111)
+function compute_ocp(T,c, material::NMC111)
+    
     """Compute OCP for NMC111 as function of temperature and concentration"""
     refT   = 298.15
     cmax   = maximum_concentration(material)
     theta  = c/cmax
     refOCP = coeff1_refOCP(theta)/coeff2_refOCP(theta)
     dUdT   = -1e-3*coeff1_dUdT(theta)/coeff2_dUdT(theta)
-    vocp   = refOCP + (T - refT) * dUdT
+    ocp    = refOCP + (T - refT) * dUdT
     
-    return vocp
+    return ocp
     
 end
 
@@ -157,7 +158,7 @@ const  coeff2= Polynomial([
 	+ 165705.8597
 ]);
 
-function ocp(T, c, material::Graphite)
+function compute_ocp(T, c, material::Graphite)
     """Compute OCP for Graphite as function of temperature and concentration"""
     cmax   = maximum_concentration(material)
     theta  = c./cmax
@@ -173,8 +174,8 @@ function ocp(T, c, material::Graphite)
 
     dUdT = 1e-3*coeff1(theta)/ coeff2(theta);
     
-    vocp = refOCP + (T - refT) * dUdT;
-    return vocp
+    ocp = refOCP + (T - refT) * dUdT;
+    return ocp
     
 end
 
