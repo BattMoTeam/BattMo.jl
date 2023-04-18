@@ -9,9 +9,11 @@ struct Cp                <: VectorVariables end # particle concentrations in p2d
 struct Cs                <: ScalarVariable  end # surface variable in p2d model
 struct SolidDiffFlux     <: VectorVariables end # flux in P2D model
 
-struct SolidMassCons     <: JutulEquation   end
+struct SolidMassCons{T} <: JutulEquation
+    discretization::T
+end
 
-const ActiveMaterialModel = SimulationModel{<:Any, <:ActiveMaterial, <:Any, <:Any}
+const ActiveMaterialModel = SimulationModel{O, S} where {O<:JutulDomain, S<:ActiveMaterial}
 
 function select_minimum_output_variables!(out                   ,
                                           system::ActiveMaterial,
@@ -70,11 +72,11 @@ function select_equations!(eqs,
     
     disc = model.domain.discretizations.charge_flow
     eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
-    eqs[:mass_conservation]   = SolidMassCons()
+    eqs[:mass_conservation]   = SolidMassCons(disc)
     
 end
 
-number_of_equations_per_entity(model::ActiveMaterial, ::SolidMassCons) = solid_diffusion_discretization_number(model.system)
+Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::SolidMassCons) = solid_diffusion_discretization_number(model.system)
 
 @jutul_secondary(
     function update_vocp!(Ocp,
@@ -87,7 +89,7 @@ number_of_equations_per_entity(model::ActiveMaterial, ::SolidMassCons) = solid_d
         s = model.system
         refT = 298.15
         for cell in ix
-            @inbounds Ocp[cell] = ocp(refT, Cs[cell], s)
+            @inbounds Ocp[cell] = compute_ocp(refT, Cs[cell], s)
         end
         
     end
@@ -101,7 +103,7 @@ number_of_equations_per_entity(model::ActiveMaterial, ::SolidMassCons) = solid_d
                               ix
                               ) where {MaterialType <:ActiveMaterial}
         s = model.system
-        N = s.N
+        N = s[:N]
         for cell in ix
             @inbounds Cs[cell] = Cp[N, cell]
         end
@@ -119,7 +121,7 @@ number_of_equations_per_entity(model::ActiveMaterial, ::SolidMassCons) = solid_d
         s = model.system
         refT = 298.15
         for cell in ix
-            @inbounds DiffusionCoef[cell] = diffusion_rate(refT, Cp[:, cell], s)
+            @inbounds @views DiffusionCoef[cell] = diffusion_rate(refT, Cp[:, cell], s)
         end
     end
 )
@@ -149,7 +151,7 @@ number_of_equations_per_entity(model::ActiveMaterial, ::SolidMassCons) = solid_d
                                           ix) where {MaterialType <:ActiveMaterial}
     s = model.system
     for cell in ix
-        @inbounds @views update_solid_flux!(SolidDiffFlux[:, cell], Cp[:, cell], DiffusionCoef, s)
+        @inbounds @views update_solid_flux!(SolidDiffFlux[:, cell], Cp[:, cell], DiffusionCoef[cell], s)
     end
 end
 )
@@ -159,9 +161,9 @@ function update_solid_flux!(flux, Cp, D, system::ActiveMaterial)
     # compute lithium flux in particle, using harmonic averaging. At the moment D has a constant value within particle
     # but this is going to change.
     
-    N    = system.N
-    A    = system.A
-    vols = system.vols
+    N    = system[:N]
+    A    = system[:A]
+    vols = system[:vols]
     
     for i = 1 : (N - 1)
 
@@ -176,13 +178,14 @@ function update_solid_flux!(flux, Cp, D, system::ActiveMaterial)
 end
 
 
-function Jutul.update_equation_in_entity!(eq_buf                    ,
-                                          self_cell                 ,
-                                          state                     ,
-                                          state0                    ,
-                                          eq::SolidMassCons         ,
-                                          model,
-                                          dt)
+function Jutul.update_equation_in_entity!(eq_buf           ,
+                                          self_cell        ,
+                                          state            ,
+                                          state0           ,
+                                          eq::SolidMassCons,
+                                          model            ,
+                                          dt               ,
+                                          ldisc = Nothing)
     
     sys  = model.system
     N    = sys[:N]
@@ -201,5 +204,5 @@ function Jutul.update_equation_in_entity!(eq_buf                    ,
         i, j, sgn = div[k]
         eq_buf[i] += sgn*flux[j]
     end
-    
+
 end
