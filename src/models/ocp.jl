@@ -38,7 +38,7 @@ end
 function setupSolidDiffusionDiscretization(R, N)
 
     N = Int64(N)
-    R = Float64(N)
+    R = Float64(R)
     
     A    = zeros(Float64, N)
     vols = zeros(Float64, N)
@@ -48,7 +48,7 @@ function setupSolidDiffusionDiscretization(R, N)
     rf   = [dr*i for i  = 0 : (N + 1)]
     for i = 1 : N
         vols[i] = 4*pi/3*(rf[i + 1]^3 - rf[i]^3)
-        A[i]    = 4*pi*rc[i]^2/dr
+        A[i]    = 4*pi*rc[i]^2/(dr/2)
     end
 
     div = Vector{Tuple{Int64, Int64, Float64}}(undef, 2*(N - 1))
