@@ -151,7 +151,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     cs = conserved_symbol(eq)
     
     if cs == :Mass
-        v = -1.0*vols*n*R
+        v = 1.0*vols*n*R
     else
         @assert cs == :Charge
         v = 1.0*vols*R*n*FARADAY_CONST
@@ -215,7 +215,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
         N  = activematerial[:N] # boundary index for P2D discretization
         vf = model_s.domain.grid.vol_frac[t_c]
         
-        v = 1.0*R*(4*pi*rp^3)/(3*vf)
+        v = -1.0*R*(4*pi*rp^3)/(3*vf)
 
         out[N] = v
         
