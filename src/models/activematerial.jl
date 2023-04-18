@@ -1,9 +1,9 @@
-export ActiveMaterial, ActiveMaterialModel
+export ActiveMaterial, ActiveMaterialModel, SolidMassCons
 
 abstract type ActiveMaterial <: ElectroChemicalComponent end
 
 struct Ocp               <: ScalarVariable  end
-struct Diffusion         <: ScalarVariable  end
+struct DiffusionCoef     <: ScalarVariable  end
 struct ReactionRateConst <: ScalarVariable  end
 struct Cp                <: VectorVariables end # particle concentrations in p2d model
 struct Cs                <: ScalarVariable  end # surface variable in p2d model
@@ -12,7 +12,6 @@ struct SolidDiffFlux     <: VectorVariables end # flux in P2D model
 struct SolidMassCons     <: JutulEquation   end
 
 const ActiveMaterialModel = SimulationModel{<:Any, <:ActiveMaterial, <:Any, <:Any}
-
 
 function select_minimum_output_variables!(out                   ,
                                           system::ActiveMaterial,
@@ -44,9 +43,9 @@ function select_secondary_variables!(S                     ,
                                      )
     
     S[:Charge]            = Charge()
-    S[:Mass]              = Mass()
     S[:Ocp]               = Ocp()
     S[:Cs]                = Cs()
+    S[:DiffusionCoef]     = DiffusionCoef()
     S[:ReactionRateConst] = ReactionRateConst()
     S[:SolidDiffFlux]     = SolidDiffFlux()
     
@@ -81,15 +80,14 @@ number_of_equations_per_entity(model::ActiveMaterial, ::SolidMassCons) = solid_d
     function update_vocp!(vocp,
                           tv::Ocp,
                           model::SimulationModel{<:Any, MaterialType, <:Any, <:Any},
-                          C,
+                          Cs,
                           ix
                           ) where {MaterialType <:ActiveMaterial}
         
         s = model.system
-        # @tullio vocp[i] = ocp(T[i], C[i], s)
         refT = 298.15
         for cell in ix
-            @inbounds vocp[cell] = ocp(refT, C[cell], s)
+            @inbounds vocp[cell] = ocp(refT, Cs[cell], s)
         end
         
     end
@@ -112,8 +110,8 @@ number_of_equations_per_entity(model::ActiveMaterial, ::SolidMassCons) = solid_d
 
 
 @jutul_secondary(
-    function update_diffusion!(D,
-                               tv::Diffusion,
+    function update_diffusion!(DiffusionCoef,
+                               tv::DiffusionCoef,
                                model::SimulationModel{<:Any, MaterialType, <:Any, <:Any},
                                Cp,
                                ix
@@ -121,7 +119,7 @@ number_of_equations_per_entity(model::ActiveMaterial, ::SolidMassCons) = solid_d
         s = model.system
         refT = 298.15
         for cell in ix
-            @inbounds D[cell] = diffusion_rate(refT, Cp[:, cell], s)
+            @inbounds DiffusionCoef[cell] = diffusion_rate(refT, Cp[:, cell], s)
         end
     end
 )
@@ -147,11 +145,11 @@ number_of_equations_per_entity(model::ActiveMaterial, ::SolidMassCons) = solid_d
                                           tv::SolidDiffFlux,
                                           model::SimulationModel{<:Any, MaterialType, <:Any, <:Any},
                                           Cp,
-                                          D,
+                                          DiffusionCoef,
                                           ix) where {MaterialType <:ActiveMaterial}
     s = model.system
     for cell in ix
-        @inbounds @views update_solid_flux!(flux[:, cell], Cp[:, cell], D, s)
+        @inbounds @views update_solid_flux!(flux[:, cell], Cp[:, cell], DiffusionCoef, s)
     end
 end
 )
@@ -183,14 +181,13 @@ function update_equation_in_entity!(eq_buf                    ,
                                     state                     ,
                                     state0                    ,
                                     eq::SolidMassCons         ,
-                                    model::ActiveMaterialModel,
-                                    dt                        ,
-                                    ldisc)
+                                    model,
+                                    dt)
     
     sys  = model.system
-    N    = sys.N
-    vols = sys.vols
-    div = sys.div
+    N    = sys[:N]
+    vols = sys[:vols]
+    div  = sys[:div]
     
     Cp   = state.Cp[:, self_cell]
     Cp0  = state0.Cp[:, self_cell]

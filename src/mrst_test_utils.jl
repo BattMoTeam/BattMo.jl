@@ -156,7 +156,7 @@ function setup_model(exported_all; use_groups = false, kwarg...)
         (model_cc, G_cc, parm_cc, init_cc) = make_system(exported_cc, sys_cc, bcfaces, srccells; kwarg...)
     end
 
-    sys_nam = Graphite()
+    sys_nam = Graphite(5.86e-06, 5)
     exported_nam = exported_all["model"]["NegativeElectrode"]["ActiveMaterial"];
     
     if  skip_cc
@@ -178,7 +178,7 @@ function setup_model(exported_all; use_groups = false, kwarg...)
     srccells       = []
     (model_elyte, G_elyte, parm_elyte, init_elyte) = make_system(exported_elyte, sys_elyte, bcfaces, srccells; kwarg...)
 
-    sys_pam = NMC111()
+    sys_pam = NMC111(5.22e-6, 5)
     exported_pam = exported_all["model"]["PositiveElectrode"]["ActiveMaterial"];
     bcfaces=[]
     srccells = []
@@ -241,11 +241,11 @@ function setup_model(exported_all; use_groups = false, kwarg...)
     init_pam[:Phi]   = state0["PositiveElectrode"]["ActiveMaterial"]["phi"][1]  #*0
 
     if skip_cc
-        init_nam[:C] = state0["NegativeElectrode"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
-        init_pam[:C] = state0["PositiveElectrode"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
+        init_nam[:Cp] = state0["NegativeElectrode"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
+        init_pam[:Cp] = state0["PositiveElectrode"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
     else
-        init_nam[:C] = state0["NegativeElectrode"]["ActiveMaterial"]["c"][1] 
-        init_pam[:C] = state0["PositiveElectrode"]["ActiveMaterial"]["c"][1]
+        init_nam[:Cp] = state0["NegativeElectrode"]["ActiveMaterial"]["c"][1] 
+        init_pam[:Cp] = state0["PositiveElectrode"]["ActiveMaterial"]["c"][1]
     end
     #init_elyte[:C] = state0["Electrolyte"]["cs"][1][1]
     if haskey(state0["Electrolyte"],"cs")

@@ -1,6 +1,6 @@
 export Graphite, NMC111, ocp, n_charge_carriers, volumetric_surface_area
 
-solid_diffusion_discretization_number(system::ActiveMaterial) = system.N
+solid_diffusion_discretization_number(system::ActiveMaterial) = system[:N]
 
 function Base.getindex(system::ActiveMaterial, key::Symbol)
     return system.data[key]
