@@ -248,7 +248,7 @@ function setup_model(exported_all; use_groups = false, kwarg...)
         init_pam[:Cp] = state0["PositiveElectrode"]["ActiveMaterial"]["c"][1]
     end
     #init_elyte[:C] = state0["Electrolyte"]["cs"][1][1]
-    if haskey(state0["Electrolyte"],"cs")
+    if haskey(state0["Electrolyte"], "cs")
         init_elyte[:C] = state0["Electrolyte"]["cs"][1][1]# for compatibility to old
     else
         init_elyte[:C] = state0["Electrolyte"]["c"][1]

@@ -92,12 +92,12 @@ function reaction_rate(phi_a         ,
     cmax = maximum_concentration(activematerial) 
     vsa  = volumetric_surface_area(activematerial)
 
-    eta = (phi_a - phi_e - ocp);
-    th  = 1e-3*cmax;
-    j0  = R0*regularized_sqrt(c_e*(cmax - c_a)*c_a, th)*n*FARADAY_CONST;
-    R   = vsa*butler_volmer_equation(j0, 0.5, n, eta, T);
+    eta = (phi_a - phi_e - ocp)
+    th  = 1e-3*cmax
+    j0  = R0*regularized_sqrt(c_e*(cmax - c_a)*c_a, th)*n*FARADAY_CONST
+    R   = vsa*butler_volmer_equation(j0, 0.5, n, eta, T)
 
-    return R./(n*FARADAY_CONST);
+    return R./(n*FARADAY_CONST)
     
 end
 
