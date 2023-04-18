@@ -151,7 +151,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     cs = conserved_symbol(eq)
     
     if cs == :Mass
-        v = 1.0*vols*n*R
+        v = 1.0*vols*R
     else
         @assert cs == :Charge
         v = 1.0*vols*R*n*FARADAY_CONST
