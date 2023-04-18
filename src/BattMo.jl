@@ -19,6 +19,7 @@ import Jutul:
     update_half_face_flux!,
     update_accumulation!,
     update_equation!,
+    update_equation_in_entity!,
     select_equations!,
     setup_parameters,
     count_entities,
