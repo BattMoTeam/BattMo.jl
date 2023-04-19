@@ -1,6 +1,8 @@
-export ActiveMaterial, ActiveMaterialModel, SolidMassCons
+export ActiveMaterial, ActiveMaterialModel, SolidMassCons, NoParticleDiffusion
+
 
 abstract type ActiveMaterial <: ElectroChemicalComponent end
+abstract type NoParticleDiffusion <: ActiveMaterial end
 
 struct Ocp               <: ScalarVariable  end
 struct DiffusionCoef     <: ScalarVariable  end
@@ -35,20 +37,38 @@ function select_primary_variables!(S                     ,
     
 end
 
+function select_primary_variables!(S                          ,
+                                   system::NoParticleDiffusion,
+                                   model::SimulationModel
+                                   )
+    S[:Phi] = Phi()
+    S[:C]   = C()
+    
+end
+
 degrees_of_freedom_per_entity(model::ActiveMaterialModel, ::Cp) =  solid_diffusion_discretization_number(model.system)
 degrees_of_freedom_per_entity(model::ActiveMaterialModel, ::SolidDiffFlux) =  solid_diffusion_discretization_number(model.system) - 1
 
-
-function select_secondary_variables!(S                     ,
-                                     system::ActiveMaterial,
+function select_secondary_variables!(S                          ,
+                                     system::NoParticleDiffusion,
                                      model::SimulationModel
                                      )
     
     S[:Charge]            = Charge()
     S[:Ocp]               = Ocp()
+    S[:ReactionRateConst] = ReactionRateConst()
+    
+end
+
+function select_secondary_variables!(S                     ,
+                                     system::ActiveMaterial,
+                                     model::SimulationModel
+                                     )
+    S[:Charge]            = Charge()
+    S[:Ocp]               = Ocp()
+    S[:ReactionRateConst] = ReactionRateConst()
     S[:Cs]                = Cs()
     S[:DiffusionCoef]     = DiffusionCoef()
-    S[:ReactionRateConst] = ReactionRateConst()
     S[:SolidDiffFlux]     = SolidDiffFlux()
     
 end
@@ -66,6 +86,17 @@ end
 
 
 function select_equations!(eqs,
+                           system::NoParticleDiffusion,
+                           model::SimulationModel
+                           )
+    
+    disc = model.domain.discretizations.charge_flow
+    eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
+    eqs[:mass_conservation]   = ConservationLaw(disc, :Mass)
+    
+end
+
+function select_equations!(eqs,
                            system::ActiveMaterial,
                            model::SimulationModel
                            )
@@ -75,6 +106,7 @@ function select_equations!(eqs,
     eqs[:mass_conservation]   = SolidMassCons(disc)
     
 end
+
 
 Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::SolidMassCons) = solid_diffusion_discretization_number(model.system)
 
@@ -88,9 +120,23 @@ Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::SolidMassCons
         
         s = model.system
         refT = 298.15
-        for cell in ix
-            @inbounds Ocp[cell] = compute_ocp(refT, Cs[cell], s)
-        end
+        @inbounds Ocp[cell] = compute_ocp(refT, Cs[cell], s)
+        
+    end
+)
+
+
+@jutul_secondary(
+    function update_vocp!(Ocp,
+                          tv::Ocp,
+                          model::SimulationModel{<:Any, MaterialType, <:Any, <:Any},
+                          Cs,
+                          ix
+                          ) where {MaterialType <:NoParticleDiffusion}
+        
+        s = model.system
+        refT = 298.15
+        @inbounds Ocp[cell] = compute_ocp(refT, Cs[cell], s)
         
     end
 )
@@ -111,16 +157,31 @@ Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::SolidMassCons
 )
 
 @jutul_secondary(
-    function update_diffusion!(DiffusionCoef,
-                               tv::DiffusionCoef,
+    function update_diffusion!(DiffusionCoef                                            ,
+                               tv::DiffusionCoef                                        ,
                                model::SimulationModel{<:Any, MaterialType, <:Any, <:Any},
-                               Cp,
+                               Cp                                                       ,
                                ix
                                ) where {MaterialType <:ActiveMaterial}
         s = model.system
         refT = 298.15
         for cell in ix
             @inbounds @views DiffusionCoef[cell] = diffusion_rate(refT, Cp[:, cell], s)
+        end
+    end
+)
+
+@jutul_secondary(
+    function update_diffusion!(DiffusionCoef                                            ,
+                               tv::DiffusionCoef                                        ,
+                               model::SimulationModel{<:Any, MaterialType, <:Any, <:Any},
+                               C                                                        ,
+                               ix
+                               ) where {MaterialType <:NoParticleDiffusion}
+        s = model.system
+        refT = 298.15
+        for cell in ix
+            @inbounds @views DiffusionCoef[cell] = diffusion_rate(refT, C[cell], s)
         end
     end
 )
@@ -140,6 +201,23 @@ Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::SolidMassCons
         end
     end
 )
+
+@jutul_secondary(
+    function update_reaction_rate!(ReactionRateConst                                                        ,
+                                   tv::ReactionRateConst                                    ,
+                                   model::SimulationModel{<:Any, MaterialType, <:Any, <:Any},
+                                   C                                                        ,
+                                   ix
+                                   ) where {MaterialType <: NoParticleDiffusion}
+        s = model.system
+        refT = 298.15
+        for i in ix
+            @inbounds ReactionRateConst[i] = reaction_rate_const(refT, C[i], s)
+        end
+    end
+)
+
+
 
 @jutul_secondary(
     function update_solid_diffusion_flux!(SolidDiffFlux,

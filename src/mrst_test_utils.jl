@@ -141,8 +141,8 @@ function convert_to_int_vector(x::Matrix{Float64})
     return vec
 end
 
-function setup_model(exported_all; use_groups = false, kwarg...)
-    
+function setup_model(exported_all; use_groups = false, amtype = "p2d", kwarg...)
+
     skip_cc = size(exported_all["model"]["include_current_collectors"]) == (0,0)
     skip_cc = false
     
@@ -156,7 +156,10 @@ function setup_model(exported_all; use_groups = false, kwarg...)
         (model_cc, G_cc, parm_cc, init_cc) = make_system(exported_cc, sys_cc, bcfaces, srccells; kwarg...)
     end
 
-    sys_nam = Graphite(5.86e-06, 5)
+    if amtype == "p2d"
+        sys_nam = Graphite(5.86e-06, 5)
+    end
+    
     exported_nam = exported_all["model"]["NegativeElectrode"]["ActiveMaterial"];
     
     if  skip_cc
@@ -178,7 +181,9 @@ function setup_model(exported_all; use_groups = false, kwarg...)
     srccells       = []
     (model_elyte, G_elyte, parm_elyte, init_elyte) = make_system(exported_elyte, sys_elyte, bcfaces, srccells; kwarg...)
 
-    sys_pam = NMC111(5.22e-6, 5)
+    if amtype == "p2d"
+        sys_pam = NMC111(5.22e-6, 5)
+    end
     exported_pam = exported_all["model"]["PositiveElectrode"]["ActiveMaterial"];
     bcfaces=[]
     srccells = []
@@ -477,12 +482,12 @@ function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggreg
     return AMGPreconditioner(m, max_levels = max_levels, max_coarse = max_coarse, presmoother = gs, postsmoother = gs, cycle = cyc)
 end
 
-function setup_sim(name; use_groups = false, general_ad = false)
+function setup_sim(name; use_groups = false, general_ad = false, amtype = "p2d")
 
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
     exported_all = MAT.matread(fn)
 
-    model, state0, parameters, grids = setup_model(exported_all, use_groups = use_groups, general_ad = general_ad)
+    model, state0, parameters, grids = setup_model(exported_all, use_groups = use_groups, general_ad = general_ad, amtype = amtype)
    
     setup_coupling!(model, exported_all)
     

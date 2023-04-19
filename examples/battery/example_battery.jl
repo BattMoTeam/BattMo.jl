@@ -27,12 +27,6 @@ name = "model1D_50"
 
 fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
 
-exported_all = MAT.matread(fn)
-
-model, state0, parameters, grids = BattMo.setup_model(exported_all);
-
-sim, forces, grids, state0, parameters, exported_all, model = BattMo.setup_sim(name);
-
 states, reports, extra = run_battery(name, info_level = 5, max_step = nothing);
 
 stateref  = extra[:states_ref]

@@ -1,4 +1,5 @@
-export Graphite, NMC111, ocp, n_charge_carriers, volumetric_surface_area
+export Graphite, NMC111, SimpleGraphite, SimpleNMC111, n_charge_carriers, volumetric_surface_area
+
 
 solid_diffusion_discretization_number(system::ActiveMaterial) = system[:N]
 
@@ -6,7 +7,10 @@ function Base.getindex(system::ActiveMaterial, key::Symbol)
     return system.data[key]
 end
 
-struct Graphite <: ActiveMaterial
+abstract type GenericGraphite <: ActiveMaterial end
+abstract type GenericNMC111 <: ActiveMaterial end
+
+struct Graphite <: GenericGraphite
 
     data::Dict{Symbol, Any}
     # At the moment the following keys are included :
@@ -16,24 +20,33 @@ struct Graphite <: ActiveMaterial
     # v::Vector{Float64}           # vector of volumes (volume of spherical layer)
     # div::Vector{Vector{Float64}} # Helping structure to compute divergence operator for particle diffusion
     
-    function Graphite(R, N)
-        data = setupSolidDiffusionDiscretization(R, N)
-        new(data)
-    end
-    
-        
-end
-
-struct NMC111 <: ActiveMaterial
-
-    data::Dict{Symbol, Any}
-    
-    function  NMC111(R, N)
+    function  Graphite(R, N)
         data = setupSolidDiffusionDiscretization(R, N)
         new(data)
     end   
 
 end
+
+struct NMC111 <: GenericNMC111
+
+    data::Dict{Symbol, Any}
+    # At the moment the following keys are included :
+    # N::Integer                   # Discretization size for solid diffusion
+    # R::Real                      # Particle radius
+    # A::Vector{Float64}           # vector of coefficients for harmonic average (half-transmissibility for spherical coordinate)
+    # v::Vector{Float64}           # vector of volumes (volume of spherical layer)
+    # div::Vector{Vector{Float64}} # Helping structure to compute divergence operator for particle diffusion
+    
+    function NMC111(R, N)
+        data = setupSolidDiffusionDiscretization(R, N)
+        new(data)
+    end   
+
+end
+
+struct simpleGraphite <: Union{GenericGraphite, NoParticleDiffusion} end
+struct simpleNMC111 <: Union{GenericNMC111, NoParticleDiffusion} end
+
 
 function setupSolidDiffusionDiscretization(R, N)
 
@@ -118,9 +131,9 @@ const coeff2_dUdT = Polynomial([
 	+ 3.048755063
 ])
 
-function compute_ocp(T,c, material::NMC111)
+function compute_ocp(T,c, material::GenericNMC111)
     
-    """Compute OCP for NMC111 as function of temperature and concentration"""
+    """Compute OCP for GenericNMC111 as function of temperature and concentration"""
     refT   = 298.15
     cmax   = maximum_concentration(material)
     theta  = c/cmax
@@ -158,8 +171,8 @@ const  coeff2= Polynomial([
 	+ 165705.8597
 ]);
 
-function compute_ocp(T, c, material::Graphite)
-    """Compute OCP for Graphite as function of temperature and concentration"""
+function compute_ocp(T, c, material::GenericGraphite)
+    """Compute OCP for GenericGraphite as function of temperature and concentration"""
     cmax   = maximum_concentration(material)
     theta  = c./cmax
     refT   = 298.15
@@ -179,23 +192,23 @@ function compute_ocp(T, c, material::Graphite)
     
 end
 
-function n_charge_carriers(::Graphite)
+function n_charge_carriers(::GenericGraphite)
     return 1
 end
 
-function n_charge_carriers(::NMC111)
+function n_charge_carriers(::GenericNMC111)
     return 1
 end
 
-maximum_concentration(::Graphite) = 30555.0
-maximum_concentration(::NMC111)   = 55554.0
+maximum_concentration(::GenericGraphite) = 30555.0
+maximum_concentration(::GenericNMC111)   = 55554.0
 
-volumetric_surface_area(::Graphite) = 723600.0
-volumetric_surface_area(::NMC111)   = 885000.0
+volumetric_surface_area(::GenericGraphite) = 723600.0
+volumetric_surface_area(::GenericNMC111)   = 885000.0
 
-## Defines exchange current density for Graphite
+## Defines exchange current density for GenericGraphite
 
-function reaction_rate_const(T, c, ::Graphite)
+function reaction_rate_const(T, c, ::GenericGraphite)
 
     refT = 298.15
     k0   = 5.0310e-11
@@ -208,7 +221,7 @@ end
 
 ## Defines exchange current density for NMC
 
-function reaction_rate_const(T, c, ::NMC111)
+function reaction_rate_const(T, c, ::GenericNMC111)
     refT = 298.15
     k0 = 2.3300e-11
     Eak = 5000
@@ -217,9 +230,9 @@ function reaction_rate_const(T, c, ::NMC111)
     return val
 end
 
-## Define solid diffusion coefficient for Graphite
+## Define solid diffusion coefficient for GenericGraphite
 
-function diffusion_rate(T, c, ::Graphite)
+function diffusion_rate(T, c, ::GenericGraphite)
     
     refT = 298.15
     D0   = 3.9e-14
@@ -231,7 +244,7 @@ end
 
 ## Define solid diffusion coefficient for NMC
 
-function diffusion_rate(T, c, ::NMC111)
+function diffusion_rate(T, c, ::GenericNMC111)
     
     refT = 298.15
     D0   = 1e-14
