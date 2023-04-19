@@ -190,13 +190,13 @@ function Jutul.update_cross_term_in_entity!(out                            ,
 
     vols  = model_s.domain.grid.volumes[s_c]
 
-    phi_e = state_t.Phi[t_c]
-    phi_a = state_s.Phi[s_c]  
-    ocp   = state_s.Ocp[s_c]
-    R0    = state_s.ReactionRateConst[s_c]
-    c_e   = state_t.C[t_c]
-    c_a   = state_s.Cs[s_c]
-    T     = state_s.Temperature[s_c]
+    phi_e = state_t.Phi[s_c]
+    phi_a = state_s.Phi[t_c]  
+    ocp   = state_s.Ocp[t_c]
+    R0    = state_s.ReactionRateConst[t_c]
+    c_e   = state_t.C[s_c]
+    c_a   = state_s.Cs[t_c]
+    T     = state_s.Temperature[t_c]
 
     R = reaction_rate(phi_a         ,
                       c_a           ,
