@@ -339,27 +339,27 @@ function setup_coupling!(model, exported_all)
     
     # setup coupling NAM <-> ELYTE charge
 
-    srange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 1])
-    trange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 2])
+    srange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 1]) # electrode
+    trange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 2]) # electrolyte
 
     ct = ButlerVolmerActmatToElyteCT(trange, srange)
     ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :charge_conservation)
     add_cross_term!(model, ct_pair)
 
-    ct = ButlerVolmerElyteToActmatCT(trange, srange)
+    ct = ButlerVolmerElyteToActmatCT(srange, trange)
     ct_pair = setup_cross_term(ct, target = :NAM, source = :ELYTE, equation = :mass_conservation)
     add_cross_term!(model, ct_pair)
 
     # setup coupling ELYTE <-> PAM charge
 
-    srange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,1])
-    trange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,2])
+    srange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,1]) # electrode
+    trange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,2]) # electrolyte
 
     ct = ButlerVolmerActmatToElyteCT(trange, srange)
     ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :charge_conservation)
     add_cross_term!(model, ct_pair)
 
-    ct = ButlerVolmerElyteToActmatCT(trange, srange)
+    ct = ButlerVolmerElyteToActmatCT(srange, trange)
     ct_pair = setup_cross_term(ct, target = :PAM, source = :ELYTE, equation = :mass_conservation)
     add_cross_term!(model, ct_pair)
 

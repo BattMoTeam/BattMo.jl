@@ -121,6 +121,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                                             ldisc = Jutul.local_discretization(ct, ind)
                                             )
 
+
     activematerial = model_s.system
     electrolyte    = model_t.system
     n = n_charge_carriers(activematerial)
@@ -181,8 +182,8 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                                             ldisc = Jutul.local_discretization(ct, ind)
                                             )
 
-    activematerial = model_s.system
-    electrolyte    = model_t.system
+    electrolyte    = model_s.system
+    activematerial = model_t.system
     n = n_charge_carriers(activematerial)
 
     t_c = ct.target_cells[ind]
@@ -190,13 +191,13 @@ function Jutul.update_cross_term_in_entity!(out                            ,
 
     vols  = model_s.domain.grid.volumes[s_c]
 
-    phi_e = state_t.Phi[s_c]
-    phi_a = state_s.Phi[t_c]  
-    ocp   = state_s.Ocp[t_c]
-    R0    = state_s.ReactionRateConst[t_c]
-    c_e   = state_t.C[s_c]
-    c_a   = state_s.Cs[t_c]
-    T     = state_s.Temperature[t_c]
+    phi_e = state_s.Phi[s_c]
+    phi_a = state_t.Phi[t_c]  
+    ocp   = state_t.Ocp[t_c]
+    R0    = state_t.ReactionRateConst[t_c]
+    c_e   = state_s.C[s_c]
+    c_a   = state_t.Cs[t_c]
+    T     = state_t.Temperature[t_c]
 
     R = reaction_rate(phi_a         ,
                       c_a           ,
@@ -217,6 +218,11 @@ function Jutul.update_cross_term_in_entity!(out                            ,
         
         v = -1.0*R*(4*pi*rp^3)/(3*vf)
 
+        # @info "ButlerVolmerElyteToActmatCT" out N
+
+        for i = 1 : N
+            out[i] = 0
+        end
         out[N] = v
         
     else
