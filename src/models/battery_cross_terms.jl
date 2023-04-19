@@ -129,7 +129,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     t_c = ct.target_cells[ind]
     s_c = ct.source_cells[ind]
 
-    vols  = model_s.domain.grid.volumes[s_c]
+    vols  = model_s.domain.representation.volumes[s_c]
 
     phi_e = state_t.Phi[t_c]
     phi_a = state_s.Phi[s_c]  
@@ -189,7 +189,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     t_c = ct.target_cells[ind]
     s_c = ct.source_cells[ind]
 
-    vols  = model_s.domain.grid.volumes[s_c]
+    vols  = model_s.domain.representation.volumes[s_c]
 
     phi_e = state_s.Phi[s_c]
     phi_a = state_t.Phi[t_c]  
@@ -214,7 +214,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
         
         rp = activematerial[:R] # particle radius
         N  = activematerial[:N] # boundary index for P2D discretization
-        vf = model_s.domain.grid.vol_frac[t_c]
+        vf = model_s.domain.representation.vol_frac[t_c]
         
         v = -1.0*R*(4*pi*rp^3)/(3*vf)
 

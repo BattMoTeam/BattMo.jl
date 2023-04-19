@@ -90,11 +90,11 @@ function get_cc_grid(;
     end
 end
 
-function exported_model_to_domain(exported; bc = [],
-                                  b_T_hf     = [],
-                                  tensor_map = false,
-                                  vf         = [],
-                                  general_ad = false)
+function exported_model_to_domain(exported; bc = []   ,
+                                  b_T_hf       = []   ,
+                                  tensor_map   = false,
+                                  vf           = []   ,
+                                  general_ad   = false)
 
     """ Returns domain"""
 
@@ -126,9 +126,9 @@ function exported_model_to_domain(exported; bc = [],
     @assert !tensor_map
     nc = length(volumes)
     if general_ad
-        flow = PotentialFlow(N, nc)
+        flow = PotentialFlow(G)
     else
-        flow = TwoPointPotentialFlowHardCoded(G, ncells = nc)
+        flow = TwoPointPotentialFlowHardCoded(G)
     end
     disc = (charge_flow = flow,)
     domain = DiscretizedDomain(G, disc)

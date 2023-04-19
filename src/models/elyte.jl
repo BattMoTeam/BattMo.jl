@@ -129,7 +129,7 @@ function update_conductivity!(kappa, kappa_def::Conductivity, model::Electrolyte
     """
     s = model.system
     # We use Bruggeman coefficient
-    vf = model.domain.grid.vol_frac
+    vf = model.domain.representation.vol_frac
     for i in ix
         @inbounds kappa[i] = conductivity(Temperature[i], C[i], s) * vf[i]^1.5
     end
@@ -140,7 +140,7 @@ end
     """ Register diffusivity function
     """
     s = model.system
-    vf = model.domain.grid.vol_frac
+    vf = model.domain.representation.vol_frac
     for i in ix
         @inbounds D[i] = diffusivity(Temperature[i], C[i], s)  * vf[i]^1.5
     end

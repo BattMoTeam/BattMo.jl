@@ -15,18 +15,23 @@ function declare_entities(G::MinimalECTPFAGrid)
     return [c, f, bf]
 end
 
-@jutul_secondary function update_ion_mass!(
-    acc, tv::Mass, model, C, Volume, VolumeFraction, ix
-    )
+@jutul_secondary function update_ion_mass!(acc           ,
+                                           tv::Mass      ,
+                                           model         ,
+                                           C             ,
+                                           Volume        ,
+                                           VolumeFraction,
+                                           ix)
     for i in ix
         @inbounds acc[i] = C[i] * Volume[i] * VolumeFraction[i]
     end
 end
 
-@jutul_secondary function update_as_secondary!(
-    acc, tv::Charge, model, Phi, # only for the graph
-    ix
-    )
+@jutul_secondary function update_as_secondary!(acc       ,
+                                               tv::Charge,
+                                               model     ,
+                                               Phi       ,
+                                               ix)
     for i in ix
         @inbounds acc[i] = 0.0
     end

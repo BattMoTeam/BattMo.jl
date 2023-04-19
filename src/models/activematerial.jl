@@ -110,7 +110,6 @@ Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::SolidMassCons
     end
 )
 
-
 @jutul_secondary(
     function update_diffusion!(DiffusionCoef,
                                tv::DiffusionCoef,

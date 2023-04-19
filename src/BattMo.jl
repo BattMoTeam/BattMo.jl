@@ -55,9 +55,10 @@ import Jutul:
     setup_state!,
     declare_pattern,
     select_primary_variables!,
-    select_minimum_output_variables!
+    select_minimum_output_variables!,
+    physical_representation
 
-using Debugger
+using Debugger, Infiltrator
 
 include("physical_constants.jl")
 include("battery_types.jl")

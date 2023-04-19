@@ -37,7 +37,7 @@ function face_to_cell!(j_cell, J, c, model)
     j_c[c, c', i] = P_[c, f, i] * J_[f, c'] (c'=cell dependence)
     """
 
-    P        = model.domain.grid.P
+    P        = model.domain.representation.P
     mf       = model.domain.discretizations.charge_flow
     cfcv     = mf.cellfacecellvec
     cfcv2ccv = mf.maps.cfcv2ccv
@@ -59,7 +59,7 @@ function vec_to_scalar!(jsq, j, c, model)
     modulus square
     jsq[c, c'] = S[c, 2*(c-1) + i] * j[c, c', i]^2
     """
-    S      = model.domain.grid.S
+    S      = model.domain.representation.S
     mf     = model.domain.discretizations.charge_flow
     ccv    = mf.cellcellvec
     ccv2cc = mf.maps.ccv2cc

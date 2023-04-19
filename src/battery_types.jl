@@ -15,7 +15,7 @@ abstract type ElectroChemicalComponent <: JutulSystem end
 # Alias for a genereal Electro Chemical Model
 const ECModel = SimulationModel{<:Any, <:ElectroChemicalComponent, <:Any, <:Any}
 
-abstract type ElectroChemicalGrid <: AbstractJutulMesh end
+abstract type ElectroChemicalGrid <: JutulMesh end
 
 # Potentials
 abstract type Potential <: ScalarVariable end
@@ -110,6 +110,8 @@ struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
     end
 end
 
+number_of_cells(G::MinimalECTPFAGrid) = length(G.volumes)
+
 Base.show(io::IO, g::MinimalECTPFAGrid) = print(io, "MinimalECTPFAGrid ($(number_of_cells(g)) cells, $(number_of_faces(g)) faces)")
 
 import Jutul: FlowDiscretization
@@ -150,18 +152,37 @@ struct ButlerVolmerElyteToActmatCT{T} <: Jutul.AdditiveCrossTerm
     source_cells::T
 end
 
-
+## Transmissibilities
 struct ECTransmissibilities <: ScalarVariable end
 Jutul.variable_scale(::ECTransmissibilities) = 1e-10
 Jutul.associated_entity(::ECTransmissibilities) = Faces()
-Jutul.default_values(model, ::ECTransmissibilities) = model.domain.grid.trans
+function Jutul.default_parameter_values(data_domain, model, ::ECTransmissibilities, symb)
 
+    repG = physical_representation(model)
+    return repG.trans
+
+end
+
+## Volume
 struct Volume <: ScalarVariable end
-Jutul.default_values(model, ::Volume) = fluid_volume(model.domain.grid)
+Jutul.associated_entity(::Volume) = Cells()
+function Jutul.default_parameter_values(data_domain, model, ::Volume, symb)
+
+    repG = physical_representation(model)
+    return repG.volumes
+    
+end
 Jutul.minimum_value(::Volume) = eps()
 
+## Volume fraction
 struct VolumeFraction <: ScalarVariable end
-Jutul.default_values(model, ::VolumeFraction) = model.domain.grid.vol_frac
+Jutul.associated_entity(::VolumeFraction) = Cells()
+function Jutul.default_parameter_values(data_domain, model, ::VolumeFraction, symb)
+
+    repG = physical_representation(model)
+    return repG.vol_frac
+    
+end
 Jutul.minimum_value(::VolumeFraction) = eps(Float64)
 
 mutable struct BatteryCPhiPreconditioner <: JutulPreconditioner

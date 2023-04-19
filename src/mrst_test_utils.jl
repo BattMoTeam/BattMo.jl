@@ -70,7 +70,7 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
     domain = exported_model_to_domain(exported, bc = bccells, b_T_hf = T_hf, vf=vf; kwarg...)
     G = exported["G"]
     plot_mesh = MRSTWrapMesh(G)
-    model = SimulationModel(domain, sys, context = DefaultContext(), plot_mesh = plot_mesh)
+    model = SimulationModel(domain, sys, context = DefaultContext())
 
     # State is dict
     phi0 = 1.0

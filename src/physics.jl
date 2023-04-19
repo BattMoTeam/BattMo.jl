@@ -44,27 +44,33 @@ function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:M
 
     @inbounds trans = state.ECTransmissibilities[face]
 
-    q = -half_face_two_point_kgrad(c, other, trans, state.C, state.Diffusivity)
+    q = - half_face_two_point_kgrad(c, other, trans, state.C, state.Diffusivity)
     
     return T(q)
 end
 
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model, dt, flow_disc) where T
+
     @inbounds trans = state.ECTransmissibilities[face]
-    q = -half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
+
+    q = - half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
+
     return T(q)
+    
 end
 
 export output_flux
 
 function output_flux(model, state, parameters, eqname = :mass_conservation)
-    grid = model.domain.grid
-    n = number_of_faces(grid)
-    N = grid.neighborship
+
+    n   = number_of_faces(model)
+    N   = model.domain.representation.neighborship
     out = zeros(n)
-    fd = model.domain.discretizations.charge_flow
-    dt = NaN
+    fd  = model.domain.discretizations.charge_flow
+    dt  = NaN
+    
     state_t = convert_to_immutable_storage(merge(state, parameters))
+
     if haskey(model.equations, eqname)
         eq = model.equations[eqname]
         for i in eachindex(out)
@@ -96,7 +102,7 @@ function apply_boundary_potential!(
     acc, state, parameters, model, eq::ConservationLaw{:Charge}
     )
 
-    bc = model.domain.grid.boundary_cells
+    bc = model.domain.representation.boundary_cells
 
     if length(bc) > 0
         
@@ -104,7 +110,7 @@ function apply_boundary_potential!(
         BoundaryPhi = state[:BoundaryPhi]
         κ           = state[:Conductivity]
 
-        T_hf = model.domain.grid.boundary_T_hf
+        T_hf = model.domain.representation.boundary_T_hf
 
         for (i, c) in enumerate(bc)
             @inbounds acc[c] -= - κ[c]*T_hf[i]*(Phi[c] - value(BoundaryPhi[i]))
@@ -117,7 +123,7 @@ function apply_boundary_potential!(
     acc, state, parameters, model, eq::ConservationLaw{:Mass}
     )
     
-    bc = model.domain.grid.boundary_cells
+    bc = model.domain.representation.boundary_cells
     
     if length(bc) > 0
         # values
@@ -126,7 +132,7 @@ function apply_boundary_potential!(
         D         = state[:Diffusivity]
 
         # Type
-        T_hf = model.domain.grid.boundary_T_hf
+        T_hf = model.domain.representation.boundary_T_hf
 
         for (i, c) in enumerate(bc)
             @inbounds acc[c] += - D[c]*T_hf[i]*(C[c] - value(BoundaryC[i]))
