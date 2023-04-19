@@ -219,10 +219,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
         v = -1.0*R*(4*pi*rp^3)/(3*vf)
 
         # @info "ButlerVolmerElyteToActmatCT" out N
-
-        for i = 1 : N
-            out[i] = 0
-        end
+        @. out = 0
         out[N] = v
         
     else
