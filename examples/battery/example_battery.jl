@@ -12,7 +12,7 @@ using MAT
 
 ENV["JULIA_DEBUG"] = 0;
 
-# name = "model1D_50"
+name = "model1D_50"
 # name = "model1Dmod_50"
 # name = "model1Dmod_500"
 # name = "sector_7920"
@@ -23,8 +23,7 @@ ENV["JULIA_DEBUG"] = 0;
 # name = "spiral_16560"
 # name = "spiral_16560_org"
 # name = "sector_1656_org"
-
-name = "model3D_492"
+# name = "model3D_492"
 
 fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
 
