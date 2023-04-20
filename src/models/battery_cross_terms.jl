@@ -21,7 +21,8 @@ function Jutul.update_cross_term_in_entity!(out                                 
     t_s   = ct.source_cells[ind]
     phi_t = state_t.Phi[t_c]
     phi_s = state_s.Phi[t_s]
-    out[] = -trans*(phi_t - phi_s)
+    
+    out[] = trans*(phi_t - phi_s)
     
 end
 
@@ -43,7 +44,7 @@ function Jutul.update_cross_term_in_entity!(out                           ,
     phi_s = state_s.Phi
     v = 0
     for (i, s_c) in enumerate(ct.source_cells)
-        v -= trans[i]*(phi_t - phi_s[s_c])
+        v = trans[i]*(phi_t - phi_s[s_c])
     end
 
     out[] = v
@@ -268,8 +269,8 @@ function source_electric_material(vols,
                       electrolyte
                       )
     
-        eS = -1.0 * vols * R * n * FARADAY_CONST
-        eM = +1.0 * vols * R 
+    eS = 1.0 * vols * R * n * FARADAY_CONST
+    eM = 1.0 * vols * R 
 
     return (eS, eM)
     
@@ -310,9 +311,16 @@ function Jutul.update_cross_term_in_entity!(out,
     c_a   = state_s.C[s_c]
     T     = state_s.Temperature[s_c]
 
-    eS, eM = source_electric_material(vols, T,
-                                      phi_a, c_a, R,  ocp,
-                                      phi_e, c_e, activematerial, electrolyte
+    eS, eM = source_electric_material(vols,
+                                      T,
+                                      phi_a,
+                                      c_a,
+                                      R,
+                                      ocp,
+                                      phi_e,
+                                      c_e,
+                                      activematerial,
+                                      electrolyte
                                       )
     
     cs = conserved_symbol(eq)
@@ -322,7 +330,9 @@ function Jutul.update_cross_term_in_entity!(out,
         @assert cs == :Charge
         v = eS
     end
+    
     out[] = -v
+    
 end
 
 

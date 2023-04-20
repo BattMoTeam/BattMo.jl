@@ -13,7 +13,7 @@ export half_face_two_point_kgrad
     return 1.0/(1.0/l + 1.0/r)
 end
 
-@inline grad(c_self, c_other, p::AbstractArray) = @inbounds +(p[c_self] - p[c_other])
+@inline grad(c_self, c_other, p::AbstractArray) = @inbounds (p[c_other] - p[c_self])
 
 @inline function half_face_two_point_kgrad(c_self::I         ,
                                            c_other::I        ,
@@ -31,6 +31,7 @@ end
 
 @inline function Jutul.face_flux!(q_i, face, eq::ConservationLaw, state, model::ECModel, dt, flow_disc::PotentialFlow, ldisc)
 
+    error("not checked")
     # Inner version, for generic flux
     kgrad, upw = ldisc.face_disc(face)
     (; left, right, face_sign) = kgrad
@@ -113,7 +114,7 @@ function apply_boundary_potential!(
         T_hf = model.domain.representation.boundary_T_hf
 
         for (i, c) in enumerate(bc)
-            @inbounds acc[c] -= - κ[c]*T_hf[i]*(Phi[c] - value(BoundaryPhi[i]))
+            @inbounds acc[c] += κ[c]*T_hf[i]*(Phi[c] - value(BoundaryPhi[i]))
         end
     end
     
@@ -135,7 +136,7 @@ function apply_boundary_potential!(
         T_hf = model.domain.representation.boundary_T_hf
 
         for (i, c) in enumerate(bc)
-            @inbounds acc[c] += - D[c]*T_hf[i]*(C[c] - value(BoundaryC[i]))
+            @inbounds acc[c] += D[c]*T_hf[i]*(C[c] - value(BoundaryC[i]))
         end
     end
 end
@@ -161,11 +162,13 @@ end
 
 function apply_boundary_current!(acc, state, jkey, model, eq::ConservationLaw)
 
+    # The current here is by convention considered as an outer flux
+    
     J = state[jkey]
 
     jb = get_variable(model, jkey)
     for (i, c) in enumerate(jb.cells)
-        @inbounds acc[c] -= J[i]
+        @inbounds acc[c] += J[i]
     end
     
 end

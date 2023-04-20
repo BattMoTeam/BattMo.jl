@@ -59,8 +59,8 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
     msource = exported
     T_hf = - getHalfTrans(msource, bcfaces)
     
-    bcvaluesrc = zeros(size(bccells))
-    bcvaluephi = ones(size(bccells)).*0.0
+    bcvalue_zeros = zeros(size(bccells))
+    bcvalue_ones  = ones(size(bccells))
 
     vf = []
     if haskey(exported, "volumeFraction")
@@ -102,10 +102,10 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
         S[:BCMass]   = BoundaryCurrent(srccells, :Mass)
 
         prm = Dict{Symbol, Any}(
-            :BoundaryPhi => bcvaluephi, 
-            :BoundaryC   => bcvaluephi, 
-            :BCCharge    => bcvaluesrc.*0,
-            :BCMass      => bcvaluesrc,
+            :BoundaryPhi => bcvalue_zeros, 
+            :BoundaryC   => bcvalue_zeros, 
+            :BCCharge    => bcvalue_zeros,
+            :BCMass      => bcvalue_zeros,
             )
     else
         prm = Dict{Symbol, Any}()
@@ -513,7 +513,7 @@ function setup_coupling!(model, exported_all)
     
 end
 
-function currentFun(t::T,inputI::T) where T
+function currentFun(t::T, inputI::T) where T
     #inputI = 9.4575
     tup = 0.1
     val::T = 0.0
@@ -552,18 +552,17 @@ function setup_sim(name; use_p2d = true, use_groups = false, general_ad = false)
     
     for i = 1:steps
         
-        inputI = max(inputI,exported_all["states"][i]["Control"]["I"])
-        minE   = min(minE,exported_all["states"][i]["Control"]["E"])
+        inputI = max(inputI, exported_all["states"][i]["Control"]["I"])
+        minE   = min(minE, exported_all["states"][i]["Control"]["E"])
         
     end
     
-    # Set initial voltage above the threshold for switching
     @. state0[:BPP][:Phi] = minE*1.5
     cFun(time) = currentFun(time, inputI)
     forces_pp = nothing
-    #forces_pp = (src = SourceAtCell(10,9.4575*0.0),)
 
     currents = setup_forces(model[:BPP], policy = SimpleCVPolicy(cFun, minE))
+
     forces = Dict(
         :CC => nothing,
         :NAM => nothing,
@@ -596,7 +595,7 @@ function run_battery(name;
     alltimesteps = Vector{Float64}(undef,steps)
     time         = 0;
     end_step     = 0
-    minE         = 2.5
+    minE         = 3.2
     
     for i = 1:steps
         alltimesteps[i] =  exported_all["states"][i]["time"]-time

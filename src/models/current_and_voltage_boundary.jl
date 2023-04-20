@@ -33,7 +33,8 @@ function policy_to_control(p::SimpleCVPolicy, is_charging, state, model, dt, tim
     end
     phi_p = p.voltage
     phi = only(state.Phi)
-    is_voltage_ctrl = phi <= phi_p
+    @info "phi" phi
+    is_voltage_ctrl = (phi <= phi_p)
     if is_voltage_ctrl
         target = phi_p
     else
@@ -176,7 +177,7 @@ end
 
 function Jutul.update_equation_in_entity!(v, i, state, state0, eq::CurrentEquation, model, dt, ldisc = Jutul.local_discretization(eq, i))
     # Sign is strange here due to cross term?
-    I   = - only(state.Current)
+    I   = only(state.Current)
     phi = only(state.Phi)
     
     v[] = I + phi*1e-10
