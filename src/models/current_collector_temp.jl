@@ -4,9 +4,10 @@ struct CurrentCollectorTemperature <: ElectroChemicalComponent end
 const CCT = SimulationModel{<:Any, <:CurrentCollectorTemperature, <:Any, <:Any}
 
 function select_minimum_output_variables!(out,
-    system::CurrentCollectorTemperature, model::SimulationModel
-    )
-    for k in [:Charge, :Energy]#, :EDensityDiag]
+                                          system::CurrentCollectorTemperature,
+                                          model::SimulationModel
+                                          )
+    for k in [:Charge, :Energy]
         push!(out, k)
     end
 end

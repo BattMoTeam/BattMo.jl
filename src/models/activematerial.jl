@@ -78,6 +78,11 @@ function solid_diffusion_discretization_number(system::ActiveMaterial{P2Ddiscret
     return system.discretization[:N]
 end
 
+function maximum_concentration(system::ActiveMaterial)
+    # used in convergence criteria
+    return system.params[:maximum_concentration]
+end
+
 function setupSolidDiffusionDiscretization(R, N)
 
     N = Int64(N)
@@ -344,6 +349,7 @@ function select_secondary_variables!(S,
                                      )
     
     S[:Charge]            = Charge()
+    S[:Mass]              = Mass()
     S[:Ocp]               = Ocp()
     S[:ReactionRateConst] = ReactionRateConst()
     

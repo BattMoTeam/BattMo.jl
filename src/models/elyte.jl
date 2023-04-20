@@ -67,7 +67,7 @@ function select_minimum_output_variables!(out,
                                           system::Electrolyte,
                                           model::SimulationModel)
     
-    for k in [:Charge, :Mass, :Energy, :Conductivity, :Diffusivity]
+    for k in [:Charge, :Mass, :Conductivity, :Diffusivity]
         push!(out, k)
     end
     

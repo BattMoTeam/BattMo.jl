@@ -94,19 +94,16 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
     S = model.parameters
     if count_active_entities(domain, BoundaryFaces()) > 0
         S[:BoundaryPhi] = BoundaryPotential(:Phi)
-        S[:BoundaryC] = BoundaryPotential(:Phi)
-        S[:BoundaryTemperature] = BoundaryPotential(:Temperature)
+        S[:BoundaryC]   = BoundaryPotential(:Phi)
 
         S[:BCCharge] = BoundaryCurrent(srccells, :Charge)
-        S[:BCMass] = BoundaryCurrent(srccells, :Mass)
-        S[:BCEnergy] = BoundaryCurrent(srccells, :Charge)
+        S[:BCMass]   = BoundaryCurrent(srccells, :Mass)
+
         prm = Dict{Symbol, Any}(
             :BoundaryPhi            => bcvaluephi, 
             :BoundaryC              => bcvaluephi, 
-            :BoundaryTemperature    => bcvaluephi,
-            :BCCharge               => bcvaluesrc.*0,#0.0227702,
+            :BCCharge               => bcvaluesrc.*0,
             :BCMass                 => bcvaluesrc,
-            :BCEnergy               => bcvaluesrc,
             )
     else
         prm = Dict{Symbol, Any}()
