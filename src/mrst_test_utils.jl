@@ -96,7 +96,7 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
     if count_active_entities(domain, BoundaryFaces()) > 0
         
         S[:BoundaryPhi] = BoundaryPotential(:Phi)
-        S[:BoundaryC]   = BoundaryPotential(:Phi)
+        S[:BoundaryC]   = BoundaryPotential(:C)
 
         S[:BCCharge] = BoundaryCurrent(srccells, :Charge)
         S[:BCMass]   = BoundaryCurrent(srccells, :Mass)
@@ -196,7 +196,7 @@ function setup_model(exported_all; use_p2d = true, use_groups = false, kwarg...)
     if !skip_cc    
         exported_pp = exported_all["model"]["PositiveElectrode"]["CurrentCollector"];
         sys_pp = CurrentCollector()
-        bcfaces=[]
+        bcfaces = []
         srccells = []
         (model_pp, G_pp, parm_pp, init_pp) = make_system(exported_pp, sys_pp, bcfaces, srccells; kwarg...)
     end

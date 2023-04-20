@@ -13,7 +13,6 @@ import Jutul:
     initialize_primary_variable_ad!,
     update_primary_variable!,
     select_secondary_variables!,
-    update_secondary_variable!,
     default_value,
     initialize_variable_ad!,
     update_half_face_flux!,
@@ -54,7 +53,6 @@ import Jutul:
     setup_state,
     setup_state!,
     declare_pattern,
-    select_primary_variables!,
     select_minimum_output_variables!,
     physical_representation
 
