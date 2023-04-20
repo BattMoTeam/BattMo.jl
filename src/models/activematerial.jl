@@ -35,9 +35,8 @@ struct Cp                <: VectorVariables end # particle concentrations in p2d
 struct Cs                <: ScalarVariable  end # surface variable in p2d model
 struct SolidDiffFlux     <: VectorVariables end # flux in P2D model
 
-struct SolidMassCons{T} <: JutulEquation
-    discretization::T
-end
+struct SolidMassCons <: JutulEquation end
+Jutul.local_discretization(::SolidMassCons, i) = nothing
 
 const ActiveMaterialModel = SimulationModel{O, S} where {O<:JutulDomain, S<:ActiveMaterial}
 
