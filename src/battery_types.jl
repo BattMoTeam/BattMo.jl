@@ -41,28 +41,23 @@ const BCCurrent = Dict(
     :Energy => :BCEnergy,
 )
 
-# Represents k∇T, where k is a tensor, T a potential
 abstract type KGrad{T} <: ScalarVariable end
 Jutul.associated_entity(::KGrad) = Faces()
 
 struct TPkGrad{T} <: KGrad{T} end
 
-# abstract type ECFlow <: FlowType end
-# struct ChargeFlow <: ECFlow end
-
-
-struct BoundaryPotential{T} <: ScalarVariable
-    function BoundaryPotential(b_label::Symbol)
-        return new{b_label}()
+struct BoundaryPotential{label} <: ScalarVariable
+    function BoundaryPotential(label::Symbol)
+        return new{label}()
     end
 end
 
 Jutul.associated_entity(::BoundaryPotential) = BoundaryFaces()
 
-struct BoundaryCurrent{T, C} <: ScalarVariable 
+struct BoundaryCurrent{label, C} <: ScalarVariable 
     cells::C
-    function BoundaryCurrent(cells::TC, b_label::Symbol) where TC
-        new{b_label, TC}(cells)
+    function BoundaryCurrent(cells::C, label::Symbol) where C
+        new{label, C}(cells)
     end
 end
 
