@@ -1,13 +1,11 @@
 using Jutul
+
 export ElectroChemicalComponent, CurrentCollector, Electectrolyte, TestElyte
 export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
 export ChargeFlow, BoundaryPotential, BoundaryCurrent
 export Phi, C, Temperature, Charge, Mass, Energy, KGrad
 export BCCurrent
 export TPFAInterfaceFluxCT, ButlerVolmerActmatToElyteCT, ButlerVolmerElyteToActmatCT, ButlerVolmerInterfaceFluxCT
-###########
-# Classes #
-###########
 
 struct BoundaryFaces <: Jutul.JutulEntity end
 
@@ -58,6 +56,7 @@ struct BoundaryPotential{T} <: ScalarVariable
         return new{b_label}()
     end
 end
+
 Jutul.associated_entity(::BoundaryPotential) = BoundaryFaces()
 
 struct BoundaryCurrent{T, C} <: ScalarVariable 

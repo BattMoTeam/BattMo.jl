@@ -81,7 +81,7 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
     if haskey(exported,"InterDiffusionCoefficient")
         D = - exported["InterDiffusionCoefficient"]
     else
-        D =  -0.0
+        D = - 0.0
     end
     if isa(exported["EffectiveElectricalConductivity"], Matrix)
         kappa = exported["EffectiveElectricalConductivity"][1]
@@ -92,7 +92,9 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
     thermal_conductivity = exported["thermalConductivity"][1]
 
     S = model.parameters
+    
     if count_active_entities(domain, BoundaryFaces()) > 0
+        
         S[:BoundaryPhi] = BoundaryPotential(:Phi)
         S[:BoundaryC]   = BoundaryPotential(:Phi)
 
@@ -100,10 +102,10 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
         S[:BCMass]   = BoundaryCurrent(srccells, :Mass)
 
         prm = Dict{Symbol, Any}(
-            :BoundaryPhi            => bcvaluephi, 
-            :BoundaryC              => bcvaluephi, 
-            :BCCharge               => bcvaluesrc.*0,
-            :BCMass                 => bcvaluesrc,
+            :BoundaryPhi => bcvaluephi, 
+            :BoundaryC   => bcvaluephi, 
+            :BCCharge    => bcvaluesrc.*0,
+            :BCMass      => bcvaluesrc,
             )
     else
         prm = Dict{Symbol, Any}()

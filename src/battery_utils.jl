@@ -7,10 +7,11 @@ function fluid_volume(grid::MinimalECTPFAGrid)
 end
 
 function declare_entities(G::MinimalECTPFAGrid)
-    # Cells equal to number of pore volumes
+    # cells
     c = (entity = Cells(), count = length(G.volumes))
-    # Faces
+    # faces
     f = (entity = Faces(), count = size(G.neighborship, 2))
+    # boundary faces
     bf = (entity = BoundaryFaces(), count = length(G.boundary_cells))
     return [c, f, bf]
 end

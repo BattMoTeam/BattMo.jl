@@ -297,10 +297,10 @@ function Jutul.update_cross_term_in_entity!(out,
     activematerial = model_s.system
     electrolyte = model_t.system
 
-    vols  = model_s.domain.representation.volumes[s_c]
-
     t_c = ct.target_cells[ind]
     s_c = ct.source_cells[ind]
+
+    vols  = model_s.domain.representation.volumes[s_c]
 
     phi_e = state_t.Phi[t_c]
     phi_a = state_s.Phi[s_c]  
