@@ -141,6 +141,7 @@ struct AccumulatorInterfaceFluxCT{T,F} <: Jutul.AdditiveCrossTerm
         new{T, F}(target, source, trans)
     end
 end
+
 struct ButlerVolmerActmatToElyteCT{T} <: Jutul.AdditiveCrossTerm
     target_cells::T
     source_cells::T

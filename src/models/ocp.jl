@@ -1,6 +1,3 @@
-export Graphite, NMC111, SimpleGraphite, SimpleNMC111, n_charge_carriers, volumetric_surface_area
-
-
 ## Defines OCP and entropy change (dUdT) for graphite using polynomials
 
 const coeff1_graphite = Polynomial([

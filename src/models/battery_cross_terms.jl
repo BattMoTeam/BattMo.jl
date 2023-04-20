@@ -100,13 +100,12 @@ end
 
 
 
-###########
+##########################
 # cross-term for 2pd model
-###########
+##########################
 
 
 Jutul.cross_term_entities(ct::ButlerVolmerActmatToElyteCT, eq, model) = ct.target_cells
-
 Jutul.cross_term_entities_source(ct::ButlerVolmerActmatToElyteCT, eq, model) = ct.source_cells
 
 
@@ -127,7 +126,8 @@ function Jutul.update_cross_term_in_entity!(out                            ,
 
     activematerial = model_s.system
     electrolyte    = model_t.system
-    n = n_charge_carriers(activematerial)
+    
+    n = activematerial.params[:n_charge_carriers]
     
     t_c = ct.target_cells[ind]
     s_c = ct.source_cells[ind]
@@ -187,7 +187,8 @@ function Jutul.update_cross_term_in_entity!(out                            ,
 
     electrolyte    = model_s.system
     activematerial = model_t.system
-    n = n_charge_carriers(activematerial)
+    
+    n = activematerial.params[:n_charge_carriers]
 
     t_c = ct.target_cells[ind]
     s_c = ct.source_cells[ind]
@@ -215,8 +216,8 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     
     if eq isa SolidMassCons
         
-        rp = activematerial[:R] # particle radius
-        N  = activematerial[:N] # boundary index for P2D discretization
+        rp = activematerial.discretization[:R] # particle radius
+        N  = activematerial.discretization[:N] # boundary index for P2D discretization
         vf = model_s.domain.representation.vol_frac[t_c]
         
         v = -1.0*R*(4*pi*rp^3)/(3*vf)
@@ -296,23 +297,24 @@ function Jutul.update_cross_term_in_entity!(out,
     activematerial = model_s.system
     electrolyte = model_t.system
 
+    vols  = model_s.domain.representation.volumes[s_c]
+
     t_c = ct.target_cells[ind]
     s_c = ct.source_cells[ind]
 
     phi_e = state_t.Phi[t_c]
     phi_a = state_s.Phi[s_c]  
-    ocp = state_s.Ocp[s_c]
-    R = state_s.ReactionRateConst[s_c]
-    c_e = state_t.C[t_c]
-    c_a = state_s.C[s_c]
-    vols = model_s.domain.representation.volumes[s_c]
-    T = state_s.Temperature[s_c]
+    ocp   = state_s.Ocp[s_c]
+    R     = state_s.ReactionRateConst[s_c]
+    c_e   = state_t.C[t_c]
+    c_a   = state_s.C[s_c]
+    T     = state_s.Temperature[s_c]
 
-    eS, eM = source_electric_material(
-        vols, T,
-        phi_a, c_a, R,  ocp,
-        phi_e, c_e, activematerial, electrolyte
-        )
+    eS, eM = source_electric_material(vols, T,
+                                      phi_a, c_a, R,  ocp,
+                                      phi_e, c_e, activematerial, electrolyte
+                                      )
+    
     cs = conserved_symbol(eq)
     if cs == :Mass
         v = eM

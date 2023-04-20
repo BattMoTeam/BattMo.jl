@@ -27,7 +27,7 @@ name = "model1D_50"
 
 fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
 
-states, reports, extra = run_battery(name, info_level = 5, max_step = nothing);
+states, reports, extra = run_battery(name, use_p2d = true, info_level = 5, max_step = nothing);
 
 stateref  = extra[:states_ref]
 timesteps = extra[:timesteps]

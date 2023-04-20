@@ -138,7 +138,7 @@ function convert_to_int_vector(x::Matrix{Float64})
     return vec
 end
 
-function setup_model(exported_all; use_groups = false, kwarg...)
+function setup_model(exported_all; use_p2d = true, use_groups = false, kwarg...)
 
     skip_cc = size(exported_all["model"]["include_current_collectors"]) == (0,0)
     skip_cc = false
@@ -153,7 +153,11 @@ function setup_model(exported_all; use_groups = false, kwarg...)
         (model_cc, G_cc, parm_cc, init_cc) = make_system(exported_cc, sys_cc, bcfaces, srccells; kwarg...)
     end
 
-    sys_nam = ActiveMaterial{NoParticleDiffusion}(graphite_params)
+    if use_p2d
+        sys_nam = ActiveMaterial{P2Ddiscretization}(graphite_params, 5.86e-6, 5)
+    else
+        sys_nam = ActiveMaterial{NoParticleDiffusion}(graphite_params)
+    end
     
     exported_nam = exported_all["model"]["NegativeElectrode"]["ActiveMaterial"];
     
@@ -176,7 +180,11 @@ function setup_model(exported_all; use_groups = false, kwarg...)
     srccells       = []
     (model_elyte, G_elyte, parm_elyte, init_elyte) = make_system(exported_elyte, sys_elyte, bcfaces, srccells; kwarg...)
 
-    sys_pam = ActiveMaterial{NoParticleDiffusion}(nmc111_params)
+    if use_p2d
+        sys_pam = ActiveMaterial{P2Ddiscretization}(nmc111_params, 5.86e-6, 5)
+    else
+        sys_pam = ActiveMaterial{NoParticleDiffusion}(nmc111_params)
+    end
 
     exported_pam = exported_all["model"]["PositiveElectrode"]["ActiveMaterial"];
     bcfaces=[]
@@ -356,12 +364,16 @@ function setup_coupling!(model, exported_all)
     trange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 2]) # electrolyte
 
     if discretisation_type(model[:NAM]) == :P2Ddiscretization
-    
+
         ct = ButlerVolmerActmatToElyteCT(trange, srange)
         ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
+        
         ct = ButlerVolmerElyteToActmatCT(srange, trange)
+        ct_pair = setup_cross_term(ct, target = :NAM, source = :ELYTE, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
         ct_pair = setup_cross_term(ct, target = :NAM, source = :ELYTE, equation = :mass_conservation)
         add_cross_term!(model, ct_pair)
         
@@ -387,8 +399,12 @@ function setup_coupling!(model, exported_all)
         ct = ButlerVolmerActmatToElyteCT(trange, srange)
         ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
+        
         ct = ButlerVolmerElyteToActmatCT(srange, trange)
+        ct_pair = setup_cross_term(ct, target = :PAM, source = :ELYTE, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
         ct_pair = setup_cross_term(ct, target = :PAM, source = :ELYTE, equation = :mass_conservation)
         add_cross_term!(model, ct_pair)
         
@@ -519,12 +535,12 @@ function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggreg
     return AMGPreconditioner(m, max_levels = max_levels, max_coarse = max_coarse, presmoother = gs, postsmoother = gs, cycle = cyc)
 end
 
-function setup_sim(name; use_groups = false, general_ad = false)
+function setup_sim(name; use_p2d = true, use_groups = false, general_ad = false)
 
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
     exported_all = MAT.matread(fn)
 
-    model, state0, parameters, grids = setup_model(exported_all, use_groups = use_groups, general_ad = general_ad)
+    model, state0, parameters, grids = setup_model(exported_all, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
    
     setup_coupling!(model, exported_all)
     
@@ -564,6 +580,7 @@ end
 export run_battery
 
 function run_battery(name;
+                     use_p2d       = true,
                      extra_timing  = false,
                      max_step      = nothing,
                      linear_solver = :direct,
@@ -571,7 +588,7 @@ function run_battery(name;
                      use_groups    = false,
                      kwarg...)
     
-    sim, forces, grids, state0, parameters, exported_all, model = setup_sim(name, use_groups = use_groups, general_ad = general_ad)
+    sim, forces, grids, state0, parameters, exported_all, model = setup_sim(name, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
     
     steps        = size(exported_all["states"],1)
     alltimesteps = Vector{Float64}(undef,steps)

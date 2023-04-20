@@ -42,7 +42,7 @@ end
 const ActiveMaterialModel = SimulationModel{O, S} where {O<:JutulDomain, S<:ActiveMaterial}
 
 ## Create ActiveMaterial with full p2d solid diffusion
-function ActiveMaterial{P2Ddiscretization}(params::ActiveMaterialParameters, N, R) 
+function ActiveMaterial{P2Ddiscretization}(params::ActiveMaterialParameters, R, N) 
     data = setupSolidDiffusionDiscretization(R, N)
     discretization = P2Ddiscretization(data)
     return ActiveMaterial{P2Ddiscretization}(params, discretization)
@@ -212,9 +212,10 @@ end
                           ix
                           )
         ocp_func = model.system.params[:ocp_func]
+        cmax     = model.system.params[:maximum_concentration]
         refT = 298.15
         for cell in ix
-            @inbounds Ocp[cell] = ocp_func(refT, Cs[cell])
+            @inbounds Ocp[cell] = ocp_func(refT, Cs[cell], cmax)
         end
     end
 )
@@ -226,8 +227,7 @@ end
                               Cp,
                               ix
                               )
-        s = model.system
-        N = s[:N]
+        N = model.system.discretization[:N]
         for cell in ix
             @inbounds Cs[cell] = Cp[N, cell]
         end
@@ -243,7 +243,6 @@ end
                                )
         diff_func = model.system.params[:diffusion_coef_func]
         refT = 298.15
-        error("fix that")
         for cell in ix
             @inbounds @views DiffusionCoef[cell] = diff_func(refT, Cp[:, cell])
         end
@@ -284,9 +283,10 @@ function update_solid_flux!(flux, Cp, D, system::ActiveMaterial{P2Ddiscretizatio
     # compute lithium flux in particle, using harmonic averaging. At the moment D has a constant value within particle
     # but this is going to change.
     
-    N    = system[:N]
-    A    = system[:A]
-    vols = system[:vols]
+    disc = system.discretization
+    N    = disc[:N]
+    A    = disc[:A]
+    vols = disc[:vols]
     
     for i = 1 : (N - 1)
 
@@ -310,10 +310,10 @@ function Jutul.update_equation_in_entity!(eq_buf           ,
                                           dt               ,
                                           ldisc = Nothing)
     
-    sys  = model.system
-    N    = sys[:N]
-    vols = sys[:vols]
-    div  = sys[:div]
+    disc  = model.system.discretization
+    N    = disc[:N]
+    vols = disc[:vols]
+    div  = disc[:div]
     
     Cp   = state.Cp[:, self_cell]
     Cp0  = state0.Cp[:, self_cell]
