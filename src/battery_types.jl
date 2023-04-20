@@ -3,7 +3,7 @@ using Jutul
 export ElectroChemicalComponent, CurrentCollector, Electectrolyte, TestElyte
 export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
 export ChargeFlow, BoundaryPotential, BoundaryCurrent
-export Phi, C, Temperature, Charge, Mass, Energy, KGrad
+export Phi, C, Temperature, Charge, Mass
 export BCCurrent
 export TPFAInterfaceFluxCT, ButlerVolmerActmatToElyteCT, ButlerVolmerElyteToActmatCT, ButlerVolmerInterfaceFluxCT
 
@@ -15,7 +15,8 @@ const ECModel = SimulationModel{<:Any, <:ElectroChemicalComponent, <:Any, <:Any}
 
 abstract type ElectroChemicalGrid <: JutulMesh end
 
-# Potentials
+# Potential variables
+
 abstract type Potential <: ScalarVariable end
 struct Phi <: Potential end
 struct C <: Potential end
@@ -26,25 +27,19 @@ struct Diffusivity <: ScalarVariable end
 
 Jutul.variable_scale(::Diffusivity) = 1e-10
 
-struct ThermalConductivity <: ScalarVariable end
-
 # Accumulation variables
+
 abstract type Conserved <: ScalarVariable end
+
 struct Charge <: Conserved end
 struct Mass <: Conserved end
-struct Energy <: Conserved end
 
-# Currents corresponding to a accumulation type
+# Boundary variables
+
 const BCCurrent = Dict(
     :Charge => :BCCharge,
     :Mass   => :BCMass,
-    :Energy => :BCEnergy,
 )
-
-abstract type KGrad{T} <: ScalarVariable end
-Jutul.associated_entity(::KGrad) = Faces()
-
-struct TPkGrad{T} <: KGrad{T} end
 
 struct BoundaryPotential{label} <: ScalarVariable
     function BoundaryPotential(label::Symbol)
@@ -62,18 +57,6 @@ struct BoundaryCurrent{label, C} <: ScalarVariable
 end
 
 Jutul.associated_entity(::BoundaryCurrent) = BoundaryFaces()
-
-
-abstract type Current <: ScalarVariable end
-Jutul.associated_entity(::Current) = Faces()
-
-#struct TotalCurrent <: Current end
-#struct ChargeCarrierFlux <: Current end
-#struct EnergyFlux <: Current end
-
-function number_of_entities(model, pv::Current)
-    return 2*count_entities(model.domain, Faces())
-end
 
 struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
     """

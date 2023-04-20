@@ -12,8 +12,7 @@ struct TestElyte <: Electrolyte end
 const ElectrolyteModel = SimulationModel{<:Any, <:Electrolyte, <:Any, <:Any}
 const TestElyteModel = SimulationModel{<:Any, <:TestElyte, <:Any, <:Any}
 
-struct TPDGrad{T} <: KGrad{T} end
-# Is it necesessary with a new struxt for all these?
+# Is it necesessary with a new struct for all of these?
 struct DmuDc <: ScalarVariable end
 struct ChemCoef <: ScalarVariable end
 
