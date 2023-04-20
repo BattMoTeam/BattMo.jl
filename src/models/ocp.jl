@@ -1,153 +1,9 @@
 export Graphite, NMC111, SimpleGraphite, SimpleNMC111, n_charge_carriers, volumetric_surface_area
 
 
-solid_diffusion_discretization_number(system::ActiveMaterial) = system[:N]
-
-function Base.getindex(system::ActiveMaterial, key::Symbol)
-    return system.data[key]
-end
-
-abstract type GenericGraphite <: ActiveMaterial end
-abstract type GenericNMC111 <: ActiveMaterial end
-
-struct Graphite <: GenericGraphite
-
-    data::Dict{Symbol, Any}
-    # At the moment the following keys are included :
-    # N::Integer                   # Discretization size for solid diffusion
-    # R::Real                      # Particle radius
-    # A::Vector{Float64}           # vector of coefficients for harmonic average (half-transmissibility for spherical coordinate)
-    # v::Vector{Float64}           # vector of volumes (volume of spherical layer)
-    # div::Vector{Vector{Float64}} # Helping structure to compute divergence operator for particle diffusion
-    
-    function  Graphite(R, N)
-        data = setupSolidDiffusionDiscretization(R, N)
-        new(data)
-    end   
-
-end
-
-struct NMC111 <: GenericNMC111
-
-    data::Dict{Symbol, Any}
-    # At the moment the following keys are included :
-    # N::Integer                   # Discretization size for solid diffusion
-    # R::Real                      # Particle radius
-    # A::Vector{Float64}           # vector of coefficients for harmonic average (half-transmissibility for spherical coordinate)
-    # v::Vector{Float64}           # vector of volumes (volume of spherical layer)
-    # div::Vector{Vector{Float64}} # Helping structure to compute divergence operator for particle diffusion
-    
-    function NMC111(R, N)
-        data = setupSolidDiffusionDiscretization(R, N)
-        new(data)
-    end   
-
-end
-
-struct simpleGraphite <: Union{GenericGraphite, NoParticleDiffusion} end
-struct simpleNMC111 <: Union{GenericNMC111, NoParticleDiffusion} end
-
-
-function setupSolidDiffusionDiscretization(R, N)
-
-    N = Int64(N)
-    R = Float64(R)
-    
-    A    = zeros(Float64, N)
-    vols = zeros(Float64, N)
-
-    dr   = R/N
-    rc   = [dr*(i - 1/2) for i  = 1 : N]
-    rf   = [dr*i for i  = 0 : (N + 1)]
-    for i = 1 : N
-        vols[i] = 4*pi/3*(rf[i + 1]^3 - rf[i]^3)
-        A[i]    = 4*pi*rc[i]^2/(dr/2)
-    end
-
-    div = Vector{Tuple{Int64, Int64, Float64}}(undef, 2*(N - 1))
-
-    k = 1
-    for j = 1 : N - 1
-        div[k] = (j, j, 1)
-        k += 1
-        div[k] = (j + 1, j, -1)
-        k += 1
-    end
-        
-    data = Dict(:N => N      ,
-                :R => R      ,
-                :A => A      ,
-                :vols => vols,
-                :div => div  ,
-                )
-    
-    return data
-        
-end
-
-
-## Define OCP and entropy change (dUdT) for graphite using polynomials
-
-const coeff1_refOCP = Polynomial([
-	-4.656,
-	0,
-	+ 88.669,
-	0,
-	- 401.119,
-	0,
-	+ 342.909,
-	0,
-	- 462.471,
-	0,
-	+ 433.434
-]);
-
-const coeff2_refOCP =Polynomial([
-	-1,
-	0 ,
-	+ 18.933,
-	0,
-	- 79.532,
-	0,
-	+ 37.311,
-	0,
-	- 73.083,
-	0,
-	+ 95.960
-])
-
-const coeff1_dUdT = Polynomial([
-	0.199521039,
-	- 0.928373822,
-	+ 1.364550689000003,
-	- 0.611544893999998
-]);
-
-const coeff2_dUdT = Polynomial([
-	1,
-	- 5.661479886999997,
-	+ 11.47636191,
-	- 9.82431213599998,
-	+ 3.048755063
-])
-
-function compute_ocp(T,c, material::GenericNMC111)
-    
-    """Compute OCP for GenericNMC111 as function of temperature and concentration"""
-    refT   = 298.15
-    cmax   = maximum_concentration(material)
-    theta  = c/cmax
-    refOCP = coeff1_refOCP(theta)/coeff2_refOCP(theta)
-    dUdT   = -1e-3*coeff1_dUdT(theta)/coeff2_dUdT(theta)
-    ocp    = refOCP + (T - refT) * dUdT
-    
-    return ocp
-    
-end
-
 ## Defines OCP and entropy change (dUdT) for graphite using polynomials
 
-const coeff1 = Polynomial([
+const coeff1_graphite = Polynomial([
 	+ 0.005269056,
 	+ 3.299265709,
 	- 91.79325798,
@@ -159,7 +15,7 @@ const coeff1 = Polynomial([
 	- 16515.05308
 ]);
 
-const  coeff2= Polynomial([
+const coeff2_graphite = Polynomial([
 	1,
 	- 48.09287227,
 	+ 1017.234804,
@@ -171,9 +27,8 @@ const  coeff2= Polynomial([
 	+ 165705.8597
 ]);
 
-function compute_ocp(T, c, material::GenericGraphite)
+function compute_ocp_graphite(T, c, cmax)
     """Compute OCP for GenericGraphite as function of temperature and concentration"""
-    cmax   = maximum_concentration(material)
     theta  = c./cmax
     refT   = 298.15
     refOCP = (0.7222
@@ -185,30 +40,14 @@ function compute_ocp(T, c, material::GenericGraphite)
               - 0.7984 * exp(0.4465*theta - 0.4108)
 	      );
 
-    dUdT = 1e-3*coeff1(theta)/ coeff2(theta);
+    dUdT = 1e-3*coeff1_graphite(theta)/ coeff2_graphite(theta);
     
     ocp = refOCP + (T - refT) * dUdT;
     return ocp
     
 end
 
-function n_charge_carriers(::GenericGraphite)
-    return 1
-end
-
-function n_charge_carriers(::GenericNMC111)
-    return 1
-end
-
-maximum_concentration(::GenericGraphite) = 30555.0
-maximum_concentration(::GenericNMC111)   = 55554.0
-
-volumetric_surface_area(::GenericGraphite) = 723600.0
-volumetric_surface_area(::GenericNMC111)   = 885000.0
-
-## Defines exchange current density for GenericGraphite
-
-function reaction_rate_const(T, c, ::GenericGraphite)
+function compute_reaction_rate_constant_graphite(T, c)
 
     refT = 298.15
     k0   = 5.0310e-11
@@ -219,20 +58,9 @@ function reaction_rate_const(T, c, ::GenericGraphite)
     
 end
 
-## Defines exchange current density for NMC
-
-function reaction_rate_const(T, c, ::GenericNMC111)
-    refT = 298.15
-    k0 = 2.3300e-11
-    Eak = 5000
-    val = k0.*exp(-Eak./FARADAY_CONST .*(1.0./T - 1/refT));
-    
-    return val
-end
-
 ## Define solid diffusion coefficient for GenericGraphite
 
-function diffusion_rate(T, c, ::GenericGraphite)
+function compute_diffusion_coef_graphite(T, c)
     
     refT = 298.15
     D0   = 3.9e-14
@@ -242,15 +70,109 @@ function diffusion_rate(T, c, ::GenericGraphite)
     return val
 end
 
+
+graphite_params = Dict{Symbol, Any}()
+
+graphite_params[:ocp_func]                    = compute_ocp_graphite
+graphite_params[:n_charge_carriers]           = 1
+graphite_params[:reaction_rate_constant_func] = compute_reaction_rate_constant_graphite
+graphite_params[:maximum_concentration]       = 30555
+graphite_params[:volumetric_surface_area]     = 723600
+graphite_params[:diffusion_coef_func]         = compute_diffusion_coef_graphite
+
+
+## Define OCP and entropy change (dUdT) for NMC111 using polynomials
+
+const coeff1_refOCP_nmc111 = Polynomial([
+    -4.656,
+    0,
+    + 88.669,
+    0,
+    - 401.119,
+    0,
+    + 342.909,
+    0,
+    - 462.471,
+    0,
+    + 433.434
+]);
+
+const coeff2_refOCP_nmc111 =Polynomial([
+    -1,
+    0 ,
+    + 18.933,
+    0,
+    - 79.532,
+    0,
+    + 37.311,
+    0,
+    - 73.083,
+    0,
+    + 95.960
+])
+
+const coeff1_dUdT_nmc111 = Polynomial([
+    0.199521039,
+    - 0.928373822,
+    + 1.364550689000003,
+    - 0.611544893999998
+]);
+
+const coeff2_dUdT_nmc111 = Polynomial([
+    1,
+    - 5.661479886999997,
+    + 11.47636191,
+    - 9.82431213599998,
+    + 3.048755063
+])
+
+function compute_ocp_nmc111(T, c, cmax)
+    
+    """Compute OCP for GenericNMC111 as function of temperature and concentration"""
+    refT   = 298.15
+    theta  = c/cmax
+    refOCP = coeff1_refOCP_nmc111(theta)/coeff2_refOCP_nmc111(theta)
+    dUdT   = -1e-3*coeff1_dUdT_nmc111(theta)/coeff2_dUdT_nmc111(theta)
+    ocp    = refOCP + (T - refT) * dUdT
+    
+    return ocp
+    
+end
+
+
+## Defines exchange current density for GenericGraphite
+
+function compute_reaction_rate_constant_nmc111(T, c)
+    
+    refT = 298.15
+    k0   = 2.3300e-11
+    Eak  = 5000
+
+    val = k0.*exp(-Eak./FARADAY_CONST .*(1.0./T - 1/refT));
+    
+    return val
+end
+
+
 ## Define solid diffusion coefficient for NMC
 
-function diffusion_rate(T, c, ::GenericNMC111)
+function compute_diffusion_coef_nmc111(T, c)
     
     refT = 298.15
     D0   = 1e-14
     Ead  = 5000
+
     val = D0.*exp(-Ead./FARADAY_CONST .*(1.0./T - 1/refT));
     
     return val
 end
+
+nmc111_params = Dict{Symbol, Any}()
+
+nmc111_params[:ocp_func]                    = compute_ocp_nmc111
+nmc111_params[:n_charge_carriers]           = 1
+nmc111_params[:reaction_rate_constant_func] = compute_reaction_rate_constant_nmc111
+nmc111_params[:maximum_concentration]       = 55554.0
+nmc111_params[:volumetric_surface_area]     = 885000.0
+nmc111_params[:diffusion_coef_func]         = compute_diffusion_coef_nmc111
 

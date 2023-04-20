@@ -141,7 +141,7 @@ function convert_to_int_vector(x::Matrix{Float64})
     return vec
 end
 
-function setup_model(exported_all; use_groups = false, amtype = "p2d", kwarg...)
+function setup_model(exported_all; use_groups = false, kwarg...)
 
     skip_cc = size(exported_all["model"]["include_current_collectors"]) == (0,0)
     skip_cc = false
@@ -156,9 +156,7 @@ function setup_model(exported_all; use_groups = false, amtype = "p2d", kwarg...)
         (model_cc, G_cc, parm_cc, init_cc) = make_system(exported_cc, sys_cc, bcfaces, srccells; kwarg...)
     end
 
-    if amtype == "p2d"
-        sys_nam = Graphite(5.86e-06, 5)
-    end
+    sys_nam = ActiveMaterial{NoParticleDiffusion}(graphite_params)
     
     exported_nam = exported_all["model"]["NegativeElectrode"]["ActiveMaterial"];
     
@@ -181,13 +179,12 @@ function setup_model(exported_all; use_groups = false, amtype = "p2d", kwarg...)
     srccells       = []
     (model_elyte, G_elyte, parm_elyte, init_elyte) = make_system(exported_elyte, sys_elyte, bcfaces, srccells; kwarg...)
 
-    if amtype == "p2d"
-        sys_pam = NMC111(5.22e-6, 5)
-    end
+    sys_pam = ActiveMaterial{NoParticleDiffusion}(nmc111_params)
+
     exported_pam = exported_all["model"]["PositiveElectrode"]["ActiveMaterial"];
     bcfaces=[]
     srccells = []
-    (model_pam, G_pam, parm_pam, init_pam) = make_system(exported_pam,sys_pam,bcfaces,srccells; kwarg...)
+    (model_pam, G_pam, parm_pam, init_pam) = make_system(exported_pam, sys_pam, bcfaces, srccells; kwarg...)
    
     if !skip_cc    
         exported_pp = exported_all["model"]["PositiveElectrode"]["CurrentCollector"];
@@ -246,13 +243,27 @@ function setup_model(exported_all; use_groups = false, amtype = "p2d", kwarg...)
     init_pam[:Phi]   = state0["PositiveElectrode"]["ActiveMaterial"]["phi"][1]  #*0
 
     if skip_cc
-        init_nam[:Cp] = state0["NegativeElectrode"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
-        init_pam[:Cp] = state0["PositiveElectrode"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
+        c_nam = state0["NegativeElectrode"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
+        c_pam = state0["PositiveElectrode"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
     else
-        init_nam[:Cp] = state0["NegativeElectrode"]["ActiveMaterial"]["c"][1] 
-        init_pam[:Cp] = state0["PositiveElectrode"]["ActiveMaterial"]["c"][1]
+        c_nam = state0["NegativeElectrode"]["ActiveMaterial"]["c"][1]
+        c_pam = state0["PositiveElectrode"]["ActiveMaterial"]["c"][1]
     end
-    #init_elyte[:C] = state0["Electrolyte"]["cs"][1][1]
+
+    if  discretisation_type(sys_nam) == :P2Ddiscretization
+        init_nam[:Cp] = c_nam
+    else
+        @assert discretisation_type(sys_nam) == :NoParticleDiffusion
+        init_nam[:C] = c_nam
+    end
+
+    if  discretisation_type(sys_pam) == :P2Ddiscretization
+        init_pam[:Cp] = c_pam
+    else
+        @assert discretisation_type(sys_nam) == :NoParticleDiffusion
+        init_pam[:C] = c_pam
+    end
+    
     if haskey(state0["Electrolyte"], "cs")
         init_elyte[:C] = state0["Electrolyte"]["cs"][1][1]# for compatibility to old
     else
@@ -347,27 +358,56 @@ function setup_coupling!(model, exported_all)
     srange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 1]) # electrode
     trange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 2]) # electrolyte
 
-    ct = ButlerVolmerActmatToElyteCT(trange, srange)
-    ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :charge_conservation)
-    add_cross_term!(model, ct_pair)
+    if discretisation_type(model[:NAM]) == :P2Ddiscretization
+    
+        ct = ButlerVolmerActmatToElyteCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
 
-    ct = ButlerVolmerElyteToActmatCT(srange, trange)
-    ct_pair = setup_cross_term(ct, target = :NAM, source = :ELYTE, equation = :mass_conservation)
-    add_cross_term!(model, ct_pair)
+        ct = ButlerVolmerElyteToActmatCT(srange, trange)
+        ct_pair = setup_cross_term(ct, target = :NAM, source = :ELYTE, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
+        
+    else
+        
+        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
+        
+        ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
+        
+    end
 
     # setup coupling ELYTE <-> PAM charge
 
     srange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,1]) # electrode
     trange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,2]) # electrolyte
+    
+    if discretisation_type(model[:PAM]) == :P2Ddiscretization
 
-    ct = ButlerVolmerActmatToElyteCT(trange, srange)
-    ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :charge_conservation)
-    add_cross_term!(model, ct_pair)
+        ct = ButlerVolmerActmatToElyteCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
 
-    ct = ButlerVolmerElyteToActmatCT(srange, trange)
-    ct_pair = setup_cross_term(ct, target = :PAM, source = :ELYTE, equation = :mass_conservation)
-    add_cross_term!(model, ct_pair)
+        ct = ButlerVolmerElyteToActmatCT(srange, trange)
+        ct_pair = setup_cross_term(ct, target = :PAM, source = :ELYTE, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
+        
+    else
+        
+        @assert discretisation_type(model[:PAM]) == :NoParticleDiffusion    
 
+        ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
+        
+    end
+
+    
     if  !skip_cc
         # setup coupling PP <-> PAM charge
         target = Dict( 
@@ -482,12 +522,12 @@ function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggreg
     return AMGPreconditioner(m, max_levels = max_levels, max_coarse = max_coarse, presmoother = gs, postsmoother = gs, cycle = cyc)
 end
 
-function setup_sim(name; use_groups = false, general_ad = false, amtype = "p2d")
+function setup_sim(name; use_groups = false, general_ad = false)
 
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
     exported_all = MAT.matread(fn)
 
-    model, state0, parameters, grids = setup_model(exported_all, use_groups = use_groups, general_ad = general_ad, amtype = amtype)
+    model, state0, parameters, grids = setup_model(exported_all, use_groups = use_groups, general_ad = general_ad)
    
     setup_coupling!(model, exported_all)
     

@@ -1,6 +1,3 @@
-# interface flux between current conductors
-# 1e7 should be the harmonic mean of hftrans/conductivity
-
 
 Jutul.symmetry(::TPFAInterfaceFluxCT) = Jutul.CTSkewSymmetry()
 
@@ -88,9 +85,9 @@ function reaction_rate(phi_a         ,
                        electrolyte
                        )
 
-    n    = n_charge_carriers(activematerial)
-    cmax = maximum_concentration(activematerial) 
-    vsa  = volumetric_surface_area(activematerial)
+    n    = activematerial.params[:n_charge_carriers]
+    cmax = activematerial.params[:maximum_concentration]
+    vsa  = activematerial.params[:volumetric_surface_area]
 
     eta = (phi_a - phi_e - ocp)
     th  = 1e-3*cmax
@@ -100,6 +97,12 @@ function reaction_rate(phi_a         ,
     return R./(n*FARADAY_CONST)
     
 end
+
+
+
+###########
+# cross-term for 2pd model
+###########
 
 
 Jutul.cross_term_entities(ct::ButlerVolmerActmatToElyteCT, eq, model) = ct.target_cells
@@ -234,3 +237,91 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     
     
 end
+
+
+##############
+# cross-terms for no particle diffusion model
+###############
+
+function source_electric_material(vols,
+                                  T,
+                                  phi_a,
+                                  c_a,
+                                  R0,
+                                  ocp,
+                                  phi_e,
+                                  c_e,
+                                  activematerial,
+                                  electrolyte
+                                  )
+
+    n = activematerial.params[:n_charge_carriers]
+    R = reaction_rate(phi_a,
+                      c_a,
+                      R0,
+                      ocp,
+                      T,
+                      phi_e,
+                      c_e,
+                      activematerial,
+                      electrolyte
+                      )
+    
+        eS = -1.0 * vols * R * n * FARADAY_CONST
+        eM = +1.0 * vols * R 
+
+    return (eS, eM)
+    
+end
+
+
+Jutul.cross_term_entities(ct::ButlerVolmerInterfaceFluxCT, eq, model) = ct.target_cells
+Jutul.cross_term_entities_source(ct::ButlerVolmerInterfaceFluxCT, eq, model) = ct.source_cells
+
+Jutul.symmetry(::ButlerVolmerInterfaceFluxCT) = Jutul.CTSkewSymmetry()
+
+function Jutul.update_cross_term_in_entity!(out,
+                                            ind,
+                                            state_t,
+                                            state0_t,
+                                            state_s,
+                                            state0_s, 
+                                            model_t,
+                                            model_s,
+                                            ct::ButlerVolmerInterfaceFluxCT,
+                                            eq,
+                                            dt,
+                                            ldisc = Jutul.local_discretization(ct, ind))
+
+    activematerial = model_s.system
+    electrolyte = model_t.system
+
+    t_c = ct.target_cells[ind]
+    s_c = ct.source_cells[ind]
+
+    phi_e = state_t.Phi[t_c]
+    phi_a = state_s.Phi[s_c]  
+    ocp = state_s.Ocp[s_c]
+    R = state_s.ReactionRateConst[s_c]
+    c_e = state_t.C[t_c]
+    c_a = state_s.C[s_c]
+    vols = model_s.domain.representation.volumes[s_c]
+    T = state_s.Temperature[s_c]
+
+    eS, eM = source_electric_material(
+        vols, T,
+        phi_a, c_a, R,  ocp,
+        phi_e, c_e, activematerial, electrolyte
+        )
+    cs = conserved_symbol(eq)
+    if cs == :Mass
+        v = eM
+    else
+        @assert cs == :Charge
+        v = eS
+    end
+    out[] = -v
+end
+
+
+

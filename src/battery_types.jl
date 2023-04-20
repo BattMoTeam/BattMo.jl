@@ -4,7 +4,7 @@ export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
 export ChargeFlow, BoundaryPotential, BoundaryCurrent
 export Phi, C, Temperature, Charge, Mass, Energy, KGrad
 export BCCurrent
-export TPFAInterfaceFluxCT, ButlerVolmerActmatToElyteCT, ButlerVolmerElyteToActmatCT
+export TPFAInterfaceFluxCT, ButlerVolmerActmatToElyteCT, ButlerVolmerElyteToActmatCT, ButlerVolmerInterfaceFluxCT
 ###########
 # Classes #
 ###########
@@ -141,13 +141,18 @@ struct AccumulatorInterfaceFluxCT{T,F} <: Jutul.AdditiveCrossTerm
         new{T, F}(target, source, trans)
     end
 end
-
 struct ButlerVolmerActmatToElyteCT{T} <: Jutul.AdditiveCrossTerm
     target_cells::T
     source_cells::T
 end
 
 struct ButlerVolmerElyteToActmatCT{T} <: Jutul.AdditiveCrossTerm
+    target_cells::T
+    source_cells::T
+end
+
+## used in no particle diffusion model
+struct ButlerVolmerInterfaceFluxCT{T} <: Jutul.AdditiveCrossTerm
     target_cells::T
     source_cells::T
 end
