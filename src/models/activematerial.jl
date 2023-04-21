@@ -192,7 +192,7 @@ function select_equations!(eqs,
     
     disc = model.domain.discretizations.charge_flow
     eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
-    eqs[:mass_conservation]   = SolidMassCons(disc)
+    eqs[:mass_conservation]   = SolidMassCons()
     
 end
 

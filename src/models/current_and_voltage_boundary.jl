@@ -33,7 +33,6 @@ function policy_to_control(p::SimpleCVPolicy, is_charging, state, model, dt, tim
     end
     phi_p = p.voltage
     phi = only(state.Phi)
-    @info "phi" phi
     is_voltage_ctrl = (phi <= phi_p)
     if is_voltage_ctrl
         target = phi_p

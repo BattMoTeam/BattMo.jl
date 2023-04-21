@@ -162,7 +162,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
         v = 1.0*vols*R*n*FARADAY_CONST
     end
     
-    out[] = v
+    out[] = -v
     
 end
 
@@ -221,9 +221,8 @@ function Jutul.update_cross_term_in_entity!(out                            ,
         N  = activematerial.discretization[:N] # boundary index for P2D discretization
         vf = model_s.domain.representation.vol_frac[t_c]
         
-        v = -1.0*R*(4*pi*rp^3)/(3*vf)
+        v = 1.0*R*(4*pi*rp^3)/(3*vf)
 
-        # @info "ButlerVolmerElyteToActmatCT" out N
         @. out = 0
         out[N] = v
         
@@ -231,7 +230,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
         
         cs = conserved_symbol(eq)
         @assert cs == :Charge
-        v = -1.0*vols*R*n*FARADAY_CONST
+        v = 1.0*vols*R*n*FARADAY_CONST
 
         out[] = v
         
