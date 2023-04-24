@@ -113,7 +113,6 @@ function apply_boundary_potential!(
 
         T_hf = model.domain.representation.boundary_T_hf
 
-        @infiltrate
         for (i, c) in enumerate(bc)
             @inbounds acc[c] += κ[c]*T_hf[i]*(Phi[c] - value(BoundaryPhi[i]))
         end
