@@ -31,7 +31,6 @@ end
 
 @inline function Jutul.face_flux!(q_i, face, eq::ConservationLaw, state, model::ECModel, dt, flow_disc::PotentialFlow, ldisc)
 
-    error("not checked")
     # Inner version, for generic flux
     kgrad, upw = ldisc.face_disc(face)
     (; left, right, face_sign) = kgrad
