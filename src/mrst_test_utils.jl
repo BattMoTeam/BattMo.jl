@@ -57,7 +57,7 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
     
     bccells = N_all[bcfaces,1] + N_all[bcfaces,2]
     msource = exported
-    T_hf = - getHalfTrans(msource, bcfaces)
+    T_hf = getHalfTrans(msource, bcfaces)
     
     bcvalue_zeros = zeros(size(bccells))
     bcvalue_ones  = ones(size(bccells))
@@ -79,9 +79,9 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
     I0   = 1.0
     
     if haskey(exported,"InterDiffusionCoefficient")
-        D = - exported["InterDiffusionCoefficient"]
+        D = exported["InterDiffusionCoefficient"]
     else
-        D = - 0.0
+        D = 0.0
     end
     if isa(exported["EffectiveElectricalConductivity"], Matrix)
         kappa = exported["EffectiveElectricalConductivity"][1]
@@ -628,6 +628,7 @@ function run_battery(name;
     cfg[:tolerances][:PP][:default] = 1e-1
     cfg[:tolerances][:BPP][:default] = 1e-1
     # Run simulation
+    
     states, report = simulate(sim, timesteps, forces = forces, config = cfg)
     stateref = exported_all["states"]
 
