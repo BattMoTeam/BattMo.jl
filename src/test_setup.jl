@@ -116,7 +116,7 @@ function exported_model_to_domain(exported; bc = []   ,
     end
     P = exported["operators"]["cellFluxOp"]["P"]
     S = exported["operators"]["cellFluxOp"]["S"]
-    T = exported["operators"]["T"].*2.0*-1.0
+    T = exported["operators"]["T"].*2.0*1.0
     G = MinimalECTPFAGrid(volumes, N, vec(T);
                           bc   = bc,
                           T_hf = b_T_hf,

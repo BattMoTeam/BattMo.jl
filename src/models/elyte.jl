@@ -161,10 +161,10 @@ end
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
     
     @inbounds trans = state.ECTransmissibilities[face]
-    j     = half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
-    jchem = half_face_two_point_kgrad(c, other, trans, state.C, state.ChemCoef)
+    j     = - half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
+    jchem = - half_face_two_point_kgrad(c, other, trans, state.C, state.ChemCoef)
     
-    j = j - jchem
+    j = j - jchem*(1.0)
 
     return T(j)
     
@@ -179,11 +179,11 @@ function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:M
     
     @inbounds trans = state.ECTransmissibilities[face]
 
-    diffFlux = half_face_two_point_kgrad(c, other, trans, state.C, state.Diffusivity)
-    j        = half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
-    jchem    = half_face_two_point_kgrad(c, other, trans, state.C, state.ChemCoef)
+    diffFlux = - half_face_two_point_kgrad(c, other, trans, state.C, state.Diffusivity)
+    j        = - half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
+    jchem    = - half_face_two_point_kgrad(c, other, trans, state.C, state.ChemCoef)
     
-    j = j - jchem
+    j = j - jchem*(1.0)
     
     massFlux = diffFlux + t/(z*F)*j
     
