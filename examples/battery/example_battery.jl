@@ -29,7 +29,7 @@ fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
 
 sim, forces, grids, state0, parameters, exported_all, model = BattMo.setup_sim(name, use_p2d = false)
 
-states, reports, extra = run_battery(name, use_p2d = false, info_level = 5, max_step = nothing);
+states, reports, extra, grids, exported_all = run_battery(name, use_p2d = false, info_level = 5, max_step = nothing);
 
 stateref  = extra[:states_ref]
 timesteps = extra[:timesteps]

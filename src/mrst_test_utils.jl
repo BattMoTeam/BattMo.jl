@@ -643,9 +643,55 @@ function run_battery(name;
                  :forces => forces,
                  :simulator => sim)
 
-    return (states = states, reports = report, extra = extra)
+    return (states = states, reports = report, extra = extra, grids = grids, exported_all = exported_all)
     # return states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim
 end
+export inputRefToStates
+function inputRefToStates(states, stateref)
+statesref = deepcopy(states);
+    for i in 1:size(states,1)
+        staterefnew = statesref[i]   
+        refstep=i
+        sim_step=i
+
+        fields = ["CurrentCollector","ActiveMaterial"]
+        components = ["NegativeElectrode","PositiveElectrode"]
+        newkeys = [:CC,:NAM,:PP,:PAM]
+        ind =1
+        for component = components
+            for field in fields
+                state = stateref[refstep][component]
+                phi_ref = state[field]["phi"]
+                newcomp = newkeys[ind]
+                staterefnew[newcomp][:Phi] = phi_ref        
+                if haskey(state[field],"c")
+                    c = state[field]["c"]
+                    staterefnew[newcomp][:C] = c
+                end
+                ind=ind + 1
+            end
+        end
+
+        fields = ["Electrolyte"]
+        newcomp = :ELYTE
+        for field in fields
+
+            state = stateref[refstep]
+            phi_ref = state[field]["phi"]
+            #j_ref = state[field]["j"]
+            staterefnew[newcomp][:Phi] = phi_ref
+            if haskey(state[field],"c")
+                c = state[field]["c"]
+                staterefnew[newcomp][:C] = c
+            end
+        end
+        
+        ##
+        staterefnew[:BPP][:Phi][1] = stateref[refstep]["Control"]["E"]
+    end
+return statesref
+end
+
 
 function test_mrst_battery(name)
     states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim = run_battery(name);
