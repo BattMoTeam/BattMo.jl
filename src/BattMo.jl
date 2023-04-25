@@ -29,7 +29,6 @@ import Jutul:
     declare_entities,
     get_neighborship,
     Faces,
-    get_diagonal_cache,
     align_to_jacobian!,
     diagonal_alignment!,
     half_face_flux_cells_alignment!,
