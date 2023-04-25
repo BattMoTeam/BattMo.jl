@@ -1,4 +1,6 @@
 function data = class2data(obj)
+% Convert Matlab object into struct which can be then read in Julia
+    
     if(isstruct(obj) || isobject(obj))
         myfields = fields(obj);
         if(numel(obj)>1)
@@ -12,21 +14,21 @@ function data = class2data(obj)
         else
             data = struct();
             for i=1:numel(myfields)
-                    data.(myfields{i}) = class2data(obj.(myfields{i}));            
+                data.(myfields{i}) = class2data(obj.(myfields{i}));            
             end
         end
     else
-       if(isnumeric(obj) || ischar(obj) )
-                data = obj;
-       elseif (iscell(obj))
-           vals = obj;
-           newvals ={};
-           for i=1:numel(vals)
-               newvals{i} = class2data(vals{i});
-           end
-           data = newvals;
-       else
-           data = [];
-       end 
+        if(isnumeric(obj) || ischar(obj) )
+            data = obj;
+        elseif (iscell(obj))
+            vals = obj;
+            newvals ={};
+            for i=1:numel(vals)
+                newvals{i} = class2data(vals{i});
+            end
+            data = newvals;
+        else
+            data = [];
+        end 
     end
 end
