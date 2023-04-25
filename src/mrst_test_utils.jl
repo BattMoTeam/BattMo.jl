@@ -1,3 +1,5 @@
+using Infiltrator
+
 struct SourceAtCell
     cell
     src
@@ -7,20 +9,26 @@ struct SourceAtCell
 end
 
 function getTrans(model1, model2, faces, cells, quantity)
-    """ setup transmissibility for coupling between models"""
-    T_all1 = model1["operators"]["T_all"][faces[:,1]]
-    T_all2 = model2["operators"]["T_all"][faces[:,2]]
-    s1     = model1[quantity][cells[:,1]]
-    s2     = model2[quantity][cells[:,2]]
-    T      = 1.0./((1.0./(T_all1.*s1))+(1.0./(T_all2.*s2)))
+    """ setup transmissibility for coupling between models at boundaries"""
+
+    # @infiltrate
+    
+    T_all1 = model1["operators"]["T_all"][faces[:, 1]]
+    T_all2 = model2["operators"]["T_all"][faces[:, 2]]
+
+    s1  = model1[quantity][cells[:, 1]]
+    s2  = model2[quantity][cells[:, 2]]
+    
+    T   = 1.0./((1.0./(T_all1.*s1))+(1.0./(T_all2.*s2)))
 
     return T
     
 end
 
 function getHalfTrans(model, faces, cells, quantity)
-    """ recover half transmissibilities for faces and  weight them by the coefficient sent as quantity for the given cells.
+    """ recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the given cells.
 Here, the faces should belong the corresponding cells at the same index"""
+
     T_all = model["operators"]["T_all"]
     s = model[quantity][cells]
     T = T_all[faces].*s
@@ -30,7 +38,8 @@ Here, the faces should belong the corresponding cells at the same index"""
 end
 
 function getHalfTrans(model, faces)
-    """ recover the half transmissibilities for faces"""
+    """ recover the half transmissibilities for boundary faces"""
+    
     T_all = model["operators"]["T_all"]
     T = T_all[faces]
     
@@ -172,9 +181,6 @@ function setup_model(exported_all; use_p2d = true, use_groups = false, kwarg...)
         bcfaces=[]
         (model_nam, G_nam, parm_nam, init_nam) = make_system(exported_nam, sys_nam, bcfaces, srccells; kwarg...)
     end
-    t1, t2 = exported_all["model"]["Electrolyte"]["sp"]["t"]
-    z1, z2 = exported_all["model"]["Electrolyte"]["sp"]["z"]
-    tDivz_eff = (t1/z1 + t2/z2)
 
     sys_elyte      = TestElyte()
     exported_elyte = exported_all["model"]["Electrolyte"]

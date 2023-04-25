@@ -12,7 +12,8 @@ using MAT
 
 ENV["JULIA_DEBUG"] = 0;
 
-name = "model1D_50"
+# name = "model1D_50"
+name = "p1d_40"
 # name = "model1Dmod_50"
 # name = "model1Dmod_500"
 # name = "sector_7920"
