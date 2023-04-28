@@ -3,7 +3,8 @@
 #fn = "/data2/hnil/JULIA/Jutul.jl/data/models/model1D_50.mat"
 #fn="/data/hnil/BITBUCKET/mrst-bitbucket/projects/project-batman/project-batman/Examples/gellyrole/model1D_50_notemp_.mat"
 #exported_all = MAT.matread(fn)
-for i in 1:1   
+for i in 5
+    
     refstep=i
     sim_step=i
 
@@ -11,11 +12,13 @@ for i in 1:1
     p2 = Plots.plot(title="Flux", size=(1000, 800))
     p3 = Plots.plot(title="C", size=(1000, 800))
 
-    fields = ["CurrentCollector","ActiveMaterial"]
-    components = ["NegativeElectrode"]#,"PositiveElectrode"]
-    #components = ["NegativeElectrode"]
-    #components = ["PositiveElectrode"]
-    #components = []
+    # fields = ["CurrentCollector","ActiveMaterial"]
+    # fields = ["CurrentCollector"]
+    fields = ["ActiveMaterial"]
+    # components = ["NegativeElectrode"]#,"PositiveElectrode"]
+    components = ["NegativeElectrode"]
+    # components = ["PositiveElectrode"]
+    components = []
     for component = components
         for field in fields
             G = exported_all["model"][component][field]["G"]
@@ -37,7 +40,7 @@ for i in 1:1
     end
 
     fields = [] 
-    #fields = ["Electrolyte"]
+    # fields = ["Electrolyte"]
 
     for field in fields
         G = exported_all["model"][field]["G"]
@@ -51,8 +54,8 @@ for i in 1:1
 
         Plots.plot!(p1,x,phi_ref;linecolor="red")
         #Plots.plot!(p2,xfi,j_ref;linecolor="red")
-        if haskey(state[field],"cs")
-            c = state[field]["cs"][1]
+        if haskey(state[field],"c")
+            c = state[field]["c"]
             Plots.plot!(p3,x,c;linecolor="red")
         end
     end
@@ -60,10 +63,12 @@ for i in 1:1
     ##
 
 
-    mykeys = [:CC, :NAM] # :ELYTE]
-    mykeys = [:PP, :PAM]
-    mykeys = [:ELYTE]
-    mykeys = [:CC]
+    # mykeys = [:CC, :NAM, :ELYTE, :PAM, :PP]
+    # mykeys = [:PP, :PAM]
+    # mykeys = [:NAM]
+    # mykeys = [:ELYTE]
+    mykeys = [:PAM]
+    # mykeys = [:CC]
     #mykeys =  keys(grids)
     for key in mykeys
         G = grids[key]
@@ -87,6 +92,12 @@ for i in 1:1
             cc = states[sim_step][key][:C]
             Plots.plot!(p3, x, cc; markershape=:circle, linestyle=:dot, seriestype = :scatter)
         end
+
+        if(haskey(states[sim_step][key], :Cs))
+            cc = states[sim_step][key][:Cs]
+            Plots.plot!(p3, x, cc; markershape=:circle, linestyle=:dot, seriestype = :scatter)
+        end
+        
     end
 
     display(plot!(p1, p2, p3,layout = (3, 1), legend = false))

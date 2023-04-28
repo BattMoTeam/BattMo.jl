@@ -165,7 +165,7 @@ function setup_model(exported_all; use_p2d = true, use_groups = false, kwarg...)
     end
 
     if use_p2d
-        sys_nam = ActiveMaterial{P2Ddiscretization}(graphite_params, 5.86e-6, 5)
+        sys_nam = ActiveMaterial{P2Ddiscretization}(graphite_params, 5.86e-6, 6)
     else
         sys_nam = ActiveMaterial{NoParticleDiffusion}(graphite_params)
     end
@@ -189,7 +189,7 @@ function setup_model(exported_all; use_p2d = true, use_groups = false, kwarg...)
     (model_elyte, G_elyte, parm_elyte, init_elyte) = make_system(exported_elyte, sys_elyte, bcfaces, srccells; kwarg...)
 
     if use_p2d
-        sys_pam = ActiveMaterial{P2Ddiscretization}(nmc111_params, 5.86e-6, 5)
+        sys_pam = ActiveMaterial{P2Ddiscretization}(nmc111_params, 5.86e-6, 6)
     else
         sys_pam = ActiveMaterial{NoParticleDiffusion}(nmc111_params)
     end
@@ -368,8 +368,8 @@ function setup_coupling!(model, exported_all)
     
     # setup coupling NAM <-> ELYTE charge
 
-    srange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 1]) # electrode
-    trange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 2]) # electrolyte
+    srange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 1]) # negative electrode
+    trange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 2]) # electrolyte (negative side)
 
     if discretisation_type(model[:NAM]) == :P2Ddiscretization
 
@@ -399,8 +399,8 @@ function setup_coupling!(model, exported_all)
 
     # setup coupling ELYTE <-> PAM charge
 
-    srange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,1]) # electrode
-    trange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,2]) # electrolyte
+    srange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,1]) # postive electrode
+    trange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,2]) # electrolyte (positive side)
     
     if discretisation_type(model[:PAM]) == :P2Ddiscretization
 
