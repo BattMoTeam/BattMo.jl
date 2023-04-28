@@ -8,8 +8,8 @@ struct P2Ddiscretization <: SolidDiffusionDiscretization
     data::Dict{Symbol, Any}
     # At the moment the following keys are included :
     # N::Integer                   # Discretization size for solid diffusion
-    # R::Real                      # Particle radius
-    # A::Vector{Float64}           # vector of coefficients for harmonic average (half-transmissibility for spherical coordinate)
+    # rp::Real                     # Particle radius
+    # hT::Vector{Float64}(N + 1)   # vector of coefficients for harmonic average (half-transmissibility for spherical coordinate)
     # v::Vector{Float64}           # vector of volumes (volume of spherical layer)
     # div::Vector{Vector{Float64}} # Helping structure to compute divergence operator for particle diffusion
 end
@@ -41,8 +41,8 @@ Jutul.local_discretization(::SolidMassCons, i) = nothing
 const ActiveMaterialModel = SimulationModel{O, S} where {O<:JutulDomain, S<:ActiveMaterial}
 
 ## Create ActiveMaterial with full p2d solid diffusion
-function ActiveMaterial{P2Ddiscretization}(params::ActiveMaterialParameters, R, N) 
-    data = setupSolidDiffusionDiscretization(R, N)
+function ActiveMaterial{P2Ddiscretization}(params::ActiveMaterialParameters, rp, N) 
+    data = setupSolidDiffusionDiscretization(rp, N)
     discretization = P2Ddiscretization(data)
     return ActiveMaterial{P2Ddiscretization}(params, discretization)
 end
@@ -82,22 +82,27 @@ function maximum_concentration(system::ActiveMaterial)
     return system.params[:maximum_concentration]
 end
 
-function setupSolidDiffusionDiscretization(R, N)
+function setupSolidDiffusionDiscretization(rp, N)
 
-    N = Int64(N)
-    R = Float64(R)
+    N  = Int64(N)
+    rp = Float64(rp)
     
-    A    = zeros(Float64, N)
+    hT   = zeros(Float64, N + 1)
     vols = zeros(Float64, N)
 
-    dr   = R/N
+    dr   = rp/N
     rc   = [dr*(i - 1/2) for i  = 1 : N]
     rf   = [dr*i for i  = 0 : (N + 1)]
+
     for i = 1 : N
         vols[i] = 4*pi/3*(rf[i + 1]^3 - rf[i]^3)
-        A[i]    = 4*pi*rc[i]^2/(dr/2)
     end
 
+    for i = 1 : N + 1
+        hT[i] = (4*pi*rf[i]^2/(dr/2))
+    end
+        
+    
     div = Vector{Tuple{Int64, Int64, Float64}}(undef, 2*(N - 1))
 
     k = 1
@@ -109,8 +114,8 @@ function setupSolidDiffusionDiscretization(R, N)
     end
         
     data = Dict(:N => N      ,
-                :R => R      ,
-                :A => A      ,
+                :rp => rp    ,
+                :hT => hT    ,
                 :vols => vols,
                 :div => div  ,
                 )
@@ -221,7 +226,7 @@ end
 
 @jutul_secondary(
     function update_cSurface!(Cs,
-                              cs_def::Cs,
+                              Cs_def::Cs,
                               model::SimulationModel{<:Any, ActiveMaterial{P2Ddiscretization}, <:Any, <:Any},
                               Cp,
                               ix
@@ -284,13 +289,15 @@ function update_solid_flux!(flux, Cp, D, system::ActiveMaterial{P2Ddiscretizatio
     
     disc = system.discretization
     N    = disc[:N]
-    A    = disc[:A]
+    hT   = disc[:hT]
     vols = disc[:vols]
+
+    @inline globFace(i::Int64) = i + 1
     
     for i = 1 : (N - 1)
-
-        T1 = A[i]*D
-        T2 = A[i + 1]*D
+        # At the moment D is equal in the whole domain, but it will be changed later
+        T1 = hT[globFace(i)]*D 
+        T2 = hT[globFace(i)]*D
         T  = 1/(1/T1 + 1/T2)
         
         flux[i] = -T*(Cp[i + 1] - Cp[i])

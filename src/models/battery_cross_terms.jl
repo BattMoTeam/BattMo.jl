@@ -17,10 +17,10 @@ function Jutul.update_cross_term_in_entity!(out                                 
                                             dt                                   ,
                                             ldisc = Jutul.local_discretization(ct, ind))
     trans = ct.trans[ind]
-    t_c   = ct.target_cells[ind]
-    t_s   = ct.source_cells[ind]
-    phi_t = state_t.Phi[t_c]
-    phi_s = state_s.Phi[t_s]
+    ind_t   = ct.target_cells[ind]
+    ind_s   = ct.source_cells[ind]
+    phi_t = state_t.Phi[ind_t]
+    phi_s = state_s.Phi[ind_s]
     
     out[] = trans*(phi_t - phi_s)
     
@@ -39,12 +39,12 @@ function Jutul.update_cross_term_in_entity!(out                           ,
                                             dt                            ,
                                             ldisc = Jutul.local_discretization(ct, ind))
     trans = ct.trans
-    t_c = ct.target_cell
-    phi_t = state_t.Phi[t_c]
+    ind_t = ct.target_cell
+    phi_t = state_t.Phi[ind_t]
     phi_s = state_s.Phi
     v = 0
-    for (i, s_c) in enumerate(ct.source_cells)
-        v = trans[i]*(phi_t - phi_s[s_c])
+    for (i, ind_s) in enumerate(ct.source_cells)
+        v = trans[i]*(phi_t - phi_s[ind_s])
     end
 
     out[] = v
@@ -130,18 +130,18 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     
     n = activematerial.params[:n_charge_carriers]
     
-    t_c = ct.target_cells[ind]
-    s_c = ct.source_cells[ind]
+    ind_t = ct.target_cells[ind]
+    ind_s = ct.source_cells[ind]
 
-    vols  = model_s.domain.representation.volumes[s_c]
+    vols  = model_t.domain.representation.volumes[ind_t]
 
-    phi_e = state_t.Phi[t_c]
-    phi_a = state_s.Phi[s_c]  
-    ocp   = state_s.Ocp[s_c]
-    R0    = state_s.ReactionRateConst[s_c]
-    c_e   = state_t.C[t_c]
-    c_a   = state_s.Cs[s_c]
-    T     = state_s.Temperature[s_c]
+    phi_e = state_t.Phi[ind_t]
+    phi_a = state_s.Phi[ind_s]  
+    ocp   = state_s.Ocp[ind_s]
+    R0    = state_s.ReactionRateConst[ind_s]
+    c_e   = state_t.C[ind_t]
+    c_a   = state_s.Cs[ind_s]
+    T     = state_s.Temperature[ind_s]
 
     R = reaction_rate(phi_a         ,
                       c_a           ,
@@ -191,18 +191,18 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     
     n = activematerial.params[:n_charge_carriers]
 
-    t_c = ct.target_cells[ind]
-    s_c = ct.source_cells[ind]
+    ind_t = ct.target_cells[ind]
+    ind_s = ct.source_cells[ind]
 
-    vols  = model_s.domain.representation.volumes[s_c]
+    vols  = model_t.domain.representation.volumes[ind_t]
 
-    phi_e = state_s.Phi[s_c]
-    phi_a = state_t.Phi[t_c]  
-    ocp   = state_t.Ocp[t_c]
-    R0    = state_t.ReactionRateConst[t_c]
-    c_e   = state_s.C[s_c]
-    c_a   = state_t.Cs[t_c]
-    T     = state_t.Temperature[t_c]
+    phi_e = state_s.Phi[ind_s]
+    phi_a = state_t.Phi[ind_t]  
+    ocp   = state_t.Ocp[ind_t]
+    R0    = state_t.ReactionRateConst[ind_t]
+    c_e   = state_s.C[ind_s]
+    c_a   = state_t.Cs[ind_t]
+    T     = state_t.Temperature[ind_t]
 
     R = reaction_rate(phi_a         ,
                       c_a           ,
@@ -216,10 +216,10 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     
     
     if eq isa SolidMassCons
-        
-        rp = activematerial.discretization[:R] # particle radius
+
+        rp = activematerial.discretization[:rp] # particle radius
         N  = activematerial.discretization[:N] # boundary index for P2D discretization
-        vf = model_s.domain.representation.vol_frac[t_c]
+        vf = model_s.domain.representation.vol_frac[ind_t]
         
         v = 1.0*R*(4*pi*rp^3)/(3*vf)
 
@@ -297,18 +297,18 @@ function Jutul.update_cross_term_in_entity!(out,
     activematerial = model_s.system
     electrolyte = model_t.system
 
-    t_c = ct.target_cells[ind]
-    s_c = ct.source_cells[ind]
+    ind_t = ct.target_cells[ind]
+    ind_s = ct.source_cells[ind]
 
-    vols  = model_s.domain.representation.volumes[s_c]
+    vols  = model_s.domain.representation.volumes[ind_s]
 
-    phi_e = state_t.Phi[t_c]
-    phi_a = state_s.Phi[s_c]  
-    ocp   = state_s.Ocp[s_c]
-    R     = state_s.ReactionRateConst[s_c]
-    c_e   = state_t.C[t_c]
-    c_a   = state_s.C[s_c]
-    T     = state_s.Temperature[s_c]
+    phi_e = state_t.Phi[ind_t]
+    phi_a = state_s.Phi[ind_s]  
+    ocp   = state_s.Ocp[ind_s]
+    R     = state_s.ReactionRateConst[ind_s]
+    c_e   = state_t.C[ind_t]
+    c_a   = state_s.C[ind_s]
+    T     = state_s.Temperature[ind_s]
 
     eS, eM = source_electric_material(vols,
                                       T,

@@ -597,14 +597,14 @@ function run_battery(name;
     
     sim, forces, grids, state0, parameters, exported_all, model = setup_sim(name, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
     
-    steps        = size(exported_all["states"],1)
-    alltimesteps = Vector{Float64}(undef,steps)
+    steps        = size(exported_all["states"], 1)
+    alltimesteps = Vector{Float64}(undef, steps)
     time         = 0;
     end_step     = 0
     minE         = 3.2
     
-    for i = 1:steps
-        alltimesteps[i] =  exported_all["states"][i]["time"]-time
+    for i = 1 : steps
+        alltimesteps[i] =  exported_all["states"][i]["time"] - time
         time = exported_all["states"][i]["time"]
         E = exported_all["states"][i]["Control"]["E"]
         if (E > minE + 0.001)
@@ -614,7 +614,7 @@ function run_battery(name;
     if !isnothing(max_step)
         end_step = min(max_step, end_step)
     end
-    timesteps = alltimesteps[1:end_step]
+    timesteps = alltimesteps[1 : end_step]
     cfg = simulator_config(sim; kwarg...)
     cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
     cfg[:debug_level]                = 0
