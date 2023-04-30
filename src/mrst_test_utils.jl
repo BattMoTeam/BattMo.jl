@@ -165,7 +165,7 @@ function setup_model(exported_all; use_p2d = true, use_groups = false, kwarg...)
     end
 
     if use_p2d
-        sys_nam = ActiveMaterial{P2Ddiscretization}(graphite_params, 5.86e-6, 6)
+        sys_nam = ActiveMaterial{P2Ddiscretization}(graphite_params, 5.86e-6, 10)
     else
         sys_nam = ActiveMaterial{NoParticleDiffusion}(graphite_params)
     end
@@ -189,7 +189,7 @@ function setup_model(exported_all; use_p2d = true, use_groups = false, kwarg...)
     (model_elyte, G_elyte, parm_elyte, init_elyte) = make_system(exported_elyte, sys_elyte, bcfaces, srccells; kwarg...)
 
     if use_p2d
-        sys_pam = ActiveMaterial{P2Ddiscretization}(nmc111_params, 5.86e-6, 6)
+        sys_pam = ActiveMaterial{P2Ddiscretization}(nmc111_params, 5.86e-6, 10)
     else
         sys_pam = ActiveMaterial{NoParticleDiffusion}(nmc111_params)
     end
@@ -614,7 +614,11 @@ function run_battery(name;
     if !isnothing(max_step)
         end_step = min(max_step, end_step)
     end
-    timesteps = alltimesteps[1 : end_step]
+    
+    # end_step  = 12
+    # timesteps = alltimesteps[1 : end_step]
+    n = 200
+    timesteps = 766/n*ones(n)
     cfg = simulator_config(sim; kwarg...)
     cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
     cfg[:debug_level]                = 0

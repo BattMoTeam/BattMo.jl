@@ -28,21 +28,21 @@ name = "p1d_40"
 
 fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
 
-sim, forces, grids, state0, parameters, exported_all, model = BattMo.setup_sim(name, use_p2d = false)
+sim, forces, grids, state0, parameters, exported_all, model = BattMo.setup_sim(name, use_p2d = true)
 
-states, reports, extra, grids, exported_all = run_battery(name, use_p2d = false, info_level = 5, max_step = nothing);
+states, reports, extra, grids, exported_all = run_battery(name, use_p2d = true, info_level = 5, max_step = nothing);
 
 stateref  = extra[:states_ref]
 timesteps = extra[:timesteps]
 steps     = size(states, 1)
 
-E = Matrix{Float64}(undef, steps, 2)
+E = Matrix{Float64}(undef, steps, 1)
 
 for step in 1 : steps
     phi       = states[step][:BPP][:Phi][1]
-    E[step,1] = phi
-    phi_ref   = stateref[step]["Control"]["E"]
-    E[step,2] = phi_ref
+    E[step] = phi
+    # phi_ref   = stateref[step]["Control"]["E"]
+    # E[step,2] = phi_ref
 end
 timesteps = timesteps[1 : steps]
 
