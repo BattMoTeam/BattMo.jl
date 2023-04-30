@@ -1,4 +1,3 @@
-
 Jutul.symmetry(::TPFAInterfaceFluxCT) = Jutul.CTSkewSymmetry()
 
 Jutul.cross_term_entities(ct::TPFAInterfaceFluxCT, eq, model) = ct.target_cells
@@ -219,10 +218,10 @@ function Jutul.update_cross_term_in_entity!(out                            ,
 
         rp = activematerial.discretization[:rp] # particle radius
         N  = activematerial.discretization[:N] # boundary index for P2D discretization
-        vf = model_s.domain.representation.vol_frac[ind_t]
-        
-        v = 1.0*R*(4*pi*rp^3)/(3*vf)
+        vf = model_t.domain.representation.vol_frac[ind_t]
 
+        v = R*(4*pi*rp^3)/(3*vf)
+        
         @. out = 0
         out[N] = v
         
