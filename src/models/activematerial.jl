@@ -113,11 +113,11 @@ function setupSolidDiffusionDiscretization(rp, N)
         k += 1
     end
         
-    data = Dict(:N => N      ,
-                :rp => rp    ,
-                :hT => hT    ,
+    data = Dict(:N    => N   ,
+                :rp   => rp  ,
+                :hT   => hT  ,
                 :vols => vols,
-                :div => div  ,
+                :div  => div ,
                 )
     
     return data
@@ -128,16 +128,6 @@ end
 ## Setup common for both diffusion models (full p2d and no diffusion)
 ####################################################
 
-function select_minimum_output_variables!(out                   ,
-                                          system::ActiveMaterial,
-                                          model::SimulationModel
-                                          )
-    push!(out, :Charge)
-    push!(out, :Mass)
-    push!(out, :Ocp)
-    push!(out, :Temperature)
-    
-end
 
 function Jutul.select_parameters!(S                     ,
                                   system::ActiveMaterial,
@@ -154,6 +144,18 @@ end
 #####################################################
 ## We setup the case with full P2d discretization
 ####################################################
+
+function select_minimum_output_variables!(out                   ,
+                                          system::ActiveMaterial{P2Ddiscretization},
+                                          model::SimulationModel
+                                          )
+    push!(out, :Charge)
+    push!(out, :Ocp)
+    push!(out, :Cs)
+    push!(out, :Temperature)
+    
+end
+
 
 function select_primary_variables!(S,
                                    system::ActiveMaterial{P2Ddiscretization},
@@ -339,6 +341,17 @@ end
 #####################################################
 ## We setup the case with full no particle diffusion
 #####################################################
+
+function select_minimum_output_variables!(out                   ,
+                                          system::ActiveMaterial{NoParticleDiffusion},
+                                          model::SimulationModel
+                                          )
+    push!(out, :Charge)
+    push!(out, :Mass)
+    push!(out, :Ocp)
+    push!(out, :Temperature)
+    
+end
 
 function select_primary_variables!(S,
                                    system::ActiveMaterial{NoParticleDiffusion},
