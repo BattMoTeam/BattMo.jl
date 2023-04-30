@@ -60,7 +60,7 @@ end
 function compute_diffusion_coef_graphite(T, c)
     
     refT = 298.15
-    D0   = 3.9e-14
+    D0   = 3.9e-12
     Ead  = 5000
     val  = D0.*exp(-Ead./FARADAY_CONST .*(1.0./T - 1/refT));
     
@@ -156,7 +156,7 @@ end
 function compute_diffusion_coef_nmc111(T, c)
     
     refT = 298.15
-    D0   = 1e-14
+    D0   = 1e-12
     Ead  = 5000
 
     val = D0.*exp(-Ead./FARADAY_CONST .*(1.0./T - 1/refT));

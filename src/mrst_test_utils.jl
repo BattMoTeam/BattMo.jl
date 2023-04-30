@@ -151,7 +151,7 @@ end
 
 function setup_model(exported_all; use_p2d = true, use_groups = false, kwarg...)
 
-    skip_cc = size(exported_all["model"]["include_current_collectors"]) == (0,0)
+    skip_cc = size(exported_all["model"]["include_current_collectors"]) == (0, 0)
     skip_cc = false
     
     if !skip_cc
@@ -615,10 +615,8 @@ function run_battery(name;
         end_step = min(max_step, end_step)
     end
     
-    # end_step  = 12
-    # timesteps = alltimesteps[1 : end_step]
-    n = 200
-    timesteps = 766/n*ones(n)
+    timesteps = alltimesteps[1 : end_step]
+    
     cfg = simulator_config(sim; kwarg...)
     cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
     cfg[:debug_level]                = 0
