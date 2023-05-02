@@ -125,37 +125,8 @@ function setupSolidDiffusionDiscretization(rp, N)
 end
 
 #####################################################
-## Setup common for both diffusion models (full p2d and no diffusion)
-####################################################
-
-
-function Jutul.select_parameters!(S                     ,
-                                  system::ActiveMaterial,
-                                  model::SimulationModel
-                                  )
-    
-    S[:Temperature]  = Temperature()
-    S[:Conductivity] = Conductivity()
-    S[:Diffusivity]  = Diffusivity()
-    
-end
-
-
-#####################################################
 ## We setup the case with full P2d discretization
 ####################################################
-
-function select_minimum_output_variables!(out                   ,
-                                          system::ActiveMaterial{P2Ddiscretization},
-                                          model::SimulationModel
-                                          )
-    push!(out, :Charge)
-    push!(out, :Ocp)
-    push!(out, :Cs)
-    push!(out, :Temperature)
-    
-end
-
 
 function select_primary_variables!(S,
                                    system::ActiveMaterial{P2Ddiscretization},
@@ -165,7 +136,6 @@ function select_primary_variables!(S,
     S[:Cp]  = Cp()
     
 end
-
 
 function degrees_of_freedom_per_entity(model::ActiveMaterialModel,
                                        ::Cp)
@@ -177,6 +147,14 @@ function degrees_of_freedom_per_entity(model::ActiveMaterialModel,
     return  solid_diffusion_discretization_number(model.system) - 1
 end
 
+function Jutul.select_parameters!(S,
+                                  system::ActiveMaterial{P2Ddiscretization},
+                                  model::SimulationModel)
+    
+    S[:Temperature]  = Temperature()
+    S[:Conductivity] = Conductivity()
+    
+end
 
 function select_secondary_variables!(S,
                                      system::ActiveMaterial{P2Ddiscretization},
@@ -190,7 +168,6 @@ function select_secondary_variables!(S,
     S[:SolidDiffFlux]     = SolidDiffFlux()
     
 end
-
 
 function select_equations!(eqs,
                            system::ActiveMaterial{P2Ddiscretization},
@@ -207,6 +184,18 @@ end
 function Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::SolidMassCons)
 
     return solid_diffusion_discretization_number(model.system)
+    
+end
+
+
+function select_minimum_output_variables!(out                   ,
+                                          system::ActiveMaterial{P2Ddiscretization},
+                                          model::SimulationModel
+                                          )
+    push!(out, :Charge)
+    push!(out, :Ocp)
+    push!(out, :Cs)
+    push!(out, :Temperature)
     
 end
 
@@ -342,16 +331,6 @@ end
 ## We setup the case with full no particle diffusion
 #####################################################
 
-function select_minimum_output_variables!(out                   ,
-                                          system::ActiveMaterial{NoParticleDiffusion},
-                                          model::SimulationModel
-                                          )
-    push!(out, :Charge)
-    push!(out, :Mass)
-    push!(out, :Ocp)
-    push!(out, :Temperature)
-    
-end
 
 function select_primary_variables!(S,
                                    system::ActiveMaterial{NoParticleDiffusion},
@@ -374,6 +353,16 @@ function select_secondary_variables!(S,
     
 end
 
+function Jutul.select_parameters!(S,
+                                  system::ActiveMaterial{P2Ddiscretization},
+                                  model::SimulationModel)
+    
+    S[:Temperature]  = Temperature()
+    S[:Conductivity] = Conductivity()
+    S[:Diffusivity]  = Diffusivity()
+    
+end
+
 function select_equations!(eqs,
                            system::ActiveMaterial{NoParticleDiffusion},
                            model::SimulationModel
@@ -384,6 +373,20 @@ function select_equations!(eqs,
     eqs[:mass_conservation]   = ConservationLaw(disc, :Mass)
     
 end
+
+
+function select_minimum_output_variables!(out                   ,
+                                          system::ActiveMaterial{NoParticleDiffusion},
+                                          model::SimulationModel
+                                          )
+    push!(out, :Charge)
+    push!(out, :Mass)
+    push!(out, :Ocp)
+    push!(out, :Temperature)
+    
+end
+
+
 
 @jutul_secondary(
     function update_vocp!(Ocp ,

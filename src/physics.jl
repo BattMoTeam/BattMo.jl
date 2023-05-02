@@ -110,7 +110,7 @@ function apply_boundary_potential!(
         BoundaryPhi = state[:BoundaryPhi]
         κ           = state[:Conductivity]
 
-        T_hf = model.domain.representation.boundary_T_hf
+        T_hf = model.domain.representation.boundary_hfT
 
         for (i, c) in enumerate(bc)
             @inbounds acc[c] += κ[c]*T_hf[i]*(Phi[c] - value(BoundaryPhi[i]))
@@ -132,7 +132,7 @@ function apply_boundary_potential!(
         D         = state[:Diffusivity]
 
         # Type
-        T_hf = model.domain.representation.boundary_T_hf
+        T_hf = model.domain.representation.boundary_hfT
         for (i, c) in enumerate(bc)
             @inbounds acc[c] += D[c]*T_hf[i]*(C[c] - value(BoundaryC[i]))
         end

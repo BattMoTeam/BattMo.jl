@@ -64,13 +64,13 @@ struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
     """
     volumes::V
     neighborship::N
-    boundary_cells::B
-    boundary_T_hf::BT
+    boundary_cells::B # indices of the boundary cells (some can can be repeated if a cell has two boundary faces). Same length as boundary_hfT.
+    boundary_hfT::BT # Boundary half face transmissibilities
     P::M # Tensor to map from cells to faces
     S::M # Tensor map cell vector to cell scalar
     vol_frac::V
     trans::V
-    function MinimalECTPFAGrid(pv, N, T; bc=[], T_hf=[], P=[], S=[], vf=[])
+    function MinimalECTPFAGrid(pv, N, T; bc=[], bc_hfT=[], P=[], S=[], vf=[])
         nc = length(pv)
         pv::AbstractVector
         @assert size(N, 1) == 2
@@ -79,11 +79,11 @@ struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
             @assert maximum(N) <= nc
         end
         @assert all(pv .> 0)
-        @assert size(bc) == size(T_hf)
+        @assert size(bc) == size(bc_hfT)
         if length(vf) != nc
             vf = ones(nc)
         end
-        return new{typeof(pv), typeof(N), typeof(bc), typeof(T_hf), typeof(P)}(pv, N, bc, T_hf, P, S, vf, T)
+        return new{typeof(pv), typeof(N), typeof(bc), typeof(bc_hfT), typeof(P)}(pv, N, bc, bc_hfT, P, S, vf, T)
     end
 end
 

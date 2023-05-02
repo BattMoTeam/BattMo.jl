@@ -19,12 +19,19 @@ function select_secondary_variables!(
     )
     # S[:TPkGrad_Phi] = TPkGrad{Phi}()
     S[:Charge] = Charge()
+    
 end
 
 function Jutul.select_parameters!(
         S, system::CurrentCollector, model::SimulationModel
     )
+    
     S[:Conductivity] = Conductivity()
+    S[:BoundaryPhi]  = BoundaryPotential(:Phi)
+    S[:BoundaryC]    = BoundaryPotential(:C)
+    S[:BCCharge]     = BoundaryCurrent(srccells, :Charge)
+    S[:BCMass]       = BoundaryCurrent(srccells, :Mass)
+    
 end
 
 function select_equations!(

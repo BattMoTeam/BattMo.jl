@@ -39,7 +39,6 @@ function get_cc_grid(;
                      extraout   = false,
                      bc         = [],
                      b_T_hf     = [],
-                     tensor_map = false,
                      general_ad = false)
     
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
@@ -74,7 +73,6 @@ function get_cc_grid(;
     P, S = get_tensorprod(name)
     G = MinimalECTPFAGrid(volumes, N, vec(T); bc = bc, T_hf = b_T_hf, P = P, S = S)
 
-    @assert !tensor_map
     nc = length(volumes)
     if general_ad
         flow = PotentialFlow(N, nc)
@@ -91,19 +89,29 @@ function get_cc_grid(;
     end
 end
 
-function exported_model_to_domain(exported; bc = []   ,
-                                  b_T_hf       = []   ,
-                                  tensor_map   = false,
-                                  vf           = []   ,
-                                  general_ad   = false)
+function exported_model_to_domain(exported;
+                                  bcfaces    = [], 
+                                  general_ad = false)
 
     """ Returns domain"""
 
     N = exported["G"]["faces"]["neighbors"]
     N = Int64.(N)
+
+    isboundary = (N[bcfaces, 1].==0) .| (N[bcfaces, 2].==0)
+    @assert all(isboundary)
+    
+    bccells = N[bcfaces, 1] + N[bcfaces, 2]
+    bc_hfT = getHalfTrans(exported, bcfaces)
+    
+    vf = []
+    if haskey(exported, "volumeFraction")
+        vf = exported["volumeFraction"][:, 1]
+    end
+    
     internal_faces = (N[:, 2] .> 0) .& (N[:, 1] .> 0)
     N = copy(N[internal_faces, :]')
-        
+    
     face_areas   = vec(exported["G"]["faces"]["areas"][internal_faces])
     face_normals = exported["G"]["faces"]["normals"][internal_faces, :]./face_areas
     face_normals = copy(face_normals')
@@ -120,13 +128,12 @@ function exported_model_to_domain(exported; bc = []   ,
     S = []
     T = exported["operators"]["T"].*2.0*1.0
     G = MinimalECTPFAGrid(volumes, N, vec(T);
-                          bc   = bc,
-                          T_hf = b_T_hf,
+                          bccells = bccells,
+                          bc_hfT = bc_hfT,
                           P    = P,
                           S    = S,
                           vf   = vf)
 
-    @assert !tensor_map
     nc = length(volumes)
     if general_ad
         flow = PotentialFlow(G)
@@ -155,63 +162,3 @@ function get_ref_states(j2m, ref_states)
     
 end
 
-function get_simple_elyte_model(name = "modelElectrolyte";
-                                kwarg...)
-    
-    fn = string(dirname(pathof(Jutul)), "/../data/models/", name, ".mat")
-    exported = MAT.matread(fn)
-    ex_model = exported["model"]
-
-    boundary = ex_model["bcstruct"]["dirichlet"]
-
-    b_faces = Int64.(boundary["faces"])
-    T_all = ex_model["operators"]["T_all"]
-    N_all = Int64.(ex_model["G"]["faces"]["neighbors"])
-    isboundary = (N_all[b_faces, 1].==0) .| (N_all[b_faces, 2].==0)
-    @assert all(isboundary)
-    bc_cells = N_all[b_faces, 1] + N_all[b_faces, 2]
-    b_T_hf   = T_all[b_faces]
-
-    domain = exported_model_to_domain(ex_model, bc = bc_cells, b_T_hf = b_T_hf; kwarg...)
-
-    sys = SimpleElyte()
-    model = SimulationModel(domain, sys, context = DefaultContext())
-
-    S = model.parameters
-    S[:BoundaryPhi] = BoundaryPotential(:Phi)
-    S[:BoundaryC] = BoundaryPotential(:C)
-
-    return model, exported
-    
-end
-
-function get_simple_elyte_sim(model, exported)
-    
-    error("Not working?")
-    boundary = exported["model"]["bcstruct"]["dirichlet"]
-    b_phi = boundary["phi"][:, 1]
-    b_c = boundary["conc"][:, 1]
-    init_states = exported["state0"]
-    init = Dict(
-        :Phi            => init_states["phi"][:, 1],
-        :C              => init_states["cs"][1][:, 1],
-        :T              => init_states["T"][:, 1],
-        :BoundaryPhi    => b_phi,
-        :BoundaryC      => b_c,
-        )
-
-    state0 = setup_state(model, init)
-
-    parameters = setup_parameters(model)
-    parameters[:tolerances][:default] = 1e-10
-    t1, t2 = exported["model"]["sp"]["t"]
-    z1, z2 = exported["model"]["sp"]["z"]
-    tDivz_eff = (t1/z1 + t2/z2)
-    parameters[:t] = tDivz_eff
-    parameters[:z] = 1
- 
-    sim = Simulator(model, state0=state0, parameters=parameters)
-
-    return sim
-    
-end
