@@ -53,28 +53,159 @@ function my_number_of_cells(model::MultiModel)
     for smodel in model.models
         cells += number_of_cells(smodel.domain)
     end
-    
+
     return cells
     
 end
 
-function make_system(exported, sys, bcfaces, srccells; kwarg...)
+function make_system(exported, sys::CurrentCollector;  bcfaces = nothing, srccells = nothing, kwargs...)
 
-    N_all = Int64.(exported["G"]["faces"]["neighbors"])
-    isboundary = (N_all[bcfaces, 1].==0) .| (N_all[bcfaces, 2].==0)
-    @assert all(isboundary)
-    
-    bccells = N_all[bcfaces,1] + N_all[bcfaces,2]
-    msource = exported
-    T_hf = getHalfTrans(msource, bcfaces)
-    
-    bcvalue_zeros = zeros(size(bccells))
-    bcvalue_ones  = ones(size(bccells))
+    @assert !isnothing(bcfaces)
 
-    vf = []
-    if haskey(exported, "volumeFraction")
-        vf = exported["volumeFraction"][:, 1]
+    # Setup geometry from exported data
+
+    domain = exported_model_to_domain(exported, bcfaces = bcfaces; kwarg...)
+    model = SimulationModel(domain, sys, context = DefaultContext())
+
+    G = exported["G"]
+
+    # Setup parameters from exported data
+    
+    prm = Dict{Symbol, Any}()
+    
+    kappa = exported["EffectiveElectricalConductivity"][1]
+    prm[:Conductivity] = kappa
+
+    nbc = count_active_entities(domain, BoundaryFaces())
+    bcvalue_zeros = zeros(nbc)
+    
+    prm[:BoundaryPhi] = bcvalue_zeros 
+    prm[:BoundaryC]   = bcvalue_zeros 
+    prm[:BCCharge]    = bcvalue_zeros
+    prm[:BCMass]      = bcvalue_zeros
+            
+    prm = setup_parameters(model, prm)
+
+    # Setup initial values from exported data
+
+    phi0 = 1.0
+    init = Dict(:Phi => phi0)
+    
+    return model, G, prm, init
+
+end
+
+function make_system(exported_model, exported_state0,  sys::TestElyte, srccells; kwargs)
+
+    # Setup geometry from exported data
+
+    domain = exported_model_to_domain(exported_model, bcfaces = bcfaces; kwargs...)
+    model = SimulationModel(domain, sys, context = DefaultContext())
+
+    G = exported["G"]
+
+    # Setup parameters from exported data
+
+    prm = Dict{Symbol, Any}()
+
+
+    # Setup initial values from exported data
+
+
+    init = Dict()
+    init_elyte[:Phi] = exported_state0["phi"][1] # we take the first value
+    
+    return model, G, prm, init
+
+end
+
+
+function make_system(exported, sys::ActiveMaterial;  bcfaces = nothing, srccells = nothing, use_current_collector = true, kwargs...)
+
+    # Setup geometry from exported data
+    
+    domain = exported_model_to_domain(exported, bcfaces = bcfaces; kwargs...)
+    model = SimulationModel(domain, sys, context = DefaultContext())
+
+    G = exported["G"]
+
+    # Setup parameters from exported data
+
+    kappa = exported["EffectiveElectricalConductivity"][1]
+    
+    prm = Dict{Symbol, Any}()
+    
+    prm[:Conductivity] = kappa
+
+    if !use_current_collector
+        
+        S = model.parameters
+
+        nbc = count_active_entities(domain, BoundaryFaces())
+        
+        if nbc > 0
+
+            bcvalue_zeros = zeros(nbc)
+            
+            # add parameters to the model
+            S[:BoundaryPhi] = BoundaryPotential(:Phi)
+            S[:BoundaryC]   = BoundaryPotential(:C)
+            S[:BCCharge]    = BoundaryCurrent(srccells, :Charge)
+            S[:BCMass]      = BoundaryCurrent(srccells, :Mass)
+
+            # add initialization values for the parameters
+            prm[:BoundaryPhi] = bcvalue_zeros 
+            prm[:BoundaryC]   = bcvalue_zeros 
+            prm[:BCCharge]    = bcvalue_zeros
+            prm[:BCMass]      = bcvalue_zeros
+            
+        end
+    
     end
+
+    T0   = 298.15
+    prm[:Temperature] = T0
+    
+    prm = setup_parameters(model, prm)
+
+    phi0 = 1.0
+    I0   = 1.0
+    
+    # Setup initial values
+    
+    init = Dict(
+        :Phi     => phi0,
+        :Current => I0,
+    )
+    
+    return model, G, prm, init
+
+
+end
+
+    
+function make_system(exported, sys::ActiveMaterial{P2Ddiscretization};  bcfaces = missing, srccells = missing, use_current_collector = true, kwargs...)
+    
+    @invoke model, G, prm, init = make_system(exported, sys::ActiveMaterial; bcfaces = bcfaces, srccells = srccells, use_current_collector = use_current_collector, kwargs...)
+    
+end
+
+    
+function make_system(exported, sys::ActiveMaterial{NoParticleDiffusion};  bcfaces = missing, srccells = missing, use_current_collector = true, kwargs...)
+    
+    @invoke model, G, prm, init = make_system(exported, sys::ActiveMaterial; bcfaces = bcfaces, srccells = srccells, use_current_collector = use_current_collector, kwargs...)
+    
+    D = exported["InterDiffusionCoefficient"]
+    prm[:Diffusivity] = D
+
+    prm = setup_parameters(model, prm)
+
+    return model, G, prm, init
+    
+end
+
+
+function make_system(exported, sys::ActiveMaterial; ;  bcfaces = missing, srccells = missing, use_current_collector = true, kwargs...)
     
     domain = exported_model_to_domain(exported, bc = bccells, b_T_hf = T_hf, vf=vf; kwarg...)
     G = exported["G"]
@@ -87,18 +218,7 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
     T0   = 298.15
     I0   = 1.0
     
-    if haskey(exported,"InterDiffusionCoefficient")
-        D = exported["InterDiffusionCoefficient"]
-    else
-        D = 0.0
-    end
-    if isa(exported["EffectiveElectricalConductivity"], Matrix)
-        kappa = exported["EffectiveElectricalConductivity"][1]
-    else
-        kappa = 1.0
-    end
-    
-    thermal_conductivity = exported["thermalConductivity"][1]
+    kappa = exported["EffectiveElectricalConductivity"][1]
 
     S = model.parameters
     
@@ -123,8 +243,8 @@ function make_system(exported, sys, bcfaces, srccells; kwarg...)
 
     init = Dict(
         :Phi     => phi0,
-        :Current => I0,
-        )
+    )
+    
     if model.system isa Electrolyte
         init[:Conductivity] = kappa
         init[:Diffusivity] = D
@@ -337,6 +457,16 @@ function setup_model(exported_all; use_p2d = true, use_groups = false, kwarg...)
 
     return model, state0, parameters, grids
 end
+
+
+function setup_battery_parameters(model)
+
+end
+
+function setup_battery_initial_state(model)
+
+end
+
 
 ##
 
