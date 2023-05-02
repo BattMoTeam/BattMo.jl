@@ -189,7 +189,7 @@ function setup_model(exported_all; use_p2d = true, use_groups = false, kwarg...)
     (model_elyte, G_elyte, parm_elyte, init_elyte) = make_system(exported_elyte, sys_elyte, bcfaces, srccells; kwarg...)
 
     if use_p2d
-        sys_pam = ActiveMaterial{P2Ddiscretization}(nmc111_params, 5.86e-6, 10)
+        sys_pam = ActiveMaterial{P2Ddiscretization}(nmc111_params, 5.22e-6, 10)
     else
         sys_pam = ActiveMaterial{NoParticleDiffusion}(nmc111_params)
     end
