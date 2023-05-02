@@ -1,5 +1,7 @@
-casenames = {'p1d_40'};
+casenames = {'p1d_40',
+             'p2d_40'};
 
+casenames = {'p2d_40'};
 battmo_folder = fileparts(mfilename('fullpath'));
 battmo_folder = fullfile(battmo_folder, '../../..');
 
