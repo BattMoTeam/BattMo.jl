@@ -28,9 +28,9 @@ name = "p1d_40"
 
 fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
 
-sim, forces, grids, state0, parameters, exported_all, model = BattMo.setup_sim(name, use_p2d = true)
+sim, forces, state0, parameters, exported, model = BattMo.setup_sim(name, use_p2d = true)
 
-states, reports, extra, grids, exported_all = run_battery(name, use_p2d = true, info_level = 5, max_step = nothing);
+states, reports, extra, exported = run_battery(name, use_p2d = true, info_level = 5, max_step = nothing);
 
 stateref  = extra[:states_ref]
 timesteps = extra[:timesteps]

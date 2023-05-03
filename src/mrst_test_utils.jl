@@ -227,7 +227,7 @@ function setup_battery_parameters(exported, model)
         prm_cc = Dict{Symbol, Any}()
         exported_cc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
         prm_cc[:Conductivity] = exported_cc["EffectiveElectricalConductivity"][1]
-        parameters[:CC] = prm_cc
+        parameters[:CC] = setup_parameters(model[:CC], prm_cc)
     end
 
     # Negative active material
@@ -244,14 +244,14 @@ function setup_battery_parameters(exported, model)
         prm_nam[:Diffusivity] = exported_nam["InterDiffusionCoefficient"]
     end
 
-    parameters[:NAM] = prm_nam
+    parameters[:NAM] = setup_parameters(model[:NAM], prm_nam)
 
     # Electrolyte
     
     prm_elyte = Dict{Symbol, Any}()
     prm_elyte[:Temperature] = T0        
 
-    parameters[:ELYTE] = prm_elyte
+    parameters[:ELYTE] = setup_parameters(model[:ELYTE], prm_elyte)
 
     # Positive active material
 
@@ -267,7 +267,7 @@ function setup_battery_parameters(exported, model)
         prm_pam[:Diffusivity] = exported_nam["InterDiffusionCoefficient"]
     end
 
-    parameters[:PAM] = prm_pam
+    parameters[:PAM] = setup_parameters(model[:PAM], prm_pam)
 
     # Positive current collector (if any)
 
@@ -282,9 +282,10 @@ function setup_battery_parameters(exported, model)
         exported_pp = exported["model"]["PositiveElectrode"]["CurrentCollector"]
         prm_pp[:Conductivity] = exported_pp["EffectiveElectricalConductivity"][1]
         
-        parameters[:PP] = prm_pp
+        parameters[:PP] = setup_parameters(model[:PP], prm_pp)
     end        
 
+    parameters[:BPP] = setup_parameters(model[:BPP])
 
     return parameters
     
@@ -370,6 +371,14 @@ function setup_battery_initial_state(exported, model)
 
     end
 
+    function initialize_bpp!(initState)
+
+        init = Dict(:Phi => 1.0, :Current => 1.0)
+        
+        initState[:BPP] = init
+        
+    end
+    
     initState = Dict()
 
     initialize_current_collector!(initState, :CC)
@@ -377,8 +386,8 @@ function setup_battery_initial_state(exported, model)
     initialize_electrolyte!(initState)
     initialize_active_material!(initState, :PAM)
     initialize_current_collector!(initState, :PP)
+    initialize_bpp!(initState)
 
-    @infiltrate
     
     initState = setup_state(model, initState)
 
@@ -389,8 +398,9 @@ end
 
 function setup_coupling!(model, exported_all)
     # setup coupling CC <-> NAM :charge_conservation
+    
     skip_pp = size(exported_all["model"]["include_current_collectors"]) == (0,0)
-    skip_cc = faPP
+    skip_cc = false
     
     if !skip_cc
         
@@ -688,7 +698,6 @@ function run_battery(name;
     stateref = exported["states"]
 
     extra = Dict(:model => model,
-                 :grids => grids,
                  :state0 => state0,
                  :states_ref => stateref,
                  :parameters => parameters,
@@ -698,9 +707,9 @@ function run_battery(name;
                  :forces => forces,
                  :simulator => sim)
 
-    return (states = states, reports = report, extra = extra, grids = grids, exported = exported)
-    # return states, grids, state0, stateref, parameters, exported, model, timesteps, cfg, report, sim
+    return (states = states, reports = report, extra = extra, exported = exported)
 end
+
 export inputRefToStates
 function inputRefToStates(states, stateref)
 statesref = deepcopy(states);
