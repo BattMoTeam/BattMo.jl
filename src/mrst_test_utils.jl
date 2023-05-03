@@ -72,7 +72,7 @@ function setup_model(exported; use_p2d = true, use_groups = false, kwarg...)
 
     include_cc = true
 
-    model      = setup_battery_model(exported, use_p2d = true, include_cc = include_cc)
+    model      = setup_battery_model(exported, use_p2d = use_p2d, include_cc = include_cc)
     parameters = setup_battery_parameters(exported, model)
     initState  = setup_battery_initial_state(exported, model)
     
@@ -84,11 +84,71 @@ end
 function setup_battery_model(exported; include_cc = true, use_p2d = true, use_groups = false)
 
     function setup_component(exported, sys, bcfaces = nothing)
+        
         domain = exported_model_to_domain(exported, bcfaces = bcfaces)
         model = SimulationModel(domain, sys, context = DefaultContext())
         return model
+        
     end
 
+    exportNames = Dict(
+        :NAM => "NegativeElectrode",
+        :PAM => "PositiveElectrode",        
+    )
+    
+    function setup_active_material(name)
+
+        exportName = exportNames[name]
+
+        exported_am = exported["model"][exportName]["ActiveMaterial"]
+
+        am_params = Dict{Symbol, Any}()
+        am_params[:n_charge_carriers]       = exported_am["Interface"]["n"]
+        am_params[:maximum_concentration]   = exported_am["Interface"]["cmax"]
+        am_params[:volumetric_surface_area] = exported_am["Interface"]["volumetricSurfaceArea"]
+
+        if name == :NAM
+            am_params[:ocp_func]                    = compute_ocp_graphite
+            am_params[:reaction_rate_constant_func] = compute_reaction_rate_constant_graphite
+            am_params[:diffusion_coef_func]         = compute_diffusion_coef_graphite
+        elseif name == :PAM
+            am_params[:ocp_func]                    = compute_ocp_nmc111
+            am_params[:reaction_rate_constant_func] = compute_reaction_rate_constant_nmc111
+            am_params[:diffusion_coef_func]         = compute_diffusion_coef_nmc111
+        else
+            error("not recongized")
+        end
+        
+        if use_p2d
+            rp = exported_am["SolidDiffusion"]["rp"]
+            N = Int64(exported_am["SolidDiffusion"]["N"])
+            sys_am = ActiveMaterial{P2Ddiscretization}(am_params, rp, N)
+        else
+            sys_am = ActiveMaterial{NoParticleDiffusion}(am_params)
+        end
+        
+        if  include_cc
+            model_am = setup_component(exported_am, sys_am)
+        else
+            bcfaces_am = convert_to_int_vector(["externalCouplingTerm"]["couplingfaces"])
+            model_am   = setup_component(exported_am, sys_am, bcfaces_am)
+            # We add also boundary parameters (if any)
+            S = model_pam.parameters
+            nbc = count_active_entities(model_pam.domain, BoundaryFaces())
+            if nbc > 0
+                bcvalue_zeros = zeros(nbc)
+                # add parameters to the model
+                S[:BoundaryPhi] = BoundaryPotential(:Phi)
+                S[:BoundaryC]   = BoundaryPotential(:C)
+                S[:BCCharge]    = BoundaryCurrent(srccells, :Charge)
+                S[:BCMass]      = BoundaryCurrent(srccells, :Mass)
+            end
+        end
+
+        return model_am
+        
+    end
+    
     # Setup positive current collector if any
     
     if include_cc
@@ -102,32 +162,8 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
     end
 
     # Setup NAM
-    
-    if use_p2d
-        sys_nam = ActiveMaterial{P2Ddiscretization}(graphite_params, 5.86e-6, 10)
-    else
-        sys_nam = ActiveMaterial{NoParticleDiffusion}(graphite_params)
-    end
-    
-    exported_nam = exported["model"]["NegativeElectrode"]["ActiveMaterial"]
-    
-    if  include_cc
-        model_nam = setup_component(exported_nam, sys_nam)
-    else
-        bcfaces_nam = convert_to_int_vector(["externalCouplingTerm"]["couplingfaces"])
-        model_nam   = setup_component(exported_nam, sys_nam, bcfaces_nam)
-        # We add also boundary parameters (if any)
-        S = model_pam.parameters
-        nbc = count_active_entities(model_pam.domain, BoundaryFaces())
-        if nbc > 0
-            bcvalue_zeros = zeros(nbc)
-            # add parameters to the model
-            S[:BoundaryPhi] = BoundaryPotential(:Phi)
-            S[:BoundaryC]   = BoundaryPotential(:C)
-            S[:BCCharge]    = BoundaryCurrent(srccells, :Charge)
-            S[:BCMass]      = BoundaryCurrent(srccells, :Mass)
-        end
-    end
+
+    model_nam = setup_active_material(:NAM)
 
     ## Setup ELYTE
     
@@ -136,30 +172,7 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
 
     # Setup PAM
     
-    if use_p2d
-        sys_pam = ActiveMaterial{P2Ddiscretization}(nmc111_params, 5.22e-6, 10)
-    else
-        sys_pam = ActiveMaterial{NoParticleDiffusion}(nmc111_params)
-    end
-    exported_pam = exported["model"]["PositiveElectrode"]["ActiveMaterial"]
-    
-    if  include_cc
-        model_pam = setup_component(exported_pam, sys_pam)
-    else
-        bcfaces_pam = convert_to_int_vector(["externalCouplingTerm"]["couplingfaces"])
-        model_pam   = setup_component(exported_pam, sys_pam, bcfaces_pam)
-        # We add also boundary parameters (if any)
-        S = model_pam.parameters
-        nbc = count_active_entities(model_pam.domain, BoundaryFaces())
-        if nbc > 0
-            bcvalue_zeros = zeros(nbc)
-            # add parameters to the model
-            S[:BoundaryPhi] = BoundaryPotential(:Phi)
-            S[:BoundaryC]   = BoundaryPotential(:C)
-            S[:BCCharge]    = BoundaryCurrent(srccells, :Charge)
-            S[:BCMass]      = BoundaryCurrent(srccells, :Mass)
-        end
-    end
+    model_pam = setup_active_material(:PAM)
 
     # Setup negative current collector if any
     if include_cc
@@ -324,6 +337,8 @@ function setup_battery_initial_state(exported, model)
     function initialize_active_material!(initState, name::Symbol)
         """ initialize values for the active material"""
 
+        exportName = exportNames[name]
+        
         ccnames = Dict(
             :NAM => :CC,
             :PAM => :PP,
@@ -341,18 +356,18 @@ function setup_battery_initial_state(exported, model)
 
         init = Dict()
         
-        init[:Phi]   = state0[exportNames[name]]["ActiveMaterial"]["phi"][1]
+        init[:Phi]   = state0[exportName]["ActiveMaterial"]["phi"][1]
 
         if use_cc
-            c = state0[exportNames[name]]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
+            c = state0[exportName]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
         else
-            c = state0[exportNames[name]]["ActiveMaterial"]["c"][1]
+            c = state0[exportName]["ActiveMaterial"]["c"][1]
         end
 
         if  discretisation_type(sys) == :P2Ddiscretization
             init[:Cp] = c
         else
-            @assert discretisation_type(sys_nam) == :NoParticleDiffusion
+            @assert discretisation_type(sys) == :NoParticleDiffusion
             init[:C] = c
         end
         
@@ -589,6 +604,7 @@ function currentFun(t::T, inputI::T) where T
 end
 
 function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggregation)
+    
     gs_its = 1
     cyc = AlgebraicMultigrid.V()
     if type == :smoothed_aggregation
@@ -597,7 +613,9 @@ function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggreg
         m = ruge_stuben
     end
     gs = GaussSeidel(ForwardSweep(), gs_its)
+    
     return AMGPreconditioner(m, max_levels = max_levels, max_coarse = max_coarse, presmoother = gs, postsmoother = gs, cycle = cyc)
+    
 end
 
 function setup_sim(name; use_p2d = true, use_groups = false, general_ad = false)

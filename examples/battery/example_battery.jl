@@ -13,7 +13,6 @@ using MAT
 ENV["JULIA_DEBUG"] = 0;
 
 # name = "model1D_50"
-name = "p1d_40"
 # name = "model1Dmod_50"
 # name = "model1Dmod_500"
 # name = "sector_7920"
@@ -26,23 +25,31 @@ name = "p1d_40"
 # name = "sector_1656_org"
 # name = "model3D_492"
 
+use_p2d = true
+
+if use_p2d
+    name = "p2d_40"
+else
+    name = "p1d_40"
+end
+
 fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
 
-sim, forces, state0, parameters, exported, model = BattMo.setup_sim(name, use_p2d = true)
+sim, forces, state0, parameters, exported, model = BattMo.setup_sim(name, use_p2d = use_p2d)
 
-states, reports, extra, exported = run_battery(name, use_p2d = true, info_level = 5, max_step = nothing);
+states, reports, extra, exported = run_battery(name, use_p2d = use_p2d, info_level = 5, max_step = nothing);
 
 stateref  = extra[:states_ref]
 timesteps = extra[:timesteps]
 steps     = size(states, 1)
 
-E = Matrix{Float64}(undef, steps, 1)
+E = Matrix{Float64}(undef, steps, 2)
 
 for step in 1 : steps
     phi       = states[step][:BPP][:Phi][1]
     E[step] = phi
-    # phi_ref   = stateref[step]["Control"]["E"]
-    # E[step,2] = phi_ref
+    phi_ref   = stateref[step]["Control"]["E"]
+    E[step,2] = phi_ref
 end
 timesteps = timesteps[1 : steps]
 
