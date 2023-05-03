@@ -70,9 +70,9 @@ end
 
 graphite_params = Dict{Symbol, Any}()
 
-graphite_params[:ocp_func]                    = compute_ocp_graphite
+graphite_params[:ocp_func]                    = getfield(BattMo, :compute_ocp_graphite)
 graphite_params[:n_charge_carriers]           = 1
-graphite_params[:reaction_rate_constant_func] = compute_reaction_rate_constant_graphite
+graphite_params[:reaction_rate_constant_func] = getfield(BattMo, :compute_reaction_rate_constant_graphite)
 graphite_params[:maximum_concentration]       = 30555
 graphite_params[:volumetric_surface_area]     = 723600
 graphite_params[:diffusion_coef_func]         = compute_diffusion_coef_graphite
