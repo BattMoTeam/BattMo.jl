@@ -102,10 +102,11 @@ function exported_model_to_domain(exported;
         isboundary = (N[bcfaces, 1].==0) .| (N[bcfaces, 2].==0)
         @assert all(isboundary)
     
-        bccells = N[bcfaces, 1] + N[bcfaces, 2]
+        bc_cells = N[bcfaces, 1] + N[bcfaces, 2]
         bc_hfT = getHalfTrans(exported, bcfaces)
     else
-        bc_hfT = nothing
+        bc_hfT = []
+        bc_cells = []
     end
     
     vf = []
@@ -132,11 +133,11 @@ function exported_model_to_domain(exported;
     S = []
     T = exported["operators"]["T"].*2.0*1.0
     G = MinimalECTPFAGrid(volumes, N, vec(T);
-                          bccells = bccells,
-                          bc_hfT = bc_hfT,
-                          P    = P,
-                          S    = S,
-                          vf   = vf)
+                          bc_cells = bc_cells,
+                          bc_hfT   = bc_hfT,
+                          P        = P,
+                          S        = S,
+                          vf       = vf)
 
     nc = length(volumes)
     if general_ad

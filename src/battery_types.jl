@@ -70,7 +70,7 @@ struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
     S::M # Tensor map cell vector to cell scalar
     vol_frac::V
     trans::V
-    function MinimalECTPFAGrid(pv, N, T; bc=[], bc_hfT=[], P=[], S=[], vf=[])
+    function MinimalECTPFAGrid(pv, N, T; bc_cells = [], bc_hfT = [], P = [], S = [], vf = [])
         nc = length(pv)
         pv::AbstractVector
         @assert size(N, 1) == 2
@@ -79,11 +79,11 @@ struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
             @assert maximum(N) <= nc
         end
         @assert all(pv .> 0)
-        @assert size(bc) == size(bc_hfT)
+        @assert size(bc_cells) == size(bc_hfT)
         if length(vf) != nc
             vf = ones(nc)
         end
-        return new{typeof(pv), typeof(N), typeof(bc), typeof(bc_hfT), typeof(P)}(pv, N, bc, bc_hfT, P, S, vf, T)
+        return new{typeof(pv), typeof(N), typeof(bc_cells), typeof(bc_hfT), typeof(P)}(pv, N, bc_cells, bc_hfT, P, S, vf, T)
     end
 end
 

@@ -354,7 +354,7 @@ function select_secondary_variables!(S,
 end
 
 function Jutul.select_parameters!(S,
-                                  system::ActiveMaterial{P2Ddiscretization},
+                                  system::ActiveMaterial{NoParticleDiffusion},
                                   model::SimulationModel)
     
     S[:Temperature]  = Temperature()

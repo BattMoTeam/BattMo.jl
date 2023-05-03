@@ -29,8 +29,6 @@ function Jutul.select_parameters!(
     S[:Conductivity] = Conductivity()
     S[:BoundaryPhi]  = BoundaryPotential(:Phi)
     S[:BoundaryC]    = BoundaryPotential(:C)
-    S[:BCCharge]     = BoundaryCurrent(srccells, :Charge)
-    S[:BCMass]       = BoundaryCurrent(srccells, :Mass)
     
 end
 

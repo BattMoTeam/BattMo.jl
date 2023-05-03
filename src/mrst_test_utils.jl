@@ -58,207 +58,6 @@ function my_number_of_cells(model::MultiModel)
     
 end
 
-function make_system(exported, sys::CurrentCollector;  bcfaces = nothing, srccells = nothing, kwargs...)
-
-    @assert !isnothing(bcfaces)
-
-    # Setup geometry from exported data
-
-    domain = exported_model_to_domain(exported, bcfaces = bcfaces; kwarg...)
-    model = SimulationModel(domain, sys, context = DefaultContext())
-
-    G = exported["G"]
-
-    # Setup parameters from exported data
-    
-    prm = Dict{Symbol, Any}()
-    
-    kappa = exported["EffectiveElectricalConductivity"][1]
-    prm[:Conductivity] = kappa
-
-    nbc = count_active_entities(domain, BoundaryFaces())
-    bcvalue_zeros = zeros(nbc)
-    
-    prm[:BoundaryPhi] = bcvalue_zeros 
-    prm[:BoundaryC]   = bcvalue_zeros 
-    prm[:BCCharge]    = bcvalue_zeros
-    prm[:BCMass]      = bcvalue_zeros
-            
-    prm = setup_parameters(model, prm)
-
-    # Setup initial values from exported data
-
-    phi0 = 1.0
-    init = Dict(:Phi => phi0)
-    
-    return model, G, prm, init
-
-end
-
-function make_system(exported_model, exported_state0,  sys::TestElyte, srccells; kwargs)
-
-    # Setup geometry from exported data
-
-    domain = exported_model_to_domain(exported_model, bcfaces = bcfaces; kwargs...)
-    model = SimulationModel(domain, sys, context = DefaultContext())
-
-    G = exported["G"]
-
-    # Setup parameters from exported data
-
-    prm = Dict{Symbol, Any}()
-
-
-    # Setup initial values from exported data
-
-
-    init = Dict()
-    init_elyte[:Phi] = exported_state0["phi"][1] # we take the first value
-    
-    return model, G, prm, init
-
-end
-
-
-function make_system(exported, sys::ActiveMaterial;  bcfaces = nothing, srccells = nothing, use_current_collector = true, kwargs...)
-
-    # Setup geometry from exported data
-    
-    domain = exported_model_to_domain(exported, bcfaces = bcfaces; kwargs...)
-    model = SimulationModel(domain, sys, context = DefaultContext())
-
-    G = exported["G"]
-
-    # Setup parameters from exported data
-
-    kappa = exported["EffectiveElectricalConductivity"][1]
-    
-    prm = Dict{Symbol, Any}()
-    
-    prm[:Conductivity] = kappa
-
-    if !use_current_collector
-        
-        S = model.parameters
-
-        nbc = count_active_entities(domain, BoundaryFaces())
-        
-        if nbc > 0
-
-            bcvalue_zeros = zeros(nbc)
-            
-            # add parameters to the model
-            S[:BoundaryPhi] = BoundaryPotential(:Phi)
-            S[:BoundaryC]   = BoundaryPotential(:C)
-            S[:BCCharge]    = BoundaryCurrent(srccells, :Charge)
-            S[:BCMass]      = BoundaryCurrent(srccells, :Mass)
-
-            # add initialization values for the parameters
-            prm[:BoundaryPhi] = bcvalue_zeros 
-            prm[:BoundaryC]   = bcvalue_zeros 
-            prm[:BCCharge]    = bcvalue_zeros
-            prm[:BCMass]      = bcvalue_zeros
-            
-        end
-    
-    end
-
-    T0   = 298.15
-    prm[:Temperature] = T0
-    
-    prm = setup_parameters(model, prm)
-
-    phi0 = 1.0
-    I0   = 1.0
-    
-    # Setup initial values
-    
-    init = Dict(
-        :Phi     => phi0,
-        :Current => I0,
-    )
-    
-    return model, G, prm, init
-
-
-end
-
-    
-function make_system(exported, sys::ActiveMaterial{P2Ddiscretization};  bcfaces = missing, srccells = missing, use_current_collector = true, kwargs...)
-    
-    @invoke model, G, prm, init = make_system(exported, sys::ActiveMaterial; bcfaces = bcfaces, srccells = srccells, use_current_collector = use_current_collector, kwargs...)
-    
-end
-
-    
-function make_system(exported, sys::ActiveMaterial{NoParticleDiffusion};  bcfaces = missing, srccells = missing, use_current_collector = true, kwargs...)
-    
-    @invoke model, G, prm, init = make_system(exported, sys::ActiveMaterial; bcfaces = bcfaces, srccells = srccells, use_current_collector = use_current_collector, kwargs...)
-    
-    D = exported["InterDiffusionCoefficient"]
-    prm[:Diffusivity] = D
-
-    prm = setup_parameters(model, prm)
-
-    return model, G, prm, init
-    
-end
-
-
-function make_system(exported, sys::ActiveMaterial; ;  bcfaces = missing, srccells = missing, use_current_collector = true, kwargs...)
-    
-    domain = exported_model_to_domain(exported, bc = bccells, b_T_hf = T_hf, vf=vf; kwarg...)
-    G = exported["G"]
-    plot_mesh = MRSTWrapMesh(G)
-    model = SimulationModel(domain, sys, context = DefaultContext())
-
-    # State is dict
-    phi0 = 1.0
-    C0   = 1.
-    T0   = 298.15
-    I0   = 1.0
-    
-    kappa = exported["EffectiveElectricalConductivity"][1]
-
-    S = model.parameters
-    
-    if count_active_entities(domain, BoundaryFaces()) > 0
-        
-        S[:BoundaryPhi] = BoundaryPotential(:Phi)
-        S[:BoundaryC]   = BoundaryPotential(:C)
-
-        S[:BCCharge] = BoundaryCurrent(srccells, :Charge)
-        S[:BCMass]   = BoundaryCurrent(srccells, :Mass)
-
-        prm = Dict{Symbol, Any}(
-            :BoundaryPhi => bcvalue_zeros, 
-            :BoundaryC   => bcvalue_zeros, 
-            :BCCharge    => bcvalue_zeros,
-            :BCMass      => bcvalue_zeros,
-            )
-    else
-        prm = Dict{Symbol, Any}()
-    end
-    prm[:Temperature] = T0
-
-    init = Dict(
-        :Phi     => phi0,
-    )
-    
-    if model.system isa Electrolyte
-        init[:Conductivity] = kappa
-        init[:Diffusivity] = D
-    else
-        prm[:Conductivity] = kappa
-        prm[:Diffusivity] = D
-    end
-
-    prm = setup_parameters(model, prm)
-    
-    return model, G, prm, init
-end
-
-##
 function convert_to_int_vector(x::Float64)
     vec = Int64.(Vector{Float64}([x]))
     return vec
@@ -269,256 +68,112 @@ function convert_to_int_vector(x::Matrix{Float64})
     return vec
 end
 
-function setup_model(exported_all; use_p2d = true, use_groups = false, kwarg...)
+function setup_model(exported; use_p2d = true, use_groups = false, kwarg...)
 
-    skip_cc = size(exported_all["model"]["include_current_collectors"]) == (0, 0)
-    skip_cc = false
+    include_cc = true
+
+    model = setup_battery_model(exported, use_p2d = true, include_cc = include_cc)
+    parameters = setup_battery_parameters(exported, model)
+    initState = setup_battery_initial_state(exported, model)
     
-    if !skip_cc
-        exported_cc = exported_all["model"]["NegativeElectrode"]["CurrentCollector"];
-
-        sys_cc = CurrentCollector()
+    return model, initState, parameters
     
-        bcfaces = convert_to_int_vector(exported_all["model"]["NegativeElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingfaces"])
-        srccells = []
-        (model_cc, G_cc, parm_cc, init_cc) = make_system(exported_cc, sys_cc, bcfaces, srccells; kwarg...)
-    end
-
-    if use_p2d
-        sys_nam = ActiveMaterial{P2Ddiscretization}(graphite_params, 5.86e-6, 10)
-    else
-        sys_nam = ActiveMaterial{NoParticleDiffusion}(graphite_params)
-    end
-    
-    exported_nam = exported_all["model"]["NegativeElectrode"]["ActiveMaterial"];
-    
-    if  skip_cc
-        srccells = []
-        bcfaces = convert_to_int_vector(exported_all["model"]["NegativeElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingfaces"])
-        (model_nam, G_nam, parm_nam, init_nam) = make_system(exported_nam, sys_nam, bcfaces, srccells; kwarg...)
-    else
-        srccells = []
-        bcfaces=[]
-        (model_nam, G_nam, parm_nam, init_nam) = make_system(exported_nam, sys_nam, bcfaces, srccells; kwarg...)
-    end
-
-    sys_elyte      = TestElyte()
-    exported_elyte = exported_all["model"]["Electrolyte"]
-    bcfaces        = []
-    srccells       = []
-    (model_elyte, G_elyte, parm_elyte, init_elyte) = make_system(exported_elyte, sys_elyte, bcfaces, srccells; kwarg...)
-
-    if use_p2d
-        sys_pam = ActiveMaterial{P2Ddiscretization}(nmc111_params, 5.22e-6, 10)
-    else
-        sys_pam = ActiveMaterial{NoParticleDiffusion}(nmc111_params)
-    end
-
-    exported_pam = exported_all["model"]["PositiveElectrode"]["ActiveMaterial"];
-    bcfaces=[]
-    srccells = []
-    (model_pam, G_pam, parm_pam, init_pam) = make_system(exported_pam, sys_pam, bcfaces, srccells; kwarg...)
-   
-    if !skip_cc    
-        exported_pp = exported_all["model"]["PositiveElectrode"]["CurrentCollector"];
-        sys_pp = CurrentCollector()
-        bcfaces = []
-        srccells = []
-        (model_pp, G_pp, parm_pp, init_pp) = make_system(exported_pp, sys_pp, bcfaces, srccells; kwarg...)
-    end
-
-    sys_bpp    = CurrentAndVoltageSystem()
-    domain_bpp = CurrentAndVoltageDomain()
-    model_bpp  = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
-    parm_bpp   = setup_parameters(model_bpp)
-    
-    # parm_bpp[:tolerances][:default] = 1e-8
-    # Setup model
-    
-    if skip_cc
-        groups = nothing
-        model = MultiModel(
-            (
-                NAM   = model_nam, 
-                ELYTE = model_elyte, 
-                PAM   = model_pam, 
-                BPP   = model_bpp
-            ), 
-            groups = groups)    
-    else
-        models = (
-            CC    = model_cc, 
-            NAM   = model_nam, 
-            ELYTE = model_elyte, 
-            PAM   = model_pam, 
-            PP    = model_pp,
-            BPP   = model_bpp
-        )
-        if use_groups
-            groups = ones(Int64, length(models))
-            # Should be BPP
-            groups[end] = 2
-            reduction = :schur_apply
-        else
-            groups    = nothing
-            reduction = :reduction
-        end
-        model = MultiModel(models, groups = groups, reduction = reduction)
-
-    end    
-    state0 = exported_all["state0"]
-    if !skip_cc
-        init_cc[:Phi] = state0["NegativeElectrode"]["CurrentCollector"]["phi"][1]           #*0
-        init_pp[:Phi] = state0["PositiveElectrode"]["CurrentCollector"]["phi"][1]           #*0
-    end
-    init_nam[:Phi]   = state0["NegativeElectrode"]["ActiveMaterial"]["phi"][1]  #*0
-    init_elyte[:Phi] = state0["Electrolyte"]["phi"][1]
-    init_pam[:Phi]   = state0["PositiveElectrode"]["ActiveMaterial"]["phi"][1]  #*0
-
-    if skip_cc
-        c_nam = state0["NegativeElectrode"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
-        c_pam = state0["PositiveElectrode"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
-    else
-        c_nam = state0["NegativeElectrode"]["ActiveMaterial"]["c"][1]
-        c_pam = state0["PositiveElectrode"]["ActiveMaterial"]["c"][1]
-    end
-
-    if  discretisation_type(sys_nam) == :P2Ddiscretization
-        init_nam[:Cp] = c_nam
-    else
-        @assert discretisation_type(sys_nam) == :NoParticleDiffusion
-        init_nam[:C] = c_nam
-    end
-
-    if  discretisation_type(sys_pam) == :P2Ddiscretization
-        init_pam[:Cp] = c_pam
-    else
-        @assert discretisation_type(sys_nam) == :NoParticleDiffusion
-        init_pam[:C] = c_pam
-    end
-    
-    if haskey(state0["Electrolyte"], "cs")
-        init_elyte[:C] = state0["Electrolyte"]["cs"][1][1]# for compatibility to old
-    else
-        init_elyte[:C] = state0["Electrolyte"]["c"][1]
-    end
-    init_bpp = Dict(:Phi => 1.0, :Current => 1.0)
-    if skip_cc
-        init = Dict(     
-            :NAM   => init_nam,
-            :ELYTE => init_elyte,
-            :PAM   => init_pam,
-            :BPP   => init_bpp
-        )
-    else
-        init = Dict(
-        :CC    => init_cc,
-        :NAM   => init_nam,
-        :ELYTE => init_elyte,
-        :PAM   => init_pam,
-        :PP    => init_pp,
-        :BPP   => init_bpp
-    )
-    end
-
-    state0 = setup_state(model, init)
-    if skip_cc
-        parameters = Dict(
-            :NAM   => parm_nam,
-            :ELYTE => parm_elyte,
-            :PAM   => parm_pam,
-            :BPP   => parm_bpp
-        )
-    else
-        parameters = Dict(
-            :CC    => parm_cc,
-            :NAM   => parm_nam,
-            :ELYTE => parm_elyte,
-            :PAM   => parm_pam,
-            :PP    => parm_pp,
-            :BPP   => parm_bpp
-        )
-    end
-    if skip_cc
-        grids = Dict(
-            :NAM   => G_nam,
-            :ELYTE => G_elyte,
-            :PAM   => G_pam
-        )
-    else
-        grids = Dict(
-         :CC => G_cc,
-            :NAM   => G_nam,
-            :ELYTE => G_elyte,
-            :PAM   => G_pam,
-            :PP    => G_pp
-        )
-    end
-
-    return model, state0, parameters, grids
 end
 
 
-function setup_battery_model(exported)
+function setup_battery_model(exported; include_cc = true, use_p2d = true, use_groups = false)
 
-    function setup_component(exported_component, sys, bcfaces = nothing)
+    function setup_component(exported, sys, bcfaces = nothing)
         domain = exported_model_to_domain(exported, bcfaces = bcfaces)
         model = SimulationModel(domain, sys, context = DefaultContext())
         return model
     end
+
+    # Setup positive current collector if any
     
-    skip_cc = size(exported["model"]["include_current_collectors"]) == (0, 0)
-    skip_cc = false
-    
-    if !skip_cc
-        
-        exported_cc = exported["model"]["NegativeElectrode"]["CurrentCollector"];
+    if include_cc
+
+        exported_cc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
         sys_cc      = CurrentCollector()
-        bcfaces     = convert_to_int_vector(exported["model"]["NegativeElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingfaces"])
+        bcfaces     = convert_to_int_vector(exported_cc["externalCouplingTerm"]["couplingfaces"])
         
         model_cc =  setup_component(exported_cc, sys_cc, bcfaces)
         
     end
 
+    # Setup NAM
+    
     if use_p2d
         sys_nam = ActiveMaterial{P2Ddiscretization}(graphite_params, 5.86e-6, 10)
     else
         sys_nam = ActiveMaterial{NoParticleDiffusion}(graphite_params)
     end
     
-    exported_nam = exported["model"]["NegativeElectrode"]["ActiveMaterial"];
+    exported_nam = exported["model"]["NegativeElectrode"]["ActiveMaterial"]
     
-    if  skip_cc
-        bcfaces_nam = convert_to_int_vector(exported["model"]["NegativeElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingfaces"])
-        model_nam   = setup_component(exported_nam, sys_nam, bcfaces_nam)
-    else
+    if  include_cc
         model_nam = setup_component(exported_nam, sys_nam)
+    else
+        bcfaces_nam = convert_to_int_vector(["externalCouplingTerm"]["couplingfaces"])
+        model_nam   = setup_component(exported_nam, sys_nam, bcfaces_nam)
+        # We add also boundary parameters (if any)
+        S = model_pam.parameters
+        nbc = count_active_entities(model_pam.domain, BoundaryFaces())
+        if nbc > 0
+            bcvalue_zeros = zeros(nbc)
+            # add parameters to the model
+            S[:BoundaryPhi] = BoundaryPotential(:Phi)
+            S[:BoundaryC]   = BoundaryPotential(:C)
+            S[:BCCharge]    = BoundaryCurrent(srccells, :Charge)
+            S[:BCMass]      = BoundaryCurrent(srccells, :Mass)
+        end
     end
 
-    sys_elyte      = TestElyte()
-    exported_elyte = exported["model"]["Electrolyte"]
-    model_elyte = setup_component(exported_elyte, sys_elyte)
+    ## Setup ELYTE
+    
+    model_elyte = setup_component(exported["model"]["Electrolyte"]
+                                  , TestElyte())
 
+    # Setup PAM
+    
     if use_p2d
         sys_pam = ActiveMaterial{P2Ddiscretization}(nmc111_params, 5.22e-6, 10)
     else
         sys_pam = ActiveMaterial{NoParticleDiffusion}(nmc111_params)
     end
-
-    exported_pam = exported["model"]["PositiveElectrode"]["ActiveMaterial"];
-    model_pam = setup_component(exported_pam, sys_pam)
-   
-    if !skip_cc    
-        exported_pp = exported["model"]["PositiveElectrode"]["CurrentCollector"];
-        sys_pp = CurrentCollector()
-        model_pp = setup_component(exported_pp, sys_pp)
+    exported_pam = exported["model"]["NegativeElectrode"]["ActiveMaterial"]
+    
+    if  include_cc
+        model_pam = setup_component(exported_pam, sys_pam)
+    else
+        bcfaces_pam = convert_to_int_vector(["externalCouplingTerm"]["couplingfaces"])
+        model_pam   = setup_component(exported_pam, sys_pam, bcfaces_pam)
+        # We add also boundary parameters (if any)
+        S = model_pam.parameters
+        nbc = count_active_entities(model_pam.domain, BoundaryFaces())
+        if nbc > 0
+            bcvalue_zeros = zeros(nbc)
+            # add parameters to the model
+            S[:BoundaryPhi] = BoundaryPotential(:Phi)
+            S[:BoundaryC]   = BoundaryPotential(:C)
+            S[:BCCharge]    = BoundaryCurrent(srccells, :Charge)
+            S[:BCMass]      = BoundaryCurrent(srccells, :Mass)
+        end
     end
+
+    # Setup negative current collector if any
+    if include_cc
+        model_pp = setup_component(exported["model"]["PositiveElectrode"]["CurrentCollector"],
+                                   CurrentCollector())
+    end
+
+    # Setup control model
 
     sys_bpp    = CurrentAndVoltageSystem()
     domain_bpp = CurrentAndVoltageDomain()
     model_bpp  = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
     
-    if skip_cc
+    if !include_cc
         groups = nothing
         model = MultiModel(
             (
@@ -551,6 +206,7 @@ function setup_battery_model(exported)
     end
     
     return model
+    
 end
 
 function setup_battery_parameters(exported, model)
@@ -561,7 +217,7 @@ function setup_battery_parameters(exported, model)
     
     # Negative current collector (if any)
 
-    if haskey(model, :CC)
+    if haskey(model.models, :CC)
         use_cc = true
     else
         use_cc = false
@@ -615,7 +271,7 @@ function setup_battery_parameters(exported, model)
 
     # Positive current collector (if any)
 
-    if haskey(model, :CC)
+    if haskey(model.models, :CC)
         use_pp = true
     else
         use_pp = false
@@ -649,7 +305,7 @@ function setup_battery_initial_state(exported, model)
     function initialize_current_collector!(initState, name::Symbol)
         """ initialize values for the current collector"""
         
-        if haskey(model, name)
+        if haskey(model.models, name)
             use_cc = true
         else
             use_cc = false
@@ -672,7 +328,7 @@ function setup_battery_initial_state(exported, model)
             :PAM => :PP,
         )
 
-        if haskey(model, ccnames[name])
+        if haskey(model.models, ccnames[name])
             use_cc = true
         else
             use_cc = false
@@ -687,7 +343,7 @@ function setup_battery_initial_state(exported, model)
         init[:Phi]   = state0[exportNames[name]]["ActiveMaterial"]["phi"][1]
 
         if use_cc
-            c = state0[exportNames[name]]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
+            c = state0[exportNames[name]]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
         else
             c = state0[exportNames[name]]["ActiveMaterial"]["c"][1]
         end
@@ -722,6 +378,8 @@ function setup_battery_initial_state(exported, model)
     initialize_active_material!(initState, :PAM)
     initialize_current_collector!(initState, :PP)
 
+    @infiltrate
+    
     initState = setup_state(model, initState)
 
     return initState
@@ -935,20 +593,20 @@ end
 function setup_sim(name; use_p2d = true, use_groups = false, general_ad = false)
 
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
-    exported_all = MAT.matread(fn)
+    exported = MAT.matread(fn)
 
-    model, state0, parameters, grids = setup_model(exported_all, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
+    model, state0, parameters = setup_model(exported, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
    
-    setup_coupling!(model, exported_all)
+    setup_coupling!(model, exported)
     
     inputI = 0;
     minE   = 10
-    steps  = size(exported_all["states"],1)
+    steps  = size(exported["states"],1)
     
     for i = 1:steps
         
-        inputI = max(inputI, exported_all["states"][i]["Control"]["I"])
-        minE   = min(minE, exported_all["states"][i]["Control"]["E"])
+        inputI = max(inputI, exported["states"][i]["Control"]["I"])
+        minE   = min(minE, exported["states"][i]["Control"]["E"])
         
     end
     
@@ -969,7 +627,7 @@ function setup_sim(name; use_p2d = true, use_groups = false, general_ad = false)
     
     sim = Simulator(model, state0 = state0, parameters = parameters, copy_state = true)
     
-    return sim, forces, grids, state0, parameters, exported_all, model
+    return sim, forces, state0, parameters, exported, model
     
 end
 
@@ -984,18 +642,18 @@ function run_battery(name;
                      use_groups    = false,
                      kwarg...)
     
-    sim, forces, grids, state0, parameters, exported_all, model = setup_sim(name, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
+    sim, forces, state0, parameters, exported, model = setup_sim(name, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
     
-    steps        = size(exported_all["states"], 1)
+    steps        = size(exported["states"], 1)
     alltimesteps = Vector{Float64}(undef, steps)
     time         = 0;
     end_step     = 0
     minE         = 3.2
     
     for i = 1 : steps
-        alltimesteps[i] =  exported_all["states"][i]["time"] - time
-        time = exported_all["states"][i]["time"]
-        E = exported_all["states"][i]["Control"]["E"]
+        alltimesteps[i] =  exported["states"][i]["time"] - time
+        time = exported["states"][i]["time"]
+        E = exported["states"][i]["Control"]["E"]
         if (E > minE + 0.001)
             end_step = i
         end
@@ -1027,21 +685,21 @@ function run_battery(name;
     # Run simulation
     
     states, report = simulate(sim, timesteps, forces = forces, config = cfg)
-    stateref = exported_all["states"]
+    stateref = exported["states"]
 
     extra = Dict(:model => model,
                  :grids => grids,
                  :state0 => state0,
                  :states_ref => stateref,
                  :parameters => parameters,
-                 :exported => exported_all,
+                 :exported => exported,
                  :timesteps => timesteps,
                  :config => cfg,
                  :forces => forces,
                  :simulator => sim)
 
-    return (states = states, reports = report, extra = extra, grids = grids, exported_all = exported_all)
-    # return states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim
+    return (states = states, reports = report, extra = extra, grids = grids, exported = exported)
+    # return states, grids, state0, stateref, parameters, exported, model, timesteps, cfg, report, sim
 end
 export inputRefToStates
 function inputRefToStates(states, stateref)
@@ -1091,7 +749,7 @@ end
 
 
 function test_mrst_battery(name)
-    states, grids, state0, stateref, parameters, exported_all, model, timesteps, cfg, report, sim = run_battery(name);
+    states, grids, state0, stateref, parameters, exported, model, timesteps, cfg, report, sim = run_battery(name);
     steps = size(states, 1)
     E = Matrix{Float64}(undef,steps,2)
     for step in 1:steps
