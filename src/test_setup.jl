@@ -90,7 +90,7 @@ function get_cc_grid(;
 end
 
 function exported_model_to_domain(exported;
-                                  bcfaces    = [], 
+                                  bcfaces    = nothing, 
                                   general_ad = false)
 
     """ Returns domain"""
@@ -98,11 +98,15 @@ function exported_model_to_domain(exported;
     N = exported["G"]["faces"]["neighbors"]
     N = Int64.(N)
 
-    isboundary = (N[bcfaces, 1].==0) .| (N[bcfaces, 2].==0)
-    @assert all(isboundary)
+    if !isnothing(bcfaces)
+        isboundary = (N[bcfaces, 1].==0) .| (N[bcfaces, 2].==0)
+        @assert all(isboundary)
     
-    bccells = N[bcfaces, 1] + N[bcfaces, 2]
-    bc_hfT = getHalfTrans(exported, bcfaces)
+        bccells = N[bcfaces, 1] + N[bcfaces, 2]
+        bc_hfT = getHalfTrans(exported, bcfaces)
+    else
+        bc_hfT = nothing
+    end
     
     vf = []
     if haskey(exported, "volumeFraction")

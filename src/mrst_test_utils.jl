@@ -459,21 +459,280 @@ function setup_model(exported_all; use_p2d = true, use_groups = false, kwarg...)
 end
 
 
-function setup_battery_parameters(model)
+function setup_battery_model(exported)
 
+    function setup_component(exported_component, sys, bcfaces = nothing)
+        domain = exported_model_to_domain(exported, bcfaces = bcfaces)
+        model = SimulationModel(domain, sys, context = DefaultContext())
+        return model
+    end
+    
+    skip_cc = size(exported["model"]["include_current_collectors"]) == (0, 0)
+    skip_cc = false
+    
+    if !skip_cc
+        
+        exported_cc = exported["model"]["NegativeElectrode"]["CurrentCollector"];
+        sys_cc      = CurrentCollector()
+        bcfaces     = convert_to_int_vector(exported["model"]["NegativeElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingfaces"])
+        
+        model_cc =  setup_component(exported_cc, sys_cc, bcfaces)
+        
+    end
+
+    if use_p2d
+        sys_nam = ActiveMaterial{P2Ddiscretization}(graphite_params, 5.86e-6, 10)
+    else
+        sys_nam = ActiveMaterial{NoParticleDiffusion}(graphite_params)
+    end
+    
+    exported_nam = exported["model"]["NegativeElectrode"]["ActiveMaterial"];
+    
+    if  skip_cc
+        bcfaces_nam = convert_to_int_vector(exported["model"]["NegativeElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingfaces"])
+        model_nam   = setup_component(exported_nam, sys_nam, bcfaces_nam)
+    else
+        model_nam = setup_component(exported_nam, sys_nam)
+    end
+
+    sys_elyte      = TestElyte()
+    exported_elyte = exported["model"]["Electrolyte"]
+    model_elyte = setup_component(exported_elyte, sys_elyte)
+
+    if use_p2d
+        sys_pam = ActiveMaterial{P2Ddiscretization}(nmc111_params, 5.22e-6, 10)
+    else
+        sys_pam = ActiveMaterial{NoParticleDiffusion}(nmc111_params)
+    end
+
+    exported_pam = exported["model"]["PositiveElectrode"]["ActiveMaterial"];
+    model_pam = setup_component(exported_pam, sys_pam)
+   
+    if !skip_cc    
+        exported_pp = exported["model"]["PositiveElectrode"]["CurrentCollector"];
+        sys_pp = CurrentCollector()
+        model_pp = setup_component(exported_pp, sys_pp)
+    end
+
+    sys_bpp    = CurrentAndVoltageSystem()
+    domain_bpp = CurrentAndVoltageDomain()
+    model_bpp  = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
+    
+    if skip_cc
+        groups = nothing
+        model = MultiModel(
+            (
+                NAM   = model_nam, 
+                ELYTE = model_elyte, 
+                PAM   = model_pam, 
+                BPP   = model_bpp
+            ), 
+            groups = groups)    
+    else
+        models = (
+            CC    = model_cc, 
+            NAM   = model_nam, 
+            ELYTE = model_elyte, 
+            PAM   = model_pam, 
+            PP    = model_pp,
+            BPP   = model_bpp
+        )
+        if use_groups
+            groups = ones(Int64, length(models))
+            # Should be BPP
+            groups[end] = 2
+            reduction = :schur_apply
+        else
+            groups    = nothing
+            reduction = :reduction
+        end
+        model = MultiModel(models, groups = groups, reduction = reduction)
+
+    end
+    
+    return model
 end
 
-function setup_battery_initial_state(model)
+function setup_battery_parameters(exported, model)
 
+    parameters = Dict{Symbol, Any}()
+
+    T0 = exported["model"]["initT"]
+    
+    # Negative current collector (if any)
+
+    if haskey(model, :CC)
+        use_cc = true
+    else
+        use_cc = false
+    end
+
+    if use_cc
+        prm_cc = Dict{Symbol, Any}()
+        exported_cc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
+        prm_cc[:Conductivity] = exported_cc["EffectiveElectricalConductivity"][1]
+        parameters[:CC] = prm_cc
+    end
+
+    # Negative active material
+    
+    prm_nam = Dict{Symbol, Any}()
+    exported_nam = exported["model"]["NegativeElectrode"]["ActiveMaterial"]
+    prm_nam[:Conductivity] = exported_nam["EffectiveElectricalConductivity"][1]
+    prm_nam[:Temperature] = T0
+    
+    if discretisation_type(model[:NAM]) == :P2Ddiscretization
+        # nothing to do
+    else
+        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
+        prm_nam[:Diffusivity] = exported_nam["InterDiffusionCoefficient"]
+    end
+
+    parameters[:NAM] = prm_nam
+
+    # Electrolyte
+    
+    prm_elyte = Dict{Symbol, Any}()
+    prm_elyte[:Temperature] = T0        
+
+    parameters[:ELYTE] = prm_elyte
+
+    # Positive active material
+
+    prm_pam = Dict{Symbol, Any}()
+    exported_pam = exported["model"]["PositiveElectrode"]["ActiveMaterial"]
+    prm_pam[:Conductivity] = exported_pam["EffectiveElectricalConductivity"][1]
+    prm_pam[:Temperature] = T0
+    
+    if discretisation_type(model[:PAM]) == :P2Ddiscretization
+        # nothing to do
+    else
+        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
+        prm_pam[:Diffusivity] = exported_nam["InterDiffusionCoefficient"]
+    end
+
+    parameters[:PAM] = prm_pam
+
+    # Positive current collector (if any)
+
+    if haskey(model, :CC)
+        use_pp = true
+    else
+        use_pp = false
+    end
+
+    if use_pp
+        prm_pp = Dict{Symbol, Any}()
+        exported_pp = exported["model"]["PositiveElectrode"]["CurrentCollector"]
+        prm_pp[:Conductivity] = exported_pp["EffectiveElectricalConductivity"][1]
+        
+        parameters[:PP] = prm_pp
+    end        
+
+
+    return parameters
+    
 end
 
+function setup_battery_initial_state(exported, model)
 
-##
+    state0 = exported["state0"]
+
+    exportNames = Dict(
+        :CC => "NegativeElectrode",
+        :NAM => "NegativeElectrode",
+        :PAM => "PositiveElectrode",        
+        :PP => "PositiveElectrode",
+    )
+
+
+    function initialize_current_collector!(initState, name::Symbol)
+        """ initialize values for the current collector"""
+        
+        if haskey(model, name)
+            use_cc = true
+        else
+            use_cc = false
+        end
+        
+        if use_cc
+            init = Dict()
+            init[:Phi] = state0[exportNames[name]]["CurrentCollector"]["phi"][1]
+            initState[name] = init
+        end
+        
+    end
+
+
+    function initialize_active_material!(initState, name::Symbol)
+        """ initialize values for the active material"""
+
+        ccnames = Dict(
+            :NAM => :CC,
+            :PAM => :PP,
+        )
+
+        if haskey(model, ccnames[name])
+            use_cc = true
+        else
+            use_cc = false
+        end
+
+        # initialise NAM
+
+        sys = model[name].system
+
+        init = Dict()
+        
+        init[:Phi]   = state0[exportNames[name]]["ActiveMaterial"]["phi"][1]
+
+        if use_cc
+            c = state0[exportNames[name]]["ActiveMaterial"]["Interface"]["cElectrodeSurface"]
+        else
+            c = state0[exportNames[name]]["ActiveMaterial"]["c"][1]
+        end
+
+        if  discretisation_type(sys) == :P2Ddiscretization
+            init[:Cp] = c
+        else
+            @assert discretisation_type(sys_nam) == :NoParticleDiffusion
+            init[:C] = c
+        end
+        
+        initState[name] = init
+        
+    end
+
+    function initialize_electrolyte!(initState)
+
+        init = Dict()
+        
+        init[:Phi] = state0["Electrolyte"]["phi"][1]
+        init[:C]   = state0["Electrolyte"]["c"][1]
+
+        initState[:ELYTE] = init
+
+    end
+
+    initState = Dict()
+
+    initialize_current_collector!(initState, :CC)
+    initialize_active_material!(initState, :NAM)
+    initialize_electrolyte!(initState)
+    initialize_active_material!(initState, :PAM)
+    initialize_current_collector!(initState, :PP)
+
+    initState = setup_state(model, initState)
+
+    return initState
+    
+end
+
 
 function setup_coupling!(model, exported_all)
     # setup coupling CC <-> NAM :charge_conservation
-    skip_cc = size(exported_all["model"]["include_current_collectors"]) == (0,0)
-    skip_cc = false
+    skip_pp = size(exported_all["model"]["include_current_collectors"]) == (0,0)
+    skip_cc = faPP
     
     if !skip_cc
         
