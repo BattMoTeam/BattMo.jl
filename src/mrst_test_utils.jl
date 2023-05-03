@@ -72,9 +72,9 @@ function setup_model(exported; use_p2d = true, use_groups = false, kwarg...)
 
     include_cc = true
 
-    model = setup_battery_model(exported, use_p2d = true, include_cc = include_cc)
+    model      = setup_battery_model(exported, use_p2d = true, include_cc = include_cc)
     parameters = setup_battery_parameters(exported, model)
-    initState = setup_battery_initial_state(exported, model)
+    initState  = setup_battery_initial_state(exported, model)
     
     return model, initState, parameters
     
@@ -131,8 +131,8 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
 
     ## Setup ELYTE
     
-    model_elyte = setup_component(exported["model"]["Electrolyte"]
-                                  , TestElyte())
+    model_elyte = setup_component(exported["model"]["Electrolyte"],
+                                  TestElyte())
 
     # Setup PAM
     
@@ -141,7 +141,7 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
     else
         sys_pam = ActiveMaterial{NoParticleDiffusion}(nmc111_params)
     end
-    exported_pam = exported["model"]["NegativeElectrode"]["ActiveMaterial"]
+    exported_pam = exported["model"]["PositiveElectrode"]["ActiveMaterial"]
     
     if  include_cc
         model_pam = setup_component(exported_pam, sys_pam)
@@ -296,10 +296,10 @@ function setup_battery_initial_state(exported, model)
     state0 = exported["state0"]
 
     exportNames = Dict(
-        :CC => "NegativeElectrode",
+        :CC  => "NegativeElectrode",
         :NAM => "NegativeElectrode",
         :PAM => "PositiveElectrode",        
-        :PP => "PositiveElectrode",
+        :PP  => "PositiveElectrode",
     )
 
 
