@@ -25,11 +25,11 @@ ENV["JULIA_DEBUG"] = 0;
 # name = "sector_1656_org"
 # name = "model3D_492"
 
-use_p2d = false
+use_p2d = true
 
 if use_p2d
-    # name = "p2d_40"
-    name = "3d_demo_case"
+    name = "p2d_40"
+    # name = "3d_demo_case"
 else
     # name = "p1d_40"
     name = "3d_demo_case"
@@ -55,6 +55,7 @@ for step in 1 : steps
 end
 timesteps = timesteps[1 : steps]
 
-plt = plot(cumsum(timesteps), E; title = "E", size=(1000, 800))
+plt = plot(cumsum(timesteps), E[:, 1]; title = "Discharge Voltage", size=(1000, 800), label = "BattMo.jl", xlabel = "Time / s", ylabel = "Voltage / V", linewidth = 4,  xtickfont = font(pointsize = 15),  ytickfont = font(pointsize = 15))
+plot!(cumsum(timesteps), E[:, 2], label = "BattMo.m", linewidth = 2)
 display(plt)
 
