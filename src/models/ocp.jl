@@ -113,12 +113,11 @@ function compute_ocp_nmc111(T, c, cmax)
     
 end
 
-## Defines exchange current density for GenericGraphite
+## Defines standard exchange current density
 
-function compute_reaction_rate_constant_nmc111(T, c)
+function compute_reaction_rate_constant(T, c, k0)
     
     refT = 298.15
-    k0   = 2.3300e-11
     Eak  = 5000
 
     val = k0.*exp(-Eak./FARADAY_CONST .*(1.0./T - 1/refT));

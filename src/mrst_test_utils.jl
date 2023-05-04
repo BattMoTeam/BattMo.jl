@@ -106,13 +106,13 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
         am_params[:n_charge_carriers]       = exported_am["Interface"]["n"]
         am_params[:maximum_concentration]   = exported_am["Interface"]["cmax"]
         am_params[:volumetric_surface_area] = exported_am["Interface"]["volumetricSurfaceArea"]
-
+        k0 = exported_am["Interface"]["k0"]
+        am_params[:reaction_rate_constant_func] = (T, c) -> compute_reaction_rate_constant(T, c, k0)
+        
         if name == :NAM
             am_params[:ocp_func]                    = compute_ocp_graphite
-            am_params[:reaction_rate_constant_func] = compute_reaction_rate_constant_graphite
         elseif name == :PAM
             am_params[:ocp_func]                    = compute_ocp_nmc111
-            am_params[:reaction_rate_constant_func] = compute_reaction_rate_constant_nmc111
         else
             error("not recongized")
         end
