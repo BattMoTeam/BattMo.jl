@@ -55,29 +55,6 @@ function compute_reaction_rate_constant_graphite(T, c)
     
 end
 
-## Define solid diffusion coefficient for GenericGraphite
-
-function compute_diffusion_coef_graphite(T, c)
-    
-    refT = 298.15
-    D0   = 3.3e-14
-    Ead  = 0
-    val  = D0.*exp(-Ead./FARADAY_CONST .*(1.0./T - 1/refT));
-
-    return val
-end
-
-
-graphite_params = Dict{Symbol, Any}()
-
-graphite_params[:ocp_func]                    = getfield(BattMo, :compute_ocp_graphite)
-graphite_params[:n_charge_carriers]           = 1
-graphite_params[:reaction_rate_constant_func] = getfield(BattMo, :compute_reaction_rate_constant_graphite)
-graphite_params[:maximum_concentration]       = 30555
-graphite_params[:volumetric_surface_area]     = 723600
-graphite_params[:diffusion_coef_func]         = compute_diffusion_coef_graphite
-
-
 ## Define OCP and entropy change (dUdT) for NMC111 using polynomials
 
 const coeff1_refOCP_nmc111 = Polynomial([
@@ -136,7 +113,6 @@ function compute_ocp_nmc111(T, c, cmax)
     
 end
 
-
 ## Defines exchange current density for GenericGraphite
 
 function compute_reaction_rate_constant_nmc111(T, c)
@@ -151,25 +127,5 @@ function compute_reaction_rate_constant_nmc111(T, c)
 end
 
 
-## Define solid diffusion coefficient for NMC
 
-function compute_diffusion_coef_nmc111(T, c)
-    
-    refT = 298.15
-    D0   = 4e-15
-    Ead  = 0
-
-    val = D0.*exp(-Ead./FARADAY_CONST .*(1.0./T - 1/refT));
-    
-    return val
-end
-
-nmc111_params = Dict{Symbol, Any}()
-
-nmc111_params[:ocp_func]                    = compute_ocp_nmc111
-nmc111_params[:n_charge_carriers]           = 1
-nmc111_params[:reaction_rate_constant_func] = compute_reaction_rate_constant_nmc111
-nmc111_params[:maximum_concentration]       = 55554.0
-nmc111_params[:volumetric_surface_area]     = 885000.0
-nmc111_params[:diffusion_coef_func]         = compute_diffusion_coef_nmc111
 

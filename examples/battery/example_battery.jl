@@ -31,8 +31,8 @@ if use_p2d
     name = "p2d_40"
     # name = "3d_demo_case"
 else
-    # name = "p1d_40"
-    name = "3d_demo_case"
+    name = "p1d_40"
+    # name = "3d_demo_case"
 end
 
 fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")

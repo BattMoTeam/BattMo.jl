@@ -110,19 +110,18 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
         if name == :NAM
             am_params[:ocp_func]                    = compute_ocp_graphite
             am_params[:reaction_rate_constant_func] = compute_reaction_rate_constant_graphite
-            am_params[:diffusion_coef_func]         = compute_diffusion_coef_graphite
         elseif name == :PAM
             am_params[:ocp_func]                    = compute_ocp_nmc111
             am_params[:reaction_rate_constant_func] = compute_reaction_rate_constant_nmc111
-            am_params[:diffusion_coef_func]         = compute_diffusion_coef_nmc111
         else
             error("not recongized")
         end
         
         if use_p2d
             rp = exported_am["SolidDiffusion"]["rp"]
-            N = Int64(exported_am["SolidDiffusion"]["N"])
-            sys_am = ActiveMaterial{P2Ddiscretization}(am_params, rp, N)
+            N  = Int64(exported_am["SolidDiffusion"]["N"])
+            D  = exported_am["SolidDiffusion"]["D0"]
+            sys_am = ActiveMaterial{P2Ddiscretization}(am_params, rp, N, D)
         else
             sys_am = ActiveMaterial{NoParticleDiffusion}(am_params)
         end

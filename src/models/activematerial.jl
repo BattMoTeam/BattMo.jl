@@ -12,6 +12,7 @@ struct P2Ddiscretization <: SolidDiffusionDiscretization
     # hT::Vector{Float64}(N + 1)   # vector of coefficients for harmonic average (half-transmissibility for spherical coordinate)
     # v::Vector{Float64}           # vector of volumes (volume of spherical layer)
     # div::Vector{Vector{Float64}} # Helping structure to compute divergence operator for particle diffusion
+    # D::Real diffusion coefficient
 end
 
 struct NoParticleDiffusion <: SolidDiffusionDiscretization end
@@ -44,8 +45,8 @@ Jutul.local_discretization(::SolidDiffusionBc, i) = nothing
 const ActiveMaterialModel = SimulationModel{O, S} where {O<:JutulDomain, S<:ActiveMaterial}
 
 ## Create ActiveMaterial with full p2d solid diffusion
-function ActiveMaterial{P2Ddiscretization}(params::ActiveMaterialParameters, rp, N) 
-    data = setupSolidDiffusionDiscretization(rp, N)
+function ActiveMaterial{P2Ddiscretization}(params::ActiveMaterialParameters, rp, N, D) 
+    data = setupSolidDiffusionDiscretization(rp, N, D)
     discretization = P2Ddiscretization(data)
     return ActiveMaterial{P2Ddiscretization}(params, discretization)
 end
@@ -85,7 +86,7 @@ function maximum_concentration(system::ActiveMaterial)
     return system.params[:maximum_concentration]
 end
 
-function setupSolidDiffusionDiscretization(rp, N)
+function setupSolidDiffusionDiscretization(rp, N, D)
 
     N  = Int64(N)
     rp = Float64(rp)
@@ -116,6 +117,7 @@ function setupSolidDiffusionDiscretization(rp, N)
     end
         
     data = Dict(:N    => N   ,
+                :D    => D   ,
                 :rp   => rp  ,
                 :hT   => hT  ,
                 :vols => vols,
@@ -166,7 +168,6 @@ function select_secondary_variables!(S,
     S[:Charge]            = Charge()
     S[:Ocp]               = Ocp()
     S[:ReactionRateConst] = ReactionRateConst()
-    S[:DiffusionCoef]     = DiffusionCoef()
     S[:SolidDiffFlux]     = SolidDiffFlux()
     
 end
@@ -217,20 +218,6 @@ end
     end
 )
 
-@jutul_secondary(
-    function update_diffusion!(DiffusionCoef                                            ,
-                               tv::DiffusionCoef                                        ,
-                               model::SimulationModel{<:Any, ActiveMaterial{P2Ddiscretization}, <:Any, <:Any},
-                               Cp                                                       ,
-                               ix
-                               )
-        diff_func = model.system.params[:diffusion_coef_func]
-        refT = 298.15
-        for cell in ix
-            @inbounds @views DiffusionCoef[cell] = diff_func(refT, Cp[:, cell])
-        end
-    end
-)
 
 @jutul_secondary(
     function update_reaction_rate!(ReactionRateConst                                                        ,
@@ -252,24 +239,23 @@ end
                                           tv::SolidDiffFlux,
                                           model::SimulationModel{<:Any, ActiveMaterial{P2Ddiscretization}, <:Any, <:Any},
                                           Cp,
-                                          DiffusionCoef,
                                           ix)
     s = model.system
     for cell in ix
-        @inbounds @views update_solid_flux!(SolidDiffFlux[:, cell], Cp[:, cell], DiffusionCoef[cell], s)
+        @inbounds @views update_solid_flux!(SolidDiffFlux[:, cell], Cp[:, cell], s)
     end
 end
 )
 
 
-function update_solid_flux!(flux, Cp, D, system::ActiveMaterial{P2Ddiscretization})
+function update_solid_flux!(flux, Cp, system::ActiveMaterial{P2Ddiscretization})
     # compute lithium flux in particle, using harmonic averaging. At the moment D has a constant value within particle
     # but this is going to change.
     
     disc = system.discretization
     N    = disc[:N]
     hT   = disc[:hT]
-    vols = disc[:vols]
+    D    = disc[:D]
 
     @inline globFace(i::Int64) = i + 1
     
@@ -300,12 +286,12 @@ function Jutul.update_equation_in_entity!(eq_buf           ,
     hT   = disc[:hT]
     vols = disc[:vols]
     div  = disc[:div]
+    D    = disc[:D]
     
     Cp   = state.Cp[:, self_cell]
     Cp0  = state0.Cp[:, self_cell]
     flux = state.SolidDiffFlux[:, self_cell]
     Cs   = state.Cs[self_cell]
-    D    = state.DiffusionCoef[self_cell]
     
     for i = 1 : N
         eq_buf[i] = vols[i]*(Cp[i] - Cp0[i])/dt
@@ -333,10 +319,10 @@ function Jutul.update_equation_in_entity!(eq_buf              ,
     disc  = model.system.discretization
     N    = disc[:N]
     hT   = disc[:hT]
+    D    = disc[:D]
     
     Cp   = state.Cp[N, self_cell]
     Cs   = state.Cs[self_cell]
-    D    = state.DiffusionCoef[self_cell]
     
     eq_buf[] = hT[N + 1]*D*(Cp - Cs)
 
@@ -422,20 +408,7 @@ end
     end
 )
 
-@jutul_secondary(
-    function update_diffusion!(DiffusionCoef    ,
-                               tv::DiffusionCoef,
-                               model::SimulationModel{<:Any, ActiveMaterial{NoParticleDiffusion}, <:Any, <:Any},
-                               C                ,
-                               ix
-                               )
-        diff_func = model.system.params[:diffusion_coef_func]
-        refT = 298.15
-        for cell in ix
-            @inbounds @views DiffusionCoef[cell] = diff_func(refT, C[cell], s)
-        end
-    end
-)
+
 
 @jutul_secondary(
     function update_reaction_rate!(ReactionRateConst    ,
