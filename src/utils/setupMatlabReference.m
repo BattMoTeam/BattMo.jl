@@ -1,4 +1,4 @@
-function setupMatlabReference(casename, jsonfolder, datafolder)
+function output = setupMatlabReference(casename, jsonfolder, datafolder)
 %% Script for BattMo.m to produce reference solution
 % - casename : is used to identify json file name for the input and saved data output
 % - jsonfolder : folder where the json file is fetched
