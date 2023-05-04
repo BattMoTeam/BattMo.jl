@@ -43,7 +43,7 @@ function Jutul.update_cross_term_in_entity!(out                           ,
     phi_s = state_s.Phi
     v = 0
     for (i, ind_s) in enumerate(ct.source_cells)
-        v = trans[i]*(phi_t - phi_s[ind_s])
+        v += trans[i]*(phi_t - phi_s[ind_s])
     end
 
     out[] = v
