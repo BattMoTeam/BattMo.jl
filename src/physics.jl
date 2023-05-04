@@ -154,9 +154,12 @@ function apply_bc_to_equation!(storage, parameters, model, eq::ConservationLaw, 
 end
 
 function apply_bc_to_equation!(storage, parameters, model, eq::SolidMassCons, eq_s)
-    
+    # do nothing
 end
 
+function apply_bc_to_equation!(storage, parameters, model, eq::SolidDiffusionBc, eq_s)
+    # do nothing    
+end
 
 function apply_boundary_current!(acc, state, jkey, model, eq::ConservationLaw)
 

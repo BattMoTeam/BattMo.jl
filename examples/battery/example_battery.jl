@@ -25,12 +25,14 @@ ENV["JULIA_DEBUG"] = 0;
 # name = "sector_1656_org"
 # name = "model3D_492"
 
-use_p2d = true
+use_p2d = false
 
 if use_p2d
-    name = "p2d_40"
+    # name = "p2d_40"
+    name = "3d_demo_case"
 else
-    name = "p1d_40"
+    # name = "p1d_40"
+    name = "3d_demo_case"
 end
 
 fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")

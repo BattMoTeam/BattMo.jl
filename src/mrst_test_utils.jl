@@ -366,6 +366,7 @@ function setup_battery_initial_state(exported, model)
 
         if  discretisation_type(sys) == :P2Ddiscretization
             init[:Cp] = c
+            init[:Cs] = c
         else
             @assert discretisation_type(sys) == :NoParticleDiffusion
             init[:C] = c
@@ -454,7 +455,7 @@ function setup_coupling!(model, exported_all)
         ct = ButlerVolmerElyteToActmatCT(srange, trange)
         ct_pair = setup_cross_term(ct, target = :NAM, source = :ELYTE, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :NAM, source = :ELYTE, equation = :mass_conservation)
+        ct_pair = setup_cross_term(ct, target = :NAM, source = :ELYTE, equation = :solid_diffusion_bc)
         add_cross_term!(model, ct_pair)
         
     else
@@ -485,7 +486,7 @@ function setup_coupling!(model, exported_all)
         ct = ButlerVolmerElyteToActmatCT(srange, trange)
         ct_pair = setup_cross_term(ct, target = :PAM, source = :ELYTE, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :PAM, source = :ELYTE, equation = :mass_conservation)
+        ct_pair = setup_cross_term(ct, target = :PAM, source = :ELYTE, equation = :solid_diffusion_bc)
         add_cross_term!(model, ct_pair)
         
     else

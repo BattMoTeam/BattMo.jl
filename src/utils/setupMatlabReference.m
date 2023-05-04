@@ -56,4 +56,13 @@ function setupMatlabReference(casename, jsonfolder, datafolder)
 
     save(filename, 'model', 'states', 'state0', "schedule")
 
+    doplot = true;
+    if doplot
+        ind = cellfun(@(x) not(isempty(x)), states); 
+        states = states(ind);
+        E = cellfun(@(x) x.Control.E, states); 
+        I = cellfun(@(x) x.Control.I, states);
+        time = cellfun(@(x) x.time, states);
+        plot(time, E)
+    end
 end

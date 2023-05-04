@@ -214,16 +214,14 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                       electrolyte)
     
     
-    if eq isa SolidMassCons
+    if eq isa SolidDiffusionBc
 
         rp = activematerial.discretization[:rp] # particle radius
-        N  = activematerial.discretization[:N] # boundary index for P2D discretization
         vf = model_t.domain.representation.vol_frac[ind_t]
 
         v = R*(4*pi*rp^3)/(3*vf)
         
-        @. out = 0
-        out[N] = v
+        out[] = -v
         
     else
         

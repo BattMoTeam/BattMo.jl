@@ -38,6 +38,9 @@ struct SolidDiffFlux     <: VectorVariables end # flux in P2D model
 struct SolidMassCons <: JutulEquation end
 Jutul.local_discretization(::SolidMassCons, i) = nothing
 
+struct SolidDiffusionBc <: JutulEquation end
+Jutul.local_discretization(::SolidDiffusionBc, i) = nothing
+
 const ActiveMaterialModel = SimulationModel{O, S} where {O<:JutulDomain, S<:ActiveMaterial}
 
 ## Create ActiveMaterial with full p2d solid diffusion
@@ -102,7 +105,6 @@ function setupSolidDiffusionDiscretization(rp, N)
         hT[i] = (4*pi*rf[i]^2/(dr/2))
     end
         
-    
     div = Vector{Tuple{Int64, Int64, Float64}}(undef, 2*(N - 1))
 
     k = 1
@@ -134,6 +136,7 @@ function select_primary_variables!(S,
                                    )
     S[:Phi] = Phi()
     S[:Cp]  = Cp()
+    S[:Cs]  = Cs()
     
 end
 
@@ -163,7 +166,6 @@ function select_secondary_variables!(S,
     S[:Charge]            = Charge()
     S[:Ocp]               = Ocp()
     S[:ReactionRateConst] = ReactionRateConst()
-    S[:Cs]                = Cs()
     S[:DiffusionCoef]     = DiffusionCoef()
     S[:SolidDiffFlux]     = SolidDiffFlux()
     
@@ -177,9 +179,11 @@ function select_equations!(eqs,
     disc = model.domain.discretizations.charge_flow
     eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
     eqs[:mass_conservation]   = SolidMassCons()
+    eqs[:solid_diffusion_bc]  = SolidDiffusionBc()
     
 end
 
+# Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::SolidDiffusionBc) = 1
 
 function Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::SolidMassCons)
 
@@ -187,14 +191,12 @@ function Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::Soli
     
 end
 
-
 function select_minimum_output_variables!(out                   ,
                                           system::ActiveMaterial{P2Ddiscretization},
                                           model::SimulationModel
                                           )
     push!(out, :Charge)
     push!(out, :Ocp)
-    push!(out, :Cs)
     push!(out, :Temperature)
     
 end
@@ -211,20 +213,6 @@ end
         refT = 298.15
         for cell in ix
             @inbounds Ocp[cell] = ocp_func(refT, Cs[cell], cmax)
-        end
-    end
-)
-
-@jutul_secondary(
-    function update_cSurface!(Cs,
-                              Cs_def::Cs,
-                              model::SimulationModel{<:Any, ActiveMaterial{P2Ddiscretization}, <:Any, <:Any},
-                              Cp,
-                              ix
-                              )
-        N = model.system.discretization[:N]
-        for cell in ix
-            @inbounds Cs[cell] = Cp[N, cell]
         end
     end
 )
@@ -309,12 +297,15 @@ function Jutul.update_equation_in_entity!(eq_buf           ,
     
     disc  = model.system.discretization
     N    = disc[:N]
+    hT   = disc[:hT]
     vols = disc[:vols]
     div  = disc[:div]
     
     Cp   = state.Cp[:, self_cell]
     Cp0  = state0.Cp[:, self_cell]
     flux = state.SolidDiffFlux[:, self_cell]
+    Cs   = state.Cs[self_cell]
+    D    = state.DiffusionCoef[self_cell]
     
     for i = 1 : N
         eq_buf[i] = vols[i]*(Cp[i] - Cp0[i])/dt
@@ -325,7 +316,32 @@ function Jutul.update_equation_in_entity!(eq_buf           ,
         eq_buf[i] += sgn*flux[j]
     end
 
+    eq_buf[N] += hT[N + 1]*D*(Cp[N] - Cs)
+
 end
+
+
+function Jutul.update_equation_in_entity!(eq_buf              ,
+                                          self_cell           ,
+                                          state               ,
+                                          state0              ,
+                                          eq::SolidDiffusionBc,
+                                          model               ,
+                                          dt                  ,
+                                          ldisc = Nothing)
+    
+    disc  = model.system.discretization
+    N    = disc[:N]
+    hT   = disc[:hT]
+    
+    Cp   = state.Cp[N, self_cell]
+    Cs   = state.Cs[self_cell]
+    D    = state.DiffusionCoef[self_cell]
+    
+    eq_buf[] = hT[N + 1]*D*(Cp - Cs)
+
+end
+
 
 #####################################################
 ## We setup the case with full no particle diffusion
