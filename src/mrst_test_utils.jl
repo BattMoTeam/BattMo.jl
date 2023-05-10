@@ -1,5 +1,3 @@
-using Infiltrator
-
 struct SourceAtCell
     cell
     src
@@ -11,8 +9,6 @@ end
 function getTrans(model1, model2, faces, cells, quantity)
     """ setup transmissibility for coupling between models at boundaries"""
 
-    # @infiltrate
-    
     T_all1 = model1["operators"]["T_all"][faces[:, 1]]
     T_all2 = model2["operators"]["T_all"][faces[:, 2]]
 

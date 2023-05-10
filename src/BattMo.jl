@@ -55,8 +55,6 @@ import Jutul:
     select_minimum_output_variables!,
     physical_representation
 
-using Debugger, Infiltrator
-
 include("physical_constants.jl")
 include("battery_types.jl")
 include("tensor_tools.jl")
