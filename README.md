@@ -36,6 +36,30 @@ display(fig)
 This should produce the following plot:
 ![Discharge curve](docs/src/assets/discharge.png)
 
+### 3D simulation example
+This example uses plotting from Jutul, so we need to add that package.
+```julia
+using Pkg
+Pkg.add("GLMakie")
+```
+Run a 3D model and plot the results in an interactive viewer.
+```julia
+using BattMo
+# Simulate case
+states, reports, extra, exported = run_battery("3d_demo_case");
+# Parts of the battery overlap in physical space - shift them a bit and plot
+# with Jutul's interactive GLMakie plotting viewer.
+using GLMakie
+using Jutul
+dx = [0.02 0 0]
+shift = Dict()
+shift[:NAM] = dx
+shift[:PAM] = dx
+shift[:CC] = dx
+shift[:PP] = dx
+plot_multimodel_interactive(model, states, shift = shift, colormap = :curl)
+```
+![3D plot](docs/src/assets/3d_plot.png)
 
 ## Acknowledgements
 
