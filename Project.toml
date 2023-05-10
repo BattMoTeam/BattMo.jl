@@ -11,3 +11,11 @@ Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
+
+[compat]
+JLD2 = "0.4.31"
+Jutul = "0.2.7"
+MAT = "0.10.4"
+Polynomials = "3.2.11"
+PrecompileTools = "1.1.1"
+Tullio = "0.3.5"
