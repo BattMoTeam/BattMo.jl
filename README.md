@@ -37,10 +37,10 @@ This should produce the following plot:
 ![Discharge curve](docs/src/assets/discharge.png)
 
 ### 3D simulation example
-This example uses plotting from Jutul, so we need to add that package.
+This example uses plotting from Jutul, so we need to add that package to our environment.
 ```julia
 using Pkg
-Pkg.add("GLMakie")
+Pkg.add("Jutul")
 ```
 Run a 3D model and plot the results in an interactive viewer.
 ```julia
