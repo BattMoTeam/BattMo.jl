@@ -86,7 +86,12 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
     function setup_component(exported, sys, bcfaces = nothing)
         
         domain = exported_model_to_domain(exported, bcfaces = bcfaces)
-        model = SimulationModel(domain, sys, context = DefaultContext())
+        G = MRSTWrapMesh(exported["G"])
+        data_domain = DataDomain(G)
+        for (k, v) in domain.entities
+            data_domain.entities[k] = v
+        end
+        model = SimulationModel(domain, sys, context = DefaultContext(), data_domain = data_domain)
         return model
         
     end
