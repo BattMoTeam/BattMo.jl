@@ -57,7 +57,7 @@ shift[:NAM] = dx
 shift[:PAM] = dx
 shift[:CC] = dx
 shift[:PP] = dx
-plot_multimodel_interactive(model, states, shift = shift, colormap = :curl)
+plot_multimodel_interactive(extra[:model], states, shift = shift, colormap = :curl)
 ```
 ![3D plot](docs/src/assets/3d_plot.png)
 
