@@ -10,7 +10,7 @@ As a technology preview, the current implementation reads in input data prepared
 ## Installation
 This package is currently unregistered. To add it to your Julia environment, open Julia and run
 ```julia
-using Pkg; Pkg.add(url="https://github.com/BattMoTeam/Battmo.jl")
+using Pkg; Pkg.add("BattMo")
 ```
 
 ### Getting started
