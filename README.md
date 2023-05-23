@@ -8,7 +8,7 @@ As a technology preview, the current implementation reads in input data prepared
 <img src="docs/src/assets/battmologo_text.png" style="margin-left: 5cm" width="300px">
 
 ## Installation
-This package is currently unregistered. To add it to your Julia environment, open Julia and run
+This package is registered in the General Julia registry. To add it to your Julia environment, open Julia and run
 ```julia
 using Pkg; Pkg.add("BattMo")
 ```
