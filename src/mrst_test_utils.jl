@@ -96,18 +96,20 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
         :NAM => "NegativeElectrode",
         :PAM => "PositiveElectrode",        
     )
+
+    inputparams = exported["model"]
     
     function setup_active_material(name)
 
         exportName = exportNames[name]
 
-        exported_am = exported["model"][exportName]["ActiveMaterial"]
+        inputparams_am = inputparams[exportName]["ActiveMaterial"]
 
-        am_params = Dict{Symbol, Any}()
-        am_params[:n_charge_carriers]       = exported_am["Interface"]["n"]
-        am_params[:maximum_concentration]   = exported_am["Interface"]["cmax"]
-        am_params[:volumetric_surface_area] = exported_am["Interface"]["volumetricSurfaceArea"]
-        k0 = exported_am["Interface"]["k0"]
+        am_params = JutulStorage()
+        am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
+        am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
+        am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
+        k0 = inputparams_am["Interface"]["k0"]
         am_params[:reaction_rate_constant_func] = (T, c) -> compute_reaction_rate_constant(T, c, k0)
         
         if name == :NAM
@@ -119,19 +121,19 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
         end
         
         if use_p2d
-            rp = exported_am["SolidDiffusion"]["rp"]
-            N  = Int64(exported_am["SolidDiffusion"]["N"])
-            D  = exported_am["SolidDiffusion"]["D0"]
+            rp = inputparams_am["SolidDiffusion"]["rp"]
+            N  = Int64(inputparams_am["SolidDiffusion"]["N"])
+            D  = inputparams_am["SolidDiffusion"]["D0"]
             sys_am = ActiveMaterial{P2Ddiscretization}(am_params, rp, N, D)
         else
             sys_am = ActiveMaterial{NoParticleDiffusion}(am_params)
         end
         
         if  include_cc
-            model_am = setup_component(exported_am, sys_am)
+            model_am = setup_component(inputparams_am, sys_am)
         else
             bcfaces_am = convert_to_int_vector(["externalCouplingTerm"]["couplingfaces"])
-            model_am   = setup_component(exported_am, sys_am, bcfaces_am)
+            model_am   = setup_component(inputparams_am, sys_am, bcfaces_am)
             # We add also boundary parameters (if any)
             S = model_pam.parameters
             nbc = count_active_entities(model_pam.domain, BoundaryFaces())
@@ -153,11 +155,11 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
     
     if include_cc
 
-        exported_cc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
+        inputparams_cc = inputparams["NegativeElectrode"]["CurrentCollector"]
         sys_cc      = CurrentCollector()
-        bcfaces     = convert_to_int_vector(exported_cc["externalCouplingTerm"]["couplingfaces"])
+        bcfaces     = convert_to_int_vector(inputparams_cc["externalCouplingTerm"]["couplingfaces"])
         
-        model_cc =  setup_component(exported_cc, sys_cc, bcfaces)
+        model_cc =  setup_component(inputparams_cc, sys_cc, bcfaces)
         
     end
 
@@ -166,9 +168,27 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
     model_nam = setup_active_material(:NAM)
 
     ## Setup ELYTE
+    params = JutulStorage();
+    inputparams_elyte = inputparams["Electrolyte"]
+    params[:transference] = inputparams_elyte["sp"]["t"]
+    params[:charge]       = inputparams_elyte["sp"]["z"]
+    params[:bruggeman]    = inputparams_elyte["BruggemanCoefficient"]
     
-    model_elyte = setup_component(exported["model"]["Electrolyte"],
-                                  TestElyte())
+    # setup diffusion coefficient function
+    # funcname = inputparams_elyte[:DiffusionCoefficient][:functionname]
+    funcname = "electrolyte_diffusivity"
+    func = getfield(BattMo, Symbol(funcname))
+    params[:diffusivity] = func
+
+    # setup diffusion coefficient function
+    # funcname = inputparams_elyte[:Conductivity][:functionname]
+    funcname = "electrolyte_conductivity"
+    func = getfield(BattMo, Symbol(funcname))
+    params[:conductivity] = func
+    
+    elyte = Electrolyte(params)
+    model_elyte = setup_component(inputparams["Electrolyte"],
+                                  elyte)
 
     # Setup PAM
     
@@ -176,7 +196,7 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
 
     # Setup negative current collector if any
     if include_cc
-        model_pp = setup_component(exported["model"]["PositiveElectrode"]["CurrentCollector"],
+        model_pp = setup_component(inputparams["PositiveElectrode"]["CurrentCollector"],
                                    CurrentCollector())
     end
 

@@ -1,27 +1,18 @@
 # Model for a electrolyte
 
 using Polynomials
-export Electrolyte, TestElyte, DmuDc, ChemCoef
+export Electrolyte, DmuDc, ChemCoef
 export p1, p2, p3, diffusivity
 export ElectrolyteModel
 
-abstract type Electrolyte <: ElectroChemicalComponent end
-struct TestElyte <: Electrolyte
-    setup_parameters <: JutulStorage
+const ElectrolyteParameters = JutulStorage
+
+struct Electrolyte <: ElectroChemicalComponent 
+    params::ElectrolyteParameters
 end
 
-function Base.getindex(system::TestElyte, key::Symbol)
-    return system.setup_parameters[key]
-end
-
-function setupElectrolyte!(system::TestElyte)
-    system.setup_parameters[:transference] = 0.601
-end
-
-
-# Alias for convinience
+# Alias for convenience
 const ElectrolyteModel = SimulationModel{<:Any, <:Electrolyte, <:Any, <:Any}
-const TestElyteModel = SimulationModel{<:Any, <:TestElyte, <:Any, <:Any}
 
 # Is it necesessary with a new struct for all of these?
 struct DmuDc <: ScalarVariable end
@@ -97,7 +88,7 @@ const p1 = Polynomial(poly_param[1:end, 1])
 const p2 = Polynomial(poly_param[1:end, 2])
 const p3 = Polynomial(poly_param[1:end, 3])
 
-@inline function conductivity(T::Real, C::Real, ::Electrolyte)
+@inline function electrolyte_conductivity(T::Real, C::Real)
     """ Compute the electrolyte conductivity as a function of temperature and concentration
     """
     fact = 1e-4
@@ -110,7 +101,7 @@ const diff_params = [
 ]
 const Tgi = [229 5.0]
 
-@inline function diffusivity(T::Real, C::Real, ::Electrolyte)
+@inline function electrolyte_diffusivity(T::Real, C::Real)
     """ Compute the diffusion coefficient as a function of temperature and concentration
     """
     return (
@@ -122,9 +113,8 @@ const Tgi = [229 5.0]
         )
 end
 
-@inline function transference(system::TestElyte)
+@inline function transference(system::Electrolyte)
     return system[:transference]
-    # return 0.601
 end
 
 @jutul_secondary(
@@ -139,11 +129,11 @@ end
 function update_conductivity!(kappa, kappa_def::Conductivity, model::ElectrolyteModel, Temperature, C, ix)
     """ Register conductivity function
     """
-    s = model.system
+    system = model.system
     # We use Bruggeman coefficient
     vf = model.domain.representation.vol_frac
     for i in ix
-        @inbounds kappa[i] = conductivity(Temperature[i], C[i], s) * vf[i]^1.5
+        @inbounds kappa[i] = system[:conductivity](Temperature[i], C[i]) * vf[i]^1.5
     end
 end
 )
@@ -151,10 +141,10 @@ end
 @jutul_secondary function update_diffusivity!(D, D_def::Diffusivity, model::ElectrolyteModel, C, Temperature, ix)
     """ Register diffusivity function
     """
-    s = model.system
+    system = model.system
     vf = model.domain.representation.vol_frac
     for i in ix
-        @inbounds D[i] = diffusivity(Temperature[i], C[i], s)  * vf[i]^1.5
+        @inbounds D[i] = system[:diffusivity](Temperature[i], C[i])*vf[i]^1.5
     end
 end
 

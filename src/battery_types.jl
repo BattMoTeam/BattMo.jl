@@ -12,6 +12,10 @@ struct BoundaryFaces <: Jutul.JutulEntity end
 abstract type ElectroChemicalComponent <: JutulSystem end
 # Alias for a general electro-chemical model
 
+function Base.getindex(system::ElectroChemicalComponent, key::Symbol)
+    return system.params[key]
+end
+
 const ElectroChemicalComponentModel = SimulationModel{<:Any, <:ElectroChemicalComponent, <:Any, <:Any}
 
 abstract type ElectroChemicalGrid <: JutulMesh end

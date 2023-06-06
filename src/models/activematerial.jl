@@ -1,7 +1,8 @@
 export ActiveMaterial, ActiveMaterialModel, SolidMassCons, NoParticleDiffusion
 
 ## The parameter for the active material are stored in a dictionnary
-const ActiveMaterialParameters = Dict{Symbol, Any}
+const ActiveMaterialParameters = JutulStorage
+
 abstract type SolidDiffusionDiscretization end
 
 struct P2Ddiscretization <: SolidDiffusionDiscretization
@@ -52,10 +53,12 @@ function ActiveMaterial{P2Ddiscretization}(params::ActiveMaterialParameters, rp,
 end
 
 ## Create ActiveMaterial with no solid diffusion
-function ActiveMaterial{NoParticleDiffusion}(param::ActiveMaterialParameters) 
+function ActiveMaterial{NoParticleDiffusion}(params::ActiveMaterialParameters)
     discretization = NoParticleDiffusion()
-    return ActiveMaterial{NoParticleDiffusion}(param, discretization)
+    return ActiveMaterial{NoParticleDiffusion}(params, discretization)
 end
+
+
 
 ####
 # Setup functions for P2D

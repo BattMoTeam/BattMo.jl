@@ -14,7 +14,7 @@ function Jutul.convergence_criterion(model::ElectroChemicalComponentModel, stora
     return R
 end
 
-function Jutul.convergence_criterion(model::ECModel, storage, eq::ConservationLaw{:Charge}, eq_s, r; dt = 1)
+function Jutul.convergence_criterion(model::ElectroChemicalComponentModel, storage, eq::ConservationLaw{:Charge}, eq_s, r; dt = 1)
     n = number_of_equations_per_entity(model, eq)
     @tullio max e[i] := abs(r[i, j])
     if n == 1
