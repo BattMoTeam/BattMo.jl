@@ -6,7 +6,18 @@ export p1, p2, p3, diffusivity
 export ElectrolyteModel
 
 abstract type Electrolyte <: ElectroChemicalComponent end
-struct TestElyte <: Electrolyte end
+struct TestElyte <: Electrolyte
+    setup_parameters <: JutulStorage
+end
+
+function Base.getindex(system::TestElyte, key::Symbol)
+    return system.setup_parameters[key]
+end
+
+function setupElectrolyte!(system::TestElyte)
+    system.setup_parameters[:transference] = 0.601
+end
+
 
 # Alias for convinience
 const ElectrolyteModel = SimulationModel{<:Any, <:Electrolyte, <:Any, <:Any}
@@ -111,8 +122,9 @@ const Tgi = [229 5.0]
         )
 end
 
-@inline function transference(::Electrolyte)
-    return 0.601
+@inline function transference(system::TestElyte)
+    return system[:transference]
+    # return 0.601
 end
 
 @jutul_secondary(
