@@ -1,6 +1,6 @@
 using Jutul
 
-export ElectroChemicalComponent, CurrentCollector, Electectrolyte, TestElyte
+export ElectroChemicalComponent, CurrentCollector
 export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
 export ChargeFlow, BoundaryPotential, BoundaryCurrent
 export Phi, C, Temperature, Charge, Mass
@@ -10,8 +10,9 @@ export TPFAInterfaceFluxCT, ButlerVolmerActmatToElyteCT, ButlerVolmerElyteToActm
 struct BoundaryFaces <: Jutul.JutulEntity end
 
 abstract type ElectroChemicalComponent <: JutulSystem end
-# Alias for a genereal Electro Chemical Model
-const ECModel = SimulationModel{<:Any, <:ElectroChemicalComponent, <:Any, <:Any}
+# Alias for a general electro-chemical model
+
+const ElectroChemicalComponentModel = SimulationModel{<:Any, <:ElectroChemicalComponent, <:Any, <:Any}
 
 abstract type ElectroChemicalGrid <: JutulMesh end
 

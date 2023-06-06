@@ -29,7 +29,7 @@ end
     
 end
 
-@inline function Jutul.face_flux!(q_i, face, eq::ConservationLaw, state, model::ECModel, dt, flow_disc::PotentialFlow, ldisc)
+@inline function Jutul.face_flux!(q_i, face, eq::ConservationLaw, state, model::ElectroChemicalComponentModel, dt, flow_disc::PotentialFlow, ldisc)
 
     # Inner version, for generic flux
     kgrad, upw = ldisc.face_disc(face)
@@ -89,7 +89,7 @@ end
 # TODO: Add possibilites for different potentials to have different boundary cells
 
 # Called from update_state dependents
-function Jutul.apply_boundary_conditions!(storage, parameters, model::ECModel)
+function Jutul.apply_boundary_conditions!(storage, parameters, model::ElectroChemicalComponentModel)
     equations_storage = storage.equations
     equations = model.equations
     for (eq, eq_s) in zip(values(equations), equations_storage)
@@ -174,13 +174,13 @@ function apply_boundary_current!(acc, state, jkey, model, eq::ConservationLaw)
     
 end
 
-function Jutul.select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::Union{ECModel, SimpleElyteModel})
+function Jutul.select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::ElectroChemicalComponentModel)
     
     prm[:ECTransmissibilities] = ECTransmissibilities()
     
 end
 
-function Jutul.select_parameters!(prm, D::MinimalECTPFAGrid, model::Union{ECModel, SimpleElyteModel})
+function Jutul.select_parameters!(prm, D::MinimalECTPFAGrid, model::ElectroChemicalComponentModel)
     
     prm[:Volume]         = Volume()
     prm[:VolumeFraction] = VolumeFraction()

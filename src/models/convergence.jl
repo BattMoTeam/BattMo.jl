@@ -1,4 +1,4 @@
-function Jutul.convergence_criterion(model::ECModel, storage, eq::ConservationLaw{:Mass}, eq_s, r; dt = 1)
+function Jutul.convergence_criterion(model::ElectroChemicalComponentModel, storage, eq::ConservationLaw{:Mass}, eq_s, r; dt = 1)
     n = number_of_equations_per_entity(model, eq)
     V = storage.state.Volume
     V_f = storage.state.VolumeFraction

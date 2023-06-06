@@ -66,7 +66,6 @@ include("models/current_collector.jl")
 include("models/current_collector_temp.jl")
 include("models/activematerial.jl")
 include("models/ocp.jl")
-include("models/simple_elyte.jl")
 include("models/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/convergence.jl")
