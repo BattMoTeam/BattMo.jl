@@ -188,7 +188,7 @@
     "rOuter": 0.02236,
     "L": 0.07,
     "nas": 20,
-    "nL": 10
+    "nL": 2
   },
   "NonLinearSolver": {
     "maxIterations": 20,
