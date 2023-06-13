@@ -27,7 +27,7 @@ function Jutul.select_parameters!(
     )
     
     S[:Conductivity] = Conductivity()
-    if count_entities(model.data_domain, BoundaryFaces()) > 0
+    if count_entities(model.data_domain, BoundaryControlFaces()) > 0
         S[:BoundaryPhi]  = BoundaryPotential(:Phi)
         S[:BoundaryC]    = BoundaryPotential(:C)
     end

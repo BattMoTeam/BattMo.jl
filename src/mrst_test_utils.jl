@@ -76,6 +76,226 @@ function setup_model(exported; use_p2d = true, use_groups = false, kwarg...)
     
 end
 
+function setup_battery_model1d(exported; include_cc = true, use_p2d = true, use_groups = false)
+
+    names = (:CC, :NAM, :SEP, :PAM, :PP)
+    geomparams = Dict(name => Dict() for name in names)
+    geomparams[:CC][:N]          = 3
+    geomparams[:CC][:thickness]  = 25e-6
+    geomparams[:NAM][:N]         = 3
+    geomparams[:NAM][:thickness] = 64e-6
+    geomparams[:SEP][:N]         = 10
+    geomparams[:SEP][:thickness] = 15e-6
+    geomparams[:PAM][:N]         = 10
+    geomparams[:PAM][:thickness] = 57e-6
+    geomparams[:PP][:N]          = 10
+    geomparams[:PP][:thickness]  = 15e-6
+
+    function setup_component(geomparam::Dict, sys, bcfaces = nothing)
+        
+        g = CartesianMesh(Tuple(geomparam[:N]), Tuple(geomparam[:length]))
+        domain = DataDomain(g)
+
+        k = ones(geomparam[:N])
+        T_hf = compute_half_face_trans(domain, k)
+        T_b  = compute_boundary_trans(domain, k)
+
+        sys.params[:halfTrans] = T_hf
+        sys.params[:bcTrans]   = T_b
+        
+        model = SimulationModel(domain, sys, context = DefaultContext())
+        return model
+        
+    end
+
+    function setup_component(geomparam::Dict, sys::Electrolyte, bcfaces = nothing)
+        # specific implementation for electrolyte
+        # requires geometric parameters for :NAM, :SEP, :PAM
+        
+        names = (:NAM, :SEP, :PAM)
+
+        deltas = Vector()
+        for name in names
+            dx = geomparam[name][:thickness]/geomparam[name][:N]
+            dx = dx*ones(geomparam[name][:N])
+            deltas = vcat(dx, deltas)
+        end
+
+        N = reduce(+, [geomparam[name][:N] for name in names])
+        
+        g = CartesianMesh(Tuple(N), Tuple(deltas))
+        
+        domain = DataDomain(g)
+
+        k = ones(N)
+        T_hf = compute_half_face_trans(domain, k)
+        T_b  = compute_boundary_trans(domain, k)
+
+        sys.params[:halfTrans] = T_hf
+        sys.params[:bcTrans]   = T_b
+        
+        model = SimulationModel(domain, sys, context = DefaultContext())
+        
+        return model
+        
+    end
+
+    exportNames = Dict(
+        :NAM => "NegativeElectrode",
+        :PAM => "PositiveElectrode",        
+    )
+
+    inputparams = exported["model"]
+    
+    function setup_active_material(name)
+
+        exportName = exportNames[name]
+
+        inputparams_am = inputparams[exportName]["ActiveMaterial"]
+
+        am_params = JutulStorage()
+        am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
+        am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
+        am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
+        k0 = inputparams_am["Interface"]["k0"]
+        am_params[:reaction_rate_constant_func] = (T, c) -> compute_reaction_rate_constant(T, c, k0)
+        
+        if name == :NAM
+            am_params[:ocp_func] = compute_ocp_graphite
+        elseif name == :PAM
+            am_params[:ocp_func] = compute_ocp_nmc111
+        else
+            error("not recongized")
+        end
+        
+        if use_p2d
+            rp = inputparams_am["SolidDiffusion"]["rp"]
+            N  = Int64(inputparams_am["SolidDiffusion"]["N"])
+            D  = inputparams_am["SolidDiffusion"]["D0"]
+            sys_am = ActiveMaterial{P2Ddiscretization}(am_params, rp, N, D)
+        else
+            sys_am = ActiveMaterial{NoParticleDiffusion}(am_params)
+        end
+        
+        geomparam = geomparams[name]
+        
+        if  include_cc
+            model_am = setup_component(geomparam, sys_am)
+        else
+            model_am = setup_component(geomparam, sys_am)
+            # We add the boundary control faces entities
+            model_am.domain.entities[BoundaryControlFaces()] = 1
+            
+            S = model_am.parameters
+            nbc = count_active_entities(model_am.domain, BoundaryControlFaces())
+            if nbc > 0
+                bcvalue_zeros = zeros(nbc)
+                # add parameters to the model
+                S[:BoundaryPhi] = BoundaryPotential(:Phi)
+                S[:BoundaryC]   = BoundaryPotential(:C)
+            end
+        end
+
+        return model_am
+        
+    end
+    
+    # Setup positive current collector if any
+    
+    if include_cc
+
+        sys_cc = CurrentCollector()
+        
+        model_cc =  setup_component(geomparams[:CC], sys_cc)
+
+        # We add the boundary control faces entities
+        model_cc.domain.entities[BoundaryControlFaces()] = 1
+        
+    end
+
+    # Setup NAM
+
+    model_nam = setup_active_material(:NAM)
+
+    ## Setup ELYTE
+
+    params = JutulStorage();
+    inputparams_elyte = inputparams["Electrolyte"]
+    
+    params[:transference] = inputparams_elyte["sp"]["t"]
+    params[:charge]       = inputparams_elyte["sp"]["z"]
+    params[:bruggeman]    = inputparams_elyte["BruggemanCoefficient"]
+    
+    # setup diffusion coefficient function
+    # funcname = inputparams_elyte[:DiffusionCoefficient][:functionname]
+    funcname = "electrolyte_diffusivity"
+    func = getfield(BattMo, Symbol(funcname))
+    params[:diffusivity] = func
+
+    # setup diffusion coefficient function
+    # funcname = inputparams_elyte[:Conductivity][:functionname]
+    funcname = "electrolyte_conductivity"
+    func = getfield(BattMo, Symbol(funcname))
+    params[:conductivity] = func
+    
+    elyte = Electrolyte(params)
+
+    geomparams = Dict()
+    geomparams[:NAM] = Dict(())
+    model_elyte = setup_component(geomparams, elyte)
+
+    # Setup PAM
+
+    model_pam = setup_active_material(:PAM)
+
+    # Setup negative current collector if any
+    if include_cc
+        sys_pp = CurrentCollector()
+        model_pp = setup_component(geomparams[:PP], sys_pp)
+    end
+
+    # Setup control model
+
+    sys_bpp    = CurrentAndVoltageSystem()
+    domain_bpp = CurrentAndVoltageDomain()
+    model_bpp  = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
+    
+    if !include_cc
+        groups = nothing
+        model = MultiModel(
+            (
+                NAM   = model_nam, 
+                ELYTE = model_elyte, 
+                PAM   = model_pam, 
+                BPP   = model_bpp
+            ), 
+            groups = groups)    
+    else
+        models = (
+            CC    = model_cc, 
+            NAM   = model_nam, 
+            ELYTE = model_elyte, 
+            PAM   = model_pam, 
+            PP    = model_pp,
+            BPP   = model_bpp
+        )
+        if use_groups
+            groups = ones(Int64, length(models))
+            # Should be BPP
+            groups[end] = 2
+            reduction = :schur_apply
+        else
+            groups    = nothing
+            reduction = :reduction
+        end
+        model = MultiModel(models, groups = groups, reduction = reduction)
+
+    end
+    
+    return model
+
+    
+end
 
 function setup_battery_model(exported; include_cc = true, use_p2d = true, use_groups = false)
 
@@ -113,9 +333,9 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
         am_params[:reaction_rate_constant_func] = (T, c) -> compute_reaction_rate_constant(T, c, k0)
         
         if name == :NAM
-            am_params[:ocp_func]                    = compute_ocp_graphite
+            am_params[:ocp_func] = compute_ocp_graphite
         elseif name == :PAM
-            am_params[:ocp_func]                    = compute_ocp_nmc111
+            am_params[:ocp_func] = compute_ocp_nmc111
         else
             error("not recongized")
         end
@@ -135,8 +355,8 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
             bcfaces_am = convert_to_int_vector(["externalCouplingTerm"]["couplingfaces"])
             model_am   = setup_component(inputparams_am, sys_am, bcfaces_am)
             # We add also boundary parameters (if any)
-            S = model_pam.parameters
-            nbc = count_active_entities(model_pam.domain, BoundaryFaces())
+            S = model_am.parameters
+            nbc = count_active_entities(model_am.domain, BoundaryControlFaces())
             if nbc > 0
                 bcvalue_zeros = zeros(nbc)
                 # add parameters to the model

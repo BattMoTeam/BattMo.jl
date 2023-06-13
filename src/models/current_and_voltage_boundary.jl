@@ -8,7 +8,7 @@ struct CurrentAndVoltageSystem <: JutulSystem end
 
 struct CurrentAndVoltageDomain <: JutulDomain end
 
-const CurrentAndVoltageModel  = SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem}
+const CurrentAndVoltageModel = SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem}
 
 number_of_cells(::CurrentAndVoltageDomain) = 1
 
