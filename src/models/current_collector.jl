@@ -1,6 +1,8 @@
 export CurrentCollector
 
-struct CurrentCollector <: ElectroChemicalComponent end
+struct CurrentCollector <: ElectroChemicalComponent
+    params
+end
 
 function select_minimum_output_variables!(out,
     system::CurrentCollector, model::SimulationModel

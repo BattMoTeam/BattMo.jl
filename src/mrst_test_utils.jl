@@ -21,6 +21,36 @@ function getTrans(model1, model2, faces, cells, quantity)
     
 end
 
+function getTrans_1d(model1, model2, bcfaces, parameters1, parameters2, quantity)
+    """ setup transmissibility for coupling between models at boundaries. Intermediate 1d version"""
+
+    bcTrans1 = model1.system.params[:bcTrans][bcfaces[:, 1]]
+    bcTrans2 = model2.system.params[:bcTrans][bcfaces[:, 2]]
+
+    cells1 = model1.domain[:boundary_neighbors][bcfaces[:, 1]]
+    cells2 = model2.domain[:boundary_neighbors][bcfaces[:, 2]]
+
+    s1  = parameters1[quantity][cells1]
+    s2  = parameters2[quantity][cells2]
+    
+    T   = 1.0./((1.0./(bcTrans1.*s1))+(1.0./(bcTrans2.*s2)))
+
+    return T
+    
+end
+
+function getHalfTrans_1d(model, faces, parameters, quantity)
+    """ recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the corresponding given cells. Intermediate 1d version"""
+
+    bcTrans = model.system.params[:bcTrans][bcfaces]
+    cells   = model.domain[:boundary_neighbors][bcfaces]
+    s       = parameters[quantity][cells]
+    
+    T   = bcTrans.*s
+
+    return T
+end
+
 function getHalfTrans(model, faces, cells, quantity)
     """ recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the given cells.
 Here, the faces should belong the corresponding cells at the same index"""
@@ -76,24 +106,36 @@ function setup_model(exported; use_p2d = true, use_groups = false, kwarg...)
     
 end
 
-function setup_battery_model1d(exported; include_cc = true, use_p2d = true, use_groups = false)
+names = (:CC, :NAM, :SEP, :PAM, :PP)
+geomparams = Dict(name => Dict() for name in names)
+geomparams[:CC][:N]          = 3
+geomparams[:CC][:thickness]  = 25e-6
+geomparams[:NAM][:N]         = 3
+geomparams[:NAM][:thickness] = 64e-6
+geomparams[:SEP][:N]         = 10
+geomparams[:SEP][:thickness] = 15e-6
+geomparams[:PAM][:N]         = 10
+geomparams[:PAM][:thickness] = 57e-6
+geomparams[:PP][:N]          = 10
+geomparams[:PP][:thickness]  = 15e-6
 
-    names = (:CC, :NAM, :SEP, :PAM, :PP)
-    geomparams = Dict(name => Dict() for name in names)
-    geomparams[:CC][:N]          = 3
-    geomparams[:CC][:thickness]  = 25e-6
-    geomparams[:NAM][:N]         = 3
-    geomparams[:NAM][:thickness] = 64e-6
-    geomparams[:SEP][:N]         = 10
-    geomparams[:SEP][:thickness] = 15e-6
-    geomparams[:PAM][:N]         = 10
-    geomparams[:PAM][:thickness] = 57e-6
-    geomparams[:PP][:N]          = 10
-    geomparams[:PP][:thickness]  = 15e-6
+function setup_model_1d(exported, geomparams; use_p2d = true, use_groups = false, kwarg...)
+
+    include_cc = true
+
+    model      = setup_battery_model_1d(exported, geomparams, use_p2d = use_p2d, include_cc = include_cc)
+    parameters = setup_battery_parameters(exported, model)
+    initState  = setup_battery_initial_state(exported, model)
+    
+    return model, initState, parameters
+    
+end
+
+function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d = true, use_groups = false)
 
     function setup_component(geomparam::Dict, sys, bcfaces = nothing)
         
-        g = CartesianMesh(Tuple(geomparam[:N]), Tuple(geomparam[:length]))
+        g = CartesianMesh(Tuple(geomparam[:N]), Tuple(geomparam[:thickness]))
         domain = DataDomain(g)
 
         k = ones(geomparam[:N])
@@ -121,7 +163,7 @@ function setup_battery_model1d(exported; include_cc = true, use_p2d = true, use_
             deltas = vcat(dx, deltas)
         end
 
-        N = reduce(+, [geomparam[name][:N] for name in names])
+        N = sum([geomparam[name][:N] for name in names])
         
         g = CartesianMesh(Tuple(N), Tuple(deltas))
         
@@ -140,7 +182,7 @@ function setup_battery_model1d(exported; include_cc = true, use_p2d = true, use_
         
     end
 
-    exportNames = Dict(
+    jsonNames = Dict(
         :NAM => "NegativeElectrode",
         :PAM => "PositiveElectrode",        
     )
@@ -149,9 +191,9 @@ function setup_battery_model1d(exported; include_cc = true, use_p2d = true, use_
     
     function setup_active_material(name)
 
-        exportName = exportNames[name]
+        jsonName = jsonNames[name]
 
-        inputparams_am = inputparams[exportName]["ActiveMaterial"]
+        inputparams_am = inputparams[jsonName]["ActiveMaterial"]
 
         am_params = JutulStorage()
         am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
@@ -312,7 +354,7 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
         
     end
 
-    exportNames = Dict(
+    jsonNames = Dict(
         :NAM => "NegativeElectrode",
         :PAM => "PositiveElectrode",        
     )
@@ -321,9 +363,9 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
     
     function setup_active_material(name)
 
-        exportName = exportNames[name]
+        jsonName = jsonNames[name]
 
-        inputparams_am = inputparams[exportName]["ActiveMaterial"]
+        inputparams_am = inputparams[jsonName]["ActiveMaterial"]
 
         am_params = JutulStorage()
         am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
@@ -548,7 +590,7 @@ function setup_battery_initial_state(exported, model)
 
     state0 = exported["state0"]
 
-    exportNames = Dict(
+    jsonNames = Dict(
         :CC  => "NegativeElectrode",
         :NAM => "NegativeElectrode",
         :PAM => "PositiveElectrode",        
@@ -567,7 +609,7 @@ function setup_battery_initial_state(exported, model)
         
         if use_cc
             init = Dict()
-            init[:Phi] = state0[exportNames[name]]["CurrentCollector"]["phi"][1]
+            init[:Phi] = state0[jsonNames[name]]["CurrentCollector"]["phi"][1]
             initState[name] = init
         end
         
@@ -577,7 +619,7 @@ function setup_battery_initial_state(exported, model)
     function initialize_active_material!(initState, name::Symbol)
         """ initialize values for the active material"""
 
-        exportName = exportNames[name]
+        jsonName = jsonNames[name]
         
         ccnames = Dict(
             :NAM => :CC,
@@ -596,12 +638,12 @@ function setup_battery_initial_state(exported, model)
 
         init = Dict()
         
-        init[:Phi]   = state0[exportName]["ActiveMaterial"]["phi"][1]
+        init[:Phi]   = state0[jsonName]["ActiveMaterial"]["phi"][1]
 
         if use_cc
-            c = state0[exportName]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
+            c = state0[jsonName]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
         else
-            c = state0[exportName]["ActiveMaterial"]["c"][1]
+            c = state0[jsonName]["ActiveMaterial"]["c"][1]
         end
 
         if  discretisation_type(sys) == :P2Ddiscretization
@@ -648,6 +690,158 @@ function setup_battery_initial_state(exported, model)
     initState = setup_state(model, initState)
 
     return initState
+    
+end
+
+function setup_coupling_1d!(model, parameters, geomparams)
+
+    # setup coupling CC <-> NAM :charge_conservation
+    
+    skip_cc = false # we consider only case with current collector (for simplicity, for the moment)
+    
+    if !skip_cc
+
+        Ncc  = geomparams[:CC][:N]
+
+        srange = Ncc
+        trange = 1
+        
+        msource = model[:CC]
+        mtarget = model[:NAM]
+        
+        psource = parameters[:CC]
+        ptarget = parameters[:NAM]
+
+        couplingfaces = [Ncc + 1, 1]
+        trans = getTrans_1d(msource, mtarget,
+                            couplingfaces,
+                            psource, ptarget,
+                            :Conductivity)
+
+        ct = TPFAInterfaceFluxCT(trange, srange, trans)
+        ct_pair = setup_cross_term(ct, target = :NAM, source = :CC, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        
+    end
+    
+    # setup coupling NAM <-> ELYTE charge
+
+    Nnam = geomparams[:NAM][:N]
+    
+    srange = [1 : Nnam] # negative electrode
+    trange = [1 : Nnam] # electrolyte (negative side)
+
+    if discretisation_type(model[:NAM]) == :P2Ddiscretization
+
+        ct = ButlerVolmerActmatToElyteCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
+        
+        ct = ButlerVolmerElyteToActmatCT(srange, trange)
+        ct_pair = setup_cross_term(ct, target = :NAM, source = :ELYTE, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :NAM, source = :ELYTE, equation = :solid_diffusion_bc)
+        add_cross_term!(model, ct_pair)
+        
+    else
+        
+        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
+        
+        ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
+        
+    end
+
+    # setup coupling ELYTE <-> PAM charge
+
+    Nnam = geomparams[:NAM][:N]
+    Nsep = geomparams[:SEP][:N]
+    Npam = geomparams[:PAM][:N]
+    
+    srange = 1 : Npam # positive electrode
+    trange = Nnam + Nsep .+ (1 : Npam) # electrolyte (positive side)
+    
+    if discretisation_type(model[:PAM]) == :P2Ddiscretization
+
+        ct = ButlerVolmerActmatToElyteCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
+        
+        ct = ButlerVolmerElyteToActmatCT(srange, trange)
+        ct_pair = setup_cross_term(ct, target = :PAM, source = :ELYTE, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :PAM, source = :ELYTE, equation = :solid_diffusion_bc)
+        add_cross_term!(model, ct_pair)
+        
+    else
+        
+        @assert discretisation_type(model[:PAM]) == :NoParticleDiffusion    
+
+        ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
+        
+    end
+
+    
+    if  !skip_cc
+        # setup coupling PP <-> PAM charge
+        
+        Npam  = geomparams[:PAM][:N]
+        
+        srange = 1
+        trange = Npam
+        
+        msource = model[:PP]
+        mtarget = model[:PAM]
+        
+        psource = parameters[:PP]
+        ptarget = parameters[:PAM]
+
+        couplingfaces = [1, 1 + Npam]
+        
+        trans = getTrans_1d(msource, mtarget,
+                            couplingfaces,
+                            psource, ptarget,
+                            :Conductivity)
+
+        ct = TPFAInterfaceFluxCT(trange, srange, trans)
+        ct_pair = setup_cross_term(ct,
+                                   target = :PAM,
+                                   source = :PP,
+                                   equation = :charge_conservation)
+
+        # setup coupling with control
+        
+        Npp  = geomparams[:PP][:N]
+        
+        trange = Npp
+        srange = Int64.(ones(size(trange)))
+
+        msource       = model[:PP]
+        mparameters   = parameters[:PP]
+        couplingfaces = Npp
+        trans = getHalfTrans_1d(msource, couplingfaces, mparameters, :Conductivity)
+
+        ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
+        ct_pair = setup_cross_term(ct, target = :PP, source = :BPP, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+
+        # Accmulation of charge
+        ct = AccumulatorInterfaceFluxCT(1, trange, trans)
+        ct_pair = setup_cross_term(ct, target = :BPP, source = :PP, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+       
+    end
     
 end
 
@@ -859,6 +1053,47 @@ function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggreg
     
 end
 
+function setup_sim_1d(name; use_p2d = true, use_groups = false, general_ad = false)
+
+    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
+    exported = MAT.matread(fn)
+
+    model, state0, parameters = setup_model_1d(exported, geomparams, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
+   
+    setup_coupling_1d!(model, parameters, geomparams)
+    
+    inputI = 0;
+    minE   = 10
+    steps  = size(exported["states"],1)
+    
+    for i = 1:steps
+        
+        inputI = max(inputI, exported["states"][i]["Control"]["I"])
+        minE   = min(minE, exported["states"][i]["Control"]["E"])
+        
+    end
+    
+    @. state0[:BPP][:Phi] = minE*1.5
+    cFun(time) = currentFun(time, inputI)
+    forces_pp = nothing
+
+    currents = setup_forces(model[:BPP], policy = SimpleCVPolicy(cFun, minE))
+
+    forces = Dict(
+        :CC => nothing,
+        :NAM => nothing,
+        :ELYTE => nothing,
+        :PAM => nothing,
+        :PP => forces_pp,
+        :BPP => currents
+    )
+    
+    sim = Simulator(model, state0 = state0, parameters = parameters, copy_state = true)
+    
+    return sim, forces, state0, parameters, exported, model
+    
+end
+
 function setup_sim(name; use_p2d = true, use_groups = false, general_ad = false)
 
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
@@ -968,6 +1203,76 @@ function run_battery(name;
 
     return (states = states, reports = report, extra = extra, exported = exported)
 end
+
+export run_battery_1d
+
+function run_battery_1d(name;
+                     use_p2d       = true,
+                     extra_timing  = false,
+                     max_step      = nothing,
+                     linear_solver = :direct,
+                     general_ad    = false,
+                     use_groups    = false,
+                     kwarg...)
+    
+    sim, forces, state0, parameters, exported, model = setup_sim_1d(name, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
+    
+    steps        = size(exported["states"], 1)
+    alltimesteps = Vector{Float64}(undef, steps)
+    time         = 0;
+    end_step     = 0
+    minE         = 3.2
+    
+    for i = 1 : steps
+        alltimesteps[i] =  exported["states"][i]["time"] - time
+        time = exported["states"][i]["time"]
+        E = exported["states"][i]["Control"]["E"]
+        if (E > minE + 0.001)
+            end_step = i
+        end
+    end
+    if !isnothing(max_step)
+        end_step = min(max_step, end_step)
+    end
+    
+    timesteps = alltimesteps[1 : end_step]
+    
+    cfg = simulator_config(sim; kwarg...)
+    cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
+    cfg[:debug_level]                = 0
+    #cfg[:max_timestep_cuts]         = 0
+    cfg[:max_residual]               = 1e20
+    cfg[:min_nonlinear_iterations]   = 1
+    cfg[:extra_timing]               = extra_timing
+    # cfg[:max_nonlinear_iterations] = 5
+    cfg[:safe_mode]                  = false
+    cfg[:error_on_incomplete]        = true
+    if false
+        cfg[:info_level]               = 5
+        cfg[:max_nonlinear_iterations] = 1
+        cfg[:max_timestep_cuts]        = 0
+    end
+
+    cfg[:tolerances][:PP][:default] = 1e-1
+    cfg[:tolerances][:BPP][:default] = 1e-1
+    # Run simulation
+    
+    states, report = simulate(sim, timesteps, forces = forces, config = cfg)
+    stateref = exported["states"]
+
+    extra = Dict(:model => model,
+                 :state0 => state0,
+                 :states_ref => stateref,
+                 :parameters => parameters,
+                 :exported => exported,
+                 :timesteps => timesteps,
+                 :config => cfg,
+                 :forces => forces,
+                 :simulator => sim)
+
+    return (states = states, reports = report, extra = extra, exported = exported)
+end
+
 
 export inputRefToStates
 function inputRefToStates(states, stateref)
