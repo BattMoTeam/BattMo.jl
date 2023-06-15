@@ -144,11 +144,15 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
 
         sys.params[:halfTrans] = T_hf
         sys.params[:bcTrans]   = T_b
-        
+
         if sys isa CurrentCollector
             domain.entities[BoundaryControlFaces()] = 1
         end
-
+        
+        flow = TwoPointPotentialFlowHardCoded(g)
+        disc = (charge_flow = flow,)
+        domain = DiscretizedDomain(domain, disc)
+        
         model = SimulationModel(domain, sys, context = DefaultContext())
         return model
         
@@ -249,20 +253,18 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
     # Setup negative current collector
     
     if include_cc
-
+        @info "Setup negative current collector"
         sys_cc = CurrentCollector()
-        
         model_cc =  setup_component(geomparams[:CC], sys_cc)
-
-        
     end
 
     # Setup NAM
-
+    @info "Setup negative active material"
     model_nam = setup_active_material(:NAM)
 
     ## Setup ELYTE
 
+    @info "Setup Electrolyte"
     params = JutulStorage();
     inputparams_elyte = inputparams["Electrolyte"]
     
@@ -289,11 +291,12 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
     model_elyte = setup_component(geomparams, elyte)
 
     # Setup PAM
-
+    @info "Setup positive active material"
     model_pam = setup_active_material(:PAM)
 
     # Setup negative current collector if any
     if include_cc
+        @info "Setup positive current collector"        
         sys_pp = CurrentCollector()
         model_pp = setup_component(geomparams[:PP], sys_pp)
     end
