@@ -145,6 +145,10 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         sys.params[:halfTrans] = T_hf
         sys.params[:bcTrans]   = T_b
         
+        if sys isa CurrentCollector
+            domain.entities[BoundaryControlFaces()] = 1
+        end
+
         model = SimulationModel(domain, sys, context = DefaultContext())
         return model
         
@@ -175,7 +179,7 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
 
         sys.params[:halfTrans] = T_hf
         sys.params[:bcTrans]   = T_b
-        
+
         model = SimulationModel(domain, sys, context = DefaultContext())
         
         return model
@@ -221,7 +225,7 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         
         geomparam = geomparams[name]
         
-        if  include_cc
+        if include_cc
             model_am = setup_component(geomparam, sys_am)
         else
             model_am = setup_component(geomparam, sys_am)
@@ -242,7 +246,7 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         
     end
     
-    # Setup positive current collector if any
+    # Setup negative current collector
     
     if include_cc
 
@@ -250,8 +254,6 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         
         model_cc =  setup_component(geomparams[:CC], sys_cc)
 
-        # We add the boundary control faces entities
-        model_cc.domain.entities[BoundaryControlFaces()] = 1
         
     end
 

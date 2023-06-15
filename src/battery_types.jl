@@ -6,6 +6,7 @@ export ChargeFlow, BoundaryPotential, BoundaryCurrent
 export Phi, C, Temperature, Charge, Mass
 export BCCurrent
 export TPFAInterfaceFluxCT, ButlerVolmerActmatToElyteCT, ButlerVolmerElyteToActmatCT, ButlerVolmerInterfaceFluxCT
+export BoundaryControlFaces
 
 struct BoundaryControlFaces <: Jutul.JutulEntity end
 

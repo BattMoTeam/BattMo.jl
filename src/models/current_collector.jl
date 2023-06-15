@@ -1,7 +1,12 @@
+using Infiltrator
 export CurrentCollector
 
 struct CurrentCollector <: ElectroChemicalComponent
     params
+end
+
+function CurrentCollector()
+    CurrentCollector(Dict())
 end
 
 function select_minimum_output_variables!(out,
