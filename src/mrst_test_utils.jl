@@ -158,22 +158,22 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         
     end
 
-    function setup_component(geomparam::Dict, sys::Electrolyte, bcfaces = nothing)
+    function setup_component(geomparams::Dict, sys::Electrolyte, bcfaces = nothing)
         # specific implementation for electrolyte
         # requires geometric parameters for :NAM, :SEP, :PAM
         
         names = (:NAM, :SEP, :PAM)
 
-        deltas = Vector()
+        deltas = Vector{Float64}()
         for name in names
-            dx = geomparam[name][:thickness]/geomparam[name][:N]
-            dx = dx*ones(geomparam[name][:N])
+            dx = geomparams[name][:thickness]/geomparams[name][:N]
+            dx = dx*ones(geomparams[name][:N])
             deltas = vcat(dx, deltas)
         end
 
-        N = sum([geomparam[name][:N] for name in names])
-        
-        g = CartesianMesh(Tuple(N), Tuple(deltas))
+        N = sum([geomparams[name][:N] for name in names])
+        deltas = (deltas,)
+        g = CartesianMesh((N,), deltas)
         
         domain = DataDomain(g)
 
@@ -197,7 +197,7 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
 
     inputparams = exported["model"]
     
-    function setup_active_material(name)
+    function setup_active_material(name::Symbol, geomparams::Dict)
 
         jsonName = jsonNames[name]
 
@@ -228,23 +228,7 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         end
         
         geomparam = geomparams[name]
-        
-        if include_cc
-            model_am = setup_component(geomparam, sys_am)
-        else
-            model_am = setup_component(geomparam, sys_am)
-            # We add the boundary control faces entities
-            model_am.domain.entities[BoundaryControlFaces()] = 1
-            
-            S = model_am.parameters
-            nbc = count_active_entities(model_am.domain, BoundaryControlFaces())
-            if nbc > 0
-                bcvalue_zeros = zeros(nbc)
-                # add parameters to the model
-                S[:BoundaryPhi] = BoundaryPotential(:Phi)
-                S[:BoundaryC]   = BoundaryPotential(:C)
-            end
-        end
+        model_am = setup_component(geomparam, sys_am)
 
         return model_am
         
@@ -260,7 +244,7 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
 
     # Setup NAM
     @info "Setup negative active material"
-    model_nam = setup_active_material(:NAM)
+    model_nam = setup_active_material(:NAM, geomparams)
 
     ## Setup ELYTE
 
@@ -285,14 +269,11 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
     params[:conductivity] = func
     
     elyte = Electrolyte(params)
-
-    geomparams = Dict()
-    geomparams[:NAM] = Dict(())
     model_elyte = setup_component(geomparams, elyte)
 
     # Setup PAM
     @info "Setup positive active material"
-    model_pam = setup_active_material(:PAM)
+    model_pam = setup_active_material(:PAM, geomparams)
 
     # Setup negative current collector if any
     if include_cc
