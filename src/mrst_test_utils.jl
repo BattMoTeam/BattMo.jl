@@ -27,8 +27,6 @@ function getTrans_1d(model1, model2, bcfaces, bccells, parameters1, parameters2,
     d1 = physical_representation(model1)
     d2 = physical_representation(model2)
 
-    @infiltrate
-    
     bcTrans1 = d1[:bcTrans][bcfaces[:, 1]]
     bcTrans2 = d2[:bcTrans][bcfaces[:, 2]]
     cells1   = bccells[:, 1]
@@ -217,6 +215,8 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         inputparams_am = inputparams[jsonName]["ActiveMaterial"]
 
         am_params = JutulStorage()
+        @info "Fix hack when done"
+        am_params[:volumeFraction]          = inputparams_am["volumeFraction"][1]
         am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
         am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
         am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
@@ -265,9 +265,11 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
     params = JutulStorage();
     inputparams_elyte = inputparams["Electrolyte"]
     
-    params[:transference] = inputparams_elyte["sp"]["t"]
-    params[:charge]       = inputparams_elyte["sp"]["z"]
-    params[:bruggeman]    = inputparams_elyte["BruggemanCoefficient"]
+    params[:transference]            = inputparams_elyte["sp"]["t"]
+    params[:charge]                  = inputparams_elyte["sp"]["z"]
+    @info "Fix hack when done"
+    params[:separatorVolumeFraction] = inputparams_elyte["Separator"]["volumeFraction"][1]
+    params[:bruggeman]               = inputparams_elyte["BruggemanCoefficient"]
     
     # setup diffusion coefficient function
     # funcname = inputparams_elyte[:DiffusionCoefficient][:functionname]
@@ -332,11 +334,49 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         model = MultiModel(models, groups = groups, reduction = reduction)
 
     end
+
+    setup_volume_fractions_1d!(model, geomparams)
+
+    @infiltrate
     
     return model
-
     
 end
+
+function setup_volume_fractions_1d!(model, geomparams)
+
+    names = (:NAM, :SEP, :PAM)
+    Nelyte = sum([geomparams[name][:N] for name in names])
+    vfelyte = zeros(Nelyte)
+    
+    names = (:NAM, :PAM)
+    
+    for name in names
+        ammodel = model[name]
+        vf = ammodel.system[:volumeFraction]
+        Nam = geomparams[name][:N]
+        ammodel.domain.representation[:volumeFraction] = vf*ones(Nam)
+        if name == :NAM
+            nstart = 1
+            nend   = Nam
+        elseif name == :PAM
+            nstart = geomparams[:NAM][:N] + geomparams[:SEP][:N] + 1
+            nend = Nelyte
+        else
+            error("name not recognized")
+        end
+        vfelyte[nstart : nend] .= 1 - vf
+    end
+
+    nstart = geomparams[:NAM][:N] +  1
+    nend   = nstart + geomparams[:SEP][:N]
+    vfseparator = model[:ELYTE].system[:separatorVolumeFraction]
+    vfelyte[nstart : nend] .= vfseparator*ones(nend - nstart + 1)
+    
+    model[:ELYTE].domain.representation[:volumeFraction] = vfelyte
+
+end
+
 
 function setup_battery_model(exported; include_cc = true, use_p2d = true, use_groups = false)
 

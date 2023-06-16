@@ -145,33 +145,58 @@ end
 struct ECTransmissibilities <: ScalarVariable end
 Jutul.variable_scale(::ECTransmissibilities) = 1e-10
 Jutul.associated_entity(::ECTransmissibilities) = Faces()
-function Jutul.default_parameter_values(data_domain, model, ::ECTransmissibilities, symb)
 
-    d = physical_representation(model)
-    return d[:trans]
+function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O, S, F, C}, ::ECTransmissibilities, symb) where {G <: MinimalECTPFAGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
+
+    repG = physical_representation(model)
+    return repG.trans
+
+end
+
+function Jutul.default_parameter_values(d::DataDomain, model, ::ECTransmissibilities, symb)
+
+    return d.representation[:trans]
 
 end
 
 ## Volume
 struct Volume <: ScalarVariable end
 Jutul.associated_entity(::Volume) = Cells()
-function Jutul.default_parameter_values(data_domain, model, ::Volume, symb)
+
+function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O, S, F, C}, ::Volume, symb) where {G <: MinimalECTPFAGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
 
     repG = physical_representation(model)
     return repG.volumes
     
 end
+
+function Jutul.default_parameter_values(d::DataDomain, model, ::Volume, symb)
+
+    return d.representation[:volumes]
+    
+end
+
 Jutul.minimum_value(::Volume) = eps()
 
 ## Volume fraction
 struct VolumeFraction <: ScalarVariable end
 Jutul.associated_entity(::VolumeFraction) = Cells()
-function Jutul.default_parameter_values(data_domain, model, ::VolumeFraction, symb)
+
+function Jutul.default_parameter_values(data_domain, model::SimulationModel{O, S, F, C}, ::VolumeFraction, symb) where {G <: MinimalECTPFAGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
 
     repG = physical_representation(model)
     return repG.vol_frac
     
 end
+
+function Jutul.default_parameter_values(d::DataDomain, model, ::VolumeFraction, symb)
+
+    @infiltrate
+    return d.representation[:volumeFraction]
+    
+end
+
+
 Jutul.minimum_value(::VolumeFraction) = eps(Float64)
 
 mutable struct BatteryCPhiPreconditioner <: JutulPreconditioner

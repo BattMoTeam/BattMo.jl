@@ -180,9 +180,13 @@ function select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, Potent
     
 end
 
-function select_parameters!(prm, D::MinimalECTPFAGrid, model::ElectroChemicalComponentModel)
-    
+function select_parameters!(prm, D::MinimalECTPFAGrid, model::ElectroChemicalComponentModel)    
     prm[:Volume]         = Volume()
     prm[:VolumeFraction] = VolumeFraction()
     
 end
+
+function select_parameters!(prm, d::DataDomain, model::ElectroChemicalComponentModel)
+    prm[:Volume]         = Volume()
+end
+
