@@ -336,8 +336,6 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
     end
 
     setup_volume_fractions_1d!(model, geomparams)
-
-    @infiltrate
     
     return model
     
@@ -361,7 +359,7 @@ function setup_volume_fractions_1d!(model, geomparams)
             nend   = Nam
         elseif name == :PAM
             nstart = geomparams[:NAM][:N] + geomparams[:SEP][:N] + 1
-            nend = Nelyte
+            nend   = Nelyte
         else
             error("name not recognized")
         end

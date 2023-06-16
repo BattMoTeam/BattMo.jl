@@ -156,11 +156,12 @@ function degrees_of_freedom_per_entity(model::ActiveMaterialModel,
 end
 
 function select_parameters!(S,
-                                  system::ActiveMaterial{P2Ddiscretization},
-                                  model::SimulationModel)
+                            system::ActiveMaterial{P2Ddiscretization},
+                            model::SimulationModel)
     
-    S[:Temperature]  = Temperature()
-    S[:Conductivity] = Conductivity()
+    S[:Temperature]    = Temperature()
+    S[:Conductivity]   = Conductivity()
+    S[:VolumeFraction] = VolumeFraction()
     
 end
 

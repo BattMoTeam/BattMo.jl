@@ -191,7 +191,6 @@ end
 
 function Jutul.default_parameter_values(d::DataDomain, model, ::VolumeFraction, symb)
 
-    @infiltrate
     return d.representation[:volumeFraction]
     
 end

@@ -33,7 +33,8 @@ function select_parameters!(S                  ,
                             system::Electrolyte,
                             model::SimulationModel
                             )
-    S[:Temperature]  = Temperature()
+    S[:Temperature]    = Temperature()
+    S[:VolumeFraction] = VolumeFraction()
     
 end
 
