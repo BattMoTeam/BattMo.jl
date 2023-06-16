@@ -39,7 +39,7 @@ fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
 
 # sim, forces, state0, parameters, exported, model = BattMo.setup_sim(name, use_p2d = use_p2d)
 
-do_1d = true
+do_1d = false
 if do_1d
     states, reports, extra, exported = run_battery_1d(name, use_p2d = use_p2d, info_level = 5, max_step = nothing);
 else

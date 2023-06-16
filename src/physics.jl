@@ -102,15 +102,29 @@ function apply_boundary_potential!(
     acc, state, parameters, model, eq::ConservationLaw{:Charge}
     )
 
-    @infiltrate
+    if model.domain.representation isa MinimalECTPFAGrid
+        bc = model.domain.representation.boundary_cells
+        if length(bc) > 0
+            dobc = true
+        else
+            dobc = false
+        end
+        dolegacy = true
+    else
+        error("not implemented")
+        dolegacy = false
+    end
     
-    if Jutul.hasentity(model.data_domain, BoundaryControlFaces())
+    if dobc
         
         Phi         = state[:Phi]
         BoundaryPhi = state[:BoundaryPhi]
         κ           = state[:Conductivity]
 
-        T_hf = model.domain.representation.boundary_hfT
+        if dolegacy
+            T_hf = model.domain.representation.boundary_hfT
+        else
+        end
 
         for (i, c) in enumerate(bc)
             @inbounds acc[c] += κ[c]*T_hf[i]*(Phi[c] - value(BoundaryPhi[i]))
@@ -122,17 +136,32 @@ end
 function apply_boundary_potential!(
     acc, state, parameters, model, eq::ConservationLaw{:Mass}
     )
+
+    if model.domain.representation isa MinimalECTPFAGrid
+        bc = model.domain.representation.boundary_cells
+        dolegacy = true
+        if length(bc) > 0
+            dobc = true
+        else
+            dobc = false
+        end
+    else
+        error("not implemented yet")
+        dolegacy = false
+    end
     
-    bc = model.domain.representation.boundary_cells
-    
-    if length(bc) > 0
+    if dobc
         # values
         C         = state[:C]
         BoundaryC = state[:BoundaryC]
         D         = state[:Diffusivity]
 
         # Type
-        T_hf = model.domain.representation.boundary_hfT
+        if dolegacy
+            T_hf = model.domain.representation.boundary_hfT
+        else
+        end
+        
         for (i, c) in enumerate(bc)
             @inbounds acc[c] += D[c]*T_hf[i]*(C[c] - value(BoundaryC[i]))
         end

@@ -295,8 +295,8 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         @info "Setup positive current collector"        
         sys_pp = CurrentCollector()
         model_pp = setup_component(geomparams[:PP], sys_pp)
-        model_pp.data_domain.entities[BoundaryControlFaces()]                = 1
-        model_pp.data_domain.representation.entities[BoundaryControlFaces()] = 1
+        model_pp.data_domain.entities[BoundaryControlFaces()]                = 0
+        model_pp.data_domain.representation.entities[BoundaryControlFaces()] = 0
         
     end
 
