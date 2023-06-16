@@ -88,7 +88,7 @@ function reaction_rate(phi_a         ,
     n    = activematerial.params[:n_charge_carriers]
     cmax = activematerial.params[:maximum_concentration]
     vsa  = activematerial.params[:volumetric_surface_area]
-
+    
     eta = (phi_a - phi_e - ocp)
     th  = 1e-3*cmax
     j0  = R0*regularized_sqrt(c_e*(cmax - c_a)*c_a, th)*n*FARADAY_CONST
@@ -132,7 +132,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     ind_t = ct.target_cells[ind]
     ind_s = ct.source_cells[ind]
 
-    vols  = model_t.domain.representation.volumes[ind_t]
+    vols  = state_t.Volume[ind_t]
 
     phi_e = state_t.Phi[ind_t]
     phi_a = state_s.Phi[ind_s]  
@@ -193,7 +193,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     ind_t = ct.target_cells[ind]
     ind_s = ct.source_cells[ind]
 
-    vols  = model_t.domain.representation.volumes[ind_t]
+    vols  = state_t.Volume[ind_t]
 
     phi_e = state_s.Phi[ind_s]
     phi_a = state_t.Phi[ind_t]  
@@ -217,7 +217,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     if eq isa SolidDiffusionBc
 
         rp = activematerial.discretization[:rp] # particle radius
-        vf = model_t.domain.representation.vol_frac[ind_t]
+        vf = state_t.VolumeFraction[ind_t]
 
         v = R*(4*pi*rp^3)/(3*vf)
         

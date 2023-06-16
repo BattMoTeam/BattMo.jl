@@ -127,25 +127,23 @@ end
 
 # ? Does this maybe look better ?
 @jutul_secondary(
-function update_conductivity!(kappa, kappa_def::Conductivity, model::ElectrolyteModel, Temperature, C, ix)
+function update_conductivity!(kappa, kappa_def::Conductivity, model::ElectrolyteModel, Temperature, C, VolumeFraction, ix)
     """ Register conductivity function
     """
     system = model.system
     # We use Bruggeman coefficient
-    vf = model.domain.representation.vol_frac
     for i in ix
-        @inbounds kappa[i] = system[:conductivity](Temperature[i], C[i]) * vf[i]^1.5
+        @inbounds kappa[i] = system[:conductivity](Temperature[i], C[i]) * VolumeFraction[i]^1.5
     end
 end
 )
 
-@jutul_secondary function update_diffusivity!(D, D_def::Diffusivity, model::ElectrolyteModel, C, Temperature, ix)
+@jutul_secondary function update_diffusivity!(D, D_def::Diffusivity, model::ElectrolyteModel, C, Temperature, VolumeFraction, ix)
     """ Register diffusivity function
     """
     system = model.system
-    vf = model.domain.representation.vol_frac
     for i in ix
-        @inbounds D[i] = system[:diffusivity](Temperature[i], C[i])*vf[i]^1.5
+        @inbounds D[i] = system[:diffusivity](Temperature[i], C[i])*VolumeFraction[i]^1.5
     end
 end
 

@@ -110,15 +110,15 @@ end
 
 names = (:CC, :NAM, :SEP, :PAM, :PP)
 geomparams = Dict(name => Dict() for name in names)
-geomparams[:CC][:N]          = 3
+geomparams[:CC][:N]          = 5
 geomparams[:CC][:thickness]  = 25e-6
-geomparams[:NAM][:N]         = 3
+geomparams[:NAM][:N]         = 10
 geomparams[:NAM][:thickness] = 64e-6
 geomparams[:SEP][:N]         = 10
 geomparams[:SEP][:thickness] = 15e-6
 geomparams[:PAM][:N]         = 10
 geomparams[:PAM][:thickness] = 57e-6
-geomparams[:PP][:N]          = 10
+geomparams[:PP][:N]          = 5
 geomparams[:PP][:thickness]  = 15e-6
 
 function setup_model_1d(exported, geomparams; use_p2d = true, use_groups = false, kwarg...)
@@ -774,8 +774,8 @@ function setup_coupling_1d!(model, parameters, geomparams)
 
     Nnam = geomparams[:NAM][:N]
     
-    srange = [1 : Nnam] # negative electrode
-    trange = [1 : Nnam] # electrolyte (negative side)
+    srange = collect(1 : Nnam) # negative electrode
+    trange = collect(1 : Nnam) # electrolyte (negative side)
 
     if discretisation_type(model[:NAM]) == :P2Ddiscretization
 
@@ -809,8 +809,8 @@ function setup_coupling_1d!(model, parameters, geomparams)
     Nsep = geomparams[:SEP][:N]
     Npam = geomparams[:PAM][:N]
     
-    srange = 1 : Npam # positive electrode
-    trange = Nnam + Nsep .+ (1 : Npam) # electrolyte (positive side)
+    srange = collect(1 : Npam) # positive electrode
+    trange = collect(Nnam + Nsep .+ (1 : Npam)) # electrolyte (positive side)
     
     if discretisation_type(model[:PAM]) == :P2Ddiscretization
 
