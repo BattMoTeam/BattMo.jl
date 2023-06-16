@@ -155,7 +155,7 @@ function degrees_of_freedom_per_entity(model::ActiveMaterialModel,
     return  solid_diffusion_discretization_number(model.system) - 1
 end
 
-function Jutul.select_parameters!(S,
+function select_parameters!(S,
                                   system::ActiveMaterial{P2Ddiscretization},
                                   model::SimulationModel)
     
@@ -358,7 +358,7 @@ function select_secondary_variables!(S,
     
 end
 
-function Jutul.select_parameters!(S,
+function select_parameters!(S,
                                   system::ActiveMaterial{NoParticleDiffusion},
                                   model::SimulationModel)
     

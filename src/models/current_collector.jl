@@ -29,10 +29,10 @@ function select_secondary_variables!(
     
 end
 
-function Jutul.select_parameters!(
-        S, system::CurrentCollector, model::SimulationModel
-    )
-    
+function select_parameters!(S,
+                            system::CurrentCollector,
+                            model::SimulationModel)
+
     S[:Conductivity] = Conductivity()
     if count_entities(model.data_domain, BoundaryControlFaces()) > 0
         S[:BoundaryPhi]  = BoundaryPotential(:Phi)

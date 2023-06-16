@@ -21,14 +21,18 @@ function getTrans(model1, model2, faces, cells, quantity)
     
 end
 
-function getTrans_1d(model1, model2, bcfaces, parameters1, parameters2, quantity)
+function getTrans_1d(model1, model2, bcfaces, bccells, parameters1, parameters2, quantity)
     """ setup transmissibility for coupling between models at boundaries. Intermediate 1d version"""
 
-    bcTrans1 = model1.system.params[:bcTrans][bcfaces[:, 1]]
-    bcTrans2 = model2.system.params[:bcTrans][bcfaces[:, 2]]
+    d1 = physical_representation(model1)
+    d2 = physical_representation(model2)
 
-    cells1 = model1.domain[:boundary_neighbors][bcfaces[:, 1]]
-    cells2 = model2.domain[:boundary_neighbors][bcfaces[:, 2]]
+    @infiltrate
+    
+    bcTrans1 = d1[:bcTrans][bcfaces[:, 1]]
+    bcTrans2 = d2[:bcTrans][bcfaces[:, 2]]
+    cells1   = bccells[:, 1]
+    cells2   = bccells[:, 2]
 
     s1  = parameters1[quantity][cells1]
     s2  = parameters2[quantity][cells2]
@@ -39,12 +43,12 @@ function getTrans_1d(model1, model2, bcfaces, parameters1, parameters2, quantity
     
 end
 
-function getHalfTrans_1d(model, faces, parameters, quantity)
-    """ recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the corresponding given cells. Intermediate 1d version"""
+function getHalfTrans_1d(model, bcfaces, bccells, parameters, quantity)
+    """ recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the corresponding given cells. Intermediate 1d version. Note the indexing in BoundaryFaces is used"""
 
-    bcTrans = model.system.params[:bcTrans][bcfaces]
-    cells   = model.domain[:boundary_neighbors][bcfaces]
-    s       = parameters[quantity][cells]
+    d = physical_representation(model)
+    bcTrans = d[:bcTrans][bcfaces]
+    s       = parameters[quantity][bccells]
     
     T   = bcTrans.*s
 
@@ -139,11 +143,14 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         domain = DataDomain(g)
 
         k = ones(geomparam[:N])
+
+        T    = compute_face_trans(domain, k)
         T_hf = compute_half_face_trans(domain, k)
         T_b  = compute_boundary_trans(domain, k)
 
-        sys.params[:halfTrans] = T_hf
-        sys.params[:bcTrans]   = T_b
+        domain[:trans, Faces()]           = T
+        domain[:halfTrans, HalfFaces()]   = T_hf
+        domain[:bcTrans, BoundaryFaces()] = T_b
 
         if sys isa CurrentCollector
             domain.entities[BoundaryControlFaces()] = 1
@@ -178,14 +185,20 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         domain = DataDomain(g)
 
         k = ones(N)
+        T    = compute_face_trans(domain, k)
         T_hf = compute_half_face_trans(domain, k)
         T_b  = compute_boundary_trans(domain, k)
 
-        sys.params[:halfTrans] = T_hf
-        sys.params[:bcTrans]   = T_b
-
-        model = SimulationModel(domain, sys, context = DefaultContext())
+        domain[:trans, Faces()]           = T
+        domain[:halfTrans, HalfFaces()]   = T_hf
+        domain[:bcTrans, BoundaryFaces()] = T_b
         
+        flow = TwoPointPotentialFlowHardCoded(g)
+        disc = (charge_flow = flow,)
+        domain = DiscretizedDomain(domain, disc)
+        
+        model = SimulationModel(domain, sys, context = DefaultContext())
+
         return model
         
     end
@@ -698,9 +711,18 @@ function setup_coupling_1d!(model, parameters, geomparams)
         psource = parameters[:CC]
         ptarget = parameters[:NAM]
 
-        couplingfaces = [Ncc + 1, 1]
+        # Here, the indexing in BoundaryFaces is used
+        couplingfaces = Array{Int64}(undef, 1, 2)
+        couplingfaces[1, 1] = 2
+        couplingfaces[1, 2] = 1
+        
+        couplingcells = Array{Int64}(undef, 1, 2)
+        couplingcells[1, 1] = Ncc
+        couplingcells[1, 2] = 1
+        
         trans = getTrans_1d(msource, mtarget,
                             couplingfaces,
+                            couplingcells,
                             psource, ptarget,
                             :Conductivity)
 
@@ -793,10 +815,19 @@ function setup_coupling_1d!(model, parameters, geomparams)
         psource = parameters[:PP]
         ptarget = parameters[:PAM]
 
-        couplingfaces = [1, 1 + Npam]
+        # Here, the indexing in BoundaryFaces is used
+        couplingfaces = Array{Int64}(undef, 1, 2)
+        couplingfaces[1, 1] = 1
+        couplingfaces[1, 2] = 2
+        
+        couplingcells = Array{Int64}(undef, 1, 2)
+        couplingcells[1, 1] = 1
+        couplingcells[1, 2] = Npam
+        
         
         trans = getTrans_1d(msource, mtarget,
                             couplingfaces,
+                            couplingcells,
                             psource, ptarget,
                             :Conductivity)
 
@@ -815,8 +846,10 @@ function setup_coupling_1d!(model, parameters, geomparams)
 
         msource       = model[:PP]
         mparameters   = parameters[:PP]
-        couplingfaces = Npp
-        trans = getHalfTrans_1d(msource, couplingfaces, mparameters, :Conductivity)
+        # Here the indexing in BoundaryFaces in used
+        couplingfaces = 2
+        couplingcells = Npp
+        trans = getHalfTrans_1d(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
 
         ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
         ct_pair = setup_cross_term(ct, target = :PP, source = :BPP, equation = :charge_conservation)

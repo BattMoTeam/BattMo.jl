@@ -174,13 +174,13 @@ function apply_boundary_current!(acc, state, jkey, model, eq::ConservationLaw)
     
 end
 
-function Jutul.select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::ElectroChemicalComponentModel)
+function select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::ElectroChemicalComponentModel)
     
     prm[:ECTransmissibilities] = ECTransmissibilities()
     
 end
 
-function Jutul.select_parameters!(prm, D::MinimalECTPFAGrid, model::ElectroChemicalComponentModel)
+function select_parameters!(prm, D::MinimalECTPFAGrid, model::ElectroChemicalComponentModel)
     
     prm[:Volume]         = Volume()
     prm[:VolumeFraction] = VolumeFraction()

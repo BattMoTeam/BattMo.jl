@@ -147,8 +147,8 @@ Jutul.variable_scale(::ECTransmissibilities) = 1e-10
 Jutul.associated_entity(::ECTransmissibilities) = Faces()
 function Jutul.default_parameter_values(data_domain, model, ::ECTransmissibilities, symb)
 
-    repG = physical_representation(model)
-    return repG.trans
+    d = physical_representation(model)
+    return d[:trans]
 
 end
 
