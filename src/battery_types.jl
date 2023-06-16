@@ -182,7 +182,7 @@ Jutul.minimum_value(::Volume) = eps()
 struct VolumeFraction <: ScalarVariable end
 Jutul.associated_entity(::VolumeFraction) = Cells()
 
-function Jutul.default_parameter_values(data_domain, model::SimulationModel{O, S, F, C}, ::VolumeFraction, symb) where {G <: MinimalECTPFAGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
+function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O, S, F, C}, ::VolumeFraction, symb) where {G <: MinimalECTPFAGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
 
     repG = physical_representation(model)
     return repG.vol_frac
