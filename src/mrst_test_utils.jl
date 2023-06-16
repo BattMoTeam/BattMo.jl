@@ -150,9 +150,7 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         domain[:halfTrans, HalfFaces()]   = T_hf
         domain[:bcTrans, BoundaryFaces()] = T_b
 
-        if sys isa CurrentCollector
-            domain.entities[BoundaryControlFaces()] = 1
-        end
+            
         
         flow = TwoPointPotentialFlowHardCoded(g)
         disc = (charge_flow = flow,)
@@ -253,6 +251,8 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         @info "Setup negative current collector"
         sys_cc = CurrentCollector()
         model_cc =  setup_component(geomparams[:CC], sys_cc)
+        model_cc.data_domain.entities[BoundaryControlFaces()]                = 1
+        model_cc.data_domain.representation.entities[BoundaryControlFaces()] = 1
     end
 
     # Setup NAM
@@ -295,6 +295,9 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         @info "Setup positive current collector"        
         sys_pp = CurrentCollector()
         model_pp = setup_component(geomparams[:PP], sys_pp)
+        model_pp.data_domain.entities[BoundaryControlFaces()]                = 1
+        model_pp.data_domain.representation.entities[BoundaryControlFaces()] = 1
+        
     end
 
     # Setup control model
@@ -1118,7 +1121,7 @@ function setup_sim_1d(name; use_p2d = true, use_groups = false, general_ad = fal
     model, state0, parameters = setup_model_1d(exported, geomparams, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
    
     setup_coupling_1d!(model, parameters, geomparams)
-    
+
     inputI = 0;
     minE   = 10
     steps  = size(exported["states"],1)

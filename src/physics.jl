@@ -102,9 +102,9 @@ function apply_boundary_potential!(
     acc, state, parameters, model, eq::ConservationLaw{:Charge}
     )
 
-    bc = model.domain.representation.boundary_cells
-
-    if length(bc) > 0
+    @infiltrate
+    
+    if Jutul.hasentity(model.data_domain, BoundaryControlFaces())
         
         Phi         = state[:Phi]
         BoundaryPhi = state[:BoundaryPhi]
