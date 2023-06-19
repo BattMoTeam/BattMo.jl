@@ -110,9 +110,12 @@ function apply_boundary_potential!(
             dobc = false
         end
         dolegacy = true
-    else
-        error("not implemented")
-        dolegacy = false
+    elseif Jutul.hasentity(model.domain, BoundaryControlFaces())
+        nc = count_active_entities(model.domain, BoundaryControlFaces())
+        if nc > 0
+            
+            dolegacy = false
+        end
     end
     
     if dobc
@@ -124,6 +127,7 @@ function apply_boundary_potential!(
         if dolegacy
             T_hf = model.domain.representation.boundary_hfT
         else
+            
         end
 
         for (i, c) in enumerate(bc)
