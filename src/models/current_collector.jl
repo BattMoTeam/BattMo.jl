@@ -34,7 +34,7 @@ function select_parameters!(S,
                             model::SimulationModel)
 
     S[:Conductivity] = Conductivity()
-    if Jutul.hasentity(model.data_domain, BoundaryControlFaces()) 
+    if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
         S[:BoundaryPhi]  = BoundaryPotential(:Phi)
         S[:BoundaryC]    = BoundaryPotential(:C)
     end

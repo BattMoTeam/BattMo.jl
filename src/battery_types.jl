@@ -6,9 +6,9 @@ export ChargeFlow, BoundaryPotential, BoundaryCurrent
 export Phi, C, Temperature, Charge, Mass
 export BCCurrent
 export TPFAInterfaceFluxCT, ButlerVolmerActmatToElyteCT, ButlerVolmerElyteToActmatCT, ButlerVolmerInterfaceFluxCT
-export BoundaryControlFaces
+export BoundaryDirichletFaces
 
-struct BoundaryControlFaces <: Jutul.JutulEntity end
+struct BoundaryDirichletFaces <: Jutul.JutulEntity end
 
 abstract type ElectroChemicalComponent <: JutulSystem end
 # Alias for a general electro-chemical model
@@ -53,7 +53,7 @@ struct BoundaryPotential{label} <: ScalarVariable
     end
 end
 
-Jutul.associated_entity(::BoundaryPotential) = BoundaryControlFaces()
+Jutul.associated_entity(::BoundaryPotential) = BoundaryDirichletFaces()
 
 struct BoundaryCurrent{label, C} <: ScalarVariable 
     cells::C
@@ -62,7 +62,7 @@ struct BoundaryCurrent{label, C} <: ScalarVariable
     end
 end
 
-Jutul.associated_entity(::BoundaryCurrent) = BoundaryControlFaces()
+Jutul.associated_entity(::BoundaryCurrent) = BoundaryDirichletFaces()
 
 struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
     """

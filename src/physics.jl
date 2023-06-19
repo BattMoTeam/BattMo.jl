@@ -110,12 +110,17 @@ function apply_boundary_potential!(
             dobc = false
         end
         dolegacy = true
-    elseif Jutul.hasentity(model.domain, BoundaryControlFaces())
-        nc = count_active_entities(model.domain, BoundaryControlFaces())
+    elseif Jutul.hasentity(model.domain, BoundaryDirichletFaces())
+        dobc = true
+        nc = count_active_entities(model.domain, BoundaryDirichletFaces())
         if nc > 0
-            
+            bcdirhalftrans = model.domain.representation[:bcDirHalfTrans]
+            bcdircells     = model.domain.representation[:bcDirCells]
+            bcdirinds      = model.domain.representation[:bcDirInds]
             dolegacy = false
         end
+    else
+        dobc = false
     end
     
     if dobc
@@ -126,12 +131,13 @@ function apply_boundary_potential!(
 
         if dolegacy
             T_hf = model.domain.representation.boundary_hfT
+            for (i, c) in enumerate(bc)
+                @inbounds acc[c] += κ[c]*T_hf[i]*(Phi[c] - value(BoundaryPhi[i]))
+            end
         else
-            
-        end
-
-        for (i, c) in enumerate(bc)
-            @inbounds acc[c] += κ[c]*T_hf[i]*(Phi[c] - value(BoundaryPhi[i]))
+            for (ht, c, i) in zip(bcdirhalftrans, bcdircells, bcdirinds)
+                @inbounds acc[c] += κ[c]*ht*(Phi[c] - value(BoundaryPhi[i]))
+            end
         end
     end
     
@@ -150,7 +156,8 @@ function apply_boundary_potential!(
             dobc = false
         end
     else
-        error("not implemented yet")
+        # this function should actually not been used (not dirichlet boundary for mass)
+        dobc = false
         dolegacy = false
     end
     

@@ -135,7 +135,7 @@ end
 
 function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d = true, use_groups = false)
 
-    function setup_component(geomparam::Dict, sys, bcfaces = nothing)
+    function setup_component(geomparam::Dict, sys; addDirichlet = false)
         
         g = CartesianMesh(Tuple(geomparam[:N]), Tuple(geomparam[:thickness]))
         domain = DataDomain(g)
@@ -150,7 +150,19 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         domain[:halfTrans, HalfFaces()]   = T_hf
         domain[:bcTrans, BoundaryFaces()] = T_b
 
+        # We add Dirichlet on negative current collector. This is hacky
+        if addDirichlet
+
+            domain.entities[BoundaryDirichletFaces()] = 1
+
+            bcDirFace = 1 # in BoundaryFaces indexing
+            bcDirCell = 1
+            bcDirInd  = 1
+            domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = domain[:bcTrans][bcDirFace]
+            domain[:bcDirCells, BoundaryDirichletFaces()]     = bcDirCell # 
+            domain[:bcDirInds, BoundaryDirichletFaces()]      = bcDirInd #
             
+        end
         
         flow = TwoPointPotentialFlowHardCoded(g)
         disc = (charge_flow = flow,)
@@ -171,7 +183,7 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         for name in names
             dx = geomparams[name][:thickness]/geomparams[name][:N]
             dx = dx*ones(geomparams[name][:N])
-            deltas = vcat(dx, deltas)
+            deltas = vcat(deltas, dx)
         end
 
         N = sum([geomparams[name][:N] for name in names])
@@ -250,9 +262,7 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
     if include_cc
         @info "Setup negative current collector"
         sys_cc = CurrentCollector()
-        model_cc =  setup_component(geomparams[:CC], sys_cc)
-        model_cc.data_domain.entities[BoundaryControlFaces()]                = 1
-        model_cc.data_domain.representation.entities[BoundaryControlFaces()] = 1
+        model_cc =  setup_component(geomparams[:CC], sys_cc, addDirichlet = true)
     end
 
     # Setup NAM
@@ -295,9 +305,6 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         @info "Setup positive current collector"        
         sys_pp = CurrentCollector()
         model_pp = setup_component(geomparams[:PP], sys_pp)
-        model_pp.data_domain.entities[BoundaryControlFaces()]                = 0
-        model_pp.data_domain.representation.entities[BoundaryControlFaces()] = 0
-        
     end
 
     # Setup control model
@@ -372,7 +379,7 @@ function setup_volume_fractions_1d!(model, geomparams)
     nstart = geomparams[:NAM][:N] +  1
     nend   = nstart + geomparams[:SEP][:N]
     vfseparator = model[:ELYTE].system[:separatorVolumeFraction]
-    vfelyte[nstart : nend] .= vfseparator*ones(nend - nstart + 1)
+    vfelyte[nstart : nend] .= (1 - vfseparator)*ones(nend - nstart + 1)
     
     model[:ELYTE].domain.representation[:volumeFraction] = vfelyte
 
@@ -438,7 +445,7 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
             model_am   = setup_component(inputparams_am, sys_am, bcfaces_am)
             # We add also boundary parameters (if any)
             S = model_am.parameters
-            nbc = count_active_entities(model_am.domain, BoundaryControlFaces())
+            nbc = count_active_entities(model_am.domain, BoundaryDirichletFaces())
             if nbc > 0
                 bcvalue_zeros = zeros(nbc)
                 # add parameters to the model
@@ -877,7 +884,9 @@ function setup_coupling_1d!(model, parameters, geomparams)
                                    target = :PAM,
                                    source = :PP,
                                    equation = :charge_conservation)
-
+        
+        add_cross_term!(model, ct_pair)
+        
         # setup coupling with control
         
         Npp  = geomparams[:PP][:N]
@@ -1160,7 +1169,6 @@ function setup_sim(name; use_p2d = true, use_groups = false, general_ad = false)
     exported = MAT.matread(fn)
 
     model, state0, parameters = setup_model(exported, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
-   
     setup_coupling!(model, exported)
     
     inputI = 0;
