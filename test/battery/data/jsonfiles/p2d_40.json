@@ -96,7 +96,7 @@
       "thermalConductivity": 170,
       "specificHeatCapacity": 875,
       "density": 2700,
-      "thickness" : 15
+      "thickness" : 15e-6
     }
   },
   "Electrolyte": {
