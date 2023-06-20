@@ -121,19 +121,44 @@ geomparams[:PAM][:thickness] = 57e-6
 geomparams[:PP][:N]          = 5
 geomparams[:PP][:thickness]  = 15e-6
 
-function setup_model_1d(exported, geomparams; use_p2d = true, use_groups = false, kwarg...)
+function load_json()
+
+    filename = "/home/xavier/Julia/BattMo/test/battery/data/jsonfiles/p2d_40_jl.json"
+    jsondict = JSON.parsefile(filename)
+    
+    names = (:CC, :NAM, :SEP, :PAM, :PP)
+    geomparams = Dict(name => Dict() for name in names)
+
+    geomparams[:CC][:N]          = jsondict["NegativeElectrode"]["CurrentCollector"]["N"]
+    geomparams[:CC][:thickness]  = jsondict["NegativeElectrode"]["CurrentCollector"]["thickness"]
+    geomparams[:NAM][:N]         = jsondict["NegativeElectrode"]["ActiveMaterial"]["N"]
+    geomparams[:NAM][:thickness] = jsondict["NegativeElectrode"]["ActiveMaterial"]["thickness"]
+    geomparams[:SEP][:N]         = jsondict["Electrolyte"]["Separator"]["N"]
+    geomparams[:SEP][:thickness] = jsondict["Electrolyte"]["Separator"]["thickness"]
+    geomparams[:PAM][:N]         = jsondict["PositiveElectrode"]["ActiveMaterial"]["N"]
+    geomparams[:PAM][:thickness] = jsondict["PositiveElectrode"]["ActiveMaterial"]["thickness"]
+    geomparams[:PP][:N]          = jsondict["PositiveElectrode"]["CurrentCollector"]["N"]
+    geomparams[:PP][:thickness]  = jsondict["PositiveElectrode"]["CurrentCollector"]["thickness"]
+
+    return (jsondict, geomparams)
+end
+
+
+function setup_model_1d(; use_p2d = true, use_groups = false, kwarg...)
 
     include_cc = true
 
-    model      = setup_battery_model_1d(exported, geomparams, use_p2d = use_p2d, include_cc = include_cc)
-    parameters = setup_battery_parameters(exported, model)
-    initState  = setup_battery_initial_state_1d(exported, model)
+    jsonstruct, geomparams = load_json()
+    
+    model      = setup_battery_model_1d(jsonstruct, geomparams, use_p2d = use_p2d, include_cc = include_cc)
+    parameters = setup_battery_parameters_1d(jsonstruct, model)
+    initState  = setup_battery_initial_state_1d(jsonstruct, model)
     
     return model, initState, parameters
     
 end
 
-function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d = true, use_groups = false)
+function setup_battery_model_1d(jsonstruct, geomparams; include_cc = true, use_p2d = true, use_groups = false)
 
     function setup_component(geomparam::Dict, sys; addDirichlet = false)
         
@@ -216,17 +241,16 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         :PAM => "PositiveElectrode",        
     )
 
-    inputparams = exported["model"]
     
     function setup_active_material(name::Symbol, geomparams::Dict)
 
         jsonName = jsonNames[name]
 
-        inputparams_am = inputparams[jsonName]["ActiveMaterial"]
+        inputparams_am = jsonstruct[jsonName]["ActiveMaterial"]
 
         am_params = JutulStorage()
         @info "Fix hack when done"
-        am_params[:volumeFraction]          = inputparams_am["volumeFraction"][1]
+        am_params[:volumeFraction]          = inputparams_am["Interface"]["volumeFraction"]
         am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
         am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
         am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
@@ -235,13 +259,8 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         k0 = inputparams_am["Interface"]["k0"]
         am_params[:reaction_rate_constant_func] = (T, c) -> compute_reaction_rate_constant(T, c, k0)
         
-        if name == :NAM
-            am_params[:ocp_func] = compute_ocp_graphite
-        elseif name == :PAM
-            am_params[:ocp_func] = compute_ocp_nmc111
-        else
-            error("not recongized")
-        end
+        funcname = inputparams_am["Interface"]["OCP"]["functionname"]
+        am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
         
         if use_p2d
             rp = inputparams_am["SolidDiffusion"]["rp"]
@@ -275,13 +294,12 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
 
     @info "Setup Electrolyte"
     params = JutulStorage();
-    inputparams_elyte = inputparams["Electrolyte"]
+    inputparams_elyte = jsonstruct["Electrolyte"]
     
-    params[:transference]            = inputparams_elyte["sp"]["t"]
-    params[:charge]                  = inputparams_elyte["sp"]["z"]
-    @info "Fix hack when done"
-    params[:separatorVolumeFraction] = inputparams_elyte["Separator"]["volumeFraction"][1]
-    params[:bruggeman]               = inputparams_elyte["BruggemanCoefficient"]
+    params[:transference]       = inputparams_elyte["sp"]["t"]
+    params[:charge]             = inputparams_elyte["sp"]["z"]
+    params[:separator_porosity] = inputparams_elyte["Separator"]["porosity"]
+    params[:bruggeman]          = inputparams_elyte["BruggemanCoefficient"]
     
     # setup diffusion coefficient function
     # funcname = inputparams_elyte[:DiffusionCoefficient][:functionname]
@@ -380,8 +398,8 @@ function setup_volume_fractions_1d!(model, geomparams)
 
     nstart = geomparams[:NAM][:N] +  1
     nend   = nstart + geomparams[:SEP][:N]
-    vfseparator = model[:ELYTE].system[:separatorVolumeFraction]
-    vfelyte[nstart : nend] .= (1 - vfseparator)*ones(nend - nstart + 1)
+    separator_porosity = model[:ELYTE].system[:separator_porosity]
+    vfelyte[nstart : nend] .= separator_porosity*ones(nend - nstart + 1)
     
     model[:ELYTE].domain.representation[:volumeFraction] = vfelyte
 
@@ -635,7 +653,13 @@ function setup_battery_parameters(exported, model)
     
 end
 
-function setup_battery_initial_state_1d(exported, model)
+function setup_battery_parameters_1d(jsonstruct, model)
+
+    parameters = Dict{Symbol, Any}()
+
+    T0 = jsonstruct["initT"]
+    
+    # Negative current collector (if any)
 
     if haskey(model.models, :CC)
         use_cc = true
@@ -643,8 +667,89 @@ function setup_battery_initial_state_1d(exported, model)
         use_cc = false
     end
 
-    T   = exported["model"]["initT"]
-    SOC = exported["model"]["SOC"]
+    if use_cc
+        prm_cc = Dict{Symbol, Any}()
+        jsonstruct_cc = jsonstruct["NegativeElectrode"]["CurrentCollector"]
+        prm_cc[:Conductivity] = jsonstruct_cc["EffectiveElectricalConductivity"]
+        parameters[:CC] = setup_parameters(model[:CC], prm_cc)
+    end
+
+    # Negative active material
+    
+    prm_nam = Dict{Symbol, Any}()
+    jsonstruct_nam = jsonstruct["NegativeElectrode"]["ActiveMaterial"]
+
+    kappa = jsonstruct_nam["electricalConductivity"]
+    vf    = jsonstruct_nam["Interface"]["volumeFraction"]
+    prm_nam[:Conductivity] = vf*kappa
+    prm_nam[:Temperature] = T0
+    
+    if discretisation_type(model[:NAM]) == :P2Ddiscretization
+        # nothing to do
+    else
+        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
+        prm_nam[:Diffusivity] = jsonstruct_nam["InterDiffusionCoefficient"]
+    end
+
+    parameters[:NAM] = setup_parameters(model[:NAM], prm_nam)
+
+    # Electrolyte
+    
+    prm_elyte = Dict{Symbol, Any}()
+    prm_elyte[:Temperature] = T0        
+
+    parameters[:ELYTE] = setup_parameters(model[:ELYTE], prm_elyte)
+
+    # Positive active material
+
+    prm_pam = Dict{Symbol, Any}()
+    jsonstruct_pam = jsonstruct["PositiveElectrode"]["ActiveMaterial"]
+    kappa = jsonstruct_pam["electricalConductivity"]
+    vf    = jsonstruct_pam["Interface"]["volumeFraction"]
+    prm_pam[:Conductivity] = vf*kappa
+    prm_pam[:Temperature] = T0
+    
+    if discretisation_type(model[:PAM]) == :P2Ddiscretization
+        # nothing to do
+    else
+        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
+        prm_pam[:Diffusivity] = jsonstruct_nam["InterDiffusionCoefficient"]
+    end
+
+    parameters[:PAM] = setup_parameters(model[:PAM], prm_pam)
+
+    # Positive current collector (if any)
+
+    if haskey(model.models, :CC)
+        use_pp = true
+    else
+        use_pp = false
+    end
+
+    if use_pp
+        prm_pp = Dict{Symbol, Any}()
+        jsonstruct_pp = jsonstruct["PositiveElectrode"]["CurrentCollector"]
+        prm_pp[:Conductivity] = jsonstruct_pp["EffectiveElectricalConductivity"][1]
+        
+        parameters[:PP] = setup_parameters(model[:PP], prm_pp)
+    end        
+
+    parameters[:BPP] = setup_parameters(model[:BPP])
+
+    return parameters
+    
+end
+
+function setup_battery_initial_state_1d(jsonstruct, model)
+
+    if haskey(model.models, :CC)
+        use_cc = true
+    else
+        use_cc = false
+    end
+
+    T   = jsonstruct["initT"]
+    SOC = jsonstruct["SOC"]
 
     function setup_init_am(name, model)
         
@@ -661,7 +766,6 @@ function setup_battery_initial_state_1d(exported, model)
         init[:Cp]  = c*ones(nc, N)
 
         OCP = model[name].system[:ocp_func](T, c, cmax)
-        @infiltrate
         return (init, nc, OCP)
         
     end
@@ -1213,7 +1317,7 @@ function setup_sim_1d(name; use_p2d = true, use_groups = false, general_ad = fal
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
     exported = MAT.matread(fn)
 
-    model, state0, parameters = setup_model_1d(exported, geomparams, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
+    model, state0, parameters = setup_model_1d(use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
    
     setup_coupling_1d!(model, parameters, geomparams)
 
