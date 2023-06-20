@@ -134,6 +134,25 @@ function load_json()
 
     filename = "/home/xavier/Julia/BattMo/test/battery/data/jsonfiles/p2d_40_jl.json"
     jsondict = JSON.parsefile(filename)
+
+    return jsondict
+    
+end
+
+
+function setup_model_1d(jsondict; use_p2d = true, use_groups = false, kwarg...)
+
+    include_cc = true
+    
+    model      = setup_battery_model_1d(jsondict, use_p2d = use_p2d, include_cc = include_cc)
+    parameters = setup_battery_parameters_1d(jsondict, model)
+    initState  = setup_battery_initial_state_1d(jsondict, model)
+    
+    return model, initState, parameters
+    
+end
+
+function setup_geomparams(jsondict)
     
     names = (:CC, :NAM, :SEP, :PAM, :PP)
     geomparams = Dict(name => Dict() for name in names)
@@ -149,25 +168,14 @@ function load_json()
     geomparams[:PP][:N]          = jsondict["PositiveElectrode"]["CurrentCollector"]["N"]
     geomparams[:PP][:thickness]  = jsondict["PositiveElectrode"]["CurrentCollector"]["thickness"]
 
-    return (jsondict, geomparams)
-end
-
-
-function setup_model_1d(; use_p2d = true, use_groups = false, kwarg...)
-
-    include_cc = true
-
-    jsonstruct, geomparams = load_json()
-    
-    model      = setup_battery_model_1d(jsonstruct, geomparams, use_p2d = use_p2d, include_cc = include_cc)
-    parameters = setup_battery_parameters_1d(jsonstruct, model)
-    initState  = setup_battery_initial_state_1d(jsonstruct, model)
-    
-    return model, initState, parameters
+    return geomparams
     
 end
 
-function setup_battery_model_1d(jsonstruct, geomparams; include_cc = true, use_p2d = true, use_groups = false)
+
+function setup_battery_model_1d(jsondict; include_cc = true, use_p2d = true, use_groups = false)
+    
+    geomparams = setup_geomparams(jsondict)
 
     function setup_component(geomparam::Dict, sys; addDirichlet = false)
         
@@ -255,7 +263,7 @@ function setup_battery_model_1d(jsonstruct, geomparams; include_cc = true, use_p
 
         jsonName = jsonNames[name]
 
-        inputparams_am = jsonstruct[jsonName]["ActiveMaterial"]
+        inputparams_am = jsondict[jsonName]["ActiveMaterial"]
 
         am_params = JutulStorage()
         @info "Fix hack when done"
@@ -303,7 +311,7 @@ function setup_battery_model_1d(jsonstruct, geomparams; include_cc = true, use_p
 
     @info "Setup Electrolyte"
     params = JutulStorage();
-    inputparams_elyte = jsonstruct["Electrolyte"]
+    inputparams_elyte = jsondict["Electrolyte"]
     
     params[:transference]       = inputparams_elyte["sp"]["t"]
     params[:charge]             = inputparams_elyte["sp"]["z"]
@@ -447,6 +455,7 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
         am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
         am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
         am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
+        am_params[:volume_fraction]         = inputparams_am["Interface"]["volumeFraction"]
         k0 = inputparams_am["Interface"]["k0"]
         am_params[:reaction_rate_constant_func] = (T, c) -> compute_reaction_rate_constant(T, c, k0)
         
@@ -939,8 +948,10 @@ function setup_battery_initial_state(exported, model)
     
 end
 
-function setup_coupling_1d!(model, parameters, geomparams)
+function setup_coupling_1d!(model, parameters, jsondict)
 
+    geomparams = setup_geomparams(jsondict)
+    
     # setup coupling CC <-> NAM :charge_conservation
     
     skip_cc = false # we consider only case with current collector (for simplicity, for the moment)
@@ -1306,6 +1317,17 @@ function currentFun(t::T, inputI::T) where T
     return val
 end
 
+
+function currentFun(t::T, inputI::T, tup::T) where T
+    val::T = 0.0
+    if  t <= tup
+        val = sineup(0.0, inputI, 0.0, tup, t) 
+    else
+        val = inputI
+    end
+    return val
+end
+
 function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggregation)
     
     gs_its = 1
@@ -1321,14 +1343,57 @@ function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggreg
     
 end
 
+
+function computeCellCapacity(model)
+
+    con = Constants()
+    
+    function computeHalfCellCapacity(name)
+
+        ammodel = model[name]
+        sys = ammodel.system
+            
+        F    = con.F
+        @infiltrate
+        n    = sys[:n_charge_carriers]
+        cMax = sys[:maximum_concentration]
+        vf   = sys[:volumeFraction]
+        
+        if name == :NAM
+            thetaMax = sys[:theta100]
+            thetaMin = sys[:theta0]
+        elseif name == :PAM
+            thetaMax = sys[:theta0]
+            thetaMin = sys[:theta100]
+        else
+            error("name not recognized")
+        end
+
+        vols = ammodel.domain.representation[:volumes]
+        vol = sum(vf*vols)
+        
+        cap_usable = (thetaMax - thetaMin)*cMax*vol*n*F
+        
+        return cap_usable
+        
+    end
+
+    caps = [computeHalfCellCapacity(name) for name in (:NAM, :PAM)]
+
+    return minimum(caps)
+    
+end
+
 function setup_sim_1d(name; use_p2d = true, use_groups = false, general_ad = false)
 
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
     exported = MAT.matread(fn)
 
-    model, state0, parameters = setup_model_1d(use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
+    jsondict = load_json()
+    
+    model, state0, parameters = setup_model_1d(jsondict, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
    
-    setup_coupling_1d!(model, parameters, geomparams)
+    setup_coupling_1d!(model, parameters, jsondict)
 
     inputI = 0;
     minE   = 10
@@ -1342,7 +1407,9 @@ function setup_sim_1d(name; use_p2d = true, use_groups = false, general_ad = fal
     end
 
     @. state0[:BPP][:Phi] = minE*1.5
-    cFun(time) = currentFun(time, inputI)
+    tup = Float64(jsondict["TimeStepping"]["rampupTime"])
+    cFun(time) = currentFun(time, inputI, tup)
+    
     forces_pp = nothing
 
     currents = setup_forces(model[:BPP], policy = SimpleCVPolicy(cFun, minE))

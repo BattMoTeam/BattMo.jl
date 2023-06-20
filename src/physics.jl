@@ -227,6 +227,6 @@ function select_parameters!(prm, D::MinimalECTPFAGrid, model::ElectroChemicalCom
 end
 
 function select_parameters!(prm, d::DataDomain, model::ElectroChemicalComponentModel)
-    prm[:Volume]         = Volume()
+    prm[:Volume] = Volume()
 end
 
