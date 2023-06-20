@@ -1,3 +1,12 @@
+struct Constants
+    F
+    R
+    function Constants()
+        new(8.31446261815324, 96485.3329)
+    end
+end
+
+
 struct SourceAtCell
     cell
     src
