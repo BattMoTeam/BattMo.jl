@@ -127,7 +127,7 @@ function setup_model_1d(exported, geomparams; use_p2d = true, use_groups = false
 
     model      = setup_battery_model_1d(exported, geomparams, use_p2d = use_p2d, include_cc = include_cc)
     parameters = setup_battery_parameters(exported, model)
-    initState  = setup_battery_initial_state(exported, model)
+    initState  = setup_battery_initial_state_1d(exported, model)
     
     return model, initState, parameters
     
@@ -230,6 +230,8 @@ function setup_battery_model_1d(exported, geomparams; include_cc = true, use_p2d
         am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
         am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
         am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
+        am_params[:theta0]                  = inputparams_am["Interface"]["theta0"]
+        am_params[:theta100]                = inputparams_am["Interface"]["theta100"]
         k0 = inputparams_am["Interface"]["k0"]
         am_params[:reaction_rate_constant_func] = (T, c) -> compute_reaction_rate_constant(T, c, k0)
         
@@ -632,6 +634,90 @@ function setup_battery_parameters(exported, model)
     return parameters
     
 end
+
+function setup_battery_initial_state_1d(exported, model)
+
+    if haskey(model.models, :CC)
+        use_cc = true
+    else
+        use_cc = false
+    end
+
+    T   = exported["model"]["initT"]
+    SOC = exported["model"]["SOC"]
+
+    function setup_init_am(name, model)
+        
+        theta0   = model[name].system[:theta0]
+        theta100 = model[name].system[:theta100]
+        cmax     = model[name].system[:maximum_concentration]
+        N        = model[name].system.discretization[:N]
+        
+        theta = SOC*(theta100 - theta0) + theta0;
+        c     = theta*cmax
+        nc    = count_entities(model[name].data_domain, Cells())
+        init = Dict()
+        init[:Cs]  = c*ones(nc)
+        init[:Cp]  = c*ones(nc, N)
+
+        OCP = model[name].system[:ocp_func](T, c, cmax)
+        @infiltrate
+        return (init, nc, OCP)
+        
+    end
+
+    function setup_cc(name, phi, model)
+        nc = count_entities(model[name].data_domain, Cells())
+        init = Dict();
+        init[:Phi] = phi*ones(nc)
+        return init
+    end
+    
+    initState = Dict()
+
+    # Setup initial state in negative active material
+    
+    init, nc, negOCP = setup_init_am(:NAM, model)
+    init[:Phi] = zeros(nc)
+    initState[:NAM] = init
+    
+    # Setup initial state in electrolyte
+    
+    nc = count_entities(model[:ELYTE].data_domain, Cells())
+    
+    init = Dict()
+    init[:C]   = 1000*ones(nc)
+    init[:Phi] = - negOCP*ones(nc) 
+
+    initState[:ELYTE] = init
+
+    # Setup initial state in positive active material
+    
+    init, nc, posOCP = setup_init_am(:PAM, model)
+    init[:Phi] = (posOCP - negOCP)*ones(nc)
+    
+    initState[:PAM] = init
+
+    # Setup negative current collector
+
+    initState[:CC] = setup_cc(:CC, 0, model)
+    
+    # Setup positive current collector
+
+    initState[:PP] = setup_cc(:PP, posOCP - negOCP, model)
+
+    init = Dict()
+    init[:Phi]     = [1.0]
+    init[:Current] = [1.0]
+        
+    initState[:BPP] = init
+
+    initState = setup_state(model, initState)
+    
+    return initState
+    
+end
+
 
 function setup_battery_initial_state(exported, model)
 
@@ -1141,7 +1227,7 @@ function setup_sim_1d(name; use_p2d = true, use_groups = false, general_ad = fal
         minE   = min(minE, exported["states"][i]["Control"]["E"])
         
     end
-    
+
     @. state0[:BPP][:Phi] = minE*1.5
     cFun(time) = currentFun(time, inputI)
     forces_pp = nothing
