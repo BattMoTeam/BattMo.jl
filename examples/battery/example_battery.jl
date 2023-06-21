@@ -35,33 +35,65 @@ else
     # name = "3d_demo_case"
 end
 
-fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
+function load_reference_solution(name)
+    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
+    refdict = MAT.matread(fn)
+    return refdict
+end
 
 # sim, forces, state0, parameters, exported, model = BattMo.setup_sim(name, use_p2d = use_p2d)
 
-do_1d = true
-if do_1d
-    states, reports, extra, exported = run_battery_1d(name, use_p2d = use_p2d, info_level = 5, max_step = nothing);
+do_json = true
+
+if do_json
+    
+    states, reports, extra = run_battery_1d(info_level = 0, extra_timing = false);
+
+
+    nsteps = size(states)
+    timesteps = extra[:timesteps]
+    
+    time = cumsum(timesteps)
+    E    = [state[:BPP][:Phi][1] for state in states]
+    
+
+    refdict = load_reference_solution(name)
+    statesref  = refdict["states"]
+
+    timeref = [state["time"] for state in statesref]
+    Eref    = [state["Control"]["E"] for state in statesref]
+
+
 else
+    
     states, reports, extra, exported = run_battery(name, use_p2d = use_p2d, info_level = 5, max_step = nothing);
+
+    nsteps = size(states, 1)
+    
+
+    timesteps = extra[:timesteps]
+    time = cumsum(timesteps[1 : nsteps])
+    E    = [state[:BPP][:Phi][1] for state in states]
+    
+    statesref  = extra[:states_ref]
+    timeref = time
+    Eref = [state["Control"]["E"] for state in statesref[1 : nsteps]]
+
 end
 
 
-stateref  = extra[:states_ref]
-timesteps = extra[:timesteps]
-steps     = size(states, 1)
 
-E = Matrix{Float64}(undef, steps, 2)
 
-for step in 1 : steps
-    phi       = states[step][:BPP][:Phi][1]
-    E[step] = phi
-    phi_ref   = stateref[step]["Control"]["E"]
-    E[step,2] = phi_ref
-end
-timesteps = timesteps[1 : steps]
+plt = plot(time, E;
+           title     = "Discharge Voltage",
+           size      = (1000, 800),
+           label     = "BattMo.jl",
+           xlabel    = "Time / s",
+           ylabel    = "Voltage / V",
+           linewidth = 4,
+           xtickfont = font(pointsize = 15),
+           ytickfont = font(pointsize = 15))
 
-plt = plot(cumsum(timesteps), E[:, 1]; title = "Discharge Voltage", size=(1000, 800), label = "BattMo.jl", xlabel = "Time / s", ylabel = "Voltage / V", linewidth = 4,  xtickfont = font(pointsize = 15),  ytickfont = font(pointsize = 15))
-plot!(cumsum(timesteps), E[:, 2], label = "BattMo.m", linewidth = 2)
+plot!(timeref, Eref, label = "BattMo.m", linewidth = 2)
 display(plt)
 

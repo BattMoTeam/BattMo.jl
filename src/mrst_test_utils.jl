@@ -1,8 +1,11 @@
 struct Constants
     F
     R
+    hour
     function Constants()
-        new(96485.3329, 8.31446261815324)
+        new(96485.3329,
+            8.31446261815324,
+            3600)
     end
 end
 
@@ -117,34 +120,11 @@ function setup_model(exported; use_p2d = true, use_groups = false, kwarg...)
     
 end
 
-names = (:CC, :NAM, :SEP, :PAM, :PP)
-geomparams = Dict(name => Dict() for name in names)
-geomparams[:CC][:N]          = 5
-geomparams[:CC][:thickness]  = 25e-6
-geomparams[:NAM][:N]         = 10
-geomparams[:NAM][:thickness] = 64e-6
-geomparams[:SEP][:N]         = 10
-geomparams[:SEP][:thickness] = 15e-6
-geomparams[:PAM][:N]         = 10
-geomparams[:PAM][:thickness] = 57e-6
-geomparams[:PP][:N]          = 5
-geomparams[:PP][:thickness]  = 15e-6
-
-function load_json()
-
-    filename = "/home/xavier/Julia/BattMo/test/battery/data/jsonfiles/p2d_40_jl.json"
-    jsondict = JSON.parsefile(filename)
-
-    return jsondict
-    
-end
-
-
-function setup_model_1d(jsondict; use_p2d = true, use_groups = false, kwarg...)
+function setup_model_1d(jsondict; use_groups = false, kwarg...)
 
     include_cc = true
     
-    model      = setup_battery_model_1d(jsondict, use_p2d = use_p2d, include_cc = include_cc)
+    model      = setup_battery_model_1d(jsondict, include_cc = include_cc)
     parameters = setup_battery_parameters_1d(jsondict, model)
     initState  = setup_battery_initial_state_1d(jsondict, model)
     
@@ -173,7 +153,7 @@ function setup_geomparams(jsondict)
 end
 
 
-function setup_battery_model_1d(jsondict; include_cc = true, use_p2d = true, use_groups = false)
+function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
     
     geomparams = setup_geomparams(jsondict)
 
@@ -279,6 +259,7 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_p2d = true, use
         funcname = inputparams_am["Interface"]["OCP"]["functionname"]
         am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
         
+        use_p2d = true
         if use_p2d
             rp = inputparams_am["SolidDiffusion"]["rp"]
             N  = Int64(inputparams_am["SolidDiffusion"]["N"])
@@ -1354,7 +1335,6 @@ function computeCellCapacity(model)
         sys = ammodel.system
             
         F    = con.F
-        @infiltrate
         n    = sys[:n_charge_carriers]
         cMax = sys[:maximum_concentration]
         vf   = sys[:volumeFraction]
@@ -1384,48 +1364,31 @@ function computeCellCapacity(model)
     
 end
 
-function setup_sim_1d(name; use_p2d = true, use_groups = false, general_ad = false)
+function setup_sim_1d(jsondict; use_groups = false, general_ad = false)
 
-    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
-    exported = MAT.matread(fn)
-
-    jsondict = load_json()
-    
-    model, state0, parameters = setup_model_1d(jsondict, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
+    model, state0, parameters = setup_model_1d(jsondict, use_groups = use_groups, general_ad = general_ad)
    
     setup_coupling_1d!(model, parameters, jsondict)
 
-    inputI = 0;
-    minE   = 10
-    steps  = size(exported["states"],1)
+    minE = jsondict["Control"]["lowerCutoffVoltage"]
+
+    CRate  = jsondict["Control"]["CRate"]
+    cap    = computeCellCapacity(model)
+    con    = Constants()
     
-    for i = 1:steps
-        
-        inputI = max(inputI, exported["states"][i]["Control"]["I"])
-        minE   = min(minE, exported["states"][i]["Control"]["E"])
-        
-    end
+    inputI = (cap/con.hour)*CRate
 
     @. state0[:BPP][:Phi] = minE*1.5
+    
     tup = Float64(jsondict["TimeStepping"]["rampupTime"])
     cFun(time) = currentFun(time, inputI, tup)
     
-    forces_pp = nothing
-
     currents = setup_forces(model[:BPP], policy = SimpleCVPolicy(cFun, minE))
-
-    forces = Dict(
-        :CC => nothing,
-        :NAM => nothing,
-        :ELYTE => nothing,
-        :PAM => nothing,
-        :PP => forces_pp,
-        :BPP => currents
-    )
+    forces = setup_forces(model, BPP = currents) 
     
     sim = Simulator(model, state0 = state0, parameters = parameters, copy_state = true)
     
-    return sim, forces, state0, parameters, exported, model
+    return sim, forces, state0, parameters, model
     
 end
 
@@ -1525,62 +1488,90 @@ function run_battery(name;
     states, report = simulate(sim, timesteps, forces = forces, config = cfg)
     stateref = exported["states"]
 
-    extra = Dict(:model => model,
-                 :state0 => state0,
+    extra = Dict(:model      => model,
+                 :state0     => state0,
                  :states_ref => stateref,
                  :parameters => parameters,
-                 :exported => exported,
-                 :timesteps => timesteps,
-                 :config => cfg,
-                 :forces => forces,
-                 :simulator => sim)
+                 :exported   => exported,
+                 :timesteps  => timesteps,
+                 :config     => cfg,
+                 :forces     => forces,
+                 :simulator  => sim)
 
     return (states = states, reports = report, extra = extra, exported = exported)
 end
 
+
+function rampupTimesteps(time, dt, n = 8)
+
+    ind = [8; collect(range(n, 1, step=-1))]
+    dt_init = [dt/2^k for k in ind]
+    cs_time = cumsum(dt_init)
+    if any(cs_time .> time)
+        dt_init = dt_init[cs_time .< time];
+    end
+    dt_left = time .- sum(dt_init)
+
+    # Even steps
+    dt_rem = dt*ones(floor(Int64, dt_left/dt));
+    # Final ministep if present
+    dt_final = time - sum(dt_init) - sum(dt_rem);
+    # Less than to account for rounding errors leading to a very small
+    # negative time-step.
+    if dt_final <= 0
+        dt_final = [];
+    end
+    # Combined timesteps
+    dT = [dt_init; dt_rem; dt_final];
+
+    return dT
+end
+
+
+function run_json_battery(filename;
+                          use_p2d       = true,
+                          extra_timing  = false,
+                          max_step      = nothing,
+                          linear_solver = :direct,
+                          general_ad    = false,
+                          use_groups    = false,
+                          kwarg...)
+end
+
+
 export run_battery_1d
 
-function run_battery_1d(name;
-                     use_p2d       = true,
-                     extra_timing  = false,
-                     max_step      = nothing,
-                     linear_solver = :direct,
-                     general_ad    = false,
-                     use_groups    = false,
-                     kwarg...)
+
+defaultjsonfilename = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/p2d_40_jl.json")
+
+function run_battery_1d(;
+                        filename      = defaultjsonfilename,
+                        extra_timing  = false,
+                        linear_solver = :direct,
+                        general_ad    = false,
+                        use_groups    = false,
+                        kwarg...)
     
-    sim, forces, state0, parameters, exported, model = setup_sim_1d(name, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
-    
-    steps        = size(exported["states"], 1)
-    alltimesteps = Vector{Float64}(undef, steps)
-    time         = 0;
-    end_step     = 0
-    minE         = 3.2
-    
-    for i = 1 : steps
-        alltimesteps[i] =  exported["states"][i]["time"] - time
-        time = exported["states"][i]["time"]
-        E = exported["states"][i]["Control"]["E"]
-        if (E > minE + 0.001)
-            end_step = i
-        end
-    end
-    if !isnothing(max_step)
-        end_step = min(max_step, end_step)
-    end
-    
-    timesteps = alltimesteps[1 : end_step]
+    jsondict = JSON.parsefile(filename)
+
+    sim, forces, state0, parameters, model = setup_sim_1d(jsondict, use_groups = use_groups, general_ad = general_ad)
+
+    total = jsondict["TimeStepping"]["totalTime"]
+    n     = jsondict["TimeStepping"]["N"]
+
+    dt = total/n
+    timesteps = rampupTimesteps(total, dt, 5);    
     
     cfg = simulator_config(sim; kwarg...)
     cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
     cfg[:debug_level]                = 0
-    #cfg[:max_timestep_cuts]         = 0
     cfg[:max_residual]               = 1e20
     cfg[:min_nonlinear_iterations]   = 1
     cfg[:extra_timing]               = extra_timing
-    # cfg[:max_nonlinear_iterations] = 5
     cfg[:safe_mode]                  = false
-    cfg[:error_on_incomplete]        = true
+    cfg[:error_on_incomplete]        = false
+    cfg[:failure_cuts_timestep]      = true
+    
     if false
         cfg[:info_level]               = 5
         cfg[:max_nonlinear_iterations] = 1
@@ -1591,31 +1582,26 @@ function run_battery_1d(name;
     cfg[:tolerances][:BPP][:default] = 1e-1
     # Run simulation
     
-    states, report = simulate(sim, timesteps, forces = forces, config = cfg)
-    stateref = exported["states"]
+    states, reports = simulate(sim, timesteps, forces = forces, config = cfg)
 
-    extra = Dict(:model => model,
-                 :state0 => state0,
-                 :states_ref => stateref,
+    extra = Dict(:model      => model,
+                 :state0     => state0,
                  :parameters => parameters,
-                 :exported => exported,
-                 :timesteps => timesteps,
-                 :config => cfg,
-                 :forces => forces,
-                 :simulator => sim)
+                 :timesteps  => timesteps,
+                 :config     => cfg,
+                 :forces     => forces,
+                 :simulator  => sim)
 
-    return (states = states, reports = report, extra = extra, exported = exported)
+    return (states = states, reports = reports, extra = extra)
 end
 
 
 export inputRefToStates
 function inputRefToStates(states, stateref)
-statesref = deepcopy(states);
+    statesref = deepcopy(states);
     for i in 1:size(states,1)
         staterefnew = statesref[i]   
-        refstep=i
-        sim_step=i
-
+        refstep = i
         fields = ["CurrentCollector","ActiveMaterial"]
         components = ["NegativeElectrode","PositiveElectrode"]
         newkeys = [:CC,:NAM,:PP,:PAM]
@@ -1651,7 +1637,7 @@ statesref = deepcopy(states);
         ##
         staterefnew[:BPP][:Phi][1] = stateref[refstep]["Control"]["E"]
     end
-return statesref
+    return statesref
 end
 
 
