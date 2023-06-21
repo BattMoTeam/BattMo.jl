@@ -9,7 +9,6 @@ struct Constants
     end
 end
 
-
 struct SourceAtCell
     cell
     src
@@ -148,6 +147,10 @@ function setup_geomparams(jsondict)
     geomparams[:PP][:N]          = jsondict["PositiveElectrode"]["CurrentCollector"]["N"]
     geomparams[:PP][:thickness]  = jsondict["PositiveElectrode"]["CurrentCollector"]["thickness"]
 
+    for name in names
+        geomparams[name][:facearea] = jsondict["Geometry"]["faceArea"]
+    end
+    
     return geomparams
     
 end
@@ -158,19 +161,23 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
     geomparams = setup_geomparams(jsondict)
 
     function setup_component(geomparam::Dict, sys; addDirichlet = false)
+
+        facearea = geomparam[:facearea]
         
         g = CartesianMesh(Tuple(geomparam[:N]), Tuple(geomparam[:thickness]))
         domain = DataDomain(g)
 
+        domain[:face_weighted_volumes] = facearea*domain[:volumes]
+        
         k = ones(geomparam[:N])
 
         T    = compute_face_trans(domain, k)
         T_hf = compute_half_face_trans(domain, k)
         T_b  = compute_boundary_trans(domain, k)
 
-        domain[:trans, Faces()]           = T
-        domain[:halfTrans, HalfFaces()]   = T_hf
-        domain[:bcTrans, BoundaryFaces()] = T_b
+        domain[:trans, Faces()]           = facearea*T
+        domain[:halfTrans, HalfFaces()]   = facearea*T_hf
+        domain[:bcTrans, BoundaryFaces()] = facearea*T_b
 
         # We add Dirichlet on negative current collector. This is hacky
         if addDirichlet
@@ -180,9 +187,9 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
             bcDirFace = 1 # in BoundaryFaces indexing
             bcDirCell = 1
             bcDirInd  = 1
-            domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = domain[:bcTrans][bcDirFace]
-            domain[:bcDirCells, BoundaryDirichletFaces()]     = bcDirCell # 
-            domain[:bcDirInds, BoundaryDirichletFaces()]      = bcDirInd #
+            domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = facearea*domain[:bcTrans][bcDirFace]
+            domain[:bcDirCells, BoundaryDirichletFaces()]     = facearea*bcDirCell # 
+            domain[:bcDirInds, BoundaryDirichletFaces()]      = facearea*bcDirInd #
             
         end
         
@@ -198,6 +205,8 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
     function setup_component(geomparams::Dict, sys::Electrolyte, bcfaces = nothing)
         # specific implementation for electrolyte
         # requires geometric parameters for :NAM, :SEP, :PAM
+
+        facearea = geomparams[:SEP][:facearea]
         
         names = (:NAM, :SEP, :PAM)
 
@@ -214,14 +223,16 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
         
         domain = DataDomain(g)
 
+        domain[:face_weighted_volumes] = facearea*domain[:volumes]
+
         k = ones(N)
         T    = compute_face_trans(domain, k)
         T_hf = compute_half_face_trans(domain, k)
         T_b  = compute_boundary_trans(domain, k)
 
-        domain[:trans, Faces()]           = T
-        domain[:halfTrans, HalfFaces()]   = T_hf
-        domain[:bcTrans, BoundaryFaces()] = T_b
+        domain[:trans, Faces()]           = facearea*T
+        domain[:halfTrans, HalfFaces()]   = facearea*T_hf
+        domain[:bcTrans, BoundaryFaces()] = facearea*T_b
         
         flow = TwoPointPotentialFlowHardCoded(g)
         disc = (charge_flow = flow,)
@@ -1349,7 +1360,7 @@ function computeCellCapacity(model)
             error("name not recognized")
         end
 
-        vols = ammodel.domain.representation[:volumes]
+        vols = ammodel.domain.representation[:face_weighted_volumes]
         vol = sum(vf*vols)
         
         cap_usable = (thetaMax - thetaMin)*cMax*vol*n*F
