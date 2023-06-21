@@ -2,7 +2,7 @@ struct Constants
     F
     R
     function Constants()
-        new(8.31446261815324, 96485.3329)
+        new(96485.3329, 8.31446261815324)
     end
 end
 
