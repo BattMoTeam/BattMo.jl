@@ -257,7 +257,6 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
         inputparams_am = jsondict[jsonName]["ActiveMaterial"]
 
         am_params = JutulStorage()
-        @info "Fix hack when done"
         am_params[:volumeFraction]          = inputparams_am["Interface"]["volumeFraction"]
         am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
         am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
@@ -292,18 +291,15 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
     # Setup negative current collector
     
     if include_cc
-        @info "Setup negative current collector"
         sys_cc = CurrentCollector()
         model_cc =  setup_component(geomparams[:CC], sys_cc, addDirichlet = true)
     end
 
     # Setup NAM
-    @info "Setup negative active material"
     model_nam = setup_active_material(:NAM, geomparams)
 
     ## Setup ELYTE
 
-    @info "Setup Electrolyte"
     params = JutulStorage();
     inputparams_elyte = jsondict["Electrolyte"]
     
@@ -326,12 +322,10 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
     model_elyte = setup_component(geomparams, elyte)
 
     # Setup PAM
-    @info "Setup positive active material"
     model_pam = setup_active_material(:PAM, geomparams)
 
     # Setup negative current collector if any
     if include_cc
-        @info "Setup positive current collector"        
         sys_pp = CurrentCollector()
         model_pp = setup_component(geomparams[:PP], sys_pp)
     end
