@@ -1527,18 +1527,6 @@ function rampupTimesteps(time, dt, n = 8)
     return dT
 end
 
-
-function run_json_battery(filename;
-                          use_p2d       = true,
-                          extra_timing  = false,
-                          max_step      = nothing,
-                          linear_solver = :direct,
-                          general_ad    = false,
-                          use_groups    = false,
-                          kwarg...)
-end
-
-
 export run_battery_1d
 
 
