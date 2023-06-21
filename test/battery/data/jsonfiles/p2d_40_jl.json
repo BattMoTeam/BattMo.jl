@@ -122,9 +122,6 @@
     "CRate": 1,
     "tup" : 0.1,
     "lowerCutoffVoltage": 2.4,
-    "upperCutoffVoltage": 4.1,
-    "dIdtLimit": 0.01,
-    "dEdtLimit": 0.01
   },
   "TimeStepping": {
     "totalTime": 4000,
