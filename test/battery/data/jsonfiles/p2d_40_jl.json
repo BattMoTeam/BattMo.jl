@@ -121,7 +121,7 @@
     "initialControl": "discharging",
     "CRate": 1,
     "tup" : 0.1,
-    "lowerCutoffVoltage": 2.4,
+    "lowerCutoffVoltage": 2.4
   },
   "TimeStepping": {
     "totalTime": 4000,
