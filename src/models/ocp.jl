@@ -24,7 +24,7 @@ const coeff2_graphite = Polynomial([
 	+ 165705.8597
 ]);
 
-function compute_ocp_graphite(T, c, cmax)
+function compute_ocp_graphite(c, T, cmax)
     """Compute OCP for GenericGraphite as function of temperature and concentration"""
     theta  = c./cmax
     refT   = 298.15
@@ -44,7 +44,7 @@ function compute_ocp_graphite(T, c, cmax)
     
 end
 
-function compute_reaction_rate_constant_graphite(T, c)
+function compute_reaction_rate_constant_graphite(c, T)
 
     refT = 298.15
     k0   = 5.0310e-11
@@ -100,7 +100,7 @@ const coeff2_dUdT_nmc111 = Polynomial([
     + 3.048755063
 ])
 
-function compute_ocp_nmc111(T, c, cmax)
+function compute_ocp_nmc111(c, T, cmax)
     
     """Compute OCP for GenericNMC111 as function of temperature and concentration"""
     refT   = 298.15
@@ -115,14 +115,14 @@ end
 
 ## Defines standard exchange current density
 
-function compute_reaction_rate_constant(T, c, k0)
+function compute_reaction_rate_constant(c, T, k0, Eak)
     
     refT = 298.15
-    Eak  = 5000
 
     val = k0.*exp(-Eak./FARADAY_CONST .*(1.0./T - 1/refT));
     
     return val
+    
 end
 
 

@@ -89,11 +89,11 @@ const p1 = Polynomial(poly_param[1:end, 1])
 const p2 = Polynomial(poly_param[1:end, 2])
 const p3 = Polynomial(poly_param[1:end, 3])
 
-@inline function electrolyte_conductivity(T::Real, C::Real)
+@inline function computeElectrolyteConductivity_default(c::Real, T::Real)
     """ Compute the electrolyte conductivity as a function of temperature and concentration
     """
     fact = 1e-4
-    return fact * C * (p1(C) + p2(C) * T + p3(C) * T^2)^2
+    return fact*c*(p1(c) + p2(c)*T + p3(c)*T^2)^2
 end
 
 const diff_params = [
@@ -102,14 +102,14 @@ const diff_params = [
 ]
 const Tgi = [229 5.0]
 
-@inline function electrolyte_diffusivity(T::Real, C::Real)
+@inline function computeDiffusionCoefficient_default(c::Real, T::Real)
     """ Compute the diffusion coefficient as a function of temperature and concentration
     """
     return (
         1e-4 * 10 ^ ( 
             diff_params[1,1] + 
-            diff_params[1,2] / ( T - Tgi[1] - Tgi[2] * C * 1e-3) + 
-            diff_params[2,1] * C * 1e-3
+            diff_params[1,2]/(T - Tgi[1] - Tgi[2]*c* 1e-3) + 
+            diff_params[2,1]*c*1e-3
             )
         )
 end
@@ -133,7 +133,7 @@ function update_conductivity!(kappa, kappa_def::Conductivity, model::Electrolyte
     system = model.system
     # We use Bruggeman coefficient
     for i in ix
-        @inbounds kappa[i] = system[:conductivity](Temperature[i], C[i]) * VolumeFraction[i]^1.5
+        @inbounds kappa[i] = system[:conductivity](C[i], Temperature[i]) * VolumeFraction[i]^1.5
     end
 end
 )
@@ -143,7 +143,7 @@ end
     """
     system = model.system
     for i in ix
-        @inbounds D[i] = system[:diffusivity](Temperature[i], C[i])*VolumeFraction[i]^1.5
+        @inbounds D[i] = system[:diffusivity](C[i], Temperature[i])*VolumeFraction[i]^1.5
     end
 end
 

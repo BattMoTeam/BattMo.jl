@@ -217,7 +217,7 @@ end
         cmax     = model.system.params[:maximum_concentration]
         refT = 298.15
         for cell in ix
-            @inbounds Ocp[cell] = ocp_func(refT, Cs[cell], cmax)
+            @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)
         end
     end
 )
@@ -233,7 +233,7 @@ end
         rate_func = model.system.params[:reaction_rate_constant_func]
         refT = 298.15
         for cell in ix
-            @inbounds ReactionRateConst[cell] = rate_func(refT, Cs[cell])
+            @inbounds ReactionRateConst[cell] = rate_func(Cs[cell], refT)
         end
     end
 )
@@ -407,7 +407,7 @@ end
         refT     = 298.15
         
         for cell in ix
-            @inbounds Ocp[cell] = ocp_func(refT, C[cell], cmax)
+            @inbounds Ocp[cell] = ocp_func(C[cell], refT, cmax)
         end
     end
 )
@@ -424,7 +424,7 @@ end
         rate_func = model.system.params[:reaction_rate_constant_func]
         refT = 298.15
         for i in ix
-            @inbounds ReactionRateConst[i] = rate_func(refT, C[i])
+            @inbounds ReactionRateConst[i] = rate_func(C[i], refT)
         end
     end
 )

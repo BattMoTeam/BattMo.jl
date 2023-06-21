@@ -264,8 +264,10 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
         am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
         am_params[:theta0]                  = inputparams_am["Interface"]["theta0"]
         am_params[:theta100]                = inputparams_am["Interface"]["theta100"]
-        k0 = inputparams_am["Interface"]["k0"]
-        am_params[:reaction_rate_constant_func] = (T, c) -> compute_reaction_rate_constant(T, c, k0)
+
+        k0  = inputparams_am["Interface"]["k0"]
+        Eak = inputparams_am["Interface"]["Eak"]
+        am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
         
         funcname = inputparams_am["Interface"]["OCP"]["functionname"]
         am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
@@ -311,14 +313,12 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
     params[:bruggeman]          = inputparams_elyte["BruggemanCoefficient"]
     
     # setup diffusion coefficient function
-    # funcname = inputparams_elyte[:DiffusionCoefficient][:functionname]
-    funcname = "electrolyte_diffusivity"
+    funcname = inputparams_elyte["DiffusionCoefficient"]["functionname"]
     func = getfield(BattMo, Symbol(funcname))
     params[:diffusivity] = func
 
     # setup diffusion coefficient function
-    # funcname = inputparams_elyte[:Conductivity][:functionname]
-    funcname = "electrolyte_conductivity"
+    funcname = inputparams_elyte["Conductivity"]["functionname"]
     func = getfield(BattMo, Symbol(funcname))
     params[:conductivity] = func
     
@@ -448,8 +448,10 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
         am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
         am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
         am_params[:volume_fraction]         = inputparams_am["Interface"]["volumeFraction"]
-        k0 = inputparams_am["Interface"]["k0"]
-        am_params[:reaction_rate_constant_func] = (T, c) -> compute_reaction_rate_constant(T, c, k0)
+        
+        k0  = inputparams_am["Interface"]["k0"]
+        Eak = inputparams_am["Interface"]["Eak"]
+        am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
         
         if name == :NAM
             am_params[:ocp_func] = compute_ocp_graphite
@@ -520,8 +522,7 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
     params[:diffusivity] = func
 
     # setup diffusion coefficient function
-    # funcname = inputparams_elyte[:Conductivity][:functionname]
-    funcname = "electrolyte_conductivity"
+    funcname = "computeElectrolyteConductivity_default"
     func = getfield(BattMo, Symbol(funcname))
     params[:conductivity] = func
     
@@ -775,7 +776,7 @@ function setup_battery_initial_state_1d(jsonstruct, model)
         init[:Cs]  = c*ones(nc)
         init[:Cp]  = c*ones(nc, N)
 
-        OCP = model[name].system[:ocp_func](T, c, cmax)
+        OCP = model[name].system[:ocp_func](c, T, cmax)
         return (init, nc, OCP)
         
     end
@@ -1541,7 +1542,6 @@ end
 export run_battery_1d
 
 
-defaultjsonfilename = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/p2d_40_jl.json")
 
 function run_battery_1d(;
                         filename      = defaultjsonfilename,
