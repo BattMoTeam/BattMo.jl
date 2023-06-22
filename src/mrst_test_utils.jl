@@ -509,13 +509,14 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
     params[:charge]       = inputparams_elyte["sp"]["z"]
     params[:bruggeman]    = inputparams_elyte["BruggemanCoefficient"]
     
-    # setup diffusion coefficient function
-    # funcname = inputparams_elyte[:DiffusionCoefficient][:functionname]
-    funcname = "electrolyte_diffusivity"
+    # setup diffusion coefficient function, hard coded for the moment because function name is not passed throught model
+    # TODO : add general code
+    funcname = "computeDiffusionCoefficient_default"
     func = getfield(BattMo, Symbol(funcname))
     params[:diffusivity] = func
 
     # setup diffusion coefficient function
+    # TODO : add general code
     funcname = "computeElectrolyteConductivity_default"
     func = getfield(BattMo, Symbol(funcname))
     params[:conductivity] = func
