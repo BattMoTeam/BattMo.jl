@@ -1,4 +1,3 @@
-using Infiltrator
 export CurrentCollector
 
 struct CurrentCollector <: ElectroChemicalComponent
