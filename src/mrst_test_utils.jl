@@ -1535,7 +1535,7 @@ end
 
 export run_battery_1d
 
-
+defaultjsonfilename = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/p2d_40_jl.json")
 
 function run_battery_1d(;
                         filename      = defaultjsonfilename,
