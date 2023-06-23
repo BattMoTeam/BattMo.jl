@@ -52,15 +52,14 @@ end
 Jutul.cross_term_entities(ct::AccumulatorInterfaceFluxCT, eq, model) = [ct.target_cell]
 
 function regularized_sqrt(x::T, th::Float64) where {T<:Any}
-    #x,th = promote(xi,thi)
-    y::T = 0.0
-    #ind = (x <= th)
-    if !(x <= th)
-        y = x^0.5
-    else
+    x, th = promote(x, th)
+    y = zero(T)
+    if x <= th
         y = x/th*sqrt(th)
+    else
+        y = x^0.5
     end
-    return y   
+    return y
 end
 
 function butler_volmer_equation(j0, alpha, n, eta, T)
