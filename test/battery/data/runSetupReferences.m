@@ -1,9 +1,10 @@
-% casenames = {'p1d_40',
-             % 'p2d_40'};
+casenames = {'p1d_40',
+             'p2d_40'};
 
+casenames = casenames(2);
 % casenames = {'3d_demo_case'};
 
-casenames = {'4680_case'};
+% casenames = {'4680_case'};
 
 battmo_folder = fileparts(mfilename('fullpath'));
 battmo_folder = fullfile(battmo_folder, '../../..');
@@ -19,7 +20,7 @@ datafolder = fullfile(battmo_folder, 'test/battery/data');
 
 for icase = 1 : numel(casenames)
     casename = casenames{icase};
-    setupMatlabReference(casename, jsonfolder, datafolder, 'runSimulation', false);
+    setupMatlabReference(casename, jsonfolder, datafolder, 'runSimulation', true);
 end
 
 

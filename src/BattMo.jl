@@ -1,5 +1,6 @@
 module BattMo
 using PrecompileTools
+import JSON
 import Jutul:
     number_of_cells, number_of_faces,
     degrees_of_freedom_per_entity,
@@ -60,13 +61,10 @@ include("battery_types.jl")
 include("tensor_tools.jl")
 include("battery_utils.jl")
 include("test_setup.jl")
-include("models/elchem_component.jl")
 include("models/elyte.jl")
 include("models/current_collector.jl")
-include("models/current_collector_temp.jl")
 include("models/activematerial.jl")
 include("models/ocp.jl")
-include("models/simple_elyte.jl")
 include("models/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/convergence.jl")

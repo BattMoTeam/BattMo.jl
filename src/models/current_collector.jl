@@ -1,6 +1,12 @@
 export CurrentCollector
 
-struct CurrentCollector <: ElectroChemicalComponent end
+struct CurrentCollector <: ElectroChemicalComponent
+    params
+end
+
+function CurrentCollector()
+    CurrentCollector(Dict())
+end
 
 function select_minimum_output_variables!(out,
     system::CurrentCollector, model::SimulationModel
@@ -22,21 +28,21 @@ function select_secondary_variables!(
     
 end
 
-function Jutul.select_parameters!(
-        S, system::CurrentCollector, model::SimulationModel
-    )
-    
+function select_parameters!(S,
+                            system::CurrentCollector,
+                            model::SimulationModel)
+
     S[:Conductivity] = Conductivity()
-    if count_entities(model.data_domain, BoundaryFaces()) > 0
+    if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
         S[:BoundaryPhi]  = BoundaryPotential(:Phi)
         S[:BoundaryC]    = BoundaryPotential(:C)
     end
     
 end
 
-function select_equations!(
-
-    eqs, system::CurrentCollector, model::SimulationModel)
+function select_equations!(eqs,
+                           system::CurrentCollector,
+                           model::SimulationModel)
     disc = model.domain.discretizations.charge_flow
 
     eqs[:charge_conservation] = ConservationLaw(disc, :Charge)

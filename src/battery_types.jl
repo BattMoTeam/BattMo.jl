@@ -1,17 +1,23 @@
 using Jutul
 
-export ElectroChemicalComponent, CurrentCollector, Electectrolyte, TestElyte
+export ElectroChemicalComponent, CurrentCollector
 export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
 export ChargeFlow, BoundaryPotential, BoundaryCurrent
 export Phi, C, Temperature, Charge, Mass
 export BCCurrent
 export TPFAInterfaceFluxCT, ButlerVolmerActmatToElyteCT, ButlerVolmerElyteToActmatCT, ButlerVolmerInterfaceFluxCT
+export BoundaryDirichletFaces
 
-struct BoundaryFaces <: Jutul.JutulEntity end
+struct BoundaryDirichletFaces <: Jutul.JutulEntity end
 
 abstract type ElectroChemicalComponent <: JutulSystem end
-# Alias for a genereal Electro Chemical Model
-const ECModel = SimulationModel{<:Any, <:ElectroChemicalComponent, <:Any, <:Any}
+# Alias for a general electro-chemical model
+
+function Base.getindex(system::ElectroChemicalComponent, key::Symbol)
+    return system.params[key]
+end
+
+const ElectroChemicalComponentModel = SimulationModel{<:Any, <:ElectroChemicalComponent, <:Any, <:Any}
 
 abstract type ElectroChemicalGrid <: JutulMesh end
 
@@ -47,7 +53,7 @@ struct BoundaryPotential{label} <: ScalarVariable
     end
 end
 
-Jutul.associated_entity(::BoundaryPotential) = BoundaryFaces()
+Jutul.associated_entity(::BoundaryPotential) = BoundaryDirichletFaces()
 
 struct BoundaryCurrent{label, C} <: ScalarVariable 
     cells::C
@@ -56,7 +62,7 @@ struct BoundaryCurrent{label, C} <: ScalarVariable
     end
 end
 
-Jutul.associated_entity(::BoundaryCurrent) = BoundaryFaces()
+Jutul.associated_entity(::BoundaryCurrent) = BoundaryDirichletFaces()
 
 struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
     """
@@ -139,33 +145,57 @@ end
 struct ECTransmissibilities <: ScalarVariable end
 Jutul.variable_scale(::ECTransmissibilities) = 1e-10
 Jutul.associated_entity(::ECTransmissibilities) = Faces()
-function Jutul.default_parameter_values(data_domain, model, ::ECTransmissibilities, symb)
+
+function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O, S, F, C}, ::ECTransmissibilities, symb) where {G <: MinimalECTPFAGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
 
     repG = physical_representation(model)
     return repG.trans
 
 end
 
+function Jutul.default_parameter_values(d::DataDomain, model, ::ECTransmissibilities, symb)
+
+    return d.representation[:trans]
+
+end
+
 ## Volume
 struct Volume <: ScalarVariable end
 Jutul.associated_entity(::Volume) = Cells()
-function Jutul.default_parameter_values(data_domain, model, ::Volume, symb)
+
+function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O, S, F, C}, ::Volume, symb) where {G <: MinimalECTPFAGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
 
     repG = physical_representation(model)
     return repG.volumes
     
 end
+
+function Jutul.default_parameter_values(d::DataDomain, model, ::Volume, symb)
+
+    return d.representation[:face_weighted_volumes]
+    
+end
+
 Jutul.minimum_value(::Volume) = eps()
 
 ## Volume fraction
 struct VolumeFraction <: ScalarVariable end
 Jutul.associated_entity(::VolumeFraction) = Cells()
-function Jutul.default_parameter_values(data_domain, model, ::VolumeFraction, symb)
+
+function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O, S, F, C}, ::VolumeFraction, symb) where {G <: MinimalECTPFAGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
 
     repG = physical_representation(model)
     return repG.vol_frac
     
 end
+
+function Jutul.default_parameter_values(d::DataDomain, model, ::VolumeFraction, symb)
+
+    return d.representation[:volumeFraction]
+    
+end
+
+
 Jutul.minimum_value(::VolumeFraction) = eps(Float64)
 
 mutable struct BatteryCPhiPreconditioner <: JutulPreconditioner

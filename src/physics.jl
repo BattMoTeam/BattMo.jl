@@ -10,7 +10,7 @@ export half_face_two_point_kgrad
     @inbounds l = k[c1]
     @inbounds r = k[c2]
     
-    return 1.0/(1.0/l + 1.0/r)
+    return 2.0/(1.0/l + 1.0/r)
 end
 
 @inline grad(c_self, c_other, p::AbstractArray) = @inbounds (p[c_other] - p[c_self])
@@ -29,7 +29,7 @@ end
     
 end
 
-@inline function Jutul.face_flux!(q_i, face, eq::ConservationLaw, state, model::ECModel, dt, flow_disc::PotentialFlow, ldisc)
+@inline function Jutul.face_flux!(q_i, face, eq::ConservationLaw, state, model::ElectroChemicalComponentModel, dt, flow_disc::PotentialFlow, ldisc)
 
     # Inner version, for generic flux
     kgrad, upw = ldisc.face_disc(face)
@@ -89,7 +89,7 @@ end
 # TODO: Add possibilites for different potentials to have different boundary cells
 
 # Called from update_state dependents
-function Jutul.apply_boundary_conditions!(storage, parameters, model::ECModel)
+function Jutul.apply_boundary_conditions!(storage, parameters, model::ElectroChemicalComponentModel)
     equations_storage = storage.equations
     equations = model.equations
     for (eq, eq_s) in zip(values(equations), equations_storage)
@@ -102,18 +102,42 @@ function apply_boundary_potential!(
     acc, state, parameters, model, eq::ConservationLaw{:Charge}
     )
 
-    bc = model.domain.representation.boundary_cells
-
-    if length(bc) > 0
+    if model.domain.representation isa MinimalECTPFAGrid
+        bc = model.domain.representation.boundary_cells
+        if length(bc) > 0
+            dobc = true
+        else
+            dobc = false
+        end
+        dolegacy = true
+    elseif Jutul.hasentity(model.domain, BoundaryDirichletFaces())
+        dobc = true
+        nc = count_active_entities(model.domain, BoundaryDirichletFaces())
+        if nc > 0
+            bcdirhalftrans = model.domain.representation[:bcDirHalfTrans]
+            bcdircells     = model.domain.representation[:bcDirCells]
+            bcdirinds      = model.domain.representation[:bcDirInds]
+            dolegacy = false
+        end
+    else
+        dobc = false
+    end
+    
+    if dobc
         
         Phi         = state[:Phi]
         BoundaryPhi = state[:BoundaryPhi]
         κ           = state[:Conductivity]
 
-        T_hf = model.domain.representation.boundary_hfT
-
-        for (i, c) in enumerate(bc)
-            @inbounds acc[c] += κ[c]*T_hf[i]*(Phi[c] - value(BoundaryPhi[i]))
+        if dolegacy
+            T_hf = model.domain.representation.boundary_hfT
+            for (i, c) in enumerate(bc)
+                @inbounds acc[c] += κ[c]*T_hf[i]*(Phi[c] - value(BoundaryPhi[i]))
+            end
+        else
+            for (ht, c, i) in zip(bcdirhalftrans, bcdircells, bcdirinds)
+                @inbounds acc[c] += κ[c]*ht*(Phi[c] - value(BoundaryPhi[i]))
+            end
         end
     end
     
@@ -122,17 +146,33 @@ end
 function apply_boundary_potential!(
     acc, state, parameters, model, eq::ConservationLaw{:Mass}
     )
+
+    if model.domain.representation isa MinimalECTPFAGrid
+        bc = model.domain.representation.boundary_cells
+        dolegacy = true
+        if length(bc) > 0
+            dobc = true
+        else
+            dobc = false
+        end
+    else
+        # this function should actually not been used (not dirichlet boundary for mass)
+        dobc = false
+        dolegacy = false
+    end
     
-    bc = model.domain.representation.boundary_cells
-    
-    if length(bc) > 0
+    if dobc
         # values
         C         = state[:C]
         BoundaryC = state[:BoundaryC]
         D         = state[:Diffusivity]
 
         # Type
-        T_hf = model.domain.representation.boundary_hfT
+        if dolegacy
+            T_hf = model.domain.representation.boundary_hfT
+        else
+        end
+        
         for (i, c) in enumerate(bc)
             @inbounds acc[c] += D[c]*T_hf[i]*(C[c] - value(BoundaryC[i]))
         end
@@ -174,15 +214,19 @@ function apply_boundary_current!(acc, state, jkey, model, eq::ConservationLaw)
     
 end
 
-function Jutul.select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::Union{ECModel, SimpleElyteModel})
+function select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::ElectroChemicalComponentModel)
     
     prm[:ECTransmissibilities] = ECTransmissibilities()
     
 end
 
-function Jutul.select_parameters!(prm, D::MinimalECTPFAGrid, model::Union{ECModel, SimpleElyteModel})
-    
+function select_parameters!(prm, D::MinimalECTPFAGrid, model::ElectroChemicalComponentModel)    
     prm[:Volume]         = Volume()
     prm[:VolumeFraction] = VolumeFraction()
     
 end
+
+function select_parameters!(prm, d::DataDomain, model::ElectroChemicalComponentModel)
+    prm[:Volume] = Volume()
+end
+

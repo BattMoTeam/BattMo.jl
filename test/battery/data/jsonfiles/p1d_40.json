@@ -1,7 +1,7 @@
 {
   "Geometry": {
     "case": "1D",
-    "faceArea": 0.0001
+    "faceArea": 1
   },
   "NegativeElectrode": {
     "ActiveMaterial": {
@@ -37,6 +37,7 @@
       "diffusionModelType": "interParticleOnly"
     },
     "CurrentCollector": {
+      "thickness": 25e-6,
       "N" : 5,
       "EffectiveElectricalConductivity": 59600000.0,
       "thermalConductivity": 398,
@@ -77,6 +78,7 @@
       "diffusionModelType": "interParticleOnly"
     },
     "CurrentCollector": {
+      "thickness": 15e-6,
       "N" : 5,
       "EffectiveElectricalConductivity": 35500000.0,
       "thermalConductivity": 170,
@@ -133,6 +135,7 @@
     "controlPolicy": "IEswitch",
     "initialControl": "discharging",
     "CRate": 1,
+    "tup" : 0.1,    
     "lowerCutoffVoltage": 2.4,
     "upperCutoffVoltage": 4.1,
     "dIdtLimit": 0.01,

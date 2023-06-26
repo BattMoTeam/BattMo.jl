@@ -1,7 +1,8 @@
 export ActiveMaterial, ActiveMaterialModel, SolidMassCons, NoParticleDiffusion
 
 ## The parameter for the active material are stored in a dictionnary
-const ActiveMaterialParameters = Dict{Symbol, Any}
+const ActiveMaterialParameters = JutulStorage
+
 abstract type SolidDiffusionDiscretization end
 
 struct P2Ddiscretization <: SolidDiffusionDiscretization
@@ -52,10 +53,12 @@ function ActiveMaterial{P2Ddiscretization}(params::ActiveMaterialParameters, rp,
 end
 
 ## Create ActiveMaterial with no solid diffusion
-function ActiveMaterial{NoParticleDiffusion}(param::ActiveMaterialParameters) 
+function ActiveMaterial{NoParticleDiffusion}(params::ActiveMaterialParameters)
     discretization = NoParticleDiffusion()
-    return ActiveMaterial{NoParticleDiffusion}(param, discretization)
+    return ActiveMaterial{NoParticleDiffusion}(params, discretization)
 end
+
+
 
 ####
 # Setup functions for P2D
@@ -152,12 +155,13 @@ function degrees_of_freedom_per_entity(model::ActiveMaterialModel,
     return  solid_diffusion_discretization_number(model.system) - 1
 end
 
-function Jutul.select_parameters!(S,
-                                  system::ActiveMaterial{P2Ddiscretization},
-                                  model::SimulationModel)
+function select_parameters!(S,
+                            system::ActiveMaterial{P2Ddiscretization},
+                            model::SimulationModel)
     
-    S[:Temperature]  = Temperature()
-    S[:Conductivity] = Conductivity()
+    S[:Temperature]    = Temperature()
+    S[:Conductivity]   = Conductivity()
+    S[:VolumeFraction] = VolumeFraction()
     
 end
 
@@ -213,7 +217,7 @@ end
         cmax     = model.system.params[:maximum_concentration]
         refT = 298.15
         for cell in ix
-            @inbounds Ocp[cell] = ocp_func(refT, Cs[cell], cmax)
+            @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)
         end
     end
 )
@@ -229,7 +233,7 @@ end
         rate_func = model.system.params[:reaction_rate_constant_func]
         refT = 298.15
         for cell in ix
-            @inbounds ReactionRateConst[cell] = rate_func(refT, Cs[cell])
+            @inbounds ReactionRateConst[cell] = rate_func(Cs[cell], refT)
         end
     end
 )
@@ -355,7 +359,7 @@ function select_secondary_variables!(S,
     
 end
 
-function Jutul.select_parameters!(S,
+function select_parameters!(S,
                                   system::ActiveMaterial{NoParticleDiffusion},
                                   model::SimulationModel)
     
@@ -403,7 +407,7 @@ end
         refT     = 298.15
         
         for cell in ix
-            @inbounds Ocp[cell] = ocp_func(refT, C[cell], cmax)
+            @inbounds Ocp[cell] = ocp_func(C[cell], refT, cmax)
         end
     end
 )
@@ -420,7 +424,7 @@ end
         rate_func = model.system.params[:reaction_rate_constant_func]
         refT = 298.15
         for i in ix
-            @inbounds ReactionRateConst[i] = rate_func(refT, C[i])
+            @inbounds ReactionRateConst[i] = rate_func(C[i], refT)
         end
     end
 )
