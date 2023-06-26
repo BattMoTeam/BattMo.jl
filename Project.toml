@@ -15,6 +15,7 @@ Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 
 [compat]
 JLD2 = "0.4.31"
+JSON = "0.21.4"
 Jutul = "0.2.10"
 MAT = "0.10.4"
 Polynomials = "3.2.11"
