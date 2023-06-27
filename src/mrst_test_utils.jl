@@ -327,7 +327,7 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false,
     params[:conductivity] = func
     
     elyte = Electrolyte(params)
-    model_elyte = setup_component(geomparams, elyte)
+    model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
 
     # Setup PAM
     model_pam = setup_active_material(:PAM, geomparams)
@@ -335,7 +335,7 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false,
     # Setup negative current collector if any
     if include_cc
         sys_pp = CurrentCollector()
-        model_pp = setup_component(geomparams[:PP], sys_pp)
+        model_pp = setup_component(geomparams[:PP], sys_pp, general_ad = general_ad)
     end
 
     # Setup control model
