@@ -123,7 +123,7 @@ function setup_model_1d(jsondict; use_groups = false, kwarg...)
 
     include_cc = true
     
-    model      = setup_battery_model_1d(jsondict, include_cc = include_cc)
+    model      = setup_battery_model_1d(jsondict, include_cc = include_cc; kwarg...)
     parameters = setup_battery_parameters_1d(jsondict, model)
     initState  = setup_battery_initial_state_1d(jsondict, model)
     
@@ -156,11 +156,11 @@ function setup_geomparams(jsondict)
 end
 
 
-function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
+function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false, general_ad = false)
     
     geomparams = setup_geomparams(jsondict)
 
-    function setup_component(geomparam::Dict, sys; addDirichlet = false)
+    function setup_component(geomparam::Dict, sys; addDirichlet = false, general_ad = false)
 
         facearea = geomparam[:facearea]
         
@@ -193,7 +193,11 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
             
         end
         
-        flow = TwoPointPotentialFlowHardCoded(g)
+        if general_ad
+            flow = PotentialFlow(g)
+        else
+            flow = TwoPointPotentialFlowHardCoded(g)
+        end
         disc = (charge_flow = flow,)
         domain = DiscretizedDomain(domain, disc)
         
@@ -202,7 +206,7 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
         
     end
 
-    function setup_component(geomparams::Dict, sys::Electrolyte, bcfaces = nothing)
+    function setup_component(geomparams::Dict, sys::Electrolyte, bcfaces = nothing; general_ad = false)
         # specific implementation for electrolyte
         # requires geometric parameters for :NAM, :SEP, :PAM
 
@@ -234,7 +238,11 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
         domain[:halfTrans, HalfFaces()]   = facearea*T_hf
         domain[:bcTrans, BoundaryFaces()] = facearea*T_b
         
-        flow = TwoPointPotentialFlowHardCoded(g)
+        if general_ad
+            flow = PotentialFlow(g)
+        else
+            flow = TwoPointPotentialFlowHardCoded(g)
+        end
         disc = (charge_flow = flow,)
         domain = DiscretizedDomain(domain, disc)
         
@@ -276,13 +284,13 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
             rp = inputparams_am["SolidDiffusion"]["rp"]
             N  = Int64(inputparams_am["SolidDiffusion"]["N"])
             D  = inputparams_am["SolidDiffusion"]["D0"]
-            sys_am = ActiveMaterial{P2Ddiscretization}(am_params, rp, N, D)
+            sys_am = ActiveMaterialP2D(am_params, rp, N, D)
         else
-            sys_am = ActiveMaterial{NoParticleDiffusion}(am_params)
+            sys_am = ActiveMaterialNoParticleDiffusion(am_params)
         end
         
         geomparam = geomparams[name]
-        model_am = setup_component(geomparam, sys_am)
+        model_am = setup_component(geomparam, sys_am, general_ad = general_ad)
 
         return model_am
         
@@ -292,7 +300,7 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
     
     if include_cc
         sys_cc = CurrentCollector()
-        model_cc =  setup_component(geomparams[:CC], sys_cc, addDirichlet = true)
+        model_cc =  setup_component(geomparams[:CC], sys_cc, addDirichlet = true, general_ad = general_ad)
     end
 
     # Setup NAM
@@ -319,7 +327,7 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
     params[:conductivity] = func
     
     elyte = Electrolyte(params)
-    model_elyte = setup_component(geomparams, elyte)
+    model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
 
     # Setup PAM
     model_pam = setup_active_material(:PAM, geomparams)
@@ -327,7 +335,7 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
     # Setup negative current collector if any
     if include_cc
         sys_pp = CurrentCollector()
-        model_pp = setup_component(geomparams[:PP], sys_pp)
+        model_pp = setup_component(geomparams[:PP], sys_pp, general_ad = general_ad)
     end
 
     # Setup control model
@@ -454,14 +462,14 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
         else
             error("not recongized")
         end
-        
+        T_prm = typeof(am_params)
         if use_p2d
             rp = inputparams_am["SolidDiffusion"]["rp"]
             N  = Int64(inputparams_am["SolidDiffusion"]["N"])
             D  = inputparams_am["SolidDiffusion"]["D0"]
-            sys_am = ActiveMaterial{P2Ddiscretization}(am_params, rp, N, D)
+            sys_am = ActiveMaterialP2D(am_params, rp, N, D)
         else
-            sys_am = ActiveMaterial{NoParticleDiffusion}(am_params)
+            sys_am = ActiveMaterialNoParticleDiffusion(am_params)
         end
         
         if  include_cc
