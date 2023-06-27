@@ -172,10 +172,10 @@ function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:C
 end
 
 
-function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
+function Jutul.face_flux!(q::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
 
     t = transference(model.system)
-    z = 1
+    z = 1.0
     F = FARADAY_CONST
     
     @inbounds trans = state.ECTransmissibilities[face]
@@ -187,7 +187,5 @@ function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:M
     j = j - jchem*(1.0)
     
     massFlux = diffFlux + t/(z*F)*j
-    
-    return T(massFlux)
-    
+    return setindex(q, massFlux, 1)::T
 end
