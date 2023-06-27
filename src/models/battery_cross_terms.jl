@@ -87,13 +87,13 @@ function reaction_rate(phi_a         ,
     n    = activematerial.params[:n_charge_carriers]
     cmax = activematerial.params[:maximum_concentration]
     vsa  = activematerial.params[:volumetric_surface_area]
-    
+
     eta = (phi_a - phi_e - ocp)
     th  = 1e-3*cmax
     j0  = R0*regularized_sqrt(c_e*(cmax - c_a)*c_a, th)*n*FARADAY_CONST
     R   = vsa*butler_volmer_equation(j0, 0.5, n, eta, T)
 
-    return R./(n*FARADAY_CONST)
+    return R/(n*FARADAY_CONST)
     
 end
 
@@ -159,9 +159,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
         @assert cs == :Charge
         v = 1.0*vols*R*n*FARADAY_CONST
     end
-    
     out[] = -v
-    
 end
 
 

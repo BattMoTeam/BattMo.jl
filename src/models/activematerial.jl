@@ -299,9 +299,9 @@ function Jutul.update_equation_in_entity!(eq_buf           ,
     div  = disc[:div]
     D    = disc[:D]
     
-    Cp   = state.Cp[:, self_cell]
-    Cp0  = state0.Cp[:, self_cell]
-    flux = state.SolidDiffFlux[:, self_cell]
+    Cp   = @views state.Cp[:, self_cell]
+    Cp0  = @views state0.Cp[:, self_cell]
+    flux = @views state.SolidDiffFlux[:, self_cell]
     Cs   = state.Cs[self_cell]
     
     for i = 1 : N

@@ -123,7 +123,7 @@ function setup_model_1d(jsondict; use_groups = false, kwarg...)
 
     include_cc = true
     
-    model      = setup_battery_model_1d(jsondict, include_cc = include_cc)
+    model      = setup_battery_model_1d(jsondict, include_cc = include_cc; kwarg...)
     parameters = setup_battery_parameters_1d(jsondict, model)
     initState  = setup_battery_initial_state_1d(jsondict, model)
     
@@ -156,11 +156,11 @@ function setup_geomparams(jsondict)
 end
 
 
-function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
+function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false, general_ad = false)
     
     geomparams = setup_geomparams(jsondict)
 
-    function setup_component(geomparam::Dict, sys; addDirichlet = false)
+    function setup_component(geomparam::Dict, sys; addDirichlet = false, general_ad = false)
 
         facearea = geomparam[:facearea]
         
@@ -193,7 +193,11 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
             
         end
         
-        flow = TwoPointPotentialFlowHardCoded(g)
+        if general_ad
+            flow = PotentialFlow(g)
+        else
+            flow = TwoPointPotentialFlowHardCoded(g)
+        end
         disc = (charge_flow = flow,)
         domain = DiscretizedDomain(domain, disc)
         
@@ -202,7 +206,7 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
         
     end
 
-    function setup_component(geomparams::Dict, sys::Electrolyte, bcfaces = nothing)
+    function setup_component(geomparams::Dict, sys::Electrolyte, bcfaces = nothing; general_ad = false)
         # specific implementation for electrolyte
         # requires geometric parameters for :NAM, :SEP, :PAM
 
@@ -234,7 +238,11 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
         domain[:halfTrans, HalfFaces()]   = facearea*T_hf
         domain[:bcTrans, BoundaryFaces()] = facearea*T_b
         
-        flow = TwoPointPotentialFlowHardCoded(g)
+        if general_ad
+            flow = PotentialFlow(g)
+        else
+            flow = TwoPointPotentialFlowHardCoded(g)
+        end
         disc = (charge_flow = flow,)
         domain = DiscretizedDomain(domain, disc)
         
@@ -282,7 +290,7 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
         end
         
         geomparam = geomparams[name]
-        model_am = setup_component(geomparam, sys_am)
+        model_am = setup_component(geomparam, sys_am, general_ad = general_ad)
 
         return model_am
         
@@ -292,7 +300,7 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
     
     if include_cc
         sys_cc = CurrentCollector()
-        model_cc =  setup_component(geomparams[:CC], sys_cc, addDirichlet = true)
+        model_cc =  setup_component(geomparams[:CC], sys_cc, addDirichlet = true, general_ad = general_ad)
     end
 
     # Setup NAM

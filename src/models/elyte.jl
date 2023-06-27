@@ -154,7 +154,7 @@ end
     t = transference(sys)
     F = FARADAY_CONST
     for i in ix
-        @inbounds chemCoef[i] = 1/F*(1 - t)*Conductivity[i]*2*DmuDc[i]
+        @inbounds chemCoef[i] = 1.0/F*(1.0 - t)*Conductivity[i]*2.0*DmuDc[i]
     end
 end
 
