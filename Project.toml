@@ -1,7 +1,7 @@
 name = "BattMo"
 uuid = "6f0c0536-3c2c-4762-a987-c605a8a6f898"
 authors = ["Olav Møyner <olav.moyner@gmail.com>"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
