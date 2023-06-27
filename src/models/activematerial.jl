@@ -5,8 +5,8 @@ const ActiveMaterialParameters = JutulStorage
 
 abstract type SolidDiffusionDiscretization end
 
-struct P2Ddiscretization <: SolidDiffusionDiscretization
-    data::Dict{Symbol, Any}
+struct P2Ddiscretization{T} <: SolidDiffusionDiscretization
+    data::T
     # At the moment the following keys are included :
     # N::Integer                   # Discretization size for solid diffusion
     # rp::Real                     # Particle radius
@@ -30,7 +30,7 @@ struct ActiveMaterial{D, T} <: ElectroChemicalComponent where {D<:SolidDiffusion
     discretization::D
 end 
 
-const ActiveMaterialP2D{T} = ActiveMaterial{P2Ddiscretization, T}
+const ActiveMaterialP2D{D, T} = ActiveMaterial{D, T}
 const ActiveMaterialNoParticleDiffusion{T} = ActiveMaterial{NoParticleDiffusion, T}
 
 struct Ocp               <: ScalarVariable  end
@@ -53,7 +53,7 @@ function ActiveMaterialP2D(params::ActiveMaterialParameters, rp, N, D)
     data = setupSolidDiffusionDiscretization(rp, N, D)
     discretization = P2Ddiscretization(data)
     params = Jutul.convert_to_immutable_storage(params)
-    return ActiveMaterial{P2Ddiscretization, typeof(params)}(params, discretization)
+    return ActiveMaterial{typeof(discretization), typeof(params)}(params, discretization)
 end
 
 ## Create ActiveMaterial with no solid diffusion
@@ -113,7 +113,7 @@ function setupSolidDiffusionDiscretization(rp, N, D)
     for i = 1 : N + 1
         hT[i] = (4*pi*rf[i]^2/(dr/2))
     end
-        
+
     div = Vector{Tuple{Int64, Int64, Float64}}(undef, 2*(N - 1))
 
     k = 1
@@ -123,7 +123,10 @@ function setupSolidDiffusionDiscretization(rp, N, D)
         div[k] = (j + 1, j, -1)
         k += 1
     end
-        
+    hT = SVector(hT...)
+    div = SVector(div...)
+    vols = SVector(vols...)
+
     data = Dict(:N    => N   ,
                 :D    => D   ,
                 :rp   => rp  ,
@@ -131,9 +134,8 @@ function setupSolidDiffusionDiscretization(rp, N, D)
                 :vols => vols,
                 :div  => div ,
                 )
-    
-    return data
-        
+    # Convert to concrete type
+    return NamedTuple(pairs(data))
 end
 
 #####################################################
@@ -214,10 +216,10 @@ end
 @jutul_secondary(
     function update_vocp!(Ocp,
                           tv::Ocp,
-                          model:: SimulationModel{<:Any, ActiveMaterialP2D{T}, <:Any, <:Any},
+                          model:: SimulationModel{<:Any, ActiveMaterialP2D{D, T}, <:Any, <:Any},
                           Cs,
                           ix
-                          ) where T
+                          ) where {D, T}
         ocp_func = model.system.params[:ocp_func]
         cmax     = model.system.params[:maximum_concentration]
         refT = 298.15
@@ -231,10 +233,10 @@ end
 @jutul_secondary(
     function update_reaction_rate!(ReactionRateConst                                                        ,
                                    tv::ReactionRateConst                                    ,
-                                   model::SimulationModel{<:Any, ActiveMaterialP2D{T}, <:Any, <:Any},
+                                   model::SimulationModel{<:Any, ActiveMaterialP2D{D, T}, <:Any, <:Any},
                                    Cs                                                       ,
                                    ix
-                                   ) where T
+                                   ) where {D, T}
         rate_func = model.system.params[:reaction_rate_constant_func]
         refT = 298.15
         for cell in ix
@@ -246,9 +248,9 @@ end
 @jutul_secondary(
     function update_solid_diffusion_flux!(SolidDiffFlux,
                                           tv::SolidDiffFlux,
-                                          model::SimulationModel{<:Any, ActiveMaterialP2D{T}, <:Any, <:Any},
+                                          model::SimulationModel{<:Any, ActiveMaterialP2D{D, T}, <:Any, <:Any},
                                           Cp,
-                                          ix) where T
+                                          ix) where {D, T}
     s = model.system
     for cell in ix
         @inbounds @views update_solid_flux!(SolidDiffFlux[:, cell], Cp[:, cell], s)
@@ -291,7 +293,7 @@ function Jutul.update_equation_in_entity!(eq_buf           ,
                                           ldisc = Nothing)
     
     disc  = model.system.discretization
-    N    = disc[:N]
+    N    = length(eq_buf)
     hT   = disc[:hT]
     vols = disc[:vols]
     div  = disc[:div]

@@ -276,9 +276,9 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false)
             rp = inputparams_am["SolidDiffusion"]["rp"]
             N  = Int64(inputparams_am["SolidDiffusion"]["N"])
             D  = inputparams_am["SolidDiffusion"]["D0"]
-            sys_am = ActiveMaterial{P2Ddiscretization}(am_params, rp, N, D)
+            sys_am = ActiveMaterialP2D(am_params, rp, N, D)
         else
-            sys_am = ActiveMaterial{NoParticleDiffusion}(am_params)
+            sys_am = ActiveMaterialNoParticleDiffusion(am_params)
         end
         
         geomparam = geomparams[name]
@@ -454,14 +454,14 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
         else
             error("not recongized")
         end
-        
+        T_prm = typeof(am_params)
         if use_p2d
             rp = inputparams_am["SolidDiffusion"]["rp"]
             N  = Int64(inputparams_am["SolidDiffusion"]["N"])
             D  = inputparams_am["SolidDiffusion"]["D0"]
-            sys_am = ActiveMaterial{P2Ddiscretization}(am_params, rp, N, D)
+            sys_am = ActiveMaterialP2D(am_params, rp, N, D)
         else
-            sys_am = ActiveMaterial{NoParticleDiffusion}(am_params)
+            sys_am = ActiveMaterialNoParticleDiffusion(am_params)
         end
         
         if  include_cc

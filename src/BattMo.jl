@@ -1,5 +1,7 @@
 module BattMo
 using PrecompileTools
+using StaticArrays
+
 import JSON
 import Jutul:
     number_of_cells, number_of_faces,
