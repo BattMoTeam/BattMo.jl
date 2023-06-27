@@ -18,8 +18,8 @@ end
 
 struct NoParticleDiffusion <: SolidDiffusionDiscretization end
 
-struct ActiveMaterial{D} <: ElectroChemicalComponent where {D<:SolidDiffusionDiscretization}
-    params::ActiveMaterialParameters
+struct ActiveMaterial{D, T} <: ElectroChemicalComponent where {D<:SolidDiffusionDiscretization, T<:ActiveMaterialParameters}
+    params::T
     # At the moment the following keys are include
     # - ocp_func::F where {F <: Function}
     # - n_charge_carriers
@@ -29,6 +29,9 @@ struct ActiveMaterial{D} <: ElectroChemicalComponent where {D<:SolidDiffusionDis
     # - volumetric_surface_area::Real
     discretization::D
 end 
+
+const ActiveMaterialP2D{T} = ActiveMaterial{P2Ddiscretization, T}
+const ActiveMaterialNoParticleDiffusion{T} = ActiveMaterial{NoParticleDiffusion, T}
 
 struct Ocp               <: ScalarVariable  end
 struct DiffusionCoef     <: ScalarVariable  end
@@ -46,16 +49,18 @@ Jutul.local_discretization(::SolidDiffusionBc, i) = nothing
 const ActiveMaterialModel = SimulationModel{O, S} where {O<:JutulDomain, S<:ActiveMaterial}
 
 ## Create ActiveMaterial with full p2d solid diffusion
-function ActiveMaterial{P2Ddiscretization}(params::ActiveMaterialParameters, rp, N, D) 
+function ActiveMaterialP2D(params::ActiveMaterialParameters, rp, N, D)
     data = setupSolidDiffusionDiscretization(rp, N, D)
     discretization = P2Ddiscretization(data)
-    return ActiveMaterial{P2Ddiscretization}(params, discretization)
+    params = Jutul.convert_to_immutable_storage(params)
+    return ActiveMaterial{P2Ddiscretization, typeof(params)}(params, discretization)
 end
 
 ## Create ActiveMaterial with no solid diffusion
-function ActiveMaterial{NoParticleDiffusion}(params::ActiveMaterialParameters)
+function ActiveMaterialNoParticleDiffusion(params::ActiveMaterialParameters)
     discretization = NoParticleDiffusion()
-    return ActiveMaterial{NoParticleDiffusion}(params, discretization)
+    params = Jutul.convert_to_immutable_storage(params)
+    return ActiveMaterial{NoParticleDiffusion, typeof(params)}(params, discretization)
 end
 
 
@@ -68,11 +73,11 @@ function Base.getindex(disc::P2Ddiscretization, key::Symbol)
     return disc.data[key]
 end
 
-function discretisation_type(system::ActiveMaterial{P2Ddiscretization})
+function discretisation_type(system::ActiveMaterialP2D)
     return :P2Ddiscretization
 end
 
-function discretisation_type(system::ActiveMaterial{NoParticleDiffusion})
+function discretisation_type(system::ActiveMaterialNoParticleDiffusion)
     return :NoParticleDiffusion
 end
 
@@ -80,7 +85,7 @@ function discretisation_type(model::ActiveMaterialModel)
     discretisation_type(model.system)
 end
 
-function solid_diffusion_discretization_number(system::ActiveMaterial{P2Ddiscretization})
+function solid_diffusion_discretization_number(system::ActiveMaterialP2D)
     return system.discretization[:N]
 end
 
@@ -136,7 +141,7 @@ end
 ####################################################
 
 function select_primary_variables!(S,
-                                   system::ActiveMaterial{P2Ddiscretization},
+                                   system::ActiveMaterialP2D,
                                    model::SimulationModel
                                    )
     S[:Phi] = Phi()
@@ -156,7 +161,7 @@ function degrees_of_freedom_per_entity(model::ActiveMaterialModel,
 end
 
 function select_parameters!(S,
-                            system::ActiveMaterial{P2Ddiscretization},
+                            system::ActiveMaterialP2D,
                             model::SimulationModel)
     
     S[:Temperature]    = Temperature()
@@ -166,7 +171,7 @@ function select_parameters!(S,
 end
 
 function select_secondary_variables!(S,
-                                     system::ActiveMaterial{P2Ddiscretization},
+                                     system::ActiveMaterialP2D,
                                      model::SimulationModel
                                      )
     S[:Charge]            = Charge()
@@ -177,7 +182,7 @@ function select_secondary_variables!(S,
 end
 
 function select_equations!(eqs,
-                           system::ActiveMaterial{P2Ddiscretization},
+                           system::ActiveMaterialP2D,
                            model::SimulationModel
                            )
     
@@ -197,7 +202,7 @@ function Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::Soli
 end
 
 function select_minimum_output_variables!(out                   ,
-                                          system::ActiveMaterial{P2Ddiscretization},
+                                          system::ActiveMaterialP2D,
                                           model::SimulationModel
                                           )
     push!(out, :Charge)
@@ -209,10 +214,10 @@ end
 @jutul_secondary(
     function update_vocp!(Ocp,
                           tv::Ocp,
-                          model:: SimulationModel{<:Any, ActiveMaterial{P2Ddiscretization}, <:Any, <:Any},
+                          model:: SimulationModel{<:Any, ActiveMaterialP2D{T}, <:Any, <:Any},
                           Cs,
                           ix
-                          )
+                          ) where T
         ocp_func = model.system.params[:ocp_func]
         cmax     = model.system.params[:maximum_concentration]
         refT = 298.15
@@ -226,10 +231,10 @@ end
 @jutul_secondary(
     function update_reaction_rate!(ReactionRateConst                                                        ,
                                    tv::ReactionRateConst                                    ,
-                                   model::SimulationModel{<:Any, ActiveMaterial{P2Ddiscretization}, <:Any, <:Any},
+                                   model::SimulationModel{<:Any, ActiveMaterialP2D{T}, <:Any, <:Any},
                                    Cs                                                       ,
                                    ix
-                                   )
+                                   ) where T
         rate_func = model.system.params[:reaction_rate_constant_func]
         refT = 298.15
         for cell in ix
@@ -241,9 +246,9 @@ end
 @jutul_secondary(
     function update_solid_diffusion_flux!(SolidDiffFlux,
                                           tv::SolidDiffFlux,
-                                          model::SimulationModel{<:Any, ActiveMaterial{P2Ddiscretization}, <:Any, <:Any},
+                                          model::SimulationModel{<:Any, ActiveMaterialP2D{T}, <:Any, <:Any},
                                           Cp,
-                                          ix)
+                                          ix) where T
     s = model.system
     for cell in ix
         @inbounds @views update_solid_flux!(SolidDiffFlux[:, cell], Cp[:, cell], s)
@@ -252,7 +257,7 @@ end
 )
 
 
-function update_solid_flux!(flux, Cp, system::ActiveMaterial{P2Ddiscretization})
+function update_solid_flux!(flux, Cp, system::ActiveMaterialP2D)
     # compute lithium flux in particle, using harmonic averaging. At the moment D has a constant value within particle
     # but this is going to change.
     
@@ -339,7 +344,7 @@ end
 
 
 function select_primary_variables!(S,
-                                   system::ActiveMaterial{NoParticleDiffusion},
+                                   system::ActiveMaterialNoParticleDiffusion,
                                    model::SimulationModel
                                    )
     S[:Phi] = Phi()
@@ -348,7 +353,7 @@ function select_primary_variables!(S,
 end
 
 function select_secondary_variables!(S,
-                                     system::ActiveMaterial{NoParticleDiffusion},
+                                     system::ActiveMaterialNoParticleDiffusion,
                                      model::SimulationModel
                                      )
     
@@ -360,7 +365,7 @@ function select_secondary_variables!(S,
 end
 
 function select_parameters!(S,
-                                  system::ActiveMaterial{NoParticleDiffusion},
+                                  system::ActiveMaterialNoParticleDiffusion,
                                   model::SimulationModel)
     
     S[:Temperature]  = Temperature()
@@ -370,7 +375,7 @@ function select_parameters!(S,
 end
 
 function select_equations!(eqs,
-                           system::ActiveMaterial{NoParticleDiffusion},
+                           system::ActiveMaterialNoParticleDiffusion,
                            model::SimulationModel
                            )
     
@@ -382,7 +387,7 @@ end
 
 
 function select_minimum_output_variables!(out                   ,
-                                          system::ActiveMaterial{NoParticleDiffusion},
+                                          system::ActiveMaterialNoParticleDiffusion,
                                           model::SimulationModel
                                           )
     push!(out, :Charge)
@@ -397,10 +402,10 @@ end
 @jutul_secondary(
     function update_vocp!(Ocp ,
                           tv::Ocp ,
-                          model::M,
+                          model::SimulationModel{<:Any, ActiveMaterialNoParticleDiffusion{T}, <:Any, <:Any},
                           C       ,
                           ix
-                          ) where {M <: SimulationModel{<:Any, ActiveMaterial{NoParticleDiffusion}, <:Any, <:Any}}
+                          ) where T
         
         ocp_func = model.system.params[:ocp_func]
         cmax     = model.system.params[:maximum_concentration]
@@ -417,10 +422,10 @@ end
 @jutul_secondary(
     function update_reaction_rate!(ReactionRateConst    ,
                                    tv::ReactionRateConst,
-                                   model::SimulationModel{<:Any, ActiveMaterial{NoParticleDiffusion}, <:Any, <:Any},
+                                   model::SimulationModel{<:Any, ActiveMaterialNoParticleDiffusion{T}, <:Any, <:Any},
                                    C                    ,
                                    ix
-                                   )
+                                   ) where T
         rate_func = model.system.params[:reaction_rate_constant_func]
         refT = 298.15
         for i in ix
