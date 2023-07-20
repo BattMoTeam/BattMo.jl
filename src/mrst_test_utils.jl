@@ -440,7 +440,6 @@ function setup_battery_model(exported; include_cc = true, use_p2d = true, use_gr
     inputparams = exported["model"]
     
     function setup_active_material(name)
-
         jsonName = jsonNames[name]
 
         inputparams_am = inputparams[jsonName]["ActiveMaterial"]
@@ -1347,7 +1346,7 @@ function computeCellCapacity(model)
     function computeHalfCellCapacity(name)
 
         ammodel = model[name]
-        sys = ammodel.system
+        sys = ammodel["ActiveMaterial"]["SolidDiffusion"]
             
         F    = con.F
         n    = sys[:n_charge_carriers]
@@ -1407,24 +1406,30 @@ function setup_sim_1d(jsondict; use_groups = false, general_ad = false)
     
 end
 
-function setup_sim(name; use_p2d = true, use_groups = false, general_ad = false)
+function setup_sim(exported; use_p2d = true, use_groups = false, general_ad = false)
 
-    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
-    exported = MAT.matread(fn)
+    #fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
+    #exported = MAT.matread(fn)
 
     model, state0, parameters = setup_model(exported, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
     setup_coupling!(model, exported)
     
     inputI = 0;
-    minE   = 10
-    steps  = size(exported["states"],1)
+    minE   = exported["model"]["Control"]["lowerCutoffVoltage"]
+    steps  = size(exported["schedule"]["step"]["val"],1)
     
-    for i = 1:steps
+    #for i = 1:steps
         
-        inputI = max(inputI, exported["states"][i]["Control"]["I"])
-        minE   = min(minE, exported["states"][i]["Control"]["E"])
+    #    inputI = max(inputI, exported["states"][i]["Control"]["I"])
+    #    minE   = min(minE, exported["states"][i]["Control"]["E"])
         
-    end
+    #end
+    CRate  = exported["model"]["Control"]["CRate"]
+    #cap    = computeCellCapacity(model)
+    #con    = Constants()
+    
+    #FIX!!!
+    inputI =1.0 # (cap/con.hour)*CRate
     
     @. state0[:BPP][:Phi] = minE*1.5
     cFun(time) = currentFun(time, inputI)
@@ -1449,7 +1454,7 @@ end
 
 export run_battery
 
-function run_battery(name;
+function run_battery(exported;
                      use_p2d       = true,
                      extra_timing  = false,
                      max_step      = nothing,
@@ -1458,27 +1463,27 @@ function run_battery(name;
                      use_groups    = false,
                      kwarg...)
     
-    sim, forces, state0, parameters, exported, model = setup_sim(name, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
+    sim, forces, state0, parameters, exported, model = setup_sim(exported, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
     
-    steps        = size(exported["states"], 1)
+    steps        = size(exported["schedule"]["step"]["val"], 1)
     alltimesteps = Vector{Float64}(undef, steps)
     time         = 0;
     end_step     = 0
     minE         = 3.2
     
     for i = 1 : steps
-        alltimesteps[i] =  exported["states"][i]["time"] - time
-        time = exported["states"][i]["time"]
-        E = exported["states"][i]["Control"]["E"]
-        if (E > minE + 0.001)
-            end_step = i
-        end
+        alltimesteps[i] =  exported["schedule"]["step"]["val"][i] #- time
+        #time = exported["states"][i]["time"]
+        #E = exported["states"][i]["Control"]["E"]
+        #if (E > minE + 0.001)
+        #    end_step = i
+        #end
     end
     if !isnothing(max_step)
         end_step = min(max_step, end_step)
     end
     
-    timesteps = alltimesteps[1 : end_step]
+    timesteps = alltimesteps
     
     cfg = simulator_config(sim; kwarg...)
     cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
