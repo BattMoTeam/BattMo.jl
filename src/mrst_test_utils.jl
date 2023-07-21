@@ -1508,15 +1508,21 @@ function run_battery(exported;
     states, report = simulate(sim, timesteps, forces = forces, config = cfg)
     stateref = exported["states"]
 
-    extra = Dict(:model      => model,
-                 :state0     => state0,
-                 :states_ref => stateref,
+    # extra = Dict(:model      => model,
+    #              :state0     => state0,
+    #              :states_ref => stateref,
+    #              :parameters => parameters,
+    #              :exported   => exported,
+    #              :timesteps  => timesteps,
+    #              :config     => cfg,
+    #              :forces     => forces,
+    #              :simulator  => sim)
+    #Compatible with json without any changes
+    extra = Dict( :state0     => state0,
+                  :states_ref => stateref,
+                  :forces     => forces,
                  :parameters => parameters,
-                 :exported   => exported,
-                 :timesteps  => timesteps,
-                 :config     => cfg,
-                 :forces     => forces,
-                 :simulator  => sim)
+                 :timesteps  => timesteps)
 
     return (states = states, reports = report, extra = extra, exported = exported)
 end
