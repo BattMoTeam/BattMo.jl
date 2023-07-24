@@ -1,21 +1,3 @@
-struct Constants
-    F
-    R
-    hour
-    function Constants()
-        new(96485.3329,
-            8.31446261815324,
-            3600)
-    end
-end
-
-struct SourceAtCell
-    cell
-    src
-    function SourceAtCell(cell, src)
-        new(cell, src)
-    end 
-end
 
 function getTrans(model1, model2, faces, cells, quantity)
     """ setup transmissibility for coupling between models at boundaries"""
@@ -86,26 +68,6 @@ function getHalfTrans(model, faces)
     
 end
 
-function my_number_of_cells(model::MultiModel)
-    
-    cells = 0
-    for smodel in model.models
-        cells += number_of_cells(smodel.domain)
-    end
-
-    return cells
-    
-end
-
-function convert_to_int_vector(x::Float64)
-    vec = Int64.(Vector{Float64}([x]))
-    return vec
-end
-
-function convert_to_int_vector(x::Matrix{Float64})
-    vec = Int64.(Vector{Float64}(x[:,1]))
-    return vec
-end
 
 function setup_model(exported; use_p2d = true, use_groups = false, kwarg...)
 
@@ -1452,161 +1414,11 @@ function setup_sim(exported; use_p2d = true, use_groups = false, general_ad = fa
     
 end
 
-export run_battery
-
-function run_battery(exported;
-                     use_p2d       = true,
-                     extra_timing  = false,
-                     max_step      = nothing,
-                     linear_solver = :direct,
-                     general_ad    = false,
-                     use_groups    = false,
-                     kwarg...)
-    
-    sim, forces, state0, parameters, exported, model = setup_sim(exported, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
-    
-    steps        = size(exported["schedule"]["step"]["val"], 1)
-    alltimesteps = Vector{Float64}(undef, steps)
-    time         = 0;
-    end_step     = 0
-    minE         = 3.2
-    
-    for i = 1 : steps
-        alltimesteps[i] =  exported["schedule"]["step"]["val"][i] #- time
-        #time = exported["states"][i]["time"]
-        #E = exported["states"][i]["Control"]["E"]
-        #if (E > minE + 0.001)
-        #    end_step = i
-        #end
-    end
-    if !isnothing(max_step)
-        end_step = min(max_step, end_step)
-    end
-    
-    timesteps = alltimesteps
-    
-    cfg = simulator_config(sim; kwarg...)
-    cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
-    cfg[:debug_level]                = 0
-    #cfg[:max_timestep_cuts]         = 0
-    cfg[:max_residual]               = 1e20
-    cfg[:min_nonlinear_iterations]   = 1
-    cfg[:extra_timing]               = extra_timing
-    # cfg[:max_nonlinear_iterations] = 5
-    cfg[:safe_mode]                  = false
-    cfg[:error_on_incomplete]        = true
-    if false
-        cfg[:info_level]               = 5
-        cfg[:max_nonlinear_iterations] = 1
-        cfg[:max_timestep_cuts]        = 0
-    end
-
-    cfg[:tolerances][:PP][:default] = 1e-1
-    cfg[:tolerances][:BPP][:default] = 1e-1
-    # Run simulation
-    
-    states, report = simulate(sim, timesteps, forces = forces, config = cfg)
-    stateref = exported["states"]
-
-    # extra = Dict(:model      => model,
-    #              :state0     => state0,
-    #              :states_ref => stateref,
-    #              :parameters => parameters,
-    #              :exported   => exported,
-    #              :timesteps  => timesteps,
-    #              :config     => cfg,
-    #              :forces     => forces,
-    #              :simulator  => sim)
-    #Compatible with json without any changes
-    extra = Dict( :state0     => state0,
-                  :states_ref => stateref,
-                  :forces     => forces,
-                 :parameters => parameters,
-                 :timesteps  => timesteps)
-
-    return (states = states, reports = report, extra = extra, exported = exported)
-end
 
 
-function rampupTimesteps(time, dt, n = 8)
-
-    ind = [8; collect(range(n, 1, step=-1))]
-    dt_init = [dt/2^k for k in ind]
-    cs_time = cumsum(dt_init)
-    if any(cs_time .> time)
-        dt_init = dt_init[cs_time .< time];
-    end
-    dt_left = time .- sum(dt_init)
-
-    # Even steps
-    dt_rem = dt*ones(floor(Int64, dt_left/dt));
-    # Final ministep if present
-    dt_final = time - sum(dt_init) - sum(dt_rem);
-    # Less than to account for rounding errors leading to a very small
-    # negative time-step.
-    if dt_final <= 0
-        dt_final = [];
-    end
-    # Combined timesteps
-    dT = [dt_init; dt_rem; dt_final];
-
-    return dT
-end
-
-export run_battery_1d
 
 defaultjsonfilename = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/p2d_40_jl.json")
 
-function run_battery_1d(;
-                        filename      = defaultjsonfilename,
-                        extra_timing  = false,
-                        linear_solver = :direct,
-                        general_ad    = false,
-                        use_groups    = false,
-                        kwarg...)
-    
-    jsondict = JSON.parsefile(filename)
-
-    sim, forces, state0, parameters, model = setup_sim_1d(jsondict, use_groups = use_groups, general_ad = general_ad)
-
-    total = jsondict["TimeStepping"]["totalTime"]
-    n     = jsondict["TimeStepping"]["N"]
-
-    dt = total/n
-    timesteps = rampupTimesteps(total, dt, 5);    
-    
-    cfg = simulator_config(sim; kwarg...)
-    cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
-    cfg[:debug_level]                = 0
-    cfg[:max_residual]               = 1e20
-    cfg[:min_nonlinear_iterations]   = 1
-    cfg[:extra_timing]               = extra_timing
-    cfg[:safe_mode]                  = false
-    cfg[:error_on_incomplete]        = false
-    cfg[:failure_cuts_timestep]      = true
-    
-    if false
-        cfg[:info_level]               = 5
-        cfg[:max_nonlinear_iterations] = 1
-        cfg[:max_timestep_cuts]        = 0
-    end
-
-    cfg[:tolerances][:PP][:default] = 1e-1
-    cfg[:tolerances][:BPP][:default] = 1e-1
-    # Run simulation
-    
-    states, reports = simulate(sim, timesteps, forces = forces, config = cfg)
-
-    extra = Dict(:model      => model,
-                 :state0     => state0,
-                 :parameters => parameters,
-                 :timesteps  => timesteps,
-                 :config     => cfg,
-                 :forces     => forces,
-                 :simulator  => sim)
-
-    return (states = states, reports = reports, extra = extra)
-end
 
 
 export inputRefToStates

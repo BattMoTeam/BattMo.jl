@@ -10,7 +10,11 @@ JSON.lower(c::BattMo.ControllerCV)=Dict(:policy => c.policy,
                                         :target_is_voltage => c.target_is_voltage,
                                         :mode => c.mode)
 JSON.lower(policy::BattMo.SimpleCVPolicy{<:Real})=Dict(:current_function => policy.current_function, :voltage => policy.voltage)
-JSON.lower(policy::BattMo.NoPolicy)="No policy"
+JSON.lower(policy::BattMo.NoPolicy)=typeof(policy)
+
+#Default to ensure all objects can be read into json
+JSON.lower(obj::Any)=typeof(obj)
+
 function jsondict(dict)
     println(dict)
 end
