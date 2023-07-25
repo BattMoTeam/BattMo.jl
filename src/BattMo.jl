@@ -71,7 +71,8 @@ include("models/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/convergence.jl")
 include("physics.jl")
-include("mrst_test_utils.jl")
+include("types.jl")
+include("mrst_test_utils_restructured.jl")
 include("linsolve.jl")
 
 # Precompilation of solver. Run a small battery simulation to precompile everything.

@@ -5,7 +5,7 @@
 using MAT
 export get_boundary, get_tensorprod, exported_model_to_domain, get_ref_states
 
-function get_boundary(name)
+function get_boundary(name::String)
     
     fn = string(dirname(pathof(Jutul)), "/../data/testgrids/", name, "_T.mat")
     exported = MAT.matread(fn)
@@ -20,7 +20,7 @@ function get_boundary(name)
     
 end
 
-function get_tensorprod(name = "square_current_collector")
+function get_tensorprod(name::String = "square_current_collector")
 
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, "_P.mat")
     exported = MAT.matread(fn)
@@ -33,9 +33,9 @@ function get_tensorprod(name = "square_current_collector")
     
 end
 
-function exported_model_to_domain(exported;
+function exported_model_to_domain(exported::Dict{String,Any};
                                   bcfaces    = nothing, 
-                                  general_ad = false)
+                                  general_ad::Bool = false)
 
     """ Returns domain"""
 
