@@ -31,7 +31,7 @@ function run_battery(init::InputFile;
         )
 
     #Perform simulation
-    states, reports = simulate(sim, timesteps, forces=forces, config=cfg)
+    states, reports = simulate(state0,sim, timesteps, forces=forces, config=cfg)
 
     extra = Dict(:model => model,
         :state0 => state0,
@@ -87,6 +87,8 @@ function prepare_simulate(init::JSONFile;
     dt = total / n
     timesteps = rampupTimesteps(total, dt, 5)
 
+    println(timesteps)
+
     cfg = simulator_config(sim; kwarg...)
     cfg[:linear_solver] = battery_linsolve(model, linear_solver)
     cfg[:debug_level] = 0
@@ -116,26 +118,30 @@ function prepare_simulate(init::MatlabFile;
     max_step::Union{Integer,Nothing},
     kwarg...)
 
-    steps = size(init.object["states"], 1)
-    alltimesteps = Vector{Float64}(undef, steps)
-    time = 0
-    end_step = 0
-    minE = 3.2
+    if init.use_state_ref
+        steps = size(init.object["states"], 1)
+        alltimesteps = Vector{Float64}(undef, steps)
+        time = 0
+        end_step = 0
+        minE = 3.2
 
-    for i = 1:steps
-        #alltimesteps[i] = init.object["schedule"]["step"]["val"][i] #- time
-        alltimesteps[i] =  init.object["states"][i]["time"] - time
-        time = init.object["states"][i]["time"]
-        E = init.object["states"][i]["Control"]["E"]
-        if (E > minE + 0.001)
-            end_step = i
+        for i = 1:steps
+            alltimesteps[i] =  init.object["states"][i]["time"] - time
+            time = init.object["states"][i]["time"]
+            E = init.object["states"][i]["Control"]["E"]
+            if (E > minE + 0.001)
+                end_step = i
+            end
         end
-    end
-    if !isnothing(max_step)
-        end_step = min(max_step, end_step)
-    end
+        if !isnothing(max_step)
+            end_step = min(max_step, end_step)
+        end
 
-    timesteps = alltimesteps[1:end_step]
+        timesteps = alltimesteps[1:end_step]
+    else
+        timesteps=init.object["schedule"]["step"]["val"][:]
+
+    end
 
     cfg = simulator_config(sim; kwarg...)
     cfg[:linear_solver] = battery_linsolve(model, linear_solver)
@@ -146,7 +152,9 @@ function prepare_simulate(init::MatlabFile;
     cfg[:extra_timing] = extra_timing
     # cfg[:max_nonlinear_iterations] = 5
     cfg[:safe_mode] = false
-    cfg[:error_on_incomplete] = true
+    cfg[:error_on_incomplete] = false
+    #Original matlab steps will be too large!
+    cfg[:failure_cuts_timestep]=true
     if false
         cfg[:info_level] = 5
         cfg[:max_nonlinear_iterations] = 1
@@ -155,6 +163,9 @@ function prepare_simulate(init::MatlabFile;
 
     cfg[:tolerances][:PP][:default] = 1e-1
     cfg[:tolerances][:BPP][:default] = 1e-1
+    
+    #println(timesteps)
+
     return timesteps, cfg
 end
 
@@ -180,6 +191,9 @@ function setup_sim(init::JSONFile;
 
     inputI = (cap / con.hour) * CRate
 
+    println("InputI: ",inputI)
+    println("minE: ",minE)
+
     @. state0[:BPP][:Phi] = minE * 1.5
 
     tup = Float64(init.object["TimeStepping"]["rampupTime"])
@@ -202,35 +216,36 @@ function setup_sim(init::MatlabFile;
     model, state0, parameters = setup_model(init, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
     setup_coupling!(init,model)
 
-    #########################################################
-    #Setup assuming existence of stateref
-    #########################################################
-    inputI = 0
-    minE = init.object["model"]["Control"]["lowerCutoffVoltage"]
-    steps = size(init.object["schedule"]["step"]["val"], 1)
-
-    for i = 1:steps
-
-        inputI = max(inputI, init.object["states"][i]["Control"]["I"])
-        minE = min(minE, init.object["states"][i]["Control"]["E"])
-
+    if init.use_state_ref
+        #########################################################
+        #Setup using previous simulation in matlab
+        #########################################################
+        inputI = 0
+        minE   = 10
+        steps  = size(init.object["states"],1)
+        
+        for i = 1:steps
+           
+           inputI = max(inputI, init.object["states"][i]["Control"]["I"])
+           minE   = min(minE, init.object["states"][i]["Control"]["E"])
+           
+        end
+    else
+        #############################################################
+        #Setup when takin minE and inputI from .mat file
+        #############################################################
+        minE=init.object["model"]["Control"]["lowerCutoffVoltage"]
+        #Matlab calculates this correctly
+        inputI=init.object["model"]["Control"]["Imax"]
+        #############################################################
     end
 
-    #############################################################
-    #Setup when calculating minE and inputI
-    #############################################################
-
-    #CRate  = exported["model"]["Control"]["CRate"]
-    #cap    = computeCellCapacity(model)
-    #con    = Constants()
-
-    #FIX!!!
-    #inputI =1.0 # (cap/con.hour)*CRate
-
-    #############################################################
+    println("InputI: ",inputI)
+    println("minE: ",minE)
 
     @. state0[:BPP][:Phi] = minE * 1.5
-    cFun(time) = currentFun(time, inputI)
+    cFun(time) = currentFun(time, inputI,init.object["model"]["Control"]["tup"])
+    
     forces_pp = nothing
 
     currents = setup_forces(model[:BPP], policy=SimpleCVPolicy(cFun, minE))
@@ -257,7 +272,8 @@ end
 #Replaces setup_coupling_1d!
 function setup_coupling!(init::JSONFile,
     model::MultiModel,
-    parameters::Dict{Symbol,Any})
+    parameters::Dict{Symbol,Any}
+    )
 
     jsondict=init.object
 
@@ -1434,20 +1450,20 @@ end
 ##################################################################################
 #Current function
 ##################################################################################
-function currentFun(t::T, inputI::T) where T
-    #inputI = 9.4575
-    tup = 0.1
-    val::T = 0.0
-    if  t <= tup
-        val = sineup(0.0, inputI, 0.0, tup, t) 
-    else
-        val = inputI
-    end
-    return val
-end
+# function currentFun(t::T, inputI::T) where T
+#     #inputI = 9.4575
+#     tup = 0.1
+#     val::T = 0.0
+#     if  t <= tup
+#         val = sineup(0.0, inputI, 0.0, tup, t) 
+#     else
+#         val = inputI
+#     end
+#     return val
+# end
 
 
-function currentFun(t::T, inputI::T, tup::T) where T
+function currentFun(t::T, inputI::T, tup::T=0.1) where T
     val::T = 0.0
     if  t <= tup
         val = sineup(0.0, inputI, 0.0, tup, t) 
@@ -1545,7 +1561,7 @@ function getHalfTrans(model::Jutul.AbstractSimulationModel, bcfaces, bccells, pa
     return T
 end
 
-function getHalfTrans(model::Dict, faces, cells, quantity)
+function getHalfTrans(model::Dict{String, Any}, faces, cells, quantity::String)
     """ recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the given cells.
     Here, the faces should belong the corresponding cells at the same index"""
 
@@ -1557,7 +1573,7 @@ function getHalfTrans(model::Dict, faces, cells, quantity)
     
 end
 
-function getHalfTrans(model::Dict, faces)
+function getHalfTrans(model::Dict{String,Any}, faces)
     """ recover the half transmissibilities for boundary faces"""
     
     T_all = model["operators"]["T_all"]
@@ -1601,15 +1617,14 @@ end
 #Compute cell capactity 
 ##################################################################################
 
-function computeCellCapacity(model)
+function computeCellCapacity(model::Dict{Symbol,Any})
 
     con = Constants()
-    
+
     function computeHalfCellCapacity(name::Symbol)
 
         ammodel = model[name]
-        sys = ammodel.system
-            
+        sys = ammodel.system            
         F    = con.F
         n    = sys[:n_charge_carriers]
         cMax = sys[:maximum_concentration]

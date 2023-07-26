@@ -11,11 +11,12 @@ abstract type InputFile end
 struct MatlabFile <: InputFile
     source::String
     object::Dict{String,Any}
-    function MatlabFile(file::String) #Read from stored mat file
-        return new(file, MAT.matread(file))
+    use_state_ref::Bool
+    function MatlabFile(file::String; state_ref=true) #Read from stored mat file
+        return new(file, MAT.matread(file),state_ref)
     end
-    function MatlabFile(file::String,object) #Used when we launch julia from matlab
-        return new(file,object)
+    function MatlabFile(file::String,object;state_ref=false) #Used when we launch julia from matlab
+        return new(file,object,state_ref)
     end
 end
 
