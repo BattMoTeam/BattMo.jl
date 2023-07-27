@@ -72,14 +72,14 @@ include("models/battery_cross_terms.jl") # Works now
 include("models/convergence.jl")
 include("physics.jl")
 include("types.jl")
-include("mrst_test_utils_restructured.jl")
+include("mrst_test_utils.jl")
 include("linsolve.jl")
 
-# Precompilation of solver. Run a small battery simulation to precompile everything.
-#@compile_workload begin
+# # Precompilation of solver. Run a small battery simulation to precompile everything.
+# @compile_workload begin
 #    for use_general_ad in [false, true]
-#        run_battery("p2d_40", info_level = -1, general_ad = use_general_ad);
+#        run_battery("p2d_40", general_ad = use_general_ad,info_level = -1);
 #    end
-#end
+# end
 
 end # module
