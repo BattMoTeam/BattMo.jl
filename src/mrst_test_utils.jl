@@ -22,14 +22,14 @@ function run_battery(init::InputFile;
     """
 
     #Setup simulation
-    sim, forces, state0, parameters, init, model = setup_sim(init, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
+    sim, forces, state0, parameters, init, model = setup_sim(init, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad; kwarg...)
 
     #Set up config and timesteps
     timesteps=setup_timesteps(init;max_step=max_step)
     cfg=setup_config(sim,model,linear_solver,extra_timing; kwarg...)
 
     #Perform simulation
-    states, reports = simulate(state0,sim, timesteps, forces=forces, config=cfg)
+    states, reports = simulate(state0,sim, timesteps, forces=forces, config=cfg; kwarg ...)
 
     extra = Dict(:model => model,
         :state0 => state0,
