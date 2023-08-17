@@ -48,22 +48,14 @@ function odeFun_useJac(dy,y,p,t,sim,forces)
     return MΔt + r
 end
 
-function odeFun_big(dX,X,p,t,sim1,forces1,model1,len1)
-    res=zeros(2*len1)
-    sim=deepcopy(sim1)
-    forces=deepcopy(forces1)
-    model=deepcopy(model1)
-    len = copy(len1)
+function odeFun_big!(res,dX,X,p,t,sim,forces)
 
-    #variableToState!(sim.storage[:state], X[len+1:end],model)
-    r= Jutul.model_residual(sim, X[len+1:end], X[len+1:end], 1, forces = forces, time = t,include_accumulation=false, update_secondary=true)
-    #Works because Δt=1
-    #M= Jutul.model_residual(sim, X[len+1:end], zeros(len), 1, forces = forces, time = t,include_accumulation=true, update_secondary=false) - r
+    len = Integer(length(X)/2)
+    r= Jutul.model_residual(sim, X[len+1:end], X[len+1:end], 0.000001, forces = forces, time = t,include_accumulation=false, update_secondary=true)
     M=Jutul.model_accumulation(sim,X[len+1:end])
     res[1:len]=dX[1:len] + r
-    res[len+1:end] = (X[1:len] - M).*0
-    println(findmax(abs.(res)))
-    return res
+    res[len+1:end] = X[1:len] - M
+    #println(findmax(abs.(res)))
 end
 
 function odeFun!(dy,y,p,t,model,sim,forces)

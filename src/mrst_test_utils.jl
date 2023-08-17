@@ -215,9 +215,14 @@ function setup_sim(init::MatlabFile;
     minE=init.object["model"]["Control"]["lowerCutoffVoltage"]
     inputI=init.object["model"]["Control"]["Imax"]
 
-    @. state0[:BPP][:Phi] = minE * 1.5
-    cFun(time) = currentFun(time, inputI,init.object["model"]["Control"]["tup"])
-    
+    #@. state0[:BPP][:Phi] = state0[:PAM][:Phi][end] #minE * 1.5
+
+    # if isempty(init.object["model"]["Control"]["tup"])
+    #     cFun(time) = currentFun(time, inputI)
+    # else
+    #     cFun(time) = currentFun(time, inputI,init.object["model"]["Control"]["tup"])
+    # end
+    cFun(time) = currentFun(time,inputI)
     forces_pp = nothing
 
     currents = setup_forces(model[:BPP], policy=SimpleCVPolicy(cFun, minE))
@@ -633,15 +638,17 @@ function setup_battery_model(init::MatlabFile;
     include_cc::Bool = true, 
     use_groups::Bool = false,
     use_p2d::Bool = true,
+    general_ad::Bool = false,
     kwarg ...
     )
 
 
     function setup_component(obj::Dict, 
         sys, 
-        bcfaces = nothing)
+        bcfaces = nothing,
+        general_ad::Bool = false)
         
-        domain = exported_model_to_domain(obj, bcfaces = bcfaces)
+        domain = exported_model_to_domain(obj, bcfaces = bcfaces, general_ad=general_ad)
         G = MRSTWrapMesh(obj["G"])
         data_domain = DataDomain(G)
         for (k, v) in domain.entities
@@ -659,7 +666,7 @@ function setup_battery_model(init::MatlabFile;
 
     inputparams = init.object["model"]
     
-    function setup_active_material(name::Symbol)
+    function setup_active_material(name::Symbol, general_ad::Bool)
         jsonName = jsonNames[name]
 
         inputparams_am = inputparams[jsonName]["ActiveMaterial"]
@@ -692,10 +699,10 @@ function setup_battery_model(init::MatlabFile;
         end
         
         if  include_cc
-            model_am = setup_component(inputparams_am, sys_am)
+            model_am = setup_component(inputparams_am, sys_am,nothing,general_ad)
         else
-            bcfaces_am = convert_to_int_vector(["externalCouplingTerm"]["couplingfaces"])
-            model_am   = setup_component(inputparams_am, sys_am, bcfaces_am)
+            bcfaces_am = convert_to_int_vector(inputparams_am["externalCouplingTerm"]["couplingfaces"])
+            model_am   = setup_component(inputparams_am, sys_am, bcfaces_am,general_ad)
             # We add also boundary parameters (if any)
             S = model_am.parameters
             nbc = count_active_entities(model_am.domain, BoundaryDirichletFaces())
@@ -721,13 +728,13 @@ function setup_battery_model(init::MatlabFile;
         sys_cc      = CurrentCollector()
         bcfaces     = convert_to_int_vector(inputparams_cc["externalCouplingTerm"]["couplingfaces"])
         
-        model_cc =  setup_component(inputparams_cc, sys_cc, bcfaces)
+        model_cc =  setup_component(inputparams_cc, sys_cc, bcfaces, general_ad)
         
     end
 
     # Setup NAM
 
-    model_nam = setup_active_material(:NAM)
+    model_nam = setup_active_material(:NAM,general_ad)
 
     ## Setup ELYTE
     params = JutulStorage();
@@ -750,16 +757,16 @@ function setup_battery_model(init::MatlabFile;
     
     elyte = Electrolyte(params)
     model_elyte = setup_component(inputparams["Electrolyte"],
-                                  elyte)
+                                  elyte,nothing,general_ad)
 
     # Setup PAM
     
-    model_pam = setup_active_material(:PAM)
+    model_pam = setup_active_material(:PAM,general_ad)
 
     # Setup negative current collector if any
     if include_cc
         model_pp = setup_component(inputparams["PositiveElectrode"]["CurrentCollector"],
-                                   CurrentCollector())
+                                   CurrentCollector(),nothing,general_ad)
     end
 
     # Setup control model
@@ -1318,7 +1325,7 @@ function setup_battery_initial_state(init::MatlabFile,
 
     function initialize_bpp!(initState)
 
-        init = Dict(:Phi => 1.0, :Current => 1.0)
+        init = Dict(:Phi => state0["Control"]["E"], :Current => 0*state0["Control"]["I"])
         
         initState[:BPP] = init
         
