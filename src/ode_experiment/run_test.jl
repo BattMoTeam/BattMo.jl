@@ -68,12 +68,13 @@ end
 #eff_state0=deepcopy(states[1])
 eff_state0=copy(state0)
 hsim=Jutul.HelperSimulator(model,Float64, state0=eff_state0, parameters=parameters)
-# #Initial state
+dt=0.000001
+#Initial state
 x0 = Jutul.vectorize_variables(model, eff_state0)
 m0 = Jutul.model_accumulation(hsim, x0)
 X0 = [m0 ; x0]
 #Consistent initial state for time derivative
-dm0 = Jutul.model_residual(hsim, x0, x0, 0.000001, forces = forces, time = 0.0) 
+dm0 = Jutul.model_residual(hsim, x0, x0, dt, forces = forces, time = (0.0 - dt)) 
 dX0 = [dm0.*(-1) ; zeros(length(dm0))]
 
 len=length(x0)

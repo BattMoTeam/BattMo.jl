@@ -44,14 +44,19 @@ end
 function odeFun_useJac(dy,y,p,t,sim,forces)
     r= Jutul.model_residual(sim,y,y,1,forces=forces, time = t,include_accumulation=false, update_secondary=true)
     M_jac=approximate_jacobian(y,1e-6,sim)
-    MΔt = M_jac * dy
-    return MΔt + r
+    ∂M∂t = M_jac * dy
+    return ∂M∂t + r
 end
 
 function odeFun_big!(res,dX,X,p,t,sim,forces)
-
+    """
+    We solve the problem defining X = [m ; u] so that f(dX,X,t) = [f₁ ; f₂] = 0:
+    f₁ = ∂m/∂t + r(u) = 0
+    f₂ =   m   - M(u) = 0 
+    """
     len = Integer(length(X)/2)
-    r= Jutul.model_residual(sim, X[len+1:end], X[len+1:end], 0.000001, forces = forces, time = t,include_accumulation=false, update_secondary=true)
+    dt=0.000001
+    r= Jutul.model_residual(sim, X[len+1:end], X[len+1:end], dt, forces = forces, time = t - dt,include_accumulation=false, update_secondary=true)
     M=Jutul.model_accumulation(sim,X[len+1:end])
     res[1:len]=dX[1:len] + r
     res[len+1:end] = X[1:len] - M
