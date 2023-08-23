@@ -188,8 +188,8 @@ function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false,
             bcDirCell = 1
             bcDirInd  = 1
             domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = facearea*domain[:bcTrans][bcDirFace]
-            domain[:bcDirCells, BoundaryDirichletFaces()]     = facearea*bcDirCell # 
-            domain[:bcDirInds, BoundaryDirichletFaces()]      = facearea*bcDirInd #
+            domain[:bcDirCells, BoundaryDirichletFaces()]     = bcDirCell # 
+            domain[:bcDirInds, BoundaryDirichletFaces()]      = bcDirInd #
             
         end
         
