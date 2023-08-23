@@ -43,11 +43,12 @@ end
 
 # sim, forces, state0, parameters, exported, model = BattMo.setup_sim(name, use_p2d = use_p2d)
 
-do_json = true
+do_json = false # true
 
 if do_json
-    
-    states, reports, extra = run_battery_1d(info_level = 0, extra_timing = false);
+    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, "_jl.json")
+    init = JSONFile(fn)
+    states, reports, extra = run_battery(init;use_p2d=use_p2d,info_level = 0, extra_timing = false);
 
 
     nsteps = size(states)
@@ -66,7 +67,7 @@ if do_json
 
 else
     
-    states, reports, extra, exported = run_battery(name, use_p2d = use_p2d, info_level = 5, max_step = nothing);
+    states, reports, extra, exported = run_battery(name; use_p2d = use_p2d, info_level = 0, max_step = nothing);
 
     nsteps = size(states, 1)
     
@@ -75,7 +76,7 @@ else
     time = cumsum(timesteps[1 : nsteps])
     E    = [state[:BPP][:Phi][1] for state in states]
     
-    statesref  = extra[:states_ref]
+    statesref  = extra[:init].object["states"]
     timeref = time
     Eref = [state["Control"]["E"] for state in statesref[1 : nsteps]]
 

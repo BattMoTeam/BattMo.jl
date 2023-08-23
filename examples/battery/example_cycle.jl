@@ -1,12 +1,13 @@
 using BattMo
-name="model1D_50"
+#name="model1D_50"
+name = "p2d_40"
 # Run base case and plot the results against BattMo-MRST reference
 states, reports, extra = run_battery(name, info_level = 1, max_step = nothing);
 prm = extra[:parameters]
 model = extra[:model]
 timesteps = extra[:timesteps]
 steps = size(states, 1)
-stateref = extra[:states_ref]
+stateref = extra[:init].object["states"]
 E = Matrix{Float64}(undef,steps,2)
 for step in 1:steps
     phi = states[step][:BPP][:Phi][1]
@@ -22,15 +23,15 @@ Plots.plot!(T, E[:, 2], label = "BattMo")
 closeall()
 display(plot1)
 ## Compute and plot the charge flux
-f = :ELYTE
-ix = 1
-get_j = ix -> output_flux(model[f], states[ix][f], prm[f], :charge_conservation)
+# f = :ELYTE
+# ix = 1
+# get_j = ix -> output_flux(model[f], states[ix][f], prm[f], :charge_conservation)
 
-plot2 = Plots.plot(get_j(1))
-for ix in 5:5:length(states)
-    Plots.plot!(get_j(ix))
-end
-display(plot2)
+# plot2 = Plots.plot(get_j(1))
+# for ix in 5:5:length(states)
+#     Plots.plot!(get_j(ix))
+# end
+# display(plot2)
 
 ## Set up a cycle policy and simulate
 using Jutul

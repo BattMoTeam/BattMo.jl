@@ -11,7 +11,7 @@ testcases  =[
         @testset "$modelname" begin
             for use_general_ad in [false, true]
                 states, report, extra = run_battery(modelname, info_level = -1, general_ad = use_general_ad);
-                stateref = extra[:states_ref]
+                stateref = extra[:init].object["states"]
                 steps = size(states, 1)
                 E = Matrix{Float64}(undef,steps,2)
                 for step in 1:steps
