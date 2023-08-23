@@ -1,6 +1,6 @@
 using BattMo, DifferentialEquations, Sundials, DiffEqBase, Plots
 import Jutul, ForwardDiff
-import LinearAlgebra
+import LinearAlgebra, SparseArrays, BandedMatrices
 
 include("state_variable_mapping.jl")
 
@@ -31,7 +31,7 @@ cfg=BattMo.setup_config(sim,model,linear_solver,extra_timing)
 
 eff_state0=copy(state0)
 hsim=Jutul.HelperSimulator(model,Float64, state0=eff_state0, parameters=parameters,ad=true)
-x0 = Jutul.vectorize_variables(model, sim.storage.state)
+x0 = Jutul.vectorize_variables(model, state0)
 
 # @time begin
 #     states, reports = Jutul.simulate(state0,sim, timesteps, forces=forces, config=cfg)    
@@ -40,7 +40,37 @@ x0 = Jutul.vectorize_variables(model, sim.storage.state)
 # voltage = map(state -> state[:BPP][:Phi][1], states)
 # t = cumsum(timesteps)
 
-dt=1
 #Residual + jacobian
 #r,jac = Jutul.model_residual(hsim,x0,missing,dt, forces = forces, time = (0.0 - dt), include_accumulation=false) 
-m, m_jac = Jutul.model_accumulation(sim, x0)
+m, m_jac = Jutul.model_accumulation(sim, x0);
+r= Jutul.model_residual(sim,x0,x0,1e-8;forces=forces,time=0.0,include_accumulation=false,update_secondary=true)
+
+ind = SparseArrays.findnz(m_jac)[1]
+vars= zeros(Integer,length(x0))
+vars[ind].=1
+
+f!(res,dy,y,p,t) = odeFun!(res,dy,y,p,t,sim,forces)
+f_jac!(J,dy,y,p,gamma,t) = odeFun_jac!(J,dy,y,p,gamma,t,sim,forces)
+
+res = zeros(length(x0))
+J = zeros(length(x0),length(x0))
+dx0 = (-1)*(r \ m_jac)'
+f!(res,dx0,x0,nothing,0.0)
+
+#prototype = SparseArrays.spzeros(length(x0),length(x0))
+#f_jac!(prototype,dx0,x0,nothing,1.0,0.0) 
+prototype = SparseArrays.sparse(BandedMatrices.BandedMatrix(BandedMatrices.Zeros(length(x0),length(x0)), (20,20)))
+
+r_approx = approx_jac(odeFun!,0.0,[1e-6,0],x0,dx0,sim,forces)
+diff = sim.storage.LinearizedSystem.jac - r_approx
+println(findmax(abs.(SparseArrays.findnz(diff)[3])))
+
+dt=1e-7
+f_DAE! = DAEFunction(f!; jac=f_jac!, jac_prototype=prototype)
+tspan=(0.0,4000)
+prob = DAEProblem(f_DAE!,dx0,x0,tspan,differential_vars=vars)
+@time begin
+    ret = solve(prob,IDA(linear_solver=:Dense))
+end
+vv= getindex.(ret.u,49)
+Plots.plot(ret.t,vv)
