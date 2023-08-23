@@ -1,952 +1,260 @@
-struct Constants
-    F
-    R
-    hour
-    function Constants()
-        new(96485.3329,
-            8.31446261815324,
-            3600)
-    end
+############################################################################################
+#Exported functions:
+############################################################################################
+export run_battery
+export inputRefToStates
+
+############################################################################################
+#Run battery 
+############################################################################################
+
+function run_battery(init::InputFile;
+    use_p2d::Bool=true,
+    extra_timing::Bool=false,
+    max_step::Union{Integer, Nothing}=nothing,
+    linear_solver::Symbol=:direct,
+    general_ad::Bool=false,
+    use_groups::Bool=false,
+    kwarg...)
+    """
+        Run battery wrapper method. Can use inputs from either Matlab or Json files and performs
+        simulation using a simple discharge CV policy
+    """
+
+    #Setup simulation
+    sim, forces, state0, parameters, init, model = setup_sim(init, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad; kwarg...)
+
+    #Set up config and timesteps
+    timesteps=setup_timesteps(init;max_step=max_step)
+    cfg=setup_config(sim,model,linear_solver,extra_timing; kwarg...)
+
+    #Perform simulation
+    states, reports = simulate(state0,sim, timesteps, forces=forces, config=cfg; kwarg ...)
+
+    extra = Dict(:model => model,
+        :state0 => state0,
+        :parameters => parameters,
+        :init => init,
+        :timesteps => timesteps,
+        :config => cfg,
+        :forces => forces,
+        :simulator => sim)
+
+    return (states=states, reports=reports, extra=extra,exported=init)
 end
 
-struct SourceAtCell
-    cell
-    src
-    function SourceAtCell(cell, src)
-        new(cell, src)
-    end 
+#Allows running run_battery with simple option for loading mat files
+function run_battery(init::String;
+    use_p2d::Bool=true,
+    extra_timing::Bool=false,
+    max_step=nothing,
+    linear_solver::Symbol=:direct,
+    general_ad::Bool=false,
+    use_groups::Bool=false,
+    kwarg...)
+    """
+        Simplifies reading pre-generated .mat files from the data repository inside BattMo.jl
+    """
+
+    #Path to mat files
+    path = string(dirname(pathof(BattMo)), "/../test/battery/data/")
+    suffix = ".mat"
+
+    return run_battery(MatlabFile(path * init * suffix); 
+         use_p2d=use_p2d, 
+         extra_timing=extra_timing, 
+         max_step=max_step, 
+         linear_solver=linear_solver, 
+         general_ad=general_ad, 
+         use_groups=use_groups,
+         kwarg...)
 end
 
-function getTrans(model1, model2, faces, cells, quantity)
-    """ setup transmissibility for coupling between models at boundaries"""
+#####################################################################################
+#Setup config
+#####################################################################################
 
-    T_all1 = model1["operators"]["T_all"][faces[:, 1]]
-    T_all2 = model2["operators"]["T_all"][faces[:, 2]]
+function setup_config(sim::Jutul.JutulSimulator,
+    model::MultiModel,
+    linear_solver::Symbol,
+    extra_timing::Bool;
+    kwarg...)
+    """
+        Sets up the config object used during simulation. In this current version this
+        setup is the same for json and mat files. The specific setup values should
+        probably be given as inputs in future versions of BattMo.jl
+    """
 
-    s1  = model1[quantity][cells[:, 1]]
-    s2  = model2[quantity][cells[:, 2]]
-    
-    T   = 1.0./((1.0./(T_all1.*s1))+(1.0./(T_all2.*s2)))
+    cfg = simulator_config(sim; kwarg...)
+    cfg[:linear_solver] = battery_linsolve(model, linear_solver)
+    cfg[:debug_level] = 0
+    #cfg[:max_timestep_cuts]         = 0
+    cfg[:max_residual] = 1e20
+    cfg[:min_nonlinear_iterations] = 1
+    cfg[:extra_timing] = extra_timing
+    # cfg[:max_nonlinear_iterations] = 5
+    cfg[:safe_mode] = false
+    cfg[:error_on_incomplete] = false
+    #Original matlab steps will be too large!
+    cfg[:failure_cuts_timestep]=true
 
-    return T
-    
-end
+    # if false
+    #     cfg[:info_level] = 5
+    #     cfg[:max_nonlinear_iterations] = 1
+    #     cfg[:max_timestep_cuts] = 0
+    # end
 
-function getTrans_1d(model1, model2, bcfaces, bccells, parameters1, parameters2, quantity)
-    """ setup transmissibility for coupling between models at boundaries. Intermediate 1d version"""
+    cfg[:tolerances][:PP][:default] = 1e-1
+    cfg[:tolerances][:BPP][:default] = 1e-1
 
-    d1 = physical_representation(model1)
-    d2 = physical_representation(model2)
-
-    bcTrans1 = d1[:bcTrans][bcfaces[:, 1]]
-    bcTrans2 = d2[:bcTrans][bcfaces[:, 2]]
-    cells1   = bccells[:, 1]
-    cells2   = bccells[:, 2]
-
-    s1  = parameters1[quantity][cells1]
-    s2  = parameters2[quantity][cells2]
-    
-    T   = 1.0./((1.0./(bcTrans1.*s1))+(1.0./(bcTrans2.*s2)))
-
-    return T
-    
-end
-
-function getHalfTrans_1d(model, bcfaces, bccells, parameters, quantity)
-    """ recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the corresponding given cells. Intermediate 1d version. Note the indexing in BoundaryFaces is used"""
-
-    d = physical_representation(model)
-    bcTrans = d[:bcTrans][bcfaces]
-    s       = parameters[quantity][bccells]
-    
-    T   = bcTrans.*s
-
-    return T
-end
-
-function getHalfTrans(model, faces, cells, quantity)
-    """ recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the given cells.
-Here, the faces should belong the corresponding cells at the same index"""
-
-    T_all = model["operators"]["T_all"]
-    s = model[quantity][cells]
-    T = T_all[faces].*s
-
-    return T
-    
-end
-
-function getHalfTrans(model, faces)
-    """ recover the half transmissibilities for boundary faces"""
-    
-    T_all = model["operators"]["T_all"]
-    T = T_all[faces]
-    
-    return T
-    
-end
-
-function my_number_of_cells(model::MultiModel)
-    
-    cells = 0
-    for smodel in model.models
-        cells += number_of_cells(smodel.domain)
-    end
-
-    return cells
-    
-end
-
-function convert_to_int_vector(x::Float64)
-    vec = Int64.(Vector{Float64}([x]))
-    return vec
-end
-
-function convert_to_int_vector(x::Matrix{Float64})
-    vec = Int64.(Vector{Float64}(x[:,1]))
-    return vec
-end
-
-function setup_model(exported; use_p2d = true, use_groups = false, kwarg...)
-
-    include_cc = true
-
-    model      = setup_battery_model(exported, use_p2d = use_p2d, include_cc = include_cc)
-    parameters = setup_battery_parameters(exported, model)
-    initState  = setup_battery_initial_state(exported, model)
-    
-    return model, initState, parameters
+    return cfg
     
 end
 
-function setup_model_1d(jsondict; use_groups = false, kwarg...)
+#####################################################################################
+#Setup timestepping
+#####################################################################################
 
-    include_cc = true
-    
-    model      = setup_battery_model_1d(jsondict, include_cc = include_cc; kwarg...)
-    parameters = setup_battery_parameters_1d(jsondict, model)
-    initState  = setup_battery_initial_state_1d(jsondict, model)
-    
-    return model, initState, parameters
-    
+function setup_timesteps(init::JSONFile;
+    kwarg ...)
+    """
+        Method setting up the timesteps from a json file object. 
+    """
+
+    total = init.object["TimeStepping"]["totalTime"]
+    n = init.object["TimeStepping"]["N"]
+
+    dt = total / n
+    timesteps = rampupTimesteps(total, dt, 5)
+
+    return timesteps
 end
 
-function setup_geomparams(jsondict)
-    
-    names = (:CC, :NAM, :SEP, :PAM, :PP)
-    geomparams = Dict(name => Dict() for name in names)
+function setup_timesteps(init::MatlabFile;
+    max_step::Union{Integer,Nothing}=nothing,
+    kwarg...)
+    """
+        Method setting up the timesteps from a mat file object. If use_state_ref is true
+        the simulation will use the same timesteps as the pre-run matlab simulation.
+    """
 
-    geomparams[:CC][:N]          = jsondict["NegativeElectrode"]["CurrentCollector"]["N"]
-    geomparams[:CC][:thickness]  = jsondict["NegativeElectrode"]["CurrentCollector"]["thickness"]
-    geomparams[:NAM][:N]         = jsondict["NegativeElectrode"]["ActiveMaterial"]["N"]
-    geomparams[:NAM][:thickness] = jsondict["NegativeElectrode"]["ActiveMaterial"]["thickness"]
-    geomparams[:SEP][:N]         = jsondict["Electrolyte"]["Separator"]["N"]
-    geomparams[:SEP][:thickness] = jsondict["Electrolyte"]["Separator"]["thickness"]
-    geomparams[:PAM][:N]         = jsondict["PositiveElectrode"]["ActiveMaterial"]["N"]
-    geomparams[:PAM][:thickness] = jsondict["PositiveElectrode"]["ActiveMaterial"]["thickness"]
-    geomparams[:PP][:N]          = jsondict["PositiveElectrode"]["CurrentCollector"]["N"]
-    geomparams[:PP][:thickness]  = jsondict["PositiveElectrode"]["CurrentCollector"]["thickness"]
+    if init.use_state_ref
+        steps = size(init.object["states"], 1)
+        alltimesteps = Vector{Float64}(undef, steps)
+        time = 0
+        end_step = 0
 
-    for name in names
-        geomparams[name][:facearea] = jsondict["Geometry"]["faceArea"]
-    end
-    
-    return geomparams
-    
-end
+        #Alternative to minE=3.2
+        minE = init.object["model"]["Control"]["lowerCutoffVoltage"]
 
-
-function setup_battery_model_1d(jsondict; include_cc = true, use_groups = false, general_ad = false)
-    
-    geomparams = setup_geomparams(jsondict)
-
-    function setup_component(geomparam::Dict, sys; addDirichlet = false, general_ad = false)
-
-        facearea = geomparam[:facearea]
-        
-        g = CartesianMesh(Tuple(geomparam[:N]), Tuple(geomparam[:thickness]))
-        domain = DataDomain(g)
-
-        domain[:face_weighted_volumes] = facearea*domain[:volumes]
-        
-        k = ones(geomparam[:N])
-
-        T    = compute_face_trans(domain, k)
-        T_hf = compute_half_face_trans(domain, k)
-        T_b  = compute_boundary_trans(domain, k)
-
-        domain[:trans, Faces()]           = facearea*T
-        domain[:halfTrans, HalfFaces()]   = facearea*T_hf
-        domain[:bcTrans, BoundaryFaces()] = facearea*T_b
-
-        # We add Dirichlet on negative current collector. This is hacky
-        if addDirichlet
-
-            domain.entities[BoundaryDirichletFaces()] = 1
-
-            bcDirFace = 1 # in BoundaryFaces indexing
-            bcDirCell = 1
-            bcDirInd  = 1
-            domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = facearea*domain[:bcTrans][bcDirFace]
-            domain[:bcDirCells, BoundaryDirichletFaces()]     = facearea*bcDirCell # 
-            domain[:bcDirInds, BoundaryDirichletFaces()]      = facearea*bcDirInd #
-            
-        end
-        
-        if general_ad
-            flow = PotentialFlow(g)
-        else
-            flow = TwoPointPotentialFlowHardCoded(g)
-        end
-        disc = (charge_flow = flow,)
-        domain = DiscretizedDomain(domain, disc)
-        
-        model = SimulationModel(domain, sys, context = DefaultContext())
-        return model
-        
-    end
-
-    function setup_component(geomparams::Dict, sys::Electrolyte, bcfaces = nothing; general_ad = false)
-        # specific implementation for electrolyte
-        # requires geometric parameters for :NAM, :SEP, :PAM
-
-        facearea = geomparams[:SEP][:facearea]
-        
-        names = (:NAM, :SEP, :PAM)
-
-        deltas = Vector{Float64}()
-        for name in names
-            dx = geomparams[name][:thickness]/geomparams[name][:N]
-            dx = dx*ones(geomparams[name][:N])
-            deltas = vcat(deltas, dx)
-        end
-
-        N = sum([geomparams[name][:N] for name in names])
-        deltas = (deltas,)
-        g = CartesianMesh((N,), deltas)
-        
-        domain = DataDomain(g)
-
-        domain[:face_weighted_volumes] = facearea*domain[:volumes]
-
-        k = ones(N)
-        T    = compute_face_trans(domain, k)
-        T_hf = compute_half_face_trans(domain, k)
-        T_b  = compute_boundary_trans(domain, k)
-
-        domain[:trans, Faces()]           = facearea*T
-        domain[:halfTrans, HalfFaces()]   = facearea*T_hf
-        domain[:bcTrans, BoundaryFaces()] = facearea*T_b
-        
-        if general_ad
-            flow = PotentialFlow(g)
-        else
-            flow = TwoPointPotentialFlowHardCoded(g)
-        end
-        disc = (charge_flow = flow,)
-        domain = DiscretizedDomain(domain, disc)
-        
-        model = SimulationModel(domain, sys, context = DefaultContext())
-
-        return model
-        
-    end
-
-    jsonNames = Dict(
-        :NAM => "NegativeElectrode",
-        :PAM => "PositiveElectrode",        
-    )
-
-    
-    function setup_active_material(name::Symbol, geomparams::Dict)
-
-        jsonName = jsonNames[name]
-
-        inputparams_am = jsondict[jsonName]["ActiveMaterial"]
-
-        am_params = JutulStorage()
-        am_params[:volumeFraction]          = inputparams_am["Interface"]["volumeFraction"]
-        am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
-        am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
-        am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
-        am_params[:theta0]                  = inputparams_am["Interface"]["theta0"]
-        am_params[:theta100]                = inputparams_am["Interface"]["theta100"]
-
-        k0  = inputparams_am["Interface"]["k0"]
-        Eak = inputparams_am["Interface"]["Eak"]
-        am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
-        
-        funcname = inputparams_am["Interface"]["OCP"]["functionname"]
-        am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
-        
-        use_p2d = true
-        if use_p2d
-            rp = inputparams_am["SolidDiffusion"]["rp"]
-            N  = Int64(inputparams_am["SolidDiffusion"]["N"])
-            D  = inputparams_am["SolidDiffusion"]["D0"]
-            sys_am = ActiveMaterialP2D(am_params, rp, N, D)
-        else
-            sys_am = ActiveMaterialNoParticleDiffusion(am_params)
-        end
-        
-        geomparam = geomparams[name]
-        model_am = setup_component(geomparam, sys_am, general_ad = general_ad)
-
-        return model_am
-        
-    end
-    
-    # Setup negative current collector
-    
-    if include_cc
-        sys_cc = CurrentCollector()
-        model_cc =  setup_component(geomparams[:CC], sys_cc, addDirichlet = true, general_ad = general_ad)
-    end
-
-    # Setup NAM
-    model_nam = setup_active_material(:NAM, geomparams)
-
-    ## Setup ELYTE
-
-    params = JutulStorage();
-    inputparams_elyte = jsondict["Electrolyte"]
-    
-    params[:transference]       = inputparams_elyte["sp"]["t"]
-    params[:charge]             = inputparams_elyte["sp"]["z"]
-    params[:separator_porosity] = inputparams_elyte["Separator"]["porosity"]
-    params[:bruggeman]          = inputparams_elyte["BruggemanCoefficient"]
-    
-    # setup diffusion coefficient function
-    funcname = inputparams_elyte["DiffusionCoefficient"]["functionname"]
-    func = getfield(BattMo, Symbol(funcname))
-    params[:diffusivity] = func
-
-    # setup diffusion coefficient function
-    funcname = inputparams_elyte["Conductivity"]["functionname"]
-    func = getfield(BattMo, Symbol(funcname))
-    params[:conductivity] = func
-    
-    elyte = Electrolyte(params)
-    model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
-
-    # Setup PAM
-    model_pam = setup_active_material(:PAM, geomparams)
-
-    # Setup negative current collector if any
-    if include_cc
-        sys_pp = CurrentCollector()
-        model_pp = setup_component(geomparams[:PP], sys_pp, general_ad = general_ad)
-    end
-
-    # Setup control model
-
-    sys_bpp    = CurrentAndVoltageSystem()
-    domain_bpp = CurrentAndVoltageDomain()
-    model_bpp  = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
-    
-    if !include_cc
-        groups = nothing
-        model = MultiModel(
-            (
-                NAM   = model_nam, 
-                ELYTE = model_elyte, 
-                PAM   = model_pam, 
-                BPP   = model_bpp
-            ), 
-            groups = groups)    
-    else
-        models = (
-            CC    = model_cc, 
-            NAM   = model_nam, 
-            ELYTE = model_elyte, 
-            PAM   = model_pam, 
-            PP    = model_pp,
-            BPP   = model_bpp
-        )
-        if use_groups
-            groups = ones(Int64, length(models))
-            # Should be BPP
-            groups[end] = 2
-            reduction = :schur_apply
-        else
-            groups    = nothing
-            reduction = :reduction
-        end
-        model = MultiModel(models, groups = groups, reduction = reduction)
-
-    end
-
-    setup_volume_fractions_1d!(model, geomparams)
-    
-    return model
-    
-end
-
-function setup_volume_fractions_1d!(model, geomparams)
-
-    names = (:NAM, :SEP, :PAM)
-    Nelyte = sum([geomparams[name][:N] for name in names])
-    vfelyte = zeros(Nelyte)
-    
-    names = (:NAM, :PAM)
-    
-    for name in names
-        ammodel = model[name]
-        vf = ammodel.system[:volumeFraction]
-        Nam = geomparams[name][:N]
-        ammodel.domain.representation[:volumeFraction] = vf*ones(Nam)
-        if name == :NAM
-            nstart = 1
-            nend   = Nam
-        elseif name == :PAM
-            nstart = geomparams[:NAM][:N] + geomparams[:SEP][:N] + 1
-            nend   = Nelyte
-        else
-            error("name not recognized")
-        end
-        vfelyte[nstart : nend] .= 1 - vf
-    end
-
-    nstart = geomparams[:NAM][:N] +  1
-    nend   = nstart + geomparams[:SEP][:N]
-    separator_porosity = model[:ELYTE].system[:separator_porosity]
-    vfelyte[nstart : nend] .= separator_porosity*ones(nend - nstart + 1)
-    
-    model[:ELYTE].domain.representation[:volumeFraction] = vfelyte
-
-end
-
-
-function setup_battery_model(exported; include_cc = true, use_p2d = true, use_groups = false)
-
-    function setup_component(exported, sys, bcfaces = nothing)
-        
-        domain = exported_model_to_domain(exported, bcfaces = bcfaces)
-        G = MRSTWrapMesh(exported["G"])
-        data_domain = DataDomain(G)
-        for (k, v) in domain.entities
-            data_domain.entities[k] = v
-        end
-        model = SimulationModel(domain, sys, context = DefaultContext(), data_domain = data_domain)
-        return model
-        
-    end
-
-    jsonNames = Dict(
-        :NAM => "NegativeElectrode",
-        :PAM => "PositiveElectrode",        
-    )
-
-    inputparams = exported["model"]
-    
-    function setup_active_material(name)
-
-        jsonName = jsonNames[name]
-
-        inputparams_am = inputparams[jsonName]["ActiveMaterial"]
-
-        am_params = JutulStorage()
-        am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
-        am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
-        am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
-        am_params[:volume_fraction]         = inputparams_am["Interface"]["volumeFraction"]
-        
-        k0  = inputparams_am["Interface"]["k0"]
-        Eak = inputparams_am["Interface"]["Eak"]
-        am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
-        
-        if name == :NAM
-            am_params[:ocp_func] = compute_ocp_graphite
-        elseif name == :PAM
-            am_params[:ocp_func] = compute_ocp_nmc111
-        else
-            error("not recongized")
-        end
-        T_prm = typeof(am_params)
-        if use_p2d
-            rp = inputparams_am["SolidDiffusion"]["rp"]
-            N  = Int64(inputparams_am["SolidDiffusion"]["N"])
-            D  = inputparams_am["SolidDiffusion"]["D0"]
-            sys_am = ActiveMaterialP2D(am_params, rp, N, D)
-        else
-            sys_am = ActiveMaterialNoParticleDiffusion(am_params)
-        end
-        
-        if  include_cc
-            model_am = setup_component(inputparams_am, sys_am)
-        else
-            bcfaces_am = convert_to_int_vector(["externalCouplingTerm"]["couplingfaces"])
-            model_am   = setup_component(inputparams_am, sys_am, bcfaces_am)
-            # We add also boundary parameters (if any)
-            S = model_am.parameters
-            nbc = count_active_entities(model_am.domain, BoundaryDirichletFaces())
-            if nbc > 0
-                bcvalue_zeros = zeros(nbc)
-                # add parameters to the model
-                S[:BoundaryPhi] = BoundaryPotential(:Phi)
-                S[:BoundaryC]   = BoundaryPotential(:C)
-                S[:BCCharge]    = BoundaryCurrent(srccells, :Charge)
-                S[:BCMass]      = BoundaryCurrent(srccells, :Mass)
+        for i = 1:steps
+            alltimesteps[i] =  init.object["states"][i]["time"] - time
+            time = init.object["states"][i]["time"]
+            E = init.object["states"][i]["Control"]["E"]
+            if (E > minE + 0.001)
+                end_step = i
             end
         end
-
-        return model_am
-        
-    end
-    
-    # Setup positive current collector if any
-    
-    if include_cc
-
-        inputparams_cc = inputparams["NegativeElectrode"]["CurrentCollector"]
-        sys_cc      = CurrentCollector()
-        bcfaces     = convert_to_int_vector(inputparams_cc["externalCouplingTerm"]["couplingfaces"])
-        
-        model_cc =  setup_component(inputparams_cc, sys_cc, bcfaces)
-        
-    end
-
-    # Setup NAM
-
-    model_nam = setup_active_material(:NAM)
-
-    ## Setup ELYTE
-    params = JutulStorage();
-    inputparams_elyte = inputparams["Electrolyte"]
-    params[:transference] = inputparams_elyte["sp"]["t"]
-    params[:charge]       = inputparams_elyte["sp"]["z"]
-    params[:bruggeman]    = inputparams_elyte["BruggemanCoefficient"]
-    
-    # setup diffusion coefficient function, hard coded for the moment because function name is not passed throught model
-    # TODO : add general code
-    funcname = "computeDiffusionCoefficient_default"
-    func = getfield(BattMo, Symbol(funcname))
-    params[:diffusivity] = func
-
-    # setup diffusion coefficient function
-    # TODO : add general code
-    funcname = "computeElectrolyteConductivity_default"
-    func = getfield(BattMo, Symbol(funcname))
-    params[:conductivity] = func
-    
-    elyte = Electrolyte(params)
-    model_elyte = setup_component(inputparams["Electrolyte"],
-                                  elyte)
-
-    # Setup PAM
-    
-    model_pam = setup_active_material(:PAM)
-
-    # Setup negative current collector if any
-    if include_cc
-        model_pp = setup_component(inputparams["PositiveElectrode"]["CurrentCollector"],
-                                   CurrentCollector())
-    end
-
-    # Setup control model
-
-    sys_bpp    = CurrentAndVoltageSystem()
-    domain_bpp = CurrentAndVoltageDomain()
-    model_bpp  = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
-    
-    if !include_cc
-        groups = nothing
-        model = MultiModel(
-            (
-                NAM   = model_nam, 
-                ELYTE = model_elyte, 
-                PAM   = model_pam, 
-                BPP   = model_bpp
-            ), 
-            groups = groups)    
-    else
-        models = (
-            CC    = model_cc, 
-            NAM   = model_nam, 
-            ELYTE = model_elyte, 
-            PAM   = model_pam, 
-            PP    = model_pp,
-            BPP   = model_bpp
-        )
-        if use_groups
-            groups = ones(Int64, length(models))
-            # Should be BPP
-            groups[end] = 2
-            reduction = :schur_apply
-        else
-            groups    = nothing
-            reduction = :reduction
+        if !isnothing(max_step)
+            end_step = min(max_step, end_step)
         end
-        model = MultiModel(models, groups = groups, reduction = reduction)
+        timesteps = alltimesteps[1:end_step]
+    else
+        timesteps=init.object["schedule"]["step"]["val"][:]
 
     end
-    
-    return model
-    
+
+    return timesteps
 end
 
-function setup_battery_parameters(exported, model)
+####################################################################################
+#Setup simulation
+####################################################################################
 
-    parameters = Dict{Symbol, Any}()
+#Replaces setup_sim_1d
+function setup_sim(init::JSONFile;
+    use_groups::Bool=false,
+    general_ad::Bool=false,
+    kwarg ... )
 
-    T0 = exported["model"]["initT"]
-    
-    # Negative current collector (if any)
+    model, state0, parameters = setup_model(init, use_groups=use_groups, general_ad=general_ad; kwarg...)
 
-    if haskey(model.models, :CC)
-        use_cc = true
-    else
-        use_cc = false
-    end
+    setup_coupling!(init,model,parameters)
 
-    if use_cc
-        prm_cc = Dict{Symbol, Any}()
-        exported_cc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
-        prm_cc[:Conductivity] = exported_cc["EffectiveElectricalConductivity"][1]
-        parameters[:CC] = setup_parameters(model[:CC], prm_cc)
-    end
+    minE = init.object["Control"]["lowerCutoffVoltage"]
 
-    # Negative active material
-    
-    prm_nam = Dict{Symbol, Any}()
-    exported_nam = exported["model"]["NegativeElectrode"]["ActiveMaterial"]
-    prm_nam[:Conductivity] = exported_nam["EffectiveElectricalConductivity"][1]
-    prm_nam[:Temperature] = T0
-    
-    if discretisation_type(model[:NAM]) == :P2Ddiscretization
-        # nothing to do
-    else
-        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
-        prm_nam[:Diffusivity] = exported_nam["InterDiffusionCoefficient"]
-    end
+    CRate = init.object["Control"]["CRate"]
+    cap = computeCellCapacity(model)
+    con = Constants()
 
-    parameters[:NAM] = setup_parameters(model[:NAM], prm_nam)
+    inputI = (cap / con.hour) * CRate
 
-    # Electrolyte
-    
-    prm_elyte = Dict{Symbol, Any}()
-    prm_elyte[:Temperature] = T0        
+    @. state0[:BPP][:Phi] = minE * 1.5
 
-    parameters[:ELYTE] = setup_parameters(model[:ELYTE], prm_elyte)
+    tup = Float64(init.object["TimeStepping"]["rampupTime"])
+    cFun(time) = currentFun(time, inputI, tup)
 
-    # Positive active material
+    currents = setup_forces(model[:BPP], policy=SimpleCVPolicy(cFun, minE))
+    forces = setup_forces(model, BPP=currents)
 
-    prm_pam = Dict{Symbol, Any}()
-    exported_pam = exported["model"]["PositiveElectrode"]["ActiveMaterial"]
-    prm_pam[:Conductivity] = exported_pam["EffectiveElectricalConductivity"][1]
-    prm_pam[:Temperature] = T0
-    
-    if discretisation_type(model[:PAM]) == :P2Ddiscretization
-        # nothing to do
-    else
-        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
-        prm_pam[:Diffusivity] = exported_nam["InterDiffusionCoefficient"]
-    end
+    sim = Simulator(model, state0=state0, parameters=parameters, copy_state=true)
 
-    parameters[:PAM] = setup_parameters(model[:PAM], prm_pam)
+    return sim, forces, state0, parameters, init, model
 
-    # Positive current collector (if any)
-
-    if haskey(model.models, :CC)
-        use_pp = true
-    else
-        use_pp = false
-    end
-
-    if use_pp
-        prm_pp = Dict{Symbol, Any}()
-        exported_pp = exported["model"]["PositiveElectrode"]["CurrentCollector"]
-        prm_pp[:Conductivity] = exported_pp["EffectiveElectricalConductivity"][1]
-        
-        parameters[:PP] = setup_parameters(model[:PP], prm_pp)
-    end        
-
-    parameters[:BPP] = setup_parameters(model[:BPP])
-
-    return parameters
-    
 end
 
-function setup_battery_parameters_1d(jsonstruct, model)
+function setup_sim(init::MatlabFile;
+    use_p2d::Bool=true,
+    use_groups::Bool=false,
+    general_ad::Bool=false)
 
-    parameters = Dict{Symbol, Any}()
+    model, state0, parameters = setup_model(init, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
+    setup_coupling!(init,model)
 
-    T0 = jsonstruct["initT"]
-    
-    # Negative current collector (if any)
+    #quantities from matlab
+    minE=init.object["model"]["Control"]["lowerCutoffVoltage"]
+    inputI=init.object["model"]["Control"]["Imax"]
 
-    if haskey(model.models, :CC)
-        use_cc = true
-    else
-        use_cc = false
-    end
+    #@. state0[:BPP][:Phi] = state0[:PAM][:Phi][end] #minE * 1.5
 
-    if use_cc
-        prm_cc = Dict{Symbol, Any}()
-        jsonstruct_cc = jsonstruct["NegativeElectrode"]["CurrentCollector"]
-        prm_cc[:Conductivity] = jsonstruct_cc["EffectiveElectricalConductivity"]
-        parameters[:CC] = setup_parameters(model[:CC], prm_cc)
-    end
+    # if isempty(init.object["model"]["Control"]["tup"])
+    #     cFun(time) = currentFun(time, inputI)
+    # else
+    #     cFun(time) = currentFun(time, inputI,init.object["model"]["Control"]["tup"])
+    # end
+    cFun(time) = currentFun(time,inputI)
+    forces_pp = nothing
 
-    # Negative active material
-    
-    prm_nam = Dict{Symbol, Any}()
-    jsonstruct_nam = jsonstruct["NegativeElectrode"]["ActiveMaterial"]
+    currents = setup_forces(model[:BPP], policy=SimpleCVPolicy(cFun, minE))
 
-    kappa = jsonstruct_nam["electricalConductivity"]
-    vf    = jsonstruct_nam["Interface"]["volumeFraction"]
-    prm_nam[:Conductivity] = vf*kappa
-    prm_nam[:Temperature] = T0
-    
-    if discretisation_type(model[:NAM]) == :P2Ddiscretization
-        # nothing to do
-    else
-        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
-        prm_nam[:Diffusivity] = jsonstruct_nam["InterDiffusionCoefficient"]
-    end
-
-    parameters[:NAM] = setup_parameters(model[:NAM], prm_nam)
-
-    # Electrolyte
-    
-    prm_elyte = Dict{Symbol, Any}()
-    prm_elyte[:Temperature] = T0        
-
-    parameters[:ELYTE] = setup_parameters(model[:ELYTE], prm_elyte)
-
-    # Positive active material
-
-    prm_pam = Dict{Symbol, Any}()
-    jsonstruct_pam = jsonstruct["PositiveElectrode"]["ActiveMaterial"]
-    kappa = jsonstruct_pam["electricalConductivity"]
-    vf    = jsonstruct_pam["Interface"]["volumeFraction"]
-    prm_pam[:Conductivity] = vf*kappa
-    prm_pam[:Temperature] = T0
-    
-    if discretisation_type(model[:PAM]) == :P2Ddiscretization
-        # nothing to do
-    else
-        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
-        prm_pam[:Diffusivity] = jsonstruct_nam["InterDiffusionCoefficient"]
-    end
-
-    parameters[:PAM] = setup_parameters(model[:PAM], prm_pam)
-
-    # Positive current collector (if any)
-
-    if haskey(model.models, :CC)
-        use_pp = true
-    else
-        use_pp = false
-    end
-
-    if use_pp
-        prm_pp = Dict{Symbol, Any}()
-        jsonstruct_pp = jsonstruct["PositiveElectrode"]["CurrentCollector"]
-        prm_pp[:Conductivity] = jsonstruct_pp["EffectiveElectricalConductivity"][1]
-        
-        parameters[:PP] = setup_parameters(model[:PP], prm_pp)
-    end        
-
-    parameters[:BPP] = setup_parameters(model[:BPP])
-
-    return parameters
-    
-end
-
-function setup_battery_initial_state_1d(jsonstruct, model)
-
-    if haskey(model.models, :CC)
-        use_cc = true
-    else
-        use_cc = false
-    end
-
-    T   = jsonstruct["initT"]
-    SOC = jsonstruct["SOC"]
-
-    function setup_init_am(name, model)
-        
-        theta0   = model[name].system[:theta0]
-        theta100 = model[name].system[:theta100]
-        cmax     = model[name].system[:maximum_concentration]
-        N        = model[name].system.discretization[:N]
-        
-        theta = SOC*(theta100 - theta0) + theta0;
-        c     = theta*cmax
-        nc    = count_entities(model[name].data_domain, Cells())
-        init = Dict()
-        init[:Cs]  = c*ones(nc)
-        init[:Cp]  = c*ones(nc, N)
-
-        OCP = model[name].system[:ocp_func](c, T, cmax)
-        return (init, nc, OCP)
-        
-    end
-
-    function setup_cc(name, phi, model)
-        nc = count_entities(model[name].data_domain, Cells())
-        init = Dict();
-        init[:Phi] = phi*ones(nc)
-        return init
-    end
-    
-    initState = Dict()
-
-    # Setup initial state in negative active material
-    
-    init, nc, negOCP = setup_init_am(:NAM, model)
-    init[:Phi] = zeros(nc)
-    initState[:NAM] = init
-    
-    # Setup initial state in electrolyte
-    
-    nc = count_entities(model[:ELYTE].data_domain, Cells())
-    
-    init = Dict()
-    init[:C]   = 1000*ones(nc)
-    init[:Phi] = - negOCP*ones(nc) 
-
-    initState[:ELYTE] = init
-
-    # Setup initial state in positive active material
-    
-    init, nc, posOCP = setup_init_am(:PAM, model)
-    init[:Phi] = (posOCP - negOCP)*ones(nc)
-    
-    initState[:PAM] = init
-
-    # Setup negative current collector
-
-    initState[:CC] = setup_cc(:CC, 0, model)
-    
-    # Setup positive current collector
-
-    initState[:PP] = setup_cc(:PP, posOCP - negOCP, model)
-
-    init = Dict()
-    init[:Phi]     = [1.0]
-    init[:Current] = [1.0]
-        
-    initState[:BPP] = init
-
-    initState = setup_state(model, initState)
-    
-    return initState
-    
-end
-
-
-function setup_battery_initial_state(exported, model)
-
-    state0 = exported["state0"]
-
-    jsonNames = Dict(
-        :CC  => "NegativeElectrode",
-        :NAM => "NegativeElectrode",
-        :PAM => "PositiveElectrode",        
-        :PP  => "PositiveElectrode",
+    forces = Dict(
+        :CC => nothing,
+        :NAM => nothing,
+        :ELYTE => nothing,
+        :PAM => nothing,
+        :PP => forces_pp,
+        :BPP => currents
     )
 
+    sim = Simulator(model, state0=state0, parameters=parameters, copy_state=true)
 
-    function initialize_current_collector!(initState, name::Symbol)
-        """ initialize values for the current collector"""
-        
-        if haskey(model.models, name)
-            use_cc = true
-        else
-            use_cc = false
-        end
-        
-        if use_cc
-            init = Dict()
-            init[:Phi] = state0[jsonNames[name]]["CurrentCollector"]["phi"][1]
-            initState[name] = init
-        end
-        
-    end
+    return sim, forces, state0, parameters, init, model
 
-
-    function initialize_active_material!(initState, name::Symbol)
-        """ initialize values for the active material"""
-
-        jsonName = jsonNames[name]
-        
-        ccnames = Dict(
-            :NAM => :CC,
-            :PAM => :PP,
-        )
-
-        if haskey(model.models, ccnames[name])
-            use_cc = true
-        else
-            use_cc = false
-        end
-
-        # initialise NAM
-
-        sys = model[name].system
-
-        init = Dict()
-        
-        init[:Phi]   = state0[jsonName]["ActiveMaterial"]["phi"][1]
-
-        if use_cc
-            c = state0[jsonName]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
-        else
-            c = state0[jsonName]["ActiveMaterial"]["c"][1]
-        end
-
-        if  discretisation_type(sys) == :P2Ddiscretization
-            init[:Cp] = c
-            init[:Cs] = c
-        else
-            @assert discretisation_type(sys) == :NoParticleDiffusion
-            init[:C] = c
-        end
-        
-        initState[name] = init
-        
-    end
-
-    function initialize_electrolyte!(initState)
-
-        init = Dict()
-        
-        init[:Phi] = state0["Electrolyte"]["phi"][1]
-        init[:C]   = state0["Electrolyte"]["c"][1]
-
-        initState[:ELYTE] = init
-
-    end
-
-    function initialize_bpp!(initState)
-
-        init = Dict(:Phi => 1.0, :Current => 1.0)
-        
-        initState[:BPP] = init
-        
-    end
-    
-    initState = Dict()
-
-    initialize_current_collector!(initState, :CC)
-    initialize_active_material!(initState, :NAM)
-    initialize_electrolyte!(initState)
-    initialize_active_material!(initState, :PAM)
-    initialize_current_collector!(initState, :PP)
-    initialize_bpp!(initState)
-
-    
-    initState = setup_state(model, initState)
-
-    return initState
-    
 end
 
-function setup_coupling_1d!(model, parameters, jsondict)
+#######################################################################
+#Setup coupling
+#######################################################################
 
-    geomparams = setup_geomparams(jsondict)
+#Replaces setup_coupling_1d!
+function setup_coupling!(init::JSONFile,
+    model::MultiModel,
+    parameters::Dict{Symbol,<:Any}
+    )
+
+    jsondict=init.object
+
+    geomparams = setup_geomparams(init)
     
     # setup coupling CC <-> NAM :charge_conservation
     
@@ -974,7 +282,7 @@ function setup_coupling_1d!(model, parameters, jsondict)
         couplingcells[1, 1] = Ncc
         couplingcells[1, 2] = 1
         
-        trans = getTrans_1d(msource, mtarget,
+        trans = getTrans(msource, mtarget,
                             couplingfaces,
                             couplingcells,
                             psource, ptarget,
@@ -1079,7 +387,7 @@ function setup_coupling_1d!(model, parameters, jsondict)
         couplingcells[1, 2] = Npam
         
         
-        trans = getTrans_1d(msource, mtarget,
+        trans = getTrans(msource, mtarget,
                             couplingfaces,
                             couplingcells,
                             psource, ptarget,
@@ -1105,7 +413,7 @@ function setup_coupling_1d!(model, parameters, jsondict)
         # Here the indexing in BoundaryFaces in used
         couplingfaces = 2
         couplingcells = Npp
-        trans = getHalfTrans_1d(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
+        trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
 
         ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
         ct_pair = setup_cross_term(ct, target = :PP, source = :BPP, equation = :charge_conservation)
@@ -1120,11 +428,13 @@ function setup_coupling_1d!(model, parameters, jsondict)
     
 end
 
-
-function setup_coupling!(model, exported_all)
+function setup_coupling!(init::MatlabFile,
+    model #MultiModel?
+    )
     # setup coupling CC <-> NAM :charge_conservation
     
-    skip_pp = size(exported_all["model"]["include_current_collectors"]) == (0,0)
+    exported_all=init.object
+    skip_pp = size(exported_all["model"]["include_current_collectors"]) == (0,0) #! unused
     skip_cc = false
     
     if !skip_cc
@@ -1301,9 +611,844 @@ function setup_coupling!(model, exported_all)
     
 end
 
-function currentFun(t::T, inputI::T) where T
-    #inputI = 9.4575
-    tup = 0.1
+########################################################################
+#Setup model
+########################################################################
+
+function setup_model(init::InputFile;
+    use_p2d::Bool=true,
+    use_groups::Bool=false,
+    kwarg...)
+
+    include_cc = true #!
+
+    model = setup_battery_model(init, include_cc=include_cc,use_groups=use_groups,use_p2d=use_p2d; kwarg ... )
+    parameters = setup_battery_parameters(init, model)
+    initState = setup_battery_initial_state(init, model)
+
+    return model, initState, parameters
+
+end
+
+###################################################################################
+#Setup battery model
+##################################################################################
+
+function setup_battery_model(init::MatlabFile; 
+    include_cc::Bool = true, 
+    use_groups::Bool = false,
+    use_p2d::Bool = true,
+    general_ad::Bool = false,
+    kwarg ...
+    )
+
+
+    function setup_component(obj::Dict, 
+        sys, 
+        bcfaces = nothing,
+        general_ad::Bool = false)
+        
+        domain = exported_model_to_domain(obj, bcfaces = bcfaces, general_ad=general_ad)
+        G = MRSTWrapMesh(obj["G"])
+        data_domain = DataDomain(G)
+        for (k, v) in domain.entities
+            data_domain.entities[k] = v
+        end
+        model = SimulationModel(domain, sys, context = DefaultContext(), data_domain = data_domain)
+        return model
+        
+    end
+
+    jsonNames = Dict(
+        :NAM => "NegativeElectrode",
+        :PAM => "PositiveElectrode",        
+    )
+
+    inputparams = init.object["model"]
+    
+    function setup_active_material(name::Symbol, general_ad::Bool)
+        jsonName = jsonNames[name]
+
+        inputparams_am = inputparams[jsonName]["ActiveMaterial"]
+
+        am_params = JutulStorage()
+        am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
+        am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
+        am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
+        am_params[:volume_fraction]         = inputparams_am["Interface"]["volumeFraction"]
+        
+        k0  = inputparams_am["Interface"]["k0"]
+        Eak = inputparams_am["Interface"]["Eak"]
+        am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
+        
+        if name == :NAM
+            am_params[:ocp_func] = compute_ocp_graphite
+        elseif name == :PAM
+            am_params[:ocp_func] = compute_ocp_nmc111
+        else
+            error("not recongized")
+        end
+        T_prm = typeof(am_params)
+        if use_p2d
+            rp = inputparams_am["SolidDiffusion"]["rp"]
+            N  = Int64(inputparams_am["SolidDiffusion"]["N"])
+            D  = inputparams_am["SolidDiffusion"]["D0"]
+            sys_am = ActiveMaterialP2D(am_params, rp, N, D)
+        else
+            sys_am = ActiveMaterialNoParticleDiffusion(am_params)
+        end
+        
+        if  include_cc
+            model_am = setup_component(inputparams_am, sys_am,nothing,general_ad)
+        else
+            bcfaces_am = convert_to_int_vector(inputparams_am["externalCouplingTerm"]["couplingfaces"])
+            model_am   = setup_component(inputparams_am, sys_am, bcfaces_am,general_ad)
+            # We add also boundary parameters (if any)
+            S = model_am.parameters
+            nbc = count_active_entities(model_am.domain, BoundaryDirichletFaces())
+            if nbc > 0
+                bcvalue_zeros = zeros(nbc)
+                # add parameters to the model
+                S[:BoundaryPhi] = BoundaryPotential(:Phi)
+                S[:BoundaryC]   = BoundaryPotential(:C)
+                S[:BCCharge]    = BoundaryCurrent(srccells, :Charge)
+                S[:BCMass]      = BoundaryCurrent(srccells, :Mass)
+            end
+        end
+
+        return model_am
+        
+    end
+    
+    # Setup positive current collector if any
+    
+    if include_cc
+
+        inputparams_cc = inputparams["NegativeElectrode"]["CurrentCollector"]
+        sys_cc      = CurrentCollector()
+        bcfaces     = convert_to_int_vector(inputparams_cc["externalCouplingTerm"]["couplingfaces"])
+        
+        model_cc =  setup_component(inputparams_cc, sys_cc, bcfaces, general_ad)
+        
+    end
+
+    # Setup NAM
+
+    model_nam = setup_active_material(:NAM,general_ad)
+
+    ## Setup ELYTE
+    params = JutulStorage();
+    inputparams_elyte = inputparams["Electrolyte"]
+    params[:transference] = inputparams_elyte["sp"]["t"]
+    params[:charge]       = inputparams_elyte["sp"]["z"]
+    params[:bruggeman]    = inputparams_elyte["BruggemanCoefficient"]
+    
+    # setup diffusion coefficient function, hard coded for the moment because function name is not passed throught model
+    # TODO : add general code
+    funcname = "computeDiffusionCoefficient_default"
+    func = getfield(BattMo, Symbol(funcname))
+    params[:diffusivity] = func
+
+    # setup diffusion coefficient function
+    # TODO : add general code
+    funcname = "computeElectrolyteConductivity_default"
+    func = getfield(BattMo, Symbol(funcname))
+    params[:conductivity] = func
+    
+    elyte = Electrolyte(params)
+    model_elyte = setup_component(inputparams["Electrolyte"],
+                                  elyte,nothing,general_ad)
+
+    # Setup PAM
+    
+    model_pam = setup_active_material(:PAM,general_ad)
+
+    # Setup negative current collector if any
+    if include_cc
+        model_pp = setup_component(inputparams["PositiveElectrode"]["CurrentCollector"],
+                                   CurrentCollector(),nothing,general_ad)
+    end
+
+    # Setup control model
+
+    sys_bpp    = CurrentAndVoltageSystem()
+    domain_bpp = CurrentAndVoltageDomain()
+    model_bpp  = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
+    
+    if !include_cc
+        groups = nothing
+        model = MultiModel(
+            (
+                NAM   = model_nam, 
+                ELYTE = model_elyte, 
+                PAM   = model_pam, 
+                BPP   = model_bpp
+            ), 
+            groups = groups)    
+    else
+        models = (
+            CC    = model_cc, 
+            NAM   = model_nam, 
+            ELYTE = model_elyte, 
+            PAM   = model_pam, 
+            PP    = model_pp,
+            BPP   = model_bpp
+        )
+        if use_groups
+            groups = ones(Int64, length(models))
+            # Should be BPP
+            groups[end] = 2
+            reduction = :schur_apply
+        else
+            groups    = nothing
+            reduction = :reduction
+        end
+        model = MultiModel(models, groups = groups, reduction = reduction)
+
+    end
+    
+    return model
+    
+end
+
+function setup_battery_model(init::JSONFile; 
+    include_cc::Bool = true, 
+    use_groups::Bool = false, 
+    general_ad::Bool = false,
+    kwarg ... )
+    
+    geomparams = setup_geomparams(init)
+
+    jsondict=init.object
+
+    function setup_component(geomparam::Dict, 
+        sys; 
+        addDirichlet::Bool = false, 
+        general_ad::Bool = false)
+
+        facearea = geomparam[:facearea]
+        
+        g = CartesianMesh(Tuple(geomparam[:N]), Tuple(geomparam[:thickness]))
+        domain = DataDomain(g)
+
+        domain[:face_weighted_volumes] = facearea*domain[:volumes]
+        
+        k = ones(geomparam[:N])
+
+        T    = compute_face_trans(domain, k)
+        T_hf = compute_half_face_trans(domain, k)
+        T_b  = compute_boundary_trans(domain, k)
+
+        domain[:trans, Faces()]           = facearea*T
+        domain[:halfTrans, HalfFaces()]   = facearea*T_hf
+        domain[:bcTrans, BoundaryFaces()] = facearea*T_b
+
+        # We add Dirichlet on negative current collector. This is hacky
+        if addDirichlet
+
+            domain.entities[BoundaryDirichletFaces()] = 1
+
+            bcDirFace = 1 # in BoundaryFaces indexing
+            bcDirCell = 1
+            bcDirInd  = 1
+            domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = facearea*domain[:bcTrans][bcDirFace]
+            domain[:bcDirCells, BoundaryDirichletFaces()]     = facearea*bcDirCell # 
+            domain[:bcDirInds, BoundaryDirichletFaces()]      = facearea*bcDirInd #
+            
+        end
+        
+        if general_ad
+            flow = PotentialFlow(g)
+        else
+            flow = TwoPointPotentialFlowHardCoded(g)
+        end
+        disc = (charge_flow = flow,)
+        domain = DiscretizedDomain(domain, disc)
+        
+        model = SimulationModel(domain, sys, context = DefaultContext())
+        return model
+        
+    end
+
+    function setup_component(geomparams::Dict, 
+        sys::Electrolyte, 
+        bcfaces = nothing; 
+        general_ad::Bool = false)
+
+        # specific implementation for electrolyte
+        # requires geometric parameters for :NAM, :SEP, :PAM
+
+        facearea = geomparams[:SEP][:facearea]
+        
+        names = (:NAM, :SEP, :PAM)
+
+        deltas = Vector{Float64}()
+        for name in names
+            dx = geomparams[name][:thickness]/geomparams[name][:N]
+            dx = dx*ones(geomparams[name][:N])
+            deltas = vcat(deltas, dx)
+        end
+
+        N = sum([geomparams[name][:N] for name in names])
+        deltas = (deltas,)
+        g = CartesianMesh((N,), deltas)
+        
+        domain = DataDomain(g)
+
+        domain[:face_weighted_volumes] = facearea*domain[:volumes]
+
+        k = ones(N)
+        T    = compute_face_trans(domain, k)
+        T_hf = compute_half_face_trans(domain, k)
+        T_b  = compute_boundary_trans(domain, k)
+
+        domain[:trans, Faces()]           = facearea*T
+        domain[:halfTrans, HalfFaces()]   = facearea*T_hf
+        domain[:bcTrans, BoundaryFaces()] = facearea*T_b
+        
+        if general_ad
+            flow = PotentialFlow(g)
+        else
+            flow = TwoPointPotentialFlowHardCoded(g)
+        end
+        disc = (charge_flow = flow,)
+        domain = DiscretizedDomain(domain, disc)
+        
+        model = SimulationModel(domain, sys, context = DefaultContext())
+
+        return model
+        
+    end
+
+    jsonNames = Dict(
+        :NAM => "NegativeElectrode",
+        :PAM => "PositiveElectrode",        
+    )
+
+    
+    function setup_active_material(name::Symbol, 
+        geomparams::Dict{Symbol,<:Any})
+
+        jsonName = jsonNames[name]
+
+        inputparams_am = jsondict[jsonName]["ActiveMaterial"]
+
+        am_params = JutulStorage()
+        am_params[:volumeFraction]          = inputparams_am["Interface"]["volumeFraction"]
+        am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
+        am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
+        am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
+        am_params[:theta0]                  = inputparams_am["Interface"]["theta0"]
+        am_params[:theta100]                = inputparams_am["Interface"]["theta100"]
+
+        k0  = inputparams_am["Interface"]["k0"]
+        Eak = inputparams_am["Interface"]["Eak"]
+        am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
+        
+        funcname = inputparams_am["Interface"]["OCP"]["functionname"]
+        am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
+        
+        use_p2d = true
+        if use_p2d
+            rp = inputparams_am["SolidDiffusion"]["rp"]
+            N  = Int64(inputparams_am["SolidDiffusion"]["N"])
+            D  = inputparams_am["SolidDiffusion"]["D0"]
+            sys_am = ActiveMaterialP2D(am_params, rp, N, D)
+        else
+            sys_am = ActiveMaterialNoParticleDiffusion(am_params)
+        end
+        
+        geomparam = geomparams[name]
+        model_am = setup_component(geomparam, sys_am, general_ad = general_ad)
+
+        return model_am
+        
+    end
+    
+    # Setup negative current collector
+    
+    if include_cc
+        sys_cc = CurrentCollector()
+        model_cc =  setup_component(geomparams[:CC], sys_cc, addDirichlet = true, general_ad = general_ad)
+    end
+
+    # Setup NAM
+    model_nam = setup_active_material(:NAM, geomparams)
+
+    ## Setup ELYTE
+
+    params = JutulStorage();
+    inputparams_elyte = jsondict["Electrolyte"]
+    
+    params[:transference]       = inputparams_elyte["sp"]["t"]
+    params[:charge]             = inputparams_elyte["sp"]["z"]
+    params[:separator_porosity] = inputparams_elyte["Separator"]["porosity"]
+    params[:bruggeman]          = inputparams_elyte["BruggemanCoefficient"]
+    
+    # setup diffusion coefficient function
+    funcname = inputparams_elyte["DiffusionCoefficient"]["functionname"]
+    func = getfield(BattMo, Symbol(funcname))
+    params[:diffusivity] = func
+
+    # setup diffusion coefficient function
+    funcname = inputparams_elyte["Conductivity"]["functionname"]
+    func = getfield(BattMo, Symbol(funcname))
+    params[:conductivity] = func
+    
+    elyte = Electrolyte(params)
+    model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
+
+    # Setup PAM
+    model_pam = setup_active_material(:PAM, geomparams)
+
+    # Setup negative current collector if any
+    if include_cc
+        sys_pp = CurrentCollector()
+        model_pp = setup_component(geomparams[:PP], sys_pp, general_ad = general_ad)
+    end
+
+    # Setup control model
+
+    sys_bpp    = CurrentAndVoltageSystem()
+    domain_bpp = CurrentAndVoltageDomain()
+    model_bpp  = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
+    
+    if !include_cc
+        groups = nothing
+        model = MultiModel(
+            (
+                NAM   = model_nam, 
+                ELYTE = model_elyte, 
+                PAM   = model_pam, 
+                BPP   = model_bpp
+            ), 
+            groups = groups)    
+    else
+        models = (
+            CC    = model_cc, 
+            NAM   = model_nam, 
+            ELYTE = model_elyte, 
+            PAM   = model_pam, 
+            PP    = model_pp,
+            BPP   = model_bpp
+        )
+        if use_groups
+            groups = ones(Int64, length(models))
+            # Should be BPP
+            groups[end] = 2
+            reduction = :schur_apply
+        else
+            groups    = nothing
+            reduction = :reduction
+        end
+        model = MultiModel(models, groups = groups, reduction = reduction)
+
+    end
+
+    setup_volume_fractions!(model, geomparams)
+    
+    return model
+    
+end
+
+###################################################################################
+#Setup battery parameters
+###################################################################################
+
+function setup_battery_parameters(init::MatlabFile, 
+    model::MultiModel
+    )
+
+    parameters = Dict{Symbol, Any}() #NB
+
+    exported=init.object
+
+    T0 = exported["model"]["initT"]
+    
+    # Negative current collector (if any)
+
+    if haskey(model.models, :CC)
+        use_cc = true
+    else
+        use_cc = false
+    end
+
+    if use_cc
+        prm_cc = Dict{Symbol, Any}()
+        exported_cc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
+        prm_cc[:Conductivity] = exported_cc["EffectiveElectricalConductivity"][1]
+        parameters[:CC] = setup_parameters(model[:CC], prm_cc)
+    end
+
+    # Negative active material
+    
+    prm_nam = Dict{Symbol, Any}()
+    exported_nam = exported["model"]["NegativeElectrode"]["ActiveMaterial"]
+    prm_nam[:Conductivity] = exported_nam["EffectiveElectricalConductivity"][1]
+    prm_nam[:Temperature] = T0
+    
+    if discretisation_type(model[:NAM]) == :P2Ddiscretization
+        # nothing to do
+    else
+        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
+        prm_nam[:Diffusivity] = exported_nam["InterDiffusionCoefficient"]
+    end
+
+    parameters[:NAM] = setup_parameters(model[:NAM], prm_nam)
+
+    # Electrolyte
+    
+    prm_elyte = Dict{Symbol, Any}()
+    prm_elyte[:Temperature] = T0        
+
+    parameters[:ELYTE] = setup_parameters(model[:ELYTE], prm_elyte)
+
+    # Positive active material
+
+    prm_pam = Dict{Symbol, Any}()
+    exported_pam = exported["model"]["PositiveElectrode"]["ActiveMaterial"]
+    prm_pam[:Conductivity] = exported_pam["EffectiveElectricalConductivity"][1]
+    prm_pam[:Temperature] = T0
+    
+    if discretisation_type(model[:PAM]) == :P2Ddiscretization
+        # nothing to do
+    else
+        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
+        prm_pam[:Diffusivity] = exported_nam["InterDiffusionCoefficient"]
+    end
+
+    parameters[:PAM] = setup_parameters(model[:PAM], prm_pam)
+
+    # Positive current collector (if any)
+
+    if haskey(model.models, :CC)
+        use_pp = true
+    else
+        use_pp = false
+    end
+
+    if use_pp
+        prm_pp = Dict{Symbol, Any}()
+        exported_pp = exported["model"]["PositiveElectrode"]["CurrentCollector"]
+        prm_pp[:Conductivity] = exported_pp["EffectiveElectricalConductivity"][1]
+        
+        parameters[:PP] = setup_parameters(model[:PP], prm_pp)
+    end        
+
+    parameters[:BPP] = setup_parameters(model[:BPP])
+
+    return parameters
+    
+end
+
+function setup_battery_parameters(init::JSONFile, 
+    model::MultiModel
+    )
+
+    parameters = Dict{Symbol, Any}()
+
+    jsonstruct=init.object
+
+    T0 = jsonstruct["initT"]
+    
+    # Negative current collector (if any)
+
+    if haskey(model.models, :CC)
+        use_cc = true
+    else
+        use_cc = false
+    end
+
+    if use_cc
+        prm_cc = Dict{Symbol, Any}()
+        jsonstruct_cc = jsonstruct["NegativeElectrode"]["CurrentCollector"]
+        prm_cc[:Conductivity] = jsonstruct_cc["EffectiveElectricalConductivity"]
+        parameters[:CC] = setup_parameters(model[:CC], prm_cc)
+    end
+
+    # Negative active material
+    
+    prm_nam = Dict{Symbol, Any}()
+    jsonstruct_nam = jsonstruct["NegativeElectrode"]["ActiveMaterial"]
+
+    kappa = jsonstruct_nam["electricalConductivity"]
+    vf    = jsonstruct_nam["Interface"]["volumeFraction"]
+    prm_nam[:Conductivity] = vf*kappa
+    prm_nam[:Temperature] = T0
+    
+    if discretisation_type(model[:NAM]) == :P2Ddiscretization
+        # nothing to do
+    else
+        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
+        prm_nam[:Diffusivity] = jsonstruct_nam["InterDiffusionCoefficient"]
+    end
+
+    parameters[:NAM] = setup_parameters(model[:NAM], prm_nam)
+
+    # Electrolyte
+    
+    prm_elyte = Dict{Symbol, Any}()
+    prm_elyte[:Temperature] = T0        
+
+    parameters[:ELYTE] = setup_parameters(model[:ELYTE], prm_elyte)
+
+    # Positive active material
+
+    prm_pam = Dict{Symbol, Any}()
+    jsonstruct_pam = jsonstruct["PositiveElectrode"]["ActiveMaterial"]
+    kappa = jsonstruct_pam["electricalConductivity"]
+    vf    = jsonstruct_pam["Interface"]["volumeFraction"]
+    prm_pam[:Conductivity] = vf*kappa
+    prm_pam[:Temperature] = T0
+    
+    if discretisation_type(model[:PAM]) == :P2Ddiscretization
+        # nothing to do
+    else
+        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
+        prm_pam[:Diffusivity] = jsonstruct_nam["InterDiffusionCoefficient"]
+    end
+
+    parameters[:PAM] = setup_parameters(model[:PAM], prm_pam)
+
+    # Positive current collector (if any)
+
+    if haskey(model.models, :CC)
+        use_pp = true
+    else
+        use_pp = false
+    end
+
+    if use_pp
+        prm_pp = Dict{Symbol, Any}()
+        jsonstruct_pp = jsonstruct["PositiveElectrode"]["CurrentCollector"]
+        prm_pp[:Conductivity] = jsonstruct_pp["EffectiveElectricalConductivity"][1]
+        
+        parameters[:PP] = setup_parameters(model[:PP], prm_pp)
+    end        
+
+    parameters[:BPP] = setup_parameters(model[:BPP])
+
+    return parameters
+    
+end
+
+###################################################################################
+#Setup initial state
+###################################################################################
+
+function setup_battery_initial_state(init::MatlabFile, 
+    model::MultiModel
+    )
+
+    exported=init.object
+
+    state0 = exported["state0"]
+
+    jsonNames = Dict(
+        :CC  => "NegativeElectrode",
+        :NAM => "NegativeElectrode",
+        :PAM => "PositiveElectrode",        
+        :PP  => "PositiveElectrode",
+    )
+
+
+    function initialize_current_collector!(initState, name::Symbol)
+        """ initialize values for the current collector"""
+        
+        if haskey(model.models, name)
+            use_cc = true
+        else
+            use_cc = false
+        end
+        
+        if use_cc
+            init = Dict()
+            init[:Phi] = state0[jsonNames[name]]["CurrentCollector"]["phi"][1]
+            initState[name] = init
+        end
+        
+    end
+
+
+    function initialize_active_material!(initState, name::Symbol)
+        """ initialize values for the active material"""
+
+        jsonName = jsonNames[name]
+        
+        ccnames = Dict(
+            :NAM => :CC,
+            :PAM => :PP,
+        )
+
+        if haskey(model.models, ccnames[name])
+            use_cc = true
+        else
+            use_cc = false
+        end
+
+        # initialise NAM
+
+        sys = model[name].system
+
+        init = Dict()
+        
+        init[:Phi]   = state0[jsonName]["ActiveMaterial"]["phi"][1]
+
+        if use_cc
+            c = state0[jsonName]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
+        else
+            c = state0[jsonName]["ActiveMaterial"]["c"][1]
+        end
+
+        if  discretisation_type(sys) == :P2Ddiscretization
+            init[:Cp] = c
+            init[:Cs] = c
+        else
+            @assert discretisation_type(sys) == :NoParticleDiffusion
+            init[:C] = c
+        end
+        
+        initState[name] = init
+        
+    end
+
+    function initialize_electrolyte!(initState)
+
+        init = Dict()
+        
+        init[:Phi] = state0["Electrolyte"]["phi"][1]
+        init[:C]   = state0["Electrolyte"]["c"][1]
+
+        initState[:ELYTE] = init
+
+    end
+
+    function initialize_bpp!(initState)
+
+        init = Dict(:Phi => state0["Control"]["E"], :Current => 0*state0["Control"]["I"])
+        
+        initState[:BPP] = init
+        
+    end
+    
+    initState = Dict()
+
+    initialize_current_collector!(initState, :CC)
+    initialize_active_material!(initState, :NAM)
+    initialize_electrolyte!(initState)
+    initialize_active_material!(initState, :PAM)
+    initialize_current_collector!(initState, :PP)
+    initialize_bpp!(initState)
+
+    
+    initState = setup_state(model, initState)
+
+    return initState 
+    
+end
+
+function setup_battery_initial_state(init::JSONFile, model::MultiModel)
+
+    jsonstruct=init.object
+
+    if haskey(model.models, :CC)
+        use_cc = true
+    else
+        use_cc = false
+    end
+
+    T   = jsonstruct["initT"]
+    SOC = jsonstruct["SOC"]
+
+    function setup_init_am(name, model)
+        
+        theta0   = model[name].system[:theta0]
+        theta100 = model[name].system[:theta100]
+        cmax     = model[name].system[:maximum_concentration]
+        N        = model[name].system.discretization[:N]
+        
+        theta = SOC*(theta100 - theta0) + theta0;
+        c     = theta*cmax
+        nc    = count_entities(model[name].data_domain, Cells())
+        init = Dict()
+        init[:Cs]  = c*ones(nc)
+        init[:Cp]  = c*ones(nc, N)
+
+        OCP = model[name].system[:ocp_func](c, T, cmax)
+        return (init, nc, OCP)
+        
+    end
+
+    function setup_cc(name, phi, model)
+        nc = count_entities(model[name].data_domain, Cells())
+        init = Dict();
+        init[:Phi] = phi*ones(nc)
+        return init
+    end
+    
+    initState = Dict()
+
+    # Setup initial state in negative active material
+    
+    init, nc, negOCP = setup_init_am(:NAM, model)
+    init[:Phi] = zeros(nc)
+    initState[:NAM] = init
+    
+    # Setup initial state in electrolyte
+    
+    nc = count_entities(model[:ELYTE].data_domain, Cells())
+    
+    init = Dict()
+    init[:C]   = 1000*ones(nc)
+    init[:Phi] = - negOCP*ones(nc) 
+
+    initState[:ELYTE] = init
+
+    # Setup initial state in positive active material
+    
+    init, nc, posOCP = setup_init_am(:PAM, model)
+    init[:Phi] = (posOCP - negOCP)*ones(nc)
+    
+    initState[:PAM] = init
+
+    # Setup negative current collector
+
+    initState[:CC] = setup_cc(:CC, 0, model)
+    
+    # Setup positive current collector
+
+    initState[:PP] = setup_cc(:PP, posOCP - negOCP, model)
+
+    init = Dict()
+    init[:Phi]     = [1.0]
+    init[:Current] = [1.0]
+        
+    initState[:BPP] = init
+
+    initState = setup_state(model, initState)
+    
+    return initState
+    
+end
+
+
+##################################################################################
+#Current function
+##################################################################################
+# function currentFun(t::T, inputI::T) where T
+#     #inputI = 9.4575
+#     tup = 0.1
+#     val::T = 0.0
+#     if  t <= tup
+#         val = sineup(0.0, inputI, 0.0, tup, t) 
+#     else
+#         val = inputI
+#     end
+#     return val
+# end
+
+
+function currentFun(t::T, inputI::T, tup::T=0.1) where T
     val::T = 0.0
     if  t <= tup
         val = sineup(0.0, inputI, 0.0, tup, t) 
@@ -1313,42 +1458,176 @@ function currentFun(t::T, inputI::T) where T
     return val
 end
 
+##################################################################################
+#Setup volume fraction 
+##################################################################################
+function setup_volume_fractions!(model::MultiModel, geomparams::Dict{Symbol,<:Any})
 
-function currentFun(t::T, inputI::T, tup::T) where T
-    val::T = 0.0
-    if  t <= tup
-        val = sineup(0.0, inputI, 0.0, tup, t) 
-    else
-        val = inputI
+    names = (:NAM, :SEP, :PAM)
+    Nelyte = sum([geomparams[name][:N] for name in names])
+    vfelyte = zeros(Nelyte)
+    
+    names = (:NAM, :PAM)
+    
+    for name in names
+        ammodel = model[name]
+        vf = ammodel.system[:volumeFraction]
+        Nam = geomparams[name][:N]
+        ammodel.domain.representation[:volumeFraction] = vf*ones(Nam)
+        if name == :NAM
+            nstart = 1
+            nend   = Nam
+        elseif name == :PAM
+            nstart = geomparams[:NAM][:N] + geomparams[:SEP][:N] + 1
+            nend   = Nelyte
+        else
+            error("name not recognized")
+        end
+        vfelyte[nstart : nend] .= 1 - vf
     end
-    return val
+
+    nstart = geomparams[:NAM][:N] +  1
+    nend   = nstart + geomparams[:SEP][:N]
+    separator_porosity = model[:ELYTE].system[:separator_porosity]
+    vfelyte[nstart : nend] .= separator_porosity*ones(nend - nstart + 1)
+    
+    model[:ELYTE].domain.representation[:volumeFraction] = vfelyte
+
 end
 
-function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggregation)
+##################################################################################
+#Transmissibilities
+##################################################################################
+
+function getTrans(model1::Dict{String,<:Any},
+    model2::Dict{String, Any}, 
+    faces, 
+    cells, 
+    quantity::String)
+    """ setup transmissibility for coupling between models at boundaries"""
+
+    T_all1 = model1["operators"]["T_all"][faces[:, 1]]
+    T_all2 = model2["operators"]["T_all"][faces[:, 2]]
+
+    s1  = model1[quantity][cells[:, 1]]
+    s2  = model2[quantity][cells[:, 2]]
     
-    gs_its = 1
-    cyc = AlgebraicMultigrid.V()
-    if type == :smoothed_aggregation
-        m = smoothed_aggregation
-    else
-        m = ruge_stuben
-    end
-    gs = GaussSeidel(ForwardSweep(), gs_its)
-    
-    return AMGPreconditioner(m, max_levels = max_levels, max_coarse = max_coarse, presmoother = gs, postsmoother = gs, cycle = cyc)
+    T   = 1.0./((1.0./(T_all1.*s1))+(1.0./(T_all2.*s2)))
+
+    return T
     
 end
 
+function getTrans(model1::Jutul.SimulationModel, 
+    model2::Jutul.SimulationModel, 
+    bcfaces, 
+    bccells, 
+    parameters1, 
+    parameters2, 
+    quantity)
+    """ setup transmissibility for coupling between models at boundaries. Intermediate 1d version"""
 
-function computeCellCapacity(model)
+    d1 = physical_representation(model1)
+    d2 = physical_representation(model2)
+
+    bcTrans1 = d1[:bcTrans][bcfaces[:, 1]]
+    bcTrans2 = d2[:bcTrans][bcfaces[:, 2]]
+    cells1   = bccells[:, 1]
+    cells2   = bccells[:, 2]
+
+    s1  = parameters1[quantity][cells1]
+    s2  = parameters2[quantity][cells2]
+    
+    T   = 1.0./((1.0./(bcTrans1.*s1))+(1.0./(bcTrans2.*s2)))
+
+    return T
+    
+end
+
+function getHalfTrans(model::Jutul.SimulationModel, 
+    bcfaces, 
+    bccells, 
+    parameters, 
+    quantity)
+    """ recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the corresponding given cells. Intermediate 1d version. Note the indexing in BoundaryFaces is used"""
+
+    d = physical_representation(model)
+    bcTrans = d[:bcTrans][bcfaces]
+    s       = parameters[quantity][bccells]
+    
+    T   = bcTrans.*s
+
+    return T
+end
+
+function getHalfTrans(model::Dict{String, Any}, 
+    faces, 
+    cells, 
+    quantity::String)
+    """ recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the given cells.
+    Here, the faces should belong the corresponding cells at the same index"""
+
+    T_all = model["operators"]["T_all"]
+    s = model[quantity][cells]
+    T = T_all[faces].*s
+
+    return T
+    
+end
+
+function getHalfTrans(model::Dict{String,<:Any}, 
+    faces)
+    """ recover the half transmissibilities for boundary faces"""
+    
+    T_all = model["operators"]["T_all"]
+    T = T_all[faces]
+    
+    return T
+    
+end
+
+##################################################################################
+#Setup geomparams
+##################################################################################
+
+function setup_geomparams(init::JSONFile)
+    
+    jsondict=init.object
+
+    names = (:CC, :NAM, :SEP, :PAM, :PP)
+    geomparams = Dict(name => Dict() for name in names)
+
+    geomparams[:CC][:N]          = jsondict["NegativeElectrode"]["CurrentCollector"]["N"]
+    geomparams[:CC][:thickness]  = jsondict["NegativeElectrode"]["CurrentCollector"]["thickness"]
+    geomparams[:NAM][:N]         = jsondict["NegativeElectrode"]["ActiveMaterial"]["N"]
+    geomparams[:NAM][:thickness] = jsondict["NegativeElectrode"]["ActiveMaterial"]["thickness"]
+    geomparams[:SEP][:N]         = jsondict["Electrolyte"]["Separator"]["N"]
+    geomparams[:SEP][:thickness] = jsondict["Electrolyte"]["Separator"]["thickness"]
+    geomparams[:PAM][:N]         = jsondict["PositiveElectrode"]["ActiveMaterial"]["N"]
+    geomparams[:PAM][:thickness] = jsondict["PositiveElectrode"]["ActiveMaterial"]["thickness"]
+    geomparams[:PP][:N]          = jsondict["PositiveElectrode"]["CurrentCollector"]["N"]
+    geomparams[:PP][:thickness]  = jsondict["PositiveElectrode"]["CurrentCollector"]["thickness"]
+
+    for name in names
+        geomparams[name][:facearea] = jsondict["Geometry"]["faceArea"]
+    end
+    
+    return geomparams
+    
+end
+
+##################################################################################
+#Compute cell capactity 
+##################################################################################
+
+function computeCellCapacity(model::MultiModel)
 
     con = Constants()
-    
-    function computeHalfCellCapacity(name)
+
+    function computeHalfCellCapacity(name::Symbol)
 
         ammodel = model[name]
-        sys = ammodel.system
-            
+        sys = ammodel.system            
         F    = con.F
         n    = sys[:n_charge_carriers]
         cMax = sys[:maximum_concentration]
@@ -1379,226 +1658,75 @@ function computeCellCapacity(model)
     
 end
 
-function setup_sim_1d(jsondict; use_groups = false, general_ad = false)
+###################################################################################
+#Other utils
+###################################################################################
 
-    model, state0, parameters = setup_model_1d(jsondict, use_groups = use_groups, general_ad = general_ad)
-   
-    setup_coupling_1d!(model, parameters, jsondict)
-
-    minE = jsondict["Control"]["lowerCutoffVoltage"]
-
-    CRate  = jsondict["Control"]["CRate"]
-    cap    = computeCellCapacity(model)
-    con    = Constants()
-    
-    inputI = (cap/con.hour)*CRate
-
-    @. state0[:BPP][:Phi] = minE*1.5
-    
-    tup = Float64(jsondict["TimeStepping"]["rampupTime"])
-    cFun(time) = currentFun(time, inputI, tup)
-    
-    currents = setup_forces(model[:BPP], policy = SimpleCVPolicy(cFun, minE))
-    forces = setup_forces(model, BPP = currents) 
-    
-    sim = Simulator(model, state0 = state0, parameters = parameters, copy_state = true)
-    
-    return sim, forces, state0, parameters, model
-    
+struct Constants
+    F
+    R
+    hour
+    function Constants()
+        new(96485.3329,
+            8.31446261815324,
+            3600)
+    end
 end
 
-function setup_sim(name; use_p2d = true, use_groups = false, general_ad = false)
-
-    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
-    exported = MAT.matread(fn)
-
-    model, state0, parameters = setup_model(exported, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
-    setup_coupling!(model, exported)
-    
-    inputI = 0;
-    minE   = 10
-    steps  = size(exported["states"],1)
-    
-    for i = 1:steps
-        
-        inputI = max(inputI, exported["states"][i]["Control"]["I"])
-        minE   = min(minE, exported["states"][i]["Control"]["E"])
-        
+struct SourceAtCell
+    cell
+    src
+    function SourceAtCell(cell, src)
+        new(cell, src)
     end
-    
-    @. state0[:BPP][:Phi] = minE*1.5
-    cFun(time) = currentFun(time, inputI)
-    forces_pp = nothing
-
-    currents = setup_forces(model[:BPP], policy = SimpleCVPolicy(cFun, minE))
-
-    forces = Dict(
-        :CC => nothing,
-        :NAM => nothing,
-        :ELYTE => nothing,
-        :PAM => nothing,
-        :PP => forces_pp,
-        :BPP => currents
-    )
-    
-    sim = Simulator(model, state0 = state0, parameters = parameters, copy_state = true)
-    
-    return sim, forces, state0, parameters, exported, model
-    
 end
 
-export run_battery
-
-function run_battery(name;
-                     use_p2d       = true,
-                     extra_timing  = false,
-                     max_step      = nothing,
-                     linear_solver = :direct,
-                     general_ad    = false,
-                     use_groups    = false,
-                     kwarg...)
-    
-    sim, forces, state0, parameters, exported, model = setup_sim(name, use_p2d = use_p2d, use_groups = use_groups, general_ad = general_ad)
-    
-    steps        = size(exported["states"], 1)
-    alltimesteps = Vector{Float64}(undef, steps)
-    time         = 0;
-    end_step     = 0
-    minE         = 3.2
-    
-    for i = 1 : steps
-        alltimesteps[i] =  exported["states"][i]["time"] - time
-        time = exported["states"][i]["time"]
-        E = exported["states"][i]["Control"]["E"]
-        if (E > minE + 0.001)
-            end_step = i
-        end
-    end
-    if !isnothing(max_step)
-        end_step = min(max_step, end_step)
-    end
-    
-    timesteps = alltimesteps[1 : end_step]
-    
-    cfg = simulator_config(sim; kwarg...)
-    cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
-    cfg[:debug_level]                = 0
-    #cfg[:max_timestep_cuts]         = 0
-    cfg[:max_residual]               = 1e20
-    cfg[:min_nonlinear_iterations]   = 1
-    cfg[:extra_timing]               = extra_timing
-    # cfg[:max_nonlinear_iterations] = 5
-    cfg[:safe_mode]                  = false
-    cfg[:error_on_incomplete]        = true
-    if false
-        cfg[:info_level]               = 5
-        cfg[:max_nonlinear_iterations] = 1
-        cfg[:max_timestep_cuts]        = 0
-    end
-
-    cfg[:tolerances][:PP][:default] = 1e-1
-    cfg[:tolerances][:BPP][:default] = 1e-1
-    # Run simulation
-    
-    states, report = simulate(sim, timesteps, forces = forces, config = cfg)
-    stateref = exported["states"]
-
-    extra = Dict(:model      => model,
-                 :state0     => state0,
-                 :states_ref => stateref,
-                 :parameters => parameters,
-                 :exported   => exported,
-                 :timesteps  => timesteps,
-                 :config     => cfg,
-                 :forces     => forces,
-                 :simulator  => sim)
-
-    return (states = states, reports = report, extra = extra, exported = exported)
-end
-
-
-function rampupTimesteps(time, dt, n = 8)
+function rampupTimesteps(time::Real, dt::Real, n::Integer=8)
 
     ind = [8; collect(range(n, 1, step=-1))]
-    dt_init = [dt/2^k for k in ind]
+    dt_init = [dt / 2^k for k in ind]
     cs_time = cumsum(dt_init)
     if any(cs_time .> time)
-        dt_init = dt_init[cs_time .< time];
+        dt_init = dt_init[cs_time.<time]
     end
     dt_left = time .- sum(dt_init)
 
     # Even steps
-    dt_rem = dt*ones(floor(Int64, dt_left/dt));
+    dt_rem = dt * ones(floor(Int64, dt_left / dt))
     # Final ministep if present
-    dt_final = time - sum(dt_init) - sum(dt_rem);
+    dt_final = time - sum(dt_init) - sum(dt_rem)
     # Less than to account for rounding errors leading to a very small
     # negative time-step.
     if dt_final <= 0
-        dt_final = [];
+        dt_final = []
     end
     # Combined timesteps
-    dT = [dt_init; dt_rem; dt_final];
+    dT = [dt_init; dt_rem; dt_final]
 
     return dT
 end
 
-export run_battery_1d
+function my_number_of_cells(model::MultiModel)
 
-defaultjsonfilename = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/p2d_40_jl.json")
-
-function run_battery_1d(;
-                        filename      = defaultjsonfilename,
-                        extra_timing  = false,
-                        linear_solver = :direct,
-                        general_ad    = false,
-                        use_groups    = false,
-                        kwarg...)
-    
-    jsondict = JSON.parsefile(filename)
-
-    sim, forces, state0, parameters, model = setup_sim_1d(jsondict, use_groups = use_groups, general_ad = general_ad)
-
-    total = jsondict["TimeStepping"]["totalTime"]
-    n     = jsondict["TimeStepping"]["N"]
-
-    dt = total/n
-    timesteps = rampupTimesteps(total, dt, 5);    
-    
-    cfg = simulator_config(sim; kwarg...)
-    cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
-    cfg[:debug_level]                = 0
-    cfg[:max_residual]               = 1e20
-    cfg[:min_nonlinear_iterations]   = 1
-    cfg[:extra_timing]               = extra_timing
-    cfg[:safe_mode]                  = false
-    cfg[:error_on_incomplete]        = false
-    cfg[:failure_cuts_timestep]      = true
-    
-    if false
-        cfg[:info_level]               = 5
-        cfg[:max_nonlinear_iterations] = 1
-        cfg[:max_timestep_cuts]        = 0
+    cells = 0
+    for smodel in model.models
+        cells += number_of_cells(smodel.domain)
     end
 
-    cfg[:tolerances][:PP][:default] = 1e-1
-    cfg[:tolerances][:BPP][:default] = 1e-1
-    # Run simulation
-    
-    states, reports = simulate(sim, timesteps, forces = forces, config = cfg)
+    return cells
 
-    extra = Dict(:model      => model,
-                 :state0     => state0,
-                 :parameters => parameters,
-                 :timesteps  => timesteps,
-                 :config     => cfg,
-                 :forces     => forces,
-                 :simulator  => sim)
-
-    return (states = states, reports = reports, extra = extra)
 end
 
+function convert_to_int_vector(x::Float64)
+    vec = Int64.(Vector{Float64}([x]))
+    return vec
+end
 
-export inputRefToStates
+function convert_to_int_vector(x::Matrix{Float64})
+    vec = Int64.(Vector{Float64}(x[:, 1]))
+    return vec
+end
+
 function inputRefToStates(states, stateref)
     statesref = deepcopy(states);
     for i in 1:size(states,1)
@@ -1654,5 +1782,20 @@ function test_mrst_battery(name)
         E[step,2] = phi_ref
     end
     
+    
+end
+
+function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggregation)
+    
+    gs_its = 1
+    cyc = AlgebraicMultigrid.V()
+    if type == :smoothed_aggregation
+        m = smoothed_aggregation
+    else
+        m = ruge_stuben
+    end
+    gs = GaussSeidel(ForwardSweep(), gs_its)
+    
+    return AMGPreconditioner(m, max_levels = max_levels, max_coarse = max_coarse, presmoother = gs, postsmoother = gs, cycle = cyc)
     
 end
