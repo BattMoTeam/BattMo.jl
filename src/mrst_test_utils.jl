@@ -175,6 +175,7 @@ end
 function setup_sim(init::JSONFile;
     use_groups::Bool=false,
     general_ad::Bool=false,
+    mode=:forward,
     kwarg ... )
 
     model, state0, parameters = setup_model(init, use_groups=use_groups, general_ad=general_ad; kwarg...)
@@ -197,7 +198,7 @@ function setup_sim(init::JSONFile;
     currents = setup_forces(model[:BPP], policy=SimpleCVPolicy(cFun, minE))
     forces = setup_forces(model, BPP=currents)
 
-    sim = Simulator(model, state0=state0, parameters=parameters, copy_state=true)
+    sim = Simulator(model, state0=state0, parameters=parameters, copy_state=true,mode=mode)
 
     return sim, forces, state0, parameters, init, model
 
@@ -206,7 +207,8 @@ end
 function setup_sim(init::MatlabFile;
     use_p2d::Bool=true,
     use_groups::Bool=false,
-    general_ad::Bool=false)
+    general_ad::Bool=false,
+    mode=:forward)
 
     model, state0, parameters = setup_model(init, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
     setup_coupling!(init,model)
@@ -236,7 +238,7 @@ function setup_sim(init::MatlabFile;
         :BPP => currents
     )
 
-    sim = Simulator(model, state0=state0, parameters=parameters, copy_state=true)
+    sim = Simulator(model, state0=state0, parameters=parameters, copy_state=true, mode=mode)
 
     return sim, forces, state0, parameters, init, model
 
