@@ -252,7 +252,6 @@ function setup_coupling!(init::JSONFile,
     model::MultiModel,
     parameters::Dict{Symbol,<:Any}
     )
-
     jsondict=init.object
 
     geomparams = setup_geomparams(init)
@@ -853,8 +852,8 @@ function setup_battery_model(init::JSONFile;
             bcDirCell = 1
             bcDirInd  = 1
             domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = facearea*domain[:bcTrans][bcDirFace]
-            domain[:bcDirCells, BoundaryDirichletFaces()]     = facearea*bcDirCell # 
-            domain[:bcDirInds, BoundaryDirichletFaces()]      = facearea*bcDirInd #
+            domain[:bcDirCells, BoundaryDirichletFaces()]     = bcDirCell # 
+            domain[:bcDirInds, BoundaryDirichletFaces()]      = bcDirInd #
             
         end
         
