@@ -6,7 +6,7 @@ include("state_variable_mapping.jl")
 
 #init = BattMo.MatlabFile("/home/andreas/SINTEF/json_experiment/BattMo.jl/test/battery/data/p2d_40.mat",state_ref=false)
 #init = BattMo.JSONFile("/home/andreas/SINTEF/json_experiment/BattMo.jl/test/battery/data/jsonfiles/p2d_40_jl.json")
-init = BattMo.MatlabFile("test_model_cc_large.mat",state_ref=false)
+init = BattMo.MatlabFile("test_model_cc_04.mat",state_ref=false)
 use_p2d=false
 use_groups=false
 extra_timing=false
