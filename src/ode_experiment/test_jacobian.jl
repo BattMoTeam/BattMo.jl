@@ -6,7 +6,7 @@ include("state_variable_mapping.jl")
 
 #init = BattMo.MatlabFile("/home/andreas/SINTEF/json_experiment/BattMo.jl/test/battery/data/p2d_40.mat",state_ref=false)
 #init = BattMo.JSONFile("/home/andreas/SINTEF/json_experiment/BattMo.jl/test/battery/data/jsonfiles/p2d_40_jl.json")
-init = BattMo.MatlabFile("test_model_cc_04.mat",state_ref=false)
+init = BattMo.MatlabFile("/home/solheim/Documents/SINTEF/BattMo.jl/src/ode_experiment/test_model_cc_04.mat",state_ref=false)
 use_p2d=false
 use_groups=false
 extra_timing=false
@@ -40,29 +40,33 @@ vars= zeros(Integer,length(x0))
 vars[ind].=1
 
 #Residual + jacobian functions
-f!(res,dy,y,p,t) = odeFun!(res,dy,y,p,t,sim,forces)
-f_jac!(J,dy,y,p,gamma,t) = odeFun_jac!(J,dy,y,p,gamma,t,sim,forces)
+
+p_obj = ODEParam(sim,forces)
+
+#f!(res,dy,y,p,t) = odeFun!(res,dy,y,p,t)
+#f_jac!(J,dy,y,p,gamma,t) = odeFun_jac!(J,dy,y,p,gamma,t)
 
 res = zeros(length(x0))
 J = zeros(length(x0),length(x0))
 dx0 = (-1)*(r \ m_jac)'
-f!(res,dx0,x0,nothing,0.0)
+#f!(res,dx0,x0,p_obj,0.0)
 
 #Sparsity pattern prototype
-prototype = SparseArrays.spzeros(length(x0),length(x0))
-f_jac!(prototype,dx0,x0,nothing,1.0,10) 
+prototype = sim.storage.LinearizedSystem.jac
+odeFun_jac!(prototype,dx0,x0,p_obj,1.0,0.0) 
 pro_ind = SparseArrays.findnz(prototype)
 for i=1:length(pro_ind[1])
     prototype[pro_ind[1][i],pro_ind[2][i]]=1.0
 end
+#prototype.=SparseArrays.sparse(Symmetric(prototype'))
 
 #Julia DifferentialEquations interface
-f_DAE! = DAEFunction(f!; jac=f_jac!, jac_prototype=prototype)
+f_DAE! = DAEFunction(odeFun!; jac=odeFun_jac!, jac_prototype=p_obj.sim.storage.LinearizedSystem.jac)
 tspan=(0.0,4000)
-prob = DAEProblem(f_DAE!,dx0,x0,tspan,differential_vars=vars)
+prob = DAEProblem(f_DAE!,dx0,x0,tspan,p_obj,differential_vars=vars)
 @time begin
-    ret = solve(prob,IDA(linear_solver=:LapackDense))
+    ret = solve(prob,IDA(linear_solver=:Dense))
 end
-vv= getindex.(ret.u,length(ret.u[1])-1)
-Plots.plot(ret.t,vv, label="DiffEq")
-Plots.plot!(t,voltage, label="Jutul")
+vv= getindex.(ret.u,length(ret.u[1])-1);
+# Plots.plot(ret.t,vv, label="DiffEq")
+# Plots.plot!(t,voltage, label="Jutul")
