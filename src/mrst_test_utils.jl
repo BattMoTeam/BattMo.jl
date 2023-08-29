@@ -1,6 +1,7 @@
 ############################################################################################
 #Exported functions:
 ############################################################################################
+
 export run_battery
 export inputRefToStates
 
@@ -645,9 +646,9 @@ function setup_battery_model(init::MatlabFile;
 
 
     function setup_component(obj::Dict, 
-        sys, 
-        bcfaces = nothing,
-        general_ad::Bool = false)
+                             sys, 
+                             bcfaces = nothing,
+                             general_ad::Bool = false)
         
         domain = exported_model_to_domain(obj, bcfaces = bcfaces, general_ad=general_ad)
         G = MRSTWrapMesh(obj["G"])
@@ -1762,6 +1763,68 @@ function inputRefToStates(states, stateref)
     return statesref
 end
 
+function exported_model_to_domain(exported;
+                                  bcfaces    = nothing, 
+                                  general_ad = false)
+
+    """ Returns domain"""
+
+    N = exported["G"]["faces"]["neighbors"]
+    N = Int64.(N)
+
+    if !isnothing(bcfaces)
+        isboundary = (N[bcfaces, 1].==0) .| (N[bcfaces, 2].==0)
+        @assert all(isboundary)
+    
+        bc_cells = N[bcfaces, 1] + N[bcfaces, 2]
+        bc_hfT = getHalfTrans(exported, bcfaces)
+    else
+        bc_hfT = []
+        bc_cells = []
+    end
+    
+    vf = []
+    if haskey(exported, "volumeFraction")
+        vf = exported["volumeFraction"][:, 1]
+    end
+    
+    internal_faces = (N[:, 2] .> 0) .& (N[:, 1] .> 0)
+    N = copy(N[internal_faces, :]')
+    
+    face_areas   = vec(exported["G"]["faces"]["areas"][internal_faces])
+    face_normals = exported["G"]["faces"]["normals"][internal_faces, :]./face_areas
+    face_normals = copy(face_normals')
+    if length(exported["G"]["cells"]["volumes"])==1
+        volumes    = exported["G"]["cells"]["volumes"]
+        volumes    = Vector{Float64}(undef, 1)
+        volumes[1] = exported["G"]["cells"]["volumes"]
+    else
+        volumes = vec(exported["G"]["cells"]["volumes"])
+    end
+    # P = exported["operators"]["cellFluxOp"]["P"]
+    # S = exported["operators"]["cellFluxOp"]["S"]
+    P = []
+    S = []
+    T = exported["operators"]["T"].*1.0
+    G = MinimalECTPFAGrid(volumes, N, vec(T);
+                          bc_cells = bc_cells,
+                          bc_hfT   = bc_hfT,
+                          P        = P,
+                          S        = S,
+                          vf       = vf)
+
+    nc = length(volumes)
+    if general_ad
+        flow = PotentialFlow(G)
+    else
+        flow = TwoPointPotentialFlowHardCoded(G)
+    end
+    disc = (charge_flow = flow,)
+    domain = DiscretizedDomain(G, disc)
+
+    return domain
+    
+end
 
 function test_mrst_battery(name)
     states, grids, state0, stateref, parameters, exported, model, timesteps, cfg, report, sim = run_battery(name);
@@ -1791,3 +1854,5 @@ function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggreg
     return AMGPreconditioner(m, max_levels = max_levels, max_coarse = max_coarse, presmoother = gs, postsmoother = gs, cycle = cyc)
     
 end
+
+
