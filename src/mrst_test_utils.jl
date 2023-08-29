@@ -9,13 +9,13 @@ export inputRefToStates
 ############################################################################################
 
 function run_battery(init::InputFile;
-    use_p2d::Bool=true,
-    extra_timing::Bool=false,
-    max_step::Union{Integer, Nothing}=nothing,
-    linear_solver::Symbol=:direct,
-    general_ad::Bool=false,
-    use_groups::Bool=false,
-    kwarg...)
+                     use_p2d::Bool                     = true,
+                     extra_timing::Bool                = false,
+                     max_step::Union{Integer, Nothing} = nothing,
+                     linear_solver::Symbol             = :direct,
+                     general_ad::Bool                  = false,
+                     use_groups::Bool                  = false,
+                     kwarg...)
     """
         Run battery wrapper method. Can use inputs from either Matlab or Json files and performs
         simulation using a simple discharge CV policy
@@ -25,33 +25,34 @@ function run_battery(init::InputFile;
     sim, forces, state0, parameters, init, model = setup_sim(init, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
 
     #Set up config and timesteps
-    timesteps=setup_timesteps(init;max_step=max_step)
-    cfg=setup_config(sim,model,linear_solver,extra_timing; kwarg...)
+    timesteps = setup_timesteps(init;max_step=max_step)
+    cfg = setup_config(sim,model,linear_solver,extra_timing; kwarg...)
 
     #Perform simulation
-    states, reports = simulate(state0,sim, timesteps, forces=forces, config=cfg; kwarg ...)
+    states, reports = simulate(state0, sim, timesteps, forces=forces, config=cfg; kwarg ...)
 
     extra = Dict(:model => model,
-        :state0 => state0,
-        :parameters => parameters,
-        :init => init,
-        :timesteps => timesteps,
-        :config => cfg,
-        :forces => forces,
-        :simulator => sim)
+                 :state0 => state0,
+                 :parameters => parameters,
+                 :init => init,
+                 :timesteps => timesteps,
+                 :config => cfg,
+                 :forces => forces,
+                 :simulator => sim)
 
     return (states=states, reports=reports, extra=extra,exported=init)
+    
 end
 
 #Allows running run_battery with simple option for loading mat files
 function run_battery(init::String;
-    use_p2d::Bool=true,
-    extra_timing::Bool=false,
-    max_step=nothing,
-    linear_solver::Symbol=:direct,
-    general_ad::Bool=false,
-    use_groups::Bool=false,
-    kwarg...)
+                     use_p2d::Bool         = true,
+                     extra_timing::Bool    = false,
+                     max_step              = nothing,
+                     linear_solver::Symbol = :direct,
+                     general_ad::Bool      = false,
+                     use_groups::Bool      = false,
+                     kwarg...)
     """
         Simplifies reading pre-generated .mat files from the data repository inside BattMo.jl
     """
@@ -61,13 +62,13 @@ function run_battery(init::String;
     suffix = ".mat"
 
     return run_battery(MatlabFile(path * init * suffix); 
-         use_p2d=use_p2d, 
-         extra_timing=extra_timing, 
-         max_step=max_step, 
-         linear_solver=linear_solver, 
-         general_ad=general_ad, 
-         use_groups=use_groups,
-         kwarg...)
+                       use_p2d       = use_p2d, 
+                       extra_timing  = extra_timing, 
+                       max_step      = max_step, 
+                       linear_solver = linear_solver, 
+                       general_ad    = general_ad, 
+                       use_groups    = use_groups,
+                       kwarg...)
 end
 
 #####################################################################################
@@ -75,10 +76,10 @@ end
 #####################################################################################
 
 function setup_config(sim::Jutul.JutulSimulator,
-    model::MultiModel,
-    linear_solver::Symbol,
-    extra_timing::Bool;
-    kwarg...)
+                      model::MultiModel,
+                      linear_solver::Symbol,
+                      extra_timing::Bool;
+                      kwarg...)
     """
         Sets up the config object used during simulation. In this current version this
         setup is the same for json and mat files. The specific setup values should
@@ -131,8 +132,8 @@ function setup_timesteps(init::JSONFile;
 end
 
 function setup_timesteps(init::MatlabFile;
-    max_step::Union{Integer,Nothing}=nothing,
-    kwarg...)
+                         max_step::Union{Integer,Nothing} = nothing,
+                         kwarg...)
     """
         Method setting up the timesteps from a mat file object. If use_state_ref is true
         the simulation will use the same timesteps as the pre-run matlab simulation.
@@ -147,7 +148,7 @@ function setup_timesteps(init::MatlabFile;
         #Alternative to minE=3.2
         minE = init.object["model"]["Control"]["lowerCutoffVoltage"]
 
-        for i = 1:steps
+        for i = 1 : steps
             alltimesteps[i] =  init.object["states"][i]["time"] - time
             time = init.object["states"][i]["time"]
             E = init.object["states"][i]["Control"]["E"]
@@ -173,9 +174,9 @@ end
 
 #Replaces setup_sim_1d
 function setup_sim(init::JSONFile;
-    use_groups::Bool=false,
-    general_ad::Bool=false,
-    kwarg ... )
+                   use_groups::Bool = false,
+                   general_ad::Bool = false,
+                   kwarg ... )
 
     model, state0, parameters = setup_model(init, use_groups=use_groups, general_ad=general_ad; kwarg...)
 
@@ -204,10 +205,10 @@ function setup_sim(init::JSONFile;
 end
 
 function setup_sim(init::MatlabFile;
-    use_p2d::Bool=true,
-    use_groups::Bool=false,
-    general_ad::Bool=false,
-    kwarg ... )
+                   use_p2d::Bool    = true,
+                   use_groups::Bool = false,
+                   general_ad::Bool = false,
+                   kwarg ... )
 
     model, state0, parameters = setup_model(init, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
     setup_coupling!(init,model)
@@ -249,10 +250,11 @@ end
 
 #Replaces setup_coupling_1d!
 function setup_coupling!(init::JSONFile,
-    model::MultiModel,
-    parameters::Dict{Symbol,<:Any}
-    )
-    jsondict=init.object
+                         model::MultiModel,
+                         parameters::Dict{Symbol,<:Any}
+                         )
+    
+    jsondict = init.object
 
     geomparams = setup_geomparams(init)
     
@@ -429,8 +431,9 @@ function setup_coupling!(init::JSONFile,
 end
 
 function setup_coupling!(init::MatlabFile,
-    model #MultiModel?
-    )
+                         model::MultiModel
+                         )
+    
     # setup coupling CC <-> NAM :charge_conservation
     
     exported_all=init.object
@@ -519,7 +522,6 @@ function setup_coupling!(init::MatlabFile,
         add_cross_term!(model, ct_pair)
         
     end
-
     
     if  !skip_cc
         # setup coupling PP <-> PAM charge
@@ -616,9 +618,9 @@ end
 ########################################################################
 
 function setup_model(init::InputFile;
-    use_p2d::Bool=true,
-    use_groups::Bool=false,
-    kwarg...)
+                     use_p2d::Bool    = true,
+                     use_groups::Bool = false,
+                     kwarg...)
 
     include_cc = true #!
 
@@ -635,12 +637,11 @@ end
 ##################################################################################
 
 function setup_battery_model(init::MatlabFile; 
-    include_cc::Bool = true, 
-    use_groups::Bool = false,
-    use_p2d::Bool = true,
-    general_ad::Bool = false,
-    kwarg ...
-    )
+                             include_cc::Bool = true, 
+                             use_groups::Bool = false,
+                             use_p2d::Bool    = true,
+                             general_ad::Bool = false,
+                             kwarg...)
 
 
     function setup_component(obj::Dict, 
@@ -812,10 +813,10 @@ function setup_battery_model(init::MatlabFile;
 end
 
 function setup_battery_model(init::JSONFile; 
-    include_cc::Bool = true, 
-    use_groups::Bool = false, 
-    general_ad::Bool = false,
-    kwarg ... )
+                             include_cc::Bool = true, 
+                             use_groups::Bool = false, 
+                             general_ad::Bool = false,
+                             kwarg...)
     
     geomparams = setup_geomparams(init)
 
@@ -1052,12 +1053,12 @@ function setup_battery_model(init::JSONFile;
 end
 
 ###################################################################################
-#Setup battery parameters
+# Setup battery parameters
 ###################################################################################
 
 function setup_battery_parameters(init::MatlabFile, 
-    model::MultiModel
-    )
+                                  model::MultiModel
+                                  )
 
     parameters = Dict{Symbol, Any}() #NB
 
@@ -1142,8 +1143,8 @@ function setup_battery_parameters(init::MatlabFile,
 end
 
 function setup_battery_parameters(init::JSONFile, 
-    model::MultiModel
-    )
+                                  model::MultiModel
+                                  )
 
     parameters = Dict{Symbol, Any}()
 
@@ -1233,12 +1234,12 @@ function setup_battery_parameters(init::JSONFile,
 end
 
 ###################################################################################
-#Setup initial state
+# Setup initial state
 ###################################################################################
 
 function setup_battery_initial_state(init::MatlabFile, 
-    model::MultiModel
-    )
+                                     model::MultiModel
+                                     )
 
     exported=init.object
 
@@ -1347,7 +1348,8 @@ function setup_battery_initial_state(init::MatlabFile,
     
 end
 
-function setup_battery_initial_state(init::JSONFile, model::MultiModel)
+function setup_battery_initial_state(init::JSONFile,
+                                     model::MultiModel)
 
     jsonstruct=init.object
 
@@ -1461,6 +1463,7 @@ end
 ##################################################################################
 #Setup volume fraction 
 ##################################################################################
+
 function setup_volume_fractions!(model::MultiModel, geomparams::Dict{Symbol,<:Any})
 
     names = (:NAM, :SEP, :PAM)
@@ -1500,10 +1503,10 @@ end
 ##################################################################################
 
 function getTrans(model1::Dict{String,<:Any},
-    model2::Dict{String, Any}, 
-    faces, 
-    cells, 
-    quantity::String)
+                  model2::Dict{String, Any}, 
+                  faces, 
+                  cells, 
+                  quantity::String)
     """ setup transmissibility for coupling between models at boundaries"""
 
     T_all1 = model1["operators"]["T_all"][faces[:, 1]]
@@ -1519,12 +1522,12 @@ function getTrans(model1::Dict{String,<:Any},
 end
 
 function getTrans(model1::Jutul.SimulationModel, 
-    model2::Jutul.SimulationModel, 
-    bcfaces, 
-    bccells, 
-    parameters1, 
-    parameters2, 
-    quantity)
+                  model2::Jutul.SimulationModel, 
+                  bcfaces, 
+                  bccells, 
+                  parameters1, 
+                  parameters2, 
+                  quantity)
     """ setup transmissibility for coupling between models at boundaries. Intermediate 1d version"""
 
     d1 = physical_representation(model1)
@@ -1545,10 +1548,10 @@ function getTrans(model1::Jutul.SimulationModel,
 end
 
 function getHalfTrans(model::Jutul.SimulationModel, 
-    bcfaces, 
-    bccells, 
-    parameters, 
-    quantity)
+                      bcfaces, 
+                      bccells, 
+                      parameters, 
+                      quantity)
     """ recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the corresponding given cells. Intermediate 1d version. Note the indexing in BoundaryFaces is used"""
 
     d = physical_representation(model)
@@ -1561,9 +1564,9 @@ function getHalfTrans(model::Jutul.SimulationModel,
 end
 
 function getHalfTrans(model::Dict{String, Any}, 
-    faces, 
-    cells, 
-    quantity::String)
+                      faces, 
+                      cells, 
+                      quantity::String)
     """ recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the given cells.
     Here, the faces should belong the corresponding cells at the same index"""
 
@@ -1576,7 +1579,7 @@ function getHalfTrans(model::Dict{String, Any},
 end
 
 function getHalfTrans(model::Dict{String,<:Any}, 
-    faces)
+                      faces)
     """ recover the half transmissibilities for boundary faces"""
     
     T_all = model["operators"]["T_all"]
@@ -1617,7 +1620,7 @@ function setup_geomparams(init::JSONFile)
 end
 
 ##################################################################################
-#Compute cell capactity 
+# Compute cell capacity 
 ##################################################################################
 
 function computeCellCapacity(model::MultiModel)
@@ -1704,17 +1707,6 @@ function rampupTimesteps(time::Real, dt::Real, n::Integer=8)
     dT = [dt_init; dt_rem; dt_final]
 
     return dT
-end
-
-function my_number_of_cells(model::MultiModel)
-
-    cells = 0
-    for smodel in model.models
-        cells += number_of_cells(smodel.domain)
-    end
-
-    return cells
-
 end
 
 function convert_to_int_vector(x::Float64)
