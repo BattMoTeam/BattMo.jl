@@ -43,30 +43,20 @@ vars[ind].=1
 
 p_obj = ODEParam(sim,forces)
 
-#f!(res,dy,y,p,t) = odeFun!(res,dy,y,p,t)
-#f_jac!(J,dy,y,p,gamma,t) = odeFun_jac!(J,dy,y,p,gamma,t)
-
 res = zeros(length(x0))
 J = zeros(length(x0),length(x0))
 dx0 = (-1)*(r \ m_jac)'
-#f!(res,dx0,x0,p_obj,0.0)
 
-#Sparsity pattern prototype
-prototype = sim.storage.LinearizedSystem.jac
-odeFun_jac!(prototype,dx0,x0,p_obj,1.0,0.0) 
-pro_ind = SparseArrays.findnz(prototype)
-for i=1:length(pro_ind[1])
-    prototype[pro_ind[1][i],pro_ind[2][i]]=1.0
-end
-#prototype.=SparseArrays.sparse(Symmetric(prototype'))
 
 #Julia DifferentialEquations interface
 f_DAE! = DAEFunction(odeFun!; jac=odeFun_jac!, jac_prototype=p_obj.sim.storage.LinearizedSystem.jac)
 tspan=(0.0,4000)
 prob = DAEProblem(f_DAE!,dx0,x0,tspan,p_obj,differential_vars=vars)
 @time begin
-    ret = solve(prob,IDA(linear_solver=:Dense))
+    ret = solve(prob,IDA(linear_solver=:KLU))
 end
 vv= getindex.(ret.u,length(ret.u[1])-1);
-# Plots.plot(ret.t,vv, label="DiffEq")
-# Plots.plot!(t,voltage, label="Jutul")
+Plots.plot(ret.t,vv, label="JuiaDiffEq: IDA Sundials",linewidth=3)
+Plots.plot!(t,voltage, label="BattMo: Jutul",linewidth=3)
+Plots.plot!(xlabel="Time [s]", ylabel= "voltage[V]",guidefontsize=14,tickfontsize=14,legendfontsize=14)
+Plots.savefig("Julia_example.png")

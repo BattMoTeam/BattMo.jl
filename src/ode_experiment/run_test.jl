@@ -14,14 +14,8 @@ max_step=nothing
 linear_solver=:direct
 general_ad=true
 
-#Setup simulation
-#Resize_state!(init,0.4)
-#init.object["Control"]["CRate"]=1e-100
-#init.object["Control"]["lowerCutoffVoltage"]=3
 
 sim, forces, state0, parameters, init, model = BattMo.setup_sim(init, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
-#state0[:BPP][:Phi][1] = state0[:PP][:Phi][1]
-#state0[:BPP][:Current][1] = 0.0
 
 #Solve problem using Jutul first
 
@@ -29,12 +23,6 @@ sim, forces, state0, parameters, init, model = BattMo.setup_sim(init, use_p2d=us
 timesteps=BattMo.setup_timesteps(init;max_step=max_step)
 cfg=BattMo.setup_config(sim,model,linear_solver,extra_timing)
 
-# @time begin
-#     states, reports = Jutul.simulate(state0,sim, timesteps, forces=forces, config=cfg)    
-# end
-
-# voltage = map(state -> state[:BPP][:Phi][1], states)
-# t = cumsum(timesteps)
 
 #Setup to solve from DiffEq library
 start_ind=1

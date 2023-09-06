@@ -1,6 +1,7 @@
 import Jutul
 import BattMo
 import LinearAlgebra
+using SparseArrays
 
 function approx_jac(func, t, Δy,y,dy,sim,forces)
     n=length(y)
