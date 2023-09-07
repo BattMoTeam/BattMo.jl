@@ -2,8 +2,15 @@ import Jutul
 import BattMo
 import LinearAlgebra
 using SparseArrays
+import DiffEqBase
+
+#Avoids issues inside DiffEqBase
+DiffEqBase.anyeltypedual(p::ODEParam, counter::Int64 =0) = Any
 
 function approx_jac(func, t, Δy,y,dy,sim,forces)
+    """
+    Finite difference approximation of the jacobian. Useful for consistency checks
+    """
     n=length(y)
     jac=SparseArrays.spzeros(n,n)
     iid= Matrix(LinearAlgebra.I,n,n)
@@ -41,11 +48,6 @@ struct ODEParam
     end
 end
 
-import DiffEqBase
-
-#Avoids issues inside DiffEqBase
-DiffEqBase.anyeltypedual(p::ODEParam, counter::Int64 =0) = Any
-
 function odeFun!(res,dy,y,p,t)
     """
     Solve the problem using the approximation ∂m/∂t = ∂m/∂y ∂y/∂t
@@ -67,6 +69,11 @@ function odeFun_jac!(Jacobian,dy,y,p,gamma,t)
     _,m_jac = Jutul.model_accumulation(p.sim,y)
     jac = p.sim.storage.LinearizedSystem.jac
     I, J, V = findnz(m_jac)
+
+    #Ensure that the sparsity pattern of the array remains constant (for KLU solver)
+    #In a sparse matrix there are two types of 0: fields defined as EXACTLY 0 (and therefore not included) and fields
+    # with the VALUE 0.0. When we perform an operation on sparse matrices which results in a field having the value 0 this will be set as 
+    # exactly 0 and thus change the sparsity pattern. 
     for (i, j, v) in zip(I, J, V)
         jac[i, j] += v * gamma
     end
