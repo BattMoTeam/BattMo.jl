@@ -110,15 +110,17 @@ function policy_to_control(p::CyclingCVPolicy, mode, state, model, dt, time, ctr
     
 end
 
-mutable struct ControllerCV
-    
+mutable struct ControllerCV{R}
     policy::AbstractCVPolicy
-    time::Real
-    control_time::Real
-    target::Real
+    time::R
+    control_time::R
+    target::R
     target_is_voltage::Bool
     mode::OperationalMode
-    
+end
+
+@inline function Jutul.numerical_type(x::ControllerCV{R}) where R
+    return R
 end
 
 function Jutul.update_values!(old::ControllerCV, new::ControllerCV)
