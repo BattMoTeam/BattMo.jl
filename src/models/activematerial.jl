@@ -221,10 +221,24 @@ end
                           ix
                           ) where {D, T}
         ocp_func = model.system.params[:ocp_func]
+        
         cmax     = model.system.params[:maximum_concentration]
         refT = 298.15
+       
+        
         for cell in ix
-            @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)
+            ################### Lorena #############
+        
+            try ocp_eq   = model.system.params[:ocp_eq]
+                global conc = Cs[cell]
+                global concmax = cmax
+                global ocp_ex = ocp_eq
+                @inbounds Ocp[cell] = ocp_func(ocp_eq,Cs[cell], refT, cmax)
+            catch
+                @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)
+            end
+            #@inbounds Ocp[cell] = @evaluate_ocp_function(ocp_eq , Cs[cell], refT, cmax)
+            ########################################
         end
     end
 )
@@ -412,9 +426,15 @@ end
         ocp_func = model.system.params[:ocp_func]
         cmax     = model.system.params[:maximum_concentration]
         refT     = 298.15
-        
+        ocp_eq   = model.system.params[:ocp_eq]
+        global ocp_ex = ocp_eq
         for cell in ix
-            @inbounds Ocp[cell] = ocp_func(C[cell], refT, cmax)
+            ################### Lorena #############
+            global c = Cs[cell]
+            @inbounds Ocp[cell] = ocp_func(ocp_eq,Cs[cell], refT, cmax)
+            #@inbounds Ocp[cell] = @evaluate_ocp_function(ocp_eq , Cs[cell], refT, cmax)
+            ########################################
+            #@inbounds Ocp[cell] = ocp_func(C[cell], refT, cmax)
         end
     end
 )

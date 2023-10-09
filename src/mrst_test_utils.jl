@@ -9,14 +9,14 @@ export inputRefToStates
 #Run battery 
 ############################################################################################
 
-function run_battery(init::InputFile;
-                     use_p2d::Bool                     = true,
-                     extra_timing::Bool                = false,
-                     max_step::Union{Integer, Nothing} = nothing,
-                     linear_solver::Symbol             = :direct,
-                     general_ad::Bool                  = false,
-                     use_groups::Bool                  = false,
-                     kwarg...)
+function run_battery(init::InputFile;   
+                    use_p2d::Bool                     = true,
+                    extra_timing::Bool                = false,
+                    max_step::Union{Integer, Nothing} = nothing,
+                    linear_solver::Symbol             = :direct,
+                    general_ad::Bool                  = false,
+                    use_groups::Bool                  = false,
+                    kwarg...)
     """
         Run battery wrapper method. Can use inputs from either Matlab or Json files and performs
         simulation using a simple discharge CV policy
@@ -34,7 +34,7 @@ function run_battery(init::InputFile;
 
     extra = Dict(:model => model,
                  :state0 => state0,
-                 :parameters => parameters,
+                 :pamraeters => parameters,
                  :init => init,
                  :timesteps => timesteps,
                  :config => cfg,
@@ -683,13 +683,20 @@ function setup_battery_model(init::MatlabFile;
         Eak = inputparams_am["Interface"]["Eak"]
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
         
-        if name == :NAM
-            am_params[:ocp_func] = compute_ocp_graphite
-        elseif name == :PAM
-            am_params[:ocp_func] = compute_ocp_nmc111
-        else
-            error("not recongized")
-        end
+        # if name == :NAM
+        #     am_params[:ocp_func] = compute_ocp_graphite
+        # elseif name == :PAM
+        #     am_params[:ocp_func] = compute_ocp_nmc111
+        # else
+        #     error("not recongized")
+        # end
+
+        ############## Lorena ##############
+
+        am_params[:ocp_func] = getfield(BattMo, Symbol("compute_ocp_from_function"))
+        am_params[:ocp_eq] = inputparams_am["Interface"]["OCP"]["functionname"]
+        ####################################
+
         T_prm = typeof(am_params)
         if use_p2d
             rp = inputparams_am["SolidDiffusion"]["rp"]
@@ -947,8 +954,20 @@ function setup_battery_model(init::JSONFile;
         Eak = inputparams_am["Interface"]["Eak"]
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
         
-        funcname = inputparams_am["Interface"]["OCP"]["functionname"]
-        am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
+        
+        ############## Lorena ##############
+        
+        if haskey(inputparams_am["Interface"]["OCP"],"function")
+            am_params[:ocp_func] = getfield(BattMo, Symbol("compute_ocp_from_function"))
+            am_params[:ocp_eq] = inputparams_am["Interface"]["OCP"]["function"]
+        else
+            funcname = inputparams_am["Interface"]["OCP"]["functionname"]
+            am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
+        end
+                
+            
+        ####################################
+        #am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
         
         use_p2d = true
         if use_p2d
@@ -1349,6 +1368,11 @@ function setup_battery_initial_state(init::MatlabFile,
     
 end
 
+conc = 0.0
+Temp = 0.0
+concmax = 0.0
+Tref = 298.15
+ocp_ex = " "
 function setup_battery_initial_state(init::JSONFile,
                                      model::MultiModel)
 
@@ -1363,6 +1387,7 @@ function setup_battery_initial_state(init::JSONFile,
     T   = jsonstruct["initT"]
     SOC = jsonstruct["SOC"]
 
+
     function setup_init_am(name, model)
         
         theta0   = model[name].system[:theta0]
@@ -1370,14 +1395,43 @@ function setup_battery_initial_state(init::JSONFile,
         cmax     = model[name].system[:maximum_concentration]
         N        = model[name].system.discretization[:N]
         
+        
         theta = SOC*(theta100 - theta0) + theta0;
         c     = theta*cmax
         nc    = count_entities(model[name].data_domain, Cells())
         init = Dict()
         init[:Cs]  = c*ones(nc)
         init[:Cp]  = c*ones(nc, N)
+        # print("func =", model[name].system[:ocp_func](ocp_eq , c, T, cmax))
+        
 
-        OCP = model[name].system[:ocp_func](c, T, cmax)
+        ################### Lorena #############
+
+        global conc = c
+        global Temp = T
+        global concmax = cmax
+        
+        #OCP = @evaluate_ocp_function(ocp_eq , c, T, cmax)
+        #js = JSON.parse(model[name].system)
+        #print(js)
+        OCP = 0
+        try ocp_eq   = model[name].system[:ocp_eq]
+            
+            # if isempty(ocp_eq)
+                
+            #     OCP = model[name].system[:ocp_func](c, T, cmax)
+            # else
+                
+            global ocp_ex = ocp_eq
+            OCP = model[name].system[:ocp_func](ocp_eq , conc, Temp, concmax)
+            
+        #end
+        catch  
+            print("ja")  
+            OCP = model[name].system[:ocp_func](c, T, cmax)
+        end
+        ########################################
+
         return (init, nc, OCP)
         
     end

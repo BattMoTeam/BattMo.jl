@@ -1,5 +1,5 @@
 ## Defines OCP and entropy change (dUdT) for graphite using polynomials
-
+using Interpolations
 const coeff1_graphite = Polynomial([
 	+ 0.005269056,
 	+ 3.299265709,
@@ -24,6 +24,38 @@ const coeff2_graphite = Polynomial([
 	+ 165705.8597
 ]);
 
+
+############## Lorena ##############
+
+function compute_ocp_function_from_data(x,y, extrapolate)
+    """Compute the OCP interpolated function for a material based on the given data"""
+   
+    if extrapolate
+        interp_linear_extrap = linear_interpolation(x, y,extrapolation_bc=Line())
+    end
+
+end
+
+macro evaluate_ocp_function(ex, conc, Temp, concmax)
+    #Tref = 298.15
+    :(eval(Meta.parse(ocp_ex)))
+   
+end
+
+function compute_ocp_from_function(ex,conc, Temp, concmax)
+    """Compute OCP for a material as function of temperature and concentration"""
+   
+    @evaluate_ocp_function ex conc Temp concmax
+    
+
+end
+
+
+
+
+####################################
+
+
 function compute_ocp_graphite(c, T, cmax)
     """Compute OCP for GenericGraphite as function of temperature and concentration"""
     theta  = c./cmax
@@ -43,6 +75,7 @@ function compute_ocp_graphite(c, T, cmax)
     return ocp
     
 end
+
 
 function compute_reaction_rate_constant_graphite(c, T)
 
