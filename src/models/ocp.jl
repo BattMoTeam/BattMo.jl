@@ -27,26 +27,40 @@ const coeff2_graphite = Polynomial([
 
 ############## Lorena ##############
 
-function compute_ocp_function_from_data(x,y, extrapolate)
-    """Compute the OCP interpolated function for a material based on the given data"""
+# function compute_ocp_function_from_data(x,y, extrapolate)
+#     """Compute the OCP interpolated function for a material based on the given data"""
    
-    if extrapolate
-        interp_linear_extrap = linear_interpolation(x, y,extrapolation_bc=Line())
-    end
+#     if extrapolate
+#         interp_linear_extrap = linear_interpolation(x, y,extrapolation_bc=Line())
+#     end
 
-end
+# end
 
-macro evaluate_ocp_function(ex, conc, Temp, concmax)
+# macro evaluate_ocp_function(ex, c, T, cmax)
+#     quote
+#         Tref = 298.15
+#         ex = "f(c,T,cmax,Tref) = " + $esc(ex)
+#         :(eval(Meta.parse($esc(ex))))
+#         return f(c,T,cmax,Tref)
+#     end
     #Tref = 298.15
-    :(eval(Meta.parse(ocp_ex)))
-   
+# end
+# c = 1
+# T = 298
+# cmax = 1
+# Tref = 299
+function compute_ocp_function(ocp_eq)
+    
+    eval(Meta.parse(ocp_eq))
 end
 
-function compute_ocp_from_function(ex,conc, Temp, concmax)
+function compute_ocp_from_function(c, T, cmax)
     """Compute OCP for a material as function of temperature and concentration"""
-   
-    @evaluate_ocp_function ex conc Temp concmax
-    
+    Tref = 298.15
+    #print("ex = ", f(c,T,cmax,Tref))
+    return f(c,T,cmax,Tref)
+    #@evaluate_ocp_function $esc(ex) c T cmax
+    #eval(Meta.parse(ex))
 
 end
 
@@ -72,6 +86,7 @@ function compute_ocp_graphite(c, T, cmax)
     dUdT = 1e-3*coeff1_graphite(theta)/ coeff2_graphite(theta);
     
     ocp = refOCP + (T - refT) * dUdT;
+    
     return ocp
     
 end

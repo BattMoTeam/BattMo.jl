@@ -10,33 +10,34 @@ states, reports, extra = run_battery(init1;use_p2d=true,info_level = -1, extra_t
 
 nam_ocp_ud = Array([state[:NAM][:Ocp] for state in states])
 pam_ocp_ud = Array([state[:PAM][:Ocp] for state in states])
-x_ud = cumsum(extra[:timesteps])
+# x_ud = cumsum(extra[:timesteps])
 
-
+#print("timesteps = ", size(extra[:timesteps]))
 fn2 = "test/battery/data/jsonfiles/p2d_40_jl.json"
 init2 = JSONFile(fn2)
 states, reports, extra = run_battery(init2;use_p2d=true,info_level = -1, extra_timing = false);
 
 nam_ocp_pd = Array([state[:NAM][:Ocp] for state in states])
 pam_ocp_pd = Array([state[:PAM][:Ocp] for state in states])
-
-# Plot result
-x_pd = cumsum(extra[:timesteps])
-print([column[1] for column in nam_ocp_pd])
-plt = plot([column[1] for column in nam_ocp_pd];
+# print("timesteps = ", size(extra[:timesteps]))
+# # Plot result
+# x_pd = cumsum(extra[:timesteps])
+# print(nam_ocp_ud)
+# print([column[1] for column in pam_ocp_ud])
+plt = plot([column[1] for column in nam_ocp_ud];
            title     = "Discharge Voltage",
            #size      = (1000, 800),
-           label     = "nam_ocp_pd",
+           label     = "nam_ocp_ud",
            xlabel    = "Time / s",
            ylabel    = "OCP / V",
            linewidth = 4,
            xtickfont = font(pointsize = 15),
            ytickfont = font(pointsize = 15))
 
-plot!(([column[1] for column in nam_ocp_ud]), label = "nam_ocp_ud", linewidth = 2)
 plot!(([column[1] for column in pam_ocp_pd]), label = "pam_ocp_pd", linewidth = 2)
-
 plot!(([column[1] for column in pam_ocp_ud]), label = "pam_ocp_ud", linewidth = 2)
+
+plot!(([column[1] for column in nam_ocp_pd]), label = "nam_ocp_pd", linewidth = 2)
 
 display(plt)
 
@@ -106,7 +107,11 @@ display(plt)
     
 #     @simple ex c T cmax 
 # end
+# mnc_111_ocp = "f(c,T,cmax,Tref) = (-4.656 + 0 * (c/cmax) + 88.669 * (c/cmax)^2 + 0 * (c/cmax)^3 - 401.119 * (c/cmax)^4 + 0 * (c/cmax)^5 + 342.909 * (c/cmax)^6 + 0 * (c/cmax)^7 - 462.471 * (c/cmax)^8 + 0 * (c/cmax)^9 + 433.434 * (c/cmax)^10)/(-1 + 0  * (c/cmax)+ 18.933 * (c/cmax)^2+ 0 * (c/cmax)^3- 79.532 * (c/cmax)^4+ 0 * (c/cmax)^5+ 37.311 * (c/cmax)^6+ 0 * (c/cmax)^7- 73.083 * (c/cmax)^8+ 0 * (c/cmax)^9+ 95.960 * (c/cmax)^10)+ (T - Tref) * ( -1e-3* ( 0.199521039- 0.928373822 * (c/cmax)+ 1.364550689000003 * (c/cmax)^2- 0.611544893999998 * (c/cmax)^3)/ (1- 5.661479886999997 * (c/cmax)+ 11.47636191 * (c/cmax)^2- 9.82431213599998 * (c/cmax)^3+ 3.048755063 * (c/cmax)^4))"
 
+# eval(Meta.parse(mnc_111_ocp))
+
+# print(f(1,298,1,299))
 
 # function func2()
 #     c = 1.0

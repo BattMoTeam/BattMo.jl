@@ -179,7 +179,7 @@ function setup_sim(init::JSONFile;
                    general_ad::Bool = false,
                    kwarg ... )
 
-    model, state0, parameters = setup_model(init, use_groups=use_groups, general_ad=general_ad; kwarg...)
+    model, state0, parameters= setup_model(init, use_groups=use_groups, general_ad=general_ad; kwarg...)
 
     setup_coupling!(init,model,parameters)
 
@@ -934,7 +934,7 @@ function setup_battery_model(init::JSONFile;
         :PAM => "PositiveElectrode",        
     )
 
-    
+    ocp_ex = "" 
     function setup_active_material(name::Symbol, 
         geomparams::Dict{Symbol,<:Any})
 
@@ -958,8 +958,10 @@ function setup_battery_model(init::JSONFile;
         ############## Lorena ##############
         
         if haskey(inputparams_am["Interface"]["OCP"],"function")
-            am_params[:ocp_func] = getfield(BattMo, Symbol("compute_ocp_from_function"))
-            am_params[:ocp_eq] = inputparams_am["Interface"]["OCP"]["function"]
+            am_params[:ocp_func] = getfield(BattMo, Symbol("compute_ocp_function"))
+            am_params[:ocp_comp] = getfield(BattMo, Symbol("compute_ocp_from_function"))
+            am_params[:ocp_eq] = "f(c,T,cmax,Tref) = " * inputparams_am["Interface"]["OCP"]["function"]
+            global ocp_ex = "f(c,T,cmax,Tref) = " * am_params[:ocp_eq]
         else
             funcname = inputparams_am["Interface"]["OCP"]["functionname"]
             am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
@@ -1372,7 +1374,7 @@ conc = 0.0
 Temp = 0.0
 concmax = 0.0
 Tref = 298.15
-ocp_ex = " "
+#ocp_ex = " "
 function setup_battery_initial_state(init::JSONFile,
                                      model::MultiModel)
 
@@ -1407,29 +1409,37 @@ function setup_battery_initial_state(init::JSONFile,
 
         ################### Lorena #############
 
-        global conc = c
-        global Temp = T
-        global concmax = cmax
+        # global conc = c
+        # global Temp = T
+        # global concmax = cmax
         
         #OCP = @evaluate_ocp_function(ocp_eq , c, T, cmax)
         #js = JSON.parse(model[name].system)
         #print(js)
-        OCP = 0
-        try ocp_eq   = model[name].system[:ocp_eq]
-            
-            # if isempty(ocp_eq)
-                
-            #     OCP = model[name].system[:ocp_func](c, T, cmax)
-            # else
-                
-            global ocp_ex = ocp_eq
-            OCP = model[name].system[:ocp_func](ocp_eq , conc, Temp, concmax)
-            
-        #end
-        catch  
-            print("ja")  
+        #OCP = 0
+        # try
+        #ocp_eq = model[name].system[:ocp_eq]
+        
+
+
+        if Jutul.haskey(model[name].system.params, :ocp_eq)
+            ocp_eq = model[name].system[:ocp_eq]
+            #global ocp_ex = "f(c,T,cmax,Tref) = " * ocp_eq
+            ocp_form = Base.invokelatest(model[name].system[:ocp_func],ocp_eq)
+            Tref = 298.15
+            OCP = Base.invokelatest(ocp_form,c, T, cmax, Tref)
+            print("ocp1 =", OCP)
+
+        else
             OCP = model[name].system[:ocp_func](c, T, cmax)
+            print("ocp2 =", OCP)
+            
+            
         end
+        # catch  
+            
+        #     print("Error")
+        # end
         ########################################
 
         return (init, nc, OCP)
@@ -1463,7 +1473,7 @@ function setup_battery_initial_state(init::JSONFile,
 
     # Setup initial state in positive active material
     
-    init, nc, posOCP = setup_init_am(:PAM, model)
+    init, nc, posOCP= setup_init_am(:PAM, model)
     init[:Phi] = (posOCP - negOCP)*ones(nc)
     
     initState[:PAM] = init
