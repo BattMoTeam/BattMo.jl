@@ -1,3 +1,5 @@
+export ocp_form
+
 ## Defines OCP and entropy change (dUdT) for graphite using polynomials
 using Interpolations
 const coeff1_graphite = Polynomial([
@@ -54,11 +56,12 @@ function compute_ocp_function(ocp_eq)
     eval(Meta.parse(ocp_eq))
 end
 
-function compute_ocp_from_function(c, T, cmax)
+
+function compute_ocp_from_function(ocp_eq)
     """Compute OCP for a material as function of temperature and concentration"""
-    Tref = 298.15
+    
     #print("ex = ", f(c,T,cmax,Tref))
-    return f(c,T,cmax,Tref)
+    return compute_ocp_function(ocp_eq)
     #@evaluate_ocp_function $esc(ex) c T cmax
     #eval(Meta.parse(ex))
 

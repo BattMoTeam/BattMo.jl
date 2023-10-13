@@ -934,7 +934,7 @@ function setup_battery_model(init::JSONFile;
         :PAM => "PositiveElectrode",        
     )
 
-    ocp_ex = "" 
+     
     function setup_active_material(name::Symbol, 
         geomparams::Dict{Symbol,<:Any})
 
@@ -958,10 +958,17 @@ function setup_battery_model(init::JSONFile;
         ############## Lorena ##############
         
         if haskey(inputparams_am["Interface"]["OCP"],"function")
+            print("name = ",jsonName)
+            if jsonName == "NegativeElectrode"
+                am_params[:ocp_eq] = "f(c,T,cmax,Tref) = " * inputparams_am["Interface"]["OCP"]["function"]
+            elseif jsonName == "PositiveElectrode"
+                am_params[:ocp_eq] = "g(c,T,cmax,Tref) = " * inputparams_am["Interface"]["OCP"]["function"]
+            end
+            #am_params[:ocp_eq] = inputparams_am["Interface"]["OCP"]["function"]
             am_params[:ocp_func] = getfield(BattMo, Symbol("compute_ocp_function"))
-            am_params[:ocp_comp] = getfield(BattMo, Symbol("compute_ocp_from_function"))
-            am_params[:ocp_eq] = "f(c,T,cmax,Tref) = " * inputparams_am["Interface"]["OCP"]["function"]
-            global ocp_ex = "f(c,T,cmax,Tref) = " * am_params[:ocp_eq]
+            am_params[:ocp_comp] = Base.invokelatest(am_params[:ocp_func],am_params[:ocp_eq])
+            #am_params[:ocp_comp] = getfield(BattMo, Symbol("compute_ocp_from_function"))
+            
         else
             funcname = inputparams_am["Interface"]["OCP"]["functionname"]
             am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
@@ -1424,8 +1431,17 @@ function setup_battery_initial_state(init::JSONFile,
 
         if Jutul.haskey(model[name].system.params, :ocp_eq)
             ocp_eq = model[name].system[:ocp_eq]
+            print("ocp = ",ocp_eq)
+            print("c = ", c)
+            print("c = ", cmax)
+            print("c = ", T)
+            
+
             #global ocp_ex = "f(c,T,cmax,Tref) = " * ocp_eq
-            ocp_form = Base.invokelatest(model[name].system[:ocp_func],ocp_eq)
+            # ocp_form = Base.invokelatest(model[name].system[:ocp_func],ocp_eq)
+            # model[name].system[:ocp_comp] = ocp_form
+            ocp_form = model[name].system[:ocp_comp]
+            print(dump(ocp_form))
             Tref = 298.15
             OCP = Base.invokelatest(ocp_form,c, T, cmax, Tref)
             print("ocp1 =", OCP)
@@ -1433,7 +1449,7 @@ function setup_battery_initial_state(init::JSONFile,
         else
             OCP = model[name].system[:ocp_func](c, T, cmax)
             print("ocp2 =", OCP)
-            
+            print("c = ", c)
             
         end
         # catch  

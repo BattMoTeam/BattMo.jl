@@ -1,3 +1,4 @@
+
 export ActiveMaterial, ActiveMaterialModel, SolidMassCons, NoParticleDiffusion
 
 ## The parameter for the active material are stored in a dictionnary
@@ -234,8 +235,10 @@ end
                 
                 ocp_comp = model.system.params[:ocp_comp]    
                 # global ocp_ex = "f(c,T,cmax,Tref) = " * ocp_eq    
-                ocp_eq = model.system.params[:ocp_eq] 
-                ocp_form = Base.invokelatest(model.system.params[:ocp_func],ocp_eq)
+                ocp_eq = model.system.params[:ocp_eq]
+                
+                ocp_form = model.system.params[:ocp_comp]
+                #ocp_form = Base.invokelatest(model.system.params[:ocp_func],ocp_eq)
                 Tref = 298.15 
                 @inbounds Ocp[cell] = Base.invokelatest(ocp_form,Cs[cell], refT, cmax,Tref)
                 
