@@ -29,28 +29,16 @@ const coeff2_graphite = Polynomial([
 
 ############## Lorena ##############
 
-# function compute_ocp_function_from_data(x,y, extrapolate)
-#     """Compute the OCP interpolated function for a material based on the given data"""
+function compute_ocp_function_from_data(x,y, extrapolate)
+    """Compute the OCP interpolated function for a material based on the given data"""
    
-#     if extrapolate
-#         interp_linear_extrap = linear_interpolation(x, y,extrapolation_bc=Line())
-#     end
+    if extrapolate
+        interp_linear_extrap = linear_interpolation(x, y,extrapolation_bc=Line())
+    end
 
-# end
+end
 
-# macro evaluate_ocp_function(ex, c, T, cmax)
-#     quote
-#         Tref = 298.15
-#         ex = "f(c,T,cmax,Tref) = " + $esc(ex)
-#         :(eval(Meta.parse($esc(ex))))
-#         return f(c,T,cmax,Tref)
-#     end
-    #Tref = 298.15
-# end
-# c = 1
-# T = 298
-# cmax = 1
-# Tref = 299
+
 function compute_ocp_function(ocp_eq)
     
     eval(Meta.parse(ocp_eq))

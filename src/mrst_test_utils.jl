@@ -958,12 +958,9 @@ function setup_battery_model(init::JSONFile;
         ############## Lorena ##############
         
         if haskey(inputparams_am["Interface"]["OCP"],"function")
-            print("name = ",jsonName)
-            if jsonName == "NegativeElectrode"
-                am_params[:ocp_eq] = "f(c,T,cmax,Tref) = " * inputparams_am["Interface"]["OCP"]["function"]
-            elseif jsonName == "PositiveElectrode"
-                am_params[:ocp_eq] = "g(c,T,cmax,Tref) = " * inputparams_am["Interface"]["OCP"]["function"]
-            end
+            
+            am_params[:ocp_eq] = inputparams_am["Interface"]["OCP"]["function"]
+            
             #am_params[:ocp_eq] = inputparams_am["Interface"]["OCP"]["function"]
             am_params[:ocp_func] = getfield(BattMo, Symbol("compute_ocp_function"))
             am_params[:ocp_comp] = Base.invokelatest(am_params[:ocp_func],am_params[:ocp_eq])
@@ -1377,11 +1374,39 @@ function setup_battery_initial_state(init::MatlabFile,
     
 end
 
-conc = 0.0
-Temp = 0.0
-concmax = 0.0
-Tref = 298.15
-#ocp_ex = " "
+
+function extract_input_symbols(ex::Expr, symbols::Vector{Symbol})
+
+    args = ex.args
+    func_definition = args[1]
+    input_symbols = func_definition.args[2:end]
+
+    return input_symbols 
+end
+
+function set_symbol_values(symbols, c, T, Tref, cmax, SOC)
+    symbol_values = Dict{Symbol, Any}()
+    
+    for symbol in symbols
+     
+        if symbol == :c
+            symbol_values[symbol] = c
+        elseif symbol == :T
+            symbol_values[symbol] = T
+        elseif symbol == :Tref
+            symbol_values[symbol] = Tref
+        elseif symbol == :cmax
+            symbol_values[symbol] = cmax
+        elseif symbol == :SOC
+            symbol_values[symbol] = SOC
+        else
+            error("Symbol $symbol not supported by BattMo OCP computation")
+        end
+    end
+    return symbol_values
+end
+
+
 function setup_battery_initial_state(init::JSONFile,
                                      model::MultiModel)
 
@@ -1394,7 +1419,7 @@ function setup_battery_initial_state(init::JSONFile,
     end
 
     T   = jsonstruct["initT"]
-    SOC = jsonstruct["SOC"]
+    SOC_init = jsonstruct["SOC"]
 
 
     function setup_init_am(name, model)
@@ -1405,8 +1430,9 @@ function setup_battery_initial_state(init::JSONFile,
         N        = model[name].system.discretization[:N]
         
         
-        theta = SOC*(theta100 - theta0) + theta0;
+        theta = SOC_init*(theta100 - theta0) + theta0;
         c     = theta*cmax
+        SOC = SOC_init
         nc    = count_entities(model[name].data_domain, Cells())
         init = Dict()
         init[:Cs]  = c*ones(nc)
@@ -1428,28 +1454,34 @@ function setup_battery_initial_state(init::JSONFile,
         #ocp_eq = model[name].system[:ocp_eq]
         
 
-
+        
         if Jutul.haskey(model[name].system.params, :ocp_eq)
             ocp_eq = model[name].system[:ocp_eq]
-            print("ocp = ",ocp_eq)
-            print("c = ", c)
-            print("c = ", cmax)
-            print("c = ", T)
             
 
             #global ocp_ex = "f(c,T,cmax,Tref) = " * ocp_eq
             # ocp_form = Base.invokelatest(model[name].system[:ocp_func],ocp_eq)
             # model[name].system[:ocp_comp] = ocp_form
             ocp_form = model[name].system[:ocp_comp]
-            print(dump(ocp_form))
             Tref = 298.15
-            OCP = Base.invokelatest(ocp_form,c, T, cmax, Tref)
-            print("ocp1 =", OCP)
 
+            expr = Meta.parse(ocp_eq)
+            #print("expr = ", dump(expr))
+            # symbols_dict = Dict{Symbol, Any}()
+            # extract_symbols(expr, symbols_dict)
+
+            # symbols = collect(values(symbols_dict))
+            symbols = Symbol[]
+            symbols = extract_input_symbols(expr,symbols)
+          
+            symbol_values = set_symbol_values(symbols,c,T,Tref,cmax,SOC)
+        
+            #OCP = lambdify(expr, symbol_values)
+            function_arguments = [symbol_values[symbol] for symbol in symbols if haskey(symbol_values, symbol)]
+            OCP = Base.invokelatest(ocp_form,function_arguments...)
+            
         else
             OCP = model[name].system[:ocp_func](c, T, cmax)
-            print("ocp2 =", OCP)
-            print("c = ", c)
             
         end
         # catch  
