@@ -1,45 +1,78 @@
-# include("src/BattMo.jl")
-# using BattMo, Jutul, JSON
-
 using BattMo, Plots
 
-fn1 = "test/battery/data/jsonfiles/p2d_40_jl_ud.json"
-init1 = JSONFile(fn1)
 
-states, reports, extra = run_battery(init1;use_p2d=true,info_level = -1, extra_timing = false);
 
-nam_ocp_ud = Array([state[:NAM][:Ocp] for state in states])
-pam_ocp_ud = Array([state[:PAM][:Ocp] for state in states])
-# x_ud = cumsum(extra[:timesteps])
+func = "1.8670.*SOC.^5 .- 5.0687.*SOC.^4 .+ 5.7087.*SOC.^3 .- 3.5125.*SOC.^2 .+ 1.7145.*SOC .+ 3.440"
+SOC = range(start = 0.2,stop = 0.99,length = 10)
+fun_ex = Meta.parse(func)
 
-#print("timesteps = ", size(extra[:timesteps]))
-fn2 = "test/battery/data/jsonfiles/p2d_40_jl.json"
-init2 = JSONFile(fn2)
-states, reports, extra = run_battery(init2;use_p2d=true,info_level = -1, extra_timing = false);
+OCP = eval(fun_ex)
 
-nam_ocp_pd = Array([state[:NAM][:Ocp] for state in states])
-pam_ocp_pd = Array([state[:PAM][:Ocp] for state in states])
-# print("timesteps = ", size(extra[:timesteps]))
-# # Plot result
-# x_pd = cumsum(extra[:timesteps])
-# print(nam_ocp_ud)
-# print([column[1] for column in pam_ocp_ud])
-plt = plot([column[1] for column in nam_ocp_ud];
-           title     = "Discharge Voltage",
-           #size      = (1000, 800),
-           label     = "nam_ocp_ud",
-           xlabel    = "Time / s",
-           ylabel    = "OCP / V",
-           linewidth = 4,
-           xtickfont = font(pointsize = 15),
-           ytickfont = font(pointsize = 15))
+ocp = interpolation(SOC,OCP, degree = 7)
 
-plot!(([column[1] for column in pam_ocp_pd]), label = "pam_ocp_pd", linewidth = 2)
-plot!(([column[1] for column in pam_ocp_ud]), label = "pam_ocp_ud", linewidth = 2)
+str = update_json_input(file_path = "test.json",
+                        interpolation_object = ocp,
+                        component_name = "NegativeElectrode",
+                        x_name = "SOC" ,
+                        y_name = "OCP",
+                        new_file_path = "test2.json")
 
-plot!(([column[1] for column in nam_ocp_pd]), label = "nam_ocp_pd", linewidth = 2)
 
-display(plt)
+OCP = []
+str = "f(SOC) = " * str
+par = Meta.parse(str)
+stop = false
+ev2 = eval(par)
+
+for i in collect(1:size(SOC)[1])
+    local SOC = soc[i]
+    if stop == false
+        ev = eval(par)
+        sub = f(SOC)
+        push!(OCP,sub)
+        global stop = true
+    else
+        sub = f(SOC)
+        push!(OCP,sub)
+
+    end
+end
+
+plot(SOC, OCP)
+
+# fn1 = "test/battery/data/jsonfiles/p2d_40_jl_ud.json"
+# init1 = JSONFile(fn1)
+
+# states, reports, extra = run_battery(init1;use_p2d=true,info_level = -1, extra_timing = false);
+
+# nam_ocp_ud = Array([state[:NAM][:Ocp] for state in states])
+# pam_ocp_ud = Array([state[:PAM][:Ocp] for state in states])
+
+# #fn2 = "test/battery/data/jsonfiles/p2d_40_jl.json"
+# fn2 = "test2.json"
+# init2 = JSONFile(fn2)
+# states, reports, extra = run_battery(init2;use_p2d=true,info_level = -1, extra_timing = false);
+# print(size(extra[:timesteps]))
+
+# nam_ocp_pd = Array([state[:NAM][:Ocp] for state in states])
+# pam_ocp_pd = Array([state[:PAM][:Ocp] for state in states])
+
+# plt = plot([column[1] for column in nam_ocp_pd];
+#            title     = "Discharge Voltage",
+#            #size      = (1000, 800),
+#            label     = "nam_ocp_ud",
+#            xlabel    = "Time / s",
+#            ylabel    = "OCP / V",
+#            linewidth = 4,
+#            xtickfont = font(pointsize = 15),
+#            ytickfont = font(pointsize = 15))
+
+# plot!(([column[1] for column in pam_ocp_pd]), label = "pam_ocp_pd", linewidth = 2)
+# plot!(([column[1] for column in pam_ocp_ud]), label = "pam_ocp_ud", linewidth = 2)
+
+# plot!(([column[1] for column in nam_ocp_ud]), label = "nam_ocp_ud", linewidth = 2)
+
+# display(plt)
 
 
 

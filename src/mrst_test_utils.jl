@@ -934,7 +934,7 @@ function setup_battery_model(init::JSONFile;
         :PAM => "PositiveElectrode",        
     )
 
-     
+    
     function setup_active_material(name::Symbol, 
         geomparams::Dict{Symbol,<:Any})
 
@@ -956,10 +956,19 @@ function setup_battery_model(init::JSONFile;
         
         
         ############## Lorena ##############
-        
+        input_symbols = ""
         if haskey(inputparams_am["Interface"]["OCP"],"function")
-            
-            am_params[:ocp_eq] = inputparams_am["Interface"]["OCP"]["function"]
+            am_params[:ocp_args] = inputparams_am["Interface"]["OCP"]["argumentlist"]
+          
+            for i in collect(1:size(am_params[:ocp_args])[1])
+                if i == size(am_params[:ocp_args])[1]
+                    input_symbols *= am_params[:ocp_args][i]    
+                else
+                    input_symbols *= am_params[:ocp_args][i] * ","
+                end
+            end
+            am_params[:ocp_eq] = jsonName * "_ocp_curve($input_symbols) = " * inputparams_am["Interface"]["OCP"]["function"]
+            print(am_params[:ocp_eq])
             
             #am_params[:ocp_eq] = inputparams_am["Interface"]["OCP"]["function"]
             am_params[:ocp_func] = getfield(BattMo, Symbol("compute_ocp_function"))
@@ -1454,29 +1463,22 @@ function setup_battery_initial_state(init::JSONFile,
         #ocp_eq = model[name].system[:ocp_eq]
         
 
-        
+        symbol_eq = ""
         if Jutul.haskey(model[name].system.params, :ocp_eq)
             ocp_eq = model[name].system[:ocp_eq]
-            
+            ocp_args = model[name].system[:ocp_args]
+            symbols = Symbol[]
+            for i in collect(1:size(ocp_args)[1])
+                
+                sym = Symbol(ocp_args[i])
+                push!(symbols, sym)   
+            end
 
-            #global ocp_ex = "f(c,T,cmax,Tref) = " * ocp_eq
-            # ocp_form = Base.invokelatest(model[name].system[:ocp_func],ocp_eq)
-            # model[name].system[:ocp_comp] = ocp_form
             ocp_form = model[name].system[:ocp_comp]
             Tref = 298.15
 
-            expr = Meta.parse(ocp_eq)
-            #print("expr = ", dump(expr))
-            # symbols_dict = Dict{Symbol, Any}()
-            # extract_symbols(expr, symbols_dict)
-
-            # symbols = collect(values(symbols_dict))
-            symbols = Symbol[]
-            symbols = extract_input_symbols(expr,symbols)
-          
             symbol_values = set_symbol_values(symbols,c,T,Tref,cmax,SOC)
         
-            #OCP = lambdify(expr, symbol_values)
             function_arguments = [symbol_values[symbol] for symbol in symbols if haskey(symbol_values, symbol)]
             OCP = Base.invokelatest(ocp_form,function_arguments...)
             
@@ -1484,10 +1486,7 @@ function setup_battery_initial_state(init::JSONFile,
             OCP = model[name].system[:ocp_func](c, T, cmax)
             
         end
-        # catch  
-            
-        #     print("Error")
-        # end
+
         ########################################
 
         return (init, nc, OCP)
