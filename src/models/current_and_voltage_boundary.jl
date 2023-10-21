@@ -205,7 +205,7 @@ function select_primary_variables!(S, system::CurrentAndVoltageSystem, model::Si
     S[:Current] = CurrentVar()
 end
 
-function Jutul.update_before_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces; time = NaN)
+function Jutul.update_before_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces; time = NaN, kwarg...)
     ctrl = storage.state[:ControllerCV]
     ctrl.policy = forces.policy
     ctrl.time = time
