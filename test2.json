@@ -13,10 +13,9 @@
             "type": "function"
         },
         "Conductivity": {
-            "functionname": "computeElectrolyteConductivity_default",
+            "function": "1e-4*c*((-10.5 + 0.668e-3*c + 0.494e-6*c^2) + (0.074 - 1.78e-5*c - 8.86e-10*c^2)*T + (-6.96e-5 + 2.80e-8*c)*T^2)^2",
             "argumentlist": [
-                "c",
-                "T"
+                "c"
             ],
             "type": "function"
         },
@@ -49,9 +48,11 @@
                 "k0": 2.33e-11,
                 "theta100": 0.4955,
                 "OCP": {
-                    "function": "3.4400000000000377 + 1.7144999999992965 * SOC^1 + -3.512499999995087 * SOC^2 + 5.708699999982373 * SOC^3 + -5.068699999964084 * SOC^4 + 1.866999999958046 * SOC^5 + 2.6132716760279423e-11 * SOC^6 ",
+                    "functionname": "compute_ocp_nmc111",
                     "argumentlist": [
-                        "SOC"
+                        "cElectrode",
+                        "T",
+                        "cmax"
                     ],
                     "type": "function"
                 },

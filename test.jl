@@ -2,20 +2,21 @@ using BattMo, Plots
 
 
 
-func = "1.8670.*SOC.^5 .- 5.0687.*SOC.^4 .+ 5.7087.*SOC.^3 .- 3.5125.*SOC.^2 .+ 1.7145.*SOC .+ 3.440"
-SOC = range(start = 0.2,stop = 0.99,length = 10)
-fun_ex = Meta.parse(func)
+#func = "1.8670.*SOC.^5 .- 5.0687.*SOC.^4 .+ 5.7087.*SOC.^3 .- 3.5125.*SOC.^2 .+ 1.7145.*SOC .+ 3.440"
+ocp = "1e-4*c*((-10.5 + 0.668e-3*c + 0.494e-6*c^2) + (0.074 - 1.78e-5*c - 8.86e-10*c^2)*T + (-6.96e-5 + 2.80e-8*c)*T^2)^2"
+# SOC = range(start = 0.2,stop = 0.99,length = 10)
+# fun_ex = Meta.parse(func)
 
-OCP = eval(fun_ex)
+# OCP = eval(fun_ex)
 
-ocp = polyfit(SOC,OCP, degree = 7)
+# ocp = polyfit(SOC,OCP, degree = 7)
 
-str = update_json_input(file_path = "test/battery/data/jsonfiles/p2d_40_jl_ud.json",
+str = update_json_input(file_path = "test.json",
                         interpolation_object = ocp,
                         component_name = "PositiveElectrode",
-                        x_name = "SOC" ,
-                        y_name = "OCP",
-                        new_file_path = "test/battery/data/jsonfiles/p2d_40_jl_ud.json")
+                        x_name = "c" ,
+                        y_name = "Conductivity",
+                        new_file_path = "test2.json")
 
 
 # OCP = []
