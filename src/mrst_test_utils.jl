@@ -952,8 +952,9 @@ function setup_battery_model(init::JSONFile;
 
         k0  = inputparams_am["Interface"]["k0"]
         Eak = inputparams_am["Interface"]["Eak"]
+        Tref = jsondict["Tref"]
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
-        
+        am_params[:Tref] = Tref
         
         ############## Lorena ##############
         input_symbols = ""
@@ -1237,6 +1238,7 @@ function setup_battery_parameters(init::JSONFile,
 
     T0 = jsonstruct["initT"]
     
+    
     # Negative current collector (if any)
 
     if haskey(model.models, :CC)
@@ -1262,6 +1264,7 @@ function setup_battery_parameters(init::JSONFile,
     prm_nam[:Conductivity] = vf*kappa
     prm_nam[:Temperature] = T0
     
+    
     if discretisation_type(model[:NAM]) == :P2Ddiscretization
         # nothing to do
     else
@@ -1274,7 +1277,8 @@ function setup_battery_parameters(init::JSONFile,
     # Electrolyte
     
     prm_elyte = Dict{Symbol, Any}()
-    prm_elyte[:Temperature] = T0        
+    prm_elyte[:Temperature] = T0 
+          
 
     parameters[:ELYTE] = setup_parameters(model[:ELYTE], prm_elyte)
 
@@ -1286,6 +1290,7 @@ function setup_battery_parameters(init::JSONFile,
     vf    = jsonstruct_pam["Interface"]["volumeFraction"]
     prm_pam[:Conductivity] = vf*kappa
     prm_pam[:Temperature] = T0
+    
     
     if discretisation_type(model[:PAM]) == :P2Ddiscretization
         # nothing to do
@@ -1478,6 +1483,7 @@ function setup_battery_initial_state(init::JSONFile,
     end
 
     T   = jsonstruct["initT"]
+    #Tref = jsonstruct["Tref"]
     SOC_init = jsonstruct["SOC"]
 
 
@@ -1487,6 +1493,11 @@ function setup_battery_initial_state(init::JSONFile,
         theta100 = model[name].system[:theta100]
         cmax     = model[name].system[:maximum_concentration]
         N        = model[name].system.discretization[:N]
+        if Jutul.haskey(model[name].system.params, :Tref)
+            Tref    = model[name].system.params[:Tref]
+        else
+            Tref = 298.15
+        end
         
         
         theta = SOC_init*(theta100 - theta0) + theta0;
@@ -1517,6 +1528,7 @@ function setup_battery_initial_state(init::JSONFile,
         if Jutul.haskey(model[name].system.params, :ocp_eq)
             ocp_eq = model[name].system[:ocp_eq]
             ocp_args = model[name].system[:ocp_args]
+            
             symbols = Symbol[]
             for i in collect(1:size(ocp_args)[1])
                 
@@ -1525,7 +1537,6 @@ function setup_battery_initial_state(init::JSONFile,
             end
 
             ocp_form = model[name].system[:ocp_comp]
-            Tref = 298.15
 
             symbol_values = set_symbol_values(symbols,c,T,Tref,cmax,SOC)
         

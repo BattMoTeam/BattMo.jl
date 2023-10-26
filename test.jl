@@ -61,7 +61,7 @@ diff_pd = Array([state[:ELYTE][:Diffusivity] for state in states])
 pam_ocp_pd = Array([state[:PAM][:Ocp] for state in states])
 nam_ocp_pd = Array([state[:NAM][:Ocp] for state in states])
 
-plt = plot([column[1] for column in pam_ocp_pd];
+plt = plot([column[1] for column in pam_ocp_ud];
            title     = "Discharge Voltage",
            #size      = (1000, 800),
            label     = "pam_ocp_pd",

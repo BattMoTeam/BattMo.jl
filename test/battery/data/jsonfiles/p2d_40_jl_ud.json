@@ -118,6 +118,7 @@
   },
   "SOC": 0.99,
   "initT": 298.15,
+  "Tref":298.15,
   "include_current_collectors": true,
   "Control": {
     "controlPolicy": "IEswitch",
