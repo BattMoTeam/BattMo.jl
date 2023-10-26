@@ -223,12 +223,13 @@ end
                           ) where {D, T}
         
         ocp_func = model.system.params[:ocp_func]
-        
-        cmax     = model.system.params[:maximum_concentration]
-        theta0   = model.system.params[:theta0]
-        theta100 = model.system.params[:theta100]
         refT = 298.15
+        cmax     = model.system.params[:maximum_concentration]
+        if Jutul.haskey(model.system.params, :ocp_eq)
+            theta0   = model.system.params[:theta0]
+            theta100 = model.system.params[:theta100]
         
+        end
        
         
         for cell in ix
@@ -237,21 +238,15 @@ end
             if Jutul.haskey(model.system.params, :ocp_eq)
                 
                 ocp_comp = model.system.params[:ocp_comp]    
-                # global ocp_ex = "f(c,T,cmax,Tref) = " * ocp_eq    
                 ocp_eq = model.system.params[:ocp_eq]
                 
                 ocp_form = model.system.params[:ocp_comp]
-                #ocp_form = Base.invokelatest(model.system.params[:ocp_func],ocp_eq)
+                
                 Tref = 298.15 
                 SOC = (Cs[cell]/cmax - theta0)/(theta100 - theta0)
-                # c = Cs[cell]
-                # T = refT
+                
                 expr = Meta.parse(ocp_eq)
 
-                # symbols_dict = Dict{Symbol, Any}()
-                # extract_symbols(expr, symbols_dict)
-
-                # symbols = collect(values(symbols_dict))
                 symbols = Symbol[]
                 symbols = extract_input_symbols(expr,symbols)
 
@@ -263,24 +258,12 @@ end
             
                 @inbounds Ocp[cell] = Base.invokelatest(ocp_form,function_arguments...)
                 
-                #@inbounds Ocp[cell] = Base.invokelatest(ocp_form,Cs[cell], refT, cmax,Tref)
                 
-                # global conc = Cs[cell]
-                # global concmax = cmax
-                # global ocp_ex = ocp_eq
-                # if isempty(ocp_eq)
-                #     @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)
-                
-                #print("ocp1 =", @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax))
-                # end
             else
                 @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)
-                # ocp_eq = model.systssem.params[:ocp_eq]
-                
-                
-                #print("ocp2 =", @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax))
+               
             end
-            #@inbounds Ocp[cell] = @evaluate_ocp_function(ocp_eq , Cs[cell], refT, cmax)
+            
             ########################################
         end
     end

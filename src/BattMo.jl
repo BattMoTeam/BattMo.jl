@@ -67,6 +67,7 @@ include("models/current_collector.jl")
 include("models/ocp.jl")
 include("models/activematerial.jl")
 
+include("function_input_tools.jl")
 include("models/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/convergence.jl")
@@ -78,8 +79,9 @@ include("linsolve.jl")
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 @compile_workload begin
    for use_general_ad in [false, true]
-        fn = "test/battery/data/jsonfiles/p2d_40_jl.json"
-        init = JSONFile(fn)
+        # fn = "test/battery/data/jsonfiles/p2d_40_jl.json"
+        # init = JSONFile(fn)
+        init = "p2d_40"
         run_battery(init; general_ad = use_general_ad,info_level = -1);
    end
 end

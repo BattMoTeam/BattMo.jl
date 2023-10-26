@@ -8,71 +8,74 @@ fun_ex = Meta.parse(func)
 
 OCP = eval(fun_ex)
 
-ocp = interpolation(SOC,OCP, degree = 7)
+ocp = polyfit(SOC,OCP, degree = 7)
 
-str = update_json_input(file_path = "test.json",
+str = update_json_input(file_path = "test/battery/data/jsonfiles/p2d_40_jl_ud.json",
                         interpolation_object = ocp,
-                        component_name = "NegativeElectrode",
+                        component_name = "PositiveElectrode",
                         x_name = "SOC" ,
                         y_name = "OCP",
-                        new_file_path = "test2.json")
+                        new_file_path = "test/battery/data/jsonfiles/p2d_40_jl_ud.json")
 
 
-OCP = []
-str = "f(SOC) = " * str
-par = Meta.parse(str)
-stop = false
-ev2 = eval(par)
+# OCP = []
+# str = "f(SOC) = " * str
+# par = Meta.parse(str)
+# stop = false
+# ev2 = eval(par)
 
-for i in collect(1:size(SOC)[1])
-    local SOC = soc[i]
-    if stop == false
-        ev = eval(par)
-        sub = f(SOC)
-        push!(OCP,sub)
-        global stop = true
-    else
-        sub = f(SOC)
-        push!(OCP,sub)
+# for i in collect(1:size(SOC)[1])
+#     local SOC = soc[i]
+#     if stop == false
+#         ev = eval(par)
+#         sub = f(SOC)
+#         push!(OCP,sub)
+#         global stop = true
+#     else
+#         sub = f(SOC)
+#         push!(OCP,sub)
 
-    end
-end
+#     end
+# end
 
-plot(SOC, OCP)
+# plot(SOC, OCP)
 
-# fn1 = "test/battery/data/jsonfiles/p2d_40_jl_ud.json"
-# init1 = JSONFile(fn1)
+fn1 = "test/battery/data/jsonfiles/p2d_40_jl_ud.json"
+#fn1 = "test2.json"
+init1 = JSONFile(fn1)
 
-# states, reports, extra = run_battery(init1;use_p2d=true,info_level = -1, extra_timing = false);
+states, reports, extra = run_battery(init1;use_p2d=true,info_level = -1, extra_timing = false);
 
-# nam_ocp_ud = Array([state[:NAM][:Ocp] for state in states])
-# pam_ocp_ud = Array([state[:PAM][:Ocp] for state in states])
+diff_ud = Array([state[:ELYTE][:Diffusivity] for state in states])
+pam_ocp_ud = Array([state[:PAM][:Ocp] for state in states])
+nam_ocp_ud = Array([state[:NAM][:Ocp] for state in states])
 
-# #fn2 = "test/battery/data/jsonfiles/p2d_40_jl.json"
-# fn2 = "test2.json"
-# init2 = JSONFile(fn2)
-# states, reports, extra = run_battery(init2;use_p2d=true,info_level = -1, extra_timing = false);
-# print(size(extra[:timesteps]))
+fn2 = "test/battery/data/jsonfiles/p2d_40_jl.json"
+#fn2 = "test2.json"
+init2 = JSONFile(fn2)
+states, reports, extra = run_battery(init2;use_p2d=true,info_level = -1, extra_timing = false);
+print(size(extra[:timesteps]))
 
-# nam_ocp_pd = Array([state[:NAM][:Ocp] for state in states])
-# pam_ocp_pd = Array([state[:PAM][:Ocp] for state in states])
+diff_pd = Array([state[:ELYTE][:Diffusivity] for state in states])
+pam_ocp_pd = Array([state[:PAM][:Ocp] for state in states])
+nam_ocp_pd = Array([state[:NAM][:Ocp] for state in states])
 
-# plt = plot([column[1] for column in nam_ocp_pd];
-#            title     = "Discharge Voltage",
-#            #size      = (1000, 800),
-#            label     = "nam_ocp_ud",
-#            xlabel    = "Time / s",
-#            ylabel    = "OCP / V",
-#            linewidth = 4,
-#            xtickfont = font(pointsize = 15),
-#            ytickfont = font(pointsize = 15))
+plt = plot([column[1] for column in pam_ocp_pd];
+           title     = "Discharge Voltage",
+           #size      = (1000, 800),
+           label     = "pam_ocp_pd",
+           xlabel    = "Time / s",
+           ylabel    = "OCP / V",
+           linewidth = 4,
+           xtickfont = font(pointsize = 15),
+           ytickfont = font(pointsize = 15))
 
-# plot!(([column[1] for column in pam_ocp_pd]), label = "pam_ocp_pd", linewidth = 2)
-# plot!(([column[1] for column in pam_ocp_ud]), label = "pam_ocp_ud", linewidth = 2)
+plot!(([column[1] for column in nam_ocp_pd]), label = "nam_ocp_pd", linewidth = 2)
+plot!(([column[1] for column in pam_ocp_ud]), label = "pam_ocp_ud", linewidth = 2)
 
-# plot!(([column[1] for column in nam_ocp_ud]), label = "nam_ocp_ud", linewidth = 2)
+plot!(([column[1] for column in nam_ocp_ud]), label = "nam_ocp_ud", linewidth = 2)
 
-# display(plt)
+display(plt)
 
 
 

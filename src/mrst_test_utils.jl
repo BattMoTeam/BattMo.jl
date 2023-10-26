@@ -683,19 +683,19 @@ function setup_battery_model(init::MatlabFile;
         Eak = inputparams_am["Interface"]["Eak"]
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
         
-        # if name == :NAM
-        #     am_params[:ocp_func] = compute_ocp_graphite
-        # elseif name == :PAM
-        #     am_params[:ocp_func] = compute_ocp_nmc111
-        # else
-        #     error("not recongized")
-        # end
+        if name == :NAM
+            am_params[:ocp_func] = compute_ocp_graphite
+        elseif name == :PAM
+            am_params[:ocp_func] = compute_ocp_nmc111
+        else
+            error("not recongized")
+        end
 
-        ############## Lorena ##############
+        # ############## Lorena ##############
 
-        am_params[:ocp_func] = getfield(BattMo, Symbol("compute_ocp_from_function"))
-        am_params[:ocp_eq] = inputparams_am["Interface"]["OCP"]["functionname"]
-        ####################################
+        # am_params[:ocp_func] = getfield(BattMo, Symbol("compute_ocp_from_function"))
+        # #am_params[:ocp_eq] = inputparams_am["Interface"]["OCP"]["functionname"]
+        # ####################################
 
         T_prm = typeof(am_params)
         if use_p2d
@@ -756,13 +756,13 @@ function setup_battery_model(init::MatlabFile;
     # TODO : add general code
     funcname = "computeDiffusionCoefficient_default"
     func = getfield(BattMo, Symbol(funcname))
-    params[:diffusivity] = func
+    params[:diffusivity_func] = func
 
     # setup diffusion coefficient function
     # TODO : add general code
     funcname = "computeElectrolyteConductivity_default"
     func = getfield(BattMo, Symbol(funcname))
-    params[:conductivity] = func
+    params[:conductivity_func] = func
     
     elyte = Electrolyte(params)
     model_elyte = setup_component(inputparams["Electrolyte"],
@@ -968,10 +968,10 @@ function setup_battery_model(init::JSONFile;
                 end
             end
             am_params[:ocp_eq] = jsonName * "_ocp_curve($input_symbols) = " * inputparams_am["Interface"]["OCP"]["function"]
-            print(am_params[:ocp_eq])
+            
             
             #am_params[:ocp_eq] = inputparams_am["Interface"]["OCP"]["function"]
-            am_params[:ocp_func] = getfield(BattMo, Symbol("compute_ocp_function"))
+            am_params[:ocp_func] = getfield(BattMo, Symbol("compute_function_from_string"))
             am_params[:ocp_comp] = Base.invokelatest(am_params[:ocp_func],am_params[:ocp_eq])
             #am_params[:ocp_comp] = getfield(BattMo, Symbol("compute_ocp_from_function"))
             
@@ -1022,14 +1022,64 @@ function setup_battery_model(init::JSONFile;
     params[:bruggeman]          = inputparams_elyte["BruggemanCoefficient"]
     
     # setup diffusion coefficient function
-    funcname = inputparams_elyte["DiffusionCoefficient"]["functionname"]
-    func = getfield(BattMo, Symbol(funcname))
-    params[:diffusivity] = func
 
-    # setup diffusion coefficient function
-    funcname = inputparams_elyte["Conductivity"]["functionname"]
-    func = getfield(BattMo, Symbol(funcname))
-    params[:conductivity] = func
+    input_symbols_diffusivity = ""
+    if haskey(inputparams_elyte["DiffusionCoefficient"],"function")
+        params[:diffusivity_args] = inputparams_elyte["DiffusionCoefficient"]["argumentlist"]
+        
+        for i in collect(1:size(params[:diffusivity_args])[1])
+            if i == size(params[:diffusivity_args])[1]
+                input_symbols_diffusivity *= params[:diffusivity_args][i]    
+            else
+                input_symbols_diffusivity *= params[:diffusivity_args][i] * ","
+            end
+        end
+        params[:diffusivity_eq] = "elyte_diffusion_curve($input_symbols_diffusivity) = " * inputparams_elyte["DiffusionCoefficient"]["function"]
+        
+        
+        #am_params[:ocp_eq] = inputparams_am["Interface"]["OCP"]["function"]
+        params[:diffusivity_func] = getfield(BattMo, Symbol("compute_function_from_string"))
+        params[:diffusivity_comp] = Base.invokelatest(params[:diffusivity_func],params[:diffusivity_eq])
+        #am_params[:ocp_comp] = getfield(BattMo, Symbol("compute_ocp_from_function"))
+        
+    else
+        funcname = inputparams_elyte["DiffusionCoefficient"]["functionname"]
+        params[:diffusivity_func] = getfield(BattMo, Symbol(funcname))
+    end
+
+    # funcname = inputparams_elyte["DiffusionCoefficient"]["functionname"]
+    # func = getfield(BattMo, Symbol(funcname))
+    # params[:diffusivity_func] = func
+
+    # setup conductivity function
+
+    input_symbols_conductivity = ""
+    if haskey(inputparams_elyte["Conductivity"],"function")
+        params[:conductivity_args] = inputparams_elyte["Conductivity"]["argumentlist"]
+        
+        for i in collect(1:size(params[:conductivity_args])[1])
+            if i == size(params[:conductivity_args])[1]
+                input_symbols_conductivity *= params[:conductivity_args][i]    
+            else
+                input_symbols_conductivity *= params[:conductivity_args][i] * ","
+            end
+        end
+        params[:conductivity_eq] = "elyte_conduct_curve($input_symbols_conductivity) = " * inputparams_elyte["Conductivity"]["function"]
+        
+        
+        #am_params[:ocp_eq] = inputparams_am["Interface"]["OCP"]["function"]
+        params[:conductivity_func] = getfield(BattMo, Symbol("compute_function_from_string"))
+        params[:conductivity_comp] = Base.invokelatest(params[:conductivity_func],params[:conductivity_eq])
+        #am_params[:ocp_comp] = getfield(BattMo, Symbol("compute_ocp_from_function"))
+        
+    else
+        funcname = inputparams_elyte["Conductivity"]["functionname"]
+        params[:conductivity_func] = getfield(BattMo, Symbol(funcname))
+    end
+    #am_params[:ocp_eq] = jsonName * "_ocp_curve($input_symbols) = " * inputparams_elyte["Conductivity"]["function"]
+    
+    # func = getfield(BattMo, Symbol(funcname))
+    # params[:conductivity] = func
     
     elyte = Electrolyte(params)
     model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
@@ -1481,10 +1531,10 @@ function setup_battery_initial_state(init::JSONFile,
         
             function_arguments = [symbol_values[symbol] for symbol in symbols if haskey(symbol_values, symbol)]
             OCP = Base.invokelatest(ocp_form,function_arguments...)
-            
+            print("OCP = ", OCP)
         else
             OCP = model[name].system[:ocp_func](c, T, cmax)
-            
+            print("OCP2 = ", OCP)
         end
 
         ########################################

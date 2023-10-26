@@ -1,10 +1,6 @@
-export interpolation, update_json_input
-
-## Defines OCP and entropy change (dUdT) for graphite using polynomials
-using Interpolations
-using Interpolations: coefficients
-using JSON
 using Polynomials
+## Defines OCP and entropy change (dUdT) for graphite using polynomials
+
 
 const coeff1_graphite = Polynomial([
 	+ 0.005269056,
@@ -31,165 +27,18 @@ const coeff2_graphite = Polynomial([
 ]);
 
 
-############## Lorena ##############
 
-function interpolation(x,
-                    y;
-                    degree = 5)
-                    # interpolator = "Linear", 
-                    # extrapolate = false, 
-                    # string = true,
-                    
-                    # )
 
-    """Compute the OCP interpolated function for a material based on the given data"""
 
-    # # Check interpolator is valid
-    # if !(interpolator in ["Linear", "Cubic", "Constant", "Quadratic"])
-    #     error("ValueError: interpolator '$interpolator' not recognised.")
-    # end
-
-    # Check if x, and y are valid
-    if ndims(x) > 1
-        error("ValueError: x should be one-dimensional")
-    elseif ndims(y) > 1
-        error("ValueError: y should be one-dimensional")
-    elseif size(x) != size(y)
-        error("ValueError: size(y) should be equal to size(y)")
-
-    end
-
-    # interp = Polynomials.fit(x,y,5)
-
-    fit = Polynomials.fit(x,y,7)
+# function compute_ocp_from_function(ocp_eq)
+#     """Compute OCP for a material as function of temperature and concentration"""
     
-    #fit = Polyn(coefficients)
-    #str = string(fit)
-   
-    
-    # if extrapolate == true
-    #     if interpolator == "Linear"
-    #         interp = Interpolations.interpolate((x,), y, Gridded(Linear()))
-    #         interp = Interpolations.extrapolate(interp, Line())
-    #     elseif interpolator == "Cubic"
-    #         interp = Interpolations.interpolate(y, BSpline(Cubic()),x)
-    #         interp = Interpolations.extrapolate(interp, Flat(OnGrid()))
-    #     elseif interpolator == "Constant"
-    #         interp = Interpolations.interpolate((x,), y, Gridded(Constant()))
-    #         interp = Interpolations.extrapolate(interp, Line())
-    #     elseif interpolator == "Quadratic"
-    #         interp = Interpolations.interpolate(y, BSpline(Quadratic()),x)
-    #         interp = Interpolations.extrapolate(interp, Line(OnGrid()))
-    #     end
+#     #print("ex = ", f(c,T,cmax,Tref))
+#     return compute_ocp_function(ocp_eq)
+#     #@evaluate_ocp_function $esc(ex) c T cmax
+#     #eval(Meta.parse(ex))
 
-    # else
-    #     if interpolator == "Linear"
-    #         interp = Interpolations.interpolate((x,), y, Gridded(Linear()))
-    #     elseif interpolator == "Cubic"
-    #         interp = scale(interpolate(y, BSpline(Cubic())), x)
-    #         #interp = scale(Interpolations.interpolate(y, BSpline(Cubic()),x))
-    #     elseif interpolator == "Constant"
-    #         interp = Interpolations.interpolate((x,), y, Gridded(Constant()))
-    #     elseif interpolator == "Quadratic"
-    #         interp = scale(interpolate(y, BSpline(Quadratic())), x)
-    #     end
-    # end
-
-    # @syms x
-
-    # symb_expr = interp(x)
-
-    # print(symb_expr)
-
-    #symb_expr_str = string(symb_expr)
-    
-    return fit#symb_expr_str
-end
-
-function update_json_input(;file_path::String = nothing,
-                        interpolation_object = nothing,
-                        component_name::String = nothing,
-                        x_name::String = nothing,
-                        y_name::String = nothing,
-                        new_file_path = nothing)
-
-    coeffs = Polynomials.coeffs(interpolation_object)
-    print("ex = ", coeffs)
-    expression = ""
-    for i in collect(1:size(coeffs)[1]-1)
-        
-        coeff = coeffs[i]
-        j = i-1
-        if i == 1
-            
-            expression *= "$coeff "
-        else
-            expression *= "+ $coeff * $x_name^$j "
-        end
-    end 
-    json_data = Dict{String, Any}()
-    
-    open(file_path, "r") do io
-        json_data = JSON.parse(io)
-    end
-
-    
-    
-    if haskey(json_data, component_name)
-        if y_name == "OCP"
-            if haskey(json_data[component_name],"ActiveMaterial")
-                if haskey(json_data[component_name]["ActiveMaterial"],"Interface")
-                    if haskey(json_data[component_name]["ActiveMaterial"]["Interface"],"OCP")
-                        if haskey(json_data[component_name]["ActiveMaterial"]["Interface"]["OCP"],"function")
-                            json_data[component_name]["ActiveMaterial"]["Interface"]["OCP"]["function"] = expression
-                            json_data[component_name]["ActiveMaterial"]["Interface"]["OCP"]["argumentlist"] = [x_name]
-                        elseif haskey(json_data[component_name]["ActiveMaterial"]["Interface"]["OCP"],"functionname")
-                            delete!(json_data[component_name]["ActiveMaterial"]["Interface"]["OCP"],"functionname")
-                            json_data[component_name]["ActiveMaterial"]["Interface"]["OCP"]["function"] = expression
-                            json_data[component_name]["ActiveMaterial"]["Interface"]["OCP"]["argumentlist"] = [x_name]
-                        end
-                    end
-                end
-            else
-                
-            end
-        end
-    end
-
-    #json_data = JSON3.pretty(json_data);
-
-
-    if new_file_path !== nothing
-        open(new_file_path, "w") do io
-            JSON.print(io, json_data, 4)
-        end
-    else 
-
-        open(file_path, "w") do io
-            JSON.print(io, json_data,4)
-        end
-    end
-
-    return expression
-
-end
-
-
-function compute_ocp_function(ocp_eq)
-    
-    eval(Meta.parse(ocp_eq))
-end
-
-
-function compute_ocp_from_function(ocp_eq)
-    """Compute OCP for a material as function of temperature and concentration"""
-    
-    #print("ex = ", f(c,T,cmax,Tref))
-    return compute_ocp_function(ocp_eq)
-    #@evaluate_ocp_function $esc(ex) c T cmax
-    #eval(Meta.parse(ex))
-
-end
+# end
 
 
 

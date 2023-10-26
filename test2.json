@@ -49,11 +49,9 @@
                 "k0": 2.33e-11,
                 "theta100": 0.4955,
                 "OCP": {
-                    "functionname": "compute_ocp_nmc111",
+                    "function": "3.4400000000000377 + 1.7144999999992965 * SOC^1 + -3.512499999995087 * SOC^2 + 5.708699999982373 * SOC^3 + -5.068699999964084 * SOC^4 + 1.866999999958046 * SOC^5 + 2.6132716760279423e-11 * SOC^6 ",
                     "argumentlist": [
-                        "cElectrode",
-                        "T",
-                        "cmax"
+                        "SOC"
                     ],
                     "type": "function"
                 },
@@ -102,9 +100,11 @@
                 "k0": 5.031e-11,
                 "theta100": 0.88551,
                 "OCP": {
-                    "function": "3.4400000000000377 + 1.7144999999992965 * SOC^1 + -3.512499999995087 * SOC^2 + 5.708699999982373 * SOC^3 + -5.068699999964084 * SOC^4 + 1.866999999958046 * SOC^5 + 2.6132716760279423e-11 * SOC^6 ",
+                    "functionname": "compute_ocp_graphite",
                     "argumentlist": [
-                        "SOC"
+                        "cElectrode",
+                        "T",
+                        "cmax"
                     ],
                     "type": "function"
                 },
