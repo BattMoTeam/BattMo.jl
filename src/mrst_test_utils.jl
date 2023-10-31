@@ -450,10 +450,10 @@ function setup_coupling!(init::MatlabFile,
         )
         
         msource = exported_all["model"]["NegativeElectrode"]["CurrentCollector"]
-        mtarget = exported_all["model"]["NegativeElectrode"]["ActiveMaterial"]
+        mtarget = exported_all["model"]["NegativeElectrode"]["Coating"]
         couplingfaces = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingfaces"])
         couplingcells = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"])
-        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "EffectiveElectricalConductivity")
+        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "EffectiveElectronicConducticity")
 
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
         ct_pair = setup_cross_term(ct, target = :NAM, source = :CC, equation = :charge_conservation)
@@ -1293,7 +1293,7 @@ function setup_battery_initial_state(init::MatlabFile,
 
         init = Dict()
         
-        init[:Phi]   = state0[jsonName]["ActiveMaterial"]["phi"][1]
+        init[:Phi] = state0[jsonName]["ActiveMaterial"]["phi"][1]
 
         if use_cc
             c = state0[jsonName]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
