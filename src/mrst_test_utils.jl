@@ -105,7 +105,7 @@ function setup_config(sim::Jutul.JutulSimulator,
     #     cfg[:max_timestep_cuts] = 0
     # end
 
-    cfg[:tolerances][:PP][:default] = 1e-1
+    cfg[:tolerances][:PP][:default]  = 1e-1
     cfg[:tolerances][:BPP][:default] = 1e-1
 
     return cfg
@@ -117,13 +117,13 @@ end
 #####################################################################################
 
 function setup_timesteps(init::JSONFile;
-    kwarg ...)
+                         kwarg ...)
     """
         Method setting up the timesteps from a json file object. 
     """
 
     total = init.object["TimeStepping"]["totalTime"]
-    n = init.object["TimeStepping"]["N"]
+    n     = init.object["TimeStepping"]["numberOfTimeSteps"]
 
     dt = total / n
     timesteps = rampupTimesteps(total, dt, 5)
@@ -624,9 +624,9 @@ function setup_model(init::InputFile;
 
     include_cc = true #!
 
-    model = setup_battery_model(init, include_cc=include_cc,use_groups=use_groups,use_p2d=use_p2d; kwarg ... )
+    model      = setup_battery_model(init, include_cc=include_cc,use_groups=use_groups,use_p2d=use_p2d; kwarg ... )
     parameters = setup_battery_parameters(init, model)
-    initState = setup_battery_initial_state(init, model)
+    initState  = setup_battery_initial_state(init, model)
 
     return model, initState, parameters
 
@@ -823,9 +823,9 @@ function setup_battery_model(init::JSONFile;
     jsondict=init.object
 
     function setup_component(geomparam::Dict, 
-        sys; 
-        addDirichlet::Bool = false, 
-        general_ad::Bool = false)
+                             sys; 
+                             addDirichlet::Bool = false, 
+                             general_ad::Bool = false)
 
         facearea = geomparam[:facearea]
         
@@ -872,9 +872,9 @@ function setup_battery_model(init::JSONFile;
     end
 
     function setup_component(geomparams::Dict, 
-        sys::Electrolyte, 
-        bcfaces = nothing; 
-        general_ad::Bool = false)
+                             sys::Electrolyte, 
+                             bcfaces = nothing; 
+                             general_ad::Bool = false)
 
         # specific implementation for electrolyte
         # requires geometric parameters for :NAM, :SEP, :PAM
@@ -928,32 +928,61 @@ function setup_battery_model(init::JSONFile;
 
     
     function setup_active_material(name::Symbol, 
-        geomparams::Dict{Symbol,<:Any})
+                                   geomparams::Dict{Symbol, <:Any})
 
         jsonName = jsonNames[name]
 
-        inputparams_am = jsondict[jsonName]["ActiveMaterial"]
+        function computeVolumeFraction(codict)
+        # We compute the volume fraction form the coating data
 
+            am = "ActiveMaterial"
+            bd = "Binder"
+            ad = "ConductingAdditive"
+
+            compnames = [am, bd, ad]
+
+            specificVolumes = zeros(length(compnames))
+            for icomp in eachindex(compnames)
+                compname = compnames[icomp]
+                rho = codict[compname]["density"]
+                mf  = codict[compname]["massFraction"]
+                specificVolumes[icomp] = mf/rho
+            end
+
+            sumSpecificVolumes = sum(specificVolumes)
+            volumeFractions =[sv/sumSpecificVolumes for sv in specificVolumes]
+                
+            effectiveDensity = codict["effectiveDensity"]
+            volumeFraction = sumSpecificVolumes*effectiveDensity
+
+            return volumeFraction, volumeFractions
+            
+        end
+
+        inputparams_am = jsondict[jsonName]["Coating"]["ActiveMaterial"]
+        
         am_params = JutulStorage()
-        am_params[:volumeFraction]          = inputparams_am["Interface"]["volumeFraction"]
-        am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
-        am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
+        vf, vfs = computeVolumeFraction(jsondict[jsonName]["Coating"])
+        am_params[:volumeFraction]          = vf
+        am_params[:volumeFractions]         = vfs
+        am_params[:n_charge_carriers]       = inputparams_am["Interface"]["numberOfElectronsTransferred"]
+        am_params[:maximum_concentration]   = inputparams_am["Interface"]["saturationConcentration"]
         am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
-        am_params[:theta0]                  = inputparams_am["Interface"]["theta0"]
-        am_params[:theta100]                = inputparams_am["Interface"]["theta100"]
+        am_params[:theta0]                  = inputparams_am["Interface"]["guestStoichiometry0"]
+        am_params[:theta100]                = inputparams_am["Interface"]["guestStoichiometry100"]
 
-        k0  = inputparams_am["Interface"]["k0"]
-        Eak = inputparams_am["Interface"]["Eak"]
+        k0  = inputparams_am["Interface"]["reactionRateConstant"]
+        Eak = inputparams_am["Interface"]["activationEnergyOfReaction"]
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
         
-        funcname = inputparams_am["Interface"]["OCP"]["functionname"]
+        funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
         am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
         
         use_p2d = true
         if use_p2d
-            rp = inputparams_am["SolidDiffusion"]["rp"]
+            rp = inputparams_am["SolidDiffusion"]["particleRadius"]
             N  = Int64(inputparams_am["SolidDiffusion"]["N"])
-            D  = inputparams_am["SolidDiffusion"]["D0"]
+            D  = inputparams_am["SolidDiffusion"]["referenceDiffusionCoefficient"]
             sys_am = ActiveMaterialP2D(am_params, rp, N, D)
         else
             sys_am = ActiveMaterialNoParticleDiffusion(am_params)
@@ -983,16 +1012,16 @@ function setup_battery_model(init::JSONFile;
     
     params[:transference]       = inputparams_elyte["sp"]["t"]
     params[:charge]             = inputparams_elyte["sp"]["z"]
-    params[:separator_porosity] = inputparams_elyte["Separator"]["porosity"]
-    params[:bruggeman]          = inputparams_elyte["BruggemanCoefficient"]
+    params[:separator_porosity] = jsondict["Separator"]["porosity"]
+    params[:bruggeman]          = inputparams_elyte["bruggemanCoefficient"]
     
     # setup diffusion coefficient function
-    funcname = inputparams_elyte["DiffusionCoefficient"]["functionname"]
+    funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
     func = getfield(BattMo, Symbol(funcname))
     params[:diffusivity] = func
 
     # setup diffusion coefficient function
-    funcname = inputparams_elyte["Conductivity"]["functionname"]
+    funcname = inputparams_elyte["ionicConductivity"]["functionname"]
     func = getfield(BattMo, Symbol(funcname))
     params[:conductivity] = func
     
@@ -1146,6 +1175,33 @@ function setup_battery_parameters(init::JSONFile,
                                   model::MultiModel
                                   )
 
+    function computeEffectiveConductivity(comodel, cojsonstruct)
+        # Compute effective conductivity for the coating
+
+        # First we compute the intrinsic conductivity as volume weight average of the subcomponents
+        am = "ActiveMaterial"
+        bd = "Binder"
+        ad = "ConductingAdditive"
+        
+        compnames = [am, bd, ad]
+
+        vfs = comodel.system.params[:volumeFractions]
+        kappa = 0
+        for icomp in eachindex(compnames)
+            compname = compnames[icomp]
+            vf = vfs[icomp]
+            kappa += vf*cojsonstruct[compname]["electronicConductivity"]
+        end
+
+        vf = comodel.system.params[:volumeFraction]
+        bg = cojsonstruct["bruggemanCoefficient"]
+
+        kappaeff = (vf^bg)*kappa
+
+        return kappaeff
+        
+    end
+
     parameters = Dict{Symbol, Any}()
 
     jsonstruct=init.object
@@ -1163,18 +1219,16 @@ function setup_battery_parameters(init::JSONFile,
     if use_cc
         prm_cc = Dict{Symbol, Any}()
         jsonstruct_cc = jsonstruct["NegativeElectrode"]["CurrentCollector"]
-        prm_cc[:Conductivity] = jsonstruct_cc["EffectiveElectricalConductivity"]
+        prm_cc[:Conductivity] = jsonstruct_cc["electronicConductivity"]
         parameters[:CC] = setup_parameters(model[:CC], prm_cc)
     end
 
     # Negative active material
     
     prm_nam = Dict{Symbol, Any}()
-    jsonstruct_nam = jsonstruct["NegativeElectrode"]["ActiveMaterial"]
+    jsonstruct_nam = jsonstruct["NegativeElectrode"]["Coating"]["ActiveMaterial"]
 
-    kappa = jsonstruct_nam["electricalConductivity"]
-    vf    = jsonstruct_nam["Interface"]["volumeFraction"]
-    prm_nam[:Conductivity] = vf*kappa
+    prm_nam[:Conductivity] = computeEffectiveConductivity(model[:NAM], jsonstruct["NegativeElectrode"]["Coating"])
     prm_nam[:Temperature] = T0
     
     if discretisation_type(model[:NAM]) == :P2Ddiscretization
@@ -1196,17 +1250,16 @@ function setup_battery_parameters(init::JSONFile,
     # Positive active material
 
     prm_pam = Dict{Symbol, Any}()
-    jsonstruct_pam = jsonstruct["PositiveElectrode"]["ActiveMaterial"]
-    kappa = jsonstruct_pam["electricalConductivity"]
-    vf    = jsonstruct_pam["Interface"]["volumeFraction"]
-    prm_pam[:Conductivity] = vf*kappa
+    jsonstruct_pam = jsonstruct["PositiveElectrode"]["Coating"]["ActiveMaterial"]
+
+    prm_pam[:Conductivity] = computeEffectiveConductivity(model[:PAM], jsonstruct["PositiveElectrode"]["Coating"])
     prm_pam[:Temperature] = T0
     
     if discretisation_type(model[:PAM]) == :P2Ddiscretization
         # nothing to do
     else
         @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
-        prm_pam[:Diffusivity] = jsonstruct_nam["InterDiffusionCoefficient"]
+        prm_pam[:Diffusivity] = jsonstruct_pam["InterDiffusionCoefficient"]
     end
 
     parameters[:PAM] = setup_parameters(model[:PAM], prm_pam)
@@ -1222,7 +1275,7 @@ function setup_battery_parameters(init::JSONFile,
     if use_pp
         prm_pp = Dict{Symbol, Any}()
         jsonstruct_pp = jsonstruct["PositiveElectrode"]["CurrentCollector"]
-        prm_pp[:Conductivity] = jsonstruct_pp["EffectiveElectricalConductivity"][1]
+        prm_pp[:Conductivity] = jsonstruct_pp["electronicConductivity"]
         
         parameters[:PP] = setup_parameters(model[:PP], prm_pp)
     end        
@@ -1595,19 +1648,19 @@ end
 
 function setup_geomparams(init::JSONFile)
     
-    jsondict=init.object
+    jsondict = init.object
 
     names = (:CC, :NAM, :SEP, :PAM, :PP)
     geomparams = Dict(name => Dict() for name in names)
 
     geomparams[:CC][:N]          = jsondict["NegativeElectrode"]["CurrentCollector"]["N"]
     geomparams[:CC][:thickness]  = jsondict["NegativeElectrode"]["CurrentCollector"]["thickness"]
-    geomparams[:NAM][:N]         = jsondict["NegativeElectrode"]["ActiveMaterial"]["N"]
-    geomparams[:NAM][:thickness] = jsondict["NegativeElectrode"]["ActiveMaterial"]["thickness"]
-    geomparams[:SEP][:N]         = jsondict["Electrolyte"]["Separator"]["N"]
-    geomparams[:SEP][:thickness] = jsondict["Electrolyte"]["Separator"]["thickness"]
-    geomparams[:PAM][:N]         = jsondict["PositiveElectrode"]["ActiveMaterial"]["N"]
-    geomparams[:PAM][:thickness] = jsondict["PositiveElectrode"]["ActiveMaterial"]["thickness"]
+    geomparams[:NAM][:N]         = jsondict["NegativeElectrode"]["Coating"]["N"]
+    geomparams[:NAM][:thickness] = jsondict["NegativeElectrode"]["Coating"]["thickness"]
+    geomparams[:SEP][:N]         = jsondict["Separator"]["N"]
+    geomparams[:SEP][:thickness] = jsondict["Separator"]["thickness"]
+    geomparams[:PAM][:N]         = jsondict["PositiveElectrode"]["Coating"]["N"]
+    geomparams[:PAM][:thickness] = jsondict["PositiveElectrode"]["Coating"]["thickness"]
     geomparams[:PP][:N]          = jsondict["PositiveElectrode"]["CurrentCollector"]["N"]
     geomparams[:PP][:thickness]  = jsondict["PositiveElectrode"]["CurrentCollector"]["thickness"]
 
@@ -1722,23 +1775,25 @@ end
 function inputRefToStates(states, stateref)
     statesref = deepcopy(states);
     for i in 1:size(states,1)
+
         staterefnew = statesref[i]   
-        refstep = i
-        fields = ["CurrentCollector","ActiveMaterial"]
-        components = ["NegativeElectrode","PositiveElectrode"]
-        newkeys = [:CC,:NAM,:PP,:PAM]
-        ind =1
+        refstep     = i
+        fields      = ["CurrentCollector","ActiveMaterial"]
+        components  = ["NegativeElectrode","PositiveElectrode"]
+        newkeys     = [:CC, :NAM, :PP, :PAM]
+       
+        ind = 1
         for component = components
             for field in fields
                 state = stateref[refstep][component]
                 phi_ref = state[field]["phi"]
                 newcomp = newkeys[ind]
                 staterefnew[newcomp][:Phi] = phi_ref        
-                if haskey(state[field],"c")
+                if haskey(state[field], "c")
                     c = state[field]["c"]
                     staterefnew[newcomp][:C] = c
                 end
-                ind=ind + 1
+                ind = ind + 1
             end
         end
 
