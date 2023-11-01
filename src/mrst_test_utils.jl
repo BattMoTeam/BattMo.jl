@@ -2,8 +2,7 @@
 #Exported functions:
 ############################################################################################
 
-export run_battery
-export inputRefToStates
+export run_battery, inputRefToStates, computeCellCapacity, Constants
 
 ############################################################################################
 #Run battery 
