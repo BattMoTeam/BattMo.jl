@@ -453,7 +453,7 @@ function setup_coupling!(init::MatlabFile,
         mtarget = exported_all["model"]["NegativeElectrode"]["Coating"]
         couplingfaces = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingfaces"])
         couplingcells = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"])
-        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectronicConducticity")
+        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectronicConductivity")
 
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
         ct_pair = setup_cross_term(ct, target = :NAM, source = :CC, equation = :charge_conservation)
@@ -543,7 +543,7 @@ function setup_coupling!(init::MatlabFile,
         ct = exported_all["model"]["PositiveElectrode"]["couplingTerm"]
         couplingfaces = Int64.(ct["couplingfaces"])
         couplingcells = Int64.(ct["couplingcells"])
-        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectricalConductivity")
+        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectronicConductivity")
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
         ct_pair = setup_cross_term(ct, target = :PAM, source = :PP, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
@@ -584,8 +584,8 @@ function setup_coupling!(init::MatlabFile,
         :equation => :charge_conservation
         )
     
-    #effcond = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["EffectiveElectricalConductivity"]
-    trans = getHalfTrans(msource, couplingfaces, couplingcells, "effectiveElectricalConductivity")
+    #effcond = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["effectiveElectronicConductivity"]
+    trans = getHalfTrans(msource, couplingfaces, couplingcells, "effectiveElectronicConductivity")
 
     if skip_cc
         
@@ -694,19 +694,19 @@ function setup_battery_model(init::MatlabFile;
         end
         T_prm = typeof(am_params)
         if use_p2d
-            rp = inputparams_sd["rp"]
+            rp = inputparams_sd["particleRadius"]
             N  = Int64(inputparams_sd["N"])
-            D  = inputparams_sd["D0"]
+            D  = inputparams_sd["referenceDiffusionCoefficient"]
             sys_am = ActiveMaterialP2D(am_params, rp, N, D)
         else
             sys_am = ActiveMaterialNoParticleDiffusion(am_params)
         end
         
         if  include_cc
-            model_am = setup_component(inputparams_am, sys_am,nothing,general_ad)
+            model_am = setup_component(inputparams_co, sys_am, nothing, general_ad)
         else
-            bcfaces_am = convert_to_int_vector(inputparams_am["externalCouplingTerm"]["couplingfaces"])
-            model_am   = setup_component(inputparams_am, sys_am, bcfaces_am,general_ad)
+            bcfaces_am = convert_to_int_vector(inputparams_co["externalCouplingTerm"]["couplingfaces"])
+            model_am   = setup_component(inputparams_co, sys_am, bcfaces_am,general_ad)
             # We add also boundary parameters (if any)
             S = model_am.parameters
             nbc = count_active_entities(model_am.domain, BoundaryDirichletFaces())
@@ -745,7 +745,7 @@ function setup_battery_model(init::MatlabFile;
     inputparams_elyte = inputparams["Electrolyte"]
     params[:transference] = inputparams_elyte["sp"]["t"]
     params[:charge]       = inputparams_elyte["sp"]["z"]
-    params[:bruggeman]    = inputparams_elyte["BruggemanCoefficient"]
+    params[:bruggeman]    = inputparams_elyte["bruggemanCoefficient"]
     
     # setup diffusion coefficient function, hard coded for the moment because function name is not passed throught model
     # TODO : add general code
@@ -1109,15 +1109,15 @@ function setup_battery_parameters(init::MatlabFile,
     if use_cc
         prm_cc = Dict{Symbol, Any}()
         exported_cc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
-        prm_cc[:Conductivity] = exported_cc["EffectiveElectricalConductivity"][1]
+        prm_cc[:Conductivity] = exported_cc["effectiveElectronicConductivity"][1]
         parameters[:CC] = setup_parameters(model[:CC], prm_cc)
     end
 
     # Negative active material
     
     prm_nam = Dict{Symbol, Any}()
-    exported_nam = exported["model"]["NegativeElectrode"]["ActiveMaterial"]
-    prm_nam[:Conductivity] = exported_nam["EffectiveElectricalConductivity"][1]
+    exported_nam = exported["model"]["NegativeElectrode"]["Coating"]
+    prm_nam[:Conductivity] = exported_nam["effectiveElectronicConductivity"][1]
     prm_nam[:Temperature] = T0
     
     if discretisation_type(model[:NAM]) == :P2Ddiscretization
@@ -1139,8 +1139,8 @@ function setup_battery_parameters(init::MatlabFile,
     # Positive active material
 
     prm_pam = Dict{Symbol, Any}()
-    exported_pam = exported["model"]["PositiveElectrode"]["ActiveMaterial"]
-    prm_pam[:Conductivity] = exported_pam["EffectiveElectricalConductivity"][1]
+    exported_pam = exported["model"]["PositiveElectrode"]["Coating"]
+    prm_pam[:Conductivity] = exported_pam["effectiveElectronicConductivity"][1]
     prm_pam[:Temperature] = T0
     
     if discretisation_type(model[:PAM]) == :P2Ddiscretization
@@ -1163,7 +1163,7 @@ function setup_battery_parameters(init::MatlabFile,
     if use_pp
         prm_pp = Dict{Symbol, Any}()
         exported_pp = exported["model"]["PositiveElectrode"]["CurrentCollector"]
-        prm_pp[:Conductivity] = exported_pp["EffectiveElectricalConductivity"][1]
+        prm_pp[:Conductivity] = exported_pp["effectiveElectronicConductivity"][1]
         
         parameters[:PP] = setup_parameters(model[:PP], prm_pp)
     end        
@@ -1349,10 +1349,10 @@ function setup_battery_initial_state(init::MatlabFile,
 
         init = Dict()
         
-        init[:Phi] = state0[jsonName]["ActiveMaterial"]["phi"][1]
+        init[:Phi] = state0[jsonName]["Coating"]["phi"][1]
 
         if use_cc
-            c = state0[jsonName]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
+            c = state0[jsonName]["Coating"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
         else
             c = state0[jsonName]["ActiveMaterial"]["c"][1]
         end
@@ -1568,8 +1568,20 @@ function getTrans(model1::Dict{String,<:Any},
     T_all1 = model1["operators"]["T_all"][faces[:, 1]]
     T_all2 = model2["operators"]["T_all"][faces[:, 2]]
 
-    s1  = model1[quantity][cells[:, 1]]
-    s2  = model2[quantity][cells[:, 2]]
+
+    function getcellvalues(values, cellinds)
+
+        if length(values) == 1
+            values = values*ones(length(cellinds))
+        else
+            values = values[cellinds]
+        end
+        return values
+        
+    end
+    
+    s1  = getcellvalues(model1[quantity], cells[:, 1])
+    s2  = getcellvalues(model2[quantity], cells[:, 2])
     
     T   = 1.0./((1.0./(T_all1.*s1))+(1.0./(T_all2.*s2)))
 
@@ -1627,7 +1639,13 @@ function getHalfTrans(model::Dict{String, Any},
     Here, the faces should belong the corresponding cells at the same index"""
 
     T_all = model["operators"]["T_all"]
-    s = model[quantity][cells]
+    s = model[quantity]
+    if length(s) == 1
+        s = s*ones(length(cells))
+    else
+        s = s[cells]
+    end
+    
     T = T_all[faces].*s
 
     return T
@@ -1843,7 +1861,11 @@ function exported_model_to_domain(exported;
     
     vf = []
     if haskey(exported, "volumeFraction")
-        vf = exported["volumeFraction"][:, 1]
+        if length(exported["volumeFraction"]) == 1
+            vf = exported["volumeFraction"]
+        else
+            vf = exported["volumeFraction"][:, 1]
+        end
     end
     
     internal_faces = (N[:, 2] .> 0) .& (N[:, 1] .> 0)
