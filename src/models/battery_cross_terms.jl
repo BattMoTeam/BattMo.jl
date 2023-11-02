@@ -213,10 +213,11 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     
     if eq isa SolidDiffusionBc
 
-        rp = activematerial.discretization[:rp] # particle radius
-        vf = state_t.VolumeFraction[ind_t]
-
-        v = R*(4*pi*rp^3)/(3*vf)
+        rp  = activematerial.discretization[:rp] # particle radius
+        vf  = state_t.VolumeFraction[ind_t]
+        avf = activematerial.params.volume_fractions[1]
+        
+        v = R*(4*pi*rp^3)/(3*vf*avf)
         
         out[] = -v
         

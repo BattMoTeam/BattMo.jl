@@ -453,7 +453,7 @@ function setup_coupling!(init::MatlabFile,
         mtarget = exported_all["model"]["NegativeElectrode"]["Coating"]
         couplingfaces = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingfaces"])
         couplingcells = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"])
-        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "EffectiveElectronicConducticity")
+        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectronicConducticity")
 
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
         ct_pair = setup_cross_term(ct, target = :NAM, source = :CC, equation = :charge_conservation)
@@ -543,7 +543,7 @@ function setup_coupling!(init::MatlabFile,
         ct = exported_all["model"]["PositiveElectrode"]["couplingTerm"]
         couplingfaces = Int64.(ct["couplingfaces"])
         couplingcells = Int64.(ct["couplingcells"])
-        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "EffectiveElectricalConductivity")
+        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectricalConductivity")
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
         ct_pair = setup_cross_term(ct, target = :PAM, source = :PP, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
@@ -585,7 +585,7 @@ function setup_coupling!(init::MatlabFile,
         )
     
     #effcond = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["EffectiveElectricalConductivity"]
-    trans = getHalfTrans(msource, couplingfaces, couplingcells, "EffectiveElectricalConductivity")
+    trans = getHalfTrans(msource, couplingfaces, couplingcells, "effectiveElectricalConductivity")
 
     if skip_cc
         
@@ -670,16 +670,19 @@ function setup_battery_model(init::MatlabFile;
     function setup_active_material(name::Symbol, general_ad::Bool)
         jsonName = jsonNames[name]
 
-        inputparams_am = inputparams[jsonName]["ActiveMaterial"]
-
-        am_params = JutulStorage()
-        am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
-        am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
-        am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
-        am_params[:volume_fraction]         = inputparams_am["Interface"]["volumeFraction"]
+        inputparams_co  = inputparams[jsonName]["Coating"]
+        inputparams_itf = inputparams[jsonName]["Coating"]["ActiveMaterial"]["Interface"]
+        inputparams_sd  = inputparams[jsonName]["Coating"]["ActiveMaterial"]["SolidDiffusion"]
         
-        k0  = inputparams_am["Interface"]["k0"]
-        Eak = inputparams_am["Interface"]["Eak"]
+        am_params = JutulStorage()
+        am_params[:n_charge_carriers]       = inputparams_itf["numberOfElectronsTransferred"]
+        am_params[:maximum_concentration]   = inputparams_itf["saturationConcentration"]
+        am_params[:volumetric_surface_area] = inputparams_itf["volumetricSurfaceArea"]
+        am_params[:volume_fraction]         = inputparams_co["volumeFraction"]
+        am_params[:volume_fractions]        = inputparams_co["volumeFractions"]
+        
+        k0  = inputparams_itf["reactionRateConstant"]
+        Eak = inputparams_itf["activationEnergyOfReaction"]
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
         
         if name == :NAM
@@ -691,9 +694,9 @@ function setup_battery_model(init::MatlabFile;
         end
         T_prm = typeof(am_params)
         if use_p2d
-            rp = inputparams_am["SolidDiffusion"]["rp"]
-            N  = Int64(inputparams_am["SolidDiffusion"]["N"])
-            D  = inputparams_am["SolidDiffusion"]["D0"]
+            rp = inputparams_sd["rp"]
+            N  = Int64(inputparams_sd["N"])
+            D  = inputparams_sd["D0"]
             sys_am = ActiveMaterialP2D(am_params, rp, N, D)
         else
             sys_am = ActiveMaterialNoParticleDiffusion(am_params)
@@ -820,7 +823,7 @@ function setup_battery_model(init::JSONFile;
     
     geomparams = setup_geomparams(init)
 
-    jsondict=init.object
+    jsondict = init.object
 
     function setup_component(geomparam::Dict, 
                              sys; 
@@ -963,8 +966,8 @@ function setup_battery_model(init::JSONFile;
         
         am_params = JutulStorage()
         vf, vfs = computeVolumeFraction(jsondict[jsonName]["Coating"])
-        am_params[:volumeFraction]          = vf
-        am_params[:volumeFractions]         = vfs
+        am_params[:volume_fraction]          = vf
+        am_params[:volume_fractions]         = vfs
         am_params[:n_charge_carriers]       = inputparams_am["Interface"]["numberOfElectronsTransferred"]
         am_params[:maximum_concentration]   = inputparams_am["Interface"]["saturationConcentration"]
         am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
@@ -1185,7 +1188,7 @@ function setup_battery_parameters(init::JSONFile,
         
         compnames = [am, bd, ad]
 
-        vfs = comodel.system.params[:volumeFractions]
+        vfs = comodel.system.params[:volume_fractions]
         kappa = 0
         for icomp in eachindex(compnames)
             compname = compnames[icomp]
@@ -1193,7 +1196,7 @@ function setup_battery_parameters(init::JSONFile,
             kappa += vf*cojsonstruct[compname]["electronicConductivity"]
         end
 
-        vf = comodel.system.params[:volumeFraction]
+        vf = comodel.system.params[:volume_fraction]
         bg = cojsonstruct["bruggemanCoefficient"]
 
         kappaeff = (vf^bg)*kappa
@@ -1527,7 +1530,7 @@ function setup_volume_fractions!(model::MultiModel, geomparams::Dict{Symbol,<:An
     
     for name in names
         ammodel = model[name]
-        vf = ammodel.system[:volumeFraction]
+        vf = ammodel.system[:volume_fraction]
         Nam = geomparams[name][:N]
         ammodel.domain.representation[:volumeFraction] = vf*ones(Nam)
         if name == :NAM
@@ -1687,7 +1690,8 @@ function computeCellCapacity(model::MultiModel)
         F    = con.F
         n    = sys[:n_charge_carriers]
         cMax = sys[:maximum_concentration]
-        vf   = sys[:volumeFraction]
+        vf   = sys[:volume_fraction]
+        avf  = sys[:volume_fractions][1]
         
         if name == :NAM
             thetaMax = sys[:theta100]
@@ -1700,7 +1704,7 @@ function computeCellCapacity(model::MultiModel)
         end
 
         vols = ammodel.domain.representation[:face_weighted_volumes]
-        vol = sum(vf*vols)
+        vol = sum(avf*vf*vols)
         
         cap_usable = (thetaMax - thetaMin)*cMax*vol*n*F
         
