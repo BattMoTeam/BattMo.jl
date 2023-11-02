@@ -145,8 +145,7 @@ function update_conductivity!(kappa, kappa_def::Conductivity, model::Electrolyte
             symbols = Symbol[]
             symbols = extract_input_symbols(expr,symbols)
 
-            symbol_values = set_symbol_values(symbols,C[i], Temperature[i],nothing,nothing,nothing)
-           
+            symbol_values = set_symbol_values(symbols,C[i],nothing, Temperature[i],nothing,nothing)
 
             #OCP = lambdify(expr, symbol_values)
             function_arguments = [symbol_values[symbol] for symbol in symbols if haskey(symbol_values, symbol)]
@@ -182,7 +181,7 @@ end
             symbols = Symbol[]
             symbols = extract_input_symbols(expr,symbols)
 
-            symbol_values = set_symbol_values(symbols,C[i], Temperature[i],nothing,nothing,nothing)
+            symbol_values = set_symbol_values(symbols,C[i],nothing, Temperature[i],nothing,nothing)
            
 
             #OCP = lambdify(expr, symbol_values)

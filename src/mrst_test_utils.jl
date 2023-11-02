@@ -691,12 +691,6 @@ function setup_battery_model(init::MatlabFile;
             error("not recongized")
         end
 
-        # ############## Lorena ##############
-
-        # am_params[:ocp_func] = getfield(BattMo, Symbol("compute_ocp_from_function"))
-        # #am_params[:ocp_eq] = inputparams_am["Interface"]["OCP"]["functionname"]
-        # ####################################
-
         T_prm = typeof(am_params)
         if use_p2d
             rp = inputparams_am["SolidDiffusion"]["rp"]
@@ -952,11 +946,9 @@ function setup_battery_model(init::JSONFile;
 
         k0  = inputparams_am["Interface"]["k0"]
         Eak = inputparams_am["Interface"]["Eak"]
-        Tref = jsondict["Tref"]
-        am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
-        am_params[:Tref] = Tref
         
-        ############## Lorena ##############
+        am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
+
         input_symbols = ""
         if haskey(inputparams_am["Interface"]["OCP"],"function")
             am_params[:ocp_args] = inputparams_am["Interface"]["OCP"]["argumentlist"]
@@ -969,21 +961,13 @@ function setup_battery_model(init::JSONFile;
                 end
             end
             am_params[:ocp_eq] = jsonName * "_ocp_curve($input_symbols) = " * inputparams_am["Interface"]["OCP"]["function"]
-            
-            
-            #am_params[:ocp_eq] = inputparams_am["Interface"]["OCP"]["function"]
             am_params[:ocp_func] = getfield(BattMo, Symbol("compute_function_from_string"))
             am_params[:ocp_comp] = Base.invokelatest(am_params[:ocp_func],am_params[:ocp_eq])
-            #am_params[:ocp_comp] = getfield(BattMo, Symbol("compute_ocp_from_function"))
             
         else
             funcname = inputparams_am["Interface"]["OCP"]["functionname"]
             am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
         end
-                
-            
-        ####################################
-        #am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
         
         use_p2d = true
         if use_p2d
@@ -1448,7 +1432,7 @@ function extract_input_symbols(ex::Expr, symbols::Vector{Symbol})
     return input_symbols 
 end
 
-function set_symbol_values(symbols, c, T, Tref, cmax, SOC)
+function set_symbol_values(symbols, c, refT, T, cmax, SOC)
     symbol_values = Dict{Symbol, Any}()
     
     for symbol in symbols
@@ -1457,8 +1441,8 @@ function set_symbol_values(symbols, c, T, Tref, cmax, SOC)
             symbol_values[symbol] = c
         elseif symbol == :T
             symbol_values[symbol] = T
-        elseif symbol == :Tref
-            symbol_values[symbol] = Tref
+        elseif symbol == :refT
+            symbol_values[symbol] = refT
         elseif symbol == :cmax
             symbol_values[symbol] = cmax
         elseif symbol == :SOC
@@ -1483,7 +1467,6 @@ function setup_battery_initial_state(init::JSONFile,
     end
 
     T   = jsonstruct["initT"]
-    #Tref = jsonstruct["Tref"]
     SOC_init = jsonstruct["SOC"]
 
 
@@ -1493,11 +1476,8 @@ function setup_battery_initial_state(init::JSONFile,
         theta100 = model[name].system[:theta100]
         cmax     = model[name].system[:maximum_concentration]
         N        = model[name].system.discretization[:N]
-        if Jutul.haskey(model[name].system.params, :Tref)
-            Tref    = model[name].system.params[:Tref]
-        else
-            Tref = 298.15
-        end
+        refT = 298.15
+        
         
         
         theta = SOC_init*(theta100 - theta0) + theta0;
@@ -1507,22 +1487,6 @@ function setup_battery_initial_state(init::JSONFile,
         init = Dict()
         init[:Cs]  = c*ones(nc)
         init[:Cp]  = c*ones(nc, N)
-        # print("func =", model[name].system[:ocp_func](ocp_eq , c, T, cmax))
-        
-
-        ################### Lorena #############
-
-        # global conc = c
-        # global Temp = T
-        # global concmax = cmax
-        
-        #OCP = @evaluate_ocp_function(ocp_eq , c, T, cmax)
-        #js = JSON.parse(model[name].system)
-        #print(js)
-        #OCP = 0
-        # try
-        #ocp_eq = model[name].system[:ocp_eq]
-        
 
         symbol_eq = ""
         if Jutul.haskey(model[name].system.params, :ocp_eq)
@@ -1538,17 +1502,15 @@ function setup_battery_initial_state(init::JSONFile,
 
             ocp_form = model[name].system[:ocp_comp]
 
-            symbol_values = set_symbol_values(symbols,c,T,Tref,cmax,SOC)
+            symbol_values = set_symbol_values(symbols,c,refT,T,cmax,SOC)
         
             function_arguments = [symbol_values[symbol] for symbol in symbols if haskey(symbol_values, symbol)]
             OCP = Base.invokelatest(ocp_form,function_arguments...)
-            print("OCP = ", OCP)
+
         else
             OCP = model[name].system[:ocp_func](c, T, cmax)
-            print("OCP2 = ", OCP)
-        end
 
-        ########################################
+        end
 
         return (init, nc, OCP)
         
