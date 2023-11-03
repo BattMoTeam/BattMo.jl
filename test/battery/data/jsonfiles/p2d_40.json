@@ -143,7 +143,7 @@
   "G": [],
   "SOC": 0.99,
   "initT": 298.15,
-  "use_thermal": true,
+  "use_thermal": false,
   "include_current_collectors": true,
   "Control": {
     "controlPolicy": "IEswitch",
