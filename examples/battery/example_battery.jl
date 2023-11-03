@@ -30,7 +30,7 @@ end
 
 # sim, forces, state0, parameters, exported, model = BattMo.setup_sim(name, use_p2d = use_p2d)
 
-do_json = false # true
+do_json = true # true
 
 if do_json
 

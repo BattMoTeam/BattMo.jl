@@ -130,10 +130,36 @@ end
 function update_conductivity!(kappa, kappa_def::Conductivity, model::ElectrolyteModel, Temperature, C, VolumeFraction, ix)
     """ Register conductivity function
     """
-    system = model.system
+    
     # We use Bruggeman coefficient
     for i in ix
-        @inbounds kappa[i] = system[:conductivity](C[i], Temperature[i]) * VolumeFraction[i]^1.5
+
+        if Jutul.haskey(model.system.params, :conductivity_eq)
+                
+            conductivity_eq = model.system.params[:conductivity_eq]
+            
+            conductivity_form = model.system.params[:conductivity_comp]
+            
+            expr = Meta.parse(conductivity_eq)
+
+            symbols = Symbol[]
+            symbols = extract_input_symbols(expr,symbols)
+
+            symbol_values = set_symbol_values(symbols,C[i],nothing, Temperature[i],nothing,nothing)
+
+            #OCP = lambdify(expr, symbol_values)
+            function_arguments = [symbol_values[symbol] for symbol in symbols if haskey(symbol_values, symbol)]
+        
+            @inbounds kappa[i] = Base.invokelatest(conductivity_form,function_arguments...) * VolumeFraction[i]^1.5
+            
+            
+        else
+            @inbounds kappa[i] = model.system[:conductivity_func](C[i], Temperature[i]) * VolumeFraction[i]^1.5
+           
+        end
+
+
+        
     end
 end
 )
@@ -141,9 +167,35 @@ end
 @jutul_secondary function update_diffusivity!(D, D_def::Diffusivity, model::ElectrolyteModel, C, Temperature, VolumeFraction, ix)
     """ Register diffusivity function
     """
-    system = model.system
+    
     for i in ix
-        @inbounds D[i] = system[:diffusivity](C[i], Temperature[i])*VolumeFraction[i]^1.5
+
+        if Jutul.haskey(model.system.params, :diffusivity_eq)
+                
+            diffusivity_eq = model.system.params[:diffusivity_eq]
+            
+            diffusivity_form = model.system.params[:diffusivity_comp]
+            
+            expr = Meta.parse(diffusivity_eq)
+
+            symbols = Symbol[]
+            symbols = extract_input_symbols(expr,symbols)
+
+            symbol_values = set_symbol_values(symbols,C[i],nothing, Temperature[i],nothing,nothing)
+           
+
+            #OCP = lambdify(expr, symbol_values)
+            function_arguments = [symbol_values[symbol] for symbol in symbols if haskey(symbol_values, symbol)]
+        
+            @inbounds D[i] = Base.invokelatest(diffusivity_form,function_arguments...) * VolumeFraction[i]^1.5
+            
+            
+        else
+            @inbounds D[i] = model.system[:diffusivity_func](C[i], Temperature[i])*VolumeFraction[i]^1.5
+           
+        end
+
+        
     end
 end
 

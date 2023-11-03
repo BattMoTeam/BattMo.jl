@@ -8,14 +8,14 @@ export run_battery, inputRefToStates, computeCellCapacity, Constants
 #Run battery 
 ############################################################################################
 
-function run_battery(init::InputFile;
-                     use_p2d::Bool                     = true,
-                     extra_timing::Bool                = false,
-                     max_step::Union{Integer, Nothing} = nothing,
-                     linear_solver::Symbol             = :direct,
-                     general_ad::Bool                  = false,
-                     use_groups::Bool                  = false,
-                     kwarg...)
+function run_battery(init::InputFile;   
+                    use_p2d::Bool                     = true,
+                    extra_timing::Bool                = false,
+                    max_step::Union{Integer, Nothing} = nothing,
+                    linear_solver::Symbol             = :direct,
+                    general_ad::Bool                  = false,
+                    use_groups::Bool                  = false,
+                    kwarg...)
     """
         Run battery wrapper method. Can use inputs from either Matlab or Json files and performs
         simulation using a simple discharge CV policy
@@ -33,7 +33,7 @@ function run_battery(init::InputFile;
 
     extra = Dict(:model => model,
                  :state0 => state0,
-                 :parameters => parameters,
+                 :pamraeters => parameters,
                  :init => init,
                  :timesteps => timesteps,
                  :config => cfg,
@@ -178,7 +178,7 @@ function setup_sim(init::JSONFile;
                    general_ad::Bool = false,
                    kwarg ... )
 
-    model, state0, parameters = setup_model(init, use_groups=use_groups, general_ad=general_ad; kwarg...)
+    model, state0, parameters= setup_model(init, use_groups=use_groups, general_ad=general_ad; kwarg...)
 
     setup_coupling!(init,model,parameters)
 
@@ -692,6 +692,7 @@ function setup_battery_model(init::MatlabFile;
         else
             error("not recongized")
         end
+
         T_prm = typeof(am_params)
         if use_p2d
             rp = inputparams_sd["particleRadius"]
@@ -751,13 +752,13 @@ function setup_battery_model(init::MatlabFile;
     # TODO : add general code
     funcname = "computeDiffusionCoefficient_default"
     func = getfield(BattMo, Symbol(funcname))
-    params[:diffusivity] = func
+    params[:diffusivity_func] = func
 
     # setup diffusion coefficient function
     # TODO : add general code
     funcname = "computeElectrolyteConductivity_default"
     func = getfield(BattMo, Symbol(funcname))
-    params[:conductivity] = func
+    params[:conductivity_func] = func
     
     elyte = Electrolyte(params)
     model_elyte = setup_component(inputparams["Electrolyte"],
@@ -976,10 +977,34 @@ function setup_battery_model(init::JSONFile;
 
         k0  = inputparams_am["Interface"]["reactionRateConstant"]
         Eak = inputparams_am["Interface"]["activationEnergyOfReaction"]
-        am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
+
+        ###### MERGE ######
+        # am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
         
-        funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
-        am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
+        # funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
+        # am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
+        
+        am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
+
+        input_symbols = ""
+        if haskey(inputparams_am["Interface"]["openCircuitPotential"],"function")
+            am_params[:ocp_args] = inputparams_am["Interface"]["openCircuitPotential"]["argumentlist"]
+          
+            for i in collect(1:size(am_params[:ocp_args])[1])
+                if i == size(am_params[:ocp_args])[1]
+                    input_symbols *= am_params[:ocp_args][i]    
+                else
+                    input_symbols *= am_params[:ocp_args][i] * ","
+                end
+            end
+            am_params[:ocp_eq] = jsonName * "_ocp_curve($input_symbols) = " * inputparams_am["Interface"]["openCircuitPotential"]["function"]
+            am_params[:ocp_func] = getfield(BattMo, Symbol("compute_function_from_string"))
+            am_params[:ocp_comp] = Base.invokelatest(am_params[:ocp_func],am_params[:ocp_eq])
+            
+        else
+            funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
+            am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
+        end
         
         use_p2d = true
         if use_p2d
@@ -1019,14 +1044,53 @@ function setup_battery_model(init::JSONFile;
     params[:bruggeman]          = inputparams_elyte["bruggemanCoefficient"]
     
     # setup diffusion coefficient function
-    funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
-    func = getfield(BattMo, Symbol(funcname))
-    params[:diffusivity] = func
 
-    # setup diffusion coefficient function
-    funcname = inputparams_elyte["ionicConductivity"]["functionname"]
-    func = getfield(BattMo, Symbol(funcname))
-    params[:conductivity] = func
+
+    ##### MERGE #####
+
+    input_symbols_diffusivity = ""
+    if haskey(inputparams_elyte["diffusionCoefficient"],"function")
+        params[:diffusivity_args] = inputparams_elyte["diffusionCoefficient"]["argumentlist"]
+        
+        for i in collect(1:size(params[:diffusivity_args])[1])
+            if i == size(params[:diffusivity_args])[1]
+                input_symbols_diffusivity *= params[:diffusivity_args][i]    
+            else
+                input_symbols_diffusivity *= params[:diffusivity_args][i] * ","
+            end
+        end
+        params[:diffusivity_eq] = "elyte_diffusion_curve($input_symbols_diffusivity) = " * inputparams_elyte["diffusionCoefficient"]["function"]
+        params[:diffusivity_func] = getfield(BattMo, Symbol("compute_function_from_string"))
+        params[:diffusivity_comp] = Base.invokelatest(params[:diffusivity_func],params[:diffusivity_eq])
+
+        
+    else
+        funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
+        params[:diffusivity_func] = getfield(BattMo, Symbol(funcname))
+    end
+
+    # setup conductivity function
+
+    input_symbols_conductivity = ""
+    if haskey(inputparams_elyte["ionicConductivity"],"function")
+        params[:conductivity_args] = inputparams_elyte["ionicConductivity"]["argumentlist"]
+        
+        for i in collect(1:size(params[:conductivity_args])[1])
+            if i == size(params[:conductivity_args])[1]
+                input_symbols_conductivity *= params[:conductivity_args][i]    
+            else
+                input_symbols_conductivity *= params[:conductivity_args][i] * ","
+            end
+        end
+        params[:conductivity_eq] = "elyte_conduct_curve($input_symbols_conductivity) = " * inputparams_elyte["ionicConductivity"]["function"]
+        params[:conductivity_func] = getfield(BattMo, Symbol("compute_function_from_string"))
+        params[:conductivity_comp] = Base.invokelatest(params[:conductivity_func],params[:conductivity_eq])
+        
+    else
+        funcname = inputparams_elyte["ionicConductivity"]["functionname"]
+        params[:conductivity_func] = getfield(BattMo, Symbol(funcname))
+    end
+
     
     elyte = Electrolyte(params)
     model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
@@ -1211,6 +1275,7 @@ function setup_battery_parameters(init::JSONFile,
 
     T0 = jsonstruct["initT"]
     
+    
     # Negative current collector (if any)
 
     if haskey(model.models, :CC)
@@ -1234,6 +1299,7 @@ function setup_battery_parameters(init::JSONFile,
     prm_nam[:Conductivity] = computeEffectiveConductivity(model[:NAM], jsonstruct["NegativeElectrode"]["Coating"])
     prm_nam[:Temperature] = T0
     
+    
     if discretisation_type(model[:NAM]) == :P2Ddiscretization
         # nothing to do
     else
@@ -1246,7 +1312,8 @@ function setup_battery_parameters(init::JSONFile,
     # Electrolyte
     
     prm_elyte = Dict{Symbol, Any}()
-    prm_elyte[:Temperature] = T0        
+    prm_elyte[:Temperature] = T0 
+          
 
     parameters[:ELYTE] = setup_parameters(model[:ELYTE], prm_elyte)
 
@@ -1257,6 +1324,7 @@ function setup_battery_parameters(init::JSONFile,
 
     prm_pam[:Conductivity] = computeEffectiveConductivity(model[:PAM], jsonstruct["PositiveElectrode"]["Coating"])
     prm_pam[:Temperature] = T0
+    
     
     if discretisation_type(model[:PAM]) == :P2Ddiscretization
         # nothing to do
@@ -1404,6 +1472,39 @@ function setup_battery_initial_state(init::MatlabFile,
     
 end
 
+
+function extract_input_symbols(ex::Expr, symbols::Vector{Symbol})
+
+    args = ex.args
+    func_definition = args[1]
+    input_symbols = func_definition.args[2:end]
+
+    return input_symbols 
+end
+
+function set_symbol_values(symbols, c, refT, T, cmax, SOC)
+    symbol_values = Dict{Symbol, Any}()
+    
+    for symbol in symbols
+     
+        if symbol == :c
+            symbol_values[symbol] = c
+        elseif symbol == :T
+            symbol_values[symbol] = T
+        elseif symbol == :refT
+            symbol_values[symbol] = refT
+        elseif symbol == :cmax
+            symbol_values[symbol] = cmax
+        elseif symbol == :SOC
+            symbol_values[symbol] = SOC
+        else
+            error("Symbol $symbol not supported by BattMo OCP computation")
+        end
+    end
+    return symbol_values
+end
+
+
 function setup_battery_initial_state(init::JSONFile,
                                      model::MultiModel)
 
@@ -1416,7 +1517,8 @@ function setup_battery_initial_state(init::JSONFile,
     end
 
     T   = jsonstruct["initT"]
-    SOC = jsonstruct["SOC"]
+    SOC_init = jsonstruct["SOC"]
+
 
     function setup_init_am(name, model)
         
@@ -1424,15 +1526,42 @@ function setup_battery_initial_state(init::JSONFile,
         theta100 = model[name].system[:theta100]
         cmax     = model[name].system[:maximum_concentration]
         N        = model[name].system.discretization[:N]
+        refT = 298.15
         
-        theta = SOC*(theta100 - theta0) + theta0;
+        
+        
+        theta = SOC_init*(theta100 - theta0) + theta0;
         c     = theta*cmax
+        SOC = SOC_init
         nc    = count_entities(model[name].data_domain, Cells())
         init = Dict()
         init[:Cs]  = c*ones(nc)
         init[:Cp]  = c*ones(nc, N)
 
-        OCP = model[name].system[:ocp_func](c, T, cmax)
+        symbol_eq = ""
+        if Jutul.haskey(model[name].system.params, :ocp_eq)
+            ocp_eq = model[name].system[:ocp_eq]
+            ocp_args = model[name].system[:ocp_args]
+            
+            symbols = Symbol[]
+            for i in collect(1:size(ocp_args)[1])
+                
+                sym = Symbol(ocp_args[i])
+                push!(symbols, sym)   
+            end
+
+            ocp_form = model[name].system[:ocp_comp]
+
+            symbol_values = set_symbol_values(symbols,c,refT,T,cmax,SOC)
+        
+            function_arguments = [symbol_values[symbol] for symbol in symbols if haskey(symbol_values, symbol)]
+            OCP = Base.invokelatest(ocp_form,function_arguments...)
+
+        else
+            OCP = model[name].system[:ocp_func](c, T, cmax)
+
+        end
+
         return (init, nc, OCP)
         
     end
@@ -1464,7 +1593,7 @@ function setup_battery_initial_state(init::JSONFile,
 
     # Setup initial state in positive active material
     
-    init, nc, posOCP = setup_init_am(:PAM, model)
+    init, nc, posOCP= setup_init_am(:PAM, model)
     init[:Phi] = (posOCP - negOCP)*ones(nc)
     
     initState[:PAM] = init
