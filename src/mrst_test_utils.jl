@@ -1367,7 +1367,7 @@ function setup_battery_initial_state(init::MatlabFile,
 
     exported=init.object
 
-    state0 = exported["state0"]
+    state0 = exported["initstate"]
 
     jsonNames = Dict(
         :CC  => "NegativeElectrode",

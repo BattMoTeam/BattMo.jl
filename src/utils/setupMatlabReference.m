@@ -34,9 +34,9 @@ function output = setupMatlabReference(casename, jsonfolder, datafolder, varargi
     mrstModule add ad-core mrst-gui mpfa agmg linearsolvers
     output = runBatteryJson(jsonstruct, 'runSimulation', runSimulation);
     
-    state0   = output.initstate;
-    model    = output.model;
-    schedule = output.schedule;
+    initstate = output.initstate;
+    model     = output.model;
+    schedule  = output.schedule;
 
     if runSimulation
         
@@ -68,7 +68,7 @@ function output = setupMatlabReference(casename, jsonfolder, datafolder, varargi
     filename = sprintf('%s.mat', casename);
     filename = fullfile(datafolder, filename);
 
-    save(filename, 'model', 'states', 'state0', "schedule")
+    save(filename, 'model', 'states', 'initstate', "schedule")
     
     doplot = true;
     if doplot && runSimulation

@@ -1,9 +1,16 @@
 {
+  "include_current_collectors": true,
   "Geometry": {
-    "case": "3D-demo"
+    "case": "3D-demo",
+    "width": 0.01,
+    "height": 0.02,
+    "Nw": 10,
+    "Nh": 10
   },
   "NegativeElectrode": {
     "Coating": {
+      "thickness": 0.0001,
+      "N": 3,
       "effectiveDensity": 1900,
       "bruggemanCoefficient": 1.5,
       "ActiveMaterial": {
@@ -41,14 +48,20 @@
         }
       },
       "Binder": {
-        "density": 1099.9999999999998,
+        "density": {
+          "value": 1.1,
+          "unit": "gram/((centi*meter)^3)"
+        },
         "massFraction": 0.03,
         "electronicConductivity": 100,
         "specificHeatCapacity": 632,
         "thermalConductivity": 1.04
       },
       "ConductingAdditive": {
-        "density": 1949.9999999999995,
+        "density": {
+          "value": 1.95,
+          "unit": "gram/((centi*meter)^3)"
+        },
         "massFraction": 0.03,
         "electronicConductivity": 100,
         "specificHeatCapacity": 632,
@@ -56,6 +69,14 @@
       }
     },
     "CurrentCollector": {
+      "thickness": 1e-05,
+      "N": 2,
+      "tab": {
+        "width": 0.004,
+        "height": 0.001,
+        "Nw": 3,
+        "Nh": 3
+      },
       "electronicConductivity": 59600000.0,
       "thermalConductivity": 398,
       "specificHeatCapacity": 385,
@@ -64,6 +85,8 @@
   },
   "PositiveElectrode": {
     "Coating": {
+      "thickness": 8e-05,
+      "N": 3,
       "effectiveDensity": 3500,
       "bruggemanCoefficient": 1.5,
       "ActiveMaterial": {
@@ -101,14 +124,20 @@
         }
       },
       "Binder": {
-        "density": 1749.9999999999998,
+        "density": {
+          "value": 1.75,
+          "unit": "gram/((centi*meter)^3)"
+        },
         "massFraction": 0.025,
         "electronicConductivity": 100,
         "specificHeatCapacity": 700,
         "thermalConductivity": 2.1
       },
       "ConductingAdditive": {
-        "density": 1829.9999999999998,
+        "density": {
+          "value": 1.83,
+          "unit": "gram/((centi*meter)^3)"
+        },
         "massFraction": 0.025,
         "electronicConductivity": 100,
         "specificHeatCapacity": 700,
@@ -117,7 +146,13 @@
     },
     "CurrentCollector": {
       "thickness": 1e-05,
-      "N": 5,
+      "N": 2,
+      "tab": {
+        "width": 0.004,
+        "height": 0.001,
+        "Nw": 3,
+        "Nh": 3
+      },
       "electronicConductivity": 35500000.0,
       "thermalConductivity": 170,
       "specificHeatCapacity": 875,
@@ -125,6 +160,8 @@
     }
   },
   "Separator": {
+    "thickness": 5e-05,
+    "N": 3,
     "porosity": 0.55,
     "specificHeatCapacity": 1978,
     "thermalConductivity": 0.334,
@@ -134,8 +171,7 @@
   "G": [],
   "SOC": 0.99,
   "initT": 298.15,
-  "use_thermal": false,
-  "include_current_collectors": true,
+  "use_thermal": true,
   "Control": {
     "controlPolicy": "IEswitch",
     "initialControl": "discharging",
@@ -182,10 +218,9 @@
   },
   "TimeStepping": {
     "totalTime": 5040,
-    "N": 40,
+    "numberOfTimeSteps": 40,
     "useRampup": true,
-    "rampupTime": 10,
-    "numberOfTimeSteps": 40
+    "rampupTime": 10
   },
   "Output": {
     "variables": [
