@@ -33,7 +33,7 @@ function run_battery(init::InputFile;
 
     extra = Dict(:model => model,
                  :state0 => state0,
-                 :pamraeters => parameters,
+                 :parameters => parameters,
                  :init => init,
                  :timesteps => timesteps,
                  :config => cfg,
