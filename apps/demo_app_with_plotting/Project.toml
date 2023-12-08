@@ -1,0 +1,6 @@
+[deps]
+ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
+BattMo = "6f0c0536-3c2c-4762-a987-c605a8a6f898"
+BattMoDemoApp = "878582eb-7ca7-41f2-ab0a-717f655161db"
+PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
+PkgTemplates = "14b8a8f1-9102-5b29-a752-f990bacb7fe1"

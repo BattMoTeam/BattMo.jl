@@ -1,0 +1,9 @@
+name = "BattMoDemoApp"
+uuid = "878582eb-7ca7-41f2-ab0a-717f655161db"
+authors = ["Olav Møyner <olav.moyner@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
+BattMo = "6f0c0536-3c2c-4762-a987-c605a8a6f898"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
