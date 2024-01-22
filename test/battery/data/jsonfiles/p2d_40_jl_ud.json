@@ -193,7 +193,7 @@
     "totalTime": 5040,
     "numberOfTimeSteps": 40,
     "useRampup": true,
-    "numberOfRampupSteps": 10
+    "numberOfRampupSteps": 5
   },
   "Output": {
     "variables": [
