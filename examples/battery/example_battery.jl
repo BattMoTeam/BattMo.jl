@@ -12,27 +12,14 @@ using MAT
 
 ENV["JULIA_DEBUG"] = 0;
 
-# name = "model1D_50"
-# name = "model1Dmod_50"
-# name = "model1Dmod_500"
-# name = "sector_7920"
-# name = "model2D_1100" # give error
-# name = "model3D_3936"
-# name = "sector_1656"
-# name = "sector_55200" #To big for direct linear_solver
-# name = "spiral_16560"
-# name = "spiral_16560_org"
-# name = "sector_1656_org"
-# name = "model3D_492"
-
 use_p2d = true
 
 if use_p2d
     name = "p2d_40"
     # name = "3d_demo_case"
 else
-    name = "p1d_40"
-    # name = "3d_demo_case"
+    # name = "p1d_40"
+    name = "3d_demo_case"
 end
 
 function load_reference_solution(name)
@@ -43,12 +30,13 @@ end
 
 # sim, forces, state0, parameters, exported, model = BattMo.setup_sim(name, use_p2d = use_p2d)
 
-do_json = false # true
+do_json = true # true
 
 if do_json
+
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, "_jl.json")
     init = JSONFile(fn)
-    states, reports, extra = run_battery(init;use_p2d=use_p2d,info_level = 0, extra_timing = false);
+    states, reports, extra = run_battery(init; use_p2d = use_p2d, info_level = 0, extra_timing = false);
 
 
     nsteps = size(states)
@@ -70,7 +58,6 @@ else
     states, reports, extra, exported = run_battery(name; use_p2d = use_p2d, info_level = 0, max_step = nothing);
 
     nsteps = size(states, 1)
-    
 
     timesteps = extra[:timesteps]
     time = cumsum(timesteps[1 : nsteps])
@@ -81,9 +68,6 @@ else
     Eref = [state["Control"]["E"] for state in statesref[1 : nsteps]]
 
 end
-
-
-
 
 plt = plot(time, E;
            title     = "Discharge Voltage",

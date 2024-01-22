@@ -1,3 +1,4 @@
+
 export ActiveMaterial, ActiveMaterialModel, SolidMassCons, NoParticleDiffusion
 
 ## The parameter for the active material are stored in a dictionnary
@@ -220,11 +221,49 @@ end
                           Cs,
                           ix
                           ) where {D, T}
+        
         ocp_func = model.system.params[:ocp_func]
+        
         cmax     = model.system.params[:maximum_concentration]
         refT = 298.15
+
+        if Jutul.haskey(model.system.params, :ocp_eq)
+            theta0   = model.system.params[:theta0]
+            theta100 = model.system.params[:theta100]
+        
+        end
+       
+        
         for cell in ix
-            @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)
+        
+            if Jutul.haskey(model.system.params, :ocp_eq)
+                
+                ocp_comp = model.system.params[:ocp_comp]    
+                ocp_eq = model.system.params[:ocp_eq]
+                
+                ocp_form = model.system.params[:ocp_comp]
+                
+                
+                SOC = (Cs[cell]/cmax - theta0)/(theta100 - theta0)
+                
+                expr = Meta.parse(ocp_eq)
+
+                symbols = Symbol[]
+                symbols = extract_input_symbols(expr,symbols)
+
+                symbol_values = set_symbol_values(symbols,Cs[cell],refT,refT,cmax,SOC)
+               
+
+                #OCP = lambdify(expr, symbol_values)
+                function_arguments = [symbol_values[symbol] for symbol in symbols if haskey(symbol_values, symbol)]
+            
+                @inbounds Ocp[cell] = Base.invokelatest(ocp_form,function_arguments...)
+                
+                
+            else
+                @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)
+               
+            end
         end
     end
 )
@@ -412,9 +451,15 @@ end
         ocp_func = model.system.params[:ocp_func]
         cmax     = model.system.params[:maximum_concentration]
         refT     = 298.15
-        
+        ocp_eq   = model.system.params[:ocp_eq]
+        global ocp_ex = ocp_eq
         for cell in ix
-            @inbounds Ocp[cell] = ocp_func(C[cell], refT, cmax)
+            ################### Lorena #############
+            global c = Cs[cell]
+            @inbounds Ocp[cell] = ocp_func(ocp_eq,Cs[cell], refT, cmax)
+            #@inbounds Ocp[cell] = @evaluate_ocp_function(ocp_eq , Cs[cell], refT, cmax)
+            ########################################
+            #@inbounds Ocp[cell] = ocp_func(C[cell], refT, cmax)
         end
     end
 )

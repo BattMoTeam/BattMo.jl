@@ -2,21 +2,20 @@
 #Exported functions:
 ############################################################################################
 
-export run_battery
-export inputRefToStates
+export run_battery, inputRefToStates, computeCellCapacity, Constants
 
 ############################################################################################
 #Run battery 
 ############################################################################################
 
-function run_battery(init::InputFile;
-                     use_p2d::Bool                     = true,
-                     extra_timing::Bool                = false,
-                     max_step::Union{Integer, Nothing} = nothing,
-                     linear_solver::Symbol             = :direct,
-                     general_ad::Bool                  = false,
-                     use_groups::Bool                  = false,
-                     kwarg...)
+function run_battery(init::InputFile;   
+                    use_p2d::Bool                     = true,
+                    extra_timing::Bool                = false,
+                    max_step::Union{Integer, Nothing} = nothing,
+                    linear_solver::Symbol             = :direct,
+                    general_ad::Bool                  = false,
+                    use_groups::Bool                  = false,
+                    kwarg...)
     """
         Run battery wrapper method. Can use inputs from either Matlab or Json files and performs
         simulation using a simple discharge CV policy
@@ -106,7 +105,7 @@ function setup_config(sim::Jutul.JutulSimulator,
     #     cfg[:max_timestep_cuts] = 0
     # end
 
-    cfg[:tolerances][:PP][:default] = 1e-1
+    cfg[:tolerances][:PP][:default]  = 1e-1
     cfg[:tolerances][:BPP][:default] = 1e-1
 
     return cfg
@@ -118,13 +117,13 @@ end
 #####################################################################################
 
 function setup_timesteps(init::JSONFile;
-    kwarg ...)
+                         kwarg ...)
     """
         Method setting up the timesteps from a json file object. 
     """
 
     total = init.object["TimeStepping"]["totalTime"]
-    n = init.object["TimeStepping"]["N"]
+    n     = init.object["TimeStepping"]["numberOfTimeSteps"]
 
     dt = total / n
     timesteps = rampupTimesteps(total, dt, 5)
@@ -179,7 +178,7 @@ function setup_sim(init::JSONFile;
                    general_ad::Bool = false,
                    kwarg ... )
 
-    model, state0, parameters = setup_model(init, use_groups=use_groups, general_ad=general_ad; kwarg...)
+    model, state0, parameters= setup_model(init, use_groups=use_groups, general_ad=general_ad; kwarg...)
 
     setup_coupling!(init,model,parameters)
 
@@ -193,7 +192,7 @@ function setup_sim(init::JSONFile;
 
     @. state0[:BPP][:Phi] = minE * 1.5
 
-    tup = Float64(init.object["TimeStepping"]["rampupTime"])
+    tup = Float64(init.object["Control"]["rampupTime"])
     cFun(time) = currentFun(time, inputI, tup)
 
     currents = setup_forces(model[:BPP], policy=SimpleCVPolicy(cFun, minE))
@@ -451,10 +450,10 @@ function setup_coupling!(init::MatlabFile,
         )
         
         msource = exported_all["model"]["NegativeElectrode"]["CurrentCollector"]
-        mtarget = exported_all["model"]["NegativeElectrode"]["ActiveMaterial"]
+        mtarget = exported_all["model"]["NegativeElectrode"]["Coating"]
         couplingfaces = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingfaces"])
         couplingcells = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"])
-        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "EffectiveElectricalConductivity")
+        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectronicConductivity")
 
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
         ct_pair = setup_cross_term(ct, target = :NAM, source = :CC, equation = :charge_conservation)
@@ -544,7 +543,7 @@ function setup_coupling!(init::MatlabFile,
         ct = exported_all["model"]["PositiveElectrode"]["couplingTerm"]
         couplingfaces = Int64.(ct["couplingfaces"])
         couplingcells = Int64.(ct["couplingcells"])
-        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "EffectiveElectricalConductivity")
+        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectronicConductivity")
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
         ct_pair = setup_cross_term(ct, target = :PAM, source = :PP, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
@@ -585,8 +584,8 @@ function setup_coupling!(init::MatlabFile,
         :equation => :charge_conservation
         )
     
-    #effcond = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["EffectiveElectricalConductivity"]
-    trans = getHalfTrans(msource, couplingfaces, couplingcells, "EffectiveElectricalConductivity")
+    #effcond = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["effectiveElectronicConductivity"]
+    trans = getHalfTrans(msource, couplingfaces, couplingcells, "effectiveElectronicConductivity")
 
     if skip_cc
         
@@ -625,9 +624,9 @@ function setup_model(init::InputFile;
 
     include_cc = true #!
 
-    model = setup_battery_model(init, include_cc=include_cc,use_groups=use_groups,use_p2d=use_p2d; kwarg ... )
+    model      = setup_battery_model(init, include_cc=include_cc,use_groups=use_groups,use_p2d=use_p2d; kwarg ... )
     parameters = setup_battery_parameters(init, model)
-    initState = setup_battery_initial_state(init, model)
+    initState  = setup_battery_initial_state(init, model)
 
     return model, initState, parameters
 
@@ -671,16 +670,19 @@ function setup_battery_model(init::MatlabFile;
     function setup_active_material(name::Symbol, general_ad::Bool)
         jsonName = jsonNames[name]
 
-        inputparams_am = inputparams[jsonName]["ActiveMaterial"]
-
-        am_params = JutulStorage()
-        am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
-        am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
-        am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
-        am_params[:volume_fraction]         = inputparams_am["Interface"]["volumeFraction"]
+        inputparams_co  = inputparams[jsonName]["Coating"]
+        inputparams_itf = inputparams[jsonName]["Coating"]["ActiveMaterial"]["Interface"]
+        inputparams_sd  = inputparams[jsonName]["Coating"]["ActiveMaterial"]["SolidDiffusion"]
         
-        k0  = inputparams_am["Interface"]["k0"]
-        Eak = inputparams_am["Interface"]["Eak"]
+        am_params = JutulStorage()
+        am_params[:n_charge_carriers]       = inputparams_itf["numberOfElectronsTransferred"]
+        am_params[:maximum_concentration]   = inputparams_itf["saturationConcentration"]
+        am_params[:volumetric_surface_area] = inputparams_itf["volumetricSurfaceArea"]
+        am_params[:volume_fraction]         = inputparams_co["volumeFraction"]
+        am_params[:volume_fractions]        = inputparams_co["volumeFractions"]
+        
+        k0  = inputparams_itf["reactionRateConstant"]
+        Eak = inputparams_itf["activationEnergyOfReaction"]
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
         
         if name == :NAM
@@ -690,21 +692,22 @@ function setup_battery_model(init::MatlabFile;
         else
             error("not recongized")
         end
+
         T_prm = typeof(am_params)
         if use_p2d
-            rp = inputparams_am["SolidDiffusion"]["rp"]
-            N  = Int64(inputparams_am["SolidDiffusion"]["N"])
-            D  = inputparams_am["SolidDiffusion"]["D0"]
+            rp = inputparams_sd["particleRadius"]
+            N  = Int64(inputparams_sd["N"])
+            D  = inputparams_sd["referenceDiffusionCoefficient"]
             sys_am = ActiveMaterialP2D(am_params, rp, N, D)
         else
             sys_am = ActiveMaterialNoParticleDiffusion(am_params)
         end
         
         if  include_cc
-            model_am = setup_component(inputparams_am, sys_am,nothing,general_ad)
+            model_am = setup_component(inputparams_co, sys_am, nothing, general_ad)
         else
-            bcfaces_am = convert_to_int_vector(inputparams_am["externalCouplingTerm"]["couplingfaces"])
-            model_am   = setup_component(inputparams_am, sys_am, bcfaces_am,general_ad)
+            bcfaces_am = convert_to_int_vector(inputparams_co["externalCouplingTerm"]["couplingfaces"])
+            model_am   = setup_component(inputparams_co, sys_am, bcfaces_am,general_ad)
             # We add also boundary parameters (if any)
             S = model_am.parameters
             nbc = count_active_entities(model_am.domain, BoundaryDirichletFaces())
@@ -741,21 +744,21 @@ function setup_battery_model(init::MatlabFile;
     ## Setup ELYTE
     params = JutulStorage();
     inputparams_elyte = inputparams["Electrolyte"]
-    params[:transference] = inputparams_elyte["sp"]["t"]
-    params[:charge]       = inputparams_elyte["sp"]["z"]
-    params[:bruggeman]    = inputparams_elyte["BruggemanCoefficient"]
+    params[:transference] = inputparams_elyte["species"]["transferenceNumber"]
+    params[:charge]       = inputparams_elyte["species"]["chargeNumber"]
+    params[:bruggeman]    = inputparams_elyte["bruggemanCoefficient"]
     
     # setup diffusion coefficient function, hard coded for the moment because function name is not passed throught model
     # TODO : add general code
     funcname = "computeDiffusionCoefficient_default"
     func = getfield(BattMo, Symbol(funcname))
-    params[:diffusivity] = func
+    params[:diffusivity_func] = func
 
     # setup diffusion coefficient function
     # TODO : add general code
     funcname = "computeElectrolyteConductivity_default"
     func = getfield(BattMo, Symbol(funcname))
-    params[:conductivity] = func
+    params[:conductivity_func] = func
     
     elyte = Electrolyte(params)
     model_elyte = setup_component(inputparams["Electrolyte"],
@@ -821,12 +824,12 @@ function setup_battery_model(init::JSONFile;
     
     geomparams = setup_geomparams(init)
 
-    jsondict=init.object
+    jsondict = init.object
 
     function setup_component(geomparam::Dict, 
-        sys; 
-        addDirichlet::Bool = false, 
-        general_ad::Bool = false)
+                             sys; 
+                             addDirichlet::Bool = false, 
+                             general_ad::Bool = false)
 
         facearea = geomparam[:facearea]
         
@@ -873,9 +876,9 @@ function setup_battery_model(init::JSONFile;
     end
 
     function setup_component(geomparams::Dict, 
-        sys::Electrolyte, 
-        bcfaces = nothing; 
-        general_ad::Bool = false)
+                             sys::Electrolyte, 
+                             bcfaces = nothing; 
+                             general_ad::Bool = false)
 
         # specific implementation for electrolyte
         # requires geometric parameters for :NAM, :SEP, :PAM
@@ -929,32 +932,85 @@ function setup_battery_model(init::JSONFile;
 
     
     function setup_active_material(name::Symbol, 
-        geomparams::Dict{Symbol,<:Any})
+                                   geomparams::Dict{Symbol, <:Any})
 
         jsonName = jsonNames[name]
 
-        inputparams_am = jsondict[jsonName]["ActiveMaterial"]
+        function computeVolumeFraction(codict)
+        # We compute the volume fraction form the coating data
 
-        am_params = JutulStorage()
-        am_params[:volumeFraction]          = inputparams_am["Interface"]["volumeFraction"]
-        am_params[:n_charge_carriers]       = inputparams_am["Interface"]["n"]
-        am_params[:maximum_concentration]   = inputparams_am["Interface"]["cmax"]
-        am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
-        am_params[:theta0]                  = inputparams_am["Interface"]["theta0"]
-        am_params[:theta100]                = inputparams_am["Interface"]["theta100"]
+            am = "ActiveMaterial"
+            bd = "Binder"
+            ad = "ConductingAdditive"
 
-        k0  = inputparams_am["Interface"]["k0"]
-        Eak = inputparams_am["Interface"]["Eak"]
-        am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
+            compnames = [am, bd, ad]
+
+            specificVolumes = zeros(length(compnames))
+            for icomp in eachindex(compnames)
+                compname = compnames[icomp]
+                rho = codict[compname]["density"]
+                mf  = codict[compname]["massFraction"]
+                specificVolumes[icomp] = mf/rho
+            end
+
+            sumSpecificVolumes = sum(specificVolumes)
+            volumeFractions =[sv/sumSpecificVolumes for sv in specificVolumes]
+                
+            effectiveDensity = codict["effectiveDensity"]
+            volumeFraction = sumSpecificVolumes*effectiveDensity
+
+            return volumeFraction, volumeFractions
+            
+        end
+
+        inputparams_am = jsondict[jsonName]["Coating"]["ActiveMaterial"]
         
-        funcname = inputparams_am["Interface"]["OCP"]["functionname"]
-        am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
+        am_params = JutulStorage()
+        vf, vfs = computeVolumeFraction(jsondict[jsonName]["Coating"])
+        am_params[:volume_fraction]          = vf
+        am_params[:volume_fractions]         = vfs
+        am_params[:n_charge_carriers]       = inputparams_am["Interface"]["numberOfElectronsTransferred"]
+        am_params[:maximum_concentration]   = inputparams_am["Interface"]["saturationConcentration"]
+        am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
+        am_params[:theta0]                  = inputparams_am["Interface"]["guestStoichiometry0"]
+        am_params[:theta100]                = inputparams_am["Interface"]["guestStoichiometry100"]
+
+        k0  = inputparams_am["Interface"]["reactionRateConstant"]
+        Eak = inputparams_am["Interface"]["activationEnergyOfReaction"]
+
+        ###### MERGE ######
+        # am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
+        
+        # funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
+        # am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
+        
+        am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
+
+        input_symbols = ""
+        if haskey(inputparams_am["Interface"]["openCircuitPotential"],"function")
+            am_params[:ocp_args] = inputparams_am["Interface"]["openCircuitPotential"]["argumentlist"]
+          
+            for i in collect(1:size(am_params[:ocp_args])[1])
+                if i == size(am_params[:ocp_args])[1]
+                    input_symbols *= am_params[:ocp_args][i]    
+                else
+                    input_symbols *= am_params[:ocp_args][i] * ","
+                end
+            end
+            am_params[:ocp_eq] = jsonName * "_ocp_curve($input_symbols) = " * inputparams_am["Interface"]["openCircuitPotential"]["function"]
+            am_params[:ocp_func] = getfield(BattMo, Symbol("compute_function_from_string"))
+            am_params[:ocp_comp] = Base.invokelatest(am_params[:ocp_func],am_params[:ocp_eq])
+            
+        else
+            funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
+            am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
+        end
         
         use_p2d = true
         if use_p2d
-            rp = inputparams_am["SolidDiffusion"]["rp"]
+            rp = inputparams_am["SolidDiffusion"]["particleRadius"]
             N  = Int64(inputparams_am["SolidDiffusion"]["N"])
-            D  = inputparams_am["SolidDiffusion"]["D0"]
+            D  = inputparams_am["SolidDiffusion"]["referenceDiffusionCoefficient"]
             sys_am = ActiveMaterialP2D(am_params, rp, N, D)
         else
             sys_am = ActiveMaterialNoParticleDiffusion(am_params)
@@ -982,20 +1038,59 @@ function setup_battery_model(init::JSONFile;
     params = JutulStorage();
     inputparams_elyte = jsondict["Electrolyte"]
     
-    params[:transference]       = inputparams_elyte["sp"]["t"]
-    params[:charge]             = inputparams_elyte["sp"]["z"]
-    params[:separator_porosity] = inputparams_elyte["Separator"]["porosity"]
-    params[:bruggeman]          = inputparams_elyte["BruggemanCoefficient"]
+    params[:transference]       = inputparams_elyte["species"]["transferenceNumber"]
+    params[:charge]             = inputparams_elyte["species"]["chargeNumber"]
+    params[:separator_porosity] = jsondict["Separator"]["porosity"]
+    params[:bruggeman]          = inputparams_elyte["bruggemanCoefficient"]
     
     # setup diffusion coefficient function
-    funcname = inputparams_elyte["DiffusionCoefficient"]["functionname"]
-    func = getfield(BattMo, Symbol(funcname))
-    params[:diffusivity] = func
 
-    # setup diffusion coefficient function
-    funcname = inputparams_elyte["Conductivity"]["functionname"]
-    func = getfield(BattMo, Symbol(funcname))
-    params[:conductivity] = func
+
+    ##### MERGE #####
+
+    input_symbols_diffusivity = ""
+    if haskey(inputparams_elyte["diffusionCoefficient"],"function")
+        params[:diffusivity_args] = inputparams_elyte["diffusionCoefficient"]["argumentlist"]
+        
+        for i in collect(1:size(params[:diffusivity_args])[1])
+            if i == size(params[:diffusivity_args])[1]
+                input_symbols_diffusivity *= params[:diffusivity_args][i]    
+            else
+                input_symbols_diffusivity *= params[:diffusivity_args][i] * ","
+            end
+        end
+        params[:diffusivity_eq] = "elyte_diffusion_curve($input_symbols_diffusivity) = " * inputparams_elyte["diffusionCoefficient"]["function"]
+        params[:diffusivity_func] = getfield(BattMo, Symbol("compute_function_from_string"))
+        params[:diffusivity_comp] = Base.invokelatest(params[:diffusivity_func],params[:diffusivity_eq])
+
+        
+    else
+        funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
+        params[:diffusivity_func] = getfield(BattMo, Symbol(funcname))
+    end
+
+    # setup conductivity function
+
+    input_symbols_conductivity = ""
+    if haskey(inputparams_elyte["ionicConductivity"],"function")
+        params[:conductivity_args] = inputparams_elyte["ionicConductivity"]["argumentlist"]
+        
+        for i in collect(1:size(params[:conductivity_args])[1])
+            if i == size(params[:conductivity_args])[1]
+                input_symbols_conductivity *= params[:conductivity_args][i]    
+            else
+                input_symbols_conductivity *= params[:conductivity_args][i] * ","
+            end
+        end
+        params[:conductivity_eq] = "elyte_conduct_curve($input_symbols_conductivity) = " * inputparams_elyte["ionicConductivity"]["function"]
+        params[:conductivity_func] = getfield(BattMo, Symbol("compute_function_from_string"))
+        params[:conductivity_comp] = Base.invokelatest(params[:conductivity_func],params[:conductivity_eq])
+        
+    else
+        funcname = inputparams_elyte["ionicConductivity"]["functionname"]
+        params[:conductivity_func] = getfield(BattMo, Symbol(funcname))
+    end
+
     
     elyte = Electrolyte(params)
     model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
@@ -1078,15 +1173,15 @@ function setup_battery_parameters(init::MatlabFile,
     if use_cc
         prm_cc = Dict{Symbol, Any}()
         exported_cc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
-        prm_cc[:Conductivity] = exported_cc["EffectiveElectricalConductivity"][1]
+        prm_cc[:Conductivity] = exported_cc["effectiveElectronicConductivity"][1]
         parameters[:CC] = setup_parameters(model[:CC], prm_cc)
     end
 
     # Negative active material
     
     prm_nam = Dict{Symbol, Any}()
-    exported_nam = exported["model"]["NegativeElectrode"]["ActiveMaterial"]
-    prm_nam[:Conductivity] = exported_nam["EffectiveElectricalConductivity"][1]
+    exported_nam = exported["model"]["NegativeElectrode"]["Coating"]
+    prm_nam[:Conductivity] = exported_nam["effectiveElectronicConductivity"][1]
     prm_nam[:Temperature] = T0
     
     if discretisation_type(model[:NAM]) == :P2Ddiscretization
@@ -1108,8 +1203,8 @@ function setup_battery_parameters(init::MatlabFile,
     # Positive active material
 
     prm_pam = Dict{Symbol, Any}()
-    exported_pam = exported["model"]["PositiveElectrode"]["ActiveMaterial"]
-    prm_pam[:Conductivity] = exported_pam["EffectiveElectricalConductivity"][1]
+    exported_pam = exported["model"]["PositiveElectrode"]["Coating"]
+    prm_pam[:Conductivity] = exported_pam["effectiveElectronicConductivity"][1]
     prm_pam[:Temperature] = T0
     
     if discretisation_type(model[:PAM]) == :P2Ddiscretization
@@ -1132,7 +1227,7 @@ function setup_battery_parameters(init::MatlabFile,
     if use_pp
         prm_pp = Dict{Symbol, Any}()
         exported_pp = exported["model"]["PositiveElectrode"]["CurrentCollector"]
-        prm_pp[:Conductivity] = exported_pp["EffectiveElectricalConductivity"][1]
+        prm_pp[:Conductivity] = exported_pp["effectiveElectronicConductivity"][1]
         
         parameters[:PP] = setup_parameters(model[:PP], prm_pp)
     end        
@@ -1147,11 +1242,39 @@ function setup_battery_parameters(init::JSONFile,
                                   model::MultiModel
                                   )
 
+    function computeEffectiveConductivity(comodel, cojsonstruct)
+        # Compute effective conductivity for the coating
+
+        # First we compute the intrinsic conductivity as volume weight average of the subcomponents
+        am = "ActiveMaterial"
+        bd = "Binder"
+        ad = "ConductingAdditive"
+        
+        compnames = [am, bd, ad]
+
+        vfs = comodel.system.params[:volume_fractions]
+        kappa = 0
+        for icomp in eachindex(compnames)
+            compname = compnames[icomp]
+            vf = vfs[icomp]
+            kappa += vf*cojsonstruct[compname]["electronicConductivity"]
+        end
+
+        vf = comodel.system.params[:volume_fraction]
+        bg = cojsonstruct["bruggemanCoefficient"]
+
+        kappaeff = (vf^bg)*kappa
+
+        return kappaeff
+        
+    end
+
     parameters = Dict{Symbol, Any}()
 
     jsonstruct=init.object
 
     T0 = jsonstruct["initT"]
+    
     
     # Negative current collector (if any)
 
@@ -1164,19 +1287,18 @@ function setup_battery_parameters(init::JSONFile,
     if use_cc
         prm_cc = Dict{Symbol, Any}()
         jsonstruct_cc = jsonstruct["NegativeElectrode"]["CurrentCollector"]
-        prm_cc[:Conductivity] = jsonstruct_cc["EffectiveElectricalConductivity"]
+        prm_cc[:Conductivity] = jsonstruct_cc["electronicConductivity"]
         parameters[:CC] = setup_parameters(model[:CC], prm_cc)
     end
 
     # Negative active material
     
     prm_nam = Dict{Symbol, Any}()
-    jsonstruct_nam = jsonstruct["NegativeElectrode"]["ActiveMaterial"]
+    jsonstruct_nam = jsonstruct["NegativeElectrode"]["Coating"]["ActiveMaterial"]
 
-    kappa = jsonstruct_nam["electricalConductivity"]
-    vf    = jsonstruct_nam["Interface"]["volumeFraction"]
-    prm_nam[:Conductivity] = vf*kappa
+    prm_nam[:Conductivity] = computeEffectiveConductivity(model[:NAM], jsonstruct["NegativeElectrode"]["Coating"])
     prm_nam[:Temperature] = T0
+    
     
     if discretisation_type(model[:NAM]) == :P2Ddiscretization
         # nothing to do
@@ -1190,24 +1312,25 @@ function setup_battery_parameters(init::JSONFile,
     # Electrolyte
     
     prm_elyte = Dict{Symbol, Any}()
-    prm_elyte[:Temperature] = T0        
+    prm_elyte[:Temperature] = T0 
+          
 
     parameters[:ELYTE] = setup_parameters(model[:ELYTE], prm_elyte)
 
     # Positive active material
 
     prm_pam = Dict{Symbol, Any}()
-    jsonstruct_pam = jsonstruct["PositiveElectrode"]["ActiveMaterial"]
-    kappa = jsonstruct_pam["electricalConductivity"]
-    vf    = jsonstruct_pam["Interface"]["volumeFraction"]
-    prm_pam[:Conductivity] = vf*kappa
+    jsonstruct_pam = jsonstruct["PositiveElectrode"]["Coating"]["ActiveMaterial"]
+
+    prm_pam[:Conductivity] = computeEffectiveConductivity(model[:PAM], jsonstruct["PositiveElectrode"]["Coating"])
     prm_pam[:Temperature] = T0
+    
     
     if discretisation_type(model[:PAM]) == :P2Ddiscretization
         # nothing to do
     else
         @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
-        prm_pam[:Diffusivity] = jsonstruct_nam["InterDiffusionCoefficient"]
+        prm_pam[:Diffusivity] = jsonstruct_pam["InterDiffusionCoefficient"]
     end
 
     parameters[:PAM] = setup_parameters(model[:PAM], prm_pam)
@@ -1223,7 +1346,7 @@ function setup_battery_parameters(init::JSONFile,
     if use_pp
         prm_pp = Dict{Symbol, Any}()
         jsonstruct_pp = jsonstruct["PositiveElectrode"]["CurrentCollector"]
-        prm_pp[:Conductivity] = jsonstruct_pp["EffectiveElectricalConductivity"][1]
+        prm_pp[:Conductivity] = jsonstruct_pp["electronicConductivity"]
         
         parameters[:PP] = setup_parameters(model[:PP], prm_pp)
     end        
@@ -1244,7 +1367,7 @@ function setup_battery_initial_state(init::MatlabFile,
 
     exported=init.object
 
-    state0 = exported["state0"]
+    state0 = exported["initstate"]
 
     jsonNames = Dict(
         :CC  => "NegativeElectrode",
@@ -1294,10 +1417,10 @@ function setup_battery_initial_state(init::MatlabFile,
 
         init = Dict()
         
-        init[:Phi]   = state0[jsonName]["ActiveMaterial"]["phi"][1]
+        init[:Phi] = state0[jsonName]["Coating"]["phi"][1]
 
         if use_cc
-            c = state0[jsonName]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
+            c = state0[jsonName]["Coating"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
         else
             c = state0[jsonName]["ActiveMaterial"]["c"][1]
         end
@@ -1349,6 +1472,39 @@ function setup_battery_initial_state(init::MatlabFile,
     
 end
 
+
+function extract_input_symbols(ex::Expr, symbols::Vector{Symbol})
+
+    args = ex.args
+    func_definition = args[1]
+    input_symbols = func_definition.args[2:end]
+
+    return input_symbols 
+end
+
+function set_symbol_values(symbols, c, refT, T, cmax, SOC)
+    symbol_values = Dict{Symbol, Any}()
+    
+    for symbol in symbols
+     
+        if symbol == :c
+            symbol_values[symbol] = c
+        elseif symbol == :T
+            symbol_values[symbol] = T
+        elseif symbol == :refT
+            symbol_values[symbol] = refT
+        elseif symbol == :cmax
+            symbol_values[symbol] = cmax
+        elseif symbol == :SOC
+            symbol_values[symbol] = SOC
+        else
+            error("Symbol $symbol not supported by BattMo OCP computation")
+        end
+    end
+    return symbol_values
+end
+
+
 function setup_battery_initial_state(init::JSONFile,
                                      model::MultiModel)
 
@@ -1361,7 +1517,8 @@ function setup_battery_initial_state(init::JSONFile,
     end
 
     T   = jsonstruct["initT"]
-    SOC = jsonstruct["SOC"]
+    SOC_init = jsonstruct["SOC"]
+
 
     function setup_init_am(name, model)
         
@@ -1369,15 +1526,42 @@ function setup_battery_initial_state(init::JSONFile,
         theta100 = model[name].system[:theta100]
         cmax     = model[name].system[:maximum_concentration]
         N        = model[name].system.discretization[:N]
+        refT = 298.15
         
-        theta = SOC*(theta100 - theta0) + theta0;
+        
+        
+        theta = SOC_init*(theta100 - theta0) + theta0;
         c     = theta*cmax
+        SOC = SOC_init
         nc    = count_entities(model[name].data_domain, Cells())
         init = Dict()
         init[:Cs]  = c*ones(nc)
         init[:Cp]  = c*ones(nc, N)
 
-        OCP = model[name].system[:ocp_func](c, T, cmax)
+        symbol_eq = ""
+        if Jutul.haskey(model[name].system.params, :ocp_eq)
+            ocp_eq = model[name].system[:ocp_eq]
+            ocp_args = model[name].system[:ocp_args]
+            
+            symbols = Symbol[]
+            for i in collect(1:size(ocp_args)[1])
+                
+                sym = Symbol(ocp_args[i])
+                push!(symbols, sym)   
+            end
+
+            ocp_form = model[name].system[:ocp_comp]
+
+            symbol_values = set_symbol_values(symbols,c,refT,T,cmax,SOC)
+        
+            function_arguments = [symbol_values[symbol] for symbol in symbols if haskey(symbol_values, symbol)]
+            OCP = Base.invokelatest(ocp_form,function_arguments...)
+
+        else
+            OCP = model[name].system[:ocp_func](c, T, cmax)
+
+        end
+
         return (init, nc, OCP)
         
     end
@@ -1402,14 +1586,14 @@ function setup_battery_initial_state(init::JSONFile,
     nc = count_entities(model[:ELYTE].data_domain, Cells())
     
     init = Dict()
-    init[:C]   = 1000*ones(nc)
+    init[:C]   = jsonstruct["Electrolyte"]["initialConcentration"]*ones(nc)
     init[:Phi] = - negOCP*ones(nc) 
 
     initState[:ELYTE] = init
 
     # Setup initial state in positive active material
     
-    init, nc, posOCP = setup_init_am(:PAM, model)
+    init, nc, posOCP= setup_init_am(:PAM, model)
     init[:Phi] = (posOCP - negOCP)*ones(nc)
     
     initState[:PAM] = init
@@ -1475,7 +1659,7 @@ function setup_volume_fractions!(model::MultiModel, geomparams::Dict{Symbol,<:An
     
     for name in names
         ammodel = model[name]
-        vf = ammodel.system[:volumeFraction]
+        vf = ammodel.system[:volume_fraction]
         Nam = geomparams[name][:N]
         ammodel.domain.representation[:volumeFraction] = vf*ones(Nam)
         if name == :NAM
@@ -1513,8 +1697,20 @@ function getTrans(model1::Dict{String,<:Any},
     T_all1 = model1["operators"]["T_all"][faces[:, 1]]
     T_all2 = model2["operators"]["T_all"][faces[:, 2]]
 
-    s1  = model1[quantity][cells[:, 1]]
-    s2  = model2[quantity][cells[:, 2]]
+
+    function getcellvalues(values, cellinds)
+
+        if length(values) == 1
+            values = values*ones(length(cellinds))
+        else
+            values = values[cellinds]
+        end
+        return values
+        
+    end
+    
+    s1  = getcellvalues(model1[quantity], cells[:, 1])
+    s2  = getcellvalues(model2[quantity], cells[:, 2])
     
     T   = 1.0./((1.0./(T_all1.*s1))+(1.0./(T_all2.*s2)))
 
@@ -1572,7 +1768,13 @@ function getHalfTrans(model::Dict{String, Any},
     Here, the faces should belong the corresponding cells at the same index"""
 
     T_all = model["operators"]["T_all"]
-    s = model[quantity][cells]
+    s = model[quantity]
+    if length(s) == 1
+        s = s*ones(length(cells))
+    else
+        s = s[cells]
+    end
+    
     T = T_all[faces].*s
 
     return T
@@ -1596,19 +1798,19 @@ end
 
 function setup_geomparams(init::JSONFile)
     
-    jsondict=init.object
+    jsondict = init.object
 
     names = (:CC, :NAM, :SEP, :PAM, :PP)
     geomparams = Dict(name => Dict() for name in names)
 
     geomparams[:CC][:N]          = jsondict["NegativeElectrode"]["CurrentCollector"]["N"]
     geomparams[:CC][:thickness]  = jsondict["NegativeElectrode"]["CurrentCollector"]["thickness"]
-    geomparams[:NAM][:N]         = jsondict["NegativeElectrode"]["ActiveMaterial"]["N"]
-    geomparams[:NAM][:thickness] = jsondict["NegativeElectrode"]["ActiveMaterial"]["thickness"]
-    geomparams[:SEP][:N]         = jsondict["Electrolyte"]["Separator"]["N"]
-    geomparams[:SEP][:thickness] = jsondict["Electrolyte"]["Separator"]["thickness"]
-    geomparams[:PAM][:N]         = jsondict["PositiveElectrode"]["ActiveMaterial"]["N"]
-    geomparams[:PAM][:thickness] = jsondict["PositiveElectrode"]["ActiveMaterial"]["thickness"]
+    geomparams[:NAM][:N]         = jsondict["NegativeElectrode"]["Coating"]["N"]
+    geomparams[:NAM][:thickness] = jsondict["NegativeElectrode"]["Coating"]["thickness"]
+    geomparams[:SEP][:N]         = jsondict["Separator"]["N"]
+    geomparams[:SEP][:thickness] = jsondict["Separator"]["thickness"]
+    geomparams[:PAM][:N]         = jsondict["PositiveElectrode"]["Coating"]["N"]
+    geomparams[:PAM][:thickness] = jsondict["PositiveElectrode"]["Coating"]["thickness"]
     geomparams[:PP][:N]          = jsondict["PositiveElectrode"]["CurrentCollector"]["N"]
     geomparams[:PP][:thickness]  = jsondict["PositiveElectrode"]["CurrentCollector"]["thickness"]
 
@@ -1635,7 +1837,8 @@ function computeCellCapacity(model::MultiModel)
         F    = con.F
         n    = sys[:n_charge_carriers]
         cMax = sys[:maximum_concentration]
-        vf   = sys[:volumeFraction]
+        vf   = sys[:volume_fraction]
+        avf  = sys[:volume_fractions][1]
         
         if name == :NAM
             thetaMax = sys[:theta100]
@@ -1648,7 +1851,7 @@ function computeCellCapacity(model::MultiModel)
         end
 
         vols = ammodel.domain.representation[:face_weighted_volumes]
-        vol = sum(vf*vols)
+        vol = sum(avf*vf*vols)
         
         cap_usable = (thetaMax - thetaMin)*cMax*vol*n*F
         
@@ -1723,23 +1926,25 @@ end
 function inputRefToStates(states, stateref)
     statesref = deepcopy(states);
     for i in 1:size(states,1)
+
         staterefnew = statesref[i]   
-        refstep = i
-        fields = ["CurrentCollector","ActiveMaterial"]
-        components = ["NegativeElectrode","PositiveElectrode"]
-        newkeys = [:CC,:NAM,:PP,:PAM]
-        ind =1
+        refstep     = i
+        fields      = ["CurrentCollector","ActiveMaterial"]
+        components  = ["NegativeElectrode","PositiveElectrode"]
+        newkeys     = [:CC, :NAM, :PP, :PAM]
+       
+        ind = 1
         for component = components
             for field in fields
                 state = stateref[refstep][component]
                 phi_ref = state[field]["phi"]
                 newcomp = newkeys[ind]
                 staterefnew[newcomp][:Phi] = phi_ref        
-                if haskey(state[field],"c")
+                if haskey(state[field], "c")
                     c = state[field]["c"]
                     staterefnew[newcomp][:C] = c
                 end
-                ind=ind + 1
+                ind = ind + 1
             end
         end
 
@@ -1785,7 +1990,11 @@ function exported_model_to_domain(exported;
     
     vf = []
     if haskey(exported, "volumeFraction")
-        vf = exported["volumeFraction"][:, 1]
+        if length(exported["volumeFraction"]) == 1
+            vf = exported["volumeFraction"]
+        else
+            vf = exported["volumeFraction"][:, 1]
+        end
     end
     
     internal_faces = (N[:, 2] .> 0) .& (N[:, 1] .> 0)
