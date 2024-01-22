@@ -1,7 +1,7 @@
 Jutul.symmetry(::TPFAInterfaceFluxCT) = Jutul.CTSkewSymmetry()
 
-Jutul.cross_term_entities(ct::TPFAInterfaceFluxCT, eq, model) = ct.target_cells
-Jutul.cross_term_entities_source(ct::TPFAInterfaceFluxCT, eq, model) = ct.source_cells
+Jutul.cross_term_entities(ct::TPFAInterfaceFluxCT, eq::Jutul.JutulEquation, model) = ct.target_cells
+Jutul.cross_term_entities_source(ct::TPFAInterfaceFluxCT, eq::Jutul.JutulEquation, model) = ct.source_cells
 
 function Jutul.update_cross_term_in_entity!(out                                  ,
                                             ind                                  ,
@@ -49,7 +49,7 @@ function Jutul.update_cross_term_in_entity!(out                           ,
     out[] = v
 end
 
-Jutul.cross_term_entities(ct::AccumulatorInterfaceFluxCT, eq, model) = [ct.target_cell]
+Jutul.cross_term_entities(ct::AccumulatorInterfaceFluxCT, eq::Jutul.JutulEquation, model) = [ct.target_cell]
 
 function regularized_sqrt(x::T, th::Float64) where {T<:Any}
     x, th = promote(x, th)
@@ -104,8 +104,8 @@ end
 ##########################
 
 
-Jutul.cross_term_entities(ct::ButlerVolmerActmatToElyteCT, eq, model) = ct.target_cells
-Jutul.cross_term_entities_source(ct::ButlerVolmerActmatToElyteCT, eq, model) = ct.source_cells
+Jutul.cross_term_entities(ct::ButlerVolmerActmatToElyteCT, eq::Jutul.JutulEquation, model) = ct.target_cells
+Jutul.cross_term_entities_source(ct::ButlerVolmerActmatToElyteCT, eq::Jutul.JutulEquation, model) = ct.source_cells
 
 
 function Jutul.update_cross_term_in_entity!(out                            ,
@@ -163,9 +163,9 @@ function Jutul.update_cross_term_in_entity!(out                            ,
 end
 
 
-Jutul.cross_term_entities(ct::ButlerVolmerElyteToActmatCT, eq, model) = ct.target_cells
+Jutul.cross_term_entities(ct::ButlerVolmerElyteToActmatCT, eq::Jutul.JutulEquation, model) = ct.target_cells
 
-Jutul.cross_term_entities_source(ct::ButlerVolmerElyteToActmatCT, eq, model) = ct.source_cells
+Jutul.cross_term_entities_source(ct::ButlerVolmerElyteToActmatCT, eq::Jutul.JutulEquation, model) = ct.source_cells
 
 
 function Jutul.update_cross_term_in_entity!(out                            ,
@@ -271,8 +271,8 @@ function source_electric_material(vols,
 end
 
 
-Jutul.cross_term_entities(ct::ButlerVolmerInterfaceFluxCT, eq, model) = ct.target_cells
-Jutul.cross_term_entities_source(ct::ButlerVolmerInterfaceFluxCT, eq, model) = ct.source_cells
+Jutul.cross_term_entities(ct::ButlerVolmerInterfaceFluxCT, eq::Jutul.JutulEquation, model) = ct.target_cells
+Jutul.cross_term_entities_source(ct::ButlerVolmerInterfaceFluxCT, eq::Jutul.JutulEquation, model) = ct.source_cells
 
 Jutul.symmetry(::ButlerVolmerInterfaceFluxCT) = Jutul.CTSkewSymmetry()
 
