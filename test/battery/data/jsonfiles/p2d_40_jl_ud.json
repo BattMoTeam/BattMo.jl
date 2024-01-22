@@ -145,19 +145,20 @@
   "G": [],
   "SOC": 0.99,
   "initT": 298.15,
-  "use_thermal": true,
-  "include_current_collectors": false,
+  "use_thermal": false,
+  "include_current_collectors": true,
   "Control": {
-    "controlPolicy": "IEswitch",
+    "controlPolicy": "CCDischarge",
     "initialControl": "discharging",
     "CRate": 1,
     "lowerCutoffVoltage": 2.4,
     "upperCutoffVoltage": 4.1,
     "dIdtLimit": 0.01,
     "dEdtLimit": 0.01,
-    "tup": 0.1
+    "rampupTime": 10
   },
   "Electrolyte": {
+    "initialConcentration": 1000,
     "specificHeatCapacity": 2055,
     "thermalConductivity": 0.6,
     "density": 1200,
@@ -177,13 +178,10 @@
         "T"
       ]
     },
-    "compnames": [
-      "Li",
-      "PF6"
-    ],
-    "sp": {
-      "z": 1,
-      "t": 0.2594
+    "species": {
+      "chargeNumber": 1,
+      "transferenceNumber": 0.2594,
+      "nominalConcentration": 1000
     },
     "bruggemanCoefficient": 1.5
   },
@@ -193,10 +191,9 @@
   },
   "TimeStepping": {
     "totalTime": 5040,
-    "N": 40,
+    "numberOfTimeSteps": 40,
     "useRampup": true,
-    "rampupTime": 10,
-    "numberOfTimeSteps": 40
+    "numberOfRampupSteps": 10
   },
   "Output": {
     "variables": [
