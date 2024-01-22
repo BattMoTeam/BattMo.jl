@@ -192,7 +192,7 @@ function setup_sim(init::JSONFile;
 
     @. state0[:BPP][:Phi] = minE * 1.5
 
-    tup = Float64(init.object["TimeStepping"]["rampupTime"])
+    tup = Float64(init.object["Control"]["rampupTime"])
     cFun(time) = currentFun(time, inputI, tup)
 
     currents = setup_forces(model[:BPP], policy=SimpleCVPolicy(cFun, minE))
@@ -744,8 +744,8 @@ function setup_battery_model(init::MatlabFile;
     ## Setup ELYTE
     params = JutulStorage();
     inputparams_elyte = inputparams["Electrolyte"]
-    params[:transference] = inputparams_elyte["sp"]["t"]
-    params[:charge]       = inputparams_elyte["sp"]["z"]
+    params[:transference] = inputparams_elyte["species"]["transferenceNumber"]
+    params[:charge]       = inputparams_elyte["species"]["chargeNumber"]
     params[:bruggeman]    = inputparams_elyte["bruggemanCoefficient"]
     
     # setup diffusion coefficient function, hard coded for the moment because function name is not passed throught model
@@ -1038,8 +1038,8 @@ function setup_battery_model(init::JSONFile;
     params = JutulStorage();
     inputparams_elyte = jsondict["Electrolyte"]
     
-    params[:transference]       = inputparams_elyte["sp"]["t"]
-    params[:charge]             = inputparams_elyte["sp"]["z"]
+    params[:transference]       = inputparams_elyte["species"]["transferenceNumber"]
+    params[:charge]             = inputparams_elyte["species"]["chargeNumber"]
     params[:separator_porosity] = jsondict["Separator"]["porosity"]
     params[:bruggeman]          = inputparams_elyte["bruggemanCoefficient"]
     
@@ -1586,7 +1586,7 @@ function setup_battery_initial_state(init::JSONFile,
     nc = count_entities(model[:ELYTE].data_domain, Cells())
     
     init = Dict()
-    init[:C]   = 1000*ones(nc)
+    init[:C]   = jsonstruct["Electrolyte"]["initialConcentration"]*ones(nc)
     init[:Phi] = - negOCP*ones(nc) 
 
     initState[:ELYTE] = init

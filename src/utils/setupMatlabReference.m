@@ -24,11 +24,6 @@ function output = setupMatlabReference(casename, jsonfolder, datafolder, varargi
 
     jsonstruct = parseBattmoJson(json_filename);
 
-    CRate = jsonstruct.Control.CRate;
-    jsonstruct.TimeStepping.totalTime = 1.4*hour/CRate;
-    jsonstruct.TimeStepping.N = 40;
-
-
     %% To run the simulation, you need to install matlab battmo
 
     mrstModule add ad-core mrst-gui mpfa agmg linearsolvers
