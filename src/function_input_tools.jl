@@ -1,4 +1,4 @@
-export polyfit, update_json_input
+export polyfit, update_json_input, compute_ocp_from_string
 
 using JSON
 using Polynomials
@@ -164,7 +164,16 @@ function update_json_input(;file_path::String = nothing,
 end
 
 
+macro compute_ocp_from_string(c, T, refT, cmax, ocp_eq)
+    
+    quote
+        return $(Meta.parse(ocp_eq))
+    end
+    
+end
+    
 function compute_function_from_string(ocp_eq)
 
     eval(Meta.parse(ocp_eq))
+    
 end

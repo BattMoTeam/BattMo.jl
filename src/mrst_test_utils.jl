@@ -987,7 +987,7 @@ function setup_battery_model(init::JSONFile;
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
 
         input_symbols = ""
-        if haskey(inputparams_am["Interface"]["openCircuitPotential"],"function")
+        if haskey(inputparams_am["Interface"]["openCircuitPotential"], "function")
             am_params[:ocp_args] = inputparams_am["Interface"]["openCircuitPotential"]["argumentlist"]
           
             for i in collect(1:size(am_params[:ocp_args])[1])
@@ -999,7 +999,8 @@ function setup_battery_model(init::JSONFile;
             end
             am_params[:ocp_eq] = jsonName * "_ocp_curve($input_symbols) = " * inputparams_am["Interface"]["openCircuitPotential"]["function"]
             am_params[:ocp_func] = getfield(BattMo, Symbol("compute_function_from_string"))
-            am_params[:ocp_comp] = Base.invokelatest(am_params[:ocp_func],am_params[:ocp_eq])
+            f(c, T, refT, cmax) = @compute_ocp_from_string(c, T, refT, cmax, "0.7222+ 0.1387*(c./cmax) + 0.0290*(c./cmax)^0.5 - 0.0172/(c./cmax) + 0.0019/(c./cmax)^1.5+ 0.2808 * exp(0.9 - 15.0*(c./cmax)) - 0.7984 * exp(0.4465*(c./cmax) - 0.4108)+ (T - refT) * (1e-3 * ( 0.005269056+ 3.299265709 * (c./cmax)- 91.79325798 * (c./cmax)^2+ 1004.911008 * (c./cmax)^3- 5812.278127 * (c./cmax)^4+ 19329.75490 * (c./cmax)*5- 37147.89470 * (c./cmax)*6+ 38379.18127 * (c./cmax)*7- 16515.05308 * (c./cmax)*8 )/ ( 1- 48.09287227 * (c./cmax)+ 1017.234804 * (c./cmax)^2- 10481.80419 * (c./cmax)^3+ 59431.30000 * (c./cmax)^4- 195881.6488 * (c./cmax)*5+ 374577.3152 * (c./cmax)*6- 385821.1607 * (c./cmax)*7+ 165705.8597 * (c./cmax)*8 ))")
+            am_params[:ocp_comp] = f
             
         else
             funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
