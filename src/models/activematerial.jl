@@ -227,40 +227,20 @@ end
         cmax = model.system.params[:maximum_concentration]
         refT = 298.15
 
-        if Jutul.haskey(model.system.params, :ocp_eq)
+        if Jutul.haskey(model.system.params, :ocp_funcexp)
             theta0   = model.system.params[:theta0]
             theta100 = model.system.params[:theta100]
-        
         end
        
         
         for cell in ix
         
-            if Jutul.haskey(model.system.params, :ocp_eq)
-                
-                ocp_comp = model.system.params[:ocp_comp]    
-                # ocp_eq = model.system.params[:ocp_eq]
-                
-                # ocp_form = model.system.params[:ocp_comp]
-                
-                
-                # SOC = (Cs[cell]/cmax - theta0)/(theta100 - theta0)
-                
-                # expr = Meta.parse(ocp_eq)
+            if Jutul.haskey(model.system.params, :ocp_funcexp)
 
-                # symbols = Symbol[]
-                # symbols = extract_input_symbols(expr,symbols)
-
-                # symbol_values = set_symbol_values(symbols,Cs[cell],refT,refT,cmax,SOC)
-               
-
-                #OCP = lambdify(expr, symbol_values)
-                # function_arguments = [symbol_values[symbol] for symbol in symbols if haskey(symbol_values, symbol)]
-            
-                @inbounds Ocp[cell] = ocp_comp(Cs[cell], refT, refT, cmax)
-                
+                @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, refT, cmax)
                 
             else
+                
                 @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)
                
             end
