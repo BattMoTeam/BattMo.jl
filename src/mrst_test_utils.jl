@@ -988,23 +988,17 @@ function setup_battery_model(init::JSONFile;
 
         input_symbols = ""
         if haskey(inputparams_am["Interface"]["openCircuitPotential"], "function")
-            am_params[:ocp_args] = inputparams_am["Interface"]["openCircuitPotential"]["argumentlist"]
-          
-            for i in collect(1:size(am_params[:ocp_args])[1])
-                if i == size(am_params[:ocp_args])[1]
-                    input_symbols *= am_params[:ocp_args][i]    
-                else
-                    input_symbols *= am_params[:ocp_args][i] * ","
-                end
-            end
-            am_params[:ocp_eq] = jsonName * "_ocp_curve($input_symbols) = " * inputparams_am["Interface"]["openCircuitPotential"]["function"]
-            am_params[:ocp_func] = getfield(BattMo, Symbol("compute_function_from_string"))
-            f(c, T, refT, cmax) = @compute_ocp_from_string(c, T, refT, cmax, "0.7222+ 0.1387*(c./cmax) + 0.0290*(c./cmax)^0.5 - 0.0172/(c./cmax) + 0.0019/(c./cmax)^1.5+ 0.2808 * exp(0.9 - 15.0*(c./cmax)) - 0.7984 * exp(0.4465*(c./cmax) - 0.4108)+ (T - refT) * (1e-3 * ( 0.005269056+ 3.299265709 * (c./cmax)- 91.79325798 * (c./cmax)^2+ 1004.911008 * (c./cmax)^3- 5812.278127 * (c./cmax)^4+ 19329.75490 * (c./cmax)*5- 37147.89470 * (c./cmax)*6+ 38379.18127 * (c./cmax)*7- 16515.05308 * (c./cmax)*8 )/ ( 1- 48.09287227 * (c./cmax)+ 1017.234804 * (c./cmax)^2- 10481.80419 * (c./cmax)^3+ 59431.30000 * (c./cmax)^4- 195881.6488 * (c./cmax)*5+ 374577.3152 * (c./cmax)*6- 385821.1607 * (c./cmax)*7+ 165705.8597 * (c./cmax)*8 ))")
-            am_params[:ocp_comp] = f
+
+            am_params[:ocp_funcexp] = true
+            ocp_exp = inputparams_am["Interface"]["openCircuitPotential"]["function"]
+            exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
+            am_params[:ocp_func] = @RuntimeGeneratedFunction(exp)
             
         else
+            
             funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
             am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
+            
         end
         
         use_p2d = true
@@ -1045,51 +1039,29 @@ function setup_battery_model(init::JSONFile;
     params[:bruggeman]          = inputparams_elyte["bruggemanCoefficient"]
     
     # setup diffusion coefficient function
-
-
-    ##### MERGE #####
-
-    input_symbols_diffusivity = ""
     if haskey(inputparams_elyte["diffusionCoefficient"],"function")
-        params[:diffusivity_args] = inputparams_elyte["diffusionCoefficient"]["argumentlist"]
-        
-        for i in collect(1:size(params[:diffusivity_args])[1])
-            if i == size(params[:diffusivity_args])[1]
-                input_symbols_diffusivity *= params[:diffusivity_args][i]    
-            else
-                input_symbols_diffusivity *= params[:diffusivity_args][i] * ","
-            end
-        end
-        params[:diffusivity_eq] = "elyte_diffusion_curve($input_symbols_diffusivity) = " * inputparams_elyte["diffusionCoefficient"]["function"]
-        params[:diffusivity_func] = getfield(BattMo, Symbol("compute_function_from_string"))
-        params[:diffusivity_comp] = Base.invokelatest(params[:diffusivity_func],params[:diffusivity_eq])
 
+        exp = setup_diffusivity_evaluation_expression_from_string(inputparams_elyte["diffusionCoefficient"]["function"])
+        params[:diffusivity_func] = @RuntimeGeneratedFunction(exp)
         
     else
+        
         funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
         params[:diffusivity_func] = getfield(BattMo, Symbol(funcname))
+        
     end
 
     # setup conductivity function
-
-    input_symbols_conductivity = ""
     if haskey(inputparams_elyte["ionicConductivity"],"function")
-        params[:conductivity_args] = inputparams_elyte["ionicConductivity"]["argumentlist"]
-        
-        for i in collect(1:size(params[:conductivity_args])[1])
-            if i == size(params[:conductivity_args])[1]
-                input_symbols_conductivity *= params[:conductivity_args][i]    
-            else
-                input_symbols_conductivity *= params[:conductivity_args][i] * ","
-            end
-        end
-        params[:conductivity_eq] = "elyte_conduct_curve($input_symbols_conductivity) = " * inputparams_elyte["ionicConductivity"]["function"]
-        params[:conductivity_func] = getfield(BattMo, Symbol("compute_function_from_string"))
-        params[:conductivity_comp] = Base.invokelatest(params[:conductivity_func],params[:conductivity_eq])
+
+        exp = setup_conductivity_evaluation_expression_from_string(inputparams_elyte["ionicConductivity"]["function"])
+        params[:conductivity_func] = @RuntimeGeneratedFunction(exp)
         
     else
+        
         funcname = inputparams_elyte["ionicConductivity"]["functionname"]
         params[:conductivity_func] = getfield(BattMo, Symbol(funcname))
+        
     end
 
     
@@ -1539,28 +1511,10 @@ function setup_battery_initial_state(init::JSONFile,
         init[:Cs]  = c*ones(nc)
         init[:Cp]  = c*ones(nc, N)
 
-        symbol_eq = ""
-        if Jutul.haskey(model[name].system.params, :ocp_eq)
-            ocp_eq = model[name].system[:ocp_eq]
-            ocp_args = model[name].system[:ocp_args]
-            
-            symbols = Symbol[]
-            for i in collect(1:size(ocp_args)[1])
-                
-                sym = Symbol(ocp_args[i])
-                push!(symbols, sym)   
-            end
-
-            ocp_form = model[name].system[:ocp_comp]
-
-            symbol_values = set_symbol_values(symbols,c,refT,T,cmax,SOC)
-        
-            function_arguments = [symbol_values[symbol] for symbol in symbols if haskey(symbol_values, symbol)]
-            OCP = Base.invokelatest(ocp_form,function_arguments...)
-
+        if Jutul.haskey(model[name].system.params, :ocp_funcexp)
+            OCP = model[name].system[:ocp_func](c, T, refT, cmax)
         else
             OCP = model[name].system[:ocp_func](c, T, cmax)
-
         end
 
         return (init, nc, OCP)

@@ -2,6 +2,9 @@ module BattMo
 using PrecompileTools
 using StaticArrays
 
+using RuntimeGeneratedFunctions
+RuntimeGeneratedFunctions.init(@__MODULE__)
+
 import JSON
 import Jutul:
     number_of_cells, number_of_faces,
