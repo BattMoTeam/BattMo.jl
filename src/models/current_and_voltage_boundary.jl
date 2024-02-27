@@ -57,10 +57,10 @@ struct CyclingCVPolicy{R} <: AbstractCVPolicy
     hold_time::R
 
     function CyclingCVPolicy(; current_discharge,
-                               current_charge = -current_charge,
+                               current_charge       = -current_charge,
                                voltage_discharge::T = 2.5,
-                               voltage_charge=-voltage_discharge,
-                               hold_time = 1.0) where T<:Real
+                               voltage_charge       =-voltage_discharge,
+                               hold_time            = 1.0) where T<:Real
         new{T}(current_charge, current_discharge, voltage_charge, voltage_discharge, hold_time)
     end
     
