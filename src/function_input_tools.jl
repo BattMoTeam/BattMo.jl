@@ -2,7 +2,6 @@ export polyfit, update_json_input, compute_ocp_from_string
 
 using JSON
 using Polynomials
-using GeneralizedGenerated
 
 function polyfit(x,
     y;
