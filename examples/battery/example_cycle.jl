@@ -1,78 +1,83 @@
 using BattMo
+
 #name="model1D_50"
 name = "p2d_40"
+
 # Run base case and plot the results against BattMo-MRST reference
 states, reports, extra = run_battery(name, info_level = 1, max_step = nothing);
-prm = extra[:parameters]
-model = extra[:model]
+
+prm       = extra[:parameters]
+model     = extra[:model]
 timesteps = extra[:timesteps]
-steps = size(states, 1)
-stateref = extra[:init].object["states"]
-E = Matrix{Float64}(undef,steps,2)
+steps     = size(states, 1)
+stateref  = extra[:init].object["states"]
+E         = Matrix{Float64}(undef,steps,2)
+
 for step in 1:steps
     phi = states[step][:BPP][:Phi][1]
     E[step,1] = phi
     phi_ref = stateref[step]["Control"]["E"]
     E[step,2] = phi_ref
 end
+
 timesteps = timesteps[1:steps]
+
 using Plots
+
 T = cumsum(timesteps)
 plot1 = Plots.plot(T,E[:, 1]; title = "E", size=(1000, 800), label = "BattMo.jl", ylabel = "Voltage")
 Plots.plot!(T, E[:, 2], label = "BattMo")
 closeall()
 display(plot1)
-## Compute and plot the charge flux
-# f = :ELYTE
-# ix = 1
-# get_j = ix -> output_flux(model[f], states[ix][f], prm[f], :charge_conservation)
 
-# plot2 = Plots.plot(get_j(1))
-# for ix in 5:5:length(states)
-#     Plots.plot!(get_j(ix))
-# end
-# display(plot2)
-
-## Set up a cycle policy and simulate
 using Jutul
-dt = extra[:timesteps]
+
+dt     = extra[:timesteps]
 forces = deepcopy(extra[:forces])
 state0 = deepcopy(extra[:state0])
+
 state0[:BPP][:ControllerCV]
 cfg = extra[:config]
+
 V_lim = 2.7
 V_lim = 3.4
-V_up = 4.0
+V_up  = 4.0
+
 state0[:BPP][:Phi][1] = (V_lim + V_up)/2.0
 
-I_t = 31.13664685506946
-cycler = CyclingCVPolicy(current_discharge = I_t,
-                         current_charge = -I_t,
-                         voltage_discharge = V_lim,
-                         voltage_charge = V_up,
-                         hold_time = 360.0)
+I_t = 3e-3
 
-simple = SimpleCVPolicy(31.13664685506946, V_lim)
+cycler = CyclingCVPolicy(current_discharge = I_t,
+                         current_charge    = -I_t,
+                         voltage_discharge = V_lim,
+                         voltage_charge    = V_up,
+                         hold_time         = 360.0)
+
+simple = SimpleCVPolicy(I_t, V_lim)
 
 policy = cycler
-# policy = simple
+
 bpp_force = setup_forces(model[:BPP], policy = policy)
-forces = setup_forces(model, BPP = bpp_force)
+forces    = setup_forces(model, BPP = bpp_force)
 
 cfg[:error_on_incomplete] = false
 dt = repeat(dt, 100)
+
 states_c = nothing
 states_c, rep = simulate(state0, model, dt, parameters = prm, config = cfg, forces = forces, info_level = 0);
-#
+
+##
+
 Ti = cumsum(dt[1:length(states_c)])
-V = map(s -> s[:BPP][:Phi][1], states_c)
-I = map(s -> s[:BPP][:Current][1], states_c)
+V  = map(s -> s[:BPP][:Phi][1], states_c)
+I  = map(s -> s[:BPP][:Current][1], states_c)
 
 plot2 = Plots.plot(Ti, V; title = "E", size=(1000, 800), legend=:topleft, label = "Voltage")
 Plots.plot!(twinx(), Ti, I; title = "E", size=(1000, 800), label = "Current", color = :red)
 
 closeall()
 display(plot2)
+
 ##
 x = Ti/[3600]
 l = @layout [a; b]
@@ -80,6 +85,7 @@ p1 = plot(x, V, ylabel = "Voltage", xlabel = "Time [min]")
 p2 = plot(x, I, ylabel = "Current", xlabel = "Time [min]")
 ylims!(p2, -1.01*I_t, 1.01*I_t)
 plot(p1, p2, layout = l, legend = false)
+
 ##
 t = cumsum(map(x -> x[:total_time], rep));
 x = Ti/[3600]
