@@ -2,9 +2,9 @@ export CurrentAndVoltageSystem, CurrentAndVoltageDomain, CurrentForce, VoltageFo
 export VoltageVar, CurrentVar, sineup
 export SimpleCVPolicy, CyclingCVPolicy
 
-@enum OperationalMode charge discharge rest
+@enum OperationalMode cc_discharge1 cc_discharge2 cc_charge1 cv_charge2 rest discharge charging discharging
 
-struct CurrentAndVoltageSystem <: JutulSystem end
+struct CurrentAndVoltageSystem <: JutulSystem ends
 
 struct CurrentAndVoltageDomain <: JutulDomain end
 
@@ -23,83 +23,98 @@ struct SimpleCVPolicy{R} <: AbstractCVPolicy
     end
 end
 
-function policy_to_control(p::SimpleCVPolicy, is_charging, state, model, dt, time, ctrl_time)
+function policy_to_control(p::SimpleCVPolicy, is_charging, state, model, dt, time)
+    
     cf = p.current_function
+
     if cf isa Real
         I_p = cf
     else
         # Function of time at the end of interval
         I_p = cf(dt + time)
     end
+    
     phi_p = p.voltage
-    phi = only(state.Phi)
+    phi   = only(state.Phi)
+    
     is_voltage_ctrl = (phi <= phi_p)
+    
     if is_voltage_ctrl
         target = phi_p
     else
         target = I_p
     end
+    
     return (target, is_voltage_ctrl, discharge)
+    
 end
 
 struct NoPolicy <: AbstractCVPolicy end
 
-function policy_to_control(::NoPolicy, is_charging, state, model, dt, time, ctrl_time)
+function policy_to_control(::NoPolicy, is_charging, state, state0, model, dt, time)
+    
     return (2.0, true, rest)
-end
-
-struct CyclingCVPolicy{R} <: AbstractCVPolicy
-
-    current_charge::R
-    current_discharge::R
-    voltage_charge::R
-    voltage_discharge::R
-    hold_time::R
-
-    function CyclingCVPolicy(; current_discharge,
-                               current_charge       = -current_charge,
-                               voltage_discharge::T = 2.5,
-                               voltage_charge       =-voltage_discharge,
-                               hold_time            = 1.0) where T<:Real
-        new{T}(current_charge, current_discharge, voltage_charge, voltage_discharge, hold_time)
-    end
     
 end
 
-function policy_to_control(p::CyclingCVPolicy, mode, state, model, dt, time, ctrl_time)
+struct CyclingCVPolicy{R}  <: AbstractCVPolicy
+
+    ImaxDischarge::R
+    ImaxCharge::R
+    lowerCutoffVoltage::R
+    upperCutoffVoltage::R
+    dIdtLimit::R
+    dEdtLimit::R
+    initialControl::OperationalMode
+    
+end 
+
+function policy_to_control(p::CyclingCVPolicy, mode, state, state0, model, dt, time)
     
     phi = only(state.Phi)
-    I = only(state.Current)
-    switched = false
-
-    if mode == charge
+    I   = only(state.Current)
+    
+    if mode == cc_discharge1
         # Keep charging if voltage is above limit
-        if abs(phi) > abs(p.voltage_charge)
+        if phi < p.lowerCutoffVoltage
             # @info "Switching to discharge"
-            mode = discharge
-            switched = true
+            mode = cc_discharge2
         end
-    else
-        # Keep discharging if voltage is above limit
-        if abs(phi) < abs(p.voltage_discharge)
+        
+    elseif mode == cc_charge1
+        
+        if phi > p.upperCutoffVoltage
             # @info "Switching to charge"
-            mode = charge
-            switched = true
+            mode = cv_charge2
         end
     end
     
-    if mode == charge
-        # V_t = p.voltage_charge
-        V_t = p.voltage_discharge
-        I_t = p.current_charge
+    if mode == cc_discharge1
+
+        I_t = p.ImaxDischarge
+        is_voltage_ctrl = false
+        
+    elseif mode == cc_discharge2
+        
+        I_t = 0
+        is_voltage_ctrl = false
+        
+    elseif mode == cc_charge1
+        
+        I_t = p.ImaxCharge
+        is_voltage_ctrl = false
+        
+    elseif mode == cv_charge2
+        
+        V_t = p.upperCutoffVoltage
+        is_voltage_ctrl = true
+        
     else
-        # V_t = p.voltage_discharge
-        V_t = p.voltage_charge
-        I_t = p.current_discharge
+        
+        error("mode not recognized")
+        
     end
     
-    is_voltage_ctrl = ctrl_time <= p.hold_time && time > 0.0 || switched # && mode == discharge
-
     if is_voltage_ctrl
         target = V_t
     else
@@ -110,37 +125,34 @@ function policy_to_control(p::CyclingCVPolicy, mode, state, model, dt, time, ctr
     
 end
 
-mutable struct ControllerCV{R}
+mutable struct ControllerCV{R, I<:Integer}
+
     policy::AbstractCVPolicy
-    time::R
-    control_time::R
     target::R
     target_is_voltage::Bool
     mode::OperationalMode
+    numberOfCycles::I
+    
 end
 
-@inline function Jutul.numerical_type(x::ControllerCV{R}) where R
+@inline function Jutul.numerical_type(x::ControllerCV{R, I}) where {R, I}
     return R
 end
 
 function Jutul.update_values!(old::ControllerCV, new::ControllerCV)
     
     old.policy            = new.policy
-    old.time              = new.time
-    old.control_time      = new.control_time
     old.target            = new.target
     old.target_is_voltage = new.target_is_voltage
     old.mode              = new.mode
+    old.numberOfCycles    = new.numberOfCycles
     
 end
 
-function select_control_cv!(cv::ControllerCV, state, model, dt)
+function select_control_cv!(cv::ControllerCV, state, state0, model, dt)
     
     ch = cv.mode
-    cv.target, cv.target_is_voltage, cv.mode = policy_to_control(cv.policy, ch, state, model, dt, cv.time, cv.control_time)
-    if cv.mode != ch
-        cv.control_time = 0.0
-    end
+    cv.target, cv.target_is_voltage, cv.mode = policy_to_control(cv.policy, ch, state, state0, model, dt, time)
     
 end
 
@@ -177,11 +189,13 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquati
 end
 
 function Jutul.update_equation_in_entity!(v, i, state, state0, eq::CurrentEquation, model, dt, ldisc = Jutul.local_discretization(eq, i))
+
     # Sign is strange here due to cross term?
     I   = only(state.Current)
     phi = only(state.Phi)
     
     v[] = I + phi*1e-10
+    
 end
 
 
@@ -212,16 +226,83 @@ function Jutul.update_before_step!(storage, domain::CurrentAndVoltageDomain, mod
 end
 
 function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces; time = NaN)
+    
     ctrl = storage.state[:ControllerCV]
-    ctrl.control_time += dt
+
+    policy = ctrl.policy
+
+    if policy isa CyclingCVPolicy
+        
+        Emin     = policy.lowerCutoffVoltage
+        Emax     = policy.upperCutoffVoltage
+        dEdtMin  = policy.dEdtLimit
+        dIdtMin  = policy.dIdtLimit
+        initctrl = policy.initialControl
+
+        state  = storage.state
+        state0 = storage.state0
+        
+        mode    = ctrl.mode
+        ncycles = ctrl.numberOfCycles
+
+        E = state[:Phi]
+        I = state[:Current]
+        
+        dEdt = (state[:Phi] - state0[:Phi])/dt
+        dIdt = (state[:Current] - state0[:Current])/dt
+
+        if mode == cc_discharge1
+            
+            nextmode = cc_discharge1;
+            if (E <= Emin) 
+                nextmode = cc_discharge2;
+            end
+            
+        elseif mode == cc_discharge2
+            
+            nextmode = cc_discharge2
+            if (abs(dEdt) <= dEdtMin)
+                nextmode = cc_charge1
+                if strcmp(initctrl, 'charging')
+                    ncycles = ncycles + 1
+                end
+            end
+            
+        elseif mode == cc_charge1
+
+            nextmode = cc_charge1
+            if (E >= Emax) 
+                nextmode = cv_charge2
+            end 
+            
+        elseif mode == cv_charge2
+
+            nextmode = cv_charge2
+            if (abs(dIdt) < dIdtMin)
+                nextmode = cc_discharge1
+                if strcmp(initctrl, 'discharging')
+                    ncycles = ncycles + 1
+                end
+            end                  
+            
+        else
+            
+            error("mode not recognized")
+            
+        end
+
+    end
+
+    
 end
+
 
 function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVoltageModel)
     state[:ControllerCV] = ControllerCV(NoPolicy(), 0.0, 0.0, 2.0, true, discharge)
 end
 
 function Jutul.prepare_equation_in_entity!(i, eq::ControlEquation, eq_s, state, state0, model::CurrentAndVoltageModel, dt)
-    select_control_cv!(state.ControllerCV, state, model, dt)
+    select_control_cv!(state.ControllerCV, state, state0, model, dt)
 end
 
 function sineup(y1::T, y2::T, x1::T, x2::T, x::T) where {T<:Any}
