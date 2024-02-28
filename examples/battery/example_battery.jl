@@ -15,7 +15,8 @@ ENV["JULIA_DEBUG"] = 0;
 use_p2d = true
 
 if use_p2d
-    name = "p2d_40"
+    # name = "p2d_40"
+    name = "p2d_40_cccv"
     # name = "3d_demo_case"
 else
     # name = "p1d_40"
@@ -30,7 +31,7 @@ end
 
 # sim, forces, state0, parameters, exported, model = BattMo.setup_sim(name, use_p2d = use_p2d)
 
-do_json = true # true
+do_json = false # true
 
 if do_json
 

@@ -55,7 +55,9 @@ cycler = CyclingCVPolicy(current_discharge = I_t,
 
 simple = SimpleCVPolicy(I_t, V_lim)
 
-policy = cycler
+policy = simple
+
+
 
 bpp_force = setup_forces(model[:BPP], policy = policy)
 forces    = setup_forces(model, BPP = bpp_force)

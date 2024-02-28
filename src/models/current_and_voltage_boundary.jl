@@ -6,16 +6,16 @@ export SimpleCVPolicy, CyclingCVPolicy
 
 abstract type AbstractCVPolicy end
 
-struct CurrentAndVoltageSystem <: JutulSystem
+struct CurrentAndVoltageSystem{P<:AbstractCVPolicy} <: JutulSystem
     
     # Control policy
-    policy::AbstractCVPolicy
+    policy::P
     
 end
 
 struct CurrentAndVoltageDomain <: JutulDomain end
 
-const CurrentAndVoltageModel = SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem}
+CurrentAndVoltageModel{P} = SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{P}}
 
 number_of_cells(::CurrentAndVoltageDomain) = 1
 
@@ -108,7 +108,7 @@ function policy_to_control(p::CyclingCVPolicy, mode, state, state0, model)
     
     phi = only(state.Phi)
     I   = only(state.Current)
-    
+
     if mode == cc_discharge1
         # Keep charging if voltage is above limit
         if phi < p.lowerCutoffVoltage
@@ -224,6 +224,83 @@ end
     return R
 end
 
+
+function Jutul.check_convergence(eqs_views,
+                                 eqs,
+                                 eqs_s,
+                                 storage,
+                                 model::SimulationModel{CurrentAndVoltageDomain,
+                                                        CurrentAndVoltageSystem{CyclingCVPolicy{Float64}},
+                                                        FullyImplicitFormulation,
+                                                        DefaultContext},
+                                 tol_cfg; extra_out = false, kwargs...)
+
+    ## We have to check for the constraint to be fullfilled
+    ## We call the generic method for checking convergence
+
+    converged, e, output = invoke(Jutul.check_convergence,
+                                  Tuple{Any, Any, Any, Any, Any, Any},
+                                  eqs_views,
+                                  eqs,
+                                  eqs_s,
+                                  storage,
+                                  model,
+                                  tol_cfg;
+                                  extra_out = extra_out,
+                                  kwargs...)
+    if converged
+
+        policy = model.system.policy
+
+        state = storage.state
+        
+        E    = only(state[:Phi])
+        I    = only(state[:Current])
+        ctrl = state[:ControllerCV]
+        
+        Emin     = policy.lowerCutoffVoltage
+        Emax     = policy.upperCutoffVoltage
+        dEdtMin  = policy.dEdtLimit
+        dIdtMin  = policy.dIdtLimit
+        
+        mode = ctrl.mode
+        
+        # Check if the constraints are fullfilled for the given mode
+        arefulfilled = true
+
+        if mode == cc_discharge1
+            if E <= Emin
+                arefulfilled = false
+                mode = cc_discharge2
+            end
+        elseif mode == cc_discharge2
+            # do not check anything in this case
+        elseif mode == cc_charge1
+            if E > Emax
+                arefulfilled = false;
+                mode = cv_charge2
+            end
+        elseif mode == cv_charge2
+           # do not check anything in this case
+        else
+            error("mode $mode not recognized")
+        end            
+
+        if !arefulfilled
+            converged = false
+            ctrl.mode = mode
+        end
+            
+    end
+    
+    if extra_out
+        return (converged, e, output)
+    else
+        return converged
+    end
+    
+end
+
 function Jutul.update_values!(old::SimpleControllerCV, new::SimpleControllerCV)
     
     old.target            = new.target
@@ -243,9 +320,14 @@ end
 function select_control_cv!(cv::ControllerCV, state, state0, model)
 
     policy = model.system.policy
+
     mode   = cv.mode
+
+    target, target_is_voltage, mode = policy_to_control(policy, mode, state, state0, model)
     
-    cv.target, cv.target_is_voltage, cv.mode = policy_to_control(policy, mode, state, state0, model)
+    cv.target            = target
+    cv.target_is_voltage = target_is_voltage
+    cv.mode              = mode
     
 end
 
@@ -332,7 +414,7 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 
         E = only(state[:Phi])
         I = only(state[:Current])
-        
+
         dEdt = only((state[:Phi] - state0[:Phi])/dt)
         dIdt = only((state[:Current] - state0[:Current])/dt)
 
@@ -346,6 +428,7 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
         elseif mode == cc_discharge2
             
             nextmode = cc_discharge2
+
             if (abs(dEdt) <= dEdtMin)
                 nextmode = cc_charge1
                 if initctrl == charging

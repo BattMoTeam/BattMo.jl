@@ -80,11 +80,11 @@ include("mrst_test_utils.jl")
 include("linsolve.jl")
 
 # Precompilation of solver. Run a small battery simulation to precompile everything.
-@compile_workload begin
-   for use_general_ad in [false, true]
-        init = "p2d_40"
-        run_battery(init; general_ad = use_general_ad,info_level = -1);
-   end
-end
+# @compile_workload begin
+#    for use_general_ad in [false, true]
+#         init = "p2d_40"
+#         run_battery(init; general_ad = use_general_ad,info_level = -1);
+#    end
+# end
 
 end # module

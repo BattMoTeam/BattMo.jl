@@ -1,5 +1,8 @@
-casenames = {'p2d_40',
-             '3d_demo_case'};
+% casenames = {'p2d_40',
+             % '3d_demo_case'};
+
+casenames = {'p2d_40_cccv'};
+% casenames = {'p2d_40'};
 
 battmo_folder = fileparts(mfilename('fullpath'));
 battmo_folder = fullfile(battmo_folder, '../../..');
