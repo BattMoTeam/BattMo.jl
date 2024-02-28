@@ -60,16 +60,16 @@ else
     nsteps = size(states, 1)
 
     timesteps = extra[:timesteps]
-    time = cumsum(timesteps[1 : nsteps])
-    E    = [state[:BPP][:Phi][1] for state in states]
+    t = cumsum(timesteps[1 : nsteps])
+    E = [state[:BPP][:Phi][1] for state in states]
     
-    statesref  = extra[:init].object["states"]
-    timeref = time
-    Eref = [state["Control"]["E"] for state in statesref[1 : nsteps]]
+    statesref = extra[:init].object["states"]
+    timeref   = t
+    Eref      = [state["Control"]["E"] for state in statesref[1 : nsteps]]
 
 end
 
-plt = plot(time, E;
+plt = plot(t, E;
            title     = "Discharge Voltage",
            size      = (1000, 800),
            label     = "BattMo.jl",
