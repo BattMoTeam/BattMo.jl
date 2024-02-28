@@ -131,12 +131,13 @@ function policy_to_control(p::CyclingCVPolicy, mode, state, state0, model)
         
     elseif mode == cc_discharge2
         
-        I_t = 0
+        I_t = 0.
         is_voltage_ctrl = false
         
     elseif mode == cc_charge1
-        
-        I_t = p.ImaxCharge
+
+        # minus sign below follows from convention
+        I_t = -p.ImaxCharge
         is_voltage_ctrl = false
         
     elseif mode == cv_charge2
@@ -332,8 +333,8 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
         E = only(state[:Phi])
         I = only(state[:Current])
         
-        dEdt = (state[:Phi] - state0[:Phi])/dt
-        dIdt = (state[:Current] - state0[:Current])/dt
+        dEdt = only((state[:Phi] - state0[:Phi])/dt)
+        dIdt = only((state[:Current] - state0[:Current])/dt)
 
         if mode == cc_discharge1
             
@@ -375,6 +376,8 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
             
         end
 
+        ctrl.mode = nextmode
+        
     else
         
     end
