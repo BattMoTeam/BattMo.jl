@@ -57,6 +57,7 @@ function output = setupMatlabReference(casename, jsonfolder, datafolder, varargi
         fprintf('Added %s to Matlab path in order to run class2data\n', adddir);
     end
 
+    model    = convertModelGrids(model);
     model    = class2data(model);
     schedule = class2data(schedule);
 

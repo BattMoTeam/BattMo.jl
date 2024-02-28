@@ -1665,8 +1665,8 @@ function getTrans(model1::Dict{String,<:Any},
                   quantity::String)
     """ setup transmissibility for coupling between models at boundaries"""
 
-    T_all1 = model1["operators"]["T_all"][faces[:, 1]]
-    T_all2 = model2["operators"]["T_all"][faces[:, 2]]
+    T_all1 = model1["G"]["operators"]["T_all"][faces[:, 1]]
+    T_all2 = model2["G"]["operators"]["T_all"][faces[:, 2]]
 
 
     function getcellvalues(values, cellinds)
@@ -1738,7 +1738,7 @@ function getHalfTrans(model::Dict{String, Any},
     """ recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the given cells.
     Here, the faces should belong the corresponding cells at the same index"""
 
-    T_all = model["operators"]["T_all"]
+    T_all = model["G"]["operators"]["T_all"]
     s = model[quantity]
     if length(s) == 1
         s = s*ones(length(cells))
@@ -1756,7 +1756,7 @@ function getHalfTrans(model::Dict{String,<:Any},
                       faces)
     """ recover the half transmissibilities for boundary faces"""
     
-    T_all = model["operators"]["T_all"]
+    T_all = model["G"]["operators"]["T_all"]
     T = T_all[faces]
     
     return T
@@ -1981,11 +1981,11 @@ function exported_model_to_domain(exported;
     else
         volumes = vec(exported["G"]["cells"]["volumes"])
     end
-    # P = exported["operators"]["cellFluxOp"]["P"]
-    # S = exported["operators"]["cellFluxOp"]["S"]
+    # P = exported["G"]["operators"]["cellFluxOp"]["P"]
+    # S = exported["G"]["operators"]["cellFluxOp"]["S"]
     P = []
     S = []
-    T = exported["operators"]["T"].*1.0
+    T = exported["G"]["operators"]["T"].*1.0
     G = MinimalECTPFAGrid(volumes, N, vec(T);
                           bc_cells = bc_cells,
                           bc_hfT   = bc_hfT,
