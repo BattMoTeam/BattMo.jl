@@ -44,6 +44,31 @@ struct CyclingCVPolicy{R}  <: AbstractCVPolicy
     
 end 
 
+function CyclingCVPolicy(ImaxDischarge,
+                         ImaxCharge,
+                         lowerCutoffVoltage,
+                         upperCutoffVoltage,
+                         dIdtLimit,
+                         dEdtLimit,
+                         initialControl::String)
+
+    if initialControl == "charging"
+        initialControl = charging
+    elseif initialControl == "discharging"
+        initialControl = discharging
+    else
+        error("initialControl not recognized")
+    end
+    
+    return CyclingCVPolicy(ImaxDischarge,
+                         ImaxCharge,
+                         lowerCutoffVoltage,
+                         upperCutoffVoltage,
+                         dIdtLimit,
+                         dEdtLimit,
+                         initialControl)
+end
+
 ## Policy to control functions
 
 function policy_to_control(p::SimpleCVPolicy, is_charging, state, state0, model)
@@ -121,7 +146,7 @@ function policy_to_control(p::CyclingCVPolicy, mode, state, state0, model)
         
     else
         
-        error("mode not recognized")
+        error("mode $mode not recognized")
         
     end
     
@@ -158,7 +183,7 @@ SimpleControllerCV() = SimpleControllerCV(0., 0., true, none)
 mutable struct CcCvControllerCV{R, I<:Integer} <: ControllerCV
 
     maincontroler::SimpleControllerCV{R}
-    number_of_cycles::I
+    numberOfCycles::I
     
 end
 
@@ -181,11 +206,11 @@ function Base.getproperty(c::CcCvControllerCV, f::Symbol)
     end
 end
 
-function Base.setproperty!(c::CcCvControllerCV, f::Symbol, vs)
+function Base.setproperty!(c::CcCvControllerCV, f::Symbol, v)
     if f in fieldnames(SimpleControllerCV)
-        return getfield(c.maincontroler, f)
+        setfield!(c.maincontroler, f, v)
     else
-        return getfield(c, f)
+        setfield!(c, f, v)
     end
 end
 
@@ -210,7 +235,7 @@ function Jutul.update_values!(old::CcCvControllerCV, new::CcCvControllerCV)
 
     Jutul.update_values!(old.maincontroler, new.maincontroler)
     
-    old.number_of_cycles = new.number_of_cycles
+    old.numberOfCycles = new.numberOfCycles
     
 end
 
@@ -304,8 +329,8 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
         mode    = ctrl.mode
         ncycles = ctrl.numberOfCycles
 
-        E = state[:Phi]
-        I = state[:Current]
+        E = only(state[:Phi])
+        I = only(state[:Current])
         
         dEdt = (state[:Phi] - state0[:Phi])/dt
         dIdt = (state[:Current] - state0[:Current])/dt
@@ -368,7 +393,15 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
     elseif policy isa CyclingCVPolicy
         
         state[:ControllerCV] = CcCvControllerCV()
-
+        
+        if policy.initialControl == discharging
+            state[:ControllerCV].mode = cc_discharge1
+        elseif policy.initialControl == charging
+            state[:ControllerCV].mode = cc_charge1
+        else
+            error("initialControl not recognized")
+        end
+        
     end
 end
 
