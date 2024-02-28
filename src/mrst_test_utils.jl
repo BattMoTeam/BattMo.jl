@@ -213,21 +213,8 @@ function setup_sim(init::MatlabFile;
     model, state0, parameters = setup_model(init, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
     setup_coupling!(init,model)
 
-    #quantities from matlab
-    minE=init.object["model"]["Control"]["lowerCutoffVoltage"]
-    inputI=init.object["model"]["Control"]["Imax"]
-
-    #@. state0[:BPP][:Phi] = state0[:PAM][:Phi][end] #minE * 1.5
-
-    # if isempty(init.object["model"]["Control"]["tup"])
-    #     cFun(time) = currentFun(time, inputI)
-    # else
-    #     cFun(time) = currentFun(time, inputI,init.object["model"]["Control"]["tup"])
-    # end
-    cFun(time) = currentFun(time,inputI)
     forces_pp = nothing
-
-    currents = setup_forces(model[:BPP], policy=SimpleCVPolicy(cFun, minE))
+    currents  = nothing
 
     forces = Dict(
         :CC => nothing,
@@ -775,8 +762,15 @@ function setup_battery_model(init::MatlabFile;
     end
 
     # Setup control model
-
-    sys_bpp    = CurrentAndVoltageSystem()
+    
+    minE   = init.object["model"]["Control"]["lowerCutoffVoltage"]
+    inputI = init.object["model"]["Control"]["Imax"]
+    
+    cFun(time) = currentFun(time, inputI)
+    
+    policy = SimpleCVPolicy(cFun, minE)
+   
+    sys_bpp    = CurrentAndVoltageSystem(policy)
     domain_bpp = CurrentAndVoltageDomain()
     model_bpp  = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
     
