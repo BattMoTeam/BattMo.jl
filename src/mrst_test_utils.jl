@@ -762,13 +762,35 @@ function setup_battery_model(init::MatlabFile;
     end
 
     # Setup control model
+
+    controlPolicy = init.object["model"]["Control"]["controlPolicy"]
     
-    minE   = init.object["model"]["Control"]["lowerCutoffVoltage"]
-    inputI = init.object["model"]["Control"]["Imax"]
-    
-    cFun(time) = currentFun(time, inputI)
-    
-    policy = SimpleCVPolicy(cFun, minE)
+    if controlPolicy == "CCDischarge"
+        
+        minE   = init.object["model"]["Control"]["lowerCutoffVoltage"]
+        inputI = init.object["model"]["Control"]["Imax"]
+
+        cFun(time) = currentFun(time, inputI)
+        
+        policy = SimpleCVPolicy(cFun, minE)
+
+    elseif controlPolicy == "CCCV"
+
+        ctrl = init.object["model"]["Control"]
+        
+        policy = CyclingCVPolicy(ctrl["ImaxDischarge"]     ,
+                                 ctrl["ImaxCharge"]        ,
+                                 ctrl["lowerCutoffVoltage"],
+                                 ctrl["upperCutoffVoltage"],
+                                 ctrl["dIdtLimit"]         ,
+                                 ctrl["dEdtLimit"]         ,
+                                 ctrl["initialControl"])
+
+    else
+
+        error("controlPolicy not recognized.")
+       
+    end
    
     sys_bpp    = CurrentAndVoltageSystem(policy)
     domain_bpp = CurrentAndVoltageDomain()
