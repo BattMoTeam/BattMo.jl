@@ -15,9 +15,10 @@ function Jutul.update_cross_term_in_entity!(out                                 
                                             eq                                   ,
                                             dt                                   ,
                                             ldisc = Jutul.local_discretization(ct, ind))
+
     trans = ct.trans[ind]
-    ind_t   = ct.target_cells[ind]
-    ind_s   = ct.source_cells[ind]
+    ind_t = ct.target_cells[ind]
+    ind_s = ct.source_cells[ind]
     phi_t = state_t.Phi[ind_t]
     phi_s = state_s.Phi[ind_s]
     

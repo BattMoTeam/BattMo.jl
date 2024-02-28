@@ -211,7 +211,7 @@ function setup_sim(init::MatlabFile;
                    kwarg ... )
 
     model, state0, parameters = setup_model(init, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
-    setup_coupling!(init,model)
+    setup_coupling!(init, model)
 
     forces_pp = nothing
     currents  = nothing
