@@ -276,10 +276,10 @@ function Jutul.check_convergence(eqs_views,
                                  eqs_s,
                                  storage,
                                  model::SimulationModel{CurrentAndVoltageDomain,
-                                                        CurrentAndVoltageSystem{CyclingCVPolicy{Float64}},
+                                                        CurrentAndVoltageSystem{CyclingCVPolicy{R}},
                                                         FullyImplicitFormulation,
                                                         DefaultContext},
-                                 tol_cfg; extra_out = false, kwargs...)
+                                 tol_cfg; extra_out = false, kwargs...) where {R}
 
     ## We have to check for the constraint to be fullfilled
     ## We call the generic method for checking convergence
