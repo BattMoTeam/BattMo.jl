@@ -1035,14 +1035,15 @@ function setup_battery_model(init::JSONFile;
         
     end
     
-    # Setup negative current collector
+    ## Setup negative current collector
     
     if include_cc
         sys_cc = CurrentCollector()
         model_cc =  setup_component(geomparams[:CC], sys_cc, addDirichlet = true, general_ad = general_ad)
     end
 
-    # Setup NAM
+    ## Setup NAM
+    
     model_nam = setup_active_material(:NAM, geomparams)
 
     ## Setup ELYTE
@@ -1085,16 +1086,18 @@ function setup_battery_model(init::JSONFile;
     elyte = Electrolyte(params)
     model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
 
-    # Setup PAM
+    ## Setup PAM
+    
     model_pam = setup_active_material(:PAM, geomparams)
 
-    # Setup negative current collector if any
+    ## Setup negative current collector if any
+    
     if include_cc
         sys_pp = CurrentCollector()
         model_pp = setup_component(geomparams[:PP], sys_pp, general_ad = general_ad)
     end
     
-    # Setup control model
+    ## Setup control model
 
     controlPolicy = jsondict["Control"]["controlPolicy"]
     
