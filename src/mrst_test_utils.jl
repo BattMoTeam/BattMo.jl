@@ -178,25 +178,16 @@ function setup_sim(init::JSONFile;
                    general_ad::Bool = false,
                    kwarg ... )
 
-    model, state0, parameters= setup_model(init, use_groups=use_groups, general_ad=general_ad; kwarg...)
+    model, state0, parameters = setup_model(init, use_groups=use_groups, general_ad=general_ad; kwarg...)
 
     setup_coupling!(init,model,parameters)
 
+    setup_policy!(model[:BPP].system.policy, init, parameters)
+    
     minE = init.object["Control"]["lowerCutoffVoltage"]
-
-    CRate = init.object["Control"]["CRate"]
-    cap = computeCellCapacity(model)
-    con = Constants()
-
-    inputI = (cap / con.hour) * CRate
-
     @. state0[:BPP][:Phi] = minE * 1.5
 
-    tup = Float64(init.object["Control"]["rampupTime"])
-    cFun(time) = currentFun(time, inputI, tup)
 
-    model[:BPP].system.policy.current_function = cFun
-    
     forces = setup_forces(model)
 
     sim = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
@@ -1368,7 +1359,15 @@ function setup_battery_parameters(init::JSONFile,
         parameters[:PP] = setup_parameters(model[:PP], prm_pp)
     end        
 
-    parameters[:BPP] = setup_parameters(model[:BPP])
+    prm_bpp = Dict{Symbol, Any}()
+
+    CRate = jsonstruct["Control"]["CRate"]
+    cap = computeCellCapacity(model)
+    con = Constants()
+    
+    prm_bpp[:ImaxDischarge] = (cap/con.hour)*CRate
+        
+    parameters[:BPP] = setup_parameters(model[:BPP], prm_bpp)
 
     return parameters
     

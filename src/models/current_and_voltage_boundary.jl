@@ -6,6 +6,7 @@ export SimpleCVPolicy, CyclingCVPolicy
 
 abstract type AbstractCVPolicy end
 
+
 struct CurrentAndVoltageSystem{P<:AbstractCVPolicy} <: JutulSystem
     
     # Control policy
@@ -19,8 +20,18 @@ CurrentAndVoltageModel{P} = SimulationModel{CurrentAndVoltageDomain, CurrentAndV
 
 number_of_cells(::CurrentAndVoltageDomain) = 1
 
-## Definition of the policy types
+## We add as parameters those that can only by computed when the whole battery model is setup
 
+struct ImaxDischarge <: ScalarVariable end
+
+function select_parameters!(S,
+                            system::CurrentAndVoltageDomain,
+                            model::SimulationModel)
+    S[:ImaxDischarge] = ImaxDischarge()
+end
+
+
+## Definition of the policy types
 
 mutable struct SimpleCVPolicy{R} <: AbstractCVPolicy
     current_function
@@ -32,7 +43,7 @@ end
 
 struct NoPolicy <: AbstractCVPolicy end
 
-struct CyclingCVPolicy{R}  <: AbstractCVPolicy
+mutable struct CyclingCVPolicy{R}  <: AbstractCVPolicy
 
     ImaxDischarge::R
     ImaxCharge::R
@@ -68,6 +79,22 @@ function CyclingCVPolicy(ImaxDischarge,
                          dEdtLimit,
                          initialControl)
 end
+
+## Setup policy
+
+function setup_policy!(policy::SimpleCVPolicy, init::JSONFile, parameters)
+
+    inputI = only(parameters[:BPP][:ImaxDischarge])
+
+    tup = Float64(init.object["Control"]["rampupTime"])
+    
+    cFun(time) = currentFun(time, inputI, tup)
+
+    policy.current_function = cFun
+    
+end
+
+    
 
 ## Policy to control functions
 
