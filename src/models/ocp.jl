@@ -46,7 +46,7 @@ const coeff2_graphite = Polynomial([
 ####################################
 
 
-function compute_ocp_graphite(c, T, cmax)
+function computeOCP_graphite(c, T, cmax)
     """Compute OCP for GenericGraphite as function of temperature and concentration"""
     theta  = c./cmax
     refT   = 298.15
@@ -124,7 +124,7 @@ const coeff2_dUdT_nmc111 = Polynomial([
     + 3.048755063
 ])
 
-function compute_ocp_nmc111(c, T, cmax)
+function computeOCP_nmc111(c, T, cmax)
     
     """Compute OCP for GenericNMC111 as function of temperature and concentration"""
     refT   = 298.15

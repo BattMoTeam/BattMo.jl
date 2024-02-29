@@ -665,9 +665,9 @@ function setup_battery_model(init::MatlabFile;
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
         
         if name == :NAM
-            am_params[:ocp_func] = compute_ocp_graphite
+            am_params[:ocp_func] = computeOCP_graphite
         elseif name == :PAM
-            am_params[:ocp_func] = compute_ocp_nmc111
+            am_params[:ocp_func] = computeOCP_nmc111
         else
             error("not recongized")
         end
