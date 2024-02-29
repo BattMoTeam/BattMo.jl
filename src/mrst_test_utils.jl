@@ -26,7 +26,7 @@ function run_battery(init::InputFile;
 
     #Set up config and timesteps
     timesteps = setup_timesteps(init; max_step = max_step)
-    cfg = setup_config(sim,model,linear_solver,extra_timing; kwarg...)
+    cfg = setup_config(sim, model, linear_solver, extra_timing; kwarg...)
 
     #Perform simulation
     states, reports = simulate(state0, sim, timesteps, forces=forces, config=cfg; kwarg ...)
@@ -87,6 +87,7 @@ function setup_config(sim::Jutul.JutulSimulator,
     """
 
     cfg = simulator_config(sim; kwarg...)
+    
     cfg[:linear_solver] = battery_linsolve(model, linear_solver)
     cfg[:debug_level] = 0
     #cfg[:max_timestep_cuts]         = 0
@@ -99,15 +100,16 @@ function setup_config(sim::Jutul.JutulSimulator,
     #Original matlab steps will be too large!
     cfg[:failure_cuts_timestep]=true
 
-    # if false
-    #     cfg[:info_level] = 5
-    #     cfg[:max_nonlinear_iterations] = 1
-    #     cfg[:max_timestep_cuts] = 0
-    # end
+    for key in Jutul.submodels_symbols(model)
+        cfg[:tolerances][key][:default]  = 1e-5
+    end
+    
+    if model[:BPP].system.policy isa CyclingCVPolicy
 
-    cfg[:tolerances][:PP][:default]  = 1e-1
-    cfg[:tolerances][:BPP][:default] = 1e-1
+        cfg[:tolerances][:global_check] = (model, storage) -> check_constraints(model, storage)
 
+    end
+    
     return cfg
     
 end

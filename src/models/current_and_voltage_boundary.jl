@@ -271,80 +271,54 @@ end
 end
 
 
-function Jutul.check_convergence(eqs_views,
-                                 eqs,
-                                 eqs_s,
-                                 storage,
-                                 model::SimulationModel{CurrentAndVoltageDomain,
-                                                        CurrentAndVoltageSystem{CyclingCVPolicy{R}},
-                                                        FullyImplicitFormulation,
-                                                        DefaultContext},
-                                 tol_cfg; extra_out = false, kwargs...) where {R}
+function check_constraints(model, storage)
 
-    ## We have to check for the constraint to be fullfilled
-    ## We call the generic method for checking convergence
+    converged = true
+    
+    policy = model[:BPP].system.policy
 
-    converged, e, output = invoke(Jutul.check_convergence,
-                                  Tuple{Any, Any, Any, Any, Any, Any},
-                                  eqs_views,
-                                  eqs,
-                                  eqs_s,
-                                  storage,
-                                  model,
-                                  tol_cfg;
-                                  extra_out = extra_out,
-                                  kwargs...)
-    if converged
+    state = storage.state
+    
+    E    = only(state[:BPP][:Phi])
+    I    = only(state[:BPP][:Current])
+    ctrl = state[:BPP][:ControllerCV]
+    
+    Emin     = policy.lowerCutoffVoltage
+    Emax     = policy.upperCutoffVoltage
+    dEdtMin  = policy.dEdtLimit
+    dIdtMin  = policy.dIdtLimit
+    
+    mode = ctrl.mode
+    
+    # Check if the constraints are fullfilled for the given mode
+    arefulfilled = true
 
-        policy = model.system.policy
-
-        state = storage.state
-        
-        E    = only(state[:Phi])
-        I    = only(state[:Current])
-        ctrl = state[:ControllerCV]
-        
-        Emin     = policy.lowerCutoffVoltage
-        Emax     = policy.upperCutoffVoltage
-        dEdtMin  = policy.dEdtLimit
-        dIdtMin  = policy.dIdtLimit
-        
-        mode = ctrl.mode
-        
-        # Check if the constraints are fullfilled for the given mode
-        arefulfilled = true
-
-        if mode == cc_discharge1
-            if E <= Emin
-                arefulfilled = false
-                mode = cc_discharge2
-            end
-        elseif mode == cc_discharge2
-            # do not check anything in this case
-        elseif mode == cc_charge1
-            if E > Emax
-                arefulfilled = false;
-                mode = cv_charge2
-            end
-        elseif mode == cv_charge2
-           # do not check anything in this case
-        else
-            error("mode $mode not recognized")
-        end            
-
-        if !arefulfilled
-            converged = false
-            ctrl.mode = mode
+    if mode == cc_discharge1
+        if E <= Emin
+            arefulfilled = false
+            mode = cc_discharge2
         end
-            
-    end
-    
-    if extra_out
-        return (converged, e, output)
+    elseif mode == cc_discharge2
+        # do not check anything in this case
+    elseif mode == cc_charge1
+        @info "cc_charge1"
+        if E > Emax
+            arefulfilled = false;
+            mode = cv_charge2
+        end
+    elseif mode == cv_charge2
+        @info "cv_charge2"
+        # do not check anything in this case
     else
-        return converged
+        error("mode $mode not recognized")
+    end            
+
+    if !arefulfilled
+        converged = false
+        ctrl.mode = mode
     end
-    
+
+    return converged
 end
 
 function Jutul.update_values!(old::SimpleControllerCV, new::SimpleControllerCV)
