@@ -15,8 +15,8 @@ ENV["JULIA_DEBUG"] = 0;
 use_p2d = true
 
 if use_p2d
-    # name = "p2d_40"
-    name = "p2d_40_cccv"
+    name = "p2d_40"
+    # name = "p2d_40_cccv"
     # name = "3d_demo_case"
 else
     # name = "p1d_40"
@@ -31,7 +31,7 @@ end
 
 # sim, forces, state0, parameters, exported, model = BattMo.setup_sim(name, use_p2d = use_p2d)
 
-do_json = false # true
+do_json = true
 
 if do_json
 
@@ -43,8 +43,8 @@ if do_json
     nsteps = size(states)
     timesteps = extra[:timesteps]
     
-    time = cumsum(timesteps)
-    E    = [state[:BPP][:Phi][1] for state in states]
+    t = cumsum(timesteps)
+    E = [state[:BPP][:Phi][1] for state in states]
     
 
     refdict = load_reference_solution(name)

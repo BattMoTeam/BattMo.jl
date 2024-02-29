@@ -195,8 +195,9 @@ function setup_sim(init::JSONFile;
     tup = Float64(init.object["Control"]["rampupTime"])
     cFun(time) = currentFun(time, inputI, tup)
 
-    currents = setup_forces(model[:BPP], policy=SimpleCVPolicy(cFun, minE))
-    forces = setup_forces(model, BPP=currents)
+    model[:BPP].system.policy.current_function = cFun
+    
+    forces = setup_forces(model)
 
     sim = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
 
@@ -1092,10 +1093,34 @@ function setup_battery_model(init::JSONFile;
         sys_pp = CurrentCollector()
         model_pp = setup_component(geomparams[:PP], sys_pp, general_ad = general_ad)
     end
-
+    
     # Setup control model
 
-    sys_bpp    = CurrentAndVoltageSystem()
+    controlPolicy = jsondict["Control"]["controlPolicy"]
+    
+    if controlPolicy == "CCDischarge"
+        
+        minE   = jsondict["Control"]["lowerCutoffVoltage"]
+        
+        policy = SimpleCVPolicy(missing, minE)
+
+    elseif controlPolicy == "CCCV"
+
+        policy = CyclingCVPolicy(ctrl["ImaxDischarge"]     ,
+                                 ctrl["ImaxCharge"]        ,
+                                 ctrl["lowerCutoffVoltage"],
+                                 ctrl["upperCutoffVoltage"],
+                                 ctrl["dIdtLimit"]         ,
+                                 ctrl["dEdtLimit"]         ,
+                                 ctrl["initialControl"])
+
+    else
+
+        error("controlPolicy not recognized.")
+       
+    end
+    
+    sys_bpp    = CurrentAndVoltageSystem(policy)
     domain_bpp = CurrentAndVoltageDomain()
     model_bpp  = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
     

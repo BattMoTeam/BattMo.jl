@@ -22,7 +22,7 @@ number_of_cells(::CurrentAndVoltageDomain) = 1
 ## Definition of the policy types
 
 
-struct SimpleCVPolicy{R} <: AbstractCVPolicy
+mutable struct SimpleCVPolicy{R} <: AbstractCVPolicy
     current_function
     voltage::R
     function SimpleCVPolicy(current, voltage::T = 2.5) where T<:Real
