@@ -20,16 +20,6 @@ CurrentAndVoltageModel{P} = SimulationModel{CurrentAndVoltageDomain, CurrentAndV
 
 number_of_cells(::CurrentAndVoltageDomain) = 1
 
-## We add as parameters those that can only by computed when the whole battery model is setup
-
-struct ImaxDischarge <: ScalarVariable end
-
-function select_parameters!(S,
-                            system::CurrentAndVoltageDomain,
-                            model::SimulationModel)
-    S[:ImaxDischarge] = ImaxDischarge()
-end
-
 
 ## Definition of the policy types
 
@@ -55,13 +45,14 @@ mutable struct CyclingCVPolicy{R}  <: AbstractCVPolicy
     
 end 
 
-function CyclingCVPolicy(ImaxDischarge,
-                         ImaxCharge,
-                         lowerCutoffVoltage,
+function CyclingCVPolicy(lowerCutoffVoltage,
                          upperCutoffVoltage,
                          dIdtLimit,
                          dEdtLimit,
-                         initialControl::String)
+                         initialControl::String;
+                         ImaxDischarge = 0*lowerCutoffVoltage,
+                         ImaxCharge = 0*lowerCutoffVoltage
+                         )
 
     if initialControl == "charging"
         initialControl = charging
@@ -70,15 +61,35 @@ function CyclingCVPolicy(ImaxDischarge,
     else
         error("initialControl not recognized")
     end
-    
+
     return CyclingCVPolicy(ImaxDischarge,
-                         ImaxCharge,
-                         lowerCutoffVoltage,
-                         upperCutoffVoltage,
-                         dIdtLimit,
-                         dEdtLimit,
-                         initialControl)
+                           ImaxCharge,
+                           lowerCutoffVoltage,
+                           upperCutoffVoltage,
+                           dIdtLimit,
+                           dEdtLimit,
+                           initialControl)
 end
+
+## We add as parameters those that can only by computed when the whole battery model is setup
+
+struct ImaxDischarge <: ScalarVariable end
+struct ImaxCharge <: ScalarVariable end
+
+
+function select_parameters!(S,
+                            system::CurrentAndVoltageSystem{SimpleCVPolicy{R}},
+                            model::SimulationModel) where {R}
+    S[:ImaxDischarge] = ImaxDischarge()
+end
+
+function select_parameters!(S,
+                            system::CurrentAndVoltageSystem{CyclingCVPolicy{R}},
+                            model::SimulationModel) where {R}
+    S[:ImaxDischarge] = ImaxDischarge()
+    S[:ImaxCharge]    = ImaxCharge()
+end
+
 
 ## Setup policy
 
@@ -93,6 +104,14 @@ function setup_policy!(policy::SimpleCVPolicy, init::JSONFile, parameters)
     policy.current_function = cFun
     
 end
+
+function setup_policy!(policy::CyclingCVPolicy, init::JSONFile, parameters)
+
+    policy.ImaxDischarge = only(parameters[:BPP][:ImaxDischarge])
+    policy.ImaxCharge    = only(parameters[:BPP][:ImaxCharge])
+    
+end
+
 
     
 

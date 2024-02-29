@@ -61,6 +61,7 @@ import Jutul:
     select_minimum_output_variables!,
     physical_representation
 
+include("types.jl")
 include("physical_constants.jl")
 include("battery_types.jl")
 include("tensor_tools.jl")
@@ -75,7 +76,6 @@ include("models/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/convergence.jl")
 include("physics.jl")
-include("types.jl")
 include("mrst_test_utils.jl")
 include("linsolve.jl")
 

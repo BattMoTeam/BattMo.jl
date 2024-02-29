@@ -122,12 +122,44 @@ function setup_timesteps(init::JSONFile;
         Method setting up the timesteps from a json file object. 
     """
 
-    total = init.object["TimeStepping"]["totalTime"]
-    n     = init.object["TimeStepping"]["numberOfTimeSteps"]
+    jsonstruct = init.object
+    
+    controlPolicy = jsonstruct["Control"]["controlPolicy"]
+    
+    if controlPolicy == "CCDischarge"
+        
+        totalTime = jsonstruct["TimeStepping"]["totalTime"]
+        n         = jsonstruct["TimeStepping"]["numberOfTimeSteps"]
 
-    dt = total / n
-    timesteps = rampupTimesteps(total, dt, 5)
+        dt = total / n
+        timesteps = rampupTimesteps(totalTime, dt, 5)
 
+    elseif controlPolicy == "CCCV"
+        
+        if haskey(jsonstruct["Control"], "numberOfCycles")
+            
+            ncycles = jsonstruct["Control"]["numberOfCycles"]
+            DRate = jsonstruct["Control"]["DRate"]
+            CRate = jsonstruct["Control"]["CRate"]
+
+            con = Constants()
+            totalTime = ncycles*1.2*(1*con.hour/CRate + 1*con.hour/DRate);
+            
+        else
+            totalTime = jsonstruct["Control"]["numberOfCycles"]
+        end
+
+        n = jsonstruct["TimeStepping"]["numberOfTimeSteps"]
+
+        dt = totalTime/n
+        timesteps = repeat([dt], n)
+
+    else
+
+        error("Control policy $controlPolicy not recognized")
+
+    end
+        
     return timesteps
 end
 
@@ -1100,9 +1132,9 @@ function setup_battery_model(init::JSONFile;
 
     elseif controlPolicy == "CCCV"
 
-        policy = CyclingCVPolicy(ctrl["ImaxDischarge"]     ,
-                                 ctrl["ImaxCharge"]        ,
-                                 ctrl["lowerCutoffVoltage"],
+        ctrl = jsondict["Control"]
+
+        policy = CyclingCVPolicy(ctrl["lowerCutoffVoltage"],
                                  ctrl["upperCutoffVoltage"],
                                  ctrl["dIdtLimit"]         ,
                                  ctrl["dEdtLimit"]         ,
@@ -1361,13 +1393,33 @@ function setup_battery_parameters(init::JSONFile,
 
     prm_bpp = Dict{Symbol, Any}()
 
-    CRate = jsonstruct["Control"]["CRate"]
-    cap = computeCellCapacity(model)
-    con = Constants()
+    controlPolicy = jsonstruct["Control"]["controlPolicy"]
     
-    prm_bpp[:ImaxDischarge] = (cap/con.hour)*CRate
+    if  controlPolicy == "CCDischarge"
         
-    parameters[:BPP] = setup_parameters(model[:BPP], prm_bpp)
+        cap = computeCellCapacity(model)
+        con = Constants()
+
+        DRate = jsonstruct["Control"]["DRate"]
+        prm_bpp[:ImaxDischarge] = (cap/con.hour)*DRate
+        
+        parameters[:BPP] = setup_parameters(model[:BPP], prm_bpp)
+        
+    elseif controlPolicy == "CCCV"
+
+        cap = computeCellCapacity(model)
+        con = Constants()
+
+        DRate = jsonstruct["Control"]["DRate"]
+        CRate = jsonstruct["Control"]["CRate"]
+        prm_bpp[:ImaxDischarge] = (cap/con.hour)*DRate        
+        prm_bpp[:ImaxCharge]    = (cap/con.hour)*CRate
+        
+        parameters[:BPP] = setup_parameters(model[:BPP], prm_bpp)
+        
+    else
+        error("control policy $controlPolicy not recognized")
+    end
 
     return parameters
     

@@ -15,8 +15,8 @@ ENV["JULIA_DEBUG"] = 0;
 use_p2d = true
 
 if use_p2d
-    name = "p2d_40"
-    # name = "p2d_40_cccv"
+    # name = "p2d_40"
+    name = "p2d_40_cccv"
     # name = "3d_demo_case"
 else
     # name = "p1d_40"
@@ -35,10 +35,9 @@ do_json = true
 
 if do_json
 
-    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, "_jl.json")
+    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, ".json")
     init = JSONFile(fn)
     states, reports, extra = run_battery(init; use_p2d = use_p2d, info_level = 0, extra_timing = false);
-
 
     nsteps = size(states)
     timesteps = extra[:timesteps]
