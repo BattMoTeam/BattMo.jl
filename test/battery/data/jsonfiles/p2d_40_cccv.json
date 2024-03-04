@@ -153,8 +153,8 @@
     "DRate": 1,
     "lowerCutoffVoltage": 2.8,
     "upperCutoffVoltage": 4.1,
-    "dIdtLimit": 5e-7,
-    "dEdtLimit": 5e-7},
+    "dIdtLimit": 1e-7,
+    "dEdtLimit": 1e-7},
   "Electrolyte": {
     "initialConcentration": 1000,
     "specificHeatCapacity": 2055,
