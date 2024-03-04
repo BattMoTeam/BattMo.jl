@@ -133,7 +133,7 @@ function setup_timesteps(init::JSONFile;
         totalTime = jsonstruct["TimeStepping"]["totalTime"]
         n         = jsonstruct["TimeStepping"]["numberOfTimeSteps"]
 
-        dt = total / n
+        dt = totalTime / n
         timesteps = rampupTimesteps(totalTime, dt, 5)
 
     elseif controlPolicy == "CCCV"

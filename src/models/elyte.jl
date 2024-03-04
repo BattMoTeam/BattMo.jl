@@ -97,6 +97,13 @@ const p3 = Polynomial(poly_param[1:end, 3])
     return fact*c*(p1(c) + p2(c)*T + p3(c)*T^2)^2
 end
 
+@inline function computeElectrolyteConductivity_Chen2020(c::Real, T::Real)
+    """ Compute the electrolyte conductivity as a function of concentration
+    """
+    c = c/1000
+    return 0.1297*c^3 - 2.51*c^(1.5) + 3.329*c
+end
+
 const diff_params = [
     -4.43   -54 ;
     -0.22   0.0 ;
@@ -113,6 +120,13 @@ const Tgi = [229 5.0]
             diff_params[2,1]*c*1e-3
             )
         )
+end
+
+@inline function computeDiffusionCoefficient_Chen2020(c::Real, T::Real)
+    """ Compute the diffusion coefficient as a function of concentration
+    """
+    c = c/1000
+    return 8.794*10^(-11)*c^2 - 3.972*10^(-10)*c + 4.862*10^(-10)
 end
 
 @inline function transference(system::Electrolyte)
