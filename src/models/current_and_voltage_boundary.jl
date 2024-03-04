@@ -403,12 +403,25 @@ function select_primary_variables!(S, system::CurrentAndVoltageSystem, model::Si
     
 end
 
-function Jutul.update_before_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces; time = NaN, kwarg...)
+function Jutul.update_before_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel{P}, dt, forces; time = NaN, kwarg...) where {P}
 
     ctrl = storage.state[:ControllerCV]
     ctrl.time = time
     
 end
+
+function Jutul.update_primary_variables!(state, dx, model::CurrentAndVoltageModel{P}; kwarg...) where {P}
+
+    invoke(Jutul.update_primary_variables!,
+           Tuple{typeof(state),
+                 typeof(dx),
+                 JutulModel},
+           state,
+           dx,
+           model; kwarg...)
+    
+end
+
 
 function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces; time = NaN)
     

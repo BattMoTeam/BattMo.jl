@@ -46,11 +46,11 @@ if do_json
     E = [state[:BPP][:Phi][1] for state in states]
     
 
-    refdict = load_reference_solution(name)
-    statesref  = refdict["states"]
+    # refdict = load_reference_solution(name)
+    # statesref  = refdict["states"]
 
-    timeref = [state["time"] for state in statesref]
-    Eref    = [state["Control"]["E"] for state in statesref]
+    # timeref = [state["time"] for state in statesref]
+    # Eref    = [state["Control"]["E"] for state in statesref]
 
 
 else
@@ -79,6 +79,6 @@ plt = plot(t, E;
            xtickfont = font(pointsize = 15),
            ytickfont = font(pointsize = 15))
 
-plot!(timeref, Eref, label = "BattMo.m", linewidth = 2)
+# plot!(timeref, Eref, label = "BattMo.m", linewidth = 2)
 display(plt)
 
