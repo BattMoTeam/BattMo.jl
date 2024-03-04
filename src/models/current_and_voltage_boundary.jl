@@ -301,13 +301,11 @@ function check_constraints(model, storage)
     elseif mode == cc_discharge2
         # do not check anything in this case
     elseif mode == cc_charge1
-        @info "cc_charge1"
         if E > Emax
             arefulfilled = false;
             mode = cv_charge2
         end
     elseif mode == cv_charge2
-        @info "cv_charge2"
         # do not check anything in this case
     else
         error("mode $mode not recognized")
