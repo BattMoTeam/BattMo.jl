@@ -33,7 +33,7 @@ end
 
 struct NoPolicy <: AbstractCVPolicy end
 
-mutable struct CyclingCVPolicy{R}  <: AbstractCVPolicy
+mutable struct CyclingCVPolicy{R,I}  <: AbstractCVPolicy
 
     ImaxDischarge::R
     ImaxCharge::R
@@ -42,6 +42,7 @@ mutable struct CyclingCVPolicy{R}  <: AbstractCVPolicy
     dIdtLimit::R
     dEdtLimit::R
     initialControl::OperationalMode
+    numberOfCycles::I
     
 end 
 
@@ -49,9 +50,10 @@ function CyclingCVPolicy(lowerCutoffVoltage,
                          upperCutoffVoltage,
                          dIdtLimit,
                          dEdtLimit,
-                         initialControl::String;
+                         initialControl::String,
+                         numberOfCycles;
                          ImaxDischarge = 0*lowerCutoffVoltage,
-                         ImaxCharge = 0*lowerCutoffVoltage
+                         ImaxCharge = 0*lowerCutoffVoltage,
                          )
 
     if initialControl == "charging"
@@ -68,7 +70,8 @@ function CyclingCVPolicy(lowerCutoffVoltage,
                            upperCutoffVoltage,
                            dIdtLimit,
                            dEdtLimit,
-                           initialControl)
+                           initialControl,
+                           numberOfCycles)
 end
 
 ## We add as parameters those that can only by computed when the whole battery model is setup
@@ -84,8 +87,8 @@ function select_parameters!(S,
 end
 
 function select_parameters!(S,
-                            system::CurrentAndVoltageSystem{CyclingCVPolicy{R}},
-                            model::SimulationModel) where {R}
+                            system::CurrentAndVoltageSystem{CyclingCVPolicy{R, I}},
+                            model::SimulationModel) where {R, I}
     S[:ImaxDischarge] = ImaxDischarge()
     S[:ImaxCharge]    = ImaxCharge()
 end
@@ -491,6 +494,7 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
         end
 
         ctrl.mode = nextmode
+        ctrl.numberOfCycles = ncycles
         
     else
         

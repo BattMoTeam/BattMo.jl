@@ -108,6 +108,23 @@ function setup_config(sim::Jutul.JutulSimulator,
 
         cfg[:tolerances][:global_check] = (model, storage) -> check_constraints(model, storage)
 
+        function post_hook(done, report, sim, dt, forces, max_iter, cfg)
+
+            s = Jutul.get_simulator_storage(sim)
+            m = Jutul.get_simulator_model(sim)
+
+            if s.state.BPP.ControllerCV.numberOfCycles > m[:BPP].system.policy.numberOfCycles
+                report[:stopnow] = true
+            else
+                report[:stopnow] = false
+            end
+            
+            return (done, report)
+            
+        end
+
+        cfg[:post_ministep_hook] = post_hook
+
     end
     
     return cfg
@@ -154,7 +171,9 @@ function setup_timesteps(init::JSONFile;
             totalTime = ncycles*1.2*(1*con.hour/CRate + 1*con.hour/DRate);
             
         else
+            
             totalTime = jsonstruct["Control"]["numberOfCycles"]
+            
         end
 
         n = jsonstruct["TimeStepping"]["numberOfTimeSteps"]
@@ -816,7 +835,8 @@ function setup_battery_model(init::MatlabFile;
                                  ctrl["upperCutoffVoltage"],
                                  ctrl["dIdtLimit"]         ,
                                  ctrl["dEdtLimit"]         ,
-                                 ctrl["initialControl"])
+                                 ctrl["initialControl"]    ,
+                                 ctrl["numberOfCycles"])
 
     else
 
@@ -1146,7 +1166,8 @@ function setup_battery_model(init::JSONFile;
                                  ctrl["upperCutoffVoltage"],
                                  ctrl["dIdtLimit"]         ,
                                  ctrl["dEdtLimit"]         ,
-                                 ctrl["initialControl"])
+                                 ctrl["initialControl"]    ,
+                                 ctrl["numberOfCycles"])
 
     else
 
