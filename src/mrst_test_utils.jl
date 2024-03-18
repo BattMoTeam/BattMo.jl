@@ -129,9 +129,15 @@ function setup_timesteps(init::JSONFile;
     controlPolicy = jsonstruct["Control"]["controlPolicy"]
     
     if controlPolicy == "CCDischarge"
-        
-        totalTime = jsonstruct["TimeStepping"]["totalTime"]
-        n         = jsonstruct["TimeStepping"]["numberOfTimeSteps"]
+
+        if haskey(jsonstruct["TimeStepping"], "totalTime")
+            totalTime = jsonstruct["TimeStepping"]["totalTime"]
+        else
+            DRate = jsonstruct["Control"]["DRate"]
+            con   = Constants()
+            totalTime = 1.1*con.hour/DRate
+        end
+        n = jsonstruct["TimeStepping"]["numberOfTimeSteps"]
 
         dt = totalTime / n
         timesteps = rampupTimesteps(totalTime, dt, 5)
