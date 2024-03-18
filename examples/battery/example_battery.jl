@@ -44,7 +44,7 @@ if do_json
     
     t = cumsum(timesteps)
     E = [state[:BPP][:Phi][1] for state in states]
-    
+    t = t[1 : length(E)]    
 
     # refdict = load_reference_solution(name)
     # statesref  = refdict["states"]
@@ -62,6 +62,7 @@ else
     timesteps = extra[:timesteps]
     t = cumsum(timesteps[1 : nsteps])
     E = [state[:BPP][:Phi][1] for state in states]
+    t = t[1 : length(E)]
     
     statesref = extra[:init].object["states"]
     timeref   = t
