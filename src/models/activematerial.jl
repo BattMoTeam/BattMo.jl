@@ -41,6 +41,9 @@ struct Cp                <: VectorVariables end # particle concentrations in p2d
 struct Cs                <: ScalarVariable  end # surface variable in p2d model
 struct SolidDiffFlux     <: VectorVariables end # flux in P2D model
 
+minimum_value(::Cp) = 1.0
+minimum_value(::Cs) = 1.0
+    
 struct SolidMassCons <: JutulEquation end
 Jutul.local_discretization(::SolidMassCons, i) = nothing
 

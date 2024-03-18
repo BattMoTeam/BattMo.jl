@@ -29,6 +29,8 @@ function select_primary_variables!(S                  ,
     
 end
 
+minimum_value(::C) = 1.0
+    
 function select_parameters!(S                  ,
                             system::Electrolyte,
                             model::SimulationModel
