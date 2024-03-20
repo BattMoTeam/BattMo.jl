@@ -61,7 +61,7 @@ import Jutul:
     select_minimum_output_variables!,
     physical_representation
 
-include("types.jl")
+include("io_types.jl")
 include("physical_constants.jl")
 include("battery_types.jl")
 include("tensor_tools.jl")
