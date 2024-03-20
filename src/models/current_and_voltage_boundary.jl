@@ -79,6 +79,15 @@ end
 struct ImaxDischarge <: ScalarVariable end
 struct ImaxCharge <: ScalarVariable end
 
+function select_minimum_output_variables!(outputs,
+                                          system::CurrentAndVoltageSystem{R},
+                                          model::SimulationModel
+                                          ) where {R}
+
+    push!(outputs, :ControllerCV)
+    
+end
+
 
 function select_parameters!(S,
                             system::CurrentAndVoltageSystem{SimpleCVPolicy{R}},
@@ -114,8 +123,6 @@ function setup_policy!(policy::CyclingCVPolicy, init::JSONFile, parameters)
     policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])
     
 end
-
-
     
 
 ## Policy to control functions
@@ -236,16 +243,16 @@ SimpleControllerCV() = SimpleControllerCV(0., 0., true, none)
 
 mutable struct CcCvControllerCV{R, I<:Integer} <: ControllerCV
 
-    maincontroler::SimpleControllerCV{R}
+    maincontroller::SimpleControllerCV{R}
     numberOfCycles::I
     
 end
 
 function CcCvControllerCV()
 
-    maincontroler = SimpleControllerCV()
+    maincontroller = SimpleControllerCV()
 
-    return CcCvControllerCV(maincontroler, 0)
+    return CcCvControllerCV(maincontroller, 0)
     
 end
 
@@ -254,7 +261,7 @@ end
 
 function Base.getproperty(c::CcCvControllerCV, f::Symbol)
     if f in fieldnames(SimpleControllerCV)
-        return getfield(c.maincontroler, f)
+        return getfield(c.maincontroller, f)
     else
         return getfield(c, f)
     end
@@ -262,7 +269,7 @@ end
 
 function Base.setproperty!(c::CcCvControllerCV, f::Symbol, v)
     if f in fieldnames(SimpleControllerCV)
-        setfield!(c.maincontroler, f, v)
+        setfield!(c.maincontroller, f, v)
     else
         setfield!(c, f, v)
     end
@@ -275,6 +282,42 @@ end
 
 @inline function Jutul.numerical_type(x::CcCvControllerCV{R, I}) where {R, I}
     return R
+end
+
+
+function Base.copy(cv::SimpleControllerCV)
+
+    cv_copy = SimpleControllerCV()
+    copyController!(cv_copy, cv)
+    
+    return cv_copy
+
+end
+
+function Base.copy(cv::CcCvControllerCV)
+
+    cv_copy = CcCvControllerCV()
+    copyController!(cv_copy, cv)
+
+    return cv_copy
+    
+end
+
+
+function copyController!(cv_copy::SimpleControllerCV, cv::SimpleControllerCV)
+
+    cv_copy.target            = cv.target
+    cv_copy.time              = cv.time
+    cv_copy.target_is_voltage = cv.target_is_voltage
+    cv_copy.mode              = cv.mode
+    
+end
+
+function copyController!(cv_copy::CcCvControllerCV, cv::CcCvControllerCV)
+
+    copyController!(cv_copy.maincontroller, cv.maincontroller)
+    cv_copy.numberOfCycles = cv.numberOfCycles
+    
 end
 
 
@@ -336,8 +379,8 @@ end
 
 function Jutul.update_values!(old::CcCvControllerCV, new::CcCvControllerCV)
 
-    Jutul.update_values!(old.maincontroler, new.maincontroler)
-    
+    Jutul.update_values!(old.maincontroller, new.maincontroller)
+
     old.numberOfCycles = new.numberOfCycles
     
 end
@@ -432,8 +475,8 @@ end
 
 function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces; time = NaN)
     
-    ctrl = storage.state[:ControllerCV]
-
+    ctrl  = storage.state[:ControllerCV]
+    
     policy = model.system.policy
 
     if policy isa CyclingCVPolicy
@@ -452,6 +495,8 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 
         E = only(state[:Phi])
         I = only(state[:Current])
+
+        copyController!(storage.state0[:ControllerCV], ctrl)
 
         dEdt = only((state[:Phi] - state0[:Phi])/dt)
         dIdt = only((state[:Current] - state0[:Current])/dt)
@@ -550,13 +595,14 @@ function sineup(y1::T, y2::T, x1::T, x2::T, x::T) where {T<:Any}
             res = dy/2.0.*cos(pi.*(x - x1)./dx) + y1 - (dy/2) 
         end
         
-        if     (x > x2)
+        if (x > x2)
             res .+= y2
         end
 
-        if  (x < x1)
+        if (x < x1)
             res .+= y1
         end
+    
         return res
     
 end
