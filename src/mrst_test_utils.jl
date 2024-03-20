@@ -1625,15 +1625,13 @@ function setup_battery_initial_state(init::JSONFile,
         N        = model[name].system.discretization[:N]
         refT = 298.15
         
-        
-        
         theta = SOC_init*(theta100 - theta0) + theta0;
         c     = theta*cmax
         SOC = SOC_init
         nc    = count_entities(model[name].data_domain, Cells())
         init = Dict()
         init[:Cs]  = c*ones(nc)
-        init[:Cp]  = c*ones(nc, N)
+        init[:Cp]  = c*ones(N, nc)
 
         if Jutul.haskey(model[name].system.params, :ocp_funcexp)
             OCP = model[name].system[:ocp_func](c, T, refT, cmax)
