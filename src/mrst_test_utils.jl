@@ -661,9 +661,10 @@ function setup_model(init::InputFile;
                      use_groups::Bool = false,
                      kwarg...)
 
-    include_cc = true #!
-
-    model      = setup_battery_model(init, include_cc=include_cc,use_groups=use_groups,use_p2d=use_p2d; kwarg ... )
+    model = setup_battery_model(init,
+                                use_groups = use_groups,
+                                use_p2d    = use_p2d;
+                                kwarg... )
     parameters = setup_battery_parameters(init, model)
     initState  = setup_battery_initial_state(init, model)
 
@@ -676,7 +677,6 @@ end
 ##################################################################################
 
 function setup_battery_model(init::MatlabFile; 
-                             include_cc::Bool = true, 
                              use_groups::Bool = false,
                              use_p2d::Bool    = true,
                              general_ad::Bool = false,
@@ -886,7 +886,6 @@ function setup_battery_model(init::MatlabFile;
 end
 
 function setup_battery_model(init::JSONFile; 
-                             include_cc::Bool = true, 
                              use_groups::Bool = false, 
                              general_ad::Bool = false,
                              kwarg...)
@@ -895,11 +894,20 @@ function setup_battery_model(init::JSONFile;
 
     jsondict = init.object
 
+    if haskey(jsondict, "include_current_collectors") && jsondict["include_current_collectors"] == false
+        include_current_collectors = false
+    else
+        include_current_collectors = true
+    end
+
+    """
+    Generic setup for a component (:NeAm, :NeCc, :PeAm, :PeCc)
+    """
     function setup_component(geomparam::Dict, 
                              sys; 
                              addDirichlet::Bool = false, 
-                             general_ad::Bool = false)
-
+                             general_ad::Bool   = false)
+        
         facearea = geomparam[:facearea]
         
         g = CartesianMesh(Tuple(geomparam[:N]), Tuple(geomparam[:thickness]))
@@ -944,6 +952,9 @@ function setup_battery_model(init::JSONFile;
         
     end
 
+    """
+    Specific setup for electrolyte (:Elyte)
+    """
     function setup_component(geomparams::Dict, 
                              sys::Electrolyte, 
                              bcfaces = nothing; 
@@ -1055,7 +1066,6 @@ function setup_battery_model(init::JSONFile;
         
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
 
-        input_symbols = ""
         if haskey(inputparams_am["Interface"]["openCircuitPotential"], "function")
 
             am_params[:ocp_funcexp] = true
@@ -1081,7 +1091,17 @@ function setup_battery_model(init::JSONFile;
         end
         
         geomparam = geomparams[name]
-        model_am = setup_component(geomparam, sys_am, general_ad = general_ad)
+
+        if include_current_collectors
+            addDirichlet = false
+        else
+            addDirichlet = true
+        end
+        
+        model_am = setup_component(geomparam              ,
+                                   sys_am                 ;
+                                   general_ad = general_ad,
+                                   addDirichlet = addDirichlet)
 
         return model_am
         
@@ -1089,9 +1109,12 @@ function setup_battery_model(init::JSONFile;
     
     ## Setup negative current collector
     
-    if include_cc
-        sys_necc = CurrentCollector()
-        model_necc =  setup_component(geomparams[:NeCc], sys_necc, addDirichlet = true, general_ad = general_ad)
+    if include_current_collectors
+        sys_necc   = CurrentCollector()
+        model_necc = setup_component(geomparams[:NeCc]  ,
+                                     sys_necc           ,
+                                     addDirichlet = true,
+                                     general_ad = general_ad)
     end
 
     ## Setup NeAm
@@ -1109,7 +1132,7 @@ function setup_battery_model(init::JSONFile;
     params[:bruggeman]          = inputparams_elyte["bruggemanCoefficient"]
     
     # setup diffusion coefficient function
-    if haskey(inputparams_elyte["diffusionCoefficient"],"function")
+    if haskey(inputparams_elyte["diffusionCoefficient"], "function")
 
         exp = setup_diffusivity_evaluation_expression_from_string(inputparams_elyte["diffusionCoefficient"]["function"])
         params[:diffusivity_func] = @RuntimeGeneratedFunction(exp)
@@ -1134,7 +1157,6 @@ function setup_battery_model(init::JSONFile;
         
     end
 
-    
     elyte = Electrolyte(params)
     model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
 
@@ -1144,7 +1166,7 @@ function setup_battery_model(init::JSONFile;
 
     ## Setup negative current collector if any
     
-    if include_cc
+    if include_current_collectors
         sys_pecc = CurrentCollector()
         model_pecc = setup_component(geomparams[:PeCc], sys_pecc, general_ad = general_ad)
     end
@@ -1180,7 +1202,7 @@ function setup_battery_model(init::JSONFile;
     domain_control = CurrentAndVoltageDomain()
     model_control  = SimulationModel(domain_control, sys_control, context = DefaultContext())
     
-    if !include_cc
+    if !include_current_collectors
         groups = nothing
         model = MultiModel(
             (
@@ -1231,16 +1253,16 @@ function setup_battery_parameters(init::MatlabFile,
     exported=init.object
 
     T0 = exported["model"]["initT"]
-    
-    # Negative current collector (if any)
 
     if haskey(model.models, :NeCc)
-        use_necc = true
+        include_current_collectors = true
+        @assert haskey(model.models, :PeCc)
     else
-        use_necc = false
+        include_current_collectors = false
+        @assert !haskey(model.models, :PeCc)
     end
 
-    if use_necc
+    if include_current_collectors
         prm_necc = Dict{Symbol, Any}()
         exported_necc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
         prm_necc[:Conductivity] = exported_necc["effectiveElectronicConductivity"][1]
@@ -1287,14 +1309,8 @@ function setup_battery_parameters(init::MatlabFile,
     parameters[:PeAm] = setup_parameters(model[:PeAm], prm_peam)
 
     # Positive current collector (if any)
-
-    if haskey(model.models, :NeCc)
-        use_pecc = true
-    else
-        use_pecc = false
-    end
-
-    if use_pecc
+    
+    if include_current_collectors
         prm_pecc = Dict{Symbol, Any}()
         exported_pecc = exported["model"]["PositiveElectrode"]["CurrentCollector"]
         prm_pecc[:Conductivity] = exported_pecc["effectiveElectronicConductivity"][1]
@@ -1345,16 +1361,17 @@ function setup_battery_parameters(init::JSONFile,
 
     T0 = jsonstruct["initT"]
     
-    
-    # Negative current collector (if any)
-
     if haskey(model.models, :NeCc)
-        use_necc = true
+        include_current_collectors = true
+        @assert haskey(model.models, :PeCc)
     else
-        use_necc = false
+        include_current_collectors = false
+        @assert !haskey(model.models, :PeCc)
     end
 
-    if use_necc
+    # Negative current collector (if any)
+
+    if include_current_collectors
         prm_necc = Dict{Symbol, Any}()
         jsonstruct_necc = jsonstruct["NegativeElectrode"]["CurrentCollector"]
         prm_necc[:Conductivity] = jsonstruct_necc["electronicConductivity"]
@@ -1413,7 +1430,7 @@ function setup_battery_parameters(init::JSONFile,
         use_pecc = false
     end
 
-    if use_pecc
+    if include_current_collectors
         prm_pecc = Dict{Symbol, Any}()
         jsonstruct_pecc = jsonstruct["PositiveElectrode"]["CurrentCollector"]
         prm_pecc[:Conductivity] = jsonstruct_pecc["electronicConductivity"]
@@ -1574,17 +1591,18 @@ end
 function setup_battery_initial_state(init::JSONFile,
                                      model::MultiModel)
 
-    jsonstruct=init.object
+    jsonstruct = init.object
 
     if haskey(model.models, :NeCc)
-        use_necc = true
+        include_current_collectors = true
+        @assert haskey(model.models, :PeCc)
     else
-        use_necc = false
+        include_current_collectors = false
+        @assert !haskey(model.models, :PeCc)
     end
 
-    T   = jsonstruct["initT"]
+    T        = jsonstruct["initT"]
     SOC_init = jsonstruct["SOC"]
-
 
     function setup_init_am(name, model)
         
@@ -1639,19 +1657,18 @@ function setup_battery_initial_state(init::JSONFile,
 
     # Setup initial state in positive active material
     
-    init, nc, posOCP= setup_init_am(:PeAm, model)
+    init, nc, posOCP = setup_init_am(:PeAm, model)
     init[:Phi] = (posOCP - negOCP)*ones(nc)
     
     initState[:PeAm] = init
 
-    # Setup negative current collector
-
-    initState[:NeCc] = setup_current_collector(:NeCc, 0, model)
+    if include_current_collectors
+        # Setup negative current collector
+        initState[:NeCc] = setup_current_collector(:NeCc, 0, model)
+        # Setup positive current collector
+        initState[:PeCc] = setup_current_collector(:PeCc, posOCP - negOCP, model)
+    end
     
-    # Setup positive current collector
-
-    initState[:PeCc] = setup_current_collector(:PeCc, posOCP - negOCP, model)
-
     init = Dict()
     init[:Phi]     = [1.0]
     init[:Current] = [1.0]
