@@ -239,7 +239,7 @@ function setup_sim(init::JSONFile;
 
     model, state0, parameters = setup_model(init, use_groups=use_groups, general_ad=general_ad; kwarg...)
 
-    setup_coupling!(init,model,parameters)
+    setup_coupling!(init, model, parameters)
 
     setup_policy!(model[:Control].system.policy, init, parameters)
     
@@ -296,12 +296,9 @@ function setup_coupling!(init::JSONFile,
 
     geomparams = setup_geomparams(init)
     
-    # setup coupling NeCc <-> NeAm :charge_conservation
+    include_cc = include_current_collectors(model)
     
-    skip_necc = false # we consider only case with current collector (for simplicity, for the moment)
-    skip_pecc = false # we consider only case with current collector (for simplicity, for the moment)
-    
-    if !skip_necc
+    if include_cc 
 
         Ncc  = geomparams[:NeCc][:N]
 
@@ -404,7 +401,8 @@ function setup_coupling!(init::JSONFile,
     end
 
     
-    if  !skip_pecc
+    if  include_cc
+        
         # setup coupling PeCc <-> PeAm charge
         
         Npam  = geomparams[:PeAm][:N]
@@ -475,30 +473,10 @@ function setup_coupling!(init::MatlabFile,
     
     # setup coupling NeCc <-> NeAm :charge_conservation
     
-    exported_all=init.object
-    skip_pecc = size(exported_all["model"]["include_current_collectors"]) == (0,0) #! unused
-    skip_necc = false
-    
-    if !skip_necc
-        
-        srange = Int64.(
-            exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:, 1]
-            )
-        trange = Int64.(
-            exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:, 2]
-        )
-        
-        msource = exported_all["model"]["NegativeElectrode"]["CurrentCollector"]
-        mtarget = exported_all["model"]["NegativeElectrode"]["Coating"]
-        couplingfaces = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingfaces"])
-        couplingcells = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"])
-        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectronicConductivity")
+    exported_all = init.object
 
-        ct = TPFAInterfaceFluxCT(trange, srange, trans)
-        ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
-        add_cross_term!(model, ct_pair)
-        
-    end
+    include_cc = include_current_collectors(model)
+    
     
     # setup coupling NeAm <-> Elyte charge
 
@@ -562,8 +540,30 @@ function setup_coupling!(init::MatlabFile,
         
     end
     
-    if  !skip_pecc
+    if  include_cc
+        
+        # setup coupling NeCc <-> NeAm charge
+        
+        srange = Int64.(
+            exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:, 1]
+        )
+        trange = Int64.(
+            exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:, 2]
+        )
+        
+        msource = exported_all["model"]["NegativeElectrode"]["CurrentCollector"]
+        mtarget = exported_all["model"]["NegativeElectrode"]["Coating"]
+        couplingfaces = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingfaces"])
+        couplingcells = Int64.(exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"])
+        trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectronicConductivity")
+
+        ct = TPFAInterfaceFluxCT(trange, srange, trans)
+        ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        
+        
         # setup coupling PeCc <-> PeAm charge
+        
         target = Dict( 
             :model => :PeAm,
             :equation => :charge_conservation
@@ -586,28 +586,12 @@ function setup_coupling!(init::MatlabFile,
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
         ct_pair = setup_cross_term(ct, target = :PeAm, source = :PeCc, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-    end
-    
-    if skip_pecc
-        #setup coupling PeCc <-> Control charge
-        target = Dict( 
-            :model => :PeAm,
-            :equation => :charge_conservation
-            )
 
-        trange = convert_to_int_vector(
-                exported_all["model"]["PositiveElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingcells"]
-            )
-        srange = Int64.(ones(size(trange)))
-        msource = exported_all["model"]["PositiveElectrode"]["ActiveMaterial"]
-        couplingfaces = Int64.(msource["externalCouplingTerm"]["couplingfaces"])
-        couplingcells = Int64.(msource["externalCouplingTerm"]["couplingcells"]) 
-    else    
-        #setup coupling PeCc <-> Control charge
-        target = Dict( 
-            :model => :PeCc,
-            :equation => :charge_conservation
-            )
+    end
+
+    if include_cc
+        
+        # setup coupling PeCc <-> Control charge
 
         trange = convert_to_int_vector(
                 exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingcells"]
@@ -616,39 +600,36 @@ function setup_coupling!(init::MatlabFile,
         msource = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]
         couplingfaces = Int64.(msource["externalCouplingTerm"]["couplingfaces"])
         couplingcells = Int64.(msource["externalCouplingTerm"]["couplingcells"])
-    end
-    
-    source = Dict( 
-        :model => :Control,
-        :equation => :charge_conservation
-        )
-    
-    #effcond = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["effectiveElectronicConductivity"]
-    trans = getHalfTrans(msource, couplingfaces, couplingcells, "effectiveElectronicConductivity")
 
-    if skip_pecc
-        
-        ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
-        ct_pair = setup_cross_term(ct, target = :PeAm, source = :Control, equation = :charge_conservation)
-        add_cross_term!(model, ct_pair)
-    
-        # Accmulation of charge
-        ct = AccumulatorInterfaceFluxCT(1, trange, trans)
-        ct_pair = setup_cross_term(ct, target = :Control, source = :PeAm, equation = :charge_conservation)
-        add_cross_term!(model, ct_pair)
+        component = :PeCc
         
     else
         
-        ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
-        ct_pair = setup_cross_term(ct, target = :PeCc, source = :Control, equation = :charge_conservation)
-        add_cross_term!(model, ct_pair)
+        # setup coupling PeAm <-> Control charge
 
-        # Accmulation of charge
-        ct = AccumulatorInterfaceFluxCT(1, trange, trans)
-        ct_pair = setup_cross_term(ct, target = :Control, source = :PeCc, equation = :charge_conservation)
-        add_cross_term!(model, ct_pair)
+        trange = convert_to_int_vector(
+                exported_all["model"]["PositiveElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingcells"]
+            )
+        srange = Int64.(ones(size(trange)))
+        msource = exported_all["model"]["PositiveElectrode"]["ActiveMaterial"]
+        couplingfaces = Int64.(msource["externalCouplingTerm"]["couplingfaces"])
+        couplingcells = Int64.(msource["externalCouplingTerm"]["couplingcells"]) 
+
+        component = :PeAm
         
     end
+
+    trans = getHalfTrans(msource, couplingfaces, couplingcells, "effectiveElectronicConductivity")
+
+    ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
+    ct_pair = setup_cross_term(ct, target = component, source = :Control, equation = :charge_conservation)
+    add_cross_term!(model, ct_pair)
+
+    # Accmulation of charge
+    ct = AccumulatorInterfaceFluxCT(1, trange, trans)
+    ct_pair = setup_cross_term(ct, target = :Control, source = component, equation = :charge_conservation)
+    add_cross_term!(model, ct_pair)
+
     
 end
 
@@ -672,6 +653,54 @@ function setup_model(init::InputFile;
 
 end
 
+function include_current_collectors(init::MatlabFile)
+
+    inputparams = init.object["model"]
+    
+    @info inputparams["include_current_collectors"]
+
+    if haskey(inputparams, "include_current_collectors") && inputparams["include_current_collectors"] == 0
+        include_cc = false
+    else
+        include_cc = true
+    end
+    
+    return include_cc
+    
+end
+
+
+function include_current_collectors(init::JSONFile)
+
+    jsondict = init.object
+    
+    if haskey(jsondict, "include_current_collectors") && jsondict["include_current_collectors"] == false
+        include_cc = false
+    else
+        include_cc = true
+    end
+    
+    return include_cc
+    
+end
+
+
+function include_current_collectors(model)
+    
+    if haskey(model.models, :NeCc)
+        include_cc = true
+        @assert haskey(model.models, :PeCc)
+    else
+        include_cc = false
+        @assert !haskey(model.models, :PeCc)
+    end
+
+    return include_cc
+    
+end
+
+
+
 ###################################################################################
 #Setup battery model
 ##################################################################################
@@ -682,6 +711,7 @@ function setup_battery_model(init::MatlabFile;
                              general_ad::Bool = false,
                              kwarg...)
 
+    include_cc = include_current_collectors(init)
 
     function setup_component(obj::Dict, 
                              sys, 
@@ -769,8 +799,8 @@ function setup_battery_model(init::MatlabFile;
     if include_cc
 
         inputparams_necc = inputparams["NegativeElectrode"]["CurrentCollector"]
-        sys_necc      = CurrentCollector()
-        bcfaces     = convert_to_int_vector(inputparams_necc["externalCouplingTerm"]["couplingfaces"])
+        sys_necc         = CurrentCollector()
+        bcfaces          = convert_to_int_vector(inputparams_necc["externalCouplingTerm"]["couplingfaces"])
         
         model_necc =  setup_component(inputparams_necc, sys_necc, bcfaces, general_ad)
         
@@ -885,6 +915,7 @@ function setup_battery_model(init::MatlabFile;
     
 end
 
+
 function setup_battery_model(init::JSONFile; 
                              use_groups::Bool = false, 
                              general_ad::Bool = false,
@@ -894,11 +925,7 @@ function setup_battery_model(init::JSONFile;
 
     jsondict = init.object
 
-    if haskey(jsondict, "include_current_collectors") && jsondict["include_current_collectors"] == false
-        include_current_collectors = false
-    else
-        include_current_collectors = true
-    end
+    include_cc = include_current_collectors(init)
 
     """
     Generic setup for a component (:NeAm, :NeCc, :PeAm, :PeCc)
@@ -1092,7 +1119,7 @@ function setup_battery_model(init::JSONFile;
         
         geomparam = geomparams[name]
 
-        if include_current_collectors
+        if include_cc
             addDirichlet = false
         else
             addDirichlet = true
@@ -1109,7 +1136,7 @@ function setup_battery_model(init::JSONFile;
     
     ## Setup negative current collector
     
-    if include_current_collectors
+    if include_cc
         sys_necc   = CurrentCollector()
         model_necc = setup_component(geomparams[:NeCc]  ,
                                      sys_necc           ,
@@ -1166,7 +1193,7 @@ function setup_battery_model(init::JSONFile;
 
     ## Setup negative current collector if any
     
-    if include_current_collectors
+    if include_cc
         sys_pecc = CurrentCollector()
         model_pecc = setup_component(geomparams[:PeCc], sys_pecc, general_ad = general_ad)
     end
@@ -1202,7 +1229,7 @@ function setup_battery_model(init::JSONFile;
     domain_control = CurrentAndVoltageDomain()
     model_control  = SimulationModel(domain_control, sys_control, context = DefaultContext())
     
-    if !include_current_collectors
+    if !include_cc
         groups = nothing
         model = MultiModel(
             (
@@ -1254,15 +1281,9 @@ function setup_battery_parameters(init::MatlabFile,
 
     T0 = exported["model"]["initT"]
 
-    if haskey(model.models, :NeCc)
-        include_current_collectors = true
-        @assert haskey(model.models, :PeCc)
-    else
-        include_current_collectors = false
-        @assert !haskey(model.models, :PeCc)
-    end
+    include_cc = include_current_collectors(model)
 
-    if include_current_collectors
+    if include_cc
         prm_necc = Dict{Symbol, Any}()
         exported_necc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
         prm_necc[:Conductivity] = exported_necc["effectiveElectronicConductivity"][1]
@@ -1310,7 +1331,7 @@ function setup_battery_parameters(init::MatlabFile,
 
     # Positive current collector (if any)
     
-    if include_current_collectors
+    if include_cc
         prm_pecc = Dict{Symbol, Any}()
         exported_pecc = exported["model"]["PositiveElectrode"]["CurrentCollector"]
         prm_pecc[:Conductivity] = exported_pecc["effectiveElectronicConductivity"][1]
@@ -1360,18 +1381,12 @@ function setup_battery_parameters(init::JSONFile,
     jsonstruct=init.object
 
     T0 = jsonstruct["initT"]
-    
-    if haskey(model.models, :NeCc)
-        include_current_collectors = true
-        @assert haskey(model.models, :PeCc)
-    else
-        include_current_collectors = false
-        @assert !haskey(model.models, :PeCc)
-    end
+
+    include_cc = include_current_collectors(model)
 
     # Negative current collector (if any)
 
-    if include_current_collectors
+    if include_cc
         prm_necc = Dict{Symbol, Any}()
         jsonstruct_necc = jsonstruct["NegativeElectrode"]["CurrentCollector"]
         prm_necc[:Conductivity] = jsonstruct_necc["electronicConductivity"]
@@ -1424,13 +1439,7 @@ function setup_battery_parameters(init::JSONFile,
 
     # Positive current collector (if any)
 
-    if haskey(model.models, :NeCc)
-        use_pecc = true
-    else
-        use_pecc = false
-    end
-
-    if include_current_collectors
+    if include_cc
         prm_pecc = Dict{Symbol, Any}()
         jsonstruct_pecc = jsonstruct["PositiveElectrode"]["CurrentCollector"]
         prm_pecc[:Conductivity] = jsonstruct_pecc["electronicConductivity"]
@@ -1484,34 +1493,35 @@ function setup_battery_initial_state(init::MatlabFile,
 
     state0 = exported["initstate"]
 
-    jsonNames = Dict(
-        :NeCc  => "NegativeElectrode",
-        :NeAm => "NegativeElectrode",
-        :PeAm => "PositiveElectrode",        
-        :PeCc  => "PositiveElectrode",
-    )
+    include_cc = include_current_collectors(model)
 
+    if include_cc
+        jsonNames = Dict(
+            :NeCc  => "NegativeElectrode",
+            :NeAm => "NegativeElectrode",
+            :PeAm => "PositiveElectrode",        
+            :PeCc  => "PositiveElectrode",
+        )
+    else
+        jsonNames = Dict(
+            :NeAm => "NegativeElectrode",
+            :PeAm => "PositiveElectrode" 
+        )
+    end
+    
 
+    """ initialize values for the current collector"""
     function initialize_current_collector!(initState, name::Symbol)
-        """ initialize values for the current collector"""
-        
-        if haskey(model.models, name)
-            use_cc = true
-        else
-            use_cc = false
-        end
-        
-        if use_cc
-            init = Dict()
-            init[:Phi] = state0[jsonNames[name]]["CurrentCollector"]["phi"][1]
-            initState[name] = init
-        end
+
+        init = Dict()
+        init[:Phi] = state0[jsonNames[name]]["CurrentCollector"]["phi"][1]
+        initState[name] = init
         
     end
 
 
+    """ initialize values for the active material"""
     function initialize_active_material!(initState, name::Symbol)
-        """ initialize values for the active material"""
 
         jsonName = jsonNames[name]
         
@@ -1519,12 +1529,6 @@ function setup_battery_initial_state(init::MatlabFile,
             :NeAm => :NeCc,
             :PeAm => :PeCc,
         )
-
-        if haskey(model.models, ccnames[name])
-            use_cc = true
-        else
-            use_cc = false
-        end
 
         # initialise NeAm
 
@@ -1534,9 +1538,10 @@ function setup_battery_initial_state(init::MatlabFile,
         
         init[:Phi] = state0[jsonName]["Coating"]["phi"][1]
 
-        if use_cc
+        if include_cc
             c = state0[jsonName]["Coating"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
         else
+            @warn "check this initialization"
             c = state0[jsonName]["ActiveMaterial"]["c"][1]
         end
 
@@ -1573,13 +1578,16 @@ function setup_battery_initial_state(init::MatlabFile,
     
     initState = Dict()
 
-    initialize_current_collector!(initState, :NeCc)
     initialize_active_material!(initState, :NeAm)
     initialize_electrolyte!(initState)
     initialize_active_material!(initState, :PeAm)
-    initialize_current_collector!(initState, :PeCc)
-    initialize_control!(initState)
 
+    if include_cc
+        initialize_current_collector!(initState, :NeCc)
+        initialize_current_collector!(initState, :PeCc)
+    end
+    
+    initialize_control!(initState)
     
     initState = setup_state(model, initState)
 
@@ -1587,19 +1595,12 @@ function setup_battery_initial_state(init::MatlabFile,
     
 end
 
-
 function setup_battery_initial_state(init::JSONFile,
                                      model::MultiModel)
 
     jsonstruct = init.object
 
-    if haskey(model.models, :NeCc)
-        include_current_collectors = true
-        @assert haskey(model.models, :PeCc)
-    else
-        include_current_collectors = false
-        @assert !haskey(model.models, :PeCc)
-    end
+    include_cc = include_current_collectors(model)
 
     T        = jsonstruct["initT"]
     SOC_init = jsonstruct["SOC"]
@@ -1662,7 +1663,7 @@ function setup_battery_initial_state(init::JSONFile,
     
     initState[:PeAm] = init
 
-    if include_current_collectors
+    if include_cc
         # Setup negative current collector
         initState[:NeCc] = setup_current_collector(:NeCc, 0, model)
         # Setup positive current collector
