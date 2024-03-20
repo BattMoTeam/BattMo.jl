@@ -120,7 +120,7 @@ end
 
 ## Policy to control functions
 
-function policy_to_control(p::SimpleCVPolicy, is_charging, state, state0, model)
+function policy_to_control(p::SimpleCVPolicy, state, state0, model)
     
     cf = p.current_function
     ctrl = state.ControllerCV
@@ -147,18 +147,21 @@ function policy_to_control(p::SimpleCVPolicy, is_charging, state, state0, model)
     
 end
 
-function policy_to_control(::NoPolicy, is_charging, state, state0, model)
+function policy_to_control(::NoPolicy, state, state0, model)
     
     return (2.0, true, rest)
     
 end
 
-function policy_to_control(p::CyclingCVPolicy, mode, state, state0, model)
+function policy_to_control(p::CyclingCVPolicy, state, state0, model)
     
     phi = only(state.Phi)
     I   = only(state.Current)
 
+    mode  = state.ControllerCV.mode
+    
     if mode == cc_discharge1
+        
         # Keep charging if voltage is above limit
         if phi < p.lowerCutoffVoltage
             # @info "Switching to discharge"
@@ -171,6 +174,7 @@ function policy_to_control(p::CyclingCVPolicy, mode, state, state0, model)
             # @info "Switching to charge"
             mode = cv_charge2
         end
+        
     end
     
     if mode == cc_discharge1
@@ -338,13 +342,13 @@ function Jutul.update_values!(old::CcCvControllerCV, new::CcCvControllerCV)
     
 end
 
-function select_control_cv!(cv::ControllerCV, state, state0, model)
+function select_control_cv!(state, state0, model)
 
     policy = model.system.policy
 
-    mode   = cv.mode
+    target, target_is_voltage, mode = policy_to_control(policy, state, state0, model)
 
-    target, target_is_voltage, mode = policy_to_control(policy, mode, state, state0, model)
+    cv = state.ControllerCV
     
     cv.target            = target
     cv.target_is_voltage = target_is_voltage
@@ -528,7 +532,7 @@ end
 
 function Jutul.prepare_equation_in_entity!(i, eq::ControlEquation, eq_s, state, state0, model::CurrentAndVoltageModel, dt)
     
-    select_control_cv!(state.ControllerCV, state, state0, model)
+    select_control_cv!(state, state0, model)
     
 end
 
