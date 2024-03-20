@@ -14,7 +14,7 @@ stateref  = extra[:init].object["states"]
 E         = Matrix{Float64}(undef,steps,2)
 
 for step in 1:steps
-    phi = states[step][:BPP][:Phi][1]
+    phi = states[step][:Control][:Phi][1]
     E[step,1] = phi
     phi_ref = stateref[step]["Control"]["E"]
     E[step,2] = phi_ref
@@ -36,14 +36,14 @@ dt     = extra[:timesteps]
 forces = deepcopy(extra[:forces])
 state0 = deepcopy(extra[:state0])
 
-state0[:BPP][:ControllerCV]
+state0[:Control][:ControllerCV]
 cfg = extra[:config]
 
 V_lim = 2.7
 V_lim = 3.4
 V_up  = 4.0
 
-state0[:BPP][:Phi][1] = (V_lim + V_up)/2.0
+state0[:Control][:Phi][1] = (V_lim + V_up)/2.0
 
 I_t = 3e-3
 
@@ -59,8 +59,8 @@ policy = simple
 
 
 
-bpp_force = setup_forces(model[:BPP], policy = policy)
-forces    = setup_forces(model, BPP = bpp_force)
+bpp_force = setup_forces(model[:Control], policy = policy)
+forces    = setup_forces(model, Control = bpp_force)
 
 cfg[:error_on_incomplete] = false
 dt = repeat(dt, 100)
@@ -71,8 +71,8 @@ states_c, rep = simulate(state0, model, dt, parameters = prm, config = cfg, forc
 ##
 
 Ti = cumsum(dt[1:length(states_c)])
-V  = map(s -> s[:BPP][:Phi][1], states_c)
-I  = map(s -> s[:BPP][:Current][1], states_c)
+V  = map(s -> s[:Control][:Phi][1], states_c)
+I  = map(s -> s[:Control][:Current][1], states_c)
 
 plot2 = Plots.plot(Ti, V; title = "E", size=(1000, 800), legend=:topleft, label = "Voltage")
 Plots.plot!(twinx(), Ti, I; title = "E", size=(1000, 800), label = "Current", color = :red)

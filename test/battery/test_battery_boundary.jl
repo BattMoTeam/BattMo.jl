@@ -15,7 +15,7 @@ testcases  =[
                 steps = size(states, 1)
                 E = Matrix{Float64}(undef, steps, 2)
                 for step in 1:steps
-                    phi = states[step][:BPP][:Phi][1]
+                    phi = states[step][:Control][:Phi][1]
                     E[step, 1] = phi
                     phi_ref = stateref[step]["Control"]["E"]
                     E[step, 2] = phi_ref

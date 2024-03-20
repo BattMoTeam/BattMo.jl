@@ -15,8 +15,8 @@ ENV["JULIA_DEBUG"] = 0;
 use_p2d = true
 
 if use_p2d
-    # name = "p2d_40"
-    name = "p2d_40_cccv"
+    name = "p2d_40"
+    # name = "p2d_40_cccv"
     # name = "3d_demo_case"
 else
     # name = "p1d_40"
@@ -43,7 +43,7 @@ if do_json
     timesteps = extra[:timesteps]
     
     t = cumsum(timesteps)
-    E = [state[:BPP][:Phi][1] for state in states]
+    E = [state[:Control][:Phi][1] for state in states]
     t = t[1 : length(E)]    
 
     # refdict = load_reference_solution(name)
@@ -61,7 +61,7 @@ else
 
     timesteps = extra[:timesteps]
     t = cumsum(timesteps[1 : nsteps])
-    E = [state[:BPP][:Phi][1] for state in states]
+    E = [state[:Control][:Phi][1] for state in states]
     t = t[1 : length(E)]
     
     statesref = extra[:init].object["states"]

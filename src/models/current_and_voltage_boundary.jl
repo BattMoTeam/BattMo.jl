@@ -98,7 +98,7 @@ end
 
 function setup_policy!(policy::SimpleCVPolicy, init::JSONFile, parameters)
 
-    inputI = only(parameters[:BPP][:ImaxDischarge])
+    inputI = only(parameters[:Control][:ImaxDischarge])
 
     tup = Float64(init.object["Control"]["rampupTime"])
     
@@ -110,8 +110,8 @@ end
 
 function setup_policy!(policy::CyclingCVPolicy, init::JSONFile, parameters)
 
-    policy.ImaxDischarge = only(parameters[:BPP][:ImaxDischarge])
-    policy.ImaxCharge    = only(parameters[:BPP][:ImaxCharge])
+    policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
+    policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])
     
 end
 
@@ -278,13 +278,13 @@ function check_constraints(model, storage)
 
     converged = true
     
-    policy = model[:BPP].system.policy
+    policy = model[:Control].system.policy
 
     state = storage.state
     
-    E    = only(state[:BPP][:Phi])
-    I    = only(state[:BPP][:Current])
-    ctrl = state[:BPP][:ControllerCV]
+    E    = only(state[:Control][:Phi])
+    I    = only(state[:Control][:Current])
+    ctrl = state[:Control][:ControllerCV]
     
     Emin     = policy.lowerCutoffVoltage
     Emax     = policy.upperCutoffVoltage

@@ -104,7 +104,7 @@ function setup_config(sim::Jutul.JutulSimulator,
         cfg[:tolerances][key][:default]  = 1e-5
     end
     
-    if model[:BPP].system.policy isa CyclingCVPolicy
+    if model[:Control].system.policy isa CyclingCVPolicy
 
         cfg[:tolerances][:global_check] = (model, storage) -> check_constraints(model, storage)
 
@@ -113,7 +113,7 @@ function setup_config(sim::Jutul.JutulSimulator,
             s = Jutul.get_simulator_storage(sim)
             m = Jutul.get_simulator_model(sim)
 
-            if s.state.BPP.ControllerCV.numberOfCycles > m[:BPP].system.policy.numberOfCycles
+            if s.state.Control.ControllerCV.numberOfCycles > m[:Control].system.policy.numberOfCycles
                 report[:stopnow] = true
             else
                 report[:stopnow] = false
@@ -241,10 +241,10 @@ function setup_sim(init::JSONFile;
 
     setup_coupling!(init,model,parameters)
 
-    setup_policy!(model[:BPP].system.policy, init, parameters)
+    setup_policy!(model[:Control].system.policy, init, parameters)
     
     minE = init.object["Control"]["lowerCutoffVoltage"]
-    @. state0[:BPP][:Phi] = minE * 1.5
+    @. state0[:Control][:Phi] = minE * 1.5
 
 
     forces = setup_forces(model)
@@ -264,16 +264,16 @@ function setup_sim(init::MatlabFile;
     model, state0, parameters = setup_model(init, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
     setup_coupling!(init, model)
 
-    forces_pp = nothing
+    forces_pecc = nothing
     currents  = nothing
 
     forces = Dict(
-        :CC => nothing,
-        :NAM => nothing,
-        :ELYTE => nothing,
-        :PAM => nothing,
-        :PP => forces_pp,
-        :BPP => currents
+        :NeCc => nothing,
+        :NeAm => nothing,
+        :Elyte => nothing,
+        :PeAm => nothing,
+        :PeCc => forces_pecc,
+        :Control => currents
     )
 
     sim = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
@@ -296,22 +296,23 @@ function setup_coupling!(init::JSONFile,
 
     geomparams = setup_geomparams(init)
     
-    # setup coupling CC <-> NAM :charge_conservation
+    # setup coupling NeCc <-> NeAm :charge_conservation
     
-    skip_cc = false # we consider only case with current collector (for simplicity, for the moment)
+    skip_necc = false # we consider only case with current collector (for simplicity, for the moment)
+    skip_pecc = false # we consider only case with current collector (for simplicity, for the moment)
     
-    if !skip_cc
+    if !skip_necc
 
-        Ncc  = geomparams[:CC][:N]
+        Ncc  = geomparams[:NeCc][:N]
 
         srange = Ncc
         trange = 1
         
-        msource = model[:CC]
-        mtarget = model[:NAM]
+        msource = model[:NeCc]
+        mtarget = model[:NeAm]
         
-        psource = parameters[:CC]
-        ptarget = parameters[:NAM]
+        psource = parameters[:NeCc]
+        ptarget = parameters[:NeAm]
 
         # Here, the indexing in BoundaryFaces is used
         couplingfaces = Array{Int64}(undef, 1, 2)
@@ -329,93 +330,93 @@ function setup_coupling!(init::JSONFile,
                             :Conductivity)
 
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
-        ct_pair = setup_cross_term(ct, target = :NAM, source = :CC, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
         
     end
     
-    # setup coupling NAM <-> ELYTE charge
+    # setup coupling NeAm <-> Elyte charge
 
-    Nnam = geomparams[:NAM][:N]
+    Nnam = geomparams[:NeAm][:N]
     
     srange = collect(1 : Nnam) # negative electrode
     trange = collect(1 : Nnam) # electrolyte (negative side)
 
-    if discretisation_type(model[:NAM]) == :P2Ddiscretization
+    if discretisation_type(model[:NeAm]) == :P2Ddiscretization
 
         ct = ButlerVolmerActmatToElyteCT(trange, srange)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :mass_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
         add_cross_term!(model, ct_pair)
         
         ct = ButlerVolmerElyteToActmatCT(srange, trange)
-        ct_pair = setup_cross_term(ct, target = :NAM, source = :ELYTE, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :NAM, source = :ELYTE, equation = :solid_diffusion_bc)
+        ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :solid_diffusion_bc)
         add_cross_term!(model, ct_pair)
         
     else
         
-        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
+        @assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
         
         ct = ButlerVolmerInterfaceFluxCT(trange, srange)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :mass_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
         add_cross_term!(model, ct_pair)
         
     end
 
-    # setup coupling ELYTE <-> PAM charge
+    # setup coupling Elyte <-> PeAm charge
 
-    Nnam = geomparams[:NAM][:N]
+    Nnam = geomparams[:NeAm][:N]
     Nsep = geomparams[:SEP][:N]
-    Npam = geomparams[:PAM][:N]
+    Npam = geomparams[:PeAm][:N]
     
     srange = collect(1 : Npam) # positive electrode
     trange = collect(Nnam + Nsep .+ (1 : Npam)) # electrolyte (positive side)
     
-    if discretisation_type(model[:PAM]) == :P2Ddiscretization
+    if discretisation_type(model[:PeAm]) == :P2Ddiscretization
 
         ct = ButlerVolmerActmatToElyteCT(trange, srange)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :mass_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
         add_cross_term!(model, ct_pair)
         
         ct = ButlerVolmerElyteToActmatCT(srange, trange)
-        ct_pair = setup_cross_term(ct, target = :PAM, source = :ELYTE, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :PAM, source = :ELYTE, equation = :solid_diffusion_bc)
+        ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :solid_diffusion_bc)
         add_cross_term!(model, ct_pair)
         
     else
         
-        @assert discretisation_type(model[:PAM]) == :NoParticleDiffusion    
+        @assert discretisation_type(model[:PeAm]) == :NoParticleDiffusion    
 
         ct = ButlerVolmerInterfaceFluxCT(trange, srange)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :mass_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
         add_cross_term!(model, ct_pair)
         
     end
 
     
-    if  !skip_cc
-        # setup coupling PP <-> PAM charge
+    if  !skip_pecc
+        # setup coupling PeCc <-> PeAm charge
         
-        Npam  = geomparams[:PAM][:N]
+        Npam  = geomparams[:PeAm][:N]
         
         srange = 1
         trange = Npam
         
-        msource = model[:PP]
-        mtarget = model[:PAM]
+        msource = model[:PeCc]
+        mtarget = model[:PeAm]
         
-        psource = parameters[:PP]
-        ptarget = parameters[:PAM]
+        psource = parameters[:PeCc]
+        ptarget = parameters[:PeAm]
 
         # Here, the indexing in BoundaryFaces is used
         couplingfaces = Array{Int64}(undef, 1, 2)
@@ -435,33 +436,33 @@ function setup_coupling!(init::JSONFile,
 
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
         ct_pair = setup_cross_term(ct,
-                                   target = :PAM,
-                                   source = :PP,
+                                   target = :PeAm,
+                                   source = :PeCc,
                                    equation = :charge_conservation)
         
         add_cross_term!(model, ct_pair)
         
         # setup coupling with control
         
-        Npp  = geomparams[:PP][:N]
+        Npp  = geomparams[:PeCc][:N]
         
         trange = Npp
         srange = Int64.(ones(size(trange)))
 
-        msource       = model[:PP]
-        mparameters   = parameters[:PP]
+        msource       = model[:PeCc]
+        mparameters   = parameters[:PeCc]
         # Here the indexing in BoundaryFaces in used
         couplingfaces = 2
         couplingcells = Npp
         trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
 
         ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
-        ct_pair = setup_cross_term(ct, target = :PP, source = :BPP, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :PeCc, source = :Control, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
 
         # Accmulation of charge
         ct = AccumulatorInterfaceFluxCT(1, trange, trans)
-        ct_pair = setup_cross_term(ct, target = :BPP, source = :PP, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :Control, source = :PeCc, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
        
     end
@@ -472,13 +473,13 @@ function setup_coupling!(init::MatlabFile,
                          model::MultiModel
                          )
     
-    # setup coupling CC <-> NAM :charge_conservation
+    # setup coupling NeCc <-> NeAm :charge_conservation
     
     exported_all=init.object
-    skip_pp = size(exported_all["model"]["include_current_collectors"]) == (0,0) #! unused
-    skip_cc = false
+    skip_pecc = size(exported_all["model"]["include_current_collectors"]) == (0,0) #! unused
+    skip_necc = false
     
-    if !skip_cc
+    if !skip_necc
         
         srange = Int64.(
             exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:, 1]
@@ -494,81 +495,81 @@ function setup_coupling!(init::MatlabFile,
         trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectronicConductivity")
 
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
-        ct_pair = setup_cross_term(ct, target = :NAM, source = :CC, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
         
     end
     
-    # setup coupling NAM <-> ELYTE charge
+    # setup coupling NeAm <-> Elyte charge
 
     srange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 1]) # negative electrode
     trange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 2]) # electrolyte (negative side)
 
-    if discretisation_type(model[:NAM]) == :P2Ddiscretization
+    if discretisation_type(model[:NeAm]) == :P2Ddiscretization
 
         ct = ButlerVolmerActmatToElyteCT(trange, srange)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :mass_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
         add_cross_term!(model, ct_pair)
         
         ct = ButlerVolmerElyteToActmatCT(srange, trange)
-        ct_pair = setup_cross_term(ct, target = :NAM, source = :ELYTE, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :NAM, source = :ELYTE, equation = :solid_diffusion_bc)
+        ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :solid_diffusion_bc)
         add_cross_term!(model, ct_pair)
         
     else
         
-        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
+        @assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
         
         ct = ButlerVolmerInterfaceFluxCT(trange, srange)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :NAM, equation = :mass_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
         add_cross_term!(model, ct_pair)
         
     end
 
-    # setup coupling ELYTE <-> PAM charge
+    # setup coupling Elyte <-> PeAm charge
 
     srange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,1]) # postive electrode
     trange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,2]) # electrolyte (positive side)
     
-    if discretisation_type(model[:PAM]) == :P2Ddiscretization
+    if discretisation_type(model[:PeAm]) == :P2Ddiscretization
 
         ct = ButlerVolmerActmatToElyteCT(trange, srange)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :mass_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
         add_cross_term!(model, ct_pair)
         
         ct = ButlerVolmerElyteToActmatCT(srange, trange)
-        ct_pair = setup_cross_term(ct, target = :PAM, source = :ELYTE, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :PAM, source = :ELYTE, equation = :solid_diffusion_bc)
+        ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :solid_diffusion_bc)
         add_cross_term!(model, ct_pair)
         
     else
         
-        @assert discretisation_type(model[:PAM]) == :NoParticleDiffusion    
+        @assert discretisation_type(model[:PeAm]) == :NoParticleDiffusion    
 
         ct = ButlerVolmerInterfaceFluxCT(trange, srange)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :ELYTE, source = :PAM, equation = :mass_conservation)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
         add_cross_term!(model, ct_pair)
         
     end
     
-    if  !skip_cc
-        # setup coupling PP <-> PAM charge
+    if  !skip_pecc
+        # setup coupling PeCc <-> PeAm charge
         target = Dict( 
-            :model => :PAM,
+            :model => :PeAm,
             :equation => :charge_conservation
             )
         source = Dict( 
-            :model => :PP,
+            :model => :PeCc,
             :equation => :charge_conservation
             )
         srange = Int64.(
@@ -583,14 +584,14 @@ function setup_coupling!(init::MatlabFile,
         couplingcells = Int64.(ct["couplingcells"])
         trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectronicConductivity")
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
-        ct_pair = setup_cross_term(ct, target = :PAM, source = :PP, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :PeAm, source = :PeCc, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
     end
     
-    if skip_cc
-        #setup coupling PP <-> BPP charge
+    if skip_pecc
+        #setup coupling PeCc <-> Control charge
         target = Dict( 
-            :model => :PAM,
+            :model => :PeAm,
             :equation => :charge_conservation
             )
 
@@ -602,9 +603,9 @@ function setup_coupling!(init::MatlabFile,
         couplingfaces = Int64.(msource["externalCouplingTerm"]["couplingfaces"])
         couplingcells = Int64.(msource["externalCouplingTerm"]["couplingcells"]) 
     else    
-        #setup coupling PP <-> BPP charge
+        #setup coupling PeCc <-> Control charge
         target = Dict( 
-            :model => :PP,
+            :model => :PeCc,
             :equation => :charge_conservation
             )
 
@@ -618,33 +619,33 @@ function setup_coupling!(init::MatlabFile,
     end
     
     source = Dict( 
-        :model => :BPP,
+        :model => :Control,
         :equation => :charge_conservation
         )
     
     #effcond = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["effectiveElectronicConductivity"]
     trans = getHalfTrans(msource, couplingfaces, couplingcells, "effectiveElectronicConductivity")
 
-    if skip_cc
+    if skip_pecc
         
         ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
-        ct_pair = setup_cross_term(ct, target = :PAM, source = :BPP, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :PeAm, source = :Control, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
     
         # Accmulation of charge
         ct = AccumulatorInterfaceFluxCT(1, trange, trans)
-        ct_pair = setup_cross_term(ct, target = :BPP, source = :PAM, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :Control, source = :PeAm, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
         
     else
         
         ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
-        ct_pair = setup_cross_term(ct, target = :PP, source = :BPP, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :PeCc, source = :Control, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
 
         # Accmulation of charge
         ct = AccumulatorInterfaceFluxCT(1, trange, trans)
-        ct_pair = setup_cross_term(ct, target = :BPP, source = :PP, equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :Control, source = :PeCc, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
         
     end
@@ -699,8 +700,8 @@ function setup_battery_model(init::MatlabFile;
     end
 
     jsonNames = Dict(
-        :NAM => "NegativeElectrode",
-        :PAM => "PositiveElectrode",        
+        :NeAm => "NegativeElectrode",
+        :PeAm => "PositiveElectrode",        
     )
 
     inputparams = init.object["model"]
@@ -723,9 +724,9 @@ function setup_battery_model(init::MatlabFile;
         Eak = inputparams_itf["activationEnergyOfReaction"]
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
         
-        if name == :NAM
+        if name == :NeAm
             am_params[:ocp_func] = computeOCP_graphite
-        elseif name == :PAM
+        elseif name == :PeAm
             am_params[:ocp_func] = computeOCP_nmc111
         else
             error("not recongized")
@@ -767,19 +768,19 @@ function setup_battery_model(init::MatlabFile;
     
     if include_cc
 
-        inputparams_cc = inputparams["NegativeElectrode"]["CurrentCollector"]
-        sys_cc      = CurrentCollector()
-        bcfaces     = convert_to_int_vector(inputparams_cc["externalCouplingTerm"]["couplingfaces"])
+        inputparams_necc = inputparams["NegativeElectrode"]["CurrentCollector"]
+        sys_necc      = CurrentCollector()
+        bcfaces     = convert_to_int_vector(inputparams_necc["externalCouplingTerm"]["couplingfaces"])
         
-        model_cc =  setup_component(inputparams_cc, sys_cc, bcfaces, general_ad)
+        model_necc =  setup_component(inputparams_necc, sys_necc, bcfaces, general_ad)
         
     end
 
-    # Setup NAM
+    # Setup NeAm
 
-    model_nam = setup_active_material(:NAM,general_ad)
+    model_neam = setup_active_material(:NeAm,general_ad)
 
-    ## Setup ELYTE
+    ## Setup Elyte
     params = JutulStorage();
     inputparams_elyte = inputparams["Electrolyte"]
     params[:transference] = inputparams_elyte["species"]["transferenceNumber"]
@@ -802,13 +803,13 @@ function setup_battery_model(init::MatlabFile;
     model_elyte = setup_component(inputparams["Electrolyte"],
                                   elyte,nothing,general_ad)
 
-    # Setup PAM
+    # Setup PeAm
     
-    model_pam = setup_active_material(:PAM,general_ad)
+    model_peam = setup_active_material(:PeAm,general_ad)
 
     # Setup negative current collector if any
     if include_cc
-        model_pp = setup_component(inputparams["PositiveElectrode"]["CurrentCollector"],
+        model_pecc = setup_component(inputparams["PositiveElectrode"]["CurrentCollector"],
                                    CurrentCollector(),nothing,general_ad)
     end
 
@@ -844,32 +845,32 @@ function setup_battery_model(init::MatlabFile;
        
     end
    
-    sys_bpp    = CurrentAndVoltageSystem(policy)
-    domain_bpp = CurrentAndVoltageDomain()
-    model_bpp  = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
+    sys_control    = CurrentAndVoltageSystem(policy)
+    domain_control = CurrentAndVoltageDomain()
+    model_control  = SimulationModel(domain_control, sys_control, context = DefaultContext())
     
     if !include_cc
         groups = nothing
         model = MultiModel(
             (
-                NAM   = model_nam, 
-                ELYTE = model_elyte, 
-                PAM   = model_pam, 
-                BPP   = model_bpp
+                NeAm    = model_neam, 
+                Elyte   = model_elyte, 
+                PeAm    = model_peam, 
+                Control = model_control
             ), 
             groups = groups)    
     else
         models = (
-            CC    = model_cc, 
-            NAM   = model_nam, 
-            ELYTE = model_elyte, 
-            PAM   = model_pam, 
-            PP    = model_pp,
-            BPP   = model_bpp
+            NeCc    = model_necc, 
+            NeAm    = model_neam, 
+            Elyte   = model_elyte, 
+            PeAm    = model_peam, 
+            PeCc    = model_pecc,
+            Control = model_control
         )
         if use_groups
             groups = ones(Int64, length(models))
-            # Should be BPP
+            # Should be Control
             groups[end] = 2
             reduction = :schur_apply
         else
@@ -949,11 +950,11 @@ function setup_battery_model(init::JSONFile;
                              general_ad::Bool = false)
 
         # specific implementation for electrolyte
-        # requires geometric parameters for :NAM, :SEP, :PAM
+        # requires geometric parameters for :NeAm, :SEP, :PeAm
 
         facearea = geomparams[:SEP][:facearea]
         
-        names = (:NAM, :SEP, :PAM)
+        names = (:NeAm, :SEP, :PeAm)
 
         deltas = Vector{Float64}()
         for name in names
@@ -994,8 +995,8 @@ function setup_battery_model(init::JSONFile;
     end
 
     jsonNames = Dict(
-        :NAM => "NegativeElectrode",
-        :PAM => "PositiveElectrode",        
+        :NeAm => "NegativeElectrode",
+        :PeAm => "PositiveElectrode",        
     )
 
     
@@ -1089,15 +1090,15 @@ function setup_battery_model(init::JSONFile;
     ## Setup negative current collector
     
     if include_cc
-        sys_cc = CurrentCollector()
-        model_cc =  setup_component(geomparams[:CC], sys_cc, addDirichlet = true, general_ad = general_ad)
+        sys_necc = CurrentCollector()
+        model_necc =  setup_component(geomparams[:NeCc], sys_necc, addDirichlet = true, general_ad = general_ad)
     end
 
-    ## Setup NAM
+    ## Setup NeAm
     
-    model_nam = setup_active_material(:NAM, geomparams)
+    model_neam = setup_active_material(:NeAm, geomparams)
 
-    ## Setup ELYTE
+    ## Setup Elyte
 
     params = JutulStorage();
     inputparams_elyte = jsondict["Electrolyte"]
@@ -1137,15 +1138,15 @@ function setup_battery_model(init::JSONFile;
     elyte = Electrolyte(params)
     model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
 
-    ## Setup PAM
+    ## Setup PeAm
     
-    model_pam = setup_active_material(:PAM, geomparams)
+    model_peam = setup_active_material(:PeAm, geomparams)
 
     ## Setup negative current collector if any
     
     if include_cc
-        sys_pp = CurrentCollector()
-        model_pp = setup_component(geomparams[:PP], sys_pp, general_ad = general_ad)
+        sys_pecc = CurrentCollector()
+        model_pecc = setup_component(geomparams[:PeCc], sys_pecc, general_ad = general_ad)
     end
     
     ## Setup control model
@@ -1175,32 +1176,32 @@ function setup_battery_model(init::JSONFile;
        
     end
     
-    sys_bpp    = CurrentAndVoltageSystem(policy)
-    domain_bpp = CurrentAndVoltageDomain()
-    model_bpp  = SimulationModel(domain_bpp, sys_bpp, context = DefaultContext())
+    sys_control    = CurrentAndVoltageSystem(policy)
+    domain_control = CurrentAndVoltageDomain()
+    model_control  = SimulationModel(domain_control, sys_control, context = DefaultContext())
     
     if !include_cc
         groups = nothing
         model = MultiModel(
             (
-                NAM   = model_nam, 
-                ELYTE = model_elyte, 
-                PAM   = model_pam, 
-                BPP   = model_bpp
+                NeAm    = model_neam, 
+                Elyte   = model_elyte, 
+                PeAm    = model_peam, 
+                Control = model_control
             ), 
             groups = groups)    
     else
         models = (
-            CC    = model_cc, 
-            NAM   = model_nam, 
-            ELYTE = model_elyte, 
-            PAM   = model_pam, 
-            PP    = model_pp,
-            BPP   = model_bpp
+            NeCc    = model_necc, 
+            NeAm    = model_neam, 
+            Elyte   = model_elyte, 
+            PeAm    = model_peam, 
+            PeCc    = model_pecc,
+            Control = model_control
         )
         if use_groups
             groups = ones(Int64, length(models))
-            # Should be BPP
+            # Should be Control
             groups[end] = 2
             reduction = :schur_apply
         else
@@ -1233,75 +1234,75 @@ function setup_battery_parameters(init::MatlabFile,
     
     # Negative current collector (if any)
 
-    if haskey(model.models, :CC)
-        use_cc = true
+    if haskey(model.models, :NeCc)
+        use_necc = true
     else
-        use_cc = false
+        use_necc = false
     end
 
-    if use_cc
-        prm_cc = Dict{Symbol, Any}()
-        exported_cc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
-        prm_cc[:Conductivity] = exported_cc["effectiveElectronicConductivity"][1]
-        parameters[:CC] = setup_parameters(model[:CC], prm_cc)
+    if use_necc
+        prm_necc = Dict{Symbol, Any}()
+        exported_necc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
+        prm_necc[:Conductivity] = exported_necc["effectiveElectronicConductivity"][1]
+        parameters[:NeCc] = setup_parameters(model[:NeCc], prm_necc)
     end
 
     # Negative active material
     
-    prm_nam = Dict{Symbol, Any}()
-    exported_nam = exported["model"]["NegativeElectrode"]["Coating"]
-    prm_nam[:Conductivity] = exported_nam["effectiveElectronicConductivity"][1]
-    prm_nam[:Temperature] = T0
+    prm_neam = Dict{Symbol, Any}()
+    exported_neam = exported["model"]["NegativeElectrode"]["Coating"]
+    prm_neam[:Conductivity] = exported_neam["effectiveElectronicConductivity"][1]
+    prm_neam[:Temperature] = T0
     
-    if discretisation_type(model[:NAM]) == :P2Ddiscretization
+    if discretisation_type(model[:NeAm]) == :P2Ddiscretization
         # nothing to do
     else
-        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
-        prm_nam[:Diffusivity] = exported_nam["InterDiffusionCoefficient"]
+        @assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
+        prm_neam[:Diffusivity] = exported_neam["InterDiffusionCoefficient"]
     end
 
-    parameters[:NAM] = setup_parameters(model[:NAM], prm_nam)
+    parameters[:NeAm] = setup_parameters(model[:NeAm], prm_neam)
 
     # Electrolyte
     
     prm_elyte = Dict{Symbol, Any}()
     prm_elyte[:Temperature] = T0        
 
-    parameters[:ELYTE] = setup_parameters(model[:ELYTE], prm_elyte)
+    parameters[:Elyte] = setup_parameters(model[:Elyte], prm_elyte)
 
     # Positive active material
 
-    prm_pam = Dict{Symbol, Any}()
-    exported_pam = exported["model"]["PositiveElectrode"]["Coating"]
-    prm_pam[:Conductivity] = exported_pam["effectiveElectronicConductivity"][1]
-    prm_pam[:Temperature] = T0
+    prm_peam = Dict{Symbol, Any}()
+    exported_peam = exported["model"]["PositiveElectrode"]["Coating"]
+    prm_peam[:Conductivity] = exported_peam["effectiveElectronicConductivity"][1]
+    prm_peam[:Temperature] = T0
     
-    if discretisation_type(model[:PAM]) == :P2Ddiscretization
+    if discretisation_type(model[:PeAm]) == :P2Ddiscretization
         # nothing to do
     else
-        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
-        prm_pam[:Diffusivity] = exported_nam["InterDiffusionCoefficient"]
+        @assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
+        prm_peam[:Diffusivity] = exported_neam["InterDiffusionCoefficient"]
     end
 
-    parameters[:PAM] = setup_parameters(model[:PAM], prm_pam)
+    parameters[:PeAm] = setup_parameters(model[:PeAm], prm_peam)
 
     # Positive current collector (if any)
 
-    if haskey(model.models, :CC)
-        use_pp = true
+    if haskey(model.models, :NeCc)
+        use_pecc = true
     else
-        use_pp = false
+        use_pecc = false
     end
 
-    if use_pp
-        prm_pp = Dict{Symbol, Any}()
-        exported_pp = exported["model"]["PositiveElectrode"]["CurrentCollector"]
-        prm_pp[:Conductivity] = exported_pp["effectiveElectronicConductivity"][1]
+    if use_pecc
+        prm_pecc = Dict{Symbol, Any}()
+        exported_pecc = exported["model"]["PositiveElectrode"]["CurrentCollector"]
+        prm_pecc[:Conductivity] = exported_pecc["effectiveElectronicConductivity"][1]
         
-        parameters[:PP] = setup_parameters(model[:PP], prm_pp)
+        parameters[:PeCc] = setup_parameters(model[:PeCc], prm_pecc)
     end        
 
-    parameters[:BPP] = setup_parameters(model[:BPP])
+    parameters[:Control] = setup_parameters(model[:Control])
 
     return parameters
     
@@ -1347,36 +1348,36 @@ function setup_battery_parameters(init::JSONFile,
     
     # Negative current collector (if any)
 
-    if haskey(model.models, :CC)
-        use_cc = true
+    if haskey(model.models, :NeCc)
+        use_necc = true
     else
-        use_cc = false
+        use_necc = false
     end
 
-    if use_cc
-        prm_cc = Dict{Symbol, Any}()
-        jsonstruct_cc = jsonstruct["NegativeElectrode"]["CurrentCollector"]
-        prm_cc[:Conductivity] = jsonstruct_cc["electronicConductivity"]
-        parameters[:CC] = setup_parameters(model[:CC], prm_cc)
+    if use_necc
+        prm_necc = Dict{Symbol, Any}()
+        jsonstruct_necc = jsonstruct["NegativeElectrode"]["CurrentCollector"]
+        prm_necc[:Conductivity] = jsonstruct_necc["electronicConductivity"]
+        parameters[:NeCc] = setup_parameters(model[:NeCc], prm_necc)
     end
 
     # Negative active material
     
-    prm_nam = Dict{Symbol, Any}()
-    jsonstruct_nam = jsonstruct["NegativeElectrode"]["Coating"]["ActiveMaterial"]
+    prm_neam = Dict{Symbol, Any}()
+    jsonstruct_neam = jsonstruct["NegativeElectrode"]["Coating"]["ActiveMaterial"]
 
-    prm_nam[:Conductivity] = computeEffectiveConductivity(model[:NAM], jsonstruct["NegativeElectrode"]["Coating"])
-    prm_nam[:Temperature] = T0
+    prm_neam[:Conductivity] = computeEffectiveConductivity(model[:NeAm], jsonstruct["NegativeElectrode"]["Coating"])
+    prm_neam[:Temperature] = T0
     
     
-    if discretisation_type(model[:NAM]) == :P2Ddiscretization
+    if discretisation_type(model[:NeAm]) == :P2Ddiscretization
         # nothing to do
     else
-        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
-        prm_nam[:Diffusivity] = jsonstruct_nam["InterDiffusionCoefficient"]
+        @assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
+        prm_neam[:Diffusivity] = jsonstruct_neam["InterDiffusionCoefficient"]
     end
 
-    parameters[:NAM] = setup_parameters(model[:NAM], prm_nam)
+    parameters[:NeAm] = setup_parameters(model[:NeAm], prm_neam)
 
     # Electrolyte
     
@@ -1384,43 +1385,43 @@ function setup_battery_parameters(init::JSONFile,
     prm_elyte[:Temperature] = T0 
           
 
-    parameters[:ELYTE] = setup_parameters(model[:ELYTE], prm_elyte)
+    parameters[:Elyte] = setup_parameters(model[:Elyte], prm_elyte)
 
     # Positive active material
 
-    prm_pam = Dict{Symbol, Any}()
-    jsonstruct_pam = jsonstruct["PositiveElectrode"]["Coating"]["ActiveMaterial"]
+    prm_peam = Dict{Symbol, Any}()
+    jsonstruct_peam = jsonstruct["PositiveElectrode"]["Coating"]["ActiveMaterial"]
 
-    prm_pam[:Conductivity] = computeEffectiveConductivity(model[:PAM], jsonstruct["PositiveElectrode"]["Coating"])
-    prm_pam[:Temperature] = T0
+    prm_peam[:Conductivity] = computeEffectiveConductivity(model[:PeAm], jsonstruct["PositiveElectrode"]["Coating"])
+    prm_peam[:Temperature] = T0
     
     
-    if discretisation_type(model[:PAM]) == :P2Ddiscretization
+    if discretisation_type(model[:PeAm]) == :P2Ddiscretization
         # nothing to do
     else
-        @assert discretisation_type(model[:NAM]) == :NoParticleDiffusion
-        prm_pam[:Diffusivity] = jsonstruct_pam["InterDiffusionCoefficient"]
+        @assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
+        prm_peam[:Diffusivity] = jsonstruct_peam["InterDiffusionCoefficient"]
     end
 
-    parameters[:PAM] = setup_parameters(model[:PAM], prm_pam)
+    parameters[:PeAm] = setup_parameters(model[:PeAm], prm_peam)
 
     # Positive current collector (if any)
 
-    if haskey(model.models, :CC)
-        use_pp = true
+    if haskey(model.models, :NeCc)
+        use_pecc = true
     else
-        use_pp = false
+        use_pecc = false
     end
 
-    if use_pp
-        prm_pp = Dict{Symbol, Any}()
-        jsonstruct_pp = jsonstruct["PositiveElectrode"]["CurrentCollector"]
-        prm_pp[:Conductivity] = jsonstruct_pp["electronicConductivity"]
+    if use_pecc
+        prm_pecc = Dict{Symbol, Any}()
+        jsonstruct_pecc = jsonstruct["PositiveElectrode"]["CurrentCollector"]
+        prm_pecc[:Conductivity] = jsonstruct_pecc["electronicConductivity"]
         
-        parameters[:PP] = setup_parameters(model[:PP], prm_pp)
+        parameters[:PeCc] = setup_parameters(model[:PeCc], prm_pecc)
     end        
 
-    prm_bpp = Dict{Symbol, Any}()
+    prm_control = Dict{Symbol, Any}()
 
     controlPolicy = jsonstruct["Control"]["controlPolicy"]
     
@@ -1430,9 +1431,9 @@ function setup_battery_parameters(init::JSONFile,
         con = Constants()
 
         DRate = jsonstruct["Control"]["DRate"]
-        prm_bpp[:ImaxDischarge] = (cap/con.hour)*DRate
+        prm_control[:ImaxDischarge] = (cap/con.hour)*DRate
         
-        parameters[:BPP] = setup_parameters(model[:BPP], prm_bpp)
+        parameters[:Control] = setup_parameters(model[:Control], prm_control)
         
     elseif controlPolicy == "CCCV"
 
@@ -1441,10 +1442,10 @@ function setup_battery_parameters(init::JSONFile,
 
         DRate = jsonstruct["Control"]["DRate"]
         CRate = jsonstruct["Control"]["CRate"]
-        prm_bpp[:ImaxDischarge] = (cap/con.hour)*DRate        
-        prm_bpp[:ImaxCharge]    = (cap/con.hour)*CRate
+        prm_control[:ImaxDischarge] = (cap/con.hour)*DRate        
+        prm_control[:ImaxCharge]    = (cap/con.hour)*CRate
         
-        parameters[:BPP] = setup_parameters(model[:BPP], prm_bpp)
+        parameters[:Control] = setup_parameters(model[:Control], prm_control)
         
     else
         error("control policy $controlPolicy not recognized")
@@ -1467,10 +1468,10 @@ function setup_battery_initial_state(init::MatlabFile,
     state0 = exported["initstate"]
 
     jsonNames = Dict(
-        :CC  => "NegativeElectrode",
-        :NAM => "NegativeElectrode",
-        :PAM => "PositiveElectrode",        
-        :PP  => "PositiveElectrode",
+        :NeCc  => "NegativeElectrode",
+        :NeAm => "NegativeElectrode",
+        :PeAm => "PositiveElectrode",        
+        :PeCc  => "PositiveElectrode",
     )
 
 
@@ -1498,8 +1499,8 @@ function setup_battery_initial_state(init::MatlabFile,
         jsonName = jsonNames[name]
         
         ccnames = Dict(
-            :NAM => :CC,
-            :PAM => :PP,
+            :NeAm => :NeCc,
+            :PeAm => :PeCc,
         )
 
         if haskey(model.models, ccnames[name])
@@ -1508,7 +1509,7 @@ function setup_battery_initial_state(init::MatlabFile,
             use_cc = false
         end
 
-        # initialise NAM
+        # initialise NeAm
 
         sys = model[name].system
 
@@ -1541,26 +1542,26 @@ function setup_battery_initial_state(init::MatlabFile,
         init[:Phi] = state0["Electrolyte"]["phi"][1]
         init[:C]   = state0["Electrolyte"]["c"][1]
 
-        initState[:ELYTE] = init
+        initState[:Elyte] = init
 
     end
 
-    function initialize_bpp!(initState)
+    function initialize_control!(initState)
 
         init = Dict(:Phi => state0["Control"]["E"], :Current => 0*state0["Control"]["I"])
         
-        initState[:BPP] = init
+        initState[:Control] = init
         
     end
     
     initState = Dict()
 
-    initialize_current_collector!(initState, :CC)
-    initialize_active_material!(initState, :NAM)
+    initialize_current_collector!(initState, :NeCc)
+    initialize_active_material!(initState, :NeAm)
     initialize_electrolyte!(initState)
-    initialize_active_material!(initState, :PAM)
-    initialize_current_collector!(initState, :PP)
-    initialize_bpp!(initState)
+    initialize_active_material!(initState, :PeAm)
+    initialize_current_collector!(initState, :PeCc)
+    initialize_control!(initState)
 
     
     initState = setup_state(model, initState)
@@ -1607,10 +1608,10 @@ function setup_battery_initial_state(init::JSONFile,
 
     jsonstruct=init.object
 
-    if haskey(model.models, :CC)
-        use_cc = true
+    if haskey(model.models, :NeCc)
+        use_necc = true
     else
-        use_cc = false
+        use_necc = false
     end
 
     T   = jsonstruct["initT"]
@@ -1643,7 +1644,7 @@ function setup_battery_initial_state(init::JSONFile,
         
     end
 
-    function setup_cc(name, phi, model)
+    function setup_current_collector(name, phi, model)
         nc = count_entities(model[name].data_domain, Cells())
         init = Dict();
         init[:Phi] = phi*ones(nc)
@@ -1654,40 +1655,40 @@ function setup_battery_initial_state(init::JSONFile,
 
     # Setup initial state in negative active material
     
-    init, nc, negOCP = setup_init_am(:NAM, model)
+    init, nc, negOCP = setup_init_am(:NeAm, model)
     init[:Phi] = zeros(nc)
-    initState[:NAM] = init
+    initState[:NeAm] = init
     
     # Setup initial state in electrolyte
     
-    nc = count_entities(model[:ELYTE].data_domain, Cells())
+    nc = count_entities(model[:Elyte].data_domain, Cells())
     
     init = Dict()
     init[:C]   = jsonstruct["Electrolyte"]["initialConcentration"]*ones(nc)
     init[:Phi] = - negOCP*ones(nc) 
 
-    initState[:ELYTE] = init
+    initState[:Elyte] = init
 
     # Setup initial state in positive active material
     
-    init, nc, posOCP= setup_init_am(:PAM, model)
+    init, nc, posOCP= setup_init_am(:PeAm, model)
     init[:Phi] = (posOCP - negOCP)*ones(nc)
     
-    initState[:PAM] = init
+    initState[:PeAm] = init
 
     # Setup negative current collector
 
-    initState[:CC] = setup_cc(:CC, 0, model)
+    initState[:NeCc] = setup_current_collector(:NeCc, 0, model)
     
     # Setup positive current collector
 
-    initState[:PP] = setup_cc(:PP, posOCP - negOCP, model)
+    initState[:PeCc] = setup_current_collector(:PeCc, posOCP - negOCP, model)
 
     init = Dict()
     init[:Phi]     = [1.0]
     init[:Current] = [1.0]
         
-    initState[:BPP] = init
+    initState[:Control] = init
 
     initState = setup_state(model, initState)
     
@@ -1728,22 +1729,22 @@ end
 
 function setup_volume_fractions!(model::MultiModel, geomparams::Dict{Symbol,<:Any})
 
-    names = (:NAM, :SEP, :PAM)
+    names = (:NeAm, :SEP, :PeAm)
     Nelyte = sum([geomparams[name][:N] for name in names])
     vfelyte = zeros(Nelyte)
     
-    names = (:NAM, :PAM)
+    names = (:NeAm, :PeAm)
     
     for name in names
         ammodel = model[name]
         vf = ammodel.system[:volume_fraction]
         Nam = geomparams[name][:N]
         ammodel.domain.representation[:volumeFraction] = vf*ones(Nam)
-        if name == :NAM
+        if name == :NeAm
             nstart = 1
             nend   = Nam
-        elseif name == :PAM
-            nstart = geomparams[:NAM][:N] + geomparams[:SEP][:N] + 1
+        elseif name == :PeAm
+            nstart = geomparams[:NeAm][:N] + geomparams[:SEP][:N] + 1
             nend   = Nelyte
         else
             error("name not recognized")
@@ -1751,12 +1752,12 @@ function setup_volume_fractions!(model::MultiModel, geomparams::Dict{Symbol,<:An
         vfelyte[nstart : nend] .= 1 - vf
     end
 
-    nstart = geomparams[:NAM][:N] +  1
+    nstart = geomparams[:NeAm][:N] +  1
     nend   = nstart + geomparams[:SEP][:N]
-    separator_porosity = model[:ELYTE].system[:separator_porosity]
+    separator_porosity = model[:Elyte].system[:separator_porosity]
     vfelyte[nstart : nend] .= separator_porosity*ones(nend - nstart + 1)
     
-    model[:ELYTE].domain.representation[:volumeFraction] = vfelyte
+    model[:Elyte].domain.representation[:volumeFraction] = vfelyte
 
 end
 
@@ -1877,19 +1878,19 @@ function setup_geomparams(init::JSONFile)
     
     jsondict = init.object
 
-    names = (:CC, :NAM, :SEP, :PAM, :PP)
+    names = (:NeCc, :NeAm, :SEP, :PeAm, :PeCc)
     geomparams = Dict(name => Dict() for name in names)
 
-    geomparams[:CC][:N]          = jsondict["NegativeElectrode"]["CurrentCollector"]["N"]
-    geomparams[:CC][:thickness]  = jsondict["NegativeElectrode"]["CurrentCollector"]["thickness"]
-    geomparams[:NAM][:N]         = jsondict["NegativeElectrode"]["Coating"]["N"]
-    geomparams[:NAM][:thickness] = jsondict["NegativeElectrode"]["Coating"]["thickness"]
+    geomparams[:NeCc][:N]          = jsondict["NegativeElectrode"]["CurrentCollector"]["N"]
+    geomparams[:NeCc][:thickness]  = jsondict["NegativeElectrode"]["CurrentCollector"]["thickness"]
+    geomparams[:NeAm][:N]         = jsondict["NegativeElectrode"]["Coating"]["N"]
+    geomparams[:NeAm][:thickness] = jsondict["NegativeElectrode"]["Coating"]["thickness"]
     geomparams[:SEP][:N]         = jsondict["Separator"]["N"]
     geomparams[:SEP][:thickness] = jsondict["Separator"]["thickness"]
-    geomparams[:PAM][:N]         = jsondict["PositiveElectrode"]["Coating"]["N"]
-    geomparams[:PAM][:thickness] = jsondict["PositiveElectrode"]["Coating"]["thickness"]
-    geomparams[:PP][:N]          = jsondict["PositiveElectrode"]["CurrentCollector"]["N"]
-    geomparams[:PP][:thickness]  = jsondict["PositiveElectrode"]["CurrentCollector"]["thickness"]
+    geomparams[:PeAm][:N]         = jsondict["PositiveElectrode"]["Coating"]["N"]
+    geomparams[:PeAm][:thickness] = jsondict["PositiveElectrode"]["Coating"]["thickness"]
+    geomparams[:PeCc][:N]          = jsondict["PositiveElectrode"]["CurrentCollector"]["N"]
+    geomparams[:PeCc][:thickness]  = jsondict["PositiveElectrode"]["CurrentCollector"]["thickness"]
 
     for name in names
         geomparams[name][:facearea] = jsondict["Geometry"]["faceArea"]
@@ -1917,10 +1918,10 @@ function computeCellCapacity(model::MultiModel)
         vf   = sys[:volume_fraction]
         avf  = sys[:volume_fractions][1]
         
-        if name == :NAM
+        if name == :NeAm
             thetaMax = sys[:theta100]
             thetaMin = sys[:theta0]
-        elseif name == :PAM
+        elseif name == :PeAm
             thetaMax = sys[:theta0]
             thetaMin = sys[:theta100]
         else
@@ -1936,7 +1937,7 @@ function computeCellCapacity(model::MultiModel)
         
     end
 
-    caps = [computeHalfCellCapacity(name) for name in (:NAM, :PAM)]
+    caps = [computeHalfCellCapacity(name) for name in (:NeAm, :PeAm)]
 
     return minimum(caps)
     
@@ -2008,7 +2009,7 @@ function inputRefToStates(states, stateref)
         refstep     = i
         fields      = ["CurrentCollector","ActiveMaterial"]
         components  = ["NegativeElectrode","PositiveElectrode"]
-        newkeys     = [:CC, :NAM, :PP, :PAM]
+        newkeys     = [:NeCc, :NeAm, :PeCc, :PeAm]
        
         ind = 1
         for component = components
@@ -2026,7 +2027,7 @@ function inputRefToStates(states, stateref)
         end
 
         fields = ["Electrolyte"]
-        newcomp = :ELYTE
+        newcomp = :Elyte
         for field in fields
 
             state = stateref[refstep]
@@ -2040,7 +2041,7 @@ function inputRefToStates(states, stateref)
         end
         
         ##
-        staterefnew[:BPP][:Phi][1] = stateref[refstep]["Control"]["E"]
+        staterefnew[:Control][:Phi][1] = stateref[refstep]["Control"]["E"]
     end
     return statesref
 end
@@ -2117,7 +2118,7 @@ function test_mrst_battery(name)
     steps = size(states, 1)
     E = Matrix{Float64}(undef,steps,2)
     for step in 1:steps
-        phi = states[step][:BPP][:Phi][1]
+        phi = states[step][:Control][:Phi][1]
         E[step,1] = phi
         phi_ref = stateref[step]["PositiveElectrode"]["CurrentCollector"]["E"]
         E[step,2] = phi_ref

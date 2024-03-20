@@ -63,12 +63,12 @@ for i in 5
     ##
 
 
-    # mykeys = [:CC, :NAM, :ELYTE, :PAM, :PP]
-    # mykeys = [:PP, :PAM]
-    # mykeys = [:NAM]
-    # mykeys = [:ELYTE]
-    mykeys = [:PAM]
-    # mykeys = [:CC]
+    # mykeys = [:NeCc, :NeAm, :Elyte, :PeAm, :PeCc]
+    # mykeys = [:PeCc, :PeAm]
+    # mykeys = [:NeAm]
+    # mykeys = [:Elyte]
+    mykeys = [:PeAm]
+    # mykeys = [:NeCc]
     #mykeys =  keys(grids)
     for key in mykeys
         G = grids[key]

@@ -13,7 +13,7 @@ timesteps = extra[:timesteps]
 # initial voltage for battery)
 v_target = 4.2
 function voltage_objective(model, state, dt, step_no, forces)
-    return dt*max(v_target - state[:BPP][:Phi][1], 0)^2
+    return dt*max(v_target - state[:Control][:Phi][1], 0)^2
 end
 G = voltage_objective
 dG = solve_adjoint_sensitivities(model, states, reports, G,
@@ -23,8 +23,8 @@ dG = solve_adjoint_sensitivities(model, states, reports, G,
 # Plotting part requires Julia 1.9
 # dx = [0.02 0 0]
 # shift = Dict()
-# shift[:NAM] = dx
-# shift[:PAM] = dx
+# shift[:NeAm] = dx
+# shift[:PeAm] = dx
 # plot_multimodel_interactive(model, [dG], shift = shift)
 ## Perform optimization
 cfg = optimization_config(model, prm, rel_min = 0.5, rel_max = 5, use_scaling = true)
@@ -78,7 +78,7 @@ for (mk, mv) in changed_param
 end
 # plot_multimodel_interactive(model, [changed_param], shift = shift)
 ## Plot difference in the main objective input
-F = s -> map(x -> only(x[:BPP][:Phi]), s)
+F = s -> map(x -> only(x[:Control][:Phi]), s)
 fig = Figure()
 ax1 = Axis(fig[1, 1], title = name, ylabel = "Voltage")
 lines!(ax1, F(states), label = "Base case (G = $F0)")
