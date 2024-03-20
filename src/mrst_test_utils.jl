@@ -1571,38 +1571,6 @@ function setup_battery_initial_state(init::MatlabFile,
 end
 
 
-function extract_input_symbols(ex::Expr, symbols::Vector{Symbol})
-
-    args = ex.args
-    func_definition = args[1]
-    input_symbols = func_definition.args[2:end]
-
-    return input_symbols 
-end
-
-function set_symbol_values(symbols, c, refT, T, cmax, SOC)
-    symbol_values = Dict{Symbol, Any}()
-    
-    for symbol in symbols
-     
-        if symbol == :c
-            symbol_values[symbol] = c
-        elseif symbol == :T
-            symbol_values[symbol] = T
-        elseif symbol == :refT
-            symbol_values[symbol] = refT
-        elseif symbol == :cmax
-            symbol_values[symbol] = cmax
-        elseif symbol == :SOC
-            symbol_values[symbol] = SOC
-        else
-            error("Symbol $symbol not supported by BattMo OCP computation")
-        end
-    end
-    return symbol_values
-end
-
-
 function setup_battery_initial_state(init::JSONFile,
                                      model::MultiModel)
 
