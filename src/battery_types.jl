@@ -35,10 +35,8 @@ Jutul.variable_scale(::Diffusivity) = 1e-10
 
 # Accumulation variables
 
-abstract type Conserved <: ScalarVariable end
-
-struct Charge <: Conserved end
-struct Mass <: Conserved end
+struct Charge <: ScalarVariable end
+struct Mass <: ScalarVariable end
 
 # Boundary variables
 
