@@ -807,7 +807,6 @@ function setup_battery_model(init::MatlabFile;
             error("not recongized")
         end
 
-        T_prm = typeof(am_params)
         if use_p2d
             rp = inputparams_sd["particleRadius"]
             N  = Int64(inputparams_sd["N"])
@@ -817,11 +816,11 @@ function setup_battery_model(init::MatlabFile;
             sys_am = ActiveMaterialNoParticleDiffusion(am_params)
         end
         
-        if  include_cc
-            model_am = setup_component(inputparams_co, sys_am, nothing, general_ad)
-        else
+        if  !include_cc && name == :NeAm
             bcfaces  = convert_to_int_vector(inputparams_co["externalCouplingTerm"]["couplingfaces"])
             model_am = setup_component(inputparams_co, sys_am, bcfaces, general_ad)
+        else
+            model_am = setup_component(inputparams_co, sys_am, nothing, general_ad)
         end
 
         return model_am
@@ -1391,7 +1390,6 @@ function setup_battery_parameters(init::MatlabFile,
     # Positive active material #
     ############################
 
-
     prm_peam = Dict{Symbol, Any}()
     exported_peam = exported["model"]["PositiveElectrode"]["Coating"]
     prm_peam[:Conductivity] = exported_peam["effectiveElectronicConductivity"][1]
@@ -1465,8 +1463,6 @@ function setup_battery_parameters(init::JSONFile,
 
     include_cc = include_current_collectors(model)
 
-    
-
     if include_cc
         
         #######################################
@@ -1477,6 +1473,7 @@ function setup_battery_parameters(init::JSONFile,
         jsonstruct_necc = jsonstruct["NegativeElectrode"]["CurrentCollector"]
         prm_necc[:Conductivity] = jsonstruct_necc["electronicConductivity"]
         parameters[:NeCc] = setup_parameters(model[:NeCc], prm_necc)
+        
     end
 
     ############################
@@ -1488,7 +1485,6 @@ function setup_battery_parameters(init::JSONFile,
 
     prm_neam[:Conductivity] = computeEffectiveConductivity(model[:NeAm], jsonstruct["NegativeElectrode"]["Coating"])
     prm_neam[:Temperature] = T0
-    
     
     if discretisation_type(model[:NeAm]) == :P2Ddiscretization
         # nothing to do
@@ -1618,19 +1614,11 @@ function setup_battery_initial_state(init::MatlabFile,
         
     end
 
-
     """ initialize values for the active material"""
     function initialize_active_material!(initState, name::Symbol)
 
         jsonName = jsonNames[name]
         
-        ccnames = Dict(
-            :NeAm => :NeCc,
-            :PeAm => :PeCc,
-        )
-
-        # initialise NeAm
-
         sys = model[name].system
 
         init = Dict()
