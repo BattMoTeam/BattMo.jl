@@ -173,6 +173,10 @@ function select_parameters!(S,
     S[:Temperature]    = Temperature()
     S[:Conductivity]   = Conductivity()
     S[:VolumeFraction] = VolumeFraction()
+
+    if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
+        S[:BoundaryPhi]  = BoundaryPotential(:Phi)
+    end
     
 end
 
@@ -389,8 +393,8 @@ function select_secondary_variables!(S,
 end
 
 function select_parameters!(S,
-                                  system::ActiveMaterialNoParticleDiffusion,
-                                  model::SimulationModel)
+                            system::ActiveMaterialNoParticleDiffusion,
+                            model::SimulationModel)
     
     S[:Temperature]  = Temperature()
     S[:Conductivity] = Conductivity()

@@ -441,10 +441,7 @@ function setup_coupling!(init::JSONFile,
                             :Conductivity)
 
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
-        ct_pair = setup_cross_term(ct,
-                                   target = :PeAm,
-                                   source = :PeCc,
-                                   equation = :charge_conservation)
+        ct_pair = setup_cross_term(ct, target = :PeAm, source = :PeCc, equation = :charge_conservation)
         
         add_cross_term!(model, ct_pair)
 
@@ -516,9 +513,9 @@ function setup_coupling!(init::MatlabFile,
 
     include_cc = include_current_collectors(model)
     
-    ########################################
-    # setup coupling NeAm <-> Elyte charge #
-    ########################################
+    #################################
+    # setup coupling NeAm <-> Elyte #
+    #################################
 
     srange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 1]) # negative electrode
     trange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 2]) # electrolyte (negative side)
@@ -549,9 +546,9 @@ function setup_coupling!(init::MatlabFile,
         
     end
 
-    ########################################
-    # setup coupling Elyte <-> PeAm charge #
-    ########################################
+    #################################
+    # setup coupling Elyte <-> PeAm #
+    #################################
 
     srange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,1]) # postive electrode
     trange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,2]) # electrolyte (positive side)
@@ -584,9 +581,9 @@ function setup_coupling!(init::MatlabFile,
     
     if  include_cc
         
-        #######################################
-        # setup coupling NeCc <-> NeAm charge #
-        #######################################
+        ################################
+        # setup coupling NeCc <-> NeAm #
+        ################################
         
         srange = Int64.(
             exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:, 1]
@@ -657,10 +654,10 @@ function setup_coupling!(init::MatlabFile,
         ##########################################
 
         trange = convert_to_int_vector(
-                exported_all["model"]["PositiveElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingcells"]
+                exported_all["model"]["PositiveElectrode"]["Coating"]["externalCouplingTerm"]["couplingcells"]
             )
         srange = Int64.(ones(size(trange)))
-        msource = exported_all["model"]["PositiveElectrode"]["ActiveMaterial"]
+        msource = exported_all["model"]["PositiveElectrode"]["Coating"]
         couplingfaces = Int64.(msource["externalCouplingTerm"]["couplingfaces"])
         couplingcells = Int64.(msource["externalCouplingTerm"]["couplingcells"]) 
 
@@ -704,9 +701,9 @@ end
 
 function include_current_collectors(init::MatlabFile)
 
-    inputparams = init.object["model"]
-    
-    if haskey(inputparams, "include_current_collectors") && isempty(inputparams["include_current_collectors"])
+    model = init.object["model"]
+
+    if haskey(model, "include_current_collectors") && isempty(model["include_current_collectors"])
         include_cc = false
     else
         include_cc = true
@@ -721,7 +718,7 @@ function include_current_collectors(init::JSONFile)
 
     jsondict = init.object
     
-    if haskey(jsondict, "include_current_collectors") && jsondict["include_current_collectors"] == false
+    if haskey(jsondict, "include_current_collectors") && isempty(jsondict["include_current_collectors"])
         include_cc = false
     else
         include_cc = true
@@ -823,19 +820,8 @@ function setup_battery_model(init::MatlabFile;
         if  include_cc
             model_am = setup_component(inputparams_co, sys_am, nothing, general_ad)
         else
-            bcfaces_am = convert_to_int_vector(inputparams_co["externalCouplingTerm"]["couplingfaces"])
-            model_am   = setup_component(inputparams_co, sys_am, bcfaces_am,general_ad)
-            # We add also boundary parameters (if any)
-            S = model_am.parameters
-            nbc = count_active_entities(model_am.domain, BoundaryDirichletFaces())
-            if nbc > 0
-                bcvalue_zeros = zeros(nbc)
-                # add parameters to the model
-                S[:BoundaryPhi] = BoundaryPotential(:Phi)
-                S[:BoundaryC]   = BoundaryPotential(:C)
-                S[:BCCharge]    = BoundaryCurrent(srccells, :Charge)
-                S[:BCMass]      = BoundaryCurrent(srccells, :Mass)
-            end
+            bcfaces  = convert_to_int_vector(inputparams_co["externalCouplingTerm"]["couplingfaces"])
+            model_am = setup_component(inputparams_co, sys_am, bcfaces, general_ad)
         end
 
         return model_am
@@ -843,7 +829,7 @@ function setup_battery_model(init::MatlabFile;
     end
     
     ###########################################
-    # Setup positive current collector if any #
+    # Setup negative current collector if any #
     ###########################################
     
     if include_cc
@@ -860,8 +846,7 @@ function setup_battery_model(init::MatlabFile;
     # Setup NeAm #
     ##############
 
-
-    model_neam = setup_active_material(:NeAm,general_ad)
+    model_neam = setup_active_material(:NeAm, general_ad)
 
     ###############
     # Setup Elyte #
@@ -887,7 +872,7 @@ function setup_battery_model(init::MatlabFile;
     
     elyte = Electrolyte(params)
     model_elyte = setup_component(inputparams["Electrolyte"],
-                                  elyte,nothing,general_ad)
+                                  elyte, nothing, general_ad)
 
     ##############
     # Setup PeAm #
@@ -899,11 +884,11 @@ function setup_battery_model(init::MatlabFile;
     if include_cc
 
         ###########################################
-        # Setup negative current collector if any #
+        # Setup positive current collector if any #
         ###########################################
 
         model_pecc = setup_component(inputparams["PositiveElectrode"]["CurrentCollector"],
-                                   CurrentCollector(),nothing,general_ad)
+                                     CurrentCollector(), nothing, general_ad)
     end
 
     #######################
@@ -1017,7 +1002,9 @@ function setup_battery_model(init::JSONFile;
         domain[:halfTrans, HalfFaces()]   = facearea*T_hf
         domain[:bcTrans, BoundaryFaces()] = facearea*T_b
 
-        # We add Dirichlet on negative current collector. This is hacky
+        # We add Dirichlet on negative current collector. This is a bit hacky as we pass directly cell-number
+        # Works only for 1D model
+        
         if addDirichlet
 
             domain.entities[BoundaryDirichletFaces()] = 1
@@ -1649,13 +1636,7 @@ function setup_battery_initial_state(init::MatlabFile,
         init = Dict()
         
         init[:Phi] = state0[jsonName]["Coating"]["phi"][1]
-
-        if include_cc
-            c = state0[jsonName]["Coating"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
-        else
-            @warn "check this initialization"
-            c = state0[jsonName]["ActiveMaterial"]["c"][1]
-        end
+        c = state0[jsonName]["Coating"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
 
         if  discretisation_type(sys) == :P2Ddiscretization
             init[:Cp] = c
