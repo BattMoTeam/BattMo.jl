@@ -453,29 +453,57 @@ function setup_coupling!(init::JSONFile,
 
     if include_cc
         
-        # setup coupling with control
+        ###################################
+        # setup coupling PeCc <-> control #
+        ###################################
         
-        Npp  = geomparams[:PeCc][:N]
+        Nc = geomparams[:PeCc][:N]
         
-        trange = Npp
+        trange = Nc
         srange = Int64.(ones(size(trange)))
 
         msource       = model[:PeCc]
         mparameters   = parameters[:PeCc]
         # Here the indexing in BoundaryFaces in used
         couplingfaces = 2
-        couplingcells = Npp
+        couplingcells = Nc
         trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
 
         ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
         ct_pair = setup_cross_term(ct, target = :PeCc, source = :Control, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
 
-        # Accmulation of charge
         ct = AccumulatorInterfaceFluxCT(1, trange, trans)
         ct_pair = setup_cross_term(ct, target = :Control, source = :PeCc, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-       
+
+    else
+        
+        ###################################
+        # setup coupling PeAm <-> control #
+        ###################################
+
+        Nc = geomparams[:PeAm][:N]
+        
+        trange = Nc
+        srange = Int64.(ones(size(trange)))
+
+        msource       = model[:PeAm]
+        mparameters   = parameters[:PeAm]
+        
+        # Here the indexing in BoundaryFaces in used
+        couplingfaces = 2
+        couplingcells = Nc
+        trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
+
+        ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
+        ct_pair = setup_cross_term(ct, target = :PeAm, source = :Control, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+
+        ct = AccumulatorInterfaceFluxCT(1, trange, trans)
+        ct_pair = setup_cross_term(ct, target = :Control, source = :PeAm, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        
     end
     
 end
@@ -488,9 +516,9 @@ function setup_coupling!(init::MatlabFile,
 
     include_cc = include_current_collectors(model)
     
-    ######################################
-    # setup coupling NeAm <-> Elyte charge
-    ######################################
+    ########################################
+    # setup coupling NeAm <-> Elyte charge #
+    ########################################
 
     srange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 1]) # negative electrode
     trange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 2]) # electrolyte (negative side)
@@ -521,9 +549,9 @@ function setup_coupling!(init::MatlabFile,
         
     end
 
-    ######################################
-    # setup coupling Elyte <-> PeAm charge
-    ######################################
+    ########################################
+    # setup coupling Elyte <-> PeAm charge #
+    ########################################
 
     srange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,1]) # postive electrode
     trange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,2]) # electrolyte (positive side)
@@ -556,9 +584,9 @@ function setup_coupling!(init::MatlabFile,
     
     if  include_cc
         
-        #####################################
-        # setup coupling NeCc <-> NeAm charge
-        #####################################
+        #######################################
+        # setup coupling NeCc <-> NeAm charge #
+        #######################################
         
         srange = Int64.(
             exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:, 1]
@@ -577,9 +605,9 @@ function setup_coupling!(init::MatlabFile,
         ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
         
-        #####################################
-        # setup coupling PeCc <-> PeAm charge
-        #####################################
+        #######################################
+        # setup coupling PeCc <-> PeAm charge #
+        #######################################
         
         target = Dict( 
             :model => :PeAm,
@@ -608,9 +636,9 @@ function setup_coupling!(init::MatlabFile,
 
     if include_cc
         
-        ########################################
-        # setup coupling PeCc <-> Control charge
-        ########################################
+        ##########################################
+        # setup coupling PeCc <-> Control charge #
+        ##########################################
 
         trange = convert_to_int_vector(
                 exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingcells"]
@@ -624,9 +652,9 @@ function setup_coupling!(init::MatlabFile,
         
     else
         
-        ########################################
-        # setup coupling PeAm <-> Control charge
-        ########################################
+        ##########################################
+        # setup coupling PeAm <-> Control charge #
+        ##########################################
 
         trange = convert_to_int_vector(
                 exported_all["model"]["PositiveElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingcells"]
@@ -678,9 +706,7 @@ function include_current_collectors(init::MatlabFile)
 
     inputparams = init.object["model"]
     
-    @info inputparams["include_current_collectors"]
-
-    if haskey(inputparams, "include_current_collectors") && inputparams["include_current_collectors"] == 0
+    if haskey(inputparams, "include_current_collectors") && isempty(inputparams["include_current_collectors"])
         include_cc = false
     else
         include_cc = true
