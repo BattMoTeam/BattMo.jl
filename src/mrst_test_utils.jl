@@ -290,49 +290,9 @@ function setup_coupling!(init::JSONFile,
                          parameters::Dict{Symbol,<:Any}
                          )
     
-    jsondict = init.object
-
+    jsondict   = init.object
     geomparams = setup_geomparams(init)
-    
     include_cc = include_current_collectors(model)
-    
-    if include_cc 
-
-        ################################
-        # Setup coupling NeCc <-> NeAm #
-        ################################
-
-        Ncc  = geomparams[:NeCc][:N]
-
-        srange = Ncc
-        trange = 1
-        
-        msource = model[:NeCc]
-        mtarget = model[:NeAm]
-        
-        psource = parameters[:NeCc]
-        ptarget = parameters[:NeAm]
-
-        # Here, the indexing in BoundaryFaces is used
-        couplingfaces = Array{Int64}(undef, 1, 2)
-        couplingfaces[1, 1] = 2
-        couplingfaces[1, 2] = 1
-        
-        couplingcells = Array{Int64}(undef, 1, 2)
-        couplingcells[1, 1] = Ncc
-        couplingcells[1, 2] = 1
-        
-        trans = getTrans(msource, mtarget,
-                            couplingfaces,
-                            couplingcells,
-                            psource, ptarget,
-                            :Conductivity)
-
-        ct = TPFAInterfaceFluxCT(trange, srange, trans)
-        ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
-        add_cross_term!(model, ct_pair)
-        
-    end
 
     #################################
     # Setup coupling NeAm <-> Elyte #
@@ -406,8 +366,41 @@ function setup_coupling!(init::JSONFile,
         
     end
 
-    
-    if  include_cc
+    if include_cc 
+
+        ################################
+        # Setup coupling NeCc <-> NeAm #
+        ################################
+
+        Ncc  = geomparams[:NeCc][:N]
+
+        srange = Ncc
+        trange = 1
+        
+        msource = model[:NeCc]
+        mtarget = model[:NeAm]
+        
+        psource = parameters[:NeCc]
+        ptarget = parameters[:NeAm]
+
+        # Here, the indexing in BoundaryFaces is used
+        couplingfaces = Array{Int64}(undef, 1, 2)
+        couplingfaces[1, 1] = 2
+        couplingfaces[1, 2] = 1
+        
+        couplingcells = Array{Int64}(undef, 1, 2)
+        couplingcells[1, 1] = Ncc
+        couplingcells[1, 2] = 1
+        
+        trans = getTrans(msource, mtarget,
+                            couplingfaces,
+                            couplingcells,
+                            psource, ptarget,
+                            :Conductivity)
+
+        ct = TPFAInterfaceFluxCT(trange, srange, trans)
+        ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
         
         ################################
         # setup coupling PeCc <-> PeAm #
@@ -717,8 +710,8 @@ end
 function include_current_collectors(init::JSONFile)
 
     jsondict = init.object
-    
-    if haskey(jsondict, "include_current_collectors") && isempty(jsondict["include_current_collectors"])
+
+    if haskey(jsondict, "include_current_collectors") && !jsondict["include_current_collectors"]
         include_cc = false
     else
         include_cc = true
@@ -878,7 +871,7 @@ function setup_battery_model(init::MatlabFile;
     ##############
 
     
-    model_peam = setup_active_material(:PeAm,general_ad)
+    model_peam = setup_active_material(:PeAm, general_ad)
 
     if include_cc
 
@@ -970,11 +963,13 @@ function setup_battery_model(init::JSONFile;
                              general_ad::Bool = false,
                              kwarg...)
     
+
     geomparams = setup_geomparams(init)
 
     jsondict = init.object
 
     include_cc = include_current_collectors(init)
+
 
     """
     Generic helper function to setup a component (:NeAm, :NeCc, :PeAm, :PeCc)
@@ -1034,8 +1029,7 @@ function setup_battery_model(init::JSONFile;
     Helper function to setup  electrolyte (:Elyte)
     """
     function setup_component(geomparams::Dict, 
-                             sys::Electrolyte, 
-                             bcfaces = nothing; 
+                             sys::Electrolyte;
                              general_ad::Bool = false)
 
         # specific implementation for electrolyte
@@ -1166,10 +1160,10 @@ function setup_battery_model(init::JSONFile;
         
         geomparam = geomparams[name]
 
-        if include_cc
-            addDirichlet = false
-        else
+        if !include_cc && name == :NeAm
             addDirichlet = true
+        else
+            addDirichlet = false
         end
         
         model_am = setup_component(geomparam              ,
@@ -1932,20 +1926,29 @@ function setup_geomparams(init::JSONFile)
     
     jsondict = init.object
 
-    names = (:NeCc, :NeAm, :SEP, :PeAm, :PeCc)
+    include_cc = include_current_collectors(init)
+
+    if include_cc
+        names = (:NeCc, :NeAm, :SEP, :PeAm, :PeCc)
+    else
+        names = (:NeAm, :SEP, :PeAm)
+    end
     geomparams = Dict(name => Dict() for name in names)
 
-    geomparams[:NeCc][:N]          = jsondict["NegativeElectrode"]["CurrentCollector"]["N"]
-    geomparams[:NeCc][:thickness]  = jsondict["NegativeElectrode"]["CurrentCollector"]["thickness"]
     geomparams[:NeAm][:N]         = jsondict["NegativeElectrode"]["Coating"]["N"]
     geomparams[:NeAm][:thickness] = jsondict["NegativeElectrode"]["Coating"]["thickness"]
-    geomparams[:SEP][:N]         = jsondict["Separator"]["N"]
-    geomparams[:SEP][:thickness] = jsondict["Separator"]["thickness"]
+    geomparams[:SEP][:N]          = jsondict["Separator"]["N"]
+    geomparams[:SEP][:thickness]  = jsondict["Separator"]["thickness"]
     geomparams[:PeAm][:N]         = jsondict["PositiveElectrode"]["Coating"]["N"]
     geomparams[:PeAm][:thickness] = jsondict["PositiveElectrode"]["Coating"]["thickness"]
-    geomparams[:PeCc][:N]          = jsondict["PositiveElectrode"]["CurrentCollector"]["N"]
-    geomparams[:PeCc][:thickness]  = jsondict["PositiveElectrode"]["CurrentCollector"]["thickness"]
 
+    if include_cc
+        geomparams[:NeCc][:N]         = jsondict["NegativeElectrode"]["CurrentCollector"]["N"]
+        geomparams[:NeCc][:thickness] = jsondict["NegativeElectrode"]["CurrentCollector"]["thickness"]
+        geomparams[:PeCc][:N]         = jsondict["PositiveElectrode"]["CurrentCollector"]["N"]
+        geomparams[:PeCc][:thickness] = jsondict["PositiveElectrode"]["CurrentCollector"]["thickness"]
+    end
+    
     for name in names
         geomparams[name][:facearea] = jsondict["Geometry"]["faceArea"]
     end
