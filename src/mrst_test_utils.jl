@@ -1,12 +1,12 @@
-############################################################################################
-#Exported functions:
-############################################################################################
+######################
+# Exported functions #
+######################
 
 export run_battery, inputRefToStates, computeCellCapacity, Constants
 
-############################################################################################
-#Run battery 
-############################################################################################
+###############
+# Run battery #
+###############
 
 function run_battery(init::InputFile;   
                     use_p2d::Bool                     = true,
@@ -44,7 +44,7 @@ function run_battery(init::InputFile;
     
 end
 
-#Allows running run_battery with simple option for loading mat files
+# Allows running run_battery with simple option for loading mat files
 function run_battery(init::String;
                      use_p2d::Bool         = true,
                      extra_timing::Bool    = false,
@@ -71,9 +71,9 @@ function run_battery(init::String;
                        kwarg...)
 end
 
-#####################################################################################
-#Setup config
-#####################################################################################
+################
+# Setup config #
+################
 
 function setup_config(sim::Jutul.JutulSimulator,
                       model::MultiModel,
@@ -88,17 +88,17 @@ function setup_config(sim::Jutul.JutulSimulator,
 
     cfg = simulator_config(sim; kwarg...)
     
-    cfg[:linear_solver] = battery_linsolve(model, linear_solver)
-    cfg[:debug_level] = 0
+    cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
+    cfg[:debug_level]                = 0
     #cfg[:max_timestep_cuts]         = 0
-    cfg[:max_residual] = 1e20
-    cfg[:min_nonlinear_iterations] = 1
-    cfg[:extra_timing] = extra_timing
+    cfg[:max_residual]               = 1e20
+    cfg[:min_nonlinear_iterations]   = 1
+    cfg[:extra_timing]               = extra_timing
     # cfg[:max_nonlinear_iterations] = 5
-    cfg[:safe_mode] = false
-    cfg[:error_on_incomplete] = false
+    cfg[:safe_mode]                  = false
+    cfg[:error_on_incomplete]        = false
     #Original matlab steps will be too large!
-    cfg[:failure_cuts_timestep]=true
+    cfg[:failure_cuts_timestep]      = true
 
     for key in Jutul.submodels_symbols(model)
         cfg[:tolerances][key][:default]  = 1e-5
@@ -131,9 +131,9 @@ function setup_config(sim::Jutul.JutulSimulator,
     
 end
 
-#####################################################################################
-#Setup timestepping
-#####################################################################################
+######################
+# Setup timestepping #
+######################
 
 function setup_timesteps(init::JSONFile;
                          kwarg ...)
@@ -227,11 +227,10 @@ function setup_timesteps(init::MatlabFile;
     return timesteps
 end
 
-####################################################################################
-#Setup simulation
-####################################################################################
+####################
+# Setup simulation #
+####################
 
-#Replaces setup_sim_1d
 function setup_sim(init::JSONFile;
                    use_groups::Bool = false,
                    general_ad::Bool = false,
@@ -282,11 +281,10 @@ function setup_sim(init::MatlabFile;
 
 end
 
-#######################################################################
-#Setup coupling
-#######################################################################
+##################
+# Setup coupling #
+##################
 
-#Replaces setup_coupling_1d!
 function setup_coupling!(init::JSONFile,
                          model::MultiModel,
                          parameters::Dict{Symbol,<:Any}
@@ -299,6 +297,10 @@ function setup_coupling!(init::JSONFile,
     include_cc = include_current_collectors(model)
     
     if include_cc 
+
+        ################################
+        # Setup coupling NeCc <-> NeAm #
+        ################################
 
         Ncc  = geomparams[:NeCc][:N]
 
@@ -331,9 +333,11 @@ function setup_coupling!(init::JSONFile,
         add_cross_term!(model, ct_pair)
         
     end
-    
-    # setup coupling NeAm <-> Elyte charge
 
+    #################################
+    # Setup coupling NeAm <-> Elyte #
+    #################################
+    
     Nnam = geomparams[:NeAm][:N]
     
     srange = collect(1 : Nnam) # negative electrode
@@ -364,9 +368,11 @@ function setup_coupling!(init::JSONFile,
         add_cross_term!(model, ct_pair)
         
     end
-
-    # setup coupling Elyte <-> PeAm charge
-
+    
+    #################################
+    # setup coupling Elyte <-> PeAm #
+    #################################
+    
     Nnam = geomparams[:NeAm][:N]
     Nsep = geomparams[:SEP][:N]
     Npam = geomparams[:PeAm][:N]
@@ -403,7 +409,9 @@ function setup_coupling!(init::JSONFile,
     
     if  include_cc
         
-        # setup coupling PeCc <-> PeAm charge
+        ################################
+        # setup coupling PeCc <-> PeAm #
+        ################################
         
         Npam  = geomparams[:PeAm][:N]
         
@@ -439,6 +447,11 @@ function setup_coupling!(init::JSONFile,
                                    equation = :charge_conservation)
         
         add_cross_term!(model, ct_pair)
+
+    end
+
+
+    if include_cc
         
         # setup coupling with control
         
@@ -471,14 +484,13 @@ function setup_coupling!(init::MatlabFile,
                          model::MultiModel
                          )
     
-    # setup coupling NeCc <-> NeAm :charge_conservation
-    
     exported_all = init.object
 
     include_cc = include_current_collectors(model)
     
-    
+    ######################################
     # setup coupling NeAm <-> Elyte charge
+    ######################################
 
     srange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 1]) # negative electrode
     trange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 2]) # electrolyte (negative side)
@@ -509,7 +521,9 @@ function setup_coupling!(init::MatlabFile,
         
     end
 
+    ######################################
     # setup coupling Elyte <-> PeAm charge
+    ######################################
 
     srange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,1]) # postive electrode
     trange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:,2]) # electrolyte (positive side)
@@ -542,7 +556,9 @@ function setup_coupling!(init::MatlabFile,
     
     if  include_cc
         
+        #####################################
         # setup coupling NeCc <-> NeAm charge
+        #####################################
         
         srange = Int64.(
             exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:, 1]
@@ -561,8 +577,9 @@ function setup_coupling!(init::MatlabFile,
         ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
         
-        
+        #####################################
         # setup coupling PeCc <-> PeAm charge
+        #####################################
         
         target = Dict( 
             :model => :PeAm,
@@ -591,7 +608,9 @@ function setup_coupling!(init::MatlabFile,
 
     if include_cc
         
+        ########################################
         # setup coupling PeCc <-> Control charge
+        ########################################
 
         trange = convert_to_int_vector(
                 exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingcells"]
@@ -605,7 +624,9 @@ function setup_coupling!(init::MatlabFile,
         
     else
         
+        ########################################
         # setup coupling PeAm <-> Control charge
+        ########################################
 
         trange = convert_to_int_vector(
                 exported_all["model"]["PositiveElectrode"]["ActiveMaterial"]["externalCouplingTerm"]["couplingcells"]
@@ -701,9 +722,9 @@ end
 
 
 
-###################################################################################
-#Setup battery model
-##################################################################################
+#######################
+# Setup battery model #
+#######################
 
 function setup_battery_model(init::MatlabFile; 
                              use_groups::Bool = false,
@@ -737,6 +758,7 @@ function setup_battery_model(init::MatlabFile;
     inputparams = init.object["model"]
     
     function setup_active_material(name::Symbol, general_ad::Bool)
+
         jsonName = jsonNames[name]
 
         inputparams_co  = inputparams[jsonName]["Coating"]
@@ -794,7 +816,9 @@ function setup_battery_model(init::MatlabFile;
         
     end
     
-    # Setup positive current collector if any
+    ###########################################
+    # Setup positive current collector if any #
+    ###########################################
     
     if include_cc
 
@@ -806,11 +830,17 @@ function setup_battery_model(init::MatlabFile;
         
     end
 
-    # Setup NeAm
+    ##############
+    # Setup NeAm #
+    ##############
+
 
     model_neam = setup_active_material(:NeAm,general_ad)
 
-    ## Setup Elyte
+    ###############
+    # Setup Elyte #
+    ###############
+
     params = JutulStorage();
     inputparams_elyte = inputparams["Electrolyte"]
     params[:transference] = inputparams_elyte["species"]["transferenceNumber"]
@@ -833,17 +863,26 @@ function setup_battery_model(init::MatlabFile;
     model_elyte = setup_component(inputparams["Electrolyte"],
                                   elyte,nothing,general_ad)
 
-    # Setup PeAm
+    ##############
+    # Setup PeAm #
+    ##############
+
     
     model_peam = setup_active_material(:PeAm,general_ad)
 
-    # Setup negative current collector if any
     if include_cc
+
+        ###########################################
+        # Setup negative current collector if any #
+        ###########################################
+
         model_pecc = setup_component(inputparams["PositiveElectrode"]["CurrentCollector"],
                                    CurrentCollector(),nothing,general_ad)
     end
 
-    # Setup control model
+    #######################
+    # Setup control model #
+    #######################
 
     controlPolicy = init.object["model"]["Control"]["controlPolicy"]
     
@@ -928,7 +967,7 @@ function setup_battery_model(init::JSONFile;
     include_cc = include_current_collectors(init)
 
     """
-    Generic setup for a component (:NeAm, :NeCc, :PeAm, :PeCc)
+    Generic helper function to setup a component (:NeAm, :NeCc, :PeAm, :PeCc)
     """
     function setup_component(geomparam::Dict, 
                              sys; 
@@ -980,7 +1019,7 @@ function setup_battery_model(init::JSONFile;
     end
 
     """
-    Specific setup for electrolyte (:Elyte)
+    Helper function to setup  electrolyte (:Elyte)
     """
     function setup_component(geomparams::Dict, 
                              sys::Electrolyte, 
@@ -1037,7 +1076,9 @@ function setup_battery_model(init::JSONFile;
         :PeAm => "PositiveElectrode",        
     )
 
-    
+    """
+    Helper function to setup the active materials
+    """
     function setup_active_material(name::Symbol, 
                                    geomparams::Dict{Symbol, <:Any})
 
@@ -1085,12 +1126,6 @@ function setup_battery_model(init::JSONFile;
         k0  = inputparams_am["Interface"]["reactionRateConstant"]
         Eak = inputparams_am["Interface"]["activationEnergyOfReaction"]
 
-        ###### MERGE ######
-        # am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
-        
-        # funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
-        # am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
-        
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
 
         if haskey(inputparams_am["Interface"]["openCircuitPotential"], "function")
@@ -1134,7 +1169,9 @@ function setup_battery_model(init::JSONFile;
         
     end
     
-    ## Setup negative current collector
+    ####################################
+    # Setup negative current collector #
+    ####################################
     
     if include_cc
         sys_necc   = CurrentCollector()
@@ -1144,12 +1181,16 @@ function setup_battery_model(init::JSONFile;
                                      general_ad = general_ad)
     end
 
-    ## Setup NeAm
+    ##############
+    # Setup NeAm #
+    ##############
     
     model_neam = setup_active_material(:NeAm, geomparams)
 
-    ## Setup Elyte
-
+    ###############
+    # Setup Elyte #
+    ###############
+    
     params = JutulStorage();
     inputparams_elyte = jsondict["Electrolyte"]
     
@@ -1187,19 +1228,25 @@ function setup_battery_model(init::JSONFile;
     elyte = Electrolyte(params)
     model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
 
-    ## Setup PeAm
+    ##############
+    # Setup PeAm #
+    ##############
     
     model_peam = setup_active_material(:PeAm, geomparams)
 
-    ## Setup negative current collector if any
+    ###########################################
+    # Setup negative current collector if any #
+    ###########################################
     
     if include_cc
         sys_pecc = CurrentCollector()
         model_pecc = setup_component(geomparams[:PeCc], sys_pecc, general_ad = general_ad)
     end
-    
-    ## Setup control model
 
+    #######################
+    # Setup control model #
+    #######################
+    
     controlPolicy = jsondict["Control"]["controlPolicy"]
     
     if controlPolicy == "CCDischarge"
@@ -1228,7 +1275,11 @@ function setup_battery_model(init::JSONFile;
     sys_control    = CurrentAndVoltageSystem(policy)
     domain_control = CurrentAndVoltageDomain()
     model_control  = SimulationModel(domain_control, sys_control, context = DefaultContext())
-    
+
+    #####################
+    # Setup multi-model #
+    #####################
+
     if !include_cc
         groups = nothing
         model = MultiModel(
@@ -1267,9 +1318,9 @@ function setup_battery_model(init::JSONFile;
     
 end
 
-###################################################################################
-# Setup battery parameters
-###################################################################################
+############################
+# Setup battery parameters #
+############################
 
 function setup_battery_parameters(init::MatlabFile, 
                                   model::MultiModel
@@ -1284,13 +1335,20 @@ function setup_battery_parameters(init::MatlabFile,
     include_cc = include_current_collectors(model)
 
     if include_cc
+
+        #####################
+        # Current collector #
+        #####################
+
         prm_necc = Dict{Symbol, Any}()
         exported_necc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
         prm_necc[:Conductivity] = exported_necc["effectiveElectronicConductivity"][1]
         parameters[:NeCc] = setup_parameters(model[:NeCc], prm_necc)
     end
 
-    # Negative active material
+    ############################
+    # Negative active material #
+    ############################
     
     prm_neam = Dict{Symbol, Any}()
     exported_neam = exported["model"]["NegativeElectrode"]["Coating"]
@@ -1306,14 +1364,20 @@ function setup_battery_parameters(init::MatlabFile,
 
     parameters[:NeAm] = setup_parameters(model[:NeAm], prm_neam)
 
-    # Electrolyte
+    ###############
+    # Electrolyte #
+    ###############
+
     
     prm_elyte = Dict{Symbol, Any}()
     prm_elyte[:Temperature] = T0        
 
     parameters[:Elyte] = setup_parameters(model[:Elyte], prm_elyte)
 
-    # Positive active material
+    ############################
+    # Positive active material #
+    ############################
+
 
     prm_peam = Dict{Symbol, Any}()
     exported_peam = exported["model"]["PositiveElectrode"]["Coating"]
@@ -1329,9 +1393,12 @@ function setup_battery_parameters(init::MatlabFile,
 
     parameters[:PeAm] = setup_parameters(model[:PeAm], prm_peam)
 
-    # Positive current collector (if any)
-    
     if include_cc
+
+        #######################################
+        # Positive current collector (if any) #
+        #######################################
+        
         prm_pecc = Dict{Symbol, Any}()
         exported_pecc = exported["model"]["PositiveElectrode"]["CurrentCollector"]
         prm_pecc[:Conductivity] = exported_pecc["effectiveElectronicConductivity"][1]
@@ -1350,6 +1417,7 @@ function setup_battery_parameters(init::JSONFile,
                                   )
 
     function computeEffectiveConductivity(comodel, cojsonstruct)
+
         # Compute effective conductivity for the coating
 
         # First we compute the intrinsic conductivity as volume weight average of the subcomponents
@@ -1384,16 +1452,23 @@ function setup_battery_parameters(init::JSONFile,
 
     include_cc = include_current_collectors(model)
 
-    # Negative current collector (if any)
+    
 
     if include_cc
+        
+        #######################################
+        # Negative current collector (if any) #
+        #######################################
+        
         prm_necc = Dict{Symbol, Any}()
         jsonstruct_necc = jsonstruct["NegativeElectrode"]["CurrentCollector"]
         prm_necc[:Conductivity] = jsonstruct_necc["electronicConductivity"]
         parameters[:NeCc] = setup_parameters(model[:NeCc], prm_necc)
     end
 
-    # Negative active material
+    ############################
+    # Negative active material #
+    ############################
     
     prm_neam = Dict{Symbol, Any}()
     jsonstruct_neam = jsonstruct["NegativeElectrode"]["Coating"]["ActiveMaterial"]
@@ -1411,7 +1486,9 @@ function setup_battery_parameters(init::JSONFile,
 
     parameters[:NeAm] = setup_parameters(model[:NeAm], prm_neam)
 
-    # Electrolyte
+    ###############
+    # Electrolyte #
+    ###############
     
     prm_elyte = Dict{Symbol, Any}()
     prm_elyte[:Temperature] = T0 
@@ -1419,7 +1496,9 @@ function setup_battery_parameters(init::JSONFile,
 
     parameters[:Elyte] = setup_parameters(model[:Elyte], prm_elyte)
 
-    # Positive active material
+    ############################
+    # Positive active material #
+    ############################
 
     prm_peam = Dict{Symbol, Any}()
     jsonstruct_peam = jsonstruct["PositiveElectrode"]["Coating"]["ActiveMaterial"]
@@ -1437,9 +1516,12 @@ function setup_battery_parameters(init::JSONFile,
 
     parameters[:PeAm] = setup_parameters(model[:PeAm], prm_peam)
 
-    # Positive current collector (if any)
-
     if include_cc
+
+        #######################################
+        # Positive current collector (if any) #
+        #######################################
+
         prm_pecc = Dict{Symbol, Any}()
         jsonstruct_pecc = jsonstruct["PositiveElectrode"]["CurrentCollector"]
         prm_pecc[:Conductivity] = jsonstruct_pecc["electronicConductivity"]
@@ -1447,6 +1529,10 @@ function setup_battery_parameters(init::JSONFile,
         parameters[:PeCc] = setup_parameters(model[:PeCc], prm_pecc)
     end        
 
+    ###########
+    # Control #
+    ###########
+    
     prm_control = Dict{Symbol, Any}()
 
     controlPolicy = jsonstruct["Control"]["controlPolicy"]
@@ -1481,9 +1567,9 @@ function setup_battery_parameters(init::JSONFile,
     
 end
 
-###################################################################################
-# Setup initial state
-###################################################################################
+#######################
+# Setup initial state #
+#######################
 
 function setup_battery_initial_state(init::MatlabFile, 
                                      model::MultiModel
@@ -1682,22 +1768,9 @@ function setup_battery_initial_state(init::JSONFile,
     
 end
 
-
-##################################################################################
-#Current function
-##################################################################################
-# function currentFun(t::T, inputI::T) where T
-#     #inputI = 9.4575
-#     tup = 0.1
-#     val::T = 0.0
-#     if  t <= tup
-#         val = sineup(0.0, inputI, 0.0, tup, t) 
-#     else
-#         val = inputI
-#     end
-#     return val
-# end
-
+####################
+# Current function #
+####################
 
 function currentFun(t::T, inputI::T, tup::T=0.1) where T
     val::T = 0.0
@@ -1709,9 +1782,9 @@ function currentFun(t::T, inputI::T, tup::T=0.1) where T
     return val
 end
 
-##################################################################################
-#Setup volume fraction 
-##################################################################################
+#########################
+# Setup volume fraction # 
+#########################
 
 function setup_volume_fractions!(model::MultiModel, geomparams::Dict{Symbol,<:Any})
 
@@ -1747,9 +1820,9 @@ function setup_volume_fractions!(model::MultiModel, geomparams::Dict{Symbol,<:An
 
 end
 
-##################################################################################
-#Transmissibilities
-##################################################################################
+######################
+# Transmissibilities #
+######################
 
 function getTrans(model1::Dict{String,<:Any},
                   model2::Dict{String, Any}, 
@@ -1856,9 +1929,9 @@ function getHalfTrans(model::Dict{String,<:Any},
     
 end
 
-##################################################################################
-#Setup geomparams
-##################################################################################
+####################
+# Setup geomparams #
+####################
 
 function setup_geomparams(init::JSONFile)
     
@@ -1929,9 +2002,9 @@ function computeCellCapacity(model::MultiModel)
     
 end
 
-###################################################################################
-#Other utils
-###################################################################################
+###############
+# Other utils #
+###############
 
 struct Constants
     F
