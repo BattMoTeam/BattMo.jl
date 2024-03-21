@@ -48,17 +48,3 @@ function select_equations!(eqs,
     
 end
 
-function apply_forces_to_equation!(acc,
-                                   storage,
-                                   model::SimulationModel{<:Any, <:CurrentCollector, <:Any, <:Any},
-                                   law::ConservationLaw{:Charge},
-                                   eq_s,
-                                   force,
-                                   time)
-    
-    cell   = force.cell
-    inputI = force.src
-    
-    acc[cell] -= inputI
-    
-end

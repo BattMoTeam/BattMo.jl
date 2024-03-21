@@ -1339,7 +1339,7 @@ function setup_battery_parameters(init::MatlabFile,
                                   model::MultiModel
                                   )
 
-    parameters = Dict{Symbol, Any}() #NB
+    parameters = Dict{Symbol, Any}()
 
     exported=init.object
 
