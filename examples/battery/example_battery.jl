@@ -16,8 +16,8 @@ use_p2d = true
 
 if use_p2d
     # name = "p2d_40"
-    name = "p2d_40_no_cc"
-    # name = "p2d_40_cccv"
+    # name = "p2d_40_no_cc"
+    name = "p2d_40_cccv"
     # name = "3d_demo_case"
 else
     # name = "p1d_40"
@@ -32,7 +32,7 @@ end
 
 # sim, forces, state0, parameters, exported, model = BattMo.setup_sim(name, use_p2d = use_p2d)
 
-do_json = false
+do_json = true
 
 if do_json
 
@@ -40,19 +40,8 @@ if do_json
     init = JSONFile(fn)
     states, reports, extra = run_battery(init; use_p2d = use_p2d, info_level = 0, extra_timing = false);
 
-    nsteps = size(states)
-    timesteps = extra[:timesteps]
-    
-    t = cumsum(timesteps)
+    t = [state[:Control][:ControllerCV].time for state in states]
     E = [state[:Control][:Phi][1] for state in states]
-    t = t[1 : length(E)]    
-
-    # refdict = load_reference_solution(name)
-    # statesref  = refdict["states"]
-
-    # timeref = [state["time"] for state in statesref]
-    # Eref    = [state["Control"]["E"] for state in statesref]
-
 
 else
     
@@ -61,12 +50,8 @@ else
 
     states, reports, extra, exported = run_battery(init; use_p2d = use_p2d, info_level = 0, max_step = nothing);
 
-    nsteps = size(states, 1)
-
-    timesteps = extra[:timesteps]
-    t = cumsum(timesteps[1 : nsteps])
+    t = [state[:Control][:ControllerCV].time for state in states]
     E = [state[:Control][:Phi][1] for state in states]
-    t = t[1 : length(E)]
     
     statesref = extra[:init].object["states"]
     timeref   = t

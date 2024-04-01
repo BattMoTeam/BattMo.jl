@@ -372,6 +372,7 @@ end
 function Jutul.update_values!(old::SimpleControllerCV, new::SimpleControllerCV)
     
     old.target            = new.target
+    old.time              = new.time
     old.target_is_voltage = new.target_is_voltage
     old.mode              = new.mode
     
@@ -545,7 +546,14 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
         ctrl.mode = nextmode
         ctrl.numberOfCycles = ncycles
         
+    elseif policy isa SimpleCVPolicy
+        
+        ctrl.time = time
+        copyController!(storage.state0[:ControllerCV], ctrl)
+
     else
+
+        error("policy not recognized")
         
     end
 
