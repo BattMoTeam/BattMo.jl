@@ -4,7 +4,8 @@ function output = setupMatlabReference(casename, jsonfolder, datafolder, varargi
 % - jsonfolder : folder where the json file is fetched
 % - datafolder : folder where the computed data is saved
 
-    opt = struct('runSimulation', true);
+    opt = struct('runSimulation', true, ...
+                 'doplot'       , true);
     opt = merge_options(opt, varargin{:});
 
     runSimulation = opt.runSimulation;
@@ -27,52 +28,32 @@ function output = setupMatlabReference(casename, jsonfolder, datafolder, varargi
     %% To run the simulation, you need to install matlab battmo
 
     mrstModule add ad-core mrst-gui mpfa agmg linearsolvers
-    output = runBatteryJson(jsonstruct, 'runSimulation', runSimulation);
     
-    initstate = output.initstate;
-    model     = output.model;
-    schedule  = output.schedule;
-
-    if runSimulation
-        
-        states   = output.states;
-
-        %% added all the extra variables on state
-
-        for istate = 1 : numel(states)
-            states{istate} = model.addVariables(states{istate});
-        end
-
-    else
-
-        states = {};
-        
-    end
-
-    %% Save solution as a matlab struct that can be imported in Julia
-
-    if exist('class2data') == 0
-        adddir = fullfile(battmo_folder, 'src/utils');
-        addpath(adddir);
-        fprintf('Added %s to Matlab path in order to run class2data\n', adddir);
-    end
-
-    model    = convertModelGrids(model);
-    model    = class2data(model);
-    schedule = class2data(schedule);
-
+    output = setupSimulationForJuliaBridge(jsonstruct, 'runSimulation', runSimulation);
+    
     filename = sprintf('%s.mat', casename);
     filename = fullfile(datafolder, filename);
 
-    save(filename, 'model', 'states', 'initstate', "schedule")
+    model     = output.model;
+    initstate = output.initstate;
+    schedule  = output.schedule;
+
+    if runSimulation
+        states = output.states;
+        save(filename, 'model', 'states', 'initstate', "schedule");
+    else
+        save(filename, 'model', 'initstate', "schedule");
+    end
     
-    doplot = true;
-    if doplot && runSimulation
+    if opt.doplot && runSimulation
+        
         ind = cellfun(@(x) not(isempty(x)), states); 
         states = states(ind);
         E = cellfun(@(x) x.Control.E, states); 
         I = cellfun(@(x) x.Control.I, states);
         time = cellfun(@(x) x.time, states);
         plot(time, E)
+        
     end
+    
 end
