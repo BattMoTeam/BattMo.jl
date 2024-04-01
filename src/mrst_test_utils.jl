@@ -696,8 +696,14 @@ function include_current_collectors(init::MatlabFile)
 
     model = init.object["model"]
 
-    if haskey(model, "include_current_collectors") && isempty(model["include_current_collectors"])
-        include_cc = false
+    if haskey(model, "include_current_collectors")
+        if isempty(model["include_current_collectors"])
+            include_cc = false
+        elseif isa(model["include_current_collectors"], Bool) && model["include_current_collectors"] == false
+            include_cc = false
+        else
+            include_cc = true
+        end
     else
         include_cc = true
     end
@@ -791,14 +797,10 @@ function setup_battery_model(init::MatlabFile;
         k0  = inputparams_itf["reactionRateConstant"]
         Eak = inputparams_itf["activationEnergyOfReaction"]
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
-        
-        if name == :NeAm
-            am_params[:ocp_func] = computeOCP_graphite
-        elseif name == :PeAm
-            am_params[:ocp_func] = computeOCP_nmc111
-        else
-            error("not recongized")
-        end
+
+        funcname = inputparams_itf["computeOCPFunc"] # This matlab parameter must have been converted from function handle to string before call
+        func = getfield(BattMo, Symbol(funcname))
+        am_params[:ocp_func] = func
 
         if use_p2d
             rp = inputparams_sd["particleRadius"]
