@@ -56,7 +56,10 @@ if do_json
 
 else
     
-    states, reports, extra, exported = run_battery(name; use_p2d = use_p2d, info_level = 0, max_step = nothing);
+    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
+    init = MatlabFile(fn)
+
+    states, reports, extra, exported = run_battery(init; use_p2d = use_p2d, info_level = 0, max_step = nothing);
 
     nsteps = size(states, 1)
 

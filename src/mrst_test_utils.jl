@@ -44,32 +44,6 @@ function run_battery(init::InputFile;
     
 end
 
-# Allows running run_battery with simple option for loading mat files
-function run_battery(init::String;
-                     use_p2d::Bool         = true,
-                     extra_timing::Bool    = false,
-                     max_step              = nothing,
-                     linear_solver::Symbol = :direct,
-                     general_ad::Bool      = false,
-                     use_groups::Bool      = false,
-                     kwarg...)
-    """
-        Simplifies reading pre-generated .mat files from the data repository inside BattMo.jl
-    """
-
-    #Path to mat files
-    path = string(dirname(pathof(BattMo)), "/../test/battery/data/")
-    suffix = ".mat"
-
-    return run_battery(MatlabFile(path * init * suffix); 
-                       use_p2d       = use_p2d, 
-                       extra_timing  = extra_timing, 
-                       max_step      = max_step, 
-                       linear_solver = linear_solver, 
-                       general_ad    = general_ad, 
-                       use_groups    = use_groups,
-                       kwarg...)
-end
 
 ################
 # Setup config #
