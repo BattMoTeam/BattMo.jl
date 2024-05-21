@@ -1,27 +1,33 @@
 # BattMo.jl is a framework for continuum modelling of lithium-ion batteries written in Julia
 
-
 The Battery Modelling Toolbox (**BattMo**) is a resource for continuum modelling of electrochemical devices in MATLAB. The initial development features a pseudo X-dimensional (PXD) framework for the Doyle-Fuller-Newman model of lithium-ion battery cells. This is currently a early release that implements a subset of features from the [MATLAB version of BattMo](https://github.com/BattMoTeam/BattMo) with improved numerical performance. **BattMo.jl** is based on [Jutul.jl](https://github.com/sintefmath/Jutul.jl) and uses finite-volume discretizations and automatic differentiation to simulate models in 1D, 2D and 3D.
 
 The current implementation has two options for setting up simulation cases:
+
 - You can read in input data prepared in the MATLAB version of BattMo (general 3D grids)
 - Or you can use the common BattMo JSON format to run cases (primarily 1D grids)
 
 <img src="docs/src/assets/battmologo_text.png" style="margin-left: 5cm" width="300px">
 
 ## Installation
+
 This package is registered in the General Julia registry. To add it to your Julia environment, open Julia and run
+
 ```julia
 using Pkg; Pkg.add("BattMo")
 ```
 
 ### Getting started
+
 For an example of usage, you can add the GLMakie plotting package:
+
 ```julia
 using Pkg
 Pkg.add("GLMakie")
 ```
+
 You can then run the following to simulate the predefined `p2d_40` case:
+
 ```julia
 using BattMo
 # Simulate case
@@ -35,16 +41,21 @@ ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Disch
 lines!(ax, t, voltage)
 display(fig)
 ```
+
 This should produce the following plot:
 ![Discharge curve](docs/src/assets/discharge.png)
 
 ### 3D simulation example
+
 This example uses plotting from Jutul, so we need to add that package to our environment.
+
 ```julia
 using Pkg
 Pkg.add("Jutul")
 ```
+
 Run a 3D model and plot the results in an interactive viewer.
+
 ```julia
 using BattMo
 # Simulate case
@@ -61,11 +72,12 @@ shift[:CC] = dx
 shift[:PP] = dx
 plot_multimodel_interactive(extra[:model], states, shift = shift, colormap = :curl)
 ```
+
 ![3D plot](docs/src/assets/3d_plot.png)
 
 ## Acknowledgements
 
 BattMo has received funding from the European Union’s Horizon 2020 innovation program under grant agreement numbers:
 
-* 875527 HYDRA  
-* 957189 BIG-MAP  
+- 875527 HYDRA
+- 957189 BIG-MAP
