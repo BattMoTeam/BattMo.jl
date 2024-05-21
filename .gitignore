@@ -28,3 +28,4 @@ apps/demo_app_with_plotting/battmo_compiled/*
 *.vscode
 *.7z
 *.ico
+*.dat
