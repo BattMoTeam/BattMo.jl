@@ -34,8 +34,10 @@ function select_parameters!(S,
 
     S[:Conductivity] = Conductivity()
     if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
-        S[:BoundaryPhi]  = BoundaryPotential(:Phi)
-        S[:BoundaryC]    = BoundaryPotential(:C)
+        if count_active_entities(model.data_domain, BoundaryDirichletFaces()) > 0
+            S[:BoundaryPhi]  = BoundaryPotential(:Phi)
+            S[:BoundaryC]    = BoundaryPotential(:C)
+        end
     end
     
 end

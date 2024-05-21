@@ -111,9 +111,9 @@ function apply_boundary_potential!(
         end
         dolegacy = true
     elseif Jutul.hasentity(model.domain, BoundaryDirichletFaces())
-        dobc = true
         nc = count_active_entities(model.domain, BoundaryDirichletFaces())
-        if nc > 0
+        dobc = nc > 0
+        if dobc
             bcdirhalftrans = model.domain.representation[:bcDirHalfTrans]
             bcdircells     = model.domain.representation[:bcDirCells]
             bcdirinds      = model.domain.representation[:bcDirInds]

@@ -1,7 +1,7 @@
-using BattMo, Jutul# , JutulViz
+using BattMo, Jutul
 # Very rough battery optimization example
-name = "model1D_50"
-states, reports, extra = run_battery(name, use_p2d = false, info_level = 1, max_step = nothing);
+name = "p2d_40"
+states, reports, extra = run_battery(name, use_p2d = true, info_level = 1, max_step = nothing, general_ad = true);
 prm = extra[:parameters]
 model = extra[:model]
 state0 = extra[:state0]
