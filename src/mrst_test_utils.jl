@@ -1669,7 +1669,6 @@ function setup_battery_initial_state(init::MatlabFile,
     return initState 
     
 end
-using Logging
 
 
 function setup_battery_initial_state(init::JSONFile,
