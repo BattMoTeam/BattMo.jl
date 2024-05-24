@@ -59,7 +59,9 @@ import Jutul:
     setup_state!,
     declare_pattern,
     select_minimum_output_variables!,
-    physical_representation
+    physical_representation,
+    get_1d_interpolator
+    
 
 include("io_types.jl")
 include("physical_constants.jl")

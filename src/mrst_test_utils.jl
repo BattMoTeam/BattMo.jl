@@ -1117,11 +1117,18 @@ function setup_battery_model(init::JSONFile;
             exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
             am_params[:ocp_func] = @RuntimeGeneratedFunction(exp)
             
-        else
+        elseif haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionname")
             
             funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
             am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
             
+        else
+            am_params[:ocp_funcdata] = true
+            data_x = inputparams_am["Interface"]["openCircuitPotential"]["data_x"]
+            data_y = inputparams_am["Interface"]["openCircuitPotential"]["data_y"]
+
+            interpolation_object = get_1d_interpolator(data_x,data_y)
+            am_params[:ocp_func] = interpolation_object
         end
         
         use_p2d = true
@@ -1187,10 +1194,19 @@ function setup_battery_model(init::JSONFile;
         exp = setup_diffusivity_evaluation_expression_from_string(inputparams_elyte["diffusionCoefficient"]["function"])
         params[:diffusivity_func] = @RuntimeGeneratedFunction(exp)
         
-    else
-        
+    elseif haskey(inputparams_elyte["diffusionCoefficient"], "functionname")
+
         funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
         params[:diffusivity_func] = getfield(BattMo, Symbol(funcname))
+
+    else
+        cap
+        data_x = inputparams_elyte["diffusionCoefficient"]["data_x"]
+        data_y = inputparams_elyte["diffusionCoefficient"]["data_y"]
+
+        interpolation = get_1d_interpolator(data_x,data_y)
+        params[:diffusivity_data] = true
+        params[:diffusivity_func] = interpolation
         
     end
 
@@ -1200,10 +1216,18 @@ function setup_battery_model(init::JSONFile;
         exp = setup_conductivity_evaluation_expression_from_string(inputparams_elyte["ionicConductivity"]["function"])
         params[:conductivity_func] = @RuntimeGeneratedFunction(exp)
         
-    else
+    elseif haskey(inputparams_elyte["ionicConductivity"], "functionname")
         
         funcname = inputparams_elyte["ionicConductivity"]["functionname"]
         params[:conductivity_func] = getfield(BattMo, Symbol(funcname))
+
+    else
+        data_x = inputparams_elyte["ionicConductivity"]["data_x"]
+        data_y = inputparams_elyte["ionicConductivity"]["data_y"]
+
+        interpolation = get_1d_interpolator(data_x,data_y)
+        params[:conductivity_data] = true
+        params[:conductivity_func] = interpolation
         
     end
 
@@ -1645,9 +1669,13 @@ function setup_battery_initial_state(init::MatlabFile,
     return initState 
     
 end
+using Logging
+
 
 function setup_battery_initial_state(init::JSONFile,
                                      model::MultiModel)
+
+                                     
 
     jsonstruct = init.object
 
@@ -1674,6 +1702,10 @@ function setup_battery_initial_state(init::JSONFile,
 
         if Jutul.haskey(model[name].system.params, :ocp_funcexp)
             OCP = model[name].system[:ocp_func](c, T, refT, cmax)
+        elseif Jutul.haskey(model[name].system.params, :ocp_funcdata)
+            
+            OCP = model[name].system[:ocp_func](theta)
+
         else
             OCP = model[name].system[:ocp_func](c, T, cmax)
         end
