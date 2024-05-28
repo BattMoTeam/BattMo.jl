@@ -80,7 +80,7 @@ function setup_config(sim::Jutul.JutulSimulator,
     
     if model[:Control].system.policy isa CyclingCVPolicy
 
-        cfg[:tolerances][:global_check] = (model, storage) -> check_constraints(model, storage)
+        cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
 
         function post_hook(done, report, sim, dt, forces, max_iter, cfg)
 
