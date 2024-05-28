@@ -15,9 +15,9 @@ ENV["JULIA_DEBUG"] = 0;
 use_p2d = true
 
 if use_p2d
-    name = "p2d_40"
+    # name = "p2d_40"
     # name = "p2d_40_no_cc"
-    # name = "p2d_40_cccv"
+    name = "p2d_40_cccv"
     # name = "3d_demo_case"
 else
     # name = "p1d_40"
@@ -42,7 +42,8 @@ if do_json
 
     t = [state[:Control][:ControllerCV].time for state in states]
     E = [state[:Control][:Phi][1] for state in states]
-
+    I = [state[:Control][:Current][1] for state in states]
+    
 else
     
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
@@ -52,6 +53,7 @@ else
 
     t = [state[:Control][:ControllerCV].time for state in states]
     E = [state[:Control][:Phi][1] for state in states]
+    I = [state[:Control][:Current][1] for state in states]
     
     statesref = extra[:init].object["states"]
     timeref   = t
@@ -59,16 +61,27 @@ else
 
 end
 
-plt = Plots.plot(t, E;
-                 title     = "Discharge Voltage",
-                 size      = (1000, 800),
-                 label     = "BattMo.jl",
-                 xlabel    = "Time / s",
-                 ylabel    = "Voltage / V",
-                 linewidth = 4,
-                 xtickfont = font(pointsize = 15),
-                 ytickfont = font(pointsize = 15))
+p1 = Plots.plot(t, E;
+                label     = "",
+                size      = (1000, 800),
+                title     = "Voltage",
+                xlabel    = "Time / s",
+                ylabel    = "Voltage / V",
+                linewidth = 4,
+                xtickfont = font(pointsize = 15),
+                ytickfont = font(pointsize = 15))
 
-# Plots.plot!(timeref, Eref, label = "BattMo.m", linewidth = 2)
-display(plt)
+
+p2 = Plots.plot(t, I;
+                label     = "",
+                size      = (1000, 800),
+                title     = "Current",
+                xlabel    = "Time / s",
+                ylabel    = "Current / A",
+                linewidth = 4,
+                xtickfont = font(pointsize = 15),
+                ytickfont = font(pointsize = 15))
+
+
+Plots.plot(p1, p2, layout = (2, 1))
 
