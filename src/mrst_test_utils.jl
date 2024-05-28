@@ -647,7 +647,7 @@ function setup_coupling!(init::MatlabFile,
 end
 
 ########################################################################
-#Setup model
+# Setup model
 ########################################################################
 
 function setup_model(init::InputFile;
