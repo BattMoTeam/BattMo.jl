@@ -15,7 +15,9 @@ ENV["JULIA_DEBUG"] = 0;
 use_p2d = true
 
 if use_p2d
-    name = "p2d_40"
+    # name = "p2d_40"
+    # name = "p2d_40_no_cc"
+    name = "p2d_40_cccv"
     # name = "3d_demo_case"
 else
     # name = "p1d_40"
@@ -30,46 +32,34 @@ end
 
 # sim, forces, state0, parameters, exported, model = BattMo.setup_sim(name, use_p2d = use_p2d)
 
-do_json = true # true
+do_json = true
 
 if do_json
 
-    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, "_jl.json")
+    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, ".json")
     init = JSONFile(fn)
     states, reports, extra = run_battery(init; use_p2d = use_p2d, info_level = 0, extra_timing = false);
 
-
-    nsteps = size(states)
-    timesteps = extra[:timesteps]
-    
-    time = cumsum(timesteps)
-    E    = [state[:BPP][:Phi][1] for state in states]
-    
-
-    refdict = load_reference_solution(name)
-    statesref  = refdict["states"]
-
-    timeref = [state["time"] for state in statesref]
-    Eref    = [state["Control"]["E"] for state in statesref]
-
+    t = [state[:Control][:ControllerCV].time for state in states]
+    E = [state[:Control][:Phi][1] for state in states]
 
 else
     
-    states, reports, extra, exported = run_battery(name; use_p2d = use_p2d, info_level = 0, max_step = nothing);
+    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
+    init = MatlabFile(fn)
 
-    nsteps = size(states, 1)
+    states, reports, extra, exported = run_battery(init; use_p2d = use_p2d, info_level = 0, max_step = nothing);
 
-    timesteps = extra[:timesteps]
-    time = cumsum(timesteps[1 : nsteps])
-    E    = [state[:BPP][:Phi][1] for state in states]
+    t = [state[:Control][:ControllerCV].time for state in states]
+    E = [state[:Control][:Phi][1] for state in states]
     
-    statesref  = extra[:init].object["states"]
-    timeref = time
-    Eref = [state["Control"]["E"] for state in statesref[1 : nsteps]]
+    statesref = extra[:init].object["states"]
+    timeref   = t
+    Eref      = [state["Control"]["E"] for state in statesref[1 : nsteps]]
 
 end
 
-plt = Plots.plot(time, E;
+plt = Plots.plot(t, E;
                  title     = "Discharge Voltage",
                  size      = (1000, 800),
                  label     = "BattMo.jl",
@@ -79,6 +69,6 @@ plt = Plots.plot(time, E;
                  xtickfont = font(pointsize = 15),
                  ytickfont = font(pointsize = 15))
 
-Plots.plot!(timeref, Eref, label = "BattMo.m", linewidth = 2)
+# Plots.plot!(timeref, Eref, label = "BattMo.m", linewidth = 2)
 display(plt)
 

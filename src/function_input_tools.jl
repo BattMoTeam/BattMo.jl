@@ -1,4 +1,4 @@
-export polyfit, update_json_input
+export polyfit, update_json_input, compute_ocp_from_string
 
 using JSON
 using Polynomials
@@ -164,7 +164,27 @@ function update_json_input(;file_path::String = nothing,
 end
 
 
-function compute_function_from_string(ocp_eq)
+function setup_ocp_evaluation_expression_from_string(str)
+    """ setup the Expr from a sting for the OCP function, with the proper signature."""
 
-    eval(Meta.parse(ocp_eq))
+    str = "function f(c, T, refT, cmax) return $str end"
+    return Meta.parse(str);
+    
 end
+
+function setup_diffusivity_evaluation_expression_from_string(str)
+    """ setup the Expr from a sting for the electrolyte diffusivity function, with the proper signature."""
+
+    str = "function f(c, T) return $str end"
+    return Meta.parse(str);
+    
+end
+
+function setup_conductivity_evaluation_expression_from_string(str)
+    """ setup the Expr from a sting for the electrolyte conductivity function, with the proper signature."""
+    
+    str = "function f(c, T) return $str end"
+    return Meta.parse(str);
+    
+end
+

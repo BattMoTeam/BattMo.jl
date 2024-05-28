@@ -2,6 +2,9 @@ module BattMo
 using PrecompileTools
 using StaticArrays
 
+using RuntimeGeneratedFunctions
+RuntimeGeneratedFunctions.init(@__MODULE__)
+
 import JSON
 import Jutul:
     number_of_cells, number_of_faces,
@@ -58,6 +61,7 @@ import Jutul:
     select_minimum_output_variables!,
     physical_representation
 
+include("io_types.jl")
 include("physical_constants.jl")
 include("battery_types.jl")
 include("tensor_tools.jl")
@@ -72,16 +76,15 @@ include("models/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/convergence.jl")
 include("physics.jl")
-include("types.jl")
 include("mrst_test_utils.jl")
 include("linsolve.jl")
 
 # Precompilation of solver. Run a small battery simulation to precompile everything.
-@compile_workload begin
-   for use_general_ad in [false, true]
-        init = "p2d_40"
-        run_battery(init; general_ad = use_general_ad,info_level = -1);
-   end
-end
+# @compile_workload begin
+#    for use_general_ad in [false, true]
+#         init = "p2d_40"
+#         run_battery(init; general_ad = use_general_ad,info_level = -1);
+#    end
+# end
 
 end # module

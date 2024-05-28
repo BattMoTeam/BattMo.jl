@@ -36,7 +36,6 @@ function select_parameters!(S,
     if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
         if count_active_entities(model.data_domain, BoundaryDirichletFaces()) > 0
             S[:BoundaryPhi]  = BoundaryPotential(:Phi)
-            S[:BoundaryC]    = BoundaryPotential(:C)
         end
     end
     
@@ -51,17 +50,3 @@ function select_equations!(eqs,
     
 end
 
-function apply_forces_to_equation!(acc,
-                                   storage,
-                                   model::SimulationModel{<:Any, <:CurrentCollector, <:Any, <:Any},
-                                   law::ConservationLaw{:Charge},
-                                   eq_s,
-                                   force,
-                                   time)
-    
-    cell   = force.cell
-    inputI = force.src
-    
-    acc[cell] -= inputI
-    
-end

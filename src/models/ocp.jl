@@ -27,26 +27,7 @@ const coeff2_graphite = Polynomial([
 ]);
 
 
-
-
-
-# function compute_ocp_from_function(ocp_eq)
-#     """Compute OCP for a material as function of temperature and concentration"""
-    
-#     #print("ex = ", f(c,T,cmax,Tref))
-#     return compute_ocp_function(ocp_eq)
-#     #@evaluate_ocp_function $esc(ex) c T cmax
-#     #eval(Meta.parse(ex))
-
-# end
-
-
-
-
-####################################
-
-
-function compute_ocp_graphite(c, T, cmax)
+function computeOCP_graphite(c, T, cmax)
     """Compute OCP for GenericGraphite as function of temperature and concentration"""
     theta  = c./cmax
     refT   = 298.15
@@ -78,6 +59,30 @@ function compute_reaction_rate_constant_graphite(c, T)
     return val
     
 end
+
+
+## Define OCP for Graphite-SiOx (Chen2020) using polynomials
+
+function computeOCP_Graphite_SiOx_Chen2020(c, T, cmax)
+    x = c./cmax
+
+    ocp = 1.9793 * exp(-39.3631 * x) + 0.2482 - 0.0909 * tanh(29.8538 * (x - 0.1234)) - 0.04478 * tanh(14.9159 * (x - 0.2769))  - 0.0205 * tanh(30.4444 * (x - 0.6103))
+
+
+    return ocp
+end
+
+## Define OCP for NMC811 (Chen2020) using polynomials
+
+function computeOCP_NMC811_Chen2020(c, T, cmax)
+    x = c./cmax
+
+    ocp = -0.8090 * x + 4.4875 - 0.0428 * tanh(18.5138 * (x - 0.5542)) - 17.7326 * tanh(15.7890 * (x - 0.3117)) + 17.5842 * tanh(15.9308 * (x - 0.3120))
+
+
+    return ocp
+end
+
 
 ## Define OCP and entropy change (dUdT) for NMC111 using polynomials
 
@@ -124,7 +129,7 @@ const coeff2_dUdT_nmc111 = Polynomial([
     + 3.048755063
 ])
 
-function compute_ocp_nmc111(c, T, cmax)
+function computeOCP_nmc111(c, T, cmax)
     
     """Compute OCP for GenericNMC111 as function of temperature and concentration"""
     refT   = 298.15

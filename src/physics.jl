@@ -83,12 +83,12 @@ function output_flux(model, state, parameters, eqname = :mass_conservation)
     end
     return out
 end
+
 #######################
 # Boundary conditions #
 #######################
-# TODO: Add possibilites for different potentials to have different boundary cells
 
-# Called from update_state dependents
+
 function Jutul.apply_boundary_conditions!(storage, parameters, model::ElectroChemicalComponentModel)
     equations_storage = storage.equations
     equations = model.equations
@@ -97,11 +97,10 @@ function Jutul.apply_boundary_conditions!(storage, parameters, model::ElectroChe
     end
 end
 
+function apply_boundary_potential!(acc, state, parameters, model, eq::ConservationLaw{:Charge})
 
-function apply_boundary_potential!(
-    acc, state, parameters, model, eq::ConservationLaw{:Charge}
-    )
-
+    dolegacy = false
+    
     if model.domain.representation isa MinimalECTPFAGrid
         bc = model.domain.representation.boundary_cells
         if length(bc) > 0
@@ -117,7 +116,6 @@ function apply_boundary_potential!(
             bcdirhalftrans = model.domain.representation[:bcDirHalfTrans]
             bcdircells     = model.domain.representation[:bcDirCells]
             bcdirinds      = model.domain.representation[:bcDirInds]
-            dolegacy = false
         end
     else
         dobc = false
@@ -125,58 +123,27 @@ function apply_boundary_potential!(
     
     if dobc
         
-        Phi         = state[:Phi]
-        BoundaryPhi = state[:BoundaryPhi]
-        κ           = state[:Conductivity]
+        Phi          = state[:Phi]
+        BoundaryPhi  = state[:BoundaryPhi]
+        conductivity = state[:Conductivity]
 
         if dolegacy
             T_hf = model.domain.representation.boundary_hfT
             for (i, c) in enumerate(bc)
-                @inbounds acc[c] += κ[c]*T_hf[i]*(Phi[c] - value(BoundaryPhi[i]))
+                @inbounds acc[c] += conductivity[c]*T_hf[i]*(Phi[c] - value(BoundaryPhi[i]))
             end
         else
             for (ht, c, i) in zip(bcdirhalftrans, bcdircells, bcdirinds)
-                @inbounds acc[c] += κ[c]*ht*(Phi[c] - value(BoundaryPhi[i]))
+                @inbounds acc[c] += conductivity[c]*ht*(Phi[c] - value(BoundaryPhi[i]))
             end
         end
     end
     
 end
 
-function apply_boundary_potential!(
-    acc, state, parameters, model, eq::ConservationLaw{:Mass}
-    )
-
-    if model.domain.representation isa MinimalECTPFAGrid
-        bc = model.domain.representation.boundary_cells
-        dolegacy = true
-        if length(bc) > 0
-            dobc = true
-        else
-            dobc = false
-        end
-    else
-        # this function should actually not been used (not dirichlet boundary for mass)
-        dobc = false
-        dolegacy = false
-    end
-    
-    if dobc
-        # values
-        C         = state[:C]
-        BoundaryC = state[:BoundaryC]
-        D         = state[:Diffusivity]
-
-        # Type
-        if dolegacy
-            T_hf = model.domain.representation.boundary_hfT
-        else
-        end
-        
-        for (i, c) in enumerate(bc)
-            @inbounds acc[c] += D[c]*T_hf[i]*(C[c] - value(BoundaryC[i]))
-        end
-    end
+function apply_boundary_potential!(acc, state, parameters, model, eq::ConservationLaw{:Mass} )
+    # do nothing
+    # We do not have in our models for the moment boundaries with given concentration
 end
 
 
@@ -201,18 +168,18 @@ function apply_bc_to_equation!(storage, parameters, model, eq::SolidDiffusionBc,
     # do nothing    
 end
 
-function apply_boundary_current!(acc, state, jkey, model, eq::ConservationLaw)
+# function apply_boundary_current!(acc, state, jkey, model, eq::ConservationLaw)
 
-    # The current here is by convention considered as an outer flux
+#     # The current here is by convention considered as an outer flux
     
-    J = state[jkey]
+#     J = state[jkey]
 
-    jb = get_variable(model, jkey)
-    for (i, c) in enumerate(jb.cells)
-        @inbounds acc[c] += J[i]
-    end
+#     jb = get_variable(model, jkey)
+#     for (i, c) in enumerate(jb.cells)
+#         @inbounds acc[c] += J[i]
+#     end
     
-end
+# end
 
 function select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::ElectroChemicalComponentModel)
     

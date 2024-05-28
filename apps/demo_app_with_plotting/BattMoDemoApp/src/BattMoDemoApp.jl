@@ -56,7 +56,7 @@ module BattMoDemoApp
             max_timestep_cuts = args["max_timestep_cuts"],
             info_level = args["info_level"]
         );
-        voltage = map(state -> state[:BPP][:Phi][1], states)
+        voltage = map(state -> state[:Control][:Phi][1], states)
         t = cumsum(extra[:timesteps])
         fig = Figure()
         ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")

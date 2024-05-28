@@ -41,6 +41,9 @@ struct Cp                <: VectorVariables end # particle concentrations in p2d
 struct Cs                <: ScalarVariable  end # surface variable in p2d model
 struct SolidDiffFlux     <: VectorVariables end # flux in P2D model
 
+minimum_value(::Cp) = 1.0
+minimum_value(::Cs) = 1.0
+    
 struct SolidMassCons <: JutulEquation end
 Jutul.local_discretization(::SolidMassCons, i) = nothing
 
@@ -170,6 +173,10 @@ function select_parameters!(S,
     S[:Temperature]    = Temperature()
     S[:Conductivity]   = Conductivity()
     S[:VolumeFraction] = VolumeFraction()
+
+    if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
+        S[:BoundaryPhi]  = BoundaryPotential(:Phi)
+    end
     
 end
 
@@ -224,43 +231,23 @@ end
         
         ocp_func = model.system.params[:ocp_func]
         
-        cmax     = model.system.params[:maximum_concentration]
+        cmax = model.system.params[:maximum_concentration]
         refT = 298.15
 
-        if Jutul.haskey(model.system.params, :ocp_eq)
+        if Jutul.haskey(model.system.params, :ocp_funcexp)
             theta0   = model.system.params[:theta0]
             theta100 = model.system.params[:theta100]
-        
         end
        
         
         for cell in ix
         
-            if Jutul.haskey(model.system.params, :ocp_eq)
-                
-                ocp_comp = model.system.params[:ocp_comp]    
-                ocp_eq = model.system.params[:ocp_eq]
-                
-                ocp_form = model.system.params[:ocp_comp]
-                
-                
-                SOC = (Cs[cell]/cmax - theta0)/(theta100 - theta0)
-                
-                expr = Meta.parse(ocp_eq)
+            if Jutul.haskey(model.system.params, :ocp_funcexp)
 
-                symbols = Symbol[]
-                symbols = extract_input_symbols(expr,symbols)
-
-                symbol_values = set_symbol_values(symbols,Cs[cell],refT,refT,cmax,SOC)
-               
-
-                #OCP = lambdify(expr, symbol_values)
-                function_arguments = [symbol_values[symbol] for symbol in symbols if haskey(symbol_values, symbol)]
-            
-                @inbounds Ocp[cell] = Base.invokelatest(ocp_form,function_arguments...)
-                
+                @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, refT, cmax)
                 
             else
+                
                 @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)
                
             end
@@ -406,8 +393,8 @@ function select_secondary_variables!(S,
 end
 
 function select_parameters!(S,
-                                  system::ActiveMaterialNoParticleDiffusion,
-                                  model::SimulationModel)
+                            system::ActiveMaterialNoParticleDiffusion,
+                            model::SimulationModel)
     
     S[:Temperature]  = Temperature()
     S[:Conductivity] = Conductivity()

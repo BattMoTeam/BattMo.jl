@@ -147,8 +147,8 @@
   "include_current_collectors": true,
   "Control": {
     "controlPolicy": "CCDischarge",
-    "initialControl": "discharging",
-    "CRate": 1,
+    "DRate": 1,
+    "useCVswitch": true,
     "lowerCutoffVoltage": 2.4,
     "upperCutoffVoltage": 4.1,
     "dIdtLimit": 0.01,
@@ -191,7 +191,7 @@
     "totalTime": 5040,
     "numberOfTimeSteps": 40,
     "useRampup": true,
-    "numberOfRampupSteps": 10
+    "numberOfRampupSteps": 5
   },
   "Output": {
     "variables": [

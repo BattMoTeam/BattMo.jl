@@ -29,10 +29,13 @@ function select_primary_variables!(S                  ,
     
 end
 
+minimum_value(::C) = 1.0
+    
 function select_parameters!(S                  ,
                             system::Electrolyte,
                             model::SimulationModel
                             )
+    
     S[:Temperature]    = Temperature()
     S[:VolumeFraction] = VolumeFraction()
     
@@ -96,6 +99,13 @@ const p3 = Polynomial(poly_param[1:end, 3])
     return fact*c*(p1(c) + p2(c)*T + p3(c)*T^2)^2
 end
 
+@inline function computeElectrolyteConductivity_Chen2020(c::Real, T::Real)
+    """ Compute the electrolyte conductivity as a function of concentration
+    """
+    c = c/1000
+    return 0.1297*c^3 - 2.51*c^(1.5) + 3.329*c
+end
+
 const diff_params = [
     -4.43   -54 ;
     -0.22   0.0 ;
@@ -112,6 +122,13 @@ const Tgi = [229 5.0]
             diff_params[2,1]*c*1e-3
             )
         )
+end
+
+@inline function computeDiffusionCoefficient_Chen2020(c::Real, T::Real)
+    """ Compute the diffusion coefficient as a function of concentration
+    """
+    c = c/1000
+    return 8.794*10^(-11)*c^2 - 3.972*10^(-10)*c + 4.862*10^(-10)
 end
 
 @inline function transference(system::Electrolyte)
@@ -133,32 +150,8 @@ function update_conductivity!(kappa, kappa_def::Conductivity, model::Electrolyte
     
     # We use Bruggeman coefficient
     for i in ix
-
-        if Jutul.haskey(model.system.params, :conductivity_eq)
-                
-            conductivity_eq = model.system.params[:conductivity_eq]
-            
-            conductivity_form = model.system.params[:conductivity_comp]
-            
-            expr = Meta.parse(conductivity_eq)
-
-            symbols = Symbol[]
-            symbols = extract_input_symbols(expr,symbols)
-
-            symbol_values = set_symbol_values(symbols,C[i],nothing, Temperature[i],nothing,nothing)
-
-            #OCP = lambdify(expr, symbol_values)
-            function_arguments = [symbol_values[symbol] for symbol in symbols if haskey(symbol_values, symbol)]
         
-            @inbounds kappa[i] = Base.invokelatest(conductivity_form,function_arguments...) * VolumeFraction[i]^1.5
-            
-            
-        else
-            @inbounds kappa[i] = model.system[:conductivity_func](C[i], Temperature[i]) * VolumeFraction[i]^1.5
-           
-        end
-
-
+        @inbounds kappa[i] = model.system[:conductivity_func](C[i], Temperature[i]) * VolumeFraction[i]^1.5
         
     end
 end
@@ -170,33 +163,10 @@ end
     
     for i in ix
 
-        if Jutul.haskey(model.system.params, :diffusivity_eq)
-                
-            diffusivity_eq = model.system.params[:diffusivity_eq]
-            
-            diffusivity_form = model.system.params[:diffusivity_comp]
-            
-            expr = Meta.parse(diffusivity_eq)
-
-            symbols = Symbol[]
-            symbols = extract_input_symbols(expr,symbols)
-
-            symbol_values = set_symbol_values(symbols,C[i],nothing, Temperature[i],nothing,nothing)
-           
-
-            #OCP = lambdify(expr, symbol_values)
-            function_arguments = [symbol_values[symbol] for symbol in symbols if haskey(symbol_values, symbol)]
-        
-            @inbounds D[i] = Base.invokelatest(diffusivity_form,function_arguments...) * VolumeFraction[i]^1.5
-            
-            
-        else
             @inbounds D[i] = model.system[:diffusivity_func](C[i], Temperature[i])*VolumeFraction[i]^1.5
-           
-        end
-
         
     end
+    
 end
 
 @jutul_secondary function update_chem_coef!(chemCoef, tv::ChemCoef, model::ElectrolyteModel, Conductivity, DmuDc, ix)
