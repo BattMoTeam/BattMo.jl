@@ -356,7 +356,10 @@ function check_constraints(model, storage)
             mode = cv_charge2
         end
     elseif mode == cv_charge2
-        # do not check anything in this case
+        if I < -policy.ImaxCharge
+            arefulfilled = false;
+            mode = cc_charge1
+        end
     else
         error("mode $mode not recognized")
     end            
