@@ -69,16 +69,16 @@ else
 
 end
 
-plt = plot(time, E;
-           title     = "Discharge Voltage",
-           size      = (1000, 800),
-           label     = "BattMo.jl",
-           xlabel    = "Time / s",
-           ylabel    = "Voltage / V",
-           linewidth = 4,
-           xtickfont = font(pointsize = 15),
-           ytickfont = font(pointsize = 15))
+plt = Plots.plot(time, E;
+                 title     = "Discharge Voltage",
+                 size      = (1000, 800),
+                 label     = "BattMo.jl",
+                 xlabel    = "Time / s",
+                 ylabel    = "Voltage / V",
+                 linewidth = 4,
+                 xtickfont = font(pointsize = 15),
+                 ytickfont = font(pointsize = 15))
 
-plot!(timeref, Eref, label = "BattMo.m", linewidth = 2)
+Plots.plot!(timeref, Eref, label = "BattMo.m", linewidth = 2)
 display(plt)
 
