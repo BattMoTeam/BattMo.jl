@@ -1127,7 +1127,7 @@ function setup_battery_model(init::JSONFile;
             data_x = inputparams_am["Interface"]["openCircuitPotential"]["data_x"]
             data_y = inputparams_am["Interface"]["openCircuitPotential"]["data_y"]
 
-            interpolation_object = get_1d_interpolator(data_x,data_y)
+            interpolation_object = get_1d_interpolator(data_x,data_y,cap_endpoints =false)
             am_params[:ocp_func] = interpolation_object
         end
         
@@ -1200,11 +1200,10 @@ function setup_battery_model(init::JSONFile;
         params[:diffusivity_func] = getfield(BattMo, Symbol(funcname))
 
     else
-        cap
         data_x = inputparams_elyte["diffusionCoefficient"]["data_x"]
         data_y = inputparams_elyte["diffusionCoefficient"]["data_y"]
 
-        interpolation = get_1d_interpolator(data_x,data_y)
+        interpolation = get_1d_interpolator(data_x,data_y,cap_endpoints =false)
         params[:diffusivity_data] = true
         params[:diffusivity_func] = interpolation
         
@@ -1225,7 +1224,7 @@ function setup_battery_model(init::JSONFile;
         data_x = inputparams_elyte["ionicConductivity"]["data_x"]
         data_y = inputparams_elyte["ionicConductivity"]["data_y"]
 
-        interpolation = get_1d_interpolator(data_x,data_y)
+        interpolation = get_1d_interpolator(data_x,data_y,cap_endpoints = false)
         params[:conductivity_data] = true
         params[:conductivity_func] = interpolation
         
