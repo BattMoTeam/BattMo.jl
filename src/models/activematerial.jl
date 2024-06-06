@@ -221,6 +221,8 @@ function select_minimum_output_variables!(out                   ,
     
 end
 
+
+
 @jutul_secondary(
     function update_vocp!(Ocp,
                           tv::Ocp,
@@ -246,6 +248,10 @@ end
 
                 @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, refT, cmax)
                 
+            elseif Jutul.haskey(model.system.params, :ocp_funcdata)
+
+                @inbounds Ocp[cell] = ocp_func(Cs[cell]/cmax)
+
             else
                 
                 @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)
