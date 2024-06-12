@@ -9,6 +9,18 @@ const ElectrolyteParameters = JutulStorage
 
 struct Electrolyte <: ElectroChemicalComponent 
     params::ElectrolyteParameters
+    #  
+    # - bruggeman          
+    # - charge             
+    # - conductivity_data  
+    # - conductivity_func  
+    # - diffusivity_data   
+    # - diffusivity_func   
+    # - separator_porosity 
+    # - transference
+    # - electrolyte_density
+    # - separator_density
+    
 end
 
 # Alias for convenience

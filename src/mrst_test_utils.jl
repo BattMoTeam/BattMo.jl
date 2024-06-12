@@ -2,7 +2,14 @@
 # Exported functions #
 ######################
 
-export run_battery, inputRefToStates, computeCellCapacity, Constants
+export
+    run_battery,
+    inputRefToStates,
+    Constants,
+    computeCellCapacity,
+    computeCellEnergy,
+    computeCellMass,
+    computeCellSpecifications
 
 ###############
 # Run battery #
@@ -803,8 +810,13 @@ function setup_battery_model(init::MatlabFile;
     if include_cc
 
         inputparams_necc = inputparams["NegativeElectrode"]["CurrentCollector"]
-        sys_necc         = CurrentCollector()
-        bcfaces          = convert_to_int_vector(inputparams_necc["externalCouplingTerm"]["couplingfaces"])
+
+        necc_params = JutulStorage()
+        necc_params[:density] = inputparams_necc["density"]
+        
+        sys_necc = CurrentCollector(necc_params)
+
+        bcfaces = convert_to_int_vector(inputparams_necc["externalCouplingTerm"]["couplingfaces"])
         
         model_necc =  setup_component(inputparams_necc, sys_necc, bcfaces, general_ad)
         
@@ -854,9 +866,16 @@ function setup_battery_model(init::MatlabFile;
         ###########################################
         # Setup positive current collector if any #
         ###########################################
+        inputparams_pecc = inputparams["PositiveElectrode"]["CurrentCollector"]
 
-        model_pecc = setup_component(inputparams["PositiveElectrode"]["CurrentCollector"],
-                                     CurrentCollector(), nothing, general_ad)
+        pecc_params = JutulStorage()
+        pecc_params[:density] = inputparams_pecc["density"]
+        
+        sys_pecc = CurrentCollector(pecc_params)
+
+        
+        model_pecc =  setup_component(inputparams_pecc, sys_pecc, nothing, general_ad)
+        
     end
 
     #######################
@@ -1089,16 +1108,17 @@ function setup_battery_model(init::JSONFile;
             effectiveDensity = codict["effectiveDensity"]
             volumeFraction = sumSpecificVolumes*effectiveDensity
 
-            return volumeFraction, volumeFractions
+            return volumeFraction, volumeFractions, effectiveDensity
             
         end
 
         inputparams_am = jsondict[jsonName]["Coating"]["ActiveMaterial"]
         
         am_params = JutulStorage()
-        vf, vfs = computeVolumeFraction(jsondict[jsonName]["Coating"])
-        am_params[:volume_fraction]          = vf
-        am_params[:volume_fractions]         = vfs
+        vf, vfs, eff_dens = computeVolumeFraction(jsondict[jsonName]["Coating"])
+        am_params[:volume_fraction]         = vf
+        am_params[:volume_fractions]        = vfs
+        am_params[:effective_density]       = eff_dens
         am_params[:n_charge_carriers]       = inputparams_am["Interface"]["numberOfElectronsTransferred"]
         am_params[:maximum_concentration]   = inputparams_am["Interface"]["saturationConcentration"]
         am_params[:volumetric_surface_area] = inputparams_am["Interface"]["volumetricSurfaceArea"]
@@ -1163,7 +1183,12 @@ function setup_battery_model(init::JSONFile;
     ####################################
     
     if include_cc
-        sys_necc   = CurrentCollector()
+
+
+        necc_params = JutulStorage()
+        necc_params[:density] = jsondict["NegativeElectrode"]["CurrentCollector"]["density"]
+        
+        sys_necc = CurrentCollector(necc_params)
         model_necc = setup_component(geomparams[:NeCc]  ,
                                      sys_necc           ,
                                      addDirichlet = true,
@@ -1183,10 +1208,12 @@ function setup_battery_model(init::JSONFile;
     params = JutulStorage();
     inputparams_elyte = jsondict["Electrolyte"]
     
-    params[:transference]       = inputparams_elyte["species"]["transferenceNumber"]
-    params[:charge]             = inputparams_elyte["species"]["chargeNumber"]
-    params[:separator_porosity] = jsondict["Separator"]["porosity"]
-    params[:bruggeman]          = inputparams_elyte["bruggemanCoefficient"]
+    params[:transference]        = inputparams_elyte["species"]["transferenceNumber"]
+    params[:charge]              = inputparams_elyte["species"]["chargeNumber"]
+    params[:separator_porosity]  = jsondict["Separator"]["porosity"]
+    params[:bruggeman]           = inputparams_elyte["bruggemanCoefficient"]
+    params[:electrolyte_density] = jsondict["Separator"]["porosity"]
+    params[:separator_density]   = inputparams_elyte["density"]
     
     # setup diffusion coefficient function
     if haskey(inputparams_elyte["diffusionCoefficient"], "function")
@@ -1244,7 +1271,11 @@ function setup_battery_model(init::JSONFile;
     ###########################################
     
     if include_cc
-        sys_pecc = CurrentCollector()
+        pecc_params = JutulStorage()
+        pecc_params[:density] = jsondict["PositiveElectrode"]["CurrentCollector"]["density"]
+        
+        sys_pecc = CurrentCollector(pecc_params)
+        
         model_pecc = setup_component(geomparams[:PeCc], sys_pecc, general_ad = general_ad)
     end
 
@@ -1786,6 +1817,7 @@ function setup_volume_fractions!(model::MultiModel, geomparams::Dict{Symbol,<:An
     names = (:NeAm, :SEP, :PeAm)
     Nelyte = sum([geomparams[name][:N] for name in names])
     vfelyte = zeros(Nelyte)
+    vfseparator  = zeros(Nelyte)
     
     names = (:NeAm, :PeAm)
     
@@ -1809,10 +1841,13 @@ function setup_volume_fractions!(model::MultiModel, geomparams::Dict{Symbol,<:An
     nstart = geomparams[:NeAm][:N] +  1
     nend   = nstart + geomparams[:SEP][:N]
     separator_porosity = model[:Elyte].system[:separator_porosity]
-    vfelyte[nstart : nend] .= separator_porosity*ones(nend - nstart + 1)
+    
+    vfelyte[nstart : nend]     .= separator_porosity*ones(nend - nstart + 1)
+    vfseparator[nstart : nend] .= (1 -separator_porosity)*ones(nend - nstart + 1)
     
     model[:Elyte].domain.representation[:volumeFraction] = vfelyte
-
+    model[:Elyte].domain.representation[:separator_volume_fraction] = vfseparator
+    
 end
 
 ######################
@@ -1967,44 +2002,160 @@ end
 # Compute cell capacity 
 ##################################################################################
 
-function computeCellCapacity(model::MultiModel)
+function computeElectrodeCapacity(model::MultiModel, name::Symbol)
 
     con = Constants()
-
-    function computeHalfCellCapacity(name::Symbol)
-
-        ammodel = model[name]
-        sys = ammodel.system            
-        F    = con.F
-        n    = sys[:n_charge_carriers]
-        cMax = sys[:maximum_concentration]
-        vf   = sys[:volume_fraction]
-        avf  = sys[:volume_fractions][1]
-        
-        if name == :NeAm
-            thetaMax = sys[:theta100]
-            thetaMin = sys[:theta0]
-        elseif name == :PeAm
-            thetaMax = sys[:theta0]
-            thetaMin = sys[:theta100]
-        else
-            error("name not recognized")
-        end
-
-        vols = ammodel.domain.representation[:face_weighted_volumes]
-        vol = sum(avf*vf*vols)
-        
-        cap_usable = (thetaMax - thetaMin)*cMax*vol*n*F
-        
-        return cap_usable
-        
+    
+    ammodel = model[name]
+    sys = ammodel.system            
+    F    = con.F
+    n    = sys[:n_charge_carriers]
+    cMax = sys[:maximum_concentration]
+    vf   = sys[:volume_fraction]
+    avf  = sys[:volume_fractions][1]
+    
+    if name == :NeAm
+        thetaMax = sys[:theta100]
+        thetaMin = sys[:theta0]
+    elseif name == :PeAm
+        thetaMax = sys[:theta0]
+        thetaMin = sys[:theta100]
+    else
+        error("name not recognized")
     end
 
-    caps = [computeHalfCellCapacity(name) for name in (:NeAm, :PeAm)]
+    vols = ammodel.domain.representation[:face_weighted_volumes]
+    vol = sum(avf*vf*vols)
+    
+    cap_usable = (thetaMax - thetaMin)*cMax*vol*n*F
+    
+    return cap_usable
+        
+end
+
+    
+function computeCellCapacity(model::MultiModel)
+
+    caps = [computeElectrodeCapacity(model, name) for name in (:NeAm, :PeAm)]
 
     return minimum(caps)
     
 end
+
+function computeCellEnergy(model::MultiModel; T = 298.15, capacities = missing)
+
+    eldes = (:NeAm, :PeAm)
+    
+    if ismissing(capacities)
+        capacities = NamedTuple([(name, computeElectrodeCapacity(model, name)) for name in eldes])
+    end
+    
+    capacity = min(capacities.NeAm, capacities.PeAm)
+    
+    N = 1000
+
+    energies = Dict()
+    
+    for elde in eldes
+
+        cmax    = model[elde].system[:maximum_concentration]
+        c0      = cmax*model[elde].system[:theta100]
+        cT      = cmax*model[elde].system[:theta0]
+        ocpfunc = model[elde].system[:ocp_func]
+
+        smax = capacity/capacities[elde]
+        s = smax*collect(range(0, 1, N + 1))
+        
+        c = (1 .- s).*c0 + s.*cT;
+
+        f = Vector{Float64}(undef, N + 1)
+
+        for i = 1 : N + 1
+            f[i] = ocpfunc(c[i], T, cmax)
+        end
+
+       energies[elde] = (capacities[elde]*smax/N)*sum(f)
+        
+    end
+
+    energy = energies[:PeAm] - energies[:NeAm]
+
+    return energy
+    
+end
+
+function computeCellMass(model::MultiModel)
+
+    eldes = (:NeAm, :PeAm)
+
+    mass = 0.0
+    
+    # Coating mass
+    
+    for elde in eldes
+        effrho = model[elde].system[:effective_density]
+        vols = model[elde].domain.representation[:volumes]
+        mass = mass + sum(effrho.*vols)
+    end
+    
+    # Electrolyte mass
+    
+    rho  = model[:Elyte].system[:electrolyte_density]
+    vf   = model[:Elyte].domain.representation[:volumeFraction]
+    vols = model[:Elyte].domain.representation[:volumes]
+    
+    mass = mass + sum(vf.*rho.*vols)
+
+    # Separator mass
+    
+    rho  = model[:Elyte].system[:separator_density]
+    vf   = model[:Elyte].domain.representation[:separator_volume_fraction]
+    vols = model[:Elyte].domain.representation[:volumes]
+    
+    mass = mass + sum(vf.*rho.*vols)
+    
+    # Current Collector masses
+    
+    ccs = (:NeCc, :PeCc)
+
+    for cc in ccs
+        if haskey(model.models, cc)
+            rho  = model[cc].system[:density]
+            vols = model[cc].domain.representation[:volumes]        
+            mass = mass + sum(rho.*vols)
+        end
+    end
+        
+    return mass
+    
+end
+
+function computeCellSpecifications(init::JSONFile)
+    
+    model = setup_battery_model(init)
+    return computeCellSpecifications(model)
+    
+end
+
+function computeCellSpecifications(model::MultiModel; T = 298.15)
+
+    capacities = (NeAm = computeElectrodeCapacity(model, :NeAm), PeAm =computeElectrodeCapacity(model, :PeAm))
+
+    energy = computeCellEnergy(model; T = T, capacities = capacities)
+
+    mass = computeCellMass(model)
+    
+    specs = Dict()
+
+    specs["NegativeElectrodeCapacity"] = capacities.NeAm
+    specs["PositiveElectrodeCapacity"] = capacities.PeAm
+    specs["Energy"]                    = energy
+    specs["Mass"]                      = mass
+    
+    return specs
+    
+end
+
 
 ###############
 # Other utils #
