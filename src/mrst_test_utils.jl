@@ -9,7 +9,8 @@ export
     computeCellCapacity,
     computeCellEnergy,
     computeCellMass,
-    computeCellSpecifications
+    computeCellSpecifications,
+    computeEnergyEfficiency
 
 ###############
 # Run battery #
@@ -35,7 +36,7 @@ function run_battery(init::InputFile;
     timesteps = setup_timesteps(init; max_step = max_step)
     cfg = setup_config(sim, model, linear_solver, extra_timing; kwarg...)
 
-    #Perform simulation
+    # Perform simulation
     states, reports = simulate(state0, sim, timesteps, forces=forces, config=cfg; kwarg ...)
 
     extra = Dict(:model => model,
@@ -47,7 +48,7 @@ function run_battery(init::InputFile;
                  :forces => forces,
                  :simulator => sim)
 
-    return (states=states, reports=reports, extra=extra,exported=init)
+    return (states=states, reports=reports, extra=extra, exported=init)
     
 end
 
@@ -2215,8 +2216,42 @@ function convert_to_int_vector(x::Matrix{Float64})
     return vec
 end
 
+function computeEnergyEfficiency(states)
+    
+    time = [state[:Control][:ControllerCV].time for state in states]
+    E    = [state[:Control][:Phi][1] for state in states]
+    I    = [state[:Control][:Current][1] for state in states]
+
+    Iref = copy(I)
+
+    dt   = diff(time)
+    Emid = (E[2 : end] + E[1 : end - 1])./2
+
+     # discharge energy
+
+    I[I .< 0] .= 0
+    Imid = (I[2 : end] .+ I[1 : end - 1])./2
+    
+    energy_discharge = sum(Emid.*Imid.*dt)
+
+    # charge energy
+
+    I = copy(Iref)
+    
+    I[I .> 0] .= 0
+    Imid = (I[2 : end] .+ I[1 : end - 1]) / 2
+    
+    energy_charge = -sum(Emid.*Imid.*dt)
+
+    efficiency = energy_discharge/energy_charge
+
+    return efficiency
+    
+end
+
+
 function inputRefToStates(states, stateref)
-    statesref = deepcopy(states);
+    statesref = deepcopy(states)
     for i in 1:size(states,1)
 
         staterefnew = statesref[i]   
