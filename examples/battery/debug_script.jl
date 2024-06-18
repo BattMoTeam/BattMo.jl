@@ -7,7 +7,7 @@ init = JSONFile(fn)
 # init.object["TimeStepping"]["numberOfTimeSteps"] = 400
 init.object["Control"]["numberOfCycles"] = 50
 
-states, reports, extra = run_battery(init; info_level = 2, max_timestep_cuts = 20)
+states, reports, extra = run_battery(init; info_level = 0, max_timestep_cuts = 10)
 
 t = [state[:Control][:ControllerCV].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
