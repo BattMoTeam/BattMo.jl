@@ -476,6 +476,18 @@ function Jutul.update_primary_variables!(state, dx, model::CurrentAndVoltageMode
     
 end
 
+function Jutul.reset_state_to_previous_state!(storage, model::Jutul.SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{CyclingCVPolicy{T1, T2}}, T3, T4}) where {T1, T2, T3, T4}
+
+    invoke(Jutul.reset_state_to_previous_state!,
+           Tuple{typeof(storage),
+                 Jutul.SimulationModel},
+           storage,
+           model)
+
+    copyController!(storage.state[:ControllerCV], storage.state0[:ControllerCV])
+end
+
+
 
 function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces; time = NaN)
     
