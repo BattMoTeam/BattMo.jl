@@ -160,33 +160,50 @@ function policy_to_control(::NoPolicy, state, state0, model)
     
 end
 
-function policy_to_control(p::CyclingCVPolicy, state, state0, model)
-    
-    phi = only(state.Phi)
-    I   = only(state.Current)
+function policy_to_control(policy::CyclingCVPolicy, state, state0, model)
 
+    dEdtMin  = policy.dEdtLimit
+    dIdtMin  = policy.dIdtLimit
+    
+    E = only(state.Phi)
+    I = only(state.Current)
+
+    dt   = state.ControllerCV.time - state0.ControllerCV.time
+    dEdt = only((state[:Phi] - state0[:Phi])/dt)
+    dIdt = only((state[:Current] - state0[:Current])/dt)
+    
     mode  = state.ControllerCV.mode
     
     if mode == cc_discharge1
         
-        # Keep charging if voltage is above limit
-        if phi < p.lowerCutoffVoltage
-            # @info "Switching to discharge"
+        if E < policy.lowerCutoffVoltage
             mode = cc_discharge2
         end
+
+    elseif mode == cc_discharge2
+
+        if (abs(dEdt) <= dEdtMin)
+            mode = cc_charge1
+        end
         
+
     elseif mode == cc_charge1
         
-        if phi > p.upperCutoffVoltage
-            # @info "Switching to charge"
+        if E > policy.upperCutoffVoltage
             mode = cv_charge2
         end
         
+    elseif mode == cv_charge2
+        
+        if (abs(dIdt) < dIdtMin)
+            mode = cc_discharge1
+        end
+                
     end
     
     if mode == cc_discharge1
 
-        I_t = p.ImaxDischarge
+        I_t = policy.ImaxDischarge
         is_voltage_ctrl = false
         
     elseif mode == cc_discharge2
@@ -197,12 +214,12 @@ function policy_to_control(p::CyclingCVPolicy, state, state0, model)
     elseif mode == cc_charge1
 
         # minus sign below follows from convention
-        I_t = -p.ImaxCharge
+        I_t = -policy.ImaxCharge
         is_voltage_ctrl = false
         
     elseif mode == cv_charge2
         
-        V_t = p.upperCutoffVoltage
+        V_t = policy.upperCutoffVoltage
         is_voltage_ctrl = true
         
     else
@@ -389,7 +406,7 @@ function Jutul.update_values!(old::CcCvControllerCV, new::CcCvControllerCV)
     
 end
 
-function select_control_cv!(state, state0, model)
+function select_control_cv!(state, state0, model, dt)
 
     policy = model.system.policy
 
@@ -400,6 +417,10 @@ function select_control_cv!(state, state0, model)
     cv.target            = target
     cv.target_is_voltage = target_is_voltage
     cv.mode              = mode
+    cv.time              = state0.ControllerCV.time + dt
+
+    @info cv.time
+    @info cv.mode    
     
 end
 
@@ -457,12 +478,12 @@ function select_primary_variables!(S, system::CurrentAndVoltageSystem, model::Si
     
 end
 
-function Jutul.update_before_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel{P}, dt, forces; time = NaN, kwarg...) where {P}
+# function Jutul.update_before_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel{P}, dt, forces; time = NaN, kwarg...) where {P}
 
-    ctrl = storage.state[:ControllerCV]
-    ctrl.time = time
+#     ctrl = storage.state[:ControllerCV]
+#     ctrl.time = time + dt
     
-end
+# end
 
 function Jutul.update_primary_variables!(state, dx, model::CurrentAndVoltageModel{P}; kwarg...) where {P}
 
@@ -483,7 +504,6 @@ function Jutul.reset_state_to_previous_state!(storage, model::Jutul.SimulationMo
                  Jutul.SimulationModel},
            storage,
            model)
-
     copyController!(storage.state[:ControllerCV], storage.state0[:ControllerCV])
 end
 
@@ -496,74 +516,30 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
     policy = model.system.policy
 
     if policy isa CyclingCVPolicy
-        
-        Emin     = policy.lowerCutoffVoltage
-        Emax     = policy.upperCutoffVoltage
-        dEdtMin  = policy.dEdtLimit
-        dIdtMin  = policy.dIdtLimit
+
         initctrl = policy.initialControl
 
-        state  = storage.state
-        state0 = storage.state0
+        mode = ctrl.mode
         
-        mode    = ctrl.mode
-        ncycles = ctrl.numberOfCycles
-
-        E = only(state[:Phi])
-        I = only(state[:Current])
-
+        mode0   = storage.state0[:ControllerCV].mode
+        ncycles = storage.state0[:ControllerCV].numberOfCycles
+        
         copyController!(storage.state0[:ControllerCV], ctrl)
-
-        dEdt = only((state[:Phi] - state0[:Phi])/dt)
-        dIdt = only((state[:Current] - state0[:Current])/dt)
-
-        if mode == cc_discharge1
-            
-            nextmode = cc_discharge1;
-            if (E <= Emin) 
-                nextmode = cc_discharge2;
+        
+        if initctrl == charging
+            if (mode0 == cc_discharge1 || mode0 == cc_discharge2) && (mode == cc_charge1 || mode == cv_charge2)
+                ncycles = ncycles + 1
             end
-            
-        elseif mode == cc_discharge2
-            
-            nextmode = cc_discharge2
-
-            if (abs(dEdt) <= dEdtMin)
-                nextmode = cc_charge1
-                if initctrl == charging
-                    ncycles = ncycles + 1
-                end
+        elseif initctrl == discharging
+            if (mode0 == cc_charge1 || mode0 == cv_charge2) && (mode == cc_discharge1 || mode == cc_discharge2) 
+                ncycles = ncycles + 1
             end
-            
-        elseif mode == cc_charge1
-
-            nextmode = cc_charge1
-            if (E >= Emax) 
-                nextmode = cv_charge2
-            end 
-            
-        elseif mode == cv_charge2
-
-            nextmode = cv_charge2
-            if (abs(dIdt) < dIdtMin)
-                nextmode = cc_discharge1
-                if initctrl == discharging
-                    ncycles = ncycles + 1
-                end
-            end                  
-            
-        else
-            
-            error("mode not recognized")
-            
         end
 
-        ctrl.mode = nextmode
         ctrl.numberOfCycles = ncycles
         
     elseif policy isa SimpleCVPolicy
         
-        ctrl.time = time
         copyController!(storage.state0[:ControllerCV], ctrl)
 
     else
@@ -600,7 +576,7 @@ end
 
 function Jutul.prepare_equation_in_entity!(i, eq::ControlEquation, eq_s, state, state0, model::CurrentAndVoltageModel, dt)
     
-    select_control_cv!(state, state0, model)
+    select_control_cv!(state, state0, model, dt)
     
 end
 
