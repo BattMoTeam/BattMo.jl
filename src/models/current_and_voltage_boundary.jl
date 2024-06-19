@@ -3,6 +3,8 @@ export VoltageVar, CurrentVar, sineup
 export SimpleCVPolicy, CyclingCVPolicy
 
 @enum OperationalMode cc_discharge1 cc_discharge2 cc_charge1 cv_charge2 rest discharge charging discharging none
+struct VoltageVar <: ScalarVariable end
+struct CurrentVar <: ScalarVariable end
 
 abstract type AbstractCVPolicy end
 
@@ -119,11 +121,44 @@ end
 
 function setup_policy!(policy::CyclingCVPolicy, init::JSONFile, parameters)
 
+    # Setup absolute increment limiter for the current
+    # Imax = max(only(parameters[:Control][:ImaxDischarge]), only(parameters[:Control][:ImaxCharge]))
+    # str = "function absolute_increment_limit(::CurrentVar)
+    #          return 0.2*$Imax
+    #        end"
+    # eval(Meta.parse(str))
+
+    # Setup policy parameter
     policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
     policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])
+
+end
+
+function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, model::CurrentAndVoltageModel{P}, dx, w) where {R, I, Q <: CyclingCVPolicy{R, I}, P <: CurrentAndVoltageModel{Q}}
+
+    entity = associated_entity(p)
+    active = active_entities(model.domain, entity, for_variables = true)
+    v = state[state_symbol]
+
+    nu = length(active)
+    ImaxDischarge = model.system.policy.ImaxDischarge
+    ImaxCharge    = model.system.policy.ImaxCharge
+
+    Imax = max(ImaxCharge, ImaxDischarge)
+
+    abs_max = 0.2*Imax
+    rel_max = relative_increment_limit(p)
+    maxval = maximum_value(p)
+    minval = minimum_value(p)
+    scale = Jutul.variable_scale(p)
+    @inbounds for i in 1:nu
+        a_i = active[i]
+        v[a_i] = Jutul.update_value(v[a_i], w*dx[i], abs_max, rel_max, minval, maxval, scale)
+    end
     
 end
-    
+
+
 
 ## Policy to control functions
 
@@ -419,9 +454,6 @@ function select_control_cv!(state, state0, model, dt)
     cv.mode              = mode
     cv.time              = state0.ControllerCV.time + dt
 
-    @info cv.time
-    @info cv.mode    
-    
 end
 
 
@@ -457,12 +489,6 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::CurrentEquati
     v[] = I + phi*1e-10
     
 end
-
-struct VoltageVar <: ScalarVariable end
-# relative_increment_limit(::VoltVar) = 0.2
-
-struct CurrentVar <: ScalarVariable end
-# absolute_increment_limit(::CurrentVar) = 5.0
 
 function select_equations!(eqs, system::CurrentAndVoltageSystem, model::SimulationModel)
 

@@ -40,9 +40,7 @@ function select_primary_variables!(S                  ,
     S[:C]   = C()
     
 end
-
-minimum_value(::C) = 1.0
-    
+        
 function select_parameters!(S                  ,
                             system::Electrolyte,
                             model::SimulationModel
@@ -52,7 +50,6 @@ function select_parameters!(S                  ,
     S[:VolumeFraction] = VolumeFraction()
     
 end
-
 
 function select_equations!(eqs                ,
                            system::Electrolyte,
