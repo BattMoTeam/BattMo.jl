@@ -154,7 +154,7 @@ function setup_timesteps(init::JSONFile;
             
         else
             
-            totalTime = jsonstruct["Control"]["numberOfCycles"]
+            totalTime = jsonstruct["Control"]["totalTime"]
             
         end
 
