@@ -1300,7 +1300,7 @@ function setup_battery_model(init::JSONFile;
         
         minE   = jsondict["Control"]["lowerCutoffVoltage"]
         
-        policy = SimpleCVPolicy(missing, minE)
+        policy = SimpleCVPolicy(voltage = minE)
 
     elseif controlPolicy == "CCCV"
 
@@ -1795,8 +1795,8 @@ function setup_battery_initial_state(init::JSONFile,
     
     init = Dict()
     init[:Phi]     = [1.0]
-    init[:Current] = [1.0]
-        
+    init[:Current] = getInitCurrent(model[:Control])
+
     initState[:Control] = init
 
     initState = setup_state(model, initState)

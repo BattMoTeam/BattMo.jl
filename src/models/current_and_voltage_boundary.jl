@@ -1,6 +1,12 @@
-export CurrentAndVoltageSystem, CurrentAndVoltageDomain, CurrentForce, VoltageForce
-export VoltageVar, CurrentVar, sineup
-export SimpleCVPolicy, CyclingCVPolicy
+export
+    CurrentAndVoltageSystem,
+    CurrentAndVoltageDomain,
+    VoltageVar,
+    CurrentVar,
+    sineup,
+    SimpleCVPolicy,
+    CyclingCVPolicy,
+    getInitCurrent
 
 @enum OperationalMode cc_discharge1 cc_discharge2 cc_charge1 cv_charge2 rest discharge charging discharging none
 struct VoltageVar <: ScalarVariable end
@@ -27,11 +33,13 @@ number_of_cells(::CurrentAndVoltageDomain) = 1
 
 mutable struct SimpleCVPolicy{R} <: AbstractCVPolicy
     current_function
+    Imax::R
     voltage::R
-    function SimpleCVPolicy(current, voltage::T = 2.5) where T<:Real
-        new{T}(current, voltage)
+    function SimpleCVPolicy(;current_function = missing, Imax = 1.0, voltage::T = 2.5) where T<:Real
+        new{T}(current_function, Imax, voltage)
     end
 end
+
 
 struct NoPolicy <: AbstractCVPolicy end
 
@@ -76,6 +84,29 @@ function CyclingCVPolicy(lowerCutoffVoltage,
                            numberOfCycles)
 end
 
+
+function getInitCurrent(policy::SimpleCVPolicy)
+    return policy.Imax
+end
+
+function getInitCurrent(policy::CyclingCVPolicy)
+    
+    if policy.initialControl == charging
+        return policy.ImaxCharge
+    elseif policy.initialControl == discharging
+        return policy.ImaxDischarge
+    else
+        error("initial control not recognized")
+    end
+    
+end
+
+function getInitCurrent(model::CurrentAndVoltageModel)
+
+    return getInitCurrent(model.system.policy)
+
+end
+
 ## We add as parameters those that can only by computed when the whole battery model is setup
 
 struct ImaxDischarge <: ScalarVariable end
@@ -109,13 +140,14 @@ end
 
 function setup_policy!(policy::SimpleCVPolicy, init::JSONFile, parameters)
 
-    inputI = only(parameters[:Control][:ImaxDischarge])
+    Imax = only(parameters[:Control][:ImaxDischarge])
 
     tup = Float64(init.object["Control"]["rampupTime"])
     
-    cFun(time) = currentFun(time, inputI, tup)
+    cFun(time) = currentFun(time, Imax, tup)
 
     policy.current_function = cFun
+    policy.Imax = Imax
     
 end
 
