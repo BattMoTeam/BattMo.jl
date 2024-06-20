@@ -4,13 +4,15 @@
 
 export
     run_battery,
-    inputRefToStates,
-    Constants,
     computeCellCapacity,
+    computeCellMaximumEnergy,
     computeCellEnergy,
     computeCellMass,
     computeCellSpecifications,
-    computeEnergyEfficiency
+    computeEnergyEfficiency,
+    inputRefToStates,
+    Constants
+
 
 ###############
 # Run battery #
@@ -39,6 +41,8 @@ function run_battery(init::InputFile;
     # Perform simulation
     states, reports = simulate(state0, sim, timesteps, forces=forces, config=cfg; kwarg ...)
 
+    energy = computeCellEnergy(states)
+
     extra = Dict(:model => model,
                  :state0 => state0,
                  :parameters => parameters,
@@ -48,7 +52,13 @@ function run_battery(init::InputFile;
                  :forces => forces,
                  :simulator => sim)
 
-    return (states=states, reports=reports, extra=extra, exported=init)
+    cellSpecifications = Dict(:energy => energy)
+    
+    return (states             = states            ,
+            cellSpecifications = cellSpecifications, 
+            reports            = reports           ,
+            extra              = extra             ,
+            exported           = init)
     
 end
 
@@ -2043,7 +2053,25 @@ function computeCellCapacity(model::MultiModel)
     
 end
 
-function computeCellEnergy(model::MultiModel; T = 298.15, capacities = missing)
+function computeCellEnergy(states)
+
+    time = [state[:Control][:ControllerCV].time for state in states]
+    E    = [state[:Control][:Phi][1] for state in states]
+    I    = [state[:Control][:Current][1] for state in states]
+
+    dt   = diff(time)
+    
+    Emid = (E[2 : end] + E[1 : end - 1])./2
+    Imid = (I[2 : end] + I[1 : end - 1])./2
+
+    energy = sum(Emid.*Imid.*dt)
+
+    return energy
+    
+end
+
+
+function computeCellMaximumEnergy(model::MultiModel; T = 298.15, capacities = missing)
 
     eldes = (:NeAm, :PeAm)
     
@@ -2142,7 +2170,7 @@ function computeCellSpecifications(model::MultiModel; T = 298.15)
 
     capacities = (NeAm = computeElectrodeCapacity(model, :NeAm), PeAm =computeElectrodeCapacity(model, :PeAm))
 
-    energy = computeCellEnergy(model; T = T, capacities = capacities)
+    energy = computeCellMaximumEnergy(model; T = T, capacities = capacities)
 
     mass = computeCellMass(model)
     
