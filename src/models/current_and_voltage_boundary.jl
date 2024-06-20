@@ -134,8 +134,10 @@ function setup_policy!(policy::CyclingCVPolicy, init::JSONFile, parameters)
 
 end
 
-function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, model::CurrentAndVoltageModel{P}, dx, w) where {R, I, Q <: CyclingCVPolicy{R, I}, P <: CurrentAndVoltageModel{Q}}
+function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, model::P, dx, w) where {R, I, Q <: CyclingCVPolicy{R, I}, P <: CurrentAndVoltageModel{Q}}
 
+    @info "here"
+    
     entity = associated_entity(p)
     active = active_entities(model.domain, entity, for_variables = true)
     v = state[state_symbol]
@@ -157,7 +159,6 @@ function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, mode
     end
     
 end
-
 
 
 ## Policy to control functions
