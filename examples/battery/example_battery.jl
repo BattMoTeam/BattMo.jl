@@ -38,7 +38,7 @@ if do_json
 
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, ".json")
     init = JSONFile(fn)
-    states, reports, extra = run_battery(init; use_p2d = use_p2d, info_level = 0, extra_timing = false);
+    states, cellSpecification, reports, extra = run_battery(init; use_p2d = use_p2d, info_level = 0, extra_timing = false);
 
     t = [state[:Control][:ControllerCV].time for state in states]
     E = [state[:Control][:Phi][1] for state in states]
