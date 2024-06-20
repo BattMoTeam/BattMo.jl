@@ -119,25 +119,17 @@ function setup_policy!(policy::SimpleCVPolicy, init::JSONFile, parameters)
     
 end
 
+ 
 function setup_policy!(policy::CyclingCVPolicy, init::JSONFile, parameters)
 
-    # Setup absolute increment limiter for the current
-    # Imax = max(only(parameters[:Control][:ImaxDischarge]), only(parameters[:Control][:ImaxCharge]))
-    # str = "function absolute_increment_limit(::CurrentVar)
-    #          return 0.2*$Imax
-    #        end"
-    # eval(Meta.parse(str))
-
-    # Setup policy parameter
     policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
     policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])
 
 end
 
+
 function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, model::P, dx, w) where {R, I, Q <: CyclingCVPolicy{R, I}, P <: CurrentAndVoltageModel{Q}}
 
-    @info "here"
-    
     entity = associated_entity(p)
     active = active_entities(model.domain, entity, for_variables = true)
     v = state[state_symbol]
@@ -502,25 +494,6 @@ function select_primary_variables!(S, system::CurrentAndVoltageSystem, model::Si
 
     S[:Phi]     = VoltageVar()
     S[:Current] = CurrentVar()
-    
-end
-
-# function Jutul.update_before_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel{P}, dt, forces; time = NaN, kwarg...) where {P}
-
-#     ctrl = storage.state[:ControllerCV]
-#     ctrl.time = time + dt
-    
-# end
-
-function Jutul.update_primary_variables!(state, dx, model::CurrentAndVoltageModel{P}; kwarg...) where {P}
-
-    invoke(Jutul.update_primary_variables!,
-           Tuple{typeof(state),
-                 typeof(dx),
-                 JutulModel},
-           state,
-           dx,
-           model; kwarg...)
     
 end
 
