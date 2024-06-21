@@ -139,38 +139,56 @@ function setup_timesteps(init::JSONFile;
     
     if controlPolicy == "CCDischarge"
 
-        if haskey(jsonstruct["TimeStepping"], "totalTime")
-            totalTime = jsonstruct["TimeStepping"]["totalTime"]
-        else
-            DRate = jsonstruct["Control"]["DRate"]
-            con   = Constants()
-            totalTime = 1.1*con.hour/DRate
-        end
-        n = jsonstruct["TimeStepping"]["numberOfTimeSteps"]
+        DRate = jsonstruct["Control"]["DRate"]
+        con   = Constants()
+        totalTime = 1.1*con.hour/DRate
 
-        dt = totalTime / n
-        timesteps = rampupTimesteps(totalTime, dt, 5)
+        if haskey(jsonstruct["TimeStepping"], "totalTime")
+            @warn "totalTime value is given but not used"
+        end
+
+        if haskey(jsonstruct["TimeStepping"], "timeStepDuration")
+            dt = jsonstruct["TimeStepping"]["timeStepDuration"]
+            if haskey(jsonstruct["TimeStepping"], "numberOfTimeSteps")
+                @warn "Number of time steps is given but not used"
+            end
+        else
+            n = jsonstruct["TimeStepping"]["numberOfTimeSteps"]
+            dt = totalTime / n
+        end
+        if haskey(jsonstruct["TimeStepping"], "useRampup") && jsonstruct["TimeStepping"]["useRampup"]
+            nr = jsonstruct["TimeStepping"]["numberOfRampupSteps"]
+        else
+            nr = 1
+        end
+            
+        timesteps = rampupTimesteps(totalTime, dt, nr)
 
     elseif controlPolicy == "CCCV"
         
-        if haskey(jsonstruct["Control"], "numberOfCycles")
-            
-            ncycles = jsonstruct["Control"]["numberOfCycles"]
-            DRate = jsonstruct["Control"]["DRate"]
-            CRate = jsonstruct["Control"]["CRate"]
+        ncycles = jsonstruct["Control"]["numberOfCycles"]
+        DRate = jsonstruct["Control"]["DRate"]
+        CRate = jsonstruct["Control"]["CRate"]
 
-            con = Constants()
-            totalTime = ncycles*1.2*(1*con.hour/CRate + 1*con.hour/DRate);
-            
-        else
-            
-            totalTime = jsonstruct["Control"]["totalTime"]
-            
+        con   = Constants()
+        
+        totalTime = ncycles*1.2*(1*con.hour/CRate + 1*con.hour/DRate);
+        
+        if haskey(jsonstruct["TimeStepping"], "totalTime")
+            @warn "totalTime value is given but not used"
         end
 
-        n = jsonstruct["TimeStepping"]["numberOfTimeSteps"]
+        if haskey(jsonstruct["TimeStepping"], "timeStepDuration")
+            dt = jsonstruct["TimeStepping"]["timeStepDuration"]
+            n  = Int64(floor(totalTime/dt))
+            if haskey(jsonstruct["TimeStepping"], "numberOfTimeSteps")
+                @warn "Number of time steps is given but not used"
+            end
+        else
+            n  = jsonstruct["TimeStepping"]["numberOfTimeSteps"]
+            dt = totalTime / n
+        end
 
-        dt = totalTime/n
         timesteps = repeat([dt], n)
 
     else
