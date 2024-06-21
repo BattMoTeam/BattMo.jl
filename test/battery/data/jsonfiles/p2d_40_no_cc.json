@@ -171,8 +171,7 @@
     "externalTemperature": 298.15
   },
   "TimeStepping": {
-    "totalTime": 5040,
-    "numberOfTimeSteps": 40,
+    "timeStepDuration": 50,
     "useRampup": true,
     "numberOfRampupSteps": 5
   },
