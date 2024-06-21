@@ -67,6 +67,9 @@ p1 = Plots.plot(t, E;
                 title     = "Voltage",
                 xlabel    = "Time / s",
                 ylabel    = "Voltage / V",
+                markershape = :cross,
+                markercolor = :black,
+                markersize = 1,
                 linewidth = 4,
                 xtickfont = font(pointsize = 15),
                 ytickfont = font(pointsize = 15))
@@ -78,6 +81,9 @@ p2 = Plots.plot(t, I;
                 title     = "Current",
                 xlabel    = "Time / s",
                 ylabel    = "Current / A",
+                markershape = :cross,
+                markercolor = :black,
+                markersize = 1,
                 linewidth = 4,
                 xtickfont = font(pointsize = 15),
                 ytickfont = font(pointsize = 15))
