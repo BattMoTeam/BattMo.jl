@@ -10,7 +10,7 @@
         "cmax": 34684,
         "OCP": {
           "type": "function",
-          "functionname": "computeOCP_graphite",
+          "functionname": "computeOCP_Graphite_Torchio",
           "argumentlist": [
             "cElectrode",
             "T",
@@ -70,7 +70,7 @@
         "cmax": 50060,
         "OCP": {
           "type": "function",
-          "functionname": "computeOCP_nmc111",
+          "functionname": "computeOCP_NMC111",
           "argumentlist": [
             "cElectrode",
             "T",

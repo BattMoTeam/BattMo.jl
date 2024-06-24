@@ -27,7 +27,7 @@ const coeff2_graphite = Polynomial([
 ]);
 
 
-function computeOCP_graphite(c, T, cmax)
+function computeOCP_Graphite_Torchio(c, T, cmax)
     """Compute OCP for GenericGraphite as function of temperature and concentration"""
     theta  = c./cmax
     refT   = 298.15
@@ -129,6 +129,81 @@ const coeff2_dUdT_nmc111 = Polynomial([
     + 3.048755063
 ])
 
+function computeOCP_Graphite_Xu2015(c, T, cmax)
+
+    """Compute OCP for LFP as function of temperature and concentration"""
+    refT   = 298.15
+    theta  = c./cmax
+
+    data1 = [0.00 1.28683
+            0.01 0.65272
+            0.02 0.52621
+            0.03 0.44128
+            0.04 0.37552
+            0.05 0.32567
+            0.10 0.21665
+            0.15 0.18623
+            0.20 0.16445
+            0.25 0.14548
+            0.30 0.13293
+            0.35 0.12635
+            0.40 0.12300
+            0.45 0.12036
+            0.50 0.11606
+            0.55 0.10811
+            0.60 0.09833
+            0.65 0.09146
+            0.70 0.08829
+            0.75 0.08696
+            0.80 0.08592
+            0.85 0.08369
+            0.90 0.07698
+            0.95 0.05692
+            0.96 0.04980
+            0.97 0.04118
+            0.98 0.03086
+            0.99 0.01865
+            1.00 0.00443]
+
+    x1 = data1[:, 1]
+    y1 = data1[:, 2]
+
+    itp_refOCP = get_1d_interpolator(x1,y1, cap_endpoints=false)
+
+    refOCP = itp_refOCP(theta)
+
+    data2 = [0.01049 3.00E-04
+            0.03146 2.47E-04
+            0.05244 1.95E-04
+            0.07711 1.33E-04
+            0.1006  7.21E-05
+            0.1302  5.09E-05
+            0.145   3.38E-05
+            0.1672  2.46E-06
+            0.2153  -6.32E-05
+            0.2696  -1.36E-04
+            0.3399  -1.55E-04
+            0.3991  -1.45E-04
+            0.4497  -1.25E-04
+            0.4806  -8.22E-05
+            0.5484  -7.41E-05
+            0.6292  -7.31E-05
+            0.7199  -9.32E-05
+            0.76    -1.14E-04]
+
+    x2 = data2[:, 1]
+    y2 = data2[:, 2]
+
+    itp_dUdT = get_1d_interpolator(x2,y2,cap_endpoints = false)
+    dUdT = itp_dUdT(theta)
+
+    ocp    = refOCP + (T - refT) * dUdT
+    
+    return ocp
+    
+end
+
+
 function computeOCP_LFP_Xu2015(c, T, cmax)
     
     """Compute OCP for LFP as function of temperature and concentration"""
@@ -216,7 +291,13 @@ function computeOCP_LFP_Xu2015(c, T, cmax)
     
 end
 
-function computeOCP_nmc111(c, T, cmax)
+function computeOCP_LFP_Gerver2011(c, T, cmax)
+
+    ocp = 3.41285712e+00 - 1.49721852e-02 * c/cmax + 3.54866018e+14 * exp(-3.95729493e+02 * c/cmax) - 1.45998465e+00 * exp(-1.10108622e+02 * (1 - c/cmax))
+    return ocp
+end
+
+function computeOCP_NMC111(c, T, cmax)
     
     """Compute OCP for GenericNMC111 as function of temperature and concentration"""
     refT   = 298.15
