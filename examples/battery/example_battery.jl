@@ -18,6 +18,7 @@ if use_p2d
     # name = "p2d_40"
     # name = "p2d_40_no_cc"
     name = "p2d_40_cccv"
+    # name = "p2d_40_jl_chen2020"
     # name = "3d_demo_case"
 else
     # name = "p1d_40"
@@ -38,7 +39,7 @@ if do_json
 
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, ".json")
     init = JSONFile(fn)
-    states, cellSpecification, reports, extra = run_battery(init; use_p2d = use_p2d, info_level = 0, extra_timing = false);
+    states, cellSpecifications, reports, extra = run_battery(init; use_p2d = use_p2d, info_level = 2, extra_timing = false);
 
     t = [state[:Control][:ControllerCV].time for state in states]
     E = [state[:Control][:Phi][1] for state in states]
