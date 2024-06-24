@@ -2143,7 +2143,7 @@ function computeCellMass(model::MultiModel)
     
     for elde in eldes
         effrho = model[elde].system[:effective_density]
-        vols = model[elde].domain.representation[:volumes]
+        vols = model[elde].domain.representation[:face_weighted_volumes]
         mass = mass + sum(effrho.*vols)
     end
     
@@ -2151,7 +2151,7 @@ function computeCellMass(model::MultiModel)
     
     rho  = model[:Elyte].system[:electrolyte_density]
     vf   = model[:Elyte].domain.representation[:volumeFraction]
-    vols = model[:Elyte].domain.representation[:volumes]
+    vols = model[:Elyte].domain.representation[:face_weighted_volumes]
     
     mass = mass + sum(vf.*rho.*vols)
 
@@ -2159,7 +2159,7 @@ function computeCellMass(model::MultiModel)
     
     rho  = model[:Elyte].system[:separator_density]
     vf   = model[:Elyte].domain.representation[:separator_volume_fraction]
-    vols = model[:Elyte].domain.representation[:volumes]
+    vols = model[:Elyte].domain.representation[:face_weighted_volumes]
     
     mass = mass + sum(vf.*rho.*vols)
     
@@ -2170,7 +2170,7 @@ function computeCellMass(model::MultiModel)
     for cc in ccs
         if haskey(model.models, cc)
             rho  = model[cc].system[:density]
-            vols = model[cc].domain.representation[:volumes]        
+            vols = model[cc].domain.representation[:face_weighted_volumes]        
             mass = mass + sum(rho.*vols)
         end
     end
