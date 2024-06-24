@@ -24,9 +24,16 @@ struct MatlabFile <: InputFile
 end
 
 struct JSONFile <: InputFile
-    inputFileName::String
+    inputFileName::Union{String, Missing}
     object::Dict{String, Any}
-    function JSONFile(inputFileName::String)
-        return new(inputFileName, JSON.parsefile(inputFileName))
-    end
 end
+
+function JSONFile(inputFileName::String)
+    return JSONFile(inputFileName, JSON.parsefile(inputFileName))
+end
+
+function JSONFile(object::Dict{String, Any})
+    return JSONFile(missing, object)
+end
+
+
