@@ -41,7 +41,6 @@ function run_battery(init::InputFile;
     # Perform simulation
     states, reports = simulate(state0, sim, timesteps, forces=forces, config=cfg; kwarg ...)
 
-    energy = computeCellEnergy(states)
 
     extra = Dict(:model => model,
                  :state0 => state0,
@@ -51,8 +50,11 @@ function run_battery(init::InputFile;
                  :config => cfg,
                  :forces => forces,
                  :simulator => sim)
+    
+    cellSpecifications = computeCellSpecifications(model)
 
-    cellSpecifications = Dict(:energy => energy)
+    cellSpecifications["energy"]           = computeCellEnergy(states)
+    cellSpecifications["energyEfficiency"] = computeEnergyEfficiency(states)
     
     return (states             = states            ,
             cellSpecifications = cellSpecifications, 
@@ -2262,6 +2264,49 @@ function convert_to_int_vector(x::Matrix{Float64})
     return vec
 end
 
+function computeEnergyEfficiency(init::JSONFile)
+
+    # setup a schedule with just one cycle and very fine refinement
+
+    jsondict = init.object
+
+    ctrldict = jsondict["Control"]
+    
+    controlPolicy = ctrldict["controlPolicy"]
+   
+    if controlPolicy == "CCDischarge"
+
+        ctrldict["controlPolicy"]  = "CCCV"
+        ctrldict["CRate"]          = 1.0
+        ctrldict["DRate"]          = 1.0
+        ctrldict["dEdtLimit"]      = 1e-5
+        ctrldict["dIdtLimit"]      = 1e-5
+        ctrldict["numberOfCycles"] = 1
+        ctrldict["initialControl"] = "charging"
+        
+        jsondict["SOC"] = 0.1
+        
+    elseif controlPolicy == "CCCV"
+
+        ctrldict["initialControl"] = "charging"
+        ctrldict["numberOfCycles"] = 1
+        jsondict["SOC"]            = 0.0
+
+    else
+
+        error("controlPolicy not recognized.")
+       
+    end
+
+    init2 = JSONFile(jsondict)
+
+    # (; states) = run_battery(init2; info_level=2)
+
+    # return (computeEnergyEfficiency(states), states, init2)
+    return (missing, missing, init2)
+    
+end
+
 function computeEnergyEfficiency(states)
     
     time = [state[:Control][:ControllerCV].time for state in states]
@@ -2271,6 +2316,7 @@ function computeEnergyEfficiency(states)
     Iref = copy(I)
 
     dt   = diff(time)
+    
     Emid = (E[2 : end] + E[1 : end - 1])./2
 
      # discharge energy

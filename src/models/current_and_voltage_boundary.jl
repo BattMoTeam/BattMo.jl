@@ -92,7 +92,7 @@ end
 function getInitCurrent(policy::CyclingCVPolicy)
     
     if policy.initialControl == charging
-        return policy.ImaxCharge
+        return -policy.ImaxCharge
     elseif policy.initialControl == discharging
         return policy.ImaxDischarge
     else
