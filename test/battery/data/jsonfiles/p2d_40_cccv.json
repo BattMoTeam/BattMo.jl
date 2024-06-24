@@ -57,14 +57,6 @@
         "specificHeatCapacity": 632,
         "thermalConductivity": 1.04
       }
-    },
-    "CurrentCollector": {
-      "thickness": 1e-05,
-      "N": 5,
-      "electronicConductivity": 59600000.0,
-      "thermalConductivity": 398,
-      "specificHeatCapacity": 385,
-      "density": 8960
     }
   },
   "PositiveElectrode": {
@@ -121,14 +113,6 @@
         "specificHeatCapacity": 700,
         "thermalConductivity": 2.1
       }
-    },
-    "CurrentCollector": {
-      "thickness": 1e-05,
-      "N": 5,
-      "electronicConductivity": 35500000.0,
-      "thermalConductivity": 170,
-      "specificHeatCapacity": 875,
-      "density": 2700
     }
   },
   "Separator": {
@@ -144,7 +128,7 @@
   "SOC": 0.99,
   "initT": 298.15,
   "use_thermal": false,
-  "include_current_collectors": true,
+  "include_current_collectors": false,
   "Control": {
     "controlPolicy": "CCCV",
     "initialControl" : "discharging",
