@@ -245,7 +245,6 @@ function setupRegionSwitchFlags(policy::CyclingCVPolicy, state, ctrlType)
 
         dIdt = state.ControllerCV.dIdt
         if !ismissing(dIdt)
-            dIdt = state.dIdt
             before = (abs(dIdt) - dIdtMin)/dIdtMin > tol
             after  = (abs(dIdt) - dIdtMin)/dIdtMin < -tol
         else
@@ -369,16 +368,16 @@ end
 
 function check_constraints(model, storage)
 
-    policy = model.system.policy
+    policy = model[:Control].system.policy
     
-    state  = storage.state
-    state0 = storage.state0
+    state  = storage.state[:Control]
+    state0 = storage.state0[:Control]
 
     controller = state[:ControllerCV]
     ctrlType   = state[:ControllerCV].ctrlType;
     ctrlType0  = state0[:ControllerCV].ctrlType;
     
-    nextCtrlType = model.getNextCtrlType(ctrlType0);
+    nextCtrlType = getNextCtrlType(ctrlType0);
 
     arefulfilled = true;
     
@@ -388,7 +387,7 @@ function check_constraints(model, storage)
         
         arefulfilled = false;
         controller.ctrlType = nextCtrlType;
-        update_values_in_controller!(storage, policy, dt)
+        update_values_in_controller!(state, policy)
         
     end
 
@@ -436,7 +435,7 @@ end
 function update_controller!(state, state0, policy::AbstractCVPolicy, dt)
     
     update_control_type_in_controller!(state, state0, policy, dt)
-    update_values_in_controller!(state, state0, policy, dt)
+    update_values_in_controller!(state, policy)
     
 end
 
@@ -447,7 +446,7 @@ function update_control_type_in_controller!(state, state0, policy::SimpleCVPolic
     
     controller = state.ControllerCV
     
-    phi   = only(state.Phi)
+    phi = only(state.Phi)
     
     target_is_voltage = (phi <= phi_p)
 
@@ -457,7 +456,7 @@ function update_control_type_in_controller!(state, state0, policy::SimpleCVPolic
     
 end
 
-function update_values_in_controller!(state, state0, policy::SimpleCVPolicy, dt)
+function update_values_in_controller!(state, policy::SimpleCVPolicy)
     
     controller  = state.ControllerCV
     
@@ -488,25 +487,24 @@ end
 
 function update_control_type_in_controller!(state, state0, policy::CyclingCVPolicy, dt)
 
-    E  = state[:Phi];
-    I  = state[:Current];
-    E0 = state0[:Phi];
-    I0 = state0[:Current];
+    E  = only(value(state[:Phi]))
+    I  = only(value(state[:Current]))
+    E0 = only(value(state0[:Phi]))
+    I0 = only(value(state0[:Current]))
 
     controller = state.ControllerCV
 
-    controller.time = state0.Controller.time + dt
+    controller.time = state0.ControllerCV.time + dt
     controller.dIdt = (I - I0)/dt
     controller.dEdt = (E - E0)/dt
 
-    ctrlType  = state.ctrlType
-    ctrlType0 = state0.ctrlType
+    ctrlType  = state.ControllerCV.ctrlType
+    ctrlType0 = state0.ControllerCV.ctrlType
     
     nextCtrlType = getNextCtrlType(ctrlType0)
 
     rsw  = setupRegionSwitchFlags(policy, state, ctrlType0);
-    rsw0 = setupRegionSwitchFlags(policy, state0, state0.ctrlType);
-
+    rsw0 = setupRegionSwitchFlags(policy, state0, ctrlType0);
             
     if ctrlType == ctrlType && rsw.afterSwitchRegion && !rsw0.beforeSwitchRegion
                 
@@ -516,9 +514,9 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
     
 end
 
-function update_values_in_controller!(state, state0, policy::CyclingCVPolicy, dt)
+function update_values_in_controller!(state,  policy::CyclingCVPolicy)
 
-    controller  = state.ControllerCV
+    controller  = state[:ControllerCV]
     
     ctrlType = controller.ctrlType
     
@@ -555,6 +553,9 @@ function update_values_in_controller!(state, state0, policy::CyclingCVPolicy, dt
         target = I_t
     end
 
+    controller.target_is_voltage = target_is_voltage
+    controller.target            = target
+    
 end
 
 
@@ -678,14 +679,21 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
         state[:ControllerCV] = CcCvControllerCV()
         
         if policy.initialControl == discharging
+            
             state[:ControllerCV].ctrlType = cc_discharge1
+
         elseif policy.initialControl == charging
+            
             state[:ControllerCV].ctrlType = cc_charge1
+            
         else
             error("initialControl not recognized")
         end
+
+        update_values_in_controller!(state, policy)
         
     end
+    
 end
 
 function getNextCtrlType(ctrlType::OperationalMode)
