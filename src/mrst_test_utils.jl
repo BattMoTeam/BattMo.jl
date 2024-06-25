@@ -955,7 +955,8 @@ function setup_battery_model(init::MatlabFile;
                 Elyte   = model_elyte, 
                 PeAm    = model_peam, 
                 Control = model_control
-            ), 
+            ),
+            Val(:Battery);
             groups = groups)    
     else
         models = (
@@ -975,7 +976,9 @@ function setup_battery_model(init::MatlabFile;
             groups    = nothing
             reduction = :reduction
         end
-        model = MultiModel(models, groups = groups, reduction = reduction)
+        model = MultiModel(models,
+                           Val(:Battery);
+                           groups = groups, reduction = reduction)
 
     end
     
@@ -1354,8 +1357,9 @@ function setup_battery_model(init::JSONFile;
                 NeAm    = model_neam, 
                 Elyte   = model_elyte, 
                 PeAm    = model_peam, 
-                Control = model_control
-            ), 
+                Control = model_control,
+            ),
+            Val(:Battery);
             groups = groups)    
     else
         models = (
@@ -1375,7 +1379,9 @@ function setup_battery_model(init::JSONFile;
             groups    = nothing
             reduction = :reduction
         end
-        model = MultiModel(models, groups = groups, reduction = reduction)
+        model = MultiModel(models,
+                           Val(:Battery);
+                           groups = groups, reduction = reduction)
 
     end
 

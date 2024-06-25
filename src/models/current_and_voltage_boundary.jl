@@ -289,8 +289,8 @@ mutable struct CcCvControllerCV{R, I<:Integer} <: ControllerCV
 
     maincontroller::SimpleControllerCV{R}
     numberOfCycles::I
-    dEdt::R
-    dIdt::R
+    dEdt::Union{R, Missing}
+    dIdt::Union{R, Missing}
     
 end
 
@@ -409,40 +409,42 @@ function Jutul.update_values!(old::CcCvControllerCV, new::CcCvControllerCV)
 end
 
 
-function Jutul.update_after_step!(storage,
-                                  model::Jutul.SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{CyclingCVPolicy{T1, T2}}, T3, T4},
-                                  dt,
-                                  forces;
-                                  kwarg...) where {T1, T2, T3, T4}
+function Jutul.perform_step_solve_impl!(report, storage, model::MultiModel{T, :Battery}, config, dt, iteration, rec, relaxation, executor) where {T}
 
-    report = invoke(Jutul.update_after_step!,
-                    Tuple{typeof(storage),
-                          typeof(Jutul.SimulationModel),
-                          typeof(dt),
-                          typeof(forces)},
-                    storage, model, dt, forces; kwarg...)
+    invoke(Jutul.perform_step_solve_impl!,
+           Tuple{typeof(report),
+                 typeof(storage),
+                 MultiModel,
+                 typeof(config),
+                 typeof(dt),
+                 typeof(iteration),
+                 typeof(rec),
+                 typeof(relaxation),
+                 typeof(executor)},
+           report, storage, model, config, dt, iteration, rec, relaxation, executor)
 
-    update_controller!(storage, model.system.policy, dt)
+    state  = storage.state[:Control]
+    state0 = storage.state0[:Control]
+    model  = model[:Control]
+    policy = model.system.policy
 
-    return report
-    
-    
-end
+    update_controller!(state, state0, policy, dt)
 
-function update_controller!(storage, policy::AbstractCVPolicy, dt)
-    
-    update_control_type_in_controller!(storage, policy, dt)
-    update_values_in_controller!(storage, policy, dt)
-    
 end
 
 
-function update_control_type_in_controller!(storage, policy::SimpleControllerCV, dt)
+function update_controller!(state, state0, policy::AbstractCVPolicy, dt)
+    
+    update_control_type_in_controller!(state, state0, policy, dt)
+    update_values_in_controller!(state, state0, policy, dt)
+    
+end
+
+
+function update_control_type_in_controller!(state, state0, policy::SimpleCVPolicy, dt)
 
     phi_p = policy.voltage
     
-    state      = storage.state
-    state0     = storage.state0
     controller = state.ControllerCV
     
     phi   = only(state.Phi)
@@ -451,13 +453,13 @@ function update_control_type_in_controller!(storage, policy::SimpleControllerCV,
 
     controller.target_is_voltage = target_is_voltage
     controller.ctrlType          = discharge # for the moment only discharge in a simple controller
-    controller.time              = state0.Controller.time + dt
+    controller.time              = state0.ControllerCV.time + dt
     
 end
 
-function update_values_in_controller!(storage, policy::SimpleControllerCV, dt)
+function update_values_in_controller!(state, state0, policy::SimpleCVPolicy, dt)
     
-    controller  = storage.state.ControllerCV
+    controller  = state.ControllerCV
     
     if controller.target_is_voltage
         
@@ -484,10 +486,7 @@ end
 
 
 
-function update_control_type_in_controller!(storage, policy::CyclingCVPolicy, dt)
-
-    state  = storage.state
-    state0 = storage.state0
+function update_control_type_in_controller!(state, state0, policy::CyclingCVPolicy, dt)
 
     E  = state[:Phi];
     I  = state[:Current];
@@ -517,9 +516,9 @@ function update_control_type_in_controller!(storage, policy::CyclingCVPolicy, dt
     
 end
 
-function update_values_in_controller!(storage, policy::CyclingCVPolicy, dt)
+function update_values_in_controller!(state, state0, policy::CyclingCVPolicy, dt)
 
-    controller  = storage.state.ControllerCV
+    controller  = state.ControllerCV
     
     ctrlType = controller.ctrlType
     
@@ -667,7 +666,12 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 
     if policy isa SimpleCVPolicy
 
-        state[:ControllerCV] = SimpleControllerCV()
+        
+        target            = model.system.policy.Imax
+        time              = 0.0
+        target_is_voltage = false
+        ctrlType          = discharging
+        state[:ControllerCV] = SimpleControllerCV(target, time, target_is_voltage, ctrlType)
         
     elseif policy isa CyclingCVPolicy
         
