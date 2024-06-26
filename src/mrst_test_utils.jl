@@ -2294,10 +2294,18 @@ function computeEnergyEfficiency(init::JSONFile)
         
     elseif controlPolicy == "CCCV"
 
-        ctrldict["initialControl"] = "charging"
-        ctrldict["numberOfCycles"] = 1
-        jsondict["SOC"]            = 0.0
+        ctrldict["initialControl"]    = "charging"
+        ctrldict["dIdtLimit"]         = 1e-5
+        ctrldict["dEdtLimit"]         = 1e-5
+        ctrldict["numberOfCycles"]    = 1
 
+        jsondict["SOC"] = 0.0
+
+        rate = max(ctrldict["DRate"], ctrldict["CRate"])
+        dt = 20/rate
+        
+        jsondict["TimeStepping"]["timeStepDuration"] = dt
+        
     else
 
         error("controlPolicy not recognized.")
@@ -2306,10 +2314,10 @@ function computeEnergyEfficiency(init::JSONFile)
 
     init2 = JSONFile(jsondict)
 
-    # (; states) = run_battery(init2; info_level=2)
+    (; states) = run_battery(init2; info_level=0)
 
-    # return (computeEnergyEfficiency(states), states, init2)
-    return (missing, missing, init2)
+    return (computeEnergyEfficiency(states), states, init2)
+    # return (missing, missing, init2)
     
 end
 
