@@ -2300,10 +2300,10 @@ function computeEnergyEfficiency(init::JSONFile)
 
     init2 = JSONFile(jsondict)
 
-    # (; states) = run_battery(init2; info_level=2)
+    (; states) = run_battery(init2; info_level=2)
 
-    # return (computeEnergyEfficiency(states), states, init2)
-    return (missing, missing, init2)
+    return (computeEnergyEfficiency(states), states, init2)
+    # return (missing, missing, init2)
     
 end
 
