@@ -163,21 +163,21 @@
      "bruggemanCoefficient": 1.5
   },
   "G": [],
-  "SOC": 0.99,
+  "SOC": 1.0,
   "initT": 298.15,
   "use_thermal": true,
   "include_current_collectors": false,
   "Control": {
-     "controlPolicy": "CCCV",
-     "initialControl": "discharging",
-     "numberOfCycles": 1,
+     "controlPolicy": "CCDischarge",
+     "initialControl": "discharge",
+     "numberOfCycles": 10,
      "CRate": 1.0,
      "DRate": 1.0,
      "lowerCutoffVoltage": 2.4,
      "rampupTime": 10.0,
      "upperCutoffVoltage": 4.1,
-     "dIdtLimit": 0.01,
-     "dEdtLimit": 0.01
+     "dIdtLimit": 0.0001,
+     "dEdtLimit": 0.0001
   },
   "ThermalModel": {
      "externalHeatTransferCoefficient": 1000.0,
@@ -187,7 +187,8 @@
      "useRampup": true,
      "totalTime": 7200.0,
      "rampupTime": 10.0,
-     "numberOfTimeSteps": 72
+     "numberOfTimeSteps": 72,
+     "numberOfRampupSteps":5
   },
   "Output": {
      "variables": [

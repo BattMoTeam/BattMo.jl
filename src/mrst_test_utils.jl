@@ -2281,12 +2281,15 @@ function computeDischargeEnergy(init::JSONFile)
 
         ctrldict["initialControl"] = "discharging"
         jsondict["SOC"] = 1.0
-        timedict["numberOfTimeSteps"] = 200
+
+        rate = ctrldict["DRate"]
+        timedict["timeStepDuration"] = 20 / rate
 
     elseif controlPolicy == "CCDischarge"
         ctrldict["initialControl"] = "discharging"
         jsondict["SOC"] = 1.0
-        timedict["numberOfTimeSteps"] = 200
+        rate = ctrldict["DRate"]
+        timedict["timeStepDuration"] = 20 / rate
 
     else
 
@@ -2296,7 +2299,7 @@ function computeDischargeEnergy(init::JSONFile)
 
     init2 = JSONFile(jsondict)
 
-    (; states) = run_battery(init2; info_level=2)
+    (; states) = run_battery(init2; info_level=0)
 
     return (computeCellEnergy(states), states, init2)
     # return (missing, missing, init2)
@@ -2321,10 +2324,12 @@ function computeEnergyEfficiency(init::JSONFile)
         ctrldict["controlPolicy"]  = "CCCV"
         ctrldict["CRate"]          = 1.0
         ctrldict["DRate"]          = 1.0
-        ctrldict["dEdtLimit"]      = 1e-5
-        ctrldict["dIdtLimit"]      = 1e-5
+        ctrldict["dEdtLimit"]      = 1e-2
+        ctrldict["dIdtLimit"]      = 1e-4
         ctrldict["numberOfCycles"] = 1
         ctrldict["initialControl"] = "charging"
+        rate = ctrldict["DRate"]
+        timedict["timeStepDuration"] = 20 / rate
         
         jsondict["SOC"] = 0.0
         
@@ -2332,7 +2337,9 @@ function computeEnergyEfficiency(init::JSONFile)
 
         ctrldict["initialControl"] = "charging"
         ctrldict["numberOfCycles"] = 1
-        timedict["numberOfTimeSteps"] = 400
+        max_rate = max(ctrldict["DRate"], ctrldict["CRate"])
+        timedict["timeStepDuration"] = 20 / max_rate
+        # timedict["numberOfTimeSteps"] = 400
         jsondict["SOC"]            = 0.0
         
 
@@ -2344,7 +2351,7 @@ function computeEnergyEfficiency(init::JSONFile)
 
     init2 = JSONFile(jsondict)
 
-    (; states) = run_battery(init2; info_level=2)
+    (; states) = run_battery(init2; info_level=0)
 
     return (computeEnergyEfficiency(states), states, init2)
     # return (missing, missing, init2)
