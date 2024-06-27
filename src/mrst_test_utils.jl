@@ -10,6 +10,7 @@ export
     computeCellMass,
     computeCellSpecifications,
     computeEnergyEfficiency,
+    computeDischargeEnergy,
     inputRefToStates,
     Constants
 
@@ -2264,6 +2265,45 @@ function convert_to_int_vector(x::Matrix{Float64})
     return vec
 end
 
+function computeDischargeEnergy(init::JSONFile)
+    # setup a schedule with just discharge half cycle and very fine refinement
+
+    jsondict = init.object
+
+    ctrldict = jsondict["Control"]
+    
+    controlPolicy = ctrldict["controlPolicy"]
+
+    timedict = jsondict["TimeStepping"]
+
+    if controlPolicy == "CCCV"
+        ctrldict["controlPolicy"]  = "CCDischarge"
+
+        ctrldict["initialControl"] = "discharging"
+        jsondict["SOC"] = 1.0
+        timedict["numberOfTimeSteps"] = 200
+
+    elseif controlPolicy == "CCDischarge"
+        ctrldict["initialControl"] = "discharging"
+        jsondict["SOC"] = 1.0
+        timedict["numberOfTimeSteps"] = 200
+
+    else
+
+        error("controlPolicy not recognized.")
+       
+    end
+
+    init2 = JSONFile(jsondict)
+
+    (; states) = run_battery(init2; info_level=2)
+
+    return (computeCellEnergy(states), states, init2)
+    # return (missing, missing, init2)
+    
+end
+
+
 function computeEnergyEfficiency(init::JSONFile)
 
     # setup a schedule with just one cycle and very fine refinement
@@ -2273,6 +2313,8 @@ function computeEnergyEfficiency(init::JSONFile)
     ctrldict = jsondict["Control"]
     
     controlPolicy = ctrldict["controlPolicy"]
+
+    timedict = jsondict["TimeStepping"]
    
     if controlPolicy == "CCDischarge"
 
@@ -2284,13 +2326,15 @@ function computeEnergyEfficiency(init::JSONFile)
         ctrldict["numberOfCycles"] = 1
         ctrldict["initialControl"] = "charging"
         
-        jsondict["SOC"] = 0.1
+        jsondict["SOC"] = 0.0
         
     elseif controlPolicy == "CCCV"
 
         ctrldict["initialControl"] = "charging"
         ctrldict["numberOfCycles"] = 1
+        timedict["numberOfTimeSteps"] = 400
         jsondict["SOC"]            = 0.0
+        
 
     else
 
