@@ -53,9 +53,6 @@ function run_battery(init::InputFile;
                  :simulator => sim)
     
     cellSpecifications = computeCellSpecifications(model)
-
-    cellSpecifications["energy"]           = computeCellEnergy(states)
-    cellSpecifications["energyEfficiency"] = computeEnergyEfficiency(states)
     
     return (states             = states            ,
             cellSpecifications = cellSpecifications, 
@@ -2180,6 +2177,7 @@ function computeCellMass(model::MultiModel)
     
 end
 
+
 function computeCellSpecifications(init::JSONFile)
     
     model = setup_battery_model(init)
@@ -2199,7 +2197,7 @@ function computeCellSpecifications(model::MultiModel; T = 298.15)
 
     specs["NegativeElectrodeCapacity"] = capacities.NeAm
     specs["PositiveElectrodeCapacity"] = capacities.PeAm
-    specs["Energy"]                    = energy
+    specs["MaximumEnergy"]             = energy
     specs["Mass"]                      = mass
     
     return specs
@@ -2332,17 +2330,17 @@ function computeEnergyEfficiency(init::JSONFile)
         timedict["timeStepDuration"] = 20 / rate
         
         jsondict["SOC"] = 0.0
-        
+
     elseif controlPolicy == "CCCV"
 
         ctrldict["initialControl"] = "charging"
         ctrldict["numberOfCycles"] = 1
+
         max_rate = max(ctrldict["DRate"], ctrldict["CRate"])
         timedict["timeStepDuration"] = 20 / max_rate
-        # timedict["numberOfTimeSteps"] = 400
+
         jsondict["SOC"]            = 0.0
         
-
     else
 
         error("controlPolicy not recognized.")
@@ -2354,7 +2352,6 @@ function computeEnergyEfficiency(init::JSONFile)
     (; states) = run_battery(init2; info_level=0)
 
     return (computeEnergyEfficiency(states), states, init2)
-    # return (missing, missing, init2)
     
 end
 
