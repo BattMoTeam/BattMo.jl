@@ -953,7 +953,8 @@ function setup_battery_model(init::MatlabFile;
                 Elyte   = model_elyte, 
                 PeAm    = model_peam, 
                 Control = model_control
-            ), 
+            ),
+            Val(:Battery);
             groups = groups)    
     else
         models = (
@@ -973,7 +974,9 @@ function setup_battery_model(init::MatlabFile;
             groups    = nothing
             reduction = :reduction
         end
-        model = MultiModel(models, groups = groups, reduction = reduction)
+        model = MultiModel(models,
+                           Val(:Battery);
+                           groups = groups, reduction = reduction)
 
     end
     
@@ -1352,8 +1355,9 @@ function setup_battery_model(init::JSONFile;
                 NeAm    = model_neam, 
                 Elyte   = model_elyte, 
                 PeAm    = model_peam, 
-                Control = model_control
-            ), 
+                Control = model_control,
+            ),
+            Val(:Battery);
             groups = groups)    
     else
         models = (
@@ -1373,7 +1377,9 @@ function setup_battery_model(init::JSONFile;
             groups    = nothing
             reduction = :reduction
         end
-        model = MultiModel(models, groups = groups, reduction = reduction)
+        model = MultiModel(models,
+                           Val(:Battery);
+                           groups = groups, reduction = reduction)
 
     end
 
@@ -2333,11 +2339,17 @@ function computeEnergyEfficiency(init::JSONFile)
 
     elseif controlPolicy == "CCCV"
 
-        ctrldict["initialControl"] = "charging"
-        ctrldict["numberOfCycles"] = 1
+        ctrldict["initialControl"]    = "charging"
+        ctrldict["dIdtLimit"]         = 1e-5
+        ctrldict["dEdtLimit"]         = 1e-5
+        ctrldict["numberOfCycles"]    = 1
 
-        max_rate = max(ctrldict["DRate"], ctrldict["CRate"])
-        timedict["timeStepDuration"] = 20 / max_rate
+        jsondict["SOC"] = 0.0
+
+        rate = max(ctrldict["DRate"], ctrldict["CRate"])
+        dt = 20/rate
+        
+        jsondict["TimeStepping"]["timeStepDuration"] = dt
 
         jsondict["SOC"]            = 0.0
         
