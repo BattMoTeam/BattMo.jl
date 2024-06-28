@@ -172,7 +172,7 @@ function setup_timesteps(init::JSONFile;
 
         con   = Constants()
         
-        totalTime = ncycles*1.2*(1*con.hour/CRate + 1*con.hour/DRate);
+        totalTime = ncycles*1.5*(1*con.hour/CRate + 1*con.hour/DRate);
         
         if haskey(jsonstruct["TimeStepping"], "totalTime")
             @warn "totalTime value is given but not used"
