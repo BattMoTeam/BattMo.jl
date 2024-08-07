@@ -1,8 +1,8 @@
 using StatsBase
 
-export removeCells
+export remove_cells
 
-function mapExcluding(indices)
+function map_excluding(indices)
     """
     indices is an array with 1's and 0's. 1 indicating the cell/face/node should be removed
     """
@@ -11,7 +11,7 @@ function mapExcluding(indices)
     return cumsum(ind) .* ind
 end
 
-function removeCells(G_raw::AbstractDict, cells)
+function remove_cells(G_raw::AbstractDict, cells)
 
    if isempty(cells)
       cellmap = collect(1 : Int(G["cells"]["num"]));
@@ -42,9 +42,9 @@ function removeCells(G_raw::AbstractDict, cells)
    G["cells"]["num"]          = Int.(G["cells"]["num"])
 
 
-   allCells = collect(1 : G["cells"]["num"])
-   ind = allCells .∈ Ref(cells)
-   cellmap = mapExcluding(ind)
+   all_cells = collect(1 : G["cells"]["num"])
+   ind = all_cells .∈ Ref(cells)
+   cellmap = map_excluding(ind)
 
    if haskey(G["cells"], "numFaces")
       numFaces = Int.(G["cells"]["numfaces"]) # This Int is neccessary since the values read are floats
@@ -71,7 +71,7 @@ function removeCells(G_raw::AbstractDict, cells)
 
    ind = 0 .∈ G["faces"]["neighbors"]
    ind = ind[:,1] .&& ind[:,2]
-   facemap = mapExcluding(ind)
+   facemap = map_excluding(ind)
 
    if haskey(G["faces"], "nodes")
       if haskey(G["faces"], "numNodes")
@@ -101,7 +101,7 @@ function removeCells(G_raw::AbstractDict, cells)
    if haskey(G["faces"], "nodes")
       ind = trues(G["nodes"]["num"])
       ind[G["faces"]["nodes"]] = falses(length(G["faces"]["nodes"]))
-      nodemap = mapExcluding(ind)
+      nodemap = map_excluding(ind)
    
       G["nodes"]["coords"] = G["nodes"]["coords"][.!ind,:]
       G["nodes"]["num"] -= sum(ind)
