@@ -1,6 +1,7 @@
 module BattMo
 using PrecompileTools
 using StaticArrays
+using StatsBase
 
 using RuntimeGeneratedFunctions
 RuntimeGeneratedFunctions.init(@__MODULE__)
@@ -62,6 +63,10 @@ import Jutul:
     physical_representation,
     get_1d_interpolator
     
+
+include("back_converter.jl")
+include("find_coupling.jl")
+include("remove_cells.jl") #Trenger StatsBase
 
 include("io_types.jl")
 include("physical_constants.jl")

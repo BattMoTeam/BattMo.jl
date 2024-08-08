@@ -5,7 +5,7 @@ function add_order(list)
     return hcat(list, collect(1:len))
 end
 
-function back_converter(g::UnstructuredMesh)
+function back_converter(g)
     """
     Docstring
     """
@@ -60,7 +60,7 @@ function back_converter(g::UnstructuredMesh)
     G_raw_faces["nodePos"] = reshape(cumsum([1;[a; b]]), :, 1)
 
     G_raw_nodes["num"] = length(g.node_points)
-    G_raw_nodes["coords"] = collect(reshape(reinterpret(Float64, g.node_points), :, 3))
+    G_raw_nodes["coords"] = transpose(reduce(hcat, g.node_points))
 
 
     G_raw["faces"] = G_raw_faces
