@@ -14,9 +14,9 @@ end
 function remove_cells(G_raw::AbstractDict, cells)
 
    if isempty(cells)
-      cellmap = collect(1 : Int(G["cells"]["num"]));
-      nodemap = collect(1 : Int(G["nodes"]["num"]));
-      facemap = collect(1 : Int(G["faces"]["num"]));
+      cellmap = collect(1 : Int(G_raw["cells"]["num"]));
+      nodemap = collect(1 : Int(G_raw["nodes"]["num"]));
+      facemap = collect(1 : Int(G_raw["faces"]["num"]));
 
       return G_raw, cellmap, facemap, nodemap
    end
