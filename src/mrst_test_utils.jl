@@ -31,7 +31,7 @@ function run_battery(init::InputFile;
         Run battery wrapper method. Can use inputs from either Matlab or Json files and performs
         simulation using a simple discharge CV policy
     """
-
+    
     #Setup simulation
     sim, forces, state0, parameters, init, model = setup_sim(init, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
 
@@ -990,12 +990,20 @@ function setup_battery_model(init::JSONFile;
                              general_ad::Bool = false,
                              kwarg...)
     
-
-    geomparams = setup_geomparams(init)
+    include_cc = include_current_collectors(init)
+    case_type = init.object["Geometry"]["case"]
+    print(case_type)
+    if case_type == "1D"                            
+        geomparams = setup_geomparams(init)
+    elseif case_type == "Grid"              
+        geomparams = setup_geomparams(init.object["Grids"],include_cc)
+    else
+        error()
+    end
 
     jsondict = init.object
 
-    include_cc = include_current_collectors(init)
+    
 
 
     """
@@ -1061,7 +1069,6 @@ function setup_battery_model(init::JSONFile;
 
         # specific implementation for electrolyte
         # requires geometric parameters for :NeAm, :SEP, :PeAm
-
         facearea = geomparams[:SEP][:facearea]
         
         names = (:NeAm, :SEP, :PeAm)
@@ -1102,6 +1109,56 @@ function setup_battery_model(init::JSONFile;
 
         return model
         
+    end
+
+    function setup_component(g::CartesianMesh,
+                            sys;
+                            general_ad::Bool=false,
+                            addDirichlet::Bool = false,
+                            facearea = 1.0)
+
+        # specific implementation for electrolyte
+        # requires geometric parameters for :NeAm, :SEP, :PeAm
+
+        domain = DataDomain(g)
+
+        domain[:face_weighted_volumes] = facearea*domain[:volumes]
+
+        # opertors only use geometry not property
+        k = ones(number_of_cells(g))
+        T = compute_face_trans(domain, k)
+        T_hf = compute_half_face_trans(domain, k)
+        T_b = compute_boundary_trans(domain, k)
+
+        domain[:trans, Faces()] = facearea * T
+        domain[:halfTrans, HalfFaces()] = facearea * T_hf
+        domain[:bcTrans, BoundaryFaces()] = facearea * T_b
+        
+        if addDirichlet
+
+            domain.entities[BoundaryDirichletFaces()] = 1
+
+            bcDirFace = 1 # in BoundaryFaces indexing
+            bcDirCell = 1
+            bcDirInd  = 1
+            domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = facearea*domain[:bcTrans][bcDirFace]
+            domain[:bcDirCells, BoundaryDirichletFaces()]     = bcDirCell # 
+            domain[:bcDirInds, BoundaryDirichletFaces()]      = bcDirInd #
+            
+        end
+        
+        if general_ad
+            flow = PotentialFlow(g)
+        else
+            flow = TwoPointPotentialFlowHardCoded(g)
+        end
+        disc = (charge_flow=flow,)
+        domain = DiscretizedDomain(domain, disc)
+
+        model = SimulationModel(domain, sys, context=DefaultContext())
+
+        return model
+
     end
 
     jsonNames = Dict(
@@ -1193,7 +1250,10 @@ function setup_battery_model(init::JSONFile;
             sys_am = ActiveMaterialNoParticleDiffusion(am_params)
         end
         
+
+        
         geomparam = geomparams[name]
+       
 
         if !include_cc && name == :NeAm
             addDirichlet = true
@@ -1204,7 +1264,8 @@ function setup_battery_model(init::JSONFile;
         model_am = setup_component(geomparam              ,
                                    sys_am                 ;
                                    general_ad = general_ad,
-                                   addDirichlet = addDirichlet)
+                                   addDirichlet = addDirichlet,
+                                   facearea = init.object["Geometry"]["faceArea"])
 
         return model_am
         
@@ -1290,7 +1351,15 @@ function setup_battery_model(init::JSONFile;
     end
 
     elyte = Electrolyte(params)
-    model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
+    if case_type == "1D"
+        model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
+    elseif case_type == "Grid"
+        model_elyte = setup_component(geomparams[:Elyte], elyte,
+                                    general_ad = general_ad,
+                                    facearea = geomparams[:facearea])
+    else
+        error()
+    end
 
     ##############
     # Setup PeAm #
@@ -1308,7 +1377,9 @@ function setup_battery_model(init::JSONFile;
         
         sys_pecc = CurrentCollector(pecc_params)
         
-        model_pecc = setup_component(geomparams[:PeCc], sys_pecc, general_ad = general_ad)
+        model_pecc = setup_component(geomparams[:PeCc], sys_pecc, 
+                                    general_ad = general_ad,
+                                    facearea = geomparams["facearea"])
     end
 
     #######################
@@ -1382,8 +1453,13 @@ function setup_battery_model(init::JSONFile;
                            groups = groups, reduction = reduction)
 
     end
-
-    setup_volume_fractions!(model, geomparams)
+    if case_type == "1D"
+        setup_volume_fractions!(model, geomparams)
+    elseif case_type = "Grid"
+        setup_volume_fractions_grid!(model, geomparams)
+    else
+        error()
+    end
     
     return model
     
@@ -1885,6 +1961,34 @@ function setup_volume_fractions!(model::MultiModel, geomparams::Dict{Symbol,<:An
     
 end
 
+function setup_volume_fractions!(model::MultiModel, geomparams::Dict{Symbol,<:Any})
+
+    names = (:NeAm, :SEP, :PeAm)
+    Nelyte = number_of_cells(geomparams[:Elyte])
+    vfelyte = zeros(Nelyte)
+    vfseparator  = zeros(Nelyte)
+    
+    names = (:NeAm, :PeAm)
+    
+    for name in names
+        ammodel = model[name]
+        vf = ammodel.system[:volume_fraction]
+        Nam = geomparams[name][:N]
+        ammodel.domain.representation[:volumeFraction] = vf*ones(Nam)
+        elytecells = geomparams[:elytecells][name]
+        vfelyte[elytecells] .= 1-vf 
+    end
+
+    separator_porosity = model[:Elyte].system[:separator_porosity]
+    
+    vfelyte[nstart : nend]     .= separator_porosity*ones()
+    vfseparator[nstart : nend] .= (1 -separator_porosity)*ones(nend - nstart + 1)
+    
+    model[:Elyte].domain.representation[:volumeFraction] = vfelyte
+    model[:Elyte].domain.representation[:separator_volume_fraction] = vfseparator
+    
+end
+
 ######################
 # Transmissibilities #
 ######################
@@ -2027,6 +2131,34 @@ function setup_geomparams(init::JSONFile)
     
     for name in names
         geomparams[name][:facearea] = jsondict["Geometry"]["faceArea"]
+    end
+    
+    return geomparams
+    
+end
+
+function setup_geomparams(geometry::Dict, include_cc)
+
+    include_cc = false #include_current_collectors(init)
+
+    if include_cc
+        names = (:NeCc, :NeAm, :SEP, :PeAm, :PeCc)
+    else
+        names = (:NeAm, :SEP, :PeAm)
+    end
+    geomparams =  Dict{Symbol, Any}()#Dict(name => Any() for name in names)
+
+    geomparams[:NeAm]         = geometry["NegativeElectrode"]
+    geomparams[:SEP]          = geometry["Separator"]
+    geomparams[:PeAm]         = geometry["PositiveElectrode"]
+    geomparams[:Elyte]         = geometry["Electrolyte"]
+    if include_cc
+        geomparams[:NeCc] = ["NegativeCurrentCollector"]
+        geomparams[:PeCc] = ["CurrentCollector"]
+    end
+    
+    for name in names
+        geomparams[:facearea] = geometry["faceArea"]
     end
     
     return geomparams
