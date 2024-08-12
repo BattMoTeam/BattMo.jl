@@ -49,17 +49,18 @@ for component in bcomponents
 end
 geometry["Electrolyte"] = CartesianMesh(Tuple(N), Tuple(L))
 geometry["Global"] = geometry["Electrolyte"]
-geometry["Couplings"] = coupling 
+geometry["Couplings"] = Dict()
+geometry["Couplings"]["Electrolyte"] = coupling 
 return geometry
 end
-#couplings =
+
  
 geometry=makeGeometry(case)
 
 coupling = Dict()
-cupling["NegativeElectrode"]
+#cupling["NegativeElectrode"]
 
-coupling =
+#coupling =
 
 
 
