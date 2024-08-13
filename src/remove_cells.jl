@@ -1,6 +1,8 @@
 using StatsBase
 
-function mapExcluding(indices)
+export remove_cells
+
+function map_excluding(indices)
     """
     indices is an array with 1's and 0's. 1 indicating the cell/face/node should be removed
     """
@@ -9,12 +11,12 @@ function mapExcluding(indices)
     return cumsum(ind) .* ind
 end
 
-function removeCells(G_raw::AbstractDict, cells) #G eller G_raw
+function remove_cells(G_raw::AbstractDict, cells)
 
    if isempty(cells)
-      cellmap = collect(1 : Int(G["cells"]["num"]));
-      nodemap = collect(1 : Int(G["nodes"]["num"]));
-      facemap = collect(1 : Int(G["faces"]["num"]));
+      cellmap = collect(1 : Int(G_raw["cells"]["num"]));
+      nodemap = collect(1 : Int(G_raw["nodes"]["num"]));
+      facemap = collect(1 : Int(G_raw["faces"]["num"]));
 
       return G_raw, cellmap, facemap, nodemap
    end
@@ -40,12 +42,12 @@ function removeCells(G_raw::AbstractDict, cells) #G eller G_raw
    G["cells"]["num"]          = Int.(G["cells"]["num"])
 
 
-   allCells = collect(1 : G["cells"]["num"])
-   ind = allCells .∈ Ref(cells)
-   cellmap = mapExcluding(ind)
+   all_cells = collect(1 : G["cells"]["num"])
+   ind = all_cells .∈ Ref(cells)
+   cellmap = map_excluding(ind)
 
    if haskey(G["cells"], "numFaces")
-      numFaces = Int.(G["cells"]["numfaces"]) # Kept this one inted just in case
+      numFaces = Int.(G["cells"]["numfaces"]) # This Int is neccessary since the values read are floats
       G["cells"]["numFaces"] = G["cells"]["numFaces"][.!ind]
    else
       numFaces = diff(G["cells"]["facePos"], dims = 1)
@@ -64,12 +66,12 @@ function removeCells(G_raw::AbstractDict, cells) #G eller G_raw
    G["cells"]["num"] -= length(cells)
    G["cells"]["facePos"] = cumsum([1;numFaces], dims = 1)
    if haskey(G["cells"], "indexMap")
-      G["cells"]["indexMap"] = G["cells"]["indexMap"][.!ind]
+      G["cells"]["indexMap"] = Int.(G["cells"]["indexMap"][.!ind]) # This Int is neccessary since the values read are floats
    end
 
    ind = 0 .∈ G["faces"]["neighbors"]
    ind = ind[:,1] .&& ind[:,2]
-   facemap = mapExcluding(ind)
+   facemap = map_excluding(ind)
 
    if haskey(G["faces"], "nodes")
       if haskey(G["faces"], "numNodes")
@@ -99,7 +101,7 @@ function removeCells(G_raw::AbstractDict, cells) #G eller G_raw
    if haskey(G["faces"], "nodes")
       ind = trues(G["nodes"]["num"])
       ind[G["faces"]["nodes"]] = falses(length(G["faces"]["nodes"]))
-      nodemap = mapExcluding(ind)
+      nodemap = map_excluding(ind)
    
       G["nodes"]["coords"] = G["nodes"]["coords"][.!ind,:]
       G["nodes"]["num"] -= sum(ind)
