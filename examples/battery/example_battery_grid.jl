@@ -8,54 +8,92 @@ use_p2d = true
 
 # name = "p2d_40"
 # name = "p2d_40_no_cc"
+include_cc =true
+if(use_p2d)
 name = "p2d_40_cccv"
-# name = "p2d_40_jl_chen2020"
-# name = "3d_demo_case"
-
+name = "p2d_40_no_cc"
+name = "p2d_40_jl_chen2020"
+else
+end
+use_p2d = true
 ##
 fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, ".json")
 init_org = JSONFile(fn)
 ##
 init = deepcopy(init_org)
 case = init.object
+case["include_current_collectors"] = include_cc
+function makeGeometry(case, include_cc)
+    #case = deepcopy(case_inn)
+    L = 0
+    N = 0
+    geometry = Dict()
+    coupling = Dict()
+    geometry["Couplings"] = Dict()
 
-function makeGeometry(case)
-L = 0;
-N = 0;
-geometry = Dict();
-coupling = Dict()
-bcomponents = ["Separator"]#,"NegativeElectrode","PositiveElectrode"]
-for component in bcomponents
-    Lloc = case[component]["thickness"];
-    Nloc = case[component]["N"]
+    bcomponents = ["Separator"]#,"NegativeElectrode","PositiveElectrode"]
+    for component in bcomponents
+        Lloc = case[component]["thickness"]
+        Nloc = case[component]["N"]
+
+        delete!(case[component], "N")
+        delete!(case[component], "thickness")
+        coupling[component] = Dict("cells" =>(N+1):(N+Nloc))
+        N = N + Nloc
+        L = L + Lloc
+        geometry[component] = CartesianMesh(Tuple(Nloc), Tuple(Lloc))
+    end
+    bcomponents = ["NegativeElectrode", "PositiveElectrode"]
     
-    delete!(case[component],"N")
-    delete!(case[component],"thickness")
-    coupling[component] = (N+1):(N+Nloc)
-    N = N + Nloc
-    L = L + Lloc
-    geometry[component] =  CartesianMesh(Tuple(Nloc), Tuple(Lloc))
-end
-bcomponents = ["NegativeElectrode","PositiveElectrode"]
-for component in bcomponents
-    Lloc = case[component]["Coating"]["thickness"];
-    Nloc = case[component]["Coating"]["N"]
-    delete!(case[component]["Coating"],"N")
-    delete!(case[component]["Coating"],"thickness")
-    coupling[component] = (N+1):(N+Nloc)
-    N = N + Nloc
-    L = L + Lloc
-    geometry[component] =  CartesianMesh(Tuple(Nloc), Tuple(Lloc))   
-end
-geometry["Electrolyte"] = CartesianMesh(Tuple(N), Tuple(L))
-geometry["Global"] = geometry["Electrolyte"]
-geometry["Couplings"] = Dict()
-geometry["Couplings"]["Electrolyte"] = coupling 
-return geometry
+    Nam = case["PositiveElectrode"]["Coating"]["N"]
+    for component in bcomponents
+        Lloc = case[component]["Coating"]["thickness"]
+        Nloc = case[component]["Coating"]["N"]
+        delete!(case[component]["Coating"], "N")
+        delete!(case[component]["Coating"], "thickness")
+        coupling[component] = Dict("cells" => (N+1):(N+Nloc))
+        N = N + Nloc
+        L = L + Lloc
+        geometry[component] = CartesianMesh(Tuple(Nloc), Tuple(Lloc))
+    end
+    geometry["Electrolyte"] = CartesianMesh(Tuple(N), Tuple(L))
+    geometry["Global"] = geometry["Electrolyte"]
+    geometry["Couplings"] = Dict()
+    geometry["Couplings"]["Electrolyte"] = coupling
+    
+    if include_cc
+        bcomponents = ["NegativeElectrode","PositiveElectrode"]
+        newnames = ["NegativeCurrentCollector","PositiveCurrentCollector"]
+        for (ind,component) in enumerate(bcomponents)
+            cc = init.object[component]["CurrentCollector"]
+            Nloc = cc["N"]
+            Lloc = cc["thickness"]
+            N = N + Nloc
+            L = L + Lloc
+            geometry[newnames[ind]] = CartesianMesh(Tuple(Nloc), Tuple(Lloc))
+        end
+
+        Npcc = init.object["PositiveElectrode"]["CurrentCollector"]["N"]
+        coupling_control = Dict("PositiveCurrentCollector" => Dict("cells" => Npcc, "faces" => 2))
+        geometry["Couplings"]["Control"] = coupling_control
+        geometry["Boundary"] = Dict("NegativeCurrentCollector" => Dict("cells" => 1, "faces" => 1))
+    else
+        coupling_control = Dict("PositiveElectrode" => Dict("cells" => Nam, "faces" => 2))
+
+        #coupling_control["NegativeElectrode"] = Dict("cells" => 1, "faces" => 1)
+
+        geometry["Couplings"]["Control"] = coupling_control
+
+        geometry["Boundary"] = Dict("NegativeElectrode" => Dict("cells" => 1, "faces" => 1))
+    end
+
+    
+    return geometry
 end
 
- 
-geometry=makeGeometry(case)
+case["NegativeElectrode"]["CurrentCollector"]["density"] = 1000
+case["PositiveElectrode"]["CurrentCollector"]["density"] = 1000
+geometry=makeGeometry(case,include_cc)
 
 coupling = Dict()
 #cupling["NegativeElectrode"]
