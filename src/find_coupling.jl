@@ -1,13 +1,13 @@
 export find_coupling
 
-function find_coupling(cellmap1, cellmap2, facemap1, facemap2, modelname = "placeholder")
+function find_coupling(maps1, maps2, modelname = "placeholder")
     """
     docstring
     """
     Coupling = Dict()
     Coupling["model"] = modelname
-    Coupling["cells"] = find_common(cellmap1, cellmap2)
-    Coupling["faces"] = find_common(facemap1, facemap2)
+    Coupling["cells"] = find_common(maps1[1], maps2[1])
+    Coupling["faces"] = find_common(maps1[2], maps2[2])
     return Coupling
 end
 
