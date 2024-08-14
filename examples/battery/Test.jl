@@ -18,8 +18,8 @@ end;
 
 function basic_grid_example_p4d2()
     # just defining some values. feel free to change them. 
-    #these values are taken from picture 
-    #https://battmoteam.github.io/BattMo/geometryinput.html#batterygeneratorp4d
+    # these values are taken from picture 
+    # https://battmoteam.github.io/BattMo/geometryinput.html#batterygeneratorp4d
         
     ne_cc_nx = 3
     int_elyte_nx = 4
@@ -100,7 +100,9 @@ begin
 
     G_NCC, maps_NCC... = remove_cells(H_mother, setdiff(1:1836, tags[1]))
     G_NAM, maps_NAM... = remove_cells(H_mother, setdiff(1:1836, tags[2]))
-    G_SEP, maps_SEP... = remove_cells(H_mother, setdiff(1:1836, tags[3])) #ikke helt riktig
+    #G_SEP, maps_SEP... = remove_cells(H_mother, setdiff(1:1836, tags[3]))
+    G_SEP, maps_SEP... = remove_cells(H_mother, setdiff(1:1836, setdiff(tags[3], UnstructuredMesh(H_mother).boundary_faces.neighbors))) 
+    # strips of outmost layer. Just one layer. prolly not all that excited. 
     G_PAM, maps_PAM... = remove_cells(H_mother, setdiff(1:1836, tags[4]))
     G_PCC, maps_PCC... = remove_cells(H_mother, setdiff(1:1836, tags[5]))
 
