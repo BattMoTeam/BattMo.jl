@@ -11,33 +11,33 @@ function find_tags(h, paramsz_z)
     return [findall(x -> x == i,tag) for i in 1:5]
 end;
 
-function basic_grid_example_p4d2()
+function basic_grid_example_p4d2(;nx=1,ny=1,nz=1)
     # just defining some values. feel free to change them. 
     #these values are taken from picture 
     #https://battmoteam.github.io/BattMo/geometryinput.html#batterygeneratorp4d
-    nx = 1
-    ny = 1
-    nz=3    
+    #nx = 1
+    #ny = 2
+    #nz=3    
     ne_cc_nx = nx*0
     int_elyte_nx = nx
     pe_cc_nx = nx*0
     
-    ne_cc_ny = nx
+    ne_cc_ny = ny
     elyte_ny = ny
     pe_cc_ny = ny
 
     ne_cc_nz = nz
     ne_am_nz = nz
     sep_nz = nz
-    pe_am_nz = 3
-    pe_cc_nz = 2
+    pe_am_nz = nz
+    pe_cc_nz = nz
     
     x0_cells, x4_cells = 0, 0 ### These can be 0 => CC is on edge
     x0, x4 = 6, 6
 
-    x = [x0, 4, 2, 4, x4] .* 1e-2 
-    y = [2, 20, 2] .* 1e-3
-    z = [10, 100, 50, 80, 10] .* 1e-6
+    x = [x0, 4, 2, 4, x4] .* 1e-2/nx 
+    y = [2, 20, 2] .* 1e-3/ny
+    z = [10, 100, 50, 80, 10] .* 1e-6/nz
     
     
     paramsx = [x0_cells, ne_cc_nx, int_elyte_nx, pe_cc_nx, x4_cells]
@@ -80,8 +80,9 @@ function basic_grid_example_p4d2()
         add_cells_ncc = cat(getindex.(list_of_iterators2[1:ne_cc_nz], [index_of_ncc .+ x0_cells])..., dims = 1)
         setdiff!(cells2, add_cells_ncc)
     end
-    
-    return remove_cells(H_back, vcat(cells1, cells2))
+    zvals =  paramsz .* z
+    G, cellmap, facemap, nodemap = remove_cells(H_back, vcat(cells1, cells2))
+    return G, cellmap, facemap, nodemap, zvals
 
 end;
 
@@ -124,7 +125,7 @@ function setup_geometry(H_mother, paramsz)
             if(ind1 < ind2)
                 append!(couplings,[intersection])
             end
-            print(size(couplings))
+            #println(size(couplings))
             if(ind1 == ind2)
 
             else
@@ -217,7 +218,7 @@ function convert_geometry(grids)
              "PositiveElectrode","PositiveCurrentCollector","Electrolyte"]
     ugrids = Dict()         
     for (ind, component) in enumerate(components)
-        println(component)
+        #println(component)
         ugrids[component] = UnstructuredMesh(grids[component])
     end 
     ugrids["Couplings"] = deepcopy(grids["Couplings"])
@@ -225,23 +226,27 @@ function convert_geometry(grids)
         couplings = ugrids["Couplings"][component]
         graw = grids[component]
         g = ugrids[component]
-        for (component2, copling) in couplings
-            println([component,component2])
-            println(coupling)
+        for (component2, coupling) in couplings
+            #println([component,component2])
+            #println(coupling)
             if !isempty(coupling)
-                if coupling["faces_type"]
+                if coupling["face_type"]
                     # remap faces
                     faces = coupling["faces"]
                     cells = coupling["cells"]
                     for fi in eachindex(faces)
                         face = faces[fi]
-                        cell = cell[fi]
-                        candidates = g.boundaries_faces.cell_to_faces[cell]
+                        cell = cells[fi]
+                        candidates = g.boundary_faces.cells_to_faces[cell]
                         rface = face
-                        rawfaces = graw["faces"]
+                        rawface = graw["faces"]
                         lnodePos = rawface["nodePos"][rface:(rface+1)]
-                        lnodes = Set(rawface["nodes"][lnodePos])
+                        lnodes = Set(rawface["nodes"][lnodePos[1]:lnodePos[2]-1])
                         count = 0
+                        #println(rface)
+                        #println(lnodes)
+                        #println("hei")
+                        #print(candidates)
                         for lfi in eachindex(candidates)
                             fnodes = Set(g.boundary_faces.faces_to_nodes[candidates[lfi]])
                             if fnodes == lnodes
@@ -250,6 +255,7 @@ function convert_geometry(grids)
                                 count += 1
                             end
                         end
+                        #println(count)
                         @assert count == 1
                         #end
                     end

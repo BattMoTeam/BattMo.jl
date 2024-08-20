@@ -724,10 +724,9 @@ mparameters   = parameters[:PeAm]
 
 # Here the indexing in BoundaryFaces in used
 ## NB probably wrong
-couplingfaces = geomparams[:couplings][:Control][:PeAm]["faces"]
+couplingfaces = geomparams[:couplings][:Control][:PeAm]["boundaryfaces"]
 couplingcells = trange
 trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
-
 ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
 ct_pair = setup_cross_term(ct, target = :PeAm, source = :Control, equation = :charge_conservation)
 add_cross_term!(model, ct_pair)
@@ -1346,10 +1345,10 @@ function setup_battery_model(init::JSONFile;
         
     end
 
-    function setup_component(g::CartesianMesh,
+    function setup_component(g::Jutul.FiniteVolumeMesh,
                             sys;
                             general_ad::Bool=false,
-                            addDirichlet::Bool = false,
+                            boundary = nothing,
                             facearea = 1.0)
 
         # specific implementation for electrolyte
@@ -1364,18 +1363,25 @@ function setup_battery_model(init::JSONFile;
         T = compute_face_trans(domain, k)
         T_hf = compute_half_face_trans(domain, k)
         T_b = compute_boundary_trans(domain, k)
-
+        #println("-----------------------TB--------------")
+        #println("T_b", T_b)
+        #println("T_hf", T_hf)
+        #println("T",T)
+        T_b = abs.(T_b)#NB hack due to bug in compute_boundary_trans(
         domain[:trans, Faces()] = facearea * T
         domain[:halfTrans, HalfFaces()] = facearea * T_hf
         domain[:bcTrans, BoundaryFaces()] = facearea * T_b
         
-        if addDirichlet
+        if !isnothing(boundary)
+            #Main.@infiltrate
+            println(boundary)
+            bfaces = boundary["boundaryfaces"]
+            nb = size(bfaces,1)
+            domain.entities[BoundaryDirichletFaces()] =  nb
 
-            domain.entities[BoundaryDirichletFaces()] = 1
-
-            bcDirFace = 1 # in BoundaryFaces indexing
-            bcDirCell = 1
-            bcDirInd  = 1
+            bcDirFace = boundary["boundaryfaces"] # in BoundaryFaces indexing
+            bcDirCell = boundary["cells"]
+            bcDirInd  = Vector{Int64}(1:nb)
             domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = facearea*domain[:bcTrans][bcDirFace]
             domain[:bcDirCells, BoundaryDirichletFaces()]     = bcDirCell # 
             domain[:bcDirInds, BoundaryDirichletFaces()]      = bcDirInd #
@@ -1489,17 +1495,20 @@ function setup_battery_model(init::JSONFile;
         
         geomparam = geomparams[name]
        
-
+        boundary = nothing
         if !include_cc && name == :NeAm
             addDirichlet = true
+            boundary = geomparams[:boundary][:NeAm]
         else
             addDirichlet = false
+            boundary = nothing
         end
         
         model_am = setup_component(geomparam              ,
                                    sys_am                 ;
                                    general_ad = general_ad,
-                                   addDirichlet = addDirichlet)
+                                   boundary = boundary,
+                                   facearea = geomparams[:facearea])
 
         return model_am
         
@@ -1511,14 +1520,14 @@ function setup_battery_model(init::JSONFile;
     
     if include_cc
 
-
+        boundary = geomparams[:boundary][:NeCc]
         necc_params = JutulStorage()
         necc_params[:density] = jsondict["NegativeElectrode"]["CurrentCollector"]["density"]
         
         sys_necc = CurrentCollector(necc_params)
         model_necc = setup_component(geomparams[:NeCc]  ,
                                      sys_necc           ,
-                                     addDirichlet = true,
+                                     boundary = boundary,
                                      general_ad = general_ad)
     end
 
@@ -2413,25 +2422,31 @@ function setup_geomparams_grid(geometry::Dict, include_cc)
     end
     geomparams[:couplings][:Elyte] = couplings
     if(include_cc)
+        geomparams[:boundary] = Dict{Symbol,Any}()
         geomparams[:couplings][:Control] = Dict{Symbol,Any}()
-        geomparams[:couplings][:Control][:PeAm] = geometry["Couplings"]["Control"]["PositiveCurrentCollector"]
+        geomparams[:couplings][:Control][:PeCc] = geometry["Couplings"]["Control"]["PositiveCurrentCollector"]
+        geomparams[:boundary][:NeCc] =  ugrids["Boundary"]["NegativeCurrentCollector"]
 
         NPeAm = number_of_cells(geomparams[:PeAm])
         NNeCc = number_of_cells(geomparams[:NeCc])
         geomparams[:couplings][:PeCc] = Dict{Symbol,Any}()
         geomparams[:couplings][:PeAm] = Dict{Symbol,Any}()
-        geomparams[:couplings][:PeCc][:PeAm] = Dict("cells"=> 1,"faces" => 1 )
-        geomparams[:couplings][:PeAm][:PeCC] = Dict("cells"=> NPeAm,"faces", 2 )
+        geomparams[:couplings][:PeCc][:PeAm] = geometry["Couplings"]["PositiveCurrentCollector"]["PositiveElectrode"] 
+        geomparams[:couplings][:PeAm][:PeCC] = geometry["Couplings"]["PositiveElectrode"]["PositiveCurrentCollector"]
 
         geomparams[:couplings][:NeCc] = Dict{Symbol,Any}()
         geomparams[:couplings][:NeAm] = Dict{Symbol,Any}()
-        geomparams[:couplings][:NeCc][:NeAm] = Dict("cells"=> NCeCc,"faces" => 2 )
-        geomparams[:couplings][:NeAm][:NeCC] = Dict("cells"=> 1, "faces" => 1)
+        geomparams[:couplings][:NeCc][:NeAm] = geometry["Couplings"]["NegativeCurrentCollector"]["NegativeElectrode"] 
+        geomparams[:couplings][:NeAm][:NeCC] = geometry["Couplings"]["NegativeElectrode"]["NegativeCurrentCollector"]
+        
 
     else
         geomparams[:couplings][:Control] = Dict{Symbol,Any}()
-        geomparams[:couplings][:Control][:PeAm] = geometry["Couplings"]["Control"]["PositiveElectrode"]        
+        geomparams[:couplings][:Control][:PeAm] = geometry["Couplings"]["Control"]["PositiveElectrode"]
+        geomparams[:boundary] = Dict{Symbol,Any}()
+        geomparams[:boundary][:NeAm] =  geometry["Boundary"]["NegativeElectrode"]   
     end
+
     return geomparams
     
 end
