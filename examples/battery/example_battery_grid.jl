@@ -8,7 +8,8 @@ use_p2d = true
 
 # name = "p2d_40"
 # name = "p2d_40_no_cc"
-include_cc =true
+include_cc =false
+
 if(use_p2d)
 name = "p2d_40_cccv"
 name = "p2d_40_no_cc"
@@ -115,6 +116,47 @@ I = [state[:Control][:Current][1] for state in states]
     
 
 
+p1 = Plots.plot(t, E;
+                label     = "",
+                size      = (1000, 800),
+                title     = "Voltage",
+                xlabel    = "Time / s",
+                ylabel    = "Voltage / V",
+                markershape = :cross,
+                markercolor = :black,
+                markersize = 1,
+                linewidth = 4,
+                xtickfont = font(pointsize = 15),
+                ytickfont = font(pointsize = 15))
+
+
+p2 = Plots.plot(t, I;
+                label     = "",
+                size      = (1000, 800),
+                title     = "Current",
+                xlabel    = "Time / s",
+                ylabel    = "Current / A",
+                markershape = :cross,
+                markercolor = :black,
+                markersize = 1,
+                linewidth = 4,
+                xtickfont = font(pointsize = 15),
+                ytickfont = font(pointsize = 15))
+
+
+Plots.plot(p1, p2, layout = (2, 1))
+##
+#fig = Figure()
+#ax = Axis3(fig[1,1])
+plot_mesh!(ax, g, transparency = true, alpha = 0.3)
+#plot_mesh!(ax, g, faces =faces, color = :red)
+fig
+
+##
+t = [state[:Control][:ControllerCV].time for state in states]
+E = [state[:Control][:Phi][1] for state in states]
+I = [state[:Control][:Current][1] for state in states]
+##
 p1 = Plots.plot(t, E;
                 label     = "",
                 size      = (1000, 800),

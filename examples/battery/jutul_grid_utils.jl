@@ -11,20 +11,21 @@ function find_tags(h, paramsz_z)
     return [findall(x -> x == i,tag) for i in 1:5]
 end;
 
-function basic_grid_example_p4d2(;nx=1,ny=1,nz=1)
+function basic_grid_example_p4d2(;nx=1,ny=1,nz=1,tab_cell_nx=0, tab_cell_ny=0)
     # just defining some values. feel free to change them. 
     #these values are taken from picture 
     #https://battmoteam.github.io/BattMo/geometryinput.html#batterygeneratorp4d
     #nx = 1
     #ny = 2
-    #nz=3    
-    ne_cc_nx = nx*0
+    #nz=3
+    #@assert tab_cell <= nx    
+    ne_cc_nx = tab_cell_nx
     int_elyte_nx = nx
-    pe_cc_nx = nx*0
+    pe_cc_nx = tab_cell_nx
     
-    ne_cc_ny = ny
+    ne_cc_ny = tab_cell_ny
     elyte_ny = ny
-    pe_cc_ny = ny
+    pe_cc_ny = tab_cell_ny
 
     ne_cc_nz = nz
     ne_am_nz = nz
@@ -32,17 +33,19 @@ function basic_grid_example_p4d2(;nx=1,ny=1,nz=1)
     pe_am_nz = nz
     pe_cc_nz = nz
     
-    x0_cells, x4_cells = 0, 0 ### These can be 0 => CC is on edge
+    x0_cells, x4_cells = tab_cell_nx, tab_cell_nx ### These can be 0 => CC is on edge
     x0, x4 = 6, 6
+
+    paramsx = [x0_cells, ne_cc_nx, int_elyte_nx, pe_cc_nx, x4_cells]
+    paramsy = [ne_cc_ny, elyte_ny, pe_cc_ny]
+    paramsz = [ne_cc_nz, ne_am_nz, sep_nz, pe_am_nz, pe_cc_nz]
 
     x = [x0, 4, 2, 4, x4] .* 1e-2/nx 
     y = [2, 20, 2] .* 1e-3/ny
     z = [10, 100, 50, 80, 10] .* 1e-6/nz
     
     
-    paramsx = [x0_cells, ne_cc_nx, int_elyte_nx, pe_cc_nx, x4_cells]
-    paramsy = [ne_cc_ny, elyte_ny, pe_cc_ny]
-    paramsz = [ne_cc_nz, ne_am_nz, sep_nz, pe_am_nz, pe_cc_nz]
+    
 
     same_side = false # if true, needs pe_cc_ny >= ne_cc_ny. I think they usually are equal
     strip = true
@@ -82,6 +85,7 @@ function basic_grid_example_p4d2(;nx=1,ny=1,nz=1)
     end
     zvals =  paramsz .* z
     G, cellmap, facemap, nodemap = remove_cells(H_back, vcat(cells1, cells2))
+    #G, cellmap, facemap, nodemap = remove_cells(H_back, vcat(cells1))
     return G, cellmap, facemap, nodemap, zvals
 
 end;

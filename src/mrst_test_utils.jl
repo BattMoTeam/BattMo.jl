@@ -521,7 +521,7 @@ function setup_coupling_grid!(init::JSONFile,
     parameters::Dict{Symbol,<:Any}
     )
 
-jsondict   = init.object
+#jsondict   = init.object
 include_cc = init.object["include_current_collectors"]
 geomparams = setup_geomparams_grid(init.object["Grids"],include_cc)
 #include_cc = include_current_collectors(model)
@@ -530,6 +530,7 @@ geomparams = setup_geomparams_grid(init.object["Grids"],include_cc)
 # Setup coupling NeAm <-> Elyte #
 #################################
 
+begin
 Nnam = number_of_cells(geomparams[:NeAm])
 
 srange = collect(1 : Nnam) # NB not givennegative electrode
@@ -560,16 +561,17 @@ ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass
 add_cross_term!(model, ct_pair)
 
 end
-
+end
 #################################
 # setup coupling Elyte <-> PeAm #
 #################################
 
-Nnam = number_of_cells(geomparams[:NeAm])
-NSEP = number_of_cells(geomparams[:SEP])
-Npam = number_of_cells(geomparams[:PeAm])
+#Nnam = number_of_cells(geomparams[:NeAm])
+#NSEP = number_of_cells(geomparams[:SEP])
+#Npam = number_of_cells(geomparams[:PeAm])
 
-
+begin
+    Npam = number_of_cells(geomparams[:PeAm])
 srange = collect(1 : Npam) #NB not givenositive electrode
 trange = collect(geomparams[:couplings][:Elyte][:PeAm]["cells"])
 
@@ -598,7 +600,7 @@ ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass
 add_cross_term!(model, ct_pair)
 
 end
-
+end
 if include_cc 
 
 ################################
@@ -620,21 +622,21 @@ psource = parameters[:NeCc]
 ptarget = parameters[:NeAm]
 
 # Here, the indexing in BoundaryFaces is used
-couplingfaces = Array{Int64}(undef, 1, 2)
-couplingfaces[1, 1] = srange_faces
-couplingfaces[1, 2] = trange_faces
+couplingfaces = Array{Int64}(undef, size(srange_faces,1), 2)
+couplingfaces[:, 1] = srange_faces
+couplingfaces[:, 2] = trange_faces
 
-couplingcells = Array{Int64}(undef, 1, 2)
-couplingcells[1, 1] = srange_cells
-couplingcells[1, 2] = trange_cells
+couplingcells = Array{Int64}(undef, size(srange_faces,1), 2)
+couplingcells[:, 1] = srange_cells
+couplingcells[:, 2] = trange_cells
 
 trans = getTrans(msource, mtarget,
        couplingfaces,
        couplingcells,
        psource, ptarget,
        :Conductivity)
-
-ct = TPFAInterfaceFluxCT(trange, srange, trans)
+@assert size(trans,1) == size(srange_cells,1)
+ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
 ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
 add_cross_term!(model, ct_pair)
 
@@ -642,7 +644,7 @@ add_cross_term!(model, ct_pair)
 # setup coupling PeCc <-> PeAm #
 ################################
 
-Npam  = geomparams[:PeAm][:N]
+#Npam  = geomparams[:PeAm][:N]
 
 srange_cells = collect(geomparams[:couplings][:PeCc][:PeAm]["cells"])
 trange_cells = collect(geomparams[:couplings][:PeAm][:PeCc]["cells"])
@@ -657,14 +659,14 @@ psource = parameters[:PeCc]
 ptarget = parameters[:PeAm]
 
 # Here, the indexing in BoundaryFaces is used
-couplingfaces = Array{Int64}(undef, 1, 2)
-couplingfaces[1, 1] = srange_faces
-couplingfaces[1, 2] = trange_faces
+couplingfaces = Array{Int64}(undef, size(srange_faces,1), 2)
+couplingfaces[:, 1] = srange_faces
+couplingfaces[:, 2] = trange_faces
 
 
-couplingcells = Array{Int64}(undef, 1, 2)
-couplingcells[1, 1] = srange_cells
-couplingcells[1, 2] = trange_cells
+couplingcells = Array{Int64}(undef, size(srange_faces,1), 2)
+couplingcells[:, 1] = srange_cells
+couplingcells[:, 2] = trange_cells
 
 
 trans = getTrans(msource, mtarget,
@@ -672,8 +674,8 @@ trans = getTrans(msource, mtarget,
        couplingcells,
        psource, ptarget,
        :Conductivity)
-
-ct = TPFAInterfaceFluxCT(trange, srange, trans)
+@assert size(trans,1) == size(srange_cells,1)  
+ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
 ct_pair = setup_cross_term(ct, target = :PeAm, source = :PeCc, equation = :charge_conservation)
 
 add_cross_term!(model, ct_pair)
@@ -689,13 +691,14 @@ if include_cc
 
 #Nc = geomparams[:PeCc][:N]
 
-trange = geomparams[:couplings][:PeCC][:Control]["cells"]
+trange = geomparams[:couplings][:PeCc][:Control]["cells"]
+#srange = geomparams[:couplings][:Control][:PeCc]["cells"]
 srange = Int64.(ones(size(trange)))
 
 msource       = model[:PeCc]
 mparameters   = parameters[:PeCc]
 # Here the indexing in BoundaryFaces in used
-couplingfaces = geomparams[:couplings][:PeCC][:Control]["faces"]
+couplingfaces = geomparams[:couplings][:PeCc][:Control]["boundaryfaces"]
 couplingcells = trange #geomparams[:couplings][:PeCC][:Control]["cells"]
 trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
 
@@ -703,7 +706,7 @@ ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
 ct_pair = setup_cross_term(ct, target = :PeCc, source = :Control, equation = :charge_conservation)
 add_cross_term!(model, ct_pair)
 
-ct = AccumulatorInterfaceFluxCT(srange, trange, trans)
+ct = AccumulatorInterfaceFluxCT(1, trange, trans)
 ct_pair = setup_cross_term(ct, target = :Control, source = :PeCc, equation = :charge_conservation)
 add_cross_term!(model, ct_pair)
 
@@ -1367,7 +1370,7 @@ function setup_battery_model(init::JSONFile;
         #println("T_b", T_b)
         #println("T_hf", T_hf)
         #println("T",T)
-        T_b = abs.(T_b)#NB hack due to bug in compute_boundary_trans(
+        #T_b = abs.(T_b)#NB hack due to bug in compute_boundary_trans(
         domain[:trans, Faces()] = facearea * T
         domain[:halfTrans, HalfFaces()] = facearea * T_hf
         domain[:bcTrans, BoundaryFaces()] = facearea * T_b
@@ -2389,7 +2392,7 @@ function setup_geomparams_grid(geometry::Dict, include_cc)
     #include_cc = false #include_current_collectors(init)
 
     if include_cc
-        longnames = ["NegativeCurrentCollector", "NegativeElectrode", "Separator","PositiveElectrode","NegativeCurrentCollector"]
+        longnames = ["NegativeCurrentCollector", "NegativeElectrode", "Separator","PositiveElectrode","PositiveCurrentCollector"]
         names = (:NeCc, :NeAm, :SEP, :PeAm, :PeCc)
     else
         longnames = ["NegativeElectrode", "Separator","PositiveElectrode"]
@@ -2423,21 +2426,23 @@ function setup_geomparams_grid(geometry::Dict, include_cc)
     geomparams[:couplings][:Elyte] = couplings
     if(include_cc)
         geomparams[:boundary] = Dict{Symbol,Any}()
-        geomparams[:couplings][:Control] = Dict{Symbol,Any}()
-        geomparams[:couplings][:Control][:PeCc] = geometry["Couplings"]["Control"]["PositiveCurrentCollector"]
-        geomparams[:boundary][:NeCc] =  ugrids["Boundary"]["NegativeCurrentCollector"]
+        #geomparams[:couplings][:Control] = Dict{Symbol,Any}()
+        geomparams[:couplings][:PeCc] = Dict{Symbol,Any}()
+        #geomparams[:couplings][:Control][:PeCc] = geometry["Couplings"]["Control"]["PositiveCurrentCollector"]
+        geomparams[:couplings][:PeCc][:Control]= geometry["Couplings"]["PositiveCurrentCollector"]["Control"]
+        geomparams[:boundary][:NeCc] =  geometry["Boundary"]["NegativeCurrentCollector"]
 
         NPeAm = number_of_cells(geomparams[:PeAm])
         NNeCc = number_of_cells(geomparams[:NeCc])
-        geomparams[:couplings][:PeCc] = Dict{Symbol,Any}()
+        #geomparams[:couplings][:PeCc] = Dict{Symbol,Any}()
         geomparams[:couplings][:PeAm] = Dict{Symbol,Any}()
         geomparams[:couplings][:PeCc][:PeAm] = geometry["Couplings"]["PositiveCurrentCollector"]["PositiveElectrode"] 
-        geomparams[:couplings][:PeAm][:PeCC] = geometry["Couplings"]["PositiveElectrode"]["PositiveCurrentCollector"]
+        geomparams[:couplings][:PeAm][:PeCc] = geometry["Couplings"]["PositiveElectrode"]["PositiveCurrentCollector"]
 
         geomparams[:couplings][:NeCc] = Dict{Symbol,Any}()
         geomparams[:couplings][:NeAm] = Dict{Symbol,Any}()
         geomparams[:couplings][:NeCc][:NeAm] = geometry["Couplings"]["NegativeCurrentCollector"]["NegativeElectrode"] 
-        geomparams[:couplings][:NeAm][:NeCC] = geometry["Couplings"]["NegativeElectrode"]["NegativeCurrentCollector"]
+        geomparams[:couplings][:NeAm][:NeCc] = geometry["Couplings"]["NegativeElectrode"]["NegativeCurrentCollector"]
         
 
     else
