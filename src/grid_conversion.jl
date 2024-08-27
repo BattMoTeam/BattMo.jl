@@ -1,13 +1,13 @@
-export back_converter
+export convert_to_mrst_grid
 
 function add_order(list)
     len = length(list)
     return hcat(list, collect(1:len))
 end
 
-function back_converter(g)
+function convert_to_mrst_grid(g)
     """
-    Docstring
+    Convert grid from jutul format to mrst format
     """
     G_raw = Dict{String, Any}()
 
@@ -70,4 +70,5 @@ function back_converter(g)
     G_raw["type"] = Matrix{Any}(undef, 0, 0)
 
     return G_raw
+    
 end

@@ -56,7 +56,7 @@ function basic_grid_example_p4d2(;
     Nz = length(Lz)
     
     h = CartesianMesh((Nx, Ny, Nz), (Lx, Ly, Lz))
-    H_back = back_converter(UnstructuredMesh(h));
+    H_back = convert_to_mrst_grid(UnstructuredMesh(h));
     
     #################################################################
     

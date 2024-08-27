@@ -64,7 +64,7 @@ import Jutul:
     get_1d_interpolator
     
 
-include("back_converter.jl")
+include("grid_conversion.jl")
 include("find_coupling.jl")
 include("remove_cells.jl") #Trenger StatsBase
 
