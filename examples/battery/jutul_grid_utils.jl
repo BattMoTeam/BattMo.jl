@@ -1,5 +1,32 @@
 using Jutul, BattMo
 
+function find_coupling(maps1, maps2, modelname = "placeholder")
+    """
+    docstring
+    """
+    Coupling = Dict()
+    Coupling["model"] = modelname
+    Coupling["cells"] = find_common(maps1[1], maps2[1])
+    Coupling["faces"] = find_common(maps1[2], maps2[2])
+    return Coupling
+end
+
+function find_common(map_grid1, map_grid2)
+
+    """
+    Insert cellmaps or facemaps
+
+    """
+
+    common_ground = intersect(map_grid1, map_grid2)
+    entity1 = findall(x -> x ∈ common_ground, map_grid1)
+    entity2 = findall(x -> x ∈ common_ground, map_grid2)
+    if isempty(entity1)
+        return nothing
+    end
+    return collect([entity1 entity2]) ###This might be quite slow, but I wanted output to be matrix
+end
+
 function plot_grid_test(G)
     fig, ax = plot_mesh(G)
     Jutul.plot_mesh_edges!(ax, G)
@@ -130,7 +157,7 @@ function setup_geometry(H_mother, paramsz)
         grids["Couplings"][comp1] = Dict{String,Any}()
       for (ind2, comp2) in enumerate(allcomps)
             #println([comp1,comp2])
-            intersection=find_coupling(global_maps[comp1],global_maps[comp2],  [comp1, comp2])
+            intersection = find_coupling(global_maps[comp1],global_maps[comp2],  [comp1, comp2])
             intersection_tmp = Dict() # intersection
             #tmp = Dict(comp2=> intersection)
             if(ind1 < ind2)

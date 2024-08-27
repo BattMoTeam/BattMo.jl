@@ -65,7 +65,6 @@ import Jutul:
     
 
 include("grid_conversion.jl")
-include("find_coupling.jl")
 include("remove_cells.jl") #Trenger StatsBase
 
 include("io_types.jl")
