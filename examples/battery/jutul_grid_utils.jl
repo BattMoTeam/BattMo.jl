@@ -1,27 +1,27 @@
+using Jutul, BattMo
+
 function plot_grid_test(G)
     fig, ax = plot_mesh(G)
     Jutul.plot_mesh_edges!(ax, G)
 end;
 
-
 function find_tags(h, paramsz_z)
     h_with_geo = tpfv_geometry(h)
     cut_offs = cumsum(paramsz_z)
     tag = searchsortedfirst.([cut_offs], h_with_geo.cell_centroids[3,:])
-    return [findall(x -> x == i,tag) for i in 1:5]
+    return [findall(x -> x == i, tag) for i in 1:5]
 end;
 
-function basic_grid_example_p4d2(;nx=1,ny=1,nz=1,tab_cell_nx=0, tab_cell_ny=0)
-    # just defining some values. feel free to change them. 
-    #these values are taken from picture 
-    #https://battmoteam.github.io/BattMo/geometryinput.html#batterygeneratorp4d
-    #nx = 1
-    #ny = 2
-    #nz=3
-    #@assert tab_cell <= nx    
-    ne_cc_nx = tab_cell_nx
+function basic_grid_example_p4d2(;
+                                 nx          = 1,
+                                 ny          = 1,
+                                 nz          = 1,
+                                 tab_cell_nx = 0,
+                                 tab_cell_ny = 0)
+
+    ne_cc_nx     = tab_cell_nx
     int_elyte_nx = nx
-    pe_cc_nx = tab_cell_nx
+    pe_cc_nx     = tab_cell_nx
     
     ne_cc_ny = tab_cell_ny
     elyte_ny = ny
@@ -29,11 +29,11 @@ function basic_grid_example_p4d2(;nx=1,ny=1,nz=1,tab_cell_nx=0, tab_cell_ny=0)
 
     ne_cc_nz = nz
     ne_am_nz = nz
-    sep_nz = nz
+    sep_nz   = nz
     pe_am_nz = nz
     pe_cc_nz = nz
     
-    x0_cells, x4_cells = tab_cell_nx, tab_cell_nx ### These can be 0 => CC is on edge
+    x0_cells, x4_cells = tab_cell_nx, tab_cell_nx ### These can be zero, then CC is on the edge
     x0, x4 = 6, 6
 
     paramsx = [x0_cells, ne_cc_nx, int_elyte_nx, pe_cc_nx, x4_cells]
@@ -44,9 +44,6 @@ function basic_grid_example_p4d2(;nx=1,ny=1,nz=1,tab_cell_nx=0, tab_cell_ny=0)
     y = [2, 20, 2] .* 1e-3/ny
     z = [10, 100, 50, 80, 10] .* 1e-6/nz
     
-    
-    
-
     same_side = false # if true, needs pe_cc_ny >= ne_cc_ny. I think they usually are equal
     strip = true
 
@@ -63,29 +60,39 @@ function basic_grid_example_p4d2(;nx=1,ny=1,nz=1,tab_cell_nx=0, tab_cell_ny=0)
     
     #################################################################
     
-    list_of_iterators = [Nx * (i * Ny - pe_cc_ny)  + 1 : Nx * Ny * i for i in 1:Nz]
-    cells1 = cat(list_of_iterators..., dims = 1)
+    # Iterators in the z-direction over the cells that contains the positive current collector.
+    # Each iterator contains an horizonzal slab at the end
+    pe_cc_list_of_iterators = [Nx * (i * Ny - pe_cc_ny)  + 1 : Nx * Ny * i for i in 1:Nz]
+
+    # pecc_extra_cells : Those cells will be removed
+    pe_cc_extra_cells = cat(pe_cc_list_of_iterators..., dims = 1)
     
-    index_of_pcc = cat([Nx * i - pe_cc_nx + 1 : Nx * i for i in 1:pe_cc_ny]..., dims = 1)
-    add_cells_pcc = cat(getindex.(list_of_iterators[end - pe_cc_nz + 1:end], [index_of_pcc .- x4_cells])..., dims = 1)
+    # (x-y) Carthesian indices of the cells of the positive current collector (not expanded in the z direction). 
+    index_of_pe_cc = cat([Nx * i - pe_cc_nx + 1 : Nx * i for i in 1:pe_cc_ny]..., dims = 1)
+
+    # Index of the positive current collector
+    pe_cc_cells = cat(getindex.(pe_cc_list_of_iterators[end - pe_cc_nz + 1:end], [index_of_pe_cc .- x4_cells])..., dims = 1)
+
+    setdiff!(pe_cc_extra_cells, pe_cc_cells)
+
+    # We proceed in the same way for the negative current collector
+   
+    ne_cc_list_of_iterators = [Nx * Ny * (i-1)  + 1 : Nx * (Ny * (i-1) + ne_cc_ny) for i in 1:Nz]
+    ne_cc_extra_cells = cat(ne_cc_list_of_iterators..., dims = 1)
     
-    setdiff!(cells1, add_cells_pcc)
-    
-    list_of_iterators2 = [Nx * Ny * (i-1)  + 1 : Nx * (Ny * (i-1) + ne_cc_ny) for i in 1:Nz]
-    cells2 = cat(list_of_iterators2..., dims = 1)
-    
-    index_of_ncc = cat([Nx * (i - 1) + 1 : Nx * (i - 1) + ne_cc_nx for i in 1:ne_cc_ny]..., dims = 1)
+    index_of_ne_cc = cat([Nx * (i - 1) + 1 : Nx * (i - 1) + ne_cc_nx for i in 1:ne_cc_ny]..., dims = 1)
     
     if same_side
-        add_cells_ncc = cat(getindex.(list_of_iterators[1:ne_cc_nz], [index_of_ncc .+ x0_cells])..., dims = 1)
-        setdiff!(cells1, add_cells_ncc)
+        ne_cc_cells = cat(getindex.(pe_cc_list_of_iterators[1:ne_cc_nz], [index_of_ne_cc .+ x0_cells])..., dims = 1)
+        setdiff!(pe_cc_extra_cells, ne_cc_cells)
     else
-        add_cells_ncc = cat(getindex.(list_of_iterators2[1:ne_cc_nz], [index_of_ncc .+ x0_cells])..., dims = 1)
-        setdiff!(cells2, add_cells_ncc)
+        ne_cc_cells = cat(getindex.(ne_cc_list_of_iterators[1:ne_cc_nz], [index_of_ne_cc .+ x0_cells])..., dims = 1)
+        setdiff!(ne_cc_extra_cells, ne_cc_cells)
     end
+    
     zvals =  paramsz .* z
-    G, cellmap, facemap, nodemap = remove_cells(H_back, vcat(cells1, cells2))
-    #G, cellmap, facemap, nodemap = remove_cells(H_back, vcat(cells1))
+    G, cellmap, facemap, nodemap = remove_cells(H_back, vcat(pe_cc_extra_cells, ne_cc_extra_cells))
+
     return G, cellmap, facemap, nodemap, zvals
 
 end;
