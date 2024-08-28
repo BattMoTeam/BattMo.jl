@@ -2,10 +2,11 @@ using Jutul, BattMo, GLMakie#, Plots, GLMakie
 using Plots
 using StatsBase
 using Infiltrator
+using AlgebraicMultigrid
 GLMakie.closeall()
 #GLMakie.activate!()
 include_cc = true
-use_p2d =true
+use_p2d = false
 
 includet("jutul_grid_utils.jl")
 
@@ -13,15 +14,17 @@ do_plot = true
 
 
 
-fac = 1    
-H_mother, cellmap, facemap, nodemap, paramsz = basic_grid_example_p4d2(nx=4*fac,ny=4*fac,nz=4,tab_cell_nx=3,tab_cell_ny=2);
+fac = 2    
+H_mother, cellmap, facemap, nodemap, paramsz = basic_grid_example_p4d2(nx=fac,ny=fac*2,nz=10,tab_cell_nx=3,tab_cell_ny=3);
+#H_mother, cellmap, facemap, nodemap, paramsz = basic_grid_example_p4d2(nx=2,ny=2,nz=5,tab_cell_nx=0,tab_cell_ny=0);
+#H_mother, cellmap, facemap, nodemap, paramsz = basic_grid_example_p4d2(nx=1,ny=1,nz=1,tab_cell_nx=0,tab_cell_ny=0, test=true);
 #plot_grid_test(UnstructuredMesh(H_mother))
 
 #paramsz =  [2, 3, 3, 3, 2] .* [10, 100, 50, 80, 10] .* 1e-6
 #paramsz =  [1, 1, 1, 1, 1] .* [10, 100, 50, 80, 10] .* 1e-6
 
 grids = setup_geometry(H_mother, paramsz);
-if do_plot
+if do_plot && false
     plot_grid_test(grids["Global"])
 end
 ##
@@ -32,7 +35,7 @@ ugrids = convert_geometry(grids);
 # set boundary and coupling to control
 if include_cc
     ##
-    fig = Figure()#size=(600, 650))
+    fig = Figure(size=(500, 650),position = (10,100))
     ax = Axis3(fig[1,1])
     g = ugrids["PositiveCurrentCollector"]
     faces,val = findBoundary(g,2,true);
@@ -89,7 +92,7 @@ else
 
     faces,val = findBoundary(g,3,true);
     cells = g.boundary_faces.neighbors[faces]
-    coupling_control = Dict("PositiveElectrode" => Dict("cells" => cells, "boundaryfaces" => faces))
+    coupling_control = Dict("cells" => cells, "boundaryfaces" => faces)
     if do_plot
         plot_mesh!(ax, g, transparency = true, alpha = 0.3, color = :red)
         Jutul.plot_mesh_edges!(ax, g)
@@ -105,7 +108,8 @@ else
         Jutul.plot_mesh_edges!(ax, g)
         plot_mesh!(ax, g, boundaryfaces =faces, color = :black)
     end
-    ugrids["Couplings"]["Control"] = coupling_control
+    ugrids["Couplings"]["PositiveElectrode"]["Control"] = coupling_control
+    #ugrids["Couplings"]["Control"] = coupling_control
     ugrids["Boundary"] = boundary
     g = ugrids["Separator"]
     if do_plot
@@ -123,12 +127,15 @@ end
 
 
 if(use_p2d)
+name = "p2d_40"
 name = "p2d_40_cccv"
 name = "p2d_40_no_cc"
 name = "p2d_40_jl_chen2020"
 else
+    name = "p2d_40_jl_chen2020"
+    #name = "p1d_40"
 end
-use_p2d = true
+
 ##
 fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, ".json")
 init_org = JSONFile(fn)
@@ -136,17 +143,23 @@ init_org = JSONFile(fn)
 init = deepcopy(init_org)
 case = init.object
 case["include_current_collectors"] = include_cc
-case["NegativeElectrode"]["CurrentCollector"]["density"] = 1000
-case["PositiveElectrode"]["CurrentCollector"]["density"] = 1000
-#cond = 1e5
-#init.object["PositiveElectrode"]["CurrentCollector"]["electronicConductivity"] = cond
-#init.object["NegativeElectrode"]["CurrentCollector"]["electronicConductivity"] = cond
+if include_cc
+    case["NegativeElectrode"]["CurrentCollector"]["density"] = 1000
+    case["PositiveElectrode"]["CurrentCollector"]["density"] = 1000
+end
+cond = 1e5
+init.object["PositiveElectrode"]["CurrentCollector"]["electronicConductivity"] = cond
+init.object["NegativeElectrode"]["CurrentCollector"]["electronicConductivity"] = cond
 init.object["Geometry"]["case"] = "Grid"
 init.object["Grids"] = ugrids 
 init.object["Grids"]["faceArea"] = 1.0
 init.object["Control"]["CRate"] = 0.1
-init.object["Control"]["DRate"] = 0.1108*1e-1
-init.object["Control"]["rampupTime"] = 1e2/init.object["Control"]["DRate"]
+init.object["Control"]["DRate"] = 0.1108
+init.object["Control"]["rampupTime"] = 1e1/init.object["Control"]["DRate"]
+if !use_p2d
+    init.object["PositiveElectrode"]["Coating"]["ActiveMaterial"]["InterDiffusionCoefficient"]= 0
+    init.object["NegativeElectrode"]["Coating"]["ActiveMaterial"]["InterDiffusionCoefficient"]= 0
+end
 if !include_cc
     init.object["Geometry"]["NegativeElectrode"] = Dict()
     init.object["Geometry"]["PostitiveElectrode"] = Dict()
@@ -156,16 +169,40 @@ if false
 states, cellSpecifications, reports, extra = run_battery(init; use_p2d = use_p2d, info_level = 0, extra_timing = false);
 else
     ##
-    sim, forces, state0, parameters, init, model = BattMo.setup_sim(init; use_p2d=use_p2d, use_groups=false, general_ad=false, max_step = nothing)
+    #sim, forces, state0, parameters, init, model = BattMo.setup_sim(init; use_p2d=use_p2d, use_groups=false, general_ad=false, max_step = nothing)
+    #model, state0, parameters = BattMo.setup_model(init, use_groups = false, use_p2d    = use_p2d)
+    model  = BattMo.setup_battery_model(init, use_groups = false, use_p2d    = use_p2d)
+    parameters = BattMo.setup_battery_parameters(init, model)
+    state0 = BattMo.setup_battery_initial_state(init, model)
+    BattMo.setup_coupling_grid!(init, model, parameters)
+    BattMo.setup_policy!(model[:Control].system.policy, init, parameters)
+    
+    minE = init.object["Control"]["lowerCutoffVoltage"]
+    @. state0[:Control][:Phi] = minE * 1.5
 
+
+    forces = setup_forces(model)
+
+    sim = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
     #Set up config and timesteps
     timesteps = BattMo.setup_timesteps(init; max_step = nothing)
-    cfg = BattMo.setup_config(sim, model, :direct, false)
-
+    #timesteps = timesteps[1:10]
+    # linear solver :ilu0,:cphi :chi_ilu :amg
+    #cfg = BattMo.setup_config(sim, model, :cphi_ilu_ilu, false)
+    cfg = BattMo.setup_config(sim, model, :ilu0, false)
+    #cfg = BattMo.setup_config(sim, model, :il5u, false)
+    #cfg = BattMo.setup_config(sim, model, :direct, false)
     # Perform simulation
-    cfg[:info_level] = 3
+    cfg[:info_level] = 10
+    cfg[:tolerances][:Elyte][:default] =1e-5
+    cfg[:tolerances][:Control][:default] = 1e-5
+    cfg[:tolerances][:PeAm][:solid_diffusion_bc] = 1e-20
+
     state0[:Control][:Phi][1] = 4.2
     state0[:Control][:Current][1] = 0
+    discharging = BattMo.cc_discharge1 
+    state0[:Control][:ControllerCV] = BattMo.SimpleControllerCV{Float64}(0.0, 0.0, false, discharging)
+    cfg[:failure_cuts_timestep] = false
     states, reports = Jutul.simulate(state0, sim, timesteps, forces=forces, config=cfg)
     ##
 end
@@ -223,11 +260,20 @@ V=state[:Control][:Phi]
 println("Current ", state[:Control][:Phi])
 println("Current ", state[:Control][:Current])
 global myfirst = true
+
+axlines = Axis(fig[1, 2], yautolimitmargin = (0.1, 0.1), xautolimitmargin = (0.1, 0.1))
+#axlines = Axis(flines[1, 1])
+if(include_cc)
+    indend = 5
+else
+    indend = 3
+end
 flines = Figure(size = (600, 650))
-#axlines = Axis(flines[1, 1], yautolimitmargin = (0.1, 0.1), xautolimitmargin = (0.1, 0.1))
-axlines = Axis(flines[1, 1])
-for ind in 1:5
+flines_c = Figure(size = (600, 650))
+for ind in 1:3
 #ind = 1
+    axlinesall = Axis(flines[1, ind], yautolimitmargin = (0.1, 0.1), xautolimitmargin = (0.1, 0.1))
+    axlinesall_c = Axis(flines_c[1, ind], yautolimitmargin = (0.1, 0.1), xautolimitmargin = (0.1, 0.1))
     name = names[ind]
     sym = syms[ind]
     g = init.object["Grids"][name]
@@ -238,7 +284,20 @@ for ind in 1:5
     z = go.cell_centroids[end, :]##
     val = state[sym][:Phi]
     #if(myfirst)
-    GLMakie.lines!(axlines, z, val)
+    GLMakie.lines!(axlinesall, z, val)
+    if(ind<2)
+        valc = state[sym][:C]
+        GLMakie.lines!(axlinesall_c, z, valc)
+    end
+    if(ind ==2 || ind == 3)
+        valc = []
+        if BattMo.discretisation_type(model[:NeAm]) == :NoParticleDiffusion
+            valc = state[sym][:C]
+        else
+            valc = state[sym][:Cs]
+        end
+        GLMakie.lines!(axlinesall_c, z, valc)
+    end
     add_left = false
     add_right = false
     if include_cc
@@ -257,13 +316,15 @@ for ind in 1:5
         vals = Vector{Float64}([V[1], V[1]])
         pos = Vector{Float64}([minz,maxz])
         GLMakie.lines!(axlines, pos, vals)  
+        GLMakie.lines!(axlinesall, pos, vals)  
     end
     if add_left
         ind1,minz = findBoundary(g,3, true)#minimum(z)
         ind2,maxz = findBoundary(g,3, false)#maximum(z)
         vals = Vector{Float64}([0, 0])
         pos = Vector{Float64}([minz,maxz])
-        GLMakie.lines!(axlines, pos, vals) 
+        GLMakie.lines!(axlines, pos, vals)
+        GLMakie.lines!(axlinesall, pos, vals)  
     end
 
     #end
@@ -280,35 +341,41 @@ end
 #sym = syms[ind]
 if do_plot
 display(GLMakie.Screen(),flines)
+display(GLMakie.Screen(),flines_c)
 end
 ##
 if do_plot
-f = Figure(size = (600, 650))
-ax1 = Axis(f[1, 1], yautolimitmargin = (0.1, 0.1), xautolimitmargin = (0.1, 0.1))
-ax2 = Axis(f[1, 2], yautolimitmargin = (0.1, 0.1), xautolimitmargin = (0.1, 0.1))
+#f = Figure(size = (600, 650))
+ax1 = Axis(fig[2, 1], yautolimitmargin = (0.1, 0.1), xautolimitmargin = (0.1, 0.1))
+ax2 = Axis(fig[2, 2], yautolimitmargin = (0.1, 0.1), xautolimitmargin = (0.1, 0.1))
 lines!(ax2,t,I)
 lines!(ax1,t,E)
 #Label(f[1,1], "Volatage")
-display(GLMakie.Screen(),f)
+#display(GLMakie.Screen(),fig)
 end
 
 
 ##
-if do_plot
+if do_plot && false
 f3D = Figure(size = (600, 650))
 ax3d = Axis3(f3D[1, 1])
-ind =5
-for ind in 2:5
+if include_cc
+    ind =5
+
+
+for ind in 5:5
 name = names[ind]
 sym = syms[ind]
 g = init.object["Grids"][name]
 phi = state[sym][:Phi]
 #Jutul.plot_cell_data(g,phi)
 Jutul.plot_cell_data!(ax3d,g,phi.-mean(phi))
+#Jutul.plot_cell_data!(ax3d,g,phi)
 end
 #GLMakie.Colorbar(f3D,limits = (0, 10), colormap = :viridis,flipaxis = false)
 #scale!(ax3d.scene, 3, 3, 3)
 display(GLMakie.Screen(),f3D)
+end
 end
 ##
 #nf = number_of_faces(g)

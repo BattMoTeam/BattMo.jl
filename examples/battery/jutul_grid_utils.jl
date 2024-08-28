@@ -11,7 +11,7 @@ function find_tags(h, paramsz_z)
     return [findall(x -> x == i,tag) for i in 1:5]
 end;
 
-function basic_grid_example_p4d2(;nx=1,ny=1,nz=1,tab_cell_nx=0, tab_cell_ny=0)
+function basic_grid_example_p4d2(;nx=1,ny=1,nz=1,tab_cell_nx=0, tab_cell_ny=0, test = false)
     # just defining some values. feel free to change them. 
     #these values are taken from picture 
     #https://battmoteam.github.io/BattMo/geometryinput.html#batterygeneratorp4d
@@ -27,12 +27,19 @@ function basic_grid_example_p4d2(;nx=1,ny=1,nz=1,tab_cell_nx=0, tab_cell_ny=0)
     elyte_ny = ny
     pe_cc_ny = tab_cell_ny
 
+    if(test)
+        ne_cc_nz = 1*nz
+    ne_am_nz = 4*nz
+    sep_nz = 3*nz
+    pe_am_nz = 5*nz
+    pe_cc_nz = 2*nz
+    else
     ne_cc_nz = nz
     ne_am_nz = nz
     sep_nz = nz
     pe_am_nz = nz
     pe_cc_nz = nz
-    
+    end
     x0_cells, x4_cells = tab_cell_nx, tab_cell_nx ### These can be 0 => CC is on edge
     x0, x4 = 6, 6
 

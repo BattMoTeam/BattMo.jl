@@ -335,8 +335,10 @@ function setup_coupling!(init::JSONFile,
         add_cross_term!(model, ct_pair)
         
     else
-        
-        @assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
+        if !(discretisation_type(model[:NeAm]) == :NoParticleDiffusion)
+            error()
+        end
+        #@assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
         
         ct = ButlerVolmerInterfaceFluxCT(trange, srange)
         ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
@@ -718,7 +720,7 @@ else
 #NB hack
 #Nc = geomparams[:PeAm][:N]
 Npam = number_of_cells(geomparams[:PeAm])
-trange = geomparams[:couplings][:Control][:PeAm]["cells"]
+trange = geomparams[:couplings][:PeAm][:Control]["cells"]
 ## control only have one cell
 srange = Int64.(ones(size(trange)))
 
@@ -727,7 +729,7 @@ mparameters   = parameters[:PeAm]
 
 # Here the indexing in BoundaryFaces in used
 ## NB probably wrong
-couplingfaces = geomparams[:couplings][:Control][:PeAm]["boundaryfaces"]
+couplingfaces = geomparams[:couplings][:PeAm][:Control]["boundaryfaces"]
 couplingcells = trange
 trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
 ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
@@ -1224,6 +1226,7 @@ end
 function setup_battery_model(init::JSONFile; 
                              use_groups::Bool = false, 
                              general_ad::Bool = false,
+                             use_p2d::Bool = false,
                              kwarg...)
     
     include_cc = include_current_collectors(init)
@@ -1247,7 +1250,7 @@ function setup_battery_model(init::JSONFile;
     """
     function setup_component(geomparam::Dict, 
                              sys; 
-                             addDirichlet::Bool = false, 
+                             boundary = nothing, 
                              general_ad::Bool   = false,
                              facearea = 1.0)
         
@@ -1271,7 +1274,7 @@ function setup_battery_model(init::JSONFile;
         # We add Dirichlet on negative current collector. This is a bit hacky as we pass directly cell-number
         # Works only for 1D model
         
-        if addDirichlet
+        if !isnothing(boundary)
 
             domain.entities[BoundaryDirichletFaces()] = 1
 
@@ -1414,7 +1417,8 @@ function setup_battery_model(init::JSONFile;
     Helper function to setup the active materials
     """
     function setup_active_material(name::Symbol, 
-                                   geomparams::Dict{Symbol, <:Any})
+                                   geomparams::Dict{Symbol, <:Any},
+                                   use_p2d)
 
         jsonName = jsonNames[name]
 
@@ -1484,7 +1488,6 @@ function setup_battery_model(init::JSONFile;
             am_params[:ocp_func] = interpolation_object
         end
         
-        use_p2d = true
         if use_p2d
             rp = inputparams_am["SolidDiffusion"]["particleRadius"]
             N  = Int64(inputparams_am["SolidDiffusion"]["N"])
@@ -1538,7 +1541,7 @@ function setup_battery_model(init::JSONFile;
     # Setup NeAm #
     ##############
     
-    model_neam = setup_active_material(:NeAm, geomparams)
+    model_neam = setup_active_material(:NeAm, geomparams, use_p2d)
 
     ###############
     # Setup Elyte #
@@ -1611,7 +1614,7 @@ function setup_battery_model(init::JSONFile;
     # Setup PeAm #
     ##############
     
-    model_peam = setup_active_material(:PeAm, geomparams)
+    model_peam = setup_active_material(:PeAm, geomparams, use_p2d)
 
     ###########################################
     # Setup negative current collector if any #
@@ -1623,8 +1626,10 @@ function setup_battery_model(init::JSONFile;
         
         sys_pecc = CurrentCollector(pecc_params)
         
-        model_pecc = setup_component(geomparams[:PeCc], sys_pecc, 
+        model_pecc = setup_component(geomparams[:PeCc], 
+                                    sys_pecc, 
                                     general_ad = general_ad,
+                                    boundary = nothing,
                                     facearea = geomparams[:facearea])
     end
 
@@ -2071,11 +2076,11 @@ function setup_battery_initial_state(init::JSONFile,
     SOC_init = jsonstruct["SOC"]
 
     function setup_init_am(name, model)
-        
+        sys = model[name].system
         theta0   = model[name].system[:theta0]
         theta100 = model[name].system[:theta100]
         cmax     = model[name].system[:maximum_concentration]
-        N        = model[name].system.discretization[:N]
+
         refT = 298.15
         
         theta = SOC_init*(theta100 - theta0) + theta0;
@@ -2083,9 +2088,15 @@ function setup_battery_initial_state(init::JSONFile,
         SOC = SOC_init
         nc    = count_entities(model[name].data_domain, Cells())
         init = Dict()
-        init[:Cs]  = c*ones(nc)
-        init[:Cp]  = c*ones(N, nc)
-
+        if  discretisation_type(sys) == :P2Ddiscretization
+            N        = model[name].system.discretization[:N]
+            init[:Cs]  = c*ones(nc)
+            init[:Cp]  = c*ones(N, nc)
+        else
+            @assert discretisation_type(sys) == :NoParticleDiffusion
+            init[:C] = c*ones(nc)
+        end
+        
         if Jutul.haskey(model[name].system.params, :ocp_funcexp)
             OCP = model[name].system[:ocp_func](c, T, refT, cmax)
         elseif Jutul.haskey(model[name].system.params, :ocp_funcdata)
@@ -2382,7 +2393,13 @@ function setup_geomparams(init::JSONFile)
     for name in names
         geomparams[name][:facearea] = jsondict["Geometry"]["faceArea"]
     end
-    
+    geomparams[:boundary] = Dict()
+    if include_cc
+        geomparams[:boundary][:NeCc] = Dict()
+    else
+        geomparams[:boundary][:NeAm] = Dict()
+    end
+    geomparams[:facearea] = Dict()
     return geomparams
     
 end
@@ -2446,8 +2463,9 @@ function setup_geomparams_grid(geometry::Dict, include_cc)
         
 
     else
-        geomparams[:couplings][:Control] = Dict{Symbol,Any}()
-        geomparams[:couplings][:Control][:PeAm] = geometry["Couplings"]["Control"]["PositiveElectrode"]
+        #geomparams[:couplings][:Control] = Dict{Symbol,Any}()
+        geomparams[:couplings][:PeAm] = Dict{Symbol,Any}()
+        geomparams[:couplings][:PeAm][:Control] = geometry["Couplings"]["PositiveElectrode"]["Control"]
         geomparams[:boundary] = Dict{Symbol,Any}()
         geomparams[:boundary][:NeAm] =  geometry["Boundary"]["NegativeElectrode"]   
     end

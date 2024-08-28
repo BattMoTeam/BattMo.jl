@@ -12,16 +12,18 @@ using MAT
 
 ENV["JULIA_DEBUG"] = 0;
 
-use_p2d = true
+use_p2d = false
 
 if use_p2d
     name = "p2d_40"
-    name = "p2d_40_no_cc"
+    #name = "p2d_40_no_cc"
     #name = "p2d_40_cccv"
-     name = "p2d_40_jl_chen2020"
+    name = "p2d_40_jl_chen2020"
     #name = "3d_demo_case"
 else
-    name = "p1d_40"
+    name = "p2d_40"
+    name = "p2d_40_jl_chen2020"
+    #name = "p1d_40"
     #name = "3d_demo_case"
 end
 
@@ -39,7 +41,17 @@ if do_json
 
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, ".json")
     init = JSONFile(fn)
-    init.object["include_current_collectors"] = true
+    include_cc = init.object["include_current_collectors"]
+    if !use_p2d
+        init.object["PositiveElectrode"]["Coating"]["ActiveMaterial"]["InterDiffusionCoefficient"]= 0
+        init.object["NegativeElectrode"]["Coating"]["ActiveMaterial"]["InterDiffusionCoefficient"]= 0
+    end
+    if include_cc
+        case = init.object
+        case["NegativeElectrode"]["CurrentCollector"]["density"] = 1000
+        case["PositiveElectrode"]["CurrentCollector"]["density"] = 1000
+    end
+#    model = setup_battery_model(init, use_groups = false, use_p2d    = use_p2d)
     states, cellSpecifications, reports, extra = run_battery(init; use_p2d = use_p2d, info_level = 0, extra_timing = false);
 
     t = [state[:Control][:ControllerCV].time for state in states]
@@ -93,3 +105,4 @@ p2 = Plots.plot(t, I;
 
 Plots.plot(p1, p2, layout = (2, 1))
 
+model = BattMo.setup_battery_model(init, use_groups = false, use_p2d    = use_p2d)

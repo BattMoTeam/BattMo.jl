@@ -1,4 +1,4 @@
-function Jutul.update!(prec::BatteryCPhiPreconditioner, lsys, model, storage, recorder)
+function Jutul.update_preconditioner!(prec::BatteryCPhiPreconditioner, lsys, model, storage, recorder, executor)
     # Solve all Phi with AMG
     # Solve the elyte C with another AMG
     # Let the rest be (?)
@@ -23,8 +23,8 @@ function Jutul.update!(prec::BatteryCPhiPreconditioner, lsys, model, storage, re
     end
     (; c, phi) = prec.data
 
-    update_local_cphi_preconditioner!(prec.c_precond, A, r, c)
-    update_local_cphi_preconditioner!(prec.p_precond, A, r, phi)
+    update_local_cphi_preconditioner!(prec.c_precond, A, r, c, executor)
+    update_local_cphi_preconditioner!(prec.p_precond, A, r, phi, executor)
 end
 
 function Jutul.apply!(x, prec::BatteryCPhiPreconditioner, r, arg...)
@@ -39,10 +39,10 @@ function storage_chpi_precond(index_map)
     return (ix = index_map, r = zeros(n), x = zeros(n))
 end
 
-function update_local_cphi_preconditioner!(prec, A, r, S)
+function update_local_cphi_preconditioner!(prec, A, r, S, executor)
     ix = S.ix
     A_s = A[ix, ix]
-    update!(prec, A_s, view(r, ix), DefaultContext())
+    Jutul.update_preconditioner!(prec, A_s, view(r, ix), DefaultContext(), executor)
 end
 
 function apply_local_cphi_preconditioner!(x, prec, r, S)
@@ -98,7 +98,10 @@ function battery_linsolve(model, method = :ilu0;
         prec = BatteryCPhiPreconditioner()
     elseif method == :cphi_ilu
         prec = BatteryCPhiPreconditioner(ILUZeroPreconditioner())
+    elseif method == :cphi_ilu_ilu
+        prec = BatteryCPhiPreconditioner(ILUZeroPreconditioner(),ILUZeroPreconditioner())
     else
+        error("Wrong input for preconditioner")
         return nothing
     end
     max_it = 200

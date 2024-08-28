@@ -412,6 +412,11 @@ function select_parameters!(S,
     S[:Temperature]  = Temperature()
     S[:Conductivity] = Conductivity()
     S[:Diffusivity]  = Diffusivity()
+    S[:VolumeFraction] = VolumeFraction()
+
+    if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
+        S[:BoundaryPhi]  = BoundaryPotential(:Phi)
+    end
     
 end
 
@@ -440,29 +445,29 @@ end
 
 
 
-@jutul_secondary(
-    function update_vocp!(Ocp ,
-                          tv::Ocp ,
-                          model::SimulationModel{<:Any, ActiveMaterialNoParticleDiffusion{T}, <:Any, <:Any},
-                          C       ,
-                          ix
-                          ) where T
+# @jutul_secondary(
+#     function update_vocp!(Ocp ,
+#                           tv::Ocp ,
+#                           model::SimulationModel{<:Any, ActiveMaterialNoParticleDiffusion{T}, <:Any, <:Any},
+#                           C       ,
+#                           ix
+#                           ) where T
         
-        ocp_func = model.system.params[:ocp_func]
-        cmax     = model.system.params[:maximum_concentration]
-        refT     = 298.15
-        ocp_eq   = model.system.params[:ocp_eq]
-        global ocp_ex = ocp_eq
-        for cell in ix
-            ################### Lorena #############
-            global c = Cs[cell]
-            @inbounds Ocp[cell] = ocp_func(ocp_eq,Cs[cell], refT, cmax)
-            #@inbounds Ocp[cell] = @evaluate_ocp_function(ocp_eq , Cs[cell], refT, cmax)
-            ########################################
-            #@inbounds Ocp[cell] = ocp_func(C[cell], refT, cmax)
-        end
-    end
-)
+#         ocp_func = model.system.params[:ocp_func]
+#         cmax     = model.system.params[:maximum_concentration]
+#         refT     = 298.15
+#         ocp_eq   = model.system.params[:ocp_eq]
+#         global ocp_ex = ocp_eq
+#         for cell in ix
+#             ################### Lorena #############
+#             global c = Cs[cell]
+#             @inbounds Ocp[cell] = ocp_func(ocp_eq,Cs[cell], refT, cmax)
+#             #@inbounds Ocp[cell] = @evaluate_ocp_function(ocp_eq , Cs[cell], refT, cmax)
+#             ########################################
+#             #@inbounds Ocp[cell] = ocp_func(C[cell], refT, cmax)
+#         end
+#     end
+# )
 
 
 
