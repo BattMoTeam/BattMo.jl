@@ -5,7 +5,6 @@ export
     find_coupling,
     find_common,
     setup_geometry,
-    plot_grid_with_edges,
     findBoundary,
     pouch_grid,
     convert_geometry
@@ -36,24 +35,16 @@ function find_common(map_grid1, map_grid2)
     
 end
 
-"""
-    plot grid with edges
-"""
-function plot_grid_with_edges(G)
-    fig, ax = plot_mesh(G)
-    Jutul.plot_mesh_edges!(ax, G)
-end
-
 """ find the tags of each cell (tag from 1 to 5 for each grid component such as negative current collector and so
 on). Returns a list with 5 elements, each element containing a list of cells for the corresponding tag
 """
-function
-    find_tags(h, paramsz_z)
+function find_tags(h, paramsz_z)
     
     h_with_geo = tpfv_geometry(h)
     cut_offs = cumsum(paramsz_z)
     tag = searchsortedfirst.([cut_offs], h_with_geo.cell_centroids[3,:])
-    return [findall(x -> x == i, tag) for i in 1:5]
+    return [findall(x -> x == i, tag) for i in 1 : 5]
+    
 end
 
 """ Create a pouch grid
@@ -137,14 +128,16 @@ function pouch_grid(;
     end
     
     zvals =  paramsz .* z
-    G, cellmap, facemap, nodemap = remove_cells(H_back, vcat(pe_cc_extra_cells, ne_cc_extra_cells))
 
-    return G, cellmap, facemap, nodemap, zvals
+    G, = remove_cells(H_back, vcat(pe_cc_extra_cells, ne_cc_extra_cells))
+
+    grids = setup_geometry(G, zvals)
+    grids = convert_geometry(grids)
 
 end;
 
 
-""" From a grid and the position of the z-values for the different components, returns a grid with the coupling
+""" From a global grid and the position of the z-values for the different components, returns the grids with the coupling
 """
 function setup_geometry(H_mother, paramsz)
     
@@ -238,57 +231,45 @@ function setup_geometry(H_mother, paramsz)
     
 end
 
-""" Find the boundary of the grid
+"""
+Find the face boundary of the grid in a given Cartesian direction (dim) and direction (true of false correpondings to "left" and "right"). It is used to obtain the external coupling for the grid
 """
 function findBoundary(g, dim, dir)
     
     nf = number_of_boundary_faces(g)
     
     if dir
-        max_min = -1e99
+        max_min = -Inf
     else
-        max_min = 1e99
+        max_min = Inf
     end
     
     face  = BoundaryFaces()
-    faces = Vector()
     tol   = 1000*eps()
+
+    function getcoord(i)
+        centroid, = Jutul.compute_centroid_and_measure(g, face, i)
+        return centroid[dim]
+    end
     
-    for i in 1:nf
-        
-        centroid, area = Jutul.compute_centroid_and_measure(g, face, i)
-        diffmax = centroid[dim] - max_min 
-        if dir
-            if  diffmax > 0
-                #push!(faces, i)
-                max_min = centroid[dim]
-            end
-        else
-            if diffmax < 0
-                #push!(faces, i)
-                max_min = centroid[dim]
-            end
-        end
+    coord = [getcoord(i) for i in 1 : nf]
+
+    if dir
+        max_min = maximum(coord)
+    else
+        max_min = minimum(coord)
     end
-    for i in 1:nf
-        centroid, area = Jutul.compute_centroid_and_measure(g, face, i)
-        diffmax = centroid[dim]-max_min 
-        if dir
-            if  abs(diffmax) < tol
-                push!(faces, i)
-                #max_min = centroid[dim]
-            end
-        else
-            if abs(diffmax) < tol
-                push!(faces, i)
-                #max_min = centroid[dim]
-            end
-        end
-    end
+
+    faces = findall(abs.(coord .- max_min) .< tol)
 
     return faces, max_min
+    
 end
 
+"""
+ We convert the grids given in MRST format (dictionnary also called raw grids) to Jutul format (UnstructuredMesh)
+ For the face couplings, we need to recover the coupling face indices in the boundary face indexing (jutul mesh structure holds a different indexing for the boundary faces)
+"""
 function convert_geometry(grids)
     
     components = ["NegativeCurrentCollector",
@@ -306,18 +287,16 @@ function convert_geometry(grids)
     
     ugrids["Couplings"] = deepcopy(grids["Couplings"])
     
-    for (ind, component) in enumerate(components)
+    for component in components
 
         couplings = ugrids["Couplings"][component]
+        
         graw = grids[component]
-        g = ugrids[component]
+        g    = ugrids[component]
         
         for (component2, coupling) in couplings
-            #println([component,component2])
-            #println(coupling)
             if !isempty(coupling)
                 if coupling["face_type"]
-                    # remap faces
                     faces = coupling["faces"]
                     cells = coupling["cells"]
                     for fi in eachindex(faces)
@@ -325,25 +304,18 @@ function convert_geometry(grids)
                         cell = cells[fi]
                         candidates = g.boundary_faces.cells_to_faces[cell]
                         rface = face
-                        rawface = graw["faces"]
-                        lnodePos = rawface["nodePos"][rface:(rface+1)]
-                        lnodes = Set(rawface["nodes"][lnodePos[1]:lnodePos[2]-1])
+                        rawfaces = graw["faces"]
+                        lnodePos = rawfaces["nodePos"][rface : (rface + 1)]
+                        lnodes = Set(rawfaces["nodes"][lnodePos[1] : lnodePos[2] - 1])
                         count = 0
-                        #println(rface)
-                        #println(lnodes)
-                        #println("hei")
-                        #print(candidates)
                         for lfi in eachindex(candidates)
                             fnodes = Set(g.boundary_faces.faces_to_nodes[candidates[lfi]])
                             if fnodes == lnodes
                                 faces[fi] = candidates[lfi]
-                                #ugrids["Couplings"][component][component2]["faces"][fi] = candidates[lfi]
                                 count += 1
                             end
                         end
-                        #println(count)
                         @assert count == 1
-                        #end
                     end
                 else
                     @assert isempty(coupling["faces"])
@@ -351,5 +323,7 @@ function convert_geometry(grids)
             end
         end
     end
+    
     return ugrids
+    
 end 
