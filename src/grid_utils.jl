@@ -1,4 +1,4 @@
-using Jutul, BattMo
+using Jutul, BattMo, Infiltrator
 
 export
     pouch_grid,
@@ -7,6 +7,7 @@ export
     setup_geometry,
     plot_grid_with_edges,
     findBoundary,
+    pouch_grid,
     convert_geometry
 
 """
@@ -41,15 +42,22 @@ end
 function plot_grid_with_edges(G)
     fig, ax = plot_mesh(G)
     Jutul.plot_mesh_edges!(ax, G)
-end;
+end
 
-function find_tags(h, paramsz_z)
+""" find the tags of each cell (tag from 1 to 5 for each grid component such as negative current collector and so
+on). Returns a list with 5 elements, each element containing a list of cells for the corresponding tag
+"""
+function
+    find_tags(h, paramsz_z)
+    
     h_with_geo = tpfv_geometry(h)
     cut_offs = cumsum(paramsz_z)
     tag = searchsortedfirst.([cut_offs], h_with_geo.cell_centroids[3,:])
     return [findall(x -> x == i, tag) for i in 1:5]
-end;
+end
 
+""" Create a pouch grid
+"""
 function pouch_grid(;
                     nx          = 1,
                     ny          = 1,
@@ -136,10 +144,12 @@ function pouch_grid(;
 end;
 
 
+""" From a grid and the position of the z-values for the different components, returns a grid with the coupling
+"""
 function setup_geometry(H_mother, paramsz)
     
-    couplings = []
-    grids = Dict()
+    couplings   = []
+    grids       = Dict()
     global_maps = Dict()
 
     components = ["NegativeCurrentCollector",
@@ -153,88 +163,101 @@ function setup_geometry(H_mother, paramsz)
     grids["Global"] = UnstructuredMesh(H_mother)
     nglobal = number_of_cells(grids["Global"])
     tags = find_tags(grids["Global"], paramsz)
-    allinds = 1:nglobal
+    
+
+    # Setup the grids and mapping for all components
+    allinds = 1 : nglobal
     for (ind, component) in enumerate(components)
         G, maps... = remove_cells(H_mother, setdiff(allinds, tags[ind]))
-        grids[component] = G#UnstructuredMesh(G)
-        global_maps[component] =maps
+        grids[component] = G
+        global_maps[component] = maps
     end
-    begin
-        G, maps... = remove_cells(H_mother, setdiff(allinds, vcat(tags[2:4]...)))
-        grids["Electrolyte"] = G#UnstructuredMesh(G)
-        global_maps["Electrolyte"] = maps
-    end
-    ##
+    
+    # Setup the grid and mapping for the electrolyte
+    G, maps... = remove_cells(H_mother, setdiff(allinds, vcat(tags[2:4]...)))
+    grids["Electrolyte"] = G
+    global_maps["Electrolyte"] = maps
+    
+    # Add Electrolyte in the component list
     allcomps = components
-    append!(allcomps,["Electrolyte"])
-    grids["Couplings"] = Dict{String,Dict{String,Any}}()
-    for (ind1, comp1) in enumerate(allcomps)
-        grids["Couplings"][comp1] = Dict{String,Any}()
-      for (ind2, comp2) in enumerate(allcomps)
-            #println([comp1,comp2])
-            intersection = find_coupling(global_maps[comp1],global_maps[comp2],  [comp1, comp2])
-            intersection_tmp = Dict() # intersection
-            #tmp = Dict(comp2=> intersection)
-            if(ind1 < ind2)
-                append!(couplings,[intersection])
-            end
-            #println(size(couplings))
-            if(ind1 == ind2)
+    append!(allcomps, ["Electrolyte"])
 
-            else
+    # Setup the couplings
+    
+    grids["Couplings"] = Dict{String,Dict{String,Any}}()
+
+    for (ind1, comp1) in enumerate(allcomps)
+        
+        grids["Couplings"][comp1] = Dict{String,Any}()
+        
+        for (ind2, comp2) in enumerate(allcomps)
+
+            intersection = find_coupling(global_maps[comp1], global_maps[comp2], [comp1, comp2])
+            
+            intersection_tmp = Dict() # intersection
+            
+            if(ind1 < ind2)
+                push!(couplings, intersection)
+            end
+
+            if ind1 != ind2
+                
                 cells = intersection["cells"]
                 faces = intersection["faces"]
-                if isnothing(cells) 
-                    if isnothing(faces)
-                        #println("No coupling")
-                        #break;
-                    else
+                
+                if isnothing(cells)
+                    # We recover the coupling cells from the neighbors
+                    if !isnothing(faces)
                         nb = grids[comp1]["faces"]["neighbors"]
-                        #println(nb)
-                        locfaces = faces[:,1]
+                        locfaces = faces[:, 1]
                         loccells = nb[locfaces,1] + nb[locfaces,2]                     
-                        intersection_tmp = Dict("cells" => loccells, "faces" => locfaces,"face_type" => true)
-                        #@assert sum(nb[locfaces,1] * nb[locfaces,2]) == 0
+                        intersection_tmp = Dict("cells" => loccells, "faces" => locfaces, "face_type" => true)
                     end
+                    
                 else
+                    # Coupling between cells and, in this case, face couplings are meaningless
                     if isnothing(faces)
                         faces = []
                     end
-                    if size(faces,1) != size(cells,1)
-                        intersection_tmp = Dict("cells" => cells[:,1], "faces" => [],"face_type" => false)
+                    
+                    if size(faces, 1) != size(cells, 1)
+                        intersection_tmp = Dict("cells" => cells[:, 1], "faces" => [], "face_type" => false)
                     else
-                       @assert false
+                        @assert false
                     end
-                     
-                    #intersection_tmp = Dict("cells" => cells[,1], "faces" => faces[:,1])
                 end
                 
-
-                if(isnothing(cells) && isnothing(faces))
-                    #println("No coupling")
-                else   
+                if !(isnothing(cells) && isnothing(faces))
                     grids["Couplings"][comp1][comp2] = intersection_tmp
                 end
             end
-      end
+        end
     end
-    # ##
+    
     return grids
+    
 end
 
+""" Find the boundary of the grid
+"""
 function findBoundary(g, dim, dir)
+    
     nf = number_of_boundary_faces(g)
-    if(dir)
+    
+    if dir
         max_min = -1e99
     else
         max_min = 1e99
     end
-    face = BoundaryFaces()
+    
+    face  = BoundaryFaces()
     faces = Vector()
-    tol = 1000*eps()
+    tol   = 1000*eps()
+    
     for i in 1:nf
+        
         centroid, area = Jutul.compute_centroid_and_measure(g, face, i)
-        diffmax = centroid[dim]-max_min 
+        diffmax = centroid[dim] - max_min 
         if dir
             if  diffmax > 0
                 #push!(faces, i)
