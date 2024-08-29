@@ -6,24 +6,26 @@ GLMakie.closeall()
 #GLMakie.activate!()
 include_cc = true
 use_p2d =true
-
-includet("jutul_grid_utils.jl")
-
 do_plot = true
 
 
+fac = 1 # discretisation factor
 
-fac = 1    
-H_mother, cellmap, facemap, nodemap, paramsz = basic_grid_example_p4d2(nx=4*fac,ny=4*fac,nz=4,tab_cell_nx=3,tab_cell_ny=2);
-#plot_grid_test(UnstructuredMesh(H_mother))
 
-#paramsz =  [2, 3, 3, 3, 2] .* [10, 100, 50, 80, 10] .* 1e-6
-#paramsz =  [1, 1, 1, 1, 1] .* [10, 100, 50, 80, 10] .* 1e-6
+## Create the pouch_grid
+H_mother, cellmap, facemap, nodemap, paramsz = pouch_grid(nx          = 4*fac,
+                                                          ny          = 4*fac,
+                                                          nz          = 4,
+                                                          tab_cell_nx = 3,
+                                                          tab_cell_ny = 2)
 
+## Create the subgrids
 grids = setup_geometry(H_mother, paramsz);
+
 if do_plot
-    plot_grid_test(grids["Global"])
+    plot_grid_with_edges(grids["Global"])
 end
+
 ##
 ugrids = convert_geometry(grids);
 ##

@@ -1,9 +1,18 @@
 using Jutul, BattMo
 
+export
+    pouch_grid,
+    find_coupling,
+    find_common,
+    setup_geometry,
+    plot_grid_with_edges,
+    findBoundary,
+    convert_geometry
+
+"""
+   find coupling cells and faces between two grid maps
+"""
 function find_coupling(maps1, maps2, modelname = "placeholder")
-    """
-    docstring
-    """
     Coupling = Dict()
     Coupling["model"] = modelname
     Coupling["cells"] = find_common(maps1[1], maps2[1])
@@ -11,23 +20,25 @@ function find_coupling(maps1, maps2, modelname = "placeholder")
     return Coupling
 end
 
+"""
+    find common elements between two mappings
+"""
 function find_common(map_grid1, map_grid2)
-
-    """
-    Insert cellmaps or facemaps
-
-    """
-
     common_ground = intersect(map_grid1, map_grid2)
     entity1 = findall(x -> x ∈ common_ground, map_grid1)
     entity2 = findall(x -> x ∈ common_ground, map_grid2)
     if isempty(entity1)
         return nothing
     end
+    
     return collect([entity1 entity2]) ###This might be quite slow, but I wanted output to be matrix
+    
 end
 
-function plot_grid_test(G)
+"""
+    plot grid with edges
+"""
+function plot_grid_with_edges(G)
     fig, ax = plot_mesh(G)
     Jutul.plot_mesh_edges!(ax, G)
 end;
@@ -39,12 +50,12 @@ function find_tags(h, paramsz_z)
     return [findall(x -> x == i, tag) for i in 1:5]
 end;
 
-function basic_grid_example_p4d2(;
-                                 nx          = 1,
-                                 ny          = 1,
-                                 nz          = 1,
-                                 tab_cell_nx = 0,
-                                 tab_cell_ny = 0)
+function pouch_grid(;
+                    nx          = 1,
+                    ny          = 1,
+                    nz          = 1,
+                    tab_cell_nx = 0,
+                    tab_cell_ny = 0)
 
     ne_cc_nx     = tab_cell_nx
     int_elyte_nx = nx
@@ -126,14 +137,18 @@ end;
 
 
 function setup_geometry(H_mother, paramsz)
+    
     couplings = []
-    grids=Dict()
+    grids = Dict()
     global_maps = Dict()
 
-    components = ["NegativeCurrentCollector","NegativeElectrode","Separator",
-             "PositiveElectrode","PositiveCurrentCollector"]#"Electrolyte"]             
+    components = ["NegativeCurrentCollector",
+                  "NegativeElectrode"       ,
+                  "Separator"               ,
+                  "PositiveElectrode"       ,
+                  "PositiveCurrentCollector"]
     
-             tags = find_tags(UnstructuredMesh(H_mother), paramsz)
+    tags = find_tags(UnstructuredMesh(H_mother), paramsz)
 
     grids["Global"] = UnstructuredMesh(H_mother)
     nglobal = number_of_cells(grids["Global"])
@@ -252,18 +267,28 @@ function findBoundary(g, dim, dir)
 end
 
 function convert_geometry(grids)
-    components = ["NegativeCurrentCollector","NegativeElectrode","Separator",
-             "PositiveElectrode","PositiveCurrentCollector","Electrolyte"]
-    ugrids = Dict()         
-    for (ind, component) in enumerate(components)
-        #println(component)
+    
+    components = ["NegativeCurrentCollector",
+                  "NegativeElectrode"       ,
+                  "Separator"               ,
+                  "PositiveElectrode"       ,
+                  "PositiveCurrentCollector",
+                  "Electrolyte"]
+    
+    ugrids = Dict()
+    
+    for component in components
         ugrids[component] = UnstructuredMesh(grids[component])
-    end 
+    end
+    
     ugrids["Couplings"] = deepcopy(grids["Couplings"])
+    
     for (ind, component) in enumerate(components)
+
         couplings = ugrids["Couplings"][component]
         graw = grids[component]
         g = ugrids[component]
+        
         for (component2, coupling) in couplings
             #println([component,component2])
             #println(coupling)
@@ -303,5 +328,5 @@ function convert_geometry(grids)
             end
         end
     end
-    return ugrids        
-end
+    return ugrids
+end 
