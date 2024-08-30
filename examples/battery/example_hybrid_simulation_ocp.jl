@@ -8,25 +8,33 @@ and conductivity, diffusivity is constant.
 # ENV["JULIA_STACKTRACE_MINIMAL"] = true
 
 using Jutul, BattMo, Plots
-using MAT
-
+using MAT, Flux, BSON
 
 ENV["JULIA_DEBUG"] = 0;
+
+use_p2d = true
+
+train_ML_model = false
+
+if train_ML_model
+    include("train_OCP_ML_models.jl")
+    train_model_neg_electrode()
+    train_model_pos_electrode()
+end
 
 name = "p2d_40_cccv"
 fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, ".json")
 init = JSONFile(fn)
 
-
 init.object["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"] = Dict(
     "type" => "function",
-    "functionname" => "computeOCP_Custom_Negative",
+    "functionname" => "computeOCP_ML_negative_electrode",
     "argumentlist" => ["concentration", "temperature", "cmax"]
 )
 
 init.object["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"] = Dict(
     "type" => "function",
-    "functionname" => "computeOCP_Custom_Positive",
+    "functionname" => "computeOCP_ML_positive_electrode",
     "argumentlist" => ["concentration", "temperature", "cmax"]
 )
 
