@@ -1166,7 +1166,7 @@ function setup_battery_model(init::JSONFile;
     ####################################
     # Setup negative current collector #
     ####################################
-    
+
     if include_cc
 
         grid     = grids["NegativeCurrentCollector"]

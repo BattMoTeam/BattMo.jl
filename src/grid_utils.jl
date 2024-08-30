@@ -370,6 +370,30 @@ function pouch_grid(geomparams::InputGeometryParams)
     grids, couplings = setup_geometry(G, zvals)
     grids, couplings = convert_geometry(grids, couplings)
 
+    # Negative current collector external coupling
+
+    grid = grids["NegativeCurrentCollector"]
+
+    neighbors = get_neighborship(grid; internal = false)
+
+    bcfaces = findBoundary(grid, 2, false);
+    bccells = neighbors[bcfaces]
+    
+    couplings["NegativeCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)        
+    
+    # Positive current collector external coupling
+
+    grid = grids["PositiveCurrentCollector"]
+
+    neighbors = get_neighborship(grid; internal = false)
+
+    bcfaces = findBoundary(grid, 2, true);
+    bccells = neighbors[bcfaces]
+    
+    couplings["PositiveCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)        
+
+    return grids, couplings
+    
 end
 
 """
@@ -385,8 +409,6 @@ function find_tags(h, paramsz_z)
     return [findall(x -> x == i, tag) for i in 1 : 5]
     
 end
-
-
 
 """
 Single layer pouch cell utility function
@@ -419,7 +441,7 @@ function findBoundary(grid, dim, dir)
 
     faces = findall(abs.(coord .- max_min) .< tol)
 
-    return faces, max_min
+    return faces
     
 end
 
