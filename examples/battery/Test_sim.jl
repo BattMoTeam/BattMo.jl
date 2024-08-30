@@ -13,11 +13,11 @@ fac = 1 # discretisation factor
 
 
 ## Create the pouch_grid
-ugrids = pouch_grid(nx = 4*fac, 
-                    ny = 4*fac, 
-                    nz = 4, 
-                    tab_cell_nx = 3, 
-                    tab_cell_ny = 2)
+ugrids, ucouplings = pouch_grid(nx = 4*fac, 
+                                ny = 4*fac, 
+                                nz = 4, 
+                                tab_cell_nx = 3, 
+                                tab_cell_ny = 2)
 
 
 
@@ -126,53 +126,56 @@ end
 
 
 
-if(use_p2d)
-    name = "p2d_40_cccv"
-    name = "p2d_40_no_cc"
-    name = "p2d_40_jl_chen2020"
-else
-end
-use_p2d = true
-##
+# name = "p2d_40_cccv"
+# name = "p2d_40_no_cc"
+name = "p2d_40_jl_chen2020"
+
 fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, ".json")
 init_org = JSONFile(fn)
+
 ##
 init = deepcopy(init_org)
 case = init.object
 case["include_current_collectors"] = include_cc
 case["NegativeElectrode"]["CurrentCollector"]["density"] = 1000
 case["PositiveElectrode"]["CurrentCollector"]["density"] = 1000
-#cond = 1e5
-#init.object["PositiveElectrode"]["CurrentCollector"]["electronicConductivity"] = cond
-#init.object["NegativeElectrode"]["CurrentCollector"]["electronicConductivity"] = cond
-init.object["Geometry"]["case"] = "Grid"
-init.object["Grids"] = ugrids 
-init.object["Grids"]["faceArea"] = 1.0
-init.object["Control"]["CRate"] = 0.1
-init.object["Control"]["DRate"] = 0.1108*1e-1
+
+use_lower_cc_conductivity = false
+if use_lower_cc_conductivity
+    cond = 1e5
+    init.object["PositiveElectrode"]["CurrentCollector"]["electronicConductivity"] = cond
+    init.object["NegativeElectrode"]["CurrentCollector"]["electronicConductivity"] = cond
+end
+
+init.object["Geometry"]["case"]      = "Grid"
+init.object["Geometry"]["Grids"]     = grids 
+init.object["Geometry"]["Couplings"] = couplings
+init.object["Geometry"]["faceArea"]  = 1.0
+
+init.object["Control"]["CRate"]      = 0.1
+init.object["Control"]["DRate"]      = 0.1108*1e-1
 init.object["Control"]["rampupTime"] = 1e2/init.object["Control"]["DRate"]
+
 if !include_cc
     init.object["Geometry"]["NegativeElectrode"] = Dict()
     init.object["Geometry"]["PostitiveElectrode"] = Dict()
 end
-#geomparams = BAttMo.setup_geomparams_grid(init.object["Grids"], include_cc)
-if false
-    states, cellSpecifications, reports, extra = run_battery(init; use_p2d = use_p2d, info_level = 0, extra_timing = false); 
-else
-    ##
-    sim, forces, state0, parameters, init, model = BattMo.setup_sim(init; use_p2d = use_p2d, use_groups = false, general_ad = false, max_step = nothing)
 
-    #Set up config and timesteps
-    timesteps = BattMo.setup_timesteps(init; max_step = nothing)
-    cfg = BattMo.setup_config(sim, model, :direct, false)
+sim, forces, state0, parameters, init, model = BattMo.setup_sim(init;
+                                                                use_p2d    = use_p2d,
+                                                                use_groups = false,
+                                                                general_ad = false,
+                                                                max_step   = nothing)
 
-    # Perform simulation
-    cfg[:info_level] = 3
-    state0[:Control][:Phi][1] = 4.2
-    state0[:Control][:Current][1] = 0
-    states, reports = Jutul.simulate(state0, sim, timesteps, forces = forces, config = cfg)
-    ##
-end
+#Set up config and timesteps
+timesteps = BattMo.setup_timesteps(init; max_step = nothing)
+cfg = BattMo.setup_config(sim, model, :direct, false)
+
+# Perform simulation
+cfg[:info_level] = 3
+state0[:Control][:Phi][1] = 4.2
+state0[:Control][:Current][1] = 0
+states, reports = Jutul.simulate(state0, sim, timesteps, forces = forces, config = cfg)
 
 ##
 t = [state[:Control][:ControllerCV].time for state in states]

@@ -48,14 +48,16 @@ function find_tags(h, paramsz_z)
 end
 
 """ Create a pouch grid
-"""
-function pouch_grid(;
-                    nx          = 1,
-                    ny          = 1,
-                    nz          = 1,
-                    tab_cell_nx = 0,
-                    tab_cell_ny = 0)
+    """
 
+function pouch_grid(geomparams::InputGeometryParams)
+
+    nx          = geomparams["nx"] 
+    ny          = geomparams["ny"]
+    nz          = geomparams["nz"]
+    tab_cell_nx = geomparams["tab_cell_nx"]
+    tab_cell_ny = geomparams["tab_cell_ny"]
+    
     ne_cc_nx     = tab_cell_nx
     int_elyte_nx = nx
     pe_cc_nx     = tab_cell_nx
@@ -131,8 +133,8 @@ function pouch_grid(;
 
     G, = remove_cells(H_back, vcat(pe_cc_extra_cells, ne_cc_extra_cells))
 
-    grids = setup_geometry(G, zvals)
-    grids = convert_geometry(grids)
+    grids, couplings = setup_geometry(G, zvals)
+    grids, couplings = convert_geometry(grids, couplings)
 
 end;
 
@@ -141,7 +143,6 @@ end;
 """
 function setup_geometry(H_mother, paramsz)
     
-    couplings   = []
     grids       = Dict()
     global_maps = Dict()
 
@@ -177,11 +178,11 @@ function setup_geometry(H_mother, paramsz)
 
     # Setup the couplings
     
-    grids["Couplings"] = Dict{String,Dict{String,Any}}()
+    couplings = Dict{String,Dict{String,Any}}()
 
     for (ind1, comp1) in enumerate(allcomps)
         
-        grids["Couplings"][comp1] = Dict{String,Any}()
+        couplings[comp1] = Dict{String,Any}()
         
         for (ind2, comp2) in enumerate(allcomps)
 
@@ -189,10 +190,6 @@ function setup_geometry(H_mother, paramsz)
             
             intersection_tmp = Dict() # intersection
             
-            if(ind1 < ind2)
-                push!(couplings, intersection)
-            end
-
             if ind1 != ind2
                 
                 cells = intersection["cells"]
@@ -221,13 +218,13 @@ function setup_geometry(H_mother, paramsz)
                 end
                 
                 if !(isnothing(cells) && isnothing(faces))
-                    grids["Couplings"][comp1][comp2] = intersection_tmp
+                    couplings[comp1][comp2] = intersection_tmp
                 end
             end
         end
     end
     
-    return grids
+    return grids, couplings
     
 end
 
@@ -270,7 +267,7 @@ end
  We convert the grids given in MRST format (dictionnary also called raw grids) to Jutul format (UnstructuredMesh)
  For the face couplings, we need to recover the coupling face indices in the boundary face indexing (jutul mesh structure holds a different indexing for the boundary faces)
 """
-function convert_geometry(grids)
+function convert_geometry(grids, couplings)
     
     components = ["NegativeCurrentCollector",
                   "NegativeElectrode"       ,
@@ -285,31 +282,38 @@ function convert_geometry(grids)
         ugrids[component] = UnstructuredMesh(grids[component])
     end
     
-    ugrids["Couplings"] = deepcopy(grids["Couplings"])
+    ucouplings = deepcopy(couplings)
     
     for component in components
 
-        couplings = ugrids["Couplings"][component]
+        ucoupling = ucouplings[component]
         
-        graw = grids[component]
-        g    = ugrids[component]
+        grid  = grids[component]
+        ugrid = ugrids[component]
         
         for (component2, coupling) in couplings
+            
             if !isempty(coupling)
+                
                 if coupling["face_type"]
+                    
                     faces = coupling["faces"]
                     cells = coupling["cells"]
+                    
                     for fi in eachindex(faces)
+
                         face = faces[fi]
                         cell = cells[fi]
-                        candidates = g.boundary_faces.cells_to_faces[cell]
+
+                        candidates = ugrid.boundary_faces.cells_to_faces[cell]
                         rface = face
-                        rawfaces = graw["faces"]
+                        rawfaces = grid["faces"]
                         lnodePos = rawfaces["nodePos"][rface : (rface + 1)]
                         lnodes = Set(rawfaces["nodes"][lnodePos[1] : lnodePos[2] - 1])
                         count = 0
+
                         for lfi in eachindex(candidates)
-                            fnodes = Set(g.boundary_faces.faces_to_nodes[candidates[lfi]])
+                            fnodes = Set(ugrid.boundary_faces.faces_to_nodes[candidates[lfi]])
                             if fnodes == lnodes
                                 faces[fi] = candidates[lfi]
                                 count += 1
@@ -324,6 +328,12 @@ function convert_geometry(grids)
         end
     end
     
-    return ugrids
+    return ugrids, ucouplings
     
 end 
+
+function one_dimensional_grid(geomparams::InputGeometryParams)
+
+    nx = 
+    
+end

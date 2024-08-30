@@ -64,11 +64,13 @@ import Jutul:
     get_1d_interpolator
     
 
+include("io_types.jl")
+include("input_types.jl")
+
 include("grid_conversion.jl")
 include("grid_utils.jl")
 include("remove_cells.jl") #Trenger StatsBase
 
-include("io_types.jl")
 include("physical_constants.jl")
 include("battery_types.jl")
 include("tensor_tools.jl")

@@ -517,228 +517,221 @@ end
 
 
 function setup_coupling_grid!(init::JSONFile,
-    model::MultiModel,
-    parameters::Dict{Symbol,<:Any}
-    )
+                              model::MultiModel,
+                              parameters::Dict{Symbol,<:Any}
+                              )
 
-#jsondict   = init.object
-include_cc = init.object["include_current_collectors"]
-geomparams = setup_geomparams_grid(init.object["Grids"],include_cc)
-#include_cc = include_current_collectors(model)
+    #jsondict   = init.object
+    include_cc = init.object["include_current_collectors"]
+    geomparams = setup_geomparams_grid(init.object["Grids"], init.object["Grids"],  include_cc)
+    #include_cc = include_current_collectors(model)
 
-#################################
-# Setup coupling NeAm <-> Elyte #
-#################################
+    #################################
+    # Setup coupling NeAm <-> Elyte #
+    #################################
 
-begin
-Nnam = number_of_cells(geomparams[:NeAm])
+    Nnam = number_of_cells(geomparams[:NeAm])
 
-srange = collect(1 : Nnam) # NB not givennegative electrode
-trange = collect(geomparams[:couplings][:Elyte][:NeAm]["cells"]) # electrolyte (negative side)
+    srange = collect(1 : Nnam) # NB not givennegative electrode
+    trange = collect(geomparams[:couplings][:Elyte][:NeAm]["cells"]) # electrolyte (negative side)
 
-if discretisation_type(model[:NeAm]) == :P2Ddiscretization
+    if discretisation_type(model[:NeAm]) == :P2Ddiscretization
 
-ct = ButlerVolmerActmatToElyteCT(trange, srange)
-ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
-add_cross_term!(model, ct_pair)
-ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
-add_cross_term!(model, ct_pair)
+        ct = ButlerVolmerActmatToElyteCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
 
-ct = ButlerVolmerElyteToActmatCT(srange, trange)
-ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :charge_conservation)
-add_cross_term!(model, ct_pair)
-ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :solid_diffusion_bc)
-add_cross_term!(model, ct_pair)
+        ct = ButlerVolmerElyteToActmatCT(srange, trange)
+        ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :solid_diffusion_bc)
+        add_cross_term!(model, ct_pair)
 
-else
+    else
 
-@assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
+        @assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
 
-ct = ButlerVolmerInterfaceFluxCT(trange, srange)
-ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
-add_cross_term!(model, ct_pair)
-ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
-add_cross_term!(model, ct_pair)
+        ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
 
-end
-end
-#################################
-# setup coupling Elyte <-> PeAm #
-#################################
+    end
+    #################################
+    # setup coupling Elyte <-> PeAm #
+    #################################
 
-#Nnam = number_of_cells(geomparams[:NeAm])
-#NSEP = number_of_cells(geomparams[:SEP])
-#Npam = number_of_cells(geomparams[:PeAm])
-
-begin
     Npam = number_of_cells(geomparams[:PeAm])
-srange = collect(1 : Npam) #NB not givenositive electrode
-trange = collect(geomparams[:couplings][:Elyte][:PeAm]["cells"])
+    srange = collect(1 : Npam) #NB not givenositive electrode
+    trange = collect(geomparams[:couplings][:Elyte][:PeAm]["cells"])
 
-if discretisation_type(model[:PeAm]) == :P2Ddiscretization
+    if discretisation_type(model[:PeAm]) == :P2Ddiscretization
 
-ct = ButlerVolmerActmatToElyteCT(trange, srange)
-ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
-add_cross_term!(model, ct_pair)
-ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
-add_cross_term!(model, ct_pair)
+        ct = ButlerVolmerActmatToElyteCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
 
-ct = ButlerVolmerElyteToActmatCT(srange, trange)
-ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :charge_conservation)
-add_cross_term!(model, ct_pair)
-ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :solid_diffusion_bc)
-add_cross_term!(model, ct_pair)
+        ct = ButlerVolmerElyteToActmatCT(srange, trange)
+        ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :solid_diffusion_bc)
+        add_cross_term!(model, ct_pair)
 
-else
+    else
 
-@assert discretisation_type(model[:PeAm]) == :NoParticleDiffusion    
+        @assert discretisation_type(model[:PeAm]) == :NoParticleDiffusion    
 
-ct = ButlerVolmerInterfaceFluxCT(trange, srange)
-ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
-add_cross_term!(model, ct_pair)
-ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
-add_cross_term!(model, ct_pair)
+        ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
 
-end
-end
-if include_cc 
+    end
 
-################################
-# Setup coupling NeCc <-> NeAm #
-################################
+    if include_cc 
 
-#Ncc  = geomparams[:NeCc][:N]
+        ################################
+        # Setup coupling NeCc <-> NeAm #
+        ################################
 
-srange_cells = collect(geomparams[:couplings][:NeCc][:NeAm]["cells"])
-trange_cells = collect(geomparams[:couplings][:NeAm][:NeCc]["cells"])
+        #Ncc  = geomparams[:NeCc][:N]
 
-srange_faces = collect(geomparams[:couplings][:NeCc][:NeAm]["faces"])
-trange_faces = collect(geomparams[:couplings][:NeAm][:NeCc]["faces"])
+        srange_cells = collect(geomparams[:couplings][:NeCc][:NeAm]["cells"])
+        trange_cells = collect(geomparams[:couplings][:NeAm][:NeCc]["cells"])
 
-msource = model[:NeCc]
-mtarget = model[:NeAm]
+        srange_faces = collect(geomparams[:couplings][:NeCc][:NeAm]["faces"])
+        trange_faces = collect(geomparams[:couplings][:NeAm][:NeCc]["faces"])
 
-psource = parameters[:NeCc]
-ptarget = parameters[:NeAm]
+        msource = model[:NeCc]
+        mtarget = model[:NeAm]
 
-# Here, the indexing in BoundaryFaces is used
-couplingfaces = Array{Int64}(undef, size(srange_faces,1), 2)
-couplingfaces[:, 1] = srange_faces
-couplingfaces[:, 2] = trange_faces
+        psource = parameters[:NeCc]
+        ptarget = parameters[:NeAm]
 
-couplingcells = Array{Int64}(undef, size(srange_faces,1), 2)
-couplingcells[:, 1] = srange_cells
-couplingcells[:, 2] = trange_cells
+        # Here, the indexing in BoundaryFaces is used
+        couplingfaces = Array{Int64}(undef, size(srange_faces,1), 2)
+        couplingfaces[:, 1] = srange_faces
+        couplingfaces[:, 2] = trange_faces
 
-trans = getTrans(msource, mtarget,
-       couplingfaces,
-       couplingcells,
-       psource, ptarget,
-       :Conductivity)
-@assert size(trans,1) == size(srange_cells,1)
-ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
-ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
-add_cross_term!(model, ct_pair)
+        couplingcells = Array{Int64}(undef, size(srange_faces,1), 2)
+        couplingcells[:, 1] = srange_cells
+        couplingcells[:, 2] = trange_cells
 
-################################
-# setup coupling PeCc <-> PeAm #
-################################
+        trans = getTrans(msource, mtarget,
+                         couplingfaces,
+                         couplingcells,
+                         psource, ptarget,
+                         :Conductivity)
+        @assert size(trans,1) == size(srange_cells,1)
+        ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
+        ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
 
-#Npam  = geomparams[:PeAm][:N]
+        ################################
+        # setup coupling PeCc <-> PeAm #
+        ################################
 
-srange_cells = collect(geomparams[:couplings][:PeCc][:PeAm]["cells"])
-trange_cells = collect(geomparams[:couplings][:PeAm][:PeCc]["cells"])
+        #Npam  = geomparams[:PeAm][:N]
 
-srange_faces = collect(geomparams[:couplings][:PeCc][:PeAm]["faces"])
-trange_faces = collect(geomparams[:couplings][:PeAm][:PeCc]["faces"])
+        srange_cells = collect(geomparams[:couplings][:PeCc][:PeAm]["cells"])
+        trange_cells = collect(geomparams[:couplings][:PeAm][:PeCc]["cells"])
 
-msource = model[:PeCc]
-mtarget = model[:PeAm]
+        srange_faces = collect(geomparams[:couplings][:PeCc][:PeAm]["faces"])
+        trange_faces = collect(geomparams[:couplings][:PeAm][:PeCc]["faces"])
 
-psource = parameters[:PeCc]
-ptarget = parameters[:PeAm]
+        msource = model[:PeCc]
+        mtarget = model[:PeAm]
 
-# Here, the indexing in BoundaryFaces is used
-couplingfaces = Array{Int64}(undef, size(srange_faces,1), 2)
-couplingfaces[:, 1] = srange_faces
-couplingfaces[:, 2] = trange_faces
+        psource = parameters[:PeCc]
+        ptarget = parameters[:PeAm]
 
-
-couplingcells = Array{Int64}(undef, size(srange_faces,1), 2)
-couplingcells[:, 1] = srange_cells
-couplingcells[:, 2] = trange_cells
+        # Here, the indexing in BoundaryFaces is used
+        couplingfaces = Array{Int64}(undef, size(srange_faces,1), 2)
+        couplingfaces[:, 1] = srange_faces
+        couplingfaces[:, 2] = trange_faces
 
 
-trans = getTrans(msource, mtarget,
-       couplingfaces,
-       couplingcells,
-       psource, ptarget,
-       :Conductivity)
-@assert size(trans,1) == size(srange_cells,1)  
-ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
-ct_pair = setup_cross_term(ct, target = :PeAm, source = :PeCc, equation = :charge_conservation)
-
-add_cross_term!(model, ct_pair)
-
-end
+        couplingcells = Array{Int64}(undef, size(srange_faces,1), 2)
+        couplingcells[:, 1] = srange_cells
+        couplingcells[:, 2] = trange_cells
 
 
-if include_cc
+        trans = getTrans(msource, mtarget,
+                         couplingfaces,
+                         couplingcells,
+                         psource, ptarget,
+                         :Conductivity)
+        @assert size(trans,1) == size(srange_cells,1)  
+        ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
+        ct_pair = setup_cross_term(ct, target = :PeAm, source = :PeCc, equation = :charge_conservation)
 
-###################################
-# setup coupling PeCc <-> control #
-###################################
+        add_cross_term!(model, ct_pair)
 
-#Nc = geomparams[:PeCc][:N]
+    end
 
-trange = geomparams[:couplings][:PeCc][:Control]["cells"]
-#srange = geomparams[:couplings][:Control][:PeCc]["cells"]
-srange = Int64.(ones(size(trange)))
 
-msource       = model[:PeCc]
-mparameters   = parameters[:PeCc]
-# Here the indexing in BoundaryFaces in used
-couplingfaces = geomparams[:couplings][:PeCc][:Control]["boundaryfaces"]
-couplingcells = trange #geomparams[:couplings][:PeCC][:Control]["cells"]
-trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
+    if include_cc
 
-ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
-ct_pair = setup_cross_term(ct, target = :PeCc, source = :Control, equation = :charge_conservation)
-add_cross_term!(model, ct_pair)
+        ###################################
+        # setup coupling PeCc <-> control #
+        ###################################
 
-ct = AccumulatorInterfaceFluxCT(1, trange, trans)
-ct_pair = setup_cross_term(ct, target = :Control, source = :PeCc, equation = :charge_conservation)
-add_cross_term!(model, ct_pair)
+        #Nc = geomparams[:PeCc][:N]
 
-else
+        trange = geomparams[:couplings][:PeCc][:Control]["cells"]
+        #srange = geomparams[:couplings][:Control][:PeCc]["cells"]
+        srange = Int64.(ones(size(trange)))
 
-###################################
-# setup coupling PeAm <-> control #
-###################################
-#NB hack
-#Nc = geomparams[:PeAm][:N]
-Npam = number_of_cells(geomparams[:PeAm])
-trange = geomparams[:couplings][:Control][:PeAm]["cells"]
-## control only have one cell
-srange = Int64.(ones(size(trange)))
+        msource       = model[:PeCc]
+        mparameters   = parameters[:PeCc]
+        # Here the indexing in BoundaryFaces in used
+        couplingfaces = geomparams[:couplings][:PeCc][:Control]["boundaryfaces"]
+        couplingcells = trange #geomparams[:couplings][:PeCC][:Control]["cells"]
+        trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
 
-msource       = model[:PeAm]
-mparameters   = parameters[:PeAm]
+        ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
+        ct_pair = setup_cross_term(ct, target = :PeCc, source = :Control, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
 
-# Here the indexing in BoundaryFaces in used
-## NB probably wrong
-couplingfaces = geomparams[:couplings][:Control][:PeAm]["boundaryfaces"]
-couplingcells = trange
-trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
-ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
-ct_pair = setup_cross_term(ct, target = :PeAm, source = :Control, equation = :charge_conservation)
-add_cross_term!(model, ct_pair)
+        ct = AccumulatorInterfaceFluxCT(1, trange, trans)
+        ct_pair = setup_cross_term(ct, target = :Control, source = :PeCc, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
 
-ct = AccumulatorInterfaceFluxCT(1, trange, trans)
-ct_pair = setup_cross_term(ct, target = :Control, source = :PeAm, equation = :charge_conservation)
-add_cross_term!(model, ct_pair)
+    else
 
-end
+        ###################################
+        # setup coupling PeAm <-> control #
+        ###################################
+        #NB hack
+        #Nc = geomparams[:PeAm][:N]
+        Npam = number_of_cells(geomparams[:PeAm])
+        trange = geomparams[:couplings][:Control][:PeAm]["cells"]
+        ## control only have one cell
+        srange = Int64.(ones(size(trange)))
+
+        msource       = model[:PeAm]
+        mparameters   = parameters[:PeAm]
+
+        # Here the indexing in BoundaryFaces in used
+        ## NB probably wrong
+        couplingfaces = geomparams[:couplings][:Control][:PeAm]["boundaryfaces"]
+        couplingcells = trange
+        trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
+        ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
+        ct_pair = setup_cross_term(ct, target = :PeAm, source = :Control, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+
+        ct = AccumulatorInterfaceFluxCT(1, trange, trans)
+        ct_pair = setup_cross_term(ct, target = :Control, source = :PeAm, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+
+    end
 
 end
 
@@ -848,17 +841,17 @@ function setup_coupling!(init::MatlabFile,
         target = Dict( 
             :model => :PeAm,
             :equation => :charge_conservation
-            )
+        )
         source = Dict( 
             :model => :PeCc,
             :equation => :charge_conservation
-            )
+        )
         srange = Int64.(
             exported_all["model"]["PositiveElectrode"]["couplingTerm"]["couplingcells"][:,1]
-            )
+        )
         trange = Int64.(
             exported_all["model"]["PositiveElectrode"]["couplingTerm"]["couplingcells"][:,2]
-            )
+        )
         msource = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]
         ct = exported_all["model"]["PositiveElectrode"]["couplingTerm"]
         couplingfaces = Int64.(ct["couplingfaces"])
@@ -877,8 +870,8 @@ function setup_coupling!(init::MatlabFile,
         ##########################################
 
         trange = convert_to_int_vector(
-                exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingcells"]
-            )    
+            exported_all["model"]["PositiveElectrode"]["CurrentCollector"]["externalCouplingTerm"]["couplingcells"]
+        )    
         srange = Int64.(ones(size(trange)))
         msource = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]
         couplingfaces = Int64.(msource["externalCouplingTerm"]["couplingfaces"])
@@ -893,8 +886,8 @@ function setup_coupling!(init::MatlabFile,
         ##########################################
 
         trange = convert_to_int_vector(
-                exported_all["model"]["PositiveElectrode"]["Coating"]["externalCouplingTerm"]["couplingcells"]
-            )
+            exported_all["model"]["PositiveElectrode"]["Coating"]["externalCouplingTerm"]["couplingcells"]
+        )
         srange = Int64.(ones(size(trange)))
         msource = exported_all["model"]["PositiveElectrode"]["Coating"]
         couplingfaces = Int64.(msource["externalCouplingTerm"]["couplingfaces"])
@@ -1025,6 +1018,8 @@ function setup_battery_model(init::MatlabFile;
 
     inputparams = init.object["model"]
     
+    """ Setup the properties of the active material
+    """
     function setup_active_material(name::Symbol, general_ad::Bool)
 
         jsonName = jsonNames[name]
@@ -1174,9 +1169,9 @@ function setup_battery_model(init::MatlabFile;
     else
 
         error("controlPolicy not recognized.")
-       
+        
     end
-   
+    
     sys_control    = CurrentAndVoltageSystem(policy)
     domain_control = CurrentAndVoltageDomain()
     model_control  = SimulationModel(domain_control, sys_control, context = DefaultContext())
@@ -1232,20 +1227,18 @@ function setup_battery_model(init::JSONFile;
     if case_type == "1D"                            
         geomparams = setup_geomparams(init)
     elseif case_type == "Grid"              
-        geomparams = setup_geomparams_grid(init.object["Grids"],include_cc)
+        geomparams = setup_geomparams_grid(init.object["Grids"], init.object["couplings"], include_cc)
     else
         error()
     end
 
     jsondict = init.object
 
-    
-
-
     """
     Generic helper function to setup a component (:NeAm, :NeCc, :PeAm, :PeCc)
+    This implementation supports a parameterized geometry (at the moment only 1D)
     """
-    function setup_component(geomparam::Dict, 
+    function setup_component(geomparam::InputGeometryParams, 
                              sys; 
                              addDirichlet::Bool = false, 
                              general_ad::Bool   = false,
@@ -1300,7 +1293,7 @@ function setup_battery_model(init::JSONFile;
     """
     Helper function to setup  electrolyte (:Elyte)
     """
-    function setup_component(geomparams::Dict, 
+    function setup_component(geomparams::InputGeometryParams, 
                              sys::Electrolyte;
                              general_ad::Bool = false,)
 
@@ -1349,10 +1342,10 @@ function setup_battery_model(init::JSONFile;
     end
 
     function setup_component(g::Jutul.FiniteVolumeMesh,
-                            sys;
-                            general_ad::Bool=false,
-                            boundary = nothing,
-                            facearea = 1.0)
+                             sys;
+                             general_ad::Bool=false,
+                             boundary = nothing,
+                             facearea = 1.0)
 
         # specific implementation for electrolyte
         # requires geometric parameters for :NeAm, :SEP, :PeAm
@@ -1363,31 +1356,28 @@ function setup_battery_model(init::JSONFile;
 
         # opertors only use geometry not property
         k = ones(number_of_cells(g))
-        T = compute_face_trans(domain, k)
+        
+        T    = compute_face_trans(domain, k)
         T_hf = compute_half_face_trans(domain, k)
-        T_b = compute_boundary_trans(domain, k)
-        #println("-----------------------TB--------------")
-        #println("T_b", T_b)
-        #println("T_hf", T_hf)
-        #println("T",T)
-        #T_b = abs.(T_b)#NB hack due to bug in compute_boundary_trans(
-        domain[:trans, Faces()] = facearea * T
-        domain[:halfTrans, HalfFaces()] = facearea * T_hf
+        T_b  = compute_boundary_trans(domain, k)
+        
+        domain[:trans, Faces()]           = facearea * T
+        domain[:halfTrans, HalfFaces()]   = facearea * T_hf
         domain[:bcTrans, BoundaryFaces()] = facearea * T_b
         
         if !isnothing(boundary)
-            #Main.@infiltrate
-            println(boundary)
+
             bfaces = boundary["boundaryfaces"]
             nb = size(bfaces,1)
             domain.entities[BoundaryDirichletFaces()] =  nb
 
             bcDirFace = boundary["boundaryfaces"] # in BoundaryFaces indexing
             bcDirCell = boundary["cells"]
+            
             bcDirInd  = Vector{Int64}(1:nb)
             domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = facearea*domain[:bcTrans][bcDirFace]
-            domain[:bcDirCells, BoundaryDirichletFaces()]     = bcDirCell # 
-            domain[:bcDirInds, BoundaryDirichletFaces()]      = bcDirInd #
+            domain[:bcDirCells, BoundaryDirichletFaces()]     = bcDirCell 
+            domain[:bcDirInds, BoundaryDirichletFaces()]      = bcDirInd 
             
         end
         
@@ -1419,7 +1409,7 @@ function setup_battery_model(init::JSONFile;
         jsonName = jsonNames[name]
 
         function computeVolumeFraction(codict)
-        # We compute the volume fraction form the coating data
+            # We compute the volume fraction form the coating data
 
             am = "ActiveMaterial"
             bd = "Binder"
@@ -1437,7 +1427,7 @@ function setup_battery_model(init::JSONFile;
 
             sumSpecificVolumes = sum(specificVolumes)
             volumeFractions =[sv/sumSpecificVolumes for sv in specificVolumes]
-                
+            
             effectiveDensity = codict["effectiveDensity"]
             volumeFraction = sumSpecificVolumes*effectiveDensity
 
@@ -1494,10 +1484,8 @@ function setup_battery_model(init::JSONFile;
             sys_am = ActiveMaterialNoParticleDiffusion(am_params)
         end
         
-
-        
         geomparam = geomparams[name]
-       
+        
         boundary = nothing
         if !include_cc && name == :NeAm
             addDirichlet = true
@@ -1597,6 +1585,7 @@ function setup_battery_model(init::JSONFile;
     end
 
     elyte = Electrolyte(params)
+    
     if case_type == "1D"
         model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
     elseif case_type == "Grid"
@@ -1624,8 +1613,8 @@ function setup_battery_model(init::JSONFile;
         sys_pecc = CurrentCollector(pecc_params)
         
         model_pecc = setup_component(geomparams[:PeCc], sys_pecc, 
-                                    general_ad = general_ad,
-                                    facearea = geomparams[:facearea])
+                                     general_ad = general_ad,
+                                     facearea = geomparams[:facearea])
     end
 
     #######################
@@ -1654,7 +1643,7 @@ function setup_battery_model(init::JSONFile;
     else
 
         error("controlPolicy not recognized.")
-       
+        
     end
     
     sys_control    = CurrentAndVoltageSystem(policy)
@@ -1882,7 +1871,7 @@ function setup_battery_parameters(init::JSONFile,
     
     prm_elyte = Dict{Symbol, Any}()
     prm_elyte[:Temperature] = T0 
-          
+    
 
     parameters[:Elyte] = setup_parameters(model[:Elyte], prm_elyte)
 
@@ -2061,7 +2050,7 @@ end
 function setup_battery_initial_state(init::JSONFile,
                                      model::MultiModel)
 
-                                     
+    
 
     jsonstruct = init.object
 
@@ -2169,13 +2158,14 @@ end
 # Setup volume fraction # 
 #########################
 
-#function setup_volume_fractions!(model::MultiModel, geomparams::Dict{Symbol,<:Any})
 function setup_volume_fractions!(model::MultiModel, geomparams)
 
     names = (:NeAm, :SEP, :PeAm)
+
     Nelyte = sum([geomparams[name][:N] for name in names])
-    vfelyte = zeros(Nelyte)
-    vfseparator  = zeros(Nelyte)
+    
+    vfelyte     = zeros(Nelyte)
+    vfseparator = zeros(Nelyte)
     
     names = (:NeAm, :PeAm)
     
@@ -2208,35 +2198,32 @@ function setup_volume_fractions!(model::MultiModel, geomparams)
     
 end
 
-function setup_volume_fractions_grid!(model::MultiModel, geomparams::Dict{Symbol,<:Any})
+function setup_volume_fractions_grid!(model::MultiModel, geomparams::Dict{Symbol, <:Any})
 
-    names = (:NeAm, :SEP, :PeAm)
-    Nelyte = number_of_cells(geomparams[:Elyte])
-    NSEP = number_of_cells(geomparams[:SEP])
-    vfelyte = zeros(Nelyte)
-    vfseparator  = zeros(Nelyte)#Why this size?
+    Nelyte      = number_of_cells(geomparams[:Elyte])
+    vfelyte     = zeros(Nelyte)
+    vfseparator = zeros(Nelyte)#Why this size?
     
     names = (:NeAm, :PeAm)
+    
     for name in names
         ncell = number_of_cells(geomparams[name])
         ammodel = model[name]
         vf = ammodel.system[:volume_fraction]
         ammodel.domain.representation[:volumeFraction] = vf*ones(ncell)
         elytecells = geomparams[:couplings][:Elyte][name]["cells"]
-        vfelyte[elytecells] .= 1-vf 
+        vfelyte[elytecells] .= 1 - vf 
     end
 
-    begin
-        separator_porosity = model[:Elyte].system[:separator_porosity]
-        elytecells = geomparams[:couplings][:Elyte][:SEP]["cells"]
-        #separatorcells = geomparams[:couplings][:Elyte][:separator].cells[:,2]
-        vfelyte[elytecells]     .= separator_porosity*ones()
-        #vfseparator[separatorcells] .= (1 -separator_porosity)*ones(nsep)
-        # Assume all of separtor is coupled
-        vfseparator[elytecells] .= (1 -separator_porosity)#*ones(nsep)
-    end
+    separator_porosity = model[:Elyte].system[:separator_porosity]
+    elytecells         = geomparams[:couplings][:Elyte][:SEP]["cells"]
+
+    vfelyte[elytecells]     .= separator_porosity*ones()
+    vfseparator[elytecells] .= (1 -separator_porosity)
+    
     model[:Elyte].domain.representation[:volumeFraction] = vfelyte
-    model[:Elyte].domain.representation[:separator_volume_fraction] = vfseparator 
+    model[:Elyte].domain.representation[:separator_volume_fraction] = vfseparator
+    
 end
 
 ######################
@@ -2387,69 +2374,76 @@ function setup_geomparams(init::JSONFile)
     
 end
 
-function setup_geomparams_grid(geometry::Dict, include_cc)
+function setup_geomparams_grid(grids::Dict, couplings::Dict, include_cc)
 
     #include_cc = false #include_current_collectors(init)
 
     if include_cc
-        longnames = ["NegativeCurrentCollector", "NegativeElectrode", "Separator","PositiveElectrode","PositiveCurrentCollector"]
-        names = (:NeCc, :NeAm, :SEP, :PeAm, :PeCc)
+
+        namemap = Dict(["NegativeCurrentCollector" => :NeCc,  
+                        "NegativeElectrode"        => :NeAm,  
+                        "Separator"                => :SEP,   
+                        "PositiveElectrode"        => :PeAm,  
+                        "PositiveCurrentCollector" => :PeCc])
+
     else
-        longnames = ["NegativeElectrode", "Separator","PositiveElectrode"]
-        names = (:NeAm, :SEP, :PeAm)
+
+        namemap = Dict(["NegativeElectrode"        => :NeAm,  
+                        "Separator"                => :SEP,   
+                        "PositiveElectrode"        => :PeAm])
+
     end
-    geomparams =  Dict{Symbol, Any}()#Dict(name => Any() for name in names)
-    for (ind,val) in enumerate(names)
-        geomparams[val] = geometry[longnames[ind]]
-    end    
-    # geomparams[:NeAm]         = geometry["NegativeElectrode"]
-    # geomparams[:SEP]          = geometry["Separator"]
-    # geomparams[:PeAm]         = geometry["PositiveElectrode"]
-    geomparams[:Elyte]         = geometry["Electrolyte"]
-    # if include_cc
-    #     geomparams[:NeCc] = ["NegativeCurrentCollector"]
-    #     geomparams[:PeCc] = ["CurrentCollector"]
-    # end
     
-    #for name in names
-    geomparams[:facearea] = geometry["faceArea"]
-    #end
-    geomparams[:couplings] = Dict{Symbol,Any}()
-    geomparams[:couplings][:Elyte] = Dict{Symbol,Any}()#{Symbol,Dict{Symbol,Any}}()
+    geomparams =  Dict{Symbol, Any}()
+    for lname in keys(namemap)
+        geomparams[namemap[lname]] = geometry[lname]
+    end    
+
+    geomparams[:Elyte]             = geometry["Electrolyte"]
+    geomparams[:couplings]         = Dict{Symbol,Any}()
+    geomparams[:couplings][:Elyte] = Dict{Symbol,Any}()
+
     couplings = Dict{Symbol,Any}()
 
-    blongnames = ["NegativeElectrode", "Separator","PositiveElectrode"]
-    bnames = (:NeAm, :SEP, :PeAm)
-    for (ind,val) in enumerate(bnames)         
-        couplings[val] =  geometry["Couplings"]["Electrolyte"][blongnames[ind]];
+    namemap = Dict(["NegativeElectrode" => :NeAm,
+                    "Separator"         => :SEP ,
+                    "PositiveElectrode" => :PeAm])
+    
+    for lname in keys(namemap)         
+        couplings[namemap[lname]] =  geometry["Couplings"]["Electrolyte"][lname];
     end
+    
     geomparams[:couplings][:Elyte] = couplings
+    
     if(include_cc)
+        
         geomparams[:boundary] = Dict{Symbol,Any}()
-        #geomparams[:couplings][:Control] = Dict{Symbol,Any}()
-        geomparams[:couplings][:PeCc] = Dict{Symbol,Any}()
-        #geomparams[:couplings][:Control][:PeCc] = geometry["Couplings"]["Control"]["PositiveCurrentCollector"]
-        geomparams[:couplings][:PeCc][:Control]= geometry["Couplings"]["PositiveCurrentCollector"]["Control"]
-        geomparams[:boundary][:NeCc] =  geometry["Boundary"]["NegativeCurrentCollector"]
+        
+        geomparams[:couplings][:PeCc]           = Dict{Symbol,Any}()
+        geomparams[:couplings][:PeCc][:Control] = geometry["Couplings"]["PositiveCurrentCollector"]["Control"]
+        geomparams[:boundary][:NeCc]            = geometry["Boundary"]["NegativeCurrentCollector"]
 
         NPeAm = number_of_cells(geomparams[:PeAm])
         NNeCc = number_of_cells(geomparams[:NeCc])
-        #geomparams[:couplings][:PeCc] = Dict{Symbol,Any}()
+
         geomparams[:couplings][:PeAm] = Dict{Symbol,Any}()
+
         geomparams[:couplings][:PeCc][:PeAm] = geometry["Couplings"]["PositiveCurrentCollector"]["PositiveElectrode"] 
         geomparams[:couplings][:PeAm][:PeCc] = geometry["Couplings"]["PositiveElectrode"]["PositiveCurrentCollector"]
 
         geomparams[:couplings][:NeCc] = Dict{Symbol,Any}()
         geomparams[:couplings][:NeAm] = Dict{Symbol,Any}()
+        
         geomparams[:couplings][:NeCc][:NeAm] = geometry["Couplings"]["NegativeCurrentCollector"]["NegativeElectrode"] 
         geomparams[:couplings][:NeAm][:NeCc] = geometry["Couplings"]["NegativeElectrode"]["NegativeCurrentCollector"]
-        
 
     else
+        
         geomparams[:couplings][:Control] = Dict{Symbol,Any}()
         geomparams[:couplings][:Control][:PeAm] = geometry["Couplings"]["Control"]["PositiveElectrode"]
         geomparams[:boundary] = Dict{Symbol,Any}()
-        geomparams[:boundary][:NeAm] =  geometry["Boundary"]["NegativeElectrode"]   
+        geomparams[:boundary][:NeAm] =  geometry["Boundary"]["NegativeElectrode"]
+        
     end
 
     return geomparams
@@ -2488,10 +2482,10 @@ function computeElectrodeCapacity(model::MultiModel, name::Symbol)
     cap_usable = (thetaMax - thetaMin)*cMax*vol*n*F
     
     return cap_usable
-        
+    
 end
 
-    
+
 function computeCellCapacity(model::MultiModel)
 
     caps = [computeElectrodeCapacity(model, name) for name in (:NeAm, :PeAm)]
@@ -2556,10 +2550,10 @@ function computeCellMaximumEnergy(model::MultiModel; T = 298.15, capacities = mi
                 f[i] = ocpfunc(c[i], T, cmax)
             end
 
-                
+            
         end
 
-       energies[elde] = (capacities[elde]*smax/N)*sum(f)
+        energies[elde] = (capacities[elde]*smax/N)*sum(f)
         
     end
 
@@ -2610,7 +2604,7 @@ function computeCellMass(model::MultiModel)
             mass = mass + sum(rho.*vols)
         end
     end
-        
+    
     return mass
     
 end
@@ -2730,7 +2724,7 @@ function computeDischargeEnergy(init::JSONFile)
     else
 
         error("controlPolicy not recognized.")
-       
+        
     end
 
     init2 = JSONFile(jsondict)
@@ -2754,7 +2748,7 @@ function computeEnergyEfficiency(init::JSONFile)
     controlPolicy = ctrldict["controlPolicy"]
 
     timedict = jsondict["TimeStepping"]
-   
+    
     if controlPolicy == "CCDischarge"
 
         ctrldict["controlPolicy"]  = "CCCV"
@@ -2788,7 +2782,7 @@ function computeEnergyEfficiency(init::JSONFile)
     else
 
         error("controlPolicy not recognized.")
-       
+        
     end
 
     init2 = JSONFile(jsondict)
@@ -2811,7 +2805,7 @@ function computeEnergyEfficiency(states)
     
     Emid = (E[2 : end] + E[1 : end - 1])./2
 
-     # discharge energy
+    # discharge energy
 
     I[I .< 0] .= 0
     Imid = (I[2 : end] .+ I[1 : end - 1])./2
@@ -2843,7 +2837,7 @@ function inputRefToStates(states, stateref)
         fields      = ["CurrentCollector","ActiveMaterial"]
         components  = ["NegativeElectrode","PositiveElectrode"]
         newkeys     = [:NeCc, :NeAm, :PeCc, :PeAm]
-       
+        
         ind = 1
         for component = components
             for field in fields
@@ -2880,7 +2874,7 @@ function inputRefToStates(states, stateref)
 end
 
 function exported_model_to_domain(exported;
-                                  bcfaces    = nothing, 
+    bcfaces    = nothing, 
                                   general_ad = false)
 
     """ Returns domain"""
@@ -2891,7 +2885,7 @@ function exported_model_to_domain(exported;
     if !isnothing(bcfaces)
         isboundary = (N[bcfaces, 1].==0) .| (N[bcfaces, 2].==0)
         @assert all(isboundary)
-    
+        
         bc_cells = N[bcfaces, 1] + N[bcfaces, 2]
         bc_hfT = getHalfTrans(exported, bcfaces)
     else
