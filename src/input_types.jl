@@ -14,6 +14,6 @@ struct InputGeometryParams <: InputParams
     data::Dict{String, Any}
 end
 
-function Base.getindex(input::InputGeometry, fdname)
+function Base.getindex(input::InputGeometryParams, fdname)
     return input.data[fdname]
 end

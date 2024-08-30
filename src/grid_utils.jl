@@ -7,7 +7,8 @@ export
     setup_geometry,
     findBoundary,
     pouch_grid,
-    convert_geometry
+    convert_geometry,
+    one_dimensional_grid
 
 """
    find coupling cells and faces between two grid maps
@@ -177,14 +178,21 @@ function setup_geometry(H_mother, paramsz)
     append!(allcomps, ["Electrolyte"])
 
     # Setup the couplings
+    couplings = setup_couplings(allcomps, grids, global_maps)
+    
+    return grids, couplings
+    
+end
+
+function setup_couplings(components, grids, global_maps)
     
     couplings = Dict{String,Dict{String,Any}}()
 
-    for (ind1, comp1) in enumerate(allcomps)
+    for (ind1, comp1) in enumerate(components)
         
         couplings[comp1] = Dict{String,Any}()
         
-        for (ind2, comp2) in enumerate(allcomps)
+        for (ind2, comp2) in enumerate(components)
 
             intersection = find_coupling(global_maps[comp1], global_maps[comp2], [comp1, comp2])
             
@@ -223,8 +231,8 @@ function setup_geometry(H_mother, paramsz)
             end
         end
     end
-    
-    return grids, couplings
+
+    return couplings
     
 end
 
@@ -334,6 +342,61 @@ end
 
 function one_dimensional_grid(geomparams::InputGeometryParams)
 
-    nx = 
+    grids       = Dict()
+    global_maps = Dict()
+    
+    include_current_collectors = geomparams["include_current_collectors"]
+    
+    if include_current_collectors
+
+        components = ["NegativeCurrentCollector",
+                      "NegativeElectrode"       ,
+                      "Separator"               ,
+                      "PositiveElectrode"       ,
+                      "PositiveCurrentCollector"]
+        
+        elyte_comp_start = 2
+        
+    else
+        
+        components = ["NegativeElectrode",
+                      "Separator"        ,
+                      "PositiveElectrode"]
+        
+        elyte_comp_start = 1
+        
+    end
+
+    ns = [geomparams[component]["N"] for component in components]
+    xs = [geomparams[component]["thickness"] for component in components]
+    
+    L = StatsBase.inverse_rle(xs./ns, ns)
+
+    uParentGrid = UnstructuredMesh(CartesianMesh(Tuple(sum(ns)), Tuple([L])))
+    parentGrid = convert_to_mrst_grid(uParentGrid)
+
+    cinds = vcat(1, 1 .+ cumsum(ns))
+
+    ## setup the grid for each component
+    for (icomponent, component) in enumerate(components)
+        inds = ns(icomponent) : ns(icomponent) - 1
+        G, maps... = remove_cells(parentGrid, inds)
+        
+        grids[component] = G
+        global_maps[component] = maps
+        
+    end
+    
+    elyteInds = cinds(elyte_comp_start) : (cinds(elyte_comp_start + 3) - 1)
+    G, maps... = remove_cells(parentGrid, elyteInds)
+
+    grids["Electrolyte"]       = G
+    global_maps["Electrolyte"] = maps
+
+    push!(components, "Electrolyte")
+    
+    couplings = setup_couplings(components, grids, global_maps)
+
+    return G, couplings
     
 end
