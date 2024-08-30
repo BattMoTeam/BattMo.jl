@@ -1,4 +1,4 @@
-using Polynomials
+using Polynomials, BSON
 ## Defines OCP and entropy change (dUdT) for graphite using polynomials
 
 con = Constants()
@@ -28,33 +28,19 @@ const coeff2_graphite = Polynomial([
 	+ 165705.8597
 ]);
 
+global OCP_ML_model_negative_electrode, OCP_ML_model_positive_electrode
+BSON.@load "OCP_ML_model_negative_electrode.bson" OCP_ML_model_negative_electrode
+BSON.@load "OCP_ML_model_positive_electrode.bson" OCP_ML_model_positive_electrode
 
-function computeOCP_Custom_Negative(c, T, cmax)
-    theta  = c./cmax
-    refT   = 298.15
-    refOCP = (0.7222
-              + 0.1387 * theta
-              + 0.0290 * theta^0.5
-              - 0.0172 / theta
-              + 0.0019 / theta^1.5
-              + 0.2808 * exp(0.9 - 15.0*theta)
-              - 0.7984 * exp(0.4465*theta - 0.4108)
-	      );
-
-    dUdT = 1e-3*coeff1_graphite(theta)/ coeff2_graphite(theta);
-    
-    ocp = refOCP + (T - refT) * dUdT;
-    
+function computeOCP_ML_negative_electrode(c, T, cmax)
+    input = reshape([c / cmax], 1, 1)
+    ocp = OCP_ML_model_negative_electrode(input)[1]
     return ocp
 end
 
-function computeOCP_Custom_Positive(c, T, cmax)
-    refT   = 298.15
-    theta  = c/cmax
-    refOCP = coeff1_refOCP_nmc111(theta)/coeff2_refOCP_nmc111(theta)
-    dUdT   = -1e-3*coeff1_dUdT_nmc111(theta)/coeff2_dUdT_nmc111(theta)
-    ocp    = refOCP + (T - refT) * dUdT
-    
+function computeOCP_ML_positive_electrode(c, T, cmax)
+    input = reshape([c / cmax], 1, 1)
+    ocp = OCP_ML_model_positive_electrode(input)[1]
     return ocp
 end
 
