@@ -174,11 +174,10 @@ function setup_geometry(H_mother, paramsz)
     global_maps["Electrolyte"] = maps
     
     # Add Electrolyte in the component list
-    allcomps = components
-    append!(allcomps, ["Electrolyte"])
+    push!(components, "Electrolyte")
 
     # Setup the couplings
-    couplings = setup_couplings(allcomps, grids, global_maps)
+    couplings = setup_couplings(components, grids, global_maps)
     
     return grids, couplings
     
@@ -372,14 +371,16 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
     
     L = StatsBase.inverse_rle(xs./ns, ns)
 
-    uParentGrid = UnstructuredMesh(CartesianMesh(Tuple(sum(ns)), Tuple([L])))
+    mesh = CartesianMesh((sum(ns), 1, 1), (L, 1., 1.))
+    
+    uParentGrid = UnstructuredMesh(mesh)
     parentGrid = convert_to_mrst_grid(uParentGrid)
 
     cinds = vcat(1, 1 .+ cumsum(ns))
 
     ## setup the grid for each component
     for (icomponent, component) in enumerate(components)
-        inds = ns(icomponent) : ns(icomponent) - 1
+        inds = ns[icomponent] : ns[icomponent] - 1
         G, maps... = remove_cells(parentGrid, inds)
         
         grids[component] = G
@@ -387,7 +388,7 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
         
     end
     
-    elyteInds = cinds(elyte_comp_start) : (cinds(elyte_comp_start + 3) - 1)
+    elyteInds = cinds[elyte_comp_start] : (cinds[elyte_comp_start + 3] - 1)
     G, maps... = remove_cells(parentGrid, elyteInds)
 
     grids["Electrolyte"]       = G
@@ -397,6 +398,6 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
     
     couplings = setup_couplings(components, grids, global_maps)
 
-    return G, couplings
+    return grids, couplings
     
 end
