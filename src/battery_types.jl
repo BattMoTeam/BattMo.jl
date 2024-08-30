@@ -183,7 +183,7 @@ end
 
 function Jutul.default_parameter_values(d::DataDomain, model, ::Volume, symb)
 
-    return d.representation[:face_weighted_volumes]
+    return d.representation[:volumes]
     
 end
 

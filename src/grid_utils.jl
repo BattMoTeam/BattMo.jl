@@ -352,6 +352,7 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
     global_maps = Dict()
     
     include_current_collectors = geomparams["include_current_collectors"]
+    faceArea = geomparams["faceArea"]
     
     if include_current_collectors
 
@@ -378,7 +379,7 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
     
     L = StatsBase.inverse_rle(xs./ns, ns)
 
-    mesh = CartesianMesh((sum(ns), 1, 1), (L, 1., 1.))
+    mesh = CartesianMesh((sum(ns), 1, 1), (L, faceArea, 1.))
     
     uParentGrid = UnstructuredMesh(mesh)
     parentGrid = convert_to_mrst_grid(uParentGrid)
