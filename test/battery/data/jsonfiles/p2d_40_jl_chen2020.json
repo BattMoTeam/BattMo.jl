@@ -58,9 +58,10 @@
         }
      },
      "CurrentCollector": {
-        "electronicConductivity": 35500000.0,
-        "N": 5,
-        "thickness": 2.5e-05
+       "electronicConductivity": 35500000.0,
+       "N": 5,
+       "thickness": 2.5e-05,
+       "density": 2700
      }
   },
   "PositiveElectrode": {
@@ -118,9 +119,10 @@
         }
      },
      "CurrentCollector": {
-        "electronicConductivity": 59600000.0,
-        "N": 5,
-        "thickness": 1.5e-05
+       "electronicConductivity": 59600000.0,
+       "N": 5,
+       "thickness": 1.5e-05,
+       "density": 8960
      }
   },
   "Separator": {
