@@ -411,6 +411,11 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
     push!(components, "Electrolyte")
     
     couplings = setup_couplings(components, grids, global_maps)
+
+    ## Add boundary coupling
+    if include_current_collectors
+    else
+    end
     
     grids, couplings = convert_geometry(grids, couplings; include_current_collectors = include_current_collectors)
     

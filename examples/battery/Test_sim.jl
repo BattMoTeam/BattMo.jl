@@ -8,9 +8,7 @@ include_cc = true
 use_p2d = true
 do_plot = true
 
-
 fac = 1 # discretisation factor
-
 
 ## Create the pouch_grid
 ugrids, ucouplings = pouch_grid(nx = 4*fac, 
@@ -18,8 +16,6 @@ ugrids, ucouplings = pouch_grid(nx = 4*fac,
                                 nz = 4, 
                                 tab_cell_nx = 3, 
                                 tab_cell_ny = 2)
-
-
 
 if do_plot
     fig = Figure(size = (1600, 900))

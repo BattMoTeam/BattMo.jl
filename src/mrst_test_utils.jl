@@ -1216,184 +1216,91 @@ function setup_battery_model(init::MatlabFile;
 end
 
 
+function setup_grids_and_couplings(init::JSONFile)
+
+    jsondict = init.object
+    
+    geomparams = setup_geomparams(init)
+
+    case_type = jsondict["Geometry"]["case"]
+
+    if case_type == "1D"
+
+        grids, couplings = one_dimensional_grid(geomparams)
+        
+    elseif case_type "3D-demo"
+        
+        grids, couplings = pouch_grid(geomparams)
+        
+    else
+        
+        error("geometry case type not recognized")
+        
+    end       
+    
+    return grids, couplings
+    
+end
+
+function setup_component(grid::Jutul.FiniteVolumeMesh,
+                         sys;
+                         general_ad::Bool=false,
+                         boundary = nothing)
+
+    domain = DataDomain(grid)
+
+    # opertors only use geometry not property
+    k = ones(number_of_cells(grid))
+    
+    T    = compute_face_trans(domain, k)
+    T_hf = compute_half_face_trans(domain, k)
+    T_b  = compute_boundary_trans(domain, k)
+    
+    domain[:trans, Faces()]           = T
+    domain[:halfTrans, HalfFaces()]   = T_hf
+    domain[:bcTrans, BoundaryFaces()] = T_b
+    
+    if !isnothing(boundary)
+
+        bfaces = boundary["boundaryfaces"]
+        nb = size(bfaces,1)
+        domain.entities[BoundaryDirichletFaces()] =  nb
+
+        bcDirFace = boundary["boundaryfaces"] # in BoundaryFaces indexing
+        bcDirCell = boundary["cells"]
+        
+        bcDirInd  = Vector{Int64}(1:nb)
+        domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = domain[:bcTrans][bcDirFace]
+        domain[:bcDirCells, BoundaryDirichletFaces()]     = bcDirCell 
+        domain[:bcDirInds, BoundaryDirichletFaces()]      = bcDirInd 
+        
+    end
+    
+    if general_ad
+        flow = PotentialFlow(grid)
+    else
+        flow = TwoPointPotentialFlowHardCoded(grid)
+    end
+    disc = (charge_flow=flow,)
+    domain = DiscretizedDomain(domain, disc)
+
+    model = SimulationModel(domain, sys, context=DefaultContext())
+
+    return model
+
+end
+
 function setup_battery_model(init::JSONFile; 
                              use_groups::Bool = false, 
                              general_ad::Bool = false,
                              kwarg...)
     
-    include_cc = include_current_collectors(init)
-    case_type = init.object["Geometry"]["case"]
-    print(case_type)
-    if case_type == "1D"                            
-        geomparams = setup_geomparams(init)
-    elseif case_type == "Grid"              
-        geomparams = setup_geomparams_grid(init.object["Grids"], init.object["couplings"], include_cc)
-    else
-        error()
-    end
 
     jsondict = init.object
 
-    """
-    Generic helper function to setup a component (:NeAm, :NeCc, :PeAm, :PeCc)
-    This implementation supports a parameterized geometry (at the moment only 1D)
-    """
-    function setup_component(geomparam::InputGeometryParams, 
-                             sys; 
-                             addDirichlet::Bool = false, 
-                             general_ad::Bool   = false,
-                             facearea = 1.0)
-        
-        facearea = geomparam[:facearea]
-        
-        g = CartesianMesh(Tuple(geomparam[:N]), Tuple(geomparam[:thickness]))
-        domain = DataDomain(g)
 
-        domain[:face_weighted_volumes] = facearea*domain[:volumes]
-        
-        k = ones(geomparam[:N])
-
-        T    = compute_face_trans(domain, k)
-        T_hf = compute_half_face_trans(domain, k)
-        T_b  = compute_boundary_trans(domain, k)
-
-        domain[:trans, Faces()]           = facearea*T
-        domain[:halfTrans, HalfFaces()]   = facearea*T_hf
-        domain[:bcTrans, BoundaryFaces()] = facearea*T_b
-
-        # We add Dirichlet on negative current collector. This is a bit hacky as we pass directly cell-number
-        # Works only for 1D model
-        
-        if addDirichlet
-
-            domain.entities[BoundaryDirichletFaces()] = 1
-
-            bcDirFace = 1 # in BoundaryFaces indexing
-            bcDirCell = 1
-            bcDirInd  = 1
-            domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = facearea*domain[:bcTrans][bcDirFace]
-            domain[:bcDirCells, BoundaryDirichletFaces()]     = bcDirCell # 
-            domain[:bcDirInds, BoundaryDirichletFaces()]      = bcDirInd #
-            
-        end
-        
-        if general_ad
-            flow = PotentialFlow(g)
-        else
-            flow = TwoPointPotentialFlowHardCoded(g)
-        end
-        disc = (charge_flow = flow,)
-        domain = DiscretizedDomain(domain, disc)
-        
-        model = SimulationModel(domain, sys, context = DefaultContext())
-        return model
-        
-    end
-
-    """
-    Helper function to setup  electrolyte (:Elyte)
-    """
-    function setup_component(geomparams::InputGeometryParams, 
-                             sys::Electrolyte;
-                             general_ad::Bool = false,)
-
-        # specific implementation for electrolyte
-        # requires geometric parameters for :NeAm, :SEP, :PeAm
-        facearea = geomparams[:SEP][:facearea]
-        
-        names = (:NeAm, :SEP, :PeAm)
-
-        deltas = Vector{Float64}()
-        for name in names
-            dx = geomparams[name][:thickness]/geomparams[name][:N]
-            dx = dx*ones(geomparams[name][:N])
-            deltas = vcat(deltas, dx)
-        end
-
-        N = sum([geomparams[name][:N] for name in names])
-        deltas = (deltas,)
-        g = CartesianMesh((N,), deltas)
-        
-        domain = DataDomain(g)
-
-        domain[:face_weighted_volumes] = facearea*domain[:volumes]
-
-        k = ones(N)
-        T    = compute_face_trans(domain, k)
-        T_hf = compute_half_face_trans(domain, k)
-        T_b  = compute_boundary_trans(domain, k)
-
-        domain[:trans, Faces()]           = facearea*T
-        domain[:halfTrans, HalfFaces()]   = facearea*T_hf
-        domain[:bcTrans, BoundaryFaces()] = facearea*T_b
-        
-        if general_ad
-            flow = PotentialFlow(g)
-        else
-            flow = TwoPointPotentialFlowHardCoded(g)
-        end
-        disc = (charge_flow = flow,)
-        domain = DiscretizedDomain(domain, disc)
-        
-        model = SimulationModel(domain, sys, context = DefaultContext())
-
-        return model
-        
-    end
-
-    function setup_component(g::Jutul.FiniteVolumeMesh,
-                             sys;
-                             general_ad::Bool=false,
-                             boundary = nothing,
-                             facearea = 1.0)
-
-        # specific implementation for electrolyte
-        # requires geometric parameters for :NeAm, :SEP, :PeAm
-
-        domain = DataDomain(g)
-
-        domain[:face_weighted_volumes] = facearea*domain[:volumes]
-
-        # opertors only use geometry not property
-        k = ones(number_of_cells(g))
-        
-        T    = compute_face_trans(domain, k)
-        T_hf = compute_half_face_trans(domain, k)
-        T_b  = compute_boundary_trans(domain, k)
-        
-        domain[:trans, Faces()]           = facearea * T
-        domain[:halfTrans, HalfFaces()]   = facearea * T_hf
-        domain[:bcTrans, BoundaryFaces()] = facearea * T_b
-        
-        if !isnothing(boundary)
-
-            bfaces = boundary["boundaryfaces"]
-            nb = size(bfaces,1)
-            domain.entities[BoundaryDirichletFaces()] =  nb
-
-            bcDirFace = boundary["boundaryfaces"] # in BoundaryFaces indexing
-            bcDirCell = boundary["cells"]
-            
-            bcDirInd  = Vector{Int64}(1:nb)
-            domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = facearea*domain[:bcTrans][bcDirFace]
-            domain[:bcDirCells, BoundaryDirichletFaces()]     = bcDirCell 
-            domain[:bcDirInds, BoundaryDirichletFaces()]      = bcDirInd 
-            
-        end
-        
-        if general_ad
-            flow = PotentialFlow(g)
-        else
-            flow = TwoPointPotentialFlowHardCoded(g)
-        end
-        disc = (charge_flow=flow,)
-        domain = DiscretizedDomain(domain, disc)
-
-        model = SimulationModel(domain, sys, context=DefaultContext())
-
-        return model
-
-    end
+    grids, couplings = setup_grids_and_couplings(init)
+    
 
     jsonNames = Dict(
         :NeAm => "NegativeElectrode",
@@ -1498,8 +1405,7 @@ function setup_battery_model(init::JSONFile;
         model_am = setup_component(geomparam              ,
                                    sys_am                 ;
                                    general_ad = general_ad,
-                                   boundary = boundary,
-                                   facearea = geomparams[:facearea])
+                                   boundary = boundary)
 
         return model_am
         
@@ -1590,8 +1496,7 @@ function setup_battery_model(init::JSONFile;
         model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
     elseif case_type == "Grid"
         model_elyte = setup_component(geomparams[:Elyte], elyte,
-                                      general_ad = general_ad,
-                                      facearea = geomparams[:facearea])
+                                      general_ad = general_ad)
     else
         error()
     end
@@ -1613,8 +1518,7 @@ function setup_battery_model(init::JSONFile;
         sys_pecc = CurrentCollector(pecc_params)
         
         model_pecc = setup_component(geomparams[:PeCc], sys_pecc, 
-                                     general_ad = general_ad,
-                                     facearea = geomparams[:facearea])
+                                     general_ad = general_ad)
     end
 
     #######################
@@ -2343,36 +2247,61 @@ function setup_geomparams(init::JSONFile)
     
     jsondict = init.object
 
-    include_cc = include_current_collectors(init)
-
-    if include_cc
-        names = (:NeCc, :NeAm, :SEP, :PeAm, :PeCc)
-    else
-        names = (:NeAm, :SEP, :PeAm)
-    end
-    geomparams = Dict(name => Dict() for name in names)
-
-    geomparams[:NeAm][:N]         = jsondict["NegativeElectrode"]["Coating"]["N"]
-    geomparams[:NeAm][:thickness] = jsondict["NegativeElectrode"]["Coating"]["thickness"]
-    geomparams[:SEP][:N]          = jsondict["Separator"]["N"]
-    geomparams[:SEP][:thickness]  = jsondict["Separator"]["thickness"]
-    geomparams[:PeAm][:N]         = jsondict["PositiveElectrode"]["Coating"]["N"]
-    geomparams[:PeAm][:thickness] = jsondict["PositiveElectrode"]["Coating"]["thickness"]
-
-    if include_cc
-        geomparams[:NeCc][:N]         = jsondict["NegativeElectrode"]["CurrentCollector"]["N"]
-        geomparams[:NeCc][:thickness] = jsondict["NegativeElectrode"]["CurrentCollector"]["thickness"]
-        geomparams[:PeCc][:N]         = jsondict["PositiveElectrode"]["CurrentCollector"]["N"]
-        geomparams[:PeCc][:thickness] = jsondict["PositiveElectrode"]["CurrentCollector"]["thickness"]
-    end
+    case_type = jsondict["Geometry"]["case"]
     
-    for name in names
-        geomparams[name][:facearea] = jsondict["Geometry"]["faceArea"]
+    if case_type == "1D"
+        
+        include_cc = include_current_collectors(init)
+        
+        if include_cc
+            components = ["NegativeCurrentCollector",
+                          "NegativeElectrode"       ,
+                          "Separator"               ,
+                          "PositiveElectrode"       ,
+                          "PositiveCurrentCollector"]        
+        else
+            components = ["NegativeElectrode",
+                          "Separator"        ,
+                          "PositiveElectrode"]
+            
+        end
+        
+        geomparams = Dict(component => Dict() for component in components)
+
+        geomparams["NegativeElectrode"]["N"]         = jsondict["NegativeElectrode"]["Coating"]["N"]
+        geomparams["NegativeElectrode"]["thickness"] = jsondict["NegativeElectrode"]["Coating"]["thickness"]
+        geomparams["Separator"]["N"]                 = jsondict["Separator"]["N"]
+        geomparams["Separator"]["thickness"]         = jsondict["Separator"]["thickness"]
+        geomparams["PositiveElectrode"]["N"]         = jsondict["PositiveElectrode"]["Coating"]["N"]
+        geomparams["PositiveElectrode"]["thickness"] = jsondict["PositiveElectrode"]["Coating"]["thickness"]
+
+        if include_cc
+            geomparams["NegativeCurrentCollector"]["N"]         = jsondict["NegativeElectrode"]["CurrentCollector"]["N"]
+            geomparams["NegativeCurrentCollector"]["thickness"] = jsondict["NegativeElectrode"]["CurrentCollector"]["thickness"]
+            geomparams["PositiveCurrentCollector"]["N"]         = jsondict["PositiveElectrode"]["CurrentCollector"]["N"]
+            geomparams["PositiveCurrentCollector"]["thickness"] = jsondict["PositiveElectrode"]["CurrentCollector"]["thickness"]
+        end
+
+
+        if haskey(jsondict, "include_current_collectors")
+            geomparams["include_current_collectors"] = jsondict["include_current_collectors"]
+        else
+            geomparams["include_current_collectors"] = true # default case
+        end
+
+    elseif case_type "3D-demo"
+        
+    else
+        
+        error("geometry case type not recognized")
+        
     end
     
     return geomparams
     
 end
+
+
 
 function setup_geomparams_grid(grids::Dict, couplings::Dict, include_cc)
 
@@ -2476,7 +2405,7 @@ function computeElectrodeCapacity(model::MultiModel, name::Symbol)
         error("name not recognized")
     end
 
-    vols = ammodel.domain.representation[:face_weighted_volumes]
+    vols = ammodel.domain.representation[:volumes]
     vol = sum(avf*vf*vols)
     
     cap_usable = (thetaMax - thetaMin)*cMax*vol*n*F
@@ -2573,7 +2502,7 @@ function computeCellMass(model::MultiModel)
     
     for elde in eldes
         effrho = model[elde].system[:effective_density]
-        vols = model[elde].domain.representation[:face_weighted_volumes]
+        vols = model[elde].domain.representation[:volumes]
         mass = mass + sum(effrho.*vols)
     end
     
@@ -2581,7 +2510,7 @@ function computeCellMass(model::MultiModel)
     
     rho  = model[:Elyte].system[:electrolyte_density]
     vf   = model[:Elyte].domain.representation[:volumeFraction]
-    vols = model[:Elyte].domain.representation[:face_weighted_volumes]
+    vols = model[:Elyte].domain.representation[:volumes]
     
     mass = mass + sum(vf.*rho.*vols)
 
@@ -2589,7 +2518,7 @@ function computeCellMass(model::MultiModel)
     
     rho  = model[:Elyte].system[:separator_density]
     vf   = model[:Elyte].domain.representation[:separator_volume_fraction]
-    vols = model[:Elyte].domain.representation[:face_weighted_volumes]
+    vols = model[:Elyte].domain.representation[:volumes]
     
     mass = mass + sum(vf.*rho.*vols)
     
@@ -2600,7 +2529,7 @@ function computeCellMass(model::MultiModel)
     for cc in ccs
         if haskey(model.models, cc)
             rho  = model[cc].system[:density]
-            vols = model[cc].domain.representation[:face_weighted_volumes]        
+            vols = model[cc].domain.representation[:volumes]        
             mass = mass + sum(rho.*vols)
         end
     end
