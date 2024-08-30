@@ -4,6 +4,7 @@ authors = ["Olav Møyner <olav.moyner@gmail.com>"]
 version = "0.1.6"
 
 [deps]
+Infiltrator = "5903a43b-9cc3-4c30-8d17-598619ec4e9b"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 Jutul = "2b460a1a-8a2b-45b2-b125-b5c536396eb9"
