@@ -981,7 +981,7 @@ function setup_grids_and_couplings(init::JSONFile)
 
         grids, couplings = one_dimensional_grid(geomparams)
         
-    elseif case_type "3D-demo"
+    elseif case_type == "3D-demo"
         
         grids, couplings = pouch_grid(geomparams)
         
@@ -1343,7 +1343,7 @@ function setup_battery_model(init::JSONFile;
 
     end
 
-    setup_volume_fractions_grid!(model, grids, couplings["Electrolyte"])
+    setup_volume_fractions!(model, grids, couplings["Electrolyte"])
     
     return model, couplings
     
@@ -1807,47 +1807,7 @@ end
 # Setup volume fraction # 
 #########################
 
-function setup_volume_fractions!(model::MultiModel, geomparams)
-
-    names = (:NeAm, :SEP, :PeAm)
-
-    Nelyte = sum([geomparams[name][:N] for name in names])
-    
-    vfelyte     = zeros(Nelyte)
-    vfseparator = zeros(Nelyte)
-    
-    names = (:NeAm, :PeAm)
-    
-    for name in names
-        ammodel = model[name]
-        vf = ammodel.system[:volume_fraction]
-        Nam = geomparams[name][:N]
-        ammodel.domain.representation[:volumeFraction] = vf*ones(Nam)
-        if name == :NeAm
-            nstart = 1
-            nend   = Nam
-        elseif name == :PeAm
-            nstart = geomparams[:NeAm][:N] + geomparams[:SEP][:N] + 1
-            nend   = Nelyte
-        else
-            error("name not recognized")
-        end
-        vfelyte[nstart : nend] .= 1 - vf
-    end
-
-    nstart = geomparams[:NeAm][:N] +  1
-    nend   = nstart + geomparams[:SEP][:N]
-    separator_porosity = model[:Elyte].system[:separator_porosity]
-    
-    vfelyte[nstart : nend]     .= separator_porosity*ones(nend - nstart + 1)
-    vfseparator[nstart : nend] .= (1 -separator_porosity)*ones(nend - nstart + 1)
-    
-    model[:Elyte].domain.representation[:volumeFraction] = vfelyte
-    model[:Elyte].domain.representation[:separator_volume_fraction] = vfseparator
-    
-end
-
-function setup_volume_fractions_grid!(model::MultiModel, grids, coupling)
+function setup_volume_fractions!(model::MultiModel, grids, coupling)
 
     Nelyte      = number_of_cells(grids["Electrolyte"])
     vfelyte     = zeros(Nelyte)
@@ -2039,7 +1999,9 @@ function setup_geomparams(init::JSONFile)
 
         geomparams["faceArea"] = jsondict["Geometry"]["faceArea"]
             
-    elseif case_type "3D-demo"
+    elseif case_type == "3D-demo"
+
+        geomparams = jsondict["Geometry"]
         
     else
         
