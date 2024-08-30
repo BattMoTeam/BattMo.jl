@@ -194,7 +194,7 @@ function setup_couplings(components, grids, global_maps)
         for (ind2, comp2) in enumerate(components)
 
             intersection = find_coupling(global_maps[comp1], global_maps[comp2], [comp1, comp2])
-            
+
             intersection_tmp = Dict() # intersection
             
             if ind1 != ind2
@@ -274,14 +274,21 @@ end
  We convert the grids given in MRST format (dictionnary also called raw grids) to Jutul format (UnstructuredMesh)
  For the face couplings, we need to recover the coupling face indices in the boundary face indexing (jutul mesh structure holds a different indexing for the boundary faces)
 """
-function convert_geometry(grids, couplings)
-    
-    components = ["NegativeCurrentCollector",
-                  "NegativeElectrode"       ,
-                  "Separator"               ,
-                  "PositiveElectrode"       ,
-                  "PositiveCurrentCollector",
-                  "Electrolyte"]
+function convert_geometry(grids, couplings; include_current_collectors = true)
+
+    if include_current_collectors
+        components = ["NegativeCurrentCollector",
+                      "NegativeElectrode"       ,
+                      "Separator"               ,
+                      "PositiveElectrode"       ,
+                      "PositiveCurrentCollector",
+                      "Electrolyte"]
+    else
+        components = ["NegativeElectrode"       ,
+                      "Separator"               ,
+                      "PositiveElectrode"       ,
+                      "Electrolyte"]
+    end
     
     ugrids = Dict()
     
@@ -293,12 +300,12 @@ function convert_geometry(grids, couplings)
     
     for component in components
 
-        ucoupling = ucouplings[component]
+        component_couplings = ucouplings[component]
         
         grid  = grids[component]
         ugrid = ugrids[component]
         
-        for (component2, coupling) in couplings
+        for (other_component, coupling) in component_couplings
             
             if !isempty(coupling)
                 
@@ -378,18 +385,24 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
 
     cinds = vcat(1, 1 .+ cumsum(ns))
 
+    uParentGrid = tpfv_geometry(uParentGrid)
+    x = uParentGrid.cell_centroids[1, :]
+    x = [[val, i] for (i, val) in enumerate(x)]
+    x = sort!(x, by = xx -> xx[1])
+
     ## setup the grid for each component
     for (icomponent, component) in enumerate(components)
-        inds = ns[icomponent] : ns[icomponent] - 1
-        G, maps... = remove_cells(parentGrid, inds)
-        
+        allinds = collect((1 : sum(ns)))
+        inds = cinds[icomponent] : cinds[icomponent + 1] - 1
+        G, maps... = remove_cells(parentGrid, setdiff!(allinds, inds))
         grids[component] = G
         global_maps[component] = maps
-        
     end
-    
-    elyteInds = cinds[elyte_comp_start] : (cinds[elyte_comp_start + 3] - 1)
-    G, maps... = remove_cells(parentGrid, elyteInds)
+
+    ## setup for the eletrolyte
+    allinds = collect((1 : sum(ns)))
+    inds = cinds[elyte_comp_start] : (cinds[elyte_comp_start + 3] - 1)
+    G, maps... = remove_cells(parentGrid, setdiff!(allinds, inds))
 
     grids["Electrolyte"]       = G
     global_maps["Electrolyte"] = maps
@@ -397,7 +410,9 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
     push!(components, "Electrolyte")
     
     couplings = setup_couplings(components, grids, global_maps)
-
+    
+    grids, couplings = convert_geometry(grids, couplings; include_current_collectors = include_current_collectors)
+    
     return grids, couplings
     
 end
