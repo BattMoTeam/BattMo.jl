@@ -238,9 +238,9 @@ end
 """
 Find the face boundary of the grid in a given Cartesian direction (dim) and direction (true of false correpondings to "left" and "right"). It is used to obtain the external coupling for the grid
 """
-function findBoundary(g, dim, dir)
+function findBoundary(grid, dim, dir)
     
-    nf = number_of_boundary_faces(g)
+    nf = number_of_boundary_faces(grid)
     
     if dir
         max_min = -Inf
@@ -248,11 +248,10 @@ function findBoundary(g, dim, dir)
         max_min = Inf
     end
     
-    face  = BoundaryFaces()
     tol   = 1000*eps()
 
     function getcoord(i)
-        centroid, = Jutul.compute_centroid_and_measure(g, face, i)
+        centroid, = Jutul.compute_centroid_and_measure(grid, BoundaryFaces(), i)
         return centroid[dim]
     end
     
@@ -412,12 +411,42 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
     
     couplings = setup_couplings(components, grids, global_maps)
 
-    ## Add boundary coupling
-    if include_current_collectors
-    else
-    end
-    
     grids, couplings = convert_geometry(grids, couplings; include_current_collectors = include_current_collectors)
+    
+    """Add  external coupling to the coupling structure.
+       Function can be used both with and without current collector."""
+    if include_current_collectors
+        boundaryComponents = Dict("left"  => "NegativeCurrentCollector",
+                                  "right" => "PositiveCurrentCollector")
+    else
+        boundaryComponents = Dict("left"  => "NegativeElectrode",
+                                  "right" => "PositiveElectrode")
+    end
+
+    """get x-coordinate of the boundary faces"""
+    function getcoord(grid, i)
+        centroid, = Jutul.compute_centroid_and_measure(grid, BoundaryFaces(), i)
+        return centroid[1]
+    end
+
+    component = boundaryComponents["left"]
+    grid = grids[component]
+    
+    nf = number_of_boundary_faces(grid)
+    
+    bcfaceind = argmin(i -> getcoord(grid, i), 1 : nf)
+    
+    couplings[component]["External"] = Dict("cells" => [1], "boundaryfaces" => [bcfaceind])        
+    
+    component = boundaryComponents["right"]
+    grid = grids[component]
+    
+    nf = number_of_boundary_faces(grid)
+    nc = number_of_cells(grid)
+    
+    bcfaceind = argmax(i -> getcoord(grid, i), 1 : nf)
+    
+    couplings[component]["External"] = Dict("cells" => [nc], "boundaryfaces" => [bcfaceind])
     
     return grids, couplings
     
