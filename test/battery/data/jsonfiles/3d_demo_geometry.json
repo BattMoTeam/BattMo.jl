@@ -1,0 +1,11 @@
+{
+  "include_current_collectors": true,
+  "Geometry": {
+    "case": "3D-demo",
+    "nx" : 4,
+    "ny" : 4,
+    "nz" : 4,
+    "tab_cell_nx" : 3,
+    "tab_cell_ny" : 2
+  }
+}
