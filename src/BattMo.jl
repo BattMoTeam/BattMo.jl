@@ -85,7 +85,7 @@ include("models/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/convergence.jl")
 include("physics.jl")
-include("mrst_test_utils.jl")
+include("model_setup.jl")
 include("matlab_model_setup.jl")
 include("linsolve.jl")
 
