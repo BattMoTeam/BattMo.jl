@@ -161,11 +161,11 @@ end
 
 ## Setup policy
 
-function setup_policy!(policy::SimpleCVPolicy, init::JSONFile, parameters)
+function setup_policy!(policy::SimpleCVPolicy, inputparams::InputParams, parameters)
 
     Imax = only(parameters[:Control][:ImaxDischarge])
 
-    tup = Float64(init.object["Control"]["rampupTime"])
+    tup = Float64(inputparams["Control"]["rampupTime"])
     
     cFun(time) = currentFun(time, Imax, tup)
 
@@ -175,7 +175,7 @@ function setup_policy!(policy::SimpleCVPolicy, init::JSONFile, parameters)
 end
 
  
-function setup_policy!(policy::CyclingCVPolicy, init::JSONFile, parameters)
+function setup_policy!(policy::CyclingCVPolicy, inputparams::InputParams, parameters)
 
     policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
     policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])

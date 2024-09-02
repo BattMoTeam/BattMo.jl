@@ -19,24 +19,24 @@ export
 # Run battery #
 ###############
 
-function run_battery(init::InputFile;   
-                    use_p2d::Bool                     = true,
-                    extra_timing::Bool                = false,
-                    max_step::Union{Integer, Nothing} = nothing,
-                    linear_solver::Symbol             = :direct,
-                    general_ad::Bool                  = false,
-                    use_groups::Bool                  = false,
-                    kwarg...)
+function run_battery(inputparams::InputParams;   
+                     use_p2d::Bool                     = true,
+                     extra_timing::Bool                = false,
+                     max_step::Union{Integer, Nothing} = nothing,
+                     linear_solver::Symbol             = :direct,
+                     general_ad::Bool                  = false,
+                     use_groups::Bool                  = false,
+                     kwarg...)
     """
         Run battery wrapper method. Can use inputs from either Matlab or Json files and performs
         simulation using a simple discharge CV policy
     """
     
     #Setup simulation
-    sim, forces, state0, parameters, init, model = setup_sim(init, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
+    sim, forces, state0, parameters, inputparams, model = setup_sim(inputparams, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
 
     #Set up config and timesteps
-    timesteps = setup_timesteps(init; max_step = max_step)
+    timesteps = setup_timesteps(inputparams; max_step = max_step)
     cfg = setup_config(sim, model, linear_solver, extra_timing; kwarg...)
 
     # Perform simulation
@@ -46,7 +46,7 @@ function run_battery(init::InputFile;
     extra = Dict(:model => model,
                  :state0 => state0,
                  :parameters => parameters,
-                 :init => init,
+                 :inputparams => inputparams,
                  :timesteps => timesteps,
                  :config => cfg,
                  :forces => forces,
@@ -58,7 +58,7 @@ function run_battery(init::InputFile;
             cellSpecifications = cellSpecifications, 
             reports            = reports           ,
             extra              = extra             ,
-            exported           = init)
+            exported           = inputparams)
     
 end
 
@@ -127,37 +127,35 @@ end
 # Setup timestepping #
 ######################
 
-function setup_timesteps(init::JSONFile;
+function setup_timesteps(inputparams::InputParams;
                          kwarg ...)
     """
         Method setting up the timesteps from a json file object. 
     """
 
-    jsonstruct = init.object
-    
-    controlPolicy = jsonstruct["Control"]["controlPolicy"]
+    controlPolicy = inputparams["Control"]["controlPolicy"]
     
     if controlPolicy == "CCDischarge"
 
-        DRate = jsonstruct["Control"]["DRate"]
+        DRate = inputparams["Control"]["DRate"]
         con   = Constants()
         totalTime = 1.1*con.hour/DRate
 
-        if haskey(jsonstruct["TimeStepping"], "totalTime")
+        if haskey(inputparams["TimeStepping"], "totalTime")
             @warn "totalTime value is given but not used"
         end
 
-        if haskey(jsonstruct["TimeStepping"], "timeStepDuration")
-            dt = jsonstruct["TimeStepping"]["timeStepDuration"]
-            if haskey(jsonstruct["TimeStepping"], "numberOfTimeSteps")
+        if haskey(inputparams["TimeStepping"], "timeStepDuration")
+            dt = inputparams["TimeStepping"]["timeStepDuration"]
+            if haskey(inputparams["TimeStepping"], "numberOfTimeSteps")
                 @warn "Number of time steps is given but not used"
             end
         else
-            n = jsonstruct["TimeStepping"]["numberOfTimeSteps"]
+            n = inputparams["TimeStepping"]["numberOfTimeSteps"]
             dt = totalTime / n
         end
-        if haskey(jsonstruct["TimeStepping"], "useRampup") && jsonstruct["TimeStepping"]["useRampup"]
-            nr = jsonstruct["TimeStepping"]["numberOfRampupSteps"]
+        if haskey(inputparams["TimeStepping"], "useRampup") && inputparams["TimeStepping"]["useRampup"]
+            nr = inputparams["TimeStepping"]["numberOfRampupSteps"]
         else
             nr = 1
         end
@@ -166,26 +164,26 @@ function setup_timesteps(init::JSONFile;
 
     elseif controlPolicy == "CCCV"
         
-        ncycles = jsonstruct["Control"]["numberOfCycles"]
-        DRate = jsonstruct["Control"]["DRate"]
-        CRate = jsonstruct["Control"]["CRate"]
+        ncycles = inputparams["Control"]["numberOfCycles"]
+        DRate = inputparams["Control"]["DRate"]
+        CRate = inputparams["Control"]["CRate"]
 
         con   = Constants()
         
         totalTime = ncycles*1.5*(1*con.hour/CRate + 1*con.hour/DRate);
         
-        if haskey(jsonstruct["TimeStepping"], "totalTime")
+        if haskey(inputparams["TimeStepping"], "totalTime")
             @warn "totalTime value is given but not used"
         end
 
-        if haskey(jsonstruct["TimeStepping"], "timeStepDuration")
-            dt = jsonstruct["TimeStepping"]["timeStepDuration"]
+        if haskey(inputparams["TimeStepping"], "timeStepDuration")
+            dt = inputparams["TimeStepping"]["timeStepDuration"]
             n  = Int64(floor(totalTime/dt))
-            if haskey(jsonstruct["TimeStepping"], "numberOfTimeSteps")
+            if haskey(inputparams["TimeStepping"], "numberOfTimeSteps")
                 @warn "Number of time steps is given but not used"
             end
         else
-            n  = jsonstruct["TimeStepping"]["numberOfTimeSteps"]
+            n  = inputparams["TimeStepping"]["numberOfTimeSteps"]
             dt = totalTime / n
         end
 
@@ -200,7 +198,7 @@ function setup_timesteps(init::JSONFile;
     return timesteps
 end
 
-function setup_timesteps(init::MatlabFile;
+function setup_timesteps(inputparams::MatlabInputParams;
                          max_step::Union{Integer,Nothing} = nothing,
                          kwarg...)
     """
@@ -208,19 +206,21 @@ function setup_timesteps(init::MatlabFile;
         the simulation will use the same timesteps as the pre-run matlab simulation.
     """
 
-    if init.use_state_ref
-        steps = size(init.object["states"], 1)
+    if inputparams.use_state_ref
+        
+        error("to be fixed")
+        steps = size(inputparams.dict["states"], 1)
         alltimesteps = Vector{Float64}(undef, steps)
         time = 0
         end_step = 0
 
         #Alternative to minE=3.2
-        minE = init.object["model"]["Control"]["lowerCutoffVoltage"]
+        minE = inputparams["model"]["Control"]["lowerCutoffVoltage"]
 
         for i = 1 : steps
-            alltimesteps[i] =  init.object["states"][i]["time"] - time
-            time = init.object["states"][i]["time"]
-            E = init.object["states"][i]["Control"]["E"]
+            alltimesteps[i] =  inputparams["states"][i]["time"] - time
+            time = inputparams["states"][i]["time"]
+            E = inputparams["states"][i]["Control"]["E"]
             if (E > minE + 0.001)
                 end_step = i
             end
@@ -230,7 +230,7 @@ function setup_timesteps(init::MatlabFile;
         end
         timesteps = alltimesteps[1:end_step]
     else
-        timesteps=init.object["schedule"]["step"]["val"][:]
+        timesteps = inputparams["schedule"]["step"]["val"][:]
 
     end
 
@@ -241,18 +241,18 @@ end
 # Setup simulation #
 ####################
 
-function setup_sim(init::JSONFile;
+function setup_sim(inputparams::InputParams;
                    use_groups::Bool = false,
                    general_ad::Bool = false,
                    kwarg ... )
 
-    model, state0, parameters, couplings = setup_model(init, use_groups=use_groups, general_ad=general_ad; kwarg...)
+    model, state0, parameters, couplings = setup_model(inputparams, use_groups=use_groups, general_ad=general_ad; kwarg...)
 
-    setup_coupling!(init, model, parameters, couplings)
+    setup_coupling!(inputparams, model, parameters, couplings)
 
-    setup_policy!(model[:Control].system.policy, init, parameters)
+    setup_policy!(model[:Control].system.policy, inputparams, parameters)
     
-    minE = init.object["Control"]["lowerCutoffVoltage"]
+    minE = inputparams["Control"]["lowerCutoffVoltage"]
     @. state0[:Control][:Phi] = minE * 1.5
 
 
@@ -260,18 +260,18 @@ function setup_sim(init::JSONFile;
 
     sim = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
 
-    return sim, forces, state0, parameters, init, model
+    return sim, forces, state0, parameters, inputparams, model
 
 end
 
-function setup_sim(init::MatlabFile;
+function setup_sim(inputparams::MatlabInputParams;
                    use_p2d::Bool    = true,
                    use_groups::Bool = false,
                    general_ad::Bool = false,
                    kwarg ... )
 
-    model, state0, parameters = setup_model(init, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
-    setup_coupling!(init, model)
+    model, state0, parameters = setup_model(inputparams, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
+    setup_coupling!(inputparams, model)
 
     forces_pecc = nothing
     currents  = nothing
@@ -287,7 +287,7 @@ function setup_sim(init::MatlabFile;
 
     sim = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
 
-    return sim, forces, state0, parameters, init, model
+    return sim, forces, state0, parameters, inputparams, model
 
 end
 
@@ -295,12 +295,12 @@ end
 # Setup coupling #
 ##################
 
-function setup_coupling!(init::JSONFile,
+function setup_coupling!(inputparams::InputParams,
                          model::MultiModel,
                          parameters::Dict{Symbol,<:Any},
                          couplings)
 
-    include_cc = init.object["include_current_collectors"]
+    include_cc = inputparams["include_current_collectors"]
 
 
     stringNames = Dict(:NeCc  => "NegativeCurrentCollector",
@@ -490,11 +490,11 @@ end
 
 
 
-function setup_coupling!(init::MatlabFile,
+function setup_coupling!(inputparams::MatlabInputParams,
                          model::MultiModel
                          )
     
-    exported_all = init.object
+    exported_all = inputparams.dict
 
     include_cc = include_current_collectors(model)
     
@@ -668,25 +668,25 @@ end
 # Setup model
 ########################################################################
 
-function setup_model(init::InputFile;
+function setup_model(inputparams::InputParams;
                      use_p2d::Bool    = true,
                      use_groups::Bool = false,
                      kwarg...)
 
-    model, couplings = setup_battery_model(init,
+    model, couplings = setup_battery_model(inputparams,
                                            use_groups = use_groups,
                                            use_p2d    = use_p2d;
                                            kwarg... )
-    parameters = setup_battery_parameters(init, model)
-    initState  = setup_battery_initial_state(init, model)
+    parameters = setup_battery_parameters(inputparams, model)
+    initialState  = setup_battery_initial_state(inputparams, model)
 
-    return model, initState, parameters, couplings
+    return model, initialState, parameters, couplings
 
 end
 
-function include_current_collectors(init::MatlabFile)
+function include_current_collectors(inputparams::MatlabInputParams)
 
-    model = init.object["model"]
+    model = inputparam["model"]
 
     if haskey(model, "include_current_collectors")
         if isempty(model["include_current_collectors"])
@@ -705,9 +705,9 @@ function include_current_collectors(init::MatlabFile)
 end
 
 
-function include_current_collectors(init::JSONFile)
+function include_current_collectors(inputparams::InputParams)
 
-    jsondict = init.object
+    jsondict = inputparams.dict
 
     if haskey(jsondict, "include_current_collectors") && !jsondict["include_current_collectors"]
         include_cc = false
@@ -740,13 +740,13 @@ end
 # Setup battery model #
 #######################
 
-function setup_battery_model(init::MatlabFile; 
+function setup_battery_model(inputparams::MatlabInputParams; 
                              use_groups::Bool = false,
                              use_p2d::Bool    = true,
                              general_ad::Bool = false,
                              kwarg...)
 
-    include_cc = include_current_collectors(init)
+    include_cc = include_current_collectors(inputparams)
 
     function setup_component(obj::Dict, 
                              sys, 
@@ -769,7 +769,7 @@ function setup_battery_model(init::MatlabFile;
         :PeAm => "PositiveElectrode",        
     )
 
-    inputparams = init.object["model"]
+    inputparams = inputparams["model"]
     
     """ Setup the properties of the active material
     """
@@ -895,12 +895,12 @@ function setup_battery_model(init::MatlabFile;
     # Setup control model #
     #######################
 
-    controlPolicy = init.object["model"]["Control"]["controlPolicy"]
+    controlPolicy = inputparams["model"]["Control"]["controlPolicy"]
     
     if controlPolicy == "CCDischarge"
         
-        minE   = init.object["model"]["Control"]["lowerCutoffVoltage"]
-        inputI = init.object["model"]["Control"]["Imax"]
+        minE   = inputparams["model"]["Control"]["lowerCutoffVoltage"]
+        inputI = inputparams["model"]["Control"]["Imax"]
 
         cFun(time) = currentFun(time, inputI)
         
@@ -908,7 +908,7 @@ function setup_battery_model(init::MatlabFile;
 
     elseif controlPolicy == "CCCV"
 
-        ctrl = init.object["model"]["Control"]
+        ctrl = inputparams["model"]["Control"]
         
         policy = CyclingCVPolicy(ctrl["ImaxDischarge"]     ,
                                  ctrl["ImaxCharge"]        ,
@@ -969,11 +969,11 @@ function setup_battery_model(init::MatlabFile;
 end
 
 
-function setup_grids_and_couplings(init::JSONFile)
+function setup_grids_and_couplings(inputparams::InputParams)
 
-    jsondict = init.object
+    jsondict = inputparams.dict
     
-    geomparams = setup_geomparams(init)
+    geomparams = setup_geomparams(inputparams)
 
     case_type = jsondict["Geometry"]["case"]
 
@@ -1043,16 +1043,16 @@ function setup_component(grid::Jutul.FiniteVolumeMesh,
 
 end
 
-function setup_battery_model(init::JSONFile; 
+function setup_battery_model(inputparams::InputParams; 
                              use_groups::Bool = false, 
                              general_ad::Bool = false,
                              kwarg...)
 
-    include_cc = include_current_collectors(init)
+    include_cc = include_current_collectors(inputparams)
     
-    jsondict = init.object
+    jsondict = inputparams.dict
 
-    grids, couplings = setup_grids_and_couplings(init)
+    grids, couplings = setup_grids_and_couplings(inputparams)
 
     stringNames = Dict(
         :NeAm => "NegativeElectrode",
@@ -1353,13 +1353,13 @@ end
 # Setup battery parameters #
 ############################
 
-function setup_battery_parameters(init::MatlabFile, 
+function setup_battery_parameters(inputparams::MatlabInputParams, 
                                   model::MultiModel
                                   )
 
     parameters = Dict{Symbol, Any}()
 
-    exported=init.object
+    exported = inputparams.dict
 
     T0 = exported["model"]["initT"]
 
@@ -1442,11 +1442,11 @@ function setup_battery_parameters(init::MatlabFile,
     
 end
 
-function setup_battery_parameters(init::JSONFile, 
+function setup_battery_parameters(inputparams::InputParams, 
                                   model::MultiModel
                                   )
 
-    function computeEffectiveConductivity(comodel, cojsonstruct)
+    function computeEffectiveConductivity(comodel, coinputparams)
 
         # Compute effective conductivity for the coating
 
@@ -1462,11 +1462,11 @@ function setup_battery_parameters(init::JSONFile,
         for icomp in eachindex(compnames)
             compname = compnames[icomp]
             vf = vfs[icomp]
-            kappa += vf*cojsonstruct[compname]["electronicConductivity"]
+            kappa += vf*coinputparams[compname]["electronicConductivity"]
         end
 
         vf = comodel.system.params[:volume_fraction]
-        bg = cojsonstruct["bruggemanCoefficient"]
+        bg = coinputparams["bruggemanCoefficient"]
 
         kappaeff = (vf^bg)*kappa
 
@@ -1476,9 +1476,7 @@ function setup_battery_parameters(init::JSONFile,
 
     parameters = Dict{Symbol, Any}()
 
-    jsonstruct=init.object
-
-    T0 = jsonstruct["initT"]
+    T0 = inputparams["initT"]
 
     include_cc = include_current_collectors(model)
 
@@ -1489,8 +1487,8 @@ function setup_battery_parameters(init::JSONFile,
         #######################################
         
         prm_necc = Dict{Symbol, Any}()
-        jsonstruct_necc = jsonstruct["NegativeElectrode"]["CurrentCollector"]
-        prm_necc[:Conductivity] = jsonstruct_necc["electronicConductivity"]
+        inputparams_necc = inputparams["NegativeElectrode"]["CurrentCollector"]
+        prm_necc[:Conductivity] = inputparams_necc["electronicConductivity"]
         parameters[:NeCc] = setup_parameters(model[:NeCc], prm_necc)
         
     end
@@ -1500,16 +1498,16 @@ function setup_battery_parameters(init::JSONFile,
     ############################
     
     prm_neam = Dict{Symbol, Any}()
-    jsonstruct_neam = jsonstruct["NegativeElectrode"]["Coating"]["ActiveMaterial"]
+    inputparams_neam = inputparams["NegativeElectrode"]["Coating"]["ActiveMaterial"]
 
-    prm_neam[:Conductivity] = computeEffectiveConductivity(model[:NeAm], jsonstruct["NegativeElectrode"]["Coating"])
+    prm_neam[:Conductivity] = computeEffectiveConductivity(model[:NeAm], inputparams["NegativeElectrode"]["Coating"])
     prm_neam[:Temperature] = T0
     
     if discretisation_type(model[:NeAm]) == :P2Ddiscretization
         # nothing to do
     else
         @assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
-        prm_neam[:Diffusivity] = jsonstruct_neam["InterDiffusionCoefficient"]
+        prm_neam[:Diffusivity] = inputparams_neam["InterDiffusionCoefficient"]
     end
 
     parameters[:NeAm] = setup_parameters(model[:NeAm], prm_neam)
@@ -1529,9 +1527,9 @@ function setup_battery_parameters(init::JSONFile,
     ############################
 
     prm_peam = Dict{Symbol, Any}()
-    jsonstruct_peam = jsonstruct["PositiveElectrode"]["Coating"]["ActiveMaterial"]
+    inputparams_peam = inputparams["PositiveElectrode"]["Coating"]["ActiveMaterial"]
 
-    prm_peam[:Conductivity] = computeEffectiveConductivity(model[:PeAm], jsonstruct["PositiveElectrode"]["Coating"])
+    prm_peam[:Conductivity] = computeEffectiveConductivity(model[:PeAm], inputparams["PositiveElectrode"]["Coating"])
     prm_peam[:Temperature] = T0
     
     
@@ -1539,7 +1537,7 @@ function setup_battery_parameters(init::JSONFile,
         # nothing to do
     else
         @assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
-        prm_peam[:Diffusivity] = jsonstruct_peam["InterDiffusionCoefficient"]
+        prm_peam[:Diffusivity] = inputparams_peam["InterDiffusionCoefficient"]
     end
 
     parameters[:PeAm] = setup_parameters(model[:PeAm], prm_peam)
@@ -1551,8 +1549,8 @@ function setup_battery_parameters(init::JSONFile,
         #######################################
 
         prm_pecc = Dict{Symbol, Any}()
-        jsonstruct_pecc = jsonstruct["PositiveElectrode"]["CurrentCollector"]
-        prm_pecc[:Conductivity] = jsonstruct_pecc["electronicConductivity"]
+        inputparams_pecc = inputparams["PositiveElectrode"]["CurrentCollector"]
+        prm_pecc[:Conductivity] = inputparams_pecc["electronicConductivity"]
         
         parameters[:PeCc] = setup_parameters(model[:PeCc], prm_pecc)
     end        
@@ -1563,14 +1561,14 @@ function setup_battery_parameters(init::JSONFile,
     
     prm_control = Dict{Symbol, Any}()
 
-    controlPolicy = jsonstruct["Control"]["controlPolicy"]
+    controlPolicy = inputparams["Control"]["controlPolicy"]
     
     if  controlPolicy == "CCDischarge"
         
         cap = computeCellCapacity(model)
         con = Constants()
 
-        DRate = jsonstruct["Control"]["DRate"]
+        DRate = inputparams["Control"]["DRate"]
         prm_control[:ImaxDischarge] = (cap/con.hour)*DRate
         
         parameters[:Control] = setup_parameters(model[:Control], prm_control)
@@ -1580,8 +1578,8 @@ function setup_battery_parameters(init::JSONFile,
         cap = computeCellCapacity(model)
         con = Constants()
 
-        DRate = jsonstruct["Control"]["DRate"]
-        CRate = jsonstruct["Control"]["CRate"]
+        DRate = inputparams["Control"]["DRate"]
+        CRate = inputparams["Control"]["CRate"]
         prm_control[:ImaxDischarge] = (cap/con.hour)*DRate        
         prm_control[:ImaxCharge]    = (cap/con.hour)*CRate
         
@@ -1599,11 +1597,11 @@ end
 # Setup initial state #
 #######################
 
-function setup_battery_initial_state(init::MatlabFile, 
+function setup_battery_initial_state(inputparams::MatlabInputParams, 
                                      model::MultiModel
                                      )
 
-    exported=init.object
+    exported = inputparams.dict
 
     state0 = exported["initstate"]
 
@@ -1696,17 +1694,15 @@ function setup_battery_initial_state(init::MatlabFile,
 end
 
 
-function setup_battery_initial_state(init::JSONFile,
+function setup_battery_initial_state(inputparams::InputParams,
                                      model::MultiModel)
 
     
 
-    jsonstruct = init.object
-
     include_cc = include_current_collectors(model)
 
-    T        = jsonstruct["initT"]
-    SOC_init = jsonstruct["SOC"]
+    T        = inputparams["initT"]
+    SOC_init = inputparams["SOC"]
 
     function setup_init_am(name, model)
         
@@ -1758,7 +1754,7 @@ function setup_battery_initial_state(init::JSONFile,
     nc = count_entities(model[:Elyte].data_domain, Cells())
     
     init = Dict()
-    init[:C]   = jsonstruct["Electrolyte"]["initialConcentration"]*ones(nc)
+    init[:C]   = inputparams["Electrolyte"]["initialConcentration"]*ones(nc)
     init[:Phi] = - negOCP*ones(nc) 
 
     initState[:Elyte] = init
@@ -1951,15 +1947,15 @@ end
 # Setup geomparams #
 ####################
 
-function setup_geomparams(init::JSONFile)
+function setup_geomparams(inputparams::InputParams)
     
-    jsondict = init.object
+    jsondict = inputparams.dict
 
     case_type = jsondict["Geometry"]["case"]
     
     if case_type == "1D"
         
-        include_cc = include_current_collectors(init)
+        include_cc = include_current_collectors(inputparams)
         
         if include_cc
             components = ["NegativeCurrentCollector",
@@ -2178,9 +2174,9 @@ function computeCellMass(model::MultiModel)
 end
 
 
-function computeCellSpecifications(init::JSONFile)
+function computeCellSpecifications(inputparams::InputParams)
     
-    model = setup_battery_model(init)
+    model = setup_battery_model(inputparams)
     return computeCellSpecifications(model)
     
 end
@@ -2263,10 +2259,10 @@ function convert_to_int_vector(x::Matrix{Float64})
     return vec
 end
 
-function computeDischargeEnergy(init::JSONFile)
+function computeDischargeEnergy(inputparams::InputParams)
     # setup a schedule with just discharge half cycle and very fine refinement
 
-    jsondict = init.object
+    jsondict = inputparams.dict
 
     ctrldict = jsondict["Control"]
     
@@ -2295,21 +2291,21 @@ function computeDischargeEnergy(init::JSONFile)
         
     end
 
-    init2 = JSONFile(jsondict)
+    inputparams2 = InputParams(jsondict)
 
-    (; states) = run_battery(init2; info_level=0)
+    (; states) = run_battery(inputparams2; info_level=0)
 
-    return (computeCellEnergy(states), states, init2)
-    # return (missing, missing, init2)
+    return (computeCellEnergy(states), states, inputparams2)
+    # return (missing, missing, inputparams2)
     
 end
 
 
-function computeEnergyEfficiency(init::JSONFile)
+function computeEnergyEfficiency(inputparams::InputParams)
 
     # setup a schedule with just one cycle and very fine refinement
 
-    jsondict = init.object
+    jsondict = inputparams.dict
 
     ctrldict = jsondict["Control"]
     
@@ -2345,7 +2341,7 @@ function computeEnergyEfficiency(init::JSONFile)
         
         jsondict["TimeStepping"]["timeStepDuration"] = dt
 
-        jsondict["SOC"]            = 0.0
+        jsondict["SOC"] = 0.0
         
     else
 
@@ -2353,11 +2349,11 @@ function computeEnergyEfficiency(init::JSONFile)
         
     end
 
-    init2 = JSONFile(jsondict)
+    inputparams2 = InputParams(jsondict)
 
-    (; states) = run_battery(init2; info_level=0)
+    (; states) = run_battery(inputparams2; info_level=0)
 
-    return (computeEnergyEfficiency(states), states, init2)
+    return (computeEnergyEfficiency(states), states, inputparams2)
     
 end
 

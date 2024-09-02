@@ -405,7 +405,7 @@ function find_tags(h, paramsz_z)
     
     h_with_geo = tpfv_geometry(h)
     cut_offs = cumsum(paramsz_z)
-    tag = searchsortedfirst.([cut_offs], h_with_geo.cell_centroids[3,:])
+    tag = searchsortedfirst.([cut_offs], h_with_geo.cell_centroids[3, :])
     return [findall(x -> x == i, tag) for i in 1 : 5]
     
 end
