@@ -19,7 +19,7 @@ export
 # Run battery #
 ###############
 
-function run_battery(inputparams::InputParams;   
+function run_battery(inputparams::AbstractInputParams;   
                      use_p2d::Bool                     = true,
                      extra_timing::Bool                = false,
                      max_step::Union{Integer, Nothing} = nothing,
