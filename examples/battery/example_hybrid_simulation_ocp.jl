@@ -26,23 +26,72 @@ name = "p2d_40_cccv"
 fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, ".json")
 init = JSONFile(fn)
 
-init.object["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"] = Dict(
-    "type" => "function",
-    "functionname" => "computeOCP_ML_negative_electrode",
-    "argumentlist" => ["concentration", "temperature", "cmax"]
+model, state0, parameters = BattMo.setup_model(init, use_groups=false, general_ad=false; info_level=0,  extra_timing=false)
+
+# define Ocp type with ML model
+struct MLModelOcp{M} <: BattMo.AbstractOcp
+    ML_model::M
+    function MLModelOcp(input_ML_model)
+        new{typeof(input_ML_model)}(input_ML_model)
+    end
+end
+
+# update Ocp variable with ML model
+@jutul_secondary(
+    function update_vocp!(Ocp,
+                          tv::MLModelOcp,
+                          model:: SimulationModel{<:Any, BattMo.ActiveMaterialP2D{D, T}, <:Any, <:Any},
+                          Cs,
+                          ix
+                          ) where {D, T}
+
+        cmax = model.system.params[:maximum_concentration]
+        ML_model =  tv.ML_model
+        # Ocp is computed for all cells in the electrode
+        @views theta = Cs ./ cmax
+        @inbounds Ocp .= vec(ML_model(reshape(theta, 1, :)))
+    end
 )
 
-init.object["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"] = Dict(
-    "type" => "function",
-    "functionname" => "computeOCP_ML_positive_electrode",
-    "argumentlist" => ["concentration", "temperature", "cmax"]
-)
+# load ML model from file and define Ocp type with ML model
+BSON.@load "OCP_ML_model_negative_electrode.bson" OCP_ML_model_negative_electrode
+BSON.@load "OCP_ML_model_positive_electrode.bson" OCP_ML_model_positive_electrode
+ocp_NeAM = MLModelOcp(OCP_ML_model_negative_electrode)
+ocp_PeAM = MLModelOcp(OCP_ML_model_positive_electrode)
 
-states, cellSpecifications, reports, extra = run_battery(init; 
-    use_p2d = use_p2d, 
-    info_level = 0, 
-    extra_timing = false
-);
+# replace Ocp with ML model in the model
+replace_variables!(model[:NeAm], Ocp = ocp_NeAM, throw = true)
+replace_variables!(model[:PeAm], Ocp = ocp_PeAM, throw = true)
+
+BattMo.setup_coupling!(init, model, parameters)
+
+BattMo.setup_policy!(model[:Control].system.policy, init, parameters)
+
+minE = init.object["Control"]["lowerCutoffVoltage"]
+@. state0[:Control][:Phi] = minE * 1.5
+
+forces = BattMo.setup_forces(model)
+
+sim = BattMo.Simulator(model; state0=state0, parameters=parameters, copy_state=true)
+
+#Set up config and timesteps
+timesteps = BattMo.setup_timesteps(init; max_step=nothing)
+cfg = BattMo.setup_config(sim, model, :direct, false)
+
+# Perform simulation
+states, reports = BattMo.simulate(state0, sim, timesteps, forces=forces, config=cfg)
+
+extra = Dict(:model => model,
+                :state0 => state0,
+                :parameters => parameters,
+                :init => init,
+                :timesteps => timesteps,
+                :config => cfg,
+                :forces => forces,
+                :simulator => sim)
+
+cellSpecifications = BattMo.computeCellSpecifications(model)
+
 
 t = [state[:Control][:ControllerCV].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
