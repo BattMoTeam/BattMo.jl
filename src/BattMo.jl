@@ -86,6 +86,7 @@ include("models/battery_cross_terms.jl") # Works now
 include("models/convergence.jl")
 include("physics.jl")
 include("mrst_test_utils.jl")
+include("matlab_model_setup.jl")
 include("linsolve.jl")
 
 # Precompilation of solver. Run a small battery simulation to precompile everything.
