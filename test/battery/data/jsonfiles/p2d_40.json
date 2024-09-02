@@ -62,7 +62,8 @@
     "CurrentCollector": {
       "thickness": 1e-05,
       "N": 5,
-      "electronicConductivity": 59600000.0,
+      "electronicConductivity": 59600.0,
+      "comment" : "In this 1d example, we use an effective current collector electronic conductivity",
       "thermalConductivity": 398,
       "specificHeatCapacity": 385,
       "density": 8960
@@ -127,7 +128,8 @@
     "CurrentCollector": {
       "thickness": 1e-05,
       "N": 5,
-      "electronicConductivity": 35500000.0,
+      "electronicConductivity": 35500.0,
+      "comment" : "In this 1d example, we use an effective current collector electronic conductivity",      
       "thermalConductivity": 170,
       "specificHeatCapacity": 875,
       "density": 2700
@@ -146,7 +148,7 @@
   "SOC": 0.99,
   "initT": 298.15,
   "use_thermal": false,
-  "include_current_collectors": false,
+  "include_current_collectors": true,
   "Control": {
     "controlPolicy": "CCDischarge",
     "DRate": 1,
