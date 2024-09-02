@@ -42,7 +42,6 @@ function run_battery(inputparams::AbstractInputParams;
     # Perform simulation
     states, reports = simulate(state0, sim, timesteps, forces=forces, config=cfg; kwarg ...)
 
-
     extra = Dict(:model => model,
                  :state0 => state0,
                  :parameters => parameters,
@@ -52,7 +51,11 @@ function run_battery(inputparams::AbstractInputParams;
                  :forces => forces,
                  :simulator => sim)
     
-    cellSpecifications = computeCellSpecifications(model)
+    if isa(inputparams, MatlabInputParams)
+        cellSpecifications = nothing
+    else
+        cellSpecifications = computeCellSpecifications(model)
+    end
     
     return (states             = states            ,
             cellSpecifications = cellSpecifications, 
@@ -429,7 +432,7 @@ end
 # Setup model
 ########################################################################
 
-function setup_model(inputparams::InputParams;
+function setup_model(inputparams::AbstractInputParams;
                      use_p2d::Bool    = true,
                      use_groups::Bool = false,
                      kwarg...)
@@ -1357,7 +1360,7 @@ function computeElectrodeCapacity(model::MultiModel, name::Symbol)
     cMax = sys[:maximum_concentration]
     vf   = sys[:volume_fraction]
     avf  = sys[:volume_fractions][1]
-    
+
     if name == :NeAm
         thetaMax = sys[:theta100]
         thetaMin = sys[:theta0]

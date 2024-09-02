@@ -10,9 +10,8 @@ function setup_timesteps(inputparams::MatlabInputParams;
         the simulation will use the same timesteps as the pre-run matlab simulation.
     """
 
-    if inputparams.use_state_ref
+    if inputparams.dict["use_state_ref"]
         
-        error("to be fixed")
         steps = size(inputparams.dict["states"], 1)
         alltimesteps = Vector{Float64}(undef, steps)
         time = 0
@@ -259,7 +258,7 @@ end
 
 function include_current_collectors(inputparams::MatlabInputParams)
 
-    model = inputparam["model"]
+    model = inputparams["model"]
 
     if haskey(model, "include_current_collectors")
         if isempty(model["include_current_collectors"])
@@ -301,6 +300,7 @@ function setup_battery_model(inputparams::MatlabInputParams;
         for (k, v) in domain.entities
             data_domain.entities[k] = v
         end
+
         model = SimulationModel(domain, sys, context = DefaultContext(), data_domain = data_domain)
         return model
         
@@ -334,10 +334,13 @@ function setup_battery_model(inputparams::MatlabInputParams;
         Eak = inputparams_itf["activationEnergyOfReaction"]
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
 
-        funcname = inputparams_itf["computeOCPFunc"] # This matlab parameter must have been converted from function handle to string before call
+        funcname = inputparams_itf["openCircuitPotential"]["functionname"] # This matlab parameter must have been converted from function handle to string before call
         func = getfield(BattMo, Symbol(funcname))
         am_params[:ocp_func] = func
 
+        am_params[:theta0]   = inputparams_itf["guestStoichiometry0"]
+        am_params[:theta100] = inputparams_itf["guestStoichiometry100"]
+        
         if use_p2d
             rp = inputparams_sd["particleRadius"]
             N  = Int64(inputparams_sd["N"])
@@ -375,8 +378,10 @@ function setup_battery_model(inputparams::MatlabInputParams;
         
         model_necc =  setup_component(inputparams_necc, sys_necc, bcfaces, general_ad)
         
+        
     end
 
+    
     ##############
     # Setup NeAm #
     ##############
@@ -437,24 +442,22 @@ function setup_battery_model(inputparams::MatlabInputParams;
     # Setup control model #
     #######################
 
-    controlPolicy = inputparams["model"]["Control"]["controlPolicy"]
+    controlPolicy = inputparams["Control"]["controlPolicy"]
     
     if controlPolicy == "CCDischarge"
         
-        minE   = inputparams["model"]["Control"]["lowerCutoffVoltage"]
-        inputI = inputparams["model"]["Control"]["Imax"]
+        minE   = inputparams["Control"]["lowerCutoffVoltage"]
+        inputI = inputparams["Control"]["Imax"]
 
         cFun(time) = currentFun(time, inputI)
         
-        policy = SimpleCVPolicy(cFun, minE)
+        policy = SimpleCVPolicy(current_function = cFun, voltage = minE)
 
     elseif controlPolicy == "CCCV"
 
-        ctrl = inputparams["model"]["Control"]
+        ctrl = inputparams["Control"]
         
-        policy = CyclingCVPolicy(ctrl["ImaxDischarge"]     ,
-                                 ctrl["ImaxCharge"]        ,
-                                 ctrl["lowerCutoffVoltage"],
+        policy = CyclingCVPolicy(ctrl["lowerCutoffVoltage"],
                                  ctrl["upperCutoffVoltage"],
                                  ctrl["dIdtLimit"]         ,
                                  ctrl["dEdtLimit"]         ,
@@ -470,7 +473,7 @@ function setup_battery_model(inputparams::MatlabInputParams;
     sys_control    = CurrentAndVoltageSystem(policy)
     domain_control = CurrentAndVoltageDomain()
     model_control  = SimulationModel(domain_control, sys_control, context = DefaultContext())
-    
+
     if !include_cc
         groups = nothing
         model = MultiModel(
@@ -505,8 +508,10 @@ function setup_battery_model(inputparams::MatlabInputParams;
                            groups = groups, reduction = reduction)
 
     end
+
+    couplings = nothing
     
-    return model
+    return model, couplings
     
 end
 
@@ -622,10 +627,10 @@ function setup_battery_initial_state(inputparams::MatlabInputParams,
 
     if include_cc
         stringNames = Dict(
-            :NeCc  => "NegativeCurrentCollector",
+            :NeCc  => "NegativeElectrode",
             :NeAm => "NegativeElectrode",
             :PeAm => "PositiveElectrode",        
-            :PeCc  => "PositiveCurrentCollector",
+            :PeCc  => "PositiveElectrode",
         )
     else
         stringNames = Dict(

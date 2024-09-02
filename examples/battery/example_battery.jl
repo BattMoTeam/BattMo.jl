@@ -48,15 +48,17 @@ if do_json
 else
     
     fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
-    inputparams = MatlabFile(fn)
-
-    states, reports, extra, exported = run_battery(inputparams; use_p2d = use_p2d, info_level = 0, max_step = nothing);
+    inputparams = readBattMoMatlabInputFile(fn)
+    inputparams.dict["use_state_ref"] = true
+    states, cellSpecifications, reports, extra = run_battery(inputparams; use_p2d = use_p2d, info_level = 10, max_step = nothing);
 
     t = [state[:Control][:ControllerCV].time for state in states]
     E = [state[:Control][:Phi][1] for state in states]
     I = [state[:Control][:Current][1] for state in states]
+
+    nsteps = size(states, 1)
     
-    statesref = extra[:init].object["states"]
+    statesref = extra[:inputparams].dict["states"]
     timeref   = t
     Eref      = [state["Control"]["E"] for state in statesref[1 : nsteps]]
 
