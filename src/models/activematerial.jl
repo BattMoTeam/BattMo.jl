@@ -469,7 +469,43 @@ end
 #     end
 # )
 
+@jutul_secondary(
+    function update_vocp!(Ocp,
+                          tv::Ocp,
+                          model:: SimulationModel{<:Any, ActiveMaterialNoParticleDiffusion{T}, <:Any, <:Any},
+                          C,
+                          ix
+                          ) where T
+        
+        ocp_func = model.system.params[:ocp_func]
+        
+        cmax = model.system.params[:maximum_concentration]
+        refT = 298.15
 
+        if Jutul.haskey(model.system.params, :ocp_funcexp)
+            theta0   = model.system.params[:theta0]
+            theta100 = model.system.params[:theta100]
+        end
+       
+        
+        for cell in ix
+        
+            if Jutul.haskey(model.system.params, :ocp_funcexp)
+
+                @inbounds Ocp[cell] = ocp_func(C[cell], refT, refT, cmax)
+                
+            elseif Jutul.haskey(model.system.params, :ocp_funcdata)
+
+                @inbounds Ocp[cell] = ocp_func(C[cell]/cmax)
+
+            else
+                
+                @inbounds Ocp[cell] = ocp_func(C[cell], refT, cmax)
+               
+            end
+        end
+    end
+)
 
 @jutul_secondary(
     function update_reaction_rate!(ReactionRateConst    ,

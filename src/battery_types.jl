@@ -215,6 +215,7 @@ mutable struct BatteryCPhiPreconditioner <: JutulPreconditioner
     data
 end
 
-function BatteryCPhiPreconditioner(c_precond = AMGPreconditioner(), p_precond = AMGPreconditioner())
+function BatteryCPhiPreconditioner(c_precond = Jutul.AMGPreconditioner(:ruge_stuben), 
+    p_precond = Jutul.AMGPreconditioner(:ruge_stuben))
     return BatteryCPhiPreconditioner(c_precond, p_precond, nothing)
 end
