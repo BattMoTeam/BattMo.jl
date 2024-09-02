@@ -1,5 +1,7 @@
-using Polynomials, BSON
+using Polynomials
 ## Defines OCP and entropy change (dUdT) for graphite using polynomials
+
+abstract type AbstractOcp <: Potential end
 
 con = Constants()
 const FARADAY_CONSTANT = con.F
@@ -27,23 +29,6 @@ const coeff2_graphite = Polynomial([
 	- 385821.1607,
 	+ 165705.8597
 ]);
-
-global OCP_ML_model_negative_electrode, OCP_ML_model_positive_electrode
-BSON.@load "OCP_ML_model_negative_electrode.bson" OCP_ML_model_negative_electrode
-BSON.@load "OCP_ML_model_positive_electrode.bson" OCP_ML_model_positive_electrode
-
-function computeOCP_ML_negative_electrode(c, T, cmax)
-    input = reshape([c / cmax], 1, 1)
-    ocp = OCP_ML_model_negative_electrode(input)[1]
-    return ocp
-end
-
-function computeOCP_ML_positive_electrode(c, T, cmax)
-    input = reshape([c / cmax], 1, 1)
-    ocp = OCP_ML_model_positive_electrode(input)[1]
-    return ocp
-end
-
 
 function computeOCP_Graphite_Torchio(c, T, cmax)
     """Compute OCP for GenericGraphite as function of temperature and concentration"""
