@@ -4,6 +4,10 @@ using StatsBase
 using Infiltrator
 GLMakie.closeall()
 
+##########################
+# setup input parameters #
+##########################
+
 name = "p2d_40_jl_chen2020"
 
 fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, ".json")
@@ -12,14 +16,18 @@ inputparams = readBattMoJsonInputFile(fn)
 fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/3d_demo_geometry.json")
 inputparams_geometry = readBattMoJsonInputFile(fn)
 
-inputparams = mergeInputParams(inputparams, inputparams_geometry)
+inputparams = mergeInputParams(inputparams_geometry, inputparams)
+
+############################
+# setup and run simulation #
+############################
 
 sim, forces, state0, parameters, init, model = BattMo.setup_sim(inputparams;
                                                                 use_groups = false,
                                                                 general_ad = false,
                                                                 max_step   = nothing)
 
-#Set up config and timesteps
+# Set up config and timesteps
 timesteps = BattMo.setup_timesteps(init; max_step = nothing)
 cfg = BattMo.setup_config(sim, model, :direct, false)
 
@@ -29,6 +37,10 @@ state0[:Control][:Phi][1] = 4.2
 state0[:Control][:Current][1] = 0
 
 states, reports = Jutul.simulate(state0, sim, timesteps, forces = forces, config = cfg)
+
+########################
+# plot discharge curve #
+########################
 
 t = [state[:Control][:ControllerCV].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
@@ -63,3 +75,19 @@ p2 = Plots.plot(t, I;
 
 
 Plots.plot(p1, p2, layout = (2, 1))
+
+############################################
+# plot potential on grid at last time step #
+############################################
+
+state = states[end]
+f3D = Figure(size = (600, 650))
+ax3d = Axis3(f3D[1, 1])
+
+components = [:NeCc, :NeAm, :PeAm, :PeCc]
+for component in components
+    g = model[component].domain.representation
+    phi = state[component][:Phi]
+    Jutul.plot_cell_data!(ax3d, g, phi .- mean(phi))
+end
+display(GLMakie.Screen(), f3D)
