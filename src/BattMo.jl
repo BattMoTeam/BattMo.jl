@@ -63,7 +63,7 @@ import Jutul:
     physical_representation,
     get_1d_interpolator
     
-include("model/battmo_types.jl")
+include("models/battmo_types.jl")
 include("models/elyte.jl")
 include("models/current_collector.jl")
 include("models/ocp.jl")

@@ -1,9 +1,18 @@
 # Model for a electrolyte
 
-using Polynomials
-export Electrolyte, DmuDc, ChemCoef
-export p1, p2, p3, diffusivity
-export ElectrolyteModel
+using
+    Polynomials,
+    Tullio
+    
+export
+    Electrolyte,
+    DmuDc,
+    ChemCoef,
+    p1,
+    p2,
+    p3,
+    diffusivity,
+    ElectrolyteModel
 
 const ElectrolyteParameters = JutulStorage
 

@@ -1,3 +1,5 @@
+using Tullio
+
 function Jutul.convergence_criterion(model::ElectroChemicalComponentModel, storage, eq::ConservationLaw{:Mass}, eq_s, r; dt = 1.0, update_report = missing)
     n = number_of_equations_per_entity(model, eq)
     V = storage.state.Volume
