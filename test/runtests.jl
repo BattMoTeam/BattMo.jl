@@ -1,4 +1,5 @@
 using BattMo
 using Test
 
-include("battery/test_battery_boundary.jl")
+include("basic_cases.jl")
+include("matlab_input.jl")
