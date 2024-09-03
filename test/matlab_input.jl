@@ -1,16 +1,16 @@
 using BattMo, MAT, Test
 
-names = ["p2d_40",
-         "p2d_40_no_cc"]
-
+tests = [(name = "p2d_40", errval = 2e-3)
+         (name = "p2d_40_no_cc", errval = 2e-3)
+         (name = "3d_demo_case", errval = 7e-3)]
 
 @testset "matlab tests" begin
 
-    for name in names
+    for test in tests
         
         @test begin
             
-            fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/", name, ".mat")
+            fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/", test[:name], ".mat")
             inputparams = readBattMoMatlabInputFile(fn)
             inputparams.dict["use_state_ref"] = true
             states, cellSpecifications, reports, extra = run_battery(inputparams, max_step = nothing);
@@ -25,7 +25,7 @@ names = ["p2d_40",
             timeref   = t
             Eref      = [state["Control"]["E"] for state in statesref[1 : nsteps]]
 
-            true
+            isapprox(E, Eref, rtol = test[:errval])
 
         end
         
