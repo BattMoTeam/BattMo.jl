@@ -408,7 +408,7 @@ function Jutul.update_values!(old::CcCvControllerCV, new::CcCvControllerCV)
 end
 
 
-function Jutul.perform_step_solve_impl!(report, storage, model::MultiModel{T, :Battery}, config, dt, iteration, rec, relaxation, executor) where {T}
+function Jutul.perform_step_solve_impl!(report, storage, model::MultiModel{:Battery,T}, config, dt, iteration, rec, relaxation, executor) where {T}
 
     invoke(Jutul.perform_step_solve_impl!,
            Tuple{typeof(report),
