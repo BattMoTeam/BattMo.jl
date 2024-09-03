@@ -15,10 +15,10 @@ ENV["JULIA_DEBUG"] = 0;
 use_p2d = true
 
 if use_p2d
-    # name = "p2d_40"
+    name = "p2d_40"
     # name = "p2d_40_no_cc"
     # name = "p2d_40_cccv"
-    name = "p2d_40_jl_chen2020"
+    # name = "p2d_40_jl_chen2020"
     # name = "3d_demo_case"
 else
     name = "p1d_40"
@@ -39,7 +39,11 @@ if do_json
 
     fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
     inputparams = readBattMoJsonInputFile(fn)
-    states, cellSpecifications, reports, extra = run_battery(inputparams; use_p2d = use_p2d, info_level = 0, extra_timing = false);
+    config_kwargs = (info_level = 0,)
+    states, cellSpecifications, reports, extra = run_battery(inputparams;
+                                                             use_p2d = use_p2d,
+                                                             config_kwargs = config_kwargs,
+                                                             extra_timing = false);
 
     t = [state[:Control][:ControllerCV].time for state in states]
     E = [state[:Control][:Phi][1] for state in states]
@@ -47,10 +51,14 @@ if do_json
     
 else
     
-    fn = string(dirname(pathof(BattMo)), "/../test/data/", name, ".mat")
+    fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/", name, ".mat")
     inputparams = readBattMoMatlabInputFile(fn)
     inputparams.dict["use_state_ref"] = true
-    states, cellSpecifications, reports, extra = run_battery(inputparams; use_p2d = use_p2d, info_level = 10, max_step = nothing);
+    config_kwargs = (info_level = 10,)
+    states, cellSpecifications, reports, extra = run_battery(inputparams;
+                                                             use_p2d = use_p2d,
+                                                             config_kwargs = config_kwargs,
+                                                             max_step = nothing);
 
     t = [state[:Control][:ControllerCV].time for state in states]
     E = [state[:Control][:Phi][1] for state in states]
@@ -61,10 +69,11 @@ else
     statesref = extra[:inputparams].dict["states"]
     timeref   = t
     Eref      = [state["Control"]["E"] for state in statesref[1 : nsteps]]
-
+    Iref      = [state["Control"]["I"] for state in statesref[1 : nsteps]]
+    
 end
 
-p1 = Plots.plot(t, E;
+p1 = plot(t, E;
                 label     = "",
                 size      = (1000, 800),
                 title     = "Voltage",
@@ -77,8 +86,15 @@ p1 = Plots.plot(t, E;
                 xtickfont = font(pointsize = 15),
                 ytickfont = font(pointsize = 15))
 
+if !do_json
+    plot!(p1, t, Eref;
+          linewidth = 2,
+          markershape = :cross,
+          markercolor = :black,
+          markersize = 1)
+end
 
-p2 = Plots.plot(t, I;
+p2 = plot(t, I;
                 label     = "",
                 size      = (1000, 800),
                 title     = "Current",
@@ -91,6 +107,13 @@ p2 = Plots.plot(t, I;
                 xtickfont = font(pointsize = 15),
                 ytickfont = font(pointsize = 15))
 
+if !do_json
+    plot!(p2, t, Iref;
+          linewidth = 2,
+          markershape = :cross,
+          markercolor = :black,
+          markersize = 1)
+end
 
-Plots.plot(p1, p2, layout = (2, 1))
+plot(p1, p2, layout = (2, 1))
 
