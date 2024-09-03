@@ -67,13 +67,9 @@ import Jutul:
 include("io_types.jl")
 include("input_types.jl")
 
-include("grid_conversion.jl")
-include("grid_utils.jl")
-include("remove_cells.jl") #Trenger StatsBase
 
 include("physical_constants.jl")
 include("battery_types.jl")
-include("tensor_tools.jl")
 include("battery_utils.jl")
 include("models/elyte.jl")
 include("models/current_collector.jl")
@@ -89,6 +85,12 @@ include("physics.jl")
 include("model_setup.jl")
 include("matlab_model_setup.jl")
 include("linsolve.jl")
+
+include("grid_tools/tensor_tools.jl")
+include("grid_tools/remove_cells.jl") #Trenger StatsBase
+include("grid_tools/grid_conversion.jl")
+include("grid_tools/grid_utils.jl")
+
 
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 # @compile_workload begin
