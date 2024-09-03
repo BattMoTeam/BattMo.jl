@@ -5,10 +5,9 @@
 
 function setup_policy!(policy::SimpleCVPolicy, inputparams::MatlabInputParams, parameters)
 
-    Imax = only(parameters[:Control][:ImaxDischarge])
-
+    Imax = Float64(inputparams["model"]["Control"]["Imax"])
     tup = Float64(inputparams["model"]["Control"]["rampupTime"])
-    
+       
     cFun(time) = currentFun(time, Imax, tup)
 
     policy.current_function = cFun
@@ -19,6 +18,7 @@ end
  
 function setup_policy!(policy::CyclingCVPolicy, inputparams::MatlabInputParams, parameters)
 
+    error("not updated, use inputparams to get values")
     policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
     policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])
 
@@ -448,8 +448,9 @@ function setup_battery_model(inputparams::MatlabInputParams;
         
         minE   = inputparams["Control"]["lowerCutoffVoltage"]
         inputI = inputparams["Control"]["Imax"]
-
-        cFun(time) = currentFun(time, inputI)
+        dtup   = inputparams["Control"]["rampupTime"]
+        
+        cFun(time) = currentFun(time, inputI, dtup)
         
         policy = SimpleCVPolicy(current_function = cFun, voltage = minE)
 
@@ -627,10 +628,10 @@ function setup_battery_initial_state(inputparams::MatlabInputParams,
 
     if include_cc
         stringNames = Dict(
-            :NeCc  => "NegativeElectrode",
+            :NeCc => "NegativeElectrode",
             :NeAm => "NegativeElectrode",
             :PeAm => "PositiveElectrode",        
-            :PeCc  => "PositiveElectrode",
+            :PeCc => "PositiveElectrode",
         )
     else
         stringNames = Dict(
@@ -686,7 +687,7 @@ function setup_battery_initial_state(inputparams::MatlabInputParams,
 
     function initialize_control!(initState)
 
-        init = Dict(:Phi => state0["Control"]["E"], :Current => 0*state0["Control"]["I"])
+        init = Dict(:Phi => state0["Control"]["E"], :Current => state0["Control"]["I"])
         
         initState[:Control] = init
         
