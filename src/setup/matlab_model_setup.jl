@@ -1,3 +1,30 @@
+
+################################################
+# control policy setup (Matlab input specific) #
+################################################
+
+function setup_policy!(policy::SimpleCVPolicy, inputparams::MatlabInputParams, parameters)
+
+    Imax = only(parameters[:Control][:ImaxDischarge])
+
+    tup = Float64(inputparams["model"]["Control"]["rampupTime"])
+    
+    cFun(time) = currentFun(time, Imax, tup)
+
+    policy.current_function = cFun
+    policy.Imax = Imax
+    
+end
+
+ 
+function setup_policy!(policy::CyclingCVPolicy, inputparams::MatlabInputParams, parameters)
+
+    policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
+    policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])
+
+end
+
+
 ######################
 # Setup timestepping #
 ######################
@@ -40,44 +67,17 @@ function setup_timesteps(inputparams::MatlabInputParams;
     return timesteps
 end
 
-####################
-# Setup simulation #
-####################
 
-function setup_sim(inputparams::MatlabInputParams;
-                   use_p2d::Bool    = true,
-                   use_groups::Bool = false,
-                   general_ad::Bool = false,
-                   kwarg ... )
 
-    model, state0, parameters = setup_model(inputparams, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
-    setup_coupling!(inputparams, model)
-
-    forces_pecc = nothing
-    currents  = nothing
-
-    forces = Dict(
-        :NeCc => nothing,
-        :NeAm => nothing,
-        :Elyte => nothing,
-        :PeAm => nothing,
-        :PeCc => forces_pecc,
-        :Control => currents
-    )
-
-    sim = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
-
-    return sim, forces, state0, parameters, inputparams, model
-
-end
 
 ##################
 # Setup coupling #
 ##################
 
 function setup_coupling!(inputparams::MatlabInputParams,
-                         model::MultiModel
-                         )
+                         model::MultiModel,
+                         parameters::Dict{Symbol,<:Any},
+                         couplings)
     
     exported_all = inputparams.dict
 

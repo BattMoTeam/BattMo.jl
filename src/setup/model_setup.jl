@@ -51,7 +51,7 @@ end
 # Setup simulation #
 ####################
 
-function setup_simulation(inputparams::InputParams;
+function setup_simulation(inputparams::AbstractInputParams;
                           use_p2d::Bool                     = true,
                           extra_timing::Bool                = false,
                           max_step::Union{Integer, Nothing} = nothing,
@@ -66,10 +66,6 @@ function setup_simulation(inputparams::InputParams;
 
     setup_policy!(model[:Control].system.policy, inputparams, parameters)
     
-    minE = inputparams["Control"]["lowerCutoffVoltage"]
-    @. state0[:Control][:Phi] = minE * 1.5
-
-
     forces = setup_forces(model)
 
     simulator = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
@@ -1084,6 +1080,9 @@ function setup_battery_initial_state(inputparams::InputParams,
     initState[:Control] = init
 
     initState = setup_state(model, initState)
+
+    minE = inputparams["Control"]["lowerCutoffVoltage"]
+    @. initState[:Control][:Phi] = minE * 1.5
     
     return initState
     
