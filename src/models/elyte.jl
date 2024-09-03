@@ -239,7 +239,7 @@ end
     """
     sys = model.system
     t = transference(sys)
-    F = FARADAY_CONST
+    F = FARADAY_CONSTANT
     for i in ix
         @inbounds chemCoef[i] = 1.0/F*(1.0 - t)*Conductivity[i]*2.0*DmuDc[i]
     end
@@ -263,7 +263,7 @@ function Jutul.face_flux!(q::T, c, other, face, face_sign, eq::ConservationLaw{:
 
     t = transference(model.system)
     z = 1.0
-    F = FARADAY_CONST
+    F = FARADAY_CONSTANT
     
     @inbounds trans = state.ECTransmissibilities[face]
 

@@ -63,6 +63,12 @@ import Jutul:
     physical_representation,
     get_1d_interpolator
     
+include("utils/physical_constants.jl")
+
+include("input/io_types.jl")
+include("input/input_types.jl")
+include("input/function_input_tools.jl")
+
 include("models/battmo_types.jl")
 include("models/elyte.jl")
 include("models/current_collector.jl")
@@ -76,11 +82,6 @@ include("models/battery_utils.jl")
 include("setup/model_setup.jl")
 include("setup/matlab_model_setup.jl")
 
-include("input/io_types.jl")
-include("input/input_types.jl")
-include("input/function_input_tools.jl")
-
-include("utils/physical_constants.jl")
 include("utils/battery_cell_specifications.jl")
 
 include("solver/linsolve.jl")

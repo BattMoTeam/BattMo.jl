@@ -1,3 +1,4 @@
+
 Jutul.symmetry(::TPFAInterfaceFluxCT) = Jutul.CTSkewSymmetry()
 
 Jutul.cross_term_entities(ct::TPFAInterfaceFluxCT, eq::Jutul.JutulEquation, model) = ct.target_cells
@@ -66,8 +67,8 @@ end
 function butler_volmer_equation(j0, alpha, n, eta, T)
     
     res = j0 * (
-        exp(  alpha * n * FARADAY_CONST * eta / (GAS_CONSTANT * T ) ) - 
-        exp( -(1-alpha) * n * FARADAY_CONST * eta / ( GAS_CONSTANT * T ) ) 
+        exp(  alpha * n * FARADAY_CONSTANT * eta / (GAS_CONSTANT * T ) ) - 
+        exp( -(1-alpha) * n * FARADAY_CONSTANT * eta / ( GAS_CONSTANT * T ) ) 
     )
     
     return res
@@ -91,10 +92,10 @@ function reaction_rate(phi_a         ,
 
     eta = (phi_a - phi_e - ocp)
     th  = 1e-3*cmax
-    j0  = R0*regularized_sqrt(c_e*(cmax - c_a)*c_a, th)*n*FARADAY_CONST
+    j0  = R0*regularized_sqrt(c_e*(cmax - c_a)*c_a, th)*n*FARADAY_CONSTANT
     R   = vsa*butler_volmer_equation(j0, 0.5, n, eta, T)
 
-    return R/(n*FARADAY_CONST)
+    return R/(n*FARADAY_CONSTANT)
     
 end
 
@@ -158,7 +159,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
         v = 1.0*vols*R
     else
         @assert cs == :Charge
-        v = 1.0*vols*R*n*FARADAY_CONST
+        v = 1.0*vols*R*n*FARADAY_CONSTANT
     end
     out[] = -v
 end
@@ -226,7 +227,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
         
         cs = conserved_symbol(eq)
         @assert cs == :Charge
-        v = 1.0*vols*R*n*FARADAY_CONST
+        v = 1.0*vols*R*n*FARADAY_CONSTANT
 
         out[] = v
         
@@ -264,7 +265,7 @@ function source_electric_material(vols,
                       electrolyte
                       )
     
-    eS = 1.0 * vols * R * n * FARADAY_CONST
+    eS = 1.0 * vols * R * n * FARADAY_CONSTANT
     eM = 1.0 * vols * R 
 
     return (eS, eM)

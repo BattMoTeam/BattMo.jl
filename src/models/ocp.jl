@@ -1,6 +1,8 @@
 using Polynomials
 ## Defines OCP and entropy change (dUdT) for graphite using polynomials
 
+con = Constants()
+const FARADAY_CONSTANT = con.F
 
 const coeff1_graphite = Polynomial([
 	+ 0.005269056,
@@ -54,7 +56,7 @@ function compute_reaction_rate_constant_graphite(c, T)
     refT = 298.15
     k0   = 5.0310e-11
     Eak  = 5000
-    val  = k0.*exp(-Eak./FARADAY_CONST .*(1.0./T - 1/refT));
+    val  = k0.*exp(-Eak./FARADAY_CONSTANT .*(1.0./T - 1/refT));
     
     return val
     
@@ -316,7 +318,7 @@ function compute_reaction_rate_constant(c, T, k0, Eak)
     
     refT = 298.15
 
-    val = k0.*exp(-Eak./FARADAY_CONST .*(1.0./T - 1/refT));
+    val = k0.*exp(-Eak./FARADAY_CONSTANT .*(1.0./T - 1/refT));
     
     return val
     

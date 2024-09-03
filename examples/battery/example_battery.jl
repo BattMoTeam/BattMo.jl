@@ -26,7 +26,7 @@ else
 end
 
 function load_reference_solution(name)
-    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
+    fn = string(dirname(pathof(BattMo)), "/../test/data/", name, ".mat")
     refdict = MAT.matread(fn)
     return refdict
 end
@@ -37,7 +37,7 @@ do_json = true
 
 if do_json
 
-    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, ".json")
+    fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
     inputparams = readBattMoJsonInputFile(fn)
     states, cellSpecifications, reports, extra = run_battery(inputparams; use_p2d = use_p2d, info_level = 0, extra_timing = false);
 
@@ -47,7 +47,7 @@ if do_json
     
 else
     
-    fn = string(dirname(pathof(BattMo)), "/../test/battery/data/", name, ".mat")
+    fn = string(dirname(pathof(BattMo)), "/../test/data/", name, ".mat")
     inputparams = readBattMoMatlabInputFile(fn)
     inputparams.dict["use_state_ref"] = true
     states, cellSpecifications, reports, extra = run_battery(inputparams; use_p2d = use_p2d, info_level = 10, max_step = nothing);
