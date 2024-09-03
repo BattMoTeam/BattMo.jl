@@ -91,7 +91,6 @@ include("grid_tools/remove_cells.jl") #Trenger StatsBase
 include("grid_tools/grid_conversion.jl")
 include("grid_tools/grid_utils.jl")
 
-
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 # @compile_workload begin
 #    for use_general_ad in [false, true]
