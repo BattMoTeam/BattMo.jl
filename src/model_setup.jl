@@ -20,37 +20,27 @@ export
 ###############
 
 function run_battery(inputparams::AbstractInputParams;   
-                     use_p2d::Bool                     = true,
-                     extra_timing::Bool                = false,
-                     max_step::Union{Integer, Nothing} = nothing,
-                     linear_solver::Symbol             = :direct,
-                     general_ad::Bool                  = false,
-                     use_groups::Bool                  = false,
-                     kwarg...)
+                     kwargs...)
     """
-        Run battery wrapper method. Can use inputs from either Matlab or Json files and performs
-        simulation using a simple discharge CV policy
+        Run battery wrapper method. Can use inputs from either Matlab or Json input
     """
     
     #Setup simulation
-    sim, forces, state0, parameters, inputparams, model = setup_sim(inputparams, use_p2d=use_p2d, use_groups=use_groups, general_ad=general_ad)
+    output = setup_simulation(inputparams; kwargs...)
 
-    #Set up config and timesteps
-    timesteps = setup_timesteps(inputparams; max_step = max_step)
-    cfg = setup_config(sim, model, linear_solver, extra_timing; kwarg...)
-
-    # Perform simulation
-    states, reports = simulate(state0, sim, timesteps, forces=forces, config=cfg; kwarg ...)
-
-    extra = Dict(:model => model,
-                 :state0 => state0,
-                 :parameters => parameters,
-                 :inputparams => inputparams,
-                 :timesteps => timesteps,
-                 :config => cfg,
-                 :forces => forces,
-                 :simulator => sim)
+    simulator = output[:simulator]
+    model     = output[:model]
+    state0    = output[:state0]
+    forces    = output[:forces]
+    timesteps = output[:timesteps]    
+    cfg       = output[:cfg]
     
+    # Perform simulation
+    states, reports = simulate(state0, simulator, timesteps; forces = forces, config=cfg)
+
+    extra = output
+    extra[:timesteps] = timesteps
+
     if isa(inputparams, MatlabInputParams)
         cellSpecifications = nothing
     else
@@ -74,14 +64,14 @@ function setup_config(sim::Jutul.JutulSimulator,
                       model::MultiModel,
                       linear_solver::Symbol,
                       extra_timing::Bool;
-                      kwarg...)
+                      kwargs...)
     """
         Sets up the config object used during simulation. In this current version this
         setup is the same for json and mat files. The specific setup values should
         probably be given as inputs in future versions of BattMo.jl
     """
 
-    cfg = simulator_config(sim; kwarg...)
+    cfg = simulator_config(sim; kwargs...)
     
     cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
     cfg[:debug_level]                = 0
@@ -131,7 +121,7 @@ end
 ######################
 
 function setup_timesteps(inputparams::InputParams;
-                         kwarg ...)
+                         kwargs ...)
     """
         Method setting up the timesteps from a json file object. 
     """
@@ -206,12 +196,16 @@ end
 # Setup simulation #
 ####################
 
-function setup_sim(inputparams::InputParams;
-                   use_groups::Bool = false,
-                   general_ad::Bool = false,
-                   kwarg ... )
+function setup_simulation(inputparams::InputParams;
+                          use_p2d::Bool                     = true,
+                          extra_timing::Bool                = false,
+                          max_step::Union{Integer, Nothing} = nothing,
+                          linear_solver::Symbol             = :direct,
+                          general_ad::Bool                  = false,
+                          use_groups::Bool                  = false,
+                          kwargs ... )
 
-    model, state0, parameters, couplings = setup_model(inputparams, use_groups=use_groups, general_ad=general_ad; kwarg...)
+    model, state0, parameters, couplings = setup_model(inputparams, use_groups=use_groups, general_ad=general_ad; kwargs...)
 
     setup_coupling!(inputparams, model, parameters, couplings)
 
@@ -223,9 +217,26 @@ function setup_sim(inputparams::InputParams;
 
     forces = setup_forces(model)
 
-    sim = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
+    simulator = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
 
-    return sim, forces, state0, parameters, inputparams, model
+    timesteps = setup_timesteps(inputparams; max_step = max_step)
+    
+    cfg = setup_config(simulator,
+                       model,
+                       linear_solver,
+                       extra_timing;
+                       kwargs...)
+    
+    output = Dict(:simulator   => simulator,
+                  :forces      => forces,
+                  :state0      => state0,
+                  :parameters  => parameters,
+                  :inputparams => inputparams,
+                  :model       => model,
+                  :timesteps   => timesteps,
+                  :cfg         => cfg)
+    
+    return output
 
 end
 
@@ -435,12 +446,12 @@ end
 function setup_model(inputparams::AbstractInputParams;
                      use_p2d::Bool    = true,
                      use_groups::Bool = false,
-                     kwarg...)
+                     kwargs...)
 
     model, couplings = setup_battery_model(inputparams,
                                            use_groups = use_groups,
                                            use_p2d    = use_p2d;
-                                           kwarg... )
+                                           kwargs... )
     parameters = setup_battery_parameters(inputparams, model)
     initialState  = setup_battery_initial_state(inputparams, model)
 
@@ -562,7 +573,7 @@ end
 function setup_battery_model(inputparams::InputParams; 
                              use_groups::Bool = false, 
                              general_ad::Bool = false,
-                             kwarg...)
+                             kwargs...)
 
     include_cc = include_current_collectors(inputparams)
     
