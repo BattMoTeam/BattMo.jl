@@ -1,6 +1,7 @@
 using BattMo, MAT, Test
 
-names = ["p2d_40"]
+names = ["p2d_40",
+         "p2d_40_no_cc"]
 
 
 @testset "matlab tests" begin
@@ -12,7 +13,7 @@ names = ["p2d_40"]
             fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/", name, ".mat")
             inputparams = readBattMoMatlabInputFile(fn)
             inputparams.dict["use_state_ref"] = true
-            states, cellSpecifications, reports, extra = run_battery(inputparams; use_p2d = use_p2d, info_level = 10, max_step = nothing);
+            states, cellSpecifications, reports, extra = run_battery(inputparams, max_step = nothing);
 
             t = [state[:Control][:ControllerCV].time for state in states]
             E = [state[:Control][:Phi][1] for state in states]
