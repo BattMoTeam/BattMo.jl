@@ -81,6 +81,7 @@ include("models/ocp.jl")
 include("models/activematerial.jl")
 
 include("function_input_tools.jl")
+include("battery_cell_specifications.jl")
 include("models/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/convergence.jl")

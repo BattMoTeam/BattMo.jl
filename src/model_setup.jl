@@ -4,14 +4,6 @@
 
 export
     run_battery,
-    computeCellCapacity,
-    computeCellMaximumEnergy,
-    computeCellEnergy,
-    computeCellMass,
-    computeCellSpecifications,
-    computeEnergyEfficiency,
-    computeDischargeEnergy,
-    inputRefToStates,
     Constants
 
 
@@ -56,9 +48,60 @@ function run_battery(inputparams::AbstractInputParams;
 end
 
 
-################
-# Setup config #
-################
+####################
+# Setup simulation #
+####################
+
+function setup_simulation(inputparams::InputParams;
+                          use_p2d::Bool                     = true,
+                          extra_timing::Bool                = false,
+                          max_step::Union{Integer, Nothing} = nothing,
+                          linear_solver::Symbol             = :direct,
+                          general_ad::Bool                  = false,
+                          use_groups::Bool                  = false,
+                          kwargs ... )
+
+    model, state0, parameters, couplings = setup_model(inputparams, use_groups=use_groups, general_ad=general_ad; kwargs...)
+
+    setup_coupling!(inputparams, model, parameters, couplings)
+
+    setup_policy!(model[:Control].system.policy, inputparams, parameters)
+    
+    minE = inputparams["Control"]["lowerCutoffVoltage"]
+    @. state0[:Control][:Phi] = minE * 1.5
+
+
+    forces = setup_forces(model)
+
+    simulator = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
+
+    timesteps = setup_timesteps(inputparams; max_step = max_step)
+    
+    cfg = setup_config(simulator,
+                       model,
+                       linear_solver,
+                       extra_timing;
+                       kwargs...)
+    
+    output = Dict(:simulator   => simulator,
+                  :forces      => forces,
+                  :state0      => state0,
+                  :parameters  => parameters,
+                  :inputparams => inputparams,
+                  :model       => model,
+                  :timesteps   => timesteps,
+                  :cfg         => cfg)
+    
+    return output
+
+end
+
+
+
+
+######################################
+# Setup solver configuration options #
+######################################
 
 function setup_config(sim::Jutul.JutulSimulator,
                       model::MultiModel,
@@ -191,54 +234,6 @@ function setup_timesteps(inputparams::InputParams;
     return timesteps
 end
 
-
-####################
-# Setup simulation #
-####################
-
-function setup_simulation(inputparams::InputParams;
-                          use_p2d::Bool                     = true,
-                          extra_timing::Bool                = false,
-                          max_step::Union{Integer, Nothing} = nothing,
-                          linear_solver::Symbol             = :direct,
-                          general_ad::Bool                  = false,
-                          use_groups::Bool                  = false,
-                          kwargs ... )
-
-    model, state0, parameters, couplings = setup_model(inputparams, use_groups=use_groups, general_ad=general_ad; kwargs...)
-
-    setup_coupling!(inputparams, model, parameters, couplings)
-
-    setup_policy!(model[:Control].system.policy, inputparams, parameters)
-    
-    minE = inputparams["Control"]["lowerCutoffVoltage"]
-    @. state0[:Control][:Phi] = minE * 1.5
-
-
-    forces = setup_forces(model)
-
-    simulator = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
-
-    timesteps = setup_timesteps(inputparams; max_step = max_step)
-    
-    cfg = setup_config(simulator,
-                       model,
-                       linear_solver,
-                       extra_timing;
-                       kwargs...)
-    
-    output = Dict(:simulator   => simulator,
-                  :forces      => forces,
-                  :state0      => state0,
-                  :parameters  => parameters,
-                  :inputparams => inputparams,
-                  :model       => model,
-                  :timesteps   => timesteps,
-                  :cfg         => cfg)
-    
-    return output
-
-end
 
 
 ##################
@@ -439,9 +434,9 @@ function setup_coupling!(inputparams::InputParams,
 end
 
 
-########################################################################
-# Setup model
-########################################################################
+###############
+# Setup model #
+###############
 
 function setup_model(inputparams::AbstractInputParams;
                      use_p2d::Bool    = true,
@@ -458,38 +453,6 @@ function setup_model(inputparams::AbstractInputParams;
     return model, initialState, parameters, couplings
 
 end
-
-
-function include_current_collectors(inputparams::InputParams)
-
-    jsondict = inputparams.dict
-
-    if haskey(jsondict, "include_current_collectors") && !jsondict["include_current_collectors"]
-        include_cc = false
-    else
-        include_cc = true
-    end
-    
-    return include_cc
-    
-end
-
-
-function include_current_collectors(model)
-    
-    if haskey(model.models, :NeCc)
-        include_cc = true
-        @assert haskey(model.models, :PeCc)
-    else
-        include_cc = false
-        @assert !haskey(model.models, :PeCc)
-    end
-
-    return include_cc
-    
-end
-
-
 
 #######################
 # Setup battery model #
@@ -1353,217 +1316,36 @@ function setup_geomparams(inputparams::InputParams)
     
 end
 
+#############
+# Utilities #
+#############
 
+function include_current_collectors(inputparams::InputParams)
 
+    jsondict = inputparams.dict
 
-##################################################################################
-# Compute cell capacity 
-##################################################################################
-
-function computeElectrodeCapacity(model::MultiModel, name::Symbol)
-
-    con = Constants()
-    
-    ammodel = model[name]
-    sys = ammodel.system            
-    F    = con.F
-    n    = sys[:n_charge_carriers]
-    cMax = sys[:maximum_concentration]
-    vf   = sys[:volume_fraction]
-    avf  = sys[:volume_fractions][1]
-
-    if name == :NeAm
-        thetaMax = sys[:theta100]
-        thetaMin = sys[:theta0]
-    elseif name == :PeAm
-        thetaMax = sys[:theta0]
-        thetaMin = sys[:theta100]
+    if haskey(jsondict, "include_current_collectors") && !jsondict["include_current_collectors"]
+        include_cc = false
     else
-        error("name not recognized")
-    end
-
-    vols = ammodel.domain.representation[:volumes]
-    vol = sum(avf*vf*vols)
-    
-    cap_usable = (thetaMax - thetaMin)*cMax*vol*n*F
-    
-    return cap_usable
-    
-end
-
-
-function computeCellCapacity(model::MultiModel)
-
-    caps = [computeElectrodeCapacity(model, name) for name in (:NeAm, :PeAm)]
-
-    return minimum(caps)
-    
-end
-
-function computeCellEnergy(states)
-
-    time = [state[:Control][:ControllerCV].time for state in states]
-    E    = [state[:Control][:Phi][1] for state in states]
-    I    = [state[:Control][:Current][1] for state in states]
-
-    dt   = diff(time)
-    
-    Emid = (E[2 : end] + E[1 : end - 1])./2
-    Imid = (I[2 : end] + I[1 : end - 1])./2
-
-    energy = sum(Emid.*Imid.*dt)
-
-    return energy
-    
-end
-
-
-function computeCellMaximumEnergy(model::MultiModel; T = 298.15, capacities = missing)
-
-    eldes = (:NeAm, :PeAm)
-    
-    if ismissing(capacities)
-        capacities = NamedTuple([(name, computeElectrodeCapacity(model, name)) for name in eldes])
+        include_cc = true
     end
     
-    capacity = min(capacities.NeAm, capacities.PeAm)
-    
-    N = 1000
-
-    energies = Dict()
-    
-    for elde in eldes
-
-        cmax    = model[elde].system[:maximum_concentration]
-        c0      = cmax*model[elde].system[:theta100]
-        cT      = cmax*model[elde].system[:theta0]
-        refT    = 298.15
-        ocpfunc = model[elde].system[:ocp_func]
-
-        smax = capacity/capacities[elde]
-        s = smax*collect(range(0, 1, N + 1))
-        
-        c = (1 .- s).*c0 + s.*cT;
-
-        f = Vector{Float64}(undef, N + 1)
-
-        for i = 1 : N + 1
-            if Jutul.haskey(model[elde].system.params, :ocp_funcexp)
-                f[i] = ocpfunc(c[i], T, refT, cmax)
-            elseif Jutul.haskey(model[elde].system.params, :ocp_funcdata)
-                f[i] = ocpfunc(c[i]/cmax)
-            else
-                f[i] = ocpfunc(c[i], T, cmax)
-            end
-
-            
-        end
-
-        energies[elde] = (capacities[elde]*smax/N)*sum(f)
-        
-    end
-
-    energy = energies[:PeAm] - energies[:NeAm]
-
-    return energy
+    return include_cc
     
 end
 
-function computeCellMass(model::MultiModel)
-
-    eldes = (:NeAm, :PeAm)
-
-    mass = 0.0
+function include_current_collectors(model)
     
-    # Coating mass
-    
-    for elde in eldes
-        effrho = model[elde].system[:effective_density]
-        vols = model[elde].domain.representation[:volumes]
-        mass = mass + sum(effrho.*vols)
+    if haskey(model.models, :NeCc)
+        include_cc = true
+        @assert haskey(model.models, :PeCc)
+    else
+        include_cc = false
+        @assert !haskey(model.models, :PeCc)
     end
-    
-    # Electrolyte mass
-    
-    rho  = model[:Elyte].system[:electrolyte_density]
-    vf   = model[:Elyte].domain.representation[:volumeFraction]
-    vols = model[:Elyte].domain.representation[:volumes]
-    
-    mass = mass + sum(vf.*rho.*vols)
 
-    # Separator mass
+    return include_cc
     
-    rho  = model[:Elyte].system[:separator_density]
-    vf   = model[:Elyte].domain.representation[:separator_volume_fraction]
-    vols = model[:Elyte].domain.representation[:volumes]
-    
-    mass = mass + sum(vf.*rho.*vols)
-    
-    # Current Collector masses
-    
-    ccs = (:NeCc, :PeCc)
-
-    for cc in ccs
-        if haskey(model.models, cc)
-            rho  = model[cc].system[:density]
-            vols = model[cc].domain.representation[:volumes]        
-            mass = mass + sum(rho.*vols)
-        end
-    end
-    
-    return mass
-    
-end
-
-
-function computeCellSpecifications(inputparams::InputParams)
-    
-    model = setup_battery_model(inputparams)
-    return computeCellSpecifications(model)
-    
-end
-
-function computeCellSpecifications(model::MultiModel; T = 298.15)
-
-    capacities = (NeAm = computeElectrodeCapacity(model, :NeAm), PeAm =computeElectrodeCapacity(model, :PeAm))
-
-    energy = computeCellMaximumEnergy(model; T = T, capacities = capacities)
-
-    mass = computeCellMass(model)
-    
-    specs = Dict()
-
-    specs["NegativeElectrodeCapacity"] = capacities.NeAm
-    specs["PositiveElectrodeCapacity"] = capacities.PeAm
-    specs["MaximumEnergy"]             = energy
-    specs["Mass"]                      = mass
-    
-    return specs
-    
-end
-
-
-###############
-# Other utils #
-###############
-
-struct Constants
-    F
-    R
-    hour
-    function Constants()
-        new(96485.3329,
-            8.31446261815324,
-            3600)
-    end
-end
-
-struct SourceAtCell
-    cell
-    src
-    function SourceAtCell(cell, src)
-        new(cell, src)
-    end
 end
 
 function rampupTimesteps(time::Real, dt::Real, n::Integer=8)
@@ -1591,6 +1373,25 @@ function rampupTimesteps(time::Real, dt::Real, n::Integer=8)
     return dT
 end
 
+struct Constants
+    F
+    R
+    hour
+    function Constants()
+        new(96485.3329,
+            8.31446261815324,
+            3600)
+    end
+end
+
+struct SourceAtCell
+    cell
+    src
+    function SourceAtCell(cell, src)
+        new(cell, src)
+    end
+end
+
 function convert_to_int_vector(x::Float64)
     vec = Int64.(Vector{Float64}([x]))
     return vec
@@ -1599,265 +1400,6 @@ end
 function convert_to_int_vector(x::Matrix{Float64})
     vec = Int64.(Vector{Float64}(x[:, 1]))
     return vec
-end
-
-function computeDischargeEnergy(inputparams::InputParams)
-    # setup a schedule with just discharge half cycle and very fine refinement
-
-    jsondict = inputparams.dict
-
-    ctrldict = jsondict["Control"]
-    
-    controlPolicy = ctrldict["controlPolicy"]
-
-    timedict = jsondict["TimeStepping"]
-
-    if controlPolicy == "CCCV"
-        ctrldict["controlPolicy"]  = "CCDischarge"
-
-        ctrldict["initialControl"] = "discharging"
-        jsondict["SOC"] = 1.0
-
-        rate = ctrldict["DRate"]
-        timedict["timeStepDuration"] = 20 / rate
-
-    elseif controlPolicy == "CCDischarge"
-        ctrldict["initialControl"] = "discharging"
-        jsondict["SOC"] = 1.0
-        rate = ctrldict["DRate"]
-        timedict["timeStepDuration"] = 20 / rate
-
-    else
-
-        error("controlPolicy not recognized.")
-        
-    end
-
-    inputparams2 = InputParams(jsondict)
-
-    (; states) = run_battery(inputparams2; info_level=0)
-
-    return (computeCellEnergy(states), states, inputparams2)
-    # return (missing, missing, inputparams2)
-    
-end
-
-
-function computeEnergyEfficiency(inputparams::InputParams)
-
-    # setup a schedule with just one cycle and very fine refinement
-
-    jsondict = inputparams.dict
-
-    ctrldict = jsondict["Control"]
-    
-    controlPolicy = ctrldict["controlPolicy"]
-
-    timedict = jsondict["TimeStepping"]
-    
-    if controlPolicy == "CCDischarge"
-
-        ctrldict["controlPolicy"]  = "CCCV"
-        ctrldict["CRate"]          = 1.0
-        ctrldict["DRate"]          = 1.0
-        ctrldict["dEdtLimit"]      = 1e-2
-        ctrldict["dIdtLimit"]      = 1e-4
-        ctrldict["numberOfCycles"] = 1
-        ctrldict["initialControl"] = "charging"
-        rate = ctrldict["DRate"]
-        timedict["timeStepDuration"] = 20 / rate
-        
-        jsondict["SOC"] = 0.0
-
-    elseif controlPolicy == "CCCV"
-
-        ctrldict["initialControl"]    = "charging"
-        ctrldict["dIdtLimit"]         = 1e-5
-        ctrldict["dEdtLimit"]         = 1e-5
-        ctrldict["numberOfCycles"]    = 1
-
-        jsondict["SOC"] = 0.0
-
-        rate = max(ctrldict["DRate"], ctrldict["CRate"])
-        dt = 20/rate
-        
-        jsondict["TimeStepping"]["timeStepDuration"] = dt
-
-        jsondict["SOC"] = 0.0
-        
-    else
-
-        error("controlPolicy not recognized.")
-        
-    end
-
-    inputparams2 = InputParams(jsondict)
-
-    (; states) = run_battery(inputparams2; info_level=0)
-
-    return (computeEnergyEfficiency(states), states, inputparams2)
-    
-end
-
-function computeEnergyEfficiency(states)
-    
-    time = [state[:Control][:ControllerCV].time for state in states]
-    E    = [state[:Control][:Phi][1] for state in states]
-    I    = [state[:Control][:Current][1] for state in states]
-
-    Iref = copy(I)
-
-    dt   = diff(time)
-    
-    Emid = (E[2 : end] + E[1 : end - 1])./2
-
-    # discharge energy
-
-    I[I .< 0] .= 0
-    Imid = (I[2 : end] .+ I[1 : end - 1])./2
-    
-    energy_discharge = sum(Emid.*Imid.*dt)
-
-    # charge energy
-
-    I = copy(Iref)
-    
-    I[I .> 0] .= 0
-    Imid = (I[2 : end] .+ I[1 : end - 1]) / 2
-    
-    energy_charge = -sum(Emid.*Imid.*dt)
-
-    efficiency = energy_discharge/energy_charge
-
-    return efficiency
-    
-end
-
-
-function inputRefToStates(states, stateref)
-    statesref = deepcopy(states)
-    for i in 1:size(states,1)
-
-        staterefnew = statesref[i]   
-        refstep     = i
-        fields      = ["CurrentCollector","ActiveMaterial"]
-        components  = ["NegativeElectrode","PositiveElectrode"]
-        newkeys     = [:NeCc, :NeAm, :PeCc, :PeAm]
-        
-        ind = 1
-        for component = components
-            for field in fields
-                state = stateref[refstep][component]
-                phi_ref = state[field]["phi"]
-                newcomp = newkeys[ind]
-                staterefnew[newcomp][:Phi] = phi_ref        
-                if haskey(state[field], "c")
-                    c = state[field]["c"]
-                    staterefnew[newcomp][:C] = c
-                end
-                ind = ind + 1
-            end
-        end
-
-        fields = ["Electrolyte"]
-        newcomp = :Elyte
-        for field in fields
-
-            state = stateref[refstep]
-            phi_ref = state[field]["phi"]
-            #j_ref = state[field]["j"]
-            staterefnew[newcomp][:Phi] = phi_ref
-            if haskey(state[field],"c")
-                c = state[field]["c"]
-                staterefnew[newcomp][:C] = c
-            end
-        end
-        
-        ##
-        staterefnew[:Control][:Phi][1] = stateref[refstep]["Control"]["E"]
-    end
-    return statesref
-end
-
-function exported_model_to_domain(exported;
-    bcfaces    = nothing, 
-                                  general_ad = false)
-
-    """ Returns domain"""
-
-    N = exported["G"]["faces"]["neighbors"]
-    N = Int64.(N)
-
-    if !isnothing(bcfaces)
-        isboundary = (N[bcfaces, 1].==0) .| (N[bcfaces, 2].==0)
-        @assert all(isboundary)
-        
-        bc_cells = N[bcfaces, 1] + N[bcfaces, 2]
-        bc_hfT = getHalfTrans(exported, bcfaces)
-    else
-        bc_hfT = []
-        bc_cells = []
-    end
-    
-    vf = []
-    if haskey(exported, "volumeFraction")
-        if length(exported["volumeFraction"]) == 1
-            vf = exported["volumeFraction"]
-        else
-            vf = exported["volumeFraction"][:, 1]
-        end
-    end
-    
-    internal_faces = (N[:, 2] .> 0) .& (N[:, 1] .> 0)
-    N = copy(N[internal_faces, :]')
-    
-    face_areas   = vec(exported["G"]["faces"]["areas"][internal_faces])
-    face_normals = exported["G"]["faces"]["normals"][internal_faces, :]./face_areas
-    face_normals = copy(face_normals')
-    if length(exported["G"]["cells"]["volumes"])==1
-        volumes    = exported["G"]["cells"]["volumes"]
-        volumes    = Vector{Float64}(undef, 1)
-        volumes[1] = exported["G"]["cells"]["volumes"]
-    else
-        volumes = vec(exported["G"]["cells"]["volumes"])
-    end
-    # P = exported["G"]["operators"]["cellFluxOp"]["P"]
-    # S = exported["G"]["operators"]["cellFluxOp"]["S"]
-    P = []
-    S = []
-    T = exported["G"]["operators"]["T"].*1.0
-    G = MinimalECTPFAGrid(volumes, N, vec(T);
-                          bc_cells = bc_cells,
-                          bc_hfT   = bc_hfT,
-                          P        = P,
-                          S        = S,
-                          vf       = vf)
-
-    nc = length(volumes)
-    if general_ad
-        flow = PotentialFlow(G)
-    else
-        flow = TwoPointPotentialFlowHardCoded(G)
-    end
-    disc = (charge_flow = flow,)
-    domain = DiscretizedDomain(G, disc)
-
-    return domain
-    
-end
-
-function test_mrst_battery(name)
-    states, grids, state0, stateref, parameters, exported, model, timesteps, cfg, report, sim = run_battery(name);
-    steps = size(states, 1)
-    E = Matrix{Float64}(undef,steps,2)
-    for step in 1:steps
-        phi = states[step][:Control][:Phi][1]
-        E[step,1] = phi
-        phi_ref = stateref[step]["PositiveElectrode"]["CurrentCollector"]["E"]
-        E[step,2] = phi_ref
-    end
-    
-    
 end
 
 function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggregation)
