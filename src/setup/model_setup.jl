@@ -10,7 +10,8 @@ export
 # Run battery #
 ###############
 
-function run_battery(inputparams::AbstractInputParams;   
+function run_battery(inputparams::AbstractInputParams;
+                     hook = nothing,
                      kwargs...)
     """
         Run battery wrapper method. Can use inputs from either Matlab or Json input
@@ -25,9 +26,18 @@ function run_battery(inputparams::AbstractInputParams;
     forces    = output[:forces]
     timesteps = output[:timesteps]    
     cfg       = output[:cfg]
+
+    if !isnothing(hook)
+        hook(simulator,
+             model,
+             state0,
+             forces,
+             timesteps,
+             cfg)
+    end
     
     # Perform simulation
-    states, reports = simulate(state0, simulator, timesteps; forces = forces, config=cfg)
+    states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
 
     extra = output
     extra[:timesteps] = timesteps
@@ -58,9 +68,13 @@ function setup_simulation(inputparams::AbstractInputParams;
                           linear_solver::Symbol             = :direct,
                           general_ad::Bool                  = false,
                           use_groups::Bool                  = false,
-                          kwargs ... )
+                          model_kwargs::NamedTuple          = NamedTuple(),
+                          config_kwargs::NamedTuple         = NamedTuple())
 
-    model, state0, parameters, couplings = setup_model(inputparams, use_groups=use_groups, general_ad=general_ad; kwargs...)
+    model, state0, parameters, couplings = setup_model(inputparams;
+                                                       use_groups=use_groups,
+                                                       general_ad=general_ad,
+                                                       model_kwargs...)
 
     setup_coupling!(inputparams, model, parameters, couplings)
 
@@ -76,7 +90,7 @@ function setup_simulation(inputparams::AbstractInputParams;
                        model,
                        linear_solver,
                        extra_timing;
-                       kwargs...)
+                       config_kwargs...)
     
     output = Dict(:simulator   => simulator,
                   :forces      => forces,
@@ -113,14 +127,13 @@ function setup_config(sim::Jutul.JutulSimulator,
     
     cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
     cfg[:debug_level]                = 0
-    #cfg[:max_timestep_cuts]         = 0
+    cfg[:max_timestep_cuts]          = 10
     cfg[:max_residual]               = 1e20
     cfg[:min_nonlinear_iterations]   = 1
     cfg[:extra_timing]               = extra_timing
     # cfg[:max_nonlinear_iterations] = 5
     cfg[:safe_mode]                  = false
     cfg[:error_on_incomplete]        = false
-    #Original matlab steps will be too large!
     cfg[:failure_cuts_timestep]      = true
 
     for key in Jutul.submodels_symbols(model)
@@ -1092,7 +1105,7 @@ end
 # Current function #
 ####################
 
-function currentFun(t::T, inputI::T, tup::T=0.1) where T
+function currentFun(t::T, inputI::T, tup::T = 0.1) where T
     val::T = 0.0
     if  t <= tup
         val = sineup(0.0, inputI, 0.0, tup, t) 
