@@ -3,8 +3,7 @@
 ######################
 
 export
-    run_battery,
-    Constants
+    run_battery
 
 
 ###############
@@ -1373,16 +1372,6 @@ function rampupTimesteps(time::Real, dt::Real, n::Integer=8)
     return dT
 end
 
-struct Constants
-    F
-    R
-    hour
-    function Constants()
-        new(96485.3329,
-            8.31446261815324,
-            3600)
-    end
-end
 
 struct SourceAtCell
     cell

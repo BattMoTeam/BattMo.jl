@@ -1,4 +1,11 @@
-export GAS_CONSTANT, FARADAY_CONST
+export Constants
 
-const GAS_CONSTANT  = 8.31446261815324  # Gas constant
-const FARADAY_CONST = 96485.3329        # Faradays constant
+struct Constants
+    F
+    R
+    hour
+    function Constants()
+        new(96485.3329,
+            8.31446261815324,
+            3600)
+    end
