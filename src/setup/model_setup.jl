@@ -1,9 +1,7 @@
-######################
-# Exported functions #
-######################
-
 export
-    run_battery
+    run_battery,
+    setup_simulation,
+    setup_model
 
 
 ###############
@@ -14,7 +12,7 @@ function run_battery(inputparams::AbstractInputParams;
                      hook = nothing,
                      kwargs...)
     """
-        Run battery wrapper method. Can use inputs from either Matlab or Json input
+        Run battery wrapper method. Call setup_simulation function and run the simulation with the setup that is returned. A hook function can be given to modify the setup after the call to setup_simulation
     """
     
     #Setup simulation
@@ -71,12 +69,10 @@ function setup_simulation(inputparams::AbstractInputParams;
                           model_kwargs::NamedTuple          = NamedTuple(),
                           config_kwargs::NamedTuple         = NamedTuple())
 
-    model, state0, parameters, couplings = setup_model(inputparams;
-                                                       use_groups=use_groups,
-                                                       general_ad=general_ad,
-                                                       model_kwargs...)
-
-    setup_coupling!(inputparams, model, parameters, couplings)
+    model, state0, parameters = setup_model(inputparams;
+                                            use_groups=use_groups,
+                                            general_ad=general_ad,
+                                            model_kwargs...)
 
     setup_policy!(model[:Control].system.policy, inputparams, parameters)
     
@@ -104,8 +100,6 @@ function setup_simulation(inputparams::AbstractInputParams;
     return output
 
 end
-
-
 
 
 ######################################
@@ -241,7 +235,6 @@ function setup_timesteps(inputparams::InputParams;
         
     return timesteps
 end
-
 
 
 ##################
@@ -458,7 +451,9 @@ function setup_model(inputparams::AbstractInputParams;
     parameters = setup_battery_parameters(inputparams, model)
     initialState  = setup_battery_initial_state(inputparams, model)
 
-    return model, initialState, parameters, couplings
+    setup_coupling!(inputparams, model, parameters, couplings)
+    
+    return model, initialState, parameters
 
 end
 
