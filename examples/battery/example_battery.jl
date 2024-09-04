@@ -55,8 +55,30 @@ else
     inputparams = readBattMoMatlabInputFile(fn)
     inputparams.dict["use_state_ref"] = true
     config_kwargs = (info_level = 10,)
+
+    function hook(simulator,
+                  model,
+                  state0,
+                  forces,
+                  timesteps,
+                  cfg)
+
+        names = [:Elyte,
+                 :NeAm,
+                 :PeCc,
+                 :Control,
+                 :NeCc,
+                 :PeAm]           
+
+        for name in names
+            cfg[:tolerances][name][:default] = 1e-8
+        end
+        
+    end
+
     states, cellSpecifications, reports, extra = run_battery(inputparams;
                                                              use_p2d = use_p2d,
+                                                             hook = hook,
                                                              config_kwargs = config_kwargs,
                                                              max_step = nothing);
 
