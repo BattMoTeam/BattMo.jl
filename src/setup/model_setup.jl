@@ -1356,7 +1356,7 @@ end
 
 function rampupTimesteps(time::Real, dt::Real, n::Integer=8)
 
-    ind = [8; collect(range(n, 1, step=-1))]
+    ind = collect(range(n, 1, step = -1))
     dt_init = [dt / 2^k for k in ind]
     cs_time = cumsum(dt_init)
     if any(cs_time .> time)
