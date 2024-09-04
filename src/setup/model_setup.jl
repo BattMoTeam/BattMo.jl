@@ -69,13 +69,13 @@ function setup_simulation(inputparams::AbstractInputParams;
                           model_kwargs::NamedTuple          = NamedTuple(),
                           config_kwargs::NamedTuple         = NamedTuple())
 
-    model, state0, parameters = setup_model(inputparams;
-                                            use_groups=use_groups,
-                                            general_ad=general_ad,
-                                            model_kwargs...)
+    model, parameters = setup_model(inputparams;
+                                    use_groups=use_groups,
+                                    general_ad=general_ad,
+                                    model_kwargs...)
 
-    setup_policy!(model[:Control].system.policy, inputparams, parameters)
-    
+    state0 = setup_initial_state(inputparams, model)
+
     forces = setup_forces(model)
 
     simulator = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
@@ -241,7 +241,7 @@ end
 # Setup coupling #
 ##################
 
-function setup_coupling!(inputparams::InputParams,
+function setup_coupling_cross_terms!(inputparams::InputParams,
                          model::MultiModel,
                          parameters::Dict{Symbol,<:Any},
                          couplings)
@@ -434,7 +434,6 @@ function setup_coupling!(inputparams::InputParams,
 
 end
 
-
 ###############
 # Setup model #
 ###############
@@ -444,16 +443,22 @@ function setup_model(inputparams::AbstractInputParams;
                      use_groups::Bool = false,
                      kwargs...)
 
-    model, couplings = setup_battery_model(inputparams,
-                                           use_groups = use_groups,
-                                           use_p2d    = use_p2d;
-                                           kwargs... )
-    parameters = setup_battery_parameters(inputparams, model)
-    initialState  = setup_battery_initial_state(inputparams, model)
+    # setup the submodels and also return a coupling structure which is used to setup later the cross-terms
+    model, couplings = setup_submodels(inputparams,
+                                       use_groups = use_groups,
+                                       use_p2d    = use_p2d;
+                                       kwargs... )
 
-    setup_coupling!(inputparams, model, parameters, couplings)
+    # setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
+    # sensitivities)
+    parameters = setup_battery_parameters(inputparams, model)
+
+    # setup the cross terms which couples the submodels.
+    setup_coupling_cross_terms!(inputparams, model, parameters, couplings)
+
+    setup_initial_control_policy!(model[:Control].system.policy, inputparams, parameters)
     
-    return model, initialState, parameters
+    return model, parameters
 
 end
 
@@ -536,10 +541,10 @@ function setup_component(grid::Jutul.FiniteVolumeMesh,
 
 end
 
-function setup_battery_model(inputparams::InputParams; 
-                             use_groups::Bool = false, 
-                             general_ad::Bool = false,
-                             kwargs...)
+function setup_submodels(inputparams::InputParams; 
+                         use_groups::Bool = false, 
+                         general_ad::Bool = false,
+                         kwargs...)
 
     include_cc = include_current_collectors(inputparams)
     
@@ -774,7 +779,7 @@ function setup_battery_model(inputparams::InputParams;
         
         minE   = jsondict["Control"]["lowerCutoffVoltage"]
         
-        policy = SimpleCVPolicy(voltage = minE)
+        policy = SimpleCVPolicy()
 
     elseif controlPolicy == "CCCV"
 
@@ -837,8 +842,11 @@ function setup_battery_model(inputparams::InputParams;
     end
 
     setup_volume_fractions!(model, grids, couplings["Electrolyte"])
+
+    output = (model      = model,
+              couplings  = couplings)
     
-    return model, couplings
+    return output
     
 end
 
@@ -1002,10 +1010,8 @@ end
 #######################
 
 
-function setup_battery_initial_state(inputparams::InputParams,
-                                     model::MultiModel)
-
-    
+function setup_initial_state(inputparams::InputParams,
+                             model::MultiModel)
 
     include_cc = include_current_collectors(model)
 
@@ -1082,16 +1088,13 @@ function setup_battery_initial_state(inputparams::InputParams,
     end
     
     init = Dict()
-    init[:Phi]     = [1.0]
+    init[:Phi]     = posOCP - negOCP
     init[:Current] = getInitCurrent(model[:Control])
 
     initState[:Control] = init
 
     initState = setup_state(model, initState)
 
-    minE = inputparams["Control"]["lowerCutoffVoltage"]
-    @. initState[:Control][:Phi] = minE * 1.5
-    
     return initState
     
 end

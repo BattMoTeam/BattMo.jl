@@ -74,7 +74,7 @@ end
 # Setup coupling #
 ##################
 
-function setup_coupling!(inputparams::MatlabInputParams,
+function setup_coupling_cross_terms!(inputparams::MatlabInputParams,
                          model::MultiModel,
                          parameters::Dict{Symbol,<:Any},
                          couplings)
@@ -616,9 +616,9 @@ end
 # Setup initial state #
 #######################
 
-function setup_intial_state(inputparams::MatlabInputParams, 
-                                     model::MultiModel
-                                     )
+function setup_initial_state(inputparams::MatlabInputParams, 
+                             model::MultiModel
+                             )
 
     exported = inputparams.dict
 

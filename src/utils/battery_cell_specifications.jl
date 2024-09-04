@@ -164,7 +164,7 @@ end
 
 function computeCellSpecifications(inputparams::InputParams)
     
-    model = setup_battery_model(inputparams)
+    model = setup_submodels(inputparams)
     return computeCellSpecifications(model)
     
 end

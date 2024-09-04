@@ -6,7 +6,6 @@ export
     sineup,
     SimpleCVPolicy,
     CyclingCVPolicy,
-    getInitCurrent
 
 @enum OperationalMode cc_discharge1 cc_discharge2 cc_charge1 cv_charge2 rest discharge charging discharging none
 
@@ -51,15 +50,15 @@ mutable struct SimpleCVPolicy{R} <: AbstractCVPolicy
     current_function
     Imax::R
     voltage::R
-    function SimpleCVPolicy(;current_function = missing, Imax = 1.0, voltage::T = 2.5) where T<:Real
-        new{T}(current_function, Imax, voltage)
+    function SimpleCVPolicy(;current_function = missing, Imax::T = 0., voltage = missing) where T <: Real
+        new{Union{Missing, T}}(current_function, Imax, voltage)
     end
 end
 
 
 struct NoPolicy <: AbstractCVPolicy end
 
-mutable struct CyclingCVPolicy{R,I}  <: AbstractCVPolicy
+mutable struct CyclingCVPolicy{R, I}  <: AbstractCVPolicy
 
     ImaxDischarge::R
     ImaxCharge::R
@@ -108,9 +107,16 @@ function CyclingCVPolicy(lowerCutoffVoltage,
 end
 
 
+
 function getInitCurrent(policy::SimpleCVPolicy)
-    return policy.Imax
+    if !ismissing(policy.current_function)
+        val = policy.current_function(0.)
+    else
+        val = policy.Imax
+    end
+    return val
 end
+
 
 function getInitCurrent(policy::CyclingCVPolicy)
     
@@ -161,7 +167,7 @@ end
 
 ## Setup policy
 
-function setup_policy!(policy::SimpleCVPolicy, inputparams::InputParams, parameters)
+function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::InputParams, parameters)
 
     Imax = only(parameters[:Control][:ImaxDischarge])
 
@@ -170,12 +176,13 @@ function setup_policy!(policy::SimpleCVPolicy, inputparams::InputParams, paramet
     cFun(time) = currentFun(time, Imax, tup)
 
     policy.current_function = cFun
-    policy.Imax = Imax
+    policy.Imax             = Imax
+    policy.voltage          = inputparams["Control"]["lowerCutoffVoltage"]
     
 end
 
  
-function setup_policy!(policy::CyclingCVPolicy, inputparams::InputParams, parameters)
+function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::InputParams, parameters)
 
     policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
     policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])
