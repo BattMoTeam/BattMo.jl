@@ -3,7 +3,7 @@
 # control policy setup (Matlab input specific) #
 ################################################
 
-function setup_policy!(policy::SimpleCVPolicy, inputparams::MatlabInputParams, parameters)
+function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::MatlabInputParams, parameters)
 
     Imax = Float64(inputparams["model"]["Control"]["Imax"])
     tup = Float64(inputparams["model"]["Control"]["rampupTime"])
@@ -11,12 +11,13 @@ function setup_policy!(policy::SimpleCVPolicy, inputparams::MatlabInputParams, p
     cFun(time) = currentFun(time, Imax, tup)
 
     policy.current_function = cFun
-    policy.Imax = Imax
+    policy.Imax             = Imax
+    policy.voltage          = Float64(inputparams["model"]["Control"]["lowerCutoffVoltage"])
     
 end
 
  
-function setup_policy!(policy::CyclingCVPolicy, inputparams::MatlabInputParams, parameters)
+function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::MatlabInputParams, parameters)
 
     error("not updated, use inputparams to get values")
     policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])

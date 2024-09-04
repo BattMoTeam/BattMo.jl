@@ -102,7 +102,7 @@ else
 
     nsteps = size(states, 1)
     
-    statesref = extra[:inputparams].dict["states"]
+    statesref = inputparams["states"]
     timeref   = t
     Eref      = [state["Control"]["E"] for state in statesref[1 : nsteps]]
     Iref      = [state["Control"]["I"] for state in statesref[1 : nsteps]]

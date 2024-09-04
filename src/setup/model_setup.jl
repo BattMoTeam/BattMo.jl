@@ -49,8 +49,8 @@ function run_battery(inputparams::AbstractInputParams;
     return (states             = states            ,
             cellSpecifications = cellSpecifications, 
             reports            = reports           ,
-            extra              = extra             ,
-            exported           = inputparams)
+            inputparams        = inputparams,
+            extra              = extra)
     
 end
 
