@@ -189,7 +189,7 @@
      "useRampup": true,
      "totalTime": 7200.0,
      "rampupTime": 10.0,
-     "numberOfTimeSteps": 72
+     "numberOfTimeSteps": 100
   },
   "Output": {
      "variables": [

@@ -6,6 +6,7 @@ export
     sineup,
     SimpleCVPolicy,
     CyclingCVPolicy,
+    OperationalMode
 
 @enum OperationalMode cc_discharge1 cc_discharge2 cc_charge1 cv_charge2 rest discharge charging discharging none
 
