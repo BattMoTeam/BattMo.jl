@@ -15,8 +15,8 @@ ENV["JULIA_DEBUG"] = 0;
 use_p2d = true
 
 if use_p2d
-    name = "p2d_40"
-    # name = "p2d_40_no_cc"
+    # name = "p2d_40"
+    name = "p2d_40_no_cc"
     # name = "p2d_40_cccv"
     # name = "p2d_40_jl_chen2020"
     # name = "3d_demo_case"
@@ -39,12 +39,24 @@ if do_json
 
     fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
     inputparams = readBattMoJsonInputFile(fn)
-    config_kwargs = (info_level = 0,)
-    states, cellSpecifications, reports, extra = run_battery(inputparams;
-                                                             use_p2d = use_p2d,
-                                                             config_kwargs = config_kwargs,
-                                                             extra_timing = false);
+    config_kwargs = (info_level = 10, )
+    function hook(simulator,
+                  model,
+                  state0,
+                  forces,
+                  timesteps,
+                  cfg)
+        # cfg[:max_timestep_cuts] = 1
+        # cfg[:max_nonlinear_iterations] = 10
+    end
+    output = run_battery(inputparams;
+                         use_p2d = use_p2d,
+                         hook = hook,
+                         config_kwargs = config_kwargs,
+                         extra_timing = false);
 
+    states = output[:states]
+    
     t = [state[:Control][:ControllerCV].time for state in states]
     E = [state[:Control][:Phi][1] for state in states]
     I = [state[:Control][:Current][1] for state in states]
@@ -76,12 +88,13 @@ else
         
     end
 
-    states, cellSpecifications, reports, extra = run_battery(inputparams;
-                                                             use_p2d = use_p2d,
-                                                             hook = hook,
-                                                             config_kwargs = config_kwargs,
-                                                             max_step = nothing);
-
+    output = run_battery(inputparams;
+                         use_p2d = use_p2d,
+                         hook = hook,
+                         config_kwargs = config_kwargs,
+                         max_step = nothing);
+    states = output[:states]
+    
     t = [state[:Control][:ControllerCV].time for state in states]
     E = [state[:Control][:Phi][1] for state in states]
     I = [state[:Control][:Current][1] for state in states]
