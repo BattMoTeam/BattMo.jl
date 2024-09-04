@@ -667,9 +667,13 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 
     if policy isa SimpleCVPolicy
 
-        
-        target            = model.system.policy.Imax
-        time              = 0.0
+        time = 0.0
+        Imax = policy.Imax
+        if !ismissing(policy.current_function)
+            target = policy.current_function(time)
+        else
+            target = Imax
+        end
         target_is_voltage = false
         ctrlType          = discharging
         state[:ControllerCV] = SimpleControllerCV(target, time, target_is_voltage, ctrlType)

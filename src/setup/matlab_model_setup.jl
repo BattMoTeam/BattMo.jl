@@ -281,11 +281,11 @@ end
 # Setup battery model #
 #######################
 
-function setup_battery_model(inputparams::MatlabInputParams; 
-                             use_groups::Bool = false,
-                             use_p2d::Bool    = true,
-                             general_ad::Bool = false,
-                             kwarg...)
+function setup_submodels(inputparams::MatlabInputParams; 
+                         use_groups::Bool = false,
+                         use_p2d::Bool    = true,
+                         general_ad::Bool = false,
+                         kwarg...)
 
     include_cc = include_current_collectors(inputparams)
 
@@ -616,7 +616,7 @@ end
 # Setup initial state #
 #######################
 
-function setup_battery_initial_state(inputparams::MatlabInputParams, 
+function setup_intial_state(inputparams::MatlabInputParams, 
                                      model::MultiModel
                                      )
 
