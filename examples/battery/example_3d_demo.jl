@@ -10,10 +10,10 @@ GLMakie.closeall()
 
 name = "p2d_40_jl_chen2020"
 
-fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, ".json")
+fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
 inputparams = readBattMoJsonInputFile(fn)
 
-fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/3d_demo_geometry.json")
+fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
 inputparams_geometry = readBattMoJsonInputFile(fn)
 
 inputparams = mergeInputParams(inputparams_geometry, inputparams)
@@ -22,25 +22,14 @@ inputparams = mergeInputParams(inputparams_geometry, inputparams)
 # setup and run simulation #
 ############################
 
-sim, forces, state0, parameters, init, model = BattMo.setup_sim(inputparams;
-                                                                use_groups = false,
-                                                                general_ad = false,
-                                                                max_step   = nothing)
-
-# Set up config and timesteps
-timesteps = BattMo.setup_timesteps(init; max_step = nothing)
-cfg = BattMo.setup_config(sim, model, :direct, false)
-
-# Perform simulation
-cfg[:info_level] = 3
-state0[:Control][:Phi][1] = 4.2
-state0[:Control][:Current][1] = 0
-
-states, reports = Jutul.simulate(state0, sim, timesteps, forces = forces, config = cfg)
+output = run_battery(inputparams);
 
 ########################
 # plot discharge curve #
 ########################
+
+states = output[:states]
+model  = output[:extra][:model]
 
 t = [state[:Control][:ControllerCV].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
