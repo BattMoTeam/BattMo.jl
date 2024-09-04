@@ -15,8 +15,9 @@ ENV["JULIA_DEBUG"] = 0;
 use_p2d = true
 
 if use_p2d
-    # name = "p2d_40"
-    name = "p2d_40_no_cc"
+    name = "p2d_40"
+    # name = "p2d_40_jl_ud_func"
+    # name = "p2d_40_no_cc"
     # name = "p2d_40_cccv"
     # name = "p2d_40_jl_chen2020"
     # name = "3d_demo_case"
