@@ -12,27 +12,12 @@ using MAT
 
 ENV["JULIA_DEBUG"] = 0;
 
-use_p2d = true
-
-if use_p2d
-    name = "p2d_40"
-    # name = "p2d_40_jl_ud_func"
-    # name = "p2d_40_no_cc"
-    # name = "p2d_40_cccv"
-    # name = "p2d_40_jl_chen2020"
-    # name = "3d_demo_case"
-else
-    name = "p1d_40"
-    #name = "3d_demo_case"
-end
-
-function load_reference_solution(name)
-    fn = string(dirname(pathof(BattMo)), "/../test/data/", name, ".mat")
-    refdict = MAT.matread(fn)
-    return refdict
-end
-
-# sim, forces, state0, parameters, exported, model = BattMo.setup_sim(name, use_p2d = use_p2d)
+name = "p2d_40"
+# name = "p2d_40_jl_ud_func"
+# name = "p2d_40_no_cc"
+# name = "p2d_40_cccv"
+# name = "p2d_40_jl_chen2020"
+# name = "3d_demo_case"
 
 do_json = true
 
