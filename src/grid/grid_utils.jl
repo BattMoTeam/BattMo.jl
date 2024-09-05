@@ -4,11 +4,15 @@ export
     pouch_grid,
     find_coupling,
     find_common,
-    setup_geometry,
     findBoundary,
     pouch_grid,
     convert_geometry,
     one_dimensional_grid
+
+
+#####################
+# utility functions #
+#####################
 
 """
    find coupling cells and faces between two grid maps
@@ -286,88 +290,102 @@ end
     """
 function pouch_grid(geomparams::InputGeometryParams)
 
-    nx          = geomparams["nx"] 
-    ny          = geomparams["ny"]
-    nz          = geomparams["nz"]
-    tab_cell_nx = geomparams["tab_cell_nx"]
-    tab_cell_ny = geomparams["tab_cell_ny"]
+    ne_cc_z  = geomparams["NegativeElectrode"]["CurrentCollector"]["thickness"]
+    ne_cc_nz = geomparams["NegativeElectrode"]["CurrentCollector"]["N"]
     
-    ne_cc_nx     = tab_cell_nx
-    int_elyte_nx = nx
-    pe_cc_nx     = tab_cell_nx
+    ne_co_z  = geomparams["NegativeElectrode"]["Coating"]["thickness"]
+    ne_co_nz = geomparams["NegativeElectrode"]["Coating"]["N"]
+
+    pe_cc_z  = geomparams["PositiveElectrode"]["CurrentCollector"]["thickness"]
+    pe_cc_nz = geomparams["PositiveElectrode"]["CurrentCollector"]["N"]
     
-    ne_cc_ny = tab_cell_ny
-    elyte_ny = ny
-    pe_cc_ny = tab_cell_ny
+    pe_co_z  = geomparams["PositiveElectrode"]["Coating"]["thickness"]
+    pe_co_nz = geomparams["PositiveElectrode"]["Coating"]["N"]    
 
-    ne_cc_nz = nz
-    ne_am_nz = nz
-    sep_nz   = nz
-    pe_am_nz = nz
-    pe_cc_nz = nz
+    sep_z  = geomparams["Separator"]["thickness"]
+    sep_nz = geomparams["Separator"]["N"]    
     
-    x0_cells, x4_cells = tab_cell_nx, tab_cell_nx ### These can be zero, then CC is on the edge
-    x0, x4 = 6, 6
+    x  = geomparams["Geometry"]["width"] 
+    y  = geomparams["Geometry"]["height"]
+    nx = geomparams["Geometry"]["Nw"] 
+    ny = geomparams["Geometry"]["Nh"]
+    
+    ne_tab_nx = geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"]
+    ne_tab_ny = geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"]
+    ne_tab_x  = geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]["width"]
+    ne_tab_y  = geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]["height"]
 
-    paramsx = [x0_cells, ne_cc_nx, int_elyte_nx, pe_cc_nx, x4_cells]
-    paramsy = [ne_cc_ny, elyte_ny, pe_cc_ny]
-    paramsz = [ne_cc_nz, ne_am_nz, sep_nz, pe_am_nz, pe_cc_nz]
+    pe_tab_nx = geomparams["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"]
+    pe_tab_ny = geomparams["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"]
+    pe_tab_x  = geomparams["PositiveElectrode"]["CurrentCollector"]["tab"]["width"]
+    pe_tab_y  = geomparams["PositiveElectrode"]["CurrentCollector"]["tab"]["height"]
 
-    x = [x0, 4, 2, 4, x4] .* 1e-2/nx 
-    y = [2, 20, 2] .* 1e-3/ny
-    z = [10, 100, 50, 80, 10] .* 1e-6/nz
+    nx = [ne_tab_nx, nx - (ne_tab_nx + pe_tab_nx), pe_tab_nx]
+    ny = [ne_tab_ny, ny - (ne_tab_ny + pe_tab_ny), pe_tab_ny]    
+    nz = [ne_cc_nz, ne_co_nz, sep_nz, pe_co_nz, pe_cc_nz]
+
+    xs = [ne_tab_x, x - (ne_tab_x + pe_tab_x), pe_tab_x]
+    ys = [ne_tab_y, y - (ne_tab_y + pe_tab_y), pe_tab_y]    
+    zs = [ne_cc_z, ne_co_z, sep_z, pe_co_z, pe_cc_z]
+
+    zvals = zs  # used to recover the different regions in setup_pouch_cell_geometry (see below)
+    
+    xs = xs ./ nx
+    ys = ys ./ ny
+    zs = zs ./ nz
     
     same_side = false # if true, needs pe_cc_ny >= ne_cc_ny. I think they usually are equal
-    strip = true
 
-    Lx = StatsBase.inverse_rle(x, paramsx)
-    Ly = StatsBase.inverse_rle(y, paramsy)
-    Lz = StatsBase.inverse_rle(z, paramsz)
+    Lx = StatsBase.inverse_rle(xs, nx)
+    Ly = StatsBase.inverse_rle(ys, ny)
+    Lz = StatsBase.inverse_rle(zs, nz)
     
     Nx = length(Lx)
     Ny = length(Ly)
     Nz = length(Lz)
     
     h = CartesianMesh((Nx, Ny, Nz), (Lx, Ly, Lz))
+    
     H_back = convert_to_mrst_grid(UnstructuredMesh(h));
     
     #################################################################
     
-    # Iterators in the z-direction over the cells that contains the positive current collector.
-    # Each iterator contains an horizonzal slab at the end
-    pe_cc_list_of_iterators = [Nx * (i * Ny - pe_cc_ny)  + 1 : Nx * Ny * i for i in 1:Nz]
+    # Iterators in the z-direction over horizontal layers at the end where the positive current collector is located
+    pe_endbox_list_of_iterators = [Nx * (i * Ny - pe_tab_ny)  + 1 : Nx * Ny * i for i in 1 : Nz]
 
-    # pecc_extra_cells : Those cells will be removed
-    pe_cc_extra_cells = cat(pe_cc_list_of_iterators..., dims = 1)
+    # collect from previous iterator. The result is the set of cells that makes up the box-shape end of the domain (in
+    # the y-direction), which includes the pe_cc tab
+    pe_extra_cells = cat(pe_endbox_list_of_iterators..., dims = 1)
     
-    # (x-y) Carthesian indices of the cells of the positive current collector (not expanded in the z direction). 
-    index_of_pe_cc = cat([Nx * i - pe_cc_nx + 1 : Nx * i for i in 1:pe_cc_ny]..., dims = 1)
+    # (x-y) Carthesian indices of the cells of the positive current collector tab (not expanded in the z direction)
+    pe_tab_horz_index = cat([Nx * i - pe_tab_nx + 1 : Nx * i for i in 1:pe_tab_ny]..., dims = 1)
 
-    # Index of the positive current collector
-    pe_cc_cells = cat(getindex.(pe_cc_list_of_iterators[end - pe_cc_nz + 1:end], [index_of_pe_cc .- x4_cells])..., dims = 1)
+    # Index of the positive current collector tab.
+    # 1) From the pc_cc_list_of_iterators, we take only the horizontal layer that contains tab : pe_endbox_list_of_iterators[end - pe_cc_nz + 1 : end]
+    # 2) From each of these layers, we take only the cells that we have a (x, y) cartesian index in the tab region
+    pe_tab_cells = cat(getindex.(pe_endbox_list_of_iterators[end - pe_cc_nz + 1 : end], [pe_tab_horz_index])..., dims = 1)
 
-    setdiff!(pe_cc_extra_cells, pe_cc_cells)
+    # From the end of the domain (in y-direction), we remove the cells that constitutes the tab
+    setdiff!(pe_extra_cells, pe_tab_cells)
 
     # We proceed in the same way for the negative current collector
    
-    ne_cc_list_of_iterators = [Nx * Ny * (i-1)  + 1 : Nx * (Ny * (i-1) + ne_cc_ny) for i in 1:Nz]
-    ne_cc_extra_cells = cat(ne_cc_list_of_iterators..., dims = 1)
+    ne_endbox_list_of_operators = [Nx * Ny * (i - 1)  + 1 : Nx * (Ny * (i - 1) + ne_tab_ny) for i in 1 : Nz]
+    ne_extra_cells = cat(ne_endbox_list_of_operators..., dims = 1)
     
-    index_of_ne_cc = cat([Nx * (i - 1) + 1 : Nx * (i - 1) + ne_cc_nx for i in 1:ne_cc_ny]..., dims = 1)
+    ne_tab_horz_index = cat([Nx * (i - 1) + 1 : Nx * (i - 1) + pe_tab_nx for i in 1:ne_tab_ny]..., dims = 1)
     
     if same_side
-        ne_cc_cells = cat(getindex.(pe_cc_list_of_iterators[1:ne_cc_nz], [index_of_ne_cc .+ x0_cells])..., dims = 1)
-        setdiff!(pe_cc_extra_cells, ne_cc_cells)
+        ne_tab_cells = cat(getindex.(pe_endbox_list_of_iterators[1 : ne_cc_nz], [ne_tab_horz_index])..., dims = 1)
+        setdiff!(pe_extra_cells, ne_tab_cells)
     else
-        ne_cc_cells = cat(getindex.(ne_cc_list_of_iterators[1:ne_cc_nz], [index_of_ne_cc .+ x0_cells])..., dims = 1)
-        setdiff!(ne_cc_extra_cells, ne_cc_cells)
+        ne_tab_cells = cat(getindex.(ne_endbox_list_of_operators[1 : ne_cc_nz], [ne_tab_horz_index])..., dims = 1)
+        setdiff!(ne_extra_cells, ne_tab_cells)
     end
     
-    zvals =  paramsz .* z
+    G, = remove_cells(H_back, vcat(pe_extra_cells, ne_extra_cells))
 
-    G, = remove_cells(H_back, vcat(pe_cc_extra_cells, ne_cc_extra_cells))
-
-    grids, couplings = setup_geometry(G, zvals)
+    grids, couplings = setup_pouch_cell_geometry(G, zvals)
     grids, couplings = convert_geometry(grids, couplings)
 
     # Negative current collector external coupling
@@ -448,7 +466,7 @@ end
 """ single layer pouch cell utility function,
     From a global grid and the position of the z-values for the different components, returns the grids with the coupling
 """
-function setup_geometry(H_mother, paramsz)
+function setup_pouch_cell_geometry(H_mother, paramsz)
     
     grids       = Dict()
     global_maps = Dict()

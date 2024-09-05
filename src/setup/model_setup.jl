@@ -642,7 +642,7 @@ function setup_submodels(inputparams::InputParams;
         
         grid     = grids[stringName]
         coupling = couplings[stringName]
-        
+
         boundary = nothing
         if !include_cc && name == :NeAm
             addDirichlet = true
@@ -1311,7 +1311,8 @@ function setup_geomparams(inputparams::InputParams)
             
     elseif case_type == "3D-demo"
 
-        geomparams = jsondict["Geometry"]
+        # setup is compatible with battmo general specifications as defined in Schema
+        geomparams = inputparams.dict
         
     else
         
