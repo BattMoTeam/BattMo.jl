@@ -1,3 +1,5 @@
+using Jutul
+
 export
     run_battery,
     setup_simulation,
