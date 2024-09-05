@@ -69,14 +69,100 @@ Plots.plot(p1, p2, layout = (2, 1))
 # plot potential on grid at last time step #
 ############################################
 
-state = states[end]
-f3D = Figure(size = (600, 650))
-ax3d = Axis3(f3D[1, 1])
+GLMakie.closeall()
 
-components = [:NeCc, :NeAm, :PeAm, :PeCc]
-for component in components
-    g = model[component].domain.representation
-    phi = state[component][:Phi]
-    Jutul.plot_cell_data!(ax3d, g, phi .- mean(phi))
+state = states[10]
+
+setups = ((:PeCc, :PeAm, "positive"),
+          (:NeCc, :NeAm, "negative"))
+
+
+for setup in setups
+
+    f3D = Figure(size = (600, 650))
+    ax3d = Axis3(f3D[1, 1];
+                 title = "Potential in $(setup[3]) electrode (coating and active material)")
+
+    am = setup[1]
+    cc = setup[2]
+    
+    maxPhi = maximum([maximum(state[cc][:Phi]), maximum(state[am][:Phi])])
+    minPhi = minimum([minimum(state[cc][:Phi]), minimum(state[am][:Phi])])
+
+    colorrange = [0, maxPhi - minPhi]
+
+    components = [am, cc]
+    for component in components
+        g = model[component].domain.representation
+        phi = state[component][:Phi]
+        Jutul.plot_cell_data!(ax3d, g, phi .- minPhi; colormap = :viridis, colorrange = colorrange)
+    end
+
+    cbar = GLMakie.Colorbar(f3D[1, 2];
+                            colormap = :viridis,
+                            colorrange = colorrange .+ minPhi,
+                            label = "potential")
+    display(GLMakie.Screen(), f3D)
+
 end
-display(GLMakie.Screen(), f3D)
+
+setups = ((:PeAm, "positive"),
+          (:NeAm, "negative"))
+
+for setup in setups
+
+    f3D = Figure(size = (600, 650))
+    ax3d = Axis3(f3D[1, 1];
+                 title = "Surface concentration in $(setup[2]) electrode")
+
+    component = setup[1]
+    
+    cs = state[component][:Cs]
+    maxcs = maximum(cs)
+    mincs = minimum(cs)
+
+    colorrange = [0, maxcs - mincs]
+
+    g = model[component].domain.representation
+    Jutul.plot_cell_data!(ax3d, g, cs .- mincs;
+                          colormap = :viridis,
+                          colorrange = colorrange)
+
+    cbar = GLMakie.Colorbar(f3D[1, 2];
+                            colormap = :viridis,
+                            colorrange = colorrange .+ mincs,
+                            label = "concentration")
+    display(GLMakie.Screen(), f3D)
+
+end
+
+
+setups = ((:C, "concentration"),
+          (:Phi, "potential"))
+
+for setup in setups
+
+    f3D = Figure(size = (600, 650))
+    ax3d = Axis3(f3D[1, 1];
+                 title = "$(setup[2]) in electrolyte")
+
+    var = setup[1]
+    
+    val = state[:Elyte][var]
+    maxval = maximum(val)
+    minval = minimum(val)
+
+    colorrange = [0, maxval - minval]
+
+    g = model[:Elyte].domain.representation
+    Jutul.plot_cell_data!(ax3d, g, val .- minval;
+                          colormap = :viridis,
+                          colorrange = colorrange)
+
+    cbar = GLMakie.Colorbar(f3D[1, 2];
+                            colormap = :viridis,
+                            colorrange = colorrange .+ minval,
+                            label = "$(setup[2])")
+    display(GLMakie.Screen(), f3D)
+
+end
