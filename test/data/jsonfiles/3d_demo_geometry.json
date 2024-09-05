@@ -1,11 +1,38 @@
 {
-  "include_current_collectors": true,
-  "Geometry": {
-    "case": "3D-demo",
-    "nx" : 4,
-    "ny" : 4,
-    "nz" : 4,
-    "tab_cell_nx" : 3,
-    "tab_cell_ny" : 2
-  }
+  "include_current_collectors" : true,
+  "Geometry" : {
+    "case" : "3D-demo",
+    "width" : 1e-2,
+    "height" : 2e-2,
+    "Nw" : 10,
+    "Nh" : 10},
+  "NegativeElectrode": {
+    "Coating": {
+      "thickness" : 100e-6,
+      "N" : 3},
+    "CurrentCollector": {
+      "thickness" : 10e-6,
+      "N" : 2,
+      "tab" : {
+        "width" : 4e-3,
+        "height" : 1e-3,
+        "Nw" : 3,
+        "Nh" : 3
+      }}},
+  "PositiveElectrode": {
+    "Coating": {
+      "thickness" : 80e-6,
+      "N" : 3},
+    "CurrentCollector": {
+      "thickness" : 10e-6,
+      "N" : 2,
+      "tab" : {
+        "width" : 4e-3,
+        "height" : 1e-3,
+        "Nw" : 3,
+        "Nh" : 3
+      }}},
+  "Separator" : {
+    "thickness" : 50e-6,
+    "N" : 3}
 }
