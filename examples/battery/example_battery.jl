@@ -36,7 +36,6 @@ if do_json
         # cfg[:max_nonlinear_iterations] = 10
     end
     output = run_battery(inputparams;
-                         use_p2d = use_p2d,
                          hook = hook,
                          config_kwargs = config_kwargs,
                          extra_timing = false);

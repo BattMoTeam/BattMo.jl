@@ -104,338 +104,6 @@ function setup_simulation(inputparams::AbstractInputParams;
 end
 
 
-######################################
-# Setup solver configuration options #
-######################################
-
-function setup_config(sim::Jutul.JutulSimulator,
-                      model::MultiModel,
-                      linear_solver::Symbol,
-                      extra_timing::Bool;
-                      kwargs...)
-    """
-        Sets up the config object used during simulation. In this current version this
-        setup is the same for json and mat files. The specific setup values should
-        probably be given as inputs in future versions of BattMo.jl
-    """
-
-    cfg = simulator_config(sim; kwargs...)
-    
-    cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
-    cfg[:debug_level]                = 0
-    cfg[:max_timestep_cuts]          = 10
-    cfg[:max_residual]               = 1e20
-    cfg[:min_nonlinear_iterations]   = 1
-    cfg[:extra_timing]               = extra_timing
-    # cfg[:max_nonlinear_iterations] = 5
-    cfg[:safe_mode]                  = false
-    cfg[:error_on_incomplete]        = false
-    cfg[:failure_cuts_timestep]      = true
-
-    for key in Jutul.submodels_symbols(model)
-        cfg[:tolerances][key][:default]  = 1e-5
-    end
-    
-    if model[:Control].system.policy isa CyclingCVPolicy
-
-        cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
-
-        function post_hook(done, report, sim, dt, forces, max_iter, cfg)
-
-            s = Jutul.get_simulator_storage(sim)
-            m = Jutul.get_simulator_model(sim)
-
-            if s.state.Control.ControllerCV.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-                report[:stopnow] = true
-            else
-                report[:stopnow] = false
-            end
-            
-            return (done, report)
-            
-        end
-
-        cfg[:post_ministep_hook] = post_hook
-
-    end
-    
-    return cfg
-    
-end
-
-######################
-# Setup timestepping #
-######################
-
-function setup_timesteps(inputparams::InputParams;
-                         kwargs ...)
-    """
-        Method setting up the timesteps from a json file object. 
-    """
-
-    controlPolicy = inputparams["Control"]["controlPolicy"]
-    
-    if controlPolicy == "CCDischarge"
-
-        DRate = inputparams["Control"]["DRate"]
-        con   = Constants()
-        totalTime = 1.1*con.hour/DRate
-
-        if haskey(inputparams["TimeStepping"], "totalTime")
-            @warn "totalTime value is given but not used"
-        end
-
-        if haskey(inputparams["TimeStepping"], "timeStepDuration")
-            dt = inputparams["TimeStepping"]["timeStepDuration"]
-            if haskey(inputparams["TimeStepping"], "numberOfTimeSteps")
-                @warn "Number of time steps is given but not used"
-            end
-        else
-            n = inputparams["TimeStepping"]["numberOfTimeSteps"]
-            dt = totalTime / n
-        end
-        if haskey(inputparams["TimeStepping"], "useRampup") && inputparams["TimeStepping"]["useRampup"]
-            nr = inputparams["TimeStepping"]["numberOfRampupSteps"]
-        else
-            nr = 1
-        end
-            
-        timesteps = rampupTimesteps(totalTime, dt, nr)
-
-    elseif controlPolicy == "CCCV"
-        
-        ncycles = inputparams["Control"]["numberOfCycles"]
-        DRate = inputparams["Control"]["DRate"]
-        CRate = inputparams["Control"]["CRate"]
-
-        con   = Constants()
-        
-        totalTime = ncycles*1.5*(1*con.hour/CRate + 1*con.hour/DRate);
-        
-        if haskey(inputparams["TimeStepping"], "totalTime")
-            @warn "totalTime value is given but not used"
-        end
-
-        if haskey(inputparams["TimeStepping"], "timeStepDuration")
-            dt = inputparams["TimeStepping"]["timeStepDuration"]
-            n  = Int64(floor(totalTime/dt))
-            if haskey(inputparams["TimeStepping"], "numberOfTimeSteps")
-                @warn "Number of time steps is given but not used"
-            end
-        else
-            n  = inputparams["TimeStepping"]["numberOfTimeSteps"]
-            dt = totalTime / n
-        end
-
-        timesteps = repeat([dt], n)
-
-    else
-
-        error("Control policy $controlPolicy not recognized")
-
-    end
-        
-    return timesteps
-end
-
-
-##################
-# Setup coupling #
-##################
-
-function setup_coupling_cross_terms!(inputparams::InputParams,
-                         model::MultiModel,
-                         parameters::Dict{Symbol,<:Any},
-                         couplings)
-
-    include_cc = inputparams["include_current_collectors"]
-
-
-    stringNames = Dict(:NeCc  => "NegativeCurrentCollector",
-                       :NeAm => "NegativeElectrode",
-                       :PeAm => "PositiveElectrode",        
-                       :PeCc  => "PositiveCurrentCollector")
-
-    #################################
-    # Setup coupling NeAm <-> Elyte #
-    #################################
-
-    srange = collect(couplings["NegativeElectrode"]["Electrolyte"]["cells"]) 
-    trange = collect(couplings["Electrolyte"]["NegativeElectrode"]["cells"]) # electrolyte (negative side)
-
-    if discretisation_type(model[:NeAm]) == :P2Ddiscretization
-
-        ct = ButlerVolmerActmatToElyteCT(trange, srange)
-        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
-        add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
-        add_cross_term!(model, ct_pair)
-
-        ct = ButlerVolmerElyteToActmatCT(srange, trange)
-        ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :charge_conservation)
-        add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :solid_diffusion_bc)
-        add_cross_term!(model, ct_pair)
-
-    else
-
-        @assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
-
-        ct = ButlerVolmerInterfaceFluxCT(trange, srange)
-        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
-        add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
-        add_cross_term!(model, ct_pair)
-
-    end
-    
-    #################################
-    # setup coupling Elyte <-> PeAm #
-    #################################
-
-    srange = collect(couplings["PositiveElectrode"]["Electrolyte"]["cells"])
-    trange = collect(couplings["Electrolyte"]["PositiveElectrode"]["cells"])
-
-    if discretisation_type(model[:PeAm]) == :P2Ddiscretization
-
-        ct = ButlerVolmerActmatToElyteCT(trange, srange)
-        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
-        add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
-        add_cross_term!(model, ct_pair)
-
-        ct = ButlerVolmerElyteToActmatCT(srange, trange)
-        ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :charge_conservation)
-        add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :solid_diffusion_bc)
-        add_cross_term!(model, ct_pair)
-
-    else
-
-        @assert discretisation_type(model[:PeAm]) == :NoParticleDiffusion    
-
-        ct = ButlerVolmerInterfaceFluxCT(trange, srange)
-        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
-        add_cross_term!(model, ct_pair)
-        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
-        add_cross_term!(model, ct_pair)
-
-    end
-
-    if include_cc 
-
-        ################################
-        # Setup coupling NeCc <-> NeAm #
-        ################################
-
-        #Ncc  = geomparams[:NeCc][:N]
-
-        srange_cells = collect(couplings["NegativeCurrentCollector"]["NegativeElectrode"]["cells"])
-        trange_cells = collect(couplings["NegativeElectrode"]["NegativeCurrentCollector"]["cells"])
-
-        srange_faces = collect(couplings["NegativeCurrentCollector"]["NegativeElectrode"]["faces"])
-        trange_faces = collect(couplings["NegativeElectrode"]["NegativeCurrentCollector"]["faces"])
-
-        msource = model[:NeCc]
-        mtarget = model[:NeAm]
-
-        psource = parameters[:NeCc]
-        ptarget = parameters[:NeAm]
-
-        # Here, the indexing in BoundaryFaces is used
-        couplingfaces = Array{Int64}(undef, size(srange_faces,1), 2)
-        couplingfaces[:, 1] = srange_faces
-        couplingfaces[:, 2] = trange_faces
-
-        couplingcells = Array{Int64}(undef, size(srange_faces,1), 2)
-        couplingcells[:, 1] = srange_cells
-        couplingcells[:, 2] = trange_cells
-
-        trans = getTrans(msource, mtarget,
-                         couplingfaces,
-                         couplingcells,
-                         psource, ptarget,
-                         :Conductivity)
-        @assert size(trans,1) == size(srange_cells,1)
-        ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
-        ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
-        add_cross_term!(model, ct_pair)
-
-        ################################
-        # setup coupling PeCc <-> PeAm #
-        ################################
-
-        #Npam  = geomparams[:PeAm][:N]
-
-        srange_cells = collect(couplings["PositiveCurrentCollector"]["PositiveElectrode"]["cells"])
-        trange_cells = collect(couplings["PositiveElectrode"]["PositiveCurrentCollector"]["cells"])
-
-        srange_faces = collect(couplings["PositiveCurrentCollector"]["PositiveElectrode"]["faces"])
-        trange_faces = collect(couplings["PositiveElectrode"]["PositiveCurrentCollector"]["faces"])
-
-        msource = model[:PeCc]
-        mtarget = model[:PeAm]
-
-        psource = parameters[:PeCc]
-        ptarget = parameters[:PeAm]
-
-        # Here, the indexing in BoundaryFaces is used
-        couplingfaces = Array{Int64}(undef, size(srange_faces,1), 2)
-        couplingfaces[:, 1] = srange_faces
-        couplingfaces[:, 2] = trange_faces
-
-
-        couplingcells = Array{Int64}(undef, size(srange_faces,1), 2)
-        couplingcells[:, 1] = srange_cells
-        couplingcells[:, 2] = trange_cells
-
-        trans = getTrans(msource, mtarget,
-                         couplingfaces,
-                         couplingcells,
-                         psource, ptarget,
-                         :Conductivity)
-        @assert size(trans,1) == size(srange_cells,1)  
-        ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
-        ct_pair = setup_cross_term(ct, target = :PeAm, source = :PeCc, equation = :charge_conservation)
-
-        add_cross_term!(model, ct_pair)
-
-    end
-
-    ########################################
-    # setup coupling PeCc/NeAm <-> control #
-    ########################################
-
-    if include_cc
-        controlComp = :PeCc
-    else
-        controlComp = :PeAm
-    end
-
-    stringControlComp = stringNames[controlComp]
-    
-    trange = couplings[stringControlComp]["External"]["cells"]
-    srange = Int64.(ones(size(trange)))
-
-    msource     = model[controlComp]
-    mparameters = parameters[controlComp]
-    
-    # Here the indexing in BoundaryFaces in used
-    couplingfaces = couplings[stringControlComp]["External"]["boundaryfaces"]
-    couplingcells = trange 
-    trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
-
-    ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
-    ct_pair = setup_cross_term(ct, target = controlComp, source = :Control, equation = :charge_conservation)
-    add_cross_term!(model, ct_pair)
-
-    ct = AccumulatorInterfaceFluxCT(1, trange, trans)
-    ct_pair = setup_cross_term(ct, target = :Control, source = controlComp, equation = :charge_conservation)
-    add_cross_term!(model, ct_pair)
-
-
-end
-
 ###############
 # Setup model #
 ###############
@@ -464,84 +132,6 @@ function setup_model(inputparams::AbstractInputParams;
 
 end
 
-#######################
-# Setup battery model #
-#######################
-
-
-function setup_grids_and_couplings(inputparams::InputParams)
-
-    jsondict = inputparams.dict
-    
-    geomparams = setup_geomparams(inputparams)
-
-    case_type = jsondict["Geometry"]["case"]
-
-    if case_type == "1D"
-
-        grids, couplings = one_dimensional_grid(geomparams)
-        
-    elseif case_type == "3D-demo"
-        
-        grids, couplings = pouch_grid(geomparams)
-        
-    else
-        
-        error("geometry case type not recognized")
-        
-    end       
-    
-    return grids, couplings
-    
-end
-
-function setup_component(grid::Jutul.FiniteVolumeMesh,
-                         sys;
-                         general_ad::Bool=false,
-                         dirichletBoundary = nothing)
-
-    domain = DataDomain(grid)
-
-    # opertors only use geometry not property
-    k = ones(number_of_cells(grid))
-    
-    T    = compute_face_trans(domain, k)
-    T_hf = compute_half_face_trans(domain, k)
-    T_b  = compute_boundary_trans(domain, k)
-    
-    domain[:trans, Faces()]           = T
-    domain[:halfTrans, HalfFaces()]   = T_hf
-    domain[:bcTrans, BoundaryFaces()] = T_b
-    
-    if !isnothing(dirichletBoundary)
-
-        bfaces = dirichletBoundary["boundaryfaces"]
-        nb = size(bfaces,1)
-        domain.entities[BoundaryDirichletFaces()] =  nb
-
-        bcDirFace = dirichletBoundary["boundaryfaces"] # in BoundaryFaces indexing
-        bcDirCell = dirichletBoundary["cells"]
-        
-        bcDirInd  = Vector{Int64}(1:nb)
-        domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = domain[:bcTrans][bcDirFace]
-        domain[:bcDirCells, BoundaryDirichletFaces()]     = bcDirCell 
-        domain[:bcDirInds, BoundaryDirichletFaces()]      = bcDirInd 
-        
-    end
-    
-    if general_ad
-        flow = PotentialFlow(grid)
-    else
-        flow = TwoPointPotentialFlowHardCoded(grid)
-    end
-    disc = (charge_flow=flow,)
-    domain = DiscretizedDomain(domain, disc)
-
-    model = SimulationModel(domain, sys, context=DefaultContext())
-
-    return model
-
-end
 
 function setup_submodels(inputparams::InputParams; 
                          use_groups::Bool = false, 
@@ -852,6 +442,85 @@ function setup_submodels(inputparams::InputParams;
     
 end
 
+#################################################################
+# Setup grids and coupling for the given geometrical parameters #
+#################################################################
+
+function setup_grids_and_couplings(inputparams::InputParams)
+
+    jsondict = inputparams.dict
+    
+    geomparams = setup_geomparams(inputparams)
+
+    case_type = jsondict["Geometry"]["case"]
+
+    if case_type == "1D"
+
+        grids, couplings = one_dimensional_grid(geomparams)
+        
+    elseif case_type == "3D-demo"
+        
+        grids, couplings = pouch_grid(geomparams)
+        
+    else
+        
+        error("geometry case type not recognized")
+        
+    end       
+    
+    return grids, couplings
+    
+end
+
+function setup_component(grid::Jutul.FiniteVolumeMesh,
+                         sys;
+                         general_ad::Bool=false,
+                         dirichletBoundary = nothing)
+
+    domain = DataDomain(grid)
+
+    # opertors only use geometry not property
+    k = ones(number_of_cells(grid))
+    
+    T    = compute_face_trans(domain, k)
+    T_hf = compute_half_face_trans(domain, k)
+    T_b  = compute_boundary_trans(domain, k)
+    
+    domain[:trans, Faces()]           = T
+    domain[:halfTrans, HalfFaces()]   = T_hf
+    domain[:bcTrans, BoundaryFaces()] = T_b
+    
+    if !isnothing(dirichletBoundary)
+
+        bfaces = dirichletBoundary["boundaryfaces"]
+        nb = size(bfaces,1)
+        domain.entities[BoundaryDirichletFaces()] =  nb
+
+        bcDirFace = dirichletBoundary["boundaryfaces"] # in BoundaryFaces indexing
+        bcDirCell = dirichletBoundary["cells"]
+        
+        bcDirInd  = Vector{Int64}(1:nb)
+        domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = domain[:bcTrans][bcDirFace]
+        domain[:bcDirCells, BoundaryDirichletFaces()]     = bcDirCell 
+        domain[:bcDirInds, BoundaryDirichletFaces()]      = bcDirInd 
+        
+    end
+    
+    if general_ad
+        flow = PotentialFlow(grid)
+    else
+        flow = TwoPointPotentialFlowHardCoded(grid)
+    end
+    disc = (charge_flow=flow,)
+    domain = DiscretizedDomain(domain, disc)
+
+    model = SimulationModel(domain, sys, context=DefaultContext())
+
+    return model
+
+end
+
+
 ############################
 # Setup battery parameters #
 ############################
@@ -1100,6 +769,340 @@ function setup_initial_state(inputparams::InputParams,
     return initState
     
 end
+
+
+##################
+# Setup coupling #
+##################
+
+function setup_coupling_cross_terms!(inputparams::InputParams,
+                         model::MultiModel,
+                         parameters::Dict{Symbol,<:Any},
+                         couplings)
+
+    include_cc = inputparams["include_current_collectors"]
+
+
+    stringNames = Dict(:NeCc  => "NegativeCurrentCollector",
+                       :NeAm => "NegativeElectrode",
+                       :PeAm => "PositiveElectrode",        
+                       :PeCc  => "PositiveCurrentCollector")
+
+    #################################
+    # Setup coupling NeAm <-> Elyte #
+    #################################
+
+    srange = collect(couplings["NegativeElectrode"]["Electrolyte"]["cells"]) 
+    trange = collect(couplings["Electrolyte"]["NegativeElectrode"]["cells"]) # electrolyte (negative side)
+
+    if discretisation_type(model[:NeAm]) == :P2Ddiscretization
+
+        ct = ButlerVolmerActmatToElyteCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
+
+        ct = ButlerVolmerElyteToActmatCT(srange, trange)
+        ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :solid_diffusion_bc)
+        add_cross_term!(model, ct_pair)
+
+    else
+
+        @assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
+
+        ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
+
+    end
+    
+    #################################
+    # setup coupling Elyte <-> PeAm #
+    #################################
+
+    srange = collect(couplings["PositiveElectrode"]["Electrolyte"]["cells"])
+    trange = collect(couplings["Electrolyte"]["PositiveElectrode"]["cells"])
+
+    if discretisation_type(model[:PeAm]) == :P2Ddiscretization
+
+        ct = ButlerVolmerActmatToElyteCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
+
+        ct = ButlerVolmerElyteToActmatCT(srange, trange)
+        ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :solid_diffusion_bc)
+        add_cross_term!(model, ct_pair)
+
+    else
+
+        @assert discretisation_type(model[:PeAm]) == :NoParticleDiffusion    
+
+        ct = ButlerVolmerInterfaceFluxCT(trange, srange)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
+        add_cross_term!(model, ct_pair)
+
+    end
+
+    if include_cc 
+
+        ################################
+        # Setup coupling NeCc <-> NeAm #
+        ################################
+
+        #Ncc  = geomparams[:NeCc][:N]
+
+        srange_cells = collect(couplings["NegativeCurrentCollector"]["NegativeElectrode"]["cells"])
+        trange_cells = collect(couplings["NegativeElectrode"]["NegativeCurrentCollector"]["cells"])
+
+        srange_faces = collect(couplings["NegativeCurrentCollector"]["NegativeElectrode"]["faces"])
+        trange_faces = collect(couplings["NegativeElectrode"]["NegativeCurrentCollector"]["faces"])
+
+        msource = model[:NeCc]
+        mtarget = model[:NeAm]
+
+        psource = parameters[:NeCc]
+        ptarget = parameters[:NeAm]
+
+        # Here, the indexing in BoundaryFaces is used
+        couplingfaces = Array{Int64}(undef, size(srange_faces,1), 2)
+        couplingfaces[:, 1] = srange_faces
+        couplingfaces[:, 2] = trange_faces
+
+        couplingcells = Array{Int64}(undef, size(srange_faces,1), 2)
+        couplingcells[:, 1] = srange_cells
+        couplingcells[:, 2] = trange_cells
+
+        trans = getTrans(msource, mtarget,
+                         couplingfaces,
+                         couplingcells,
+                         psource, ptarget,
+                         :Conductivity)
+        @assert size(trans,1) == size(srange_cells,1)
+        ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
+        ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+
+        ################################
+        # setup coupling PeCc <-> PeAm #
+        ################################
+
+        #Npam  = geomparams[:PeAm][:N]
+
+        srange_cells = collect(couplings["PositiveCurrentCollector"]["PositiveElectrode"]["cells"])
+        trange_cells = collect(couplings["PositiveElectrode"]["PositiveCurrentCollector"]["cells"])
+
+        srange_faces = collect(couplings["PositiveCurrentCollector"]["PositiveElectrode"]["faces"])
+        trange_faces = collect(couplings["PositiveElectrode"]["PositiveCurrentCollector"]["faces"])
+
+        msource = model[:PeCc]
+        mtarget = model[:PeAm]
+
+        psource = parameters[:PeCc]
+        ptarget = parameters[:PeAm]
+
+        # Here, the indexing in BoundaryFaces is used
+        couplingfaces = Array{Int64}(undef, size(srange_faces,1), 2)
+        couplingfaces[:, 1] = srange_faces
+        couplingfaces[:, 2] = trange_faces
+
+
+        couplingcells = Array{Int64}(undef, size(srange_faces,1), 2)
+        couplingcells[:, 1] = srange_cells
+        couplingcells[:, 2] = trange_cells
+
+        trans = getTrans(msource, mtarget,
+                         couplingfaces,
+                         couplingcells,
+                         psource, ptarget,
+                         :Conductivity)
+        @assert size(trans,1) == size(srange_cells,1)  
+        ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
+        ct_pair = setup_cross_term(ct, target = :PeAm, source = :PeCc, equation = :charge_conservation)
+
+        add_cross_term!(model, ct_pair)
+
+    end
+
+    ########################################
+    # setup coupling PeCc/NeAm <-> control #
+    ########################################
+
+    if include_cc
+        controlComp = :PeCc
+    else
+        controlComp = :PeAm
+    end
+
+    stringControlComp = stringNames[controlComp]
+    
+    trange = couplings[stringControlComp]["External"]["cells"]
+    srange = Int64.(ones(size(trange)))
+
+    msource     = model[controlComp]
+    mparameters = parameters[controlComp]
+    
+    # Here the indexing in BoundaryFaces in used
+    couplingfaces = couplings[stringControlComp]["External"]["boundaryfaces"]
+    couplingcells = trange 
+    trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
+
+    ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
+    ct_pair = setup_cross_term(ct, target = controlComp, source = :Control, equation = :charge_conservation)
+    add_cross_term!(model, ct_pair)
+
+    ct = AccumulatorInterfaceFluxCT(1, trange, trans)
+    ct_pair = setup_cross_term(ct, target = :Control, source = controlComp, equation = :charge_conservation)
+    add_cross_term!(model, ct_pair)
+
+
+end
+
+######################
+# Setup timestepping #
+######################
+
+function setup_timesteps(inputparams::InputParams;
+                         kwargs ...)
+    """
+        Method setting up the timesteps from a json file object. 
+    """
+
+    controlPolicy = inputparams["Control"]["controlPolicy"]
+    
+    if controlPolicy == "CCDischarge"
+
+        DRate = inputparams["Control"]["DRate"]
+        con   = Constants()
+        totalTime = 1.1*con.hour/DRate
+
+        if haskey(inputparams["TimeStepping"], "totalTime")
+            @warn "totalTime value is given but not used"
+        end
+
+        if haskey(inputparams["TimeStepping"], "timeStepDuration")
+            dt = inputparams["TimeStepping"]["timeStepDuration"]
+            if haskey(inputparams["TimeStepping"], "numberOfTimeSteps")
+                @warn "Number of time steps is given but not used"
+            end
+        else
+            n = inputparams["TimeStepping"]["numberOfTimeSteps"]
+            dt = totalTime / n
+        end
+        if haskey(inputparams["TimeStepping"], "useRampup") && inputparams["TimeStepping"]["useRampup"]
+            nr = inputparams["TimeStepping"]["numberOfRampupSteps"]
+        else
+            nr = 1
+        end
+            
+        timesteps = rampupTimesteps(totalTime, dt, nr)
+
+    elseif controlPolicy == "CCCV"
+        
+        ncycles = inputparams["Control"]["numberOfCycles"]
+        DRate = inputparams["Control"]["DRate"]
+        CRate = inputparams["Control"]["CRate"]
+
+        con   = Constants()
+        
+        totalTime = ncycles*1.5*(1*con.hour/CRate + 1*con.hour/DRate);
+        
+        if haskey(inputparams["TimeStepping"], "totalTime")
+            @warn "totalTime value is given but not used"
+        end
+
+        if haskey(inputparams["TimeStepping"], "timeStepDuration")
+            dt = inputparams["TimeStepping"]["timeStepDuration"]
+            n  = Int64(floor(totalTime/dt))
+            if haskey(inputparams["TimeStepping"], "numberOfTimeSteps")
+                @warn "Number of time steps is given but not used"
+            end
+        else
+            n  = inputparams["TimeStepping"]["numberOfTimeSteps"]
+            dt = totalTime / n
+        end
+
+        timesteps = repeat([dt], n)
+
+    else
+
+        error("Control policy $controlPolicy not recognized")
+
+    end
+        
+    return timesteps
+end
+
+
+######################################
+# Setup solver configuration options #
+######################################
+
+function setup_config(sim::Jutul.JutulSimulator,
+                      model::MultiModel,
+                      linear_solver::Symbol,
+                      extra_timing::Bool;
+                      kwargs...)
+    """
+        Sets up the config object used during simulation. In this current version this
+        setup is the same for json and mat files. The specific setup values should
+        probably be given as inputs in future versions of BattMo.jl
+    """
+
+    cfg = simulator_config(sim; kwargs...)
+    
+    cfg[:linear_solver]              = battery_linsolve(model, linear_solver)
+    cfg[:debug_level]                = 0
+    cfg[:max_timestep_cuts]          = 10
+    cfg[:max_residual]               = 1e20
+    cfg[:min_nonlinear_iterations]   = 1
+    cfg[:extra_timing]               = extra_timing
+    # cfg[:max_nonlinear_iterations] = 5
+    cfg[:safe_mode]                  = false
+    cfg[:error_on_incomplete]        = false
+    cfg[:failure_cuts_timestep]      = true
+
+    for key in Jutul.submodels_symbols(model)
+        cfg[:tolerances][key][:default]  = 1e-5
+    end
+    
+    if model[:Control].system.policy isa CyclingCVPolicy
+
+        cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+
+        function post_hook(done, report, sim, dt, forces, max_iter, cfg)
+
+            s = Jutul.get_simulator_storage(sim)
+            m = Jutul.get_simulator_model(sim)
+
+            if s.state.Control.ControllerCV.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+                report[:stopnow] = true
+            else
+                report[:stopnow] = false
+            end
+            
+            return (done, report)
+            
+        end
+
+        cfg[:post_ministep_hook] = post_hook
+
+    end
+    
+    return cfg
+    
+end
+
 
 ####################
 # Current function #
