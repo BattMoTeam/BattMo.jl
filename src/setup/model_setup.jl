@@ -448,19 +448,16 @@ end
 
 function setup_grids_and_couplings(inputparams::InputParams)
 
-    jsondict = inputparams.dict
-    
-    geomparams = setup_geomparams(inputparams)
 
-    case_type = jsondict["Geometry"]["case"]
+    case_type = inputparams["Geometry"]["case"]
 
     if case_type == "1D"
 
-        grids, couplings = one_dimensional_grid(geomparams)
+        grids, couplings = one_dimensional_grid(inputparams)
         
     elseif case_type == "3D-demo"
         
-        grids, couplings = pouch_grid(geomparams)
+        grids, couplings = pouch_grid(inputparams)
         
     else
         
@@ -519,7 +516,6 @@ function setup_component(grid::Jutul.FiniteVolumeMesh,
     return model
 
 end
-
 
 ############################
 # Setup battery parameters #
@@ -769,7 +765,6 @@ function setup_initial_state(inputparams::InputParams,
     return initState
     
 end
-
 
 ##################
 # Setup coupling #
@@ -1043,14 +1038,13 @@ function setup_timesteps(inputparams::InputParams;
     return timesteps
 end
 
-
 ######################################
 # Setup solver configuration options #
 ######################################
 
 function setup_config(sim::Jutul.JutulSimulator,
-                      model::MultiModel,
-                      linear_solver::Symbol,
+                      model::MultiModel        ,
+                      linear_solver::Symbol    ,
                       extra_timing::Bool;
                       kwargs...)
     """
@@ -1262,74 +1256,6 @@ function getHalfTrans(model::Dict{String,<:Any},
     
 end
 
-####################
-# Setup geomparams #
-####################
-
-function setup_geomparams(inputparams::InputParams)
-    
-    jsondict = inputparams.dict
-
-    case_type = jsondict["Geometry"]["case"]
-    
-    if case_type == "1D"
-        
-        include_cc = include_current_collectors(inputparams)
-        
-        if include_cc
-            components = ["NegativeCurrentCollector",
-                          "NegativeElectrode"       ,
-                          "Separator"               ,
-                          "PositiveElectrode"       ,
-                          "PositiveCurrentCollector"]        
-        else
-            components = ["NegativeElectrode",
-                          "Separator"        ,
-                          "PositiveElectrode"]
-            
-        end
-        
-        geomparams = Dict()
-
-        geomparams["NegativeElectrode"] = Dict("N"         => jsondict["NegativeElectrode"]["Coating"]["N"],
-                                               "thickness" => jsondict["NegativeElectrode"]["Coating"]["thickness"])
-        geomparams["PositiveElectrode"] = Dict("N"         => jsondict["PositiveElectrode"]["Coating"]["N"],
-                                               "thickness" => jsondict["PositiveElectrode"]["Coating"]["thickness"])
-        geomparams["Separator"]         = Dict("N"         => jsondict["Separator"]["N"],
-                                               "thickness" => jsondict["Separator"]["thickness"])
-        
-
-        if include_cc
-            geomparams["NegativeCurrentCollector"] = Dict("N"         => jsondict["NegativeElectrode"]["CurrentCollector"]["N"],
-                                                          "thickness" => jsondict["NegativeElectrode"]["CurrentCollector"]["thickness"])
-            geomparams["PositiveCurrentCollector"] = Dict("N"         => jsondict["PositiveElectrode"]["CurrentCollector"]["N"],
-                                                          "thickness" => jsondict["PositiveElectrode"]["CurrentCollector"]["thickness"])
-        end
-        
-        if haskey(jsondict, "include_current_collectors")
-            geomparams["include_current_collectors"] = jsondict["include_current_collectors"]
-        else
-            geomparams["include_current_collectors"] = true # default case
-        end
-
-        geomparams["faceArea"] = jsondict["Geometry"]["faceArea"]
-            
-    elseif case_type == "3D-demo"
-
-        # setup is compatible with battmo general specifications as defined in Schema
-        geomparams = inputparams.dict
-        
-    else
-        
-        error("geometry case type not recognized")
-        
-    end
-
-    geomparams = InputGeometryParams(geomparams)
-    
-    return geomparams
-    
-end
 
 #############
 # Utilities #

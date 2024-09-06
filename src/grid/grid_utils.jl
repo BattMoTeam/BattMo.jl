@@ -9,7 +9,6 @@ export
     convert_geometry,
     one_dimensional_grid
 
-
 #####################
 # utility functions #
 #####################
@@ -35,55 +34,54 @@ function find_common(map_grid1, map_grid2)
     if isempty(entity1)
         return nothing
     end
-    
-    return collect([entity1 entity2]) ###This might be quite slow, but I wanted output to be matrix
-    
-end
 
+    return collect([entity1 entity2]) ###This might be quite slow, but I wanted output to be matrix
+
+end
 
 """ Generic function to compute the couplings structure between the components
 """
 function setup_couplings(components, grids, global_maps)
-    
+
     couplings = Dict{String,Dict{String,Any}}()
 
     for (ind1, comp1) in enumerate(components)
-        
+
         couplings[comp1] = Dict{String,Any}()
-        
+
         for (ind2, comp2) in enumerate(components)
 
             intersection = find_coupling(global_maps[comp1], global_maps[comp2], [comp1, comp2])
 
             intersection_tmp = Dict() # intersection
-            
+
             if ind1 != ind2
-                
+
                 cells = intersection["cells"]
                 faces = intersection["faces"]
-                
+
                 if isnothing(cells)
                     # We recover the coupling cells from the neighbors
                     if !isnothing(faces)
                         nb = grids[comp1]["faces"]["neighbors"]
                         locfaces = faces[:, 1]
-                        loccells = nb[locfaces,1] + nb[locfaces,2]                     
+                        loccells = nb[locfaces,1] + nb[locfaces,2]
                         intersection_tmp = Dict("cells" => loccells, "faces" => locfaces, "face_type" => true)
                     end
-                    
+
                 else
                     # Coupling between cells and, in this case, face couplings are meaningless
                     if isnothing(faces)
                         faces = []
                     end
-                    
+
                     if size(faces, 1) != size(cells, 1)
                         intersection_tmp = Dict("cells" => cells[:, 1], "faces" => [], "face_type" => false)
                     else
                         @assert false
                     end
                 end
-                
+
                 if !(isnothing(cells) && isnothing(faces))
                     couplings[comp1][comp2] = intersection_tmp
                 end
@@ -92,7 +90,7 @@ function setup_couplings(components, grids, global_maps)
     end
 
     return couplings
-    
+
 end
 
 """
@@ -114,31 +112,31 @@ function convert_geometry(grids, couplings; include_current_collectors = true)
                       "PositiveElectrode"       ,
                       "Electrolyte"]
     end
-    
+
     ugrids = Dict()
-    
+
     for component in components
         ugrids[component] = UnstructuredMesh(grids[component])
     end
-    
+
     ucouplings = deepcopy(couplings)
-    
+
     for component in components
 
         component_couplings = ucouplings[component]
-        
+
         grid  = grids[component]
         ugrid = ugrids[component]
-        
+
         for (other_component, coupling) in component_couplings
-            
+
             if !isempty(coupling)
-                
+
                 if coupling["face_type"]
-                    
+
                     faces = coupling["faces"]
                     cells = coupling["cells"]
-                    
+
                     for fi in eachindex(faces)
 
                         face = faces[fi]
@@ -166,10 +164,10 @@ function convert_geometry(grids, couplings; include_current_collectors = true)
             end
         end
     end
-    
+
     return ugrids, ucouplings
-    
-end 
+
+end
 
 ##############################
 # one dimensional grid setup #
@@ -179,12 +177,29 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
 
     grids       = Dict()
     global_maps = Dict()
-    
+
     include_current_collectors = geomparams["include_current_collectors"]
-    faceArea = geomparams["faceArea"]
-    
+
+    faceArea = geomparams["Geometry"]["faceArea"]
+
+    vars = ["thickness", "N"]
+    vals = Dict("thickness" => Vector{Float64}(),
+                "N" => Vector{Int}())
+
+    for var in vars
+        push!(vals[var], geomparams["NegativeElectrode"]["Coating"][var])
+        push!(vals[var], geomparams["Separator"][var])
+        push!(vals[var], geomparams["PositiveElectrode"]["Coating"][var])
+    end
+
+
     if include_current_collectors
 
+        for var in vars
+            pushfirst!(vals[var], geomparams["NegativeElectrode"]["CurrentCollector"][var])
+            push!(vals[var], geomparams["PositiveElectrode"]["CurrentCollector"][var])
+        end
+        
         components = ["NegativeCurrentCollector",
                       "NegativeElectrode"       ,
                       "Separator"               ,
@@ -194,22 +209,22 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
         elyte_comp_start = 2
         
     else
-        
+
         components = ["NegativeElectrode",
                       "Separator"        ,
                       "PositiveElectrode"]
-        
+    
         elyte_comp_start = 1
-        
+
     end
 
-    ns = [geomparams[component]["N"] for component in components]
-    xs = [geomparams[component]["thickness"] for component in components]
-    
+    ns = vals["N"]
+    xs = vals["thickness"]
+
     L = StatsBase.inverse_rle(xs./ns, ns)
 
     mesh = CartesianMesh((sum(ns), 1, 1), (L, faceArea, 1.))
-    
+
     uParentGrid = UnstructuredMesh(mesh)
     parentGrid = convert_to_mrst_grid(uParentGrid)
 
@@ -238,11 +253,11 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
     global_maps["Electrolyte"] = maps
 
     push!(components, "Electrolyte")
-    
+
     couplings = setup_couplings(components, grids, global_maps)
 
     grids, couplings = convert_geometry(grids, couplings; include_current_collectors = include_current_collectors)
-    
+
     """Add  external coupling to the coupling structure.
        Function can be used both with and without current collector."""
     if include_current_collectors
@@ -261,25 +276,25 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
 
     component = boundaryComponents["left"]
     grid = grids[component]
-    
+
     nf = number_of_boundary_faces(grid)
-    
+
     bcfaceind = argmin(i -> getcoord(grid, i), 1 : nf)
-    
-    couplings[component]["External"] = Dict("cells" => [1], "boundaryfaces" => [bcfaceind])        
-    
+
+    couplings[component]["External"] = Dict("cells" => [1], "boundaryfaces" => [bcfaceind])
+
     component = boundaryComponents["right"]
     grid = grids[component]
-    
+
     nf = number_of_boundary_faces(grid)
     nc = number_of_cells(grid)
-    
+
     bcfaceind = argmax(i -> getcoord(grid, i), 1 : nf)
-    
+
     couplings[component]["External"] = Dict("cells" => [nc], "boundaryfaces" => [bcfaceind])
-    
+
     return grids, couplings
-    
+
 end
 
 #################################
@@ -292,24 +307,24 @@ function pouch_grid(geomparams::InputGeometryParams)
 
     ne_cc_z  = geomparams["NegativeElectrode"]["CurrentCollector"]["thickness"]
     ne_cc_nz = geomparams["NegativeElectrode"]["CurrentCollector"]["N"]
-    
+
     ne_co_z  = geomparams["NegativeElectrode"]["Coating"]["thickness"]
     ne_co_nz = geomparams["NegativeElectrode"]["Coating"]["N"]
 
     pe_cc_z  = geomparams["PositiveElectrode"]["CurrentCollector"]["thickness"]
     pe_cc_nz = geomparams["PositiveElectrode"]["CurrentCollector"]["N"]
-    
+
     pe_co_z  = geomparams["PositiveElectrode"]["Coating"]["thickness"]
-    pe_co_nz = geomparams["PositiveElectrode"]["Coating"]["N"]    
+    pe_co_nz = geomparams["PositiveElectrode"]["Coating"]["N"]
 
     sep_z  = geomparams["Separator"]["thickness"]
-    sep_nz = geomparams["Separator"]["N"]    
-    
-    x  = geomparams["Geometry"]["width"] 
+    sep_nz = geomparams["Separator"]["N"]
+
+    x  = geomparams["Geometry"]["width"]
     y  = geomparams["Geometry"]["height"]
-    nx = geomparams["Geometry"]["Nw"] 
+    nx = geomparams["Geometry"]["Nw"]
     ny = geomparams["Geometry"]["Nh"]
-    
+
     ne_tab_nx = geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"]
     ne_tab_ny = geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"]
     ne_tab_x  = geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]["width"]
@@ -321,42 +336,42 @@ function pouch_grid(geomparams::InputGeometryParams)
     pe_tab_y  = geomparams["PositiveElectrode"]["CurrentCollector"]["tab"]["height"]
 
     nx = [ne_tab_nx, nx - (ne_tab_nx + pe_tab_nx), pe_tab_nx]
-    ny = [ne_tab_ny, ny - (ne_tab_ny + pe_tab_ny), pe_tab_ny]    
+    ny = [ne_tab_ny, ny - (ne_tab_ny + pe_tab_ny), pe_tab_ny]
     nz = [ne_cc_nz, ne_co_nz, sep_nz, pe_co_nz, pe_cc_nz]
 
     xs = [ne_tab_x, x - (ne_tab_x + pe_tab_x), pe_tab_x]
-    ys = [ne_tab_y, y - (ne_tab_y + pe_tab_y), pe_tab_y]    
+    ys = [ne_tab_y, y - (ne_tab_y + pe_tab_y), pe_tab_y]
     zs = [ne_cc_z, ne_co_z, sep_z, pe_co_z, pe_cc_z]
 
     zvals = zs  # used to recover the different regions in setup_pouch_cell_geometry (see below)
-    
+
     xs = xs ./ nx
     ys = ys ./ ny
     zs = zs ./ nz
-    
+
     same_side = false # if true, needs pe_cc_ny >= ne_cc_ny. I think they usually are equal
 
     Lx = StatsBase.inverse_rle(xs, nx)
     Ly = StatsBase.inverse_rle(ys, ny)
     Lz = StatsBase.inverse_rle(zs, nz)
-    
+
     Nx = length(Lx)
     Ny = length(Ly)
     Nz = length(Lz)
-    
+
     h = CartesianMesh((Nx, Ny, Nz), (Lx, Ly, Lz))
-    
+
     H_back = convert_to_mrst_grid(UnstructuredMesh(h));
-    
+
     #################################################################
-    
+
     # Iterators in the z-direction over horizontal layers at the end where the positive current collector is located
     pe_endbox_list_of_iterators = [Nx * (i * Ny - pe_tab_ny)  + 1 : Nx * Ny * i for i in 1 : Nz]
 
     # collect from previous iterator. The result is the set of cells that makes up the box-shape end of the domain (in
     # the y-direction), which includes the pe_cc tab
     pe_extra_cells = cat(pe_endbox_list_of_iterators..., dims = 1)
-    
+
     # (x-y) Carthesian indices of the cells of the positive current collector tab (not expanded in the z direction)
     pe_tab_horz_index = cat([Nx * i - pe_tab_nx + 1 : Nx * i for i in 1:pe_tab_ny]..., dims = 1)
 
@@ -369,12 +384,12 @@ function pouch_grid(geomparams::InputGeometryParams)
     setdiff!(pe_extra_cells, pe_tab_cells)
 
     # We proceed in the same way for the negative current collector
-   
+
     ne_endbox_list_of_operators = [Nx * Ny * (i - 1)  + 1 : Nx * (Ny * (i - 1) + ne_tab_ny) for i in 1 : Nz]
     ne_extra_cells = cat(ne_endbox_list_of_operators..., dims = 1)
-    
+
     ne_tab_horz_index = cat([Nx * (i - 1) + 1 : Nx * (i - 1) + pe_tab_nx for i in 1:ne_tab_ny]..., dims = 1)
-    
+
     if same_side
         ne_tab_cells = cat(getindex.(pe_endbox_list_of_iterators[1 : ne_cc_nz], [ne_tab_horz_index])..., dims = 1)
         setdiff!(pe_extra_cells, ne_tab_cells)
@@ -382,7 +397,7 @@ function pouch_grid(geomparams::InputGeometryParams)
         ne_tab_cells = cat(getindex.(ne_endbox_list_of_operators[1 : ne_cc_nz], [ne_tab_horz_index])..., dims = 1)
         setdiff!(ne_extra_cells, ne_tab_cells)
     end
-    
+
     G, = remove_cells(H_back, vcat(pe_extra_cells, ne_extra_cells))
 
     grids, couplings = setup_pouch_cell_geometry(G, zvals)
@@ -396,9 +411,9 @@ function pouch_grid(geomparams::InputGeometryParams)
 
     bcfaces = findBoundary(grid, 2, false);
     bccells = neighbors[bcfaces]
-    
-    couplings["NegativeCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)        
-    
+
+    couplings["NegativeCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)
+
     # Positive current collector external coupling
 
     grid = grids["PositiveCurrentCollector"]
@@ -407,11 +422,11 @@ function pouch_grid(geomparams::InputGeometryParams)
 
     bcfaces = findBoundary(grid, 2, true);
     bccells = neighbors[bcfaces]
-    
-    couplings["PositiveCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)        
+
+    couplings["PositiveCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)
 
     return grids, couplings
-    
+
 end
 
 """
@@ -420,12 +435,12 @@ find the tags of each cell (tag from 1 to 5 for each grid component such as nega
 on). Returns a list with 5 elements, each element containing a list of cells for the corresponding tag
 """
 function find_tags(h, paramsz_z)
-    
+
     h_with_geo = tpfv_geometry(h)
     cut_offs = cumsum(paramsz_z)
     tag = searchsortedfirst.([cut_offs], h_with_geo.cell_centroids[3, :])
     return [findall(x -> x == i, tag) for i in 1 : 5]
-    
+
 end
 
 """
@@ -433,22 +448,22 @@ Single layer pouch cell utility function
 Find the face boundary of the grid in a given Cartesian direction (dim) and direction (true of false correpondings to "left" and "right"). It is used to obtain the external coupling for the grid
 """
 function findBoundary(grid, dim, dir)
-    
+
     nf = number_of_boundary_faces(grid)
-    
+
     if dir
         max_min = -Inf
     else
         max_min = Inf
     end
-    
+
     tol = 1000*eps()
 
     function getcoord(i)
         centroid, = Jutul.compute_centroid_and_measure(grid, BoundaryFaces(), i)
         return centroid[dim]
     end
-    
+
     coord = [getcoord(i) for i in 1 : nf]
 
     if dir
@@ -460,14 +475,14 @@ function findBoundary(grid, dim, dir)
     faces = findall(abs.(coord .- max_min) .< tol)
 
     return faces
-    
+
 end
 
 """ single layer pouch cell utility function,
     From a global grid and the position of the z-values for the different components, returns the grids with the coupling
 """
 function setup_pouch_cell_geometry(H_mother, paramsz)
-    
+
     grids       = Dict()
     global_maps = Dict()
 
@@ -476,13 +491,12 @@ function setup_pouch_cell_geometry(H_mother, paramsz)
                   "Separator"               ,
                   "PositiveElectrode"       ,
                   "PositiveCurrentCollector"]
-    
+
     tags = find_tags(UnstructuredMesh(H_mother), paramsz)
 
     grids["Global"] = UnstructuredMesh(H_mother)
     nglobal = number_of_cells(grids["Global"])
     tags = find_tags(grids["Global"], paramsz)
-    
 
     # Setup the grids and mapping for all components
     allinds = 1 : nglobal
@@ -491,18 +505,18 @@ function setup_pouch_cell_geometry(H_mother, paramsz)
         grids[component] = G
         global_maps[component] = maps
     end
-    
+
     # Setup the grid and mapping for the electrolyte
     G, maps... = remove_cells(H_mother, setdiff(allinds, vcat(tags[2:4]...)))
     grids["Electrolyte"] = G
     global_maps["Electrolyte"] = maps
-    
+
     # Add Electrolyte in the component list
     push!(components, "Electrolyte")
 
     # Setup the couplings
     couplings = setup_couplings(components, grids, global_maps)
-    
+
     return grids, couplings
-    
+
 end
