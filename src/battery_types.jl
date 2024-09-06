@@ -212,10 +212,11 @@ Jutul.minimum_value(::VolumeFraction) = eps(Float64)
 mutable struct BatteryCPhiPreconditioner <: JutulPreconditioner
     c_precond
     p_precond
+    g_precond
     data
 end
 
 function BatteryCPhiPreconditioner(c_precond = Jutul.AMGPreconditioner(:ruge_stuben), 
-    p_precond = Jutul.AMGPreconditioner(:ruge_stuben))
-    return BatteryCPhiPreconditioner(c_precond, p_precond, nothing)
+    p_precond = Jutul.AMGPreconditioner(:ruge_stuben), g_precond = nothing)
+    return BatteryCPhiPreconditioner(c_precond, p_precond, g_precond, nothing)
 end

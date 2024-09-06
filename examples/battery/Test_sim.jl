@@ -1,21 +1,30 @@
 using Jutul, BattMo, GLMakie#, Plots, GLMakie
+using HYPRE
 using Plots
 using StatsBase
 using Infiltrator
 using AlgebraicMultigrid
+using Preconditioners
+using Preferences
+#revise(; throw=true)
+set_preferences!(BattMo, "precompile_workload" => false; force=true)
+set_preferences!(Jutul, "precompile_workload" => false; force=true)
+#
 GLMakie.closeall()
 #GLMakie.activate!()
 include_cc = true
 use_p2d = false
 
 includet("jutul_grid_utils.jl")
+includet("../../src/solver_as_preconditioner.jl")
+includet("../../src/solver_as_preconditioner_system.jl")
 
 do_plot = true
 
 
-
-fac = 2    
-H_mother, cellmap, facemap, nodemap, paramsz = basic_grid_example_p4d2(nx=fac,ny=fac*2,nz=10,tab_cell_nx=3,tab_cell_ny=3);
+nz_fac = 1#2
+fac = 1#3*2    
+H_mother, cellmap, facemap, nodemap, paramsz = basic_grid_example_p4d2(nx=fac,ny=fac*2,nz=10*nz_fac,tab_cell_nx=3,tab_cell_ny=3);
 #H_mother, cellmap, facemap, nodemap, paramsz = basic_grid_example_p4d2(nx=2,ny=2,nz=5,tab_cell_nx=0,tab_cell_ny=0);
 #H_mother, cellmap, facemap, nodemap, paramsz = basic_grid_example_p4d2(nx=1,ny=1,nz=1,tab_cell_nx=0,tab_cell_ny=0, test=true);
 #plot_grid_test(UnstructuredMesh(H_mother))
@@ -147,7 +156,7 @@ if include_cc
     case["NegativeElectrode"]["CurrentCollector"]["density"] = 1000
     case["PositiveElectrode"]["CurrentCollector"]["density"] = 1000
 end
-cond = 1e5
+cond = 1e4
 init.object["PositiveElectrode"]["CurrentCollector"]["electronicConductivity"] = cond
 init.object["NegativeElectrode"]["CurrentCollector"]["electronicConductivity"] = cond
 init.object["Geometry"]["case"] = "Grid"
@@ -161,7 +170,7 @@ if !use_p2d
     init.object["NegativeElectrode"]["Coating"]["ActiveMaterial"]["InterDiffusionCoefficient"]= 0
 end
 if !include_cc
-    init.object["Geometry"]["NegativeElectrode"] = Dict()
+    init.object["Geometry"]["NegativeElectr1.0ode"] = Dict()
     init.object["Geometry"]["PostitiveElectrode"] = Dict()
 end
 #geomparams = BAttMo.setup_geomparams_grid(init.object["Grids"],include_cc)
@@ -186,17 +195,104 @@ else
     sim = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
     #Set up config and timesteps
     timesteps = BattMo.setup_timesteps(init; max_step = nothing)
-    #timesteps = timesteps[1:10]
+    timesteps = timesteps[1:5]
     # linear solver :ilu0,:cphi :chi_ilu :amg
-    #cfg = BattMo.setup_config(sim, model, :cphi_ilu_ilu, false)
-    cfg = BattMo.setup_config(sim, model, :ilu0, false)
+    cfg = BattMo.setup_config(sim, model, :cphi_ilu_ilu, false)
+    cfg = BattMo.setup_config(sim, model, :cphi, false)
+    #cfg = BattMo.setup_config(sim, model, :ilu0, false)
     #cfg = BattMo.setup_config(sim, model, :il5u, false)
     #cfg = BattMo.setup_config(sim, model, :direct, false)
     # Perform simulation
-    cfg[:info_level] = 10
-    cfg[:tolerances][:Elyte][:default] =1e-5
+    cfg[:info_level] = 3
+    cfg[:tolerances][:Elyte][:mass_conservation] =1e-3
+    cfg[:tolerances][:PeAm][:mass_conservation] =1e-3
+    cfg[:tolerances][:NeAm][:mass_conservation] =1e-3
     cfg[:tolerances][:Control][:default] = 1e-5
-    cfg[:tolerances][:PeAm][:solid_diffusion_bc] = 1e-20
+    #cfg[:tolerances][:PeAm][:solid_diffusion_bc] = 1e-20
+    if true
+        solver = :fgmres
+        fac =1e-4
+        fac_s=1e-1
+        fac_p=1e3
+        rtol = 1e-7  # for simple face rtol=1e7 and atol 1e-9 seems give same number ononlinear as direct
+        atol = 1e-9 # seems important
+        max_it = 100
+        verbose = 0
+        prec_org_s = Jutul.ILUZeroPreconditioner()
+        prec_org_p = Jutul.ILUZeroPreconditioner()
+        prec_org_p = Jutul.AMGPreconditioner(:ruge_stuben)
+        #prec_org_p  = Jutul.TrivialPreconditioner()
+        #prec_org_p = Jutul.BoomerAMGPreconditioner()
+        ksolver_s  = GenericKrylov(solver, verbose = 0,
+                                   preconditioner = prec_org_s, 
+                                   relative_tolerance = rtol*fac_s,
+                                   absolute_tolerance = atol*fac_s*1e-22,
+                                   max_iterations = max_it,
+                                   min_iterations = 4)
+        max_it = 30                          
+        ksolver_p  = GenericKrylov(solver, verbose = 0,
+                                   preconditioner = prec_org_p, 
+                                   relative_tolerance = 1e-4,
+                                   absolute_tolerance = atol*fac_p*1e-22,
+                                   max_iterations = max_it,
+                                   min_iterations = 4)                     
+       # p_prec = Jutul.AMGPreconditioner(:ruge_stuben)
+        #s_prec = Jutul.AMGPreconditioner(:ruge_stuben)
+        p_prec = Jutul.ILUZeroPreconditioner()
+        s_prec = Jutul.ILUZeroPreconditioner()
+        s_prec = LUPreconditioner()
+        p_prec = LUPreconditioner()
+        psolver = LUSolver()
+        ssolver = LUSolver()
+        s_prec = SolverAsPreconditionerSystem(ksolver_s)
+        p_prec = SolverAsPreconditionerSystem(ksolver_p)
+        #s_prec = Jutul.TrivialPreconditioner()
+        #p_prec = Jutul.TrivialPreconditioner()
+        #g_prec = SolverAsPreconditionerSystem(ksolver_p)
+        if false
+            s_prec = SolverAsPreconditionerSystem(ksolver_s)
+            p_prec = SolverAsPreconditionerSystem(ksolver_p)
+            #p_prec = Jutul.AMGPreconditioner(:ruge_stuben)
+            s_prec = Jutul.ILUZeroPreconditioner()
+            g_prec = Jutul.TrivialPreconditioner()
+            #g_prec = Jutul.ILUZeroPreconditioner()
+        else
+            s_prec = Jutul.TrivialPreconditioner()
+            p_prec = Jutul.TrivialPreconditioner()
+            #p_prec = SolverAsPreconditionerSystem(ksolver_p)
+            #s_prec = Jutul.AMGPreconditioner(:ruge_stuben)
+            p_prec = Jutul.AMGPreconditioner(:ruge_stuben)
+            g_prec = Jutul.ILUZeroPreconditioner()
+        end
+        
+        #g_prec = Jutul.TrivialPreconditioner()
+        #g_prec = Jutul.ILUZeroPreconditioner()
+        #s_prec = LUPreconditioner()
+        #p_prec = LUPreconditioner()
+        prec = BattMo.BatteryCPhiPreconditioner(s_prec,p_prec,g_prec)
+        #prec = Jutul.ILUZeroPreconditioner()
+        
+        #psolver = LUSolver() 
+        #prec = SolverAsPreconditionerSystem(psolver)
+        #prec = s_prec
+        #prec = SolverAsPreconditionerSystem(ksolver)
+    #prec = Jutul.ILUZeroPreconditioner()
+    solver = :fgmres
+    solver = :fgmres
+    fac = 1e0    
+    rtol = 1e-4*fac  # for simple face rtol=1e7 and atol 1e-9 seems give same number ononlinear as direct
+    atol = 1e-5*fac # seems important
+    max_it = 100
+    verbose = 0
+    cfg[:linear_solver]  = GenericKrylov(solver, verbose = verbose,
+                                   preconditioner = prec, 
+                                   relative_tolerance = rtol,
+                                   absolute_tolerance = atol,
+                                   max_iterations = max_it)
+    #cfg[:linear_solver]  = LUSolver()
+
+    cfg[:extra_timing]   = false               
+    end
 
     state0[:Control][:Phi][1] = 4.2
     state0[:Control][:Current][1] = 0
@@ -356,7 +452,7 @@ end
 
 
 ##
-if do_plot && false
+if do_plot && true
 f3D = Figure(size = (600, 650))
 ax3d = Axis3(f3D[1, 1])
 if include_cc
