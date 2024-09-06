@@ -17,6 +17,8 @@ using Test
         inputparams = mergeInputParams(inputparams_geometry, inputparams)
 
         output = run_battery(inputparams);
+
+        true
         
     end
     

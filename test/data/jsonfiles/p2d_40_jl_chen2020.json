@@ -187,7 +187,6 @@
   },
   "TimeStepping": {
      "useRampup": true,
-     "totalTime": 7200.0,
      "rampupTime": 10.0,
      "numberOfTimeSteps": 72,
      "numberOfRampupSteps":5
