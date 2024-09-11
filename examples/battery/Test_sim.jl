@@ -18,7 +18,7 @@ use_p2d = false
 includet("jutul_grid_utils.jl")
 includet("../../src/solver_as_preconditioner.jl")
 includet("../../src/solver_as_preconditioner_system.jl")
-
+includet("../../src/precondgenneral.jl")
 do_plot = true
 
 
@@ -180,7 +180,9 @@ else
     ##
     #sim, forces, state0, parameters, init, model = BattMo.setup_sim(init; use_p2d=use_p2d, use_groups=false, general_ad=false, max_step = nothing)
     #model, state0, parameters = BattMo.setup_model(init, use_groups = false, use_p2d    = use_p2d)
-    model  = BattMo.setup_battery_model(init, use_groups = false, use_p2d    = use_p2d)
+    #context = Jutul.ParallelCSRContext(1)
+    context = Jutul.DefaultContext()
+    model  = BattMo.setup_battery_model(init, use_groups = false, use_p2d    = use_p2d, context = context)
     parameters = BattMo.setup_battery_parameters(init, model)
     state0 = BattMo.setup_battery_initial_state(init, model)
     BattMo.setup_coupling_grid!(init, model, parameters)
@@ -195,7 +197,7 @@ else
     sim = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
     #Set up config and timesteps
     timesteps = BattMo.setup_timesteps(init; max_step = nothing)
-    timesteps = timesteps[1:5]
+    timesteps = timesteps[1:20]
     # linear solver :ilu0,:cphi :chi_ilu :amg
     cfg = BattMo.setup_config(sim, model, :cphi_ilu_ilu, false)
     cfg = BattMo.setup_config(sim, model, :cphi, false)
@@ -203,7 +205,7 @@ else
     #cfg = BattMo.setup_config(sim, model, :il5u, false)
     #cfg = BattMo.setup_config(sim, model, :direct, false)
     # Perform simulation
-    cfg[:info_level] = 3
+    cfg[:info_level] = 1
     cfg[:tolerances][:Elyte][:mass_conservation] =1e-3
     cfg[:tolerances][:PeAm][:mass_conservation] =1e-3
     cfg[:tolerances][:NeAm][:mass_conservation] =1e-3
@@ -212,14 +214,15 @@ else
     if true
         solver = :fgmres
         fac =1e-4
-        fac_s=1e-1
-        fac_p=1e3
+        fac_s=1e3
+        fac_p=1e1
         rtol = 1e-7  # for simple face rtol=1e7 and atol 1e-9 seems give same number ononlinear as direct
         atol = 1e-9 # seems important
         max_it = 100
         verbose = 0
         prec_org_s = Jutul.ILUZeroPreconditioner()
-        prec_org_p = Jutul.ILUZeroPreconditioner()
+        #prec_org_s = Jutul.AMGPreconditioner(:ruge_stuben)
+        #prec_org_p = Jutul.ILUZeroPreconditioner()
         prec_org_p = Jutul.AMGPreconditioner(:ruge_stuben)
         #prec_org_p  = Jutul.TrivialPreconditioner()
         #prec_org_p = Jutul.BoomerAMGPreconditioner()
@@ -232,7 +235,7 @@ else
         max_it = 30                          
         ksolver_p  = GenericKrylov(solver, verbose = 0,
                                    preconditioner = prec_org_p, 
-                                   relative_tolerance = 1e-4,
+                                   relative_tolerance = rtol*fac_p,
                                    absolute_tolerance = atol*fac_p*1e-22,
                                    max_iterations = max_it,
                                    min_iterations = 4)                     
@@ -250,18 +253,43 @@ else
         #p_prec = Jutul.TrivialPreconditioner()
         #g_prec = SolverAsPreconditionerSystem(ksolver_p)
         if false
+            prec_org_s = Jutul.AMGPreconditioner(:ruge_stuben)     
+            ksolver_s  = GenericKrylov(solver, verbose = 0,
+                                   preconditioner = prec_org_s, 
+                                   relative_tolerance = 1e-5,
+                                   absolute_tolerance = atol*fac_s*1e-22,
+                                   max_iterations = max_it,
+                                   min_iterations = 4)
+            prec_org_p = Jutul.AMGPreconditioner(:ruge_stuben)                       
+            ksolver_p  = GenericKrylov(solver, verbose = 0,
+                                   preconditioner = prec_org_p, 
+                                   relative_tolerance = 1e-6,
+                                   absolute_tolerance = atol*fac_p*1e-22,
+                                   max_iterations = max_it,
+                                   min_iterations = 4) 
             s_prec = SolverAsPreconditionerSystem(ksolver_s)
             p_prec = SolverAsPreconditionerSystem(ksolver_p)
             #p_prec = Jutul.AMGPreconditioner(:ruge_stuben)
-            s_prec = Jutul.ILUZeroPreconditioner()
+            #s_prec = Jutul.AMGPreconditioner(:ruge_stuben)# also ok?
+            #s_prec = Jutul.ILUZeroPreconditioner() # seems to be sufficent?
+            #s_prec = Jutul.TrivialPreconditioner()
             g_prec = Jutul.TrivialPreconditioner()
             #g_prec = Jutul.ILUZeroPreconditioner()
         else
-            s_prec = Jutul.TrivialPreconditioner()
-            p_prec = Jutul.TrivialPreconditioner()
-            #p_prec = SolverAsPreconditionerSystem(ksolver_p)
+            #s_prec = Jutul.TrivialPreconditioner()
+            #p_prec = Jutul.TrivialPreconditioner()
+            # ksolver_p  = GenericKrylov(solver, verbose = 0,
+            #                        preconditioner = prec_org_p, 
+            #                        relative_tolerance = 1e-6,
+            #                        absolute_tolerance = atol*fac_p*1e-22,
+            #                        max_iterations = max_it,
+            #                        min_iterations = 4)      
+            # p_prec = SolverAsPreconditionerSystem(ksolver_p)
             #s_prec = Jutul.AMGPreconditioner(:ruge_stuben)
+    
+            #s_prec = Jutul.ILUZeroPreconditioner()
             p_prec = Jutul.AMGPreconditioner(:ruge_stuben)
+            s_prec = Jutul.TrivialPreconditioner()
             g_prec = Jutul.ILUZeroPreconditioner()
         end
         

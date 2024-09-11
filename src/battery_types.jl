@@ -209,6 +209,34 @@ end
 
 Jutul.minimum_value(::VolumeFraction) = eps(Float64)
 
+mutable struct VariablePrecond # mutable needed?
+    precond
+    var
+    eq
+end
+
+
+mutable struct BatteryGeneralPreconditioner <: JutulPreconditioner
+    VariablePreconds
+    params
+    data
+end
+
+
+
+function BatteryGeneralPreconditioner(varpreconds, params)
+    return BatteryGeneralPreconditioner(varpreconds, params, nothing)
+end
+
+function BatteryGeneralPreconditioner()
+    varpreconds = Vector{VariablePrecond}()
+    push!(varpreonds,VariablePerecond(Jutul.AMGPreconditioner(:ruge_stuben),:Phi,:mass_conservation))
+    push!(varpreonds,VariablePerecond(Jutul.ILUZeroPreconditioner(),:Global,:Global))
+    params["method"] = "jacobi"
+    return BatteryGeneralPreconditioner(varpreconds, method, nothing)
+end
+
+
 mutable struct BatteryCPhiPreconditioner <: JutulPreconditioner
     c_precond
     p_precond

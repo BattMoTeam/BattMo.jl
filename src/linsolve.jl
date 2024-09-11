@@ -1,47 +1,126 @@
-function Jutul.post_update_linearized_system!(lsys, executor, storage, model::Jutul.MultiModel)
-    # fix linear system 
-    e_models = [:Elyte]
-    mass_cons_map = setup_subset_equation_map(model, storage, e_models, :mass_conservation)
-    phi_map = setup_subset_residual_map(model, storage, e_models, :Phi)
-    charge_cons_map = setup_subset_equation_map(model, storage, e_models, :charge_conservation)
-    C_map = setup_subset_residual_map(model, storage, e_models, :C)
-    nc = length(mass_cons_map)
-    #Main.@infiltrate true
-    tfac = model[:Elyte].system[:transference]/BattMo.FARADAY_CONST
+using LinearAlgebra
+using SparseArrays
+function modify_equation!(lsys, mass_cons_map, charge_cons_map,tfac, nc, context)
     for i in 1:nc
         ## decouple mass end charge conservation based on the property
         # that charge and mass transport is propotioinal due to change 
         #storage.LinearizedSystem.jac[mass_cons_map[i],:] += storage.LinearizedSystem.jac[charge_cons_map[i],:] 
         #storage.LinearizedSystem.r[mass_cons_map[i],:] += storage.LinearizedSystem.r[charge_cons_map[i],:] 
-        #lsys.jac[mass_cons_map[i],:] .-= tfac*lsys.jac[charge_cons_map[i],:] 
-        #lsys.r[mass_cons_map[i],:] .-= tfac*lsys.r[charge_cons_map[i],:] 
-    end 
-    ## to control reduction ?
-    #Main.@infiltrate true
+        if true #needed for separate saturation solve
+        @.    lsys.jac[mass_cons_map[i],:] .-= tfac.*lsys.jac[charge_cons_map[i],:] 
+            #lsys.r[mass_cons_map[i]] .-= tfac.*lsys.r[charge_cons_map[i]]
+            lsys.r[mass_cons_map[i]] -= tfac*lsys.r[charge_cons_map[i]]
+        end 
+    end
+end
+# function modify_equation!(lsys, mass_cons_map, charge_cons_map,tfac, nc, context::Jutul.DefaultContext)
+#     vals = nonzeros(lsys.jac)
+#     rows = rowvals(lsys.jac)
+#     for j in 1:size(lsys.jac,2)
+#         for i in nzrange(lsys.jac,j)
+#             row = rows[i]
+#             ind = indexin(row, mass_cons_map)
+#             if !(ind[1] == nothing)
+#                #mass_row = row
+#                charge_ind = indexin(charge_cons_map[ind[1]], rows)
+#                vals[i] += vals[charge_ind[1]]
+#             else
+
+#             end
+#         end
+#     end
+
+#         ## decouple mass end charge conservation based on the property
+#         # that charge and mass transport is propotioinal due to change 
+#         #storage.LinearizedSystem.jac[mass_cons_map[i],:] += storage.LinearizedSystem.jac[charge_cons_map[i],:] 
+#         #storage.LinearizedSystem.r[mass_cons_map[i],:] += storage.LinearizedSystem.r[charge_cons_map[i],:] 
+#     for i in 1:nc
+#             lsys.r[mass_cons_map[i]] -= tfac*lsys.r[charge_cons_map[i]]
+#     end
+# end
+function modify_equation!(lsys, mass_cons_map, charge_cons_map,tfac, nc, context::Jutul.ParallelCSRContext)
     
+    vals = nonzeros(lsys.jac)
+    #colvals = colvals(lsys.jac)
+    for i in 1:nc
+        ## decouple mass end charge conservation based on the property
+        # that charge and mass transport is propotioinal due to change 
+        #storage.LinearizedSystem.jac[mass_cons_map[i],:] += storage.LinearizedSystem.jac[charge_cons_map[i],:] 
+        #storage.LinearizedSystem.r[mass_cons_map[i],:] += storage.LinearizedSystem.r[charge_cons_map[i],:] 
+        mass_ind = nzrange(lsys.jac,mass_cons_map[i])
+        charge_ind = nzrange(lsys.jac,mass_cons_map[i])
+        @assert length(mass_ind) == length(charge_ind)
+        #for j in 1:lenght(mass_ind)
+        #    vals[mass_ind[j]] .-= tfac.*vals[charge_ind[i]]
+        #end
+        @. vals[mass_ind] -= tfac*vals[charge_ind]
+        lsys.r[mass_cons_map[i]] -= tfac*lsys.r[charge_cons_map[i]]
+    end
+end 
+
+
+function fix_control!(lsys, context)
+if lsys.jac[end,end] == 1
+    @assert    lsys.jac[end,end-1] == 0
+    @assert    lsys.jac[end-1,end] == 1
+    fac = lsys.jac[end-1,end]
+    lsys.jac[end-1,end] -= lsys.jac[end,end]*fac
+    lsys.r[end-1] -=  lsys.r[end]*fac 
+    @assert lsys.jac[end-1,end] == 0
+else
+    if(true)
+    @assert lsys.jac[end,end-1] == 1
+    @assert lsys.jac[end,end] == 0
+    jac_l = deepcopy(lsys.jac[end,:])
+    r_l= copy(r[end])
+    lsys.jac[end,:] = lsys[end-1,:]
+    lsys.r[end] = lsys.r[end-1] 
+    lsys.jac[end-1,:] = a
+    lsys.r[end] = r_l
+    end
+end
+end
+
+function fix_control!(lsys, context::Jutul.ParallelCSRContext)
     if lsys.jac[end,end] == 1
         @assert    lsys.jac[end,end-1] == 0
         @assert    lsys.jac[end-1,end] == 1
         fac = lsys.jac[end-1,end]
-        lsys.jac[end-1,end] -= lsys.jac[end,end]*fac
+        lsys.jac.At[end,end-1] -= lsys.jac[end,end]*fac
         lsys.r[end-1] -=  lsys.r[end]*fac 
         @assert lsys.jac[end-1,end] == 0
     else
-        @assert sys.jac[end,end-1] == 1
-        @assert sys.jac[end,end] == 0
-        jac_l = deapcopy(lsys.jac[end,:])
+        if(true)
+        @assert lsys.jac[end,end-1] == 1
+        @assert lsys.jac[end,end] == 0
+        jac_l = deepcopy(lsys.jac[end,:])
         r_l= copy(r[end])
         lsys.jac[end,:] = lsys[end-1,:]
         lsys.r[end] = lsys.r[end-1] 
         lsys.jac[end-1,:] = a
         lsys.r[end] = r_l
+        end
     end
+    end
+
+function Jutul.post_update_linearized_system!(lsys, executor, storage, model::Jutul.MultiModel)
+    # fix linear system 
+    e_models = [:Elyte]
+    mass_cons_map = setup_subset_equation_map(model, storage, e_models, :mass_conservation)
+    #phi_map = setup_subset_residual_map(model, storage, e_models, :Phi)
+    charge_cons_map = setup_subset_equation_map(model, storage, e_models, :charge_conservation)
+    #C_map = setup_subset_residual_map(model, storage, e_models, :C)
+    nc = length(mass_cons_map)
+    #Main.@infiltrate true
+    tfac = model[:Elyte].system[:transference]/BattMo.FARADAY_CONST
+    modify_equation!(lsys, mass_cons_map, charge_cons_map,tfac, nc, model.context)
+    ## to control reduction ?
+    #Main.@infiltrate true
+    fix_control!(lsys, model.context)
     #Main.@infiltrate true
     #print("hei")
 
 end
-
-
 
 
 function Jutul.update_preconditioner!(prec::BatteryCPhiPreconditioner, lsys, context, model, storage, recorder, executor)
@@ -116,17 +195,21 @@ function Jutul.apply!(x, prec::BatteryCPhiPreconditioner, r, arg...)
 
     end
     ## asume p_prec and c_prec is orthogonal
+    #println("Start consentration")
     dx .= 0.0
     apply_local_cphi_preconditioner!(dx, prec.p_precond, r_local, phi, arg...)
     #apply_local_cphi_preconditioner!(dx, prec.c_precond, r_local, c, arg...)
     x .+= dx
     #Jutul.mul!(r_local, A, dx, -1, true)
     dx .= 0.0
+    #println("Start Volatage")
     apply_local_cphi_preconditioner!(dx, prec.c_precond, r_local, c, arg...)
     #apply_local_cphi_preconditioner!(dx, prec.p_precond, r_local, phi, arg...)
     x .+= dx
+    #NB just done to avoid to do gaus sidal
     r_local .= r
     Jutul.mul!(r_local, A, x, -1, true)
+    #println("Norm after Voltage and consentration ")#,norm(r_local,2) )
     #Jutul.mul!(r_local, A, dx, -1, true)
     dx .= 0.0
     if !isnothing(prec.g_precond)

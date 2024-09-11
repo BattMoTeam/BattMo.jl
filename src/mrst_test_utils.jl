@@ -1000,6 +1000,7 @@ function setup_battery_model(init::MatlabFile;
                              use_groups::Bool = false,
                              use_p2d::Bool    = true,
                              general_ad::Bool = false,
+                             context = DefaultContext(),
                              kwarg...)
 
     include_cc = include_current_collectors(init)
@@ -1015,7 +1016,7 @@ function setup_battery_model(init::MatlabFile;
         for (k, v) in domain.entities
             data_domain.entities[k] = v
         end
-        model = SimulationModel(domain, sys, context = DefaultContext(), data_domain = data_domain)
+        model = SimulationModel(domain, sys, context = context, data_domain = data_domain)
         return model
         
     end
@@ -1181,7 +1182,7 @@ function setup_battery_model(init::MatlabFile;
    
     sys_control    = CurrentAndVoltageSystem(policy)
     domain_control = CurrentAndVoltageDomain()
-    model_control  = SimulationModel(domain_control, sys_control, context = DefaultContext())
+    model_control  = SimulationModel(domain_control, sys_control, context = context)
     
     if !include_cc
         groups = nothing
@@ -1214,7 +1215,7 @@ function setup_battery_model(init::MatlabFile;
         end
         model = MultiModel(models,
                            Val(:Battery);
-                           groups = groups, reduction = reduction)
+                           groups = groups, reduction = reduction, context = context)
 
     end
     
@@ -1227,6 +1228,7 @@ function setup_battery_model(init::JSONFile;
                              use_groups::Bool = false, 
                              general_ad::Bool = false,
                              use_p2d::Bool = false,
+                             context = DefaultContext(),
                              kwarg...)
     
     include_cc = include_current_collectors(init)
@@ -1295,7 +1297,7 @@ function setup_battery_model(init::JSONFile;
         disc = (charge_flow = flow,)
         domain = DiscretizedDomain(domain, disc)
         
-        model = SimulationModel(domain, sys, context = DefaultContext())
+        model = SimulationModel(domain, sys, context = context)
         return model
         
     end
@@ -1345,7 +1347,7 @@ function setup_battery_model(init::JSONFile;
         disc = (charge_flow = flow,)
         domain = DiscretizedDomain(domain, disc)
         
-        model = SimulationModel(domain, sys, context = DefaultContext())
+        model = SimulationModel(domain, sys, context = context)
 
         return model
         
@@ -1355,7 +1357,8 @@ function setup_battery_model(init::JSONFile;
                             sys;
                             general_ad::Bool=false,
                             boundary = nothing,
-                            facearea = 1.0)
+                            facearea = 1.0,
+                            context = DefaultContext())
 
         # specific implementation for electrolyte
         # requires geometric parameters for :NeAm, :SEP, :PeAm
@@ -1402,7 +1405,7 @@ function setup_battery_model(init::JSONFile;
         disc = (charge_flow=flow,)
         domain = DiscretizedDomain(domain, disc)
 
-        model = SimulationModel(domain, sys, context=DefaultContext())
+        model = SimulationModel(domain, sys; context = context)
 
         return model
 
@@ -1418,7 +1421,7 @@ function setup_battery_model(init::JSONFile;
     """
     function setup_active_material(name::Symbol, 
                                    geomparams::Dict{Symbol, <:Any},
-                                   use_p2d)
+                                   use_p2d, context)
 
         jsonName = jsonNames[name]
 
@@ -1514,7 +1517,8 @@ function setup_battery_model(init::JSONFile;
                                    sys_am                 ;
                                    general_ad = general_ad,
                                    boundary = boundary,
-                                   facearea = geomparams[:facearea])
+                                   facearea = geomparams[:facearea],
+                                   context = context)
 
         return model_am
         
@@ -1534,14 +1538,15 @@ function setup_battery_model(init::JSONFile;
         model_necc = setup_component(geomparams[:NeCc]  ,
                                      sys_necc           ,
                                      boundary = boundary,
-                                     general_ad = general_ad)
+                                     general_ad = general_ad,
+                                     context = context)
     end
 
     ##############
     # Setup NeAm #
     ##############
     
-    model_neam = setup_active_material(:NeAm, geomparams, use_p2d)
+    model_neam = setup_active_material(:NeAm, geomparams, use_p2d, context)
 
     ###############
     # Setup Elyte #
@@ -1601,11 +1606,12 @@ function setup_battery_model(init::JSONFile;
 
     elyte = Electrolyte(params)
     if case_type == "1D"
-        model_elyte = setup_component(geomparams, elyte, general_ad = general_ad)
+        model_elyte = setup_component(geomparams, elyte, general_ad = general_ad, context = context)
     elseif case_type == "Grid"
         model_elyte = setup_component(geomparams[:Elyte], elyte,
                                       general_ad = general_ad,
-                                      facearea = geomparams[:facearea])
+                                      facearea = geomparams[:facearea],
+                                      context = context)
     else
         error()
     end
@@ -1614,7 +1620,7 @@ function setup_battery_model(init::JSONFile;
     # Setup PeAm #
     ##############
     
-    model_peam = setup_active_material(:PeAm, geomparams, use_p2d)
+    model_peam = setup_active_material(:PeAm, geomparams, use_p2d, context)
 
     ###########################################
     # Setup negative current collector if any #
@@ -1630,7 +1636,8 @@ function setup_battery_model(init::JSONFile;
                                     sys_pecc, 
                                     general_ad = general_ad,
                                     boundary = nothing,
-                                    facearea = geomparams[:facearea])
+                                    facearea = geomparams[:facearea],
+                                    context = context)
     end
 
     #######################
@@ -1664,7 +1671,7 @@ function setup_battery_model(init::JSONFile;
     
     sys_control    = CurrentAndVoltageSystem(policy)
     domain_control = CurrentAndVoltageDomain()
-    model_control  = SimulationModel(domain_control, sys_control, context = DefaultContext())
+    model_control  = SimulationModel(domain_control, sys_control, context = context)
 
     #####################
     # Setup multi-model #
@@ -1680,7 +1687,8 @@ function setup_battery_model(init::JSONFile;
                 Control = model_control,
             ),
             Val(:Battery);
-            groups = groups)    
+            groups = groups,
+            context = context)    
     else
         models = (
             NeCc    = model_necc, 
@@ -1701,7 +1709,7 @@ function setup_battery_model(init::JSONFile;
         end
         model = MultiModel(models,
                            Val(:Battery);
-                           groups = groups, reduction = reduction)
+                           groups = groups, reduction = reduction, context = context)
 
     end
     if case_type == "1D"
