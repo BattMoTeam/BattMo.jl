@@ -1,7 +1,7 @@
 name = "BattMo"
 uuid = "6f0c0536-3c2c-4762-a987-c605a8a6f898"
 authors = ["Olav Møyner <olav.moyner@gmail.com>"]
-version = "0.1.6"
+version = "0.1.7"
 
 [deps]
 Infiltrator = "5903a43b-9cc3-4c30-8d17-598619ec4e9b"
