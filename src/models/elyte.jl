@@ -1,14 +1,35 @@
 # Model for a electrolyte
 
-using Polynomials
-export Electrolyte, DmuDc, ChemCoef
-export p1, p2, p3, diffusivity
-export ElectrolyteModel
+using
+    Polynomials,
+    Tullio
+    
+export
+    Electrolyte,
+    DmuDc,
+    ChemCoef,
+    p1,
+    p2,
+    p3,
+    diffusivity,
+    ElectrolyteModel
 
 const ElectrolyteParameters = JutulStorage
 
 struct Electrolyte <: ElectroChemicalComponent 
     params::ElectrolyteParameters
+    #  
+    # - bruggeman          
+    # - charge             
+    # - conductivity_data  
+    # - conductivity_func  
+    # - diffusivity_data   
+    # - diffusivity_func   
+    # - separator_porosity 
+    # - transference
+    # - electrolyte_density
+    # - separator_density
+    
 end
 
 # Alias for convenience
@@ -28,9 +49,7 @@ function select_primary_variables!(S                  ,
     S[:C]   = C()
     
 end
-
-minimum_value(::C) = 1.0
-    
+        
 function select_parameters!(S                  ,
                             system::Electrolyte,
                             model::SimulationModel
@@ -40,7 +59,6 @@ function select_parameters!(S                  ,
     S[:VolumeFraction] = VolumeFraction()
     
 end
-
 
 function select_equations!(eqs                ,
                            system::Electrolyte,
@@ -106,6 +124,25 @@ end
     return 0.1297*c^3 - 2.51*c^(1.5) + 3.329*c
 end
 
+@inline function computeElectrolyteConductivity_Xu2015(c::Real, T::Real)
+    """ Compute the electrolyte conductivity as a function of concentration
+    """
+    conductivityFactor = 1e-4
+    
+    # cnst = [-10.5   , 0.074    , -6.96e-5; ...
+    #         0.668e-3, -1.78e-5 , 2.80e-8; ...
+    #         0.494e-6, -8.86e-10, 0];            
+            
+    
+    #  Ionic conductivity, [S m^-1]
+    # conductivity = conductivityFactor.* c .*( polyval(cnst(end:-1:1,1),c) + polyval(cnst(end:-1:1,2),c) .* T + ...
+    #                                           polyval(cnst(end:-1:1,3),c) .* T.^2).^2;
+    # From cideMOD
+
+    conductivity=c*1e-4*1.2544* (-8.2488+0.053248*T-2.987e-5*(T^2)+ 0.26235e-3*c-9.3063e-6*c*T+ 8.069e-9*c*T^2+ 2.2002e-7*c^2-1.765e-10*T*c^2);
+    return conductivity
+end
+
 const diff_params = [
     -4.43   -54 ;
     -0.22   0.0 ;
@@ -131,6 +168,22 @@ end
     return 8.794*10^(-11)*c^2 - 3.972*10^(-10)*c + 4.862*10^(-10)
 end
 
+
+@inline function computeDiffusionCoefficient_Xu2015(c::Real, T::Real)
+    """ Compute the diffusion coefficient as a function of concentration
+    """
+    # Calculate diffusion coefficients constant for the diffusion coefficient calculation
+    cnst = [ -4.43 -54 
+             -0.22 0.0 ]
+
+    Tgi = [ 229 5.0 ]
+    
+    # Diffusion coefficient, [m^2 s^-1]
+    #Removed 10⁻⁴ otherwise the same
+    D = 10^( ( cnst[1,1] + cnst[1,2] / ( T - Tgi[1] - Tgi[2] * c * 1e-3) + cnst[2,1] * c * 1e-3) )
+    return D
+end
+
 @inline function transference(system::Electrolyte)
     return system[:transference]
 end
@@ -151,8 +204,13 @@ function update_conductivity!(kappa, kappa_def::Conductivity, model::Electrolyte
     # We use Bruggeman coefficient
     for i in ix
         
-        @inbounds kappa[i] = model.system[:conductivity_func](C[i], Temperature[i]) * VolumeFraction[i]^1.5
-        
+        if Jutul.haskey(model.system.params, :conductivity_data)
+
+            @inbounds kappa[i] = model.system[:conductivity_func](C[i]) * VolumeFraction[i]^1.5
+
+        else
+            @inbounds kappa[i] = model.system[:conductivity_func](C[i], Temperature[i]) * VolumeFraction[i]^1.5
+        end
     end
 end
 )
@@ -163,7 +221,14 @@ end
     
     for i in ix
 
+        if Jutul.haskey(model.system.params, :diffusivity_data)
+
+            @inbounds D[i] = model.system[:diffusivity_func](C[i])*VolumeFraction[i]^1.5
+
+        else
+            
             @inbounds D[i] = model.system[:diffusivity_func](C[i], Temperature[i])*VolumeFraction[i]^1.5
+        end
         
     end
     
@@ -174,7 +239,7 @@ end
     """
     sys = model.system
     t = transference(sys)
-    F = FARADAY_CONST
+    F = FARADAY_CONSTANT
     for i in ix
         @inbounds chemCoef[i] = 1.0/F*(1.0 - t)*Conductivity[i]*2.0*DmuDc[i]
     end
@@ -198,7 +263,7 @@ function Jutul.face_flux!(q::T, c, other, face, face_sign, eq::ConservationLaw{:
 
     t = transference(model.system)
     z = 1.0
-    F = FARADAY_CONST
+    F = FARADAY_CONSTANT
     
     @inbounds trans = state.ECTransmissibilities[face]
 

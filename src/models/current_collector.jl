@@ -1,8 +1,18 @@
 export CurrentCollector
 
-struct CurrentCollector <: ElectroChemicalComponent
-    params
+const CurrentCollectorParameters = JutulStorage
+
+struct CurrentCollector{T} <: ElectroChemicalComponent where {T<:CurrentCollectorParameters}
+    params::T
+    # At the moment the following keys are include
+    # - density::Real
 end
+
+function CurrentCollector(params::CurrentCollectorParameters)
+    params = Jutul.convert_to_immutable_storage(params)
+    return CurrentCollector{typeof(params)}(params)
+end
+
 
 function CurrentCollector()
     CurrentCollector(Dict())

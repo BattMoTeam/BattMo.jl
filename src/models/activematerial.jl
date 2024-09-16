@@ -22,12 +22,19 @@ struct NoParticleDiffusion <: SolidDiffusionDiscretization end
 struct ActiveMaterial{D, T} <: ElectroChemicalComponent where {D<:SolidDiffusionDiscretization, T<:ActiveMaterialParameters}
     params::T
     # At the moment the following keys are include
-    # - ocp_func::F where {F <: Function}
-    # - n_charge_carriers
-    # - reaction_rate_constant_func::F where {F <: Function}
     # - diffusion_coef_func::F where {F <: Function}
     # - maximum_concentration::Real
+    # - n_charge_carriers::Integer
+    # - ocp_func::F where {F <: Function}
+    # - ocp_funcdata
+    # - ocp_funcexp
+    # - reaction_rate_constant_func::F where {F <: Function}
+    # - theta0::Real
+    # - theta100::Real
+    # - volume_fraction::Real
+    # - volume_fractions::Vector{Real}
     # - volumetric_surface_area::Real
+    # - effective_density::Real
     discretization::D
 end 
 
@@ -221,6 +228,8 @@ function select_minimum_output_variables!(out                   ,
     
 end
 
+
+
 @jutul_secondary(
     function update_vocp!(Ocp,
                           tv::Ocp,
@@ -246,6 +255,10 @@ end
 
                 @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, refT, cmax)
                 
+            elseif Jutul.haskey(model.system.params, :ocp_funcdata)
+
+                @inbounds Ocp[cell] = ocp_func(Cs[cell]/cmax)
+
             else
                 
                 @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)

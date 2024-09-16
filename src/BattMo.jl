@@ -1,6 +1,7 @@
 module BattMo
 using PrecompileTools
 using StaticArrays
+using StatsBase
 
 using RuntimeGeneratedFunctions
 RuntimeGeneratedFunctions.init(@__MODULE__)
@@ -59,25 +60,36 @@ import Jutul:
     setup_state!,
     declare_pattern,
     select_minimum_output_variables!,
-    physical_representation
+    physical_representation,
+    get_1d_interpolator
+    
+include("utils/physical_constants.jl")
 
-include("io_types.jl")
-include("physical_constants.jl")
-include("battery_types.jl")
-include("tensor_tools.jl")
-include("battery_utils.jl")
+include("input/io_types.jl")
+include("input/input_types.jl")
+include("input/function_input_tools.jl")
+
+include("models/battmo_types.jl")
 include("models/elyte.jl")
 include("models/current_collector.jl")
 include("models/ocp.jl")
 include("models/activematerial.jl")
-
-include("function_input_tools.jl")
 include("models/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/convergence.jl")
-include("physics.jl")
-include("mrst_test_utils.jl")
-include("linsolve.jl")
+include("models/battery_utils.jl")
+
+include("setup/model_setup.jl")
+include("setup/matlab_model_setup.jl")
+
+include("utils/battery_cell_specifications.jl")
+
+include("solver/linsolve.jl")
+
+include("grid/tensor_tools.jl")
+include("grid/remove_cells.jl") #Trenger StatsBase
+include("grid/grid_conversion.jl")
+include("grid/grid_utils.jl")
 
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 # @compile_workload begin
