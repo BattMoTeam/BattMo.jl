@@ -1,7 +1,6 @@
 using Jutul, BattMo, GLMakie
 using Plots
 using StatsBase
-using Infiltrator
 GLMakie.closeall()
 #GLMakie.activate!()
 include_cc = true

@@ -1,4 +1,4 @@
-using Jutul, BattMo, Infiltrator
+using Jutul, BattMo
 
 export
     pouch_grid,
