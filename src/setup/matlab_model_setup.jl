@@ -76,9 +76,9 @@ end
 ##################
 
 function setup_coupling_cross_terms!(inputparams::MatlabInputParams,
-                         model::MultiModel,
-                         parameters::Dict{Symbol,<:Any},
-                         couplings)
+                                     model::MultiModel,
+                                     parameters::Dict{Symbol,<:Any},
+                                     couplings)
     
     exported_all = inputparams.dict
 
