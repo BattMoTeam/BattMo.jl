@@ -83,9 +83,9 @@ function computeOCPFunc_Graphite_paper(c, T, cmax)
             0.997814 0.0393
             0.999526 0.0236]
     
-    ocp =  get_1d_interpolator(cmax.*data[:, 1], data[:, 2] cap_endpoints =false)
-    
-    return ocp
+    ocp =  get_1d_interpolator(data[:, 1], data[:, 2], cap_endpoints =false)
+
+    return ocp(c./cmax)
     
 end
 
@@ -172,25 +172,26 @@ function  computeOCPFunc_NMC_paper(c, T, cmax)
             0.9494 3.5585
             1.0009 3.5203]
 
-    ocp =  get_1d_interpolator(cmax.*data[:, 1], data[:, 2] cap_endpoints =false)
+    ocp =  get_1d_interpolator(cmax.*data[:, 1], data[:, 2], cap_endpoints =false)
     
-    return ocp
+    return ocp(c./cmax)
     
 end
 
 
 function computeDiffusionCoefficient_paper(c, T)
     
-    D = 8.794e-11*(c./1000).^2 - 3.972e-10*(c./1000) + 4.862e-10;
+    D = 8.794e-11*(c./1000).^2 - 3.972e-10*(c./1000) + 4.862e-10
 
     return D
+    
 end
 
 
 function computeElectrolyteConductivity_paper(c, T)
 
     creg = 0.1
-    conductivity = 0.1297*(c./1000).^3 - 2.51*(c./1000).^1.5 + 3.329*(c./1000) + creg;
+    conductivity = 0.1297*(c./1000).^3 - 2.51*(c./1000).^1.5 + 3.329*(c./1000) + creg
 
     return conductivity
     
