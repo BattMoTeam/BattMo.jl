@@ -155,7 +155,7 @@ if !do_json
     axislegend()
 end
 
-f
+display(f)
 
 
 

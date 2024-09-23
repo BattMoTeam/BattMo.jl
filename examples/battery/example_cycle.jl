@@ -53,7 +53,7 @@ scatterlines!(ax,
               markercolor = :black)
 
 
-f
+display(f)
 
 
 
