@@ -127,7 +127,7 @@ function setup_model(inputparams::AbstractInputParams;
     setup_coupling_cross_terms!(inputparams, model, parameters, couplings)
 
     setup_initial_control_policy!(model[:Control].system.policy, inputparams, parameters)
-    
+    #model.context = Jutul.DefaultContext()
     return model, parameters
 
 end

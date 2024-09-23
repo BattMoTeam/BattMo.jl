@@ -1,6 +1,19 @@
 using Jutul, BattMo, GLMakie
 using Plots
 using StatsBase
+#using HYPRE
+using Plots
+using Infiltrator
+using AlgebraicMultigrid
+using Preconditioners
+using Preferences
+revise(; throw=true)
+set_preferences!(BattMo, "precompile_workload" => false; force=true)
+set_preferences!(Jutul, "precompile_workload" => false; force=true)
+includet("../../src/solver_as_preconditioner.jl")
+includet("../../src/solver_as_preconditioner_system.jl")
+includet("../../src/precondgenneral.jl")
+
 GLMakie.closeall()
 #GLMakie.activate!()
 include_cc = true

@@ -2,6 +2,8 @@ module BattMo
 using PrecompileTools
 using StaticArrays
 using StatsBase
+using LinearAlgebra
+using SparseArrays
 
 using RuntimeGeneratedFunctions
 RuntimeGeneratedFunctions.init(@__MODULE__)
