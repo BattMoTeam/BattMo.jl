@@ -1,113 +1,60 @@
-using BattMo
+using BattMo, GLMakie
 
 #name="model1D_50"
-name = "p2d_40"
+name = "p2d_40_cccv"
 
+fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
+inputparams = readBattMoJsonInputFile(fn)
 # Run base case and plot the results against BattMo-MRST reference
-states, reports, extra = run_battery(name, info_level = 1, max_step = nothing);
+output = run_battery(inputparams);
 
-prm       = extra[:parameters]
-model     = extra[:model]
-timesteps = extra[:timesteps]
-steps     = size(states, 1)
-stateref  = extra[:init].object["states"]
-E         = Matrix{Float64}(undef,steps,2)
+states = output[:states]
 
-for step in 1:steps
-    phi = states[step][:Control][:Phi][1]
-    E[step,1] = phi
-    phi_ref = stateref[step]["Control"]["E"]
-    E[step,2] = phi_ref
-end
+t = [state[:Control][:ControllerCV].time for state in states]
+E = [state[:Control][:Phi][1] for state in states]
+I = [state[:Control][:Current][1] for state in states]
 
-timesteps = timesteps[1:steps]
 
-using Plots
+f = Figure(size = (1000, 400))
 
-T = cumsum(timesteps)
-plot1 = Plots.plot(T,E[:, 1]; title = "E", size=(1000, 800), label = "BattMo.jl", ylabel = "Voltage")
-Plots.plot!(T, E[:, 2], label = "BattMo")
-closeall()
-display(plot1)
+ax = Axis(f[1, 1],
+          title     = "Voltage",
+          xlabel    = "Time / s",
+          ylabel    = "Voltage / V",
+          xlabelsize = 25,
+          ylabelsize = 25,
+          xticklabelsize = 25,
+          yticklabelsize = 25
+          )
 
-using Jutul
+scatterlines!(ax,
+              t,
+              E;
+              linewidth = 4,
+              markersize = 10,
+              marker = :cross, 
+              markercolor = :black)
 
-dt     = extra[:timesteps]
-forces = deepcopy(extra[:forces])
-state0 = deepcopy(extra[:state0])
+ax = Axis(f[1, 2],
+          title     = "Current",
+          xlabel    = "Time / s",
+          ylabel    = "Current / A",
+          xlabelsize = 25,
+          ylabelsize = 25,
+          xticklabelsize = 25,
+          yticklabelsize = 25)
 
-state0[:Control][:ControllerCV]
-cfg = extra[:config]
+scatterlines!(ax,
+              t,
+              I;
+              linewidth = 4,
+              markersize = 10,
+              marker = :cross, 
+              markercolor = :black)
 
-V_lim = 2.7
-V_lim = 3.4
-V_up  = 4.0
 
-state0[:Control][:Phi][1] = (V_lim + V_up)/2.0
-
-I_t = 3e-3
-
-cycler = CyclingCVPolicy(current_discharge = I_t,
-                         current_charge    = -I_t,
-                         voltage_discharge = V_lim,
-                         voltage_charge    = V_up,
-                         hold_time         = 360.0)
-
-simple = SimpleCVPolicy(I_t, V_lim)
-
-policy = simple
+f
 
 
 
-bpp_force = setup_forces(model[:Control], policy = policy)
-forces    = setup_forces(model, Control = bpp_force)
-
-cfg[:error_on_incomplete] = false
-dt = repeat(dt, 100)
-
-states_c = nothing
-states_c, rep = simulate(state0, model, dt, parameters = prm, config = cfg, forces = forces, info_level = 0);
-
-##
-
-Ti = cumsum(dt[1:length(states_c)])
-V  = map(s -> s[:Control][:Phi][1], states_c)
-I  = map(s -> s[:Control][:Current][1], states_c)
-
-plot2 = Plots.plot(Ti, V; title = "E", size=(1000, 800), legend=:topleft, label = "Voltage")
-Plots.plot!(twinx(), Ti, I; title = "E", size=(1000, 800), label = "Current", color = :red)
-
-closeall()
-display(plot2)
-
-##
-x = Ti/[3600]
-l = @layout [a; b]
-p1 = plot(x, V, ylabel = "Voltage", xlabel = "Time [min]")
-p2 = plot(x, I, ylabel = "Current", xlabel = "Time [min]")
-ylims!(p2, -1.01*I_t, 1.01*I_t)
-plot(p1, p2, layout = l, legend = false)
-
-##
-t = cumsum(map(x -> x[:total_time], rep));
-x = Ti/[3600]
-n = 100
-N = length(Ti)
-plotrange = range(1, length(Ti), length = n)
-plotrange = [collect(plotrange)..., repeat([length(Ti)], 50)...]
-
-@gif for i in plotrange
-    l = @layout [a; b; c]
-    stop = Int64(ceil(i))
-    subs = 1:stop
-
-    ti = t[subs]
-    p1 = plot(x[subs], V[subs], ylabel = "Voltage", xlabel = "Time [min]")
-    p2 = plot(x[subs], I[subs], ylabel = "Current", xlabel = "Time [min]")
-    p3 = plot(1:length(ti), ti, ylabel = "Runtime [s]", xlabel = "Time-step index")
-    ylims!(p2, -1.01*I_t, 1.01*I_t)
-    ylims!(p3, 0, maximum(t))
-
-    plot(p1, p2, p3, layout = l, legend = false)
-end
 
