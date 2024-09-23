@@ -23,11 +23,66 @@ do_plot = true
 fac = 1 # discretisation factor
 
 ## Create the pouch_grid
-ugrids, ucouplings = pouch_grid(nx = 4*fac, 
-                                ny = 4*fac, 
-                                nz = 4, 
-                                tab_cell_nx = 3, 
-                                tab_cell_ny = 2)
+
+#x = [x0, 4, 2, 4, x4] .* 1e-2/nx 
+#y = [2, 20, 2] .* 1e-3/ny
+#z = [10, 100, 50, 80, 10] .* 1e-6/nz
+tab_nx = 3
+tab_ny = 3
+(nx,ny) = (2+2*tab_nx,3+2*tab_ny)
+n = [4,4,4,4,4]
+z = [10, 100, 50, 80, 10] .* 1e-6./nz
+tab_w = 4*1e-2
+tab_h = 2*1e-3
+x = 10*1e-2 + 2* tab_w
+y = 20*1e-3 + 2*tab_h
+#geomparam = Dict()
+
+geomparams = Dict() 
+geomparams["NegativeElectrode"]=Dict()
+geomparams["PositiveElectrode"] = Dict()
+geomparams["Separator"] = Dict()
+geomparams["NegativeElectrode"]["CurrentCollector"] = Dict()
+geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]=Dict() 
+geomparams["NegativeElectrode"]["Coating"] = Dict()
+geomparams["PositiveElectrode"]["Coating"] = Dict()
+geomparams["PositiveElectrode"]["CurrentCollector"] = Dict()
+geomparams["PositiveElectrode"]["CurrentCollector"]["tab"]=Dict() 
+geomparams["Geometry"] =Dict()
+
+geomparams["NegativeElectrode"]["CurrentCollector"]["thickness"] = z[1]
+geomparams["NegativeElectrode"]["CurrentCollector"]["N"] = n[1]
+
+geomparams["NegativeElectrode"]["Coating"]["thickness"] = z[2]
+geomparams["NegativeElectrode"]["Coating"]["N"] = n[2]
+
+geomparams["PositiveElectrode"]["CurrentCollector"]["thickness"] = z[5]
+geomparams["PositiveElectrode"]["CurrentCollector"]["N"] = n[5]
+
+geomparams["PositiveElectrode"]["Coating"]["thickness"] = z[4]
+geomparams["PositiveElectrode"]["Coating"]["N"] = n[4]
+
+geomparams["Separator"]["thickness"] = z[3]
+geomparams["Separator"]["N"] = n[3]
+
+geomparams["Geometry"]["width"] = x
+geomparams["Geometry"]["height"] = y
+geomparams["Geometry"]["Nw"] = nx
+geomparams["Geometry"]["Nh"] = ny
+
+geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"] = tab_nx
+geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"] = tab_ny
+geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]["width"] = tab_w
+geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]["height"] = tab_h
+
+geomparams["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"] = tab_nx
+geomparams["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"] = tab_ny
+geomparams["PositiveElectrode"]["CurrentCollector"]["tab"]["width"] = tab_w
+geomparams["PositiveElectrode"]["CurrentCollector"]["tab"]["height"] = tab_h
+
+parameters = InputGeometryParams(geomparams)
+
+ugrids, couplings = pouch_grid(parameters)
 
 if do_plot
     fig = Figure(size = (1600, 900))
