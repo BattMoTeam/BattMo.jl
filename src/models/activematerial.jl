@@ -19,7 +19,10 @@ end
 
 struct NoParticleDiffusion <: SolidDiffusionDiscretization end
 
-struct ActiveMaterial{D, T} <: ElectroChemicalComponent where {D<:SolidDiffusionDiscretization, T<:ActiveMaterialParameters}
+abstract type AbstractActiveMaterial{label} <: ElectroChemicalComponent end
+activematerial_label(::AbstractActiveMaterial{label}) where label = label
+
+struct ActiveMaterial{label, D, T} <: AbstractActiveMaterial{label} where {D<:SolidDiffusionDiscretization, T<:ActiveMaterialParameters}
     params::T
     # At the moment the following keys are include
     # - diffusion_coef_func::F where {F <: Function}
@@ -38,8 +41,8 @@ struct ActiveMaterial{D, T} <: ElectroChemicalComponent where {D<:SolidDiffusion
     discretization::D
 end 
 
-const ActiveMaterialP2D{D, T} = ActiveMaterial{D, T}
-const ActiveMaterialNoParticleDiffusion{T} = ActiveMaterial{NoParticleDiffusion, T}
+const ActiveMaterialP2D{label, D, T} = ActiveMaterial{label, D, T}
+const ActiveMaterialNoParticleDiffusion{T} = ActiveMaterial{nothing, NoParticleDiffusion, T}
 
 struct Ocp               <: ScalarVariable  end
 struct DiffusionCoef     <: ScalarVariable  end
@@ -60,18 +63,18 @@ Jutul.local_discretization(::SolidDiffusionBc, i) = nothing
 const ActiveMaterialModel = SimulationModel{O, S} where {O<:JutulDomain, S<:ActiveMaterial}
 
 ## Create ActiveMaterial with full p2d solid diffusion
-function ActiveMaterialP2D(params::ActiveMaterialParameters, rp, N, D)
+function ActiveMaterialP2D(params::ActiveMaterialParameters, rp, N, D; label::Union{Nothing, Symbol} = nothing)
     data = setupSolidDiffusionDiscretization(rp, N, D)
     discretization = P2Ddiscretization(data)
     params = Jutul.convert_to_immutable_storage(params)
-    return ActiveMaterial{typeof(discretization), typeof(params)}(params, discretization)
+    return ActiveMaterialP2D{label, typeof(discretization), typeof(params)}(params, discretization)
 end
 
 ## Create ActiveMaterial with no solid diffusion
 function ActiveMaterialNoParticleDiffusion(params::ActiveMaterialParameters)
     discretization = NoParticleDiffusion()
     params = Jutul.convert_to_immutable_storage(params)
-    return ActiveMaterial{NoParticleDiffusion, typeof(params)}(params, discretization)
+    return ActiveMaterialNoParticleDiffusion{NoParticleDiffusion, typeof(params)}(params, discretization)
 end
 
 
