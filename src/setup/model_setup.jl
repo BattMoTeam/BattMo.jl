@@ -227,7 +227,7 @@ function setup_submodels(inputparams::InputParams;
             rp = inputparams_am["SolidDiffusion"]["particleRadius"]
             N  = Int64(inputparams_am["SolidDiffusion"]["N"])
             D  = inputparams_am["SolidDiffusion"]["referenceDiffusionCoefficient"]
-            sys_am = ActiveMaterialP2D(am_params, rp, N, D)
+            sys_am = ActiveMaterialP2D(am_params, rp, N, D; label = :sei)
         else
             sys_am = ActiveMaterialNoParticleDiffusion(am_params)
         end

@@ -107,9 +107,6 @@ end
 number_of_cells(G::MinimalECTPFAGrid) = length(G.volumes)
 
 Base.show(io::IO, g::MinimalECTPFAGrid) = print(io, "MinimalECTPFAGrid ($(number_of_cells(g)) cells, $(number_of_faces(g)) faces)")
-
-import Jutul: FlowDiscretization
-
 ################
 # Constructors #
 ################
