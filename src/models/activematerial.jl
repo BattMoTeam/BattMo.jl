@@ -20,6 +20,7 @@ end
 struct NoParticleDiffusion <: SolidDiffusionDiscretization end
 
 abstract type AbstractActiveMaterial{label} <: ElectroChemicalComponent end
+
 activematerial_label(::AbstractActiveMaterial{label}) where label = label
 
 struct ActiveMaterial{label, D, T} <: AbstractActiveMaterial{label} where {D<:SolidDiffusionDiscretization, T<:ActiveMaterialParameters}
@@ -221,10 +222,9 @@ function Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::Soli
     
 end
 
-function select_minimum_output_variables!(out                   ,
+function select_minimum_output_variables!(out,
                                           system::ActiveMaterialP2D,
-                                          model::SimulationModel
-                                          )
+                                          model::SimulationModel)
     push!(out, :Charge)
     push!(out, :Ocp)
     push!(out, :Temperature)
@@ -236,10 +236,10 @@ end
 @jutul_secondary(
     function update_vocp!(Ocp,
                           tv::Ocp,
-                          model:: SimulationModel{<:Any, ActiveMaterialP2D{D, T}, <:Any, <:Any},
+                          model:: SimulationModel{<:Any, ActiveMaterialP2D{label, D, T}, <:Any, <:Any},
                           Cs,
                           ix
-                          ) where {D, T}
+                          ) where {label, D, T}
         
         ocp_func = model.system.params[:ocp_func]
         
@@ -273,12 +273,11 @@ end
 
 
 @jutul_secondary(
-    function update_reaction_rate!(ReactionRateConst                                                        ,
-                                   tv::ReactionRateConst                                    ,
-                                   model::SimulationModel{<:Any, ActiveMaterialP2D{D, T}, <:Any, <:Any},
-                                   Cs                                                       ,
-                                   ix
-                                   ) where {D, T}
+    function update_reaction_rate!(ReactionRateConst,
+                                   tv::ReactionRateConst,
+                                   model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T}, <:Any, <:Any},
+                                   Cs,
+                                   ix) where {label, D, T}
         rate_func = model.system.params[:reaction_rate_constant_func]
         refT = 298.15
         for cell in ix
@@ -290,9 +289,9 @@ end
 @jutul_secondary(
     function update_solid_diffusion_flux!(SolidDiffFlux,
                                           tv::SolidDiffFlux,
-                                          model::SimulationModel{<:Any, ActiveMaterialP2D{D, T}, <:Any, <:Any},
+                                          model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T}, <:Any, <:Any},
                                           Cp,
-                                          ix) where {D, T}
+                                          ix) where {label, D, T}
     s = model.system
     for cell in ix
         @inbounds @views update_solid_flux!(SolidDiffFlux[:, cell], Cp[:, cell], s)
