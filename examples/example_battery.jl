@@ -115,7 +115,7 @@ if !do_json
                   t,
                   Eref;
                   linewidth = 2,
-                  markershape = :cross,
+                  marker = :cross,
                   markercolor = :black,
                   markersize = 1,
                   label = "Matlab")
@@ -148,7 +148,7 @@ if !do_json
                   t,
                   Iref;
                   linewidth = 2,
-                  markershape = :cross,
+                  marker = :cross,
                   markercolor = :black,
                   markersize = 1,
                   label = "Matlab")
