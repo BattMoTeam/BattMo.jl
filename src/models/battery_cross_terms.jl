@@ -75,12 +75,10 @@ function butler_volmer_equation(j0, alpha, n, eta, T)
     
 end
 
-function reaction_rate(phi_a         ,
+function reaction_rate(eta           ,
                        c_a           ,
                        R0            ,
-                       ocp           ,
                        T             ,
-                       phi_e         ,
                        c_e           ,
                        activematerial,
                        electrolyte
@@ -90,7 +88,6 @@ function reaction_rate(phi_a         ,
     cmax = activematerial.params[:maximum_concentration]
     vsa  = activematerial.params[:volumetric_surface_area]
 
-    eta = (phi_a - phi_e - ocp)
     th  = 1e-3*cmax
     j0  = R0*regularized_sqrt(c_e*(cmax - c_a)*c_a, th)*n*FARADAY_CONSTANT
     R   = vsa*butler_volmer_equation(j0, 0.5, n, eta, T)
@@ -101,14 +98,12 @@ end
 
 
 
-##########################
-# cross-term for 2pd model
-##########################
+############################
+# cross-term for 2pd model #
+############################
 
-
-Jutul.cross_term_entities(ct::ButlerVolmerActmatToElyteCT, eq::Jutul.JutulEquation, model) = ct.target_cells
+Jutul.cross_term_entities(ct::ButlerVolmerActmatToElyteCT, eq::Jutul.JutulEquation, model)        = ct.target_cells
 Jutul.cross_term_entities_source(ct::ButlerVolmerActmatToElyteCT, eq::Jutul.JutulEquation, model) = ct.source_cells
-
 
 function Jutul.update_cross_term_in_entity!(out                            ,
                                             ind                            ,
@@ -143,12 +138,13 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     c_a   = state_s.Cs[ind_s]
     T     = state_s.Temperature[ind_s]
 
-    R = reaction_rate(phi_a         ,
+    # overpotential
+    eta = phi_a - phi_e - ocp
+    
+    R = reaction_rate(eta           ,
                       c_a           ,
                       R0            ,
-                      ocp           ,
                       T             ,
-                      phi_e         ,
                       c_e           ,
                       activematerial,
                       electrolyte)
@@ -162,13 +158,12 @@ function Jutul.update_cross_term_in_entity!(out                            ,
         v = 1.0*vols*R*n*FARADAY_CONSTANT
     end
     out[] = -v
+    
 end
 
 
-Jutul.cross_term_entities(ct::ButlerVolmerElyteToActmatCT, eq::Jutul.JutulEquation, model) = ct.target_cells
-
+Jutul.cross_term_entities(ct::ButlerVolmerElyteToActmatCT, eq::Jutul.JutulEquation, model)        = ct.target_cells
 Jutul.cross_term_entities_source(ct::ButlerVolmerElyteToActmatCT, eq::Jutul.JutulEquation, model) = ct.source_cells
-
 
 function Jutul.update_cross_term_in_entity!(out                            ,
                                             ind                            ,
@@ -202,12 +197,13 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     c_a   = state_t.Cs[ind_t]
     T     = state_t.Temperature[ind_t]
 
-    R = reaction_rate(phi_a         ,
+    # overpotential
+    eta = phi_a - phi_e - ocp
+
+    R = reaction_rate(eta           ,
                       c_a           ,
                       R0            ,
-                      ocp           ,
                       T             ,
-                      phi_e         ,
                       c_e           ,
                       activematerial,
                       electrolyte)
@@ -236,10 +232,9 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     
 end
 
-
-##############
-# cross-terms for no particle diffusion model
-###############
+###############################################
+# cross-terms for no particle diffusion model #
+###############################################
 
 function source_electric_material(vols,
                                   T,
