@@ -52,12 +52,6 @@ struct Cp                <: VectorVariables end # particle concentrations in p2d
 struct Cs                <: ScalarVariable  end # surface variable in p2d model
 struct SolidDiffFlux     <: VectorVariables end # flux in P2D model
 
-## Variable for SEI model
-struct normalizedSEIlength      <: ScalarVariable end
-struct normalizedSEIvoltageDrop <: ScalarVariable end
-struct SEIlength                <: ScalarVariable end
-struct SEIvoltageDrop           <: ScalarVariable end
-struct SEIflux                  <: ScalarVariable end
 
 minimum_value(::Cp) = 1.0
 minimum_value(::Cs) = 1.0
@@ -67,13 +61,6 @@ Jutul.local_discretization(::SolidMassCons, i) = nothing
 
 struct SolidDiffusionBc <: JutulEquation end
 Jutul.local_discretization(::SolidDiffusionBc, i) = nothing
-
-## Equations for SEI model
-struct SEImassCons <: JutulEquation end
-Jutul.local_discretization(::SEImassCons, i) = nothing
-
-struct SEIvoltageDropEquation <: JutulEquation end
-Jutul.local_discretization(::SEIvoltageDropEquation, i) = nothing
 
 const ActiveMaterialModel = SimulationModel{O, S} where {O<:JutulDomain, S<:ActiveMaterial}
 
@@ -166,9 +153,9 @@ function setupSolidDiffusionDiscretization(rp, N, D)
     return NamedTuple(pairs(data))
 end
 
-##################################################
-# We setup the case with full P2d discretization #
-##################################################
+#################################################################################
+# setup case with full P2d discretization : variables and equations declaration #
+#################################################################################
 
 function select_primary_variables!(S,
                                    system::ActiveMaterialP2D,
@@ -215,18 +202,6 @@ function select_secondary_variables!(S,
     
 end
 
-function select_secondary_variables!(S,
-                                     system::ActiveMaterialP2D{:sei, D, T},
-                                     model::SimulationModel
-                                     ) where {D, T}
-    S[:Charge]            = Charge()
-    S[:Ocp]               = Ocp()
-    S[:ReactionRateConst] = ReactionRateConst()
-    S[:SolidDiffFlux]     = SolidDiffFlux()
-    S[:SEIflux]           = SEIflux()
-    
-end
-
 
 function select_equations!(eqs,
                            system::ActiveMaterialP2D,
@@ -260,20 +235,11 @@ function select_minimum_output_variables!(out,
     
 end
 
-@jutul_secondary(
-    function update_vocp!(SEIflux,
-                          tv::SEIflux,
-                          model:: SimulationModel{<:Any, ActiveMaterialP2D{:sei, D, T}, <:Any, <:Any},
-                          Cs,
-                          ix
-                          ) where {D, T}
-        
-        for cell in ix
-            @inbounds SEIflux[cell] = Cs[cell]
-        end
-        
-    end
-)
+
+##############################
+# Update secondary variables #
+##############################
+
 @jutul_secondary(
     function update_vocp!(Ocp,
                           tv::Ocp,
@@ -311,7 +277,6 @@ end
         end
     end
 )
-
 
 @jutul_secondary(
     function update_reaction_rate!(ReactionRateConst,
@@ -364,6 +329,9 @@ function update_solid_flux!(flux, Cp, system::ActiveMaterialP2D)
 
 end
 
+########################################
+# update equations for solid diffusion #
+########################################
 
 function Jutul.update_equation_in_entity!(eq_buf           ,
                                           self_cell        ,
@@ -420,55 +388,6 @@ function Jutul.update_equation_in_entity!(eq_buf              ,
     eq_buf[] = hT[N + 1]*D*(Cp - Cs)
 
 end
-
-##################################
-# equations specific to SEI case #
-##################################
-
-function update_equation_in_entity!(eq_buf,
-                                    self_cell,
-                                    state,
-                                    state0,
-                                    eq::SEImassCons,
-                                    model,
-                                    dt,
-                                    ldisc = nothing)
-    params = model.system.params
-
-    s = params[:SEIstoichiometryCoefficient]
-    V = params[:SEImolarVolume]
-
-    N  = state.SEIflux[self_cell]
-    L  = state.Length[self_cell]
-    L0 = state0.Length[self_cell]
-
-    eq_buf[] = s/V*(L - L0)/dt - N
-    
-end
-
-function update_equation_in_entity!(eq_buf,
-                                    self_cell,
-                                    state,
-                                    state0,
-                                    eq::SEIvoltageDropEquation,
-                                    model,
-                                    dt,
-                                    ldisc = nothing)
-    
-    params = model.system.params
-
-    F = FARADAY_CONSTANT
-    k = params[:SEIionicConductivity]
-    V = params[:SEImolarVolume]
-
-    N  = state.SEIflux[self_cell]
-    L  = state.Length[self_cell]
-    L0 = state0.Length[self_cell]
-
-    eq_buf[] = s/V*(L - L0)/dt - N
-    
-end
-
 
 
 #####################################################
