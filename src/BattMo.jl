@@ -8,6 +8,8 @@ using SparseArrays
 using RuntimeGeneratedFunctions
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
+timeit_debug_enabled() = Jutul.timeit_debug_enabled()
+
 import JSON
 import Jutul:
     number_of_cells, number_of_faces,

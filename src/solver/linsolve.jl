@@ -1,20 +1,21 @@
 using LinearAlgebra
 using SparseArrays
-function modify_equation!(lsys, maps, tfac, context)
-    # slow genneral version
-    (mass_index, charge_index, mass_cons_map, charge_cons_map) = maps
-    for i in 1:length(mass_cons_map)
-        ## decouple mass end charge conservation based on the property
-        # that charge and mass transport is propotioinal due to change 
-        #storage.LinearizedSystem.jac[mass_cons_map[i],:] += storage.LinearizedSystem.jac[charge_cons_map[i],:] 
-        #storage.LinearizedSystem.r[mass_cons_map[i],:] += storage.LinearizedSystem.r[charge_cons_map[i],:] 
-        if true #needed for separate saturation solve
-        @.    lsys.jac[mass_cons_map[i],:] .-= tfac.*lsys.jac[charge_cons_map[i],:] 
-            #lsys.r[mass_cons_map[i]] .-= tfac.*lsys.r[charge_cons_map[i]]
-            lsys.r[mass_cons_map[i]] -= tfac*lsys.r[charge_cons_map[i]]
-        end 
-    end
-end
+##NB genneral version
+# function modify_equation!(lsys, maps, tfac, context)
+#     # slow genneral version
+#     (mass_index, charge_index, mass_cons_map, charge_cons_map) = maps
+#     for i in 1:length(mass_cons_map)
+#         ## decouple mass end charge conservation based on the property
+#         # that charge and mass transport is propotioinal due to change 
+#         #storage.LinearizedSystem.jac[mass_cons_map[i],:] += storage.LinearizedSystem.jac[charge_cons_map[i],:] 
+#         #storage.LinearizedSystem.r[mass_cons_map[i],:] += storage.LinearizedSystem.r[charge_cons_map[i],:] 
+#         if true #needed for separate saturation solve
+#         @.    lsys.jac[mass_cons_map[i],:] .-= tfac.*lsys.jac[charge_cons_map[i],:] 
+#             #lsys.r[mass_cons_map[i]] .-= tfac.*lsys.r[charge_cons_map[i]]
+#             lsys.r[mass_cons_map[i]] -= tfac*lsys.r[charge_cons_map[i]]
+#         end 
+#     end
+# end
 function matrix_maps(lsys, mass_cons_map, charge_cons_map, context)#only work for CSC::Jutul.DefaultContext)
     ## make pair
     ncol = size(lsys.jac,1)
@@ -45,7 +46,7 @@ function matrix_maps(lsys, mass_cons_map, charge_cons_map, context)#only work fo
 end
 
 
-function modify_equation!(lsys, maps,tfac, context::Jutul.DefaultContext)
+function modify_equation!(lsys, maps,tfac, context)#::Jutul.DefaultContext)
     
     (mass_index, charge_index, mass_cons_map, charge_cons_map) = maps
     vals = nonzeros(lsys.jac)

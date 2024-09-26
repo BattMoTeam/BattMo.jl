@@ -959,6 +959,10 @@ function setup_coupling_cross_terms!(inputparams::InputParams,
     ct = AccumulatorInterfaceFluxCT(1, trange, trans)
     ct_pair = setup_cross_term(ct, target = :Control, source = controlComp, equation = :charge_conservation)
     add_cross_term!(model, ct_pair)
+    
+    ct1 = AccumulatorInterfaceFluxCT(1, trange, trans*0.0)
+    ct1_pair = setup_cross_term(ct1, target = :Control, source = controlComp, equation = :control)
+    add_cross_term!(model, ct1_pair)
 
 
 end

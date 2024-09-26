@@ -214,8 +214,12 @@ mutable struct VariablePrecond # mutable needed?
     var
     eq
     models
+    data
+    
 end
-
+function VariablePrecond(precond,var,eq,models)
+    return VariablePrecond(precond,var,eq,models,nothing)
+end
 
 mutable struct BatteryGeneralPreconditioner <: JutulPreconditioner
     varpreconds

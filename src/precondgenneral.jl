@@ -16,6 +16,7 @@ function Jutul.update_preconditioner!(prec::BattMo.BatteryGeneralPreconditioner,
     end
     #Main.@infiltrate true
     if setup
+        Jutul.@tic "setup genneral precond" begin
         maps = []
         for varprecond in prec.varpreconds
             if isnothing(varprecond.models)
@@ -37,20 +38,35 @@ function Jutul.update_preconditioner!(prec::BattMo.BatteryGeneralPreconditioner,
         end
         ndof = length(r)
         prec.data = (maps = maps, allvars = (r = zeros(ndof), x = zeros(ndof)), n = ndof, A = A)
+       end
+    #    for (i,varprecond) in enumerate(prec.varpreconds)
+    #         #eq_map = copy(prec.data.maps[i].eq_map)
+    #         #var_map = copy(prec.data.maps[i].var.ix)
+    #         eq_map = prec.data.maps[i].eq_map
+    #         var_map = copy(prec.data.maps[i].var.ix)
+    #         Jutul.@tic "update local preconditioner" update_local_preconditioner!(varprecond, A, r, eq_map, var_map, executor)
+    #         #Main.@timit_debug "update local preconditioner" update_local_preconditioner!(varprecond.precond, A, r, eq_map, var_map, executor)
+    #     end
+       precond = prec.g_varprecond
+       Jutul.@tic "update global preconditioner" Jutul.update_preconditioner!(precond.precond, lsys, context, model, storage, recorder, executor)
     else
         #Main.@infiltrate !(A == prec.data.A)
         @assert A == prec.data.A
     end
     #prec.data.A = A
     for (i,varprecond) in enumerate(prec.varpreconds)
-        eq_map = copy(prec.data.maps[i].eq_map)
+        #eq_map = copy(prec.data.maps[i].eq_map)
+        #var_map = copy(prec.data.maps[i].var.ix)
+        eq_map = prec.data.maps[i].eq_map
         var_map = copy(prec.data.maps[i].var.ix)
-        update_local_preconditioner!(varprecond.precond, A, r, eq_map, var_map, executor)
+        Jutul.@tic "update local var preconditioner" update_local_preconditioner!(varprecond, A, r, eq_map, var_map, executor)
+        #Main.@timit_debug "update local preconditioner" update_local_preconditioner!(varprecond.precond, A, r, eq_map, var_map, executor)
     end
     
     if !isnothing(prec.g_varprecond)
         precond = prec.g_varprecond
-        Jutul.update_preconditioner!(precond.precond, lsys, context, model, storage, recorder, executor)
+        #Jutul.@tic "global partial update global preconditioner" Jutul.update_preconditioner!(precond.precond, lsys, context, model, storage, recorder, executor)
+        Jutul.@tic "partial update global preconditioner" Jutul.partial_update_preconditioner!(precond.precond, lsys.jac,lsys.r, context, executor)
     end
 end
 Jutul.operator_nrows(p::BattMo.BatteryGeneralPreconditioner) = p.data.n
@@ -144,13 +160,29 @@ function storage_general_precond(index_map)
     return (ix = index_map, r = zeros(n), x = zeros(n))
 end
 
-function update_local_preconditioner!(prec, A, r, ind_eq, ind_var, executor)
-    A_s = A[ind_eq, ind_var]
-    b_s = view(r, ind_var)
-    sys = Jutul.LinearizedSystem(A_s)
+function update_local_preconditioner!(varprec, A, r, ind_eq, ind_var, executor)
+    prec = varprec.precond
+    full_update = true
+    if isnothing(varprec.data)
+    #A_s = A[ind_eq, ind_var]
+    #A_s, ind) = getindex_I_sorted_linear_new(A,ind_eq,ind_var)
+        (A_s, ind) = getindex_I_sorted_bsearch_I_new(A,ind_eq,ind_var)
+        varprec.data = (Al = A_s, indg = ind)
+    else
+        full_update = false
+        valsg = nonzeros(A)
+        valsl = nonzeros(varprec.data.Al)
+        @. valsl = valsg[varprec.data.indg]
+    end
+    #b_s = view(r, ind_var)
+    sys = Jutul.LinearizedSystem(varprec.data.Al)
     dummy_model = Jutul.Nothing()
     dummy_storage = Jutul.Nothing()
-    Jutul.update_preconditioner!(prec, sys, DefaultContext(), dummy_model, dummy_storage , Jutul.ProgressRecorder(), executor)
+    if full_update
+        Jutul.@tic "update local preconditioner" Jutul.update_preconditioner!(prec, sys, DefaultContext(), dummy_model, dummy_storage , Jutul.ProgressRecorder(), executor)
+    else
+        Jutul.@tic "partial update local preconditioner" Jutul.partial_update_preconditioner!(prec, sys.jac,sys.r, DefaultContext(), executor)
+    end
     #NB ok??
     #Jutul.update_preconditioner!(prec, A_s, view(r, ix), DefaultContext(), executor)
 end
