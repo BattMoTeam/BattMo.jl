@@ -94,7 +94,9 @@ include("grid/tensor_tools.jl")
 include("grid/remove_cells.jl") #Trenger StatsBase
 include("grid/grid_conversion.jl")
 include("grid/grid_utils.jl")
-
+include("solver/solver_as_preconditioner_system.jl")
+include("solver/precondgenneral.jl")
+include("solver/sparse_utils.jl")
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 # @compile_workload begin
 #    for use_general_ad in [false, true]
