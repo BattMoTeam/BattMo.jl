@@ -11,8 +11,7 @@ set_preferences!(BattMo, "precompile_workload" => false; force=true)
 set_preferences!(Jutul, "precompile_workload" => false; force=true)
 #
 #includet("../src/solver_as_preconditioner.jl")
-includet("../src/solver_as_preconditioner_system.jl")
-includet("../src/precondgenneral.jl")
+
 
 ##########################
 # setup input parameters #
@@ -25,9 +24,9 @@ inputparams = readBattMoJsonInputFile(fn)
 
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
 inputparams_geometry = readBattMoJsonInputFile(fn)
-facx = 3
+facx = 1
 facy = facx
-facz = 4
+facz = 1
 fac2p = 1
 inputparams_geometry.dict["Geometry"]["Nh"] *=facy 
 inputparams_geometry.dict["Geometry"]["Nw"] *=facx
