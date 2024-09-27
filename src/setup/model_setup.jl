@@ -111,12 +111,14 @@ end
 function setup_model(inputparams::AbstractInputParams;
                      use_p2d::Bool    = true,
                      use_groups::Bool = false,
+                     general_ad = false,
                      kwargs...)
 
     # setup the submodels and also return a coupling structure which is used to setup later the cross-terms
     model, couplings = setup_submodels(inputparams,
                                        use_groups = use_groups,
                                        use_p2d    = use_p2d;
+                                       general_ad = general_ad,
                                        kwargs... )
 
     # setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
@@ -136,6 +138,7 @@ end
 function setup_submodels(inputparams::InputParams; 
                          use_groups::Bool = false, 
                          general_ad::Bool = false,
+                         use_p2d = true,
                          kwargs...)
 
     include_cc = include_current_collectors(inputparams)
@@ -152,7 +155,7 @@ function setup_submodels(inputparams::InputParams;
     """
     Helper function to setup the active materials
     """
-    function setup_active_material(name::Symbol)
+    function setup_active_material(name::Symbol;kwargs...)
 
         stringName = stringNames[name]
 
@@ -222,7 +225,6 @@ function setup_submodels(inputparams::InputParams;
             am_params[:ocp_func] = interpolation_object
         end
         
-        use_p2d = true
         if use_p2d
             rp = inputparams_am["SolidDiffusion"]["particleRadius"]
             N  = Int64(inputparams_am["SolidDiffusion"]["N"])
@@ -247,7 +249,7 @@ function setup_submodels(inputparams::InputParams;
         model_am = setup_component(grid,
                                    sys_am;
                                    general_ad = general_ad,
-                                   dirichletBoundary = boundary)
+                                   dirichletBoundary = boundary,kwargs...)
 
         return model_am
         
@@ -270,14 +272,14 @@ function setup_submodels(inputparams::InputParams;
         model_necc = setup_component(grid,
                                      sys_necc           ,
                                      dirichletBoundary = boundary,
-                                     general_ad = general_ad)
+                                     general_ad = general_ad; kwargs...)
     end
 
     ##############
     # Setup NeAm #
     ##############
     
-    model_neam = setup_active_material(:NeAm)
+    model_neam = setup_active_material(:NeAm; kwargs...)
 
     ###############
     # Setup Elyte #
@@ -337,13 +339,13 @@ function setup_submodels(inputparams::InputParams;
 
     elyte = Electrolyte(params)
     
-    model_elyte = setup_component(grids["Electrolyte"], elyte, general_ad = general_ad)
+    model_elyte = setup_component(grids["Electrolyte"], elyte, general_ad = general_ad; kwargs...)
 
     ##############
     # Setup PeAm #
     ##############
     
-    model_peam = setup_active_material(:PeAm)
+    model_peam = setup_active_material(:PeAm;kwargs...)
 
     ###########################################
     # Setup negative current collector if any #
@@ -358,7 +360,7 @@ function setup_submodels(inputparams::InputParams;
         sys_pecc = CurrentCollector(pecc_params)
         
         model_pecc = setup_component(grid, sys_pecc, 
-                                     general_ad = general_ad)
+                                     general_ad = general_ad;kwargs...)
     end
 
     #######################
@@ -392,7 +394,7 @@ function setup_submodels(inputparams::InputParams;
     
     sys_control    = CurrentAndVoltageSystem(policy)
     domain_control = CurrentAndVoltageDomain()
-    model_control  = SimulationModel(domain_control, sys_control, context = DefaultContext())
+    model_control  = SimulationModel(domain_control, sys_control;kwargs...)
 
     #####################
     # Setup multi-model #
@@ -472,7 +474,8 @@ end
 function setup_component(grid::Jutul.FiniteVolumeMesh,
                          sys;
                          general_ad::Bool=false,
-                         dirichletBoundary = nothing)
+                         dirichletBoundary = nothing,
+                         kwargs...)
 
     domain = DataDomain(grid)
 
@@ -511,7 +514,7 @@ function setup_component(grid::Jutul.FiniteVolumeMesh,
     disc = (charge_flow=flow,)
     domain = DiscretizedDomain(domain, disc)
 
-    model = SimulationModel(domain, sys, context=DefaultContext())
+    model = SimulationModel(domain, sys; kwargs...)
 
     return model
 

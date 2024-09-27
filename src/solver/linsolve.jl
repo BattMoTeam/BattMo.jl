@@ -16,7 +16,7 @@ using SparseArrays
 #         end 
 #     end
 # end
-function matrix_maps(lsys, mass_cons_map, charge_cons_map, context)#only work for CSC::Jutul.DefaultContext)
+function matrix_maps(lsys, mass_cons_map, charge_cons_map, context::Jutul.DefaultContext)
     ## make pair
     ncol = size(lsys.jac,1)
     mass_index = zeros(Int,0)
