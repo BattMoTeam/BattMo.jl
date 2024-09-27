@@ -229,15 +229,16 @@ function setup_submodels(inputparams::InputParams;
             D  = inputparams_am["SolidDiffusion"]["referenceDiffusionCoefficient"]
             if inputparams_am["SEImodel"] == "Bolay"
                 label = :sei
-                fds = ["sei_length_scaling",
-                       "sei_voltage_drop_scaling",
-                       "SEIstoichiometryCoefficient",
+                fds = ["SEIlengthInitial",
+                       "SEIvoltageDropRef",
+                       "SEIlengthRef",
+                       "SEIstoichiometricCoefficient",
                        "SEImolarVolume",
                        "SEIelectronicDiffusionCoefficient",
                        "SEIintersticialConcentration",
                        "SEIionicConductivity"]
                 for fd in fds
-                    am_params[Symbol(fd)] = intputparams_am[fd]
+                    am_params[Symbol(fd)] = inputparams_am["Interface"][fd]
                 end
             else
                 label = nothing
@@ -691,7 +692,6 @@ end
 # Setup initial state #
 #######################
 
-
 function setup_initial_state(inputparams::InputParams,
                              model::MultiModel)
 
@@ -716,6 +716,11 @@ function setup_initial_state(inputparams::InputParams,
         init[:Cs]  = c*ones(nc)
         init[:Cp]  = c*ones(N, nc)
 
+        if model[name] isa SEImodel
+            init[:normalizedSEIlength] = 1.0*ones(nc)
+            init[:normalizedSEIvoltageDrop] = 0.0*ones(nc)
+        end
+        
         if Jutul.haskey(model[name].system.params, :ocp_funcexp)
             OCP = model[name].system[:ocp_func](c, T, refT, cmax)
         elseif Jutul.haskey(model[name].system.params, :ocp_funcdata)

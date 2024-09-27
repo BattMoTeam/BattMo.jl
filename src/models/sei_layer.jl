@@ -30,7 +30,7 @@ struct SEIvoltageDropEquationCT{T} <: Jutul.AdditiveCrossTerm
 end
 
 # Create a type for the model with SEI layer. It will be used to specialize the function
-SeiModel = SimulationModel{O, BattMo.ActiveMaterialP2D{:sei, D, T}, F, C} where {O <: JutulDomain,
+SEImodel = SimulationModel{O, BattMo.ActiveMaterialP2D{:sei, D, T}, F, C} where {O <: JutulDomain,
                                                                                  D<: BattMo.SolidDiffusionDiscretization,
                                                                                  T<: BattMo.ActiveMaterialParameters,
                                                                                  F<: Jutul.JutulFormulation,
@@ -41,8 +41,8 @@ SeiModel = SimulationModel{O, BattMo.ActiveMaterialP2D{:sei, D, T}, F, C} where 
 ###################################
 
 function select_primary_variables!(S,
-                                   system,
-                                   model::SeiModel
+                                   system::ActiveMaterialP2D,
+                                   model::SEImodel
                                    )
     
     S[:Phi]                      = Phi()
@@ -56,8 +56,8 @@ end
 
 
 function select_secondary_variables!(S,
-                                     system,
-                                     model::SeiModel
+                                     system::ActiveMaterialP2D,
+                                     model::SEImodel
                                      )
     
     S[:Charge]            = Charge()
@@ -76,12 +76,12 @@ end
 @jutul_secondary(
     function update_vocp!(SEIlength,
                           tv::SEIlength,
-                          model::SeiModel,
+                          model::SEImodel,
                           normalizedSEIlength,
                           ix
-                          ) where {D, T}
+                          )
 
-        scaling = model.system.params[:sei_length_scaling]
+        scaling = model.system.params[:SEIlengthRef]
         
         for cell in ix
             @inbounds SEIlength[cell] = scaling*normalizedSEIlength[cell]
@@ -93,12 +93,12 @@ end
 @jutul_secondary(
     function update_vocp!(SEIvoltageDrop,
                           tv::SEIvoltageDrop,
-                          model::SeiModel,
+                          model::SEImodel,
                           normalizedSEIvoltageDrop,
                           ix
-                          ) where {D, T}
+                          )
 
-        scaling = model.system.params[:sei_voltage_drop_scaling]
+        scaling = model.system.params[:SEIvoltageDropRef]
         
         for cell in ix
             @inbounds SEIvoltageDrop[cell] = scaling*normalizedSEIvoltageDrop[cell]
@@ -131,7 +131,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                                             state_s                        ,
                                             state0_s                       , 
                                             model_t                        ,
-                                            model_s::SeiModel              ,
+                                            model_s::SEImodel              ,
                                             ct::ButlerVolmerActmatToElyteCT,
                                             eq                             ,
                                             dt                             ,
@@ -181,16 +181,13 @@ function Jutul.update_cross_term_in_entity!(out                            ,
 end
 
 
-Jutul.cross_term_entities(ct::ButlerVolmerElyteToActmatCT, eq::Jutul.JutulEquation, model)        = ct.target_cells
-Jutul.cross_term_entities_source(ct::ButlerVolmerElyteToActmatCT, eq::Jutul.JutulEquation, model) = ct.source_cells
-
 function Jutul.update_cross_term_in_entity!(out                            ,
                                             ind                            ,
                                             state_t                        ,
                                             state0_t                       ,
                                             state_s                        ,
                                             state0_s                       , 
-                                            model_t::SeiModel              ,
+                                            model_t::SEImodel              ,
                                             model_s                        ,
                                             ct::ButlerVolmerElyteToActmatCT,
                                             eq                             ,
@@ -251,7 +248,6 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     
 end
 
-
 #################################################
 # update the equations that are specific to SEI #
 #################################################
@@ -262,7 +258,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                                             state0_t                       ,
                                             state_s                        ,
                                             state0_s                       , 
-                                            model_t::SeiModel              ,
+                                            model_t::SEImodel              ,
                                             model_s                        ,
                                             ct::SEImassConsCT              ,
                                             eq                             ,
@@ -309,7 +305,7 @@ function Jutul.update_cross_term_in_entity!(out                       ,
                                             state0_t                  ,
                                             state_s                   ,
                                             state0_s                  , 
-                                            model_t::SeiModel         ,
+                                            model_t::SEImodel         ,
                                             model_s                   ,
                                             ct::SEIvoltageDropEquation,
                                             eq                        ,

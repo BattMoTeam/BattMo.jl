@@ -3,18 +3,23 @@
     "controlPolicy": "CCCV",
     "initialControl": "discharging",
     "numberOfCycles": 4,
-    "CRate": 1,
-    "DRate": 1,
-    "lowerCutoffVoltage": 3,
-    "upperCutoffVoltage": 4,
-    "dIdtLimit": 0.0001,
-    "dEdtLimit": 0.0001,
+    "CRate": 1.0,
+    "DRate": 1.0,
+    "lowerCutoffVoltage": 3.0,
+    "upperCutoffVoltage": 4.0,
+    "dIdtLimit": 1e-7,
+    "dEdtLimit": 1e-7,
     "switchTolerances": {
       "CC_discharge1": 0.01,
       "CC_discharge2": 0.9,
       "CC_charge1": 0.01,
       "CV_charge2": 0.9
     }
+  },
+  "TimeStepping": {
+    "timeStepDuration": 50,
+    "useRampup": true,
+    "numberOfRampupSteps": 5
   },
   "Separator": {
     "porosity": 0.55,
@@ -47,7 +52,8 @@
       "transferenceNumber": 0.2594,
       "nominalConcentration": 1000
     },
-    "bruggemanCoefficient": 1.5
+    "bruggemanCoefficient": 1.5,
+    "density" : 1200
   },
   "PositiveElectrode": {
     "Coating": {
@@ -151,9 +157,11 @@
           "SEImolarVolume": 9.586E-5,
           "SEIionicConductivity": 1E-5,
           "SEIelectronicDiffusionCoefficient": 3.5E-15,
-          "SEIstochiometricCoeffcient": 2,
+          "SEIstoichiometricCoefficient": 2.0,
           "SEIintersticialConcentration": 0.015,
           "SEIlengthInitial": 1E-8,
+          "SEIvoltageDropRef": 0.0024,
+          "SEIlengthRef": 1E-8,
           "density": 2240
         },
         "massFraction": 0.94,

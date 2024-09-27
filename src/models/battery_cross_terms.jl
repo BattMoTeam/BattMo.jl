@@ -161,7 +161,6 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     
 end
 
-
 Jutul.cross_term_entities(ct::ButlerVolmerElyteToActmatCT, eq::Jutul.JutulEquation, model)        = ct.target_cells
 Jutul.cross_term_entities_source(ct::ButlerVolmerElyteToActmatCT, eq::Jutul.JutulEquation, model) = ct.source_cells
 
