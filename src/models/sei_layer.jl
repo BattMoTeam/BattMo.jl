@@ -252,11 +252,9 @@ function Jutul.update_cross_term_in_entity!(out                            ,
 end
 
 
-############################
-# update equations for SEI #
-############################
-
-
+#################################################
+# update the equations that are specific to SEI #
+#################################################
 
 function Jutul.update_cross_term_in_entity!(out                            ,
                                             ind                            ,

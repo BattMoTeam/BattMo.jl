@@ -39,6 +39,16 @@ struct ActiveMaterial{label, D, T} <: AbstractActiveMaterial{label} where {D<:So
     # - volume_fractions::Vector{Real}
     # - volumetric_surface_area::Real
     # - effective_density::Real
+    #
+    # If SEI layer is present, we have the following in addition
+    # - sei_length_scaling
+    # - sei_voltage_drop_scaling
+    # - SEIstoichiometryCoefficient
+    # - SEImolarVolume
+    # - SEIelectronicDiffusionCoefficient
+    # - SEIintersticialConcentration
+    # - SEIionicConductivity
+    
     discretization::D
 end 
 
