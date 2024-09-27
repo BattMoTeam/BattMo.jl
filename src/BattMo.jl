@@ -2,6 +2,7 @@ module BattMo
 using PrecompileTools
 using StaticArrays
 using StatsBase
+using Infiltrator
 
 using RuntimeGeneratedFunctions
 RuntimeGeneratedFunctions.init(@__MODULE__)
