@@ -1,3 +1,14 @@
+##################
+# SEI model type #
+##################
+
+# Create a type for the model with SEI layer. It will be used to specialize the function
+SEImodel = SimulationModel{O, BattMo.ActiveMaterialP2D{:sei, D, T}, F, C} where {O <: JutulDomain,
+                                                                                 D<: BattMo.SolidDiffusionDiscretization,
+                                                                                 T<: BattMo.ActiveMaterialParameters,
+                                                                                 F<: Jutul.JutulFormulation,
+                                                                                 C<: Jutul.JutulContext}
+
 ##################################################
 # Variable for SEI model added to ActiveMaterial #
 ##################################################
@@ -7,34 +18,30 @@ struct normalizedSEIvoltageDrop <: ScalarVariable end
 struct SEIlength                <: ScalarVariable end
 struct SEIvoltageDrop           <: ScalarVariable end
 
+
 ###################################################
 # Equations for SEI model added to ActiveMaterial #
 ###################################################
 
+# SEI mass conservation equation
+
 struct SEImassCons <: JutulEquation end
+
 Jutul.local_discretization(::SEImassCons, i) = nothing
+
+function Jutul.number_of_equations_per_entity(model::SEImodel, ::SEImassCons)
+    return 1
+end
+
+# SEI voltage drop equation
 
 struct SEIvoltageDropEquation <: JutulEquation end
 Jutul.local_discretization(::SEIvoltageDropEquation, i) = nothing
 
-# The equations are both of cross-term type
-
-struct SEImassConsCT{T} <: Jutul.AdditiveCrossTerm
-    target_cells::T
-    source_cells::T
+function Jutul.number_of_equations_per_entity(model::SEImodel, ::SEIvoltageDropEquation)
+    return 1
 end
 
-struct SEIvoltageDropEquationCT{T} <: Jutul.AdditiveCrossTerm
-    target_cells::T
-    source_cells::T
-end
-
-# Create a type for the model with SEI layer. It will be used to specialize the function
-SEImodel = SimulationModel{O, BattMo.ActiveMaterialP2D{:sei, D, T}, F, C} where {O <: JutulDomain,
-                                                                                 D<: BattMo.SolidDiffusionDiscretization,
-                                                                                 T<: BattMo.ActiveMaterialParameters,
-                                                                                 F<: Jutul.JutulFormulation,
-                                                                                 C<: Jutul.JutulContext}
 
 ###################################
 # Declare variables for sei model #
@@ -67,6 +74,53 @@ function select_secondary_variables!(S,
     S[:SEIlength]         = SEIlength()
     S[:SEIvoltageDrop]    = SEIvoltageDrop()
     
+end
+
+###################################
+# Declare equations for sei model #
+###################################
+
+function select_equations!(eqs,
+                           system::ActiveMaterialP2D,
+                           model::SEImodel
+                           )
+    disc = model.domain.discretizations.charge_flow
+    eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
+    eqs[:mass_conservation]   = SolidMassCons()
+    eqs[:solid_diffusion_bc]  = SolidDiffusionBc()
+    eqs[:sei_mass_cons]       = SEImassCons()
+    eqs[:sei_voltage_drop]    = SEIvoltageDropEquation()
+    
+end
+
+function Jutul.update_equation_in_entity!(eq_buf           ,
+                                          self_cell        ,
+                                          state            ,
+                                          state0           ,
+                                          eq::SEImassCons  ,
+                                          model            ,
+                                          dt               ,
+                                          ldisc = nothing)
+    # do nothing
+end
+
+function Jutul.update_equation_in_entity!(eq_buf                    ,
+                                          self_cell                 ,
+                                          state                     ,
+                                          state0                    ,
+                                          eq::SEIvoltageDropEquation,
+                                          model                     ,
+                                          dt                        ,
+                                          ldisc = nothing)
+    # do nothing    
+end
+
+function apply_bc_to_equation!(storage, parameters, model::SEImodel, eq::SEImassCons, eq_s)
+    # do nothing
+end
+
+function apply_bc_to_equation!(storage, parameters, model::SEImodel, eq::SEIvoltageDropEquation, eq_s)
+    # do nothing
 end
 
 ##############################
@@ -106,18 +160,6 @@ end
         
     end
 )
-
-
-############################
-# Setup of the cross-terms #
-############################
-
-Jutul.cross_term_entities(ct::SEImassConsCT, eq::Jutul.JutulEquation, model)        = ct.target_cells
-Jutul.cross_term_entities_source(ct::SEImassConsCT, eq::Jutul.JutulEquation, model) = ct.source_cells
-
-
-Jutul.cross_term_entities(ct::SEIvoltageDropEquationCT, eq::Jutul.JutulEquation, model)        = ct.target_cells
-Jutul.cross_term_entities_source(ct::SEIvoltageDropEquationCT, eq::Jutul.JutulEquation, model) = ct.source_cells
 
 
 ###################################
@@ -260,8 +302,8 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                                             state0_s                       , 
                                             model_t::SEImodel              ,
                                             model_s                        ,
-                                            ct::SEImassConsCT              ,
-                                            eq                             ,
+                                            ct::ButlerVolmerElyteToActmatCT,
+                                            eq::SEImassCons                ,
                                             dt                             ,
                                             ldisc = Jutul.local_discretization(ct, ind)
                                             )
@@ -271,7 +313,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     
     params = model_t.system.params
 
-    s   = params[:SEIstoichiometryCoefficient]
+    s   = params[:SEIstoichiometricCoefficient]
     V   = params[:SEImolarVolume]
     De  = params[:SEIelectronicDiffusionCoefficient]
     ce0 = params[:SEIintersticialConcentration]
@@ -279,43 +321,45 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     ind_t = ct.target_cells[ind]
     ind_s = ct.source_cells[ind]
     
-    L0 = state0_t.Length[ind_t]
+    L0 = state0_t.SEIlength[ind_t]
 
-    L     = state_t.Length[ind_t]
-    T     = state_t.temperature[ind_t]
-    phi_a = state_t.phiElectrode[ind_t]
+    L     = state_t.SEIlength[ind_t]
+    T     = state_t.Temperature[ind_t]
+    phi_a = state_t.Phi[ind_t]
     Usei  = state_t.SEIvoltageDrop[ind_t]
     L     = state_t.SEIlength[ind_t]
     
-    phi_e = state_s.phiElectrolyte[ind_s]
+    phi_e = state_s.Phi[ind_s]
 
     # compute SEI flux (called N)
-    eta = phiElectrode - phiElectrolyte - Usei
+    eta = phi_e - phi_a - Usei
     
     N = De*ce0/L*exp(-(F/(R*T))*eta)*(1 - (F/(2*R*T))*Usei)
 
     # Evolution equation for the SEI length
     out[] = (s/V)*(L - L0)/dt - N
-    
+
 end
 
-function Jutul.update_cross_term_in_entity!(out                       ,
-                                            ind                       ,
-                                            state_t                   ,
-                                            state0_t                  ,
-                                            state_s                   ,
-                                            state0_s                  , 
-                                            model_t::SEImodel         ,
-                                            model_s                   ,
-                                            ct::SEIvoltageDropEquation,
-                                            eq                        ,
-                                            dt                        ,
+function Jutul.update_cross_term_in_entity!(out                            ,
+                                            ind                            ,
+                                            state_t                        ,
+                                            state0_t                       ,
+                                            state_s                        ,
+                                            state0_s                       , 
+                                            model_t::SEImodel              ,
+                                            model_s                        ,
+                                            ct::ButlerVolmerElyteToActmatCT,
+                                            eq::SEIvoltageDropEquation     ,
+                                            dt                             ,
                                             ldisc = Jutul.local_discretization(ct, ind)
                                             )
 
     F = FARADAY_CONSTANT
 
-    params = model_t.system.params
+    electrolyte    = model_s.system
+    activematerial = model_t.system
+    params         = activematerial.params
     
     k   = params[:SEIionicConductivity]
     
@@ -329,7 +373,7 @@ function Jutul.update_cross_term_in_entity!(out                       ,
     R0    = state_t.ReactionRateConst[ind_t]
     c_a   = state_t.Cs[ind_t]
     T     = state_t.Temperature[ind_t]
-    L     = state_t.Length[ind_t]
+    L     = state_t.SEIlength[ind_t]
     
     phi_e = state_s.Phi[ind_s]
     c_e   = state_s.C[ind_s]

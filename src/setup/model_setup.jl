@@ -824,6 +824,13 @@ function setup_coupling_cross_terms!(inputparams::InputParams,
         ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :solid_diffusion_bc)
         add_cross_term!(model, ct_pair)
 
+        if model[:NeAm] isa SEImodel
+            ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :sei_mass_cons)
+            add_cross_term!(model, ct_pair)
+            ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :sei_voltage_drop)
+            add_cross_term!(model, ct_pair)
+        end
+
     else
 
         @assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
