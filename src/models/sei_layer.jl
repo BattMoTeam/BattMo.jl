@@ -188,17 +188,17 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     ind_t = ct.target_cells[ind]
     ind_s = ct.source_cells[ind]
 
-    vols  = state_t.Volume[ind_t]
-
-    phi_e = state_t.Phi[ind_t]
     phi_a = state_s.Phi[ind_s]  
     seiU  = state_s.SEIvoltageDrop[ind_s]
     ocp   = state_s.Ocp[ind_s]
     R0    = state_s.ReactionRateConst[ind_s]
-    c_e   = state_t.C[ind_t]
     c_a   = state_s.Cs[ind_s]
     T     = state_s.Temperature[ind_s]
 
+    vols  = state_t.Volume[ind_t]
+    phi_e = state_t.Phi[ind_t]
+    c_e   = state_t.C[ind_t]
+    
     # overpotential include SEI voltage drop
     eta = phi_a - phi_e - ocp - seiU
     
@@ -245,15 +245,15 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     ind_t = ct.target_cells[ind]
     ind_s = ct.source_cells[ind]
 
-    vols  = state_t.Volume[ind_t]
-
     phi_e = state_s.Phi[ind_s]
+    c_e   = state_s.C[ind_s]
+
+    vols  = state_t.Volume[ind_t]
+    c_a   = state_t.Cs[ind_t]
     phi_a = state_t.Phi[ind_t]  
-    seiU  = state_t.SEIvoltageDrop[ind_s]
+    seiU  = state_t.SEIvoltageDrop[ind_t]
     ocp   = state_t.Ocp[ind_t]
     R0    = state_t.ReactionRateConst[ind_t]
-    c_e   = state_s.C[ind_s]
-    c_a   = state_t.Cs[ind_t]
     T     = state_t.Temperature[ind_t]
 
     # overpotential include SEI voltage drop
@@ -368,7 +368,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
 
     vols  = state_t.Volume[ind_t]
     phi_a = state_t.Phi[ind_t]  
-    seiU  = state_t.SEIvoltageDrop[ind_s]
+    seiU  = state_t.SEIvoltageDrop[ind_t]
     ocp   = state_t.Ocp[ind_t]
     R0    = state_t.ReactionRateConst[ind_t]
     c_a   = state_t.Cs[ind_t]
