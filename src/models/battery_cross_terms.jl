@@ -86,11 +86,10 @@ function reaction_rate(eta           ,
 
     n    = activematerial.params[:n_charge_carriers]
     cmax = activematerial.params[:maximum_concentration]
-    vsa  = activematerial.params[:volumetric_surface_area]
 
-    th  = 1e-3*cmax
-    j0  = R0*regularized_sqrt(c_e*(cmax - c_a)*c_a, th)*n*FARADAY_CONSTANT
-    R   = vsa*butler_volmer_equation(j0, 0.5, n, eta, T)
+    th = 1e-3*cmax
+    j0 = R0*regularized_sqrt(c_e*(cmax - c_a)*c_a, th)*n*FARADAY_CONSTANT
+    R  = butler_volmer_equation(j0, 0.5, n, eta, T)
 
     return R/(n*FARADAY_CONSTANT)
     
@@ -123,7 +122,8 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     activematerial = model_s.system
     electrolyte    = model_t.system
     
-    n = activematerial.params[:n_charge_carriers]
+    n   = activematerial.params[:n_charge_carriers]
+    vsa = activematerial.params[:volumetric_surface_area]
     
     ind_t = ct.target_cells[ind]
     ind_s = ct.source_cells[ind]
@@ -148,14 +148,14 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                       c_e           ,
                       activematerial,
                       electrolyte)
-    
+
     cs = conserved_symbol(eq)
     
     if cs == :Mass
-        v = 1.0*vols*R
+        v = 1.0*vols*vsa*R
     else
         @assert cs == :Charge
-        v = 1.0*vols*R*n*FARADAY_CONSTANT
+        v = 1.0*vols*vsa*R*n*FARADAY_CONSTANT
     end
     out[] = -v
     
@@ -181,7 +181,8 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     electrolyte    = model_s.system
     activematerial = model_t.system
     
-    n = activematerial.params[:n_charge_carriers]
+    n   = activematerial.params[:n_charge_carriers]
+    vsa = activematerial.params[:volumetric_surface_area]
 
     ind_t = ct.target_cells[ind]
     ind_s = ct.source_cells[ind]
@@ -207,14 +208,13 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                       activematerial,
                       electrolyte)
     
-    
     if eq isa SolidDiffusionBc
 
         rp  = activematerial.discretization[:rp] # particle radius
         vf  = state_t.VolumeFraction[ind_t]
         avf = activematerial.params.volume_fractions[1]
         
-        v = R*(4*pi*rp^3)/(3*vf*avf)
+        v = vsa*R*(4*pi*rp^3)/(3*vf*avf)
         
         out[] = -v
         
@@ -222,7 +222,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
         
         cs = conserved_symbol(eq)
         @assert cs == :Charge
-        v = 1.0*vols*R*n*FARADAY_CONSTANT
+        v = 1.0*vols*vsa*R*n*FARADAY_CONSTANT
 
         out[] = v
         
@@ -247,7 +247,9 @@ function source_electric_material(vols,
                                   electrolyte
                                   )
 
-    n = activematerial.params[:n_charge_carriers]
+    n   = activematerial.params[:n_charge_carriers]
+    vsa = activematerial.params[:volumetric_surface_area]
+    
     R = reaction_rate(phi_a,
                       c_a,
                       R0,
@@ -259,8 +261,8 @@ function source_electric_material(vols,
                       electrolyte
                       )
     
-    eS = 1.0 * vols * R * n * FARADAY_CONSTANT
-    eM = 1.0 * vols * R 
+    eS = 1.0*vols*vsa*R*n*FARADAY_CONSTANT
+    eM = 1.0*vols*vsa*R 
 
     return (eS, eM)
     

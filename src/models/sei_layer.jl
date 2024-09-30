@@ -153,11 +153,9 @@ end
                           )
 
         scaling = model.system.params[:SEIvoltageDropRef]
-        
         for cell in ix
             @inbounds SEIvoltageDrop[cell] = scaling*normalizedSEIvoltageDrop[cell]
         end
-        
     end
 )
 
@@ -183,7 +181,8 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     activematerial = model_s.system
     electrolyte    = model_t.system
     
-    n = activematerial.params[:n_charge_carriers]
+    n   = activematerial.params[:n_charge_carriers]
+    vsa = activematerial.params[:volumetric_surface_area]
     
     ind_t = ct.target_cells[ind]
     ind_s = ct.source_cells[ind]
@@ -213,10 +212,10 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     cs = conserved_symbol(eq)
     
     if cs == :Mass
-        v = 1.0*vols*R
+        v = 1.0*vols*vsa*R
     else
         @assert cs == :Charge
-        v = 1.0*vols*R*n*FARADAY_CONSTANT
+        v = 1.0*vols*vsa*R*n*FARADAY_CONSTANT
     end
     out[] = -v
     
@@ -240,8 +239,9 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     electrolyte    = model_s.system
     activematerial = model_t.system
     
-    n = activematerial.params[:n_charge_carriers]
-
+    n   = activematerial.params[:n_charge_carriers]
+    vsa = activematerial.params[:volumetric_surface_area]
+    
     ind_t = ct.target_cells[ind]
     ind_s = ct.source_cells[ind]
 
@@ -267,14 +267,13 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                       activematerial,
                       electrolyte)
     
-    
     if eq isa SolidDiffusionBc
 
         rp  = activematerial.discretization[:rp] # particle radius
         vf  = state_t.VolumeFraction[ind_t]
         avf = activematerial.params.volume_fractions[1]
         
-        v = R*(4*pi*rp^3)/(3*vf*avf)
+        v = vsa*R*(4*pi*rp^3)/(3*vf*avf)
         
         out[] = -v
         
@@ -282,7 +281,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
         
         cs = conserved_symbol(eq)
         @assert cs == :Charge
-        v = 1.0*vols*R*n*FARADAY_CONSTANT
+        v = 1.0*vols*vsa*R*n*FARADAY_CONSTANT
 
         out[] = v
         
@@ -313,16 +312,17 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     
     params = model_t.system.params
 
-    s   = params[:SEIstoichiometricCoefficient]
-    V   = params[:SEImolarVolume]
-    De  = params[:SEIelectronicDiffusionCoefficient]
-    ce0 = params[:SEIintersticialConcentration]
-
+    s    = params[:SEIstoichiometricCoefficient]
+    V    = params[:SEImolarVolume]
+    De   = params[:SEIelectronicDiffusionCoefficient]
+    ce0  = params[:SEIintersticialConcentration]
+    Lref = params[:SEIlengthInitial]
+    
     ind_t = ct.target_cells[ind]
     ind_s = ct.source_cells[ind]
     
     L0 = state0_t.SEIlength[ind_t]
-
+    
     L     = state_t.SEIlength[ind_t]
     T     = state_t.Temperature[ind_t]
     phi_a = state_t.Phi[ind_t]
@@ -338,7 +338,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
 
     # Evolution equation for the SEI length
     out[] = (s/V)*(L - L0)/dt - N
-
+    
 end
 
 function Jutul.update_cross_term_in_entity!(out                            ,
@@ -366,7 +366,6 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     ind_t = ct.target_cells[ind]
     ind_s = ct.source_cells[ind]
 
-    vols  = state_t.Volume[ind_t]
     phi_a = state_t.Phi[ind_t]  
     seiU  = state_t.SEIvoltageDrop[ind_t]
     ocp   = state_t.Ocp[ind_t]
