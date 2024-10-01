@@ -5,7 +5,6 @@ export
     find_coupling,
     find_common,
     findBoundary,
-    pouch_grid,
     convert_geometry,
     one_dimensional_grid
 
