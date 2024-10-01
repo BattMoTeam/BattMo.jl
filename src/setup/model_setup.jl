@@ -1015,7 +1015,7 @@ function setup_scalings(model, parameters)
         
         j0s[i] = rate_func(c, refT)
 
-        Rvols[i] = j0s(i)*vsa/F
+        Rvols[i] = j0s[i]*vsa/F
         
     end
     
@@ -1039,15 +1039,15 @@ function setup_scalings(model, parameters)
 
     scalings = []
 
-    scaling = (model = :Elyte, equation_label = :charge_conservation, scaling = F*volRefs[:Elyte]*RvolRef)
+    scaling = (model_label = :Elyte, equation_label = :charge_conservation, scaling = F*volRefs[:Elyte]*RvolRef)
     push!(scalings, scaling)
 
-    scaling = (model = :Elyte, equation_label = :mass_conservation, scaling = volRefs[:Elyte]*RvolRef)
+    scaling = (model_label = :Elyte, equation_label = :mass_conservation, scaling = volRefs[:Elyte]*RvolRef)
     push!(scalings, scaling)
 
     for elde in eldes
         
-        scaling = (model = elde, equation_label = :charge_conservation, scaling = F*volRefs[elde]*RvolRef)
+        scaling = (model_label = elde, equation_label = :charge_conservation, scaling = F*volRefs[elde]*RvolRef)
         push!(scalings, scaling)
 
         if include_current_collectors(model)
@@ -1056,19 +1056,19 @@ function setup_scalings(model, parameters)
             cc = cc_mapping[elde]
             coef = paramaters[cc][:Conductivity]/paramaters[elde][:Conductivity]
 
-            scaling = (model = cc, equation_label = :charge_conservation, scaling = coef*F*volRefs[elde]*RvolRef)
+            scaling = (model_label = cc, equation_label = :charge_conservation, scaling = coef*F*volRefs[elde]*RvolRef)
             push!(scalings, scaling)
 
         end
         
-        rp   = model[elde].system.discretisation[:rp]
+        rp   = model[elde].system.discretization[:rp]
         volp = 4/3*pi*rp^3;
 
         coef = RvolRef*volp
 
-        scaling = (model = elde, equation_label = :mass_conservation, scaling = coef)
+        scaling = (model_label = elde, equation_label = :mass_conservation, scaling = coef)
         push!(scalings, scaling)
-        scaling = (model = elde, equation_label = :solid_diffusion_bc, scaling = coef)
+        scaling = (model_label = elde, equation_label = :solid_diffusion_bc, scaling = coef)
         push!(scalings, scaling)
 
         if model[elde] isa SEImodel
@@ -1079,18 +1079,20 @@ function setup_scalings(model, parameters)
 
             SEIvoltageDropRef = F*RvolRef/vsa*L/k
             
-            scaling = (model = elde, equation_label = :sei_voltage_drop, scaling = SEIvoltageDropRef)
+            scaling = (model_label = elde, equation_label = :sei_voltage_drop, scaling = SEIvoltageDropRef)
             push!(scalings, scaling)
 
             De = model[elde].system[:SEIelectronicDiffusionCoefficient]
             ce = model[elde].system[:SEIintersticialConcentration]
 
-            scaling = (model = elde, equation_label = :sei_mass_cons, scaling = De*ce/L)
+            scaling = (model_label = elde, equation_label = :sei_mass_cons, scaling = De*ce/L)
             push!(scalings, scaling)
 
         end
 
     end
+
+    return scalings
     
 end
 
