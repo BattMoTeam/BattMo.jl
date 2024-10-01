@@ -1,6 +1,7 @@
 module BattMo
 using PrecompileTools
 using StaticArrays
+using Statistics
 using StatsBase
 using Infiltrator
 

@@ -990,6 +990,113 @@ function setup_coupling_cross_terms!(inputparams::InputParams,
 
 end
 
+##################
+# Setup scalings #
+##################
+
+function setup_scalings(model, parameters)
+
+    refT = 298.15
+
+    eldes = (:NeAm, :PeAm)
+
+    j0s   = Array{Float64}(undef, 2)
+    Rvols = Array{Float64}(undef, 2)
+
+    F = FARADAY_CONSTANT
+    
+    for (i, elde) in enumerate(eldes)
+        
+        rate_func = model[elde].system.params[:reaction_rate_constant_func]
+        cmax      = model[elde].system[:maximum_concentration]
+        vsa       = model[elde].system[:volumetric_surface_area]
+        
+        c = 0.5*cmax
+        
+        j0s[i] = rate_func(c, refT)
+
+        Rvols[i] = j0s(i)*vsa/F
+        
+    end
+    
+    j0Ref   = mean(j0s);
+    RvolRef = mean(Rvols);
+
+    if include_current_collectors(model)
+        component_names = (:NeCc, :NeAm, :Elyte, :PeAm, :PeCc)
+        cc_mapping      = Dict(:NeAm => :NeCc, :PeAm => :PeCc)
+    else
+        component_names = (:NeAm, :Elyte, :PeAm)
+    end
+        
+    volRefs = Dict()
+
+    for name in component_names
+
+        volRefs[name] = mean(model[name].domain.representation[:volumes])
+        
+    end
+
+    scalings = []
+
+    scaling = (model = :Elyte, equation_label = :charge_conservation, scaling = F*volRefs[:Elyte]*RvolRef)
+    push!(scalings, scaling)
+
+    scaling = (model = :Elyte, equation_label = :mass_conservation, scaling = volRefs[:Elyte]*RvolRef)
+    push!(scalings, scaling)
+
+    for elde in eldes
+        
+        scaling = (model = elde, equation_label = :charge_conservation, scaling = F*volRefs[elde]*RvolRef)
+        push!(scalings, scaling)
+
+        if include_current_collectors(model)
+
+            # We use the same scaling as for the coating multiplied by the conductivity ration
+            cc = cc_mapping[elde]
+            coef = paramaters[cc][:Conductivity]/paramaters[elde][:Conductivity]
+
+            scaling = (model = cc, equation_label = :charge_conservation, scaling = coef*F*volRefs[elde]*RvolRef)
+            push!(scalings, scaling)
+
+        end
+        
+        rp   = model[elde].system.discretisation[:rp]
+        volp = 4/3*pi*rp^3;
+
+        coef = RvolRef*volp
+
+        scaling = (model = elde, equation_label = :mass_conservation, scaling = coef)
+        push!(scalings, scaling)
+        scaling = (model = elde, equation_label = :solid_diffusion_bc, scaling = coef)
+        push!(scalings, scaling)
+
+        if model[elde] isa SEImodel
+
+            vsa = model[elde].system[:volumetric_surface_area];
+            L   = model[elde].system[:SEIlengthInitial];
+            k   = model[elde].system[:SEIionicConductivity];
+
+            SEIvoltageDropRef = F*RvolRef/vsa*L/k
+            
+            scaling = (model = elde, equation_label = :sei_voltage_drop, scaling = SEIvoltageDropRef)
+            push!(scalings, scaling)
+
+            De = model[elde].system[:SEIelectronicDiffusionCoefficient]
+            ce = model[elde].system[:SEIintersticialConcentration]
+
+            scaling = (model = elde, equation_label = :sei_mass_cons, scaling = De*ce/L)
+            push!(scalings, scaling)
+
+        end
+
+    end
+    
+end
+
+
+
+
 ######################
 # Setup timestepping #
 ######################
