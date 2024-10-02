@@ -227,7 +227,7 @@ function setup_submodels(inputparams::InputParams;
             rp = inputparams_am["SolidDiffusion"]["particleRadius"]
             N  = Int64(inputparams_am["SolidDiffusion"]["N"])
             D  = inputparams_am["SolidDiffusion"]["referenceDiffusionCoefficient"]
-            if inputparams_am["SEImodel"] == "Bolay"
+            if haskey(inputparams_am, "SEImodel") && inputparams_am["SEImodel"] == "Bolay"
                 label = :sei
                 fds = ["SEIlengthInitial",
                        "SEIvoltageDropRef",
