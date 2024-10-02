@@ -11,7 +11,7 @@ using Jutul, BattMo, GLMakie
 name = "bolay"
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
 inputparams = readBattMoJsonInputFile(fn)
-config_kwargs = (info_level = 10, )
+config_kwargs = (info_level = 0, )
 
 function hook(simulator,
               model,
