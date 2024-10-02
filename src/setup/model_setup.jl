@@ -1092,8 +1092,21 @@ function setup_scalings(model, parameters)
 
     end
 
-    return scalings
-    
+    for scaling in enumerate(scalings)
+
+        submodel = model[scaling[:model_label]]
+        submodeltype = typeof(submodel)
+        eq = submodel.equations[scaling[:equation_label]]
+        eqtype = typeof(eq)
+        expr = quote
+            function get_scaling(model::$submodeltype, eq::$eqtype)
+                return $(scaling[:scaling])
+            end
+        end
+        Base.eval(BattMo, expr)
+        
+    end
+
 end
 
 
