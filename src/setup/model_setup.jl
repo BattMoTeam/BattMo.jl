@@ -81,7 +81,7 @@ function setup_simulation(inputparams::AbstractInputParams;
     forces = setup_forces(model)
 
     simulator = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
-
+    
     timesteps = setup_timesteps(inputparams; max_step = max_step)
     
     cfg = setup_config(simulator,
@@ -1092,21 +1092,8 @@ function setup_scalings(model, parameters)
 
     end
 
-    for scaling in enumerate(scalings)
-
-        submodel = model[scaling[:model_label]]
-        submodeltype = typeof(submodel)
-        eq = submodel.equations[scaling[:equation_label]]
-        eqtype = typeof(eq)
-        expr = quote
-            function get_scaling(model::$submodeltype, eq::$eqtype)
-                return $(scaling[:scaling])
-            end
-        end
-        Base.eval(BattMo, expr)
-        
-    end
-
+    return scalings
+    
 end
 
 
