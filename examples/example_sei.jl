@@ -1,12 +1,8 @@
-#=
-Electro-Chemical component
-A component with electric potential, concentration and temperature
-The different potentials are independent (diagonal onsager matrix),
-and conductivity, diffusivity is constant.
-=#
+##########################
+# Example with SEI layer #
+##########################
 
 using Jutul, BattMo, GLMakie
-
 
 name = "bolay"
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
