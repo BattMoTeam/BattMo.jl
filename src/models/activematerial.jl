@@ -178,7 +178,7 @@ function select_primary_variables!(S,
     S[:Phi] = Phi()
     S[:Cp]  = Cp()
     S[:Cs]  = Cs()
-    
+
 end
 
 function degrees_of_freedom_per_entity(model::ActiveMaterialModel,

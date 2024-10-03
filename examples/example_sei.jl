@@ -74,5 +74,28 @@ scatterlines!(ax,
 
 display(f)
 
+seilength = [state[:NeAm][:normalizedSEIlength][end] for state in states]
+
+f = Figure(size = (1000, 400))
+
+ax = Axis(f[1, 1],
+          title     = "Length",
+          xlabel    = "Time / s",
+          ylabel    = "Length / ",
+          xlabelsize = 25,
+          ylabelsize = 25,
+          xticklabelsize = 25,
+          yticklabelsize = 25
+          )
+
+scatterlines!(ax,
+              t,
+              seilength;
+              linewidth = 4,
+              markersize = 10,
+              marker = :cross, 
+              markercolor = :black)
+
+display(f)
 
 
