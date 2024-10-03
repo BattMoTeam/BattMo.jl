@@ -3,11 +3,10 @@
 ##################
 
 # Create a type for the model with SEI layer. It will be used to specialize the function
-SEImodel = SimulationModel{O, BattMo.ActiveMaterialP2D{:sei, D, T}, F, C} where {O <: JutulDomain,
-                                                                                 D<: BattMo.SolidDiffusionDiscretization,
-                                                                                 T<: BattMo.ActiveMaterialParameters,
-                                                                                 F<: Jutul.JutulFormulation,
-                                                                                 C<: Jutul.JutulContext}
+SEImodel = SimulationModel{O, S, F, C} where {O <: JutulDomain,
+                                             S <: BattMo.ActiveMaterialP2D{:sei, D, T} where {D, T},
+                                             F<: Jutul.JutulFormulation,
+                                             C<: Jutul.JutulContext}
 
 ##################################################
 # Variable for SEI model added to ActiveMaterial #
