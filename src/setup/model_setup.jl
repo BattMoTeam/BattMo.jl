@@ -1,4 +1,4 @@
-using Jutul
+using Jutul, Statistics
 
 export
     run_battery,
@@ -1009,23 +1009,27 @@ function setup_scalings!(model, parameters)
 
     refT = 298.15
 
+    electrolyte    = model[:Elyte].system
+
     eldes = (:NeAm, :PeAm)
 
     j0s   = Array{Float64}(undef, 2)
     Rvols = Array{Float64}(undef, 2)
 
     F = FARADAY_CONSTANT
-    
+
     for (i, elde) in enumerate(eldes)
         
         rate_func = model[elde].system.params[:reaction_rate_constant_func]
         cmax      = model[elde].system[:maximum_concentration]
         vsa       = model[elde].system[:volumetric_surface_area]
-        
-        c = 0.5*cmax
-        
-        j0s[i] = rate_func(c, refT)
 
+        c_a            = 0.5*cmax
+        R0             = rate_func(c_a, refT)
+        c_e            = 1000.0
+        activematerial = model[elde].system
+
+        j0s[i] = reaction_rate_coefficient(R0, c_e, c_a, activematerial)
         Rvols[i] = j0s[i]*vsa/F
         
     end
@@ -1112,6 +1116,8 @@ function setup_scalings!(model, parameters)
         submodel.system.scalings[eq] = value
         
     end
+
+    return scalings
     
 end
 

@@ -65,13 +65,30 @@ function regularized_sqrt(x::T, th::Float64) where {T<:Any}
 end
 
 function butler_volmer_equation(j0, alpha, n, eta, T)
+
+    F = FARADAY_CONSTANT
+    R = GAS_CONSTANT
     
-    res = j0 * (
-        exp(  alpha * n * FARADAY_CONSTANT * eta / (GAS_CONSTANT * T ) ) - 
-        exp( -(1-alpha) * n * FARADAY_CONSTANT * eta / ( GAS_CONSTANT * T ) ) 
-    )
+    val = j0*(exp(alpha*n*F*eta/(R*T)) - exp(-(1-alpha)*n*F*eta/(R*T)))
+   
+    return val
     
-    return res
+end
+
+function reaction_rate_coefficient(R0,
+                                   c_e,
+                                   c_a,
+                                   activematerial)
+    
+    F = FARADAY_CONSTANT
+    
+    n    = activematerial.params[:n_charge_carriers]
+    cmax = activematerial.params[:maximum_concentration]
+    
+    th = 1e-3*cmax
+    j0 = R0*regularized_sqrt(c_e*(cmax - c_a)*c_a, th)*n*F
+    
+    return j0
     
 end
 
@@ -84,14 +101,14 @@ function reaction_rate(eta           ,
                        electrolyte
                        )
 
-    n    = activematerial.params[:n_charge_carriers]
-    cmax = activematerial.params[:maximum_concentration]
+    F = FARADAY_CONSTANT
 
-    th = 1e-3*cmax
-    j0 = R0*regularized_sqrt(c_e*(cmax - c_a)*c_a, th)*n*FARADAY_CONSTANT
+    n = activematerial.params[:n_charge_carriers]
+    
+    j0 = reaction_rate_coefficient(R0, c_e, c_a, activematerial)
     R  = butler_volmer_equation(j0, 0.5, n, eta, T)
 
-    return R/(n*FARADAY_CONSTANT)
+    return R/(n*F)
     
 end
 
