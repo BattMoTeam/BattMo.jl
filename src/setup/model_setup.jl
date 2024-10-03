@@ -76,6 +76,8 @@ function setup_simulation(inputparams::AbstractInputParams;
                                     general_ad=general_ad,
                                     model_kwargs...)
 
+    setup_scalings!(model, parameters)
+    
     state0 = setup_initial_state(inputparams, model)
 
     forces = setup_forces(model)
@@ -994,8 +996,7 @@ end
 # Setup scalings #
 ##################
 
-function get_scaling(model::SimulationModel{O, S, F, C}, equation::JutulEquation) where {O, S <: ElectroChemicalComponent, F, C}
-
+function Jutul.get_scaling(model::SimulationModel{O, S, F, C}, equation::JutulEquation) where {O, S <: ElectroChemicalComponent, F, C}
     if haskey(model.system.scalings, equation)
         return model.system.scalings[equation]
     else
