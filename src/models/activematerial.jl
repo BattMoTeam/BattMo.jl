@@ -23,7 +23,7 @@ abstract type AbstractActiveMaterial{label} <: ElectroChemicalComponent end
 
 activematerial_label(::AbstractActiveMaterial{label}) where label = label
 
-struct ActiveMaterial{label, D, T} <: AbstractActiveMaterial{label} where {D<:SolidDiffusionDiscretization, T<:ActiveMaterialParameters}
+struct ActiveMaterial{label, D, T, Di} <: AbstractActiveMaterial{label} where {D<:SolidDiffusionDiscretization, T<:ActiveMaterialParameters, Di <: AbstractDict}
     params::T
     # At the moment the following keys are include
     # - diffusion_coef_func::F where {F <: Function}
@@ -51,9 +51,12 @@ struct ActiveMaterial{label, D, T} <: AbstractActiveMaterial{label} where {D<:So
     # - SEIionicConductivity
     
     discretization::D
+
+    scalings::Di
+    
 end 
 
-const ActiveMaterialP2D{label, D, T} = ActiveMaterial{label, D, T}
+const ActiveMaterialP2D{label, D, T, Di} = ActiveMaterial{label, D, T, Di}
 const ActiveMaterialNoParticleDiffusion{T} = ActiveMaterial{nothing, NoParticleDiffusion, T}
 
 struct Ocp               <: ScalarVariable  end
@@ -76,18 +79,18 @@ Jutul.local_discretization(::SolidDiffusionBc, i) = nothing
 const ActiveMaterialModel = SimulationModel{O, S} where {O<:JutulDomain, S<:ActiveMaterial}
 
 ## Create ActiveMaterial with full p2d solid diffusion
-function ActiveMaterialP2D(params::ActiveMaterialParameters, rp, N, D; label::Union{Nothing, Symbol} = nothing)
+function ActiveMaterialP2D(params::ActiveMaterialParameters, rp, N, D, scalings = Dict(); label::Union{Nothing, Symbol} = nothing)
     data = setupSolidDiffusionDiscretization(rp, N, D)
     discretization = P2Ddiscretization(data)
     params = Jutul.convert_to_immutable_storage(params)
-    return ActiveMaterialP2D{label, typeof(discretization), typeof(params)}(params, discretization)
+    return ActiveMaterialP2D{label, typeof(discretization), typeof(params), typeof(scalings)}(params, discretization, scalings)
 end
 
 ## Create ActiveMaterial with no solid diffusion
-function ActiveMaterialNoParticleDiffusion(params::ActiveMaterialParameters)
+function ActiveMaterialNoParticleDiffusion(params::ActiveMaterialParameters, scalings = Dict())
     discretization = NoParticleDiffusion()
     params = Jutul.convert_to_immutable_storage(params)
-    return ActiveMaterialNoParticleDiffusion{NoParticleDiffusion, typeof(params)}(params, discretization)
+    return ActiveMaterialNoParticleDiffusion{NoParticleDiffusion, typeof(params), typeof(scalings)}(params, discretization, scalings)
 end
 
 
@@ -254,10 +257,10 @@ end
 @jutul_secondary(
     function update_vocp!(Ocp,
                           tv::Ocp,
-                          model:: SimulationModel{<:Any, ActiveMaterialP2D{label, D, T}, <:Any, <:Any},
+                          model:: SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
                           Cs,
                           ix
-                          ) where {label, D, T}
+                          ) where {label, D, T, Di}
         
         ocp_func = model.system.params[:ocp_func]
         
@@ -292,9 +295,9 @@ end
 @jutul_secondary(
     function update_reaction_rate!(ReactionRateConst,
                                    tv::ReactionRateConst,
-                                   model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T}, <:Any, <:Any},
+                                   model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
                                    Cs,
-                                   ix) where {label, D, T}
+                                   ix) where {label, D, T, Di}
         rate_func = model.system.params[:reaction_rate_constant_func]
         refT = 298.15
         for cell in ix
@@ -306,9 +309,9 @@ end
 @jutul_secondary(
     function update_solid_diffusion_flux!(SolidDiffFlux,
                                           tv::SolidDiffFlux,
-                                          model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T}, <:Any, <:Any},
+                                          model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
                                           Cp,
-                                          ix) where {label, D, T}
+                                          ix) where {label, D, T, Di}
     s = model.system
     for cell in ix
         @inbounds @views update_solid_flux!(SolidDiffFlux[:, cell], Cp[:, cell], s)

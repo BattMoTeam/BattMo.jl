@@ -16,7 +16,7 @@ export
 
 const ElectrolyteParameters = JutulStorage
 
-struct Electrolyte <: ElectroChemicalComponent 
+struct Electrolyte{D} <: ElectroChemicalComponent where {D <: AbstractDict}
     params::ElectrolyteParameters
     #  
     # - bruggeman          
@@ -29,6 +29,12 @@ struct Electrolyte <: ElectroChemicalComponent
     # - transference
     # - electrolyte_density
     # - separator_density
+    scalings::D
+end
+
+function Electrolyte(params, scalings = Dict())
+    
+    return Electrolyte{typeof(scalings)}(params, scalings)
     
 end
 
