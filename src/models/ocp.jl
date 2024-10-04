@@ -1,6 +1,8 @@
 using Polynomials
 ## Defines OCP and entropy change (dUdT) for graphite using polynomials
 
+export AbstractOcp
+
 abstract type AbstractOcp <: Potential end
 
 con = Constants()
