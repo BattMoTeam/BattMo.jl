@@ -8,12 +8,13 @@ export
     CyclingCVPolicy,
     OperationalMode
 
+
+###########################
+# Define operational mode #
+###########################
+
 @enum OperationalMode cc_discharge1 cc_discharge2 cc_charge1 cv_charge2 rest discharge charging discharging none
 
-struct VoltageVar <: ScalarVariable end
-struct CurrentVar <: ScalarVariable end
-
-abstract type AbstractCVPolicy end
 
 function getSymbol(ctrlType::OperationalMode)
 
@@ -31,6 +32,47 @@ function getSymbol(ctrlType::OperationalMode)
    
 end
 
+###################
+# Define variable #
+###################
+
+struct VoltageVar <: ScalarVariable end
+struct CurrentVar <: ScalarVariable end
+
+# The following variable will be added as parameters. In this way, they can also be computed when the whole battery
+# model is setup
+
+struct ImaxDischarge <: ScalarVariable end
+struct ImaxCharge <: ScalarVariable end
+
+############################
+# Select primary variables #
+############################
+
+function select_primary_variables!(S, system::CurrentAndVoltageSystem, model::SimulationModel)
+
+    S[:Phi]     = VoltageVar()
+    S[:Current] = CurrentVar()
+    
+end
+
+####################
+# Select equations #
+####################
+
+function select_equations!(eqs, system::CurrentAndVoltageSystem, model::SimulationModel)
+
+    eqs[:charge_conservation] = CurrentEquation()
+    eqs[:control] = ControlEquation()
+    
+end
+
+##############################################
+# Define Current and voltage control systems #
+##############################################
+
+abstract type AbstractCVPolicy end
+
 struct CurrentAndVoltageSystem{P<:AbstractCVPolicy} <: JutulSystem
     
     # Control policy
@@ -45,8 +87,15 @@ CurrentAndVoltageModel{P} = SimulationModel{CurrentAndVoltageDomain, CurrentAndV
 number_of_cells(::CurrentAndVoltageDomain) = 1
 
 
-## Definition of the policy types
+####################################
+# Define of the different policies #
+####################################
 
+# A policy is used to compute the next control from the current control and state
+
+
+""" Simple constant current policy. Stops when lower cut-off value is reached
+"""
 mutable struct SimpleCVPolicy{R} <: AbstractCVPolicy
     current_function
     Imax::R
@@ -56,9 +105,13 @@ mutable struct SimpleCVPolicy{R} <: AbstractCVPolicy
     end
 end
 
-
+""" No policy means that the control is kept fixed throughout the simulation
+"""
 struct NoPolicy <: AbstractCVPolicy end
 
+
+""" Standard CC-CV policy
+"""
 mutable struct CyclingCVPolicy{R, I}  <: AbstractCVPolicy
 
     ImaxDischarge::R
@@ -107,7 +160,26 @@ function CyclingCVPolicy(lowerCutoffVoltage,
                            tolerances)
 end
 
+#####################
+# Select parameters #
+#####################
 
+function select_parameters!(S,
+                            system::CurrentAndVoltageSystem{SimpleCVPolicy{R}},
+                            model::SimulationModel) where {R}
+    S[:ImaxDischarge] = ImaxDischarge()
+end
+
+function select_parameters!(S,
+                            system::CurrentAndVoltageSystem{CyclingCVPolicy{R, I}},
+                            model::SimulationModel) where {R, I}
+    S[:ImaxDischarge] = ImaxDischarge()
+    S[:ImaxCharge]    = ImaxCharge()
+end
+
+###################################################################################
+# Functions to compute initial current given the policy, used to initialize state #
+###################################################################################
 
 function getInitCurrent(policy::SimpleCVPolicy)
     if !ismissing(policy.current_function)
@@ -137,10 +209,6 @@ function getInitCurrent(model::CurrentAndVoltageModel)
 
 end
 
-## We add as parameters those that can only by computed when the whole battery model is setup
-
-struct ImaxDischarge <: ScalarVariable end
-struct ImaxCharge <: ScalarVariable end
 
 function select_minimum_output_variables!(outputs,
                                           system::CurrentAndVoltageSystem{R},
@@ -151,22 +219,9 @@ function select_minimum_output_variables!(outputs,
     
 end
 
-
-function select_parameters!(S,
-                            system::CurrentAndVoltageSystem{SimpleCVPolicy{R}},
-                            model::SimulationModel) where {R}
-    S[:ImaxDischarge] = ImaxDischarge()
-end
-
-function select_parameters!(S,
-                            system::CurrentAndVoltageSystem{CyclingCVPolicy{R, I}},
-                            model::SimulationModel) where {R, I}
-    S[:ImaxDischarge] = ImaxDischarge()
-    S[:ImaxCharge]    = ImaxCharge()
-end
-
-
-## Setup policy
+##############################################
+# Setup the policy from the input parameters #
+##############################################
 
 function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::InputParams, parameters)
 
@@ -491,8 +546,6 @@ function update_values_in_controller!(state, policy::SimpleCVPolicy)
 
 end
 
-
-
 function update_control_type_in_controller!(state, state0, policy::CyclingCVPolicy, dt)
 
     E  = only(value(state[:Phi]))
@@ -601,19 +654,6 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::CurrentEquati
     
 end
 
-function select_equations!(eqs, system::CurrentAndVoltageSystem, model::SimulationModel)
-
-    eqs[:charge_conservation] = CurrentEquation()
-    eqs[:control] = ControlEquation()
-    
-end
-
-function select_primary_variables!(S, system::CurrentAndVoltageSystem, model::SimulationModel)
-
-    S[:Phi]     = VoltageVar()
-    S[:Current] = CurrentVar()
-    
-end
 
 function Jutul.reset_state_to_previous_state!(storage, model::Jutul.SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{CyclingCVPolicy{T1, T2}}, T3, T4}) where {T1, T2, T3, T4}
 
@@ -626,7 +666,8 @@ function Jutul.reset_state_to_previous_state!(storage, model::Jutul.SimulationMo
 end
 
 
-
+""" Update after convergence. Here, we copy the controller to state0 and count the total number of cycles in case of CyclingCVPolicy
+"""
 function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces; time = NaN)
     
     ctrl  = storage.state[:ControllerCV]
