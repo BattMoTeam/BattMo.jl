@@ -1071,7 +1071,7 @@ function setup_scalings!(model, parameters)
             cc = cc_mapping[elde]
             coef = parameters[cc][:Conductivity]/parameters[elde][:Conductivity]
 
-            scaling = (model_label = cc, equation_label = :charge_conservation, value = coef*F*volRefs[elde]*RvolRef)
+            scaling = (model_label = cc, equation_label = :charge_conservation, value = coef[1]*F*volRefs[elde]*RvolRef)
             push!(scalings, scaling)
 
         end
