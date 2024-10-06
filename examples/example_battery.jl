@@ -4,14 +4,14 @@
 
 using Jutul, BattMo, GLMakie
 
-name = "p2d_40"
+# name = "p2d_40"
 # name = "p2d_40_jl_ud_func"
-# name = "p2d_40_no_cc"
+name = "p2d_40_no_cc"
 # name = "p2d_40_cccv"
 # name = "p2d_40_jl_chen2020"
 # name = "3d_demo_case"
 
-do_json = false
+do_json = true
 
 if do_json
 
