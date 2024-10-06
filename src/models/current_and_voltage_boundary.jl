@@ -8,10 +8,9 @@ export
     CyclingCVPolicy,
     OperationalMode
 
-
-###########################
-# Define operational mode #
-###########################
+################################
+# Define the operational modes #
+################################
 
 @enum OperationalMode cc_discharge1 cc_discharge2 cc_charge1 cv_charge2 rest discharge charging discharging none
 
@@ -32,9 +31,9 @@ function getSymbol(ctrlType::OperationalMode)
    
 end
 
-###################
-# Define variable #
-###################
+#############################################
+# Define the variables in the control model #
+#############################################
 
 struct VoltageVar <: ScalarVariable end
 struct CurrentVar <: ScalarVariable end
@@ -45,9 +44,9 @@ struct CurrentVar <: ScalarVariable end
 struct ImaxDischarge <: ScalarVariable end
 struct ImaxCharge <: ScalarVariable end
 
-############################
-# Select primary variables #
-############################
+################################
+# Select the primary variables #
+################################
 
 function select_primary_variables!(S, system::CurrentAndVoltageSystem, model::SimulationModel)
 
@@ -56,9 +55,9 @@ function select_primary_variables!(S, system::CurrentAndVoltageSystem, model::Si
     
 end
 
-####################
-# Select equations #
-####################
+########################
+# Select the equations #
+########################
 
 function select_equations!(eqs, system::CurrentAndVoltageSystem, model::SimulationModel)
 
@@ -67,9 +66,9 @@ function select_equations!(eqs, system::CurrentAndVoltageSystem, model::Simulati
     
 end
 
-#####################
-# Select parameters #
-#####################
+#########################
+# Select the parameters #
+#########################
 
 function select_parameters!(S,
                             system::CurrentAndVoltageSystem{SimpleCVPolicy{R}},
@@ -84,9 +83,11 @@ function select_parameters!(S,
     S[:ImaxCharge]    = ImaxCharge()
 end
 
-##############################################
-# Define Current and voltage control systems #
-##############################################
+##################################################
+# Define the Current and voltage control systems #
+##################################################
+
+## In Jutul, a system is part of a model and contains data
 
 abstract type AbstractCVPolicy end
 
@@ -103,13 +104,13 @@ CurrentAndVoltageModel{P} = SimulationModel{CurrentAndVoltageDomain, CurrentAndV
 
 number_of_cells(::CurrentAndVoltageDomain) = 1
 
-################################
-# Definition of the controller #
-################################
+###########################################################################################################
+# Definition of the controller and some basic utility functions. The controller will be part of the state #
+###########################################################################################################
 
 ## A controller provides the information to exert the current control
 
-## The controller are implemented as mutable structures
+## The controller are implemented as mutable structures and will be attached to the state
 
 abstract type ControllerCV end
 
@@ -146,7 +147,7 @@ function CcCvControllerCV()
 end
 
 
-# Helper for CcCvControllerCV so that the fields of SimpleControllerCV appears as inherrited.
+## Helper for CcCvControllerCV so that the fields of SimpleControllerCV appears as inherrited.
 
 function Base.getproperty(c::CcCvControllerCV, f::Symbol)
     if f in fieldnames(SimpleControllerCV)
@@ -219,12 +220,23 @@ function Base.copy(cv::CcCvControllerCV)
     
 end
 
-#################################
-# Define the different policies #
-#################################
+"""
+We add the controller in the output
+"""
+function select_minimum_output_variables!(outputs,
+                                          system::CurrentAndVoltageSystem{R},
+                                          model::SimulationModel
+                                          ) where {R}
 
-# A policy is used to compute the next control from the current control and state
+    push!(outputs, :ControllerCV)
+    
+end
 
+####################################
+# Types for the different policies #
+####################################
+
+## A policy is used to compute the next control from the current control and state
 
 """ Simple constant current policy. Stops when lower cut-off value is reached
 """
@@ -292,9 +304,9 @@ function CyclingCVPolicy(lowerCutoffVoltage,
                            tolerances)
 end
 
-###################################################################################
-# Functions to compute initial current given the policy, used to initialize state #
-###################################################################################
+###################################################################################################################
+# Functions to compute initial current given the policy, it used at initialization of the state in the simulation #
+###################################################################################################################
 
 function getInitCurrent(policy::SimpleCVPolicy)
     if !ismissing(policy.current_function)
@@ -325,17 +337,9 @@ function getInitCurrent(model::CurrentAndVoltageModel)
 end
 
 
-function select_minimum_output_variables!(outputs,
-                                          system::CurrentAndVoltageSystem{R},
-                                          model::SimulationModel
-                                          ) where {R}
-
-    push!(outputs, :ControllerCV)
-    
-end
 
 ######################################################
-# Setup the initila policy from the input parameters #
+# Setup the initial policy from the input parameters #
 ######################################################
 
 function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::InputParams, parameters)
@@ -359,6 +363,10 @@ function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::Inp
     policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])
 
 end
+
+###################################
+# Special primary variable update #
+###################################
 
 """
 We need a more fine-tuned update of the variables when we use a cycling policies, to avoid convergence problem.
@@ -386,6 +394,10 @@ function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, mode
     end
     
 end
+
+#######################################
+# Helper functions for control switch #
+#######################################
 
 """
 The setupRegionSwitchFlags function detects from the current state and control, if we are in the switch region. The functions return two flags :
@@ -447,9 +459,9 @@ function setupRegionSwitchFlags(policy::CyclingCVPolicy, state, ctrlType)
 
 end
 
-
-
-
+"""
+When a step has been computed for a given control up to the convergence requirement, it may happen that the state that is obtained do not fulfill the requirement of the control, meaning that a control switch should have been triggered. The function check_constraints checks that and return false in this case and update the control. The step is then not completed and carries on with the new control
+"""
 function check_constraints(model, storage)
 
     policy = model[:Control].system.policy
@@ -479,19 +491,27 @@ function check_constraints(model, storage)
     
 end
 
+################################################
+# Functions to update values in the controller #
+################################################
+
 function Jutul.update_values!(old::SimpleControllerCV, new::SimpleControllerCV)
 
+    @infiltrate
     copyController!(old, new)
     
 end
 
 function Jutul.update_values!(old::CcCvControllerCV, new::CcCvControllerCV)
 
+    @infiltrate
     copyController!(old, new)
     
 end
 
-
+"""
+In addition to update the values in all primary variables, we need also to update the values in the controller. We do that by specializing the method perform_step_solve_impl!
+"""
 function Jutul.perform_step_solve_impl!(report, storage, model::MultiModel{:Battery,T}, config, dt, iteration, rec, relaxation, executor) where {T}
 
     invoke(Jutul.perform_step_solve_impl!,
@@ -515,6 +535,19 @@ function Jutul.perform_step_solve_impl!(report, storage, model::MultiModel{:Batt
 
 end
 
+"""
+We need to add the specific treatment of the controller variables
+"""
+function Jutul.reset_state_to_previous_state!(storage, model::Jutul.SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{CyclingCVPolicy{T1, T2}}, T3, T4}) where {T1, T2, T3, T4}
+
+    invoke(Jutul.reset_state_to_previous_state!,
+           Tuple{typeof(storage),
+                 Jutul.SimulationModel},
+           storage,
+           model)
+    copyController!(storage.state[:ControllerCV], storage.state0[:ControllerCV])
+end
+
 
 function update_controller!(state, state0, policy::AbstractCVPolicy, dt)
     
@@ -524,6 +557,15 @@ function update_controller!(state, state0, policy::AbstractCVPolicy, dt)
 end
 
 
+##################################
+# Implementation of the policies #
+##################################
+
+# Given a policy, a current control and state, we compute the next control
+
+"""
+Implementation of the simple CV policy
+"""
 function update_control_type_in_controller!(state, state0, policy::SimpleCVPolicy, dt)
 
     phi_p = policy.voltage
@@ -540,33 +582,9 @@ function update_control_type_in_controller!(state, state0, policy::SimpleCVPolic
     
 end
 
-function update_values_in_controller!(state, policy::SimpleCVPolicy)
-    
-    controller  = state.ControllerCV
-    
-    if controller.target_is_voltage
-        
-        phi_p = policy.voltage
-        
-        controller.target = phi_p
-        
-    else
-        
-        cf = policy.current_function
-        
-        if cf isa Real
-            I_p = cf
-        else
-            # Function of time at the end of interval
-            I_p = cf(controller.time)
-        end
-        
-        controller.target = I_p
-        
-    end
-
-end
-
+"""
+Implementation of the cycling CC-CV policy
+"""
 function update_control_type_in_controller!(state, state0, policy::CyclingCVPolicy, dt)
 
     E  = only(value(state[:Phi]))
@@ -594,6 +612,40 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
 
     end
     
+end
+
+#############################################################
+# Functions to update the values in the controller in state #
+#############################################################
+
+# Once the controller has been assigned the given control, we adjust the target value which is used in the equation
+# assembly
+
+function update_values_in_controller!(state, policy::SimpleCVPolicy)
+    
+    controller  = state.ControllerCV
+    
+    if controller.target_is_voltage
+        
+        phi_p = policy.voltage
+        
+        controller.target = phi_p
+        
+    else
+        
+        cf = policy.current_function
+        
+        if cf isa Real
+            I_p = cf
+        else
+            # Function of time at the end of interval
+            I_p = cf(controller.time)
+        end
+        
+        controller.target = I_p
+        
+    end
+
 end
 
 function update_values_in_controller!(state,  policy::CyclingCVPolicy)
@@ -640,9 +692,9 @@ function update_values_in_controller!(state,  policy::CyclingCVPolicy)
     
 end
 
-
-
-## Equations
+#############################
+# Assembly of the equations #
+#############################
 
 struct CurrentEquation <: JutulEquation end
 Jutul.local_discretization(::CurrentEquation, i) = nothing
@@ -675,17 +727,9 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::CurrentEquati
     
 end
 
-
-function Jutul.reset_state_to_previous_state!(storage, model::Jutul.SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{CyclingCVPolicy{T1, T2}}, T3, T4}) where {T1, T2, T3, T4}
-
-    invoke(Jutul.reset_state_to_previous_state!,
-           Tuple{typeof(storage),
-                 Jutul.SimulationModel},
-           storage,
-           model)
-    copyController!(storage.state[:ControllerCV], storage.state0[:ControllerCV])
-end
-
+#####################################################################
+# Function to update the controller part in state after convergence #
+#####################################################################
 
 """ Update after convergence. Here, we copy the controller to state0 and count the total number of cycles in case of CyclingCVPolicy
 """
@@ -731,6 +775,13 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
     
 end
 
+########################################################################
+# Controller initialization function. Adds the controller to the state #
+########################################################################
+
+"""
+Function called when setting up state initially. We need to add the fields corresponding to the controller
+"""
 function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVoltageModel)
 
     policy = model.system.policy
@@ -770,6 +821,10 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
     
 end
 
+#######################################
+# Utility functions for CC-CV control #
+#######################################
+
 function getNextCtrlType(ctrlType::OperationalMode)
 
     if ctrlType == cc_discharge1
@@ -797,7 +852,14 @@ function getNextCtrlType(ctrlType::OperationalMode)
     return nextCtrlType
 
 end
-    
+
+############################################
+# Helper function to compute control value #
+############################################
+
+"""
+sineup rampup function
+"""
 function sineup(y1::T, y2::T, x1::T, x2::T, x::T) where {T<:Any}
     #SINEUP Creates a sine ramp function
     #
