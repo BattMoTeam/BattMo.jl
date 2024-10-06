@@ -67,6 +67,23 @@ function select_equations!(eqs, system::CurrentAndVoltageSystem, model::Simulati
     
 end
 
+#####################
+# Select parameters #
+#####################
+
+function select_parameters!(S,
+                            system::CurrentAndVoltageSystem{SimpleCVPolicy{R}},
+                            model::SimulationModel) where {R}
+    S[:ImaxDischarge] = ImaxDischarge()
+end
+
+function select_parameters!(S,
+                            system::CurrentAndVoltageSystem{CyclingCVPolicy{R, I}},
+                            model::SimulationModel) where {R, I}
+    S[:ImaxDischarge] = ImaxDischarge()
+    S[:ImaxCharge]    = ImaxCharge()
+end
+
 ##############################################
 # Define Current and voltage control systems #
 ##############################################
@@ -86,10 +103,125 @@ CurrentAndVoltageModel{P} = SimulationModel{CurrentAndVoltageDomain, CurrentAndV
 
 number_of_cells(::CurrentAndVoltageDomain) = 1
 
+################################
+# Definition of the controller #
+################################
 
-####################################
-# Define of the different policies #
-####################################
+## A controller provides the information to exert the current control
+
+## The controller are implemented as mutable structures
+
+abstract type ControllerCV end
+
+## SimpleControllerCV
+
+mutable struct SimpleControllerCV{R} <: ControllerCV
+
+    target::R
+    time::R
+    target_is_voltage::Bool
+    ctrlType::OperationalMode
+    
+end
+
+SimpleControllerCV() = SimpleControllerCV(0., 0., true, none)
+
+## CcCvControllerCV
+
+mutable struct CcCvControllerCV{R, I<:Integer} <: ControllerCV
+
+    maincontroller::SimpleControllerCV{R}
+    numberOfCycles::I
+    dEdt::Union{R, Missing}
+    dIdt::Union{R, Missing}
+    
+end
+
+function CcCvControllerCV()
+
+    maincontroller = SimpleControllerCV()
+
+    return CcCvControllerCV(maincontroller, 0, missing, missing)
+    
+end
+
+
+# Helper for CcCvControllerCV so that the fields of SimpleControllerCV appears as inherrited.
+
+function Base.getproperty(c::CcCvControllerCV, f::Symbol)
+    if f in fieldnames(SimpleControllerCV)
+        return getfield(c.maincontroller, f)
+    else
+        return getfield(c, f)
+    end
+end
+
+function Base.setproperty!(c::CcCvControllerCV, f::Symbol, v)
+    if f in fieldnames(SimpleControllerCV)
+        setfield!(c.maincontroller, f, v)
+    else
+        setfield!(c, f, v)
+    end
+end
+
+
+@inline function Jutul.numerical_type(x::SimpleControllerCV{R}) where {R}
+    return R
+end
+
+@inline function Jutul.numerical_type(x::CcCvControllerCV{R, I}) where {R, I}
+    return R
+end
+
+"""
+Function to create (deep) copy of simple controller
+"""
+function copyController!(cv_copy::SimpleControllerCV, cv::SimpleControllerCV)
+
+    cv_copy.target            = cv.target
+    cv_copy.time              = cv.time
+    cv_copy.target_is_voltage = cv.target_is_voltage
+    cv_copy.ctrlType          = cv.ctrlType
+    
+end
+
+"""
+Function to create (deep) copy of CC-CV controller
+"""
+function copyController!(cv_copy::CcCvControllerCV, cv::CcCvControllerCV)
+
+    copyController!(cv_copy.maincontroller, cv.maincontroller)
+    cv_copy.numberOfCycles = cv.numberOfCycles
+    
+end
+
+"""
+Overload function to copy simple controller
+"""
+function Base.copy(cv::SimpleControllerCV)
+
+    cv_copy = SimpleControllerCV()
+    copyController!(cv_copy, cv)
+    
+    return cv_copy
+
+end
+
+"""
+Overload function to copy CC-CV controller
+"""
+function Base.copy(cv::CcCvControllerCV)
+
+    cv_copy = CcCvControllerCV()
+    copyController!(cv_copy, cv)
+
+    return cv_copy
+    
+end
+
+#################################
+# Define the different policies #
+#################################
 
 # A policy is used to compute the next control from the current control and state
 
@@ -160,23 +292,6 @@ function CyclingCVPolicy(lowerCutoffVoltage,
                            tolerances)
 end
 
-#####################
-# Select parameters #
-#####################
-
-function select_parameters!(S,
-                            system::CurrentAndVoltageSystem{SimpleCVPolicy{R}},
-                            model::SimulationModel) where {R}
-    S[:ImaxDischarge] = ImaxDischarge()
-end
-
-function select_parameters!(S,
-                            system::CurrentAndVoltageSystem{CyclingCVPolicy{R, I}},
-                            model::SimulationModel) where {R, I}
-    S[:ImaxDischarge] = ImaxDischarge()
-    S[:ImaxCharge]    = ImaxCharge()
-end
-
 ###################################################################################
 # Functions to compute initial current given the policy, used to initialize state #
 ###################################################################################
@@ -219,9 +334,9 @@ function select_minimum_output_variables!(outputs,
     
 end
 
-##############################################
-# Setup the policy from the input parameters #
-##############################################
+######################################################
+# Setup the initila policy from the input parameters #
+######################################################
 
 function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::InputParams, parameters)
 
@@ -245,7 +360,9 @@ function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::Inp
 
 end
 
-
+"""
+We need a more fine-tuned update of the variables when we use a cycling policies, to avoid convergence problem.
+"""
 function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, model::P, dx, w) where {R, I, Q <: CyclingCVPolicy{R, I}, P <: CurrentAndVoltageModel{Q}}
 
     entity = associated_entity(p)
@@ -270,6 +387,11 @@ function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, mode
     
 end
 
+"""
+The setupRegionSwitchFlags function detects from the current state and control, if we are in the switch region. The functions return two flags :
+- beforeSwitchRegion : the state is before the switch region for the current control
+- afterSwitchRegion : the state is after the switch region for the current control
+"""
 function setupRegionSwitchFlags(policy::CyclingCVPolicy, state, ctrlType)
 
     Emin    = policy.lowerCutoffVoltage
@@ -326,107 +448,6 @@ function setupRegionSwitchFlags(policy::CyclingCVPolicy, state, ctrlType)
 end
 
 
-
-## Definition of the controller which are attached to the state. They contain the variables necessary to compute the
-## control from the policy for a given state
-
-abstract type ControllerCV end
-
-## SimpleControllerCV
-
-mutable struct SimpleControllerCV{R} <: ControllerCV
-
-    target::R
-    time::R
-    target_is_voltage::Bool
-    ctrlType::OperationalMode
-    
-end
-
-SimpleControllerCV() = SimpleControllerCV(0., 0., true, none)
-
-## CcCvControllerCV
-
-mutable struct CcCvControllerCV{R, I<:Integer} <: ControllerCV
-
-    maincontroller::SimpleControllerCV{R}
-    numberOfCycles::I
-    dEdt::Union{R, Missing}
-    dIdt::Union{R, Missing}
-    
-end
-
-function CcCvControllerCV()
-
-    maincontroller = SimpleControllerCV()
-
-    return CcCvControllerCV(maincontroller, 0, missing, missing)
-    
-end
-
-
-# helper for CcCvControllerCV so that the fields of SimpleControllerCV appears as inherrited.
-
-function Base.getproperty(c::CcCvControllerCV, f::Symbol)
-    if f in fieldnames(SimpleControllerCV)
-        return getfield(c.maincontroller, f)
-    else
-        return getfield(c, f)
-    end
-end
-
-function Base.setproperty!(c::CcCvControllerCV, f::Symbol, v)
-    if f in fieldnames(SimpleControllerCV)
-        setfield!(c.maincontroller, f, v)
-    else
-        setfield!(c, f, v)
-    end
-end
-
-
-@inline function Jutul.numerical_type(x::SimpleControllerCV{R}) where {R}
-    return R
-end
-
-@inline function Jutul.numerical_type(x::CcCvControllerCV{R, I}) where {R, I}
-    return R
-end
-
-
-function Base.copy(cv::SimpleControllerCV)
-
-    cv_copy = SimpleControllerCV()
-    copyController!(cv_copy, cv)
-    
-    return cv_copy
-
-end
-
-function Base.copy(cv::CcCvControllerCV)
-
-    cv_copy = CcCvControllerCV()
-    copyController!(cv_copy, cv)
-
-    return cv_copy
-    
-end
-
-
-function copyController!(cv_copy::SimpleControllerCV, cv::SimpleControllerCV)
-
-    cv_copy.target            = cv.target
-    cv_copy.time              = cv.time
-    cv_copy.target_is_voltage = cv.target_is_voltage
-    cv_copy.ctrlType          = cv.ctrlType
-    
-end
-
-function copyController!(cv_copy::CcCvControllerCV, cv::CcCvControllerCV)
-
-    copyController!(cv_copy.maincontroller, cv.maincontroller)
-    cv_copy.numberOfCycles = cv.numberOfCycles
-    
-end
 
 
 function check_constraints(model, storage)
