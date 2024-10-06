@@ -14,7 +14,6 @@ export
 
 @enum OperationalMode cc_discharge1 cc_discharge2 cc_charge1 cv_charge2 rest discharge charging discharging none
 
-
 function getSymbol(ctrlType::OperationalMode)
 
     if ctrlType == cc_discharge1
@@ -43,6 +42,99 @@ struct CurrentVar <: ScalarVariable end
 
 struct ImaxDischarge <: ScalarVariable end
 struct ImaxCharge <: ScalarVariable end
+
+##################################################
+# Define the Current and voltage control systems #
+##################################################
+
+## In Jutul, a system is part of a model and contains data
+
+abstract type AbstractCVPolicy end
+
+struct CurrentAndVoltageSystem{P<:AbstractCVPolicy} <: JutulSystem
+    
+    # Control policy
+    policy::P
+    
+end
+
+struct CurrentAndVoltageDomain <: JutulDomain end
+
+CurrentAndVoltageModel{P} = SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{P}}
+
+number_of_cells(::CurrentAndVoltageDomain) = 1
+
+####################################
+# Types for the different policies #
+####################################
+
+## A policy is used to compute the next control from the current control and state
+
+""" Simple constant current policy. Stops when lower cut-off value is reached
+"""
+mutable struct SimpleCVPolicy{R} <: AbstractCVPolicy
+    current_function
+    Imax::R
+    voltage::R
+    function SimpleCVPolicy(;current_function = missing, Imax::T = 0., voltage = missing) where T <: Real
+        new{Union{Missing, T}}(current_function, Imax, voltage)
+    end
+end
+
+""" No policy means that the control is kept fixed throughout the simulation
+"""
+struct NoPolicy <: AbstractCVPolicy end
+
+
+""" Standard CC-CV policy
+"""
+mutable struct CyclingCVPolicy{R, I}  <: AbstractCVPolicy
+
+    ImaxDischarge::R
+    ImaxCharge::R
+    lowerCutoffVoltage::R
+    upperCutoffVoltage::R
+    dIdtLimit::R
+    dEdtLimit::R
+    initialControl::OperationalMode
+    numberOfCycles::I
+    tolerances
+    
+end 
+
+function CyclingCVPolicy(lowerCutoffVoltage,
+                         upperCutoffVoltage,
+                         dIdtLimit,
+                         dEdtLimit,
+                         initialControl::String,
+                         numberOfCycles;
+                         ImaxDischarge = 0*lowerCutoffVoltage,
+                         ImaxCharge = 0*lowerCutoffVoltage,
+                         )
+
+    if initialControl == "charging"
+        initialControl = charging
+    elseif initialControl == "discharging"
+        initialControl = discharging
+    else
+        error("initialControl not recognized")
+    end
+
+    tolerances = (cc_discharge1 = 1e-2,
+                  cc_discharge2 = 0.9,
+                  cc_charge1    = 1e-2,
+                  cv_charge2    = 0.9)
+    
+    return CyclingCVPolicy(ImaxDischarge,
+                           ImaxCharge,
+                           lowerCutoffVoltage,
+                           upperCutoffVoltage,
+                           dIdtLimit,
+                           dEdtLimit,
+                           initialControl,
+                           numberOfCycles,
+                           tolerances)
+end
 
 ################################
 # Select the primary variables #
@@ -83,26 +175,6 @@ function select_parameters!(S,
     S[:ImaxCharge]    = ImaxCharge()
 end
 
-##################################################
-# Define the Current and voltage control systems #
-##################################################
-
-## In Jutul, a system is part of a model and contains data
-
-abstract type AbstractCVPolicy end
-
-struct CurrentAndVoltageSystem{P<:AbstractCVPolicy} <: JutulSystem
-    
-    # Control policy
-    policy::P
-    
-end
-
-struct CurrentAndVoltageDomain <: JutulDomain end
-
-CurrentAndVoltageModel{P} = SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{P}}
-
-number_of_cells(::CurrentAndVoltageDomain) = 1
 
 ###########################################################################################################
 # Definition of the controller and some basic utility functions. The controller will be part of the state #
@@ -232,77 +304,6 @@ function select_minimum_output_variables!(outputs,
     
 end
 
-####################################
-# Types for the different policies #
-####################################
-
-## A policy is used to compute the next control from the current control and state
-
-""" Simple constant current policy. Stops when lower cut-off value is reached
-"""
-mutable struct SimpleCVPolicy{R} <: AbstractCVPolicy
-    current_function
-    Imax::R
-    voltage::R
-    function SimpleCVPolicy(;current_function = missing, Imax::T = 0., voltage = missing) where T <: Real
-        new{Union{Missing, T}}(current_function, Imax, voltage)
-    end
-end
-
-""" No policy means that the control is kept fixed throughout the simulation
-"""
-struct NoPolicy <: AbstractCVPolicy end
-
-
-""" Standard CC-CV policy
-"""
-mutable struct CyclingCVPolicy{R, I}  <: AbstractCVPolicy
-
-    ImaxDischarge::R
-    ImaxCharge::R
-    lowerCutoffVoltage::R
-    upperCutoffVoltage::R
-    dIdtLimit::R
-    dEdtLimit::R
-    initialControl::OperationalMode
-    numberOfCycles::I
-    tolerances
-    
-end 
-
-function CyclingCVPolicy(lowerCutoffVoltage,
-                         upperCutoffVoltage,
-                         dIdtLimit,
-                         dEdtLimit,
-                         initialControl::String,
-                         numberOfCycles;
-                         ImaxDischarge = 0*lowerCutoffVoltage,
-                         ImaxCharge = 0*lowerCutoffVoltage,
-                         )
-
-    if initialControl == "charging"
-        initialControl = charging
-    elseif initialControl == "discharging"
-        initialControl = discharging
-    else
-        error("initialControl not recognized")
-    end
-
-    tolerances = (cc_discharge1 = 1e-3,
-                  cc_discharge2 = 0.9,
-                  cc_charge1    = 1e-3,
-                  cv_charge2    = 0.9)
-    
-    return CyclingCVPolicy(ImaxDischarge,
-                           ImaxCharge,
-                           lowerCutoffVoltage,
-                           upperCutoffVoltage,
-                           dIdtLimit,
-                           dEdtLimit,
-                           initialControl,
-                           numberOfCycles,
-                           tolerances)
-end
 
 ###################################################################################################################
 # Functions to compute initial current given the policy, it used at initialization of the state in the simulation #
@@ -497,14 +498,12 @@ end
 
 function Jutul.update_values!(old::SimpleControllerCV, new::SimpleControllerCV)
 
-    @infiltrate
     copyController!(old, new)
     
 end
 
 function Jutul.update_values!(old::CcCvControllerCV, new::CcCvControllerCV)
 
-    @infiltrate
     copyController!(old, new)
     
 end
