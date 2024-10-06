@@ -74,7 +74,7 @@ scatterlines!(ax,
 
 display(f)
 
-seilength = [state[:NeAm][:normalizedSEIlength][end] for state in states]
+seilength = [state[:NeAm][:SEIlength][end] for state in states]
 
 f = Figure(size = (1000, 400))
 

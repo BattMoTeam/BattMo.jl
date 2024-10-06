@@ -75,6 +75,19 @@ function select_secondary_variables!(S,
     
 end
 
+
+function select_minimum_output_variables!(outputs,
+                                          system::ActiveMaterialP2D,
+                                          model::SEImodel
+                                          )
+
+    push!(outputs, :SEIlength)
+    push!(outputs, :SEIvoltageDrop)
+    
+end
+
+
+
 ###################################
 # Declare equations for sei model #
 ###################################
