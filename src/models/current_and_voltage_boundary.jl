@@ -479,12 +479,11 @@ function check_constraints(model, storage)
     arefulfilled = true;
     
     rsw = setupRegionSwitchFlags(policy, state, ctrlType);
-
-    if ctrlType == ctrlType0 && rsw.afterSwitchRegion
+    rswN = setupRegionSwitchFlags(policy, state, nextCtrlType);
+    
+    if (ctrlType == ctrlType0 && rsw.afterSwitchRegion) || (ctrlType == nextCtrlType && !rswN.beforeSwitchRegion)
         
         arefulfilled = false;
-        controller.ctrlType = nextCtrlType;
-        update_values_in_controller!(state, policy)
         
     end
 
@@ -597,19 +596,59 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
     controller.dIdt = (I - I0)/dt
     controller.dEdt = (E - E0)/dt
 
-    ctrlType  = state.ControllerCV.ctrlType
     ctrlType0 = state0.ControllerCV.ctrlType
     
     nextCtrlType = getNextCtrlType(ctrlType0)
 
-    rsw  = setupRegionSwitchFlags(policy, state, ctrlType0);
-    rsw0 = setupRegionSwitchFlags(policy, state0, ctrlType0);
-            
-    if ctrlType == ctrlType && rsw.afterSwitchRegion && !rsw0.beforeSwitchRegion
+    rsw00 = setupRegionSwitchFlags(policy, state0, ctrlType0)
+
+    if rsw00.beforeSwitchRegion
+
+        # We have not entered the switching region in the time step. We are not going to change control
+        # in this step.
+        ctrlType = ctrlType0
+
+    else
+        
+        # We entered the switch region in the previous time step. We consider switching control
                 
-        controller.ctrlType = nextCtrlType;
+        currentCtrlType = state.ControllerCV.ctrlType # current control in the the Newton iteration
+        nextCtrlType0   = model.getNextCtrlType(ctrlType0) # next control that can occur after the previous time step control (if it changes)
+
+        rsw0 = setupRegionSwitchFlags(policy, state, ctrlType0)
+                
+        if currentCtrlType == ctrlType0
+
+            # The control has not changed from previous time step and we want to determine if we should change it. 
+
+            if rsw0.afterSwitchRegion
+
+                # We switch to a new control because we are no longer in the acceptable region for the current
+                # control
+                ctrlType = nextCtrlType0
+                
+            else
+
+                ctrlType = ctrlType0
+
+            end
+
+        elseif currentCtrlType == nextCtrlType0
+
+            # We do not switch back to avoid oscillation. We are anyway within the given tolerance for the
+            # control so that we keep the control as it is.
+
+            ctrlType = nextCtrlType0
+
+        else
+
+            error("control type not recognized")
+
+        end
 
     end
+    
+    controller.ctrlType = ctrlType
     
 end
 
