@@ -125,7 +125,7 @@
     "bruggemanCoefficient": 1.5
   },
   "G": [],
-  "SOC": 0.99,
+  "SOC": 1,
   "initT": 298.15,
   "use_thermal": false,
   "include_current_collectors": false,
@@ -137,7 +137,7 @@
     "DRate": 1.0,
     "lowerCutoffVoltage": 3.0,
     "upperCutoffVoltage": 4.0,
-    "dIdtLimit": 1e-2,
+    "dIdtLimit": 1e-6,
     "dEdtLimit": 1e-4},
   "Electrolyte": {
     "initialConcentration": 1000,
