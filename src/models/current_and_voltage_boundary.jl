@@ -420,15 +420,15 @@ function setupRegionSwitchFlags(policy::CyclingCVPolicy, state, ctrlType)
     
     if ctrlType ==  cc_discharge1
 
-        before = (E - Emin)/Emin > tol
-        after  = (E - Emin)/Emin < -tol
+        before = E > Emin*(1 + tol)
+        after  = E < Emin*(1 - tol)
         
     elseif ctrlType == cc_discharge2
 
         dEdt = state.ControllerCV.dEdt
         if !ismissing(dEdt)
-            before = (abs(dEdt) - dEdtMin)/dEdtMin > tol
-            after  = (abs(dEdt) - dEdtMin)/dEdtMin < -tol
+            before = abs(dEdt) > dEdtMin*(1 + tol)
+            after  = abs(dEdt) < dEdtMin*(1 - tol)
         else
             before = false
             after  = false
@@ -436,15 +436,15 @@ function setupRegionSwitchFlags(policy::CyclingCVPolicy, state, ctrlType)
         
     elseif ctrlType == cc_charge1
         
-        before = (E - Emax)/Emax < -tol
-        after  = (E - Emax)/Emax > tol
+        before = E < Emax*(1 - tol)
+        after  = E > Emax*(1 + tol)
 
     elseif ctrlType == cv_charge2
 
         dIdt = state.ControllerCV.dIdt
         if !ismissing(dIdt)
-            before = (abs(dIdt) - dIdtMin)/dIdtMin > tol
-            after  = (abs(dIdt) - dIdtMin)/dIdtMin < -tol
+            before = abs(dIdt) > dIdtMin*(1 + tol)
+            after  = abs(dIdt) < dIdtMin*(1 - tol)
         else
             before = false
             after  = false
@@ -471,19 +471,19 @@ function check_constraints(model, storage)
     state0 = storage.state0[:Control]
 
     controller = state[:ControllerCV]
-    ctrlType   = state[:ControllerCV].ctrlType;
-    ctrlType0  = state0[:ControllerCV].ctrlType;
+    ctrlType   = state[:ControllerCV].ctrlType
+    ctrlType0  = state0[:ControllerCV].ctrlType
     
-    nextCtrlType = getNextCtrlType(ctrlType0);
+    nextCtrlType = getNextCtrlType(ctrlType0)
 
-    arefulfilled = true;
+    arefulfilled = true
     
-    rsw = setupRegionSwitchFlags(policy, state, ctrlType);
-    rswN = setupRegionSwitchFlags(policy, state, nextCtrlType);
+    rsw  = setupRegionSwitchFlags(policy, state, ctrlType)
+    rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
     
     if (ctrlType == ctrlType0 && rsw.afterSwitchRegion) || (ctrlType == nextCtrlType && !rswN.beforeSwitchRegion)
-        
-        arefulfilled = false;
+
+        arefulfilled = false
         
     end
 
@@ -526,8 +526,7 @@ function Jutul.perform_step_solve_impl!(report, storage, model::MultiModel{:Batt
 
     state  = storage.state[:Control]
     state0 = storage.state0[:Control]
-    model  = model[:Control]
-    policy = model.system.policy
+    policy = model[:Control].system.policy
 
     update_controller!(state, state0, policy, dt)
 
@@ -613,7 +612,7 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
         # We entered the switch region in the previous time step. We consider switching control
                 
         currentCtrlType = state.ControllerCV.ctrlType # current control in the the Newton iteration
-        nextCtrlType0   = model.getNextCtrlType(ctrlType0) # next control that can occur after the previous time step control (if it changes)
+        nextCtrlType0   = getNextCtrlType(ctrlType0) # next control that can occur after the previous time step control (if it changes)
 
         rsw0 = setupRegionSwitchFlags(policy, state, ctrlType0)
                 
@@ -661,7 +660,7 @@ end
 
 function update_values_in_controller!(state, policy::SimpleCVPolicy)
     
-    controller  = state.ControllerCV
+    controller = state.ControllerCV
     
     if controller.target_is_voltage
         
@@ -783,19 +782,23 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 
         ctrlType = ctrl.ctrlType
         
-        ctrlType0   = storage.state0[:ControllerCV].ctrlType
-        ncycles = storage.state0[:ControllerCV].numberOfCycles
+        ctrlType0 = storage.state0[:ControllerCV].ctrlType
+        ncycles   = storage.state0[:ControllerCV].numberOfCycles
         
         copyController!(storage.state0[:ControllerCV], ctrl)
         
         if initctrl == charging
+            
             if (ctrlType0 == cc_discharge1 || ctrlType0 == cc_discharge2) && (ctrlType == cc_charge1 || ctrlType == cv_charge2)
                 ncycles = ncycles + 1
             end
+            
         elseif initctrl == discharging
+            
             if (ctrlType0 == cc_charge1 || ctrlType0 == cv_charge2) && (ctrlType == cc_discharge1 || ctrlType == cc_discharge2) 
                 ncycles = ncycles + 1
             end
+            
         end
 
         ctrl.numberOfCycles = ncycles
