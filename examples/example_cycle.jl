@@ -6,7 +6,7 @@ name = "p2d_40_cccv"
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
 inputparams = readBattMoJsonInputFile(fn)
 
-config_kwargs = (info_level = 10, )
+config_kwargs = (info_level = 0, )
 # Run base case and plot the results against BattMo-MRST reference
 output = run_battery(inputparams; config_kwargs = config_kwargs);
 
