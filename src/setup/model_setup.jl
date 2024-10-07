@@ -1217,6 +1217,7 @@ function setup_config(sim::Jutul.JutulSimulator,
     cfg[:debug_level]                = 0
     cfg[:max_timestep_cuts]          = 10
     cfg[:max_residual]               = 1e20
+    cfg[:output_substates]           = true
     cfg[:min_nonlinear_iterations]   = 1
     cfg[:extra_timing]               = extra_timing
     # cfg[:max_nonlinear_iterations] = 5
