@@ -45,8 +45,6 @@ const ElectrolyteModel = SimulationModel{<:Any, <:Electrolyte, <:Any, <:Any}
 struct DmuDc <: ScalarVariable end
 struct ChemCoef <: ScalarVariable end
 
-maximum_concentration(::Electrolyte) = 1000.0
-
 function select_primary_variables!(S                  ,
                                    system::Electrolyte,
                                    model::SimulationModel)
