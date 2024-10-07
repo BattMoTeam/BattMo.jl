@@ -120,9 +120,9 @@ function CyclingCVPolicy(lowerCutoffVoltage,
         error("initialControl not recognized")
     end
 
-    tolerances = (cc_discharge1 = 1e-2,
+    tolerances = (cc_discharge1 = 1e-4,
                   cc_discharge2 = 0.9,
-                  cc_charge1    = 1e-2,
+                  cc_charge1    = 1e-4,
                   cv_charge2    = 0.9)
     
     return CyclingCVPolicy(ImaxDischarge,
