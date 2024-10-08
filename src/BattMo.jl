@@ -79,7 +79,6 @@ include("models/activematerial.jl")
 include("models/sei_layer.jl")
 include("models/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
-include("models/convergence.jl")
 include("models/battery_utils.jl")
 
 include("setup/model_setup.jl")
