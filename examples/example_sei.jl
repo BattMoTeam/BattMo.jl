@@ -72,7 +72,7 @@ scatterlines!(ax,
               label = "Julia"
               )
 
-display(f)
+display(GLMakie.Screen(), f)
 
 seilength = [state[:NeAm][:SEIlength][end] for state in states]
 
@@ -96,6 +96,24 @@ scatterlines!(ax,
               marker = :cross, 
               markercolor = :black)
 
-display(f)
+ax = Axis(f[2, 1],
+          title     = "Length",
+          xlabel    = "Time / s",
+          ylabel    = "Voltage / ",
+          xlabelsize = 25,
+          ylabelsize = 25,
+          xticklabelsize = 25,
+          yticklabelsize = 25
+          )
+
+scatterlines!(ax,
+              t,
+              E;
+              linewidth = 4,
+              markersize = 10,
+              marker = :cross, 
+              markercolor = :black)
+
+display(GLMakie.Screen(),f)
 
 
