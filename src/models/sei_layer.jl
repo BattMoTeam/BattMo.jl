@@ -344,7 +344,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     phi_e = state_s.Phi[ind_s]
 
     # compute SEI flux (called N)
-    eta = phi_e - phi_a - Usei
+    eta = phi_a - phi_e - Usei
     
     N = De*ce0/L*exp(-(F/(R*T))*eta)*(1 - (F/(2*R*T))*Usei)
 
