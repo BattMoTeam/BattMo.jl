@@ -4,9 +4,9 @@
 
 using Jutul, BattMo, GLMakie
 
-# name = "p2d_40"
+name = "p2d_40"
 # name = "p2d_40_jl_ud_func"
-name = "p2d_40_no_cc"
+# name = "p2d_40_no_cc"
 # name = "p2d_40_cccv"
 # name = "p2d_40_jl_chen2020"
 # name = "3d_demo_case"
@@ -17,7 +17,7 @@ if do_json
 
     fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
     inputparams = readBattMoJsonInputFile(fn)
-    config_kwargs = (info_level = 10, )
+    config_kwargs = (info_level = 0, )
     function hook(simulator,
                   model,
                   state0,
@@ -43,7 +43,7 @@ else
     fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/", name, ".mat")
     inputparams = readBattMoMatlabInputFile(fn)
     inputparams.dict["use_state_ref"] = true
-    config_kwargs = (info_level = 10,)
+    config_kwargs = (info_level = 0,)
 
     function hook(simulator,
                   model,
@@ -54,11 +54,13 @@ else
 
         names = [:Elyte,
                  :NeAm,
-                 :PeCc,
                  :Control,
-                 :NeCc,
                  :PeAm]           
 
+        if inputparams["model"]["include_current_collectors"]
+            names = append!(names, [:PeCc, :NeCc])
+        end
+        
         for name in names
             cfg[:tolerances][name][:default] = 1e-8
         end

@@ -1006,7 +1006,7 @@ end
 
 
 function setup_scalings!(model, parameters)
-
+    
     refT = 298.15
 
     electrolyte    = model[:Elyte].system
@@ -1048,7 +1048,12 @@ function setup_scalings!(model, parameters)
 
     for name in component_names
 
-        volRefs[name] = mean(model[name].domain.representation[:volumes])
+        rep = model[name].domain.representation
+        if rep isa MinimalECTPFAGrid
+            volRefs[name] = mean(rep.volumes)  
+        else
+            volRefs[name] = mean(rep[:volumes])
+        end
         
     end
 
