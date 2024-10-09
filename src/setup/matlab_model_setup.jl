@@ -173,6 +173,10 @@ function setup_coupling_cross_terms!(inputparams::MatlabInputParams,
         ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
         
+        ct = TPFAInterfaceFluxCT(srange, trange, trans)
+        ct_pair = setup_cross_term(ct, target = :NeCc, source = :NeAm, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        
         #######################################
         # setup coupling PeCc <-> PeAm charge #
         #######################################
@@ -196,8 +200,13 @@ function setup_coupling_cross_terms!(inputparams::MatlabInputParams,
         couplingfaces = Int64.(ct["couplingfaces"])
         couplingcells = Int64.(ct["couplingcells"])
         trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectronicConductivity")
+        
         ct = TPFAInterfaceFluxCT(trange, srange, trans)
         ct_pair = setup_cross_term(ct, target = :PeAm, source = :PeCc, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+
+        ct = TPFAInterfaceFluxCT(srange, trange, trans)
+        ct_pair = setup_cross_term(ct, target = :PeCc, source = :PeAm, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
 
     end
@@ -238,7 +247,7 @@ function setup_coupling_cross_terms!(inputparams::MatlabInputParams,
 
     trans = getHalfTrans(msource, couplingfaces, couplingcells, "effectiveElectronicConductivity")
 
-    ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
+    ct = TPFAInterfaceFluxCT(trange, srange, trans)
     ct_pair = setup_cross_term(ct, target = component, source = :Control, equation = :charge_conservation)
     add_cross_term!(model, ct_pair)
 

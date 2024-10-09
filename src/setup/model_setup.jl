@@ -916,7 +916,10 @@ function setup_coupling_cross_terms!(inputparams::InputParams,
         ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
         ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-
+        ct = TPFAInterfaceFluxCT(srange_cells, trange_cells, trans)
+        ct_pair = setup_cross_term(ct, target = :NeCc, source = :NeAm, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        
         ################################
         # setup coupling PeCc <-> PeAm #
         ################################
@@ -953,9 +956,12 @@ function setup_coupling_cross_terms!(inputparams::InputParams,
         @assert size(trans,1) == size(srange_cells,1)  
         ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
         ct_pair = setup_cross_term(ct, target = :PeAm, source = :PeCc, equation = :charge_conservation)
-
         add_cross_term!(model, ct_pair)
-
+        
+        ct = TPFAInterfaceFluxCT(srange_cells, trange_cells, trans)
+        ct_pair = setup_cross_term(ct, target = :PeCc, source = :PeAm, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        
     end
 
     ########################################
@@ -981,7 +987,7 @@ function setup_coupling_cross_terms!(inputparams::InputParams,
     couplingcells = trange 
     trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
 
-    ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
+    ct = TPFAInterfaceFluxCT(trange, srange, trans)
     ct_pair = setup_cross_term(ct, target = controlComp, source = :Control, equation = :charge_conservation)
     add_cross_term!(model, ct_pair)
 
@@ -1076,7 +1082,7 @@ function setup_scalings!(model, parameters)
             cc = cc_mapping[elde]
             coef = parameters[cc][:Conductivity]/parameters[elde][:Conductivity]
 
-            scaling = (model_label = cc, equation_label = :charge_conservation, value = coef[1]*F*volRefs[elde]*RvolRef)
+            scaling = (model_label = cc, equation_label = :charge_conservation, value = F*coef[1]*volRefs[elde]*RvolRef)
             push!(scalings, scaling)
 
         end

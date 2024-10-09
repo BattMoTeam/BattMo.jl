@@ -1,6 +1,3 @@
-
-Jutul.symmetry(::TPFAInterfaceFluxCT) = Jutul.CTSkewSymmetry()
-
 Jutul.cross_term_entities(ct::TPFAInterfaceFluxCT, eq::Jutul.JutulEquation, model) = ct.target_cells
 Jutul.cross_term_entities_source(ct::TPFAInterfaceFluxCT, eq::Jutul.JutulEquation, model) = ct.source_cells
 
