@@ -1,18 +1,33 @@
 #=
-Electro-Chemical component
-A component with electric potential, concentration and temperature
-The different potentials are independent (diagonal onsager matrix),
-and conductivity, diffusivity is constant.
+Hybrid Simulation Example with Machine Learning OCP Model
+
+This example demonstrates a hybrid simulation approach for a battery model,
+combining physics-based modeling with machine learning. The open-circuit potential (OCP)
+is modeled using a neural network, which is integrated into the BattMo framework.
+
+Key features:
+1. Custom MLModelOcp type to incorporate the ML model into the simulation
+2. Integration of pre-trained neural networks for both negative and positive electrodes
+3. Replacement of standard OCP calculations with ML-based predictions
+4. Simulation of a P2D (Pseudo-2-Dimensional) battery model
+5. Visualization of voltage and current profiles over time
+
+This hybrid approach allows for potentially faster and more accurate OCP predictions
+while maintaining the physical accuracy of the overall battery model.
 =#
 
 using Jutul, BattMo, Plots
-using Flux, BSON
+using Lux, JLD2
+
+include("train_OCP_ML_models.jl")
 
 # define Ocp type with ML model
-struct MLModelOcp{M} <: AbstractOcp
+struct MLModelOcp{M, P, S} <: AbstractOcp
     ML_model::M
-    function MLModelOcp(input_ML_model)
-        new{typeof(input_ML_model)}(input_ML_model)
+    parameters::P
+    states::S
+    function MLModelOcp(input_ML_model, parameters, states)
+        new{typeof(input_ML_model), typeof(parameters), typeof(states)}(input_ML_model, parameters, states)
     end
 end
 
@@ -26,10 +41,20 @@ end
                           ) where {D, T}
 
         cmax = model.system.params[:maximum_concentration]
-        ML_model =  tv.ML_model
-        # Ocp is computed for all cells in the electrode
+        ML_model = tv.ML_model
+        ps = tv.parameters
+        st = tv.states
+        
         @views theta = Cs ./ cmax
-        @inbounds Ocp .= vec(ML_model(reshape(theta, 1, :)))
+        
+        # Reshape theta to a 2D array with singleton dimensions to match expected input shape
+        theta = reshape(theta, 1, length(theta))
+        
+        # Apply the ML model
+        Ocp_pred, st = Lux.apply(ML_model, theta, ps, st)
+        
+        # Reshape the output to match Ocp
+        @inbounds Ocp .= vec(Ocp_pred)
     end
 )
 
@@ -38,7 +63,6 @@ use_p2d = true
 train_ML_model = false
 
 if train_ML_model
-    include("train_OCP_ML_models.jl")
     train_model_neg_electrode()
     train_model_pos_electrode()
 end
@@ -47,13 +71,14 @@ name = "p2d_40_cccv"
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
 inputparams = readBattMoJsonInputFile(fn)
 
-model, parameters = BattMo.setup_model(inputparams, use_groups=false, general_ad=false)#; info_level=0,  extra_timing=false)
+model, parameters = BattMo.setup_model(inputparams, use_groups=false, general_ad=false)
 
 # load ML model from file and define Ocp type with ML model
-BSON.@load "OCP_ML_model_negative_electrode.bson" OCP_ML_model_negative_electrode
-BSON.@load "OCP_ML_model_positive_electrode.bson" OCP_ML_model_positive_electrode
-ocp_NeAM = MLModelOcp(OCP_ML_model_negative_electrode)
-ocp_PeAM = MLModelOcp(OCP_ML_model_positive_electrode)
+@load joinpath(folder, "OCP_ML_model_negative_electrode.jld2") OCP_ML_model_neg_electrode ps_neg st_neg
+@load joinpath(folder, "OCP_ML_model_positive_electrode.jld2") OCP_ML_model_pos_electrode ps_pos st_pos
+
+ocp_NeAM = MLModelOcp(OCP_ML_model_neg_electrode, ps_neg, st_neg)
+ocp_PeAM = MLModelOcp(OCP_ML_model_pos_electrode, ps_pos, st_pos)
 
 # replace Ocp with ML model in the model
 replace_variables!(model[:NeAm], Ocp = ocp_NeAM, throw = true)
@@ -119,4 +144,3 @@ p2 = Plots.plot(t, I;
 
 
 Plots.plot(p1, p2, layout = (2, 1))
-
