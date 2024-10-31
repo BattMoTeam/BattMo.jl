@@ -36,117 +36,101 @@ output = run_battery(inputparams);
 
 
 ```
-Simulating 1 hour, 6 minutes as 77 report steps   3%|▏   |  ETA: 0:17:49[K
+Simulating 1 hour, 6 minutes as 77 report steps   3%|▏   |  ETA: 0:17:22[K
   Progress:  Solving step 2/77 (0.13% of time interval complete)[K
-  Stats:     4 iterations in 26.09 s (6.52 s each)[K[A[A
+  Stats:     4 iterations in 25.38 s (6.35 s each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  12%|▌   |  ETA: 0:03:42[K
-  Progress:  Solving step 9/77 (6.90% of time interval complete)[K
-  Stats:     33 iterations in 26.57 s (805.06 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  15%|▋   |  ETA: 0:02:37[K
+  Progress:  Solving step 12/77 (11.07% of time interval complete)[K
+  Stats:     43 iterations in 25.98 s (604.13 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  14%|▋   |  ETA: 0:02:57[K
-  Progress:  Solving step 11/77 (9.68% of time interval complete)[K
-  Stats:     40 iterations in 26.67 s (666.75 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  26%|█   |  ETA: 0:01:24[K
+  Progress:  Solving step 20/77 (22.18% of time interval complete)[K
+  Stats:     70 iterations in 26.38 s (376.92 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  18%|▊   |  ETA: 0:02:14[K
-  Progress:  Solving step 14/77 (13.85% of time interval complete)[K
-  Stats:     50 iterations in 26.81 s (536.29 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  29%|█▏  |  ETA: 0:01:10[K
+  Progress:  Solving step 23/77 (26.35% of time interval complete)[K
+  Stats:     79 iterations in 26.52 s (335.64 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  21%|▉   |  ETA: 0:01:54[K
-  Progress:  Solving step 16/77 (16.62% of time interval complete)[K
-  Stats:     58 iterations in 26.93 s (464.31 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  33%|█▍  |  ETA: 0:00:58[K
+  Progress:  Solving step 26/77 (30.51% of time interval complete)[K
+  Stats:     88 iterations in 26.65 s (302.79 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  24%|█   |  ETA: 0:01:32[K
-  Progress:  Solving step 19/77 (20.79% of time interval complete)[K
-  Stats:     67 iterations in 27.06 s (403.95 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  37%|█▌  |  ETA: 0:00:50[K
+  Progress:  Solving step 29/77 (34.68% of time interval complete)[K
+  Stats:     97 iterations in 26.77 s (276.02 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  28%|█▏  |  ETA: 0:01:15[K
-  Progress:  Solving step 22/77 (24.96% of time interval complete)[K
-  Stats:     76 iterations in 27.20 s (357.86 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  41%|█▋  |  ETA: 0:00:42[K
+  Progress:  Solving step 32/77 (38.85% of time interval complete)[K
+  Stats:     106 iterations in 26.91 s (253.84 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  32%|█▎  |  ETA: 0:01:03[K
-  Progress:  Solving step 25/77 (29.12% of time interval complete)[K
-  Stats:     85 iterations in 27.35 s (321.77 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  45%|█▊  |  ETA: 0:00:36[K
+  Progress:  Solving step 35/77 (43.01% of time interval complete)[K
+  Stats:     115 iterations in 27.05 s (235.24 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  36%|█▍  |  ETA: 0:00:53[K
-  Progress:  Solving step 28/77 (33.29% of time interval complete)[K
-  Stats:     94 iterations in 27.48 s (292.38 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  49%|██  |  ETA: 0:00:31[K
+  Progress:  Solving step 38/77 (47.18% of time interval complete)[K
+  Stats:     124 iterations in 27.18 s (219.21 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  40%|█▋  |  ETA: 0:00:46[K
-  Progress:  Solving step 31/77 (37.46% of time interval complete)[K
-  Stats:     103 iterations in 27.62 s (268.12 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  53%|██▏ |  ETA: 0:00:27[K
+  Progress:  Solving step 41/77 (51.35% of time interval complete)[K
+  Stats:     133 iterations in 27.31 s (205.36 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  44%|█▊  |  ETA: 0:00:39[K
-  Progress:  Solving step 34/77 (41.62% of time interval complete)[K
-  Stats:     112 iterations in 27.75 s (247.77 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  56%|██▎ |  ETA: 0:00:23[K
+  Progress:  Solving step 44/77 (55.51% of time interval complete)[K
+  Stats:     142 iterations in 27.44 s (193.27 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  47%|█▉  |  ETA: 0:00:34[K
-  Progress:  Solving step 37/77 (45.79% of time interval complete)[K
-  Stats:     121 iterations in 27.88 s (230.44 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  60%|██▍ |  ETA: 0:00:20[K
+  Progress:  Solving step 47/77 (59.68% of time interval complete)[K
+  Stats:     151 iterations in 27.57 s (182.61 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  51%|██  |  ETA: 0:00:29[K
-  Progress:  Solving step 40/77 (49.96% of time interval complete)[K
-  Stats:     130 iterations in 28.02 s (215.51 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  64%|██▋ |  ETA: 0:00:17[K
+  Progress:  Solving step 50/77 (63.85% of time interval complete)[K
+  Stats:     160 iterations in 27.71 s (173.16 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  55%|██▎ |  ETA: 0:00:25[K
-  Progress:  Solving step 43/77 (54.12% of time interval complete)[K
-  Stats:     139 iterations in 28.15 s (202.51 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  68%|██▊ |  ETA: 0:00:14[K
+  Progress:  Solving step 53/77 (68.01% of time interval complete)[K
+  Stats:     169 iterations in 27.83 s (164.69 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  59%|██▍ |  ETA: 0:00:21[K
-  Progress:  Solving step 46/77 (58.29% of time interval complete)[K
-  Stats:     148 iterations in 28.28 s (191.11 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  72%|██▉ |  ETA: 0:00:12[K
+  Progress:  Solving step 56/77 (72.18% of time interval complete)[K
+  Stats:     178 iterations in 27.96 s (157.10 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  62%|██▌ |  ETA: 0:00:19[K
-  Progress:  Solving step 48/77 (61.07% of time interval complete)[K
-  Stats:     154 iterations in 28.39 s (184.36 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  76%|███ |  ETA: 0:00:10[K
+  Progress:  Solving step 59/77 (76.35% of time interval complete)[K
+  Stats:     187 iterations in 28.11 s (150.33 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  65%|██▋ |  ETA: 0:00:16[K
-  Progress:  Solving step 51/77 (65.23% of time interval complete)[K
-  Stats:     163 iterations in 28.52 s (174.99 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  79%|███▏|  ETA: 0:00:08[K
+  Progress:  Solving step 62/77 (80.51% of time interval complete)[K
+  Stats:     196 iterations in 28.24 s (144.09 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  69%|██▊ |  ETA: 0:00:14[K
-  Progress:  Solving step 54/77 (69.40% of time interval complete)[K
-  Stats:     172 iterations in 28.66 s (166.60 ms each)[K[A[A
-
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  73%|██▉ |  ETA: 0:00:12[K
-  Progress:  Solving step 57/77 (73.57% of time interval complete)[K
-  Stats:     181 iterations in 28.79 s (159.06 ms each)[K[A[A
-
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  77%|███▏|  ETA: 0:00:09[K
-  Progress:  Solving step 60/77 (77.73% of time interval complete)[K
-  Stats:     190 iterations in 28.92 s (152.22 ms each)[K[A[A
-
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  81%|███▎|  ETA: 0:00:07[K
-  Progress:  Solving step 63/77 (81.90% of time interval complete)[K
-  Stats:     199 iterations in 29.05 s (146.00 ms each)[K[A[A
-
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  85%|███▍|  ETA: 0:00:06[K
-  Progress:  Solving step 66/77 (86.07% of time interval complete)[K
-  Stats:     208 iterations in 29.19 s (140.33 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  83%|███▍|  ETA: 0:00:06[K
+  Progress:  Solving step 65/77 (84.68% of time interval complete)[K
+  Stats:     205 iterations in 28.37 s (138.39 ms each)[K[A[A
 
 [K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  87%|███▌|  ETA: 0:00:05[K
   Progress:  Solving step 68/77 (88.85% of time interval complete)[K
-  Stats:     215 iterations in 29.29 s (136.23 ms each)[K[A[A
+  Stats:     215 iterations in 28.51 s (132.62 ms each)[K[A[A
 
 [K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  90%|███▋|  ETA: 0:00:04[K
   Progress:  Solving step 70/77 (91.62% of time interval complete)[K
-  Stats:     223 iterations in 29.42 s (131.94 ms each)[K[A[A
+  Stats:     223 iterations in 28.63 s (128.37 ms each)[K[A[A
 
 [K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  92%|███▊|  ETA: 0:00:03[K
   Progress:  Solving step 72/77 (94.40% of time interval complete)[K
-  Stats:     231 iterations in 29.54 s (127.88 ms each)[K[A[A
+  Stats:     231 iterations in 28.74 s (124.41 ms each)[K[A[A
 
 [K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  95%|███▊|  ETA: 0:00:02[K
   Progress:  Solving step 74/77 (97.18% of time interval complete)[K
-  Stats:     239 iterations in 29.66 s (124.09 ms each)[K[A[A
+  Stats:     239 iterations in 28.85 s (120.72 ms each)[K[A[A
 
-[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  97%|███▉|  ETA: 0:00:01[K
-  Progress:  Solving step 76/77 (99.96% of time interval complete)[K
-  Stats:     246 iterations in 29.76 s (120.97 ms each)[K[A[A
+[K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps  99%|████|  ETA: 0:00:00[K
+  Progress:  Solving step 77/77 (100.00% of time interval complete)[K
+  Stats:     250 iterations in 29.01 s (116.03 ms each)[K[A[A
 
 [K[A[K[ASimulating 1 hour, 6 minutes as 77 report steps 100%|████| Time: 0:00:32[K
   Progress:  Solved step 77/77[K
-  Stats:     252 iterations in 29.85 s (118.44 ms each)[K
+  Stats:     252 iterations in 29.04 s (115.23 ms each)[K
 ╭────────────────┬──────────┬──────────────┬──────────╮
 │ Iteration type │ Avg/step │ Avg/ministep │    Total │
 │                │ 77 steps │ 77 ministeps │ (wasted) │
@@ -160,18 +144,18 @@ output = run_battery(inputparams);
 │ Timing type   │     Each │   Relative │   Total │
 │               │       ms │ Percentage │       s │
 ├───────────────┼──────────┼────────────┼─────────┤
-│ Properties    │   0.2075 │     0.18 % │  0.0523 │
-│ Equations     │  25.1867 │    27.76 % │  8.2864 │
-│ Assembly      │  13.9548 │    15.38 % │  4.5911 │
-│ Linear solve  │  13.7498 │    11.61 % │  3.4650 │
+│ Properties    │   0.2025 │     0.18 % │  0.0510 │
+│ Equations     │  24.2977 │    27.53 % │  7.9939 │
+│ Assembly      │  13.3871 │    15.17 % │  4.4043 │
+│ Linear solve  │  13.3711 │    11.60 % │  3.3695 │
 │ Linear setup  │   0.0000 │     0.00 % │  0.0000 │
 │ Precond apply │   0.0000 │     0.00 % │  0.0000 │
-│ Update        │   5.4308 │     4.59 % │  1.3685 │
-│ Convergence   │  20.0807 │    22.13 % │  6.6066 │
-│ Input/Output  │   4.1770 │     1.08 % │  0.3216 │
-│ Other         │  20.4615 │    17.28 % │  5.1563 │
+│ Update        │   5.4329 │     4.72 % │  1.3691 │
+│ Convergence   │  19.6021 │    22.21 % │  6.4491 │
+│ Input/Output  │   4.1206 │     1.09 % │  0.3173 │
+│ Other         │  20.1696 │    17.50 % │  5.0827 │
 ├───────────────┼──────────┼────────────┼─────────┤
-│ Total         │ 118.4438 │   100.00 % │ 29.8478 │
+│ Total         │ 115.2263 │   100.00 % │ 29.0370 │
 ╰───────────────┴──────────┴────────────┴─────────╯
 ```
 
@@ -228,7 +212,7 @@ display(f)
 f
 ```
 
-![](cebxjct.jpeg)
+![](woysaos.jpeg)
 
 ## Plot potential on grid at last time step {#Plot-potential-on-grid-at-last-time-step}
 
@@ -273,7 +257,7 @@ plot_potential (generic function with 1 method)
 plot_potential(:PeAm, :PeCc, "positive")
 ```
 
-![](pdmemzs.jpeg)
+![](jcrezho.jpeg)
 
 ##  {#-2}
 
@@ -281,7 +265,7 @@ plot_potential(:PeAm, :PeCc, "positive")
 plot_potential(:NeAm, :NeCc, "negative")
 ```
 
-![](ztcprom.jpeg)
+![](osybtwi.jpeg)
 
 ## Plot surface concentration on grid at last time step {#Plot-surface-concentration-on-grid-at-last-time-step}
 
@@ -322,7 +306,7 @@ plot_surface_concentration (generic function with 1 method)
 plot_surface_concentration(:PeAm, "positive")
 ```
 
-![](ejwbkhh.jpeg)
+![](rxzxpeq.jpeg)
 
 ## Negative
 
@@ -330,7 +314,7 @@ plot_surface_concentration(:PeAm, "positive")
 plot_surface_concentration(:NeAm, "negative")
 ```
 
-![](sphwkye.jpeg)
+![](jlkumwv.jpeg)
 
 ## Plot electrolyte concentration and potential on grid at last time step {#Plot-electrolyte-concentration-and-potential-on-grid-at-last-time-step}
 
@@ -371,7 +355,7 @@ plot_elyte (generic function with 1 method)
 plot_elyte(:C, "concentration")
 ```
 
-![](zslbgkp.jpeg)
+![](ovrierr.jpeg)
 
 ##  {#-4}
 
@@ -379,11 +363,11 @@ plot_elyte(:C, "concentration")
 plot_elyte(:Phi, "potential")
 ```
 
-![](onfumix.jpeg)
+![](nkcyjic.jpeg)
 
 ## Example on GitHub {#Example-on-GitHub}
 
-If you would like to run this example yourself, it can be downloaded from the BattMo.jl GitHub repository [as a script](https://https://github.com/BattMoTeam/BattMo.jl/blob/main/examples/example_3d_demo.jl), or as a [Jupyter Notebook](https://https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/example_3d_demo.ipynb)
+If you would like to run this example yourself, it can be downloaded from the BattMo.jl GitHub repository [as a script](https://github.com/BattMoTeam/BattMo.jl/blob/main/examples/example_3d_demo.jl), or as a [Jupyter Notebook](https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/example_3d_demo.ipynb)
 
 
 ---
