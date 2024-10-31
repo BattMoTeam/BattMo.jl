@@ -35,8 +35,8 @@ function build_battmo_docs(build_format = nothing;
     function update_footer(content, pth)
         return content*"\n\n # ## Example on GitHub\n "*
         "# If you would like to run this example yourself, it can be downloaded from "*
-        "the BattMo.jl GitHub repository [as a script](https://https://github.com/BattMoTeam/BattMo.jl/blob/main/examples/$pth.jl), "*
-        "or as a [Jupyter Notebook](https://https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/$pth.ipynb)"
+        "the BattMo.jl GitHub repository [as a script](https://github.com/BattMoTeam/BattMo.jl/blob/main/examples/$pth.jl), "*
+        "or as a [Jupyter Notebook](https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/$pth.ipynb)"
     end
     if clean
         for (ex, pth) in examples
@@ -85,7 +85,7 @@ function build_battmo_docs(build_format = nothing;
     makedocs(;
         modules=[BattMo, Jutul],
         authors="SINTEF BattMo team and contributors",
-        repo="https://https://github.com/BattMoTeam/BattMo.jl/blob/{commit}{path}#{line}",
+        repo="https://github.com/BattMoTeam/BattMo.jl/blob/{commit}{path}#{line}",
         sitename="BattMo.jl",
         warnonly = true,
         plugins=[bib],
