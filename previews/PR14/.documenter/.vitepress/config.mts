@@ -38,6 +38,9 @@ export default defineConfig({
 { text: 'Introduction', collapsed: false, items: [
 { text: 'BattMo.jl', link: '/index' }]
  },
+{ text: 'Manual', collapsed: false, items: [
+{ text: 'High level API', link: '/man/highlevel' }]
+ },
 { text: 'Examples: Introduction', collapsed: false, items: [
 ]
  },
@@ -55,6 +58,9 @@ export default defineConfig({
 { text: 'Introduction', collapsed: false, items: [
 { text: 'BattMo.jl', link: '/index' }]
  },
+{ text: 'Manual', collapsed: false, items: [
+{ text: 'High level API', link: '/man/highlevel' }]
+ },
 { text: 'Examples: Introduction', collapsed: false, items: [
 ]
  },
@@ -68,7 +74,7 @@ export default defineConfig({
  }
 ]
 ,
-    editLink: { pattern: "https://https://github.com/sintefmath/BattMo.jl/edit/main/docs/src/:path" },
+    editLink: { pattern: "https://github.com/sintefmath/BattMo.jl/edit/main/docs/src/:path" },
     socialLinks: [
       { icon: 'github', link: 'https://github.com/sintefmath/BattMo.jl' }
     ],

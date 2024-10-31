@@ -97,7 +97,7 @@ scatterlines!(ax,
 f
 ```
 
-![](pcnmuuv.jpeg)
+![](cghfyxq.jpeg)
 
 ## Example on GitHub {#Example-on-GitHub}
 
