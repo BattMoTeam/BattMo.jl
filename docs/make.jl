@@ -114,7 +114,7 @@ function build_battmo_docs(build_format = nothing;
     end
     if deploy
         deploydocs(;
-            repo="https://github.com/BattMoTeam/BattMo.jl.git",
+            repo="github.com/BattMoTeam/BattMo.jl",
             devbranch="main",
             target = "build", # this is where Vitepress stores its output
             branch = "gh-pages",
