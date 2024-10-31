@@ -27,8 +27,6 @@ if do_json
                   forces,
                   timesteps,
                   cfg)
-        # cfg[:max_timestep_cuts] = 1
-        # cfg[:max_nonlinear_iterations] = 10
     end
     output = run_battery(inputparams;
                          hook = hook,

@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.9'
+          - '1'
         os:
           - ubuntu-latest
         arch:
@@ -39,3 +39,35 @@ jobs:
       # - uses: julia-actions/julia-uploadcoveralls@v1
       #  env:
       #    COVERALLS_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Add GLMakie/XFVB dependencies
+        run: sudo apt-get update && sudo apt-get install -y xorg-dev mesa-utils xvfb libgl1 freeglut3-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Julia
+        uses: julia-actions/setup-julia@v1
+        with:
+          version: '1'
+      - name: Julia cache
+        uses: julia-actions/cache@v1
+      - name: "BuildPkg"
+        uses: julia-actions/julia-buildpkg@v1
+      - name: "docdeploy"
+        uses: julia-actions/julia-docdeploy@v1
+        with:
+          prefix: xvfb-run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DISPLAY: :0
+      - name: Doc build
+        run: |
+          DISPLAY=:0 xvfb-run -s '-screen 0 1024x768x24' julia --project=docs -e '
+            using Documenter: DocMeta, doctest
+            using BattMo
+            DocMeta.setdocmeta!(BattMo, :DocTestSetup, :(using JutulDarcy); recursive=true)
+            doctest(BattMo)'

@@ -1,6 +1,4 @@
 using Jutul, BattMo, GLMakie
-using StatsBase
-GLMakie.closeall()
 
 ##########################
 # setup input parameters #
