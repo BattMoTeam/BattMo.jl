@@ -1,9 +1,4 @@
-#=
-Electro-Chemical component
-A component with electric potential, concentration and temperature
-The different potentials are independent (diagonal onsager matrix),
-and conductivity, diffusivity is constant.
-=#
+# A basic example
 
 using Jutul, BattMo, GLMakie
 
@@ -153,7 +148,7 @@ if !do_json
     axislegend()
 end
 
-display(f)
+f
 
 
 

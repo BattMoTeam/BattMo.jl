@@ -1,3 +1,4 @@
+````@raw html
 ---
 # https://vitepress.dev/reference/default-theme-home-page
 layout: home
@@ -6,7 +7,7 @@ hero:
   name: BattMo
   text: Framework for continuum modelling of lithium-ion batteries written in Julia
   image:
-    src: battmologo_text.png
+    src: battmologo_stacked.png
     alt: BattMo
   tagline: 
   actions:
@@ -17,25 +18,26 @@ hero:
       text: View on Github
       link: https://github.com/sintefmath/BattMo.jl
     - theme: alt
-      text: Run .DATA file
-      link: /examples/data_input_file
+      text: Run a battery cycle
+      link: /examples/example_cycle
 
 features:
-  - icon: 💥
+  - icon: 🔋
     title: Feature 1
     details: Details 1
     link: /examples
 
-  - icon: ⚙️
+  - icon: ⏳
     title: Feature 2
     details: Details 2
     link: /examples
 
-  - icon: 🏃
+  - icon: ⚡
     title: Details 3
     details: We have dark mode
     link: /man/advanced
 ---
+````
 
 # BattMo.jl is a framework for continuum modelling of lithium-ion batteries written in Julia
 
@@ -45,8 +47,6 @@ The current implementation has two options for setting up simulation cases:
 
 - You can read in input data prepared in the MATLAB version of BattMo (general 3D grids)
 - Or you can use the common BattMo JSON format to run cases (primarily 1D grids)
-
-<img src="docs/src/assets/battmologo_text.png" style="margin-left: 5cm" width="300px">
 
 ## Installation
 
@@ -86,9 +86,8 @@ ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Disch
 lines!(ax, t, E)
 ax = Axis(fig[1, 2], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 lines!(ax, t, I)
-display(fig)
+fig
 ```
-
 
 ## Acknowledgements
 
