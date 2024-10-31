@@ -93,9 +93,9 @@ function plot_potential(am, cc, label)
     display(GLMakie.Screen(), f3D)
     return f3D
 end
-##
+# ##
 plot_potential(:PeAm, :PeCc, "positive")
-##
+# ##
 plot_potential(:NeAm, :NeCc, "negative")
 # ## Plot surface concentration on grid at last time step
 function plot_surface_concentration(component, label)
@@ -148,7 +148,7 @@ function plot_elyte(var, label)
     f3D
 end
 
-##
+# ##
 plot_elyte(:C, "concentration")
-##
+# ##
 plot_elyte(:Phi, "potential")
