@@ -91,7 +91,7 @@ lines!(ax, t, I)
 fig
 ```
 
-![](eoqfhhe.jpeg)
+![](dtntwdy.jpeg)
 
 ## Acknowledgements
 
