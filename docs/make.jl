@@ -2,6 +2,7 @@ using BattMo
 using Jutul
 using Literate
 using Documenter
+using GLMakie
 
 using DocumenterCitations
 using DocumenterVitepress
@@ -76,7 +77,7 @@ function build_battmo_docs(build_format = nothing;
     ## Docs
     if isnothing(build_format)
         build_format = DocumenterVitepress.MarkdownVitepress(
-            repo = "https://github.com/sintefmath/BattMo.jl",
+            repo = "github.com/sintefmath/BattMo.jl",
         )
     end
     makedocs(;
@@ -90,6 +91,9 @@ function build_battmo_docs(build_format = nothing;
         pages=[
             "Introduction" => [
                 "BattMo.jl" => "index.md",
+            ],
+            "Manual" => [
+                "High level API" => "man/highlevel.md",
             ],
             "Examples: Introduction" => intros_markdown,
             "Examples: Usage" => examples_markdown,
@@ -115,6 +119,7 @@ function build_battmo_docs(build_format = nothing;
             push_preview = true
         )
     end
+    GLMakie.closeall()
 end
 ##
 # build_battmo_docs(build_examples = false, build_validation_examples = false)
