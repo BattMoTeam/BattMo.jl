@@ -78,6 +78,8 @@ function build_battmo_docs(build_format = nothing;
     if isnothing(build_format)
         build_format = DocumenterVitepress.MarkdownVitepress(
             repo = "github.com/sintefmath/BattMo.jl",
+            devbranch = "main",
+            devurl = "dev"
         )
     end
     makedocs(;
