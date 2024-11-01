@@ -11,7 +11,7 @@ cd(@__DIR__)
 function build_battmo_docs(build_format = nothing;
         build_examples = true,
         build_validation_examples = build_examples,
-        build_notebooks = true,
+        build_notebooks = false,
         clean = true,
         deploy = true
     )
