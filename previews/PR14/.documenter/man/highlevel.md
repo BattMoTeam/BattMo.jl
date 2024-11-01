@@ -15,7 +15,7 @@ run_battery(inputparams::AbstractInputParams; hook = nothing)
 Simulate a battery for a given input (JSON file, Dict, etc.)
 
 
-[source](https://github.com/BattMoTeam/BattMo.jl/blob/b27d6743425a0ddd82c3afcecd0c3db24d06e579/src/setup/model_setup.jl#L13-L17)
+[source](https://github.com/BattMoTeam/BattMo.jl/blob/0342fd50c324e029b50d0860cb3b474cd4d35cd3/src/setup/model_setup.jl#L13-L17)
 
 </details>
 

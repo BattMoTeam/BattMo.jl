@@ -160,7 +160,7 @@ end
 f
 ```
 
-![](qvlhbov.jpeg)
+![](abbbprq.jpeg)
 
 ## Example on GitHub {#Example-on-GitHub}
 
