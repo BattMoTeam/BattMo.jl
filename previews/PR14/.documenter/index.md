@@ -91,7 +91,7 @@ lines!(ax, t, I)
 fig
 ```
 
-![](otflzst.jpeg)
+![](ufxmfqr.jpeg)
 
 ## Acknowledgements
 
