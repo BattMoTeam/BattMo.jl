@@ -11,7 +11,7 @@ cd(@__DIR__)
 function build_battmo_docs(build_format = nothing;
         build_examples = true,
         build_validation_examples = build_examples,
-        build_notebooks = false,
+        build_notebooks = true,
         clean = true,
         deploy = true
     )
@@ -77,7 +77,7 @@ function build_battmo_docs(build_format = nothing;
     ## Docs
     if isnothing(build_format)
         build_format = DocumenterVitepress.MarkdownVitepress(
-            repo = "github.com/sintefmath/BattMo.jl",
+            repo = "github.com/BattMoTeam/BattMo.jl",
             devbranch = "main",
             devurl = "dev"
         )
@@ -90,6 +90,9 @@ function build_battmo_docs(build_format = nothing;
         warnonly = true,
         plugins=[bib],
         format=build_format,
+        draft = false,
+        source = "src",
+        build = "build",
         pages=[
             "Introduction" => [
                 "BattMo.jl" => "index.md",
@@ -114,7 +117,7 @@ function build_battmo_docs(build_format = nothing;
     end
     if deploy
         deploydocs(;
-            repo="github.com/BattMoTeam/BattMo.jl.git",
+            repo="github.com/BattMoTeam/BattMo.jl",
             devbranch="main",
             target = "build", # this is where Vitepress stores its output
             branch = "gh-pages",
