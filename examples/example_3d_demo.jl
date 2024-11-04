@@ -1,12 +1,7 @@
+# # 3D battery example
 using Jutul, BattMo, GLMakie
-using Plots
-using StatsBase
-GLMakie.closeall()
 
-##########################
-# setup input parameters #
-##########################
-
+# ## Setup input parameters
 name = "p2d_40_jl_chen2020"
 
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
@@ -17,15 +12,11 @@ inputparams_geometry = readBattMoJsonInputFile(fn)
 
 inputparams = mergeInputParams(inputparams_geometry, inputparams)
 
-############################
-# setup and run simulation #
-############################
+# ## Setup and run simulation
 
 output = run_battery(inputparams);
 
-########################
-# plot discharge curve #
-########################
+# ## Plot discharge curve 
 
 states = output[:states]
 model  = output[:extra][:model]
@@ -34,57 +25,55 @@ t = [state[:Control][:ControllerCV].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
-p1 = Plots.plot(t, E;
-                label     = "",
-                size      = (1000, 800),
-                title     = "Voltage",
-                xlabel    = "Time / s",
-                ylabel    = "Voltage / V",
-                markershape = :cross,
-                markercolor = :black,
-                markersize = 1,
-                linewidth = 4,
-                xtickfont = font(pointsize = 15),
-                ytickfont = font(pointsize = 15))
+f = Figure(size = (1000, 400))
 
+ax = Axis(f[1, 1],
+          title     = "Voltage",
+          xlabel    = "Time / s",
+          ylabel    = "Voltage / V",
+          xlabelsize = 25,
+          ylabelsize = 25,
+          xticklabelsize = 25,
+          yticklabelsize = 25)
 
-p2 = Plots.plot(t, I;
-                label     = "",
-                size      = (1000, 800),
-                title     = "Current",
-                xlabel    = "Time / s",
-                ylabel    = "Current / A",
-                markershape = :cross,
-                markercolor = :black,
-                markersize = 1,
-                linewidth = 4,
-                xtickfont = font(pointsize = 15),
-                ytickfont = font(pointsize = 15))
+scatterlines!(ax,
+              t,
+              E;
+              linewidth = 4,
+              markersize = 10,
+              marker = :cross, 
+              markercolor = :black,
+              )
 
+ax = Axis(f[1, 2],
+          title     = "Current",
+          xlabel    = "Time / s",
+          ylabel    = "Current / A",
+          xlabelsize = 25,
+          ylabelsize = 25,
+          xticklabelsize = 25,
+          yticklabelsize = 25
+          )
 
-Plots.plot(p1, p2, layout = (2, 1))
+scatterlines!(ax,
+              t,
+              I;
+              linewidth = 4,
+              markersize = 10,
+              marker = :cross, 
+              markercolor = :black)
 
-############################################
-# plot potential on grid at last time step #
-############################################
+display(f)
+f
 
-GLMakie.closeall()
-
+# ## Plot potential on grid at last time step #
 state = states[10]
 
-setups = ((:PeCc, :PeAm, "positive"),
-          (:NeCc, :NeAm, "negative"))
-
-
-for setup in setups
-
+function plot_potential(am, cc, label)
     f3D = Figure(size = (600, 650))
     ax3d = Axis3(f3D[1, 1];
-                 title = "Potential in $(setup[3]) electrode (coating and active material)")
+                 title = "Potential in $label electrode (coating and active material)")
 
-    am = setup[1]
-    cc = setup[2]
-    
     maxPhi = maximum([maximum(state[cc][:Phi]), maximum(state[am][:Phi])])
     minPhi = minimum([minimum(state[cc][:Phi]), minimum(state[am][:Phi])])
 
@@ -102,26 +91,23 @@ for setup in setups
                             colorrange = colorrange .+ minPhi,
                             label = "potential")
     display(GLMakie.Screen(), f3D)
-
+    return f3D
 end
-
-setups = ((:PeAm, "positive"),
-          (:NeAm, "negative"))
-
-for setup in setups
-
+# ##
+plot_potential(:PeAm, :PeCc, "positive")
+# ##
+plot_potential(:NeAm, :NeCc, "negative")
+# ## Plot surface concentration on grid at last time step
+function plot_surface_concentration(component, label)
     f3D = Figure(size = (600, 650))
     ax3d = Axis3(f3D[1, 1];
-                 title = "Surface concentration in $(setup[2]) electrode")
+                 title = "Surface concentration in $label electrode")
 
-    component = setup[1]
-    
     cs = state[component][:Cs]
     maxcs = maximum(cs)
     mincs = minimum(cs)
 
     colorrange = [0, maxcs - mincs]
-
     g = model[component].domain.representation
     Jutul.plot_cell_data!(ax3d, g, cs .- mincs;
                           colormap = :viridis,
@@ -132,21 +118,17 @@ for setup in setups
                             colorrange = colorrange .+ mincs,
                             label = "concentration")
     display(GLMakie.Screen(), f3D)
-
+    return f3D
 end
-
-
-setups = ((:C, "concentration"),
-          (:Phi, "potential"))
-
-for setup in setups
-
+# ## Positive 
+plot_surface_concentration(:PeAm, "positive")
+# ## Negative
+plot_surface_concentration(:NeAm, "negative")
+# ## Plot electrolyte concentration and potential on grid at last time step
+function plot_elyte(var, label)
     f3D = Figure(size = (600, 650))
-    ax3d = Axis3(f3D[1, 1];
-                 title = "$(setup[2]) in electrolyte")
+    ax3d = Axis3(f3D[1, 1]; title = "$label in electrolyte")
 
-    var = setup[1]
-    
     val = state[:Elyte][var]
     maxval = maximum(val)
     minval = minimum(val)
@@ -161,7 +143,12 @@ for setup in setups
     cbar = GLMakie.Colorbar(f3D[1, 2];
                             colormap = :viridis,
                             colorrange = colorrange .+ minval,
-                            label = "$(setup[2])")
+                            label = "$label")
     display(GLMakie.Screen(), f3D)
-
+    f3D
 end
+
+# ##
+plot_elyte(:C, "concentration")
+# ##
+plot_elyte(:Phi, "potential")

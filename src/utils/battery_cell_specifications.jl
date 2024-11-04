@@ -48,10 +48,10 @@ function computeCellCapacity(model::MultiModel)
 end
 
 function computeCellEnergy(states)
-
-    time = [state[:Control][:ControllerCV].time for state in states]
-    E    = [state[:Control][:Phi][1] for state in states]
-    I    = [state[:Control][:Current][1] for state in states]
+    # Only take discharge curves
+    time = [state[:Control][:ControllerCV].time for state in states if state[:Control][:Current][1] > 0]
+    E    = [state[:Control][:Phi][1] for state in states if state[:Control][:Current][1] > 0]
+    I    = [state[:Control][:Current][1] for state in states if state[:Control][:Current][1] > 0]
 
     dt   = diff(time)
     
