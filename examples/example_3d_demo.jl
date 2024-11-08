@@ -1,11 +1,5 @@
 # # 3D battery example
 using Jutul, BattMo, GLMakie
-using StatsBase
-GLMakie.closeall()
-
-##########################
-# setup input parameters #
-##########################
 
 # ## Setup input parameters
 name = "p2d_40_jl_chen2020"
@@ -70,11 +64,9 @@ scatterlines!(ax,
               markercolor = :black)
 
 display(f)
+f
 
-############################################
-# plot potential on grid at last time step #
-############################################
-
+# ## Plot potential on grid at last time step #
 state = states[10]
 
 function plot_potential(am, cc, label)
