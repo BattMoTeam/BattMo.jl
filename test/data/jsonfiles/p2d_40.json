@@ -62,7 +62,7 @@
     "CurrentCollector": {
       "thickness": 1e-05,
       "N": 5,
-      "electronicConductivity": 59600.0,
+      "electronicConductivity": 5.96E+7,
       "comment" : "In this 1d example, we use an effective current collector electronic conductivity",
       "thermalConductivity": 398,
       "specificHeatCapacity": 385,
@@ -128,7 +128,7 @@
     "CurrentCollector": {
       "thickness": 1e-05,
       "N": 5,
-      "electronicConductivity": 35500.0,
+      "electronicConductivity": 3.55E+7,
       "comment" : "In this 1d example, we use an effective current collector electronic conductivity",      
       "thermalConductivity": 170,
       "specificHeatCapacity": 875,

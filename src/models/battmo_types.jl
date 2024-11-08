@@ -28,10 +28,10 @@ struct Phi <: Potential end
 
 # minimum_value(::Phi) = -10
 # maximum_value(::Phi) = 10
-absolute_increment_limit(::Phi) = 0.1
+# absolute_increment_limit(::Phi) = 0.
 
 struct C <: Potential end
-minimum_value(::C)   = 1.0
+minimum_value(::C)   = 0.
 # maximum_value(::C)   = 10000
 # absolute_increment_limit(::C) = 500
 # relative_increment_limit(::C) = 0.1
@@ -41,7 +41,7 @@ struct Temperature <: Potential end
 struct Conductivity <: ScalarVariable end
 struct Diffusivity <: ScalarVariable end
 
-Jutul.variable_scale(::Diffusivity) = 1e-10
+# Jutul.variable_scale(::Diffusivity) = 1e-10
 
 # Accumulation variables
 
@@ -107,9 +107,6 @@ end
 number_of_cells(G::MinimalECTPFAGrid) = length(G.volumes)
 
 Base.show(io::IO, g::MinimalECTPFAGrid) = print(io, "MinimalECTPFAGrid ($(number_of_cells(g)) cells, $(number_of_faces(g)) faces)")
-
-import Jutul: FlowDiscretization
-
 ################
 # Constructors #
 ################
@@ -118,13 +115,11 @@ struct TPFAInterfaceFluxCT{T,F} <: Jutul.AdditiveCrossTerm
     target_cells::T
     source_cells::T
     trans::F
-    is_symmetric::Bool
-    function TPFAInterfaceFluxCT(target::T, source::T, trans::F; symmetric = true) where {T, F}
-        new{T, F}(target, source, trans, symmetric)
+    function TPFAInterfaceFluxCT(target::T, source::T, trans::F) where {T, F}
+        new{T, F}(target, source, trans)
     end
 end
 
-Jutul.has_symmetry(ct::TPFAInterfaceFluxCT) = ct.is_symmetric
 
 export AccumulatorInterfaceFluxCT
 struct AccumulatorInterfaceFluxCT{T,F} <: Jutul.AdditiveCrossTerm

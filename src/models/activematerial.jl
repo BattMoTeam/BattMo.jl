@@ -19,7 +19,11 @@ end
 
 struct NoParticleDiffusion <: SolidDiffusionDiscretization end
 
-struct ActiveMaterial{D, T} <: ElectroChemicalComponent where {D<:SolidDiffusionDiscretization, T<:ActiveMaterialParameters}
+abstract type AbstractActiveMaterial{label} <: ElectroChemicalComponent end
+
+activematerial_label(::AbstractActiveMaterial{label}) where label = label
+
+struct ActiveMaterial{label, D, T, Di} <: AbstractActiveMaterial{label} where {D<:SolidDiffusionDiscretization, T<:ActiveMaterialParameters, Di <: AbstractDict}
     params::T
     # At the moment the following keys are include
     # - diffusion_coef_func::F where {F <: Function}
@@ -35,11 +39,25 @@ struct ActiveMaterial{D, T} <: ElectroChemicalComponent where {D<:SolidDiffusion
     # - volume_fractions::Vector{Real}
     # - volumetric_surface_area::Real
     # - effective_density::Real
+    #
+    # If SEI layer is present, we have the following in addition
+    # - SEIlengthInitial
+    # - SEIvoltageDropRef
+    # - SEIlengthRef
+    # - SEIstoichiometryCoefficient
+    # - SEImolarVolume
+    # - SEIelectronicDiffusionCoefficient
+    # - SEIintersticialConcentration
+    # - SEIionicConductivity
+    
     discretization::D
+
+    scalings::Di
+    
 end 
 
-const ActiveMaterialP2D{D, T} = ActiveMaterial{D, T}
-const ActiveMaterialNoParticleDiffusion{T} = ActiveMaterial{NoParticleDiffusion, T}
+const ActiveMaterialP2D{label, D, T, Di} = ActiveMaterial{label, D, T, Di}
+const ActiveMaterialNoParticleDiffusion{T} = ActiveMaterial{nothing, NoParticleDiffusion, T}
 
 struct Ocp               <: ScalarVariable  end
 struct DiffusionCoef     <: ScalarVariable  end
@@ -48,8 +66,9 @@ struct Cp                <: VectorVariables end # particle concentrations in p2d
 struct Cs                <: ScalarVariable  end # surface variable in p2d model
 struct SolidDiffFlux     <: VectorVariables end # flux in P2D model
 
-minimum_value(::Cp) = 1.0
-minimum_value(::Cs) = 1.0
+
+minimum_value(::Cp) = 0.0
+minimum_value(::Cs) = 0.0
     
 struct SolidMassCons <: JutulEquation end
 Jutul.local_discretization(::SolidMassCons, i) = nothing
@@ -60,25 +79,24 @@ Jutul.local_discretization(::SolidDiffusionBc, i) = nothing
 const ActiveMaterialModel = SimulationModel{O, S} where {O<:JutulDomain, S<:ActiveMaterial}
 
 ## Create ActiveMaterial with full p2d solid diffusion
-function ActiveMaterialP2D(params::ActiveMaterialParameters, rp, N, D)
+function ActiveMaterialP2D(params::ActiveMaterialParameters, rp, N, D, scalings = Dict(); label::Union{Nothing, Symbol} = nothing)
     data = setupSolidDiffusionDiscretization(rp, N, D)
     discretization = P2Ddiscretization(data)
     params = Jutul.convert_to_immutable_storage(params)
-    return ActiveMaterial{typeof(discretization), typeof(params)}(params, discretization)
+    return ActiveMaterialP2D{label, typeof(discretization), typeof(params), typeof(scalings)}(params, discretization, scalings)
 end
 
 ## Create ActiveMaterial with no solid diffusion
-function ActiveMaterialNoParticleDiffusion(params::ActiveMaterialParameters)
+function ActiveMaterialNoParticleDiffusion(params::ActiveMaterialParameters, scalings = Dict())
     discretization = NoParticleDiffusion()
     params = Jutul.convert_to_immutable_storage(params)
-    return ActiveMaterial{NoParticleDiffusion, typeof(params)}(params, discretization)
+    return ActiveMaterialNoParticleDiffusion{NoParticleDiffusion, typeof(params), typeof(scalings)}(params, discretization, scalings)
 end
 
 
-
-####
-# Setup functions for P2D
-####
+###########################
+# Setup functions for P2D #
+###########################
 
 function Base.getindex(disc::P2Ddiscretization, key::Symbol)
     return disc.data[key]
@@ -149,9 +167,9 @@ function setupSolidDiffusionDiscretization(rp, N, D)
     return NamedTuple(pairs(data))
 end
 
-#####################################################
-## We setup the case with full P2d discretization
-####################################################
+#################################################################################
+# setup case with full P2d discretization : variables and equations declaration #
+#################################################################################
 
 function select_primary_variables!(S,
                                    system::ActiveMaterialP2D,
@@ -160,7 +178,7 @@ function select_primary_variables!(S,
     S[:Phi] = Phi()
     S[:Cp]  = Cp()
     S[:Cs]  = Cs()
-    
+
 end
 
 function degrees_of_freedom_per_entity(model::ActiveMaterialModel,
@@ -198,6 +216,7 @@ function select_secondary_variables!(S,
     
 end
 
+
 function select_equations!(eqs,
                            system::ActiveMaterialP2D,
                            model::SimulationModel
@@ -210,6 +229,9 @@ function select_equations!(eqs,
     
 end
 
+
+
+
 # Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::SolidDiffusionBc) = 1
 
 function Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::SolidMassCons)
@@ -218,10 +240,9 @@ function Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::Soli
     
 end
 
-function select_minimum_output_variables!(out                   ,
+function select_minimum_output_variables!(out,
                                           system::ActiveMaterialP2D,
-                                          model::SimulationModel
-                                          )
+                                          model::SimulationModel)
     push!(out, :Charge)
     push!(out, :Ocp)
     push!(out, :Temperature)
@@ -229,14 +250,17 @@ function select_minimum_output_variables!(out                   ,
 end
 
 
+##############################
+# Update secondary variables #
+##############################
 
 @jutul_secondary(
     function update_vocp!(Ocp,
                           tv::Ocp,
-                          model:: SimulationModel{<:Any, ActiveMaterialP2D{D, T}, <:Any, <:Any},
+                          model:: SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
                           Cs,
                           ix
-                          ) where {D, T}
+                          ) where {label, D, T, Di}
         
         ocp_func = model.system.params[:ocp_func]
         
@@ -268,14 +292,12 @@ end
     end
 )
 
-
 @jutul_secondary(
-    function update_reaction_rate!(ReactionRateConst                                                        ,
-                                   tv::ReactionRateConst                                    ,
-                                   model::SimulationModel{<:Any, ActiveMaterialP2D{D, T}, <:Any, <:Any},
-                                   Cs                                                       ,
-                                   ix
-                                   ) where {D, T}
+    function update_reaction_rate!(ReactionRateConst,
+                                   tv::ReactionRateConst,
+                                   model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
+                                   Cs,
+                                   ix) where {label, D, T, Di}
         rate_func = model.system.params[:reaction_rate_constant_func]
         refT = 298.15
         for cell in ix
@@ -287,9 +309,9 @@ end
 @jutul_secondary(
     function update_solid_diffusion_flux!(SolidDiffFlux,
                                           tv::SolidDiffFlux,
-                                          model::SimulationModel{<:Any, ActiveMaterialP2D{D, T}, <:Any, <:Any},
+                                          model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
                                           Cp,
-                                          ix) where {D, T}
+                                          ix) where {label, D, T, Di}
     s = model.system
     for cell in ix
         @inbounds @views update_solid_flux!(SolidDiffFlux[:, cell], Cp[:, cell], s)
@@ -321,6 +343,9 @@ function update_solid_flux!(flux, Cp, system::ActiveMaterialP2D)
 
 end
 
+########################################
+# update equations for solid diffusion #
+########################################
 
 function Jutul.update_equation_in_entity!(eq_buf           ,
                                           self_cell        ,
@@ -380,7 +405,7 @@ end
 
 
 #####################################################
-## We setup the case with full no particle diffusion
+# We setup the case with full no particle diffusion #
 #####################################################
 
 

@@ -1,16 +1,8 @@
-#=
-Electro-Chemical component
-A component with electric potential, concentration and temperature
-The different potentials are independent (diagonal onsager matrix),
-and conductivity, diffusivity is constant.
-=#
+####################
+# Standard example #
+####################
 
-# ENV["JULIA_STACKTRACE_MINIMAL"] = true
-
-using Jutul, BattMo, Plots
-using MAT
-
-ENV["JULIA_DEBUG"] = 0;
+using Jutul, BattMo, GLMakie
 
 name = "p2d_40"
 # name = "p2d_40_jl_ud_func"
@@ -25,7 +17,7 @@ if do_json
 
     fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
     inputparams = readBattMoJsonInputFile(fn)
-    config_kwargs = (info_level = 10, )
+    config_kwargs = (info_level = 0, )
     function hook(simulator,
                   model,
                   state0,
@@ -51,7 +43,7 @@ else
     fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/", name, ".mat")
     inputparams = readBattMoMatlabInputFile(fn)
     inputparams.dict["use_state_ref"] = true
-    config_kwargs = (info_level = 10,)
+    config_kwargs = (info_level = 0,)
 
     function hook(simulator,
                   model,
@@ -62,11 +54,13 @@ else
 
         names = [:Elyte,
                  :NeAm,
-                 :PeCc,
                  :Control,
-                 :NeCc,
                  :PeAm]           
 
+        if inputparams["model"]["include_current_collectors"]
+            names = append!(names, [:PeCc, :NeCc])
+        end
+        
         for name in names
             cfg[:tolerances][name][:default] = 1e-8
         end
@@ -74,7 +68,6 @@ else
     end
 
     output = run_battery(inputparams;
-                         use_p2d = use_p2d,
                          hook = hook,
                          config_kwargs = config_kwargs,
                          max_step = nothing);
@@ -93,47 +86,75 @@ else
     
 end
 
-p1 = plot(t, E;
-                label     = "",
-                size      = (1000, 800),
-                title     = "Voltage",
-                xlabel    = "Time / s",
-                ylabel    = "Voltage / V",
-                markershape = :cross,
-                markercolor = :black,
-                markersize = 1,
-                linewidth = 4,
-                xtickfont = font(pointsize = 15),
-                ytickfont = font(pointsize = 15))
+f = Figure(size = (1000, 400))
+
+ax = Axis(f[1, 1],
+          title     = "Voltage",
+          xlabel    = "Time / s",
+          ylabel    = "Voltage / V",
+          xlabelsize = 25,
+          ylabelsize = 25,
+          xticklabelsize = 25,
+          yticklabelsize = 25
+          )
+
+scatterlines!(ax,
+              t,
+              E;
+              linewidth = 4,
+              markersize = 10,
+              marker = :cross, 
+              markercolor = :black,
+              label = "Julia"
+              )
+
 
 if !do_json
-    plot!(p1, t, Eref;
-          linewidth = 2,
-          markershape = :cross,
-          markercolor = :black,
-          markersize = 1)
+    scatterlines!(ax,
+                  t,
+                  Eref;
+                  linewidth = 2,
+                  marker = :cross,
+                  markercolor = :black,
+                  markersize = 1,
+                  label = "Matlab")
+    axislegend()
 end
 
-p2 = plot(t, I;
-                label     = "",
-                size      = (1000, 800),
-                title     = "Current",
-                xlabel    = "Time / s",
-                ylabel    = "Current / A",
-                markershape = :cross,
-                markercolor = :black,
-                markersize = 1,
-                linewidth = 4,
-                xtickfont = font(pointsize = 15),
-                ytickfont = font(pointsize = 15))
+
+ax = Axis(f[1, 2],
+          title     = "Current",
+          xlabel    = "Time / s",
+          ylabel    = "Current / A",
+          xlabelsize = 25,
+          ylabelsize = 25,
+          xticklabelsize = 25,
+          yticklabelsize = 25
+          )
+
+scatterlines!(ax,
+              t,
+              I;
+              linewidth = 4,
+              markersize = 10,
+              marker = :cross, 
+              markercolor = :black,
+              label = "Julia"
+              )
 
 if !do_json
-    plot!(p2, t, Iref;
-          linewidth = 2,
-          markershape = :cross,
-          markercolor = :black,
-          markersize = 1)
+    scatterlines!(ax,
+                  t,
+                  Iref;
+                  linewidth = 2,
+                  marker = :cross,
+                  markercolor = :black,
+                  markersize = 1,
+                  label = "Matlab")
+    axislegend()
 end
 
-plot(p1, p2, layout = (2, 1))
+display(f)
+
+
 

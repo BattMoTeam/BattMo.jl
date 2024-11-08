@@ -1,5 +1,4 @@
 using Jutul, BattMo, GLMakie
-using Plots
 using StatsBase
 GLMakie.closeall()
 
@@ -34,41 +33,49 @@ t = [state[:Control][:ControllerCV].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
-p1 = Plots.plot(t, E;
-                label     = "",
-                size      = (1000, 800),
-                title     = "Voltage",
-                xlabel    = "Time / s",
-                ylabel    = "Voltage / V",
-                markershape = :cross,
-                markercolor = :black,
-                markersize = 1,
-                linewidth = 4,
-                xtickfont = font(pointsize = 15),
-                ytickfont = font(pointsize = 15))
+f = Figure(size = (1000, 400))
 
+ax = Axis(f[1, 1],
+          title     = "Voltage",
+          xlabel    = "Time / s",
+          ylabel    = "Voltage / V",
+          xlabelsize = 25,
+          ylabelsize = 25,
+          xticklabelsize = 25,
+          yticklabelsize = 25)
 
-p2 = Plots.plot(t, I;
-                label     = "",
-                size      = (1000, 800),
-                title     = "Current",
-                xlabel    = "Time / s",
-                ylabel    = "Current / A",
-                markershape = :cross,
-                markercolor = :black,
-                markersize = 1,
-                linewidth = 4,
-                xtickfont = font(pointsize = 15),
-                ytickfont = font(pointsize = 15))
+scatterlines!(ax,
+              t,
+              E;
+              linewidth = 4,
+              markersize = 10,
+              marker = :cross, 
+              markercolor = :black,
+              )
 
+ax = Axis(f[1, 2],
+          title     = "Current",
+          xlabel    = "Time / s",
+          ylabel    = "Current / A",
+          xlabelsize = 25,
+          ylabelsize = 25,
+          xticklabelsize = 25,
+          yticklabelsize = 25
+          )
 
-Plots.plot(p1, p2, layout = (2, 1))
+scatterlines!(ax,
+              t,
+              I;
+              linewidth = 4,
+              markersize = 10,
+              marker = :cross, 
+              markercolor = :black)
+
+display(f)
 
 ############################################
 # plot potential on grid at last time step #
 ############################################
-
-GLMakie.closeall()
 
 state = states[10]
 
