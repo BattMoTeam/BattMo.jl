@@ -1,4 +1,4 @@
-using Jutul
+using Jutul, Statistics
 
 export
     run_battery,
@@ -76,12 +76,14 @@ function setup_simulation(inputparams::AbstractInputParams;
                                     general_ad=general_ad,
                                     model_kwargs...)
 
+    setup_scalings!(model, parameters)
+    
     state0 = setup_initial_state(inputparams, model)
 
     forces = setup_forces(model)
 
     simulator = Simulator(model; state0=state0, parameters=parameters, copy_state=true)
-
+    
     timesteps = setup_timesteps(inputparams; max_step = max_step)
     
     cfg = setup_config(simulator,
@@ -227,7 +229,23 @@ function setup_submodels(inputparams::InputParams;
             rp = inputparams_am["SolidDiffusion"]["particleRadius"]
             N  = Int64(inputparams_am["SolidDiffusion"]["N"])
             D  = inputparams_am["SolidDiffusion"]["referenceDiffusionCoefficient"]
-            sys_am = ActiveMaterialP2D(am_params, rp, N, D)
+            if haskey(inputparams_am, "SEImodel") && inputparams_am["SEImodel"] == "Bolay"
+                label = :sei
+                fds = ["SEIlengthInitial",
+                       "SEIvoltageDropRef",
+                       "SEIlengthRef",
+                       "SEIstoichiometricCoefficient",
+                       "SEImolarVolume",
+                       "SEIelectronicDiffusionCoefficient",
+                       "SEIintersticialConcentration",
+                       "SEIionicConductivity"]
+                for fd in fds
+                    am_params[Symbol(fd)] = inputparams_am["Interface"][fd]
+                end
+            else
+                label = nothing
+            end
+            sys_am = ActiveMaterialP2D(am_params, rp, N, D; label = label)
         else
             sys_am = ActiveMaterialNoParticleDiffusion(am_params)
         end
@@ -676,7 +694,6 @@ end
 # Setup initial state #
 #######################
 
-
 function setup_initial_state(inputparams::InputParams,
                              model::MultiModel)
 
@@ -701,6 +718,11 @@ function setup_initial_state(inputparams::InputParams,
         init[:Cs]  = c*ones(nc)
         init[:Cp]  = c*ones(N, nc)
 
+        if model[name] isa SEImodel
+            init[:normalizedSEIlength] = 1.0*ones(nc)
+            init[:normalizedSEIvoltageDrop] = 0.0*ones(nc)
+        end
+        
         if Jutul.haskey(model[name].system.params, :ocp_funcexp)
             OCP = model[name].system[:ocp_func](c, T, refT, cmax)
         elseif Jutul.haskey(model[name].system.params, :ocp_funcdata)
@@ -804,6 +826,13 @@ function setup_coupling_cross_terms!(inputparams::InputParams,
         ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :solid_diffusion_bc)
         add_cross_term!(model, ct_pair)
 
+        if model[:NeAm] isa SEImodel
+            ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :sei_mass_cons)
+            add_cross_term!(model, ct_pair)
+            ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :sei_voltage_drop)
+            add_cross_term!(model, ct_pair)
+        end
+
     else
 
         @assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
@@ -887,7 +916,10 @@ function setup_coupling_cross_terms!(inputparams::InputParams,
         ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
         ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
         add_cross_term!(model, ct_pair)
-
+        ct = TPFAInterfaceFluxCT(srange_cells, trange_cells, trans)
+        ct_pair = setup_cross_term(ct, target = :NeCc, source = :NeAm, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        
         ################################
         # setup coupling PeCc <-> PeAm #
         ################################
@@ -924,9 +956,12 @@ function setup_coupling_cross_terms!(inputparams::InputParams,
         @assert size(trans,1) == size(srange_cells,1)  
         ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
         ct_pair = setup_cross_term(ct, target = :PeAm, source = :PeCc, equation = :charge_conservation)
-
         add_cross_term!(model, ct_pair)
-
+        
+        ct = TPFAInterfaceFluxCT(srange_cells, trange_cells, trans)
+        ct_pair = setup_cross_term(ct, target = :PeCc, source = :PeAm, equation = :charge_conservation)
+        add_cross_term!(model, ct_pair)
+        
     end
 
     ########################################
@@ -952,7 +987,7 @@ function setup_coupling_cross_terms!(inputparams::InputParams,
     couplingcells = trange 
     trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
 
-    ct = TPFAInterfaceFluxCT(trange, srange, trans, symmetric = false)
+    ct = TPFAInterfaceFluxCT(trange, srange, trans)
     ct_pair = setup_cross_term(ct, target = controlComp, source = :Control, equation = :charge_conservation)
     add_cross_term!(model, ct_pair)
 
@@ -961,6 +996,140 @@ function setup_coupling_cross_terms!(inputparams::InputParams,
     add_cross_term!(model, ct_pair)
 
 
+end
+
+##################
+# Setup scalings #
+##################
+
+function Jutul.get_scaling(model::SimulationModel{O, S, F, C}, equation::JutulEquation) where {O, S <: ElectroChemicalComponent, F, C}
+    if haskey(model.system.scalings, equation)
+        return model.system.scalings[equation]
+    else
+        return 1.0
+    end
+end
+
+
+function setup_scalings!(model, parameters)
+    
+    refT = 298.15
+
+    electrolyte    = model[:Elyte].system
+
+    eldes = (:NeAm, :PeAm)
+
+    j0s   = Array{Float64}(undef, 2)
+    Rvols = Array{Float64}(undef, 2)
+
+    F = FARADAY_CONSTANT
+
+    for (i, elde) in enumerate(eldes)
+        
+        rate_func = model[elde].system.params[:reaction_rate_constant_func]
+        cmax      = model[elde].system[:maximum_concentration]
+        vsa       = model[elde].system[:volumetric_surface_area]
+
+        c_a            = 0.5*cmax
+        R0             = rate_func(c_a, refT)
+        c_e            = 1000.0
+        activematerial = model[elde].system
+
+        j0s[i] = reaction_rate_coefficient(R0, c_e, c_a, activematerial)
+        Rvols[i] = j0s[i]*vsa/F
+        
+    end
+    
+    j0Ref   = mean(j0s);
+    RvolRef = mean(Rvols);
+
+    if include_current_collectors(model)
+        component_names = (:NeCc, :NeAm, :Elyte, :PeAm, :PeCc)
+        cc_mapping      = Dict(:NeAm => :NeCc, :PeAm => :PeCc)
+    else
+        component_names = (:NeAm, :Elyte, :PeAm)
+    end
+        
+    volRefs = Dict()
+
+    for name in component_names
+
+        rep = model[name].domain.representation
+        if rep isa MinimalECTPFAGrid
+            volRefs[name] = mean(rep.volumes)  
+        else
+            volRefs[name] = mean(rep[:volumes])
+        end
+        
+    end
+
+    scalings = []
+
+    scaling = (model_label = :Elyte, equation_label = :charge_conservation, value = F*volRefs[:Elyte]*RvolRef)
+    push!(scalings, scaling)
+
+    scaling = (model_label = :Elyte, equation_label = :mass_conservation, value = volRefs[:Elyte]*RvolRef)
+    push!(scalings, scaling)
+
+    for elde in eldes
+        
+        scaling = (model_label = elde, equation_label = :charge_conservation, value = F*volRefs[elde]*RvolRef)
+        push!(scalings, scaling)
+
+        if include_current_collectors(model)
+
+            # We use the same scaling as for the coating multiplied by the conductivity ration
+            cc = cc_mapping[elde]
+            coef = parameters[cc][:Conductivity]/parameters[elde][:Conductivity]
+
+            scaling = (model_label = cc, equation_label = :charge_conservation, value = F*coef[1]*volRefs[elde]*RvolRef)
+            push!(scalings, scaling)
+
+        end
+        
+        rp   = model[elde].system.discretization[:rp]
+        volp = 4/3*pi*rp^3;
+
+        coef = RvolRef*volp
+
+        scaling = (model_label = elde, equation_label = :mass_conservation, value = coef)
+        push!(scalings, scaling)
+        scaling = (model_label = elde, equation_label = :solid_diffusion_bc, value = coef)
+        push!(scalings, scaling)
+
+        if model[elde] isa SEImodel
+
+            vsa = model[elde].system[:volumetric_surface_area];
+            L   = model[elde].system[:SEIlengthInitial];
+            k   = model[elde].system[:SEIionicConductivity];
+
+            SEIvoltageDropRef = F*RvolRef/vsa*L/k
+            
+            scaling = (model_label = elde, equation_label = :sei_voltage_drop, value = SEIvoltageDropRef)
+            push!(scalings, scaling)
+
+            De = model[elde].system[:SEIelectronicDiffusionCoefficient]
+            ce = model[elde].system[:SEIintersticialConcentration]
+
+            scaling = (model_label = elde, equation_label = :sei_mass_cons, value = De*ce/L)
+            push!(scalings, scaling)
+
+        end
+
+    end
+
+    for scaling in scalings
+        
+        submodel = model[scaling[:model_label]]
+        eq       = submodel.equations[scaling[:equation_label]]
+        value    = scaling[:value]
+
+        submodel.system.scalings[eq] = value
+        
+    end
+
+    return scalings
+    
 end
 
 ######################
@@ -1059,6 +1228,7 @@ function setup_config(sim::Jutul.JutulSimulator,
     cfg[:debug_level]                = 0
     cfg[:max_timestep_cuts]          = 10
     cfg[:max_residual]               = 1e20
+    cfg[:output_substates]           = true
     cfg[:min_nonlinear_iterations]   = 1
     cfg[:extra_timing]               = extra_timing
     # cfg[:max_nonlinear_iterations] = 5

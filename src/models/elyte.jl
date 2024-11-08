@@ -16,7 +16,7 @@ export
 
 const ElectrolyteParameters = JutulStorage
 
-struct Electrolyte <: ElectroChemicalComponent 
+struct Electrolyte{D} <: ElectroChemicalComponent where {D <: AbstractDict}
     params::ElectrolyteParameters
     #  
     # - bruggeman          
@@ -29,6 +29,12 @@ struct Electrolyte <: ElectroChemicalComponent
     # - transference
     # - electrolyte_density
     # - separator_density
+    scalings::D
+end
+
+function Electrolyte(params, scalings = Dict())
+    
+    return Electrolyte{typeof(scalings)}(params, scalings)
     
 end
 
@@ -38,8 +44,6 @@ const ElectrolyteModel = SimulationModel{<:Any, <:Electrolyte, <:Any, <:Any}
 # Is it necesessary with a new struct for all of these?
 struct DmuDc <: ScalarVariable end
 struct ChemCoef <: ScalarVariable end
-
-maximum_concentration(::Electrolyte) = 1000.0
 
 function select_primary_variables!(S                  ,
                                    system::Electrolyte,
