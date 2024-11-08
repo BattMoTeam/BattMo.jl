@@ -315,11 +315,11 @@ end
 ## Defines standard exchange current density
 
 function compute_reaction_rate_constant(c, T, k0, Eak)
-    
+
+    F = FARADAY_CONSTANT
     refT = 298.15
 
-    val = k0.*exp(-Eak./FARADAY_CONSTANT .*(1.0./T - 1/refT));
-    
+    val = k0.*exp(-Eak./F.*(1.0./T - 1/refT));
     return val
     
 end

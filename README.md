@@ -31,14 +31,22 @@ You can then run the following to simulate the predefined `p2d_40` case:
 ```julia
 using BattMo
 # Simulate case
-states, reports, extra, exported = run_battery("p2d_40");
+filename = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/p2d_40.json")
+# Read input from json file
+inputparams = readBattMoJsonInputFile(filename)
+# run simulation from given input
+output = run_battery(inputparams);
 # Plot result
 using GLMakie
-voltage = map(state -> state[:BPP][:Phi][1], states)
-t = cumsum(extra[:timesteps])
+states = output[:states]
+t = [state[:Control][:ControllerCV].time for state in states]
+E = [state[:Control][:Phi][1] for state in states]
+I = [state[:Control][:Current][1] for state in states]
 fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
-lines!(ax, t, voltage)
+lines!(ax, t, E)
+ax = Axis(fig[1, 2], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
+lines!(ax, t, I)
 display(fig)
 ```
 

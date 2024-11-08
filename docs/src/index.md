@@ -57,6 +57,7 @@ The current implementation has many options for setting up simulation cases:
 - Read in input data prepared in the MATLAB version of BattMo (coin-cell, jellyroll, pouch)
 - Make use of common BattMo JSON format to run cases
 
+
 ## Installation
 
 This package is registered in the General Julia registry. To add it to your Julia environment, open Julia and run
