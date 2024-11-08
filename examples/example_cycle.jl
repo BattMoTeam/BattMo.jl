@@ -1,8 +1,6 @@
+# # Cycling a battery 40 times with a constant current constant voltage (CCCV) control
 using BattMo, GLMakie
-
-#name="model1D_50"
 name = "p2d_40_cccv"
-
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
 inputparams = readBattMoJsonInputFile(fn)
 
@@ -16,7 +14,7 @@ t = [state[:Control][:ControllerCV].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
-
+# ## Plot the results
 f = Figure(size = (1000, 400))
 
 ax = Axis(f[1, 1],
@@ -54,9 +52,7 @@ scatterlines!(ax,
               marker = :cross, 
               markercolor = :black)
 
-
-display(f)
-
+f
 
 
 

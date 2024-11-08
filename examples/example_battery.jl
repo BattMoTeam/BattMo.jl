@@ -1,6 +1,4 @@
-####################
-# Standard example #
-####################
+# A basic example
 
 using Jutul, BattMo, GLMakie
 
@@ -152,7 +150,7 @@ if !do_json
     axislegend()
 end
 
-display(f)
+f
 
 
 
