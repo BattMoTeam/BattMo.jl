@@ -11,7 +11,7 @@ name = "p2d_40"
 # name = "p2d_40_jl_chen2020"
 # name = "3d_demo_case"
 
-do_json = true
+do_json = false
 
 if do_json
 
@@ -24,8 +24,6 @@ if do_json
                   forces,
                   timesteps,
                   cfg)
-        # cfg[:max_timestep_cuts] = 1
-        # cfg[:max_nonlinear_iterations] = 10
     end
     output = run_battery(inputparams;
                          hook = hook,

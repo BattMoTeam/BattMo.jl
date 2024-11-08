@@ -10,6 +10,11 @@ export
 # Run battery #
 ###############
 
+"""
+    run_battery(inputparams::AbstractInputParams; hook = nothing)
+
+Simulate a battery for a given input (JSON file, Dict, etc.)
+"""
 function run_battery(inputparams::AbstractInputParams;
                      hook = nothing,
                      kwargs...)
@@ -24,7 +29,7 @@ function run_battery(inputparams::AbstractInputParams;
     model     = output[:model]
     state0    = output[:state0]
     forces    = output[:forces]
-    timesteps = output[:timesteps]    
+    timesteps = output[:timesteps]
     cfg       = output[:cfg]
 
     if !isnothing(hook)
@@ -1211,16 +1216,22 @@ end
 # Setup solver configuration options #
 ######################################
 
+"""
+    setup_config(sim::Jutul.JutulSimulator,
+                      model::MultiModel        ,
+                      linear_solver::Symbol    ,
+                      extra_timing::Bool;
+                      kwargs...)
+
+Sets up the config object used during simulation. In this current version this
+setup is the same for json and mat files. The specific setup values should
+probably be given as inputs in future versions of BattMo.jl
+"""
 function setup_config(sim::Jutul.JutulSimulator,
                       model::MultiModel        ,
                       linear_solver::Symbol    ,
                       extra_timing::Bool;
                       kwargs...)
-    """
-        Sets up the config object used during simulation. In this current version this
-        setup is the same for json and mat files. The specific setup values should
-        probably be given as inputs in future versions of BattMo.jl
-    """
 
     cfg = simulator_config(sim; kwargs...)
     
