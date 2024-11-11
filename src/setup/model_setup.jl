@@ -1007,13 +1007,13 @@ end
 # Setup scalings #
 ##################
 
-# function Jutul.get_scaling(model::SimulationModel{O, S, F, C}, equation::JutulEquation) where {O, S <: ElectroChemicalComponent, F, C}
-#     if haskey(model.system.scalings, equation)
-#         return model.system.scalings[equation]
-#     else
-#         return 1.0
-#     end
-# end
+function Jutul.get_scaling(model::SimulationModel{O, S, F, C}, equation::JutulEquation) where {O, S <: ElectroChemicalComponent, F, C}
+    if haskey(model.system.scalings, equation)
+        return model.system.scalings[equation]
+    else
+        return 1.0
+    end
+end
 
 
 function setup_scalings!(model, parameters)
