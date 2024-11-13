@@ -20,7 +20,7 @@ fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
 inputparams = readBattMoJsonInputFile(fn)
 
 
-simple = true
+simple = false
 if(!simple)
     
     facx  = 1
@@ -30,28 +30,27 @@ if(!simple)
 
     fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
     inputparams_geometry = readBattMoJsonInputFile(fn)
-    inputparams_geometry.dict["Geometry"]["Nh"] *=facy 
-    inputparams_geometry.dict["Geometry"]["Nw"] *=facx
-    inputparams_geometry.dict["Separator"]["N"] *= facz
-    inputparams_geometry.dict["PositiveElectrode"]["Coating"]["N"] *= facz
-    inputparams_geometry.dict["NegativeElectrode"]["Coating"]["N"] *= facz
+    inputparams_geometry.dict["Geometry"]["Nh"]                                     *= facy 
+    inputparams_geometry.dict["Geometry"]["Nw"]                                     *= facx
+    inputparams_geometry.dict["Separator"]["N"]                                     *= facz
+    inputparams_geometry.dict["PositiveElectrode"]["Coating"]["N"]                  *= facz
+    inputparams_geometry.dict["NegativeElectrode"]["Coating"]["N"]                  *= facz
     inputparams_geometry.dict["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"] *= facy
     inputparams_geometry.dict["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"] *= facx
     inputparams_geometry.dict["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"] *= facy
     inputparams_geometry.dict["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"] *= facx
-    inputparams_geometry.dict["NegativeElectrode"]["CurrentCollector"]["N"] *=facz
-    inputparams_geometry.dict["PositiveElectrode"]["CurrentCollector"]["N"] *=facz
+    inputparams_geometry.dict["NegativeElectrode"]["CurrentCollector"]["N"]         *= facz
+    inputparams_geometry.dict["PositiveElectrode"]["CurrentCollector"]["N"]         *= facz
+    
 else
     #fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
     fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/1D_geometry.json")
     inputparams_geometry_org = readBattMoJsonInputFile(fn)
+    inputparams_geometry = deepcopy(inputparams_geometry_org)
+    inputparams_geometry.dict["include_current_collectors"] = false
 end
 
-inputparams_geometry = deepcopy(inputparams_geometry_org)
-
-inputparams_geometry.dict["include_current_collectors"] = false
 inputparams = mergeInputParams(deepcopy(inputparams_geometry), inputparams)
-
 
 ############################
 # setup and run simulation #
@@ -82,18 +81,28 @@ atol = 1e-5*fac # seems important
 max_it = 100
 verbose = 10
 
-varpreconds = Vector{BattMo.VariablePrecond}()
+# We combine two preconditioners. One working on a subset of variables and equations (we call it block-preconditioner)
+# and the other for the full system
 
+# We first setup the block preconditioners. They are given as a list and applied separatly. Preferably, they
+# should be orthogonal
+varpreconds = Vector{BattMo.VariablePrecond}()
 push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:Phi,:charge_conservation, nothing))
 #push!(varpreconds,BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(),:Cp,:mass_conservation, [:PeAm,:NeAm]))
 #push!(varpreconds,BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:C,:mass_conservation, [:Elyte]))
-g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(),:Global,:Global,nothing)
+
+# We setup the global preconditioner
+g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global,nothing)
 
 params = Dict()
+# Type of method used for the block preconditioners. Here "block" means separatly (other options can be found
+# BatteryGeneralPreconditione)
 params["method"]             = "block"
+# Option for post- and pre-solve of the control system. 
 params["post_solve_control"] = true
 params["pre_solve_control"]  = true
 
+# We setup the preconditioner, which combines both the block and global preconditioners
 prec = BattMo.BatteryGeneralPreconditioner(varpreconds, g_varprecond, params)
 #prec = Jutul.ILUZeroPreconditioner()
 
@@ -102,7 +111,7 @@ cfg[:linear_solver]  = GenericKrylov(solver, verbose = verbose,
                                      relative_tolerance = rtol,
                                      absolute_tolerance = atol*1e-20,## may skip linear iterations all to getter.
                                      max_iterations = max_it)
-cfg[:extra_timing]   = true               
+cfg[:extra_timing] = true               
 
 # Perform simulation
 states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
@@ -162,101 +171,105 @@ display(f)
 ############################################
 # plot potential on grid at last time step #
 ############################################
-do_plot = false
+
+do_plot = true
+
 if(do_plot)
-state = states[10]
 
-setups = ((:PeCc, :PeAm, "positive"),
-          (:NeCc, :NeAm, "negative"))
+    state = states[10]
+
+    setups = ((:PeCc, :PeAm, "positive"),
+              (:NeCc, :NeAm, "negative"))
 
 
-for setup in setups
+    for setup in setups
 
-    f3D = Figure(size = (600, 650))
-    ax3d = Axis3(f3D[1, 1];
-                 title = "Potential in $(setup[3]) electrode (coating and active material)")
+        f3D = Figure(size = (600, 650))
+        ax3d = Axis3(f3D[1, 1];
+                     title = "Potential in $(setup[3]) electrode (coating and active material)")
 
-    am = setup[1]
-    cc = setup[2]
-    
-    maxPhi = maximum([maximum(state[cc][:Phi]), maximum(state[am][:Phi])])
-    minPhi = minimum([minimum(state[cc][:Phi]), minimum(state[am][:Phi])])
+        am = setup[1]
+        cc = setup[2]
+        
+        maxPhi = maximum([maximum(state[cc][:Phi]), maximum(state[am][:Phi])])
+        minPhi = minimum([minimum(state[cc][:Phi]), minimum(state[am][:Phi])])
 
-    colorrange = [0, maxPhi - minPhi]
+        colorrange = [0, maxPhi - minPhi]
 
-    components = [am, cc]
-    for component in components
-        g = model[component].domain.representation
-        phi = state[component][:Phi]
-        Jutul.plot_cell_data!(ax3d, g, phi .- minPhi; colormap = :viridis, colorrange = colorrange)
+        components = [am, cc]
+        for component in components
+            g = model[component].domain.representation
+            phi = state[component][:Phi]
+            Jutul.plot_cell_data!(ax3d, g, phi .- minPhi; colormap = :viridis, colorrange = colorrange)
+        end
+
+        cbar = GLMakie.Colorbar(f3D[1, 2];
+                                colormap = :viridis,
+                                colorrange = colorrange .+ minPhi,
+                                label = "potential")
+        display(GLMakie.Screen(), f3D)
+
     end
 
-    cbar = GLMakie.Colorbar(f3D[1, 2];
-                            colormap = :viridis,
-                            colorrange = colorrange .+ minPhi,
-                            label = "potential")
-    display(GLMakie.Screen(), f3D)
+    setups = ((:PeAm, "positive"),
+              (:NeAm, "negative"))
 
-end
+    for setup in setups
 
-setups = ((:PeAm, "positive"),
-          (:NeAm, "negative"))
+        f3D = Figure(size = (600, 650))
+        ax3d = Axis3(f3D[1, 1];
+                     title = "Surface concentration in $(setup[2]) electrode")
 
-for setup in setups
+        component = setup[1]
+        
+        cs = state[component][:Cs]
+        maxcs = maximum(cs)
+        mincs = minimum(cs)
 
-    f3D = Figure(size = (600, 650))
-    ax3d = Axis3(f3D[1, 1];
-                 title = "Surface concentration in $(setup[2]) electrode")
+        colorrange = [0, maxcs - mincs]
 
-    component = setup[1]
+        g = model[component].domain.representation
+        Jutul.plot_cell_data!(ax3d, g, cs .- mincs;
+                              colormap = :viridis,
+                              colorrange = colorrange)
+
+        cbar = GLMakie.Colorbar(f3D[1, 2];
+                                colormap = :viridis,
+                                colorrange = colorrange .+ mincs,
+                                label = "concentration")
+        display(GLMakie.Screen(), f3D)
+
+    end
+
+
+    setups = ((:C, "concentration"),
+              (:Phi, "potential"))
+
+    for setup in setups
+
+        f3D = Figure(size = (600, 650))
+        ax3d = Axis3(f3D[1, 1];
+                     title = "$(setup[2]) in electrolyte")
+
+        var = setup[1]
+        
+        val = state[:Elyte][var]
+        maxval = maximum(val)
+        minval = minimum(val)
+
+        colorrange = [0, maxval - minval]
+
+        g = model[:Elyte].domain.representation
+        Jutul.plot_cell_data!(ax3d, g, val .- minval;
+                              colormap = :viridis,
+                              colorrange = colorrange)
+
+        cbar = GLMakie.Colorbar(f3D[1, 2];
+                                colormap = :viridis,
+                                colorrange = colorrange .+ minval,
+                                label = "$(setup[2])")
+        display(GLMakie.Screen(), f3D)
+
+    end
     
-    cs = state[component][:Cs]
-    maxcs = maximum(cs)
-    mincs = minimum(cs)
-
-    colorrange = [0, maxcs - mincs]
-
-    g = model[component].domain.representation
-    Jutul.plot_cell_data!(ax3d, g, cs .- mincs;
-                          colormap = :viridis,
-                          colorrange = colorrange)
-
-    cbar = GLMakie.Colorbar(f3D[1, 2];
-                            colormap = :viridis,
-                            colorrange = colorrange .+ mincs,
-                            label = "concentration")
-    display(GLMakie.Screen(), f3D)
-
-end
-
-
-setups = ((:C, "concentration"),
-          (:Phi, "potential"))
-
-for setup in setups
-
-    f3D = Figure(size = (600, 650))
-    ax3d = Axis3(f3D[1, 1];
-                 title = "$(setup[2]) in electrolyte")
-
-    var = setup[1]
-    
-    val = state[:Elyte][var]
-    maxval = maximum(val)
-    minval = minimum(val)
-
-    colorrange = [0, maxval - minval]
-
-    g = model[:Elyte].domain.representation
-    Jutul.plot_cell_data!(ax3d, g, val .- minval;
-                          colormap = :viridis,
-                          colorrange = colorrange)
-
-    cbar = GLMakie.Colorbar(f3D[1, 2];
-                            colormap = :viridis,
-                            colorrange = colorrange .+ minval,
-                            label = "$(setup[2])")
-    display(GLMakie.Screen(), f3D)
-
-end
 end
