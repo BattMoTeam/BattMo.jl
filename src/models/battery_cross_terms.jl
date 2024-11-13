@@ -241,8 +241,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
         out[] = v
         
     end
-    
-    
+        
 end
 
 ###############################################
@@ -306,9 +305,9 @@ function Jutul.update_cross_term_in_entity!(out,
 
     ind_t = ct.target_cells[ind]
     ind_s = ct.source_cells[ind]
-
-    vols  = model_s.domain.representation.volumes[ind_s]
-
+    #NB probably wrong use
+    vols  = model_s.domain.representation[:volumes][ind_s]
+    
     phi_e = state_t.Phi[ind_t]
     phi_a = state_s.Phi[ind_s]  
     ocp   = state_s.Ocp[ind_s]
@@ -336,9 +335,9 @@ function Jutul.update_cross_term_in_entity!(out,
         @assert cs == :Charge
         v = eS
     end
-    
+
     out[] = -v
-    
+
 end
 
 
