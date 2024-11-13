@@ -438,7 +438,8 @@ function setup_submodels(inputparams::InputParams;
     setup_volume_fractions!(model, grids, couplings["Electrolyte"])
 
     output = (model      = model,
-              couplings  = couplings)
+              couplings  = couplings,
+              grids      = grids)
     
     return output
     
