@@ -1,0 +1,44 @@
+{
+    "include_current_collectors" : true,
+    "Geometry": {
+       "case": "1D",
+       "faceArea": 0.027
+    },
+    "NegativeElectrode": {
+       "Coating": {
+          "thickness": 8.499999999999999e-05,
+          "N": 1,
+          "ActiveMaterial": {
+             "diffusionModelType": "full",
+             "SolidDiffusion": {
+                "N": 1
+             }
+          }
+       },
+       "CurrentCollector": {
+         "N": 1,
+         "thickness": 2.5e-05
+       }
+    },
+    "PositiveElectrode": {
+       "Coating": {
+          "thickness": 7.599999999999999e-05,
+          "N": 1,
+          "ActiveMaterial": {
+             "diffusionModelType": "full",
+             "SolidDiffusion": {
+                "N": 1
+             }
+          }
+       },
+       "CurrentCollector": {
+         "N": 1,
+         "thickness": 1.5e-05
+       }
+    },
+    "Separator": {
+       "thickness": 1.4999999999999999e-05,
+       "N": 1
+    }  
+  }
+  
