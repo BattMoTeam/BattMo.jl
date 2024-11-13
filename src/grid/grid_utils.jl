@@ -164,7 +164,9 @@ function convert_geometry(grids, couplings; include_current_collectors = true)
         end
     end
 
-    ugrids["Global"] = UnstructuredMesh(grids["Global"])
+    if haskey(grids, "Global")
+        ugrids["Global"] = UnstructuredMesh(grids["Global"])
+    end
     
     return ugrids, ucouplings
 
