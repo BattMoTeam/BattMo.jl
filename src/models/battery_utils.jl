@@ -97,6 +97,17 @@ function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:C
     
 end
 
+function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Energy, <:Any}, state, model, dt, flow_disc) where T
+
+    @inbounds trans = state.ECTransmissibilities[face]
+
+    q = - half_face_two_point_kgrad(c, other, trans, state.Temperature, state.Conductivity)
+
+    return T(q)
+    
+end
+
+
 export output_flux
 
 function output_flux(model, state, parameters, eqname = :mass_conservation)
@@ -184,7 +195,10 @@ function apply_boundary_potential!(acc, state, parameters, model, eq::Conservati
     # We do not have in our models for the moment boundaries with given concentration
 end
 
-
+function apply_boundary_potential!(acc, state, parameters, model, eq::ConservationLaw{:Energy} )
+    # do nothing
+    # We do not have in our models for the moment boundaries with given concentration
+end
 function apply_bc_to_equation!(storage, parameters, model, eq::ConservationLaw, eq_s)
     
     acc   = get_diagonal_entries(eq, eq_s)

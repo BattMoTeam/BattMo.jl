@@ -38,6 +38,16 @@ function select_secondary_variables!(
     
 end
 
+@jutul_secondary function update_as_secondary!(acc       ,
+    tv::Energy,
+    model     ,
+    Temperature       ,
+    ix)
+for i in ix
+@inbounds acc[i] = Temperature[i]
+end
+end
+
 function select_parameters!(S,
                             system::Thermal,
                             model::SimulationModel)
@@ -54,8 +64,8 @@ end
 function select_equations!(eqs,
                            system::Thermal,
                            model::SimulationModel)
-    disc = model.domain.discretizations.charge_flow
+    disc = model.domain.discretizations.heat_flow
 
-    eqs[:energy_conservation] = ConservationLaw(disc, :Temperature)
+    eqs[:energy_conservation] = ConservationLaw(disc, :Energy)
     
 end

@@ -47,12 +47,14 @@ Jutul.variable_scale(::Diffusivity) = 1e-10
 
 struct Charge <: ScalarVariable end
 struct Mass <: ScalarVariable end
+struct Energy <: ScalarVariable end
 
 # Boundary variables
 
 const BCCurrent = Dict(
     :Charge => :BCCharge,
     :Mass   => :BCMass,
+    :Energy => :BCCurrent
 )
 
 struct BoundaryPotential{label} <: ScalarVariable

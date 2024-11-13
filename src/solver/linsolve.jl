@@ -45,6 +45,36 @@ function matrix_maps(lsys, mass_cons_map, charge_cons_map, context::Jutul.Defaul
     return (mass_index, charge_index)
 end
 
+function matrix_maps(lsys, mass_cons_map, charge_cons_map, context::Jutul.ParallelCSRContext)
+    ## make pair
+    At = lsys.jac.At
+    #ncol = size(At,2)
+    mass_index = zeros(Int,0)
+    charge_index = zeros(Int,0)
+    #mass_charge_ind = zeros(Int,ncol)
+    #mass_charge_ind[mass_cons_map] = charge_cons_map
+    #vals = nonzeros(lsys.jac)
+    cols = rowvals(At)
+    #NB could probably be more efficent vectorized
+    for (i, mass_row) in enumerate(mass_cons_map)
+        zrange_mass = nzrange(At,mass_row)
+        zrange_charge = nzrange(At,charge_cons_map[i])
+        #mass_cols = cols[zrange_mass]
+        loc_charge_cols = cols[zrange_charge]
+        for j in zrange_mass
+            mass_col = cols[j]
+            charge_ind = indexin(mass_col, loc_charge_cols)
+            if charge_ind[1] != 0
+                charge_zrange_ind = zrange_charge[charge_ind[1]]
+                @assert mass_col == cols[charge_zrange_ind]
+                push!(charge_index,charge_zrange_ind)
+                push!(mass_index,j)
+            end
+        end
+    end
+    return (mass_index, charge_index)
+end
+
 
 function modify_equation!(lsys, maps,tfac, context)#::Jutul.DefaultContext)
     
@@ -75,7 +105,7 @@ function modify_equation!(lsys, mass_cons_map, charge_cons_map,tfac, nc, context
 end 
 
 
-function fix_control!(lsys, context)
+function fix_control!(lsys, context::Jutul.DefaultContext)
 if lsys.jac[end,end] == 1 && lsys.jac[end,end-1] == 0
     #Main.@infiltrate !(lsys.jac[end-1,end] == 1)
     @assert    lsys.jac[end,end-1] == 0
@@ -126,6 +156,7 @@ function fix_control!(lsys, context::Jutul.ParallelCSRContext)
     end
 
 function Jutul.post_update_linearized_system!(lsys, executor, storage, model::Jutul.MultiModel)
+    context = first(model.models).context# NB hack to get context of mulitmodel
     if(true)
     # fix linear system 
     e_models = [:Elyte]
@@ -133,16 +164,17 @@ function Jutul.post_update_linearized_system!(lsys, executor, storage, model::Ju
         mass_cons_map = setup_subset_equation_map(model, storage, e_models, :mass_conservation)
         #phi_map = setup_subset_residual_map(model, storage, e_models, :Phi)
         charge_cons_map = setup_subset_equation_map(model, storage, e_models, :charge_conservation)
-        (mass_ind, charge_ind) = matrix_maps(lsys, mass_cons_map, charge_cons_map, model.context)
+        (mass_ind, charge_ind) = matrix_maps(lsys, mass_cons_map, charge_cons_map, context)
         storage[:eq_maps].maps = (mass_ind = mass_ind, charge_ind = charge_ind, mass_cons_map = mass_cons_map, charge_cons_map = charge_cons_map) 
     end
     #C_map = setup_subset_residual_map(model, storage, e_models, :C)
     #Main.@infiltrate true
     tfac = model[:Elyte].system[:transference]/BattMo.FARADAY_CONSTANT
-    modify_equation!(lsys, storage[:eq_maps].maps,tfac, model.context)
+    modify_equation!(lsys, storage[:eq_maps].maps,tfac, context)
     ## to control reduction ?
     #Main.@infiltrate true
-    fix_control!(lsys, model.context)
+
+    fix_control!(lsys, context)
     #Main.@infiltrate true
     #print("hei")
     end

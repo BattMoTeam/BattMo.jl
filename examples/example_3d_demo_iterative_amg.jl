@@ -22,12 +22,15 @@ name = "p2d_40_jl_chen2020"
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
 inputparams = readBattMoJsonInputFile(fn)
 
-fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
-inputparams_geometry = readBattMoJsonInputFile(fn)
-facx = 1
+
+simple = true
+if(!simple)
+    facx = 1
 facy = facx
 facz = 1
 fac2p = 1
+fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
+inputparams_geometry = readBattMoJsonInputFile(fn)
 inputparams_geometry.dict["Geometry"]["Nh"] *=facy 
 inputparams_geometry.dict["Geometry"]["Nw"] *=facx
 inputparams_geometry.dict["Separator"]["N"] *= facz
@@ -39,14 +42,29 @@ inputparams_geometry.dict["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"] 
 inputparams_geometry.dict["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"] *= facx
 inputparams_geometry.dict["NegativeElectrode"]["CurrentCollector"]["N"] *=facz
 inputparams_geometry.dict["PositiveElectrode"]["CurrentCollector"]["N"] *=facz
-inputparams = mergeInputParams(inputparams_geometry, inputparams)
+else
+    #fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
+    fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/1D_geometry.json")
+    inputparams_geometry_org = readBattMoJsonInputFile(fn)
+end
+inputparams_geometry = deepcopy(inputparams_geometry_org)
+#inputparams_geometry.dict = Dict() 
+#inputparams_geometry.dict["PositiveElectrode"] = Dict()
+#inputparams_geometry.dict["NegativeElectrode"] = Dict()
+#inputparams_geometry.dict["Separator"] = Dict()
+#inputparams_geometry.dict["Separator"] = Dict()
+inputparams_geometry.dict["include_current_collectors"] = false
+inputparams = mergeInputParams(deepcopy(inputparams_geometry), inputparams)
 ## ibkt to get the global grid
 
 #number_of_cells(Jutul.UnstructuredMesh())
 ############################
 # setup and run simulation #
 ############################
-output = setup_simulation(inputparams)
+model_kwargs = (context = Jutul.DefaultContext(),)
+#model_kwargs = (context = nothing,)
+#model_kwargs = (context = Jutul.ParallelCSRContext(1),)
+output = setup_simulation(inputparams;model_kwargs)
 ##
 simulator = output[:simulator]
 model     = output[:model]
@@ -57,34 +75,42 @@ cfg       = output[:cfg]
 ##
 
 #cfg[:linear_solver]
-cfg[:info_level] = 0
-    if(true)
-    cfg[:tolerances][:Elyte][:mass_conservation] =1e-3
-    cfg[:tolerances][:PeAm][:mass_conservation] =1e-3
-    cfg[:tolerances][:NeAm][:mass_conservation] =1e-3
-    cfg[:tolerances][:Control][:default] = 1e-5
+cfg[:info_level] = 10
+    if(false)
+        #seemed to work for 3D case
+        cfg[:tolerances][:Elyte][:mass_conservation] =1e-3
+        cfg[:tolerances][:PeAm][:mass_conservation] =1e-3
+        cfg[:tolerances][:NeAm][:mass_conservation] =1e-3
+        cfg[:tolerances][:Control][:default] = 1e-5
+    else
+        # need for good solution of 1D case
+        fac = 1e8
+        cfg[:tolerances][:PeAm][:solid_diffusion_bc] = 1e-25*fac
+        cfg[:tolerances][:NeAm][:solid_diffusion_bc] = 1e-25*fac
+        cfg[:tolerances][:NeAm][:mass_conservation] = 1e-25*fac
+        cfg[:tolerances][:PeAm][:mass_conservation] = 1e-25*fac
     end
-    #cfg[:tolerances][:PeAm][:solid_diffusion_bc] = 1e-20
     solver = :fgmres
-    fac = 1e-4  #NEEDED  
+    fac = 1e-3  #NEEDED  1e-4 ok for 3D case 1e-7 need for 1D case
     rtol = 1e-4*fac  # for simple face rtol=1e7 and atol 1e-9 seems give same number ononlinear as direct
     atol = 1e-5*fac # seems important
     max_it = 100
-    verbose = 0
+    verbose = 10
     varpreconds = Vector{BattMo.VariablePrecond}()
     push!(varpreconds,BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:Phi,:charge_conservation, nothing))
-    #push!(varpreconds,BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:C,:charge_conservation, [:Elyte]))
+    #push!(varpreconds,BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(),:Cp,:mass_conservation, [:PeAm,:NeAm]))
+    #push!(varpreconds,BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:C,:mass_conservation, [:Elyte]))
     g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(),:Global,:Global,nothing)
     params = Dict()
     params["method"] = "block"
     params["post_solve_control"] =true
     params["pre_solve_control"] = true
     prec = BattMo.BatteryGeneralPreconditioner(varpreconds, g_varprecond, params)
-
+    #prec = Jutul.ILUZeroPreconditioner()
     cfg[:linear_solver]  = GenericKrylov(solver, verbose = verbose,
                                    preconditioner = prec, 
                                    relative_tolerance = rtol,
-                                   absolute_tolerance = atol,
+                                   absolute_tolerance = atol*1e-20,## may skip linear iterations all to getter.
                                    max_iterations = max_it)
     #cfg[:linear_solver]  = nothing
 
@@ -148,12 +174,13 @@ scatterlines!(ax,
               markercolor = :black)
 
 display(f)
-error()
+
 
 ############################################
 # plot potential on grid at last time step #
 ############################################
-
+do_plot = false
+if(do_plot)
 state = states[10]
 
 setups = ((:PeCc, :PeAm, "positive"),
@@ -248,4 +275,5 @@ for setup in setups
                             label = "$(setup[2])")
     display(GLMakie.Screen(), f3D)
 
+end
 end

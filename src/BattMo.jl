@@ -73,7 +73,9 @@ include("input/io_types.jl")
 include("input/input_types.jl")
 include("input/function_input_tools.jl")
 
+
 include("models/battmo_types.jl")
+include("models/thermal.jl")
 include("models/elyte.jl")
 include("models/current_collector.jl")
 include("models/ocp.jl")

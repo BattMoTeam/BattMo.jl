@@ -160,13 +160,26 @@ function storage_general_precond(index_map)
     return (ix = index_map, r = zeros(n), x = zeros(n))
 end
 
+function getMatrixAndInd(A::SparseArrays.SparseMatrixCSC,ind_eq,ind_var)
+    (A_s, ind) = getindex_I_sorted_bsearch_I_new(A,ind_eq,ind_var)
+    return (A_s, ind)
+end
+
+function getMatrixAndInd(A::Jutul.StaticCSR.StaticSparsityMatrixCSR,ind_eq,ind_var)
+    At = A.At;
+    (At_s, ind) = getindex_I_sorted_bsearch_I_new(At,ind_var,ind_eq)
+     A_s = Jutul.StaticCSR.StaticSparsityMatrixCSR(At_s)  
+    return (A_s, ind)
+end
+
 function update_local_preconditioner!(varprec, A, r, ind_eq, ind_var, executor)
     prec = varprec.precond
     full_update = true
     if isnothing(varprec.data)
     #A_s = A[ind_eq, ind_var]
     #A_s, ind) = getindex_I_sorted_linear_new(A,ind_eq,ind_var)
-        (A_s, ind) = getindex_I_sorted_bsearch_I_new(A,ind_eq,ind_var)
+        #(A_s, ind) = getindex_I_sorted_bsearch_I_new(A,ind_eq,ind_var)
+        (A_s, ind) = getMatrixAndInd(A,ind_eq,ind_var)
         varprec.data = (Al = A_s, indg = ind)
     else
         full_update = false
