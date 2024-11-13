@@ -4,7 +4,6 @@ authors = ["Olav Møyner <olav.moyner@gmail.com>"]
 version = "0.1.7"
 
 [deps]
-Infiltrator = "5903a43b-9cc3-4c30-8d17-598619ec4e9b"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 Jutul = "2b460a1a-8a2b-45b2-b125-b5c536396eb9"
@@ -21,9 +20,6 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 x264_jll = "1270edf5-f2f9-52d2-97e9-ab00b5d0237a"
 
-[sources]
-Jutul = {url = "https://github.com/sintefmath/Jutul.jl", rev = "battmo"}
-
 [compat]
 JLD2 = "0.4.31"
 JSON = "0.21.4"
@@ -36,3 +32,7 @@ StaticArrays = "1.5.17"
 StatsBase = "0.34"
 Tullio = "0.3.5"
 julia = "1.8"
+
+[sources.Jutul]
+rev = "battmo"
+url = "https://github.com/sintefmath/Jutul.jl"

@@ -2,7 +2,6 @@ using Jutul, BattMo, GLMakie#, Plots, GLMakie
 using HYPRE
 using Plots
 using StatsBase
-using Infiltrator
 using AlgebraicMultigrid
 using Preconditioners
 using Preferences

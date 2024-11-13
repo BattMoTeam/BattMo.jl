@@ -3,7 +3,6 @@ using Plots
 using StatsBase
 #using HYPRE
 using Plots
-using Infiltrator
 using AlgebraicMultigrid
 using Preconditioners
 using Preferences
