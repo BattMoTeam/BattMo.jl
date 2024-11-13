@@ -68,6 +68,7 @@ end
 
 function setup_simulation(inputparams::AbstractInputParams;
                           use_p2d::Bool                     = true,
+                          use_model_scaling::Bool           = true,
                           extra_timing::Bool                = false,
                           max_step::Union{Integer, Nothing} = nothing,
                           linear_solver::Symbol             = :direct,
@@ -81,8 +82,6 @@ function setup_simulation(inputparams::AbstractInputParams;
                                     general_ad=general_ad,
                                     model_kwargs...)
 
-    setup_scalings!(model, parameters)
-    
     state0 = setup_initial_state(inputparams, model)
 
     forces = setup_forces(model)
@@ -93,8 +92,10 @@ function setup_simulation(inputparams::AbstractInputParams;
     
     cfg = setup_config(simulator,
                        model,
+                       parameters,
                        linear_solver,
-                       extra_timing;
+                       extra_timing,
+                       use_model_scaling;
                        config_kwargs...)
     
     output = Dict(:simulator   => simulator,
@@ -1015,16 +1016,7 @@ end
 # Setup scalings #
 ##################
 
-function Jutul.get_scaling(model::SimulationModel{O, S, F, C}, equation::JutulEquation) where {O, S <: ElectroChemicalComponent, F, C}
-    if haskey(model.system.scalings, equation)
-        return model.system.scalings[equation]
-    else
-        return 1.0
-    end
-end
-
-
-function setup_scalings!(model, parameters)
+function get_scalings(model, parameters)
     
     refT = 298.15
 
@@ -1131,16 +1123,6 @@ function setup_scalings!(model, parameters)
 
     end
 
-    for scaling in scalings
-        
-        submodel = model[scaling[:model_label]]
-        eq       = submodel.equations[scaling[:equation_label]]
-        value    = scaling[:value]
-
-        submodel.system.scalings[eq] = value
-        
-    end
-
     return scalings
     
 end
@@ -1237,8 +1219,10 @@ probably be given as inputs in future versions of BattMo.jl
 """
 function setup_config(sim::Jutul.JutulSimulator,
                       model::MultiModel        ,
+                      parameters, 
                       linear_solver::Symbol    ,
-                      extra_timing::Bool;
+                      extra_timing::Bool       ,
+                      use_model_scaling::Bool;
                       kwargs...)
 
     cfg = simulator_config(sim; kwargs...)
@@ -1255,8 +1239,19 @@ function setup_config(sim::Jutul.JutulSimulator,
     cfg[:error_on_incomplete]        = false
     cfg[:failure_cuts_timestep]      = true
 
-    for key in Jutul.submodels_symbols(model)
-        cfg[:tolerances][key][:default]  = 1e-5
+    if use_model_scaling
+        scalings = get_scalings(model, parameters)
+        tol_default = 1e-5
+        for scaling in scalings
+            model_label    = scaling[:model_label]
+            equation_label = scaling[:equation_label]
+            value          = scaling[:value]            
+            cfg[:tolerances][model_label][equation_label] = value*tol_default
+        end
+    else
+        for key in Jutul.submodels_symbols(model)
+            cfg[:tolerances][key][:default]  = 1e-5
+        end
     end
     
     if model[:Control].system.policy isa CyclingCVPolicy

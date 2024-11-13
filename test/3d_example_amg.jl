@@ -26,10 +26,6 @@ using AlgebraicMultigrid
         cfg       = output[:cfg]
 
         cfg[:info_level]                             = 0
-        cfg[:tolerances][:Elyte][:mass_conservation] = 1e-3
-        cfg[:tolerances][:PeAm][:mass_conservation]  = 1e-3
-        cfg[:tolerances][:NeAm][:mass_conservation]  = 1e-3
-        cfg[:tolerances][:Control][:default]         = 1e-5
 
         solver  = :fgmres
         fac     = 1e-4  #NEEDED  

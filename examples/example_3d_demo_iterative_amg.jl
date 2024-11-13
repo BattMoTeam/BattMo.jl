@@ -23,9 +23,9 @@ inputparams = readBattMoJsonInputFile(fn)
 simple = false
 if(!simple)
     
-    facx  = 1
+    facx  = 2
     facy  = facx
-    facz  = 1
+    facz  = 2
     fac2p = 1
 
     fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
@@ -69,16 +69,11 @@ cfg       = output[:cfg]
 #cfg[:linear_solver]
 cfg[:info_level] = 10
 
-fac = 1e8
-cfg[:tolerances][:PeAm][:solid_diffusion_bc] = 1e-25*fac
-cfg[:tolerances][:NeAm][:solid_diffusion_bc] = 1e-25*fac
-cfg[:tolerances][:NeAm][:mass_conservation] = 1e-25*fac
-cfg[:tolerances][:PeAm][:mass_conservation] = 1e-25*fac
-solver = :fgmres
-fac = 1e-3  #NEEDED  1e-4 ok for 3D case 1e-7 need for 1D case
-rtol = 1e-4*fac  # for simple face rtol=1e7 and atol 1e-9 seems give same number ononlinear as direct
-atol = 1e-5*fac # seems important
-max_it = 100
+solver  = :fgmres
+fac     = 1e-3  #NEEDED  1e-4 ok for 3D case 1e-7 need for 1D case
+rtol    = 1e-4*fac  # for simple face rtol=1e7 and atol 1e-9 seems give same number ononlinear as direct
+atol    = 1e-5*fac # seems important
+max_it  = 100
 verbose = 10
 
 # We combine two preconditioners. One working on a subset of variables and equations (we call it block-preconditioner)
