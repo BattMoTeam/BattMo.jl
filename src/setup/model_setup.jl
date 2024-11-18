@@ -72,7 +72,7 @@ function setup_simulation(inputparams::AbstractInputParams;
                           extra_timing::Bool                = false,
                           max_step::Union{Integer, Nothing} = nothing,
                           linear_solver::Symbol             = :direct,
-                          general_ad::Bool                  = false,
+                          general_ad::Bool                  = true,
                           use_groups::Bool                  = false,
                           model_kwargs::NamedTuple          = NamedTuple(),
                           config_kwargs::NamedTuple         = NamedTuple())
@@ -119,7 +119,7 @@ end
 function setup_model(inputparams::AbstractInputParams;
                      use_p2d::Bool    = true,
                      use_groups::Bool = false,
-                     general_ad = false,
+                     general_ad       = true,
                      kwargs...)
 
     # setup the submodels and also return a coupling structure which is used to setup later the cross-terms
@@ -145,7 +145,7 @@ end
 
 function setup_submodels(inputparams::InputParams; 
                          use_groups::Bool = false, 
-                         general_ad::Bool = false,
+                         general_ad::Bool = true,
                          use_p2d = true,
                          kwargs...)
 
@@ -273,7 +273,8 @@ function setup_submodels(inputparams::InputParams;
         model_am = setup_component(grid,
                                    sys_am;
                                    general_ad = general_ad,
-                                   dirichletBoundary = boundary,kwargs...)
+                                   dirichletBoundary = boundary,
+                                   kwargs...)
 
         return model_am
         
@@ -498,7 +499,7 @@ end
 
 function setup_component(grid::Jutul.FiniteVolumeMesh,
                          sys;
-                         general_ad::Bool=false,
+                         general_ad::Bool=true,
                          dirichletBoundary = nothing,
                          kwargs...)
 

@@ -294,15 +294,15 @@ end
 function setup_submodels(inputparams::MatlabInputParams; 
                          use_groups::Bool = false,
                          use_p2d::Bool    = true,
-                         general_ad::Bool = false,
+                         general_ad::Bool = true,
                          kwarg...)
 
     include_cc = include_current_collectors(inputparams)
 
     function setup_component(obj::Dict, 
-                             sys, 
-                             bcfaces = nothing,
-                             general_ad::Bool = false)
+                             sys,
+                             general_ad::Bool,
+                             bcfaces = nothing)
         
         domain = exported_model_to_domain(obj, bcfaces = bcfaces, general_ad=general_ad)
         G = MRSTWrapMesh(obj["G"])
@@ -362,9 +362,9 @@ function setup_submodels(inputparams::MatlabInputParams;
         
         if  !include_cc && name == :NeAm
             bcfaces  = convert_to_int_vector(inputparams_co["externalCouplingTerm"]["couplingfaces"])
-            model_am = setup_component(inputparams_co, sys_am, bcfaces, general_ad)
+            model_am = setup_component(inputparams_co, sys_am, general_ad, bcfaces)
         else
-            model_am = setup_component(inputparams_co, sys_am, nothing, general_ad)
+            model_am = setup_component(inputparams_co, sys_am, general_ad, nothing)
         end
 
         return model_am
@@ -386,7 +386,7 @@ function setup_submodels(inputparams::MatlabInputParams;
 
         bcfaces = convert_to_int_vector(inputparams_necc["externalCouplingTerm"]["couplingfaces"])
         
-        model_necc =  setup_component(inputparams_necc, sys_necc, bcfaces, general_ad)
+        model_necc =  setup_component(inputparams_necc, sys_necc, general_ad, bcfaces)
         
         
     end
@@ -422,7 +422,7 @@ function setup_submodels(inputparams::MatlabInputParams;
     
     elyte = Electrolyte(params)
     model_elyte = setup_component(inputparams["Electrolyte"],
-                                  elyte, nothing, general_ad)
+                                  elyte, general_ad, nothing)
 
     ##############
     # Setup PeAm #
@@ -444,7 +444,7 @@ function setup_submodels(inputparams::MatlabInputParams;
         sys_pecc = CurrentCollector(pecc_params)
 
         
-        model_pecc =  setup_component(inputparams_pecc, sys_pecc, nothing, general_ad)
+        model_pecc =  setup_component(inputparams_pecc, sys_pecc, general_ad, nothing)
         
     end
 
@@ -723,7 +723,7 @@ function setup_initial_state(inputparams::MatlabInputParams,
 end
 
 function exported_model_to_domain(exported; bcfaces = nothing, 
-                                  general_ad = false)
+                                  general_ad = true)
 
     """ Returns domain"""
 
