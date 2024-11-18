@@ -536,7 +536,7 @@ function setup_component(grid::Jutul.FiniteVolumeMesh,
     else
         flow = TwoPointPotentialFlowHardCoded(grid)
     end
-    disc = (charge_flow=flow,)
+    disc = (charge_flow = flow,)
     domain = DiscretizedDomain(domain, disc)
 
     model = SimulationModel(domain, sys; kwargs...)
