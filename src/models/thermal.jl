@@ -2,58 +2,61 @@ export Thermal
 
 const ThermalParameters = JutulStorage
 
-struct Thermal{T} <: ElectroChemicalComponent where {T<:ThermalParameters}
+struct ThermalSystem{T} <: ElectroChemicalComponent where {T<:ThermalParameters}
     params::T
     # At the moment the following keys are include
     # - density::Real
 end
 
-function Thermal(params::ThermalParameters)
+function ThermalSystem(params::ThermalParameters)
     params = Jutul.convert_to_immutable_storage(params)
-    return Thermal{typeof(params)}(params)
+    return ThermalSystem{typeof(params)}(params)
 end
 
 
-function Thermal()
-    Thermal(Dict())
+function ThermalSystem()
+    ThermalSystem(Dict())
 end
+
+const ThermalModel = SimulationModel{<:Any, <:ThermalSystem, <:Any, <:Any}
 
 function select_minimum_output_variables!(out,
-    system::Thermal, model::SimulationModel
+    system::ThermalSystem, model::SimulationModel
     )
     push!(out, :Temperature)
 end
 
 function select_primary_variables!(
-    S, system::Thermal, model::SimulationModel
+    S, system::ThermalSystem, model::SimulationModel
     )
     S[:Temperature] = Temperature()
 end
 
 function select_secondary_variables!(
-    S, system::Thermal, model::SimulationModel
+    S, system::ThermalSystem, model::SimulationModel
     )
-    # S[:TPkGrad_Phi] = TPkGrad{Phi}()
     S[:Energy] = Energy()
-    
 end
 
-@jutul_secondary function update_as_secondary!(acc        ,
-                                               tv::Energy ,
-                                               model      ,
-                                               Temperature,
-                                               ix)
+@jutul_secondary function update_energy!(acc        ,
+                                         tv::Energy ,
+                                         model      ,
+                                         Temperature,
+                                         Volume,
+                                         Capacity,
+                                         ix)
     for i in ix
-        @inbounds acc[i] = Temperature[i]
+        @inbounds acc[i] = Volume[i]*Capacity[i]*Temperature[i]
     end
     
 end
 
 function select_parameters!(S,
-                            system::Thermal,
+                            system::ThermalSystem,
                             model::SimulationModel)
 
     S[:Conductivity] = Conductivity()
+    S[:Capacity]     = Capacity()
     if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
         if count_active_entities(model.data_domain, BoundaryDirichletFaces()) > 0
             S[:BoundaryTemperature]  = BoundaryTemperature(:Temperature)
@@ -62,8 +65,19 @@ function select_parameters!(S,
     
 end
 
+
+function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Temperature, <:Any}, state, model::ThermalModel, dt, flow_disc) where T
+    
+    @inbounds trans = state.ECTransmissibilities[face]
+    j = - half_face_two_point_kgrad(c, other, trans, state.Temperature, state.Conductivity)
+
+    return T(j)
+    
+end
+
+
 function select_equations!(eqs,
-                           system::Thermal,
+                           system::ThermalSystem,
                            model::SimulationModel)
 
     disc = model.domain.discretizations.heat_flow
