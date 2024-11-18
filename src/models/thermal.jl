@@ -1,11 +1,13 @@
-export Thermal
+struct Source <: ScalarVariable end
+struct Capacity <: ScalarVariable end
 
 const ThermalParameters = JutulStorage
 
 struct ThermalSystem{T} <: ElectroChemicalComponent where {T<:ThermalParameters}
     params::T
     # At the moment the following keys are include
-    # - density::Real
+    # - Capacity::Real
+    # - Conductivity::Real
 end
 
 function ThermalSystem(params::ThermalParameters)
@@ -13,10 +15,26 @@ function ThermalSystem(params::ThermalParameters)
     return ThermalSystem{typeof(params)}(params)
 end
 
-
 function ThermalSystem()
     ThermalSystem(Dict())
 end
+
+
+function Jutul.update_equation_in_entity!(eq_buf::AbstractVector{T_e}, self_cell, state, state0, eq::ConservationLaw, model, Δt, ldisc = Jutul.local_discretization(eq, self_cell)) where T_e
+    # Compute accumulation term
+    conserved = Jutul.conserved_symbol(eq)
+    M₀ = state0[conserved]
+    M = state[conserved]
+    # Compute ∇⋅V
+    disc = eq.flow_discretization
+    flux(face) = Jutul.face_flux(face, eq, state, model, Δt, disc, ldisc, Val(T_e))
+    div_v = ldisc.div(flux)
+    for i in eachindex(div_v)
+        ∂M∂t = Jutul.accumulation_term(M, M₀, Δt, i, self_cell)
+        @inbounds eq_buf[i] = ∂M∂t + div_v[i] + state[:Source][i]
+    end
+end
+
 
 const ThermalModel = SimulationModel{<:Any, <:ThermalSystem, <:Any, <:Any}
 
@@ -57,6 +75,8 @@ function select_parameters!(S,
 
     S[:Conductivity] = Conductivity()
     S[:Capacity]     = Capacity()
+    S[:Source]       = Source()
+    
     if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
         if count_active_entities(model.data_domain, BoundaryDirichletFaces()) > 0
             S[:BoundaryTemperature]  = BoundaryTemperature(:Temperature)
