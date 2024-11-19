@@ -3,7 +3,7 @@ struct Capacity <: ScalarVariable end
 
 const ThermalParameters = JutulStorage
 
-struct ThermalSystem{T} <: ElectroChemicalComponent where {T<:ThermalParameters}
+struct ThermalSystem{T} <: BattMoSystem where {T<:ThermalParameters}
     params::T
     # At the moment the following keys are include
     # - Capacity::Real
@@ -19,8 +19,9 @@ function ThermalSystem()
     ThermalSystem(Dict())
 end
 
+const ThermalModel = SimulationModel{O, S ,F, C} where {O<:JutulDomain, S<:ThermalSystem, F<:JutulFormulation, C<:JutulContext}
 
-function Jutul.update_equation_in_entity!(eq_buf::AbstractVector{T_e}, self_cell, state, state0, eq::ConservationLaw, model, Δt, ldisc = Jutul.local_discretization(eq, self_cell)) where T_e
+function Jutul.update_equation_in_entity!(eq_buf::AbstractVector{T_e}, self_cell, state, state0, eq::ConservationLaw{Val{:Energy}}, model::ThermalModel, Δt, ldisc = Jutul.local_discretization(eq, self_cell)) where T_e
     # Compute accumulation term
     conserved = Jutul.conserved_symbol(eq)
     M₀ = state0[conserved]
@@ -34,9 +35,6 @@ function Jutul.update_equation_in_entity!(eq_buf::AbstractVector{T_e}, self_cell
         @inbounds eq_buf[i] = ∂M∂t + div_v[i] + state[:Source][i]
     end
 end
-
-
-const ThermalModel = SimulationModel{<:Any, <:ThermalSystem, <:Any, <:Any}
 
 function select_minimum_output_variables!(out,
     system::ThermalSystem, model::SimulationModel
@@ -71,7 +69,7 @@ end
 
 function select_parameters!(S,
                             system::ThermalSystem,
-                            model::SimulationModel)
+                            model::BattMoModel)
 
     S[:Conductivity] = Conductivity()
     S[:Capacity]     = Capacity()
@@ -86,7 +84,7 @@ function select_parameters!(S,
 end
 
 
-function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Temperature, <:Any}, state, model::ThermalModel, dt, flow_disc) where T
+function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{Val{:Temperature}, <:Any}, state, model::ThermalModel, dt, flow_disc) where T
     
     @inbounds trans = state.ECTransmissibilities[face]
     j = - half_face_two_point_kgrad(c, other, trans, state.Temperature, state.Conductivity)
@@ -104,3 +102,62 @@ function select_equations!(eqs,
     eqs[:energy_conservation] = ConservationLaw(disc, :Energy)
     
 end
+
+#######################
+# Boundary conditions #
+#######################
+
+function apply_bc_to_equation!(storage, parameters, model::ThermalModel, eq::ConservationLaw{Val{:Energy}}, eq_s)
+    
+    acc   = get_diagonal_entries(eq, eq_s)
+    state = storage.state
+
+    apply_boundary_potential!(acc, state, parameters, model, eq)
+
+end
+
+function apply_boundary_potential!(acc, state, parameters, model::ThermalModel, eq::ConservationLaw{Val{:Energy}})
+
+    dolegacy = false
+    
+    if model.domain.representation isa MinimalECTPFAGrid
+        bc = model.domain.representation.boundary_cells
+        if length(bc) > 0
+            dobc = true
+        else
+            dobc = false
+        end
+        dolegacy = true
+    elseif Jutul.hasentity(model.domain, BoundaryDirichletFaces())
+        nc = count_active_entities(model.domain, BoundaryDirichletFaces())
+        dobc = nc > 0
+        if dobc
+            bcdirhalftrans = model.domain.representation[:bcDirHalfTrans]
+            bcdircells     = model.domain.representation[:bcDirCells]
+            bcdirinds      = model.domain.representation[:bcDirInds]
+        end
+    else
+        dobc = false
+    end
+    
+    if dobc
+        
+        Phi          = state[:Temperature]
+        BoundaryPhi  = state[:BoundaryTemperature]
+        conductivity = state[:Conductivity]
+        extcoef      = state[:ExternalHeatTransferCoefficient]
+        
+        if dolegacy
+            T_hf = model.domain.representation.boundary_hfT
+            for (i, c) in enumerate(bc)
+                @inbounds acc[c] += conductivity[c]*T_hf[i]*(Phi[c] - value(BoundaryPhi[i]))
+            end
+        else
+            for (ht, c, i) in zip(bcdirhalftrans, bcdircells, bcdirinds)
+                @inbounds acc[c] += conductivity[c]*ht*(Phi[c] - value(BoundaryPhi[i]))
+            end
+        end
+    end
+    
+end
+
