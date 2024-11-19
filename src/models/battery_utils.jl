@@ -199,6 +199,7 @@ function apply_boundary_potential!(acc, state, parameters, model, eq::Conservati
     # do nothing
     # We do not have in our models for the moment boundaries with given concentration
 end
+
 function apply_bc_to_equation!(storage, parameters, model, eq::ConservationLaw, eq_s)
     
     acc   = get_diagonal_entries(eq, eq_s)
@@ -212,13 +213,9 @@ function apply_bc_to_equation!(storage, parameters, model, eq::ConservationLaw, 
     end
 end
 
-function apply_bc_to_equation!(storage, parameters, model, eq::SolidMassCons, eq_s)
-    # do nothing
-end
+apply_bc_to_equation!(storage, parameters, model, eq::SolidMassCons, eq_s) = nothing
 
-function apply_bc_to_equation!(storage, parameters, model, eq::SolidDiffusionBc, eq_s)
-    # do nothing    
-end
+apply_bc_to_equation!(storage, parameters, model, eq::SolidDiffusionBc, eq_s) = nothing
 
 # function apply_boundary_current!(acc, state, jkey, model, eq::ConservationLaw)
 
