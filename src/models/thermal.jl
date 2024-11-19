@@ -71,7 +71,7 @@ function select_parameters!(S,
     S[:Conductivity]        = Conductivity()
     S[:Capacity]            = Capacity()
     S[:Source]              = Source()
-    S[:BoundaryTemperature] = BoundaryTemperature(:Temperature) # BoundaryTemperature is declared below
+    S[:BoundaryTemperature] = BoundaryTemperature() # BoundaryTemperature is declared below
     
 end
 
@@ -171,31 +171,38 @@ function setup_thermal_model(inputparams::InputParams;
     grids, couplings = setup_grids_and_couplings(inputparams)
     
     grid     = grids["ThermalModel"]
-    boundary = coupling["External"]
+    coupling = couplings["ThermalModel"]["External"]
 
     thermalsystem = ThermalSystem()
 
     model = setup_component(grid, thermalsystem;
-                            general_ad        = general_ad,
-                            dirichletBoundary = boundary)
-    
-    
-    # setup the submodels and also return a coupling structure which is used to setup later the cross-terms
-    model, couplings = setup_submodels(inputparams,
-                                       use_groups = use_groups,
-                                       use_p2d    = use_p2d;
-                                       general_ad = general_ad,
-                                       kwargs... )
+                            general_ad = general_ad)
 
+    domain = model.domain.representation
+    
+    bfaces = coupling["boundaryfaces"]
+    nb = size(bfaces,1)
+    domain.entities[BoundaryThermalFaces()] =  nb
+
+    bcDirFace = coupling["boundaryfaces"] # in BoundaryFaces indexing
+    bcDirCell = coupling["cells"]
+    
+    bcDirInd  = Vector{Int64}(1 : nb)
+    domain[:boundaryThermalHalfTrans, BoundaryThermalFaces()] = domain[:bcTrans][bcDirFace]
+    domain[:boundaryThermalCells, BoundaryThermalFaces()]     = bcDirCell 
+    domain[:boundaryThermalInds, BoundaryThermalFaces()]      = bcDirInd 
+            
     # setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
     # sensitivities)
-    parameters = setup_battery_parameters(inputparams, model)
 
-    # setup the cross terms which couples the submodels.
-    setup_coupling_cross_terms!(inputparams, model, parameters, couplings)
+    prm = Dict{Symbol, Any}()
+    prm[:Capacity]            = inputparams["ThermalModel"]["capacity"]
+    prm[:Conductivity]        = inputparams["ThermalModel"]["conductivity"]
+    prm[:Source]              = inputparams["ThermalModel"]["source"]
+    prm[:BoundaryTemperature] = inputparams["ThermalModel"]["externalTemperature"]
 
-    setup_initial_control_policy!(model[:Control].system.policy, inputparams, parameters)
-    #model.context = Jutul.DefaultContext()
+    parameters = setup_parameters(model, prm)
+    
     return model, parameters
 
 end
