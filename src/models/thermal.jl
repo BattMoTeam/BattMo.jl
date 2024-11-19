@@ -142,19 +142,21 @@ function apply_boundary_potential!(acc, state, parameters, model::ThermalModel, 
     
     if dobc
         
-        Phi          = state[:Temperature]
-        BoundaryPhi  = state[:BoundaryTemperature]
+        T            = state[:Temperature]
+        BoundaryT    = state[:BoundaryTemperature]
         conductivity = state[:Conductivity]
         extcoef      = state[:ExternalHeatTransferCoefficient]
         
         if dolegacy
             T_hf = model.domain.representation.boundary_hfT
             for (i, c) in enumerate(bc)
-                @inbounds acc[c] += conductivity[c]*T_hf[i]*(Phi[c] - value(BoundaryPhi[i]))
+                m = 1/(1/conductivity[c]*T_hf[i] + 1/extcoef)
+                @inbounds acc[c] += m*(T[c] - value(BoundaryT[i]))
             end
         else
             for (ht, c, i) in zip(bcdirhalftrans, bcdircells, bcdirinds)
-                @inbounds acc[c] += conductivity[c]*ht*(Phi[c] - value(BoundaryPhi[i]))
+                m = 1/(1/conductivity[c]*ht[i] + 1/extcoef)
+                @inbounds acc[c] += m*(T[c] - value(BoundaryT[i]))
             end
         end
     end
