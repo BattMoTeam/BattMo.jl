@@ -2,7 +2,7 @@ export CurrentCollector
 
 const CurrentCollectorParameters = JutulStorage
 
-struct CurrentCollector{T, D} <: ElectroChemicalComponent where {T<:CurrentCollectorParameters, D <: AbstractDict}
+struct CurrentCollector{T, D} <: BattMoSystem where {T<:CurrentCollectorParameters, D <: AbstractDict}
     params::T
     # At the moment the following keys are include
     # - density::Real

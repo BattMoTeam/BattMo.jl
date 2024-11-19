@@ -1,6 +1,6 @@
 using Jutul
 
-export ElectroChemicalComponent, CurrentCollector
+export BattMoSystem, CurrentCollector
 export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
 export ChargeFlow, BoundaryPotential, BoundaryCurrent
 export Phi, C, Temperature, Charge, Mass
@@ -10,16 +10,16 @@ export BoundaryDirichletFaces
 
 struct BoundaryDirichletFaces <: Jutul.JutulEntity end
 
-abstract type ElectroChemicalComponent <: JutulSystem end
+abstract type BattMoSystem <: JutulSystem end
 # Alias for a general electro-chemical model
 
-function Base.getindex(system::ElectroChemicalComponent, key::Symbol)
+function Base.getindex(system::BattMoSystem, key::Symbol)
     return system.params[key]
 end
 
-const ElectroChemicalComponentModel = SimulationModel{<:Any, <:ElectroChemicalComponent, <:Any, <:Any}
+const BattMoModel = SimulationModel{<:Any, <:BattMoSystem, <:Any, <:Any}
 
-abstract type ElectroChemicalGrid <: JutulMesh end
+abstract type BattMoGrid <: JutulMesh end
 
 # Potential variables
 
@@ -74,7 +74,7 @@ end
 
 Jutul.associated_entity(::BoundaryCurrent) = BoundaryDirichletFaces()
 
-struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
+struct MinimalECTPFAGrid{V, N, B, BT, M} <: BattMoGrid
     """
     Simple grid for a electro chemical component
     """

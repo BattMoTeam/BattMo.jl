@@ -16,7 +16,7 @@ export
 
 const ElectrolyteParameters = JutulStorage
 
-struct Electrolyte{D} <: ElectroChemicalComponent where {D <: AbstractDict}
+struct Electrolyte{D} <: BattMoSystem where {D <: AbstractDict}
     params::ElectrolyteParameters
     #  
     # - bruggeman          

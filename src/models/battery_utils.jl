@@ -67,7 +67,7 @@ end
     
 end
 
-@inline function Jutul.face_flux!(q_i, face, eq::ConservationLaw, state, model::ElectroChemicalComponentModel, dt, flow_disc::PotentialFlow, ldisc)
+@inline function Jutul.face_flux!(q_i, face, eq::ConservationLaw, state, model::BattMoModel, dt, flow_disc::PotentialFlow, ldisc)
 
     # Inner version, for generic flux
     kgrad, upw = ldisc.face_disc(face)
@@ -138,7 +138,7 @@ end
 #######################
 
 
-function Jutul.apply_boundary_conditions!(storage, parameters, model::ElectroChemicalComponentModel)
+function Jutul.apply_boundary_conditions!(storage, parameters, model::BattMoModel)
     equations_storage = storage.equations
     equations = model.equations
     for (eq, eq_s) in zip(values(equations), equations_storage)
@@ -190,59 +190,33 @@ function apply_boundary_potential!(acc, state, parameters, model, eq::Conservati
     
 end
 
-function apply_boundary_potential!(acc, state, parameters, model, eq::ConservationLaw{:Mass} )
-    # do nothing
-    # We do not have in our models for the moment boundaries with given concentration
-end
+apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw) = nothing
 
-function apply_boundary_potential!(acc, state, parameters, model, eq::ConservationLaw{:Energy} )
-    # do nothing
-    # We do not have in our models for the moment boundaries with given concentration
-end
-
-function apply_bc_to_equation!(storage, parameters, model, eq::ConservationLaw, eq_s)
+function apply_bc_to_equation!(storage, parameters, model::BattMoModel, eq::ConservationLaw{:Charge}, eq_s)
     
     acc   = get_diagonal_entries(eq, eq_s)
     state = storage.state
 
     apply_boundary_potential!(acc, state, parameters, model, eq)
 
-    jkey = BCCurrent[conserved_symbol(eq)]
-    if haskey(state, jkey)
-        apply_boundary_current!(acc, state, jkey, model, eq)
-    end
 end
 
-apply_bc_to_equation!(storage, parameters, model, eq::SolidMassCons, eq_s) = nothing
+apply_bc_to_equation!(storage, parameters, model::BattMoModel, eq, eq_s) = nothing
 
-apply_bc_to_equation!(storage, parameters, model, eq::SolidDiffusionBc, eq_s) = nothing
-
-# function apply_boundary_current!(acc, state, jkey, model, eq::ConservationLaw)
-
-#     # The current here is by convention considered as an outer flux
-    
-#     J = state[jkey]
-
-#     jb = get_variable(model, jkey)
-#     for (i, c) in enumerate(jb.cells)
-#         @inbounds acc[c] += J[i]
-#     end
-    
-# end
-
-function select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::ElectroChemicalComponentModel)
+function select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::BattMoModel)
     
     prm[:ECTransmissibilities] = ECTransmissibilities()
     
 end
 
-function select_parameters!(prm, D::MinimalECTPFAGrid, model::ElectroChemicalComponentModel)    
+function select_parameters!(prm, D::MinimalECTPFAGrid, model::BattMoModel)    
+
     prm[:Volume]         = Volume()
     prm[:VolumeFraction] = VolumeFraction()
     
 end
 
-function select_parameters!(prm, d::DataDomain, model::ElectroChemicalComponentModel)
+function select_parameters!(prm, d::DataDomain, model::BattMoModel)
     prm[:Volume] = Volume()
 end
 
