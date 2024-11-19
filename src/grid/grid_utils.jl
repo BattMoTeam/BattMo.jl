@@ -428,6 +428,19 @@ function pouch_grid(geomparams::InputGeometryParams)
 
     couplings["PositiveCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)
 
+    if haskey(geomparams, "ThermalModel")
+        # Setup thermal model
+
+        grid["ThermalModel"] = grid["Global"]
+
+        nf = number_of_boundary_faces(grid)
+        bcfaces = collect(1 : nf)
+        bccells = grid.boundary_cells
+        
+        couplings["ThermalModel"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)
+
+    end
+    
     return grids, couplings
 
 end
@@ -489,17 +502,18 @@ function setup_pouch_cell_geometry(H_mother, paramsz)
     grids       = Dict()
     global_maps = Dict()
 
+    tags = find_tags(UnstructuredMesh(H_mother), paramsz)
+
+    grids["Global"] = UnstructuredMesh(H_mother)
+
+    nglobal = number_of_cells(grids["Global"])
+    tags = find_tags(grids["Global"], paramsz)
+
     components = ["NegativeCurrentCollector",
                   "NegativeElectrode"       ,
                   "Separator"               ,
                   "PositiveElectrode"       ,
                   "PositiveCurrentCollector"]
-
-    tags = find_tags(UnstructuredMesh(H_mother), paramsz)
-
-    grids["Global"] = UnstructuredMesh(H_mother)
-    nglobal = number_of_cells(grids["Global"])
-    tags = find_tags(grids["Global"], paramsz)
 
     # Setup the grids and mapping for all components
     allinds = 1 : nglobal
