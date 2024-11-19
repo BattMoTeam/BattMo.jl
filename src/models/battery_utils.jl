@@ -133,6 +133,30 @@ function output_flux(model, state, parameters, eqname = :mass_conservation)
     return out
 end
 
+####################
+# Setup Parameters #
+####################
+
+""" We set the transmissibilities as parameters. They are used to compute fluxes, most of time using harmonic average
+for the coefficient, see FaceFlux function above """
+function select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::BattMoModel)
+    
+    prm[:ECTransmissibilities] = ECTransmissibilities()
+    
+end
+
+function select_parameters!(prm, D::MinimalECTPFAGrid, model::BattMoModel)    
+
+    prm[:Volume]         = Volume()
+    prm[:VolumeFraction] = VolumeFraction()
+    
+end
+
+function select_parameters!(prm, d::DataDomain, model::BattMoModel)
+    prm[:Volume] = Volume()
+end
+
+
 #######################
 # Boundary conditions #
 #######################
@@ -146,7 +170,19 @@ function Jutul.apply_boundary_conditions!(storage, parameters, model::BattMoMode
     end
 end
 
-function apply_boundary_potential!(acc, state, parameters, model, eq::ConservationLaw{:Charge})
+
+function apply_bc_to_equation!(storage, parameters, model::BattMoModel, eq::ConservationLaw{Val{:charge}}, eq_s)
+    
+    acc   = get_diagonal_entries(eq, eq_s)
+    state = storage.state
+
+    apply_boundary_potential!(acc, state, parameters, model, eq)
+
+end
+
+apply_bc_to_equation!(storage, parameters, model::BattMoModel, eq, eq_s) = nothing
+
+function apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw{Val{:Charge}})
 
     dolegacy = false
     
@@ -192,31 +228,4 @@ end
 
 apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw) = nothing
 
-function apply_bc_to_equation!(storage, parameters, model::BattMoModel, eq::ConservationLaw{:Charge}, eq_s)
-    
-    acc   = get_diagonal_entries(eq, eq_s)
-    state = storage.state
-
-    apply_boundary_potential!(acc, state, parameters, model, eq)
-
-end
-
-apply_bc_to_equation!(storage, parameters, model::BattMoModel, eq, eq_s) = nothing
-
-function select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::BattMoModel)
-    
-    prm[:ECTransmissibilities] = ECTransmissibilities()
-    
-end
-
-function select_parameters!(prm, D::MinimalECTPFAGrid, model::BattMoModel)    
-
-    prm[:Volume]         = Volume()
-    prm[:VolumeFraction] = VolumeFraction()
-    
-end
-
-function select_parameters!(prm, d::DataDomain, model::BattMoModel)
-    prm[:Volume] = Volume()
-end
 
