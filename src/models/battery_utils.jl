@@ -171,7 +171,7 @@ function Jutul.apply_boundary_conditions!(storage, parameters, model::BattMoMode
 end
 
 
-function apply_bc_to_equation!(storage, parameters, model::BattMoModel, eq::ConservationLaw{Val{:charge}}, eq_s)
+function apply_bc_to_equation!(storage, parameters, model::BattMoModel, eq::ConservationLaw{:charge}, eq_s)
     
     acc   = get_diagonal_entries(eq, eq_s)
     state = storage.state
@@ -182,7 +182,7 @@ end
 
 apply_bc_to_equation!(storage, parameters, model::BattMoModel, eq, eq_s) = nothing
 
-function apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw{Val{:Charge}})
+function apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw{:Charge})
 
     dolegacy = false
     

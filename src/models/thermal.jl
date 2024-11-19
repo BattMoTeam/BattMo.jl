@@ -21,7 +21,7 @@ end
 
 const ThermalModel = SimulationModel{O, S ,F, C} where {O<:JutulDomain, S<:ThermalSystem, F<:JutulFormulation, C<:JutulContext}
 
-function Jutul.update_equation_in_entity!(eq_buf::AbstractVector{T_e}, self_cell, state, state0, eq::ConservationLaw{Val{:Energy}}, model::ThermalModel, Δt, ldisc = Jutul.local_discretization(eq, self_cell)) where T_e
+function Jutul.update_equation_in_entity!(eq_buf::AbstractVector{T_e}, self_cell, state, state0, eq::ConservationLaw{:Energy}, model::ThermalModel, Δt, ldisc = Jutul.local_discretization(eq, self_cell)) where T_e
     # Compute accumulation term
     conserved = Jutul.conserved_symbol(eq)
     M₀ = state0[conserved]
@@ -84,7 +84,7 @@ function select_parameters!(S,
 end
 
 
-function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{Val{:Temperature}, <:Any}, state, model::ThermalModel, dt, flow_disc) where T
+function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Temperature, <:Any}, state, model::ThermalModel, dt, flow_disc) where T
     
     @inbounds trans = state.ECTransmissibilities[face]
     j = - half_face_two_point_kgrad(c, other, trans, state.Temperature, state.Conductivity)
@@ -107,7 +107,7 @@ end
 # Boundary conditions #
 #######################
 
-function apply_bc_to_equation!(storage, parameters, model::ThermalModel, eq::ConservationLaw{Val{:Energy}}, eq_s)
+function apply_bc_to_equation!(storage, parameters, model::ThermalModel, eq::ConservationLaw{:Energy}, eq_s)
     
     acc   = get_diagonal_entries(eq, eq_s)
     state = storage.state
@@ -116,7 +116,7 @@ function apply_bc_to_equation!(storage, parameters, model::ThermalModel, eq::Con
 
 end
 
-function apply_boundary_potential!(acc, state, parameters, model::ThermalModel, eq::ConservationLaw{Val{:Energy}})
+function apply_boundary_potential!(acc, state, parameters, model::ThermalModel, eq::ConservationLaw{:Energy})
 
     dolegacy = false
     
