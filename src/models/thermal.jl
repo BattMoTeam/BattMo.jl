@@ -5,9 +5,6 @@ const ThermalParameters = JutulStorage
 
 struct ThermalSystem{T} <: BattMoSystem where {T<:ThermalParameters}
     params::T
-    # At the moment the following keys are include
-    # - Capacity::Real
-    # - Conductivity::Real
 end
 
 function ThermalSystem(params::ThermalParameters)
@@ -71,15 +68,10 @@ function select_parameters!(S,
                             system::ThermalSystem,
                             model::BattMoModel)
 
-    S[:Conductivity] = Conductivity()
-    S[:Capacity]     = Capacity()
-    S[:Source]       = Source()
-    
-    if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
-        if count_active_entities(model.data_domain, BoundaryDirichletFaces()) > 0
-            S[:BoundaryTemperature]  = BoundaryTemperature(:Temperature)
-        end
-    end
+    S[:Conductivity]        = Conductivity()
+    S[:Capacity]            = Capacity()
+    S[:Source]              = Source()
+    S[:BoundaryTemperature] = BoundaryTemperature(:Temperature) # BoundaryTemperature is declared below
     
 end
 
@@ -106,6 +98,11 @@ end
 #######################
 # Boundary conditions #
 #######################
+
+struct BoundaryTemperature <: ScalarVariable end
+struct BoundaryThermalFaces <: Jutul.JutulEntity end
+
+Jutul.associated_entity(::BoundaryTemperature) = BoundaryThermalFaces()
 
 function apply_bc_to_equation!(storage, parameters, model::ThermalModel, eq::ConservationLaw{:Energy}, eq_s)
     
@@ -163,3 +160,42 @@ function apply_boundary_potential!(acc, state, parameters, model::ThermalModel, 
     
 end
 
+#######################
+# setup thermal model #
+#######################
+
+function setup_thermal_model(inputparams::InputParams;
+                             general_ad = true,
+                             kwargs...)
+
+    grids, couplings = setup_grids_and_couplings(inputparams)
+    
+    grid     = grids["ThermalModel"]
+    boundary = coupling["External"]
+
+    thermalsystem = ThermalSystem()
+
+    model = setup_component(grid, thermalsystem;
+                            general_ad        = general_ad,
+                            dirichletBoundary = boundary)
+    
+    
+    # setup the submodels and also return a coupling structure which is used to setup later the cross-terms
+    model, couplings = setup_submodels(inputparams,
+                                       use_groups = use_groups,
+                                       use_p2d    = use_p2d;
+                                       general_ad = general_ad,
+                                       kwargs... )
+
+    # setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
+    # sensitivities)
+    parameters = setup_battery_parameters(inputparams, model)
+
+    # setup the cross terms which couples the submodels.
+    setup_coupling_cross_terms!(inputparams, model, parameters, couplings)
+
+    setup_initial_control_policy!(model[:Control].system.policy, inputparams, parameters)
+    #model.context = Jutul.DefaultContext()
+    return model, parameters
+
+end
