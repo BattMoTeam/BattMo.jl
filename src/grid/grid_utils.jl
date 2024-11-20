@@ -431,14 +431,15 @@ function pouch_grid(geomparams::InputGeometryParams)
     if haskey(geomparams, "ThermalModel")
         # Setup thermal model
 
-        grid["ThermalModel"] = grid["Global"]
+        grids["ThermalModel"] = grids["Global"]
+
+        grid = grids["ThermalModel"]
 
         nf = number_of_boundary_faces(grid)
         bcfaces = collect(1 : nf)
-        bccells = grid.boundary_cells
-        
-        couplings["ThermalModel"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)
+        bccells = grid.boundary_faces.neighbors
 
+        couplings["ThermalModel"] = Dict("External" => Dict("cells" => bccells, "boundaryfaces" => bcfaces))
     end
     
     return grids, couplings
