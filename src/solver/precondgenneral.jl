@@ -1,5 +1,5 @@
 
-function Jutul.update_preconditioner!(prec::BattMo.BatteryGeneralPreconditioner, lsys, context, model, storage, recorder, executor)
+function Jutul.update_preconditioner!(prec::BattMo.BatteryGeneralPreconditioner, lsys::Jutul.JutulLinearSystem, context, model, storage, recorder, executor)
     # Solve all Phi with AMG
     # Solve the elyte C with another AMG
     # Let the rest be (?)
@@ -71,7 +71,7 @@ function Jutul.update_preconditioner!(prec::BattMo.BatteryGeneralPreconditioner,
 end
 Jutul.operator_nrows(p::BattMo.BatteryGeneralPreconditioner) = p.data.n
 
-function Jutul.apply!(x, prec::BattMo.BatteryGeneralPreconditioner, r, arg...)
+function Jutul.apply!(x, prec::BattMo.BatteryGeneralPreconditioner, r)
     A = prec.data.A
     x .= 0 
     dx = prec.data.allvars.x#copy(x) # maybe move to storage
@@ -96,7 +96,7 @@ function Jutul.apply!(x, prec::BattMo.BatteryGeneralPreconditioner, r, arg...)
         println("Models ", varprecond.models)
         #println(precond)
         end
-        apply_local_preconditioner!(dx, precond, r_local, var, arg...)
+        apply_local_preconditioner!(dx, precond, r_local, var)
         #println(dx)
         x .+= dx
         if prec.params["method"] == "seq"
@@ -122,7 +122,7 @@ function Jutul.apply!(x, prec::BattMo.BatteryGeneralPreconditioner, r, arg...)
     #error()
     if !isnothing(prec.g_varprecond)
         varprec = prec.g_varprecond
-        Jutul.apply!(dx, varprec.precond, r_local, arg...)
+        Jutul.apply!(dx, varprec.precond, r_local)
         x .+= dx
         Jutul.mul!(r_local, A, dx, -1, true)
         dx .= 0.0
@@ -199,12 +199,12 @@ function update_local_preconditioner!(varprec, A, r, ind_eq, ind_var, executor)
     #NB ok??
     #Jutul.update_preconditioner!(prec, A_s, view(r, ix), DefaultContext(), executor)
 end
-function apply_local_preconditioner!(x, prec, r, S, arg...)
+function apply_local_preconditioner!(x, prec, r, S)
     r_i = S.r
     x_i = S.x
     x_i .= 0.0
     ix = S.ix
     @. r_i = r[ix]
-    apply!(x_i, prec, r_i,arg...)
+    apply!(x_i, prec, r_i)
     @. x[ix] = x_i
 end

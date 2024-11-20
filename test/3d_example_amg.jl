@@ -3,9 +3,7 @@ using Test
 using AlgebraicMultigrid
 
 @testset "3d amg" begin
-    
     @test begin
-        
         name = "p2d_40_jl_chen2020"
 
         fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
@@ -25,7 +23,8 @@ using AlgebraicMultigrid
         timesteps = output[:timesteps]
         cfg       = output[:cfg]
 
-        cfg[:info_level]                             = 0
+        cfg[:info_level] = 0
+        cfg[:failure_cuts_timestep] = false
 
         solver  = :fgmres
         fac     = 1e-4  #NEEDED  
@@ -56,15 +55,15 @@ using AlgebraicMultigrid
 
         states, reports = simulate(state0, simulator, timesteps; forces=forces, config=cfg)
         Cc = map(x -> x[:Control][:Current][1], states)
-        Phi = map(x -> x[:Control][:Phi][1], states)
+        phi = map(x -> x[:Control][:Phi][1], states)
         @test length(states) == 77
         @test Cc[1] ≈ 0.00058 atol = 1e-2
         for i in 3:length(Cc)
             @test Cc[i] ≈ 0.008165 atol = 1e-2
         end
-        @test Phi[1] ≈ 4.175 atol = 1e-1
-        @test Phi[end] ≈ 2.76 atol = 1e-2
-        @test Phi[30] ≈ 3.67 atol = 1e-2
+        @test phi[1] ≈ 4.175 atol = 1e-1
+        @test phi[end] ≈ 2.76 atol = 1e-2
+        @test phi[30] ≈ 3.67 atol = 1e-2
         true
     end
 end

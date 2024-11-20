@@ -229,7 +229,7 @@ function Jutul.update_preconditioner!(prec::BatteryCPhiPreconditioner, lsys, con
     #@exfiltrate mass_map, c, charge_map, phi
 end
 
-function Jutul.apply!(x, prec::BatteryCPhiPreconditioner, r, arg...)
+function Jutul.apply!(x, prec::BatteryCPhiPreconditioner, r)
     (; c, phi, allvars, A) = prec.data
     #@. x .= r
     dx = allvars.x
