@@ -23,7 +23,7 @@ using AlgebraicMultigrid
         timesteps = output[:timesteps]
         cfg       = output[:cfg]
 
-        cfg[:info_level] = 0
+        cfg[:info_level] = -1
         cfg[:failure_cuts_timestep] = false
 
         solver  = :fgmres
