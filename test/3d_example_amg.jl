@@ -1,4 +1,4 @@
-using BattMo
+using BattMo, Jutul
 using Test
 using AlgebraicMultigrid
 
@@ -55,9 +55,16 @@ using AlgebraicMultigrid
         cfg[:extra_timing] = true
 
         states, reports = simulate(state0, simulator, timesteps; forces=forces, config=cfg)
-
+        Cc = map(x -> x[:Control][:Current][1], states)
+        Phi = map(x -> x[:Control][:Phi][1], states)
+        @test length(states) == 77
+        @test Cc[1] ≈ 0.00058 atol = 1e-2
+        for i in 3:length(Cc)
+            @test Cc[i] ≈ 0.008165 atol = 1e-2
+        end
+        @test Phi[1] ≈ 4.175 atol = 1e-1
+        @test Phi[end] ≈ 2.76 atol = 1e-2
+        @test Phi[30] ≈ 3.67 atol = 1e-2
         true
-        
     end
-    
 end
