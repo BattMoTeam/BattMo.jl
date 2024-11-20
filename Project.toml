@@ -1,7 +1,7 @@
 name = "BattMo"
 uuid = "6f0c0536-3c2c-4762-a987-c605a8a6f898"
 authors = ["Olav Møyner <olav.moyner@gmail.com>"]
-version = "0.1.7"
+version = "0.1.8"
 
 [deps]
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
@@ -23,7 +23,7 @@ x264_jll = "1270edf5-f2f9-52d2-97e9-ab00b5d0237a"
 [compat]
 JLD2 = "0.4.31"
 JSON = "0.21.4"
-Jutul = "0.2.10"
+Jutul = "0.3.0"
 MAT = "0.10.4"
 Polynomials = "3.2.11 - 4"
 PrecompileTools = "1.1.1"
@@ -32,9 +32,3 @@ StaticArrays = "1.5.17"
 StatsBase = "0.34"
 Tullio = "0.3.5"
 julia = "1.8"
-
-[extras]
-AlgebraicMultigrid = "2169fc97-5a83-5252-b627-83903c6c433c"
-
-[targets]
-test = ["AlgebraicMultigrid"]

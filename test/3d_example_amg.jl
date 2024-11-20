@@ -1,6 +1,5 @@
 using BattMo, Jutul
 using Test
-using AlgebraicMultigrid
 
 @testset "3d amg" begin
     @test begin
