@@ -22,14 +22,14 @@ function Jutul.update_equation_in_entity!(eq_buf::AbstractVector{T_e}, self_cell
     # Compute accumulation term
     conserved = Jutul.conserved_symbol(eq)
     M₀ = state0[conserved]
-    M = state[conserved]
+    M  = state[conserved]
     # Compute ∇⋅V
     disc = eq.flow_discretization
     flux(face) = Jutul.face_flux(face, eq, state, model, Δt, disc, ldisc, Val(T_e))
     div_v = ldisc.div(flux)
     for i in eachindex(div_v)
         ∂M∂t = Jutul.accumulation_term(M, M₀, Δt, i, self_cell)
-        @inbounds eq_buf[i] = ∂M∂t + div_v[i] + state[:Source][i]
+        @inbounds eq_buf[i] = ∂M∂t + div_v[i] - state[:Source][self_cell]
     end
 end
 
@@ -68,17 +68,19 @@ function select_parameters!(S,
                             system::ThermalSystem,
                             model::BattMoModel)
 
-    S[:Conductivity]        = Conductivity()
-    S[:Capacity]            = Capacity()
-    S[:Source]              = Source()
-    S[:BoundaryTemperature] = BoundaryTemperature() # BoundaryTemperature is declared below
+    S[:Conductivity]                    = Conductivity()
+    S[:Capacity]                        = Capacity()
+    S[:Source]                          = Source()
+    S[:BoundaryTemperature]             = BoundaryTemperature() # BoundaryTemperature is declared below
+    S[:ExternalHeatTransferCoefficient] = ExternalHeatTransferCoefficient() # ExternalHeatTransferCoefficient is declared below
     
 end
 
 
-function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Temperature, <:Any}, state, model::ThermalModel, dt, flow_disc) where T
-    
+function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Energy, <:Any}, state, model::ThermalModel, dt, flow_disc) where T
+
     @inbounds trans = state.ECTransmissibilities[face]
+
     j = - half_face_two_point_kgrad(c, other, trans, state.Temperature, state.Conductivity)
 
     return T(j)
@@ -90,7 +92,7 @@ function select_equations!(eqs,
                            system::ThermalSystem,
                            model::SimulationModel)
 
-    disc = model.domain.discretizations.heat_flow
+    disc = model.domain.discretizations.flow
     eqs[:energy_conservation] = ConservationLaw(disc, :Energy)
     
 end
@@ -99,43 +101,46 @@ end
 # Boundary conditions #
 #######################
 
-struct BoundaryTemperature <: ScalarVariable end
-struct BoundaryThermalFaces <: Jutul.JutulEntity end
 
-Jutul.associated_entity(::BoundaryTemperature) = BoundaryThermalFaces()
+struct BoundaryTemperature <: ScalarVariable end
+Jutul.associated_entity(::BoundaryTemperature) = BoundaryFaces()
+
+struct ExternalHeatTransferCoefficient <: ScalarVariable end
+Jutul.associated_entity(::ExternalHeatTransferCoefficient) = BoundaryFaces()
 
 function apply_bc_to_equation!(storage, parameters, model::ThermalModel, eq::ConservationLaw{:Energy}, eq_s)
-    
+
     acc   = get_diagonal_entries(eq, eq_s)
     state = storage.state
 
-    apply_boundary_potential!(acc, state, parameters, model, eq)
+    apply_boundary_temperature!(acc, state, parameters, model, eq)
 
 end
 
-function apply_boundary_potential!(acc, state, parameters, model::ThermalModel, eq::ConservationLaw{:Energy})
+function apply_boundary_temperature!(acc, state, parameters, model::ThermalModel, eq::ConservationLaw{:Energy})
 
     dolegacy = false
     
     if model.domain.representation isa MinimalECTPFAGrid
+
+        error("not supported yet")
         bc = model.domain.representation.boundary_cells
         if length(bc) > 0
             dobc = true
         else
             dobc = false
         end
+
         dolegacy = true
-    elseif Jutul.hasentity(model.domain, BoundaryDirichletFaces())
-        nc = count_active_entities(model.domain, BoundaryDirichletFaces())
-        dobc = nc > 0
-        if dobc
-            bcdirhalftrans = model.domain.representation[:bcDirHalfTrans]
-            bcdircells     = model.domain.representation[:bcDirCells]
-            bcdirinds      = model.domain.representation[:bcDirInds]
-        end
+        
     else
-        dobc = false
+        
+        bchalftrans = model.domain.representation[:bcTrans]
+        bccells     = model.domain.representation[:boundary_neighbors]
+
     end
+
+    dobc = true
     
     if dobc
         
@@ -143,7 +148,7 @@ function apply_boundary_potential!(acc, state, parameters, model::ThermalModel, 
         BoundaryT    = state[:BoundaryTemperature]
         conductivity = state[:Conductivity]
         extcoef      = state[:ExternalHeatTransferCoefficient]
-        
+
         if dolegacy
             T_hf = model.domain.representation.boundary_hfT
             for (i, c) in enumerate(bc)
@@ -151,8 +156,12 @@ function apply_boundary_potential!(acc, state, parameters, model::ThermalModel, 
                 @inbounds acc[c] += m*(T[c] - value(BoundaryT[i]))
             end
         else
-            for (ht, c, i) in zip(bcdirhalftrans, bcdircells, bcdirinds)
-                m = 1/(1/conductivity[c]*ht[i] + 1/extcoef)
+            for (i, (ht, c)) in enumerate(zip(bchalftrans, bccells))
+                if extcoef[i] > 0
+                    m = 1/(1/conductivity[c]*ht + 1/extcoef[i])
+                else
+                    m = 0
+                end
                 @inbounds acc[c] += m*(T[c] - value(BoundaryT[i]))
             end
         end
@@ -164,45 +173,83 @@ end
 # setup thermal model #
 #######################
 
+function setup_thermal_model(::Val{:simple}, inputparams::InputParams; N = 2, Nz = 10)
+
+    grid = CartesianMesh((N, N, Nz), (1., 1., 1.))
+    grid = UnstructuredMesh(grid)
+    
+    sys = ThermalSystem()
+    
+    domain = DataDomain(grid)
+
+    # operators only, use geometry, not property
+    k = ones(number_of_cells(grid))
+    
+    T    = compute_face_trans(domain, k)
+    T_hf = compute_half_face_trans(domain, k)
+    T_b  = compute_boundary_trans(domain, k)
+    
+    domain[:trans, Faces()]           = T
+    domain[:halfTrans, HalfFaces()]   = T_hf
+    domain[:bcTrans, BoundaryFaces()] = T_b
+    
+    flow = PotentialFlow(grid)
+
+    disc = (flow = flow,)
+    domain = DiscretizedDomain(domain, disc)
+
+    model = SimulationModel(domain, sys)
+    
+    prm = Dict{Symbol, Any}()
+    prm[:Capacity]                        = inputparams["ThermalModel"]["capacity"]
+    prm[:Conductivity]                    = inputparams["ThermalModel"]["conductivity"]
+    prm[:Source]                          = inputparams["ThermalModel"]["source"]
+    prm[:BoundaryTemperature]             = inputparams["ThermalModel"]["externalTemperature"]
+    prm[:ExternalHeatTransferCoefficient] = inputparams["ThermalModel"]["externalHeatTransferCoefficient"]
+    
+    parameters = setup_parameters(model, prm)
+    
+    parameters[:Source]                          .= parameters[:Source].*parameters[:Volume]
+    parameters[:ExternalHeatTransferCoefficient] .= model.domain.representation[:boundary_areas].*parameters[:ExternalHeatTransferCoefficient]
+
+    vertfaces = [findBoundary(grid, 1, true); findBoundary(grid, 1, false)]
+    vertfaces = append!(vertfaces, [findBoundary(grid, 2, true); findBoundary(grid, 2, false)])
+    parameters[:ExternalHeatTransferCoefficient][vertfaces] .= 0
+    
+    return model, parameters
+
+end
+
+
 function setup_thermal_model(inputparams::InputParams;
                              general_ad = true,
                              kwargs...)
 
-    grids, couplings = setup_grids_and_couplings(inputparams)
+    grids, = setup_grids_and_couplings(inputparams)
     
-    grid     = grids["ThermalModel"]
-    coupling = couplings["ThermalModel"]["External"]
+    grid = grids["ThermalModel"]
 
     thermalsystem = ThermalSystem()
 
     model = setup_component(grid, thermalsystem;
                             general_ad = general_ad)
-
-    domain = model.domain.representation
     
-    bfaces = coupling["boundaryfaces"]
-    nb = size(bfaces,1)
-    domain.entities[BoundaryThermalFaces()] =  nb
 
-    bcDirFace = coupling["boundaryfaces"] # in BoundaryFaces indexing
-    bcDirCell = coupling["cells"]
-    
-    bcDirInd  = Vector{Int64}(1 : nb)
-    domain[:boundaryThermalHalfTrans, BoundaryThermalFaces()] = domain[:bcTrans][bcDirFace]
-    domain[:boundaryThermalCells, BoundaryThermalFaces()]     = bcDirCell 
-    domain[:boundaryThermalInds, BoundaryThermalFaces()]      = bcDirInd 
-            
     # setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
     # sensitivities)
 
     prm = Dict{Symbol, Any}()
-    prm[:Capacity]            = inputparams["ThermalModel"]["capacity"]
-    prm[:Conductivity]        = inputparams["ThermalModel"]["conductivity"]
-    prm[:Source]              = inputparams["ThermalModel"]["source"]
-    prm[:BoundaryTemperature] = inputparams["ThermalModel"]["externalTemperature"]
-
-    parameters = setup_parameters(model, prm)
+    prm[:Capacity]                        = inputparams["ThermalModel"]["capacity"]
+    prm[:Conductivity]                    = inputparams["ThermalModel"]["conductivity"]
+    prm[:Source]                          = inputparams["ThermalModel"]["source"]
+    prm[:BoundaryTemperature]             = inputparams["ThermalModel"]["externalTemperature"]
+    prm[:ExternalHeatTransferCoefficient] = inputparams["ThermalModel"]["externalHeatTransferCoefficient"]
     
+    parameters = setup_parameters(model, prm)
+
+    # parameters[:Source]                   .= parameters[:Source].*parameters[:Volume]
+    parameters[:ExternalHeatTransferCoefficient] .= model.domain.representation[:boundary_areas].*parameters[:ExternalHeatTransferCoefficient]
+
     return model, parameters
 
 end

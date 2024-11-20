@@ -505,7 +505,7 @@ function setup_component(grid::Jutul.FiniteVolumeMesh,
 
     domain = DataDomain(grid)
 
-    # opertors only use geometry not property
+    # operators only use geometry not property
     k = ones(number_of_cells(grid))
     
     T    = compute_face_trans(domain, k)
@@ -537,7 +537,7 @@ function setup_component(grid::Jutul.FiniteVolumeMesh,
     else
         flow = TwoPointPotentialFlowHardCoded(grid)
     end
-    disc = (charge_flow = flow,)
+    disc = (flow = flow,)
     domain = DiscretizedDomain(domain, disc)
 
     model = SimulationModel(domain, sys; kwargs...)
