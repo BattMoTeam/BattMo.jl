@@ -1,12 +1,7 @@
 using Jutul
 
 export
-    fluid_volume,
     half_face_two_point_kgrad
-
-function fluid_volume(grid::MinimalECTPFAGrid)
-    grid.volumes
-end
 
 function declare_entities(G::MinimalECTPFAGrid)
     # cells
