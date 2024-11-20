@@ -155,7 +155,7 @@ function fix_control!(lsys, context::Jutul.ParallelCSRContext)
     end
     end
 
-function Jutul.post_update_linearized_system!(lsys, executor, storage, model::Jutul.MultiModel)
+function Jutul.post_update_linearized_system!(lsys, executor, storage, model::Jutul.MultiModel{:Battery})
     context = first(model.models).context# NB hack to get context of mulitmodel
     if(true)
     # fix linear system 
