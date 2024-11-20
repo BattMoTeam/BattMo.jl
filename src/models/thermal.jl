@@ -59,7 +59,7 @@ end
                                          Capacity,
                                          ix)
     for i in ix
-        @inbounds acc[i] = Volume[i]*Capacity[i]*Temperature[i]
+        @inbounds acc[i] = Temperature[i] * Volume[i] * Capacity[i]
     end
     
 end
@@ -158,7 +158,7 @@ function apply_boundary_temperature!(acc, state, parameters, model::ThermalModel
         else
             for (i, (ht, c)) in enumerate(zip(bchalftrans, bccells))
                 if extcoef[i] > 0
-                    m = 1/(1/conductivity[c]*ht + 1/extcoef[i])
+                    m = 1/(1/(ht*conductivity[c]) + 1/extcoef[i])
                 else
                     m = 0
                 end
