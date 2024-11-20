@@ -781,7 +781,7 @@ function exported_model_to_domain(exported; bcfaces = nothing,
     else
         flow = TwoPointPotentialFlowHardCoded(G)
     end
-    disc = (charge_flow = flow,)
+    disc = (flow = flow,)
     domain = DiscretizedDomain(G, disc)
 
     return domain

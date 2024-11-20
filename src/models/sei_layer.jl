@@ -96,7 +96,7 @@ function select_equations!(eqs,
                            system::ActiveMaterialP2D,
                            model::SEImodel
                            )
-    disc = model.domain.discretizations.charge_flow
+    disc = model.domain.discretizations.flow
     eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
     eqs[:mass_conservation]   = SolidMassCons()
     eqs[:solid_diffusion_bc]  = SolidDiffusionBc()

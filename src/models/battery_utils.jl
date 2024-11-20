@@ -115,7 +115,7 @@ function output_flux(model, state, parameters, eqname = :mass_conservation)
     n   = number_of_faces(model)
     N   = model.domain.representation.neighborship
     out = zeros(n)
-    fd  = model.domain.discretizations.charge_flow
+    fd  = model.domain.discretizations.flow
     dt  = NaN
     
     state_t = convert_to_immutable_storage(merge(state, parameters))
