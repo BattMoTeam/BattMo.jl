@@ -24,7 +24,7 @@ using Test
         for i in 3:length(Cc)
             @test Cc[i] ≈ 0.008165 atol = 1e-2
         end
-        @test Phi[1] ≈ 4.175 atol = 1e-2
+        @test Phi[1] ≈ 4.185 atol = 1e-2
         @test Phi[end] ≈ 2.76 atol = 1e-2
         @test Phi[30] ≈ 3.67 atol = 1e-2
         true

@@ -52,7 +52,7 @@ using AlgebraicMultigrid
                                             max_iterations=max_it)
         #cfg[:linear_solver]  = nothing
 
-        cfg[:extra_timing] = true
+        # cfg[:extra_timing] = true
 
         states, reports = simulate(state0, simulator, timesteps; forces=forces, config=cfg)
         Cc = map(x -> x[:Control][:Current][1], states)
