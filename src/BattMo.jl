@@ -3,10 +3,13 @@ using PrecompileTools
 using StaticArrays
 using Statistics
 using StatsBase
-using Infiltrator
+using LinearAlgebra
+using SparseArrays
 
 using RuntimeGeneratedFunctions
 RuntimeGeneratedFunctions.init(@__MODULE__)
+
+timeit_debug_enabled() = Jutul.timeit_debug_enabled()
 
 import JSON
 import Jutul:
@@ -71,7 +74,9 @@ include("input/io_types.jl")
 include("input/input_types.jl")
 include("input/function_input_tools.jl")
 
+
 include("models/battmo_types.jl")
+include("models/thermal.jl")
 include("models/elyte.jl")
 include("models/current_collector.jl")
 include("models/ocp.jl")
@@ -92,7 +97,9 @@ include("grid/tensor_tools.jl")
 include("grid/remove_cells.jl") #Trenger StatsBase
 include("grid/grid_conversion.jl")
 include("grid/grid_utils.jl")
-
+include("solver/solver_as_preconditioner_system.jl")
+include("solver/precondgenneral.jl")
+include("solver/sparse_utils.jl")
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 # @compile_workload begin
 #    for use_general_ad in [false, true]

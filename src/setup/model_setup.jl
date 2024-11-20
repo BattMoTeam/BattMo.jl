@@ -68,10 +68,11 @@ end
 
 function setup_simulation(inputparams::AbstractInputParams;
                           use_p2d::Bool                     = true,
+                          use_model_scaling::Bool           = true,
                           extra_timing::Bool                = false,
                           max_step::Union{Integer, Nothing} = nothing,
                           linear_solver::Symbol             = :direct,
-                          general_ad::Bool                  = false,
+                          general_ad::Bool                  = true,
                           use_groups::Bool                  = false,
                           model_kwargs::NamedTuple          = NamedTuple(),
                           config_kwargs::NamedTuple         = NamedTuple())
@@ -81,8 +82,6 @@ function setup_simulation(inputparams::AbstractInputParams;
                                     general_ad=general_ad,
                                     model_kwargs...)
 
-    setup_scalings!(model, parameters)
-    
     state0 = setup_initial_state(inputparams, model)
 
     forces = setup_forces(model)
@@ -93,8 +92,10 @@ function setup_simulation(inputparams::AbstractInputParams;
     
     cfg = setup_config(simulator,
                        model,
+                       parameters,
                        linear_solver,
-                       extra_timing;
+                       extra_timing,
+                       use_model_scaling;
                        config_kwargs...)
     
     output = Dict(:simulator   => simulator,
@@ -118,12 +119,14 @@ end
 function setup_model(inputparams::AbstractInputParams;
                      use_p2d::Bool    = true,
                      use_groups::Bool = false,
+                     general_ad       = true,
                      kwargs...)
 
     # setup the submodels and also return a coupling structure which is used to setup later the cross-terms
     model, couplings = setup_submodels(inputparams,
                                        use_groups = use_groups,
                                        use_p2d    = use_p2d;
+                                       general_ad = general_ad,
                                        kwargs... )
 
     # setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
@@ -134,7 +137,7 @@ function setup_model(inputparams::AbstractInputParams;
     setup_coupling_cross_terms!(inputparams, model, parameters, couplings)
 
     setup_initial_control_policy!(model[:Control].system.policy, inputparams, parameters)
-    
+    #model.context = Jutul.DefaultContext()
     return model, parameters
 
 end
@@ -142,7 +145,8 @@ end
 
 function setup_submodels(inputparams::InputParams; 
                          use_groups::Bool = false, 
-                         general_ad::Bool = false,
+                         general_ad::Bool = true,
+                         use_p2d = true,
                          kwargs...)
 
     include_cc = include_current_collectors(inputparams)
@@ -159,7 +163,7 @@ function setup_submodels(inputparams::InputParams;
     """
     Helper function to setup the active materials
     """
-    function setup_active_material(name::Symbol)
+    function setup_active_material(name::Symbol;kwargs...)
 
         stringName = stringNames[name]
 
@@ -229,7 +233,6 @@ function setup_submodels(inputparams::InputParams;
             am_params[:ocp_func] = interpolation_object
         end
         
-        use_p2d = true
         if use_p2d
             rp = inputparams_am["SolidDiffusion"]["particleRadius"]
             N  = Int64(inputparams_am["SolidDiffusion"]["N"])
@@ -270,7 +273,8 @@ function setup_submodels(inputparams::InputParams;
         model_am = setup_component(grid,
                                    sys_am;
                                    general_ad = general_ad,
-                                   dirichletBoundary = boundary)
+                                   dirichletBoundary = boundary,
+                                   kwargs...)
 
         return model_am
         
@@ -293,14 +297,14 @@ function setup_submodels(inputparams::InputParams;
         model_necc = setup_component(grid,
                                      sys_necc           ,
                                      dirichletBoundary = boundary,
-                                     general_ad = general_ad)
+                                     general_ad = general_ad; kwargs...)
     end
 
     ##############
     # Setup NeAm #
     ##############
     
-    model_neam = setup_active_material(:NeAm)
+    model_neam = setup_active_material(:NeAm; kwargs...)
 
     ###############
     # Setup Elyte #
@@ -360,13 +364,13 @@ function setup_submodels(inputparams::InputParams;
 
     elyte = Electrolyte(params)
     
-    model_elyte = setup_component(grids["Electrolyte"], elyte, general_ad = general_ad)
+    model_elyte = setup_component(grids["Electrolyte"], elyte, general_ad = general_ad; kwargs...)
 
     ##############
     # Setup PeAm #
     ##############
     
-    model_peam = setup_active_material(:PeAm)
+    model_peam = setup_active_material(:PeAm;kwargs...)
 
     ###########################################
     # Setup negative current collector if any #
@@ -381,7 +385,7 @@ function setup_submodels(inputparams::InputParams;
         sys_pecc = CurrentCollector(pecc_params)
         
         model_pecc = setup_component(grid, sys_pecc, 
-                                     general_ad = general_ad)
+                                     general_ad = general_ad;kwargs...)
     end
 
     #######################
@@ -415,7 +419,7 @@ function setup_submodels(inputparams::InputParams;
     
     sys_control    = CurrentAndVoltageSystem(policy)
     domain_control = CurrentAndVoltageDomain()
-    model_control  = SimulationModel(domain_control, sys_control, context = DefaultContext())
+    model_control  = SimulationModel(domain_control, sys_control;kwargs...)
 
     #####################
     # Setup multi-model #
@@ -459,7 +463,8 @@ function setup_submodels(inputparams::InputParams;
     setup_volume_fractions!(model, grids, couplings["Electrolyte"])
 
     output = (model      = model,
-              couplings  = couplings)
+              couplings  = couplings,
+              grids      = grids)
     
     return output
     
@@ -494,8 +499,9 @@ end
 
 function setup_component(grid::Jutul.FiniteVolumeMesh,
                          sys;
-                         general_ad::Bool=false,
-                         dirichletBoundary = nothing)
+                         general_ad::Bool=true,
+                         dirichletBoundary = nothing,
+                         kwargs...)
 
     domain = DataDomain(grid)
 
@@ -531,10 +537,10 @@ function setup_component(grid::Jutul.FiniteVolumeMesh,
     else
         flow = TwoPointPotentialFlowHardCoded(grid)
     end
-    disc = (charge_flow=flow,)
+    disc = (charge_flow = flow,)
     domain = DiscretizedDomain(domain, disc)
 
-    model = SimulationModel(domain, sys, context=DefaultContext())
+    model = SimulationModel(domain, sys; kwargs...)
 
     return model
 
@@ -999,6 +1005,10 @@ function setup_coupling_cross_terms!(inputparams::InputParams,
     ct = AccumulatorInterfaceFluxCT(1, trange, trans)
     ct_pair = setup_cross_term(ct, target = :Control, source = controlComp, equation = :charge_conservation)
     add_cross_term!(model, ct_pair)
+    
+    ct1 = AccumulatorInterfaceFluxCT(1, trange, trans*0.0)
+    ct1_pair = setup_cross_term(ct1, target = :Control, source = controlComp, equation = :control)
+    add_cross_term!(model, ct1_pair)
 
 
 end
@@ -1007,16 +1017,7 @@ end
 # Setup scalings #
 ##################
 
-# function Jutul.get_scaling(model::SimulationModel{O, S, F, C}, equation::JutulEquation) where {O, S <: ElectroChemicalComponent, F, C}
-#     if haskey(model.system.scalings, equation)
-#         return model.system.scalings[equation]
-#     else
-#         return 1.0
-#     end
-# end
-
-
-function setup_scalings!(model, parameters)
+function get_scalings(model, parameters)
     
     refT = 298.15
 
@@ -1123,16 +1124,6 @@ function setup_scalings!(model, parameters)
 
     end
 
-    for scaling in scalings
-        
-        submodel = model[scaling[:model_label]]
-        eq       = submodel.equations[scaling[:equation_label]]
-        value    = scaling[:value]
-
-        submodel.system.scalings[eq] = value
-        
-    end
-
     return scalings
     
 end
@@ -1229,8 +1220,10 @@ probably be given as inputs in future versions of BattMo.jl
 """
 function setup_config(sim::Jutul.JutulSimulator,
                       model::MultiModel        ,
+                      parameters, 
                       linear_solver::Symbol    ,
-                      extra_timing::Bool;
+                      extra_timing::Bool       ,
+                      use_model_scaling::Bool;
                       kwargs...)
 
     cfg = simulator_config(sim; kwargs...)
@@ -1247,8 +1240,19 @@ function setup_config(sim::Jutul.JutulSimulator,
     cfg[:error_on_incomplete]        = false
     cfg[:failure_cuts_timestep]      = true
 
-    for key in Jutul.submodels_symbols(model)
-        cfg[:tolerances][key][:default]  = 1e-5
+    if use_model_scaling
+        scalings = get_scalings(model, parameters)
+        tol_default = 1e-5
+        for scaling in scalings
+            model_label    = scaling[:model_label]
+            equation_label = scaling[:equation_label]
+            value          = scaling[:value]            
+            cfg[:tolerances][model_label][equation_label] = value*tol_default
+        end
+    else
+        for key in Jutul.submodels_symbols(model)
+            cfg[:tolerances][key][:default]  = 1e-5
+        end
     end
     
     if model[:Control].system.policy isa CyclingCVPolicy

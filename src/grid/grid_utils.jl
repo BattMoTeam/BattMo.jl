@@ -164,6 +164,10 @@ function convert_geometry(grids, couplings; include_current_collectors = true)
         end
     end
 
+    if haskey(grids, "Global")
+        ugrids["Global"] = UnstructuredMesh(grids["Global"])
+    end
+    
     return ugrids, ucouplings
 
 end
@@ -397,9 +401,9 @@ function pouch_grid(geomparams::InputGeometryParams)
         setdiff!(ne_extra_cells, ne_tab_cells)
     end
 
-    G, = remove_cells(H_back, vcat(pe_extra_cells, ne_extra_cells))
+    globalgrid, = remove_cells(H_back, vcat(pe_extra_cells, ne_extra_cells))
 
-    grids, couplings = setup_pouch_cell_geometry(G, zvals)
+    grids, couplings = setup_pouch_cell_geometry(globalgrid, zvals)
     grids, couplings = convert_geometry(grids, couplings)
 
     # Negative current collector external coupling

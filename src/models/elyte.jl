@@ -193,7 +193,7 @@ end
 end
 
 @jutul_secondary(
-function update_as_secondary!(dmudc, dmudc_def::DmuDc, model, Temperature, C, ix)
+function update_dmudc!(dmudc, dmudc_def::DmuDc, model, Temperature, C, ix)
     R = GAS_CONSTANT
     @tullio dmudc[i] = R * (Temperature[i] / C[i])
 end

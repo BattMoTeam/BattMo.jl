@@ -47,12 +47,14 @@ struct Diffusivity <: ScalarVariable end
 
 struct Charge <: ScalarVariable end
 struct Mass <: ScalarVariable end
+struct Energy <: ScalarVariable end
 
 # Boundary variables
 
 const BCCurrent = Dict(
     :Charge => :BCCharge,
     :Mass   => :BCMass,
+    :Energy => :BCCurrent
 )
 
 struct BoundaryPotential{label} <: ScalarVariable
@@ -204,12 +206,51 @@ end
 
 Jutul.minimum_value(::VolumeFraction) = eps(Float64)
 
-mutable struct BatteryCPhiPreconditioner <: JutulPreconditioner
-    c_precond
-    p_precond
+mutable struct VariablePrecond # mutable needed?
+    precond
+    var
+    eq
+    models
+    data
+    
+end
+function VariablePrecond(precond,var,eq,models)
+    return VariablePrecond(precond,var,eq,models,nothing)
+end
+
+mutable struct BatteryGeneralPreconditioner <: JutulPreconditioner
+    varpreconds
+    g_varprecond
+    params
     data
 end
 
-function BatteryCPhiPreconditioner(c_precond = AMGPreconditioner(), p_precond = AMGPreconditioner())
-    return BatteryCPhiPreconditioner(c_precond, p_precond, nothing)
+
+
+function BatteryGeneralPreconditioner(varpreconds, g_precond, params)
+    return BatteryGeneralPreconditioner(varpreconds, g_precond, params, nothing)
+end
+
+function BatteryGeneralPreconditioner()
+    varpreconds = Vector{VariablePrecond}()
+    push!(varpreconds,VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:Phi,:charge_conservation, nothing))
+    g_varprecond = VariablePrecond(Jutul.ILUZeroPreconditioner(),:Global,:Global,nothing)
+    params = Dict()
+    params["method"] = "block"
+    params["post_solve_control"] = true
+    params["pre_solve_control"] = true
+    return BatteryGeneralPreconditioner(varpreconds, g_varprecond, params, nothing)
+end
+
+
+mutable struct BatteryCPhiPreconditioner <: JutulPreconditioner
+    c_precond
+    p_precond
+    g_precond
+    data
+end
+
+function BatteryCPhiPreconditioner(c_precond = Jutul.AMGPreconditioner(:ruge_stuben), 
+    p_precond = Jutul.AMGPreconditioner(:ruge_stuben), g_precond = nothing)
+    return BatteryCPhiPreconditioner(c_precond, p_precond, g_precond, nothing)
 end
