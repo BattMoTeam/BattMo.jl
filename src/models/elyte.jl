@@ -250,33 +250,54 @@ end
 end
 
 
-function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
-    
+function computeFlux(::Val{:Charge}, model::ElectrolyteModel, state, cell, other_cell, face)
+
     @inbounds trans = state.ECTransmissibilities[face]
-    j     = - half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
-    jchem = - half_face_two_point_kgrad(c, other, trans, state.C, state.ChemCoef)
+
+    j     = - half_face_two_point_kgrad(cell, other_cell, trans, state.Phi, state.Conductivity)
+    jchem = - half_face_two_point_kgrad(cell, other_cell, trans, state.C, state.ChemCoef)
     
     j = j - jchem*(1.0)
+
+    return j
+    
+end
+
+
+function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
+
+    j = computeFlux(Val(:Charge), model, state, c, other, face)
 
     return T(j)
     
 end
 
 
-function Jutul.face_flux!(q::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
-
+function computeFlux(::Val{:Mass}, model::ElectrolyteModel, state, cell, other_cell, face)
+    
     t = transference(model.system)
     z = 1.0
     F = FARADAY_CONSTANT
     
     @inbounds trans = state.ECTransmissibilities[face]
 
-    diffFlux = - half_face_two_point_kgrad(c, other, trans, state.C, state.Diffusivity)
-    j        = - half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
-    jchem    = - half_face_two_point_kgrad(c, other, trans, state.C, state.ChemCoef)
+    diffFlux = - half_face_two_point_kgrad(cell, other_cell, trans, state.C, state.Diffusivity)
+    j        = - half_face_two_point_kgrad(cell, other_cell, trans, state.Phi, state.Conductivity)
+    jchem    = - half_face_two_point_kgrad(cell, other_cell, trans, state.C, state.ChemCoef)
     
     j = j - jchem*(1.0)
-    
+
     massFlux = diffFlux + t/(z*F)*j
+    
+    return massFlux
+    
+end    
+
+
+function Jutul.face_flux!(q::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
+
+    massFlux = computeFlux(Val(:Mass), model, state, c, other, face)
+    
     return setindex(q, massFlux, 1)::T
+
 end

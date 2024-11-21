@@ -67,27 +67,39 @@ end
     # Inner version, for generic flux
     kgrad, upw = ldisc.face_disc(face)
     (; left, right, face_sign) = kgrad
-    
+
     return Jutul.face_flux!(q_i, left, right, face, face_sign, eq, state, model, dt, flow_disc)
     
 end
 
+function computeFlux(::Val{:Mass}, model, state, cell, other_cell, face)
+
+    @inbounds trans = state.ECTransmissibilities[face]
+    q = - half_face_two_point_kgrad(cell, other_cell, trans, state.C, state.Diffusivity)
+
+    return q
+end
 
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model, dt, flow_disc) where T
 
-    @inbounds trans = state.ECTransmissibilities[face]
-
-    q = - half_face_two_point_kgrad(c, other, trans, state.C, state.Diffusivity)
+    q = computeFlux(Val(:Mass), model, state, c, other, face)
     
     return T(q)
 end
 
-function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model, dt, flow_disc) where T
-
+function computeFlux(::Val{:Charge}, model, state, cell, other_cell, face)
+    
     @inbounds trans = state.ECTransmissibilities[face]
 
-    q = - half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
+    q = - half_face_two_point_kgrad(cell, other_cell, trans, state.Phi, state.Conductivity)
 
+    return q
+    
+end
+
+function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model, dt, flow_disc) where T
+
+    q = computeFlux(Val(:Charge), model, state, c, other, face)
     return T(q)
     
 end
