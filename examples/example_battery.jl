@@ -9,7 +9,7 @@ name = "p2d_40"
 # name = "p2d_40_jl_chen2020"
 # name = "3d_demo_case"
 
-do_json = false
+do_json = true
 
 if do_json
 
