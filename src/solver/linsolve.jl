@@ -155,7 +155,7 @@ function fix_control!(lsys, context::Jutul.ParallelCSRContext)
     end
     end
 
-function Jutul.post_update_linearized_system!(lsys, executor, storage, model::Jutul.MultiModel)
+function Jutul.post_update_linearized_system!(lsys, executor, storage, model::Jutul.MultiModel{:Battery})
     context = first(model.models).context# NB hack to get context of mulitmodel
     if(true)
     # fix linear system 
@@ -229,7 +229,7 @@ function Jutul.update_preconditioner!(prec::BatteryCPhiPreconditioner, lsys, con
     #@exfiltrate mass_map, c, charge_map, phi
 end
 
-function Jutul.apply!(x, prec::BatteryCPhiPreconditioner, r, arg...)
+function Jutul.apply!(x, prec::BatteryCPhiPreconditioner, r)
     (; c, phi, allvars, A) = prec.data
     #@. x .= r
     dx = allvars.x

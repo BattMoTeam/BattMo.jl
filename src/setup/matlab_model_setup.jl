@@ -655,7 +655,7 @@ function setup_initial_state(inputparams::MatlabInputParams,
     function initialize_current_collector!(initState, name::Symbol)
 
         init = Dict()
-        init[:Phi] = state0[stringNames[name]]["CurrentCollector"]["phi"][1]
+        init[:Phi] = state0[stringNames[name]]["Coating"]["phi"][1]
         initState[name] = init
         
     end
