@@ -437,7 +437,7 @@ function setup_submodels(inputparams::InputParams;
                 PeAm    = model_peam, 
                 Control = model_control,
             ),
-            Val(:Battery);
+            :Battery;
             groups = groups)    
     else
         models = (
@@ -458,7 +458,7 @@ function setup_submodels(inputparams::InputParams;
             reduction = :reduction
         end
         model = MultiModel(models,
-                           Val(:Battery);
+                           :Battery;
                            groups = groups, reduction = reduction)
 
     end

@@ -494,7 +494,7 @@ function setup_submodels(inputparams::MatlabInputParams;
                 PeAm    = model_peam, 
                 Control = model_control
             ),
-            Val(:Battery);
+            :Battery;
             groups = groups)    
     else
         models = (
@@ -515,7 +515,7 @@ function setup_submodels(inputparams::MatlabInputParams;
             reduction = :reduction
         end
         model = MultiModel(models,
-                           Val(:Battery);
+                           :Battery;
                            groups = groups, reduction = reduction)
 
     end
