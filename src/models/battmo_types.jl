@@ -19,6 +19,8 @@ end
 
 const BattMoModel = SimulationModel{<:Any, <:BattMoSystem, <:Any, <:Any}
 
+const BatteryModel = MultiModel{:Battery}
+
 abstract type BattMoGrid <: JutulMesh end
 
 # Potential variables
