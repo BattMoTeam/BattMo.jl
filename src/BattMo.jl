@@ -77,6 +77,7 @@ include("input/function_input_tools.jl")
 
 include("models/battmo_types.jl")
 include("models/thermal.jl")
+include("utils/assembly.jl")
 include("models/elyte.jl")
 include("models/current_collector.jl")
 include("models/ocp.jl")
