@@ -18,8 +18,8 @@ export
 function find_coupling(maps1, maps2, modelname = "placeholder")
     Coupling = Dict()
     Coupling["model"] = modelname
-    Coupling["cells"] = find_common(maps1[1], maps2[1])
-    Coupling["faces"] = find_common(maps1[2], maps2[2])
+    Coupling["cells"] = find_common(maps1[:cellmap], maps2[:cellmap])
+    Coupling["faces"] = find_common(maps1[:facemap], maps2[:facemap])
     return Coupling
 end
 
@@ -242,7 +242,7 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
     for (icomponent, component) in enumerate(components)
         allinds = collect((1 : sum(ns)))
         inds = cinds[icomponent] : cinds[icomponent + 1] - 1
-        G, maps... = remove_cells(parentGrid, setdiff!(allinds, inds))
+        G, maps = remove_cells(parentGrid, setdiff!(allinds, inds))
         grids[component] = G
         global_maps[component] = maps
     end
@@ -250,7 +250,7 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
     ## setup for the eletrolyte
     allinds = collect((1 : sum(ns)))
     inds = cinds[elyte_comp_start] : (cinds[elyte_comp_start + 3] - 1)
-    G, maps... = remove_cells(parentGrid, setdiff!(allinds, inds))
+    G, maps = remove_cells(parentGrid, setdiff!(allinds, inds))
 
     grids["Electrolyte"]       = G
     global_maps["Electrolyte"] = maps
@@ -403,7 +403,7 @@ function pouch_grid(geomparams::InputGeometryParams)
 
     globalgrid, = remove_cells(H_back, vcat(pe_extra_cells, ne_extra_cells))
 
-    grids, couplings = setup_pouch_cell_geometry(globalgrid, zvals)
+    grids, couplings, global_maps = setup_pouch_cell_geometry(globalgrid, zvals)
     grids, couplings = convert_geometry(grids, couplings)
 
     # Negative current collector external coupling
@@ -442,7 +442,7 @@ function pouch_grid(geomparams::InputGeometryParams)
         couplings["ThermalModel"] = Dict("External" => Dict("cells" => bccells, "boundaryfaces" => bcfaces))
     end
     
-    return grids, couplings
+    return grids, couplings, global_maps
 
 end
 
@@ -519,13 +519,13 @@ function setup_pouch_cell_geometry(H_mother, paramsz)
     # Setup the grids and mapping for all components
     allinds = 1 : nglobal
     for (ind, component) in enumerate(components)
-        G, maps... = remove_cells(H_mother, setdiff(allinds, tags[ind]))
+        G, maps = remove_cells(H_mother, setdiff(allinds, tags[ind]))
         grids[component] = G
         global_maps[component] = maps
     end
 
     # Setup the grid and mapping for the electrolyte
-    G, maps... = remove_cells(H_mother, setdiff(allinds, vcat(tags[2:4]...)))
+    G, maps = remove_cells(H_mother, setdiff(allinds, vcat(tags[2:4]...)))
     grids["Electrolyte"] = G
     global_maps["Electrolyte"] = maps
 
@@ -535,6 +535,8 @@ function setup_pouch_cell_geometry(H_mother, paramsz)
     # Setup the couplings
     couplings = setup_couplings(components, grids, global_maps)
 
-    return grids, couplings
+    return (grids       = grids,
+            couplings   = couplings,
+            global_maps = global_maps)
 
 end

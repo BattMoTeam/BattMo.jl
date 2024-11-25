@@ -77,10 +77,10 @@ function setup_simulation(inputparams::AbstractInputParams;
                           model_kwargs::NamedTuple          = NamedTuple(),
                           config_kwargs::NamedTuple         = NamedTuple())
 
-    model, parameters = setup_model(inputparams;
-                                    use_groups=use_groups,
-                                    general_ad=general_ad,
-                                    model_kwargs...)
+    model, parameters, global_maps = setup_model(inputparams;
+                                                 use_groups = use_groups,
+                                                 general_ad = general_ad,
+                                                 model_kwargs...)
 
     state0 = setup_initial_state(inputparams, model)
 
@@ -97,12 +97,13 @@ function setup_simulation(inputparams::AbstractInputParams;
                        extra_timing,
                        use_model_scaling;
                        config_kwargs...)
-    
+
     output = Dict(:simulator   => simulator,
                   :forces      => forces,
                   :state0      => state0,
                   :parameters  => parameters,
                   :inputparams => inputparams,
+                  :global_maps => global_maps,
                   :model       => model,
                   :timesteps   => timesteps,
                   :cfg         => cfg)
@@ -123,11 +124,11 @@ function setup_model(inputparams::AbstractInputParams;
                      kwargs...)
 
     # setup the submodels and also return a coupling structure which is used to setup later the cross-terms
-    model, couplings = setup_submodels(inputparams,
-                                       use_groups = use_groups,
-                                       use_p2d    = use_p2d;
-                                       general_ad = general_ad,
-                                       kwargs... )
+    model, couplings, global_maps = setup_submodels(inputparams,
+                                                    use_groups = use_groups,
+                                                    use_p2d    = use_p2d;
+                                                    general_ad = general_ad,
+                                                    kwargs... )
 
     # setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
     # sensitivities)
@@ -138,7 +139,9 @@ function setup_model(inputparams::AbstractInputParams;
 
     setup_initial_control_policy!(model[:Control].system.policy, inputparams, parameters)
     #model.context = Jutul.DefaultContext()
-    return model, parameters
+    return (model       = model,
+            parameters  = parameters,
+            global_maps = global_maps)
 
 end
 
@@ -153,7 +156,7 @@ function setup_submodels(inputparams::InputParams;
     
     jsondict = inputparams.dict
 
-    grids, couplings = setup_grids_and_couplings(inputparams)
+    grids, couplings, global_maps = setup_grids_and_couplings(inputparams)
 
     stringNames = Dict(
         :NeAm => "NegativeElectrode",
@@ -462,11 +465,10 @@ function setup_submodels(inputparams::InputParams;
 
     setup_volume_fractions!(model, grids, couplings["Electrolyte"])
 
-    output = (model      = model,
-              couplings  = couplings,
-              grids      = grids)
-    
-    return output
+    return (model       = model,
+            couplings   = couplings,
+            grids       = grids,
+            global_maps = global_maps)
     
 end
 
@@ -485,7 +487,7 @@ function setup_grids_and_couplings(inputparams::InputParams)
         
     elseif case_type == "3D-demo"
         
-        grids, couplings = pouch_grid(inputparams)
+        grids, couplings, global_maps = pouch_grid(inputparams)
         
     else
         
@@ -493,7 +495,9 @@ function setup_grids_and_couplings(inputparams::InputParams)
         
     end       
     
-    return grids, couplings
+    return (grids       = grids,
+            couplings   = couplings,
+            global_maps = global_maps)
     
 end
 

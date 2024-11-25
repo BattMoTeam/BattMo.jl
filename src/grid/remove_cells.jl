@@ -47,7 +47,7 @@ function remove_cells(G_raw::AbstractDict, cells)
    cellmap = map_excluding(ind)
 
    if haskey(G["cells"], "numFaces")
-      numFaces = Int.(G["cells"]["numfaces"]) # This Int is neccessary since the values read are floats
+      numFaces = Int.(G["cells"]["numfaces"]) # This Int is necessary since the values read are floats
       G["cells"]["numFaces"] = G["cells"]["numFaces"][.!ind]
    else
       numFaces = diff(G["cells"]["facePos"], dims = 1)
@@ -66,7 +66,7 @@ function remove_cells(G_raw::AbstractDict, cells)
    G["cells"]["num"] -= length(cells)
    G["cells"]["facePos"] = cumsum([1;numFaces], dims = 1)
    if haskey(G["cells"], "indexMap")
-      G["cells"]["indexMap"] = Int.(G["cells"]["indexMap"][.!ind]) # This Int is neccessary since the values read are floats
+      G["cells"]["indexMap"] = Int.(G["cells"]["indexMap"][.!ind]) # This Int is necessary since the values read are floats
    end
 
    ind = 0 .∈ G["faces"]["neighbors"]
@@ -108,12 +108,16 @@ function remove_cells(G_raw::AbstractDict, cells)
       G["faces"]["nodes"] = nodemap[G["faces"]["nodes"]]
 
    else
-      nodemap = []
+       nodemap = []
    end
 
     cellmap = findall(!iszero, cellmap) 
     facemap = findall(!iszero, facemap) 
     nodemap = findall(!iszero, nodemap) 
 
-    return G, cellmap, facemap, nodemap
+    maps = (cellmap = cellmap,
+            facemap = facemap,
+            nodemap = nodemap)
+    
+    return G, maps
 end
