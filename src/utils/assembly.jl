@@ -1,7 +1,94 @@
-export fluxReconstruction
+export computeFluxVector
 
-function fluxReconstruction(model, state, parameters, operators)
+function getEnergySource!(thermal_model::ThermalModel, model::BatteryModel, state, maps, operators = setupFluxOperators(model))
+
+    nc = number_of_cells(thermal_model.domain)
+    src = zeros(Float64, nc)
+
+    if include_current_collectors(model)
+        components = (:NeCc, :NeAm, :Elyte, :PeAm, :PeCc)
+    else
+        components = (:NeAm, :Elyte, :PeAm)
+    end
     
+    mapname = (Elyte = "Electrolyte"             ,
+               NeCc  = "NegativeCurrentCollector",
+               PeAm  = "PositiveElectrode"       ,
+               PeCc  = "PositiveCurrentCollector",
+               NeAm  = "NegativeElectrode")
+
+    
+    for component in components
+        
+        addEnergySource!(src                 ,
+                         model[component]    ,
+                         state[component]    ,
+                         operators[component],
+                         maps[mapname[component]])
+        
+    end
+
+    return src
+        
+end
+
+function addEnergySource!(src, model::ElectrolyteModel, state, operators, maps)
+
+    map = maps[:cellmap]
+
+    # Ohmic flux
+
+    fluxvec = computeFluxVector(model, state, operators)
+    fluxnorm = sum(fluxvec.^2; dims = 1)
+    src[map] .+= fluxnorm
+    
+    # Diffusion flux    
+
+    fluxvec = computeFluxVector(model, state, operators, fieldname = :Mass)
+    fluxnorm = sum(fluxvec.^2; dims = 1)
+    src[map] .+= fluxnorm
+    
+end
+
+function addEnergySource!(src, model::ActiveMaterialModel, state, operators, maps)
+    
+    # Ohmic flux
+
+    fluxvec = computeFluxVector(model, state, operators)
+    fluxnorm = sum(fluxvec.^2; dims = 1)
+    src[map] .+= fluxnorm
+    
+end
+
+function addEnergySource!(src, model::CurrentCollectorModel, state, operators, maps)
+    
+    # Ohmic flux
+
+    fluxvec = computeFluxVector(model, state, operators)
+    fluxnorm = sum(fluxvec.^2; dims = 1)
+    src[map] .+= fluxnorm
+   
+end
+
+
+""" 
+   getStateWithSecondaryVariables(model, state, parameters)
+
+Compute and add to the state variables all the secondary variables
+
+# Arguments
+
+- `model`      : 
+- `state`      : 
+- `parameters` : 
+
+# Returns
+
+state : state with the added secondary variables
+
+"""
+function getStateWithSecondaryVariables(model, state, parameters)
+
     storage = Jutul.setup_storage(model;
                                   setup_linearized_system = false,
                                   setup_equations         = false,
@@ -13,10 +100,37 @@ function fluxReconstruction(model, state, parameters, operators)
     Jutul.update_secondary_variables!(storage, model)
 
     state = storage[:state]
+
+    return state
+    
+end
+
+
+""" 
+   computeFluxVector(model, state, operators; fieldname = :Charge)
+
+For a given model and state, compute the reconstruction of the flux vector at each cell from the integrated flux value
+at the faces (which we typically simply call flux)
+
+# Arguments
+
+- `model`              : simulation model 
+- `state`              : state variable
+                         All the secondary variables that are needed to compute the flux should be present there.
+                         To add those, you can use the `getStateWithSecondaryVariables` function
+- `operators`          : list of local matrices that are used to compute the flux vector from face integratedvalues,
+                         see `setupFluxOperator
+- `fieldname = :Charge`: Name of the flux that is computed, which corresponds to the name of the equation where this flux is primarily intended to be used,
+                         see the function `computeFlux` and their specializations
+
+# Returns
+
+- fluxVector : Flux vector of size dim x ncells, where dim is the spatial dimension and ncells is the number of discretization cells
+
+"""
+function computeFluxVector(model, state, operators; fieldname = :Charge)
     
     domain = model.domain.representation
-
-    trans = domain[:trans]
 
     g = domain.representation
     
@@ -43,7 +157,7 @@ function fluxReconstruction(model, state, parameters, operators)
                 face_sign = 2
             end
             
-            localflux[iloc] = computeFlux(Val(:Charge), model, state, cell, other_cell, iface)
+            localflux[iloc] = computeFlux(Val(fieldname), model, state, cell, other_cell, iface)
             
         end
 
@@ -57,6 +171,22 @@ function fluxReconstruction(model, state, parameters, operators)
     
 end
 
+
+function setupFluxOperators(model::BatteryModel)
+
+    models = model.models
+
+    operators = Dict()
+    
+    for name in keys(models)
+
+        submodel = models[name]
+        if name in [:NeCc, :NeAm, :Elyte, :PeAm, :PeCc]
+            operators[name] = BattMo.setupFluxOperator(submodel.domain.representation)
+        end
+    end
+
+end
 
 function setupFluxOperator(domain::DataDomain{R, <:Any, <:Any}) where {R <: UnstructuredMesh}
     
