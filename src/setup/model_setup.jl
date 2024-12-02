@@ -124,11 +124,11 @@ function setup_model(inputparams::AbstractInputParams;
                      kwargs...)
 
     # setup the submodels and also return a coupling structure which is used to setup later the cross-terms
-    model, couplings, global_maps = setup_submodels(inputparams,
-                                                    use_groups = use_groups,
-                                                    use_p2d    = use_p2d;
-                                                    general_ad = general_ad,
-                                                    kwargs... )
+    model, couplings, grids, global_maps = setup_submodels(inputparams,
+                                                           use_groups = use_groups,
+                                                           use_p2d    = use_p2d;
+                                                           general_ad = general_ad,
+                                                           kwargs... )
 
     # setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
     # sensitivities)
