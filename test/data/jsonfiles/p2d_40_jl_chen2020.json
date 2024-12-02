@@ -1,7 +1,7 @@
 {
   "Geometry": {
      "case": "1D",
-     "faceArea": 0.027
+     "faceArea": 0.1027
   },
   "NegativeElectrode": {
      "Coating": {
