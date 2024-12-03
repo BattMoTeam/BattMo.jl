@@ -14,7 +14,7 @@ inputparams["ThermalModel"]["source"]                          = 1e4
 inputparams["ThermalModel"]["conductivity"]                    = 12
 
 # model, parameters = BattMo.setup_thermal_model(inputparams)
-model, parameters = BattMo.setup_thermal_model(Val(:simple), inputparams; N = 3, Nz = 3)
+model, parameters = BattMo.setup_thermal_model(Val(:simple), inputparams; N = 30, Nz = 30)
 
 nc = number_of_cells(model.domain)
 T0 = zeros(nc)
@@ -30,9 +30,17 @@ N         = 10
 tend      = 1e10
 timesteps = tend*collect(1/N : 1/N : 1)
 
-states, = simulate(sim, timesteps, info_level = -1)
+nt = length(timesteps)
 
-if false
+vols = parameters[:Volume]
+
+source = (value = 1e8*ones(nc, 1).*vols,)
+forces = fill(source, nt)
+states, = simulate(sim, timesteps; info_level = -1, forces = forces)
+
+doplot = true
+
+if doplot
 
     try
         GLMakie.closeall()

@@ -1,4 +1,3 @@
-struct Source <: ScalarVariable end
 struct Capacity <: ScalarVariable end
 
 const ThermalParameters = JutulStorage
@@ -17,21 +16,6 @@ function ThermalSystem()
 end
 
 const ThermalModel = SimulationModel{O, S ,F, C} where {O<:JutulDomain, S<:ThermalSystem, F<:JutulFormulation, C<:JutulContext}
-
-function Jutul.update_equation_in_entity!(eq_buf::AbstractVector{T_e}, self_cell, state, state0, eq::ConservationLaw{:Energy}, model::ThermalModel, Δt, ldisc = Jutul.local_discretization(eq, self_cell)) where T_e
-    # Compute accumulation term
-    conserved = Jutul.conserved_symbol(eq)
-    M₀ = state0[conserved]
-    M  = state[conserved]
-    # Compute ∇⋅V
-    disc = eq.flow_discretization
-    flux(face) = Jutul.face_flux(face, eq, state, model, Δt, disc, ldisc, Val(T_e))
-    div_v = ldisc.div(flux)
-    for i in eachindex(div_v)
-        ∂M∂t = Jutul.accumulation_term(M, M₀, Δt, i, self_cell)
-        @inbounds eq_buf[i] = ∂M∂t + div_v[i] - state[:Source][self_cell]
-    end
-end
 
 function select_minimum_output_variables!(out,
     system::ThermalSystem, model::SimulationModel
@@ -70,7 +54,6 @@ function select_parameters!(S,
 
     S[:Conductivity]                    = Conductivity()
     S[:Capacity]                        = Capacity()
-    S[:Source]                          = Source()
     S[:BoundaryTemperature]             = BoundaryTemperature() # BoundaryTemperature is declared below
     S[:ExternalHeatTransferCoefficient] = ExternalHeatTransferCoefficient() # ExternalHeatTransferCoefficient is declared below
     
@@ -87,6 +70,13 @@ function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:E
     
 end
 
+function Jutul.apply_forces_to_equation!(diag_part, storage, model::ThermalModel, eq::ConservationLaw{:Energy}, eq_s, force, time)
+
+    for i in eachindex(force)
+        diag_part[i] -= force[i]
+    end
+    
+end
 
 function select_equations!(eqs,
                            system::ThermalSystem,
@@ -203,13 +193,11 @@ function setup_thermal_model(::Val{:simple}, inputparams::InputParams; N = 2, Nz
     prm = Dict{Symbol, Any}()
     prm[:Capacity]                        = inputparams["ThermalModel"]["capacity"]
     prm[:Conductivity]                    = inputparams["ThermalModel"]["conductivity"]
-    prm[:Source]                          = inputparams["ThermalModel"]["source"]
     prm[:BoundaryTemperature]             = inputparams["ThermalModel"]["externalTemperature"]
     prm[:ExternalHeatTransferCoefficient] = inputparams["ThermalModel"]["externalHeatTransferCoefficient"]
     
     parameters = setup_parameters(model, prm)
     
-    parameters[:Source]                          .= parameters[:Source].*parameters[:Volume]
     parameters[:ExternalHeatTransferCoefficient] .= model.domain.representation[:boundary_areas].*parameters[:ExternalHeatTransferCoefficient]
 
     vertfaces = [findBoundary(grid, 1, true); findBoundary(grid, 1, false)]
@@ -241,7 +229,6 @@ function setup_thermal_model(inputparams::InputParams;
     prm = Dict{Symbol, Any}()
     prm[:Capacity]                        = inputparams["ThermalModel"]["capacity"]
     prm[:Conductivity]                    = inputparams["ThermalModel"]["conductivity"]
-    prm[:Source]                          = inputparams["ThermalModel"]["source"]
     prm[:BoundaryTemperature]             = inputparams["ThermalModel"]["externalTemperature"]
     prm[:ExternalHeatTransferCoefficient] = inputparams["ThermalModel"]["externalHeatTransferCoefficient"]
     
