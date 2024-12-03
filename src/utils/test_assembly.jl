@@ -1,8 +1,7 @@
 using Jutul, BattMo, GLMakie
 
-doinit = false
-
-if doinit
+dosetupelchem = false
+if dosetupelchem
     
     # ## Setup input parameters
     name = "p2d_40_jl_chen2020"
@@ -18,14 +17,15 @@ if doinit
     # ## Setup and run simulation
     output = run_battery(inputparams);
 
-    model  = output[:extra][:model]
-    maps   = output[:extra][:global_maps]
-    states = output[:states]
+    model      = output[:extra][:model]
+    maps       = output[:extra][:global_maps]
+    states     = output[:states]
+    timesteps  = output[:extra][:timesteps]
+    parameters = output[:extra][:parameters]
     
 end
 
 doinitthermal = true
-
 if doinitthermal
 
     using Jutul, BattMo, GLMakie, Statistics
@@ -38,17 +38,41 @@ if doinitthermal
 
     inputparams = mergeInputParams(inputparams_geometry, inputparams_thermal)
 
-    inputparams["ThermalModel"]["externalHeatTransferCoefficient"] = 1e20
-    inputparams["ThermalModel"]["source"]                          = 1e4
+    inputparams["ThermalModel"]["externalHeatTransferCoefficient"] = 1e1
     inputparams["ThermalModel"]["conductivity"]                    = 12
 
     # model, parameters = BattMo.setup_thermal_model(inputparams)
-    thermal_model, thermal_parameters = BattMo.setup_thermal_model(inputparams; N = 3, Nz = 3)
+    thermal_model, thermal_parameters = BattMo.setup_thermal_model(inputparams)
 
 end
 
-state = states[1]
-state = BattMo.getStateWithSecondaryVariables(model, state)
+dosetupforces = true
+if dosetupforces
+    
+    forces = []
+    for (i, state) in enumerate(states)
+        state = BattMo.getStateWithSecondaryVariables(model, state, parameters)
+        src = BattMo.getEnergySource!(thermal_model, model, state, maps)
+        push!(forces, (value = src, ))
+    end
 
-src = BattMo.getEnergySource!(thermal_model, model, state, maps)
+    nc = number_of_cells(thermal_model.domain)
+    T0 = 298*ones(nc)
+
+    thermal_state0 = setup_state(thermal_model, Dict(:Temperature => T0))
+
+    thermal_sim = Simulator(thermal_model;
+                            state0     = thermal_state0,
+                            parameters = thermal_parameters,
+                            copy_state = true)
+    thermal_states, = simulate(thermal_sim, timesteps; info_level = -1, forces = forces)
+    
+end
+
+doplot = true
+if doplot
+    GLMakie.closeall()
+    plot_interactive(thermal_model, thermal_states)
+end
+
 

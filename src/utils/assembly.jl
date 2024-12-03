@@ -36,17 +36,26 @@ function addEnergySource!(src, model::ElectrolyteModel, state, operators, maps)
 
     map = maps[:cellmap]
 
+    vols = state[:Volume]
+    
     # Ohmic flux
 
+    kappa = state[:Conductivity] # Effective conductivity
+    
     fluxvec = computeFluxVector(model, state, operators)
     fluxnorm = transpose(sum(fluxvec.^2; dims = 1))
-    src[map] .+= fluxnorm
+
+    src[map] .+= fluxnorm.*vols./kappa
 
     # Diffusion flux
-
-    fluxvec = computeFluxVector(model, state, operators, fieldname = :Mass)
+    
+    D     = state[:Diffusivity] # Effective diffusivity
+    dmudc = state[:DmuDc] # Effective diffusivity
+    
+    fluxvec = computeFluxVector(model, state, operators, fieldname = :Diffusion)
     fluxnorm = transpose(sum(fluxvec.^2; dims = 1))
-    src[map] .+= fluxnorm
+
+    src[map] .+= dmudc.*fluxnorm.*vols./D
 
 end
 
@@ -54,23 +63,31 @@ function addEnergySource!(src, model::ActiveMaterialModel, state, operators, map
 
     map = maps[:cellmap]
 
+    vols  = state[:Volume]
+    kappa = state[:Conductivity] # Effective conductivity
+    
     # Ohmic flux
 
     fluxvec = computeFluxVector(model, state, operators)
     fluxnorm = transpose(sum(fluxvec.^2; dims = 1))
-    src[map] .+= fluxnorm
 
+    src[map] .+= fluxnorm.*vols./kappa
+    
 end
 
 function addEnergySource!(src, model::CurrentCollectorModel, state, operators, maps)
 
     map = maps[:cellmap]
 
+    vols  = state[:Volume]
+    kappa = state[:Conductivity]
+    
     # Ohmic flux
 
     fluxvec = computeFluxVector(model, state, operators)
     fluxnorm = transpose(sum(fluxvec.^2; dims = 1))
-    src[map] .+= fluxnorm
+
+    src[map] .+= fluxnorm.*vols./kappa
 
 end
 
@@ -89,12 +106,13 @@ Compute and add to the state variables all the secondary variables
 state : state with the added secondary variables
 
 """
-function getStateWithSecondaryVariables(model, state)
+function getStateWithSecondaryVariables(model, state, parameters)
 
     storage = Jutul.setup_storage(model;
                                   setup_linearized_system = false,
                                   setup_equations         = false,
                                   state0                  = state,
+                                  parameters              = parameters,
                                   state_ad                = false)
 
     storage = convert_to_immutable_storage(storage)

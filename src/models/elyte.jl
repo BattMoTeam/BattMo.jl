@@ -272,6 +272,30 @@ function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:C
     
 end
 
+""" 
+   computeFlux(::Val{:Diffusion}, model::ElectrolyteModel, state, cell, other_cell, face)
+
+   Uses the (effective) diffusitivty coefficient and return  -D grad(c) , where D is effective diffusivity coefficient and C in the concentration
+# Arguments
+
+- `model       ::ElectrolyteModel` : 
+- `state`      : 
+- `cell`       : 
+- `other_cell` : 
+- `face`       : 
+
+# Returns
+diffFlux
+"""
+function computeFlux(::Val{:Diffusion}, model::ElectrolyteModel, state, cell, other_cell, face)
+    
+    @inbounds trans = state.ECTransmissibilities[face]
+
+    diffFlux = - half_face_two_point_kgrad(cell, other_cell, trans, state.C, state.Diffusivity)
+
+    return diffFlux
+    
+end
 
 function computeFlux(::Val{:Mass}, model::ElectrolyteModel, state, cell, other_cell, face)
     
