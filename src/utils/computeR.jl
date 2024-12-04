@@ -1,4 +1,4 @@
-using Infiltrator, Jutul, BattMo
+export computeR
 
 """
    getStateWithSecondaryVariables(model, state, parameters)
@@ -32,11 +32,6 @@ function getStateWithSecondaryVariables(model, state, parameters)
     return state
 
 end
-
-model      = output[:extra][:model]
-parameters = output[:extra][:parameters]
-
-state = output[:states][1]
 
 function computeR(state, amsymbol::Symbol, model::BattMo.BatteryModel, parameters)
 
