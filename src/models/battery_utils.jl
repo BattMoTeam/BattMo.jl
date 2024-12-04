@@ -236,3 +236,35 @@ end
 apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw) = nothing
 
 
+function setupHalfTransFaces(hT, domain)
+
+    @infiltrate
+   
+    g = domain.representation.representation
+    neighbors = get_neighborship(g)
+
+    d = domain.representation
+
+    cells = d[:half_face_cells]
+    faces = d[:half_face_faces]
+
+    pos = []
+    for (cell, face) in zip(cells, faces)
+        if neighbors[1, face] == cell
+            push!(pos, 1)
+        else
+            push!(pos, 2)
+        end
+    end
+
+    A = hcat(faces, pos, cells)
+
+    ind = sortperm(eachrow(A))
+
+    hT = d[:halfTrans]
+    hT = hT[ind]
+    hT = reshape(hT, (:, 2))
+
+    return hT
+    
+end
