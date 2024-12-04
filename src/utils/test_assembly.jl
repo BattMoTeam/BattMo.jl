@@ -50,10 +50,12 @@ dosetupforces = true
 if dosetupforces
     
     forces = []
+    sources = []
     for (i, state) in enumerate(states)
         state = BattMo.getStateWithSecondaryVariables(model, state, parameters)
-        src = BattMo.getEnergySource!(thermal_model, model, state, maps)
+        src, stepsources = BattMo.getEnergySource!(thermal_model, model, state, maps)
         push!(forces, (value = src, ))
+        push!(sources, stepsources)
     end
 
     nc = number_of_cells(thermal_model.domain)
@@ -76,3 +78,7 @@ if doplot
 end
 
 
+doplotsource = true
+if doplotsource
+    Jutul.plot_interactive_impl(thermal_model.domain.representation.representation, sources)
+end
