@@ -90,6 +90,7 @@ include("setup/model_setup.jl")
 include("setup/matlab_model_setup.jl")
 
 include("utils/battery_cell_specifications.jl")
+include("utils/computeR.jl")
 
 include("solver/linsolve.jl")
 
