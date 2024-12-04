@@ -17,6 +17,7 @@ state : state with the added secondary variables
 """
 function getStateWithSecondaryVariables(model, state, parameters)
 
+    @infiltrate
     storage = Jutul.setup_storage(model;
                                   setup_linearized_system = false,
                                   setup_equations         = false,
