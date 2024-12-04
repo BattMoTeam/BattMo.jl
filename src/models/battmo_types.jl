@@ -19,6 +19,8 @@ end
 
 const ElectroChemicalComponentModel = SimulationModel{<:Any, <:ElectroChemicalComponent, <:Any, <:Any}
 
+const BatteryModel = MultiModel{:Battery} 
+
 abstract type ElectroChemicalGrid <: JutulMesh end
 
 # Potential variables
