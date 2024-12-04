@@ -4,7 +4,7 @@ function getEnergySource!(thermal_model::ThermalModel, model::BatteryModel, stat
 
     nc = number_of_cells(thermal_model.domain)
     src = zeros(Float64, nc)
-
+    
     # names of component versus names in maps (since they do not match... should be fixed for the sake of simplicity)
     mapnames = (Elyte = "Electrolyte"             ,
                 NeCc  = "NegativeCurrentCollector",
@@ -18,23 +18,28 @@ function getEnergySource!(thermal_model::ThermalModel, model::BatteryModel, stat
         components = (:NeAm, :Elyte, :PeAm)
     end
 
+    sources = Dict()
+    
     for component in components
 
-        addEnergySource!(src                 ,
-                         model[component]    ,
-                         state[component]    ,
-                         operators[component],
-                         maps[mapnames[component]])
+        map = maps[mapnames[component]][:cellmap]
+        comp_src = getEnergySource(model[component],
+                                             state[component],
+                                             operators[component]
+                                             )
 
+        src[map] .+= comp_src
+
+        sources[component] = fill(NaN, nc)
+        sources[component][map] = comp_src
+        
     end
 
-    return src
+    return src, sources
 
 end
 
-function addEnergySource!(src, model::ElectrolyteModel, state, operators, maps)
-
-    map = maps[:cellmap]
+function getEnergySource(model::ElectrolyteModel, state, operators)
 
     vols = state[:Volume]
     
@@ -45,7 +50,7 @@ function addEnergySource!(src, model::ElectrolyteModel, state, operators, maps)
     fluxvec = computeFluxVector(model, state, operators)
     fluxnorm = transpose(sum(fluxvec.^2; dims = 1))
 
-    src[map] .+= fluxnorm.*vols./kappa
+    src = fluxnorm.*vols./kappa
 
     # Diffusion flux
     
@@ -55,13 +60,13 @@ function addEnergySource!(src, model::ElectrolyteModel, state, operators, maps)
     fluxvec = computeFluxVector(model, state, operators, fieldname = :Diffusion)
     fluxnorm = transpose(sum(fluxvec.^2; dims = 1))
 
-    src[map] .+= dmudc.*fluxnorm.*vols./D
+    src .+= dmudc.*fluxnorm.*vols./D
+    
+    return src
 
 end
 
-function addEnergySource!(src, model::ActiveMaterialModel, state, operators, maps)
-
-    map = maps[:cellmap]
+function getEnergySource(model::ActiveMaterialModel, state, operators)
 
     vols  = state[:Volume]
     kappa = state[:Conductivity] # Effective conductivity
@@ -71,13 +76,13 @@ function addEnergySource!(src, model::ActiveMaterialModel, state, operators, map
     fluxvec = computeFluxVector(model, state, operators)
     fluxnorm = transpose(sum(fluxvec.^2; dims = 1))
 
-    src[map] .+= fluxnorm.*vols./kappa
+    src = fluxnorm.*vols./kappa
+    
+    return src
     
 end
 
-function addEnergySource!(src, model::CurrentCollectorModel, state, operators, maps)
-
-    map = maps[:cellmap]
+function getEnergySource(model::CurrentCollectorModel, state, operators)
 
     vols  = state[:Volume]
     kappa = state[:Conductivity]
@@ -87,7 +92,9 @@ function addEnergySource!(src, model::CurrentCollectorModel, state, operators, m
     fluxvec = computeFluxVector(model, state, operators)
     fluxnorm = transpose(sum(fluxvec.^2; dims = 1))
 
-    src[map] .+= fluxnorm.*vols./kappa
+    src = fluxnorm.*vols./kappa
+    
+    return src
 
 end
 
