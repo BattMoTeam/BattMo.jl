@@ -36,37 +36,53 @@ end
 model      = output[:extra][:model]
 parameters = output[:extra][:parameters]
 
-for crosstermpair_ in model.cross_terms
-    if crosstermpair_.source == :NeAm && crosstermpair_.target == :Elyte
-        global crosstermpair = crosstermpair_
-    end
-end
-
-crossterm = crosstermpair.cross_term
-
-amcells = crossterm.source_cells
-elcells = crossterm.target_cells
-
 state = output[:states][1]
 
-state = getStateWithSecondaryVariables(model, state, parameters)
+function computeR(state, amsymbol::Symbol, model::BattMo.BatteryModel, parameters)
 
+    local crosstermpair
+    
+    for crosstermpair_ in model.cross_terms
+        if crosstermpair_.source == amsymbol && crosstermpair_.target == :Elyte
+            crosstermpair = crosstermpair_
+            break
+        end
+    end
 
-c_a   = state[:NeAm].Cs[amcells[1]]
-R0    = state[:NeAm].ReactionRateConst[amcells[1]]
-phi_a = state[:NeAm].Phi[amcells[1]]
-ocp   = state[:NeAm].Ocp[amcells[1]]
-T     = state[:NeAm].Temperature[amcells[1]]
-c_e   = state[:Elyte].C[elcells[1]]
-phi_e = state[:Elyte].Phi[elcells[1]]
-phi_e = state[:Elyte].Phi[elcells[1]]
+    crossterm = crosstermpair.cross_term
 
-eta = phi_a - phi_e - ocp
+    amcells = crossterm.source_cells
+    elcells = crossterm.target_cells
+    
+    state = getStateWithSecondaryVariables(model, state, parameters)
+    
+    R = []
+    
+    for (ind, (amcell, elcell)) in enumerate(zip(amcells, elcells))
 
-R = BattMo.reaction_rate(eta           ,
-                         c_a           ,
-                         R0            ,
-                         T             ,
-                         c_e           ,
-                         model[:NeAm].system,
-                         model[:Elyte].system)
+        c_a   = state[:NeAm].Cs[amcell]
+        R0    = state[:NeAm].ReactionRateConst[amcell]
+        phi_a = state[:NeAm].Phi[amcell]
+        ocp   = state[:NeAm].Ocp[amcell]
+        T     = state[:NeAm].Temperature[amcell]
+        c_e   = state[:Elyte].C[elcell]
+        phi_e = state[:Elyte].Phi[elcell]
+        phi_e = state[:Elyte].Phi[elcell]
+
+        eta = phi_a - phi_e - ocp
+
+        Rcell = BattMo.reaction_rate(eta,
+                                     c_a,
+                                     R0 ,
+                                     T  ,
+                                     c_e,
+                                     model[:NeAm].system,
+                                     model[:Elyte].system)
+
+        push!(R, Rcell)
+    end
+
+    return R
+    
+end
+
