@@ -60,8 +60,9 @@ function select_parameters!(S                  ,
                             )
     
     S[:Temperature]    = Temperature()
+    S[:BruggemanCoefficient] = BruggemanCoefficient()
     S[:VolumeFraction] = VolumeFraction()
-    
+
 end
 
 function select_equations!(eqs                ,
@@ -201,37 +202,37 @@ end
 
 # ? Does this maybe look better ?
 @jutul_secondary(
-function update_conductivity!(kappa, kappa_def::Conductivity, model::ElectrolyteModel, Temperature, C, VolumeFraction, ix)
+function update_conductivity!(kappa, kappa_def::Conductivity, model::ElectrolyteModel, Temperature, C, VolumeFraction, BruggemanCoefficient, ix)
     """ Register conductivity function
     """
     
     # We use Bruggeman coefficient
     for i in ix
-        
+        b = BruggemanCoefficient[i]
         if Jutul.haskey(model.system.params, :conductivity_data)
 
-            @inbounds kappa[i] = model.system[:conductivity_func](C[i]) * VolumeFraction[i]^1.5
+            @inbounds kappa[i] = model.system[:conductivity_func](C[i]) * VolumeFraction[i]^b
 
         else
-            @inbounds kappa[i] = model.system[:conductivity_func](C[i], Temperature[i]) * VolumeFraction[i]^1.5
+            @inbounds kappa[i] = model.system[:conductivity_func](C[i], Temperature[i]) * VolumeFraction[i]^b
         end
     end
 end
 )
 
-@jutul_secondary function update_diffusivity!(D, D_def::Diffusivity, model::ElectrolyteModel, C, Temperature, VolumeFraction, ix)
+@jutul_secondary function update_diffusivity!(D, D_def::Diffusivity, model::ElectrolyteModel, C, Temperature, VolumeFraction, BruggemanCoefficient, ix)
     """ Register diffusivity function
     """
     
     for i in ix
-
+        b = BruggemanCoefficient[i]
         if Jutul.haskey(model.system.params, :diffusivity_data)
 
-            @inbounds D[i] = model.system[:diffusivity_func](C[i])*VolumeFraction[i]^1.5
+            @inbounds D[i] = model.system[:diffusivity_func](C[i])*VolumeFraction[i]^b
 
         else
             
-            @inbounds D[i] = model.system[:diffusivity_func](C[i], Temperature[i])*VolumeFraction[i]^1.5
+            @inbounds D[i] = model.system[:diffusivity_func](C[i], Temperature[i])*VolumeFraction[i]^b
         end
         
     end
