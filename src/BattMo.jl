@@ -77,7 +77,6 @@ include("input/function_input_tools.jl")
 
 include("models/battmo_types.jl")
 include("models/thermal.jl")
-include("utils/assembly.jl")
 include("models/elyte.jl")
 include("models/current_collector.jl")
 include("models/ocp.jl")
@@ -86,6 +85,8 @@ include("models/sei_layer.jl")
 include("models/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")
+
+include("utils/assembly.jl")
 
 include("setup/model_setup.jl")
 include("setup/matlab_model_setup.jl")

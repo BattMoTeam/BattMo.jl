@@ -1,6 +1,6 @@
 using Jutul, BattMo, GLMakie
 
-dosetupelchem = false
+dosetupelchem = true
 if dosetupelchem
     
     # ## Setup input parameters
