@@ -196,6 +196,7 @@ function computeFluxVector(model, state, operators; fieldname = :Charge)
 
 end
 
+
 function setupFluxOperators(model::BatteryModel)
 
     models = model.models
@@ -210,9 +211,22 @@ function setupFluxOperators(model::BatteryModel)
     end
 
     return operators
-    
+
 end
 
+"""
+    setupFluxOperator(domain::DataDomain{R, <:Any, <:Any}) where {R <: UnstructuredMesh}
+
+Assemble the list of the operators, one per cell. For a given cell the operator maps the integrated flux on each face
+(called only flux in rest of code) to the flux vector in the cell, see setupFluxOperator(normals::AbstractVector, flux::AbstractVector) 
+
+
+# Arguments
+- `domain`: data domain which contains the mesh of type UnstructuredMesh
+
+# Returns
+- List of flux operators, one per cell
+"""
 function setupFluxOperator(domain::DataDomain{R, <:Any, <:Any}) where {R <: UnstructuredMesh}
 
     g = domain.representation
