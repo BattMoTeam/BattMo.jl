@@ -252,10 +252,10 @@ end
 
 function computeFlux(::Val{:Charge}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
 
-    cell, other_cell = setupHalfTrans(model, face, cell, other_cell, face_sign)
+    htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
 
-    j     = - half_face_two_point_kgrad(cell, other_cell, state.Phi, state.Conductivity)
-    jchem = - half_face_two_point_kgrad(cell, other_cell, state.C, state.ChemCoef)
+    j     = - half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Phi, state.Conductivity)
+    jchem = - half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other,  state.C, state.ChemCoef)
     
     j = j - jchem*(1.0)
 
@@ -289,8 +289,8 @@ diffFlux
 """
 function computeFlux(::Val{:Diffusion}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
     
-    cell, other_cell = setupHalfTrans(model, face, cell, other_cell, face_sign)
-    diffFlux = - half_face_two_point_kgrad(cell, other_cell, state.C, state.Diffusivity)
+    htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
+    diffFlux = - half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other,  state.C, state.Diffusivity)
 
     return diffFlux
     
@@ -302,11 +302,11 @@ function computeFlux(::Val{:Mass}, model::ElectrolyteModel, state, cell, other_c
     z = 1.0
     F = FARADAY_CONSTANT
     
-    cell, other_cell = setupHalfTrans(model, face, cell, other_cell, face_sign)
+    htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
 
-    diffFlux = - half_face_two_point_kgrad(cell, other_cell, state.C, state.Diffusivity)
-    j        = - half_face_two_point_kgrad(cell, other_cell, state.Phi, state.Conductivity)
-    jchem    = - half_face_two_point_kgrad(cell, other_cell, state.C, state.ChemCoef)
+    diffFlux = - half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other,  state.C, state.Diffusivity)
+    j        = - half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other,  state.Phi, state.Conductivity)
+    jchem    = - half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other,  state.C, state.ChemCoef)
     
     j = j - jchem*(1.0)
 

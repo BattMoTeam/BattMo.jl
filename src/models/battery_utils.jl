@@ -52,13 +52,13 @@ Computes the harmonic average weighted with half-transmissibilities
 - `k`  : vector containing the value to be average
 
 """
-@inline function harmonic_average(c1, c2, k)
+@inline function harmonic_average(c1, c2, ht1, ht2, k)
 
     
-    @inbounds l   = k[c1[:cell]]
-    @inbounds r   = k[c2[:cell]]
-    @inbounds htl = c1[:htrans]
-    @inbounds htr = c2[:htrans]
+    @inbounds l   = k[c1]
+    @inbounds r   = k[c2]
+    @inbounds htl = ht1
+    @inbounds htr = ht2
     
     return 1.0/(1.0/(htl*l) + 1.0/(htr*r))
     
@@ -69,11 +69,13 @@ end
 
 @inline function half_face_two_point_kgrad(c_self            ,
                                            c_other           ,
+                                           ht_self           ,
+                                           ht_other          , 
                                            phi::AbstractArray,
                                            k::AbstractArray
                                            )
     
-    k_av = harmonic_average(c_self, c_other, k)
+    k_av = harmonic_average(c_self, c_other, ht_self, ht_other, k)
     grad_phi = grad(c_self, c_other, phi)
     
     return k_av*grad_phi
@@ -84,12 +86,14 @@ function setupHalfTrans(model, face, cell, other_cell, face_sign)
 
     htrans = model.domain.representation[:halftransfaces][:, face]
     if face_sign > 0
-        shtrans = (cell = cell, htrans = htrans[1]), (cell = other_cell, htrans = htrans[2])
+        htrans_cell  = htrans[1]
+        htrans_other = htrans[2]
     else
-        shtrans = (cell = cell, htrans = htrans[2]), (cell = other_cell, htrans = htrans[3])        
+        htrans_cell  = htrans[2]
+        htrans_other = htrans[1]
     end
 
-    return shtrans
+    return (htrans_cell, htrans_other)
     
 end
 
@@ -106,8 +110,8 @@ end
 
 function computeFlux(::Val{:Mass}, model, state, cell, other_cell, face, face_sign)
     
-    cell, other_cell = setupHalfTrans(model, face, cell, other_cell, face_sign)
-    q = - half_face_two_point_kgrad(cell, other_cell, state.C, state.Diffusivity)
+    htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
+    q = - half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.C, state.Diffusivity)
 
     return q
 end
@@ -121,8 +125,8 @@ end
 
 function computeFlux(::Val{:Charge}, model, state, cell, other_cell, face, face_sign)
     
-    cell, other_cell = setupHalfTrans(model, face, cell, other_cell, face_sign)
-    q = - half_face_two_point_kgrad(cell, other_cell, state.Phi, state.Conductivity)
+    htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
+    q = - half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Phi, state.Conductivity)
 
     return q
     
@@ -135,10 +139,10 @@ function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:C
     
 end
 
-function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Energy, <:Any}, state, model, dt, flow_disc) where T
+function Jutul.face_flux!(::T, cell, other_cell, face, face_sign, eq::ConservationLaw{:Energy, <:Any}, state, model, dt, flow_disc) where T
 
-    cell, other_cell = setupHalfTrans(model, face, cell, other_cell, face_sign)
-    q = - half_face_two_point_kgrad(c, other, htrans, state.Temperature, state.Conductivity)
+    htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
+    q = - half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Temperature, state.Conductivity)
 
     return T(q)
     
