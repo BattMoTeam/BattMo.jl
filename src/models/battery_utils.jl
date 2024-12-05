@@ -38,29 +38,61 @@ end
 #####################
 # Gradient operator #
 #####################
+
+
+""" 
+   harmonic_average(c1, c2, k)
+
+Computes the harmonic average weighted with half-transmissibilities
+
+# Arguments
+
+- `c1` : first cell input, tuple with keys :cell (cell index) and :htrans (value of half-transmissibility)
+- `c2` : second cell input, same format as `c1`
+- `k`  : vector containing the value to be average
+
+"""
 @inline function harmonic_average(c1, c2, k)
+
     
-    @inbounds l = k[c1]
-    @inbounds r = k[c2]
+    @inbounds l   = k[c1[:cell]]
+    @inbounds r   = k[c2[:cell]]
+    @inbounds htl = c1[:htrans]
+    @inbounds htr = c2[:htrans]
     
-    return 2.0/(1.0/l + 1.0/r)
+    return 1.0/(1.0/(htl*l) + 1.0/(htr*r))
+    
 end
 
 @inline grad(c_self, c_other, p::AbstractArray) = @inbounds (p[c_other] - p[c_self])
 
-@inline function half_face_two_point_kgrad(c_self::I         ,
-                                           c_other::I        ,
-                                           T::R              ,
+
+@inline function half_face_two_point_kgrad(c_self            ,
+                                           c_other           ,
                                            phi::AbstractArray,
                                            k::AbstractArray
-                                           ) where {R<:Real, I<:Integer}
+                                           )
     
     k_av = harmonic_average(c_self, c_other, k)
     grad_phi = grad(c_self, c_other, phi)
     
-    return T*k_av*grad_phi
+    return k_av*grad_phi
     
 end
+
+function setupHalfTrans(model, face, cell, other_cell, face_sign)
+
+    htrans = model.domain.representation[:halftransfaces][:, face]
+    if face_sign > 0
+        shtrans = (cell = cell, htrans = htrans[1]), (cell = other_cell, htrans = htrans[2])
+    else
+        shtrans = (cell = cell, htrans = htrans[2]), (cell = other_cell, htrans = htrans[3])        
+    end
+
+    return shtrans
+    
+end
+
 
 @inline function Jutul.face_flux!(q_i, face, eq::ConservationLaw, state, model::BattMoModel, dt, flow_disc::PotentialFlow, ldisc)
 
@@ -72,26 +104,25 @@ end
     
 end
 
-function computeFlux(::Val{:Mass}, model, state, cell, other_cell, face)
-
-    @inbounds trans = state.ECTransmissibilities[face]
-    q = - half_face_two_point_kgrad(cell, other_cell, trans, state.C, state.Diffusivity)
+function computeFlux(::Val{:Mass}, model, state, cell, other_cell, face, face_sign)
+    
+    cell, other_cell = setupHalfTrans(model, face, cell, other_cell, face_sign)
+    q = - half_face_two_point_kgrad(cell, other_cell, state.C, state.Diffusivity)
 
     return q
 end
 
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model, dt, flow_disc) where T
 
-    q = computeFlux(Val(:Mass), model, state, c, other, face)
+    q = computeFlux(Val(:Mass), model, state, c, other, face, face_sign)
     
     return T(q)
 end
 
-function computeFlux(::Val{:Charge}, model, state, cell, other_cell, face)
+function computeFlux(::Val{:Charge}, model, state, cell, other_cell, face, face_sign)
     
-    @inbounds trans = state.ECTransmissibilities[face]
-
-    q = - half_face_two_point_kgrad(cell, other_cell, trans, state.Phi, state.Conductivity)
+    cell, other_cell = setupHalfTrans(model, face, cell, other_cell, face_sign)
+    q = - half_face_two_point_kgrad(cell, other_cell, state.Phi, state.Conductivity)
 
     return q
     
@@ -99,16 +130,15 @@ end
 
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model, dt, flow_disc) where T
 
-    q = computeFlux(Val(:Charge), model, state, c, other, face)
+    q = computeFlux(Val(:Charge), model, state, c, other, face, face_sign)
     return T(q)
     
 end
 
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Energy, <:Any}, state, model, dt, flow_disc) where T
 
-    @inbounds trans = state.ECTransmissibilities[face]
-
-    q = - half_face_two_point_kgrad(c, other, trans, state.Temperature, state.Conductivity)
+    cell, other_cell = setupHalfTrans(model, face, cell, other_cell, face_sign)
+    q = - half_face_two_point_kgrad(c, other, htrans, state.Temperature, state.Conductivity)
 
     return T(q)
     
@@ -235,15 +265,12 @@ end
 
 apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw) = nothing
 
+function setupHalfTransFaces(domain)
 
-function setupHalfTransFaces(hT, domain)
-
-    @infiltrate
-   
-    g = domain.representation.representation
+    g = domain.representation
     neighbors = get_neighborship(g)
 
-    d = domain.representation
+    d = domain
 
     cells = d[:half_face_cells]
     faces = d[:half_face_faces]
@@ -263,8 +290,9 @@ function setupHalfTransFaces(hT, domain)
 
     hT = d[:halfTrans]
     hT = hT[ind]
-    hT = reshape(hT, (:, 2))
+    hT = reshape(hT, (2, :))
 
     return hT
     
 end
+

@@ -484,6 +484,8 @@ function setup_grids_and_couplings(inputparams::InputParams)
     if case_type == "1D"
 
         grids, couplings = one_dimensional_grid(inputparams)
+
+        error("we should return the global map")
         
     elseif case_type == "3D-demo"
         
@@ -517,8 +519,8 @@ function setup_component(grid::Jutul.FiniteVolumeMesh,
     T_b  = compute_boundary_trans(domain, k)
     
     domain[:trans, Faces()]           = T
-    domain[:halftransfaces, Faces()]  = setupHalfTransFaces(T_hf, domain)
     domain[:halfTrans, HalfFaces()]   = T_hf
+    domain[:halftransfaces, Faces()]  = setupHalfTransFaces(domain)
     domain[:bcTrans, BoundaryFaces()] = T_b
     
     if !isnothing(dirichletBoundary)

@@ -182,7 +182,7 @@ function computeFluxVector(model, state, operators; fieldname = :Charge)
                 face_sign = 2
             end
 
-            localflux[iloc] = computeFlux(Val(fieldname), model, state, cell, other_cell, iface)
+            localflux[iloc] = computeFlux(Val(fieldname), model, state, cell, other_cell, iface, face_sign)
 
         end
 
