@@ -2,50 +2,19 @@ using Polynomials
 ## Defines OCP and entropy change (dUdT) for graphite using polynomials
 
 con = Constants()
-const FARADAY_CONSTANT = con.F
 
-const coeff1_graphite = Polynomial([
-	+ 0.005269056,
-	+ 3.299265709,
-	- 91.79325798,
-	+ 1004.911008,
-	- 5812.278127,
-	+ 19329.75490,
-	- 37147.89470,
-	+ 38379.18127,
-	- 16515.05308
-]);
+function computeOCP_Graphite_Torchio(theta)
+    """Compute OCP for GenericGraphite as function of stoichiometry"""
 
-const coeff2_graphite = Polynomial([
-	1,
-	- 48.09287227,
-	+ 1017.234804,
-	- 10481.80419,
-	+ 59431.30000,
-	- 195881.6488,
-	+ 374577.3152,
-	- 385821.1607,
-	+ 165705.8597
-]);
+    ocp = (0.7222
+           + 0.1387 * theta
+           + 0.0290 * theta^0.5
+           - 0.0172 / theta
+           + 0.0019 / theta^1.5
+           + 0.2808 * exp(0.9 - 15.0*theta)
+           - 0.7984 * exp(0.4465*theta - 0.4108)
+	   );
 
-
-function computeOCP_Graphite_Torchio(c, T, cmax)
-    """Compute OCP for GenericGraphite as function of temperature and concentration"""
-    theta  = c./cmax
-    refT   = 298.15
-    refOCP = (0.7222
-              + 0.1387 * theta
-              + 0.0290 * theta^0.5
-              - 0.0172 / theta
-              + 0.0019 / theta^1.5
-              + 0.2808 * exp(0.9 - 15.0*theta)
-              - 0.7984 * exp(0.4465*theta - 0.4108)
-	      );
-
-    dUdT = 1e-3*coeff1_graphite(theta)/ coeff2_graphite(theta);
-    
-    ocp = refOCP + (T - refT) * dUdT;
-    
     return ocp
     
 end
@@ -65,22 +34,19 @@ end
 
 ## Define OCP for Graphite-SiOx (Chen2020) using polynomials
 
-function computeOCP_Graphite_SiOx_Chen2020(c, T, cmax)
-    x = c./cmax
+function computeOCP_Graphite_SiOx_Chen2020(stoc)
 
-    ocp = 1.9793 * exp(-39.3631 * x) + 0.2482 - 0.0909 * tanh(29.8538 * (x - 0.1234)) - 0.04478 * tanh(14.9159 * (x - 0.2769))  - 0.0205 * tanh(30.4444 * (x - 0.6103))
-
+    ocp = 1.9793 * exp(-39.3631 * stoc) + 0.2482 - 0.0909 * tanh(29.8538 * (stoc - 0.1234)) - 0.04478 * tanh(14.9159 * (stoc - 0.2769))  - 0.0205 * tanh(30.4444 * (stoc - 0.6103))
 
     return ocp
+    
 end
 
 ## Define OCP for NMC811 (Chen2020) using polynomials
 
-function computeOCP_NMC811_Chen2020(c, T, cmax)
-    x = c./cmax
+function computeOCP_NMC811_Chen2020(stoc)
 
-    ocp = -0.8090 * x + 4.4875 - 0.0428 * tanh(18.5138 * (x - 0.5542)) - 17.7326 * tanh(15.7890 * (x - 0.3117)) + 17.5842 * tanh(15.9308 * (x - 0.3120))
-
+    ocp = -0.8090 * stoc + 4.4875 - 0.0428 * tanh(18.5138 * (stoc - 0.5542)) - 17.7326 * tanh(15.7890 * (stoc - 0.3117)) + 17.5842 * tanh(15.9308 * (stoc - 0.3120))
 
     return ocp
 end
@@ -293,20 +259,16 @@ function computeOCP_LFP_Xu2015(c, T, cmax)
     
 end
 
-function computeOCP_LFP_Gerver2011(c, T, cmax)
+function computeOCP_LFP_Gerver2011(stoc)
 
-    ocp = 3.41285712e+00 - 1.49721852e-02 * c/cmax + 3.54866018e+14 * exp(-3.95729493e+02 * c/cmax) - 1.45998465e+00 * exp(-1.10108622e+02 * (1 - c/cmax))
+    ocp = 3.41285712e+00 - 1.49721852e-02 * stoc + 3.54866018e+14 * exp(-3.95729493e+02 * stoc) - 1.45998465e+00 * exp(-1.10108622e+02 * (1 - stoc))
     return ocp
 end
 
-function computeOCP_NMC111(c, T, cmax)
-    
+function computeOCP_NMC111(stoc)
     """Compute OCP for GenericNMC111 as function of temperature and concentration"""
-    refT   = 298.15
-    theta  = c/cmax
-    refOCP = coeff1_refOCP_nmc111(theta)/coeff2_refOCP_nmc111(theta)
-    dUdT   = -1e-3*coeff1_dUdT_nmc111(theta)/coeff2_dUdT_nmc111(theta)
-    ocp    = refOCP + (T - refT) * dUdT
+    
+    ocp = coeff1_refOCP_nmc111(stoc)/coeff2_refOCP_nmc111(stoc)
     
     return ocp
     
