@@ -30,8 +30,6 @@ struct ActiveMaterial{label, D, T, Di} <: AbstractActiveMaterial{label} where {D
     # - maximum_concentration::Real
     # - n_charge_carriers::Integer
     # - ocp_func::F where {F <: Function}
-    # - ocp_funcdata
-    # - ocp_funcexp
     # - reaction_rate_constant_func::F where {F <: Function}
     # - theta0::Real
     # - theta100::Real
@@ -265,29 +263,11 @@ end
         ocp_func = model.system.params[:ocp_func]
         
         cmax = model.system.params[:maximum_concentration]
-        refT = 298.15
-
-        if Jutul.haskey(model.system.params, :ocp_funcexp)
-            theta0   = model.system.params[:theta0]
-            theta100 = model.system.params[:theta100]
-        end
-       
         
         for cell in ix
-        
-            if Jutul.haskey(model.system.params, :ocp_funcexp)
-
-                @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, refT, cmax)
-                
-            elseif Jutul.haskey(model.system.params, :ocp_funcdata)
-
-                @inbounds Ocp[cell] = ocp_func(Cs[cell]/cmax)
-
-            else
-                
-                @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)
-               
-            end
+            
+            @inbounds Ocp[cell] = ocp_func(Cs[cell]/cmax)
+            
         end
     end
 )
@@ -468,36 +448,10 @@ function select_minimum_output_variables!(out                   ,
     
 end
 
-
-
-# @jutul_secondary(
-#     function update_vocp!(Ocp ,
-#                           tv::Ocp ,
-#                           model::SimulationModel{<:Any, ActiveMaterialNoParticleDiffusion{T}, <:Any, <:Any},
-#                           C       ,
-#                           ix
-#                           ) where T
-        
-#         ocp_func = model.system.params[:ocp_func]
-#         cmax     = model.system.params[:maximum_concentration]
-#         refT     = 298.15
-#         ocp_eq   = model.system.params[:ocp_eq]
-#         global ocp_ex = ocp_eq
-#         for cell in ix
-#             ################### Lorena #############
-#             global c = Cs[cell]
-#             @inbounds Ocp[cell] = ocp_func(ocp_eq,Cs[cell], refT, cmax)
-#             #@inbounds Ocp[cell] = @evaluate_ocp_function(ocp_eq , Cs[cell], refT, cmax)
-#             ########################################
-#             #@inbounds Ocp[cell] = ocp_func(C[cell], refT, cmax)
-#         end
-#     end
-# )
-
 @jutul_secondary(
     function update_vocp!(Ocp,
                           tv::Ocp,
-                          model:: SimulationModel{<:Any, ActiveMaterialNoParticleDiffusion{T}, <:Any, <:Any},
+                          model::SimulationModel{<:Any, ActiveMaterialNoParticleDiffusion{T}, <:Any, <:Any},
                           C,
                           ix
                           ) where T
@@ -505,29 +459,9 @@ end
         ocp_func = model.system.params[:ocp_func]
         
         cmax = model.system.params[:maximum_concentration]
-        refT = 298.15
 
-        if Jutul.haskey(model.system.params, :ocp_funcexp)
-            theta0   = model.system.params[:theta0]
-            theta100 = model.system.params[:theta100]
-        end
-       
-        
         for cell in ix
-        
-            if Jutul.haskey(model.system.params, :ocp_funcexp)
-
-                @inbounds Ocp[cell] = ocp_func(C[cell], refT, refT, cmax)
-                
-            elseif Jutul.haskey(model.system.params, :ocp_funcdata)
-
-                @inbounds Ocp[cell] = ocp_func(C[cell]/cmax)
-
-            else
-                
-                @inbounds Ocp[cell] = ocp_func(C[cell], refT, cmax)
-               
-            end
+            @inbounds Ocp[cell] = ocp_func(C[cell]/cmax)
         end
     end
 )

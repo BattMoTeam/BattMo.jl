@@ -212,28 +212,7 @@ function setup_submodels(inputparams::InputParams;
 
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
 
-        functionFormat = inputparams_am["Interface"]["openCircuitPotential"]["functionFormat"]
-        
-        if haskey(inputparams_am["Interface"]["openCircuitPotential"], "function")
-
-            am_params[:ocp_funcexp] = true
-            ocp_exp = inputparams_am["Interface"]["openCircuitPotential"]["function"]
-            exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
-            am_params[:ocp_func] = @RuntimeGeneratedFunction(exp)
-            
-        elseif haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionname")
-            
-            funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
-            am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
-            
-        else
-            am_params[:ocp_funcdata] = true
-            data_x = inputparams_am["Interface"]["openCircuitPotential"]["data_x"]
-            data_y = inputparams_am["Interface"]["openCircuitPotential"]["data_y"]
-
-            interpolation_object = get_1d_interpolator(data_x,data_y,cap_endpoints =false)
-            am_params[:ocp_func] = interpolation_object
-        end
+        am_params[:ocp_func] = setup_function(inputparams_am["Interface"]["openCircuitPotential"])
         
         if use_p2d
             rp = inputparams_am["SolidDiffusion"]["particleRadius"]
@@ -323,46 +302,10 @@ function setup_submodels(inputparams::InputParams;
     params[:separator_density]   = inputparams_elyte["density"]
     
     # setup diffusion coefficient function
-    if haskey(inputparams_elyte["diffusionCoefficient"], "function")
-
-        exp = setup_diffusivity_evaluation_expression_from_string(inputparams_elyte["diffusionCoefficient"]["function"])
-        params[:diffusivity_func] = @RuntimeGeneratedFunction(exp)
-        
-    elseif haskey(inputparams_elyte["diffusionCoefficient"], "functionname")
-
-        funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
-        params[:diffusivity_func] = getfield(BattMo, Symbol(funcname))
-
-    else
-        data_x = inputparams_elyte["diffusionCoefficient"]["data_x"]
-        data_y = inputparams_elyte["diffusionCoefficient"]["data_y"]
-
-        interpolation = get_1d_interpolator(data_x,data_y,cap_endpoints =false)
-        params[:diffusivity_data] = true
-        params[:diffusivity_func] = interpolation
-        
-    end
+    params[:diffusivity_func] = setup_function(inputparams_elyte["diffusionCoefficient"])
 
     # setup conductivity function
-    if haskey(inputparams_elyte["ionicConductivity"],"function")
-
-        exp = setup_conductivity_evaluation_expression_from_string(inputparams_elyte["ionicConductivity"]["function"])
-        params[:conductivity_func] = @RuntimeGeneratedFunction(exp)
-        
-    elseif haskey(inputparams_elyte["ionicConductivity"], "functionname")
-        
-        funcname = inputparams_elyte["ionicConductivity"]["functionname"]
-        params[:conductivity_func] = getfield(BattMo, Symbol(funcname))
-
-    else
-        data_x = inputparams_elyte["ionicConductivity"]["data_x"]
-        data_y = inputparams_elyte["ionicConductivity"]["data_y"]
-
-        interpolation = get_1d_interpolator(data_x,data_y,cap_endpoints = false)
-        params[:conductivity_data] = true
-        params[:conductivity_func] = interpolation
-        
-    end
+    params[:conductivity_func] = setup_function(inputparams_elyte["ionicConductivity"])
 
     elyte = Electrolyte(params)
     
@@ -736,15 +679,7 @@ function setup_initial_state(inputparams::InputParams,
             init[:normalizedSEIvoltageDrop] = 0.0*ones(nc)
         end
         
-        if Jutul.haskey(model[name].system.params, :ocp_funcexp)
-            OCP = model[name].system[:ocp_func](c, T, refT, cmax)
-        elseif Jutul.haskey(model[name].system.params, :ocp_funcdata)
-            
-            OCP = model[name].system[:ocp_func](theta)
-
-        else
-            OCP = model[name].system[:ocp_func](c, T, cmax)
-        end
+        OCP = model[name].system[:ocp_func](theta)
 
         return (init, nc, OCP)
         
@@ -1519,52 +1454,6 @@ function convert_to_int_vector(x::Matrix{Float64})
     vec = Int64.(Vector{Float64}(x[:, 1]))
     return vec
 end
-
-function setup_function(function_params)
-    
-    functionFormat = function_params["functionFormat"]
-        
-        if functionFormat = "string expression"
-
-            found = false
-            
-            if haskey(function_params, "expression")
-                
-                if function_params["expression"]["language"] = "julia"
-                    
-                    found = true
-                    
-                    ocp_exp = function_params["formula"]
-                    exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
-                    am_params[:ocp_func] = @RuntimeGeneratedFunction(exp)
-                    
-                end
-                
-            elseif !found && haskey(function_params, "expressions")
-                
-            
-        elseif functionFormat = "named function"
-            
-            funcname = function_params["functionName"]
-            am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
-            
-        elseif functionFormat = "tabulated"
-            
-            am_params[:ocp_funcdata] = true
-            dataX = function_params["dataX"]
-            dataY = function_params["dataY"]
-
-            interpolation_object = get_1d_interpolator(dataX, dataY, cap_endpoints =false)
-            am_params[:ocp_func] = interpolation_object
-            
-        else
-            
-            error("functionFormat $functionFormat not recognized")
-            
-        end
-
-end
-
 
 function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggregation)
     

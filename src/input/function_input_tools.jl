@@ -163,28 +163,73 @@ function update_json_input(;file_path::String = nothing,
 
 end
 
+function setup_function(function_params)
+    
+    functionFormat = function_params["functionFormat"]
+    
+    if functionFormat = "string expression"
 
-function setup_ocp_evaluation_expression_from_string(str)
-    """ setup the Expr from a sting for the OCP function, with the proper signature."""
+        found = false
+        
+        if haskey(function_params, "expression")
+            
+            if function_params["expression"]["language"] = "julia"
+                
+                found = true
+                
+                formula = function_params["formula"]
+                arguments = function_params["arguments"]
+                exp = setup_evaluation_expression_from_string(formula, arguments)
+                func = @RuntimeGeneratedFunction(exp)
+                
+            end
+            
+        elseif !found && haskey(function_params, "expressions")
 
-    str = "function f(c, T, refT, cmax) return $str end"
+            ind = findfirst(map(exp -> exp["language"] = "julia", function_params["expressions"]))
+
+            if ind isa Nothing
+                error("No julia expression found")
+            else                # 
+                formula = function_params["expressions"][ind]["formula"]
+                arguments = function_params["expressions"][ind]["arguments"]
+                exp = setup_evaluation_expression_from_string(formula, arguments)
+                func = @RuntimeGeneratedFunction(exp)
+            end
+        end
+        
+    elseif functionFormat = "named function"
+        
+        funcname = function_params["functionName"]
+        func = getfield(BattMo, Symbol(funcname))
+        
+    elseif functionFormat = "tabulated"
+        
+        dataX = function_params["dataX"]
+        dataY = function_params["dataY"]
+
+        func = get_1d_interpolator(dataX, dataY, cap_endpoints =false)
+
+    else
+        
+        error("functionFormat $functionFormat not recognized")
+        
+    end
+
+    return func
+
+end
+
+function setup_evaluation_expression_from_string(formula, arguments)
+    """ setup the Expr from a formula for the given list of arguments."""
+    
+    arg_str = join(arguments, ", ")
+    
+    str = "function f($arg_str) return $formula end"
+    
     return Meta.parse(str);
     
 end
 
-function setup_diffusivity_evaluation_expression_from_string(str)
-    """ setup the Expr from a sting for the electrolyte diffusivity function, with the proper signature."""
 
-    str = "function f(c, T) return $str end"
-    return Meta.parse(str);
-    
-end
-
-function setup_conductivity_evaluation_expression_from_string(str)
-    """ setup the Expr from a sting for the electrolyte conductivity function, with the proper signature."""
-    
-    str = "function f(c, T) return $str end"
-    return Meta.parse(str);
-    
-end
 
