@@ -212,6 +212,8 @@ function setup_submodels(inputparams::InputParams;
 
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
 
+        functionFormat = inputparams_am["Interface"]["openCircuitPotential"]["functionFormat"]
+        
         if haskey(inputparams_am["Interface"]["openCircuitPotential"], "function")
 
             am_params[:ocp_funcexp] = true
@@ -1517,6 +1519,52 @@ function convert_to_int_vector(x::Matrix{Float64})
     vec = Int64.(Vector{Float64}(x[:, 1]))
     return vec
 end
+
+function setup_function(function_params)
+    
+    functionFormat = function_params["functionFormat"]
+        
+        if functionFormat = "string expression"
+
+            found = false
+            
+            if haskey(function_params, "expression")
+                
+                if function_params["expression"]["language"] = "julia"
+                    
+                    found = true
+                    
+                    ocp_exp = function_params["formula"]
+                    exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
+                    am_params[:ocp_func] = @RuntimeGeneratedFunction(exp)
+                    
+                end
+                
+            elseif !found && haskey(function_params, "expressions")
+                
+            
+        elseif functionFormat = "named function"
+            
+            funcname = function_params["functionName"]
+            am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
+            
+        elseif functionFormat = "tabulated"
+            
+            am_params[:ocp_funcdata] = true
+            dataX = function_params["dataX"]
+            dataY = function_params["dataY"]
+
+            interpolation_object = get_1d_interpolator(dataX, dataY, cap_endpoints =false)
+            am_params[:ocp_func] = interpolation_object
+            
+        else
+            
+            error("functionFormat $functionFormat not recognized")
+            
+        end
+
+end
+
 
 function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggregation)
     
