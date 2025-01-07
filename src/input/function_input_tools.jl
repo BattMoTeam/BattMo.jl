@@ -167,13 +167,13 @@ function setup_function(function_params)
     
     functionFormat = function_params["functionFormat"]
     
-    if functionFormat = "string expression"
+    if functionFormat == "string expression"
 
         found = false
         
         if haskey(function_params, "expression")
             
-            if function_params["expression"]["language"] = "julia"
+            if function_params["expression"]["language"] == "julia"
                 
                 found = true
                 
@@ -198,12 +198,12 @@ function setup_function(function_params)
             end
         end
         
-    elseif functionFormat = "named function"
+    elseif functionFormat == "named function"
         
         funcname = function_params["functionName"]
         func = getfield(BattMo, Symbol(funcname))
         
-    elseif functionFormat = "tabulated"
+    elseif functionFormat == "tabulated"
         
         dataX = function_params["dataX"]
         dataY = function_params["dataY"]
