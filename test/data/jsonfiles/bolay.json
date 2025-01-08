@@ -32,17 +32,17 @@
     "initialConcentration": 1000,
     "nominalEthyleneCarbonateConcentration": 1000,
     "ionicConductivity": {
-      "type": "function",
-      "functionname": "computeElectrolyteConductivity_default",
-      "argumentlist": [
+      "functionFormat": "named function",
+      "functionName": "computeElectrolyteConductivity_default",
+      "argumentList": [
         "concentration",
         "temperature"
       ]
     },
     "diffusionCoefficient": {
-      "type": "function",
-      "functionname": "computeDiffusionCoefficient_default",
-      "argumentlist": [
+      "functionFormat": "named function",
+      "functionName": "computeDiffusionCoefficient_default",
+      "argumentList": [
         "concentration",
         "temperature"
       ]
@@ -86,13 +86,9 @@
           "guestStoichiometry0": 0.99174,
           "chargeTransferCoefficient": 0.5,
           "openCircuitPotential": {
-            "type": "function",
-            "functionname": "computeOCP_NMC111",
-            "argumentlist": [
-              "concentration",
-              "temperature",
-              "cmax"
-            ]
+            "functionFormat": "named function",
+            "functionName": "computeOCP_NMC111",
+            "argumentList": ["stoichiometry"]
           }
         },
         "massFraction": 0.95,
@@ -146,13 +142,9 @@
           "guestStoichiometry0": 0.1429,
           "chargeTransferCoefficient": 0.5,
           "openCircuitPotential": {
-            "type": "function",
-            "functionname": "computeOCP_Graphite_Torchio",
-            "argumentlist": [
-              "concentration",
-              "temperature",
-              "cmax"
-            ]
+            "functionFormat": "named function",
+            "functionName": "computeOCP_Graphite_Torchio",
+            "argumentList": ["stoichiometry"]
           },
           "SEImolarVolume": 9.586E-5,
           "SEIionicConductivity": 1E-5,
