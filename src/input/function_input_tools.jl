@@ -216,7 +216,9 @@ function setup_function(function_params)
         
     end
 
-    return func
+    function_setup = (functionFormat = functionFormat, argumentList = function_params["argumentList"])
+    
+    return (func, function_setup)
 
 end
 

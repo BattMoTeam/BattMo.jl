@@ -212,7 +212,7 @@ function setup_submodels(inputparams::InputParams;
 
         am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
 
-        am_params[:ocp_func] = setup_function(inputparams_am["Interface"]["openCircuitPotential"])
+        am_params[:ocp_func], = setup_function(inputparams_am["Interface"]["openCircuitPotential"])
         
         if use_p2d
             rp = inputparams_am["SolidDiffusion"]["particleRadius"]
@@ -302,11 +302,21 @@ function setup_submodels(inputparams::InputParams;
     params[:separator_density]   = inputparams_elyte["density"]
     
     # setup diffusion coefficient function
-    params[:diffusivity_func] = setup_function(inputparams_elyte["diffusionCoefficient"])
+    func, func_setup = setup_function(inputparams_elyte["diffusionCoefficient"])
+    if length(func_setup[:argumentList]) == 1
+        params[:diffusivity_func] = (c, T) -> func(c)
+    else
+        params[:diffusivity_func] = func
+    end
 
     # setup conductivity function
-    params[:conductivity_func] = setup_function(inputparams_elyte["ionicConductivity"])
-
+    func, func_setup = setup_function(inputparams_elyte["ionicConductivity"])
+    if length(func_setup[:argumentList]) == 1
+        params[:conductivity_func] = (c, T) -> func(c)
+    else
+        params[:conductivity_func] = func
+    end
+    
     elyte = Electrolyte(params)
     
     model_elyte = setup_component(grids["Electrolyte"], elyte, general_ad = general_ad; kwargs...)
