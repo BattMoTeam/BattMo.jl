@@ -1,0 +1,11 @@
+{
+  "openCircuitPotential" : {
+    "functionFormat": "string expression",
+    "argumentList" : ["guestStoichiometry"],
+    "expressions" : [{
+      "formula" : "3.41285712e+00 - 1.49721852e-02 * sto + 3.54866018e+14 * exp(-3.95729493e+02 * sto) - 1.45998465e+00 * exp(-1.10108622e+02 * (1 - sto))",
+      "language" : "julia",
+      "variableNames" : ["sto"],
+    }]
+  }
+}

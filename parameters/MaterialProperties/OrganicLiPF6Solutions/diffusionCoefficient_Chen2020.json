@@ -1,0 +1,7 @@
+{"diffusionCoefficient" : {
+  "functionFormat" : "string expression",
+  "argumentList" : ["concentration", "temperature"],
+  "expression" : {
+    "language" : "julia",
+    "formula" : "8.794 *10^(-11) *(c/1000) ^2 - 3.972 *10^(-10) *(c/1000) + 4.862*10^(-10)",
+    "variableNames" : ["c", "T"]}}}

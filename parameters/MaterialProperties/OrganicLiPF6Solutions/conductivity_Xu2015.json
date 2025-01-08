@@ -1,0 +1,9 @@
+{"ionicConductivity" : {
+  "functionFormat" : "string expression",
+  "argumentList" : ["concentration", "temperature"],
+  "expression" : {
+    "language" : "julia",
+    "formula" : "c*1e-4*1.2544*(-8.2488 + 0.053248*T - 2.987e-5*(T^2) + 0.26235e-3*c - 9.3063e-6*c*T + 8.069e-9*c*T^2+ 2.2002e-7*c^2 - 1.765e-10*T*c^2)",
+    "variableNames" : ["c", "T"]}}}
+
+    

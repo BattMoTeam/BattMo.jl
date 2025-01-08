@@ -1,0 +1,29 @@
+{
+  "specificHeatCapacity": 1518.0,
+  "thermalConductivity": 0.099,
+  "density": 1210,
+  "initialConcentration": {
+    "value": 1,
+    "unit": "mol/litre"
+  },
+  "ionicConductivity" : {
+  "functionFormat" : "string expression",
+  "argumentList" : ["concentration", "temperature"],
+  "expression" : {
+    "language" : "julia",
+    "formula" : "c*1e-4*1.2544*(-8.2488 + 0.053248*T - 2.987e-5*(T^2) + 0.26235e-3*c - 9.3063e-6*c*T + 8.069e-9*c*T^2+ 2.2002e-7*c^2 - 1.765e-10*T*c^2)",
+    "variableNames" : ["c", "T"]}},
+  "diffusionCoefficient": {
+    "functionFormat" : "string expression",
+    "argumentList" : ["concentration", "temperature"],
+    "expression" : {
+      "language" : "julia",
+      "formula" : "8.794 *10^(-11) *(c/1000) ^2 - 3.972 *10^(-10) *(c/1000) + 4.862*10^(-10)",
+      "variableNames" : ["c", "T"]}},
+  "species": {
+    "chargeNumber": 1,
+    "transferenceNumber": 0.2594,
+    "nominalConcentration": 1000
+  },
+  "bruggemanCoefficient": 1.5
+}

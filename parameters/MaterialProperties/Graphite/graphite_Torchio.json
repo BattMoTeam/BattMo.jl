@@ -1,0 +1,19 @@
+{
+  "saturationConcentration": 30555,
+  "volumetricSurfaceArea": 723600,
+  "numberOfElectronsTransferred" : 1,
+  "activationEnergyOfReaction": 5000,
+  "reactionRateConstant": 5.031e-11,
+  "guestStoichiometry100": 0.88551,
+  "guestStoichiometry0": 0.1429,
+  "chargeTransferCoefficient": 0.5,
+  "openCircuitPotential" : {
+    "functionFormat": "string expression",
+    "argumentList" : ["guestStoichiometry"],
+    "expressions" : [{
+      "formula" : "0.7222 + 0.1387*x + 0.0290*x^0.5 - 0.0172/x + 0.0019/(x^1.5) + 0.2808*exp(0.9 - 15*x) - 0.7984*exp(0.4465*x - 0.4108)",
+      "language" : "julia",
+      "variableNames" : ["x"],
+    }]
+  }
+}

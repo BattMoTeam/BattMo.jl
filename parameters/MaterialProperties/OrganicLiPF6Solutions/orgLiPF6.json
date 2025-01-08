@@ -1,0 +1,35 @@
+{
+  "specificHeatCapacity": 2055.0,
+  "thermalConductivity": 0.6,
+  "density": 1200,
+  "initialConcentration": {
+    "value": 1,
+    "unit": "mol/litre"
+  },
+  "nominalEthyleneCarbonateConcentration": {
+    "value": 1,
+    "unit": "mol/litre"
+  },
+  "ionicConductivity": {
+    "functionFormat": "named function",
+    "functionName": "computeElectrolyteConductivity_default",
+    "argumentList": [
+      "concentration",
+      "temperature"
+    ]
+  },
+  "diffusionCoefficient": {
+    "functionFormat": "named function",
+    "functionName": "computeDiffusionCoefficient_default",
+    "argumentList": [
+      "concentration",
+      "temperature"
+    ]
+  },
+  "species": {
+    "chargeNumber": 1,
+    "transferenceNumber": 0.2594,
+    "nominalConcentration": 1000
+  },
+  "bruggemanCoefficient": 1.5
+}

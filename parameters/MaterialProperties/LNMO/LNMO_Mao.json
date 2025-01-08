@@ -1,0 +1,17 @@
+{
+  "description" :  "Data from  @article{Mao_2020, title={Entropy Change Characteristics of the LiNi0.5Mn1.5O4 Cathode Material for Lithium-Ion Batteries}, volume={5}, ISSN={2470-1343}, url={http://dx.doi.org/10.1021/acsomega.9b03794}, DOI={10.1021/acsomega.9b03794}, number={8}, journal={ACS Omega}, publisher={American Chemical Society (ACS)}, author={Mao, Jing and Zhang, Peng and Liu, Xin and Liu, Yanxia and Shao, Guosheng and Dai, Kehua}, year={2020}, month=feb, pages={4109–4114} }",
+  "saturationConcentration": 24358,
+  "volumeFraction": 0.8,
+  "volumetricSurfaceArea": 885000,
+  "density": 4450,
+  "numberOfElectronsTransferred" : 1,
+  "activationEnergyOfReaction": 5000,
+  "reactionRateConstant": 2.33e-11,
+  "guestStoichiometry100": 1.4001e-04,
+  "guestStoichiometry0": 0.9811,
+  "openCircuitPotential" : {
+    "functionFormat" : "tabulated",
+    "argumentList" : ["stoichiometry"],
+    "dataX" : [0e-2 , 10e-2 , 20e-2 , 30e-2 , 40e-2 , 50e-2 , 60e-2 , 70e-2 , 80e-2 , 85e-2 , 90e-2 , 100e-2],
+    "dataY" : [4.7336, 4.7309, 4.7251, 4.7248, 4.7184, 4.6806, 4.6742, 4.6681, 4.6589, 4.4763, 4.1264, 3.7273] },
+  "chargeTransferCoefficient" : 0.5}
