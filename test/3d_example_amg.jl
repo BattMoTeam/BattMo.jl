@@ -43,14 +43,12 @@ using Test
         
         prec = BattMo.BatteryGeneralPreconditioner(varpreconds, g_varprecond, params)
 
-        cfg[:linear_solver] = GenericKrylov(solver, verbose=verbose,
-                                            preconditioner=prec,
-                                            relative_tolerance=rtol,
-                                            absolute_tolerance=atol,
-                                            max_iterations=max_it)
-        #cfg[:linear_solver]  = nothing
-
-        # cfg[:extra_timing] = true
+        cfg[:linear_solver] = GenericKrylov(solver,
+                                            verbose            = verbose,
+                                            preconditioner     = prec,
+                                            relative_tolerance = rtol,
+                                            absolute_tolerance = atol,
+                                            max_iterations     = max_it)
 
         states, reports = simulate(state0, simulator, timesteps; forces=forces, config=cfg)
         Cc = map(x -> x[:Control][:Current][1], states)
