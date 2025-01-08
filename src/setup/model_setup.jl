@@ -303,7 +303,7 @@ function setup_submodels(inputparams::InputParams;
     
     # setup diffusion coefficient function
     func, func_setup = setup_function(inputparams_elyte["diffusionCoefficient"])
-    if length(func_setup[:argumentList]) == 1
+    if func_setup[:functionFormat] == "tabulated" && length(func_setup[:argumentList]) == 1
         params[:diffusivity_func] = extend_signature(func)
     else
         params[:diffusivity_func] = func
@@ -311,7 +311,7 @@ function setup_submodels(inputparams::InputParams;
 
     # setup conductivity function
     func, func_setup = setup_function(inputparams_elyte["ionicConductivity"])
-    if length(func_setup[:argumentList]) == 1
+    if func_setup[:functionFormat] == "tabulated" && length(func_setup[:argumentList]) == 1
         params[:conductivity_func] = extend_signature(func)
     else
         params[:conductivity_func] = func
