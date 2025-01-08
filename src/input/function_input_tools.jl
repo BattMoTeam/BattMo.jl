@@ -233,5 +233,14 @@ function setup_evaluation_expression_from_string(formula, arguments)
     
 end
 
+function extend_signature(func)
+
+    function newfunc(x, y)
+        return func(x)
+    end
+
+    return newfunc
+    
+end
 
 

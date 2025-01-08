@@ -304,7 +304,7 @@ function setup_submodels(inputparams::InputParams;
     # setup diffusion coefficient function
     func, func_setup = setup_function(inputparams_elyte["diffusionCoefficient"])
     if length(func_setup[:argumentList]) == 1
-        params[:diffusivity_func] = (c, T) -> func(c)
+        params[:diffusivity_func] = extend_signature(func)
     else
         params[:diffusivity_func] = func
     end
@@ -312,7 +312,7 @@ function setup_submodels(inputparams::InputParams;
     # setup conductivity function
     func, func_setup = setup_function(inputparams_elyte["ionicConductivity"])
     if length(func_setup[:argumentList]) == 1
-        params[:conductivity_func] = (c, T) -> func(c)
+        params[:conductivity_func] = extend_signature(func)
     else
         params[:conductivity_func] = func
     end
@@ -1479,5 +1479,4 @@ function amg_precond(; max_levels = 10, max_coarse = 10, type = :smoothed_aggreg
     return AMGPreconditioner(m, max_levels = max_levels, max_coarse = max_coarse, presmoother = gs, postsmoother = gs, cycle = cyc)
     
 end
-
 
