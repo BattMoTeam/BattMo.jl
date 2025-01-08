@@ -177,8 +177,8 @@ function setup_function(function_params)
                 
                 found = true
                 
-                formula = function_params["formula"]
-                arguments = function_params["arguments"]
+                formula = function_params["expression"]["formula"]
+                arguments = function_params["expression"]["variableNames"]
                 exp = setup_evaluation_expression_from_string(formula, arguments)
                 func = @RuntimeGeneratedFunction(exp)
                 
@@ -186,13 +186,13 @@ function setup_function(function_params)
             
         elseif !found && haskey(function_params, "expressions")
 
-            ind = findfirst(map(exp -> exp["language"] = "julia", function_params["expressions"]))
+            ind = findfirst(map(exp -> (exp["language"] == "julia"), function_params["expressions"]))
 
             if ind isa Nothing
                 error("No julia expression found")
             else                # 
                 formula = function_params["expressions"][ind]["formula"]
-                arguments = function_params["expressions"][ind]["arguments"]
+                arguments = function_params["expressions"][ind]["variableNames"]
                 exp = setup_evaluation_expression_from_string(formula, arguments)
                 func = @RuntimeGeneratedFunction(exp)
             end

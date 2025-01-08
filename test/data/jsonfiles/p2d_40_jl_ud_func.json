@@ -26,13 +26,12 @@
           "guestStoichiometry0": 0.1429,
           "chargeTransferCoefficient": 0.5,
           "openCircuitPotential": {
-            "type": "function",
-            "function": "0.7222+ 0.1387*(c./cmax) + 0.0290*(c./cmax)^0.5 - 0.0172/(c./cmax) + 0.0019/(c./cmax)^1.5+ 0.2808 * exp(0.9 - 15.0*(c./cmax)) - 0.7984 * exp(0.4465*(c./cmax) - 0.4108)+ (T - refT) * (1e-3 * ( 0.005269056+ 3.299265709 * (c./cmax)- 91.79325798 * (c./cmax)^2+ 1004.911008 * (c./cmax)^3- 5812.278127 * (c./cmax)^4+ 19329.75490 * (c./cmax)*5- 37147.89470 * (c./cmax)*6+ 38379.18127 * (c./cmax)*7- 16515.05308 * (c./cmax)*8 )/ ( 1- 48.09287227 * (c./cmax)+ 1017.234804 * (c./cmax)^2- 10481.80419 * (c./cmax)^3+ 59431.30000 * (c./cmax)^4- 195881.6488 * (c./cmax)*5+ 374577.3152 * (c./cmax)*6- 385821.1607 * (c./cmax)*7+ 165705.8597 * (c./cmax)*8 ))",
-            "argumentlist": [
-              "concentration",
-              "temperature",
-              "cmax"
-            ]
+            "functionFormat": "string expression",
+            "argumentList": ["stoichiometry"],
+            "expression": {
+              "language" : "julia",
+              "variableNames" : ["stoc"],
+              "formula" : "0.7222 + 0.1387*stoc + 0.0290*stoc^0.5 - 0.0172/stoc + 0.0019/stoc^1.5+ 0.2808 * exp(0.9 - 15.0*stoc) - 0.7984 * exp(0.4465*stoc - 0.4108)"}
           }
         },
         "diffusionModelType": "full",
@@ -90,15 +89,16 @@
           "guestStoichiometry0": 0.99174,
           "chargeTransferCoefficient": 0.5,
           "openCircuitPotential": {
-            "type": "function",
-            "function": "(-4.656 + 0 * (c./cmax) + 88.669 * (c./cmax)^2 + 0 * (c./cmax)^3 - 401.119 * (c./cmax)^4 + 0 * (c./cmax)^5 + 342.909 * (c./cmax)^6 + 0 * (c./cmax)^7 - 462.471 * (c./cmax)^8 + 0 * (c./cmax)^9 + 433.434 * (c./cmax)^10)/(-1 + 0  * (c./cmax)+ 18.933 * (c./cmax)^2+ 0 * (c./cmax)^3- 79.532 * (c./cmax)^4+ 0 * (c./cmax)^5+ 37.311 * (c./cmax)^6+ 0 * (c./cmax)^7- 73.083 * (c./cmax)^8+ 0 * (c./cmax)^9+ 95.960 * (c./cmax)^10)+ (T - refT) * ( -1e-3* ( 0.199521039- 0.928373822 * (c./cmax)+ 1.364550689000003 * (c./cmax)^2- 0.611544893999998 * (c./cmax)^3)/ (1- 5.661479886999997 * (c./cmax)+ 11.47636191 * (c./cmax)^2- 9.82431213599998 * (c./cmax)^3+ 3.048755063 * (c./cmax)^4))",
-            "argumentlist": [
-              "concentration",
-              "temperature",
-              "cmax"
-            ]
-          }
-        },
+            "functionFormat": "string expression",
+            "argumentList": ["stoichiometry"],
+            "expressions": [
+              {"language" : "julia",
+               "variableNames" : ["stoc"],
+               "formula" : "(-4.656 + 0 * stoc + 88.669 * stoc^2 + 0 * stoc^3 - 401.119 * stoc^4 + 0 * stoc^5 + 342.909 * stoc^6 + 0 * stoc^7 - 462.471 * stoc^8 + 0 * stoc^9 + 433.434 * stoc^10)/(-1 + 0  * stoc+ 18.933 * stoc^2+ 0 * stoc^3- 79.532 * stoc^4+ 0 * stoc^5+ 37.311 * stoc^6+ 0 * stoc^7- 73.083 * stoc^8+ 0 * stoc^9+ 95.960 * stoc^10)"},
+              {"language" : "matlab",
+               "variableNames" : ["stoc"],
+               "formula" : "(-4.656 + 0 * stoc + 88.669 * stoc^2 + 0 * stoc^3 - 401.119 * stoc^4 + 0 * stoc^5 + 342.909 * stoc^6 + 0 * stoc^7 - 462.471 * stoc^8 + 0 * stoc^9 + 433.434 * stoc^10)/(-1 + 0  * stoc+ 18.933 * stoc^2+ 0 * stoc^3- 79.532 * stoc^4+ 0 * stoc^5+ 37.311 * stoc^6+ 0 * stoc^7- 73.083 * stoc^8+ 0 * stoc^9+ 95.960 * stoc^10)"}
+            ]}},
         "diffusionModelType": "full",
         "SolidDiffusion": {
           "activationEnergyOfDiffusion": 5000,
@@ -160,17 +160,25 @@
     "thermalConductivity": 0.6,
     "density": 1200,
     "ionicConductivity": {
-      "type": "function",
-      "function": "1e-4*c*((-10.5 + 0.668e-3*c + 0.494e-6*c^2) + (0.074 - 1.78e-5*c - 8.86e-10*c^2)*T + (-6.96e-5 + 2.80e-8*c)*T^2)^2",
-      "argumentlist": [
+      "functionFormat": "string expression",
+      "expression" : {
+        "language" : "julia",
+        "variableNames" : ["c", "T"],
+        "formula" : "1e-4*c*((-10.5 + 0.668e-3*c + 0.494e-6*c^2) + (0.074 - 1.78e-5*c - 8.86e-10*c^2)*T + (-6.96e-5 + 2.80e-8*c)*T^2)^2"
+      },
+      "argumentList": [
         "concentration",
         "temperature"
       ]
     },
     "diffusionCoefficient": {
-      "type": "function",
-      "function": "1e-4 * 10 ^ (-4.43 - 54/(T - 229 - 5*c*1e-3) - 0.22*c*1e-3)",
-      "argumentlist": [
+      "functionFormat": "string expression",
+      "expression" : {
+        "language" : "julia",
+        "variableNames" : ["c", "T"],
+        "formula" : "1e-4 * 10 ^ (-4.43 - 54/(T - 229 - 5*c*1e-3) - 0.22*c*1e-3)"
+      },
+      "argumentList": [
         "concentration",
         "temperature"
       ]
