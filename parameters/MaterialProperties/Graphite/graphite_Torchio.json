@@ -10,10 +10,16 @@
   "openCircuitPotential" : {
     "functionFormat": "string expression",
     "argumentList" : ["guestStoichiometry"],
-    "expressions" : [{
-      "formula" : "0.7222 + 0.1387*x + 0.0290*x^0.5 - 0.0172/x + 0.0019/(x^1.5) + 0.2808*exp(0.9 - 15*x) - 0.7984*exp(0.4465*x - 0.4108)",
-      "language" : "julia",
-      "variableNames" : ["x"],
-    }]
+    "expressions" : [
+      {
+        "formula" : "0.7222 + 0.1387*x + 0.0290*x^0.5 - 0.0172/x + 0.0019/(x^1.5) + 0.2808*exp(0.9 - 15*x) - 0.7984*exp(0.4465*x - 0.4108)",
+        "language" : "julia",
+        "variableNames" : ["x"],
+      },
+      {
+        "formula" : "0.7222 + 0.1387*x + 0.0290*x.^0.5 - 0.0172./x + 0.0019./(x.^1.5) + 0.2808.*exp(0.9 - 15*x) - 0.7984.*exp(0.4465*x - 0.4108)",
+        "language" : "matlab",
+        "variableNames" : ["x"],
+      }
   }
 }
