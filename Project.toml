@@ -23,7 +23,6 @@ x264_jll = "1270edf5-f2f9-52d2-97e9-ab00b5d0237a"
 [compat]
 JLD2 = "0.4.31"
 JSON = "0.21.4"
-BSON = "0.3.9"
 Jutul = "0.3.0"
 MAT = "0.10.4"
 Polynomials = "3.2.11 - 4"

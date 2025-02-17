@@ -35,10 +35,10 @@ end
 @jutul_secondary(
     function update_vocp!(Ocp,
                           tv::MLModelOcp,
-                          model:: SimulationModel{<:Any, BattMo.ActiveMaterialP2D{D, T}, <:Any, <:Any},
+                          model:: SimulationModel{<:Any, BattMo.ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
                           Cs,
                           ix
-                          ) where {D, T}
+                          ) where {label, D, T, Di}
 
         cmax = model.system.params[:maximum_concentration]
         ML_model = tv.ML_model
@@ -93,7 +93,7 @@ sim = BattMo.Simulator(model; state0=state0, parameters=parameters, copy_state=t
 #Set up config and timesteps
 timesteps = BattMo.setup_timesteps(inputparams; max_step=nothing)
 
-cfg = BattMo.setup_config(sim, model, :direct, false)
+cfg = BattMo.setup_config(sim, model, parameters, :direct, false, true)
 
 # Perform simulation
 states, reports = BattMo.simulate(state0, sim, timesteps, forces=forces, config=cfg)
