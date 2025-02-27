@@ -30,8 +30,6 @@ function build_battmo_docs(build_format = nothing;
         "3D demo example" => "example_3d_demo",
     ]
     examples_markdown = []
-    validation_markdown = []
-    intros_markdown = []
     function update_footer(content, pth)
         return content*"\n\n # ## Example on GitHub\n "*
         "# If you would like to run this example yourself, it can be downloaded from "*
@@ -100,9 +98,7 @@ function build_battmo_docs(build_format = nothing;
             "Manual" => [
                 "High level API" => "man/highlevel.md",
             ],
-            "Examples: Introduction" => intros_markdown,
-            "Examples: Usage" => examples_markdown,
-            "Examples: Validation" => validation_markdown
+            "Examples" => examples_markdown
         ],
     )
     if build_notebooks
