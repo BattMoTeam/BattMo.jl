@@ -23,7 +23,7 @@ function build_battmo_docs(build_format              = nothing;
 
     ## Literate pass
     # Base directory
-    jutul_dir = realpath(joinpath(@__DIR__, ".."))
+    battmo_dir = realpath(joinpath(@__DIR__, ".."))
     # Convert examples as .jl files to markdown
     examples = [
         "Cycling example" => "example_cycle",
@@ -48,7 +48,7 @@ function build_battmo_docs(build_format              = nothing;
             end
         end
     end
-    example_path(pth) = joinpath(jutul_dir, "examples", "$pth.jl")
+    example_path(pth) = joinpath(battmo_dir, "examples", "$pth.jl")
     out_dir = joinpath(@__DIR__, "src", "examples")
     notebook_dir = joinpath(@__DIR__, "assets")
     for (ex, pth) in examples
