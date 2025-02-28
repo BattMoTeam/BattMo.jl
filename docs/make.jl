@@ -96,6 +96,9 @@ function build_battmo_docs(build_format              = nothing;
              pages=[
                  "Introduction" => [
                      "BattMo.jl" => "index.md",
+                     "Physical parameters" => "man/phys_params.md",
+                     "Control parameters" => "man/control_params.md",
+                     "Grid parameters" => "man/grid_params.md",
                  ],
                  "Manual" => [
                      "High level API" => "man/highlevel.md",
