@@ -8,13 +8,14 @@ using DocumenterCitations
 using DocumenterVitepress
 ##
 cd(@__DIR__)
-function build_battmo_docs(build_format = nothing;
-        build_examples = true,
-        build_validation_examples = build_examples,
-        build_notebooks = true,
-        clean = true,
-        deploy = true
-    )
+function build_battmo_docs(build_format              = nothing;
+                           build_examples            = false,
+                           build_validation_examples = build_examples,
+                           build_notebooks           = true,
+                           clean                     = true,
+                           deploy                    = true
+                           )
+    
     # In case we want to include docs of Jutul functions
     DocMeta.setdocmeta!(BattMo, :DocTestSetup, :(using BattMo; using Jutul); recursive=true)
     DocMeta.setdocmeta!(Jutul, :DocTestSetup, :(using Jutul); recursive=true)
@@ -80,27 +81,28 @@ function build_battmo_docs(build_format = nothing;
             devurl = "dev"
         )
     end
+
     makedocs(;
-        modules=[BattMo, Jutul],
-        authors="SINTEF BattMo team and contributors",
-        repo="https://github.com/BattMoTeam/BattMo.jl/blob/{commit}{path}#{line}",
-        sitename="BattMo.jl",
-        warnonly = true,
-        plugins=[bib],
-        format=build_format,
-        draft = false,
-        source = "src",
-        build = "build",
-        pages=[
-            "Introduction" => [
-                "BattMo.jl" => "index.md",
-            ],
-            "Manual" => [
-                "High level API" => "man/highlevel.md",
-            ],
-            "Examples" => examples_markdown
-        ],
-    )
+             modules  = [BattMo],
+             authors  ="SINTEF BattMo team and contributors",
+             repo     = "https://github.com/BattMoTeam/BattMo.jl/blob/{commit}{path}#{line}",
+             sitename = "BattMo.jl",
+             warnonly = true,
+             plugins  = [bib],
+             format   = build_format,
+             draft    = false,
+             source   = "src",
+             build    = "build",
+             pages=[
+                 "Introduction" => [
+                     "BattMo.jl" => "index.md",
+                 ],
+                 "Manual" => [
+                     "High level API" => "man/highlevel.md",
+                 ],
+                 "Examples" => examples_markdown
+             ]             
+             )
     if build_notebooks
         # Subfolder of final site build folder
         notebook_dir = joinpath(@__DIR__, "build", "final_site", "notebooks")
