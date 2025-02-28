@@ -1,9 +1,4 @@
-# High level interface
+# Control parameters
 
-Exported functions and their documentation:
+We inspect some of the control parameters, change them an re-run the simulation
 
-```@docs
-run_battery
-setup_simulation
-setup_model
-```

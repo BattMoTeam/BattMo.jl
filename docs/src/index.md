@@ -84,7 +84,7 @@ run, you will therefore experience a compilation time which will not be present 
 
 We start by loading BattMo
 
-```julia
+```@example intro
 using BattMo
 ```
 
@@ -94,20 +94,21 @@ Let us choose the case
 [p2d_40.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/p2d_40.json). We load it using the
 function `readBattMoJsonInputFile`.
 
-```julia
+```@example intro
 filename = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/p2d_40.json")
 inputparams = readBattMoJsonInputFile(filename)
 ```
 
 We run the simulation using the [run_battery](@ref) 
 
-```julia
-output = run_battery(inputparams);
+```@example intro
+output = run_battery(inputparams)
+nothing # hide
 ``` 
-
 We can now plot the results
 
-```julia
+```@example intro
+using GLMakie
 states = output[:states]
 t = [state[:Control][:ControllerCV].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
@@ -120,23 +121,6 @@ lines!(ax, t, I)
 fig
 ```
 
-```@example
-using BattMo # hide
-filename = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/p2d_40.json") # hide
-inputparams = readBattMoJsonInputFile(filename) # hide
-output = run_battery(inputparams); # hide
-using GLMakie # hide
-states = output[:states] # hide
-t = [state[:Control][:ControllerCV].time for state in states] # hide
-E = [state[:Control][:Phi][1] for state in states] # hide
-I = [state[:Control][:Current][1] for state in states] # hide
-fig = Figure() # hide
-ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve") # hide
-lines!(ax, t, E) # hide
-ax = Axis(fig[1, 2], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve") # hide
-lines!(ax, t, I) # hide
-fig # hide
-```
 see full example script here
 
 ## Get involved

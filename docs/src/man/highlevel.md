@@ -4,6 +4,10 @@ Exported functions and their documentation:
 
 ```@docs
 run_battery
-setup_simulation
-setup_model
 ```
+
+::: info
+
+Maybe not much here
+
+:::

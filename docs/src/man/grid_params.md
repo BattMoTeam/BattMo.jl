@@ -1,9 +1,3 @@
-# High level interface
+# Grid parameters
 
-Exported functions and their documentation:
-
-```@docs
-run_battery
-setup_simulation
-setup_model
-```
+We inspect some of the grid parameters, change them an re-run the simulation
