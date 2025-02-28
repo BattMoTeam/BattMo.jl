@@ -15,6 +15,9 @@ hero:
       text: Getting started
       link: /man/intro
     - theme: alt
+      text: BattMo Web App
+      link: https://app.batterymodel.com/
+    - theme: alt
       text: Github
       link: https://github.com/sintefmath/BattMo.jl
     - theme: alt
