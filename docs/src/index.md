@@ -79,27 +79,33 @@ run, you will therefore experience a compilation time which will not be present 
 
 ### Getting started
 
-For an example of usage, you can add the GLMakie plotting package:
+We start by loading BattMo
 
 ```julia
-using Pkg
-Pkg.add("GLMakie")
+using BattMo
 ```
 
-BattMo uses a json input format. Json files can be easily read and modified.
+BattMo uses a json input format. Json files can be easily read and modified. They are converted to dictionary structure
 
-You can then run the following to simulate the predefined `p2d_40` case:
+Let us choose the case
+[p2d_40.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/p2d_40.json). We load it using the
+function `readBattMoJsonInputFile`.
 
-```@example
-using BattMo
-# Simulate case
+```julia
 filename = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/p2d_40.json")
-# Read input from json file
 inputparams = readBattMoJsonInputFile(filename)
+```
+
+We run the simulation
+
+```julia
 # run simulation from given input
 output = run_battery(inputparams);
-# Plot result
-using GLMakie
+``` 
+
+We can now plot the results
+
+```julia
 states = output[:states]
 t = [state[:Control][:ControllerCV].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
@@ -111,6 +117,9 @@ ax = Axis(fig[1, 2], ylabel = "Voltage / V", xlabel = "Time / s", title = "Disch
 lines!(ax, t, I)
 fig
 ```
+
+
+see full example script here
 
 ## Get involved
 
