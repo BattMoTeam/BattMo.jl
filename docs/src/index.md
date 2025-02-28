@@ -38,15 +38,18 @@ features:
     details: Written in Julia, simulate with scripting syntax without sacrificing performance. Extensible with new features.
     link: /man/advanced
 
+  - icon:
+      src: battmologo.ico
+      height: 10pt
+    title: BattMo Web App
+    details: A BattMo web application is available to run the simulation online without any further installation steps.
+    link: https://app.batterymodel.com
+    
   - icon: 🧱
     title: 1D, 2D and 3D
     details: One code handles both 1D models and complex 3D grids, with support for high-performance linear solvers for bigger models.
     link: /examples
 
-  - icon: 📈
-    title: Ready for optimization and calibration
-    details: Automatic differentiation allows for fast gradient-based optimization and parameter/model matching
-    link: /examples
 ---
 ````
 
