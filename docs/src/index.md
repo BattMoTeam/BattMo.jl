@@ -63,7 +63,7 @@ The current implementation has many options for setting up simulation cases:
 
 ## Installation
 
-To install Julia, first visit the official Julia website at <julialang.org> and
+To install Julia, first visit the official Julia website at <https://julialang.org> and
 [download](https://julialang.org/downloads/ ) the appropriate installer for your operating system (Windows, macOS, or
 Linux).  After installation, you can verify it by opening a terminal or command prompt and typing julia to start the
 Julia REPL (Read-Eval-Print Loop). This will confirm that Julia is correctly installed and ready for use.
@@ -96,10 +96,9 @@ filename = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/p2d_40.json"
 inputparams = readBattMoJsonInputFile(filename)
 ```
 
-We run the simulation
+We run the simulation using the [run_battery](@ref) 
 
 ```julia
-# run simulation from given input
 output = run_battery(inputparams);
 ``` 
 
@@ -118,7 +117,23 @@ lines!(ax, t, I)
 fig
 ```
 
-
+```@example
+using BattMo # hide
+filename = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/p2d_40.json") # hide
+inputparams = readBattMoJsonInputFile(filename) # hide
+output = run_battery(inputparams); # hide
+using GLMakie # hide
+states = output[:states] # hide
+t = [state[:Control][:ControllerCV].time for state in states] # hide
+E = [state[:Control][:Phi][1] for state in states] # hide
+I = [state[:Control][:Current][1] for state in states] # hide
+fig = Figure() # hide
+ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve") # hide
+lines!(ax, t, E) # hide
+ax = Axis(fig[1, 2], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve") # hide
+lines!(ax, t, I) # hide
+fig # hide
+```
 see full example script here
 
 ## Get involved
