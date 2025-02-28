@@ -14,6 +14,10 @@ function Base.getindex(input::DictInputParams, keyname)
     return input.dict[keyname]
 end
 
+function Base.setindex!(input::DictInputParams, value, keyname)
+    input.dict[keyname] = value
+end
+
 function Base.haskey(input::DictInputParams, keyname)
     return haskey(input.dict, keyname)
 end
