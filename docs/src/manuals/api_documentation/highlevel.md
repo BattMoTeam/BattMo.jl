@@ -1,13 +1,24 @@
 # High level interface
 
-Exported functions and their documentation:
+## Main functions
 
 ```@docs
 run_battery
 ```
 
-::: info
+## input types
 
-Maybe not much here
+```@docs
+AbstractInputParams
+DictInputParams
+InputParams
+MatlabInputParams
+```
 
-:::
+## Utility to read and manipulate input 
+
+```@docs
+readBattMoJsonInputFile
+readBattMoMatlabInputFile
+mergeInputParams
+```
