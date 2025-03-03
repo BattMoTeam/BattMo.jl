@@ -15,6 +15,7 @@ function `readBattMoJsonInputFile`.
 ```@example intro
 filename = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/p2d_40.json")
 inputparams = readBattMoJsonInputFile(filename)
+nothing # hide
 ```
 
 We run the simulation using the [run_battery](@ref) 

@@ -23,7 +23,7 @@ function run_battery(inputparams::AbstractInputParams;
     """
     
     #Setup simulation
-    output = setup_simulation(inputparams; kwargs...)
+    output = setup_simulation(deepcopy(inputparams); kwargs...)
 
     simulator = output[:simulator]
     model     = output[:model]
