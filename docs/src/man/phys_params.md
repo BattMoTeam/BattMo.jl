@@ -4,7 +4,7 @@ We follow up on the example presented in the first page of the [introduction](..
 
 After running
 
-```example physparams
+```@example physparams
 using BattMo # hide
 filename = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/p2d_40.json")
 inputparams = readBattMoJsonInputFile(filename)
@@ -92,7 +92,7 @@ collect the results in the `outputs` list. In the simulation configuration keywo
 outputs = []
 for r in range(5e-11, 1e-13, length = 5)
     interfaceparams["reactionRateConstant"] = r
-    push!(outputs, run_battery(inputparams; config_kwargs = (;end_report = false))))
+    push!(outputs, run_battery(inputparams; config_kwargs = (;end_report = false)))
 end
 nothing # hide
 ```
@@ -100,6 +100,7 @@ nothing # hide
 We can then plot the results and observe that reaction rate constant is not really a limiting factor before we reache the value of 1e-13.
 
 ```@example physparams
+using Printf
 fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 for output in outputs
