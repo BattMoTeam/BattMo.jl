@@ -14,10 +14,10 @@ We have an `inputparams` object that corresponds to the json file [p2d_40.json](
 The simulation input is organised hierarchically 
 
 ````@raw html
-    <img src = "../assets/cutbatterygraph.png" style = "width:100%;display:block;margin-left:auto;margin-right:auto;margin-top:1cm;margin-bottom:1cm">
-    <img src = "../assets/electrodegraph.png" style = "width:50%;display:block;margin-left:auto;margin-right:auto;margin-bottom:1cm">
-    <img src = "../assets/coatinggraph.png" style = "width:70%;display:block;margin-left:auto;margin-right:auto;margin-bottom:1cm">
-    <img src = "../assets/activematerialgraph.png" style = "width:50%;display:block;margin-left:auto;margin-right:auto;margin-bottom:1cm">
+    <img src = "../../assets/cutbatterygraph.png" style = "width:100%;display:block;margin-left:auto;margin-right:auto;margin-top:1cm;margin-bottom:1cm">
+    <img src = "../../assets/electrodegraph.png" style = "width:50%;display:block;margin-left:auto;margin-right:auto;margin-bottom:1cm">
+    <img src = "../../assets/coatinggraph.png" style = "width:70%;display:block;margin-left:auto;margin-right:auto;margin-bottom:1cm">
+    <img src = "../../assets/activematerialgraph.png" style = "width:50%;display:block;margin-left:auto;margin-right:auto;margin-bottom:1cm">
 ````
 
 We can inspect the parameters for the electrolyte

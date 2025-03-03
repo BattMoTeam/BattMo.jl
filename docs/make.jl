@@ -25,11 +25,18 @@ function build_battmo_docs(build_format              = nothing;
     # Base directory
     battmo_dir = realpath(joinpath(@__DIR__, ".."))
     # Convert examples as .jl files to markdown
+    tutorials = [
+        "Tutorial 1 - How to run a model" => "1_how_to_run_a_model",
+        "Tutorial 2 - Basic plotting" => "2_basic_plotting"
+    ]
+
     examples = [
-        "Cycling example" => "example_cycle",
         "Battery example" => "example_battery",
+        "Cycle example" => "example_cycle",
         "3D demo example" => "example_3d_demo",
     ]
+
+    tutorials_markdown = []
     examples_markdown = []
     function update_footer(content, pth)
         return content*"\n\n # ## Example on GitHub\n "*
@@ -38,6 +45,15 @@ function build_battmo_docs(build_format              = nothing;
         "or as a [Jupyter Notebook](https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/$pth.ipynb)"
     end
     if clean
+        for (ex, pth) in tutorials
+            delpath = joinpath(@__DIR__, "src", "tutorials", "$pth.md")
+            if isfile(delpath)
+                println("Deleting generated example \"$ex\":\n\t$delpath")
+                rm(delpath)
+            else
+                println("Did not find generated example \"$ex\", skipping removal:\n\t$delpath")
+            end
+        end
         for (ex, pth) in examples
             delpath = joinpath(@__DIR__, "src", "examples", "$pth.md")
             if isfile(delpath)
@@ -48,9 +64,33 @@ function build_battmo_docs(build_format              = nothing;
             end
         end
     end
+    tutorial_path(pth) = joinpath(battmo_dir, "examples","beginner_tutorials", "$pth.jl")
     example_path(pth) = joinpath(battmo_dir, "examples", "$pth.jl")
-    out_dir = joinpath(@__DIR__, "src", "examples")
+    examples_out_dir = joinpath(@__DIR__, "src", "examples")
+    tutorials_out_dir = joinpath(@__DIR__, "src", "tutorials")
     notebook_dir = joinpath(@__DIR__, "assets")
+    for (ex, pth) in tutorials
+        in_pth = tutorial_path(pth)
+        is_validation = startswith(ex, "Validation:")
+        is_intro = startswith(ex, "Intro: ")
+        is_example = !(is_intro || is_validation)
+        if is_validation
+            ex_dest = validation_markdown
+            do_build = build_validation_examples
+        else
+            if is_intro
+                ex_dest = intros_markdown
+            else
+                ex_dest = tutorials_markdown
+            end
+            do_build = build_examples
+        end
+        if do_build
+            push!(ex_dest, ex => joinpath("tutorials", "$pth.md"))
+            upd(content) = update_footer(content, pth)
+            Literate.markdown(in_pth, tutorials_out_dir, preprocess = upd)
+        end
+    end
     for (ex, pth) in examples
         in_pth = example_path(pth)
         is_validation = startswith(ex, "Validation:")
@@ -70,7 +110,7 @@ function build_battmo_docs(build_format              = nothing;
         if do_build
             push!(ex_dest, ex => joinpath("examples", "$pth.md"))
             upd(content) = update_footer(content, pth)
-            Literate.markdown(in_pth, out_dir, preprocess = upd)
+            Literate.markdown(in_pth, examples_out_dir, preprocess = upd)
         end
     end
     ## Docs
@@ -94,16 +134,35 @@ function build_battmo_docs(build_format              = nothing;
              source   = "src",
              build    = "build",
              pages=[
-                 "Introduction" => [
-                     "BattMo.jl" => "index.md",
-                     "Physical parameters" => "man/phys_params.md",
-                     "Control parameters" => "man/control_params.md",
-                     "Grid parameters" => "man/grid_params.md",
-                 ],
-                 "Manual" => [
-                     "High level API" => "man/highlevel.md",
-                 ],
-                 "Examples" => examples_markdown
+                "User Guide" => [
+                    "Getting started" => [
+                        "Installation" => "manuals/user_guide/installation.md",
+                        "Getting started" => "manuals/user_guide/getting_started.md"
+                    ],
+                    "Models and Architecture" => [
+                        "Models" => "manuals/user_guide/models.md",
+                        "Model Architecture" => "manuals/user_guide/model_architecture.md"
+                    ],
+                    "Usage" => [
+                        "Public API" => "manuals/user_guide/public_api.md",
+                        "Physical parameters" => "manuals/user_guide/phys_params.md",
+                        "Control parameters" => "manuals/user_guide/control_params.md",
+                        "Grid parameters" => "manuals/user_guide/grid_params.md"
+                    ]
+                ],
+                    
+                "Tutorials and Examples" => [
+                    "Tutorials" => tutorials_markdown,
+                    "Advanced examples" => examples_markdown
+                ],
+                "API Documentation" => [
+                    "High level API" => "manuals/api_documentation/highlevel.md"
+                ],
+                 
+                "Contribution" => [
+                    "Contribute to BattMo.jl" => "manuals/contribution/contribution.md"
+                ]       
+                 
              ]             
              )
     if build_notebooks
