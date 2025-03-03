@@ -22,6 +22,10 @@ function Base.haskey(input::DictInputParams, keyname)
     return haskey(input.dict, keyname)
 end
 
+function Base.keys(input::DictInputParams)
+    return keys(input.dict)
+end
+
 struct InputParams <: DictInputParams
     dict::Dict{String, Any}
 end
