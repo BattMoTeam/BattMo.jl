@@ -39,7 +39,7 @@ features:
     link: /man/advanced
 
   - icon:
-      src: battmologo.ico
+      src: battmologo_stacked.png
       height: 10pt
     title: BattMo Web App
     details: A BattMo web application is available to run the simulation online without any further installation steps.
