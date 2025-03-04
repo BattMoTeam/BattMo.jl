@@ -1,0 +1,74 @@
+```@meta
+EditURL = "../../../examples/beginner_tutorials/2_inspect_simulation_output.jl"
+```
+
+# How to inspect simulation output
+
+We have seen how to simple it is to run a simulation using BattMo.
+Now we'll have a look into how to inspect the results of a simulation.
+
+We'll run a simulation like we saw in the previous tutorial
+
+````@example 2_inspect_simulation_output
+using BattMo
+
+file_name = "p2d_40_jl_chen2020.json"
+file_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", file_name)
+
+inputparams = readBattMoJsonInputFile(file_path)
+
+output = run_battery(inputparams);
+nothing #hide
+````
+
+Now we'll have a look into what the output entail. The ouput is of type NamedTuple and contains multiple dicts. Lets print the
+keys of each dict.
+
+````@example 2_inspect_simulation_output
+println("Keys: ", keys(output))
+````
+
+So we can see the the output contains state data, cell specifications, reports on the simulation, the input parameters of the simulation, and some extra data.
+The most important dicts, that we'll dive a bit deeper into, are the states and cell specifications. First let's see how the states output is structured.
+
+### States
+
+````@example 2_inspect_simulation_output
+states = output[:states];
+println("Type: ", typeof(states))
+println("Keys: ", keys(states))
+````
+
+As we can see, the states output is a Vector that contains dicts. In this case it consists of 77 dicts. Each dict represents
+a time step in the simulation and each time step stores quantities divided into battery component related group. This structure agrees with the overal model structure of BattMo.
+
+````@example 2_inspect_simulation_output
+initial_state = states[1]
+println("Keys: ", keys(initial_state))
+````
+
+So each time step contains quantities related to the electrolyte, the negative electrode active material, the cycling control, and the positive electrode active material.
+Lets print the stored quantities for each group.
+
+````@example 2_inspect_simulation_output
+println("Electrolyte keys: ", keys(initial_state[:Elyte]))
+println("Negative electrode active material keys: ", keys(initial_state[:NeAm]))
+println("Positive electrode active material keys: ", keys(initial_state[:PeAm]))
+println("Control keys: ", keys(initial_state[:Control]))
+````
+
+### Cell specifications
+Now lets see what quantities are stored within the cellSpecifications dict in the simulation output.
+
+````@example 2_inspect_simulation_output
+cell_specifications = output[:cellSpecifications];
+println("Keys: ", keys(cell_specifications))
+````
+
+## Example on GitHub
+If you would like to run this example yourself, it can be downloaded from the BattMo.jl GitHub repository [as a script](https://github.com/BattMoTeam/BattMo.jl/blob/main/examples/2_inspect_simulation_output.jl), or as a [Jupyter Notebook](https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/2_inspect_simulation_output.ipynb)
+
+---
+
+*This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
+

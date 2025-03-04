@@ -26,8 +26,10 @@ function build_battmo_docs(build_format              = nothing;
     battmo_dir = realpath(joinpath(@__DIR__, ".."))
     # Convert examples as .jl files to markdown
     tutorials = [
-        "Tutorial 1 - How to run a model" => "1_how_to_run_a_model",
-        "Tutorial 2 - Basic plotting" => "2_basic_plotting"
+        "Tutorial 1 - Run a model" => "1_run_a_model",
+        "Tutorial 2 - Inspect simulation output" => "2_inspect_simulation_output",
+        "Tutorial 3 - Basic Plotting" => "3_basic_plotting"
+
     ]
 
     examples = [

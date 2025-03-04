@@ -1,6 +1,6 @@
 # A basic example
 
-using Jutul, BattMo, GLMakie
+using Jutul, BattMo, GLMakied
 
 name = "p2d_40"
 # name = "p2d_40_jl_ud_func"
