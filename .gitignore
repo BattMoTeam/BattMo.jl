@@ -17,6 +17,7 @@ deps/src/
 docs/build/
 docs/site/
 docs/src/examples/*
+docs/src/tutorials/*
 package-lock.json
 package.json
 docs/node_modules/
