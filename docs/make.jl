@@ -173,6 +173,10 @@ function build_battmo_docs(build_format              = nothing;
                 "API Documentation" => [
                     "High level API" => "manuals/api_documentation/highlevel.md"
                 ],
+
+                "References" => [
+                    "Bibliography" => "extras/refs.md"
+                ],
                  
                 "Contribution" => [
                     "Contribute to BattMo.jl" => "manuals/contribution/contribution.md"
