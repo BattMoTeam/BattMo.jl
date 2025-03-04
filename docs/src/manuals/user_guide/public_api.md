@@ -20,7 +20,15 @@ the files are compatible with the julia version.
 
 ## Simulation Parameters
 
-The simulation parameters belong to one of the following categories. Each of the category is explicated below.
+The simulation parameters belong to one of the following categories. Each of the category is explicated below and shown in a hierarchical graph.
+
+````@raw html
+    <img src = "../../assets/cutbatterygraph.png" style = "width:100%;display:block;margin-left:auto;margin-right:auto;margin-top:1cm;margin-bottom:1cm">
+    <img src = "../../assets/electrodegraph.png" style = "width:50%;display:block;margin-left:auto;margin-right:auto;margin-bottom:1cm">
+    <img src = "../../assets/coatinggraph.png" style = "width:70%;display:block;margin-left:auto;margin-right:auto;margin-bottom:1cm">
+    <img src = "../../assets/activematerialgraph.png" style = "width:50%;display:block;margin-left:auto;margin-right:auto;margin-bottom:1cm">
+````
+
 - **Model specifications** : This category of parameters describes the model choices. For example, presence or not of current collectors, use of SEI model.
 - **Physical parameters** : This category contains all the physical parameters that belong to the P2D model.
 - **Control type** : This category contains the parameters describing the control or stimulation that is used (for example CCCV)

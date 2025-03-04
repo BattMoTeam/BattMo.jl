@@ -1,4 +1,4 @@
 # Control parameters
 
-We inspect some of the control parameters, change them an re-run the simulation
+A description of how the control parameters are structured
 

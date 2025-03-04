@@ -29,7 +29,10 @@ function build_battmo_docs(build_format              = nothing;
     tutorials = [
         "Tutorial 1 - Run a model" => "1_run_a_model",
         "Tutorial 2 - Inspect simulation output" => "2_inspect_simulation_output",
-        "Tutorial 3 - Basic Plotting" => "3_basic_plotting"
+        "Tutorial 3 - Basic Plotting" => "3_basic_plotting",
+        "Tutorial 4 - Modifying physical parameters" => "4_modifying_physical_parameters",
+        "Tutorial 5 - Modifying control parameters" => "5_modifying_control_parameters",
+        "Tutorial 6 - Modifying grid parameters" => "6_modifying_grid_parameters",
 
     ]
 
@@ -143,14 +146,22 @@ function build_battmo_docs(build_format              = nothing;
                         "Getting started" => "manuals/user_guide/getting_started.md"
                     ],
                     "Models and Architecture" => [
-                        "Models" => "manuals/user_guide/models.md",
-                        "Model Architecture" => "manuals/user_guide/model_architecture.md"
+                        "Models" => "manuals/user_guide/models.md"
+                        
                     ],
                     "Usage" => [
                         "Public API" => "manuals/user_guide/public_api.md",
-                        "Modifying physical parameters" => "manuals/user_guide/phys_params.md",
-                        "Modifying control parameters" => "manuals/user_guide/control_params.md",
-                        "Modifying grid parameters" => "manuals/user_guide/grid_params.md"
+                        "Input data" => [
+                            "Non-scalar input quantities" => "manuals/user_guide/non_scalar_input_quantities.md",
+                            "Control Policies" => "manuals/user_guide/control_params.md",
+                            "Geometries" => "manuals/user_guide/grid_params.md"
+                            ],
+                            
+                        "Output data" => [
+                            "Simulation output" => "manuals/user_guide/simulation_output.md",
+                            "Retrieve data in HDF5" => "manuals/user_guide/hdf5_output.md"
+                        ]
+                        
                     ]
                 ],
                     
