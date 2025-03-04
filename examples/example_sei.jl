@@ -3,7 +3,7 @@
 # ## Preparation of the input
 using Jutul, BattMo, GLMakie
 
-# We use the json data given in [bolay.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/bolay.json#L157) which contains the parameters for the SEI layer.
+# We use the SEI model presented in [bolay2022](@cite). We use the json data given in [bolay.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/bolay.json#L157) which contains the parameters for the SEI layer. 
 
 name = "bolay"
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
