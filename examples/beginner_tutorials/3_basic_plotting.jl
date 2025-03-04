@@ -50,9 +50,7 @@ f
 
 # And the cell current.
 
-f = Figure(size = (1000, 400))
-
-ax = Axis(f[1, 1],
+ax = Axis(f[1, 2],
             title     = "Current",
             xlabel    = "Time / s",
             ylabel    = "Current / V",
