@@ -65,8 +65,8 @@ scatterlines!(ax,
               marker = :cross, 
               markercolor = :black)
 
-display(f)
-f
+display(f) # hide
+f # hide
 
 # ## Plot potential on grid at last time step #
 state = states[10]
