@@ -34,9 +34,9 @@ function build_battmo_docs(build_format              = nothing;
     ]
 
     examples = [
-        "Battery example" => "example_battery",
         "Cycle example" => "example_cycle",
         "3D demo example" => "example_3d_demo",
+        "Matlab input" => "example_battery"
     ]
 
     tutorials_markdown = []
@@ -148,9 +148,9 @@ function build_battmo_docs(build_format              = nothing;
                     ],
                     "Usage" => [
                         "Public API" => "manuals/user_guide/public_api.md",
-                        "Physical parameters" => "manuals/user_guide/phys_params.md",
-                        "Control parameters" => "manuals/user_guide/control_params.md",
-                        "Grid parameters" => "manuals/user_guide/grid_params.md"
+                        "Modifying physical parameters" => "manuals/user_guide/phys_params.md",
+                        "Modifying control parameters" => "manuals/user_guide/control_params.md",
+                        "Modifying grid parameters" => "manuals/user_guide/grid_params.md"
                     ]
                 ],
                     
