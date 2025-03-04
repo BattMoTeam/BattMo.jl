@@ -6,7 +6,7 @@
 run_battery
 ```
 
-## input types
+## Input types
 
 ```@docs
 AbstractInputParams

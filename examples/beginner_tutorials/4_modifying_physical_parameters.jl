@@ -1,8 +1,9 @@
 # # Change input parameters
 
-# One way to change the values of our input parameters is the alter the value in the JSON file, which speaks for itself. 
-# But, as we saw in the first tutorial, BattMo uses the function ´readBattMoJsonInputFile´ to convert the JSON data to a Julia dict before running the simulation.
-# Therefore, it is also possible to change the input parameters by altering the dict.
+# One way to change the values of our input parameters is the alter the value in the JSON file, which speaks for itself.
+# But, as we saw in the first tutorial, BattMo uses the function ´readBattMoJsonInputFile´ to convert the JSON data to a
+# Julia dict before running the simulation.  Therefore, it is also possible to change the input parameters by altering
+# the dict.
 
 # We create the input parameter dict like shown in the first tutorial.
 
@@ -19,22 +20,17 @@ inputparams = readBattMoJsonInputFile(file_path)
 
 # We can for example inspect the parameters for the electrolyte
 
-
 inputparams["Electrolyte"]
     
-    
-#or of the interface of the negative electrode. At the interface level, we find all the parameters related to the
-#interface reactions.
-
+# or of the interface of the negative electrode. At the interface level, we find all the parameters related to the
+# interface reactions.
 
 interfaceparams = inputparams["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]
-
 
 # We can directly change one of these parameters. Let us for example change the reaction rate constant,
 
 interfaceparams["reactionRateConstant"] = 1e-13
 nothing # hide
-
 
 # We re-run the simulation and observe the impact on the solution
 
@@ -51,16 +47,13 @@ ax = Axis(fig[1, 2], ylabel = "Current / I", xlabel = "Time / s", title = "Disch
 lines!(ax, t, I)
 fig
 
-
 # To compare the results, let us reload the previous input file and run it
 
 inputparams2 = readBattMoJsonInputFile(file_path)
 output2 = run_battery(inputparams2)
 nothing # hide
 
-
-#We plot both curves
-
+# We plot both curves
 
 t2 = [state[:Control][:ControllerCV].time for state in output2[:states]]
 E2 = [state[:Control][:Phi][1] for state in output2[:states]]
@@ -74,13 +67,11 @@ ax = Axis(fig[1, 2], ylabel = "Current / A", xlabel = "Time / s")
 lines!(ax, t, I, label = "intial value")
 lines!(ax, t2, I2, label = "updated value")
 fig[1, 3] = Legend(fig, ax, "Reaction rate", framevisible = false)
-fig
-
+fig # hide
 
 # Then, it becomes clear that the values can be changed programatically. We iterate over a range of reaction rate and
 # collect the results in the `outputs` list. In the simulation configuration keywords `config_kwargs` we pass to
 # `run_battery`, we add the options of not printing out the full simulation report at the end of the simulation.
-
 
 outputs = []
 for r in range(5e-11, 1e-13, length = 5)
@@ -89,9 +80,8 @@ for r in range(5e-11, 1e-13, length = 5)
 end
 nothing # hide
 
-
-# We can then plot the results and observe that reaction rate constant is not really a limiting factor before we reache the value of 1e-13.
-
+# We can then plot the results and observe that reaction rate constant is not really a limiting factor before we reache
+# the value of 1e-13.
 
 using Printf
 fig = Figure()
@@ -103,4 +93,4 @@ for output in outputs
     lines!(ax, t, E, label = "$(@sprintf("%g", r))") 
 end
 fig[1, 2] = Legend(fig, ax, "Reaction rate", framevisible = false)
-fig
+fig # hide
