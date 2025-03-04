@@ -21,6 +21,7 @@ states = output[:states]
 t = [state[:Control][:ControllerCV].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
+nothing # hide
 
 # Now we can use GLMakie to create a plot. Lets first plot the cell voltage.
 
@@ -46,7 +47,7 @@ scatterlines!(ax,
     markercolor = :black,
     )
 
-f
+f # hide
 
 # And the cell current.
 
@@ -71,4 +72,4 @@ scatterlines!(ax,
     )
 
 
-f
+f # hide
