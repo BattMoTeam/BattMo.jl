@@ -148,9 +148,9 @@ function build_battmo_docs(build_format              = nothing;
                     ],
                     "Usage" => [
                         "Public API" => "manuals/user_guide/public_api.md",
-                        "Physical parameters" => "manuals/user_guide/phys_params.md",
-                        "Control parameters" => "manuals/user_guide/control_params.md",
-                        "Grid parameters" => "manuals/user_guide/grid_params.md"
+                        "Modifying physical parameters" => "manuals/user_guide/phys_params.md",
+                        "Modifying control parameters" => "manuals/user_guide/control_params.md",
+                        "Modifying grid parameters" => "manuals/user_guide/grid_params.md"
                     ]
                 ],
                     
