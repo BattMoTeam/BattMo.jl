@@ -10,6 +10,7 @@ using DocumenterVitepress
 cd(@__DIR__)
 function build_battmo_docs(build_format              = nothing;
                            build_examples            = true,
+                           build_tutorials           = build_examples
                            build_validation_examples = build_examples,
                            build_notebooks           = true,
                            clean                     = true,
@@ -85,8 +86,8 @@ function build_battmo_docs(build_format              = nothing;
             else
                 ex_dest = tutorials_markdown
             end
-            do_build = build_examples
-        end
+            do_build = build_tutorials
+        end                      
         if do_build
             push!(ex_dest, ex => joinpath("tutorials", "$pth.md"))
             upd(content) = update_footer(content, pth)
