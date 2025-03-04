@@ -55,7 +55,7 @@ fig
 # To compare the results, let us reload the previous input file and run it
 
 
-inputparams2 = readBattMoJsonInputFile(filename)
+inputparams2 = readBattMoJsonInputFile(file_path)
 output2 = run_battery(inputparams2)
 nothing # hide
 
