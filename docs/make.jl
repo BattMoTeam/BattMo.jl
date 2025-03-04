@@ -34,9 +34,9 @@ function build_battmo_docs(build_format              = nothing;
     ]
 
     examples = [
-        "Battery example" => "example_battery",
         "Cycle example" => "example_cycle",
         "3D demo example" => "example_3d_demo",
+        "Matlab input" => "example_battery"
     ]
 
     tutorials_markdown = []

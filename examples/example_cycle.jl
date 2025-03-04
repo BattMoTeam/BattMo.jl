@@ -1,18 +1,22 @@
 # # Cycling a battery 40 times with a constant current constant voltage (CCCV) control
+
 using BattMo, GLMakie
+# We use the setup provided in the [p2d_40.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/p2d_40.json#L152) file. In particular, see the data under the `Control` key.
 name = "p2d_40_cccv"
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
 inputparams = readBattMoJsonInputFile(fn)
+nothing # hide
 
-config_kwargs = (info_level = 0, )
-# Run base case and plot the results against BattMo-MRST reference
-output = run_battery(inputparams; config_kwargs = config_kwargs);
+# We run the simulation.
+
+output = run_battery(inputparams);
 
 states = output[:states]
 
 t = [state[:Control][:ControllerCV].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
+nothing # hide
 
 # ## Plot the results
 f = Figure(size = (1000, 400))
