@@ -10,7 +10,7 @@ using DocumenterVitepress
 cd(@__DIR__)
 function build_battmo_docs(build_format              = nothing;
                            build_examples            = true,
-                           build_tutorials           = build_examples
+                           build_tutorials           = build_examples,
                            build_validation_examples = build_examples,
                            build_notebooks           = true,
                            clean                     = true,
