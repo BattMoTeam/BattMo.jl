@@ -26,9 +26,11 @@ keys(output)
 states = output[:states]
 typeof(states)
 
+# As we can see, the states output is a Vector that contains dicts.
+
 keys(states)
 
-# As we can see, the states output is a Vector that contains dicts. In this case it consists of 77 dicts. Each dict represents 
+# In this case it consists of 77 dicts. Each dict represents 
 # a time step in the simulation and each time step stores quantities divided into battery component related group. This structure agrees with the overal model structure of BattMo.
 
 initial_state = states[1]
