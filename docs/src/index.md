@@ -13,7 +13,7 @@ hero:
   actions:
     - theme: brand
       text: Getting started
-      link: /man/intro
+      link: /manual/user_guide/introduction.md
     - theme: alt
       text: BattMo Web App
       link: https://app.batterymodel.com/
