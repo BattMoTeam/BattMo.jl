@@ -39,6 +39,7 @@ function build_battmo_docs(build_format              = nothing;
     examples = [
         "Cycle example" => "example_cycle",
         "3D demo example" => "example_3d_demo",
+        "SEI layer growth" => "example_sei",
         "Matlab input" => "example_battery"
     ]
 
@@ -171,6 +172,10 @@ function build_battmo_docs(build_format              = nothing;
                 ],
                 "API Documentation" => [
                     "High level API" => "manuals/api_documentation/highlevel.md"
+                ],
+
+                "References" => [
+                    "Bibliography" => "extras/refs.md"
                 ],
                  
                 "Contribution" => [
