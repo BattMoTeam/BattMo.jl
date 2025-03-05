@@ -31,8 +31,7 @@ function build_battmo_docs(build_format              = nothing;
         "Tutorial 2 - Inspect simulation output" => "2_inspect_simulation_output",
         "Tutorial 3 - Basic Plotting" => "3_basic_plotting",
         "Tutorial 4 - Modifying physical parameters" => "4_modifying_physical_parameters",
-        "Tutorial 5 - Modifying control parameters" => "5_modifying_control_parameters",
-        "Tutorial 6 - Modifying grid parameters" => "6_modifying_grid_parameters",
+        "Tutorial 5 - Modifying grid parameters" => "5_modifying_grid_parameters"
 
     ]
 
@@ -163,24 +162,25 @@ function build_battmo_docs(build_format              = nothing;
                             "Retrieve data in HDF5" => "manuals/user_guide/hdf5_output.md"
                         ]
                         
-                    ]
+                    ],
+                    "Tutorials" => tutorials_markdown,
                 ],
                     
-                "Tutorials and Examples" => [
-                    "Tutorials" => tutorials_markdown,
+                "Examples" => [
                     "Advanced examples" => examples_markdown
                 ],
                 "API Documentation" => [
                     "High level API" => "manuals/api_documentation/highlevel.md"
                 ],
+                "Contribution" => [
+                    "Contribute to BattMo.jl" => "manuals/contribution/contribution.md"
+                ]
 
                 "References" => [
                     "Bibliography" => "extras/refs.md"
-                ],
+                ]
                  
-                "Contribution" => [
-                    "Contribute to BattMo.jl" => "manuals/contribution/contribution.md"
-                ]       
+                       
                  
              ]             
              )
