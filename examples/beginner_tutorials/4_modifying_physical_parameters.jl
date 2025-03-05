@@ -1,7 +1,7 @@
 # # Change input parameters
 
 # One way to change the values of our input parameters is the alter the value in the JSON file, which speaks for itself. 
-# But, as we saw in the first tutorial, BattMo uses the function ´readBattMoJsonInputFile´ to convert the JSON data to a Julia dict before running the simulation.
+# But, as we saw in the first tutorial, BattMo uses the function `readBattMoJsonInputFile` to convert the JSON data to a Julia dict before running the simulation.
 # Therefore, it is also possible to change the input parameters by altering the dict.
 
 # We create the input parameter dict like shown in the first tutorial.
