@@ -145,10 +145,8 @@ function build_battmo_docs(build_format              = nothing;
                         "Installation" => "manuals/user_guide/installation.md",
                         "Getting started" => "manuals/user_guide/getting_started.md"
                     ],
-                    "Models and Architecture" => [
-                        "Models" => "manuals/user_guide/models.md"
-                        
-                    ],
+                    
+                    "Models" => "manuals/user_guide/models.md",
                     "Public API" =>  "manuals/user_guide/public_api.md",
                     "Tutorials" => tutorials_markdown,
                 ],
