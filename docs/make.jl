@@ -193,6 +193,12 @@ function build_battmo_docs(build_format              = nothing;
             @info "$ex Writing notebook to $notebook_dir"
             Literate.notebook(in_pth, notebook_dir, execute = false)
         end
+
+        for (ex, pth) in tutorials
+            in_pth = tutorial_path(pth)
+            @info "$ex Writing notebook to $notebook_dir"
+            Literate.notebook(in_pth, notebook_dir, execute = false)
+        end
     end
     if deploy
         deploydocs(;
