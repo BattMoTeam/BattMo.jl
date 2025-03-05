@@ -34,12 +34,12 @@ features:
   - icon: 🔋
     title: Accurate and open
     details: Validated on standard benchmarks. Automatic differentiation and Julia syntax means that the code is easy to read and edit. Based on proven computational core for other multiphysics domains.
-    link: /examples
+    link: manuals/user_guide/public_api
 
   - icon: ⚡
     title: Fast and flexible
     details: Written in Julia, simulate with scripting syntax without sacrificing performance. Extensible with new features.
-    link: /man/advanced
+    link: manuals/user_guide/public_api
 
   - icon:
       src: battmologo_stacked.png
@@ -51,7 +51,7 @@ features:
   - icon: 🧱
     title: 1D, 2D and 3D
     details: One code handles both 1D models and complex 3D grids, with support for high-performance linear solvers for bigger models.
-    link: /examples
+    link: manuals/user_guide/public_api
 
 ---
 ````
