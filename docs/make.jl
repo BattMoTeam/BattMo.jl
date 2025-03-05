@@ -174,7 +174,7 @@ function build_battmo_docs(build_format              = nothing;
                 ],
                 "Contribution" => [
                     "Contribute to BattMo.jl" => "manuals/contribution/contribution.md"
-                ]
+                ],
 
                 "References" => [
                     "Bibliography" => "extras/refs.md"
