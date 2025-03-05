@@ -149,20 +149,7 @@ function build_battmo_docs(build_format              = nothing;
                         "Models" => "manuals/user_guide/models.md"
                         
                     ],
-                    "Usage" => [
-                        "Public API" => "manuals/user_guide/public_api.md",
-                        "Input data" => [
-                            "Non-scalar input quantities" => "manuals/user_guide/non_scalar_input_quantities.md",
-                            "Control Policies" => "manuals/user_guide/control_params.md",
-                            "Geometries" => "manuals/user_guide/grid_params.md"
-                            ],
-                            
-                        "Output data" => [
-                            "Simulation output" => "manuals/user_guide/simulation_output.md",
-                            "Retrieve data in HDF5" => "manuals/user_guide/hdf5_output.md"
-                        ]
-                        
-                    ],
+                    "Public API" =>  "manuals/user_guide/public_api.md",
                     "Tutorials" => tutorials_markdown,
                 ],
                     
