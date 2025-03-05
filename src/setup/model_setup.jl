@@ -13,7 +13,10 @@ export
 """
     run_battery(inputparams::AbstractInputParams; hook = nothing)
 
-Simulate a battery for a given input (JSON file, Dict, etc.)
+Simulate a battery for a given input. The input is expected to be an instance of AbstractInputParams. Such input can be
+prepared from a json file using the function [`readBattMoJsonInputFile`](@ref).
+
+
 """
 function run_battery(inputparams::AbstractInputParams;
                      hook = nothing,
@@ -23,7 +26,7 @@ function run_battery(inputparams::AbstractInputParams;
     """
     
     #Setup simulation
-    output = setup_simulation(inputparams; kwargs...)
+    output = setup_simulation(deepcopy(inputparams); kwargs...)
 
     simulator = output[:simulator]
     model     = output[:model]
