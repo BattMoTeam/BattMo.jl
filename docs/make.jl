@@ -30,8 +30,7 @@ function build_battmo_docs(build_format              = nothing;
         "Tutorial 1 - Run a model" => "1_run_a_model",
         "Tutorial 2 - Inspect simulation output" => "2_inspect_simulation_output",
         "Tutorial 3 - Basic Plotting" => "3_basic_plotting",
-        "Tutorial 4 - Modifying physical parameters" => "4_modifying_physical_parameters",
-        "Tutorial 5 - Modifying grid parameters" => "5_modifying_grid_parameters"
+        "Tutorial 4 - Modifying physical parameters" => "4_modifying_physical_parameters"
 
     ]
 
@@ -146,7 +145,6 @@ function build_battmo_docs(build_format              = nothing;
                         "Getting started" => "manuals/user_guide/getting_started.md"
                     ],
                     
-                    "Models" => "manuals/user_guide/models.md",
                     "Public API" =>  "manuals/user_guide/public_api.md",
                     "Tutorials" => tutorials_markdown,
                 ],
