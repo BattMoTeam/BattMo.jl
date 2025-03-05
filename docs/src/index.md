@@ -12,8 +12,11 @@ hero:
   tagline: 1D, 2D and 3D open-source P2D/PXD Lithium-Ion battery simulation
   actions:
     - theme: brand
+      text: Install
+      link: manuals/user_guide/installation
+    - theme: brand
       text: Getting started
-      link: /manuals/user_guide/introduction
+      link: manuals/user_guide/getting_started
     - theme: alt
       text: BattMo Web App
       link: https://app.batterymodel.com/
