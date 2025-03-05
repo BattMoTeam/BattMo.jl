@@ -1,4 +1,7 @@
-In the following, all the symbols that are not introduced directly in the text are collected in Table \ref{tab:symb}.
+# PXD model
+
+In the following, all the symbols that are not introduced directly in the text are collected in the table at the end of
+the page
 
 The mass and charge conservation in the electrolyte are given by
 ```math
@@ -43,3 +46,20 @@ and the temperature.  The exchange current density is given by
 ```math
   j_\text{elde} = k_{\text{elde},0} e^{-\frac{E_a}{R}(1/T - 1/T_{\text{ref}})}\left(c_\text{elyte}(c_{\text{elde},\max} - c_\text{elde})c_\text{elde}\right)^{\frac12}.
 ```
+
+| Symbol                                      | Definition                                      |
+|---------------------------------------------|-------------------------------------------------|
+| ``c_\text{elyte}``, ``c_\text{elde}``       | Lithium concentration in electrolyte, electrode |
+| ``\phi_\text{elyte}``, ``\phi_\text{elde}`` | Electrolyte potential in electrolyte, electrode |
+| ``T``                                       | Temperature                                     |
+| ``t_+``                                     | Transference number                             |
+| ``z_+``                                     | Charge number                                   |
+| ``F``                                       | Faraday coefficient                             |
+| ``r_p``                                     | Particle radius                                 |
+| ``R_\text{elde}``                           | Reaction rate at electrode                      |
+| ``\gamma_\text{elde}``                      | Volumetric surface area                         |
+| ``k_{\text{elde}, 0}``                      | Reaction rate constant                          |
+| ``\varepsilon_\text{elde}``                 | Volume fraction electrode                       |
+| ``\varepsilon_\text{elyte}``                | Volume fraction electrolyte                     |
+| ``E_q``                                     | Activation energy of reaction                   |
+| ``R``                                       | Ideal gas constant                              |
