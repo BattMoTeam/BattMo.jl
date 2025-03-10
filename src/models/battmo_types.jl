@@ -37,6 +37,9 @@ minimum_value(::C)   = 0.
 # relative_increment_limit(::C) = 0.1
 
 struct Temperature <: Potential end
+struct BruggemanCoefficient <: ScalarVariable end
+
+Jutul.default_value(model, ::BruggemanCoefficient) = 1.5
 
 struct Conductivity <: ScalarVariable end
 struct Diffusivity <: ScalarVariable end
