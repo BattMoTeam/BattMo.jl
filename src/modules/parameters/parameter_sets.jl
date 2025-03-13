@@ -9,17 +9,17 @@
 abstract type ParameterSet end
 
 "Abstract type for all parameter sets that only contain cell parameters in BattMo"
-abstract type CellParameters <: ParameterSet   end
+abstract type CellParameterSet <: ParameterSet   end
 
 "Parameter set type that represents the cycling related parameters"
-struct CyclingParameters <: ParameterSet end
+struct CyclingParameterSet <: ParameterSet end
 
 "Parameter set type that represents the model related parameters"
-struct ModelSettings <: ParameterSet end
+struct ModelParameterSet <: ParameterSet end
 
 "Parameter set type that represents the BattMo input parameter set containing all 
 three above mentioned parameter set types."
-struct BattMoInputParameters <: ParameterSet end
+struct BattMoInputParameterSet <: ParameterSet end
 
 
 #########################################
@@ -27,10 +27,10 @@ struct BattMoInputParameters <: ParameterSet end
 #########################################
 
 "Cell parameter set type that represents the BPX formatted cell parameters"
-struct BPXCellParameters <: CellParameters end
+struct BPXCellParameterSet <: CellParameterSet end
 
 "Cell parameter set type that represents the BattMo formatted cell parameters"
-struct BattMoCellParameters <: CellParameters end
+struct BattMoCellParameterSet <: CellParameterSet end
 
 
 #########################################
@@ -39,18 +39,18 @@ struct BattMoCellParameters <: CellParameters end
 
 
 """
-    load_parameters(source::Union{String,Dict}, category::BattMoInputParameters)
+    load_parameters(source::Union{String,Dict}, category::BattMoInputParameterSet)
 
 Loads a set of input parameters for the BattMo model.
 
 # Arguments
 - `source::Union{String, Dict}`: The source of the parameters, either as a filename (for BattMo default parameter sets), as a filepath, as an url, or a dictionary.
-- `category::BattMoInputParameters`: The specific category of input parameters to load.
+- `category::BattMoInputParameterSet`: The specific category of input parameters to load.
 
 # Returns
-- The loaded parameters in the format required by `BattMoInputParameters`.
+- The loaded parameters in the format required by `BattMoInputParameterSet`.
 """
-function load_parameters(source::Union{String,Dict}, category::BattMoInputParameters)
+function load_parameters(source::Union{String,Dict}, category::BattMoInputParameterSet)
     source
     category
 end
@@ -58,18 +58,18 @@ end
 
 
 """
-    load_parameters(source::Union{String,Dict}, category::BattMoCellParameters)
+    load_parameters(source::Union{String,Dict}, category::BattMoCellParameterSet)
 
 Loads cell-specific parameters for the BattMo model.
 
 # Arguments
 - `source::Union{String, Dict}`: The source of the parameters, either as a filename (for BattMo default parameter sets), as a filepath, as an url, or a dictionary.
-- `category::BattMoCellParameters`: The specific category of cell parameters to load.
+- `category::BattMoCellParameterSet`: The specific category of cell parameters to load.
 
 # Returns
-- The loaded parameters in the format required by `BattMoCellParameters`.
+- The loaded parameters in the format required by `BattMoCellParameterSet`.
 """
-function load_parameters(source::Union{String,Dict}, category::BattMoCellParameters)
+function load_parameters(source::Union{String,Dict}, category::BattMoCellParameterSet)
     source
     category
 end
@@ -77,18 +77,18 @@ end
 
 
 """
-    load_parameters(source::Union{String,Dict}, category::BPXCellParameters)
+    load_parameters(source::Union{String,Dict}, category::BPXCellParameterSet)
 
 Loads BPX cell parameters from a given source.
 
 # Arguments
 - `source::Union{String, Dict}`: The source of the parameters, either as a filename (for BattMo default parameter sets), as a filepath, as an url, or a dictionary.
-- `category::BPXCellParameters`: The specific category of BPX cell parameters to load.
+- `category::BPXCellParameterSet`: The specific category of BPX cell parameters to load.
 
 # Returns
-- The loaded parameters in the format required by `BPXCellParameters`.
+- The loaded parameters in the format required by `BPXCellParameterSet`.
 """
-function load_parameters(source::Union{String,Dict}, category::BPXCellParameters)
+function load_parameters(source::Union{String,Dict}, category::BPXCellParameterSet)
     source
     category
 end
@@ -96,18 +96,18 @@ end
 
 
 """
-    load_parameters(source::Union{String,Dict}, category::CyclingParameters)
+    load_parameters(source::Union{String,Dict}, category::CyclingParameterSet)
 
 Loads cycling-related parameters from a given source.
 
 # Arguments
 - `source::Union{String, Dict}`: The source of the parameters, either as a filename (for BattMo default parameter sets), as a filepath, as an url, or a dictionary.
-- `category::CyclingParameters`: The specific category of cycling parameters to load.
+- `category::CyclingParameterSet`: The specific category of cycling parameters to load.
 
 # Returns
-- The loaded parameters in the format required by `CyclingParameters`.
+- The loaded parameters in the format required by `CyclingParameterSet`.
 """
-function load_parameters(source::Union{String,Dict}, category::CyclingParameters)
+function load_parameters(source::Union{String,Dict}, category::CyclingParameterSet)
     source
     category
 end
@@ -115,18 +115,18 @@ end
 
 
 """
-    load_parameters(source::Union{String,Dict}, category::ModelSettings)
+    load_parameters(source::Union{String,Dict}, category::ModelParameterSet)
 
 Loads general model settings from a given source.
 
 # Arguments
 - `source::Union{String, Dict}`: The source of the settings, either as a filename (for BattMo default parameter sets), as a filepath, as an url, or a dictionary.
-- `category::ModelSettings`: The specific category of model settings to load.
+- `category::ModelParameterSet`: The specific category of model settings to load.
 
 # Returns
-- The loaded model settings in the format required by `ModelSettings`.
+- The loaded model settings in the format required by `ModelParameterSet`.
 """
-function load_parameters(source::Union{String,Dict}, category::ModelSettings)
+function load_parameters(source::Union{String,Dict}, category::ModelParameterSet)
     source
     category
 end
