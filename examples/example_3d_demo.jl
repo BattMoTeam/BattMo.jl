@@ -11,10 +11,12 @@ fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.j
 inputparams_geometry = readBattMoJsonInputFile(fn)
 
 inputparams = mergeInputParams(inputparams_geometry, inputparams)
+nothing # hide
 
 # ## Setup and run simulation
 
-output = run_battery(inputparams);
+output = run_battery(inputparams)
+nothing # hide
 
 # ## Plot discharge curve 
 
@@ -63,8 +65,8 @@ scatterlines!(ax,
               marker = :cross, 
               markercolor = :black)
 
-display(f)
-f
+display(f) # hide
+f # hide
 
 # ## Plot potential on grid at last time step #
 state = states[10]
@@ -93,10 +95,14 @@ function plot_potential(am, cc, label)
     display(GLMakie.Screen(), f3D)
     return f3D
 end
-# ##
+nothing # hide
+
+# ## Plot the potential in the positive electrode
 plot_potential(:PeAm, :PeCc, "positive")
-# ##
+
+# ## Plot the potential in the negative electrode
 plot_potential(:NeAm, :NeCc, "negative")
+
 # ## Plot surface concentration on grid at last time step
 function plot_surface_concentration(component, label)
     f3D = Figure(size = (600, 650))
@@ -120,10 +126,14 @@ function plot_surface_concentration(component, label)
     display(GLMakie.Screen(), f3D)
     return f3D
 end
-# ## Positive 
+nothing # hide
+
+# ## Plot the surface concentration in the positive electrode
 plot_surface_concentration(:PeAm, "positive")
-# ## Negative
+
+# ## Plot the surface concentration in the negative electrode
 plot_surface_concentration(:NeAm, "negative")
+
 # ## Plot electrolyte concentration and potential on grid at last time step
 function plot_elyte(var, label)
     f3D = Figure(size = (600, 650))
@@ -147,8 +157,10 @@ function plot_elyte(var, label)
     display(GLMakie.Screen(), f3D)
     f3D
 end
+nothing # hide
 
-# ##
+# ## Plot of the concentration in the electrolyte
 plot_elyte(:C, "concentration")
-# ##
+
+# ## Plot of the potential in the electrolyte
 plot_elyte(:Phi, "potential")
