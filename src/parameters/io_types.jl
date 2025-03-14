@@ -8,7 +8,7 @@ export readBattMoMatlabInputFile, readBattMoJsonInputFile, load_parameters
 #########################################
 
 
-function load_parameters(source::Union{String,Dict}, ::Type{T}) where {T <: Union{BattMoInputParameters,CellParameters,CyclingParameters,ModelParameters}} 
+function load_parameters(source::Union{String,Dict}, ::Type{T}) where {T <: Union{BattMoSimulationInput,CellParameters,CyclingParameters,ModelParameters}} 
 
     if source isa String
         parameter_object = T(JSON.parsefile(source))
@@ -18,22 +18,12 @@ function load_parameters(source::Union{String,Dict}, ::Type{T}) where {T <: Unio
     return parameter_object
 end
 
-function load_parameters(source::Union{String,Dict}, ::Type{MatlabInputParameters})
+function load_parameters(source::Union{String,Dict}, ::Type{MatlabSimulationInput})
 
     if source isa String
-        parameter_object = MatlabInputParameters(MAT.matread(source))
+        parameter_object = MatlabSimulationInput(MAT.matread(source))
     else
-        parameter_object = MatlabInputParameters(source)
-    end
-    return parameter_object
-end
-
-function load_parameters(source::Union{String,Dict}, ::Type{}) 
-
-    if source isa String
-        parameter_object = CellParameters(JSON.parsefile(source))
-    else
-        parameter_object = CellParameters(source)
+        parameter_object = MatlabSimulationInput(source)
     end
     return parameter_object
 end

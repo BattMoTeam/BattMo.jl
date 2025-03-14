@@ -4,8 +4,8 @@ export
     BPXCellParameters,
     CyclingParameters,
     ModelParameters,
-    BattMoInputParameters,
-    MatlabInputParameters
+    BattMoSimulationInput,
+    MatlabSimulationInput
 
 
 #########################################
@@ -37,12 +37,12 @@ end
 
 "Parameter set type that represents the BattMo input parameter set containing all 
 three above mentioned parameter set types."
-struct BattMoInputParameters <: Parameters 
+struct BattMoSimulationInput <: Parameters 
     dict::Dict{String, Any}
 end
 
 "Parameter set type that represents a BattMo input parameter set in a MATLAB dict."
-struct MatlabInputParameters <: Parameters 
+struct MatlabSimulationInput <: Parameters 
     dict::Dict{String, Any}
 end
 

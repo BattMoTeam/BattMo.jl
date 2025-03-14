@@ -13,7 +13,9 @@ file_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", file_nam
 
 # First we convert the json data to a julia dict and format it using the folowing function.
 
-inputparams = load_parameters(file_path, BattMoInputParameters)
+inputparams = load_parameters(file_path, BattMoSimulationInput)
+
+
 
 # Then we can run the model.
 
