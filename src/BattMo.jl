@@ -70,9 +70,10 @@ import Jutul:
     
 include("utils/physical_constants.jl")
 
-include("input/io_types.jl")
-include("input/input_types.jl")
-include("input/function_input_tools.jl")
+include("parameters/io_types.jl")
+include("parameters/input_types.jl")
+include("parameters/parameter_types.jl")
+include("parameters/function_input_tools.jl")
 
 
 include("models/battmo_types.jl")
