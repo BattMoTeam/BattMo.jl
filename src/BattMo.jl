@@ -70,9 +70,9 @@ import Jutul:
     
 include("utils/physical_constants.jl")
 
+include("parameters/parameter_types.jl")
 include("parameters/io_types.jl")
 include("parameters/input_types.jl")
-include("parameters/parameter_types.jl")
 include("parameters/function_input_tools.jl")
 
 
