@@ -176,7 +176,7 @@ end
 # one dimensional grid setup #
 ##############################
 
-function one_dimensional_grid(geomparams::InputGeometryParams)
+function one_dimensional_grid(geomparams::ParameterSet)
 
     grids       = Dict()
     global_maps = Dict()
@@ -306,7 +306,7 @@ end
 
 """ Create a single layer pouch grid
     """
-function pouch_grid(geomparams::InputGeometryParams)
+function pouch_grid(geomparams::ParameterSet)
 
     ne_cc_z  = geomparams["NegativeElectrode"]["CurrentCollector"]["thickness"]
     ne_cc_nz = geomparams["NegativeElectrode"]["CurrentCollector"]["N"]

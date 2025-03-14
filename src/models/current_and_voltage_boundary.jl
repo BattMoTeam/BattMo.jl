@@ -343,7 +343,7 @@ end
 # Setup the initial policy from the input parameters #
 ######################################################
 
-function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::InputParams, parameters)
+function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::ParameterSet, parameters)
 
     Imax = only(parameters[:Control][:ImaxDischarge])
 
@@ -358,7 +358,7 @@ function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::Inpu
 end
 
  
-function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::InputParams, parameters)
+function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::ParameterSet, parameters)
 
     policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
     policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])

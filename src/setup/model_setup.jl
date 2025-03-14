@@ -10,6 +10,53 @@ export
 # Run battery #
 ###############
 
+function run_battery(inputparams::SimulationInput;
+                        hook = nothing,
+                        kwargs...)
+    """
+    Run battery wrapper method. Call setup_simulation function and run the simulation with the setup that is returned. A hook function can be given to modify the setup after the call to setup_simulation
+    """
+
+    #Setup simulation
+    output = setup_simulation(deepcopy(inputparams); kwargs...)
+
+    simulator = output[:simulator]
+    model     = output[:model]
+    state0    = output[:state0]
+    forces    = output[:forces]
+    timesteps = output[:timesteps]
+    cfg       = output[:cfg]
+
+    if !isnothing(hook)
+    hook(simulator,
+    model,
+    state0,
+    forces,
+    timesteps,
+    cfg)
+    end
+
+    # Perform simulation
+    states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+
+    extra = output
+    extra[:timesteps] = timesteps
+
+    if isa(inputparams, MatlabSimulationInput)
+    cellSpecifications = nothing
+    else
+    cellSpecifications = computeCellSpecifications(model)
+    end
+
+    return (states             = states            ,
+    cellSpecifications = cellSpecifications, 
+    reports            = reports           ,
+    inputparams        = inputparams,
+    extra              = extra)
+
+end
+
+
 """
     run_battery(inputparams::AbstractInputParams; hook = nothing)
 
@@ -18,13 +65,22 @@ prepared from a json file using the function [`readBattMoJsonInputFile`](@ref).
 
 
 """
-function run_battery(inputparams::AbstractInputParams;
+function run_battery(cell_parameters::CellParameters,
+                     cycling_parameters::CyclingParameters;
+                     model_settings::ModelParameters,
                      hook = nothing,
                      kwargs...)
     """
         Run battery wrapper method. Call setup_simulation function and run the simulation with the setup that is returned. A hook function can be given to modify the setup after the call to setup_simulation
     """
-    
+    # Combine parameter sets
+    if model_settings
+        inputparams = combine_parameter_sets(cell_parameters,cycling_parameters;model_settings)
+    else
+        inputparams = combine_parameter_sets(cell_parameters,cycling_parameters)
+    end
+
+
     #Setup simulation
     output = setup_simulation(deepcopy(inputparams); kwargs...)
 
@@ -50,7 +106,7 @@ function run_battery(inputparams::AbstractInputParams;
     extra = output
     extra[:timesteps] = timesteps
 
-    if isa(inputparams, MatlabInputParams)
+    if isa(inputparams, MatlabSimulationInput)
         cellSpecifications = nothing
     else
         cellSpecifications = computeCellSpecifications(model)
@@ -69,7 +125,7 @@ end
 # Setup simulation #
 ####################
 
-function setup_simulation(inputparams::AbstractInputParams;
+function setup_simulation(inputparams::ParameterSet;
                           use_p2d::Bool                     = true,
                           use_model_scaling::Bool           = true,
                           extra_timing::Bool                = false,
@@ -119,7 +175,7 @@ end
 # Setup model #
 ###############
 
-function setup_model(inputparams::AbstractInputParams;
+function setup_model(inputparams::ParameterSet;
                      use_p2d::Bool    = true,
                      use_groups::Bool = false,
                      general_ad       = true,
@@ -146,7 +202,7 @@ function setup_model(inputparams::AbstractInputParams;
 end
 
 
-function setup_submodels(inputparams::InputParams; 
+function setup_submodels(inputparams::ParameterSet; 
                          use_groups::Bool = false, 
                          general_ad::Bool = true,
                          use_p2d = true,
@@ -477,7 +533,7 @@ end
 # Setup grids and coupling for the given geometrical parameters #
 #################################################################
 
-function setup_grids_and_couplings(inputparams::InputParams)
+function setup_grids_and_couplings(inputparams::ParameterSet)
 
 
     case_type = inputparams["Geometry"]["case"]
@@ -553,7 +609,7 @@ end
 # Setup battery parameters #
 ############################
 
-function setup_battery_parameters(inputparams::InputParams, 
+function setup_battery_parameters(inputparams::ParameterSet, 
                                   model::MultiModel
                                   )
 
@@ -708,7 +764,7 @@ end
 # Setup initial state #
 #######################
 
-function setup_initial_state(inputparams::InputParams,
+function setup_initial_state(inputparams::ParameterSet,
                              model::MultiModel)
 
     include_cc = include_current_collectors(model)
@@ -806,7 +862,7 @@ end
 # Setup coupling #
 ##################
 
-function setup_coupling_cross_terms!(inputparams::InputParams,
+function setup_coupling_cross_terms!(inputparams::ParameterSet,
                          model::MultiModel,
                          parameters::Dict{Symbol,<:Any},
                          couplings)
@@ -1135,7 +1191,7 @@ end
 # Setup timestepping #
 ######################
 
-function setup_timesteps(inputparams::InputParams;
+function setup_timesteps(inputparams::ParameterSet;
                          kwargs ...)
     """
         Method setting up the timesteps from a json file object. 
@@ -1449,7 +1505,7 @@ end
 # Utilities #
 #############
 
-function include_current_collectors(inputparams::InputParams)
+function include_current_collectors(inputparams::ParameterSet)
 
     jsondict = inputparams.dict
 

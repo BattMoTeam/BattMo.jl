@@ -49,7 +49,7 @@ else
     inputparams_geometry.dict["include_current_collectors"] = false
 end
 
-inputparams = mergeInputParams(deepcopy(inputparams_geometry), inputparams)
+inputparams = combine_parameter_sets(deepcopy(inputparams_geometry), inputparams)
 
 ############################
 # setup and run simulation #

@@ -3,7 +3,7 @@
 # control policy setup (Matlab input specific) #
 ################################################
 
-function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::MatlabInputParams, parameters)
+function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::MatlabSimulationInput, parameters)
 
     Imax = Float64(inputparams["model"]["Control"]["Imax"])
     tup = Float64(inputparams["model"]["Control"]["rampupTime"])
@@ -17,7 +17,7 @@ function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::Matl
 end
 
  
-function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::MatlabInputParams, parameters)
+function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::MatlabSimulationInput, parameters)
 
     error("not updated, use inputparams to get values")
     policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
@@ -30,7 +30,7 @@ end
 # Setup timestepping #
 ######################
 
-function setup_timesteps(inputparams::MatlabInputParams;
+function setup_timesteps(inputparams::MatlabSimulationInput;
                          max_step::Union{Integer,Nothing} = nothing,
                          kwarg...)
     """
@@ -75,7 +75,7 @@ end
 # Setup coupling #
 ##################
 
-function setup_coupling_cross_terms!(inputparams::MatlabInputParams,
+function setup_coupling_cross_terms!(inputparams::MatlabSimulationInput,
                          model::MultiModel,
                          parameters::Dict{Symbol,<:Any},
                          couplings)
@@ -266,7 +266,7 @@ end
 
 
 
-function include_current_collectors(inputparams::MatlabInputParams)
+function include_current_collectors(inputparams::MatlabSimulationInput)
 
     model = inputparams["model"]
 
@@ -291,7 +291,7 @@ end
 # Setup battery model #
 #######################
 
-function setup_submodels(inputparams::MatlabInputParams; 
+function setup_submodels(inputparams::MatlabSimulationInput; 
                          use_groups::Bool = false,
                          use_p2d::Bool    = true,
                          general_ad::Bool = true,
@@ -532,7 +532,7 @@ end
 ############################
 
 
-function setup_battery_parameters(inputparams::MatlabInputParams, 
+function setup_battery_parameters(inputparams::MatlabSimulationInput, 
                                   model::MultiModel
                                   )
 
@@ -626,7 +626,7 @@ end
 # Setup initial state #
 #######################
 
-function setup_initial_state(inputparams::MatlabInputParams, 
+function setup_initial_state(inputparams::MatlabSimulationInput, 
                              model::MultiModel
                              )
 

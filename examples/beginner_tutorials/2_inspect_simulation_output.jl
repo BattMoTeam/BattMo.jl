@@ -10,7 +10,7 @@ using BattMo
 file_name = "p2d_40_jl_chen2020.json"
 file_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", file_name)
 
-inputparams = readBattMoJsonInputFile(file_path)
+inputparams = load_parameters(file_path, SimulationInput)
 
 output = run_battery(inputparams);
 

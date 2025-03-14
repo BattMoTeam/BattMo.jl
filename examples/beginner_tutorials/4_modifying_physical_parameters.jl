@@ -11,7 +11,7 @@ using BattMo
 file_name = "p2d_40_jl_chen2020.json"
 file_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", file_name)
 
-inputparams = readBattMoJsonInputFile(file_path)
+inputparams = load_parameters(file_path, SimulationInput)
 
 # We have an `inputparams` object that corresponds to the json file 
 # [p2d_40_jl_chen2020.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/p2d_40_jl_chen2020.json) 

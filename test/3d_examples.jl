@@ -14,7 +14,7 @@ using Test
         fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
         inputparams_geometry = readBattMoJsonInputFile(fn)
 
-        inputparams = mergeInputParams(inputparams_geometry, inputparams)
+        inputparams = combine_parameter_sets(inputparams_geometry, inputparams)
 
         output = run_battery(inputparams);
         Cc = map(x -> x[:Control][:Current][1], output.states)
