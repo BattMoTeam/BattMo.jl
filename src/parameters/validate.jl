@@ -1,10 +1,5 @@
 
-abstract type SimulationModel end
 
-struct LithiumP2DModel <: SimulationModel
-    negative_electrode_coating_thickness::Real
-    positive_electrode_coating_thickness::Real
-end
 
 function validate_parameter_set(inputparams::CellParameters,model::Type{<: SimulationModel})
 
