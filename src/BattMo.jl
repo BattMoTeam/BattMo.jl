@@ -68,23 +68,36 @@ import Jutul:
     physical_representation,
     get_1d_interpolator
     
-include("utils/physical_constants.jl")
 
-include("input/io_types.jl")
-include("input/input_types.jl")
-include("input/function_input_tools.jl")
+include("parameters/physical_constants.jl")
+# include("models/submodels/boundary_conditions.jl")
+# include("parameters/parameters.jl")
 
+include("parameters/input_types.jl")
+include("parameters/parameter_tools.jl")
+include("parameters/functional_valued_parameters/ocp.jl")
+include("parameters/functional_valued_parameters/electrolyte_conductivity.jl")
+include("parameters/functional_valued_parameters/electrolyte_diffusivity.jl")
+
+include("meshes/mesh.jl")
+include("meshes/mrst_mesh.jl")
+
+
+
+include("geometries/1D.jl")
+include("geometries/pouch_cell.jl")
 
 include("models/battmo_types.jl")
-include("models/thermal.jl")
-include("models/elyte.jl")
-include("models/current_collector.jl")
-include("models/ocp.jl")
-include("models/activematerial.jl")
-include("models/sei_layer.jl")
+include("models/submodels/thermal.jl")
+include("models/submodels/elyte.jl")
+include("models/submodels/current_collector.jl")
+include("models//submodels/activematerial.jl")
+include("models//submodels/reaction_rate.jl")
+include("models/submodels/sei_layer.jl")
 include("models/current_and_voltage_boundary.jl")
-include("models/battery_cross_terms.jl") # Works now
+include("models/submodels/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")
+
 
 include("setup/model_setup.jl")
 include("setup/matlab_model_setup.jl")
@@ -93,10 +106,11 @@ include("utils/battery_cell_specifications.jl")
 
 include("solver/linsolve.jl")
 
-include("grid/tensor_tools.jl")
-include("grid/remove_cells.jl") #Trenger StatsBase
-include("grid/grid_conversion.jl")
-include("grid/grid_utils.jl")
+
+
+include("meshes/tensor_tools.jl")
+include("meshes/remove_cells.jl") #Trenger StatsBase
+include("meshes/grid_utils.jl")
 include("solver/solver_as_preconditioner_system.jl")
 include("solver/precondgenneral.jl")
 include("solver/sparse_utils.jl")

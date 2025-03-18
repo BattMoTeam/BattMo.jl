@@ -51,16 +51,6 @@ function computeOCP_Graphite_Torchio(c, T, cmax)
 end
 
 
-function compute_reaction_rate_constant_graphite(c, T)
-
-    refT = 298.15
-    k0   = 5.0310e-11
-    Eak  = 5000
-    val  = k0.*exp(-Eak./FARADAY_CONSTANT .*(1.0./T - 1/refT));
-    
-    return val
-    
-end
 
 
 ## Define OCP for Graphite-SiOx (Chen2020) using polynomials
@@ -312,17 +302,7 @@ function computeOCP_NMC111(c, T, cmax)
     
 end
 
-## Defines standard exchange current density
 
-function compute_reaction_rate_constant(c, T, k0, Eak)
-
-    F = FARADAY_CONSTANT
-    refT = 298.15
-
-    val = k0.*exp(-Eak./F.*(1.0./T - 1/refT));
-    return val
-    
-end
 
 
 

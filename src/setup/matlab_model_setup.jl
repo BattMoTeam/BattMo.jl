@@ -1,4 +1,4 @@
-
+using Jutul
 ################################################
 # control policy setup (Matlab input specific) #
 ################################################
@@ -768,6 +768,7 @@ function exported_model_to_domain(exported; bcfaces = nothing,
     P = []
     S = []
     T = exported["G"]["operators"]["T"].*1.0
+
     G = MinimalECTPFAGrid(volumes, N, vec(T);
                           bc_cells = bc_cells,
                           bc_hfT   = bc_hfT,
