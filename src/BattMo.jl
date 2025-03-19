@@ -18,8 +18,9 @@ timeit_debug_enabled() = Jutul.timeit_debug_enabled()
 # Import Jutul Types
 using Jutul: ScalarVariable
 using Jutul: SimulationModel
-using Jutul: DiagonalEquation
+using Jutul: JutulEquation, DiagonalEquation
 using Jutul: Faces
+using Jutul: CTSkewSymmetry
 
 # Import Jutul functions
 using Jutul: hasentity, haskey
@@ -29,7 +30,7 @@ using Jutul: update_linearized_system_equation!, update_cross_term!, update!
 using Jutul: setup_forces,setup_state,setup_state!,setup_parameters
 using Jutul: initialize_primary_variable_ad!,initialize_variable_ad!
 using Jutul: count_entities, count_active_entities, active_entities, associated_entity
-using Jutul: get_neighborship
+using Jutul: get_neighborship, local_discretization
 using Jutul: align_to_jacobian!, diagonal_alignment!, get_jacobian_pos, half_face_flux_cells_alignment!
 using Jutul: check_convergence, convergence_criterion
 using Jutul: get_dependencies, get_entry
@@ -41,8 +42,9 @@ using Jutul: physical_representation, get_1d_interpolator
 using Jutul: face_flux!
 using Jutul: maximum_value, minimum_value, absolute_increment_limit, relative_increment_limit, default_value
 using Jutul: select_minimum_output_variables!,select_equations!,select_primary_variables!,select_secondary_variables!,select_parameters!
-using Jutul: degrees_of_freedom_per_entity
-using Jutul: declare_entities
+using Jutul: degrees_of_freedom_per_entity, declare_entities
+using Jutul: cross_term_entities, cross_term_entities_source, update_cross_term_in_entity!
+using Jutul: symmetry
     
     
 
@@ -69,11 +71,11 @@ include("models/battmo_types.jl")
 include("models/submodels/thermal.jl")
 include("models/submodels/electrolyte.jl")
 include("models/submodels/current_collector.jl")
-include("models//submodels/activematerial.jl")
-include("models//submodels/reaction_rate.jl")
+include("models/submodels/activematerial.jl")
+include("models//reaction_rate.jl")
 include("models/submodels/sei_layer.jl")
-include("models/current_and_voltage_boundary.jl")
-include("models/submodels/battery_cross_terms.jl") # Works now
+include("models/submodels/current_and_voltage_boundary.jl")
+include("models/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")
 
 

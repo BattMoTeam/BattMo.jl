@@ -162,7 +162,7 @@ function build_battmo_docs(build_format              = nothing;
                 "Contribution guide" => [
                     "Contribute to BattMo.jl" => "manuals/contribution/contribution.md",
                     "Coding style guide" => "manuals/contribution/style_guide.md",
-                    "Code and architecture and Jutul.jl" => "manuals/user_guide/code_architecture.md"
+                    "Code and architecture and Jutul.jl" => "manuals/contribution/code_architecture.md"
                 ],
 
                 "References" => [

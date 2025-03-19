@@ -1,5 +1,5 @@
-Jutul.cross_term_entities(ct::TPFAInterfaceFluxCT, eq::Jutul.JutulEquation, model) = ct.target_cells
-Jutul.cross_term_entities_source(ct::TPFAInterfaceFluxCT, eq::Jutul.JutulEquation, model) = ct.source_cells
+Jutul.cross_term_entities(ct::TPFAInterfaceFluxCT, eq::JutulEquation, model) = ct.target_cells
+Jutul.cross_term_entities_source(ct::TPFAInterfaceFluxCT, eq::JutulEquation, model) = ct.source_cells
 
 function Jutul.update_cross_term_in_entity!(out                                  ,
                                             ind                                  ,
@@ -12,7 +12,7 @@ function Jutul.update_cross_term_in_entity!(out                                 
                                             ct::TPFAInterfaceFluxCT              ,
                                             eq                                   ,
                                             dt                                   ,
-                                            ldisc = Jutul.local_discretization(ct, ind))
+                                            ldisc = local_discretization(ct, ind))
 
     trans = ct.trans[ind]
     ind_t = ct.target_cells[ind]
@@ -35,7 +35,7 @@ function Jutul.update_cross_term_in_entity!(out                           ,
                                             ct::AccumulatorInterfaceFluxCT,
                                             eq                            ,
                                             dt                            ,
-                                            ldisc = Jutul.local_discretization(ct, ind))
+                                            ldisc = local_discretization(ct, ind))
     trans = ct.trans
     ind_t = ct.target_cell
     phi_t = state_t.Phi[ind_t]
@@ -48,7 +48,7 @@ function Jutul.update_cross_term_in_entity!(out                           ,
     out[] = v
 end
 
-Jutul.cross_term_entities(ct::AccumulatorInterfaceFluxCT, eq::Jutul.JutulEquation, model) = [ct.target_cell]
+Jutul.cross_term_entities(ct::AccumulatorInterfaceFluxCT, eq::JutulEquation, model) = [ct.target_cell]
 
 
 
@@ -56,8 +56,8 @@ Jutul.cross_term_entities(ct::AccumulatorInterfaceFluxCT, eq::Jutul.JutulEquatio
 # cross-term for 2pd model #
 ############################
 
-Jutul.cross_term_entities(ct::ButlerVolmerActmatToElyteCT, eq::Jutul.JutulEquation, model)        = ct.target_cells
-Jutul.cross_term_entities_source(ct::ButlerVolmerActmatToElyteCT, eq::Jutul.JutulEquation, model) = ct.source_cells
+Jutul.cross_term_entities(ct::ButlerVolmerActmatToElyteCT, eq::JutulEquation, model)        = ct.target_cells
+Jutul.cross_term_entities_source(ct::ButlerVolmerActmatToElyteCT, eq::JutulEquation, model) = ct.source_cells
 
 function Jutul.update_cross_term_in_entity!(out                            ,
                                             ind                            ,
@@ -70,7 +70,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                                             ct::ButlerVolmerActmatToElyteCT,
                                             eq                             ,
                                             dt                             ,
-                                            ldisc = Jutul.local_discretization(ct, ind)
+                                            ldisc = local_discretization(ct, ind)
                                             )
 
 
@@ -116,8 +116,8 @@ function Jutul.update_cross_term_in_entity!(out                            ,
     
 end
 
-Jutul.cross_term_entities(ct::ButlerVolmerElyteToActmatCT, eq::Jutul.JutulEquation, model)        = ct.target_cells
-Jutul.cross_term_entities_source(ct::ButlerVolmerElyteToActmatCT, eq::Jutul.JutulEquation, model) = ct.source_cells
+Jutul.cross_term_entities(ct::ButlerVolmerElyteToActmatCT, eq::JutulEquation, model)        = ct.target_cells
+Jutul.cross_term_entities_source(ct::ButlerVolmerElyteToActmatCT, eq::JutulEquation, model) = ct.source_cells
 
 function Jutul.update_cross_term_in_entity!(out                            ,
                                             ind                            ,
@@ -130,7 +130,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                                             ct::ButlerVolmerElyteToActmatCT,
                                             eq                             ,
                                             dt                             ,
-                                            ldisc = Jutul.local_discretization(ct, ind)
+                                            ldisc = local_discretization(ct, ind)
                                             )
 
     electrolyte    = model_s.system
@@ -223,10 +223,10 @@ function source_electric_material(vols,
 end
 
 
-Jutul.cross_term_entities(ct::ButlerVolmerInterfaceFluxCT, eq::Jutul.JutulEquation, model) = ct.target_cells
-Jutul.cross_term_entities_source(ct::ButlerVolmerInterfaceFluxCT, eq::Jutul.JutulEquation, model) = ct.source_cells
+Jutul.cross_term_entities(ct::ButlerVolmerInterfaceFluxCT, eq::JutulEquation, model) = ct.target_cells
+Jutul.cross_term_entities_source(ct::ButlerVolmerInterfaceFluxCT, eq::JutulEquation, model) = ct.source_cells
 
-Jutul.symmetry(::ButlerVolmerInterfaceFluxCT) = Jutul.CTSkewSymmetry()
+Jutul.symmetry(::ButlerVolmerInterfaceFluxCT) = CTSkewSymmetry()
 
 function Jutul.update_cross_term_in_entity!(out,
                                             ind,
@@ -239,7 +239,7 @@ function Jutul.update_cross_term_in_entity!(out,
                                             ct::ButlerVolmerInterfaceFluxCT,
                                             eq,
                                             dt,
-                                            ldisc = Jutul.local_discretization(ct, ind))
+                                            ldisc = local_discretization(ct, ind))
 
     activematerial = model_s.system
     electrolyte = model_t.system

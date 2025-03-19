@@ -5,7 +5,7 @@
 # - Initiate a Jutul.JutulStorage
 # - Create a subclass of Jutul.JutulSystem
 # - Initiate a Jutul.SimulationModel
-# - Define methods called by Jutul.SimulationModel
+# - Extend functions called by Jutul.SimulationModel
 # - Define methods for calculating secondary variables
 # - Define methods for calculating face fluxes
 ###################################################################
@@ -47,7 +47,7 @@ const ElectrolyteModel = SimulationModel{<:Any, <:Electrolyte, <:Any, <:Any}
 
 
 #################################################
-# Define methods called by Jutul.SimulationModel
+# Extend functions called by Jutul.SimulationModel
 #################################################
 
 function Jutul.select_primary_variables!(S                  ,
