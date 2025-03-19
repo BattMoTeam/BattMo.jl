@@ -50,7 +50,7 @@ const ElectrolyteModel = SimulationModel{<:Any, <:Electrolyte, <:Any, <:Any}
 # Define methods called by Jutul.SimulationModel
 #################################################
 
-function select_primary_variables!(S                  ,
+function Jutul.select_primary_variables!(S                  ,
                                    system::Electrolyte,
                                    model::SimulationModel)
 
@@ -59,7 +59,7 @@ function select_primary_variables!(S                  ,
     
 end
         
-function select_parameters!(S                  ,
+function Jutul.select_parameters!(S                  ,
                             system::Electrolyte,
                             model::SimulationModel
                             )
@@ -69,7 +69,7 @@ function select_parameters!(S                  ,
     
 end
 
-function select_equations!(eqs                ,
+function Jutul.select_equations!(eqs                ,
                            system::Electrolyte,
                            model::SimulationModel
                            )
@@ -81,7 +81,7 @@ function select_equations!(eqs                ,
     
 end
 
-function select_secondary_variables!(S,
+function Jutul.select_secondary_variables!(S,
                                      system::Electrolyte,
                                      model::SimulationModel)
     
@@ -95,7 +95,7 @@ function select_secondary_variables!(S,
 
 end
 
-function select_minimum_output_variables!(out,
+function Jutul.select_minimum_output_variables!(out,
                                           system::Electrolyte,
                                           model::SimulationModel)
     
@@ -121,7 +121,6 @@ function update_dmudc!(dmudc, dmudc_def::DmuDc, model, Temperature, C, ix)
 end
 )
 
-# ? Does this maybe look better ?
 @jutul_secondary(
 function update_conductivity!(kappa, kappa_def::Conductivity, model::ElectrolyteModel, Temperature, C, VolumeFraction, ix)
     """ Register conductivity function

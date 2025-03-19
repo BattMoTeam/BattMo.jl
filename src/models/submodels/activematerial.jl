@@ -67,8 +67,8 @@ struct Cs                <: ScalarVariable  end # surface variable in p2d model
 struct SolidDiffFlux     <: VectorVariables end # flux in P2D model
 
 
-minimum_value(::Cp) = 0.0
-minimum_value(::Cs) = 0.0
+Jutul.minimum_value(::Cp) = 0.0
+Jutul.minimum_value(::Cs) = 0.0
     
 struct SolidMassCons <: JutulEquation end
 Jutul.local_discretization(::SolidMassCons, i) = nothing
@@ -171,7 +171,7 @@ end
 # setup case with full P2d discretization : variables and equations declaration #
 #################################################################################
 
-function select_primary_variables!(S,
+function Jutul.select_primary_variables!(S,
                                    system::ActiveMaterialP2D,
                                    model::SimulationModel
                                    )
@@ -181,17 +181,17 @@ function select_primary_variables!(S,
 
 end
 
-function degrees_of_freedom_per_entity(model::ActiveMaterialModel,
+function Jutul.degrees_of_freedom_per_entity(model::ActiveMaterialModel,
                                        ::Cp)
     return solid_diffusion_discretization_number(model.system)
 end
 
-function degrees_of_freedom_per_entity(model::ActiveMaterialModel,
+function Jutul.degrees_of_freedom_per_entity(model::ActiveMaterialModel,
                                        ::SolidDiffFlux)
     return  solid_diffusion_discretization_number(model.system) - 1
 end
 
-function select_parameters!(S,
+function Jutul.select_parameters!(S,
                             system::ActiveMaterialP2D,
                             model::SimulationModel)
     
@@ -199,13 +199,13 @@ function select_parameters!(S,
     S[:Conductivity]   = Conductivity()
     S[:VolumeFraction] = VolumeFraction()
 
-    if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
+    if hasentity(model.data_domain, BoundaryDirichletFaces())
         S[:BoundaryPhi]  = BoundaryPotential(:Phi)
     end
     
 end
 
-function select_secondary_variables!(S,
+function Jutul.select_secondary_variables!(S,
                                      system::ActiveMaterialP2D,
                                      model::SimulationModel
                                      )
@@ -217,7 +217,7 @@ function select_secondary_variables!(S,
 end
 
 
-function select_equations!(eqs,
+function Jutul.select_equations!(eqs,
                            system::ActiveMaterialP2D,
                            model::SimulationModel
                            )
@@ -240,7 +240,7 @@ function Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::Soli
     
 end
 
-function select_minimum_output_variables!(out,
+function Jutul.select_minimum_output_variables!(out,
                                           system::ActiveMaterialP2D,
                                           model::SimulationModel)
     push!(out, :Charge)
@@ -409,7 +409,7 @@ end
 #####################################################
 
 
-function select_primary_variables!(S,
+function Jutul.select_primary_variables!(S,
                                    system::ActiveMaterialNoParticleDiffusion,
                                    model::SimulationModel
                                    )
@@ -418,7 +418,7 @@ function select_primary_variables!(S,
     
 end
 
-function select_secondary_variables!(S,
+function Jutul.select_secondary_variables!(S,
                                      system::ActiveMaterialNoParticleDiffusion,
                                      model::SimulationModel
                                      )
@@ -430,7 +430,7 @@ function select_secondary_variables!(S,
     
 end
 
-function select_parameters!(S,
+function Jutul.select_parameters!(S,
                             system::ActiveMaterialNoParticleDiffusion,
                             model::SimulationModel)
     
@@ -439,13 +439,13 @@ function select_parameters!(S,
     S[:Diffusivity]  = Diffusivity()
     S[:VolumeFraction] = VolumeFraction()
 
-    if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
+    if hasentity(model.data_domain, BoundaryDirichletFaces())
         S[:BoundaryPhi]  = BoundaryPotential(:Phi)
     end
     
 end
 
-function select_equations!(eqs,
+function Jutul.select_equations!(eqs,
                            system::ActiveMaterialNoParticleDiffusion,
                            model::SimulationModel
                            )
@@ -457,7 +457,7 @@ function select_equations!(eqs,
 end
 
 
-function select_minimum_output_variables!(out                   ,
+function Jutul.select_minimum_output_variables!(out                   ,
                                           system::ActiveMaterialNoParticleDiffusion,
                                           model::SimulationModel
                                           )

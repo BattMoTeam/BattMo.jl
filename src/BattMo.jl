@@ -1,5 +1,6 @@
 module BattMo
 
+using JSON
 using LinearAlgebra
 using PrecompileTools
 using RuntimeGeneratedFunctions
@@ -14,65 +15,35 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 
 timeit_debug_enabled() = Jutul.timeit_debug_enabled()
 
+# Import Jutul Types
 using Jutul: ScalarVariable
 using Jutul: SimulationModel
+using Jutul: DiagonalEquation
+using Jutul: Faces
 
-import JSON
-import Jutul:
-    number_of_cells, number_of_faces,
-    degrees_of_freedom_per_entity,
-    values_per_entity,
-    absolute_increment_limit,
-    relative_increment_limit,
-    maximum_value,
-    minimum_value,
-    select_primary_variables!,
-    select_parameters!,
-    initialize_primary_variable_ad!,
-    update_primary_variable!,
-    select_secondary_variables!,
-    default_value,
-    initialize_variable_ad!,
-    update_half_face_flux!,
-    update_accumulation!,
-    update_equation!,
-    update_equation_in_entity!,
-    select_equations!,
-    setup_parameters,
-    count_entities,
-    count_active_entities,
-    associated_entity,
-    active_entities,
-    number_of_entities,
-    declare_entities,
-    get_neighborship,
-    Faces,
-    align_to_jacobian!,
-    diagonal_alignment!,
-    half_face_flux_cells_alignment!,
-    update_cross_term!,
-    get_entry,
-    get_jacobian_pos,
-    DiagonalEquation,
-    fill_equation_entries!,
-    update_linearized_system_equation!,
-    check_convergence,
-    update!,
-    linear_operator,
-    transfer,
-    operator_nrows,
-    matrix_layout,
-    apply!,
-    apply_forces_to_equation!,
-    convergence_criterion,
-    get_dependencies,
-    setup_forces,
-    setup_state,
-    setup_state!,
-    declare_pattern,
-    select_minimum_output_variables!,
-    physical_representation,
-    get_1d_interpolator
+# Import Jutul functions
+using Jutul: hasentity, haskey
+using Jutul: number_of_cells, number_of_faces,number_of_entities
+using Jutul: update_primary_variable!, update_half_face_flux!,update_accumulation!,update_equation!,update_equation_in_entity!
+using Jutul: update_linearized_system_equation!, update_cross_term!, update!
+using Jutul: setup_forces,setup_state,setup_state!,setup_parameters
+using Jutul: initialize_primary_variable_ad!,initialize_variable_ad!
+using Jutul: count_entities, count_active_entities, active_entities, associated_entity
+using Jutul: get_neighborship
+using Jutul: align_to_jacobian!, diagonal_alignment!, get_jacobian_pos, half_face_flux_cells_alignment!
+using Jutul: check_convergence, convergence_criterion
+using Jutul: get_dependencies, get_entry
+using Jutul: linear_operator, transfer, operator_nrows, matrix_layout
+using Jutul: fill_equation_entries!,apply_forces_to_equation!, apply!
+using Jutul: physical_representation, get_1d_interpolator
+
+# Import Jutul functions to extend
+using Jutul: face_flux!
+using Jutul: maximum_value, minimum_value, absolute_increment_limit, relative_increment_limit, default_value
+using Jutul: select_minimum_output_variables!,select_equations!,select_primary_variables!,select_secondary_variables!,select_parameters!
+using Jutul: degrees_of_freedom_per_entity
+using Jutul: declare_entities
+    
     
 
 include("parameters/physical_constants.jl")

@@ -31,7 +31,7 @@ struct Phi <: Potential end
 # absolute_increment_limit(::Phi) = 0.
 
 struct C <: Potential end
-minimum_value(::C)   = 0.
+Jutul.minimum_value(::C) = 0.
 # maximum_value(::C)   = 10000
 # absolute_increment_limit(::C) = 500
 # relative_increment_limit(::C) = 0.1
@@ -106,7 +106,7 @@ struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
     end
 end
 
-number_of_cells(G::MinimalECTPFAGrid) = length(G.volumes)
+Jutul.number_of_cells(G::MinimalECTPFAGrid) = length(G.volumes)
 
 Base.show(io::IO, g::MinimalECTPFAGrid) = print(io, "MinimalECTPFAGrid ($(number_of_cells(g)) cells, $(number_of_faces(g)) faces)")
 ################

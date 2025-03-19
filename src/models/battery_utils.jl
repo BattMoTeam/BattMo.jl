@@ -8,7 +8,7 @@ function fluid_volume(grid::MinimalECTPFAGrid)
     grid.volumes
 end
 
-function declare_entities(G::MinimalECTPFAGrid)
+function Jutul.declare_entities(G::MinimalECTPFAGrid)
     # cells
     c = (entity = Cells(), count = length(G.volumes))
     # faces
@@ -73,7 +73,7 @@ end
     kgrad, upw = ldisc.face_disc(face)
     (; left, right, face_sign) = kgrad
     
-    return Jutul.face_flux!(q_i, left, right, face, face_sign, eq, state, model, dt, flow_disc)
+    return face_flux!(q_i, left, right, face, face_sign, eq, state, model, dt, flow_disc)
     
 end
 
@@ -125,7 +125,7 @@ function output_flux(model, state, parameters, eqname = :mass_conservation)
         for i in eachindex(out)
             l = N[1, i]
             r = N[2, i]
-            out[i] = Jutul.face_flux!(1.0, l, r, i, 1, eq, state_t, model, dt, fd)
+            out[i] = face_flux!(1.0, l, r, i, 1, eq, state_t, model, dt, fd)
         end
     else
         @. out = NaN
@@ -158,7 +158,7 @@ function apply_boundary_potential!(acc, state, parameters, model, eq::Conservati
             dobc = false
         end
         dolegacy = true
-    elseif Jutul.hasentity(model.domain, BoundaryDirichletFaces())
+    elseif hasentity(model.domain, BoundaryDirichletFaces())
         nc = count_active_entities(model.domain, BoundaryDirichletFaces())
         dobc = nc > 0
         if dobc
@@ -233,19 +233,19 @@ end
     
 # end
 
-function select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::ElectroChemicalComponentModel)
+function Jutul.select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::ElectroChemicalComponentModel)
     
     prm[:ECTransmissibilities] = ECTransmissibilities()
     
 end
 
-function select_parameters!(prm, D::MinimalECTPFAGrid, model::ElectroChemicalComponentModel)    
+function Jutul.select_parameters!(prm, D::MinimalECTPFAGrid, model::ElectroChemicalComponentModel)    
     prm[:Volume]         = Volume()
     prm[:VolumeFraction] = VolumeFraction()
     
 end
 
-function select_parameters!(prm, d::DataDomain, model::ElectroChemicalComponentModel)
+function Jutul.select_parameters!(prm, d::DataDomain, model::ElectroChemicalComponentModel)
     prm[:Volume] = Volume()
 end
 
