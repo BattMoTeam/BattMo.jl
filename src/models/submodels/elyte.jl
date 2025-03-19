@@ -24,11 +24,13 @@ struct Electrolyte{D} <: ElectroChemicalComponent where {D <: AbstractDict}
 
     scalings::D
 
-    function Electrolyte(params, scalings = Dict())
     
-        return Electrolyte{typeof(scalings)}(params, scalings)
-        
-    end
+end
+
+function Electrolyte(params, scalings = Dict())
+    
+    return Electrolyte{typeof(scalings)}(params, scalings)
+    
 end
 
 
