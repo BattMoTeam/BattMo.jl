@@ -129,7 +129,7 @@ function update_conductivity!(kappa, kappa_def::Conductivity, model::Electrolyte
     # We use Bruggeman coefficient
     for i in ix
         
-        if Jutul.haskey(model.system.params, :conductivity_data)
+        if haskey(model.system.params, :conductivity_data)
 
             @inbounds kappa[i] = model.system[:conductivity_func](C[i]) * VolumeFraction[i]^1.5
 
@@ -146,7 +146,7 @@ end
     
     for i in ix
 
-        if Jutul.haskey(model.system.params, :diffusivity_data)
+        if haskey(model.system.params, :diffusivity_data)
 
             @inbounds D[i] = model.system[:diffusivity_func](C[i])*VolumeFraction[i]^1.5
 

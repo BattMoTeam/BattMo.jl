@@ -94,9 +94,9 @@ function computeCellMaximumEnergy(model::MultiModel; T = 298.15, capacities = mi
         f = Vector{Float64}(undef, N + 1)
 
         for i = 1 : N + 1
-            if Jutul.haskey(model[elde].system.params, :ocp_funcexp)
+            if haskey(model[elde].system.params, :ocp_funcexp)
                 f[i] = ocpfunc(c[i], T, refT, cmax)
-            elseif Jutul.haskey(model[elde].system.params, :ocp_funcdata)
+            elseif haskey(model[elde].system.params, :ocp_funcdata)
                 f[i] = ocpfunc(c[i]/cmax)
             else
                 f[i] = ocpfunc(c[i], T, cmax)

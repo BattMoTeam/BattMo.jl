@@ -22,7 +22,8 @@ The BattMo backend defines the complete simulation model by combining several su
 - CurrentAndVoltageModel
 
 Each of these submodels is stored as a ´Jutul.SimulationModel´ [Struct](https://sintefmath.github.io/Jutul.jl/dev/usage/#Jutul.SimulationModel), and then the submodels are stored within a ´Jutul.MultiModel´ [Struct](https://sintefmath.github.io/Jutul.jl/dev/usage/#Jutul.MultiModel).
-
+- model settings
+- simulation settings
 ### SimulationModel
 The ´Jutul.SimulationModel´ [Struct](https://sintefmath.github.io/Jutul.jl/dev/usage/#Jutul.SimulationModel) stores the following attributes:
 
@@ -32,19 +33,19 @@ The ´Jutul.SimulationModel´ [Struct](https://sintefmath.github.io/Jutul.jl/dev
 - secondary_variables: variables that depend on the primary_variables.
 - parameters: some other variables that infuence the calculation of the primary variables
 - equations: the equations used to solve the system
-output_variables: the output variables that are wanted
+- output_variables: the output variables that are wanted
 
 When calling the ´Jutul.SimulationModel´ constructor, giving it the domain and system as arguments, it calls the following functions to retrieve the other attributes: 
 
-´´´
+```  
 Jutul.update_model_pre_selection!
 Jutul.select_primary_variables!
 Jutul.select_secondary_variables!
 Jutul.select_parameters!
 Jutul.select_equations!
 Jutul.select_output_variables!
-Jutul.update_model_post_selection!
-´´´
+Jutul.update_model_post_selection!  
+```
 
 BattMo defines these equations for every submodel type. 
 

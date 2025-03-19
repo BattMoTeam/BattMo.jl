@@ -267,7 +267,7 @@ end
         cmax = model.system.params[:maximum_concentration]
         refT = 298.15
 
-        if Jutul.haskey(model.system.params, :ocp_funcexp)
+        if haskey(model.system.params, :ocp_funcexp)
             theta0   = model.system.params[:theta0]
             theta100 = model.system.params[:theta100]
         end
@@ -275,11 +275,11 @@ end
         
         for cell in ix
         
-            if Jutul.haskey(model.system.params, :ocp_funcexp)
+            if haskey(model.system.params, :ocp_funcexp)
 
                 @inbounds Ocp[cell] = ocp_func(Cs[cell], refT, refT, cmax)
                 
-            elseif Jutul.haskey(model.system.params, :ocp_funcdata)
+            elseif haskey(model.system.params, :ocp_funcdata)
 
                 @inbounds Ocp[cell] = ocp_func(Cs[cell]/cmax)
 
@@ -507,7 +507,7 @@ end
         cmax = model.system.params[:maximum_concentration]
         refT = 298.15
 
-        if Jutul.haskey(model.system.params, :ocp_funcexp)
+        if haskey(model.system.params, :ocp_funcexp)
             theta0   = model.system.params[:theta0]
             theta100 = model.system.params[:theta100]
         end
@@ -515,11 +515,11 @@ end
         
         for cell in ix
         
-            if Jutul.haskey(model.system.params, :ocp_funcexp)
+            if haskey(model.system.params, :ocp_funcexp)
 
                 @inbounds Ocp[cell] = ocp_func(C[cell], refT, refT, cmax)
                 
-            elseif Jutul.haskey(model.system.params, :ocp_funcdata)
+            elseif haskey(model.system.params, :ocp_funcdata)
 
                 @inbounds Ocp[cell] = ocp_func(C[cell]/cmax)
 

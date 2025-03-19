@@ -737,9 +737,9 @@ function setup_initial_state(inputparams::InputParams,
             init[:normalizedSEIvoltageDrop] = 0.0*ones(nc)
         end
         
-        if Jutul.haskey(model[name].system.params, :ocp_funcexp)
+        if haskey(model[name].system.params, :ocp_funcexp)
             OCP = model[name].system[:ocp_func](c, T, refT, cmax)
-        elseif Jutul.haskey(model[name].system.params, :ocp_funcdata)
+        elseif haskey(model[name].system.params, :ocp_funcdata)
             
             OCP = model[name].system[:ocp_func](theta)
 
