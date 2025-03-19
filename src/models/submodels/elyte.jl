@@ -1,4 +1,6 @@
-# Model for a electrolyte
+###################################################################
+# In this module we define methods to handle the Electrolyte model
+###################################################################
 
 using
     Polynomials,
@@ -14,36 +16,29 @@ export
     diffusivity,
     ElectrolyteModel
 
+
 const ElectrolyteParameters = JutulStorage
 
 struct Electrolyte{D} <: ElectroChemicalComponent where {D <: AbstractDict}
     params::ElectrolyteParameters
-    #  
-    # - bruggeman          
-    # - charge             
-    # - conductivity_data  
-    # - conductivity_func  
-    # - diffusivity_data   
-    # - diffusivity_func   
-    # - separator_porosity 
-    # - transference
-    # - electrolyte_density
-    # - separator_density
+
     scalings::D
+
+    function Electrolyte(params, scalings = Dict())
+    
+        return Electrolyte{typeof(scalings)}(params, scalings)
+        
+    end
 end
 
-function Electrolyte(params, scalings = Dict())
-    
-    return Electrolyte{typeof(scalings)}(params, scalings)
-    
-end
+
 
 # Alias for convenience
 const ElectrolyteModel = SimulationModel{<:Any, <:Electrolyte, <:Any, <:Any}
 
 # Is it necesessary with a new struct for all of these?
-struct DmuDc <: ScalarVariable end
-struct ChemCoef <: ScalarVariable end
+struct DmuDc <: ScalarVariable end # derivative of potential with respect to concentration
+struct ChemCoef <: ScalarVariable end # coefficient that comes before the DmuDc in the transport eq?
 
 function select_primary_variables!(S                  ,
                                    system::Electrolyte,
@@ -173,10 +168,10 @@ end
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
     
     @inbounds trans = state.ECTransmissibilities[face]
-    j     = - half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
-    jchem = - half_face_two_point_kgrad(c, other, trans, state.C, state.ChemCoef)
+    j     = - half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity) # electrical current density
+    jchem = - half_face_two_point_kgrad(c, other, trans, state.C, state.ChemCoef) # chemical current density
     
-    j = j - jchem*(1.0)
+    j = j - jchem*(1.0) 
 
     return T(j)
     
@@ -191,7 +186,7 @@ function Jutul.face_flux!(q::T, c, other, face, face_sign, eq::ConservationLaw{:
     
     @inbounds trans = state.ECTransmissibilities[face]
 
-    diffFlux = - half_face_two_point_kgrad(c, other, trans, state.C, state.Diffusivity)
+    diffFlux = - half_face_two_point_kgrad(c, other, trans, state.C, state.Diffusivity) # diffusion flux
     j        = - half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
     jchem    = - half_face_two_point_kgrad(c, other, trans, state.C, state.ChemCoef)
     

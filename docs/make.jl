@@ -144,7 +144,11 @@ function build_battmo_docs(build_format              = nothing;
                         "Installation" => "manuals/user_guide/installation.md",
                         "Getting started" => "manuals/user_guide/getting_started.md"
                     ],
-                    "Models" => "manuals/user_guide/models.md",
+                    "Models and architecture" => [
+                        "Terminology" => "manuals/user-guid/models.md",
+                        "Models" => "manuals/user_guide/models.md",
+                    ],
+                    
                     "Public API" =>  "manuals/user_guide/public_api.md",
                     "Tutorials" => tutorials_markdown,
                 ],
@@ -155,8 +159,10 @@ function build_battmo_docs(build_format              = nothing;
                 "API Documentation" => [
                     "High level API" => "manuals/api_documentation/highlevel.md"
                 ],
-                "Contribution" => [
-                    "Contribute to BattMo.jl" => "manuals/contribution/contribution.md"
+                "Contribution guide" => [
+                    "Contribute to BattMo.jl" => "manuals/contribution/contribution.md",
+                    "Coding style guide" => "manuals/contribution/style_guide",
+                    "Code and architecture and Jutul.jl" => "manuals/user-guide/code_architecture.md"
                 ],
 
                 "References" => [
