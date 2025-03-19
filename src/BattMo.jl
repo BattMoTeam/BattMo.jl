@@ -1,15 +1,21 @@
 module BattMo
-using PrecompileTools
-using StaticArrays
-using Statistics
-using StatsBase
-using LinearAlgebra
-using SparseArrays
 
+using LinearAlgebra
+using PrecompileTools
 using RuntimeGeneratedFunctions
+using SparseArrays
+using StaticArrays
+using StatsBase
+using Statistics
+using Tullio: @tullio
+
+
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
 timeit_debug_enabled() = Jutul.timeit_debug_enabled()
+
+using Jutul: ScalarVariable
+using Jutul: SimulationModel
 
 import JSON
 import Jutul:
@@ -71,7 +77,8 @@ import Jutul:
 
 include("parameters/physical_constants.jl")
 # include("models/submodels/boundary_conditions.jl")
-# include("parameters/parameters.jl")
+
+include("parameters/parameter_types.jl")
 
 include("parameters/input_types.jl")
 include("parameters/parameter_tools.jl")
@@ -89,7 +96,7 @@ include("geometries/pouch_cell.jl")
 
 include("models/battmo_types.jl")
 include("models/submodels/thermal.jl")
-include("models/submodels/elyte.jl")
+include("models/submodels/electrolyte.jl")
 include("models/submodels/current_collector.jl")
 include("models//submodels/activematerial.jl")
 include("models//submodels/reaction_rate.jl")

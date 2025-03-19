@@ -1,23 +1,26 @@
 ###################################################################
 # In this module we define methods to handle the Electrolyte model
+# 
+# File structure:
+# - Initiate a Jutul.JutulStorage
+# - Create a subclass of Jutul.JutulSystem
+# - Initiate a Jutul.SimulationModel
+# - Define methods called by Jutul.SimulationModel
+# - Define methods for calculating secondary variables
+# - Define methods for calculating face fluxes
 ###################################################################
 
-using
-    Polynomials,
-    Tullio
-    
-export
-    Electrolyte,
-    DmuDc,
-    ChemCoef,
-    p1,
-    p2,
-    p3,
-    diffusivity,
-    ElectrolyteModel
+export Electrolyte, ElectrolyteModel
 
+##################################
+# Initiate a Jutul.JutulStorage
+##################################
 
 const ElectrolyteParameters = JutulStorage
+
+###########################################
+# Create a subclass of Jutul.JutulSystem
+###########################################
 
 struct Electrolyte{D} <: ElectroChemicalComponent where {D <: AbstractDict}
     params::ElectrolyteParameters
@@ -34,13 +37,18 @@ function Electrolyte(params, scalings = Dict())
 end
 
 
+###########################################
+# Initiate a Jutul.SimulationModel
+###########################################
 
-# Alias for convenience
 const ElectrolyteModel = SimulationModel{<:Any, <:Electrolyte, <:Any, <:Any}
 
-# Is it necesessary with a new struct for all of these?
-struct DmuDc <: ScalarVariable end # derivative of potential with respect to concentration
-struct ChemCoef <: ScalarVariable end # coefficient that comes before the DmuDc in the transport eq?
+
+
+
+#################################################
+# Define methods called by Jutul.SimulationModel
+#################################################
 
 function select_primary_variables!(S                  ,
                                    system::Electrolyte,
@@ -98,12 +106,9 @@ function select_minimum_output_variables!(out,
 end
 
 
-
-
-#######################
-# Secondary Variables #
-#######################
-
+#####################################################
+# Define methods for calculating secondary variables
+#####################################################
 
 @inline function transference(system::Electrolyte)
     return system[:transference]
@@ -165,6 +170,11 @@ end
         @inbounds chemCoef[i] = 1.0/F*(1.0 - t)*Conductivity[i]*2.0*DmuDc[i]
     end
 end
+
+
+#####################################################
+# Define methods for calculating face fluxes
+#####################################################
 
 
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
