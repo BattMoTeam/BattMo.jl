@@ -62,7 +62,7 @@ struct CurrentAndVoltageDomain <: JutulDomain end
 
 CurrentAndVoltageModel{P} = SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{P}}
 
-number_of_cells(::CurrentAndVoltageDomain) = 1
+Jutul.number_of_cells(::CurrentAndVoltageDomain) = 1
 
 ####################################
 # Types for the different policies #
@@ -140,7 +140,7 @@ end
 # Select the primary variables #
 ################################
 
-function select_primary_variables!(S, system::CurrentAndVoltageSystem, model::SimulationModel)
+function Jutul.select_primary_variables!(S, system::CurrentAndVoltageSystem, model::SimulationModel)
 
     S[:Phi]     = VoltageVar()
     S[:Current] = CurrentVar()
@@ -151,7 +151,7 @@ end
 # Select the equations #
 ########################
 
-function select_equations!(eqs, system::CurrentAndVoltageSystem, model::SimulationModel)
+function Jutul.select_equations!(eqs, system::CurrentAndVoltageSystem, model::SimulationModel)
 
     eqs[:charge_conservation] = CurrentEquation()
     eqs[:control] = ControlEquation()
@@ -162,13 +162,13 @@ end
 # Select the parameters #
 #########################
 
-function select_parameters!(S,
+function Jutul.select_parameters!(S,
                             system::CurrentAndVoltageSystem{SimpleCVPolicy{R}},
                             model::SimulationModel) where {R}
     S[:ImaxDischarge] = ImaxDischarge()
 end
 
-function select_parameters!(S,
+function Jutul.select_parameters!(S,
                             system::CurrentAndVoltageSystem{CyclingCVPolicy{R, I}},
                             model::SimulationModel) where {R, I}
     S[:ImaxDischarge] = ImaxDischarge()
@@ -295,7 +295,7 @@ end
 """
 We add the controller in the output
 """
-function select_minimum_output_variables!(outputs,
+function Jutul.select_minimum_output_variables!(outputs,
                                           system::CurrentAndVoltageSystem{R},
                                           model::SimulationModel
                                           ) where {R}

@@ -1,4 +1,9 @@
-export convert_to_mrst_grid
+using Jutul
+
+export Mesh, convert_to_mrst_grid
+
+abstract type Mesh <: JutulMesh end
+
 
 function add_order(list)
     len = length(list)

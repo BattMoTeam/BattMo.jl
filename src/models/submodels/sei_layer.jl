@@ -46,7 +46,7 @@ end
 # Declare variables for sei model #
 ###################################
 
-function select_primary_variables!(S,
+function Jutul.select_primary_variables!(S,
                                    system::ActiveMaterialP2D,
                                    model::SEImodel
                                    )
@@ -61,7 +61,7 @@ end
 
 
 
-function select_secondary_variables!(S,
+function Jutul.select_secondary_variables!(S,
                                      system::ActiveMaterialP2D,
                                      model::SEImodel
                                      )
@@ -76,7 +76,7 @@ function select_secondary_variables!(S,
 end
 
 
-function select_minimum_output_variables!(outputs,
+function Jutul.select_minimum_output_variables!(outputs,
                                           system::ActiveMaterialP2D,
                                           model::SEImodel
                                           )
@@ -92,7 +92,7 @@ end
 # Declare equations for sei model #
 ###################################
 
-function select_equations!(eqs,
+function Jutul.select_equations!(eqs,
                            system::ActiveMaterialP2D,
                            model::SEImodel
                            )
