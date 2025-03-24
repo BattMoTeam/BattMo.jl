@@ -74,18 +74,17 @@ f # hide
 # ## Plot of SEI length
 
 # We recover the SEI length from the `state` output
-seilength = [state[:NeAm][:SEIlength][end] for state in states]
+seilength = [state[:NeAm][:SEIlength][end] for state in states].*10^9
 
 f = Figure(size = (1000, 400))
 
 ax = Axis(f[1, 1],
-          title     = "Length",
-          xlabel    = "Time / s",
-          ylabel    = "Length / m",
-          xlabelsize = 25,
-          ylabelsize = 25,
-          xticklabelsize = 25,
-          yticklabelsize = 25
+          title     = "SEI growth",
+          ylabel    = "Thickness / nm",
+          xlabelsize = 20,
+          ylabelsize = 20,
+          xticklabelsize = 20,
+          yticklabelsize = 20
           )
 
 scatterlines!(ax,
@@ -97,13 +96,13 @@ scatterlines!(ax,
               markercolor = :black)
 
 ax = Axis(f[2, 1],
-          title     = "Length",
+          title     = "Cell voltage",
           xlabel    = "Time / s",
           ylabel    = "Voltage / V",
-          xlabelsize = 25,
-          ylabelsize = 25,
-          xticklabelsize = 25,
-          yticklabelsize = 25
+          xlabelsize = 20,
+          ylabelsize = 20,
+          xticklabelsize = 20,
+          yticklabelsize = 20
           )
 
 scatterlines!(ax,

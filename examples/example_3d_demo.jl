@@ -69,12 +69,15 @@ display(f) # hide
 f # hide
 
 # ## Plot potential on grid at last time step #
-state = states[10]
+state = states[2]
 
 function plot_potential(am, cc, label)
     f3D = Figure(size = (600, 650))
     ax3d = Axis3(f3D[1, 1];
-                 title = "Potential in $label electrode (coating and active material)")
+                 title = "$label electrode potential",
+                 xlabel = "Width [µm]",  
+                 ylabel = "Length [µm]",  
+                 zlabel = "Thickness [µm]")  
 
     maxPhi = maximum([maximum(state[cc][:Phi]), maximum(state[am][:Phi])])
     minPhi = minimum([minimum(state[cc][:Phi]), minimum(state[am][:Phi])])
@@ -85,23 +88,32 @@ function plot_potential(am, cc, label)
     for component in components
         g = model[component].domain.representation
         phi = state[component][:Phi]
-        Jutul.plot_cell_data!(ax3d, g, phi .- minPhi; colormap = :viridis, colorrange = colorrange)
+
+        # Convert coordinates from meters to micrometers
+        g_transformed = deepcopy(g)  # Create a copy to avoid modifying original data
+        g_transformed[:cell_centroids] .*= 1e6
+        g_transformed[:face_centroids] .*= 1e6
+        g_transformed[:boundary_centroids] .*= 1e6
+
+
+        Jutul.plot_cell_data!(ax3d, g_transformed, phi .- minPhi; colormap = :viridis, colorrange = colorrange)
     end
 
     cbar = GLMakie.Colorbar(f3D[1, 2];
                             colormap = :viridis,
                             colorrange = colorrange .+ minPhi,
-                            label = "potential")
+                            label = "Potential  /  V")  
+
     display(GLMakie.Screen(), f3D)
     return f3D
 end
 nothing # hide
 
 # ## Plot the potential in the positive electrode
-plot_potential(:PeAm, :PeCc, "positive")
+plot_potential(:PeAm, :PeCc, "Positive")
 
 # ## Plot the potential in the negative electrode
-plot_potential(:NeAm, :NeCc, "negative")
+plot_potential(:NeAm, :NeCc, "Negative")
 
 # ## Plot surface concentration on grid at last time step
 function plot_surface_concentration(component, label)

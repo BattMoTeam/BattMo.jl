@@ -1,4 +1,3 @@
-using StatsBase
 
 export remove_cells
 

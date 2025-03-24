@@ -1,11 +1,27 @@
+########################################################################
+# In this module we define methods to handle the CurrentCollector model
+# 
+# File structure:
+# - Initiate a Jutul.JutulStorage
+# - Create a subclass of Jutul.JutulSystem
+# - Extend functions called by Jutul.SimulationModel
+#
+########################################################################
+
 export CurrentCollector
+
+##################################
+# Initiate a Jutul.JutulStorage
+##################################
 
 const CurrentCollectorParameters = JutulStorage
 
+###########################################
+# Create a subclass of Jutul.JutulSystem
+###########################################
+
 struct CurrentCollector{T, D} <: ElectroChemicalComponent where {T<:CurrentCollectorParameters, D <: AbstractDict}
     params::T
-    # At the moment the following keys are include
-    # - density::Real
     scalings::D
 end
 
@@ -18,6 +34,12 @@ end
 function CurrentCollector()
     CurrentCollector(Dict())
 end
+
+
+#################################################
+# Extend functions called by Jutul.SimulationModel
+#################################################
+
 
 function Jutul.select_minimum_output_variables!(out,
     system::CurrentCollector, model::SimulationModel

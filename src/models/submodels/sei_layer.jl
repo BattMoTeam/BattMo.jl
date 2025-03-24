@@ -1,12 +1,23 @@
-##################
-# SEI model type #
-##################
+###################################################################
+# In this module we define methods to handle the SEI model. This
+# submodel is part of the ActiveMaterialModel
+# 
+# File structure:
+# - Initiate a Jutul.SimulationModel
+# - Extend functions called by Jutul.SimulationModel
+# - Define methods for calculating secondary variables
+# - Define methods for calculating face fluxes
+#
+###################################################################
 
-# Create a type for the model with SEI layer. It will be used to specialize the function
+
+###########################################
+# Initiate a Jutul.SimulationModel
+###########################################
 SEImodel = SimulationModel{O, S, F, C} where {O <: JutulDomain,
-                                             S <: BattMo.ActiveMaterialP2D{:sei, D, T} where {D, T},
-                                             F<: Jutul.JutulFormulation,
-                                             C<: Jutul.JutulContext}
+                                             S <: ActiveMaterialP2D{:sei, D, T} where {D, T},
+                                             F<: JutulFormulation,
+                                             C<: JutulContext}
 
 ##################################################
 # Variable for SEI model added to ActiveMaterial #
@@ -98,8 +109,8 @@ function Jutul.select_equations!(eqs,
                            )
     disc = model.domain.discretizations.charge_flow
     eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
-    eqs[:mass_conservation]   = SolidMassCons()
-    eqs[:solid_diffusion_bc]  = SolidDiffusionBc()
+    eqs[:mass_conservation]   = SolidMassConservation()
+    eqs[:solid_diffusion_bc]  = SolidDiffusionBoundaryCondition()
     eqs[:sei_mass_cons]       = SEImassCons()
     eqs[:sei_voltage_drop]    = SEIvoltageDropEquation()
     
@@ -279,7 +290,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                       activematerial,
                       electrolyte)
     
-    if eq isa SolidDiffusionBc
+    if eq isa SolidDiffusionBoundaryCondition
 
         rp  = activematerial.discretization[:rp] # particle radius
         vf  = state_t.VolumeFraction[ind_t]
@@ -316,7 +327,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                                             ct::ButlerVolmerElyteToActmatCT,
                                             eq::SEImassCons                ,
                                             dt                             ,
-                                            ldisc = Jutul.local_discretization(ct, ind)
+                                            ldisc = local_discretization(ct, ind)
                                             )
 
     F = FARADAY_CONSTANT
@@ -364,7 +375,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                                             ct::ButlerVolmerElyteToActmatCT,
                                             eq::SEIvoltageDropEquation     ,
                                             dt                             ,
-                                            ldisc = Jutul.local_discretization(ct, ind)
+                                            ldisc = local_discretization(ct, ind)
                                             )
 
     F = FARADAY_CONSTANT

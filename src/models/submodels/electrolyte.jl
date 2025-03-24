@@ -8,6 +8,7 @@
 # - Extend functions called by Jutul.SimulationModel
 # - Define methods for calculating secondary variables
 # - Define methods for calculating face fluxes
+#
 ###################################################################
 
 export Electrolyte, ElectrolyteModel
@@ -22,17 +23,14 @@ const ElectrolyteParameters = JutulStorage
 # Create a subclass of Jutul.JutulSystem
 ###########################################
 
-struct Electrolyte{D} <: ElectroChemicalComponent where {D <: AbstractDict}
-    params::ElectrolyteParameters
-
+struct Electrolyte{T, D} <: ElectroChemicalComponent where {T <: ElectrolyteParameters, D <: AbstractDict}
+    params::T
     scalings::D
-
-    
 end
 
-function Electrolyte(params, scalings = Dict())
+function Electrolyte(params::ElectrolyteParameters, scalings = Dict())
     
-    return Electrolyte{typeof(scalings)}(params, scalings)
+    return Electrolyte{typeof(params), typeof(scalings)}(params, scalings)
     
 end
 

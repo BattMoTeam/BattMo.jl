@@ -1,9 +1,9 @@
 # Style Guide
 
-When writing code for BattMo we use the [Blue Style](https://github.com/JuliaDiff/BlueStyle?tab=readme-ov-file#module-imports) coding style in general, but we apply some specific rules that are a bit more strict.
+When writing code for BattMo we use the [Blue Style](https://github.com/JuliaDiff/BlueStyle?tab=readme-ov-file#module-imports) coding style in general.
 
 
-## Modules import
+## Formatting
 When importing packages into BattMo like for example Jutul.jl we prefer to import the package with `using` and explicitly write down the used functions and types using qualification (`Jutul.function()`) notation.
 
 So:

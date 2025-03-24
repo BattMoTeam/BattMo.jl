@@ -163,7 +163,7 @@ function Jutul.update_cross_term_in_entity!(out                            ,
                       activematerial,
                       electrolyte)
     
-    if eq isa SolidDiffusionBc
+    if eq isa SolidDiffusionBoundaryCondition
 
         rp  = activematerial.discretization[:rp] # particle radius
         vf  = state_t.VolumeFraction[ind_t]

@@ -15,6 +15,12 @@ file_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", file_nam
 
 inputparams = readBattMoJsonInputFile(file_path)
 
+@info methods(LithiumIon)
 # Then we can run the model.
+model = LithiumIon(inputparams);
 
-results = run_battery(inputparams);
+
+# results = run_battery(inputparams, model);
+
+
+
