@@ -1,13 +1,8 @@
-export
-	ParameterSet,
-	CellParameters,
-	BPXCellParameters,
-	CyclingParameters,
-	ModelParameters,
-	SimulationInput,
-	MatlabSimulationInput,
-	load_parameters,
-	combine_parameter_sets
+export ParameterSet
+export CellParameters, CyclingParameters, ModelParameters
+export SimulationInput, MatlabSimulationInput
+export load_cell_parameters, load_cell_parameters_bpx, load_cycling_protocol, load_simulation_settings
+export merge_parameter_sets
 
 
 #########################################
@@ -20,6 +15,11 @@ abstract type ParameterSet end
 "Cell parameter set type that represents the BattMo formatted cell parameters"
 struct CellParameters <: ParameterSet
 	dict::Dict{String, Any}
+
+	function CellParameters(file_path)
+		cell_parameters = Dict(json.load(file_path))
+		return new{typeof(cell_parameters)}(cell_parameters)
+	end
 end
 
 "Cell parameter set type that represents the BPX formatted cell parameters"
@@ -28,12 +28,12 @@ struct BPXCellParameters <: ParameterSet
 end
 
 "Parameter set type that represents the cycling related parameters"
-struct CyclingParameters <: ParameterSet
+struct CyclingProtocol <: ParameterSet
 	dict::Dict{String, Any}
 end
 
 "Parameter set type that represents the model related parameters"
-struct ModelParameters <: ParameterSet
+struct SimulationSettings <: ParameterSet
 	dict::Dict{String, Any}
 end
 
@@ -55,35 +55,53 @@ end
 #########################################
 
 
-function load_parameters(source::Union{String, Dict}, ::Type{T}) where {T <: Union{SimulationInput, CellParameters, CyclingParameters, ModelParameters}}
+function load_cell_parameters(source::Union{String, Dict})
 
 	if source isa String
-		inputparams = T(JSON.parsefile(source))
+		inputparams = CellParameters(JSON.parsefile(source))
 	else
-		inputparams = T(source)
+		inputparams = CellParameters(source)
 	end
 	return inputparams
 end
 
-function load_parameters(source::Union{String, Dict}, ::Type{MatlabSimulationInput})
+function load_cell_parameters_bpx(source::Union{String, Dict})
 
 	if source isa String
-		inputparams = MatlabSimulationInput(matread(source))
+
+		bpx_dict = JSON.parsefile(source)
 	else
-		inputparams = MatlabSimulationInput(source)
+		bpx_dict = source
 	end
+
+	function convert_bpx_to_battmo(bpx_dict::Dict{Symbol, Any})
+
+	end
+
+	battmo_formatted_dict = convert_bpx_to_battmo(bpx_dict)
+
+	inputparams = CellParameters(battmo_formatted_dict)
 	return inputparams
 end
 
-function load_parameters(source::Union{String, Dict}, ::Type{BPXCellParameters})
+function load_cycling_protocol(source::Union{String, Dict})
 
 	if source isa String
-		bpx_object = BPXCellParameters(JSON.parsefile(source))
+		inputparams = CyclingProtocol(JSON.parsefile(source))
 	else
-		bpx_object = BPXCellParameters(source)
+		inputparams = CyclingProtocol(source)
 	end
 
-	# parameter_object = bpx_to_battmo(bpx_object)
+	return inputparams
+end
+
+function load_simulation_settings(source::Union{String, Dict})
+
+	if source isa String
+		inputparams = SimulationSettings(JSON.parsefile(source))
+	else
+		inputparams = SimulationSettings(source)
+	end
 
 	return inputparams
 end
@@ -134,7 +152,7 @@ function recursive_merge_dict(d1, d2; warn = false)
 end
 
 
-function combine_parameter_sets(inputparams1::Union{CellParameters, CyclingParameters, ModelParameters},
+function merge_parameter_sets(inputparams1::Union{CellParameters, CyclingParameters, ModelParameters},
 	inputparams2::Union{CellParameters, CyclingParameters, ModelParameters};
 	inputparams3::Union{CellParameters, CyclingParameters, ModelParameters} = nothing,
 	warn = false)

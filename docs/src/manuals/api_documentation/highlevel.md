@@ -20,5 +20,5 @@ MatlabSimulationInput
 ```@docs
 readBattMoJsonInputFile
 readBattMoMatlabInputFile
-combine_parameter_sets
+merge_parameter_sets
 ```
