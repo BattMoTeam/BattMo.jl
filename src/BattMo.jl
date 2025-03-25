@@ -54,6 +54,7 @@ include("parameters/physical_constants.jl")
 include("parameters/parameter_types.jl")
 
 include("parameters/parameter_sets.jl")
+
 include("parameters/functional_valued_parameters/tools.jl")
 include("parameters/functional_valued_parameters/ocp.jl")
 include("parameters/functional_valued_parameters/electrolyte_conductivity.jl")
@@ -67,6 +68,8 @@ include("meshes/mrst_mesh.jl")
 include("geometries/1D.jl")
 include("geometries/pouch_cell.jl")
 
+include("models/full_battery_models/battery_model.jl")
+include("models/full_battery_models/lithium_ion.jl")
 include("models/battmo_types.jl")
 include("models/submodels/thermal.jl")
 include("models/submodels/electrolyte.jl")
@@ -78,9 +81,9 @@ include("models/submodels/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")
 
-
 include("setup/model_setup.jl")
 include("setup/matlab_model_setup.jl")
+include("forward_simulation/simulate.jl")
 
 include("utils/battery_cell_specifications.jl")
 

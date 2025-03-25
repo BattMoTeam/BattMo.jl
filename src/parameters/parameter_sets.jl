@@ -1,5 +1,5 @@
 export ParameterSet
-export CellParameters, CyclingParameters, ModelParameters
+export CellParameters, CyclingProtocol, SimulationSettings
 export SimulationInput, MatlabSimulationInput
 export load_cell_parameters, load_cell_parameters_bpx, load_cycling_protocol, load_simulation_settings
 export merge_parameter_sets
@@ -16,10 +16,6 @@ abstract type ParameterSet end
 struct CellParameters <: ParameterSet
 	dict::Dict{String, Any}
 
-	function CellParameters(file_path)
-		cell_parameters = Dict(json.load(file_path))
-		return new{typeof(cell_parameters)}(cell_parameters)
-	end
 end
 
 "Cell parameter set type that represents the BPX formatted cell parameters"
@@ -55,21 +51,21 @@ end
 #########################################
 
 
-function load_cell_parameters(source::Union{String, Dict})
+function load_cell_parameters(source::String)
 
 	if source isa String
-		inputparams = CellParameters(JSON.parsefile(source))
+		inputparams = CellParameters(Dict(JSON.parsefile(source)))
 	else
 		inputparams = CellParameters(source)
 	end
 	return inputparams
 end
 
-function load_cell_parameters_bpx(source::Union{String, Dict})
+function load_cell_parameters_bpx(source::String)
 
 	if source isa String
 
-		bpx_dict = JSON.parsefile(source)
+		bpx_dict = Dict(JSON.parsefile(source))
 	else
 		bpx_dict = source
 	end
@@ -84,10 +80,10 @@ function load_cell_parameters_bpx(source::Union{String, Dict})
 	return inputparams
 end
 
-function load_cycling_protocol(source::Union{String, Dict})
+function load_cycling_protocol(source::String)
 
 	if source isa String
-		inputparams = CyclingProtocol(JSON.parsefile(source))
+		inputparams = CyclingProtocol(Dict(JSON.parsefile(source)))
 	else
 		inputparams = CyclingProtocol(source)
 	end
@@ -95,10 +91,10 @@ function load_cycling_protocol(source::Union{String, Dict})
 	return inputparams
 end
 
-function load_simulation_settings(source::Union{String, Dict})
+function load_simulation_settings(source::String)
 
 	if source isa String
-		inputparams = SimulationSettings(JSON.parsefile(source))
+		inputparams = SimulationSettings(Dict(JSON.parsefile(source)))
 	else
 		inputparams = SimulationSettings(source)
 	end
@@ -152,9 +148,9 @@ function recursive_merge_dict(d1, d2; warn = false)
 end
 
 
-function merge_parameter_sets(inputparams1::Union{CellParameters, CyclingParameters, ModelParameters},
-	inputparams2::Union{CellParameters, CyclingParameters, ModelParameters};
-	inputparams3::Union{CellParameters, CyclingParameters, ModelParameters} = nothing,
+function merge_parameter_sets(inputparams1::Union{CellParameters, CyclingProtocol, SimulationSettings},
+	inputparams2::Union{CellParameters, CyclingProtocol, SimulationSettings};
+	inputparams3::Union{CellParameters, CyclingProtocol, SimulationSettings} = nothing,
 	warn = false)
 
 	dict1 = inputparams1.dict
