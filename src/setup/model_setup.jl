@@ -66,8 +66,8 @@ prepared from a json file using the function [`readBattMoJsonInputFile`](@ref).
 
 """
 function run_battery(cell_parameters::CellParameters,
-	cycling_parameters::CyclingParameters;
-	model_settings::ModelParameters,
+	cycling_parameters::CyclingProtocol;
+	model_settings::SimulationSettings,
 	hook = nothing,
 	kwargs...)
 	"""

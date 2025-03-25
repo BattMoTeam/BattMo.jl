@@ -1,10 +1,56 @@
-struct LithiumIon
+export LithiumIon
+
+struct LithiumIon <: BatteryModel
+	name::String
+	model_settings::SimulationSettings
+	print_required_cell_parameters::Function
 
 
-	function LithiumIon()
-        include_current_collector::
+	function LithiumIon(; model_settings = get_lithium_ion_default_model_settings())
 
-        
-		return new{}()
+		model_geometry = model_settings.dict["ModelGeometry"]
+		name = "$model_geometry Doyle-Fuller-Newman lithium-ion model"
+
+
+		return new{}(
+			name,
+			model_settings,
+			print_required_cell_parameters,
+		)
 	end
+end
+
+function print_required_cell_parameters()
+
+	required_cell_parameters = [
+		("CoatingThickness", "m", "Real"),
+		("OCV", "V", "Function"),
+	]
+
+	println("┌──────────────────┬───────────┬───────────┐")
+	println("│ Parameter Name   │ Unit      │ Type      │")
+	println("├──────────────────┼───────────┼───────────┤")
+	for (name, unit, type) in required_cell_parameters
+		println("│ " * lpad(name, 16) * " │ " * lpad(unit, 9) * " │ " * lpad(type, 9) * " │")
+	end
+	println("└──────────────────┴───────────┴───────────┘")
+
+end
+
+function get_lithium_ion_default_model_settings()
+	settings = Dict(
+		"ModelGeometry" => "1D",
+		"UseThermalModel" => false,
+		"UseCurrentCollectors" => false,
+		"GridPointsPositiveElectrode" => 10,
+		"GridPointsPositiveElectrodeActiveMaterial" => 10,
+		"GridPointsNegativeElectrode" => 10,
+		"GridPointsNegativeElectrodeActiveMaterial" => 10,
+		"GridPointsSeparator" => 10,
+		"Grid" => [],
+		"TimeStepDuration" => 50,
+		"UseRampUp" => true,
+		"RampUpSteps" => 5,
+	)
+	return SimulationSettings(settings)
 end
