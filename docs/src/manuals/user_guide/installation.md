@@ -1,7 +1,7 @@
 ## Installation
 
 To install Julia, first visit the official Julia website at <https://julialang.org> and
-[download](https://julialang.org/downloads/ ) the appropriate installer for your operating system (Windows, macOS, or
+[download](https://julialang.org/downloads/) the appropriate installer for your operating system (Windows, macOS, or
 Linux).  After installation, you can verify it by opening a terminal or command prompt and typing julia to start the
 Julia REPL (Read-Eval-Print Loop). This will confirm that Julia is correctly installed and ready for use.
 
