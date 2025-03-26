@@ -22,6 +22,21 @@ end
 
 function validate_parameter_set(parameter_set::ModelSettings)
 
+	schema = get_schema_cell_parameters_1d()
+	# Convert schema Dict to JSONSchema object
+	schema_obj = Schema(schema)
+
+	# Validate the JSON data
+	result = validate(data, schema_obj)
+
+	if result.valid
+		println("✅ JSON data is valid!")
+	else
+		println("❌ JSON data is invalid! Errors:")
+		for err in result.errors
+			println(err)
+		end
+	end
 
 end
 
@@ -44,6 +59,16 @@ function get_required_model_settings()
 
 end
 
+function get_required_simulation_settings(model_geometry, use_thermal, use_cc, use_ramp_up)
+
+	simulation_settings = [
+		"Grid",
+		"TimeStepDuration",
+		"Grid",
+	]
+
+
+end
 function get_required_protocol_parameters(protocol)
 
 	if protocol == "GalvanostaticCycling"
@@ -56,6 +81,7 @@ function get_required_protocol_parameters(protocol)
 			"LowerVoltageLimit",
 			"UpperVoltageLimit",
 			"StartWithCharge",
+			"InitialStateOfCharge",
 			"RestingTimeAfterCharge",
 			"RestingTimeAfterDischarge",
 			"AmbientCelsiusTemperature",
@@ -72,6 +98,7 @@ function get_required_protocol_parameters(protocol)
 			"LowerVoltageLimit",
 			"UpperVoltageLimit",
 			"StartWithCharge",
+			"InitialStateOfCharge",
 			"RestingTimeAfterCharge",
 			"RestingTimeAfterDischarge",
 			"CurrentChangeLimit",

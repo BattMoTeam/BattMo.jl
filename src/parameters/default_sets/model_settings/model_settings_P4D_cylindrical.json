@@ -1,0 +1,7 @@
+{
+"ModelGeometry": "3D Cylindrical",
+"UseThermalModel": false,
+"UseCurrentCollectors": false,
+"UseRampUp": true  
+} 
+
