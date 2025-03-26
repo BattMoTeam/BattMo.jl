@@ -22,7 +22,7 @@ end
 struct CyclingProtocol <: ParameterSet
 	dict::Dict{String, Any}
 
-    function CyclingProtocol(file_path)
+	function CyclingProtocol(file_path)
 		cell_parameters = Dict(json.load(file_path))
 		return new{typeof(cell_parameters)}(cell_parameters)
 	end
@@ -30,10 +30,10 @@ end
 
 
 "Parameter set type that represents the model related parameters"
-struct SimulationSettings <: ParameterSet
+struct ModelSettings <: ParameterSet
 	dict::Dict{String, Any}
 
-    function SimulationSettings(file_path)
+	function ModelSettings(file_path)
 		cell_parameters = Dict(json.load(file_path))
 		return new{typeof(cell_parameters)}(cell_parameters)
 	end

@@ -2,8 +2,7 @@ export LithiumIon
 
 struct LithiumIon <: BatteryModel
 	name::String
-	model_settings::SimulationSettings
-	print_required_cell_parameters::Function
+	model_settings::ModelSettings
 
 
 	function LithiumIon(; model_settings = get_lithium_ion_default_model_settings())
@@ -15,12 +14,11 @@ struct LithiumIon <: BatteryModel
 		return new{}(
 			name,
 			model_settings,
-			print_required_cell_parameters,
 		)
 	end
 end
 
-function print_required_cell_parameters()
+function print_required_cell_parameters(::LithiumIon)
 
 	required_cell_parameters = [
 		("CoatingThickness", "m", "Real"),
@@ -52,5 +50,6 @@ function get_lithium_ion_default_model_settings()
 		"UseRampUp" => true,
 		"RampUpSteps" => 5,
 	)
-	return SimulationSettings(settings)
+	return ModelSettings(settings)
 end
+

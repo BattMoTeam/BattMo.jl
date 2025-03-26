@@ -25,6 +25,7 @@ simulation_settings = load_simulation_settings(file_path)
 
 model = LithiumIon();
 
+print_required_cell_parameters(model)
 
 output = simulate(model, cell_parameters, cycling_protocol);
 

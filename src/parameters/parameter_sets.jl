@@ -1,5 +1,5 @@
 export ParameterSet
-export CellParameters, CyclingProtocol, SimulationSettings
+export CellParameters, CyclingProtocol, ModelSettings
 export SimulationInput, MatlabSimulationInput
 export load_cell_parameters, load_cell_parameters_bpx, load_cycling_protocol, load_simulation_settings
 export merge_parameter_sets
@@ -29,7 +29,7 @@ struct CyclingProtocol <: ParameterSet
 end
 
 "Parameter set type that represents the model related parameters"
-struct SimulationSettings <: ParameterSet
+struct ModelSettings <: ParameterSet
 	dict::Dict{String, Any}
 end
 
@@ -94,9 +94,9 @@ end
 function load_simulation_settings(source::String)
 
 	if source isa String
-		inputparams = SimulationSettings(Dict(JSON.parsefile(source)))
+		inputparams = ModelSettings(Dict(JSON.parsefile(source)))
 	else
-		inputparams = SimulationSettings(source)
+		inputparams = ModelSettings(source)
 	end
 
 	return inputparams
@@ -148,9 +148,9 @@ function recursive_merge_dict(d1, d2; warn = false)
 end
 
 
-function merge_parameter_sets(inputparams1::Union{CellParameters, CyclingProtocol, SimulationSettings},
-	inputparams2::Union{CellParameters, CyclingProtocol, SimulationSettings};
-	inputparams3::Union{CellParameters, CyclingProtocol, SimulationSettings} = nothing,
+function merge_parameter_sets(inputparams1::Union{CellParameters, CyclingProtocol, ModelSettings},
+	inputparams2::Union{CellParameters, CyclingProtocol, ModelSettings};
+	inputparams3::Union{CellParameters, CyclingProtocol, ModelSettings} = nothing,
 	warn = false)
 
 	dict1 = inputparams1.dict

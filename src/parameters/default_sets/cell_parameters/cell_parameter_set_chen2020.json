@@ -116,10 +116,10 @@
   },
 
 "Separator": {
-    "porosity": 0.4,
-    "density": 946,
-    "bruggemanCoefficient": 1.5,
-    "thickness": 1.5e-5, 
+    "Porosity": 0.4,
+    "Density": 946,
+    "BruggemanCoefficient": 1.5,
+    "Thickness": 1.5e-5, 
     "SpecificHeatCapacity": 1692.0, 
     "ThermalConductivity": 0.334
     },
