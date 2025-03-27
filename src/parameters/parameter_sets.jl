@@ -17,7 +17,6 @@ struct CellParameters <: ParameterSet
 
 end
 
-
 "Parameter set type that represents the cycling related parameters"
 struct CyclingProtocol <: ParameterSet
 	dict::Dict{String, Any}
@@ -33,7 +32,13 @@ struct SimulationSettings <: ParameterSet
 end
 
 
+struct FullSimulationInput <: ParameterSet
+	dict::Dict{String, Any}
+end
 
+struct MatlabBattMoInput <: ParameterSet
+	dict::Dict{String, Any}
+end
 
 #########################################
 # Functions to loading parameter sets

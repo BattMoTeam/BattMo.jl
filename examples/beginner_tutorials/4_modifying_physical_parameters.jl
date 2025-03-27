@@ -11,7 +11,7 @@ using BattMo
 file_name = "p2d_40_jl_chen2020.json"
 file_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", file_name)
 
-inputparams = load_parameters(file_path, SimulationInput)
+inputparams = load_parameters(file_path, BattMoInput)
 
 # We have an `inputparams` object that corresponds to the json file 
 # [p2d_40_jl_chen2020.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/p2d_40_jl_chen2020.json) 
@@ -20,7 +20,7 @@ inputparams = load_parameters(file_path, SimulationInput)
 # We can for example inspect the parameters for the electrolyte
 
 inputparams["Electrolyte"]
-    
+
 # or of the interface of the negative electrode. At the interface level, we find all the parameters related to the
 # interface reactions.
 
@@ -74,8 +74,8 @@ fig # hide
 
 outputs = []
 for r in range(5e-11, 1e-13, length = 5)
-    interfaceparams["reactionRateConstant"] = r
-    push!(outputs, run_battery(inputparams; config_kwargs = (;end_report = false)))
+	interfaceparams["reactionRateConstant"] = r
+	push!(outputs, run_battery(inputparams; config_kwargs = (; end_report = false)))
 end
 nothing # hide
 
@@ -86,10 +86,10 @@ using Printf
 fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 for output in outputs
-    local t = [state[:Control][:ControllerCV].time for state in output[:states]]
-    local E = [state[:Control][:Phi][1] for state in output[:states]]
-    local r = output[:extra][:inputparams]["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["reactionRateConstant"]
-    lines!(ax, t, E, label = "$(@sprintf("%g", r))") 
+	local t = [state[:Control][:ControllerCV].time for state in output[:states]]
+	local E = [state[:Control][:Phi][1] for state in output[:states]]
+	local r = output[:extra][:inputparams]["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["reactionRateConstant"]
+	lines!(ax, t, E, label = "$(@sprintf("%g", r))")
 end
 fig[1, 2] = Legend(fig, ax, "Reaction rate", framevisible = false)
 fig # hide

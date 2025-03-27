@@ -9,7 +9,7 @@ using Test
 		name = "bolay"
 
 		fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
-		inputparams = load_parameters(fn, SimulationInput)
+		inputparams = load_parameters(fn, BattMoInput)
 
 		output = run_battery(inputparams)
 

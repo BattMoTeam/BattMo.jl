@@ -4,10 +4,28 @@ export get_parameter_meta_data
 function get_parameter_meta_data()
 	meta_data = Dict(
 		"Case" => Dict(
+			"type" => String,
 			"options" => ["Cylindrical", "Pouch", "CoinCell"],
 		),
 		"EffectiveDensity" => Dict(
 			"type" => Real,
+			"min_value" => 100000,
+		),
+		"DubbelCoatedElectrodes" => Dict(
+			"type" => Bool,
+		),
+		"NominalVoltage" => Dict(
+			"type" => Real,
+		),
+		"InnerCellRadius" => Dict(
+			"type" => Real,
+		),
+		"Width" => Dict(
+			"type" => Real,
+		),
+		"Length" => Dict(
+			"type" => Real,
+			"min_value" => 1,
 		),
 		"SurfaceCoefficientOfHeatTransfer" => Dict(
 			"type" => Real,
@@ -86,7 +104,7 @@ function get_parameter_meta_data()
 			"context_type" => "VolumetricSurfaceArea",
 			"context_type_iri" => "https=>//w3id.org/emmo/domain/electrochemistry#electrochemistry_a5571263_f153_448f_84a3_cd18092cf8fa",
 			"max_value" => 10000000.0,
-			"min_value" => 1,
+			"min_value" => 10000000,
 			"description" => "Surface area of the material per volume of electrode",
 			"type" => Real,
 			"unit" => "m\u00b2m\u207b\u00b3",

@@ -10,7 +10,7 @@ using BattMo, GLMakie
 file_name = "p2d_40_jl_chen2020.json"
 file_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", file_name)
 
-inputparams = load_parameters(file_path, SimulationInput)
+inputparams = load_parameters(file_path, BattMoInput)
 
 output = run_battery(inputparams);
 

@@ -9,20 +9,16 @@ struct BattMoInput <: BattMoParameters
 
 end
 
-function format_battmo_input(model::LithiumIon, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol)
+function setup_battmo_input(model::LithiumIon, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings)
 
 
 	model_settings_dict = model.model_settings.dict
 	cell_parameters_dict = cell_parameters.dict
 	cycling_protocol_dict = cycling_protocol.dict
 
-	model_geometry = model_settings_dict["ModelGeometry"]
-	use_current_collector = model_settings_dict["UseCurrentCollectors"]
-	use_thermal = model_settings_dict["UseThermalModel"]
+	battmo_dict = format_battmo_dict(model_settings_dict, cell_parameters_dict, cycling_protocol_dict, simulation_settings_dict)
 
-	input = Dict()
-
-
+	return battmo_dict
 
 end
 
@@ -30,7 +26,7 @@ function get_key_value(dict::Dict, key)
 	return get(dict, key, nothing)
 end
 
-function format_battmo_input(model_settings_dict, cell_parameters_dict, cycling_protocol, simulation_settings)
+function format_battmo_dict(model_settings_dict, cell_parameters_dict, cycling_protocol, simulation_settings)
 
 	cell = cell_parameters_dict["Cell"]
 	ne = cell_parameters_dict["NegativeElectrode"]
@@ -40,6 +36,9 @@ function format_battmo_input(model_settings_dict, cell_parameters_dict, cycling_
 	ne_b = ne["Binder"]
 	ne_cc = ne["CurrentCollector"]
 	ne_ca = ne["ConductingAdditive"]
+
+	elyte = cell_parameters_dict["Electrolyte"]
+	sep = cell_parameters_dict["Separator"]
 
 	grid_points = simulation_settings["GridPoints"]
 
@@ -194,48 +193,40 @@ function format_battmo_input(model_settings_dict, cell_parameters_dict, cycling_
 			),
 		),
 		"Electrolyte" => Dict(
-			"specificHeatCapacity" => 2055,
-			"thermalConductivity" => 0.6,
-			"density" => 1200,
-			"initialConcentration" => 999.99999999999977,
-			"nominalEthyleneCarbonateConcentration" => 999.99999999999977,
-			"ionicConductivity" => Dict(
-				"type" => "function",
-				"functionname" => "computeElectrolyteConductivity_default",
-				"argumentlist" => ["concentration", "temperature"],
-			),
-			"diffusionCoefficient" => Dict(
-				"type" => "function",
-				"functionname" => "computeDiffusionCoefficient_default",
-				"argumentlist" => ["concentration", "temperature"],
-			),
+			"specificHeatCapacity" => get_key_value(elyte, "SpecificHeatCapacity"),
+			"thermalConductivity" => get_key_value(elyte, "ThermalConductivity"),
+			"density" => get_key_value(elyte, "Density"),
+			"initialConcentration" => get_key_value(elyte, "Concentration"),
+			# "nominalEthyleneCarbonateConcentration" => 999.99999999999977,
+			"ionicConductivity" => get_key_value(elyte, "IonicConductivity"),
+			"diffusionCoefficient" => get_key_value(elyte, "DiffusionCoefficient"),
 			"species" => Dict(
-				"chargeNumber" => 1,
-				"transferenceNumber" => 0.2594,
-				"nominalConcentration" => 1000,
+				"chargeNumber" => get_key_value(elyte, "ChargeNumber"),
+				"transferenceNumber" => get_key_value(elyte, "TransferenceNumber"),
+				"nominalConcentration" => get_key_value(elyte, "Concentration"),
 			),
-			"bruggemanCoefficient" => 1.5,
+			"bruggemanCoefficient" => get_key_value(sep, "BruggemanCoefficient"),
 		),
 		"Separator" => Dict(
-			"porosity" => 0.55,
-			"specificHeatCapacity" => 1978,
-			"thermalConductivity" => 0.334,
-			"density" => 946,
-			"bruggemanCoefficient" => 1.5,
-			"thickness" => 5E-5,
-			"N" => 3,
+			"porosity" => get_key_value(sep, "Porosity"),
+			"specificHeatCapacity" => get_key_value(sep, "SpecificHeatCapacity"),
+			"thermalConductivity" => get_key_value(sep, "ThermalConductivity"),
+			"density" => get_key_value(sep, "Density"),
+			"bruggemanCoefficient" => get_key_value(sep, "BruggemanCoefficient"),
+			"thickness" => get_key_value(sep, "Thickness"),
+			"N" => get_key_value(grid_points, "Separator"),
 		),
 		"ThermalModel" => Dict(
-			"externalHeatTransferCoefficient" => 1000,
-			"externalTemperature" => 298.15,
-			"externalHeatTransferCoefficientTab" => 1000,
+			"externalHeatTransferCoefficient" => get_key_value(cell, "HeatTransferCoefficient"),
+			"externalTemperature" => get_key_value(cycling_protocol, "AmbientKelvinTemperature"),
+			"externalHeatTransferCoefficientTab" => get_key_value(cell, "HeatTransferCoefficient"),
 		),
 		"Geometry" => Dict(
-			"case" => "3D-demo",
-			"width" => 0.01,
-			"height" => 0.02,
-			"Nw" => 10,
-			"Nh" => 10,
+			"case" => get_key_value(model_settings_dict, "ModelGeometry"),
+			"width" => cell_width,
+			"height" => cell_length,
+			"Nw" => get_key_value(grid_points, "ElectrodeWidth"),
+			"Nh" => get_key_value(grid_points, "ElectrodeLength"),
 		),
 	)
 	return battmo_input

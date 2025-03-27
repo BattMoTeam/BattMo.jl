@@ -1,7 +1,16 @@
 module BattMo
 
 using JSON
-using JSONSchema: Schema, validate
+
+# Internally exported JSONSchema functions and types
+using JSONSchema: Schema, SingleIssue
+using JSONSchema: validate
+
+# Non-exported JSONSchema functions and types
+import JSONSchema: Schema
+import JSONSchema: _validate_entry, _validate, show, isvalid, _resolve_refs
+
+
 using LinearAlgebra
 using MAT: matread
 using PrecompileTools
@@ -19,10 +28,11 @@ timeit_debug_enabled() = Jutul.timeit_debug_enabled()
 
 # Import Jutul Types
 using Jutul: ScalarVariable
-using Jutul: SimulationModel
+using Jutul: SimulationModel, MultiModel
 using Jutul: JutulEquation, DiagonalEquation
 using Jutul: Faces
 using Jutul: CTSkewSymmetry
+using Jutul: Simulator
 
 # Import Jutul functions
 using Jutul: hasentity, haskey
@@ -41,6 +51,7 @@ using Jutul: fill_equation_entries!, apply_forces_to_equation!, apply!
 using Jutul: physical_representation, get_1d_interpolator
 
 # Import Jutul functions to extend
+using Jutul: simulate
 using Jutul: face_flux!
 using Jutul: maximum_value, minimum_value, absolute_increment_limit, relative_increment_limit, default_value
 using Jutul: select_minimum_output_variables!, select_equations!, select_primary_variables!, select_secondary_variables!, select_parameters!
@@ -55,6 +66,9 @@ include("parameters/physical_constants.jl")
 include("parameters/parameter_types.jl")
 
 include("parameters/parameter_sets.jl")
+include("parameters/schemas/cell_parameter_set.jl")
+include("parameters/parameter_meta_data.jl")
+
 
 include("parameters/functional_valued_parameters/tools.jl")
 include("parameters/functional_valued_parameters/ocp.jl")
@@ -81,6 +95,9 @@ include("models/submodels/sei_layer.jl")
 include("models/submodels/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")
+
+include("parameters/battmo_formatter.jl")
+include("parameters/validate.jl")
 
 include("setup/model_setup.jl")
 include("setup/matlab_model_setup.jl")

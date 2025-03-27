@@ -7,7 +7,7 @@ using Jutul, BattMo, GLMakie
 
 name = "bolay"
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
-inputparams = load_parameters(fn, SimulationInput)
+inputparams = load_parameters(fn, BattMoInput)
 nothing # hide
 
 # We retrieve the parameters for the SEI layer, using the fact that their names have a "SEI" prefix.

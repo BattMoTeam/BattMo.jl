@@ -1,17 +1,41 @@
 export get_schema_cell_parameters
 
-function create_property(name)
-	meta = get(parameter_meta, name, Dict())  # Get meta-data or empty Dict
-	return Dict(
-		"type" => string(meta["type"]),  # Enforce correct type
-		"minimum" => get(meta, "min_value", nothing),  # Enforce min value if present
-		"maximum" => get(meta, "max_value", nothing),  # Enforce max value if present
-		"description" => get(meta, "description", ""),  # Optional documentation
-		"unit" => get(meta, "unit", ""),  # Optional unit annotation
-	) |> filter!(x -> x.second !== nothing)  # Remove missing values
+function julia_to_json_schema_type(julia_type::Type)
+	if julia_type == Real
+		return "number"  # JSON schema type for Real numbers (includes both integer and float)
+	elseif julia_type == Int
+		return "integer"  # JSON schema type for Int (integer numbers)
+	elseif julia_type == Bool
+		return "bool"  # JSON schema type for String
+	elseif julia_type == String
+		return "string"  # JSON schema type for Bool
+	elseif julia_type == Function
+		return "string"  # Functions aren't directly representable in JSON, treating as string (function name or identifier)
+	elseif julia_type == Vector
+		return "array"  # JSON schema type for arrays (Vector in Julia)
+	else
+		throw(ArgumentError("Unknown Julia type: $julia_type"))
+	end
 end
 
-function get_schema_cell_parameters(model_settings)
+function create_property(parameter_meta, name)
+	meta = get(parameter_meta, name, Dict())  # Get meta-data or empty Dict
+	@info name
+	# Create the dictionary
+	property = Dict(
+		"type" => julia_to_json_schema_type(meta["type"]),  # Enforce correct type
+		"minimum" => get(meta, "min_value", nothing),  # Enforce min value if present
+		"maximum" => get(meta, "max_value", nothing),  # Enforce max value if present
+		"enum" => get(meta, "options", nothing),  # Enforce max value if present
+		"description" => get(meta, "description", ""),  # Optional documentation
+		"unit" => get(meta, "unit", ""),  # Optional unit annotation
+	)
+
+	# Filter out `nothing` values
+	return filter(x -> x.second !== nothing, property)
+end
+
+function get_schema_cell_parameters(model_settings::ModelSettings)
 	# Retrieve meta-data for validation
 	parameter_meta = get_parameter_meta_data()
 
@@ -30,14 +54,14 @@ function get_schema_cell_parameters(model_settings)
 			"Cell" => Dict(
 				"type" => "object",
 				"properties" => Dict(
-					"Case" => create_property("Case"),
-					"DeviceSurfaceArea" => create_property("DeviceSurfaceArea"),
-					"DubbelCoatedElectrodes" => create_property("DubbelCoatedElectrodes"),
-					"NominalVoltage" => create_property("NominalVoltage"),
-					"NominalCapacity" => create_property("NominalCapacity"),
-					"HeatTransferCoefficient" => create_property("HeatTransferCoefficient"),
-					"InitialStateOfCharge" => create_property("InitialStateOfCharge"),
-					"InnerCellRadius" => create_property("InnerCellRadius"),
+					"Case" => create_property(parameter_meta, "Case"),
+					"DeviceSurfaceArea" => create_property(parameter_meta, "DeviceSurfaceArea"),
+					"DubbelCoatedElectrodes" => create_property(parameter_meta, "DubbelCoatedElectrodes"),
+					"NominalVoltage" => create_property(parameter_meta, "NominalVoltage"),
+					"NominalCapacity" => create_property(parameter_meta, "NominalCapacity"),
+					"HeatTransferCoefficient" => create_property(parameter_meta, "HeatTransferCoefficient"),
+					"InitialStateOfCharge" => create_property(parameter_meta, "InitialStateOfCharge"),
+					"InnerCellRadius" => create_property(parameter_meta, "InnerCellRadius"),
 				),
 				"required" => ["Case", "InitialStateOfCharge"],
 			),
@@ -47,35 +71,35 @@ function get_schema_cell_parameters(model_settings)
 					"ElectrodeCoating" => Dict(
 						"type" => "object",
 						"properties" => Dict(
-							"BruggemanCoefficient" => create_property("BruggemanCoefficient"),
-							"EffectiveDensity" => create_property("EffectiveDensity"),
-							"Thickness" => create_property("Thickness"),
-							"Width" => create_property("Width"),
-							"Length" => create_property("Length"),
-							"Area" => create_property("Area"),
-							"SurfaceCoefficientOfHeatTransfer" => create_property("SurfaceCoefficientOfHeatTransfer"),
+							"BruggemanCoefficient" => create_property(parameter_meta, "BruggemanCoefficient"),
+							"EffectiveDensity" => create_property(parameter_meta, "EffectiveDensity"),
+							"Thickness" => create_property(parameter_meta, "Thickness"),
+							"Width" => create_property(parameter_meta, "Width"),
+							"Length" => create_property(parameter_meta, "Length"),
+							"Area" => create_property(parameter_meta, "Area"),
+							"SurfaceCoefficientOfHeatTransfer" => create_property(parameter_meta, "SurfaceCoefficientOfHeatTransfer"),
 						),
 						"required" => ["BruggemanCoefficient", "EffectiveDensity", "Thickness"],
 					),
 					"ActiveMaterial" => Dict(
 						"type" => "object",
 						"properties" => Dict(
-							"MassFraction" => create_property("MassFraction"),
-							"Density" => create_property("Density"),
-							"VolumetricSurfaceArea" => create_property("VolumetricSurfaceArea"),
-							"ElectronicConductivity" => create_property("ElectronicConductivity"),
-							"SpecificHeatCapacity" => create_property("SpecificHeatCapacity"),
-							"ThermalConductivity" => create_property("ThermalConductivity"),
-							"DiffusionCoefficient" => create_property("DiffusionCoefficient"),
-							"ParticleRadius" => create_property("ParticleRadius"),
-							"MaximumConcentration" => create_property("MaximumConcentration"),
-							"StoichiometricCoefficientAtSOC0" => create_property("StoichiometricCoefficientAtSOC0"),
-							"StoichiometricCoefficientAtSOC100" => create_property("StoichiometricCoefficientAtSOC100"),
-							"OpenCircuitVoltage" => create_property("OpenCircuitVoltage"),
-							"NumberOfElectronsTransferred" => create_property("NumberOfElectronsTransferred"),
-							"ActivationEnergyOfReaction" => create_property("ActivationEnergyOfReaction"),
-							"ReactionRateConstant" => create_property("ReactionRateConstant"),
-							"ChargeTransferCoefficient" => create_property("ChargeTransferCoefficient"),
+							"MassFraction" => create_property(parameter_meta, "MassFraction"),
+							"Density" => create_property(parameter_meta, "Density"),
+							"VolumetricSurfaceArea" => create_property(parameter_meta, "VolumetricSurfaceArea"),
+							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
+							"SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
+							"ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
+							"DiffusionCoefficient" => create_property(parameter_meta, "DiffusionCoefficient"),
+							"ParticleRadius" => create_property(parameter_meta, "ParticleRadius"),
+							"MaximumConcentration" => create_property(parameter_meta, "MaximumConcentration"),
+							"StoichiometricCoefficientAtSOC0" => create_property(parameter_meta, "StoichiometricCoefficientAtSOC0"),
+							"StoichiometricCoefficientAtSOC100" => create_property(parameter_meta, "StoichiometricCoefficientAtSOC100"),
+							"OpenCircuitVoltage" => create_property(parameter_meta, "OpenCircuitVoltage"),
+							"NumberOfElectronsTransferred" => create_property(parameter_meta, "NumberOfElectronsTransferred"),
+							"ActivationEnergyOfReaction" => create_property(parameter_meta, "ActivationEnergyOfReaction"),
+							"ReactionRateConstant" => create_property(parameter_meta, "ReactionRateConstant"),
+							"ChargeTransferCoefficient" => create_property(parameter_meta, "ChargeTransferCoefficient"),
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
@@ -84,43 +108,43 @@ function get_schema_cell_parameters(model_settings)
 					"Interphase" => Dict(
 						"type" => "object",
 						"properties" => Dict(
-							"MolarVolume" => create_property("MolarVolume"),
-							"IonicConductivity" => create_property("IonicConductivity"),
-							"ElectronicDiffusionCoefficient" => create_property("ElectronicDiffusionCoefficient"),
-							"StoichiometricCoefficient" => create_property("StoichiometricCoefficient"),
-							"IntersticialConcentration" => create_property("IntersticialConcentration"),
-							"InitialThickness" => create_property("InitialThickness"),
+							"MolarVolume" => create_property(parameter_meta, "MolarVolume"),
+							"IonicConductivity" => create_property(parameter_meta, "IonicConductivity"),
+							"ElectronicDiffusionCoefficient" => create_property(parameter_meta, "ElectronicDiffusionCoefficient"),
+							"StoichiometricCoefficient" => create_property(parameter_meta, "StoichiometricCoefficient"),
+							"IntersticialConcentration" => create_property(parameter_meta, "IntersticialConcentration"),
+							"InitialThickness" => create_property(parameter_meta, "InitialThickness"),
 						),
 						"required" => ["MolarVolume", "IonicConductivity", "ElectronicDiffusionCoefficient", "StoichiometricCoefficient", "IntersticialConcentration", "InitialThickness"],
 					),
 					"ConductiveAdditive" => Dict(
 						"type" => "object",
 						"properties" => Dict(
-							"Density" => create_property("Density"),
-							"MassFraction" => create_property("MassFraction"),
-							"ElectronicConductivity" => create_property("ElectronicConductivity"),
-							"SpecificHeatCapacity" => create_property("SpecificHeatCapacity"),
-							"ThermalConductivity" => create_property("ThermalConductivity"),
+							"Density" => create_property(parameter_meta, "Density"),
+							"MassFraction" => create_property(parameter_meta, "MassFraction"),
+							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
+							"SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
+							"ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
 						),
 						"required" => ["Density", "MassFraction", "ElectronicConductivity"],
 					),
 					"Binder" => Dict(
 						"type" => "object",
 						"properties" => Dict(
-							"Density" => create_property("Density"),
-							"MassFraction" => create_property("MassFraction"),
-							"ElectronicConductivity" => create_property("ElectronicConductivity"),
-							"SpecificHeatCapacity" => create_property("SpecificHeatCapacity"),
-							"ThermalConductivity" => create_property("ThermalConductivity"),
+							"Density" => create_property(parameter_meta, "Density"),
+							"MassFraction" => create_property(parameter_meta, "MassFraction"),
+							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
+							"SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
+							"ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
 						),
 						"required" => ["Density", "MassFraction", "ElectronicConductivity"],
 					),
 					"CurrentCollector" => Dict(
 						"type" => "object",
 						"properties" => Dict(
-							"Density" => create_property("Density"),
-							"MassFraction" => create_property("MassFraction"),
-							"ElectronicConductivity" => create_property("ElectronicConductivity"),
+							"Density" => create_property(parameter_meta, "Density"),
+							"MassFraction" => create_property(parameter_meta, "MassFraction"),
+							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					),
@@ -133,35 +157,35 @@ function get_schema_cell_parameters(model_settings)
 					"ElectrodeCoating" => Dict(
 						"type" => "object",
 						"properties" => Dict(
-							"BruggemanCoefficient" => create_property("BruggemanCoefficient"),
-							"EffectiveDensity" => create_property("EffectiveDensity"),
-							"Thickness" => create_property("Thickness"),
-							"Width" => create_property("Width"),
-							"Length" => create_property("Length"),
-							"Area" => create_property("Area"),
-							"SurfaceCoefficientOfHeatTransfer" => create_property("SurfaceCoefficientOfHeatTransfer"),
+							"BruggemanCoefficient" => create_property(parameter_meta, "BruggemanCoefficient"),
+							"EffectiveDensity" => create_property(parameter_meta, "EffectiveDensity"),
+							"Thickness" => create_property(parameter_meta, "Thickness"),
+							"Width" => create_property(parameter_meta, "Width"),
+							"Length" => create_property(parameter_meta, "Length"),
+							"Area" => create_property(parameter_meta, "Area"),
+							"SurfaceCoefficientOfHeatTransfer" => create_property(parameter_meta, "SurfaceCoefficientOfHeatTransfer"),
 						),
 						"required" => ["BruggemanCoefficient", "EffectiveDensity", "Thickness"],
 					),
 					"ActiveMaterial" => Dict(
 						"type" => "object",
 						"properties" => Dict(
-							"MassFraction" => create_property("MassFraction"),
-							"Density" => create_property("Density"),
-							"VolumetricSurfaceArea" => create_property("VolumetricSurfaceArea"),
-							"ElectronicConductivity" => create_property("ElectronicConductivity"),
-							"SpecificHeatCapacity" => create_property("SpecificHeatCapacity"),
-							"ThermalConductivity" => create_property("ThermalConductivity"),
-							"DiffusionCoefficient" => create_property("DiffusionCoefficient"),
-							"ParticleRadius" => create_property("ParticleRadius"),
-							"MaximumConcentration" => create_property("MaximumConcentration"),
-							"StoichiometricCoefficientAtSOC0" => create_property("StoichiometricCoefficientAtSOC0"),
-							"StoichiometricCoefficientAtSOC100" => create_property("StoichiometricCoefficientAtSOC100"),
-							"OpenCircuitVoltage" => create_property("OpenCircuitVoltage"),
-							"NumberOfElectronsTransferred" => create_property("NumberOfElectronsTransferred"),
-							"ActivationEnergyOfReaction" => create_property("ActivationEnergyOfReaction"),
-							"ReactionRateConstant" => create_property("ReactionRateConstant"),
-							"ChargeTransferCoefficient" => create_property("ChargeTransferCoefficient"),
+							"MassFraction" => create_property(parameter_meta, "MassFraction"),
+							"Density" => create_property(parameter_meta, "Density"),
+							"VolumetricSurfaceArea" => create_property(parameter_meta, "VolumetricSurfaceArea"),
+							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
+							"SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
+							"ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
+							"DiffusionCoefficient" => create_property(parameter_meta, "DiffusionCoefficient"),
+							"ParticleRadius" => create_property(parameter_meta, "ParticleRadius"),
+							"MaximumConcentration" => create_property(parameter_meta, "MaximumConcentration"),
+							"StoichiometricCoefficientAtSOC0" => create_property(parameter_meta, "StoichiometricCoefficientAtSOC0"),
+							"StoichiometricCoefficientAtSOC100" => create_property(parameter_meta, "StoichiometricCoefficientAtSOC100"),
+							"OpenCircuitVoltage" => create_property(parameter_meta, "OpenCircuitVoltage"),
+							"NumberOfElectronsTransferred" => create_property(parameter_meta, "NumberOfElectronsTransferred"),
+							"ActivationEnergyOfReaction" => create_property(parameter_meta, "ActivationEnergyOfReaction"),
+							"ReactionRateConstant" => create_property(parameter_meta, "ReactionRateConstant"),
+							"ChargeTransferCoefficient" => create_property(parameter_meta, "ChargeTransferCoefficient"),
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
@@ -170,43 +194,43 @@ function get_schema_cell_parameters(model_settings)
 					"Interphase" => Dict(
 						"type" => "object",
 						"properties" => Dict(
-							"MolarVolume" => create_property("MolarVolume"),
-							"IonicConductivity" => create_property("IonicConductivity"),
-							"ElectronicDiffusionCoefficient" => create_property("ElectronicDiffusionCoefficient"),
-							"StoichiometricCoefficient" => create_property("StoichiometricCoefficient"),
-							"IntersticialConcentration" => create_property("IntersticialConcentration"),
-							"InitialThickness" => create_property("InitialThickness"),
+							"MolarVolume" => create_property(parameter_meta, "MolarVolume"),
+							"IonicConductivity" => create_property(parameter_meta, "IonicConductivity"),
+							"ElectronicDiffusionCoefficient" => create_property(parameter_meta, "ElectronicDiffusionCoefficient"),
+							"StoichiometricCoefficient" => create_property(parameter_meta, "StoichiometricCoefficient"),
+							"IntersticialConcentration" => create_property(parameter_meta, "IntersticialConcentration"),
+							"InitialThickness" => create_property(parameter_meta, "InitialThickness"),
 						),
 						"required" => ["MolarVolume", "IonicConductivity", "ElectronicDiffusionCoefficient", "StoichiometricCoefficient", "IntersticialConcentration", "InitialThickness"],
 					),
 					"ConductiveAdditive" => Dict(
 						"type" => "object",
 						"properties" => Dict(
-							"Density" => create_property("Density"),
-							"MassFraction" => create_property("MassFraction"),
-							"ElectronicConductivity" => create_property("ElectronicConductivity"),
-							"SpecificHeatCapacity" => create_property("SpecificHeatCapacity"),
-							"ThermalConductivity" => create_property("ThermalConductivity"),
+							"Density" => create_property(parameter_meta, "Density"),
+							"MassFraction" => create_property(parameter_meta, "MassFraction"),
+							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
+							"SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
+							"ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
 						),
 						"required" => ["Density", "MassFraction", "ElectronicConductivity"],
 					),
 					"Binder" => Dict(
 						"type" => "object",
 						"properties" => Dict(
-							"Density" => create_property("Density"),
-							"MassFraction" => create_property("MassFraction"),
-							"ElectronicConductivity" => create_property("ElectronicConductivity"),
-							"SpecificHeatCapacity" => create_property("SpecificHeatCapacity"),
-							"ThermalConductivity" => create_property("ThermalConductivity"),
+							"Density" => create_property(parameter_meta, "Density"),
+							"MassFraction" => create_property(parameter_meta, "MassFraction"),
+							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
+							"SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
+							"ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
 						),
 						"required" => ["Density", "MassFraction", "ElectronicConductivity"],
 					),
 					"CurrentCollector" => Dict(
 						"type" => "object",
 						"properties" => Dict(
-							"Density" => create_property("Density"),
-							"MassFraction" => create_property("MassFraction"),
-							"ElectronicConductivity" => create_property("ElectronicConductivity"),
+							"Density" => create_property(parameter_meta, "Density"),
+							"MassFraction" => create_property(parameter_meta, "MassFraction"),
+							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					),
@@ -216,26 +240,26 @@ function get_schema_cell_parameters(model_settings)
 			"Separator" => Dict(
 				"type" => "object",
 				"properties" => Dict(
-					"Porosity" => create_property("MaximumConcentration"),
-					"Density" => create_property("MaximumConcentration"),
-					"BruggemanCoefficient" => create_property("MaximumConcentration"),
-					"Thickness" => create_property("MaximumConcentration"),
-					"SpecificHeatCapacity" => create_property("MaximumConcentration"),
-					"ThermalConductivity" => create_property("MaximumConcentration"),
+					"Porosity" => create_property(parameter_meta, "MaximumConcentration"),
+					"Density" => create_property(parameter_meta, "MaximumConcentration"),
+					"BruggemanCoefficient" => create_property(parameter_meta, "MaximumConcentration"),
+					"Thickness" => create_property(parameter_meta, "MaximumConcentration"),
+					"SpecificHeatCapacity" => create_property(parameter_meta, "MaximumConcentration"),
+					"ThermalConductivity" => create_property(parameter_meta, "MaximumConcentration"),
 				),
 				"required" => ["Porosity", "Density", "BruggemanCoefficient", "Thickness"],
 			),
 			"Electrolyte" => Dict(
 				"type" => "object",
 				"properties" => Dict(
-					"SpecificHeatCapacity" => create_property("MaximumConcentration"),
-					"ThermalConductivity" => create_property("MaximumConcentration"),
-					"Density" => create_property("MaximumConcentration"),
-					"Concentration" => create_property("MaximumConcentration"),
-					"IonicConductivity" => create_property("MaximumConcentration"),
-					"DiffusionCoefficient" => create_property("MaximumConcentration"),
+					"SpecificHeatCapacity" => create_property(parameter_meta, "MaximumConcentration"),
+					"ThermalConductivity" => create_property(parameter_meta, "MaximumConcentration"),
+					"Density" => create_property(parameter_meta, "MaximumConcentration"),
+					"Concentration" => create_property(parameter_meta, "MaximumConcentration"),
+					"IonicConductivity" => create_property(parameter_meta, "MaximumConcentration"),
+					"DiffusionCoefficient" => create_property(parameter_meta, "MaximumConcentration"),
 					"ChargeNumber" => Dict("type" => "integer"),
-					"TransferenceNumber" => create_property("MaximumConcentration"),
+					"TransferenceNumber" => create_property(parameter_meta, "MaximumConcentration"),
 				),
 				"required" => ["Concentration", "Density", "DiffusionCoefficient", "IonicConductivity", "ChargeNumber", "TransferenceNumber"],
 			),
@@ -259,10 +283,12 @@ function get_schema_cell_parameters(model_settings)
 	sep_required = schema["properties"]["Separator"]["required"]
 	elyte_required = schema["properties"]["Electrolyte"]["required"]
 
-	if model_settings["ModelGeometry"] == "1D"
+	model_settings_dict = model_settings.dict
+
+	if model_settings_dict["ModelGeometry"] == "1D"
 		push!(ne_coating_required, "Area")
 		push!(pe_coating_required, "Area")
-		if model_settings["UseThermalModel"]
+		if model_settings_dict["UseThermalModel"]
 			push!(cell_required, "DeviceSurfaceArea")
 			push!(cell_required, "HeatTransferCoefficient")
 			push!(ne_coating_required, "SurfaceCoefficientOfHeatTransfer")
@@ -286,12 +312,12 @@ function get_schema_cell_parameters(model_settings)
 
 		end
 
-	elseif model_settings["ModelGeometry"] == "3D Pouch"
+	elseif model_settings_dict["ModelGeometry"] == "3D Pouch"
 		push!(ne_coating_required, "Width")
 		push!(ne_coating_required, "Length")
 		push!(pe_coating_required, "Width")
 		push!(pe_coating_required, "Length")
-		if model_settings["UseThermalModel"]
+		if model_settings_dict["UseThermalModel"]
 			push!(cell_required, "DeviceSurfaceArea")
 			push!(cell_required, "HeatTransferCoefficient")
 			push!(ne_coating_required, "SurfaceCoefficientOfHeatTransfer")
@@ -314,7 +340,7 @@ function get_schema_cell_parameters(model_settings)
 			push!(elyte_required, "ThermalConductivity")
 		end
 
-	elseif model_settings["ModelGeometry"] == "3D Cyclindrical"
+	elseif model_settings_dict["ModelGeometry"] == "3D Cyclindrical"
 
 		push!(cell_required, "DubbelCoatedElectrodes")
 		push!(cell_required, "InnerCellRadius")
@@ -324,7 +350,7 @@ function get_schema_cell_parameters(model_settings)
 		push!(pe_coating_required, "Width")
 		push!(pe_coating_required, "Length")
 
-		if model_settings["UseThermalModel"]
+		if model_settings_dict["UseThermalModel"]
 			push!(cell_required, "DeviceSurfaceArea")
 			push!(cell_required, "HeatTransferCoefficient")
 			push!(ne_coating_required, "SurfaceCoefficientOfHeatTransfer")
