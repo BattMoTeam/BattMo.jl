@@ -121,7 +121,7 @@ end
 
 
 "Parameter set type that represents the model related parameters"
-struct SimulationSettings <: ParameterSet
+struct ModelSettings <: ParameterSet
 	dict::Dict{String, Any}
 end
 

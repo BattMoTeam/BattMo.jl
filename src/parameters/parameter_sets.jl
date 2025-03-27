@@ -1,7 +1,6 @@
 export ParameterSet
-export CellParameters, CyclingProtocol, SimulationSettings
-export SimulationInput, MatlabSimulationInput
-export load_cell_parameters, load_cell_parameters_bpx, load_cycling_protocol, load_simulation_settings
+export CellParameters, CyclingProtocol, ModelSettings, SimulationSettings
+export load_cell_parameters, load_cell_parameters_bpx, load_cycling_protocol, load_simulation_settings, load_model_settings
 export merge_parameter_sets
 
 
@@ -18,10 +17,6 @@ struct CellParameters <: ParameterSet
 
 end
 
-"Cell parameter set type that represents the BPX formatted cell parameters"
-struct BPXCellParameters <: ParameterSet
-	dict::Dict{String, Any}
-end
 
 "Parameter set type that represents the cycling related parameters"
 struct CyclingProtocol <: ParameterSet
@@ -29,20 +24,14 @@ struct CyclingProtocol <: ParameterSet
 end
 
 "Parameter set type that represents the model related parameters"
+struct ModelSettings <: ParameterSet
+	dict::Dict{String, Any}
+end
+
 struct SimulationSettings <: ParameterSet
 	dict::Dict{String, Any}
 end
 
-"Parameter set type that represents the BattMo input parameter set containing all 
-three above mentioned parameter set types."
-struct SimulationInput <: ParameterSet
-	dict::Dict{String, Any}
-end
-
-"Parameter set type that represents a BattMo input parameter set in a MATLAB dict."
-struct MatlabSimulationInput <: ParameterSet
-	dict::Dict{String, Any}
-end
 
 
 
@@ -53,11 +42,8 @@ end
 
 function load_cell_parameters(source::String)
 
-	if source isa String
-		inputparams = CellParameters(Dict(JSON.parsefile(source)))
-	else
-		inputparams = CellParameters(source)
-	end
+	inputparams = CellParameters(JSON.parsefile(source))
+
 	return inputparams
 end
 
@@ -82,26 +68,26 @@ end
 
 function load_cycling_protocol(source::String)
 
-	if source isa String
-		inputparams = CyclingProtocol(Dict(JSON.parsefile(source)))
-	else
-		inputparams = CyclingProtocol(source)
-	end
+	inputparams = CyclingProtocol(JSON.parsefile(source))
+
 
 	return inputparams
 end
 
 function load_simulation_settings(source::String)
 
-	if source isa String
-		inputparams = SimulationSettings(Dict(JSON.parsefile(source)))
-	else
-		inputparams = SimulationSettings(source)
-	end
+	inputparams = SimulationSettings(JSON.parsefile(source))
 
 	return inputparams
 end
 
+
+function load_model_settings(source::String)
+
+	inputparams = ModelSettings(JSON.parsefile(source))
+
+	return inputparams
+end
 
 #########################################
 # Functions to inspect parameter sets
@@ -148,9 +134,9 @@ function recursive_merge_dict(d1, d2; warn = false)
 end
 
 
-function merge_parameter_sets(inputparams1::Union{CellParameters, CyclingProtocol, SimulationSettings},
-	inputparams2::Union{CellParameters, CyclingProtocol, SimulationSettings};
-	inputparams3::Union{CellParameters, CyclingProtocol, SimulationSettings} = nothing,
+function merge_parameter_sets(inputparams1::Union{CellParameters, CyclingProtocol, ModelSettings},
+	inputparams2::Union{CellParameters, CyclingProtocol, ModelSettings};
+	inputparams3::Union{CellParameters, CyclingProtocol, ModelSettings} = nothing,
 	warn = false)
 
 	dict1 = inputparams1.dict
@@ -169,6 +155,6 @@ function merge_parameter_sets(inputparams1::Union{CellParameters, CyclingProtoco
 		dict = mergewith!(combiner, dict, dict3)
 	end
 
-	return SimulationInput(dict)
+	return BattMoInput(dict)
 
 end

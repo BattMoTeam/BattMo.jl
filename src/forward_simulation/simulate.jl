@@ -21,3 +21,4 @@ function simulate(model::BatteryModel, cell_parameters::CellParameters, cycling_
 	return output
 
 end
+

@@ -1,6 +1,7 @@
 module BattMo
 
 using JSON
+using JSONSchema: Schema, validate
 using LinearAlgebra
 using MAT: matread
 using PrecompileTools
