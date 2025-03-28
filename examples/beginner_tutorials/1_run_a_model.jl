@@ -9,10 +9,10 @@ using BattMo
 
 
 file_name = "p2d_40_jl_chen2020.json"
-file_path_cell = string(dirname(pathof(BattMo)), "/../src/parameters/default_sets/cell_parameters/", "cell_parameter_set_chen2020.json")
-file_path_model = string(dirname(pathof(BattMo)), "/../src/parameters/default_sets/model_settings/", "model_settings_P2D.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/../src/parameters/default_sets/cycling_protocols/", "CCCV.json")
-file_path_simulation = string(dirname(pathof(BattMo)), "/../src/parameters/default_sets/simulation_settings/", "simulation_settings_P2D.json")
+file_path_cell = string(dirname(pathof(BattMo)), "/../input/cell_parameters/", "cell_parameter_set_chen2020.json")
+file_path_model = string(dirname(pathof(BattMo)), "/../input/model_settings/", "model_settings_P2D.json")
+file_path_cycling = string(dirname(pathof(BattMo)), "/../input/cycling_protocols/", "CCCV.json")
+file_path_simulation = string(dirname(pathof(BattMo)), "/../input/simulation_settings/", "simulation_settings_P2D.json")
 
 # First we convert the json data to a julia dict and format it using the folowing function.
 
@@ -29,8 +29,6 @@ simulation_settings = load_simulation_settings(file_path_simulation)
 
 model = LithiumIon(; model_settings);
 
-print_required_cell_parameters(model)
-
-output = simulate(model, CellParameters(Dict("Cell" => Dict("Case" => "Cylindrical"))), cycling_protocol; simulation_settings);
+output = run_battery(model, CellParameters(Dict("Cell" => Dict("Case" => "Cylindrical"))), cycling_protocol; simulation_settings);
 
 

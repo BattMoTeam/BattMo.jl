@@ -1,5 +1,5 @@
 
-export simulate
+export run_battery
 
 abstract type Output end
 
@@ -9,9 +9,8 @@ struct SimulationOutput <: Output
 end
 
 
-
 # Define the run function that updates the results for the Simulate instance
-function Jutul.simulate(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings)
+function run_battery(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings)
 
 	model_settings = model.model_settings
 	validaded_cell_parameters = validate_parameter_set!(cell_parameters, model_settings)

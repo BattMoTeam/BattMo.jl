@@ -2,21 +2,16 @@
 export format_battmo_input
 export BattMoInput
 
-abstract type BattMoParameters end
-
-struct BattMoInput <: BattMoParameters
-	Dict::Dict{String, Any}
-
-end
-
-function setup_battmo_input(model::LithiumIon, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings)
 
 
-	model_settings_dict = model.model_settings.dict
+function setup_battmo_input(model_settings::ModelSettings, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings)
+
+
+	model_settings_dict = model_settings.dict
 	cell_parameters_dict = cell_parameters.dict
 	cycling_protocol_dict = cycling_protocol.dict
 
-	battmo_dict = format_battmo_dict(model_settings_dict, cell_parameters_dict, cycling_protocol_dict, simulation_settings_dict)
+	battmo_dict = convert_parameter_sets_to_battmo_input(model_settings_dict, cell_parameters_dict, cycling_protocol_dict, simulation_settings_dict)
 
 	return battmo_dict
 
@@ -26,7 +21,7 @@ function get_key_value(dict::Dict, key)
 	return get(dict, key, nothing)
 end
 
-function format_battmo_dict(model_settings_dict, cell_parameters_dict, cycling_protocol, simulation_settings)
+function convert_parameter_sets_to_battmo_input(model_settings_dict, cell_parameters_dict, cycling_protocol, simulation_settings)
 
 	cell = cell_parameters_dict["Cell"]
 	ne = cell_parameters_dict["NegativeElectrode"]

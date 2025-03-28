@@ -35,6 +35,7 @@ using Jutul: CTSkewSymmetry
 using Jutul: Simulator
 
 # Import Jutul functions
+using Jutul: simulate
 using Jutul: hasentity, haskey
 using Jutul: number_of_cells, number_of_faces, number_of_entities
 using Jutul: update_primary_variable!, update_half_face_flux!, update_accumulation!, update_equation!, update_equation_in_entity!
@@ -51,7 +52,6 @@ using Jutul: fill_equation_entries!, apply_forces_to_equation!, apply!
 using Jutul: physical_representation, get_1d_interpolator
 
 # Import Jutul functions to extend
-using Jutul: simulate
 using Jutul: face_flux!
 using Jutul: maximum_value, minimum_value, absolute_increment_limit, relative_increment_limit, default_value
 using Jutul: select_minimum_output_variables!, select_equations!, select_primary_variables!, select_secondary_variables!, select_parameters!
@@ -60,29 +60,47 @@ using Jutul: cross_term_entities, cross_term_entities_source, update_cross_term_
 using Jutul: symmetry
 
 
+##############################################
+# Include variables
+include("variables/physical_constants.jl")
+include("variables/types.jl")
 
-include("parameters/physical_constants.jl")
-
-include("parameters/parameter_types.jl")
-
-include("parameters/parameter_sets.jl")
+##############################################
+# Include parameters
+include("parameters/types.jl")
+include("parameters/base_extensions.jl")
+include("parameters/meta_data/parameters.jl")
 include("parameters/schemas/cell_parameter_set.jl")
-include("parameters/parameter_meta_data.jl")
+include("parameters/defaults/cell_parameter_set.jl")
+include("parameters/tools/loader.jl")
+include("parameters/tools/merger.jl")
+include("parameters/tools/validater.jl")
+include("parameters/tools/formatter.jl")
 
 
-include("parameters/functional_valued_parameters/tools.jl")
-include("parameters/functional_valued_parameters/ocp.jl")
-include("parameters/functional_valued_parameters/electrolyte_conductivity.jl")
-include("parameters/functional_valued_parameters/electrolyte_diffusivity.jl")
 
+include("models/submodels/functional_valued_parameters/tools.jl")
+include("models/submodels/functional_valued_parameters/ocp.jl")
+include("models/submodels/functional_valued_parameters/electrolyte_conductivity.jl")
+include("models/submodels/functional_valued_parameters/electrolyte_diffusivity.jl")
+
+
+##############################################
+# Include meshes
 include("meshes/mesh.jl")
 include("meshes/mrst_mesh.jl")
+include("meshes/tensor_tools.jl")
+include("meshes/remove_cells.jl") #Trenger StatsBase
+include("meshes/grid_utils.jl")
 
-
-
+##############################################
+# Include geometries
 include("geometries/1D.jl")
 include("geometries/pouch_cell.jl")
 
+
+##############################################
+# Include models
 include("models/full_battery_models/battery_model.jl")
 include("models/full_battery_models/lithium_ion.jl")
 include("models/battmo_types.jl")
@@ -96,25 +114,29 @@ include("models/submodels/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")
 
-include("parameters/battmo_formatter.jl")
-include("parameters/validate.jl")
-
+##############################################
+# Include setup
 include("setup/model_setup.jl")
 include("setup/matlab_model_setup.jl")
+
+##############################################
+# Include forward_simulation
 include("forward_simulation/simulate.jl")
 
+
+##############################################
+# Include utils
 include("utils/battery_cell_specifications.jl")
 
+##############################################
+# Include solver
 include("solver/linsolve.jl")
-
-
-
-include("meshes/tensor_tools.jl")
-include("meshes/remove_cells.jl") #Trenger StatsBase
-include("meshes/grid_utils.jl")
 include("solver/solver_as_preconditioner_system.jl")
 include("solver/precondgenneral.jl")
 include("solver/sparse_utils.jl")
+
+
+
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 # @compile_workload begin
 #    for use_general_ad in [false, true]

@@ -1,3 +1,8 @@
+Use JuliaFormatter for automatic code formatting (extension in VSCode available)
+snake_case for variables, functions, directories and files, PascalCase for types. PascalCase for parameter names
+Use Blue Style coding style in general
+
+
 # Style Guide
 
 When writing code for BattMo we use the [Blue Style](https://github.com/JuliaDiff/BlueStyle?tab=readme-ov-file#module-imports) coding style in general, but we apply some specific rules that are a bit more strict.

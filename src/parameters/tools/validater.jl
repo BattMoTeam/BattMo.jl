@@ -65,13 +65,6 @@ function _validate_entry_json(x, schema::AbstractDict, path)
 	return ValidationReport(issues)
 end
 
-# function _validate_entry_json(x, schema::Bool, path::String)
-# 	if !schema
-# 		return SingleIssue(x, path, "schema", schema)
-# 	end
-# 	return
-# end
-
 
 # Extending the JSONSchema.show function
 function show(io::IO, report::ValidationReport)
@@ -131,6 +124,8 @@ end
 function validate_parameter_set!(parameters::CellParameters, model_settings::ModelSettings)
 
 	schema = get_schema_cell_parameters(model_settings)
+	defaults = get_default_cell_parameter_set()
+
 	# Convert schema Dict to JSONSchema object
 	schema_obj = Schema(schema)
 
@@ -144,7 +139,7 @@ function validate_parameter_set!(parameters::CellParameters, model_settings::Mod
 	for issue in result.issues
 		keys = Vector(parse_path(issue.path))  # The key causing the issue
 		keyword = issue.reason  # Type of validation error
-
+		@info keys
 		if keyword == "required"
 			# Missing required key: add default
 			default_value = get_nested_value(defaults, keys, nothing)
