@@ -19,7 +19,7 @@
 "NegativeElectrode": {
     "ElectrodeCoating": {
         "BruggemanCoefficient": 1.5,
-        "EffectiveDensity": 1.9,
+        "EffectiveDensity": 1900.0,
         "Thickness": 8.5e-5,
         "Width": 0.065,
         "Length": 0.775,
