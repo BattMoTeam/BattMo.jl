@@ -12,7 +12,7 @@ run_battery
 AbstractInputParams
 DictInputParams
 InputParams
-MatlabSimulationInput
+MatlabBattMoInput
 ```
 
 ## Utility to read and manipulate input 

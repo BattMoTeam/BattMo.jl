@@ -13,7 +13,7 @@ tests = [(name = "p2d_40", errval = 2e-3)
 			@test begin
 
 				fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/", test[:name], ".mat")
-				inputparams = load_parameters(fn, MatlabSimulationInput)
+				inputparams = load_parameters(fn, MatlabBattMoInput)
 				inputparams.dict["use_state_ref"] = true
 				states, cellSpecifications, reports, extra = run_battery(inputparams, max_step = nothing)
 

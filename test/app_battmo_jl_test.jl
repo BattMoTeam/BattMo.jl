@@ -7,7 +7,7 @@ function runP2DBatt(json_file)
 	i            = 0
 
 	# read input parameters from json file
-	inputparams = load_parameters(json_file, SimulationInput)
+	inputparams = load_parameters(json_file, BattMoInput)
 
 	# setup simulation from the input parameters
 	output = setup_simulation(inputparams)

@@ -4,7 +4,7 @@ using BattMo, GLMakie
 # We use the setup provided in the [p2d_40.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/p2d_40.json#L152) file. In particular, see the data under the `Control` key.
 name = "p2d_40_cccv"
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
-inputparams = load_parameters(fn, SimulationInput)
+inputparams = load_parameters(fn, BattMoInput)
 nothing # hide
 
 # We run the simulation.

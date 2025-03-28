@@ -10,7 +10,7 @@ export
 # Run battery #
 ###############
 
-function run_battery(inputparams::SimulationInput;
+function run_battery(inputparams::BattMoInput;
 	hook = nothing,
 	kwargs...)
 	"""
@@ -42,7 +42,7 @@ function run_battery(inputparams::SimulationInput;
 	extra = output
 	extra[:timesteps] = timesteps
 
-	if isa(inputparams, MatlabSimulationInput)
+	if isa(inputparams, MatlabBattMoInput)
 		cellSpecifications = nothing
 	else
 		cellSpecifications = computeCellSpecifications(model)
@@ -106,7 +106,7 @@ function run_battery(cell_parameters::CellParameters,
 	extra = output
 	extra[:timesteps] = timesteps
 
-	if isa(inputparams, MatlabSimulationInput)
+	if isa(inputparams, MatlabBattMoInput)
 		cellSpecifications = nothing
 	else
 		cellSpecifications = computeCellSpecifications(model)

@@ -1,4 +1,5 @@
 export LithiumIon
+export print_required_cell_parameters, get_lithium_ion_default_model_settings
 
 struct LithiumIon <: BatteryModel
 	name::String

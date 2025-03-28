@@ -10,5 +10,5 @@
   "RestingTimeAfterDischarge": 0.0,
   "CurrentChangeLimit": 1e-4,
   "VoltageChangeLimit": 1e-4,
-  "AmbientCelsiusTemperature":25
+  "AmbientKelvinTemperature":298.15
 }
