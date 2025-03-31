@@ -5,9 +5,11 @@ Pkg.activate("./src/parameters")
 Pkg.status() |> print
 
 using Revise
-#%%
 
+
+#%%
 using JSON
+using LinearAlgebra
 
 
 ########################################################################
@@ -141,8 +143,8 @@ end
 
 
 function read_model_settings(filepath::String)
-    simulation_settings_instance = filepath |> JSON.parsefile |> Dict |> ModelSettings
-    return simulation_settings_instance
+    model_settings_instance = filepath |> JSON.parsefile |> Dict |> ModelSettings
+    return model_settings_instance
 end
 
 
@@ -155,13 +157,13 @@ end
 
 # %%
 #########################################
-# Cell calculations
+# Cell Mass calculations
 #########################################
 
 function compute_electrode_coating_mass(params::CellParameters, electrode::String)
 
     if !(electrode in ["PositiveElectrode", "NegativeElectrode"])
-        error("Electrode must be either PositiveElectrode or NegativeElectrode, not $electrode")
+        error("Electrode must be either PositiveElectrode or NegativeElectrode, not $electrode. Check for typos")
     end
 
     effective_density = params[electrode]["ElectrodeCoating"]["EffectiveDensity"]
@@ -171,10 +173,12 @@ function compute_electrode_coating_mass(params::CellParameters, electrode::Strin
     return effective_density*area*thickness
 end
 
+
+
 function compute_electrode_theoretical_density(params::CellParameters, electrode::String)
 
     if !(electrode in ["PositiveElectrode", "NegativeElectrode"])
-        error("Electrode must be either PositiveElectrode or NegativeElectrode, not $electrode")
+        error("Electrode must be either PositiveElectrode or NegativeElectrode, not $electrode. Check for typos")
     end
 
     component_mass_fractions = [params[electrode]["ActiveMaterial"]["MassFraction"],
@@ -188,52 +192,109 @@ function compute_electrode_theoretical_density(params::CellParameters, electrode
 end
 
 
+
 function compute_separator_mass(params::CellParameters)
-    area = params["Cell"]["Area"]
+    area = params["NegativeElectrode"]["ElectrodeCoating"]["Area"] #Assumes the electrode areas are the same.
     density = params["Separator"]["Density"]
     thickness = params["Separator"]["Thickness"]
     porosity = params["Separator"]["Porosity"]
     return thickness*area*(1-porosity)*density    
 end
 
+
+
 function compute_current_collector_mass(params::CellParameters, electrode::String)
 
     if !(electrode in ["PositiveElectrode", "NegativeElectrode"])
-        error("Electrode must be either PositiveElectrode or NegativeElectrode, not $electrode")
+        error("Electrode must be either PositiveElectrode or NegativeElectrode, not $electrode. Check for typos")
     end
 
-    area = params["Cell"]["Area"]
+    area = params[electrode]["ElectrodeCoating"]["Area"]
     thickness = params[electrode]["CurrentCollector"]["Thickness"]
     density = params[electrode]["CurrentCollector"]["Density"]
     return area*thickness*density
 end
 
-function compute_electrolyte_mass(params::CellParameters)
-    # TO BE CONTINUED
-    density = params["Electrolyte"]["Density"]
-    porosity_separator = params["Separator"]["Porosity"]
-    porosity_positive_electrode
-    porosity_negative_electrode
 
-    return effective_density*area*thickness
+"""
+
+"""
+function compute_electrolyte_mass(params::CellParameters)
+   
+    electrolyte_density = params["Electrolyte"]["Density"]
+    cell_area = params["NegativeElectrode"]["ElectrodeCoating"]["Area"] #Assumes the electrode areas are the same.
+
+    #separator (sep)
+    sep_porosity = params["Separator"]["Porosity"]
+    sep_volume = cell_area*params["Separator"]["Thickness"]
+
+    #positive electrode (pe)
+    pe_theoretical_density = compute_electrode_theoretical_density(params, "PositiveElectrode")
+    pe_effective_density = params["PositiveElectrode"]["ElectrodeCoating"]["EffectiveDensity"]
+    pe_volume = cell_area*params["PositiveElectrode"]["ElectrodeCoating"]["Thickness"]
+    pe_porosity = 1.0 - (pe_effective_density/pe_theoretical_density)
+
+    #negative electrode (ne)
+    ne_theoretical_density = compute_electrode_theoretical_density(params, "NegativeElectrode")    
+    ne_effective_density = params["NegativeElectrode"]["ElectrodeCoating"]["EffectiveDensity"]
+    ne_volume = cell_area*params["NegativeElectrode"]["ElectrodeCoating"]["Thickness"]
+    ne_porosity = 1.0 - (ne_effective_density/ne_theoretical_density)
+
+    component_volumes = [pe_volume, ne_volume, sep_volume]
+    component_porosities = [pe_porosity, ne_porosity, sep_porosity]
+
+    return electrolyte_density*dot(component_volumes, component_porosities)
 end
 
-function compute_cell_mass(params::CellParameters)
+function compute_cell_mass(params::CellParameters; print_breakdown::Bool = false)
     m_positive_e = compute_electrode_coating_mass(params, "PositiveElectrode")
     m_negative_e = compute_electrode_coating_mass(params, "NegativeElectrode")
     m_separator = compute_separator_mass(params)
     m_positive_e_cc = compute_current_collector_mass(params, "PositiveElectrode")
     m_negative_e_cc = compute_current_collector_mass(params, "NegativeElectrode")
     m_electrolyte = compute_electrolyte_mass(params)
-    return m_positive_e + m_negative_e + m_separator + m_positive_e_cc + m_negative_e_cc + m_electrolyte
+    total_cell_mass = m_positive_e + m_negative_e + m_separator + m_positive_e_cc + m_negative_e_cc + m_electrolyte
+
+    if print_breakdown
+        print("""
+        Positive Electrode                   Mass = $m_positive_e,     % = $(100*m_positive_e/total_cell_mass) \n
+        Negative Electrode                   Mass = $m_negative_e,     % = $(100*m_negative_e/total_cell_mass) \n
+        Positive Electrode Current Collector Mass = $m_positive_e_cc,  % = $(100*m_positive_e_cc/total_cell_mass) \n
+        Negative Electrode Current Collector Mass = $m_negative_e_cc,  % = $(100*m_negative_e_cc/total_cell_mass) \n
+        Electrolyte                          Mass = $m_electrolyte,    % = $(100*m_electrolyte/total_cell_mass) \n
+        Separator                            Mass = $m_separator,      % = $(100*m_separator/total_cell_mass) \n
+        """) 
+    end
+    return total_cell_mass 
 end
+
+
+# %%
+#########################################
+# Cell XXXX calculations
+#########################################
+
+
+function compute_electrode_volume_fraction(params::CellParameters, electrode::String)
+
+    if !(electrode in ["PositiveElectrode", "NegativeElectrode"])
+        error("Electrode must be either PositiveElectrode or NegativeElectrode, not $electrode. Check for typos")
+    end
+
+    effective_density = params[electrode]["ElectrodeCoating"]["EffectiveDensity"]
+    theoretical_density = compute_electrode_theoretical_density(params, electrode)
+    return effective_density/theoretical_density
+end
+
+
+
 
 # %%
 #########################################
 # Testing
 #########################################
 
-parameter_sets_directory = "./src/parameters/default_sets/"
+parameter_sets_directory = "./input/"
 
 cell_parameters = read_cell_parameters(parameter_sets_directory * "cell_parameters/cell_parameter_set_chen2020.json")
 cell_parameters["PositiveElectrode"]["ElectrodeCoating"]["Thickness"] |> println
@@ -243,3 +304,4 @@ cycling_protocol["Protocol"] |> println
 
 simulation_settings = read_simulation_settings(parameter_sets_directory * "model_settings/model_settings_P2D.json")
 simulation_settings["ModelGeometry"] |> println
+
