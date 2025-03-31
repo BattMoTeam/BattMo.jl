@@ -1,320 +1,319 @@
 export
-    computeCellCapacity,
-    computeCellMaximumEnergy,
-    computeCellEnergy,
-    computeCellMass,
-    computeCellSpecifications,
-    computeEnergyEfficiency,
-    computeDischargeEnergy
+	computeCellCapacity,
+	computeCellMaximumEnergy,
+	computeCellEnergy,
+	computeCellMass,
+	computeCellSpecifications,
+	computeEnergyEfficiency,
+	computeDischargeEnergy
 
-    
+
 function computeElectrodeCapacity(model::MultiModel, name::Symbol)
 
-    con = Constants()
-    
-    ammodel = model[name]
-    sys = ammodel.system            
-    F    = con.F
-    n    = sys[:n_charge_carriers]
-    cMax = sys[:maximum_concentration]
-    vf   = sys[:volume_fraction]
-    avf  = sys[:volume_fractions][1]
+	con = Constants()
 
-    if name == :NeAm
-        thetaMax = sys[:theta100]
-        thetaMin = sys[:theta0]
-    elseif name == :PeAm
-        thetaMax = sys[:theta0]
-        thetaMin = sys[:theta100]
-    else
-        error("name not recognized")
-    end
+	ammodel = model[name]
+	sys = ammodel.system
+	F = con.F
+	n = sys[:n_charge_carriers]
+	cMax = sys[:maximum_concentration]
+	vf = sys[:volume_fraction]
+	avf = sys[:volume_fractions][1]
 
-    vols = ammodel.domain.representation[:volumes]
-    vol = sum(avf*vf*vols)
-    
-    cap_usable = (thetaMax - thetaMin)*cMax*vol*n*F
-    
-    return cap_usable
-    
+	if name == :NeAm
+		thetaMax = sys[:theta100]
+		thetaMin = sys[:theta0]
+	elseif name == :PeAm
+		thetaMax = sys[:theta0]
+		thetaMin = sys[:theta100]
+	else
+		error("name not recognized")
+	end
+
+	vols = ammodel.domain.representation[:volumes]
+	vol = sum(avf * vf * vols)
+	cap_usable = (thetaMax - thetaMin) * cMax * vol * n * F
+
+	return cap_usable
+
 end
 
 function computeCellCapacity(model::MultiModel)
 
-    caps = [computeElectrodeCapacity(model, name) for name in (:NeAm, :PeAm)]
+	caps = [computeElectrodeCapacity(model, name) for name in (:NeAm, :PeAm)]
 
-    return minimum(caps)
-    
+	return minimum(caps)
+
 end
 
 function computeCellEnergy(states)
-    # Only take discharge curves
-    time = [state[:Control][:ControllerCV].time for state in states if state[:Control][:Current][1] > 0]
-    E    = [state[:Control][:Phi][1] for state in states if state[:Control][:Current][1] > 0]
-    I    = [state[:Control][:Current][1] for state in states if state[:Control][:Current][1] > 0]
+	# Only take discharge curves
+	time = [state[:Control][:ControllerCV].time for state in states if state[:Control][:Current][1] > 0]
+	E    = [state[:Control][:Phi][1] for state in states if state[:Control][:Current][1] > 0]
+	I    = [state[:Control][:Current][1] for state in states if state[:Control][:Current][1] > 0]
 
-    dt   = diff(time)
-    
-    Emid = (E[2 : end] + E[1 : end - 1])./2
-    Imid = (I[2 : end] + I[1 : end - 1])./2
+	dt = diff(time)
 
-    energy = sum(Emid.*Imid.*dt)
+	Emid = (E[2:end] + E[1:end-1]) ./ 2
+	Imid = (I[2:end] + I[1:end-1]) ./ 2
 
-    return energy
-    
+	energy = sum(Emid .* Imid .* dt)
+
+	return energy
+
 end
 
 function computeCellMaximumEnergy(model::MultiModel; T = 298.15, capacities = missing)
 
-    eldes = (:NeAm, :PeAm)
-    
-    if ismissing(capacities)
-        capacities = NamedTuple([(name, computeElectrodeCapacity(model, name)) for name in eldes])
-    end
-    
-    capacity = min(capacities.NeAm, capacities.PeAm)
-    
-    N = 1000
+	eldes = (:NeAm, :PeAm)
 
-    energies = Dict()
-    
-    for elde in eldes
+	if ismissing(capacities)
+		capacities = NamedTuple([(name, computeElectrodeCapacity(model, name)) for name in eldes])
+	end
 
-        cmax    = model[elde].system[:maximum_concentration]
-        c0      = cmax*model[elde].system[:theta100]
-        cT      = cmax*model[elde].system[:theta0]
-        refT    = 298.15
-        ocpfunc = model[elde].system[:ocp_func]
+	capacity = min(capacities.NeAm, capacities.PeAm)
 
-        smax = capacity/capacities[elde]
-        s = smax*collect(range(0, 1, N + 1))
-        
-        c = (1 .- s).*c0 + s.*cT;
+	N = 1000
 
-        f = Vector{Float64}(undef, N + 1)
+	energies = Dict()
 
-        for i = 1 : N + 1
-            if Jutul.haskey(model[elde].system.params, :ocp_funcexp)
-                f[i] = ocpfunc(c[i], T, refT, cmax)
-            elseif Jutul.haskey(model[elde].system.params, :ocp_funcdata)
-                f[i] = ocpfunc(c[i]/cmax)
-            else
-                f[i] = ocpfunc(c[i], T, cmax)
-            end
+	for elde in eldes
 
-            
-        end
+		cmax    = model[elde].system[:maximum_concentration]
+		c0      = cmax * model[elde].system[:theta100]
+		cT      = cmax * model[elde].system[:theta0]
+		refT    = 298.15
+		ocpfunc = model[elde].system[:ocp_func]
 
-        energies[elde] = (capacities[elde]*smax/N)*sum(f)
-        
-    end
+		smax = capacity / capacities[elde]
+		s = smax * collect(range(0, 1, N + 1))
 
-    energy = energies[:PeAm] - energies[:NeAm]
+		c = (1 .- s) .* c0 + s .* cT
 
-    return energy
-    
+		f = Vector{Float64}(undef, N + 1)
+
+		for i ∈ 1:N+1
+			if Jutul.haskey(model[elde].system.params, :ocp_funcexp)
+				f[i] = ocpfunc(c[i], T, refT, cmax)
+			elseif Jutul.haskey(model[elde].system.params, :ocp_funcdata)
+				f[i] = ocpfunc(c[i] / cmax)
+			else
+				f[i] = ocpfunc(c[i], T, cmax)
+			end
+
+
+		end
+
+		energies[elde] = (capacities[elde] * smax / N) * sum(f)
+
+	end
+
+	energy = energies[:PeAm] - energies[:NeAm]
+
+	return energy
+
 end
 
 function computeCellMass(model::MultiModel)
 
-    eldes = (:NeAm, :PeAm)
+	eldes = (:NeAm, :PeAm)
 
-    mass = 0.0
-    
-    # Coating mass
-    
-    for elde in eldes
-        effrho = model[elde].system[:effective_density]
-        vols = model[elde].domain.representation[:volumes]
-        mass = mass + sum(effrho.*vols)
-    end
-    
-    # Electrolyte mass
-    
-    rho  = model[:Elyte].system[:electrolyte_density]
-    vf   = model[:Elyte].domain.representation[:volumeFraction]
-    vols = model[:Elyte].domain.representation[:volumes]
-    
-    mass = mass + sum(vf.*rho.*vols)
+	mass = 0.0
 
-    # Separator mass
-    
-    rho  = model[:Elyte].system[:separator_density]
-    vf   = model[:Elyte].domain.representation[:separator_volume_fraction]
-    vols = model[:Elyte].domain.representation[:volumes]
-    
-    mass = mass + sum(vf.*rho.*vols)
-    
-    # Current Collector masses
-    
-    ccs = (:NeCc, :PeCc)
+	# Coating mass
 
-    for cc in ccs
-        if haskey(model.models, cc)
-            rho  = model[cc].system[:density]
-            vols = model[cc].domain.representation[:volumes]        
-            mass = mass + sum(rho.*vols)
-        end
-    end
-    
-    return mass
-    
+	for elde in eldes
+		effrho = model[elde].system[:effective_density]
+		vols = model[elde].domain.representation[:volumes]
+		mass = mass + sum(effrho .* vols)
+	end
+
+	# Electrolyte mass
+
+	rho  = model[:Elyte].system[:electrolyte_density]
+	vf   = model[:Elyte].domain.representation[:volumeFraction]
+	vols = model[:Elyte].domain.representation[:volumes]
+
+	mass = mass + sum(vf .* rho .* vols)
+
+	# Separator mass
+
+	rho  = model[:Elyte].system[:separator_density]
+	vf   = model[:Elyte].domain.representation[:separator_volume_fraction]
+	vols = model[:Elyte].domain.representation[:volumes]
+
+	mass = mass + sum(vf .* rho .* vols)
+
+	# Current Collector masses
+
+	ccs = (:NeCc, :PeCc)
+
+	for cc in ccs
+		if haskey(model.models, cc)
+			rho  = model[cc].system[:density]
+			vols = model[cc].domain.representation[:volumes]
+			mass = mass + sum(rho .* vols)
+		end
+	end
+
+	return mass
+
 end
 
 
 function computeCellSpecifications(inputparams::InputParams)
-    
-    model = setup_submodels(inputparams)
-    return computeCellSpecifications(model)
-    
+
+	model = setup_submodels(inputparams)
+	return computeCellSpecifications(model)
+
 end
 
 function computeCellSpecifications(model::MultiModel; T = 298.15)
 
-    capacities = (NeAm = computeElectrodeCapacity(model, :NeAm), PeAm =computeElectrodeCapacity(model, :PeAm))
+	capacities = (NeAm = computeElectrodeCapacity(model, :NeAm), PeAm = computeElectrodeCapacity(model, :PeAm))
 
-    energy = computeCellMaximumEnergy(model; T = T, capacities = capacities)
+	energy = computeCellMaximumEnergy(model; T = T, capacities = capacities)
 
-    mass = computeCellMass(model)
-    
-    specs = Dict()
+	mass = computeCellMass(model)
 
-    specs["NegativeElectrodeCapacity"] = capacities.NeAm
-    specs["PositiveElectrodeCapacity"] = capacities.PeAm
-    specs["MaximumEnergy"]             = energy
-    specs["Mass"]                      = mass
-    
-    return specs
-    
+	specs = Dict()
+
+	specs["NegativeElectrodeCapacity"] = capacities.NeAm
+	specs["PositiveElectrodeCapacity"] = capacities.PeAm
+	specs["MaximumEnergy"]             = energy
+	specs["Mass"]                      = mass
+
+	return specs
+
 end
 
 
 function computeEnergyEfficiency(inputparams::InputParams)
 
-    # setup a schedule with just one cycle and very fine refinement
+	# setup a schedule with just one cycle and very fine refinement
 
-    jsondict = inputparams.dict
+	jsondict = inputparams.dict
 
-    ctrldict = jsondict["Control"]
-    
-    controlPolicy = ctrldict["controlPolicy"]
+	ctrldict = jsondict["Control"]
 
-    timedict = jsondict["TimeStepping"]
-    
-    if controlPolicy == "CCDischarge"
+	controlPolicy = ctrldict["controlPolicy"]
 
-        ctrldict["controlPolicy"]  = "CCCV"
-        ctrldict["CRate"]          = 1.0
-        ctrldict["DRate"]          = 1.0
-        ctrldict["dEdtLimit"]      = 1e-2
-        ctrldict["dIdtLimit"]      = 1e-4
-        ctrldict["numberOfCycles"] = 1
-        ctrldict["initialControl"] = "charging"
-        rate = ctrldict["DRate"]
-        timedict["timeStepDuration"] = 20 / rate
-        
-        jsondict["SOC"] = 0.0
+	timedict = jsondict["TimeStepping"]
 
-    elseif controlPolicy == "CCCV"
+	if controlPolicy == "CCDischarge"
 
-        ctrldict["initialControl"]    = "charging"
-        ctrldict["dIdtLimit"]         = 1e-5
-        ctrldict["dEdtLimit"]         = 1e-5
-        ctrldict["numberOfCycles"]    = 1
+		ctrldict["controlPolicy"] = "CCCV"
+		ctrldict["CRate"] = 1.0
+		ctrldict["DRate"] = 1.0
+		ctrldict["dEdtLimit"] = 1e-2
+		ctrldict["dIdtLimit"] = 1e-4
+		ctrldict["numberOfCycles"] = 1
+		ctrldict["initialControl"] = "charging"
+		rate = ctrldict["DRate"]
+		timedict["timeStepDuration"] = 20 / rate
 
-        jsondict["SOC"] = 0.0
+		jsondict["SOC"] = 0.0
 
-        rate = max(ctrldict["DRate"], ctrldict["CRate"])
-        dt = 20/rate
-        
-        jsondict["TimeStepping"]["timeStepDuration"] = dt
+	elseif controlPolicy == "CCCV"
 
-        jsondict["SOC"] = 0.0
-        
-    else
+		ctrldict["initialControl"] = "charging"
+		ctrldict["dIdtLimit"]      = 1e-5
+		ctrldict["dEdtLimit"]      = 1e-5
+		ctrldict["numberOfCycles"] = 1
 
-        error("controlPolicy not recognized.")
-        
-    end
+		jsondict["SOC"] = 0.0
 
-    inputparams2 = InputParams(jsondict)
+		rate = max(ctrldict["DRate"], ctrldict["CRate"])
+		dt = 20 / rate
 
-    (; states) = run_battery(inputparams2; info_level=0)
+		jsondict["TimeStepping"]["timeStepDuration"] = dt
 
-    return (computeEnergyEfficiency(states), states, inputparams2)
-    
+		jsondict["SOC"] = 0.0
+
+	else
+
+		error("controlPolicy not recognized.")
+
+	end
+
+	inputparams2 = InputParams(jsondict)
+
+	(; states) = run_battery(inputparams2; info_level = 0)
+
+	return (computeEnergyEfficiency(states), states, inputparams2)
+
 end
 
 function computeEnergyEfficiency(states)
-    
-    time = [state[:Control][:ControllerCV].time for state in states]
-    E    = [state[:Control][:Phi][1] for state in states]
-    I    = [state[:Control][:Current][1] for state in states]
 
-    Iref = copy(I)
+	time = [state[:Control][:ControllerCV].time for state in states]
+	E    = [state[:Control][:Phi][1] for state in states]
+	I    = [state[:Control][:Current][1] for state in states]
 
-    dt   = diff(time)
-    
-    Emid = (E[2 : end] + E[1 : end - 1])./2
+	Iref = copy(I)
 
-    # discharge energy
+	dt = diff(time)
 
-    I[I .< 0] .= 0
-    Imid = (I[2 : end] .+ I[1 : end - 1])./2
-    
-    energy_discharge = sum(Emid.*Imid.*dt)
+	Emid = (E[2:end] + E[1:end-1]) ./ 2
 
-    # charge energy
+	# discharge energy
 
-    I = copy(Iref)
-    
-    I[I .> 0] .= 0
-    Imid = (I[2 : end] .+ I[1 : end - 1]) / 2
-    
-    energy_charge = -sum(Emid.*Imid.*dt)
+	I[I.<0] .= 0
+	Imid = (I[2:end] .+ I[1:end-1]) ./ 2
 
-    efficiency = energy_discharge/energy_charge
+	energy_discharge = sum(Emid .* Imid .* dt)
 
-    return efficiency
-    
+	# charge energy
+
+	I = copy(Iref)
+
+	I[I.>0] .= 0
+	Imid = (I[2:end] .+ I[1:end-1]) / 2
+
+	energy_charge = -sum(Emid .* Imid .* dt)
+
+	efficiency = energy_discharge / energy_charge
+
+	return efficiency
+
 end
 function computeDischargeEnergy(inputparams::InputParams)
-    # setup a schedule with just discharge half cycle and very fine refinement
+	# setup a schedule with just discharge half cycle and very fine refinement
 
-    jsondict = inputparams.dict
+	jsondict = inputparams.dict
 
-    ctrldict = jsondict["Control"]
-    
-    controlPolicy = ctrldict["controlPolicy"]
+	ctrldict = jsondict["Control"]
 
-    timedict = jsondict["TimeStepping"]
+	controlPolicy = ctrldict["controlPolicy"]
 
-    if controlPolicy == "CCCV"
-        ctrldict["controlPolicy"]  = "CCDischarge"
+	timedict = jsondict["TimeStepping"]
 
-        ctrldict["initialControl"] = "discharging"
-        jsondict["SOC"] = 1.0
+	if controlPolicy == "CCCV"
+		ctrldict["controlPolicy"] = "CCDischarge"
 
-        rate = ctrldict["DRate"]
-        timedict["timeStepDuration"] = 20 / rate
+		ctrldict["initialControl"] = "discharging"
+		jsondict["SOC"] = 1.0
 
-    elseif controlPolicy == "CCDischarge"
-        ctrldict["initialControl"] = "discharging"
-        jsondict["SOC"] = 1.0
-        rate = ctrldict["DRate"]
-        timedict["timeStepDuration"] = 20 / rate
+		rate = ctrldict["DRate"]
+		timedict["timeStepDuration"] = 20 / rate
 
-    else
+	elseif controlPolicy == "CCDischarge"
+		ctrldict["initialControl"] = "discharging"
+		jsondict["SOC"] = 1.0
+		rate = ctrldict["DRate"]
+		timedict["timeStepDuration"] = 20 / rate
 
-        error("controlPolicy not recognized.")
-        
-    end
+	else
 
-    inputparams2 = InputParams(jsondict)
+		error("controlPolicy not recognized.")
 
-    (; states) = run_battery(inputparams2; info_level=0)
+	end
 
-    return (computeCellEnergy(states), states, inputparams2)
-    # return (missing, missing, inputparams2)
-    
+	inputparams2 = InputParams(jsondict)
+
+	(; states) = run_battery(inputparams2; info_level = 0)
+
+	return (computeCellEnergy(states), states, inputparams2)
+	# return (missing, missing, inputparams2)
+
 end

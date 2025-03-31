@@ -1,0 +1,9 @@
+{
+"ModelGeometry": "1D",
+"UseThermalModel": false,
+"UseCurrentCollectors": false,
+"UseRampUp": true,
+"UseSEIModel": true,
+"SEIModel": "Bolay" 
+} 
+

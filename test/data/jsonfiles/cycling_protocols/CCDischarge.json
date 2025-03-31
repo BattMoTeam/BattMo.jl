@@ -1,0 +1,9 @@
+{
+  "Protocol": "CCDischarge",
+  "InitialStateOfCharge": 0.99,
+  "DRate": 1.0,
+  "LowerVoltageLimit": 2.5,
+  "UpperVoltageLimit": 4.1,
+  "InitialControl": "discharge",
+  "AmbientKelvinTemperature":298.15
+}
