@@ -69,6 +69,7 @@ import Jutul:
     get_1d_interpolator
     
 include("utils/physical_constants.jl")
+include("utils/simple_api.jl")
 
 include("input/io_types.jl")
 include("input/input_types.jl")
