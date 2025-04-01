@@ -4,7 +4,7 @@ export CellParameters, CyclingProtocol, ModelSettings, SimulationSettings, FullS
 export BattMoFormattedInput
 export BattMoInput, MatlabBattMoInput
 
-export mergeInputParams, search_parameter
+export merge_input_params, search_parameter
 
 
 abstract type AbstractInputParams end
@@ -175,11 +175,11 @@ end
 
 const InputGeometryParams = InputParams
 
-function recursiveMergeDict(d1, d2; warn = false)
+function recursive_merge_dict(d1, d2; warn = false)
 
 	if isa(d1, Dict) && isa(d2, Dict)
 
-		combiner(d1, d2) = recursiveMergeDict(d1, d2; warn = warn)
+		combiner(d1, d2) = recursive_merge_dict(d1, d2; warn = warn)
 		return mergewith(combiner, d1, d2)
 
 	else
@@ -194,7 +194,7 @@ function recursiveMergeDict(d1, d2; warn = false)
 end
 
 """ 
-   mergeInputParams(inputparams1::T, inputparams2::T; warn = false) where {T <: DictInputParams}
+   merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: DictInputParams}
 
 
 # Arguments
@@ -206,12 +206,12 @@ end
 # Returns
 A `DictInputParams` structure whose field are the composition of the two input parameter structures.
 """
-function mergeInputParams(inputparams1::T, inputparams2::T; warn = false) where {T <: DictInputParams}
+function merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: DictInputParams}
 
 	dict1 = inputparams1.dict
 	dict2 = inputparams2.dict
 
-	combiner(d1, d2) = recursiveMergeDict(d1, d2; warn = warn)
+	combiner(d1, d2) = recursive_merge_dict(d1, d2; warn = warn)
 	dict = mergewith!(combiner, dict1, dict2)
 
 	return T(dict)

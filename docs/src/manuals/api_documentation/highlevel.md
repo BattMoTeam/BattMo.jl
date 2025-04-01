@@ -20,5 +20,5 @@ MatlabInputParams
 ```@docs
 readBattMoJsonInputFile
 readBattMoMatlabInputFile
-mergeInputParams
+merge_input_params
 ```
