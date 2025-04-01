@@ -70,8 +70,8 @@ import Jutul:
 
 include("utils/physical_constants.jl")
 
-include("input/io_types.jl")
 include("input/input_types.jl")
+include("input/reader.jl")
 include("input/function_input_tools.jl")
 include("input/formatter.jl")
 

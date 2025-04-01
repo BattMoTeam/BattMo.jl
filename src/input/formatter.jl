@@ -52,15 +52,15 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 
 	battmo_input = Dict(
-		"G" => [],
+		"G" => get_key_value(simulation_settings, "Grid"),
 		"SOC" => get_key_value(cycling_protocol, "InitialStateOfCharge"),
-		"initT" => 298.15,
+		"initT" => get_key_value(cycling_protocol, "InitialKelvinTemperature"),
 		"use_thermal" => get_key_value(model_settings, "UseThermalModel"),
 		"include_current_collectors" => get_key_value(model_settings, "UseCurrentCollectors"),
 		"Control" => Dict(
 			"controlPolicy" => get_key_value(cycling_protocol, "Protocol"),
 			"numberOfCycles" => get_key_value(cycling_protocol, "TotalNumberOfCycles"),
-			"rampupsteps" => get_key_value(simulation_settings, "RampUpSteps"),
+			"rampupTime" => get_key_value(simulation_settings, "RampUpTime"),
 			"CRate" => get_key_value(cycling_protocol, "CRate"),
 			"DRate" => get_key_value(cycling_protocol, "DRate"),
 			"initialControl" => get_key_value(cycling_protocol, "InitialControl"),
@@ -97,14 +97,14 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 						"SEIstoichiometricCoefficient" => get_key_value(ne_interphase, "StoichiometricCoefficient"),
 						"SEIintersticialConcentration" => get_key_value(ne_interphase, "IntersticialConcentration"),
 						"SEIlengthInitial" => get_key_value(ne_interphase, "InitialThickness"),
-						"SEIvoltageDropRef" => 0.0024,
-						"SEIlengthRef" => get_key_value(ne_interphase, "InitialThickness"),
+						# "SEIvoltageDropRef" => 0.0024,
+						# "SEIlengthRef" => get_key_value(ne_interphase, "InitialThickness"),
 						"density" => get_key_value(ne_am, "Density"),
 					),
 					"diffusionModelType" => "full",
 					"SolidDiffusion" => Dict(
 						"activationEnergyOfDiffusion" => get_key_value(ne_am, "ActivationEnergyOfDiffusion"),
-						"referenceDiffusionCoefficient" => get_key_value(ne_interphase, "ElectronicDiffusionCoefficient"),
+						"referenceDiffusionCoefficient" => get_key_value(ne_am, "DiffusionCoefficient"),
 						"particleRadius" => get_key_value(ne_am, "ParticleRadius"),
 						"N" => get_key_value(grid_points, "NegativeElectrodeActiveMaterial"),
 					),
@@ -207,7 +207,6 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"thermalConductivity" => get_key_value(elyte, "ThermalConductivity"),
 			"density" => get_key_value(elyte, "Density"),
 			"initialConcentration" => get_key_value(elyte, "Concentration"),
-			# "nominalEthyleneCarbonateConcentration" => 999.99999999999977,
 			"ionicConductivity" => get_key_value(elyte, "IonicConductivity"),
 			"diffusionCoefficient" => get_key_value(elyte, "DiffusionCoefficient"),
 			"species" => Dict(

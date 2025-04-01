@@ -4,6 +4,7 @@
   "DRate": 1.0,
   "LowerVoltageLimit": 2.5,
   "UpperVoltageLimit": 4.1,
-  "InitialControl": "discharge",
-  "AmbientKelvinTemperature":298.15
+  "InitialControl": "discharging",
+  "AmbientKelvinTemperature": 298.15,
+  "InitialKelvinTemperature": 298.15
 }

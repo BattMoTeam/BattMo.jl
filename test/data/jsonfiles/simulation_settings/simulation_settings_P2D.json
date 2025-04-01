@@ -1,12 +1,13 @@
 {
     "GridPoints": {
         "PositiveElectrode": 10,
-        "PositiveElectrodeActiveMaterial": 10,  
+        "PositiveElectrodeActiveMaterial": 10,
         "NegativeElectrode": 10,
         "NegativeElectrodeActiveMaterial": 10,
         "Separator": 10
     },
-    "Grid": [],    
-    "TimeStepDuration":50,
-    "RampUpSteps":5    
-} 
+    "Grid": [],
+    "TimeStepDuration": 50,
+    "RampUpTime": 10,
+    "RampUpSteps": 5
+}

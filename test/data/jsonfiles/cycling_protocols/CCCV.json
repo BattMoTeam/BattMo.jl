@@ -1,15 +1,14 @@
 {
   "Protocol": "CCCV",
-  "InitialStateOfCharge": 0.0,
+  "InitialStateOfCharge": 0.99,
   "TotalNumberOfCycles": 10,
   "CRate": 1.0,
   "DRate": 1.0,
   "LowerVoltageLimit": 2.5,
   "UpperVoltageLimit": 4.1,
-  "InitialControl": "charging",
-  "RestingTimeAfterCharge": 0.0,
-  "RestingTimeAfterDischarge": 0.0,
-  "CurrentChangeLimit": 1e-4,
+  "InitialControl": "discharging",
+  "CurrentChangeLimit": 1e-6,
   "VoltageChangeLimit": 1e-4,
-  "AmbientKelvinTemperature":298.15
+  "AmbientKelvinTemperature": 298.15,
+  "InitialKelvinTemperature": 298.15
 }

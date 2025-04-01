@@ -4,10 +4,10 @@ using Jutul, BattMo, GLMakie
 # ## Setup input parameters
 name = "p2d_40_jl_chen2020"
 
-fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
+fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/old/", name, ".json")
 inputparams = read_battmo_formatted_input(fn)
 
-fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
+fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/old/3d_demo_geometry.json")
 inputparams_geometry = read_battmo_formatted_input(fn)
 
 inputparams = merge_input_params(inputparams_geometry, inputparams)

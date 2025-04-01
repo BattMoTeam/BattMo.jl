@@ -11,14 +11,15 @@ export
 ###############
 
 function run_battery(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol;
-	simulation_settings::SimulationSettings,
+	simulation_settings::SimulationSettings = get_default_simulation_settings(model),
 	hook = nothing,
 	kwargs...)
 
 	model_settings = model.model_settings
-	battmo_input = convert_parameter_sets_to_battmo_input(model_settings, cell_parameters, cycling_protocol, simulation_settings)
 
-	output = run_battery(battmo_input)
+	battmo_formatted_input = convert_parameter_sets_to_battmo_input(model_settings, cell_parameters, cycling_protocol, simulation_settings)
+
+	output = run_battery(battmo_formatted_input)
 
 	return output
 end
