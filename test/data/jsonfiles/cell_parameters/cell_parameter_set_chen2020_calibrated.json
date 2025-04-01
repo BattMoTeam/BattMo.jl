@@ -2,7 +2,7 @@
 "Metadata":{
     "Title": "Chen2020",
     "Source": "https://doi.org/10.1149/1945-7111/ab9050",
-    "Description": "Parameter set of a cylindrical 21700 commercial cell (LGM50), for an electrochemical pseudo-two-dimensional (P2D) model."
+    "Description": "Parameter set of a cylindrical 21700 commercial cell (LGM50), for an electrochemical pseudo-two-dimensional (P2D) model, after calibration."
 }, 
 
 "Cell":{
@@ -18,7 +18,7 @@
 
 "NegativeElectrode": {
     "ElectrodeCoating": {
-        "BruggemanCoefficient": 2.91,
+        "BruggemanCoefficient": 1.5,
         "EffectiveDensity": 1695,
         "Thickness": 8.52e-5,
         "Width": 0.065,
@@ -34,10 +34,10 @@
         "ElectronicConductivity": 215,
         "SpecificHeatCapacity": 632.0,
         "ThermalConductivity": 1.04, 
-        "DiffusionCoefficient": 1.74e-15,
+        "DiffusionCoefficient": 3.3e-14,
         "ActivationEnergyOfDiffusion": 5000,
         "ParticleRadius":5.86e-6,
-        "MaximumConcentration": 29583.0,
+        "MaximumConcentration": 33133.0,
         "StoichiometricCoefficientAtSOC0": 0.0279,
         "StoichiometricCoefficientAtSOC100": 0.9014,
         "OpenCircuitVoltage": {
@@ -77,7 +77,7 @@
 
 "PositiveElectrode": {
     "ElectrodeCoating": {
-        "BruggemanCoefficient": 2.43,
+        "BruggemanCoefficient": 1.5,
         "EffectiveDensity": 3292,
         "Thickness": 7.56e-5,
         "Width": 0.065,
@@ -93,12 +93,11 @@
         "ElectronicConductivity": 0.18,
         "SpecificHeatCapacity": 700.0,
         "ThermalConductivity": 2.1, 
-        "DiffusionCoefficient": 1.48e-15,
-        "ActivationEnergyOfDiffusion": 5000,
+        "DiffusionCoefficient": 4.0e-15,
         "ParticleRadius":5.22e-6,
-        "MaximumConcentration": 51765.0,
+        "MaximumConcentration": 63104.0,
         "StoichiometricCoefficientAtSOC0": 0.9084,
-        "StoichiometricCoefficientAtSOC100": 0.2661,
+        "StoichiometricCoefficientAtSOC100": 0.27,
         "OpenCircuitVoltage": {
             "type": "function",
             "functionname": "computeOCP_NMC811_Chen2020",
@@ -135,10 +134,10 @@
   },
 
 "Separator": {
-    "Description": "Ceramic-coated Plyolefin",
+    "Description": "Ceramic-coated Polyolefin",
     "Porosity": 0.47,
     "Density": 946,
-    "BruggemanCoefficient": 2.57,
+    "BruggemanCoefficient": 1.5,
     "Thickness": 1.2e-5, 
     "SpecificHeatCapacity": 1692.0, 
     "ThermalConductivity": 0.334
