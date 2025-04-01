@@ -11,7 +11,7 @@ using Test
 		fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/old/3d_demo_geometry.json")
 		inputparams_geometry = readBattMoJsonInputFile(fn)
 
-		inputparams = mergeInputParams(inputparams_geometry, inputparams)
+		inputparams = merge_input_params(inputparams_geometry, inputparams)
 
 		output = setup_simulation(inputparams)
 

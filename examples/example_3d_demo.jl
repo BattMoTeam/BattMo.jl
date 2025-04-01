@@ -2,25 +2,20 @@
 using Jutul, BattMo, GLMakie
 
 # ## Setup input parameters
-file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_chen2020.json")
-file_path_model = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/model_settings/", "model_settings_P4D_pouch.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCCV.json")
-file_path_simulation = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/simulation_settings/", "simulation_settings_P4D_pouch.json")
+name = "p2d_40_jl_chen2020"
 
-cell_parameters = read_cell_parameters(file_path_cell)
-cycling_protocol = read_cycling_protocol(file_path_cycling)
-model_settings = read_model_settings(file_path_model)
-simulation_settings = read_simulation_settings(file_path_simulation)
+fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
+inputparams = read_battmo_formatted_input(fn)
 
+fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
+inputparams_geometry = read_battmo_formatted_input(fn)
 
-model = LithiumIon(; model_settings)
-
+inputparams = merge_input_params(inputparams_geometry, inputparams)
 nothing # hide
 
 # ## Setup and run simulation
 
-
-output = run_battery(model, cell_parameters, cycling_protocol; simulation_settings)
+output = run_battery(inputparams)
 nothing # hide
 
 # ## Plot discharge curve 
