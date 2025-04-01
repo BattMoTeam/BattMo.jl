@@ -13,18 +13,10 @@ set_preferences!(Jutul, "precompile_workload" => false; force = true)
 # setup input parameters #
 ##########################
 
-file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_chen2020.json")
-file_path_model = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/model_settings/", "model_settings_P4D_pouch.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCDischarge.json")
-file_path_simulation = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/simulation_settings/", "simulation_settings_P4D_pouch.json")
+name = "p2d_40_jl_chen2020"
 
-cell_parameters = read_cell_parameters(file_path_cell)
-cycling_protocol = read_cycling_protocol(file_path_cycling)
-model_settings = read_model_settings(file_path_model)
-simulation_settings = read_simulation_settings(file_path_simulation)
-
-
-model = LithiumIon(; model_settings)
+fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
+inputparams = read_battmo_formatted_input(fn)
 
 
 simple = false
@@ -35,30 +27,29 @@ if (!simple)
 	facz  = 2
 	fac2p = 1
 
-	simulation_settings.dict["GridPoints"]["ElectrodeLength"] *= facy
-	simulation_settings.dict["GridPoints"]["ElectrodeWidth"] *= facy
-	simulation_settings.dict["GridPoints"]["Separator"] *= facz
-	simulation_settings.dict["GridPoints"]["PositiveElectrodeActiveMaterial"] *= facz
-	simulation_settings.dict["GridPoints"]["NegativeElectrodeActiveMaterial"] *= facz
-	simulation_settings.dict["GridPoints"]["NegativeElectrodeCurrentCollectorTabLength"] *= facy
-	simulation_settings.dict["GridPoints"]["NegativeElectrodeCurrentCollectorTabWidth"] *= facx
-	simulation_settings.dict["GridPoints"]["PositiveElectrodeCurrentCollectorTabLength"] *= facy
-	simulation_settings.dict["GridPoints"]["PositiveElectrodeCurrentCollectorTabWidth"] *= facx
-	simulation_settings.dict["GridPoints"]["NegativeElectrodeCurrentCollector"] *= facz
-	simulation_settings.dict["GridPoints"]["PositiveElectrodeCurrentCollector"] *= facz
+	fn                                                                              = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
+	inputparams_geometry                                                            = readBattMoJsonInputFile(fn)
+	inputparams_geometry.dict["Geometry"]["Nh"]                                     *= facy
+	inputparams_geometry.dict["Geometry"]["Nw"]                                     *= facx
+	inputparams_geometry.dict["Separator"]["N"]                                     *= facz
+	inputparams_geometry.dict["PositiveElectrode"]["Coating"]["N"]                  *= facz
+	inputparams_geometry.dict["NegativeElectrode"]["Coating"]["N"]                  *= facz
+	inputparams_geometry.dict["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"] *= facy
+	inputparams_geometry.dict["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"] *= facx
+	inputparams_geometry.dict["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"] *= facy
+	inputparams_geometry.dict["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"] *= facx
+	inputparams_geometry.dict["NegativeElectrode"]["CurrentCollector"]["N"]         *= facz
+	inputparams_geometry.dict["PositiveElectrode"]["CurrentCollector"]["N"]         *= facz
 
 else
-	file_path_model = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/model_settings/", "model_settings_P2D.json")
-	file_path_simulation = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/simulation_settings/", "simulation_settings_P2D.json")
-
-	model_settings = read_model_settings(file_path_model)
-	simulation_settings = read_simulation_settings(file_path_simulation)
-
-	model_settings["UseCurrentCollectors"] = false
+	#fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
+	fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/1D_geometry.json")
+	inputparams_geometry_org = read_battmo_formatted_input(fn)
+	inputparams_geometry = deepcopy(inputparams_geometry_org)
+	inputparams_geometry.dict["include_current_collectors"] = false
 end
 
-inputparams = convert_parameter_sets_to_battmo_input(model_settings, cell_parameters, cycling_protocol, simulation_settings)
-
+inputparams = merge_input_params(deepcopy(inputparams_geometry), inputparams)
 ############################
 # setup and run simulation #
 ############################
