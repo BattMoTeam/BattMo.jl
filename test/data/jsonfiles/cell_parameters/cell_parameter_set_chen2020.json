@@ -52,18 +52,20 @@
             "ChargeTransferCoefficient": 0.5
         },
         "ConductiveAdditive": {
-            "Density": 0.0,
+            "Description": "Unknown",
+            "Density": 1950.0,
             "MassFraction": 0.0,
-            "ElectronicConductivity": 0.0,
-            "SpecificHeatCapacity": 0.0,
-            "ThermalConductivity": 0.0
+            "ElectronicConductivity": 100.0,
+            "SpecificHeatCapacity": 632.0,
+            "ThermalConductivity": 1.04
         },
         "Binder": {
-            "Density": 0.0,
+            "Description": "Unknown",
+            "Density": 1100.0,
             "MassFraction": 0.0,
-            "ElectronicConductivity": 0.0,
-            "SpecificHeatCapacity": 0.0,
-            "ThermalConductivity": 0.0
+            "ElectronicConductivity": 100.0,
+            "SpecificHeatCapacity": 632.0,
+            "ThermalConductivity": 1.04
         },
         "CurrentCollector": {
             "Description": "Copper",
@@ -110,18 +112,20 @@
             "ChargeTransferCoefficient": 0.5
         },
         "ConductiveAdditive": {
-            "Density": 0.0,
+            "Description": "Unknown",
+            "Density": 1830.0,
             "MassFraction": 0.0,
-            "ElectronicConductivity": 0.0,
-            "SpecificHeatCapacity": 0.0,
-            "ThermalConductivity": 0.0
+            "ElectronicConductivity": 100.0,
+            "SpecificHeatCapacity": 700.0,
+            "ThermalConductivity": 2.1
         },
         "Binder": {
-            "Density": 0.0,
+            "Description": "Unknown",
+            "Density": 1750.0,
             "MassFraction": 0.0,
-            "ElectronicConductivity": 0.0,
-            "SpecificHeatCapacity": 0.0,
-            "ThermalConductivity": 0.0
+            "ElectronicConductivity": 100.0,
+            "SpecificHeatCapacity": 700.0,
+            "ThermalConductivity": 2.1
         },
         "CurrentCollector": {
             "Description": "Aluminum",

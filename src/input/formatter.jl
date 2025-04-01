@@ -134,8 +134,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 				"thickness" => get_key_value(ne_cc, "Thickness"),
 				"N" => get_key_value(grid_points, "NegativeElectrodeCurrentCollector"),
 				"tab" => Dict(
-					"width" => get_key_value(ne_cc_tab, "Width"),
-					"height" => get_key_value(ne_cc_tab, "Length"),
+					"width" => get_key_value(ne_cc, "TabWidth"),
+					"height" => get_key_value(ne_cc, "TabLength"),
 					"Nw" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabWidth"),
 					"Nh" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabLength"),
 				),
@@ -195,8 +195,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 				"thickness" => get_key_value(pe_cc, "Thickness"),
 				"N" => get_key_value(grid_points, "PositiveElectrodeCurrentCollector"),
 				"tab" => Dict(
-					"width" => get_key_value(pe_cc_tab, "Width"),
-					"height" => get_key_value(pe_cc_tab, "Length"),
+					"width" => get_key_value(pe_cc, "TabWidth"),
+					"height" => get_key_value(pe_cc, "TabLength"),
 					"Nw" => get_key_value(grid_points, "PositiveElectrodeCurrentCollectorTabWidth"),
 					"Nh" => get_key_value(grid_points, "PositiveElectrodeCurrentCollectorTabLength"),
 				),

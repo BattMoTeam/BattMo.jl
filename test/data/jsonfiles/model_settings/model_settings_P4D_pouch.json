@@ -1,9 +1,7 @@
 {
-"ModelGeometry": "3D Pouch",
-"UseThermalModel": false,
-"UseCurrentCollectors": true,
-"UseRampUp": true,
-"UseSEIModel": true,
-"SEIModel": "Bolay"   
-} 
-
+    "ModelGeometry": "3D-demo",
+    "UseThermalModel": false,
+    "UseCurrentCollectors": true,
+    "UseRampUp": true,
+    "UseSEIModel": false
+}

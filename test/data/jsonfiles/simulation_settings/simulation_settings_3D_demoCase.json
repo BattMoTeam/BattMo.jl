@@ -1,21 +1,21 @@
 {
     "GridPoints": {
-        "ElectrodeWidth":10,
-        "ElectrodeLength":10,      
+        "ElectrodeWidth": 10,
+        "ElectrodeLength": 10,
         "PositiveElectrode": 3,
         "PositiveElectrodeActiveMaterial": 10,
-        "PositiveElectrodeCurrentCollector": 2,  
+        "PositiveElectrodeCurrentCollector": 2,
         "PositiveElectrodeCurrentCollectorTabWidth": 3,
-        "PositiveElectrodeCurrentCollectorTabLength": 3,  
+        "PositiveElectrodeCurrentCollectorTabLength": 3,
         "NegativeElectrode": 3,
         "NegativeElectrodeActiveMaterial": 10,
-        "NegativeElectrodeCurrentCollector": 2,  
+        "NegativeElectrodeCurrentCollector": 2,
         "NegativeElectrodeCurrentCollectorTabWidth": 3,
-        "NegativeElectrodeCurrentCollectorTabLength": 3,  
+        "NegativeElectrodeCurrentCollectorTabLength": 3,
         "Separator": 3
-
     },
-    "Grid": [],    
-    "RampUpTime": 0.1   
-} 
-
+    "Grid": [],
+    "TimeStepDuration": 50,
+    "RampUpTime": 10,
+    "RampUpSteps": 5
+}
