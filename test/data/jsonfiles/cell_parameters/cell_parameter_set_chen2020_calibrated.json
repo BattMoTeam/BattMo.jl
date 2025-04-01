@@ -54,18 +54,18 @@
         "ChargeTransferCoefficient": 0.5                                                 
         },
     "ConductiveAdditive": {
-        "Density": 1800.0,
+        "Density": 0.0,
         "MassFraction":0.0,
-        "ElectronicConductivity": 100.0,
-        "SpecificHeatCapacity": 300.0,
-        "ThermalConductivity": 0.5            
+        "ElectronicConductivity": 0.0,
+        "SpecificHeatCapacity": 0.0,
+        "ThermalConductivity": 0.0            
         },
     "Binder": {
-        "Density": 1780.0,
+        "Density": 0.0,
         "MassFraction": 0.0,
-        "ElectronicConductivity": 100.0,
-        "SpecificHeatCapacity": 1400.0,
-        "ThermalConductivity": 0.165            
+        "ElectronicConductivity": 0.0,
+        "SpecificHeatCapacity": 0.0,
+        "ThermalConductivity": 0.0            
         },
     "CurrentCollector": {
         "Description": "Copper",
