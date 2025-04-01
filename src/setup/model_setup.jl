@@ -629,6 +629,7 @@ function setup_battery_parameters(inputparams::InputParams,
     
     prm_elyte = Dict{Symbol, Any}()
     prm_elyte[:Temperature] = T0 
+    prm_elyte[:BruggemanCoefficient] = inputparams["Electrolyte"]["bruggemanCoefficient"]
     
 
     parameters[:Elyte] = setup_parameters(model[:Elyte], prm_elyte)
