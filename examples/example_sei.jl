@@ -21,7 +21,7 @@ Dict(interphaseparams)
 
 # ## We start the simulation and retrieve the result
 
-model = LithiumIon();
+model = LithiumIonBatteryModel();
 
 model_settings = model.model_settings
 model_settings["UseSEIModel"] = true

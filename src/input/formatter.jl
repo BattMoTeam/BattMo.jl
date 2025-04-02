@@ -185,7 +185,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 					"thermalConductivity" => get_key_value(pe_ca, "ThermalConductivity"),
 				),
 				"thickness" => get_key_value(pe_coating, "Thickness"),
-				"N" => get_key_value(grid_points, "NegativeElectrodeCoating"),
+				"N" => get_key_value(grid_points, "PositiveElectrodeCoating"),
 			),
 			"CurrentCollector" => Dict(
 				"electronicConductivity" => get_key_value(pe_cc, "ElectronicConductivity"),

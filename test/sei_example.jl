@@ -22,7 +22,7 @@ using Test
 		model_settings["UseSEIModel"] = true
 		model_settings["SEIModel"] = "Bolay"
 
-		model = LithiumIon(; model_settings)
+		model = LithiumIonBatteryModel(; model_settings)
 
 		cycling_protocol["TotalNumberOfCycles"] = 10
 

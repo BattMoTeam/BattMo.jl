@@ -1,12 +1,12 @@
-export LithiumIon
+export LithiumIonBatteryModel
 export print_required_cell_parameters, get_lithium_ion_default_model_settings
 
-struct LithiumIon <: BatteryModel
+struct LithiumIonBatteryModel <: BatteryModel
 	name::String
 	model_settings::ModelSettings
 
 
-	function LithiumIon(; model_settings = get_default_model_settings(LithiumIon))
+	function LithiumIonBatteryModel(; model_settings = get_default_model_settings(LithiumIonBatteryModel))
 
 		model_geometry = model_settings.dict["ModelGeometry"]
 		name = "$model_geometry Doyle-Fuller-Newman lithium-ion model"
@@ -19,7 +19,7 @@ struct LithiumIon <: BatteryModel
 	end
 end
 
-function print_required_cell_parameters(::LithiumIon)
+function print_required_cell_parameters(::LithiumIonBatteryModel)
 
 	required_cell_parameters = [
 		("CoatingThickness", "m", "Real"),
@@ -36,7 +36,7 @@ function print_required_cell_parameters(::LithiumIon)
 
 end
 
-function get_default_model_settings(::Type{LithiumIon})
+function get_default_model_settings(::Type{LithiumIonBatteryModel})
 	settings = Dict(
 		"ModelGeometry" => "1D",
 		"UseThermalModel" => false,
@@ -56,7 +56,7 @@ function get_default_model_settings(::Type{LithiumIon})
 end
 
 
-function get_default_simulation_settings(st::LithiumIon)
+function get_default_simulation_settings(st::LithiumIonBatteryModel)
 
 	settings = Dict(
 		"Grid" => [],
@@ -66,12 +66,12 @@ function get_default_simulation_settings(st::LithiumIon)
 		"GridPoints" => Dict(
 			"ElectrodeWidth" => 5,
 			"ElectrodeLength" => 5,
-			"PositiveElectrode" => 10,
+			"PositiveElectrodeCoating" => 10,
 			"PositiveElectrodeActiveMaterial" => 10,
 			"PositiveElectrodeCurrentCollector" => 10,
 			"PositiveElectrodeCurrentCollectorTabWidth" => 10,
 			"PositiveElectrodeCurrentCollectorTabLength" => 10,
-			"NegativeElectrode" => 10,
+			"NegativeElectrodeCoating" => 10,
 			"NegativeElectrodeActiveMaterial" => 10,
 			"NegativeElectrodeCurrentCollector" => 10,
 			"NegativeElectrodeCurrentCollectorTabWidth" => 10,

@@ -8,13 +8,17 @@
 
 using BattMo
 
-file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_chen2020.json")
+file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_chen2020_calibrated.json")
 file_path_cycling = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCDischarge.json")
 
 cell_parameters = read_cell_parameters(file_path_cell)
 cycling_protocol = read_cycling_protocol(file_path_cycling)
+nothing # hide
 
-model = LithiumIon();
+# We instantiate the model that we would like to work with.
+
+model = LithiumIonBatteryModel()
+
 
 # We have an `inputparams` object that corresponds to the json file 
 # [p2d_40_jl_chen2020.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/p2d_40_jl_chen2020.json) 
@@ -34,9 +38,13 @@ active_material_params = cell_parameters["NegativeElectrode"]["ActiveMaterial"]
 active_material_params["ReactionRateConstant"] = 1e-13
 nothing # hide
 
-# We re-run the simulation and observe the impact on the solution
+# We setup the simulation object and check if it's valid
 
-output = run_battery(model, cell_parameters, cycling_protocol);
+sim = Simulation(model, cell_parameters, cycling_protocol)
+# sim.is_valid
+
+# Then we solve for the simulation
+output = solve(sim);
 
 states = output[:states]
 t = [state[:Control][:ControllerCV].time for state in states]
@@ -53,7 +61,8 @@ fig
 # To compare the results, let us reload the previous input file and run it
 
 cell_parameters_2 = read_cell_parameters(file_path_cell)
-output2 = run_battery(model, cell_parameters_2, cycling_protocol);
+sim2 = Simulation(model, cell_parameters_2, cycling_protocol);
+output2 = solve(sim)
 nothing # hide
 
 # We plot both curves
@@ -79,7 +88,8 @@ fig # hide
 outputs = []
 for r in range(5e-11, 1e-13, length = 5)
 	active_material_params["reactionRateConstant"] = r
-	push!(outputs, run_battery(model, cell_parameters, cycling_protocol; simulation_settings, config_kwargs = (; end_report = false)))
+	sim3 = Simulation(model, cell_parameters, cycling_protocol)
+	push!(outputs, solve(sim3; config_kwargs = (; end_report = false)))
 end
 nothing # hide
 

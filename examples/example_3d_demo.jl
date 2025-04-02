@@ -15,7 +15,7 @@ nothing # hide
 
 # ## Setup and run simulation
 
-model = LithiumIon(; model_settings)
+model = LithiumIonBatteryModel(; model_settings)
 
 sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
 output = solve(sim)
