@@ -17,7 +17,8 @@ nothing # hide
 
 model = LithiumIon(; model_settings)
 
-output = run_battery(model, cell_parameters, cycling_protocol; simulation_settings);
+sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
+output = solve(sim)
 nothing # hide
 
 # ## Plot discharge curve 

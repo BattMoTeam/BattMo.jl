@@ -1,8 +1,8 @@
 {
     "GridPoints": {
-        "PositiveElectrode": 10,
+        "PositiveElectrodeCoating": 10,
         "PositiveElectrodeActiveMaterial": 10,
-        "NegativeElectrode": 10,
+        "NegativeElectrodeCoating": 10,
         "NegativeElectrodeActiveMaterial": 10,
         "Separator": 10
     },

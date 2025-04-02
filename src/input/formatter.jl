@@ -97,8 +97,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 						"SEIstoichiometricCoefficient" => get_key_value(ne_interphase, "StoichiometricCoefficient"),
 						"SEIintersticialConcentration" => get_key_value(ne_interphase, "IntersticialConcentration"),
 						"SEIlengthInitial" => get_key_value(ne_interphase, "InitialThickness"),
-						# "SEIvoltageDropRef" => 0.0024,
-						# "SEIlengthRef" => get_key_value(ne_interphase, "InitialThickness"),
+						"SEIvoltageDropRef" => get_key_value(ne_interphase, "InitialPotentialDrop"),
+						"SEIlengthRef" => get_key_value(ne_interphase, "InitialThickness"),
 						"density" => get_key_value(ne_am, "Density"),
 					),
 					"diffusionModelType" => "full",
@@ -124,7 +124,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 					"thermalConductivity" => get_key_value(ne_ca, "ThermalConductivity"),
 				),
 				"thickness" => get_key_value(ne_coating, "Thickness"),
-				"N" => get_key_value(grid_points, "NegativeElectrode"),
+				"N" => get_key_value(grid_points, "NegativeElectrodeCoating"),
 			),
 			"CurrentCollector" => Dict(
 				"electronicConductivity" => get_key_value(ne_cc, "ElectronicConductivity"),
@@ -185,7 +185,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 					"thermalConductivity" => get_key_value(pe_ca, "ThermalConductivity"),
 				),
 				"thickness" => get_key_value(pe_coating, "Thickness"),
-				"N" => get_key_value(grid_points, "NegativeElectrode"),
+				"N" => get_key_value(grid_points, "NegativeElectrodeCoating"),
 			),
 			"CurrentCollector" => Dict(
 				"electronicConductivity" => get_key_value(pe_cc, "ElectronicConductivity"),

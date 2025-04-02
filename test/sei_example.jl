@@ -19,10 +19,16 @@ using Test
 
 		########################################
 
+		model_settings["UseSEIModel"] = true
+		model_settings["SEIModel"] = "Bolay"
 
 		model = LithiumIon(; model_settings)
 
-		output = run_battery(model, cell_parameters, cycling_protocol; simulation_settings)
+		cycling_protocol["TotalNumberOfCycles"] = 10
+
+		sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
+
+		output = solve(sim)
 
 		true
 

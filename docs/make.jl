@@ -27,10 +27,10 @@ function build_battmo_docs(build_format              = nothing;
 	battmo_dir = realpath(joinpath(@__DIR__, ".."))
 	# Convert examples as .jl files to markdown
 	tutorials = [
-		"Tutorial 1 - Run a model" => "1_run_a_model",
-		"Tutorial 2 - Inspect simulation output" => "2_inspect_simulation_output",
-		"Tutorial 3 - Basic Plotting" => "3_basic_plotting",
-		"Tutorial 4 - Modifying physical parameters" => "4_modifying_physical_parameters",]
+		"Tutorial 1 - Run a simulation" => "1_run_a_simulation",
+		"Tutorial 2 - Modify cell parameters" => "2_modify_cell_parameters",
+		"Tutorial 3 - Specify a model" => "3_specify_a_model",
+		"Tutorial 4 - Modify simulation settings" => "4_modify_simulation_settings"]
 
 	examples = [
 		"Cycle example" => "example_cycle",
@@ -142,10 +142,14 @@ function build_battmo_docs(build_format              = nothing;
 		"Installation" => "manuals/user_guide/installation.md",
 		"Getting started" => "manuals/user_guide/getting_started.md"
 	],
-		"Models" => "manuals/user_guide/models.md",
+		"Models and architecture" => [
+		"Terminology" => "manuals/user_guide/terminology.md",
+		"Models" => "manuals/user_guide/models.md"
+	],
 		"Public API" => "manuals/user_guide/public_api.md",
 		"Tutorials" => tutorials_markdown
-	], "Examples" => [
+	],
+		"Examples" => [
 		"Advanced examples" => examples_markdown
 	],
 		"API Documentation" => [
@@ -153,7 +157,8 @@ function build_battmo_docs(build_format              = nothing;
 	],
 		"Contribution" => [
 		"Contribute to BattMo.jl" => "manuals/contribution/contribution.md"
-	], "References" => [
+	],
+		"References" => [
 		"Bibliography" => "extras/refs.md"
 	]],
 	)

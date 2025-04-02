@@ -3,21 +3,61 @@ using Jutul, Statistics
 export
 	run_battery,
 	setup_simulation,
-	setup_model
+	setup_model,
+	Simulation,
+	solve
 
 
 ###############
 # Run battery #
 ###############
 
-function run_battery(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol;
-	simulation_settings::SimulationSettings = get_default_simulation_settings(model),
+abstract type SolvingProblem end
+
+struct Simulation <: SolvingProblem
+	function_to_solve::Function
+	model::BatteryModel
+	cell_parameters::CellParameters
+	cycling_protocol::CyclingProtocol
+	simulation_settings::SimulationSettings
+	valid::Bool
+
+	function Simulation(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
+
+		function_to_solve = run_battery
+
+		# Here will come a validation function
+		valid = true
+		return new{}(function_to_solve, model, cell_parameters, cycling_protocol, simulation_settings, valid)
+	end
+end
+
+struct Optimization <: SolvingProblem
+
+end
+
+function solve(problem::Simulation)
+
+	if problem.valid == true
+		output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings)
+
+		return output
+	else
+
+		error("Your Simulation object is not valid. Have a look at the warnings when instantiating the object to see where the issue lies.")
+	end
+
+end
+
+function run_battery(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings = get_default_simulation_settings(model),
 	hook = nothing,
 	kwargs...)
 
 	model_settings = model.model_settings
 
 	battmo_formatted_input = convert_parameter_sets_to_battmo_input(model_settings, cell_parameters, cycling_protocol, simulation_settings)
+
+	@info JSON.json(battmo_formatted_input, 2)
 
 	output = run_battery(battmo_formatted_input)
 

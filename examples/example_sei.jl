@@ -5,27 +5,34 @@ using Jutul, BattMo, GLMakie
 
 # We use the SEI model presented in [bolay2022](@cite). We use the json data given in [bolay.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/bolay.json#L157) which contains the parameters for the SEI layer. 
 
-file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_chen2020.json")
-file_path_model = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/model_settings/", "model_settings_P2D.json")
+file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_SEI_example.json")
 file_path_cycling = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCCV.json")
 file_path_simulation = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/simulation_settings/", "simulation_settings_P2D.json")
 
 cell_parameters = read_cell_parameters(file_path_cell)
 cycling_protocol = read_cycling_protocol(file_path_cycling)
-model_settings = read_model_settings(file_path_model)
 simulation_settings = read_simulation_settings(file_path_simulation)
 
 nothing # hide
 
 # We retrieve the parameters for the SEI layer, using the fact that their names have a "SEI" prefix.
-interphaseparams = inputparams["NegativeElectrode"]["Interphase"]
+interphaseparams = cell_parameters["NegativeElectrode"]["Interphase"]
 Dict(interphaseparams)
 
 # ## We start the simulation and retrieve the result
 
-model = LithiumIon(; model_settings);
+model = LithiumIon();
 
-output = run_battery(model, cell_parameters, cycling_protocol; simulation_settings);
+model_settings = model.model_settings
+model_settings["UseSEIModel"] = true
+model_settings["SEIModel"] = "Bolay"
+
+
+cycling_protocol["TotalNumberOfCycles"] = 10
+
+sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
+
+output = solve(sim)
 
 states = output[:states]
 

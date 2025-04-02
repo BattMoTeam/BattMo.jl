@@ -3,6 +3,5 @@
     "UseThermalModel": false,
     "UseCurrentCollectors": false,
     "UseRampUp": true,
-    "UseSEIModel": false,
-    "SEIModel": "Bolay"
+    "UseSEIModel": false
 }
