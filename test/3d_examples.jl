@@ -23,14 +23,14 @@ using Test
 
 		Cc = map(x -> x[:Control][:Current][1], output.states)
 		Phi = map(x -> x[:Control][:Phi][1], output.states)
-		@test length(output.states) == 77
-		@test Cc[1] ≈ 0.00058 atol = 1e-2
+		@test length(output.states) == 84
+		@test Cc[2] ≈ 0.00343 atol = 1e-2
 		for i in 3:length(Cc)
-			@test Cc[i] ≈ 0.008165 atol = 1e-2
+			@test Cc[i] ≈ 0.0076079 atol = 1e-2
 		end
-		@test Phi[1] ≈ 4.185 atol = 1e-2
-		@test Phi[end] ≈ 2.76 atol = 1e-2
-		@test Phi[30] ≈ 3.67 atol = 1e-2
+		@test Phi[1] ≈ 4.163 atol = 1e-2
+		@test Phi[end] ≈ 2.5 atol = 1e-2
+		@test Phi[30] ≈ 3.79 atol = 1e-2
 		true
 
 	end

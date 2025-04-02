@@ -6,70 +6,93 @@ export BattMoInput, MatlabBattMoInput
 
 export merge_input_params, search_parameter
 
-
-abstract type AbstractInputParams end
-
-""" Abstract type for parameter sets that have an underlying dictionary structure.
-
-For any structure of this type, it is possible to access and set the values of the object using the same syntax a
-standard julia [dictionary](https://docs.julialang.org/en/v1/base/collections/#Dictionaries)
 """
-abstract type DictInputParams <: AbstractInputParams end
+	AbstractInput
+
+Abstract type for all parameter sets that can be given as an input to BattMo.
+
+For any structure of this type, it is possible to access and set the values of the object using the same syntax as a
+standard Julia [dictionary](https://docs.julialang.org/en/v1/base/collections/#Dictionaries).
+"""
+abstract type AbstractInput end
+
 
 
 #########################################################
-# Extensions for Abstract type ParameterSet
+# Extensions for Abstract type AbstractInput
 
 """
-New method extending Base.getindex to enable Dictionary-like access to subtypes of ParameterSet.
+	Base.getindex(ps::AbstractInput, key::String)
 
-Example use: 
+Extends `Base.getindex` to enable dictionary-like access to subtypes of `AbstractInput`.
 
-parameters = ParameterSetSubtype(dict_with_params)
-parameters["key"] # output: value of key
-parameters["key", "subkey", "subsubkey"] # output: value of subsubkey (nested key)
+# Arguments
+- `ps ::AbstractInput` : The parameter set instance.
+- `key ::String` : The key to look up.
+
+# Returns
+The value associated with `key`. If the key is not found, an error is thrown.
 """
-function Base.getindex(ps::DictInputParams, key::String)
+function Base.getindex(ps::AbstractInput, key::String)
 	value = get(ps.dict, key, nothing)
 	if value === nothing
 		error("Parameter not found: $key")
 	else
-		return value  # Return the actual value
+		return value
 	end
 end
 
+
 """
-New method extending Base.setindex! to enable listing all keys in the ParameterSet
+	Base.setindex!(ps::AbstractInput, value, key::String)
+
+Extends `Base.setindex!` to allow setting values in the parameter set.
+
+# Arguments
+- `ps ::AbstractInput` : The parameter set instance.
+- `value` : The value to assign.
+- `key ::String` : The key to assign the value to.
 """
-function Base.setindex!(ps::DictInputParams, value, key)
+function Base.setindex!(ps::AbstractInput, value, key::String)
 	ps.dict[key] = value
 end
 
 """
-New method extending Base.get to enable listing all keys in the ParameterSet
+	Base.get(ps::AbstractInput, key::String, default=nothing)
+
+Extends `Base.get` to retrieve values from the parameter set with a default fallback.
+
+# Arguments
+- `ps ::AbstractInput` : The parameter set instance.
+- `key ::String` : The key to look up.
+- `default` : The default value to return if the key is not found.
+
+# Returns
+The value associated with `key` or `default` if the key is not found.
 """
-function Base.get(ps::DictInputParams, key, default = nothing)
+function Base.get(ps::AbstractInput, key, default = nothing)
 	return get(ps.dict, key, default)
 end
+
 
 """
 New method extending Base.keys to enable listing all keys in the ParameterSet
 """
-function Base.keys(ps::DictInputParams)
+function Base.keys(ps::AbstractInput)
 	return keys(ps.dict)
 end
 
 """
 New method extending Base.haskey to check if key exists
 """
-function Base.haskey(ps::DictInputParams, key::String)
+function Base.haskey(ps::AbstractInput, key::String)
 	return haskey(ps.dict, key)
 end
 
 """
 New method extending Base.push! to insert a new parameter-value pair
 """
-function Base.push!(ps::DictInputParams, pair::Pair{String, Any})
+function Base.push!(ps::AbstractInput, pair::Pair{String, Any})
 	push!(ps.dict, pair)
 	return ps
 end
@@ -77,7 +100,7 @@ end
 """
 New method extending Base.delete! to remove a parameter-value pair
 """
-function Base.delete!(ps::DictInputParams, key::String)
+function Base.delete!(ps::AbstractInput, key::String)
 	delete!(ps.dict, key)
 end
 
@@ -85,45 +108,53 @@ end
 New method extending Base.iterate to enable iteration in for loops
 """
 # Extend Base.iterate() - Enable iteration (for loops)
-function Base.iterate(ps::DictInputParams, state = nothing)
+function Base.iterate(ps::AbstractInput, state = nothing)
 	return iterate(ps.dict, state)
 end
 
 
 
 ##################################################################
-# Types for parameter sets
+# Abstract type for parameter sets
 
-abstract type ParameterSet <: DictInputParams end
+"""
+Abstract type for parameter sets that are part of the user API.
+"""
+abstract type ParameterSet <: AbstractInput end
 
 ######################################
 # Define ParameterSet custom methods.
 
+"""
+	search_parameter(ps::ParameterSet, query::String)
 
+Searches for a parameter key in the nested dictionary structure and returns matching paths.
+
+# Arguments
+- `ps ::ParameterSet` : The parameter set instance.
+- `query ::String` : The string to search for in parameter keys.
+
+# Returns
+A list of matching parameter key paths if found, otherwise `nothing`.
+"""
 function search_parameter(ps::ParameterSet, query::String)
 	search_matches = []
-	dicts_to_search = [(ps.dict, [])]  # Stack for traversal: (current_dict, current_path)
+	dicts_to_search = [(ps.dict, [])]
 
 	while !isempty(dicts_to_search)
-		dict, key_path = pop!(dicts_to_search) #a key_path is e.g. ["key"]["subkey"]
+		dict, key_path = pop!(dicts_to_search)
 		for (key, value) in dict
-			if occursin(lowercase(query), lowercase(key))  # Case-insensitive substring search
+			if occursin(lowercase(query), lowercase(key))
 				formatted_key_path = "[" * join(vcat(key_path, key), "][") * "]"
 				push!(search_matches, formatted_key_path)
 			end
 			if value isa Dict
-				push!(dicts_to_search, (value, vcat(key_path, key)))  # Add nested dict to stack
+				push!(dicts_to_search, (value, vcat(key_path, key)))
 			end
 		end
 	end
 
-	if isempty(search_matches)
-		println("No match found")
-		return nothing
-	else
-		return search_matches
-	end
-
+	return isempty(search_matches) ? nothing : search_matches
 end
 
 ###########################################
@@ -160,8 +191,10 @@ end
 
 ################################################################
 # BattMo formatted input types (the validated and to the backend formatted input prameters)
-
-abstract type BattMoFormattedInput <: DictInputParams end
+"""
+Abstract type that represents BattMo formatted input only used in the backend as input to the simulation.
+"""
+abstract type BattMoFormattedInput <: AbstractInput end
 
 struct InputParams <: BattMoFormattedInput
 	dict::Dict{String, Any}
@@ -194,7 +227,7 @@ function recursive_merge_dict(d1, d2; warn = false)
 end
 
 """ 
-   merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: DictInputParams}
+   merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: AbstractInput}
 
 
 # Arguments
@@ -204,9 +237,9 @@ end
 - `warn = false` : If option `warn` is true, then give a warning when two distinct values are given for the same field. The first value has other precedence.
 
 # Returns
-A `DictInputParams` structure whose field are the composition of the two input parameter structures.
+A `AbstractInput` structure whose field are the composition of the two input parameter structures.
 """
-function merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: DictInputParams}
+function merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: AbstractInput}
 
 	dict1 = inputparams1.dict
 	dict2 = inputparams2.dict

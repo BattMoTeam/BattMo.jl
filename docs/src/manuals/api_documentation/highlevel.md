@@ -1,24 +1,28 @@
 # High level interface
 
-## Main functions
-
-```@docs
-run_battery
-```
 
 ## Input types
 
 ```@docs
-AbstractInputParams
-DictInputParams
+AbstractInput
+ParameterSet
+CellParameters
+CyclingProtocol
+ModelSettings
+SimulationSettings
+FullSimulationInput
+BattMoFormattedInput
 InputParams
 MatlabInputParams
 ```
 
-## Utility to read and manipulate input 
+## Read input 
 
 ```@docs
-readBattMoJsonInputFile
-readBattMoMatlabInputFile
-merge_input_params
+read_cell_parameters
+read_cycling_protocol
+read_model_settings
+read_simulation_settings
+read_battmo_formatted_input
+read_matlab_battmo_input
 ```

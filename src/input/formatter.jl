@@ -1,7 +1,7 @@
 export convert_parameter_sets_to_battmo_input
 
 
-function get_key_value(dict::Union{DictInputParams, Dict, Nothing}, key)
+function get_key_value(dict::Union{AbstractInput, Dict, Nothing}, key)
 	if isnothing(dict)
 		value = nothing
 	else
