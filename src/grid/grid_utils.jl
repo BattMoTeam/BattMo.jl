@@ -1,5 +1,3 @@
-using Jutul, BattMo
-
 export
 	pouch_grid,
 	find_coupling,
@@ -224,7 +222,7 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
 	ns = vals["N"]
 	xs = vals["thickness"]
 
-	L = StatsBase.inverse_rle(xs ./ ns, ns)
+	L = inverse_rle(xs ./ ns, ns)
 
 	mesh = CartesianMesh((sum(ns), 1, 1), (L, faceArea, 1.0))
 
@@ -273,7 +271,7 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
 
 	"""get x-coordinate of the boundary faces"""
 	function getcoord(grid, i)
-		centroid, = Jutul.compute_centroid_and_measure(grid, BoundaryFaces(), i)
+		centroid, = compute_centroid_and_measure(grid, BoundaryFaces(), i)
 		return centroid[1]
 	end
 
@@ -354,9 +352,9 @@ function pouch_grid(geomparams::InputGeometryParams)
 
 	same_side = false # if true, needs pe_cc_ny >= ne_cc_ny. I think they usually are equal
 
-	Lx = StatsBase.inverse_rle(xs, nx)
-	Ly = StatsBase.inverse_rle(ys, ny)
-	Lz = StatsBase.inverse_rle(zs, nz)
+	Lx = inverse_rle(xs, nx)
+	Ly = inverse_rle(ys, ny)
+	Lz = inverse_rle(zs, nz)
 
 	Nx = length(Lx)
 	Ny = length(Ly)
@@ -463,7 +461,7 @@ function findBoundary(grid, dim, dir)
 	tol = 1000 * eps()
 
 	function getcoord(i)
-		centroid, = Jutul.compute_centroid_and_measure(grid, BoundaryFaces(), i)
+		centroid, = compute_centroid_and_measure(grid, BoundaryFaces(), i)
 		return centroid[dim]
 	end
 

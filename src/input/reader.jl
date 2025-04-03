@@ -1,6 +1,3 @@
-using JSON: JSON
-using MAT: MAT
-
 export read_model_settings, read_cell_parameters, read_cycling_protocol, read_simulation_settings
 export read_matlab_battmo_input, read_battmo_formatted_input
 
@@ -84,7 +81,7 @@ that can be sent to the simulator.
 An instance of `MatlabInputParams` that can be sent to the simulator via `run_battery`.
 """
 function read_matlab_battmo_input(filepath::String)
-	inputparams = filepath |> MAT.matread |> MatlabInputParams
+	inputparams = filepath |> matread |> MatlabInputParams
 	return inputparams
 end
 

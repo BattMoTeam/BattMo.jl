@@ -1,4 +1,3 @@
-using Jutul, Statistics
 
 export
 	run_battery,
@@ -253,7 +252,7 @@ function setup_model(inputparams::BattMoFormattedInput;
 	setup_coupling_cross_terms!(inputparams, model, parameters, couplings)
 
 	setup_initial_control_policy!(model[:Control].system.policy, inputparams, parameters)
-	#model.context = Jutul.DefaultContext()
+	#model.context = DefaultContext()
 	return model, parameters
 
 end
@@ -613,7 +612,7 @@ function setup_grids_and_couplings(inputparams::InputParams)
 
 end
 
-function setup_component(grid::Jutul.FiniteVolumeMesh,
+function setup_component(grid::FiniteVolumeMesh,
 	sys;
 	general_ad::Bool = true,
 	dirichletBoundary = nothing,
@@ -851,9 +850,9 @@ function setup_initial_state(inputparams::InputParams,
 			init[:normalizedSEIvoltageDrop] = 0.0 * ones(nc)
 		end
 
-		if Jutul.haskey(model[name].system.params, :ocp_funcexp)
+		if haskey(model[name].system.params, :ocp_funcexp)
 			OCP = model[name].system[:ocp_func](c, T, refT, cmax)
-		elseif Jutul.haskey(model[name].system.params, :ocp_funcdata)
+		elseif haskey(model[name].system.params, :ocp_funcdata)
 
 			OCP = model[name].system[:ocp_func](theta)
 
@@ -1325,7 +1324,7 @@ end
 ######################################
 
 """
-	setup_config(sim::Jutul.JutulSimulator,
+	setup_config(sim::JutulSimulator,
 					  model::MultiModel        ,
 					  linear_solver::Symbol    ,
 					  extra_timing::Bool;
@@ -1335,7 +1334,7 @@ Sets up the config object used during simulation. In this current version this
 setup is the same for json and mat files. The specific setup values should
 probably be given as inputs in future versions of BattMo.jl
 """
-function setup_config(sim::Jutul.JutulSimulator,
+function setup_config(sim::JutulSimulator,
 	model::MultiModel,
 	parameters,
 	linear_solver::Symbol,
@@ -1367,7 +1366,7 @@ function setup_config(sim::Jutul.JutulSimulator,
 			cfg[:tolerances][model_label][equation_label] = value * tol_default
 		end
 	else
-		for key in Jutul.submodels_symbols(model)
+		for key in submodels_symbols(model)
 			cfg[:tolerances][key][:default] = 1e-5
 		end
 	end
@@ -1378,8 +1377,8 @@ function setup_config(sim::Jutul.JutulSimulator,
 
 		function post_hook(done, report, sim, dt, forces, max_iter, cfg)
 
-			s = Jutul.get_simulator_storage(sim)
-			m = Jutul.get_simulator_model(sim)
+			s = get_simulator_storage(sim)
+			m = get_simulator_model(sim)
 
 			if s.state.Control.ControllerCV.numberOfCycles >= m[:Control].system.policy.numberOfCycles
 				report[:stopnow] = true
@@ -1484,8 +1483,8 @@ function getTrans(model1::Dict{String, <:Any},
 
 end
 
-function getTrans(model1::Jutul.SimulationModel,
-	model2::Jutul.SimulationModel,
+function getTrans(model1::SimulationModel,
+	model2::SimulationModel,
 	bcfaces,
 	bccells,
 	parameters1,
@@ -1510,7 +1509,7 @@ function getTrans(model1::Jutul.SimulationModel,
 
 end
 
-function getHalfTrans(model::Jutul.SimulationModel,
+function getHalfTrans(model::SimulationModel,
 	bcfaces,
 	bccells,
 	parameters,
