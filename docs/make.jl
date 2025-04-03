@@ -36,7 +36,6 @@ function build_battmo_docs(build_format              = nothing;
 		"Cycle example" => "example_cycle",
 		"3D demo example" => "example_3d_demo",
 		"SEI layer growth" => "example_sei",
-		"Matlab input" => "example_battery",
 	]
 
 	tutorials_markdown = []
@@ -146,8 +145,8 @@ function build_battmo_docs(build_format              = nothing;
 		"Models" => "manuals/user_guide/models.md"
 	],
 		"Public API" => [
-		"Input parameters" => "manuals/user_guide/terminology.md",
-		"Forward Simulation" => "manuals/user_guide/forward_simulation.md"
+		"Input terminology" => "manuals/user_guide/terminology.md",
+		"Functions and types" => "manuals/user_guide/public_api.md"
 	],
 		"Tutorials" => tutorials_markdown
 	],

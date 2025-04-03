@@ -6,6 +6,7 @@ export BattMoInput, MatlabBattMoInput
 
 export merge_input_params, search_parameter
 
+
 """
 	AbstractInput
 
@@ -192,15 +193,37 @@ end
 ################################################################
 # BattMo formatted input types (the validated and to the backend formatted input prameters)
 """
-Abstract type that represents BattMo formatted input only used in the backend as input to the simulation.
+	abstract type BattMoFormattedInput <: AbstractInput
+
+Abstract type representing input parameters formatted for BattMo.
+This type is used exclusively in the backend as an input to the simulation.
+Subtypes of `BattMoFormattedInput` contain parameter dictionaries structured for BattMo compatibility.
 """
 abstract type BattMoFormattedInput <: AbstractInput end
 
+
+"""
+	struct InputParams <: BattMoFormattedInput
+
+Represents a validated and backend-formatted set of input parameters for a BattMo simulation.
+
+# Fields
+- `dict ::Dict{String, Any}` : A dictionary storing the input parameters for BattMo.
+"""
 struct InputParams <: BattMoFormattedInput
 	dict::Dict{String, Any}
 
 end
 
+
+"""
+	struct MatlabInputParams <: BattMoFormattedInput
+
+Represents input parameters derived from MATLAB-generated files, formatted for BattMo compatibility.
+
+# Fields
+- `dict ::Dict{String, Any}` : A dictionary storing MATLAB-extracted input parameters.
+"""
 struct MatlabInputParams <: BattMoFormattedInput
 	dict::Dict{String, Any}
 end

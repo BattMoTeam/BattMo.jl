@@ -26,3 +26,17 @@ read_simulation_settings
 read_battmo_formatted_input
 read_matlab_battmo_input
 ```
+
+## Battery model types
+```@docs
+BatteryModel
+LithiumIonBatteryModel
+```
+
+## Forward simulation
+```@docs
+Simulation
+solve
+run_battery
+```
+

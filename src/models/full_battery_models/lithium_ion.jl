@@ -1,6 +1,22 @@
 export LithiumIonBatteryModel
 export print_required_cell_parameters, get_lithium_ion_default_model_settings
 
+
+"""
+	struct LithiumIonBatteryModel <: BatteryModel
+
+Represents a lithium-ion battery model based on the Doyle-Fuller-Newman approach.
+
+# Fields
+- `name ::String` : A descriptive name for the model.
+- `model_settings ::ModelSettings` : Settings specific to the model.
+
+# Constructor
+	LithiumIonBatteryModel(; model_settings = get_default_model_settings(LithiumIonBatteryModel))
+
+Creates an instance of `LithiumIonBatteryModel` with the specified or default model settings.
+The model name is automatically generated based on the model geometry.
+"""
 struct LithiumIonBatteryModel <: BatteryModel
 	name::String
 	model_settings::ModelSettings

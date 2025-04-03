@@ -12,8 +12,34 @@ export
 # Run battery #
 ###############
 
+"""
+	abstract type SolvingProblem
+
+Abstract type for all problem definitions related to solving battery simulations.
+Subtypes of `SolvingProblem` represent specific simulation or solving configurations.
+"""
 abstract type SolvingProblem end
 
+
+"""
+	struct Simulation <: SolvingProblem
+
+Represents a battery simulation problem to be solved.
+
+# Fields
+- `function_to_solve ::Function` : The function responsible for running the simulation.
+- `model ::BatteryModel` : The battery model being simulated.
+- `cell_parameters ::CellParameters` : The cell parameters for the simulation.
+- `cycling_protocol ::CyclingProtocol` : The cycling protocol used.
+- `simulation_settings ::SimulationSettings` : The simulation settings applied.
+- `is_valid ::Bool` : A flag indicating if the simulation is valid.
+
+# Constructor
+	Simulation(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
+
+Creates an instance of `Simulation`, initializing it with the given parameters and defaulting
+simulation settings if not provided.
+"""
 struct Simulation <: SolvingProblem
 	function_to_solve::Function
 	model::BatteryModel
@@ -32,6 +58,23 @@ struct Simulation <: SolvingProblem
 	end
 end
 
+
+"""
+	solve(problem::Simulation; hook=nothing, kwargs...)
+
+Solves a given `Simulation` problem by running the associated simulation function.
+
+# Arguments
+- `problem ::Simulation` : The simulation problem instance.
+- `hook` (optional) : A user-defined function or callback to modify the solving process.
+- `kwargs...` : Additional keyword arguments passed to the solver.
+
+# Returns
+The output of the simulation if the problem is valid. 
+
+# Throws
+Throws an error if the `Simulation` object is not valid, prompting the user to check warnings during instantiation.
+"""
 function solve(problem::Simulation; hook = nothing, kwargs...)
 
 	if problem.is_valid == true
@@ -46,6 +89,24 @@ function solve(problem::Simulation; hook = nothing, kwargs...)
 
 end
 
+"""
+	run_battery(model::BatteryModel, cell_parameters::CellParameters, 
+				cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings; 
+				hook=nothing, kwargs...)
+
+Runs a battery simulation using the provided model, cell parameters, cycling protocol, and simulation settings.
+
+# Arguments
+- `model ::BatteryModel` : The battery model to be used.
+- `cell_parameters ::CellParameters` : The cell parameter set.
+- `cycling_protocol ::CyclingProtocol` : The cycling protocol parameter set.
+- `simulation_settings ::SimulationSettings` : The simulation settings parameter set.
+- `hook` (optional) : A user-defined function or callback to modify the process.
+- `kwargs...` : Additional keyword arguments.
+
+# Returns
+The output of the battery simulation after executing `run_battery` with formatted input.
+"""
 function run_battery(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings;
 	hook = nothing,
 	kwargs...)
@@ -66,7 +127,7 @@ end
 	run_battery(inputparams::AbstractInputParams; hook = nothing)
 
 Simulate a battery for a given input. The input is expected to be an instance of AbstractInputParams. Such input can be
-prepared from a json file using the function [`readBattMoJsonInputFile`](@ref).
+prepared from a json file using the function [`read_battmo_formatted_input`](@ref).
 
 
 """

@@ -12,23 +12,25 @@ By following these tutorials, you will gain hands-on experience and a solid foun
 
 ## Step 2: Explore the Examples
 Once you are comfortable with the basics, you can explore the **Examples** section. The examples cover a range of specific cases and advanced features, such as:
-- Custom cycling protocols
+- Modeling of 3D geometries
 - Thermal effects modeling
-- Parameter sensitivity analysis
-- Different solver configurations
+- Modeling SEI growth
 
 These examples provide practical insights into how to extend BattMo for various research and engineering applications.
 
-## Step 3: Consult the Documentation
-For more details on BattMo's API and functionality, refer to the **Public API Documentation**. This includes:
+## Step 3: Consult the documentation
+For more details on BattMo's API and functionality, refer to the Public API Documentation. This includes:
 - Function descriptions and usage
 - Input and output structures
 - Configuration options
 
-
 ## Need Help?
 If you encounter any issues or have questions, you can:
 - Contact the **Development Team** if you need further support.
+- Feel free to create an issue when you encounter a bug or would like to see a certain feature.
+
+## Would you like to contribute to BattMo.jl development?
+Have a look at our [Contribution guide](../contribution/contribution)
 
 
 

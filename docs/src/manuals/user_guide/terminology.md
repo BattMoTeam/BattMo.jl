@@ -1,4 +1,4 @@
-# Terminology
+# Input terminology
 
 This section describes the key terminology related to input parameters in BattMo. The input parameters influence both the physical behavior of the battery model and the numerical methods used for solving equations. These parameters are categorized based on their role in describing experimental conditions and numerical settings which divides them into two main groups:
 
@@ -10,7 +10,7 @@ Parameters represent the controllable variables in real-world experiments.
 
 They can be categorized based on their purpose:
 - *Cell parameters*: Define the characteristics of a battery cell. Instantiated with type [`CellParameters`](@ref).
-- *Cycling parameters*: Specify how the cell is operated during a simulation (experiment). Instantiated with type [`CyclingParameters`](@ref).
+- *Cycling protocol parameters*: Specify how the cell is operated during a simulation (experiment). Instantiated with type [`CyclingProtocol`](@ref).
 
 ### Cell Parameters
 These parameters characterize the intrinsic properties of a battery cell, such as:
@@ -27,7 +27,7 @@ These parameters characterize the intrinsic properties of a battery cell, such a
       "SurfaceCoefficientOfHeatTransfer": 1000
     }}}
 ```
-All parameter values should be given in *SI units*. Examples of cell parameter sets can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/cell_parameters).
+All parameter values should be given in **SI units**. Examples of cell parameter sets can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/cell_parameters).
 
 ### Cycling Parameters
 These parameters define the operational conditions of the battery during a simulation, such as:
