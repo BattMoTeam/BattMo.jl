@@ -1,32 +1,92 @@
 # Terminology
 
+This section describes the key terminology related to input parameters in BattMo. The input parameters influence both the physical behavior of the battery model and the numerical methods used for solving equations. These parameters are categorized based on their role in describing experimental conditions and numerical settings which divides them into two main groups:
+
+- Parameters 
+- Settings 
 
 ## Parameters
-A user would normally control these in real experiments.
+Parameters represent the controllable variables in real-world experiments.
 
-According to what they describe:
-- Cell parameters
-- Cycling parameters
+They can be categorized based on their purpose:
+- *Cell parameters*: Define the characteristics of a battery cell. Instantiated with type [`CellParameters`](@ref).
+- *Cycling parameters*: Specify how the cell is operated during a simulation (experiment). Instantiated with type [`CyclingParameters`](@ref).
 
-According to how they are described:
-- Scalar parameters
-- Functional parameters
+### Cell Parameters
+These parameters characterize the intrinsic properties of a battery cell, such as:
 
-### Cell parameters
-The parameters that characterize a battery cell.
+```json
+{"NegativeElectrode": {
+    "ElectrodeCoating": {
+      "BruggemanCoefficient": 1.5,
+      "EffectiveDensity": 1900.0,
+      "Thickness": 1.0e-4,
+      "Width": 1.0e-2,
+      "Length": 2.0e-2,
+      "Area": 0.0002,
+      "SurfaceCoefficientOfHeatTransfer": 1000
+    }}}
+```
+All parameter values should be given in *SI units*. Examples of cell parameter sets can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/cell_parameters).
 
-### Cyling parameters
-The parameters that define how the cell is operated during a Simulation (Experiment).
+### Cycling Parameters
+These parameters define the operational conditions of the battery during a simulation, such as:
+
+```json
+    {
+  "Protocol": "CCDischarge",
+  "InitialStateOfCharge": 0.99,
+  "DRate": 1.0,
+  "LowerVoltageLimit": 2.5,
+  "UpperVoltageLimit": 4.1,
+  "InitialControl": "discharging",
+  "AmbientKelvinTemperature": 298.15,
+  "InitialKelvinTemperature": 298.15
+}
+```
+
+Examples of cycling protocol sets can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/cycling_protocol).
 
 ## Settings
-Needed for the solver to set the numerical assumptions to find the numerical solution.
+Settings are used to configure numerical assumptions for solving equations and finding numerical solutions.
 
-### Model settings
-The setting that define some numerical assumptions about the model.
+They can be categorized based on their purpose:
+- *Model settings*: instantiated with type [`ModelSettings`](@ref).
+- *Simulation settings*: instantiated with type [`SimulationSettings`](@ref).
 
-### Simulation settings
-The settings that define numerical assumptions about the simulation.
+### Model Settings
+Define numerical assumptions related to the battery model, such as diffusion methods or simplifications used in the simulation:
 
-According to what they describe:
-- Grid settings
-- Time step settings
+```json
+{
+    "ModelGeometry": "1D",
+    "UseThermalModel": false,
+    "UseCurrentCollectors": false,
+    "UseRampUp": true,
+    "UseSEIModel": true,
+    "SEIModel": "Bolay"
+}
+```
+Examples of model settings can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/model_settings).
+
+### Simulation Settings
+Define numerical assumptions specific to the simulation process, including time-stepping schemes and discretization precision:
+
+```json
+{
+    "GridPoints": {
+        "PositiveElectrodeCoating": 10,
+        "PositiveElectrodeActiveMaterial": 10,
+        "NegativeElectrodeCoating": 10,
+        "NegativeElectrodeActiveMaterial": 10,
+        "Separator": 10
+    },
+    "Grid": [],
+    "TimeStepDuration": 50,
+    "RampUpTime": 10,
+    "RampUpSteps": 5
+}
+```
+Examples of simulation settings can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/simulation_settings).
+
+
