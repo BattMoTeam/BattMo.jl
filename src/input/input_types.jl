@@ -279,13 +279,3 @@ function merge_input_params(inputparams1::T, inputparams2::T; warn = false) wher
 	return T(dict)
 
 end
-
-
-#%%
-
-file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_chen2020_calibrated.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCDischarge.json")
-
-cell_parameters = read_cell_parameters(file_path_cell)
-cycling_protocol = read_cycling_protocol(file_path_cycling)
-nothing # hide
