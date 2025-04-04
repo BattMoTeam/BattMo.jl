@@ -52,7 +52,9 @@ struct Simulation <: SolvingProblem
 		function_to_solve = run_battery
 
 		# Here will come a validation function
-		is_valid = true
+		model_settings = model.model_settings
+		cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
+		is_valid = cell_parameters_is_valid
 		return new{}(function_to_solve, model, cell_parameters, cycling_protocol, simulation_settings, is_valid)
 	end
 end
@@ -74,16 +76,32 @@ The output of the simulation if the problem is valid.
 # Throws
 Throws an error if the `Simulation` object is not valid, prompting the user to check warnings during instantiation.
 """
-function solve(problem::Simulation; hook = nothing, kwargs...)
+function solve(problem::Simulation; accept_invalid = false, hook = nothing, kwargs...)
 
-	if problem.is_valid == true
+	if accept_invalid == true
 		output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings; hook = nothing,
 			kwargs...)
-
-		return output
 	else
+		if problem.is_valid == true
+			output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings; hook = nothing,
+				kwargs...)
 
-		error("Your Simulation object is not valid. Have a look at the warnings when instantiating the object to see where the issue lies.")
+			return output
+		else
+
+			error("""
+			Oops! Your Simulation object hasn't passed the parameter validation. 🛑
+
+			TIP: Validation happens when instantiating the Simulation object. 
+			Check the warnings to see exactly where things went wrong. 🔍
+
+			If you’re confident you know what you're doing, you can bypass the validation result 
+			by setting the flag: 
+				accept_invalid = true 
+
+			But proceed with caution! 😎 
+			""")
+		end
 	end
 
 end
