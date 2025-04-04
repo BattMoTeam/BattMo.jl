@@ -1,0 +1,5 @@
+[BattMo]
+precompile_workload = false
+
+[Jutul]
+precompile_workload = false

@@ -8,10 +8,17 @@
 
 using BattMo
 
-file_name = "p2d_40_jl_chen2020.json"
-file_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", file_name)
+file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_chen2020_calibrated.json")
+file_path_cycling = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCDischarge.json")
 
-inputparams = readBattMoJsonInputFile(file_path)
+cell_parameters = read_cell_parameters(file_path_cell)
+cycling_protocol = read_cycling_protocol(file_path_cycling)
+nothing # hide
+
+# We instantiate the model that we would like to work with.
+
+model = LithiumIonBatteryModel()
+
 
 # We have an `inputparams` object that corresponds to the json file 
 # [p2d_40_jl_chen2020.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/p2d_40_jl_chen2020.json) 
@@ -19,21 +26,26 @@ inputparams = readBattMoJsonInputFile(file_path)
 
 # We can for example inspect the parameters for the electrolyte
 
-inputparams["Electrolyte"]
-    
-# or of the interface of the negative electrode. At the interface level, we find all the parameters related to the
-# interface reactions.
+cell_parameters["Electrolyte"]
 
-interfaceparams = inputparams["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]
+# or of the active material of the negative electrode. At the active material, we find all the parameters related to the
+# active material reactions.
+
+active_material_params = cell_parameters["NegativeElectrode"]["ActiveMaterial"]
 
 # We can directly change one of these parameters. Let us for example change the reaction rate constant,
 
-interfaceparams["reactionRateConstant"] = 1e-13
+active_material_params["ReactionRateConstant"] = 1e-13
 nothing # hide
 
-# We re-run the simulation and observe the impact on the solution
+# We setup the simulation object and check if it's valid
 
-output = run_battery(inputparams)
+sim = Simulation(model, cell_parameters, cycling_protocol)
+# sim.is_valid
+
+# Then we solve for the simulation
+output = solve(sim);
+
 states = output[:states]
 t = [state[:Control][:ControllerCV].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
@@ -48,8 +60,9 @@ fig
 
 # To compare the results, let us reload the previous input file and run it
 
-inputparams2 = readBattMoJsonInputFile(file_path)
-output2 = run_battery(inputparams2)
+cell_parameters_2 = read_cell_parameters(file_path_cell)
+sim2 = Simulation(model, cell_parameters_2, cycling_protocol);
+output2 = solve(sim)
 nothing # hide
 
 # We plot both curves
@@ -74,8 +87,9 @@ fig # hide
 
 outputs = []
 for r in range(5e-11, 1e-13, length = 5)
-    interfaceparams["reactionRateConstant"] = r
-    push!(outputs, run_battery(inputparams; config_kwargs = (;end_report = false)))
+	active_material_params["reactionRateConstant"] = r
+	sim3 = Simulation(model, cell_parameters, cycling_protocol)
+	push!(outputs, solve(sim3; config_kwargs = (; end_report = false)))
 end
 nothing # hide
 
@@ -86,10 +100,10 @@ using Printf
 fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 for output in outputs
-    local t = [state[:Control][:ControllerCV].time for state in output[:states]]
-    local E = [state[:Control][:Phi][1] for state in output[:states]]
-    local r = output[:extra][:inputparams]["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["reactionRateConstant"]
-    lines!(ax, t, E, label = "$(@sprintf("%g", r))") 
+	local t = [state[:Control][:ControllerCV].time for state in output[:states]]
+	local E = [state[:Control][:Phi][1] for state in output[:states]]
+	local r = output[:extra][:inputparams]["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["reactionRateConstant"]
+	lines!(ax, t, E, label = "$(@sprintf("%g", r))")
 end
 fig[1, 2] = Legend(fig, ax, "Reaction rate", framevisible = false)
 fig # hide
