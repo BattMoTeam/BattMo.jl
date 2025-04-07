@@ -1,9 +1,0 @@
-{
-"ModelGeometry": "3D Cylindrical",
-"UseThermalModel": false,
-"UseCurrentCollectors": true,
-"UseRampUp": true,
-"UseSEIModel": true,
-"SEIModel": "Bolay"  
-} 
-

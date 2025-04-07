@@ -137,9 +137,9 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 					"NominalCapacity" => create_property(parameter_meta, "NominalCapacity"),
 					"HeatTransferCoefficient" => create_property(parameter_meta, "HeatTransferCoefficient"),
 					"InnerCellRadius" => create_property(parameter_meta, "InnerCellRadius"),
-					"Width" => create_property(parameter_meta, "Width"),
-					"Length" => create_property(parameter_meta, "Length"),
-					"Area" => create_property(parameter_meta, "Area"),
+					"ElectrodeWidth" => create_property(parameter_meta, "ElectrodeWidth"),
+					"ElectrodeLength" => create_property(parameter_meta, "ElectrodeLength"),
+					"ElectrodeGeometricSurfaceArea" => create_property(parameter_meta, "ElectrodeGeometricSurfaceArea"),
 				),
 				"required" => ["Case"],
 			),
@@ -358,7 +358,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 	model_settings_dict = model_settings.dict
 
 	if model_settings_dict["ModelGeometry"] == "1D"
-		push!(cell_required, "Area")
+		push!(cell_required, "ElectrodeGeometricSurfaceArea")
 		if model_settings_dict["UseThermalModel"]
 			push!(cell_required, "DeviceSurfaceArea")
 			push!(cell_required, "HeatTransferCoefficient")
@@ -384,8 +384,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 		end
 
 	elseif model_settings_dict["ModelGeometry"] == "3D Pouch"
-		push!(cell_required, "Width")
-		push!(cell_required, "Length")
+		push!(cell_required, "ElectrodeWidth")
+		push!(cell_required, "ElectrodeLength")
 		if model_settings_dict["UseThermalModel"]
 			push!(cell_required, "DeviceSurfaceArea")
 			push!(cell_required, "HeatTransferCoefficient")

@@ -44,7 +44,7 @@ function get_parameter_meta_data()
 			"context_type" => "InnerCellRadius",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_54321",
 		),
-		"Width" => Dict(
+		"ElectrodeWidth" => Dict(
 			"type" => Real,
 			"min_value" => 0.001,
 			"max_value" => 0.3,
@@ -54,7 +54,7 @@ function get_parameter_meta_data()
 			"context_type" => "Width",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_11223",
 		),
-		"Length" => Dict(
+		"ElectrodeLength" => Dict(
 			"type" => Real,
 			"min_value" => 0.01,
 			"max_value" => 0.5,
@@ -308,7 +308,7 @@ function get_parameter_meta_data()
 			"unit_name" => "emmo:MolePerCubicMetre",
 			"unit_iri" => "https://w3id.org/emmo#MolePerCubicMetre",
 		),
-		"Area" => Dict(
+		"ElectrodeGeometricSurfaceArea" => Dict(
 			"context_type" => "VolumetricSurfaceArea",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_a5571263_f153_448f_84a3_cd18092cf8fa",
 			"max_value" => 5000000.0,
