@@ -21,6 +21,7 @@ Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 x264_jll = "1270edf5-f2f9-52d2-97e9-ab00b5d0237a"
 
 [compat]
+ForwardDiff = "0.10.38"
 JLD2 = "0.4.31"
 JSON = "0.21.4"
 Jutul = "0.3.0"
