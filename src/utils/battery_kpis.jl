@@ -12,7 +12,7 @@ function compute_electrode_coating_mass(params::CellParameters, electrode::Strin
     end
 
     effective_density = params[electrode]["ElectrodeCoating"]["EffectiveDensity"]
-    area = params["Cell"]["Area"]
+    area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
     thickness = params[electrode]["ElectrodeCoating"]["Thickness"]
 
     return effective_density*area*thickness
@@ -39,7 +39,7 @@ end
 
 
 function compute_separator_mass(params::CellParameters)
-    area = params["Cell"]["Area"] 
+    area = params["Cell"]["ElectrodeGeometricSurfaceArea"] 
     density = params["Separator"]["Density"]
     thickness = params["Separator"]["Thickness"]
     porosity = params["Separator"]["Porosity"]
@@ -54,7 +54,7 @@ function compute_current_collector_mass(params::CellParameters, electrode::Strin
         error("Electrode must be either PositiveElectrode or NegativeElectrode, not $electrode. Check for typos")
     end
 
-    area = params["Cell"]["Area"]
+    area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
     thickness = params[electrode]["CurrentCollector"]["Thickness"]
     density = params[electrode]["CurrentCollector"]["Density"]
     return area*thickness*density
@@ -67,7 +67,7 @@ end
 function compute_electrolyte_mass(params::CellParameters)
    
     electrolyte_density = params["Electrolyte"]["Density"]
-    cell_area = params["Cell"]["Area"] 
+    cell_area = params["Cell"]["ElectrodeGeometricSurfaceArea"] 
 
     #separator (sep)
     sep_porosity = params["Separator"]["Porosity"]
@@ -142,7 +142,7 @@ function compute_electrode_mass_loading(params::CellParameters, electrode::Strin
 
     electrode_mass = compute_electrode_coating_mass(params, electrode)
     active_material_mass = electrode_mass*params[electrode]["ActiveMaterial"]["MassFraction"]
-    electrode_area = params["Cell"]["Area"]
+    electrode_area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
     return active_material_mass/electrode_area
 end
 

@@ -7,9 +7,9 @@
   "Cell": {
     "Name": "",
     "Case": "3D-demo",
-    "Width": 1.0e-2,
-    "Length": 2.0e-2,
-    "Area": 0.0002,
+    "ElectrodeWidth": 1.0e-2,
+    "ElectrodeLength": 2.0e-2,
+    "ElectrodeGeometricSurfaceArea": 0.0002,
     "DeviceSurfaceArea": 0.0,
     "DoubleCoatedElectrodes": null,
     "NominalVoltage": 0.0,
