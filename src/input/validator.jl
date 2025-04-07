@@ -36,7 +36,6 @@ end
 function validate_parameter_set(parameters::CellParameters, model_settings::ModelSettings)
 
 	schema = get_schema_cell_parameters(model_settings)
-	defaults = get_default_cell_parameter_set()
 
 	# Convert schema Dict to JSONSchema object
 	schema_obj = Schema(schema)
@@ -45,9 +44,82 @@ function validate_parameter_set(parameters::CellParameters, model_settings::Mode
 	# Validate the JSON data
 	result = validate(schema_obj, parameters_dict)
 
-	@info result
+	log_schema_issues(result.issues, "CellParameters")
 
-	log_schema_issues(result.issues)
+	if !isempty(result.issues)
+		is_valid = false
+
+	else
+		is_valid = true
+
+	end
+
+	return is_valid
+
+end
+
+function validate_parameter_set(parameters::SimulationSettings, model_settings::ModelSettings)
+
+	schema = get_schema_simulation_settings(model_settings)
+
+	# Convert schema Dict to JSONSchema object
+	schema_obj = Schema(schema)
+
+	parameters_dict = parameters.dict
+	# Validate the JSON data
+	result = validate(schema_obj, parameters_dict)
+
+	log_schema_issues(result.issues, "SimulationSettings")
+
+	if !isempty(result.issues)
+		is_valid = false
+
+	else
+		is_valid = true
+
+	end
+
+	return is_valid
+
+end
+
+function validate_parameter_set(parameters::ModelSettings)
+
+	schema = get_schema_model_settings()
+
+	# Convert schema Dict to JSONSchema object
+	schema_obj = Schema(schema)
+
+	parameters_dict = parameters.dict
+	# Validate the JSON data
+	result = validate(schema_obj, parameters_dict)
+
+	log_schema_issues(result.issues, "ModelSettings")
+
+	if !isempty(result.issues)
+		is_valid = false
+
+	else
+		is_valid = true
+
+	end
+
+	return is_valid
+
+end
+
+function validate_parameter_set(parameters::CyclingProtocol)
+
+	schema = get_schema_cycling_protocol()
+
+	# Convert schema Dict to JSONSchema object
+	schema_obj = Schema(schema)
+
+	parameters_dict = parameters.dict
+	# Validate the JSON data
+	result = validate(schema_obj, parameters_dict)
+
+	log_schema_issues(result.issues, "CyclingProtocol")
 
 	if !isempty(result.issues)
 		is_valid = false
@@ -62,22 +134,23 @@ function validate_parameter_set(parameters::CellParameters, model_settings::Mode
 end
 
 
-function log_schema_issues(issues::Vector{SingleIssue})
+
+function log_schema_issues(issues::Vector{SingleIssue}, set_name::String)
 	if !isempty(issues)
 
-		println("🔍 Validation failed with $(length(issues)) issue$(length(issues) == 1 ? "" : "s"):\n")
+
+		println("🔍 Validation of $set_name failed with $(length(issues)) issue$(length(issues) == 1 ? "" : "s"):\n")
+		println("─"^50)
 
 		for (i, issue) in enumerate(issues)
 			println("─"^50)
 			println("Issue $i:")
 
-			path_elements = [typeof(x) === String ? x : string(x) for x in issue.path]
-			path_str = join(path_elements, " → ")
-			println("📍 Path:         $(isempty(issue.path) ? "[root]" : issue.path)")
+			label_width = 16  # adjust as needed
 
-			println("🔢 Instance:     $(issue.x)")
-
-			println("🔑 Rule:  $(issue.reason) = $(issue.val)")
+			println(rpad("📍 Where:", label_width), issue.path)
+			println(rpad("🔢 Provided:", label_width), issue.x)
+			println(rpad("🔑 Rule:", label_width), "$(issue.reason) = $(issue.val)")
 
 			# Custom messages for common schema keys
 			msg =
@@ -88,12 +161,14 @@ function log_schema_issues(issues::Vector{SingleIssue})
 				issue.reason == "enum"     ? "Value must be one of: $(join(issue.val, ", "))" :
 				"Schema violation: $(issue.reason)"
 
-			println("🛠  Description:  $msg\n")
+			println(rpad("🛠  Issue:", label_width), msg, "\n")
 		end
 
 		println("─"^50)
 	else
-		println("✔️ Validation passed: No issues found.")
+
+		println("✔️ Validation of $set_name passed: No issues found.")
+		println("─"^50)
 	end
 end
 
@@ -123,7 +198,7 @@ end
 
 function _validate_entry(x, schema::AbstractDict, path, issues)
 	for (k, v) in schema
-		_validate(x, schema, Val{Symbol(k)}(), v, path, issues)
+		ret = _validate(x, schema, Val{Symbol(k)}(), v, path, issues)
 	end
 end
 
@@ -160,11 +235,16 @@ end
 
 # 9.2.1.2
 function _validate(x, schema, ::Val{:anyOf}, val::AbstractVector, path::String, issues::Vector{SingleIssue})
+	temp_issues = Vector{SingleIssue}()
 	for v in val
-		if _validate(x, v, path, issues) === nothing
+		local_issues = Vector{SingleIssue}()
+		_validate(x, v, path, local_issues)
+		if isempty(local_issues)
 			return
 		end
+		append!(temp_issues, local_issues)
 	end
+	append!(issues, temp_issues)
 	push!(issues, SingleIssue(x, path, "anyOf", val))
 end
 
@@ -196,7 +276,9 @@ end
 
 # 9.2.1.4
 function _validate(x, schema, ::Val{:not}, val, path::String, issues::Vector{SingleIssue})
-	if _validate(x, val, path, issues) === nothing
+	local_issues = Vector{SingleIssue}()
+	_validate(x, val, path, local_issues)
+	if isempty(local_issues)
 		push!(issues, SingleIssue(x, path, "not", val))
 	end
 end
@@ -223,12 +305,14 @@ function _validate(x, schema, ::Val{:else}, val, path::String, issues::Vector{Si
 end
 
 function _if_then_else(x, schema, path, issues::Vector{SingleIssue})
-	if _validate(x, schema["if"], path, issues) !== nothing
-		if haskey(schema, "else")
-			_validate(x, schema["else"], path, issues)
+	local_issues = Vector{SingleIssue}()
+	_validate(x, schema["if"], path, local_issues)
+	if isempty(local_issues)
+		if haskey(schema, "then")
+			_validate(x, schema["then"], path, issues)
 		end
-	elseif haskey(schema, "then")
-		_validate(x, schema["then"], path, issues)
+	elseif haskey(schema, "else")
+		_validate(x, schema["else"], path, issues)
 	end
 end
 
@@ -325,7 +409,7 @@ function _validate(
 		if haskey(val, k)
 			ret = _validate(v, val[k], path * "[$(k)]", issues)
 			if ret !== nothing
-				return ret
+				push!(issues, ret)
 			end
 		end
 	end

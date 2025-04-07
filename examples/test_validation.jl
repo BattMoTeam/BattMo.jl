@@ -17,11 +17,8 @@ model = LithiumIonBatteryModel()
 # Then we setup a Simulation object to validate our parameter sets to the intsnatiated battery model.
 sim = Simulation(model, cell_parameters, cycling_protocol);
 
-# check if the Simulation object is valid
-sim.is_valid
-
 # Now we can solve the simulation
-# output = solve(sim; accept_invalid = true);
+output = solve(sim);
 
 
 # states = output[:states]

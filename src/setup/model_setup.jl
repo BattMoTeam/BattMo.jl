@@ -49,12 +49,29 @@ struct Simulation <: SolvingProblem
 
 	function Simulation(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
 
-		function_to_solve = run_battery
+		if model.is_valid
+			function_to_solve = run_battery
 
-		# Here will come a validation function
-		model_settings = model.model_settings
-		cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
-		is_valid = cell_parameters_is_valid
+			# Here will come a validation function
+			model_settings = model.model_settings
+			cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
+			cycling_protocol_is_valid = validate_parameter_set(cycling_protocol)
+			simulation_settings_is_valid = validate_parameter_set(simulation_settings, model_settings)
+
+			if cell_parameters_is_valid && cycling_protocol_is_valid && simulation_settings_is_valid
+				is_valid = true
+			else
+				is_valid = false
+			end
+		else
+			error("""
+			Oops! Your Model object is not valid. 🛑
+
+			TIP: Validation happens when instantiating the Model object. 
+			Check the warnings to see exactly where things went wrong. 🔍
+
+			""")
+		end
 		return new{}(function_to_solve, model, cell_parameters, cycling_protocol, simulation_settings, is_valid)
 	end
 end
@@ -90,14 +107,15 @@ function solve(problem::Simulation; accept_invalid = false, hook = nothing, kwar
 		else
 
 			error("""
-			Oops! Your Simulation object hasn't passed the parameter validation. 🛑
+			Oops! Your Simulation object is not valid. 🛑
 
 			TIP: Validation happens when instantiating the Simulation object. 
 			Check the warnings to see exactly where things went wrong. 🔍
 
 			If you’re confident you know what you're doing, you can bypass the validation result 
-			by setting the flag: 
-				accept_invalid = true 
+			by setting the flag "accept_invalid = true": 
+
+				solve(sim; accept_invalid = true)
 
 			But proceed with caution! 😎 
 			""")

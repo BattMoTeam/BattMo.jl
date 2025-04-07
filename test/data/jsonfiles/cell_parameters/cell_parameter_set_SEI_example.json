@@ -7,6 +7,9 @@
   "Cell": {
     "Name": "",
     "Case": "3D-demo",
+    "Width": 1.0e-2,
+    "Length": 2.0e-2,
+    "Area": 0.0002,
     "DeviceSurfaceArea": 0.0,
     "DoubleCoatedElectrodes": null,
     "NominalVoltage": 0.0,
@@ -19,9 +22,6 @@
       "BruggemanCoefficient": 1.5,
       "EffectiveDensity": 1900.0,
       "Thickness": 1.0e-4,
-      "Width": 1.0e-2,
-      "Length": 2.0e-2,
-      "Area": 0.0002,
       "SurfaceCoefficientOfHeatTransfer": 1000
     },
     "ActiveMaterial": {

@@ -20,17 +20,21 @@ The model name is automatically generated based on the model geometry.
 struct LithiumIonBatteryModel <: BatteryModel
 	name::String
 	model_settings::ModelSettings
+	is_valid::Bool
 
 
 	function LithiumIonBatteryModel(; model_settings = get_default_model_settings(LithiumIonBatteryModel))
 
-		model_geometry = model_settings.dict["ModelGeometry"]
+		model_geometry = model_settings["ModelGeometry"]
 		name = "$model_geometry Doyle-Fuller-Newman lithium-ion model"
+
+		is_valid = validate_parameter_set(model_settings)
 
 
 		return new{}(
 			name,
 			model_settings,
+			is_valid,
 		)
 	end
 end

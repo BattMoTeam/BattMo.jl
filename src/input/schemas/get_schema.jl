@@ -1,4 +1,4 @@
-export get_schema_cell_parameters
+export get_schema_cell_parameters, get_schema_cycling_protocol, get_schema_simulation_settings, get_schema_model_settings
 
 function julia_to_json_schema_type!(dict, meta::Dict)
 	if meta["type"] == Real
@@ -16,7 +16,7 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 		dict["unit"] = get(meta, "unit", "")  # Optional unit annotation
 
 	elseif meta["type"] == Bool
-		dict["type"] = "bool"  # JSON schema type for String
+		dict["type"] = "boolean"  # JSON schema type for String
 		dict["description"] = get(meta, "description", "")  # Optional documentation
 
 	elseif meta["type"] == String
@@ -97,12 +97,16 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 end
 
 function create_property(parameter_meta, name)
-	meta = get(parameter_meta, name, Dict())  # Get meta-data or empty Dict
-	@info name
+	meta = get(parameter_meta, name, nothing)  # Get meta-data or empty Dict
 	# Create the dictionary
 	property = Dict()
-	@info meta["type"]
-	julia_to_json_schema_type!(property, meta)  # Enforce correct type
+	if isnothing(meta)
+		error("KeyError: Key $name is not found")
+	else
+		julia_to_json_schema_type!(property, meta)  # Enforce correct type
+
+	end
+
 	# Filter out `nothing` values
 	return filter(x -> x.second !== nothing, property)
 end
@@ -132,10 +136,12 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 					"NominalVoltage" => create_property(parameter_meta, "NominalVoltage"),
 					"NominalCapacity" => create_property(parameter_meta, "NominalCapacity"),
 					"HeatTransferCoefficient" => create_property(parameter_meta, "HeatTransferCoefficient"),
-					"InitialStateOfCharge" => create_property(parameter_meta, "InitialStateOfCharge"),
 					"InnerCellRadius" => create_property(parameter_meta, "InnerCellRadius"),
+					"Width" => create_property(parameter_meta, "Width"),
+					"Length" => create_property(parameter_meta, "Length"),
+					"Area" => create_property(parameter_meta, "Area"),
 				),
-				"required" => ["Case", "InitialStateOfCharge"],
+				"required" => ["Case"],
 			),
 			"NegativeElectrode" => Dict(
 				"type" => "object",
@@ -146,9 +152,6 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"BruggemanCoefficient" => create_property(parameter_meta, "BruggemanCoefficient"),
 							"EffectiveDensity" => create_property(parameter_meta, "EffectiveDensity"),
 							"Thickness" => create_property(parameter_meta, "Thickness"),
-							"Width" => create_property(parameter_meta, "Width"),
-							"Length" => create_property(parameter_meta, "Length"),
-							"Area" => create_property(parameter_meta, "Area"),
 							"SurfaceCoefficientOfHeatTransfer" => create_property(parameter_meta, "SurfaceCoefficientOfHeatTransfer"),
 						),
 						"required" => ["BruggemanCoefficient", "EffectiveDensity", "Thickness"],
@@ -232,9 +235,6 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"BruggemanCoefficient" => create_property(parameter_meta, "BruggemanCoefficient"),
 							"EffectiveDensity" => create_property(parameter_meta, "EffectiveDensity"),
 							"Thickness" => create_property(parameter_meta, "Thickness"),
-							"Width" => create_property(parameter_meta, "Width"),
-							"Length" => create_property(parameter_meta, "Length"),
-							"Area" => create_property(parameter_meta, "Area"),
 							"SurfaceCoefficientOfHeatTransfer" => create_property(parameter_meta, "SurfaceCoefficientOfHeatTransfer"),
 						),
 						"required" => ["BruggemanCoefficient", "EffectiveDensity", "Thickness"],
@@ -358,8 +358,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 	model_settings_dict = model_settings.dict
 
 	if model_settings_dict["ModelGeometry"] == "1D"
-		push!(ne_coating_required, "Area")
-		push!(pe_coating_required, "Area")
+		push!(cell_required, "Area")
 		if model_settings_dict["UseThermalModel"]
 			push!(cell_required, "DeviceSurfaceArea")
 			push!(cell_required, "HeatTransferCoefficient")
@@ -385,10 +384,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 		end
 
 	elseif model_settings_dict["ModelGeometry"] == "3D Pouch"
-		push!(ne_coating_required, "Width")
-		push!(ne_coating_required, "Length")
-		push!(pe_coating_required, "Width")
-		push!(pe_coating_required, "Length")
+		push!(cell_required, "Width")
+		push!(cell_required, "Length")
 		if model_settings_dict["UseThermalModel"]
 			push!(cell_required, "DeviceSurfaceArea")
 			push!(cell_required, "HeatTransferCoefficient")
@@ -450,3 +447,181 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 	return schema
 end
+
+
+function get_schema_cycling_protocol()
+	# Retrieve meta-data for validation
+	parameter_meta = get_parameter_meta_data()
+	return Dict(
+		"\$schema" => "http://json-schema.org/draft-07/schema#",
+		"type" => "object",
+		"properties" => Dict(
+			"Protocol" => create_property(parameter_meta, "Protocol"),
+			"InitialStateOfCharge" => create_property(parameter_meta, "InitialStateOfCharge"),
+			"TotalNumberOfCycles" => create_property(parameter_meta, "TotalNumberOfCycles"),
+			"CRate" => create_property(parameter_meta, "CRate"),
+			"DRate" => create_property(parameter_meta, "DRate"),
+			"LowerVoltageLimit" => create_property(parameter_meta, "LowerVoltageLimit"),
+			"UpperVoltageLimit" => create_property(parameter_meta, "UpperVoltageLimit"),
+			"InitialControl" => create_property(parameter_meta, "InitialControl"),
+			"CurrentChangeLimit" => create_property(parameter_meta, "CurrentChangeLimit"),
+			"VoltageChangeLimit" => create_property(parameter_meta, "VoltageChangeLimit"),
+			"AmbientKelvinTemperature" => create_property(parameter_meta, "AmbientKelvinTemperature"),
+			"InitialKelvinTemperature" => create_property(parameter_meta, "InitialKelvinTemperature"),
+		),
+		"required" => ["Protocol"],
+		"allOf" => [
+			Dict(
+				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CCCV"))),
+				"then" => Dict(
+					"required" => [
+						"InitialStateOfCharge",
+						"TotalNumberOfCycles",
+						"CRate",
+						"DRate",
+						"LowerVoltageLimit",
+						"UpperVoltageLimit",
+						"InitialControl",
+						"CurrentChangeLimit",
+						"VoltageChangeLimit",
+						"AmbientKelvinTemperature",
+						"InitialKelvinTemperature",
+					],
+				),
+			),
+			Dict(
+				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CCDischarge"))),
+				"then" => Dict(
+					"required" => [
+						"InitialStateOfCharge",
+						"DRate",
+						"LowerVoltageLimit",
+						"UpperVoltageLimit",
+						"InitialControl",
+						"AmbientKelvinTemperature",
+						"InitialKelvinTemperature",
+					],
+				),
+			),
+		],
+	)
+end
+
+
+function get_schema_simulation_settings(model_settings)
+	parameter_meta = get_parameter_meta_data()
+	schema = Dict(
+		"\$schema" => "http://json-schema.org/draft-07/schema#",
+		"type" => "object",
+		"properties" => Dict(
+			"GridPoints" => Dict(
+				"type" => "object",
+				"properties" => Dict(
+					"ElectrodeWidth" => create_property(parameter_meta, "GridPointsElectrodeWidth"),
+					"ElectrodeLength" => create_property(parameter_meta, "GridPointsElectrodeLength"),
+					"PositiveElectrodeCoating" => create_property(parameter_meta, "GridPointsPositiveElectrodeCoating"),
+					"PositiveElectrodeActiveMaterial" => create_property(parameter_meta, "GridPointsPositiveElectrodeActiveMaterial"),
+					"PositiveElectrodeCurrentCollector" => create_property(parameter_meta, "GridPointsPositiveElectrodeCurrentCollector"),
+					"PositiveElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridPointsPositiveElectrodeCurrentCollectorTabWidth"),
+					"PositiveElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridPointsPositiveElectrodeCurrentCollectorTabLength"),
+					"NegativeElectrodeCoating" => create_property(parameter_meta, "GridPointsNegativeElectrodeCoating"),
+					"NegativeElectrodeActiveMaterial" => create_property(parameter_meta, "GridPointsNegativeElectrodeActiveMaterial"),
+					"NegativeElectrodeCurrentCollector" => create_property(parameter_meta, "GridPointsNegativeElectrodeCurrentCollector"),
+					"NegativeElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridPointsNegativeElectrodeCurrentCollectorTabWidth"),
+					"NegativeElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridPointsNegativeElectrodeCurrentCollectorTabLength"),
+					"Separator" => create_property(parameter_meta, "GridPointsSeparator"),
+				),
+				"required" => [
+					"PositiveElectrodeCoating",
+					"PositiveElectrodeActiveMaterial",
+					"NegativeElectrodeCoating",
+					"NegativeElectrodeActiveMaterial",
+					"Separator",
+				],
+			),
+			"Grid" => Dict(
+				"type" => "array",
+			),
+			"TimeStepDuration" => Dict("type" => "integer"),
+			"RampUpTime" => Dict("type" => "integer"),
+			"RampUpSteps" => Dict("type" => "integer"),
+		),
+		"required" => ["GridPoints", "Grid", "TimeStepDuration", "RampUpTime", "RampUpSteps"],
+	)
+
+	required_grid_points = schema["properties"]["GridPoints"]["required"]
+
+	if model_settings["ModelGeometry"] == "3D-demo"
+		push!(required_grid_points, "ElectrodeWidth")
+		push!(required_grid_points, "ElectrodeLength")
+
+		if model_settings["UseCurrentCollectors"]
+			push!(required_grid_points, "PositiveElectrodeCurrentCollector")
+			push!(required_grid_points, "PositiveElectrodeCurrentCollectorTabWidth")
+			push!(required_grid_points, "PositiveElectrodeCurrentCollectorTabLength")
+			push!(required_grid_points, "NegativeElectrodeCurrentCollector")
+			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabWidth")
+			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabLength")
+		end
+	end
+
+	return schema
+end
+
+
+function get_schema_model_settings()
+	parameter_meta = get_parameter_meta_data()
+	return Dict(
+		"\$schema" => "http://json-schema.org/draft-07/schema#",
+		"type" => "object",
+		"properties" => Dict(
+			"ModelGeometry" => create_property(parameter_meta, "ModelGeometry"),
+			"UseThermalModel" => create_property(parameter_meta, "UseThermalModel"),
+			"UseCurrentCollectors" => create_property(parameter_meta, "UseCurrentCollectors"),
+			"UseRampUp" => create_property(parameter_meta, "UseRampUp"),
+			"UseSEIModel" => create_property(parameter_meta, "UseSEIModel"),
+			"SEIModel" => create_property(parameter_meta, "SEIModel"),
+		),
+		"required" => [
+			"ModelGeometry",
+			"UseThermalModel",
+			"UseCurrentCollectors",
+			"UseRampUp",
+			"UseSEIModel",
+		],
+		"allOf" => [
+			# 🔹 If UseSEIModel is true, SEIModel must be present
+			Dict(
+				"if" => Dict(
+					"properties" => Dict("UseSEIModel" => Dict("const" => true)),
+					"required" => ["UseSEIModel"],
+				),
+				"then" => Dict(
+					"required" => ["SEIModel"],
+				),
+			),
+			# 🔹 If UseSEIModel is false, SEIModel must not be present
+			Dict(
+				"if" => Dict(
+					"properties" => Dict("UseSEIModel" => Dict("const" => false)),
+					"required" => ["UseSEIModel"],
+				),
+				"then" => Dict(
+					"not" => Dict("required" => ["SEIModel"]),
+				),
+			),
+			# 🔹 Enforce UseCurrentCollectors == false if ModelGeometry is 1D
+			Dict(
+				"if" => Dict(
+					"properties" => Dict("ModelGeometry" => Dict("const" => "1D")),
+					"required" => ["ModelGeometry"],
+				),
+				"then" => Dict(
+					"properties" => Dict("UseCurrentCollectors" => Dict("const" => false)),
+				),
+			),
+		],
+	)
+
+end
+

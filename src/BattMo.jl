@@ -177,7 +177,7 @@ include("input/reader.jl")
 include("input/function_input_tools.jl")
 include("input/formatter.jl")
 include("input/meta_data/parameters.jl")
-include("input/schemas/cell_parameter_set.jl")
+include("input/schemas/get_schema.jl")
 include("input/defaults/cell_parameter_set.jl")
 include("input/validator.jl")
 
