@@ -1,4 +1,4 @@
-# # How to run a model
+# # How to run a simulation
 #
 # BattMo simulations repicate the voltage-current response of a cell. To run a Battmo simulation, the basic workflow is:    
 # * Set up cell parameters 
@@ -25,7 +25,7 @@ nothing # hide
 
 
 # Next, we select the Lithium-Ion Battery Model with default model settings. A model can be thought as a mathematical implementation of the electrochemical and 
-# transport phenomena occuring in a real battery cell. The implmentation consist of a system of partial differential equations and their corresponding parameters, constants and boundary conditions. 
+# transport phenomena occuring in a real battery cell. The implementation consist of a system of partial differential equations and their corresponding parameters, constants and boundary conditions. 
 # The default Lithium-Ion Battery Model selected below corresponds to a basic P2D model, where neither current collectors nor thermal effects are considered.
 model = LithiumIonBatteryModel()
 
@@ -41,7 +41,7 @@ sim.is_valid
 
 # Now we can run the simulation
 output = solve(sim)
-
+nothing # hide
 
 
 # Now we'll have a look into what the output entail. The ouput is of type NamedTuple and contains multiple dicts. Lets print the
