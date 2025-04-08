@@ -62,15 +62,7 @@ function get_default_model_settings(::Type{LithiumIonBatteryModel})
 		"UseThermalModel" => false,
 		"UseCurrentCollectors" => false,
 		"UseSEIModel" => false,
-		"GridPointsPositiveElectrode" => 10,
-		"GridPointsPositiveElectrodeActiveMaterial" => 10,
-		"GridPointsNegativeElectrode" => 10,
-		"GridPointsNegativeElectrodeActiveMaterial" => 10,
-		"GridPointsSeparator" => 10,
-		"Grid" => [],
-		"TimeStepDuration" => 50,
 		"UseRampUp" => true,
-		"RampUpSteps" => 5,
 	)
 	return ModelSettings(settings)
 end

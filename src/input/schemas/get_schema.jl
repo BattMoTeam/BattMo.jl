@@ -355,7 +355,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 	sep_required = schema["properties"]["Separator"]["required"]
 	elyte_required = schema["properties"]["Electrolyte"]["required"]
 
-	model_settings_dict = model_settings.dict
+	model_settings_dict = model_settings.all
 
 	if model_settings_dict["ModelGeometry"] == "1D"
 		push!(cell_required, "ElectrodeGeometricSurfaceArea")

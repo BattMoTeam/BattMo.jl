@@ -27,26 +27,26 @@ if (!simple)
 	facz  = 2
 	fac2p = 1
 
-	fn                                                                              = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/old/3d_demo_geometry.json")
-	inputparams_geometry                                                            = read_battmo_formatted_input(fn)
-	inputparams_geometry.dict["Geometry"]["Nh"]                                     *= facy
-	inputparams_geometry.dict["Geometry"]["Nw"]                                     *= facx
-	inputparams_geometry.dict["Separator"]["N"]                                     *= facz
-	inputparams_geometry.dict["PositiveElectrode"]["Coating"]["N"]                  *= facz
-	inputparams_geometry.dict["NegativeElectrode"]["Coating"]["N"]                  *= facz
-	inputparams_geometry.dict["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"] *= facy
-	inputparams_geometry.dict["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"] *= facx
-	inputparams_geometry.dict["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"] *= facy
-	inputparams_geometry.dict["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"] *= facx
-	inputparams_geometry.dict["NegativeElectrode"]["CurrentCollector"]["N"]         *= facz
-	inputparams_geometry.dict["PositiveElectrode"]["CurrentCollector"]["N"]         *= facz
+	fn                                                                         = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/old/3d_demo_geometry.json")
+	inputparams_geometry                                                       = read_battmo_formatted_input(fn)
+	inputparams_geometry["Geometry"]["Nh"]                                     *= facy
+	inputparams_geometry["Geometry"]["Nw"]                                     *= facx
+	inputparams_geometry["Separator"]["N"]                                     *= facz
+	inputparams_geometry["PositiveElectrode"]["Coating"]["N"]                  *= facz
+	inputparams_geometry["NegativeElectrode"]["Coating"]["N"]                  *= facz
+	inputparams_geometry["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"] *= facy
+	inputparams_geometry["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"] *= facx
+	inputparams_geometry["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"] *= facy
+	inputparams_geometry["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"] *= facx
+	inputparams_geometry["NegativeElectrode"]["CurrentCollector"]["N"]         *= facz
+	inputparams_geometry["PositiveElectrode"]["CurrentCollector"]["N"]         *= facz
 
 else
 	#fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
 	fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/old/1D_geometry.json")
 	inputparams_geometry_org = read_battmo_formatted_input(fn)
 	inputparams_geometry = deepcopy(inputparams_geometry_org)
-	inputparams_geometry.dict["include_current_collectors"] = false
+	inputparams_geometry["include_current_collectors"] = false
 end
 
 inputparams = merge_input_params(deepcopy(inputparams_geometry), inputparams)

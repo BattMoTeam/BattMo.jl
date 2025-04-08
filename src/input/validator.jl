@@ -40,9 +40,8 @@ function validate_parameter_set(parameters::CellParameters, model_settings::Mode
 	# Convert schema Dict to JSONSchema object
 	schema_obj = Schema(schema)
 
-	parameters_dict = parameters.dict
 	# Validate the JSON data
-	result = validate(schema_obj, parameters_dict)
+	result = validate(schema_obj, parameters.all)
 
 	log_schema_issues(result.issues, "CellParameters")
 
@@ -65,9 +64,8 @@ function validate_parameter_set(parameters::SimulationSettings, model_settings::
 	# Convert schema Dict to JSONSchema object
 	schema_obj = Schema(schema)
 
-	parameters_dict = parameters.dict
 	# Validate the JSON data
-	result = validate(schema_obj, parameters_dict)
+	result = validate(schema_obj, parameters.all)
 
 	log_schema_issues(result.issues, "SimulationSettings")
 
@@ -90,9 +88,8 @@ function validate_parameter_set(parameters::ModelSettings)
 	# Convert schema Dict to JSONSchema object
 	schema_obj = Schema(schema)
 
-	parameters_dict = parameters.dict
 	# Validate the JSON data
-	result = validate(schema_obj, parameters_dict)
+	result = validate(schema_obj, parameters.all)
 
 	log_schema_issues(result.issues, "ModelSettings")
 
@@ -115,9 +112,8 @@ function validate_parameter_set(parameters::CyclingProtocol)
 	# Convert schema Dict to JSONSchema object
 	schema_obj = Schema(schema)
 
-	parameters_dict = parameters.dict
 	# Validate the JSON data
-	result = validate(schema_obj, parameters_dict)
+	result = validate(schema_obj, parameters.all)
 
 	log_schema_issues(result.issues, "CyclingProtocol")
 

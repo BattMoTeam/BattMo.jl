@@ -302,7 +302,7 @@ function setup_submodels(inputparams::InputParams;
 
 	include_cc = include_current_collectors(inputparams)
 
-	jsondict = inputparams.dict
+	jsondict = inputparams.all
 
 	grids, couplings = setup_grids_and_couplings(inputparams)
 
@@ -1600,7 +1600,7 @@ end
 
 function include_current_collectors(inputparams::InputParams)
 
-	jsondict = inputparams.dict
+	jsondict = inputparams.all
 
 	if haskey(jsondict, "include_current_collectors") && !jsondict["include_current_collectors"]
 		include_cc = false

@@ -40,7 +40,7 @@ function setup_timesteps(inputparams::MatlabInputParams;
 
 	if inputparams["use_state_ref"]
 
-		steps = size(inputparams.dict["states"], 1)
+		steps = size(inputparams.all["states"], 1)
 		alltimesteps = Vector{Float64}(undef, steps)
 		time = 0
 		end_step = 0
@@ -80,7 +80,7 @@ function setup_coupling_cross_terms!(inputparams::MatlabInputParams,
 	parameters::Dict{Symbol, <:Any},
 	couplings)
 
-	exported_all = inputparams.dict
+	exported_all = inputparams.all
 
 	include_cc = include_current_collectors(model)
 
@@ -538,7 +538,7 @@ function setup_battery_parameters(inputparams::MatlabInputParams,
 
 	parameters = Dict{Symbol, Any}()
 
-	exported = inputparams.dict
+	exported = inputparams.all
 
 	T0 = exported["model"]["initT"]
 
@@ -630,7 +630,7 @@ function setup_initial_state(inputparams::MatlabInputParams,
 	model::MultiModel,
 )
 
-	exported = inputparams.dict
+	exported = inputparams.all
 
 	state0 = exported["initstate"]
 
