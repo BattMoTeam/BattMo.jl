@@ -1,10 +1,9 @@
 # # Change input parameters
 
-# One way to change the values of our input parameters is the alter the value in the JSON file, which speaks for itself. 
-# But, as we saw in the first tutorial, BattMo uses the function `readBattMoJsonInputFile` to convert the JSON data to a Julia dict before running the simulation.
-# Therefore, it is also possible to change the input parameters by altering the dict.
+# To change cell parameters, cycling protocols and settings, we can modify the JSON files directly, or we can read 
+# them into objects in the script and modify them as Dictionaries. 
 
-# We create the input parameter dict like shown in the first tutorial.
+# Lets first read the parameters from the JSON files.
 
 using BattMo
 
@@ -15,36 +14,52 @@ cell_parameters = read_cell_parameters(file_path_cell)
 cycling_protocol = read_cycling_protocol(file_path_cycling)
 nothing # hide
 
-# We instantiate the model that we would like to work with.
+# You can inspect the contents of the parameter object as you would do with normal dictionaries.
+
+keys(cell_parameters)
+
+# ### Accessing parameters
+
+# Lets access what is inside the Separator key.
+
+cell_parameters["Separator"]
+
+# We have a flat list of parameters and values for the separator. In other cases, a key might nest other dictionaries, 
+# which can be accessed using the normal dictionary notation. Lets see for instance the  active material parameters of 
+# the negative electrode.
+
+cell_parameters["NegativeElectrode"]["ActiveMaterial"]
+
+# ### Editing scalar parameters
+
+# Parameter that take single numerical values (e.g. real, integers, booleans) can be directly modified. Examples:
+
+cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 1e-13
+nothing # hide
+
+cell_parameters["PositiveElectrode"]["ElectrodeCoating"]["Thickness"] = 8.2e-5
+nothing # hide
+
+
+# ### Editing non-scalar parameters
+
+# Some parameters are described as functions or arrays, since the parameter value depends on other variables. For instance
+# the Open Circuit Potentials of the Active Materials depend on the lithium stoichiometry and temperature. 
+
+# > MISSING 
+
+# ### Compare simulations 
+
+# After the updates, we instantiate the model and the simulations, verify the simulations to be valid, 
+# and run it as in the first tutorial.
 
 model = LithiumIonBatteryModel()
 
-
-# We have an `inputparams` object that corresponds to the json file 
-# [p2d_40_jl_chen2020.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/p2d_40_jl_chen2020.json) 
-# which we can investigate directly.
-
-# We can for example inspect the parameters for the electrolyte
-
-cell_parameters["Electrolyte"]
-
-# or of the active material of the negative electrode. At the active material, we find all the parameters related to the
-# active material reactions.
-
-active_material_params = cell_parameters["NegativeElectrode"]["ActiveMaterial"]
-
-# We can directly change one of these parameters. Let us for example change the reaction rate constant,
-
-active_material_params["ReactionRateConstant"] = 1e-13
-nothing # hide
-
-# We setup the simulation object and check if it's valid
-
 sim = Simulation(model, cell_parameters, cycling_protocol)
-# sim.is_valid
 
-# Then we solve for the simulation
 output = solve(sim);
+
+# > UPDATE WITH NEW OUTPUT API
 
 states = output[:states]
 t = [state[:Control][:ControllerCV].time for state in states]
@@ -58,10 +73,11 @@ ax = Axis(fig[1, 2], ylabel = "Current / I", xlabel = "Time / s", title = "Disch
 lines!(ax, t, I)
 fig
 
-# To compare the results, let us reload the previous input file and run it
+# To compare the results, let us reload the original parameter set and run a simulation with it. Note that we use 
+# the same model and simulation protocol.
 
-cell_parameters_2 = read_cell_parameters(file_path_cell)
-sim2 = Simulation(model, cell_parameters_2, cycling_protocol);
+cell_parameters_original = read_cell_parameters(file_path_cell)
+sim2 = Simulation(model, cell_parameters_original, cycling_protocol);
 output2 = solve(sim)
 nothing # hide
 
@@ -81,15 +97,18 @@ lines!(ax, t2, I2, label = "updated value")
 fig[1, 3] = Legend(fig, ax, "Reaction rate", framevisible = false)
 fig # hide
 
-# Then, it becomes clear that the values can be changed programatically. We iterate over a range of reaction rate and
+# ### Parameter Sweep
+#%%
+# We can of course change parameter values programatically. Lets iterate over a range of reaction rates and
 # collect the results in the `outputs` list. In the simulation configuration keywords `config_kwargs` we pass to
 # `run_battery`, we add the options of not printing out the full simulation report at the end of the simulation.
 
 outputs = []
 for r in range(5e-11, 1e-13, length = 5)
-	active_material_params["reactionRateConstant"] = r
+	cell_parameters_original["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = r
 	sim3 = Simulation(model, cell_parameters, cycling_protocol)
-	push!(outputs, solve(sim3; config_kwargs = (; end_report = false)))
+	current_simulation_output = solve(sim3; config_kwargs = (; end_report = false))
+	push!(outputs, current_simulation_output)
 end
 nothing # hide
 
@@ -107,3 +126,4 @@ for output in outputs
 end
 fig[1, 2] = Legend(fig, ax, "Reaction rate", framevisible = false)
 fig # hide
+#%%

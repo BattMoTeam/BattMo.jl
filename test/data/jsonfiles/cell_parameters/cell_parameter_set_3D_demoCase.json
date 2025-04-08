@@ -10,7 +10,12 @@
     "ElectrodeWidth": 1.0e-2,
     "ElectrodeLength": 2.0e-2,
     "ElectrodeGeometricSurfaceArea": 0.0002,
-    "HeatTransferCoefficient": 1000.0
+    "DeviceSurfaceArea": 0.0,
+    "DoubleCoatedElectrodes": null,
+    "NominalVoltage": 0.0,
+    "NominalCapacity": 0.0,
+    "HeatTransferCoefficient": 1000.0,
+    "InnerCellRadius": 0.0
   },
   "NegativeElectrode": {
     "ElectrodeCoating": {

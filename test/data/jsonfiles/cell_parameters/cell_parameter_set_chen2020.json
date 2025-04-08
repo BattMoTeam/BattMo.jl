@@ -8,7 +8,7 @@
         "Name": "LG INR 21700 M50",
         "Case": "Cylindrical",
         "ElectrodeWidth": 0.065,
-        "ElectrodeLength": 0.158,
+        "ElectrodeLength": 1.58,
         "ElectrodeGeometricSurfaceArea": 0.1027,
         "DeviceSurfaceArea": 0.0053,
         "DoubleCoatedElectrodes": true,
