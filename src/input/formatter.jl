@@ -247,3 +247,5 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 	return InputParams(battmo_input)
 
 end
+
+

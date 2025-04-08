@@ -1392,6 +1392,26 @@ function setup_config(sim::JutulSimulator,
 
 		cfg[:post_ministep_hook] = post_hook
 
+	elseif model[:Control].system.policy isa GenericPolicy
+		cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+
+		function post_hook(done, report, sim, dt, forces, max_iter, cfg)
+
+			s = get_simulator_storage(sim)
+			m = get_simulator_model(sim)
+
+			if s.state.Control.GenericController.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+				report[:stopnow] = true
+			else
+				report[:stopnow] = false
+			end
+
+			return (done, report)
+
+		end
+
+		cfg[:post_ministep_hook] = post_hook
+
 	end
 
 	return cfg

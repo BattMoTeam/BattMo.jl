@@ -168,6 +168,7 @@ include("input/input_types.jl")
 include("input/reader.jl")
 include("input/function_input_tools.jl")
 include("input/formatter.jl")
+include("input/experiment.jl")
 
 
 include("models/battmo_types.jl")
