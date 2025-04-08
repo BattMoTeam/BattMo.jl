@@ -13,16 +13,16 @@ import{_ as a,c as s,o as n,aA as e}from"./chunks/framework.7C67B1-w.js";const g
 <span class="line"><span>│ Timing type   │    Each │   Relative │  Total │</span></span>
 <span class="line"><span>│               │      ms │ Percentage │      s │</span></span>
 <span class="line"><span>├───────────────┼─────────┼────────────┼────────┤</span></span>
-<span class="line"><span>│ Properties    │  0.0471 │     0.23 % │ 0.0114 │</span></span>
-<span class="line"><span>│ Equations     │  7.6694 │    48.35 % │ 2.4542 │</span></span>
-<span class="line"><span>│ Assembly      │  0.6232 │     3.93 % │ 0.1994 │</span></span>
-<span class="line"><span>│ Linear solve  │  0.8401 │     4.02 % │ 0.2041 │</span></span>
+<span class="line"><span>│ Properties    │  0.0491 │     0.22 % │ 0.0119 │</span></span>
+<span class="line"><span>│ Equations     │  7.9569 │    47.72 % │ 2.5462 │</span></span>
+<span class="line"><span>│ Assembly      │  0.6454 │     3.87 % │ 0.2065 │</span></span>
+<span class="line"><span>│ Linear solve  │  0.9200 │     4.19 % │ 0.2236 │</span></span>
 <span class="line"><span>│ Linear setup  │  0.0000 │     0.00 % │ 0.0000 │</span></span>
 <span class="line"><span>│ Precond apply │  0.0000 │     0.00 % │ 0.0000 │</span></span>
-<span class="line"><span>│ Update        │  0.6323 │     3.03 % │ 0.1536 │</span></span>
-<span class="line"><span>│ Convergence   │  1.1036 │     6.96 % │ 0.3531 │</span></span>
-<span class="line"><span>│ Input/Output  │  0.6276 │     0.95 % │ 0.0483 │</span></span>
-<span class="line"><span>│ Other         │  6.7972 │    32.54 % │ 1.6517 │</span></span>
+<span class="line"><span>│ Update        │  0.6842 │     3.12 % │ 0.1663 │</span></span>
+<span class="line"><span>│ Convergence   │  1.1577 │     6.94 % │ 0.3705 │</span></span>
+<span class="line"><span>│ Input/Output  │  0.6776 │     0.98 % │ 0.0522 │</span></span>
+<span class="line"><span>│ Other         │  7.2351 │    32.95 % │ 1.7581 │</span></span>
 <span class="line"><span>├───────────────┼─────────┼────────────┼────────┤</span></span>
-<span class="line"><span>│ Total         │ 20.8891 │   100.00 % │ 5.0761 │</span></span>
+<span class="line"><span>│ Total         │ 21.9556 │   100.00 % │ 5.3352 │</span></span>
 <span class="line"><span>╰───────────────┴─────────┴────────────┴────────╯</span></span></code></pre></div><h2 id="Example-on-GitHub" tabindex="-1">Example on GitHub <a class="header-anchor" href="#Example-on-GitHub" aria-label="Permalink to &quot;Example on GitHub {#Example-on-GitHub}&quot;">​</a></h2><p>If you would like to run this example yourself, it can be downloaded from the BattMo.jl GitHub repository <a href="https://github.com/BattMoTeam/BattMo.jl/blob/main/examples/1_run_a_model.jl" target="_blank" rel="noreferrer">as a script</a>, or as a <a href="https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/1_run_a_model.ipynb" target="_blank" rel="noreferrer">Jupyter Notebook</a></p><hr><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl" target="_blank" rel="noreferrer">Literate.jl</a>.</em></p>`,16)]))}const d=a(i,[["render",o]]);export{g as __pageData,d as default};
