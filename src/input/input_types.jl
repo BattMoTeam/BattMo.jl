@@ -1,3 +1,4 @@
+#%%
 export ParameterSet
 export CellParameters, CyclingProtocol, ModelSettings, SimulationSettings, FullSimulationInput
 
@@ -143,11 +144,16 @@ function search_parameter(ps::ParameterSet, query::String)
 	dicts_to_search = [(ps.all, [])]
 
 	while !isempty(dicts_to_search)
+
 		dict, key_path = pop!(dicts_to_search)
+
 		for (key, value) in dict
+
 			if occursin(lowercase(query), lowercase(key))
 				formatted_key_path = "[" * join(vcat(key_path, key), "][") * "]"
-				push!(search_matches, formatted_key_path)
+				if !(value isa Dict)  
+                    push!(search_matches, formatted_key_path * " => " * string(value))
+                end
 			end
 			if value isa Dict
 				push!(dicts_to_search, (value, vcat(key_path, key)))
@@ -273,6 +279,3 @@ function merge_input_params(inputparams1::T, inputparams2::T; warn = false) wher
 	return T(dict)
 
 end
-
-
-

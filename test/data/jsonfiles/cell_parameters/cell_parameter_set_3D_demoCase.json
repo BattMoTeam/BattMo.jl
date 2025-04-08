@@ -10,6 +10,7 @@
     "ElectrodeWidth": 1.0e-2,
     "ElectrodeLength": 2.0e-2,
     "ElectrodeGeometricSurfaceArea": 0.0002,
+    "DoubleCoatedElectrodes": null,
     "HeatTransferCoefficient": 1000.0
   },
   "NegativeElectrode": {

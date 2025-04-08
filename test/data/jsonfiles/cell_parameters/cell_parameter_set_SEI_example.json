@@ -10,6 +10,7 @@
     "ElectrodeWidth": 1.0e-2,
     "ElectrodeLength": 2.0e-2,
     "ElectrodeGeometricSurfaceArea": 0.0002,
+    "DoubleCoatedElectrodes": null,
     "HeatTransferCoefficient": 1000.0
   },
   "NegativeElectrode": {
@@ -89,9 +90,6 @@
       "BruggemanCoefficient": 1.5,
       "EffectiveDensity": 3500.0,
       "Thickness": 8.0e-5,
-      "Width": 1.0e-2,
-      "Length": 2.0e-2,
-      "Area": 0.0002,
       "SurfaceCoefficientOfHeatTransfer": 1000
     },
     "ActiveMaterial": {
