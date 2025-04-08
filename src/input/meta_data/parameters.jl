@@ -5,7 +5,7 @@ function get_parameter_meta_data()
 	meta_data = Dict(
 		"Case" => Dict(
 			"type" => String,
-			"options" => ["Cylindrical", "Pouch", "CoinCell"],
+			"options" => ["3D-demo", "Cylindrical", "Pouch"],
 			"context_type" => "CellCaseType",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_case_type",
 		),
@@ -67,7 +67,7 @@ function get_parameter_meta_data()
 		"SurfaceCoefficientOfHeatTransfer" => Dict(
 			"type" => Real,
 			"min_value" => 5,
-			"max_value" => 100,
+			"max_value" => 10000,
 			"unit" => "W·m⁻²·K⁻¹",
 			"unit_name" => "emmo:WattPerSquareMetreKelvin",
 			"unit_iri" => "https://w3id.org/emmo#WattPerSquareMetreKelvin",
@@ -107,7 +107,7 @@ function get_parameter_meta_data()
 		"StoichiometricCoefficient" => Dict(
 			"type" => Real,
 			"min_value" => 0,
-			"max_value" => 1,
+			"max_value" => 10,
 			"unit" => "-",
 			"unit_name" => "dimensionless",
 			"unit_iri" => "https://w3id.org/emmo#Dimensionless",
@@ -126,7 +126,7 @@ function get_parameter_meta_data()
 		),
 		"InitialThickness" => Dict(
 			"type" => Real,
-			"min_value" => 1e-6,
+			"min_value" => 1e-9,
 			"max_value" => 1e-2,
 			"unit" => "m",
 			"unit_name" => "emmo:Metre",
@@ -309,10 +309,10 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#MolePerCubicMetre",
 		),
 		"ElectrodeGeometricSurfaceArea" => Dict(
-			"context_type" => "VolumetricSurfaceArea",
+			"context_type" => "ElectrodeGeometricSurfaceArea",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_a5571263_f153_448f_84a3_cd18092cf8fa",
-			"max_value" => 5000000.0,
-			"min_value" => 50000.0,
+			"max_value" => 1,
+			"min_value" => 0,
 			"description" => "Surface area of the material per volume of electrode",
 			"type" => Real,
 			"unit" => "m²m⁻³",
@@ -333,8 +333,8 @@ function get_parameter_meta_data()
 		"Density" => Dict(
 			"context_type" => "Density",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_06448f64_8db6_4304_8b2c_e785dba82044",
-			"max_value" => 5000.0,
-			"min_value" => 1000.0,
+			"max_value" => 10000.0,
+			"min_value" => 100.0,
 			"description" => "",
 			"type" => Real,
 			"unit" => "kg·m⁻³",
@@ -344,7 +344,7 @@ function get_parameter_meta_data()
 		"SpecificHeatCapacity" => Dict(
 			"context_type" => "SpecificHeatCapacity",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_b4f4ed28_d24c_4a00_9583_62ab839abeca",
-			"max_value" => 2000.0,
+			"max_value" => 3000.0,
 			"min_value" => 500.0,
 			"description" => "",
 			"type" => Real,
@@ -366,7 +366,7 @@ function get_parameter_meta_data()
 		"ElectronicConductivity" => Dict(
 			"context_type" => "ElectricConductivity",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_cde4368c_1d4d_4c94_8548_604749523c6d",
-			"max_value" => 1e6,
+			"max_value" => 1e8,
 			"min_value" => 0.01,
 			"description" => "The electronic conductivity of the material",
 			"type" => Real,
@@ -389,7 +389,7 @@ function get_parameter_meta_data()
 			"context_type" => "ReactionRateConstant",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_0335e3f6_d1d8_4daa_8376_a9285f1bc9f1",
 			"max_value" => 1e-2,
-			"min_value" => 1e-10,
+			"min_value" => 1e-13,
 			"description" => "the reaction rate constant of the electrochemical reaction",
 			"type" => Real,
 			"unit" => "mol·m⁻²·s⁻¹",
@@ -608,7 +608,7 @@ function get_parameter_meta_data()
 			"context_type" => "StateOfCharge",
 			"context_type_iri" => "https://w3id.org/emmo/domain/battery#battery_17591da0_34ec_41b9_b3c1_3a4446dc6f0a",
 			"max_value" => 1,
-			"min_value" => 0.05,
+			"min_value" => 0.0,
 			"description" => "SOC, state of charge of the battery, where 1 is fully charged and 0 is fully discharged",
 			"type" => Real,
 			"unit" => "1",
@@ -671,8 +671,8 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#Volt",
 		),
 		"CurrentChangeLimit" => Dict(
-			"max_value" => 0.05,
-			"min_value" => 0.0001,
+			"max_value" => 1.0e-1,
+			"min_value" => 1.0e-8,
 			"description" => "Limit for changes in current",
 			"type" => Real,
 			"unit" => "A·s⁻¹",

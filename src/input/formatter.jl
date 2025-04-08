@@ -35,21 +35,6 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	grid_points = get_key_value(simulation_settings, "GridPoints")
 
-	cell_width = minimum([
-		get_key_value(ne_coating, "Width"),
-		get_key_value(pe_coating, "Width"),
-	])
-
-	cell_length = minimum([
-		get_key_value(ne_coating, "Length"),
-		get_key_value(pe_coating, "Length"),
-	])
-
-	face_area = minimum([
-		get_key_value(ne_coating, "Area"),
-		get_key_value(pe_coating, "Area"),
-	])
-
 
 	battmo_input = Dict(
 		"G" => get_key_value(simulation_settings, "Grid"),
@@ -232,9 +217,9 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		),
 		"Geometry" => Dict(
 			"case" => get_key_value(model_settings, "ModelGeometry"),
-			"faceArea" => face_area,
-			"width" => cell_width,
-			"height" => cell_length,
+			"faceArea" => get_key_value(cell, "ElectrodeGeometricSurfaceArea"),
+			"width" => get_key_value(cell, "ElectrodeWidth"),
+			"height" => get_key_value(cell, "ElectrodeLength"),
 			"Nw" => get_key_value(grid_points, "ElectrodeWidth"),
 			"Nh" => get_key_value(grid_points, "ElectrodeLength"),
 		),
