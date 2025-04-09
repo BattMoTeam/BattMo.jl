@@ -1,8 +1,9 @@
-# # Exploring the Impact of C-Rate in a CC Discharge Protocol
+# # Handling cycling protocols
 
-# In this tutorial, we demonstrate the effect that the CRate has on battery performance during discharge, using a constant-current (CC) discharge protocol.
+# In this tutorial, we demonstrate functionality to handle cycling protcols, by illustrating the effect that the CRate has on battery 
+# performance during discharge, using a constant-current (CC) discharge protocol.
 
-# ### Load Required Packages and Data
+# ### Load required packages and data
 # We start by loading the necessary parameters sets and instantiating a model. For the cyling protocol, we'll start from the default constant current discharge protocol.
 
 using BattMo, GLMakie, Printf
