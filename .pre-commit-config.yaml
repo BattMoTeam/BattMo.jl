@@ -1,0 +1,7 @@
+repos:
+- repo: local
+  hooks:
+    - id: format
+      name: JuliaFormatter
+      entry: julia --project="." -e 'using Pkg; Pkg.instantiate(); using JuliaFormatter; format(".", BlueStyle(); verbose=true)'
+      language: system
