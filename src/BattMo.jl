@@ -6,7 +6,6 @@ module BattMo
 using PrecompileTools                             # Precompilation optimizations
 using RuntimeGeneratedFunctions                   # Code generation
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 📂 File Handling & Data Processing
 # ─────────────────────────────────────────────────────────────────────────────
@@ -18,9 +17,6 @@ using JSONSchema: Schema, SingleIssue
 
 # Non-exported JSONSchema functions and types
 import JSONSchema: show, isvalid, _resolve_refs
-
-
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🧮 Mathematical & Computational Tools
@@ -34,7 +30,6 @@ using Statistics                                  # Basic statistical functions
 using StatsBase: inverse_rle                      # Statistical utility
 using Tullio: @tullio                             # Einstein summation notation
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 🏗️ Jutul Core Structures & functions
 # ─────────────────────────────────────────────────────────────────────────────
@@ -44,7 +39,6 @@ using Jutul: physical_representation
 using Jutul: @tic, @jutul_secondary
 
 using Jutul: ProgressRecorder
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🏗️ Physical and mathemathical models
@@ -80,17 +74,16 @@ using Jutul: declare_entities
 using Jutul: count_entities, count_active_entities
 using Jutul: degrees_of_freedom_per_entity, number_of_entities
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 🏗️ Equations
 # ─────────────────────────────────────────────────────────────────────────────
 using Jutul: JutulEquation, DiagonalEquation
 
-using Jutul: update_equation!, update_equation_in_entity!, update_linearized_system_equation!
+using Jutul:
+    update_equation!, update_equation_in_entity!, update_linearized_system_equation!
 using Jutul: fill_equation_entries!, apply_forces_to_equation!
 using Jutul: select_equations!
 using Jutul: number_of_equations_per_entity
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🏗️ Mesh and Discretization
@@ -103,7 +96,6 @@ using Jutul: number_of_faces, number_of_boundary_faces, number_of_cells
 using Jutul: compute_face_trans, compute_half_face_trans, compute_boundary_trans
 using Jutul: compute_centroid_and_measure
 using Jutul: local_discretization
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🏗️ Cross terms
@@ -120,7 +112,6 @@ using Jutul: update_cross_term!, update_cross_term_in_entity!
 using Jutul: face_flux!, half_face_flux_cells_alignment!
 using Jutul: update_half_face_flux!
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 🎛️ Simulation and model
 # ─────────────────────────────────────────────────────────────────────────────
@@ -134,7 +125,6 @@ using Jutul: initialize_primary_variable_ad!, initialize_variable_ad!
 using Jutul: get_neighborship, get_simulator_storage, get_simulator_model
 using Jutul: get_submodel_offsets, submodels_symbols
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 🔍 Solver, Convergence & Preconditioning
 # ─────────────────────────────────────────────────────────────────────────────
@@ -144,9 +134,9 @@ using Jutul: LUSolver
 
 using Jutul: check_convergence, convergence_criterion, linear_solve!
 using Jutul: update_preconditioner!, apply!, mul!, operator_nrows
-using Jutul: perform_step_solve_impl!, reset_state_to_previous_state!, partial_update_preconditioner!
+using Jutul:
+    perform_step_solve_impl!, reset_state_to_previous_state!, partial_update_preconditioner!
 using Jutul: is_left_preconditioner, is_right_preconditioner, opEye
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🏗️ Matrix & Linear System Handling
@@ -155,7 +145,6 @@ using Jutul: align_to_jacobian!, diagonal_alignment!
 using Jutul: get_jacobian_pos, linear_operator, transfer, operator_nrows, matrix_layout
 using Jutul: get_diagonal_entries
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 🛠️ Other
 # ─────────────────────────────────────────────────────────────────────────────
@@ -163,12 +152,9 @@ using Jutul: get_dependencies, get_entry, convert_to_immutable_storage
 using Jutul: tpfv_geometry, apply!, is_cell_major
 using Jutul: StaticCSR, ParallelCSRContext
 
-
 timeit_debug_enabled() = Jutul.timeit_debug_enabled()
 
-
 RuntimeGeneratedFunctions.init(@__MODULE__)
-
 
 include("utils/physical_constants.jl")
 
@@ -180,7 +166,6 @@ include("input/meta_data/parameters.jl")
 include("input/schemas/get_schema.jl")
 include("input/defaults/cell_parameter_set.jl")
 include("input/validator.jl")
-
 
 include("models/battmo_types.jl")
 include("models/full_battery_models/battery_model.jl")

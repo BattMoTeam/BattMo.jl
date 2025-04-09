@@ -13,15 +13,13 @@ function get_neigh(c, model)
     (T = a, face = b, self = c, other = d)
     of all neighbours of cell c.
     """
-    mf        = model.domain.discretizations.charge_flow
-    conn_pos  = mf.conn_pos
+    mf = model.domain.discretizations.charge_flow
+    conn_pos = mf.conn_pos
     conn_data = mf.conn_data
-    indx      = conn_pos[c]:(conn_pos[c + 1] - 1)
-    
-    return conn_data[indx]
-    
-end
+    indx = conn_pos[c]:(conn_pos[c + 1] - 1)
 
+    return conn_data[indx]
+end
 
 ##############
 # Tensormaps #
@@ -37,19 +35,19 @@ function face_to_cell!(j_cell, J, c, model)
     j_c[c, c', i] = P_[c, f, i] * J_[f, c'] (c'=cell dependence)
     """
 
-    P        = model.domain.representation.P
-    mf       = model.domain.discretizations.charge_flow
-    cfcv     = mf.cellfacecellvec
+    P = model.domain.representation.P
+    mf = model.domain.discretizations.charge_flow
+    cfcv = mf.cellfacecellvec
     cfcv2ccv = mf.maps.cfcv2ccv
-    cfcv2fc  = mf.maps.cfcv2fc
-    bool     = mf.maps.cfcv2fc_bool
+    cfcv2fc = mf.maps.cfcv2fc
+    bool = mf.maps.cfcv2fc_bool
 
-    for j in cfcv.pos[c]:(cfcv.pos[c+1]-1)
+    for j in cfcv.pos[c]:(cfcv.pos[c + 1] - 1)
         c, f, n, i = cfcv.tbl[j]
         cni = cfcv2ccv[j]
         fc = cfcv2fc[j]
         Jfc = bool[j] ? J[fc] : value(J[fc])
-        j_cell[cni] += P[2*(c-1) + i, f] * Jfc
+        j_cell[cni] += P[2 * (c - 1) + i, f] * Jfc
     end
 end
 
@@ -59,19 +57,17 @@ function vec_to_scalar!(jsq, j, c, model)
     modulus square
     jsq[c, c'] = S[c, 2*(c-1) + i] * j[c, c', i]^2
     """
-    S      = model.domain.representation.S
-    mf     = model.domain.discretizations.charge_flow
-    ccv    = mf.cellcellvec
+    S = model.domain.representation.S
+    mf = model.domain.discretizations.charge_flow
+    ccv = mf.cellcellvec
     ccv2cc = mf.maps.ccv2cc
-    
-    for cni in ccv.pos[c] : (ccv.pos[c + 1] - 1)
-        c, n, i  = ccv.tbl[cni]
-        cn       = ccv2cc[cni]
-        jsq[cn] += S[c, 2*(c-1) + i] * j[cni]^2
-    end
-    
-end
 
+    for cni in ccv.pos[c]:(ccv.pos[c + 1] - 1)
+        c, n, i = ccv.tbl[cni]
+        cn = ccv2cc[cni]
+        jsq[cn] += S[c, 2 * (c - 1) + i] * j[cni]^2
+    end
+end
 
 ##############################
 # Table generating functions #
@@ -80,35 +76,32 @@ end
 # TODO: Make sure the order of the loops give optimal performance
 
 function get_cellfacecellvec_tbl(cdata, cpos)
-
     cfcv_tbl = []
     cfcv_pos = [1]
     nc = length(cpos) - 1
 
     for c in 1:nc
-        for fp in cpos[c]:(cpos[c+1]-1)
+        for fp in cpos[c]:(cpos[c + 1] - 1)
             f = cdata[fp].face
 
             for i in 1:2
-                cfcv = (cell =c, face =f, cell_dep =c, vec =i)
+                cfcv = (cell=c, face=f, cell_dep=c, vec=i)
                 push!(cfcv_tbl, cfcv)
             end
 
-            for np in cpos[c]:(cpos[c+1]-1)
+            for np in cpos[c]:(cpos[c + 1] - 1)
                 n = cdata[np].other
                 for i in 1:2
-                    cfcv = (cell =c, face =f, cell_dep =n, vec =i)
+                    cfcv = (cell=c, face=f, cell_dep=n, vec=i)
                     push!(cfcv_tbl, cfcv)
                 end
             end
-
         end
         push!(cfcv_pos, size(cfcv_tbl, 1)+1)
     end
 
-    return (tbl =cfcv_tbl, pos =cfcv_pos)
+    return (tbl=cfcv_tbl, pos=cfcv_pos)
 end
-
 
 function get_cellcellvec_tbl(cdata, cpos)
     ccv_tbl = []
@@ -116,16 +109,15 @@ function get_cellcellvec_tbl(cdata, cpos)
     nc = length(cpos) - 1
 
     for c in 1:nc
-
         for i in 1:2
-            ccv = (cell =c, cell_dep =c, vec =i)
+            ccv = (cell=c, cell_dep=c, vec=i)
             push!(ccv_tbl, ccv)
         end
 
-        for np in cpos[c]:(cpos[c+1]-1)
+        for np in cpos[c]:(cpos[c + 1] - 1)
             n = cdata[np].other
             for i in 1:2
-                ccv = (cell =c, cell_dep =n, vec =i)
+                ccv = (cell=c, cell_dep=n, vec=i)
                 push!(ccv_tbl, ccv)
             end
         end
@@ -133,7 +125,7 @@ function get_cellcellvec_tbl(cdata, cpos)
         push!(ccv_pos, size(ccv_tbl, 1)+1)
     end
 
-    return (tbl =ccv_tbl, pos =ccv_pos)
+    return (tbl=ccv_tbl, pos=ccv_pos)
 end
 
 function get_cellcell_tbl(cdata, cpos)
@@ -142,18 +134,17 @@ function get_cellcell_tbl(cdata, cpos)
     nc = length(cpos) - 1
 
     for c in 1:nc
-
-        cc = (cell =c, cell_dep =c)
+        cc = (cell=c, cell_dep=c)
         push!(cc_tbl, cc)
-        for np in cpos[c]:(cpos[c+1]-1)
+        for np in cpos[c]:(cpos[c + 1] - 1)
             n = cdata[np].other
-            cc = (cell =c, cell_dep =n)
+            cc = (cell=c, cell_dep=n)
             push!(cc_tbl, cc)
         end
 
         push!(cc_pos, size(cc_tbl, 1)+1)
     end
-    return (tbl =cc_tbl, pos =cc_pos)
+    return (tbl=cc_tbl, pos=cc_pos)
 end
 
 ##############
@@ -188,7 +179,7 @@ function get_fc_index(f, c, conn_data)
         return indx[1], true
     elseif bool[indx[2]][2]
         return indx[2], true
-    else   
+    else
         return indx[1][1], false
     end
 end
@@ -203,7 +194,6 @@ function get_cc_index(c, n, tbl)
     @assert size(indx, 1) == 1 "Invalid or duplicate face cell combo, size = $(size(indx)) for (c, n) = ($c, $n)"
     return indx[1]
 end
-
 
 function get_cfcv2ccv_map(cfcv, ccv)
     """

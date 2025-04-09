@@ -9,8 +9,16 @@
 using BattMo, GLMakie, Printf
 
 # Load cell and model setup
-cell_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_chen2020_calibrated.json")
-cycling_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCDischarge.json")
+cell_path = string(
+    dirname(pathof(BattMo)),
+    "/../test/data/jsonfiles/cell_parameters/",
+    "cell_parameter_set_chen2020_calibrated.json",
+)
+cycling_path = string(
+    dirname(pathof(BattMo)),
+    "/../test/data/jsonfiles/cycling_protocols/",
+    "CCDischarge.json",
+)
 
 cell_parameters = read_cell_parameters(cell_path)
 cc_discharge_protocol = read_cycling_protocol(cycling_path)
@@ -30,31 +38,29 @@ c_rates = [0.2, 0.5, 1.0, 2.0]
 outputs = []
 
 for c_rate in c_rates
-	protocol = deepcopy(cc_discharge_protocol)
-	protocol["DRate"] = c_rate
+    protocol = deepcopy(cc_discharge_protocol)
+    protocol["DRate"] = c_rate
 
-	sim = Simulation(model, cell_parameters, protocol)
-	output = solve(sim; config_kwargs = (; end_report = false))
-	push!(outputs, (c_rate = c_rate, output = output))
+    sim = Simulation(model, cell_parameters, protocol)
+    output = solve(sim; config_kwargs=(; end_report=false))
+    push!(outputs, (c_rate=c_rate, output=output))
 end
 nothing # hide
 # ### Analyze Voltage and Capacity
 # We'll extract the voltage vs. time and delivered capacity for each C-rate:
 
-fig = Figure(size = (1000, 400))
-ax1 = Axis(fig[1, 1], title = "Voltage vs Time", xlabel = "Time / s", ylabel = "Voltage / V")
+fig = Figure(; size=(1000, 400))
+ax1 = Axis(fig[1, 1]; title="Voltage vs Time", xlabel="Time / s", ylabel="Voltage / V")
 
 for result in outputs
+    states = result.output[:states]
+    t = [state[:Control][:ControllerCV].time for state in states]
+    E = [state[:Control][:Phi][1] for state in states]
+    I = [state[:Control][:Current][1] for state in states]
 
-	states = result.output[:states]
-	t = [state[:Control][:ControllerCV].time for state in states]
-	E = [state[:Control][:Phi][1] for state in states]
-	I = [state[:Control][:Current][1] for state in states]
-
-	label_str = @sprintf("%.1fC", result.c_rate)
-	lines!(ax1, t, E, label = label_str)
-
+    label_str = @sprintf("%.1fC", result.c_rate)
+    lines!(ax1, t, E; label=label_str)
 end
 
-fig[1, 3] = Legend(fig, ax1, "C-rates", framevisible = false)
+fig[1, 3] = Legend(fig, ax1, "C-rates"; framevisible=false)
 fig

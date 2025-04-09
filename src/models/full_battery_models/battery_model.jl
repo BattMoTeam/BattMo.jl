@@ -1,6 +1,5 @@
 export BatteryModel
 
-
 """
 	abstract type BatteryModel
 

@@ -1,12 +1,12 @@
 #%%
 export ParameterSet
-export CellParameters, CyclingProtocol, ModelSettings, SimulationSettings, FullSimulationInput
+export CellParameters,
+    CyclingProtocol, ModelSettings, SimulationSettings, FullSimulationInput
 
 export BattMoFormattedInput
 export BattMoInput, MatlabBattMoInput
 
 export merge_input_params, search_parameter
-
 
 """
 	AbstractInput
@@ -17,8 +17,6 @@ For any structure of this type, it is possible to access and set the values of t
 standard Julia [dictionary](https://docs.julialang.org/en/v1/base/collections/#Dictionaries).
 """
 abstract type AbstractInput end
-
-
 
 #########################################################
 # Extensions for Abstract type AbstractInput
@@ -36,14 +34,13 @@ Extends `Base.getindex` to enable dictionary-like access to subtypes of `Abstrac
 The value associated with `key`. If the key is not found, an error is thrown.
 """
 function Base.getindex(ps::AbstractInput, key::String)
-	value = get(ps.all, key, nothing)
-	if value === nothing
-		error("Parameter not found: $key")
-	else
-		return value
-	end
+    value = get(ps.all, key, nothing)
+    if value === nothing
+        error("Parameter not found: $key")
+    else
+        return value
+    end
 end
-
 
 """
 	Base.setindex!(ps::AbstractInput, value, key::String)
@@ -56,7 +53,7 @@ Extends `Base.setindex!` to allow setting values in the parameter set.
 - `key ::String` : The key to assign the value to.
 """
 function Base.setindex!(ps::AbstractInput, value, key::String)
-	ps.all[key] = value
+    ps.all[key] = value
 end
 
 """
@@ -72,49 +69,46 @@ Extends `Base.get` to retrieve values from the parameter set with a default fall
 # Returns
 The value associated with `key` or `default` if the key is not found.
 """
-function Base.get(ps::AbstractInput, key, default = nothing)
-	return get(ps.all, key, default)
+function Base.get(ps::AbstractInput, key, default=nothing)
+    return get(ps.all, key, default)
 end
-
 
 """
 New method extending Base.keys to enable listing all keys in the ParameterSet
 """
 function Base.keys(ps::AbstractInput)
-	return keys(ps.all)
+    return keys(ps.all)
 end
 
 """
 New method extending Base.haskey to check if key exists
 """
 function Base.haskey(ps::AbstractInput, key::String)
-	return haskey(ps.all, key)
+    return haskey(ps.all, key)
 end
 
 """
 New method extending Base.push! to insert a new parameter-value pair
 """
-function Base.push!(ps::AbstractInput, pair::Pair{String, Any})
-	push!(ps.all, pair)
-	return ps
+function Base.push!(ps::AbstractInput, pair::Pair{String,Any})
+    push!(ps.all, pair)
+    return ps
 end
 
 """
 New method extending Base.delete! to remove a parameter-value pair
 """
 function Base.delete!(ps::AbstractInput, key::String)
-	delete!(ps.all, key)
+    delete!(ps.all, key)
 end
 
 """
 New method extending Base.iterate to enable iteration in for loops
 """
 # Extend Base.iterate() - Enable iteration (for loops)
-function Base.iterate(ps::AbstractInput, state = nothing)
-	return iterate(ps.all, state)
+function Base.iterate(ps::AbstractInput, state=nothing)
+    return iterate(ps.all, state)
 end
-
-
 
 ##################################################################
 # Abstract type for parameter sets
@@ -140,28 +134,26 @@ Searches for a parameter key in the nested dictionary structure and returns matc
 A list of matching parameter key paths if found, otherwise `nothing`.
 """
 function search_parameter(ps::ParameterSet, query::String)
-	search_matches = []
-	dicts_to_search = [(ps.all, [])]
+    search_matches = []
+    dicts_to_search = [(ps.all, [])]
 
-	while !isempty(dicts_to_search)
+    while !isempty(dicts_to_search)
+        dict, key_path = pop!(dicts_to_search)
 
-		dict, key_path = pop!(dicts_to_search)
-
-		for (key, value) in dict
-
-			if occursin(lowercase(query), lowercase(key))
-				formatted_key_path = "[" * join(vcat(key_path, key), "][") * "]"
-				if !(value isa Dict)  
+        for (key, value) in dict
+            if occursin(lowercase(query), lowercase(key))
+                formatted_key_path = "[" * join(vcat(key_path, key), "][") * "]"
+                if !(value isa Dict)
                     push!(search_matches, formatted_key_path * " => " * string(value))
                 end
-			end
-			if value isa Dict
-				push!(dicts_to_search, (value, vcat(key_path, key)))
-			end
-		end
-	end
+            end
+            if value isa Dict
+                push!(dicts_to_search, (value, vcat(key_path, key)))
+            end
+        end
+    end
 
-	return isempty(search_matches) ? nothing : search_matches
+    return isempty(search_matches) ? nothing : search_matches
 end
 
 ###########################################
@@ -169,32 +161,28 @@ end
 
 "Cell parameter set type that represents the cell parameters"
 struct CellParameters <: ParameterSet
-	all::Dict{String, Any}
-
+    all::Dict{String,Any}
 end
 
 "Parameter set type that represents the cycling protocol related parameters"
 struct CyclingProtocol <: ParameterSet
-	all::Dict{String, Any}
+    all::Dict{String,Any}
 end
 
 "Parameter set type that represents the model related settings"
 struct ModelSettings <: ParameterSet
-	all::Dict{String, Any}
+    all::Dict{String,Any}
 end
-
 
 "Parameter set type that represents the simulation related settings"
 struct SimulationSettings <: ParameterSet
-	all::Dict{String, Any}
+    all::Dict{String,Any}
 end
 
 "Parameter set type that includes all other parameter set types"
 struct FullSimulationInput <: ParameterSet
-	all::Dict{String, Any}
+    all::Dict{String,Any}
 end
-
-
 
 ################################################################
 # BattMo formatted input types (the validated and to the backend formatted input prameters)
@@ -207,7 +195,6 @@ Subtypes of `BattMoFormattedInput` contain parameter dictionaries structured for
 """
 abstract type BattMoFormattedInput <: AbstractInput end
 
-
 """
 	struct InputParams <: BattMoFormattedInput
 
@@ -217,10 +204,8 @@ Represents a validated and backend-formatted set of input parameters for a BattM
 - `data ::Dict{String, Any}` : A dictionary storing the input parameters for BattMo.
 """
 struct InputParams <: BattMoFormattedInput
-	all::Dict{String, Any}
-
+    all::Dict{String,Any}
 end
-
 
 """
 	struct MatlabInputParams <: BattMoFormattedInput
@@ -231,28 +216,25 @@ Represents input parameters derived from MATLAB-generated files, formatted for B
 - `data ::Dict{String, Any}` : A dictionary storing MATLAB-extracted input parameters.
 """
 struct MatlabInputParams <: BattMoFormattedInput
-	all::Dict{String, Any}
+    all::Dict{String,Any}
 end
-
 
 const InputGeometryParams = InputParams
 
-function recursive_merge_dict(d1, d2; warn = false)
+function recursive_merge_dict(d1, d2; warn=false)
+    if isa(d1, Dict) && isa(d2, Dict)
+        combiner(d1, d2) = recursive_merge_dict(d1, d2; warn=warn)
+        return mergewith(combiner, d1, d2)
 
-	if isa(d1, Dict) && isa(d2, Dict)
+    else
+        if (d1 != d2) && warn
+            println(
+                "Some variables have distinct values, we use the value give by the first one",
+            )
+        end
 
-		combiner(d1, d2) = recursive_merge_dict(d1, d2; warn = warn)
-		return mergewith(combiner, d1, d2)
-
-	else
-
-		if (d1 != d2) && warn
-			println("Some variables have distinct values, we use the value give by the first one")
-		end
-
-		return d1
-
-	end
+        return d1
+    end
 end
 
 """ 
@@ -268,14 +250,14 @@ end
 # Returns
 A `AbstractInput` structure whose field are the composition of the two input parameter structures.
 """
-function merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: AbstractInput}
+function merge_input_params(
+    inputparams1::T, inputparams2::T; warn=false
+) where {T<:AbstractInput}
+    dict1 = inputparams1.all
+    dict2 = inputparams2.all
 
-	dict1 = inputparams1.all
-	dict2 = inputparams2.all
+    combiner(d1, d2) = recursive_merge_dict(d1, d2; warn=warn)
+    dict = mergewith!(combiner, dict1, dict2)
 
-	combiner(d1, d2) = recursive_merge_dict(d1, d2; warn = warn)
-	dict = mergewith!(combiner, dict1, dict2)
-
-	return T(dict)
-
+    return T(dict)
 end

@@ -16,13 +16,20 @@ using BattMo, GLMakie
 # the cell parameter set from a NMC811 vs Graphite-SiOx cell whose parameters were determined in the [Chen 2020 paper](https://doi.org/10.1149/1945-7111/ab9050). 
 # We also read an example cycling protocol for a simple Constant Current Discharge.
 
-file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_chen2020_calibrated.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCDischarge.json")
+file_path_cell = string(
+    dirname(pathof(BattMo)),
+    "/../test/data/jsonfiles/cell_parameters/",
+    "cell_parameter_set_chen2020_calibrated.json",
+)
+file_path_cycling = string(
+    dirname(pathof(BattMo)),
+    "/../test/data/jsonfiles/cycling_protocols/",
+    "CCDischarge.json",
+)
 
 cell_parameters = read_cell_parameters(file_path_cell)
 cycling_protocol = read_cycling_protocol(file_path_cycling)
 nothing # hide
-
 
 # Next, we select the Lithium-Ion Battery Model with default model settings. A model can be thought as a mathematical implementation of the electrochemical and 
 # transport phenomena occuring in a real battery cell. The implementation consist of a system of partial differential equations and their corresponding parameters, constants and boundary conditions. 
@@ -42,7 +49,6 @@ sim.is_valid
 # Now we can run the simulation
 output = solve(sim)
 nothing # hide
-
 
 # Now we'll have a look into what the output entail. The ouput is of type NamedTuple and contains multiple dicts. Lets print the
 # keys of each dict. 
@@ -95,52 +101,36 @@ nothing # hide
 
 # Now we can use GLMakie to create a plot. Lets first plot the cell voltage.
 
-f = Figure(size = (1000, 400))
+f = Figure(; size=(1000, 400))
 
-ax = Axis(f[1, 1],
-	title = "Voltage",
-	xlabel = "Time / s",
-	ylabel = "Voltage / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
+ax = Axis(
+    f[1, 1];
+    title="Voltage",
+    xlabel="Time / s",
+    ylabel="Voltage / V",
+    xlabelsize=25,
+    ylabelsize=25,
+    xticklabelsize=25,
+    yticklabelsize=25,
 )
 
-
-scatterlines!(ax,
-	t,
-	E;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-)
+scatterlines!(ax, t, E; linewidth=4, markersize=10, marker=:cross, markercolor=:black)
 
 f # hide
 
 # And the cell current.
 
-ax = Axis(f[1, 2],
-	title = "Current",
-	xlabel = "Time / s",
-	ylabel = "Current / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
+ax = Axis(
+    f[1, 2];
+    title="Current",
+    xlabel="Time / s",
+    ylabel="Current / V",
+    xlabelsize=25,
+    ylabelsize=25,
+    xticklabelsize=25,
+    yticklabelsize=25,
 )
 
-
-scatterlines!(ax,
-	t,
-	I;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-)
-
+scatterlines!(ax, t, I; linewidth=4, markersize=10, marker=:cross, markercolor=:black)
 
 f # hide
-

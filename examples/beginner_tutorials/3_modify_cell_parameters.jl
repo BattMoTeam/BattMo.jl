@@ -11,8 +11,16 @@
 
 using BattMo
 
-file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_chen2020_calibrated.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCDischarge.json")
+file_path_cell = string(
+    dirname(pathof(BattMo)),
+    "/../test/data/jsonfiles/cell_parameters/",
+    "cell_parameter_set_chen2020_calibrated.json",
+)
+file_path_cycling = string(
+    dirname(pathof(BattMo)),
+    "/../test/data/jsonfiles/cycling_protocols/",
+    "CCDischarge.json",
+)
 
 cell_parameters = read_cell_parameters(file_path_cell)
 cycling_protocol = read_cycling_protocol(file_path_cycling)
@@ -26,7 +34,6 @@ search_parameter(cell_parameters, "Electrode")
 
 # Another example where we'd like to now which concentration parameters are part of the parameter set:
 search_parameter(cell_parameters, "Concentration")
-
 
 # Lets access what is inside the Separator key.
 
@@ -47,7 +54,6 @@ nothing # hide
 
 cell_parameters["PositiveElectrode"]["ElectrodeCoating"]["Thickness"] = 8.2e-5
 nothing # hide
-
 
 # ### Editing non-scalar parameters
 
@@ -73,9 +79,9 @@ E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 using GLMakie # hide
 fig = Figure()
-ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
+ax = Axis(fig[1, 1]; ylabel="Voltage / V", xlabel="Time / s", title="Discharge curve")
 lines!(ax, t, E)
-ax = Axis(fig[1, 2], ylabel = "Current / I", xlabel = "Time / s", title = "Discharge curve")
+ax = Axis(fig[1, 2]; ylabel="Current / I", xlabel="Time / s", title="Discharge curve")
 lines!(ax, t, I)
 fig
 
@@ -95,23 +101,23 @@ E2 = [state[:Control][:Phi][1] for state in output2[:states]]
 I2 = [state[:Control][:Current][1] for state in output2[:states]]
 
 fig = Figure()
-ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
+ax = Axis(fig[1, 1]; ylabel="Voltage / V", xlabel="Time / s", title="Discharge curve")
 lines!(ax, t, E)
 lines!(ax, t2, E2)
-ax = Axis(fig[1, 2], ylabel = "Current / A", xlabel = "Time / s")
-lines!(ax, t, I, label = "intial value")
-lines!(ax, t2, I2, label = "updated value")
-fig[1, 3] = Legend(fig, ax, "Reaction rate", framevisible = false)
+ax = Axis(fig[1, 2]; ylabel="Current / A", xlabel="Time / s")
+lines!(ax, t, I; label="intial value")
+lines!(ax, t2, I2; label="updated value")
+fig[1, 3] = Legend(fig, ax, "Reaction rate"; framevisible=false)
 fig # hide
 
 # ### Sweep Over Reaction Rate Constants
 # We can now explore how the reaction rate constant affects the battery performance. We loop over a range of values, update the parameter, and collect results:
 outputs = []
-for r in range(5e-11, 1e-13, length = 5)
-	cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = r
-	sim3 = Simulation(model, cell_parameters, cycling_protocol)
-	result = solve(sim3; config_kwargs = (; end_report = false))
-	push!(outputs, (r = r, output = result))  # store r together with output
+for r in range(5e-11, 1e-13; length=5)
+    cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = r
+    sim3 = Simulation(model, cell_parameters, cycling_protocol)
+    result = solve(sim3; config_kwargs=(; end_report=false))
+    push!(outputs, (r=r, output=result))  # store r together with output
 end
 nothing # hide
 
@@ -119,15 +125,15 @@ nothing # hide
 
 using Printf
 fig = Figure()
-ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
+ax = Axis(fig[1, 1]; ylabel="Voltage / V", xlabel="Time / s", title="Discharge curve")
 
 for data in outputs
-	local t = [state[:Control][:ControllerCV].time for state in data.output[:states]]
-	local E = [state[:Control][:Phi][1] for state in data.output[:states]]
-	lines!(ax, t, E, label = @sprintf("%.1e", data.r))
+    local t = [state[:Control][:ControllerCV].time for state in data.output[:states]]
+    local E = [state[:Control][:Phi][1] for state in data.output[:states]]
+    lines!(ax, t, E; label=@sprintf("%.1e", data.r))
 end
 
-fig[1, 2] = Legend(fig, ax, "Reaction rate", framevisible = false)
+fig[1, 2] = Legend(fig, ax, "Reaction rate"; framevisible=false)
 fig # hide
 
 # This clearly demonstrates that the reaction rate constant only becomes a limiting factor as it drops to very low values, such as 1e-13.
