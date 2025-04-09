@@ -1,0 +1,165 @@
+{
+    "Metadata": {
+        "Title": "Chen2020",
+        "Source": "https://doi.org/10.1149/1945-7111/ab9050",
+        "Description": "Parameter set of a cylindrical 21700 commercial cell (LGM50), for an electrochemical pseudo-two-dimensional (P2D) model, after calibration."
+    },
+    "Cell": {
+        "Name": "LG INR 21700 M50",
+        "Case": "Cylindrical",
+        "ElectrodeWidth": 0.065,
+        "ElectrodeLength": 1.58,
+        "ElectrodeGeometricSurfaceArea": 0.1027,
+        "DeviceSurfaceArea": 0.0053,
+        "DoubleCoatedElectrodes": true,
+        "NominalVoltage": 3.71,
+        "NominalCapacity": 4.8,
+        "HeatTransferCoefficient": 1000.0,
+        "InnerCellRadius": 0.001
+    },
+    "NegativeElectrode": {
+        "ElectrodeCoating": {
+            "BruggemanCoefficient": 1.5,
+            "EffectiveDensity": 1695,
+            "Thickness": 8.52e-5,
+            "SurfaceCoefficientOfHeatTransfer": 1000
+        },
+        "ActiveMaterial": {
+            "Description": "Graphite-SiOx",
+            "MassFraction": 1.0,
+            "Density": 2260.0,
+            "VolumetricSurfaceArea": 383959.0,
+            "ElectronicConductivity": 215,
+            "SpecificHeatCapacity": 632.0,
+            "ThermalConductivity": 1.04,
+            "DiffusionCoefficient": 3.3e-14,
+            "ActivationEnergyOfDiffusion": 5000,
+            "ParticleRadius": 5.86e-6,
+            "MaximumConcentration": 33133.0,
+            "StoichiometricCoefficientAtSOC0": 0.0279,
+            "StoichiometricCoefficientAtSOC100": 0.9014,
+            "OpenCircuitVoltage": {
+                "type": "function",
+                "functionname": "computeOCP_Graphite_SiOx_Chen2020",
+                "argumentlist": [
+                    "c",
+                    "cmax"
+                ]
+            },
+            "NumberOfElectronsTransfered": 1,
+            "ActivationEnergyOfReaction": 35000,
+            "ReactionRateConstant": 6.716e-12,
+            "ChargeTransferCoefficient": 0.5
+        },
+        "ConductiveAdditive": {
+            "Description": "Unknown",
+            "Density": 1950.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100.0,
+            "SpecificHeatCapacity": 632.0,
+            "ThermalConductivity": 1.04
+        },
+        "Binder": {
+            "Description": "Unknown",
+            "Density": 1100.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100.0,
+            "SpecificHeatCapacity": 632.0,
+            "ThermalConductivity": 1.04
+        },
+        "CurrentCollector": {
+            "Description": "Copper",
+            "Thickness": 1.17e-5,
+            "Density": 8960,
+            "ElectronicConductivity": 3.55e7
+        }
+    },
+    "PositiveElectrode": {
+        "ElectrodeCoating": {
+            "BruggemanCoefficient": 1.5,
+            "EffectiveDensity": 3292,
+            "Thickness": 7.56e-5,
+            "SurfaceCoefficientOfHeatTransfer": 1000
+        },
+        "ActiveMaterial": {
+            "Description": "NMC811",
+            "MassFraction": 1.0,
+            "Density": 4950,
+            "VolumetricSurfaceArea": 383959.0,
+            "ElectronicConductivity": 0.18,
+            "SpecificHeatCapacity": 700.0,
+            "ThermalConductivity": 2.1,
+            "DiffusionCoefficient": 4.0e-15,
+            "ParticleRadius": 5.22e-6,
+            "MaximumConcentration": 63104.0,
+            "StoichiometricCoefficientAtSOC0": 0.9084,
+            "StoichiometricCoefficientAtSOC100": 0.27,
+            "OpenCircuitVoltage": {
+                "type": "function",
+                "functionname": "computeOCP_NMC811_Chen2020",
+                "argumentlist": [
+                    "c",
+                    "cmax"
+                ]
+            },
+            "NumberOfElectronsTransfered": 1,
+            "ActivationEnergyOfReaction": 17800.0,
+            "ReactionRateConstant": 3.545e-11,
+            "ChargeTransferCoefficient": 0.5
+        },
+        "ConductiveAdditive": {
+            "Description": "Unknown",
+            "Density": 1800.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100,
+            "SpecificHeatCapacity": 300.0,
+            "ThermalConductivity": 0.5
+        },
+        "Binder": {
+            "Description": "Unknown",
+            "Density": 1780.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100,
+            "SpecificHeatCapacity": 1400,
+            "ThermalConductivity": 0.165
+        },
+        "CurrentCollector": {
+            "Description": "Aluminum",
+            "Thickness": 1.63e-05,
+            "Density": 2700,
+            "ElectronicConductivity": 5.96e7
+        }
+    },
+    "Separator": {
+        "Description": "Ceramic-coated Polyolefin",
+        "Porosity": 0.47,
+        "Density": 946,
+        "BruggemanCoefficient": 1.5,
+        "Thickness": 1.2e-5,
+        "SpecificHeatCapacity": 1692.0,
+        "ThermalConductivity": 0.334
+    },
+    "Electrolyte": {
+        "Description": "1 mol/l LiPF6 with ethylene carbonate (EC): ethyl methyl carbonate (EMC) (3:7, V:V)",
+        "SpecificHeatCapacity": 1518.0,
+        "ThermalConductivity": 0.099,
+        "Density": 1200,
+        "Concentration": 1000,
+        "ChargeNumber": 1,
+        "TransferenceNumber": 0.2594,
+        "IonicConductivity": {
+            "type": "function",
+            "functionname": "computeElectrolyteConductivity_Chen2020",
+            "argumentlist": [
+                "c"
+            ]
+        },
+        "DiffusionCoefficient": {
+            "type": "function",
+            "functionname": "computeDiffusionCoefficient_Chen2020",
+            "argumentlist": [
+                "c"
+            ]
+        }
+    }
+}

@@ -1,43 +1,36 @@
-### Getting started
+# Getting Started with BattMo
 
-We start by loading BattMo
+Welcome to **BattMo**, a powerful simulation framework for modeling lithium-ion battery behavior. This guide will help you get started by directing you to the most relevant resources for learning how to use BattMo effectively.
 
-```@example intro
-using BattMo
-```
+## Step 1: Start with the Beginner Tutorials
+If you are new to BattMo, we recommend starting with the **Beginner Tutorials**. These tutorials will guide you through the fundamental concepts, such as:
+- Setting up and configuring battery models
+- Defining cycling protocols
+- Running simulations and analyzing outputs
 
-BattMo uses a json input format. Json files can be easily read and modified. They are converted to dictionary structure
+By following these tutorials, you will gain hands-on experience and a solid foundation in using BattMo for battery modeling.
 
-Let us choose the case
-[p2d_40.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/p2d_40.json). We load it using the
-function `readBattMoJsonInputFile`.
+## Step 2: Explore the Examples
+Once you are comfortable with the basics, you can explore the **Examples** section. The examples cover a range of specific cases and advanced features, such as:
+- Modeling of 3D geometries
+- Thermal effects modeling
+- Modeling SEI growth
 
-```@example intro
-filename = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/p2d_40.json")
-inputparams = readBattMoJsonInputFile(filename)
-nothing # hide
-```
+These examples provide practical insights into how to extend BattMo for various research and engineering applications.
 
-We run the simulation using the [run_battery](@ref) 
+## Step 3: Consult the documentation
+For more details on BattMo's API and functionality, refer to the Public API Documentation. This includes:
+- Function descriptions and usage
+- Input and output structures
+- Configuration options
 
-```@example intro
-output = run_battery(inputparams)
-nothing # hide
-``` 
-We can now plot the results
+## Need Help?
+If you encounter any issues or have questions, you can:
+- Contact the **Development Team** if you need further support.
+- Feel free to create an issue when you encounter a bug or would like to see a certain feature.
 
-```@example intro
-using GLMakie
-states = output[:states]
-t = [state[:Control][:ControllerCV].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
-I = [state[:Control][:Current][1] for state in states]
-fig = Figure()
-ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
-lines!(ax, t, E)
-ax = Axis(fig[1, 2], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
-lines!(ax, t, I)
-fig
-```
+## Would you like to contribute to BattMo.jl development?
+Have a look at our [Contribution guide](../contribution/contribution)
 
-see full example script here
+
+

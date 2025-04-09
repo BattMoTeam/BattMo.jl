@@ -125,20 +125,21 @@
     "bruggemanCoefficient": 1.5
   },
   "G": [],
-  "SOC": 1,
+  "SOC": 0,
   "initT": 298.15,
   "use_thermal": false,
   "include_current_collectors": false,
   "Control": {
     "controlPolicy": "CCCV",
-    "initialControl" : "discharging",
-    "numberOfCycles" : 3,
+    "initialControl": "charging",
+    "numberOfCycles": 3,
     "CRate": 0.5,
     "DRate": 1.0,
     "lowerCutoffVoltage": 3.0,
     "upperCutoffVoltage": 4.0,
     "dIdtLimit": 1e-6,
-    "dEdtLimit": 1e-4},
+    "dEdtLimit": 1e-4
+  },
   "Electrolyte": {
     "initialConcentration": 1000,
     "specificHeatCapacity": 2055,

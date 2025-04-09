@@ -1,0 +1,10 @@
+{
+  "Protocol": "CCCharge",
+  "InitialStateOfCharge": 0.01,
+  "DRate": 1.0,
+  "LowerVoltageLimit": 2.5,
+  "UpperVoltageLimit": 4.1,
+  "InitialControl": "charging",
+  "AmbientKelvinTemperature": 298.15,
+  "InitialKelvinTemperature": 298.15
+}
