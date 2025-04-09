@@ -3,7 +3,7 @@ using Test
 
 @testset "3d" begin
     @test begin
-    file_path_cell = string(
+        file_path_cell = string(
             dirname(pathof(BattMo)),
             "/../test/data/jsonfiles/cell_parameters/",
             "cell_parameter_set_3D_demoCase.json",
