@@ -1,6 +1,6 @@
 # # Handling cycling protocols
 
-# In this tutorial, we demonstrate functionality to handle cycling protcols, by illustrating the effect that the CRate has on battery 
+# In this tutorial, we demonstrate functionality to handle cycling protcols. We will illustrate the effect that the DRate has on battery 
 # performance during discharge, using a constant-current (CC) discharge protocol.
 
 # ### Load required packages and data
