@@ -30,8 +30,7 @@ function build_battmo_docs(build_format              = nothing;
 		"Tutorial 1 - Run a simulation" => "1_run_a_simulation",
 		"Tutorial 2 - Specify a model" => "2_specify_a_model",
 		"Tutorial 3 - Modify cell parameters" => "3_modify_cell_parameters",
-		"Tutorial 4 - Modify cycling protocol" => "4_modify_cycling_protocol",
-		"Tutorial 5 - Modify grid parameters" => "5_modify_grid_parameters"]
+		"Tutorial 4 - Modify cycling protocol" => "4_modify_cycling_protocol"]
 
 	examples = [
 		"Cycle example" => "example_cycle",

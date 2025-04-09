@@ -1,9 +1,9 @@
 # # Exploring the impact of the reaction rate constant
 
-# In BattMo, input parameters for a simulation are typically defined in JSON files. While you can edit these files directly, there's a more flexible approach: 
-# modify the parameters programmatically by working with the corresponding Julia dictionary created from the JSON.
+# To change cell parameters, cycling protocols and settings, we can modify the JSON files directly, or we can read 
+# them into objects in the script and modify them as Dictionaries. 
 
-# As shown in the first tutorial, the function read_cell_parameters reads and converts the JSON content into a Julia Dict. This allows us to directly access and modify simulation inputs in code.
+# Lets first read the parameters from the JSON files.
 
 # ###  Load Input Files and Initialize Model
 
@@ -18,10 +18,6 @@ cell_parameters = read_cell_parameters(file_path_cell)
 cycling_protocol = read_cycling_protocol(file_path_cycling)
 nothing # hide
 
-# Now, instantiate the model you'd like to work with:
-
-model = LithiumIonBatteryModel();
-
 # ### Explore and Modify Parameters
 
 # We can inspect different parameter groups in the loaded parameter sets using search_parameter. For example, we'd like to now how electrode related objects and parameters are named:
@@ -32,24 +28,43 @@ search_parameter(cell_parameters, "Electrode")
 search_parameter(cell_parameters, "Concentration")
 
 
-# We can access the parameters by perfoming Dict operations. Let’s take a closer look at the electrolyte parameters:
-cell_parameters["Electrolyte"]
+# Lets access what is inside the Separator key.
 
-# And now, access the active material parameters for the negative electrode:
+cell_parameters["Separator"]
 
-active_material_params = cell_parameters["NegativeElectrode"]["ActiveMaterial"]
+# We have a flat list of parameters and values for the separator. In other cases, a key might nest other dictionaries, 
+# which can be accessed using the normal dictionary notation. Lets see for instance the  active material parameters of 
+# the negative electrode.
 
-# We can directly change one of these parameters. Let us for example change the reaction rate constant,
+cell_parameters["NegativeElectrode"]["ActiveMaterial"]
 
-active_material_params["ReactionRateConstant"] = 1e-13
+# ### Editing scalar parameters
+
+# Parameter that take single numerical values (e.g. real, integers, booleans) can be directly modified. Examples:
+
+cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 1e-13
 nothing # hide
 
-# ###  Run the Simulation
-# We now create a Simulation object and solve it:
+cell_parameters["PositiveElectrode"]["ElectrodeCoating"]["Thickness"] = 8.2e-5
+nothing # hide
+
+
+# ### Editing non-scalar parameters
+
+# Some parameters are described as functions or arrays, since the parameter value depends on other variables. For instance
+# the Open Circuit Potentials of the Active Materials depend on the lithium stoichiometry and temperature. 
+
+# > MISSING 
+
+# ### Compare simulations 
+
+# After the updates, we instantiate the model and the simulations, verify the simulations to be valid, 
+# and run it as in the first tutorial.
+
+model = LithiumIonBatteryModel()
 
 sim = Simulation(model, cell_parameters, cycling_protocol)
 
-# Then we solve for the simulation
 output = solve(sim);
 
 states = output[:states]
@@ -93,7 +108,7 @@ fig # hide
 # We can now explore how the reaction rate constant affects the battery performance. We loop over a range of values, update the parameter, and collect results:
 outputs = []
 for r in range(5e-11, 1e-13, length = 5)
-	active_material_params["ReactionRateConstant"] = r
+	cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = r
 	sim3 = Simulation(model, cell_parameters, cycling_protocol)
 	result = solve(sim3; config_kwargs = (; end_report = false))
 	push!(outputs, (r = r, output = result))  # store r together with output

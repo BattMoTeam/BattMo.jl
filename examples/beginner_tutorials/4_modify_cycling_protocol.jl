@@ -51,7 +51,8 @@ for result in outputs
 	E = [state[:Control][:Phi][1] for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
-	lines!(ax1, t, E, label = "@sprintf(\"%.1fC\", result.c_rate)")
+	label_str = @sprintf("%.1fC", result.c_rate)
+	lines!(ax1, t, E, label = label_str)
 
 end
 
