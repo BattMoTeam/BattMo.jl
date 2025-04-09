@@ -1,6 +1,18 @@
-# %%
-using BattMo
 using LinearAlgebra
+
+export 
+    compute_electrode_coating_mass,
+    compute_electrode_theoretical_density,
+    compute_separator_mass,
+    compute_current_collector_mass,
+    compute_electrolyte_mass,
+    compute_cell_mass,
+    compute_electrode_volume_fraction,
+    compute_electrode_mass_loading,
+    compute_electrode_maximum_capacity,
+    compute_np_ratio,
+    compute_cell_theoretical_capacity
+
 #########################################
 # Cell Mass calculations
 #########################################
@@ -102,13 +114,17 @@ function compute_cell_mass(params::CellParameters; print_breakdown::Bool = false
 
     if print_breakdown
         print("""
-        Positive Electrode                   Mass = $m_positive_e,     % = $(100*m_positive_e/total_cell_mass) \n
-        Negative Electrode                   Mass = $m_negative_e,     % = $(100*m_negative_e/total_cell_mass) \n
-        Positive Electrode Current Collector Mass = $m_positive_e_cc,  % = $(100*m_positive_e_cc/total_cell_mass) \n
-        Negative Electrode Current Collector Mass = $m_negative_e_cc,  % = $(100*m_negative_e_cc/total_cell_mass) \n
-        Electrolyte                          Mass = $m_electrolyte,    % = $(100*m_electrolyte/total_cell_mass) \n
-        Separator                            Mass = $m_separator,      % = $(100*m_separator/total_cell_mass) \n
+                   Component                 | Mass/kg |  Percentage
+        -------------------------------------------------------------
+        Cell                                 | $(round(total_cell_mass, digits=5)) |    100
+        Positive Electrode                   | $(round(m_positive_e, digits=5)) |    $(round(100*m_positive_e/total_cell_mass, digits=1))
+        Negative Electrode                   | $(round(m_negative_e, digits=5)) |    $(round(100*m_negative_e/total_cell_mass, digits=1))
+        Positive Electrode Current Collector | $(round(m_positive_e_cc, digits=5)) |    $(round(100*m_positive_e_cc/total_cell_mass, digits=1))
+        Negative Electrode Current Collector | $(round(m_negative_e_cc, digits=5)) |    $(round(100*m_negative_e_cc/total_cell_mass, digits=1))
+        Electrolyte                          | $(round(m_electrolyte, digits=5)) |    $(round(100*m_electrolyte/total_cell_mass, digits=1))
+        Separator                            | $(round(m_separator, digits=5)) |    $(round(100*m_separator/total_cell_mass, digits=1))
         """) 
+        return nothing
     end
     return total_cell_mass 
 end
@@ -177,20 +193,3 @@ function compute_cell_theoretical_capacity(params::CellParameters)
     ne_maximum_capacity = compute_electrode_maximum_capacity(params, "NegativeElectrode")
     return min(pe_maximum_capacity, ne_maximum_capacity)
 end
-
-# %%
-#########################################
-# Testing
-#########################################
-
-
-parameter_sets_directory = "./test/data/jsonfiles/"
-
-cell_parameters = read_cell_parameters(parameter_sets_directory * "cell_parameters/cell_parameter_set_chen2020.json")
-cell_parameters["PositiveElectrode"]["ElectrodeCoating"]["Thickness"] |> println
-
-cycling_protocol = read_cycling_protocol(parameter_sets_directory * "cycling_protocols/CCCV.json")
-cycling_protocol["Protocol"] |> println
-
-simulation_settings = read_simulation_settings(parameter_sets_directory * "model_settings/model_settings_P2D.json")
-simulation_settings["ModelGeometry"] |> println
