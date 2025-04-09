@@ -170,8 +170,6 @@ timeit_debug_enabled() = Jutul.timeit_debug_enabled()
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
 
-include("utils/physical_constants.jl")
-
 include("input/input_types.jl")
 include("input/reader.jl")
 include("input/function_input_tools.jl")
@@ -180,6 +178,10 @@ include("input/meta_data/parameters.jl")
 include("input/schemas/get_schema.jl")
 include("input/defaults/cell_parameter_set.jl")
 include("input/validator.jl")
+
+include("utils/physical_constants.jl")
+include("utils/battery_kpis.jl")
+
 
 
 include("models/battmo_types.jl")
