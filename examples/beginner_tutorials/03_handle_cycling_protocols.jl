@@ -19,7 +19,7 @@ cc_discharge_protocol = read_cycling_protocol(cycling_path)
 model = LithiumIonBatteryModel()
 
 # ### Handle, access and edit cycling protocols
-# We manipulate the cycling protocol object in the same was as we do cell parameters in the previous tutorial. List all outermost keys:
+# We manipulate a cycling protocol in the same was as we do cell parameters in the previous tutorial. To list all outermost keys:
 keys(cc_discharge_protocol)
 
 # Show all keys and values
@@ -31,11 +31,11 @@ search_parameter(cc_discharge_protocol, "rate")
 # Access a specific parameter
 cc_discharge_protocol["DRate"]
 
-# We also change protocol parameters as dicitonaries
+# Change protocol parameters as dicitonaries
 cc_discharge_protocol["DRate"] = 2.0
 
 # ### Compare cell performance across DRates
-# Lets now do something more fun. Since we can edit scalar valued parameters with dictionary notation, we can loop through different DRates and run
+# Lets now do something more fun. Since we can edit scalar valued parameters as we edit dictionaries, we can loop through different DRates and run
 # a simulation for each. We can then compare the cell voltage profiles for each DRate.
 
 # Let’s define the range of C-rates to explore:
