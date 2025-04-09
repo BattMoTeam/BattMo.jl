@@ -58,18 +58,18 @@ import{_ as a,c as n,o as e,aA as i}from"./chunks/framework.BFbzQv2c.js";const k
 <span class="line"><span>│ Timing type   │   Each │   Relative │  Total │</span></span>
 <span class="line"><span>│               │     ms │ Percentage │      s │</span></span>
 <span class="line"><span>├───────────────┼────────┼────────────┼────────┤</span></span>
-<span class="line"><span>│ Properties    │ 0.0522 │     5.01 % │ 0.0952 │</span></span>
-<span class="line"><span>│ Equations     │ 0.2009 │    26.10 % │ 0.4965 │</span></span>
-<span class="line"><span>│ Assembly      │ 0.0781 │    10.15 % │ 0.1931 │</span></span>
-<span class="line"><span>│ Linear solve  │ 0.4049 │    38.81 % │ 0.7381 │</span></span>
+<span class="line"><span>│ Properties    │ 0.0470 │     4.41 % │ 0.0857 │</span></span>
+<span class="line"><span>│ Equations     │ 0.1956 │    24.88 % │ 0.4833 │</span></span>
+<span class="line"><span>│ Assembly      │ 0.0826 │    10.50 % │ 0.2040 │</span></span>
+<span class="line"><span>│ Linear solve  │ 0.4469 │    41.95 % │ 0.8148 │</span></span>
 <span class="line"><span>│ Linear setup  │ 0.0000 │     0.00 % │ 0.0000 │</span></span>
 <span class="line"><span>│ Precond apply │ 0.0000 │     0.00 % │ 0.0000 │</span></span>
-<span class="line"><span>│ Update        │ 0.0537 │     5.15 % │ 0.0979 │</span></span>
-<span class="line"><span>│ Convergence   │ 0.0684 │     8.89 % │ 0.1691 │</span></span>
-<span class="line"><span>│ Input/Output  │ 0.0848 │     2.89 % │ 0.0550 │</span></span>
-<span class="line"><span>│ Other         │ 0.0313 │     3.00 % │ 0.0571 │</span></span>
+<span class="line"><span>│ Update        │ 0.0503 │     4.72 % │ 0.0917 │</span></span>
+<span class="line"><span>│ Convergence   │ 0.0762 │     9.69 % │ 0.1882 │</span></span>
+<span class="line"><span>│ Input/Output  │ 0.0262 │     0.87 % │ 0.0170 │</span></span>
+<span class="line"><span>│ Other         │ 0.0317 │     2.97 % │ 0.0577 │</span></span>
 <span class="line"><span>├───────────────┼────────┼────────────┼────────┤</span></span>
-<span class="line"><span>│ Total         │ 1.0434 │   100.00 % │ 1.9020 │</span></span>
+<span class="line"><span>│ Total         │ 1.0655 │   100.00 % │ 1.9424 │</span></span>
 <span class="line"><span>╰───────────────┴────────┴────────────┴────────╯</span></span></code></pre></div><h2 id="Plot-of-voltage-and-current" tabindex="-1">Plot of voltage and current <a class="header-anchor" href="#Plot-of-voltage-and-current" aria-label="Permalink to &quot;Plot of voltage and current {#Plot-of-voltage-and-current}&quot;">​</a></h2><div class="language-@example vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">@example</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span>states = output[:states]</span></span>
 <span class="line highlighted"><span></span></span>
 <span class="line"><span>t = [state[:Control][:ControllerCV].time for state in states]</span></span>
