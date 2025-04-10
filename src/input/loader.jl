@@ -40,7 +40,7 @@ Reads and loads cell parameters either from a JSON file, a default set, or a mod
 # Arguments
 - `from_file_path ::String` : (Optional) Path to the JSON file containing cell parameters.
 - `from_default_set ::String` : (Optional) The name of the default set to load cell parameters from.
-- `from_model_template ::BatteryModel` : (Optional) A `BatteryModel` instance used to load cell parameters from a model template.
+- `from_model_template ::BatteryModel` : (Optional) A `BatteryModel` instance used to load an empty set of cell parameters required for the concerning model.
 
 # Returns
 An instance of `CellParameters`.
@@ -104,7 +104,7 @@ Reads and loads simulation settings either from a JSON file, a default set, or a
 # Arguments
 - `from_file_path ::String` : (Optional) Path to the JSON file containing simulation settings.
 - `from_default_set ::String` : (Optional) The name of the default set to load simulation settings from.
-- `from_model_template ::BatteryModel` : (Optional) A `BatteryModel` instance used to load simulation settings from a model template.
+- `from_model_template ::BatteryModel` : (Optional) A `BatteryModel` instance used to load an empty set of simulation settings required for the concerning model.
 
 # Returns
 An instance of `SimulationSettings`.
