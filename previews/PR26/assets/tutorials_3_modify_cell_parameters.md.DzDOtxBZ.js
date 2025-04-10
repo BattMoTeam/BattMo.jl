@@ -1,4 +1,4 @@
-import{_ as a,c as i,o as n,aA as p}from"./chunks/framework.BFbzQv2c.js";const t="/BattMo.jl/previews/PR26/assets/tbcjcii.jZI0NB23.jpeg",l="/BattMo.jl/previews/PR26/assets/bryhoqx.BWbkGkbO.jpeg",e="/BattMo.jl/previews/PR26/assets/bcfpibs.DCbt-ZFt.jpeg",y=JSON.parse('{"title":"Exploring the impact of the reaction rate constant","description":"","frontmatter":{},"headers":[],"relativePath":"tutorials/3_modify_cell_parameters.md","filePath":"tutorials/3_modify_cell_parameters.md","lastUpdated":null}'),h={name:"tutorials/3_modify_cell_parameters.md"};function k(r,s,o,E,d,c){return n(),i("div",null,s[0]||(s[0]=[p(`<h1 id="Exploring-the-impact-of-the-reaction-rate-constant" tabindex="-1">Exploring the impact of the reaction rate constant <a class="header-anchor" href="#Exploring-the-impact-of-the-reaction-rate-constant" aria-label="Permalink to &quot;Exploring the impact of the reaction rate constant {#Exploring-the-impact-of-the-reaction-rate-constant}&quot;">​</a></h1><p>To change cell parameters, cycling protocols and settings, we can modify the JSON files directly, or we can read them into objects in the script and modify them as Dictionaries.</p><p>Lets first read the parameters from the JSON files.</p><h3 id="Load-Input-Files-and-Initialize-Model" tabindex="-1">Load Input Files and Initialize Model <a class="header-anchor" href="#Load-Input-Files-and-Initialize-Model" aria-label="Permalink to &quot;Load Input Files and Initialize Model {#Load-Input-Files-and-Initialize-Model}&quot;">​</a></h3><p>We begin by loading the parameter files:</p><div class="language-julia vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">julia</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">using</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> BattMo</span></span>
+import{_ as a,c as i,o as n,aA as p}from"./chunks/framework.BFbzQv2c.js";const t="/BattMo.jl/previews/PR26/assets/ulucexf.jZI0NB23.jpeg",l="/BattMo.jl/previews/PR26/assets/rusijhg.BWbkGkbO.jpeg",e="/BattMo.jl/previews/PR26/assets/snfefsu.DCbt-ZFt.jpeg",y=JSON.parse('{"title":"Exploring the impact of the reaction rate constant","description":"","frontmatter":{},"headers":[],"relativePath":"tutorials/3_modify_cell_parameters.md","filePath":"tutorials/3_modify_cell_parameters.md","lastUpdated":null}'),h={name:"tutorials/3_modify_cell_parameters.md"};function k(r,s,o,E,d,c){return n(),i("div",null,s[0]||(s[0]=[p(`<h1 id="Exploring-the-impact-of-the-reaction-rate-constant" tabindex="-1">Exploring the impact of the reaction rate constant <a class="header-anchor" href="#Exploring-the-impact-of-the-reaction-rate-constant" aria-label="Permalink to &quot;Exploring the impact of the reaction rate constant {#Exploring-the-impact-of-the-reaction-rate-constant}&quot;">​</a></h1><p>To change cell parameters, cycling protocols and settings, we can modify the JSON files directly, or we can read them into objects in the script and modify them as Dictionaries.</p><p>Lets first read the parameters from the JSON files.</p><h3 id="Load-Input-Files-and-Initialize-Model" tabindex="-1">Load Input Files and Initialize Model <a class="header-anchor" href="#Load-Input-Files-and-Initialize-Model" aria-label="Permalink to &quot;Load Input Files and Initialize Model {#Load-Input-Files-and-Initialize-Model}&quot;">​</a></h3><p>We begin by loading the parameter files:</p><div class="language-julia vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">julia</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">using</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> BattMo</span></span>
 <span class="line"></span>
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">file_path_cell </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> string</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">dirname</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">pathof</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(BattMo)), </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">&quot;/../test/data/jsonfiles/cell_parameters/&quot;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">&quot;cell_parameter_set_chen2020_calibrated.json&quot;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">)</span></span>
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">file_path_cycling </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> string</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">dirname</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">pathof</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(BattMo)), </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">&quot;/../test/data/jsonfiles/cycling_protocols/&quot;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">&quot;CCDischarge.json&quot;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">)</span></span>
@@ -75,18 +75,18 @@ import{_ as a,c as i,o as n,aA as p}from"./chunks/framework.BFbzQv2c.js";const t
 <span class="line"><span>│ Timing type   │   Each │   Relative │    Total │</span></span>
 <span class="line"><span>│               │     ms │ Percentage │       ms │</span></span>
 <span class="line"><span>├───────────────┼────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Properties    │ 0.0386 │     3.51 % │   9.9659 │</span></span>
-<span class="line"><span>│ Equations     │ 0.1903 │    22.94 % │  65.0801 │</span></span>
-<span class="line"><span>│ Assembly      │ 0.0856 │    10.32 % │  29.2637 │</span></span>
-<span class="line"><span>│ Linear solve  │ 0.5112 │    46.50 % │ 131.9020 │</span></span>
+<span class="line"><span>│ Properties    │ 0.0366 │     3.35 % │   9.4448 │</span></span>
+<span class="line"><span>│ Equations     │ 0.1893 │    22.97 % │  64.7380 │</span></span>
+<span class="line"><span>│ Assembly      │ 0.0819 │     9.94 % │  28.0096 │</span></span>
+<span class="line"><span>│ Linear solve  │ 0.5180 │    47.42 % │ 133.6554 │</span></span>
 <span class="line"><span>│ Linear setup  │ 0.0000 │     0.00 % │   0.0000 │</span></span>
 <span class="line"><span>│ Precond apply │ 0.0000 │     0.00 % │   0.0000 │</span></span>
-<span class="line"><span>│ Update        │ 0.0543 │     4.94 % │  14.0165 │</span></span>
-<span class="line"><span>│ Convergence   │ 0.0695 │     8.38 % │  23.7641 │</span></span>
-<span class="line"><span>│ Input/Output  │ 0.0318 │     0.94 % │   2.6677 │</span></span>
-<span class="line"><span>│ Other         │ 0.0272 │     2.48 % │   7.0270 │</span></span>
+<span class="line"><span>│ Update        │ 0.0522 │     4.77 % │  13.4570 │</span></span>
+<span class="line"><span>│ Convergence   │ 0.0676 │     8.20 % │  23.1071 │</span></span>
+<span class="line"><span>│ Input/Output  │ 0.0295 │     0.88 % │   2.4772 │</span></span>
+<span class="line"><span>│ Other         │ 0.0270 │     2.47 % │   6.9757 │</span></span>
 <span class="line"><span>├───────────────┼────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Total         │ 1.0996 │   100.00 % │ 283.6871 │</span></span>
+<span class="line"><span>│ Total         │ 1.0925 │   100.00 % │ 281.8647 │</span></span>
 <span class="line"><span>╰───────────────┴────────┴────────────┴──────────╯</span></span></code></pre></div><p>Now, plot the original and modified results:</p><div class="language-julia vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">julia</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">t2 </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> [state[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">:Control</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">][</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">:ControllerCV</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">]</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">.</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">time </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">for</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> state </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">in</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> output2[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">:states</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">]]</span></span>
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">E2 </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> [state[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">:Control</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">][</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">:Phi</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">][</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">for</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> state </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">in</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> output2[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">:states</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">]]</span></span>
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">I2 </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> [state[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">:Control</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">][</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">:Current</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">][</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">for</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> state </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">in</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> output2[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">:states</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">]]</span></span>
@@ -124,18 +124,18 @@ import{_ as a,c as i,o as n,aA as p}from"./chunks/framework.BFbzQv2c.js";const t
 <span class="line"><span>│ Timing type   │   Each │   Relative │    Total │</span></span>
 <span class="line"><span>│               │     ms │ Percentage │       ms │</span></span>
 <span class="line"><span>├───────────────┼────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Properties    │ 0.0324 │     3.09 % │   8.2371 │</span></span>
-<span class="line"><span>│ Equations     │ 0.1723 │    21.82 % │  58.2507 │</span></span>
-<span class="line"><span>│ Assembly      │ 0.0735 │     9.31 % │  24.8568 │</span></span>
-<span class="line"><span>│ Linear solve  │ 0.2675 │    25.45 % │  67.9414 │</span></span>
+<span class="line"><span>│ Properties    │ 0.0322 │     3.06 % │   8.1674 │</span></span>
+<span class="line"><span>│ Equations     │ 0.1735 │    21.97 % │  58.6535 │</span></span>
+<span class="line"><span>│ Assembly      │ 0.0679 │     8.60 % │  22.9666 │</span></span>
+<span class="line"><span>│ Linear solve  │ 0.5349 │    50.89 % │ 135.8675 │</span></span>
 <span class="line"><span>│ Linear setup  │ 0.0000 │     0.00 % │   0.0000 │</span></span>
 <span class="line"><span>│ Precond apply │ 0.0000 │     0.00 % │   0.0000 │</span></span>
-<span class="line"><span>│ Update        │ 0.3048 │    29.00 % │  77.4074 │</span></span>
-<span class="line"><span>│ Convergence   │ 0.0631 │     7.99 % │  21.3385 │</span></span>
-<span class="line"><span>│ Input/Output  │ 0.0270 │     0.85 % │   2.2711 │</span></span>
-<span class="line"><span>│ Other         │ 0.0261 │     2.48 % │   6.6235 │</span></span>
+<span class="line"><span>│ Update        │ 0.0449 │     4.27 % │  11.4027 │</span></span>
+<span class="line"><span>│ Convergence   │ 0.0625 │     7.91 % │  21.1216 │</span></span>
+<span class="line"><span>│ Input/Output  │ 0.0272 │     0.86 % │   2.2874 │</span></span>
+<span class="line"><span>│ Other         │ 0.0257 │     2.45 % │   6.5360 │</span></span>
 <span class="line"><span>├───────────────┼────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Total         │ 1.0509 │   100.00 % │ 266.9266 │</span></span>
+<span class="line"><span>│ Total         │ 1.0512 │   100.00 % │ 267.0028 │</span></span>
 <span class="line"><span>╰───────────────┴────────┴────────────┴──────────╯</span></span>
 <span class="line"><span>✔️ Validation of CellParameters passed: No issues found.</span></span>
 <span class="line"><span>──────────────────────────────────────────────────</span></span>
@@ -157,18 +157,18 @@ import{_ as a,c as i,o as n,aA as p}from"./chunks/framework.BFbzQv2c.js";const t
 <span class="line"><span>│ Timing type   │     Each │   Relative │    Total │</span></span>
 <span class="line"><span>│               │       μs │ Percentage │       ms │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Properties    │  31.5255 │     3.43 % │   8.0390 │</span></span>
-<span class="line"><span>│ Equations     │ 168.0359 │    24.30 % │  56.9642 │</span></span>
-<span class="line"><span>│ Assembly      │  67.3044 │     9.73 % │  22.8162 │</span></span>
-<span class="line"><span>│ Linear solve  │ 271.9218 │    29.58 % │  69.3401 │</span></span>
+<span class="line"><span>│ Properties    │  32.0145 │     3.45 % │   8.1637 │</span></span>
+<span class="line"><span>│ Equations     │ 278.7631 │    39.88 % │  94.5007 │</span></span>
+<span class="line"><span>│ Assembly      │  68.4283 │     9.79 % │  23.1972 │</span></span>
+<span class="line"><span>│ Linear solve  │ 273.9825 │    29.49 % │  69.8655 │</span></span>
 <span class="line"><span>│ Linear setup  │   0.0000 │     0.00 % │   0.0000 │</span></span>
 <span class="line"><span>│ Precond apply │   0.0000 │     0.00 % │   0.0000 │</span></span>
-<span class="line"><span>│ Update        │  44.7961 │     4.87 % │  11.4230 │</span></span>
-<span class="line"><span>│ Convergence   │ 168.1979 │    24.32 % │  57.0191 │</span></span>
-<span class="line"><span>│ Input/Output  │  27.2645 │     0.98 % │   2.2902 │</span></span>
-<span class="line"><span>│ Other         │  25.6227 │     2.79 % │   6.5338 │</span></span>
+<span class="line"><span>│ Update        │  43.9634 │     4.73 % │  11.2107 │</span></span>
+<span class="line"><span>│ Convergence   │  62.3944 │     8.93 % │  21.1517 │</span></span>
+<span class="line"><span>│ Input/Output  │  27.0201 │     0.96 % │   2.2697 │</span></span>
+<span class="line"><span>│ Other         │  25.8010 │     2.78 % │   6.5793 │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Total         │ 919.3158 │   100.00 % │ 234.4255 │</span></span>
+<span class="line"><span>│ Total         │ 929.1704 │   100.00 % │ 236.9384 │</span></span>
 <span class="line"><span>╰───────────────┴──────────┴────────────┴──────────╯</span></span>
 <span class="line"><span>✔️ Validation of CellParameters passed: No issues found.</span></span>
 <span class="line"><span>──────────────────────────────────────────────────</span></span>
@@ -190,18 +190,18 @@ import{_ as a,c as i,o as n,aA as p}from"./chunks/framework.BFbzQv2c.js";const t
 <span class="line"><span>│ Timing type   │     Each │   Relative │    Total │</span></span>
 <span class="line"><span>│               │       μs │ Percentage │       ms │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Properties    │  31.8985 │     3.39 % │   8.1660 │</span></span>
-<span class="line"><span>│ Equations     │ 168.2278 │    23.78 % │  57.1975 │</span></span>
-<span class="line"><span>│ Assembly      │  69.6254 │     9.84 % │  23.6726 │</span></span>
-<span class="line"><span>│ Linear solve  │ 271.1959 │    28.86 % │  69.4261 │</span></span>
+<span class="line"><span>│ Properties    │  31.0452 │     3.75 % │   7.9476 │</span></span>
+<span class="line"><span>│ Equations     │ 169.2053 │    27.14 % │  57.5298 │</span></span>
+<span class="line"><span>│ Assembly      │  64.7313 │    10.38 % │  22.0086 │</span></span>
+<span class="line"><span>│ Linear solve  │ 326.4254 │    39.42 % │  83.5649 │</span></span>
 <span class="line"><span>│ Linear setup  │   0.0000 │     0.00 % │   0.0000 │</span></span>
 <span class="line"><span>│ Precond apply │   0.0000 │     0.00 % │   0.0000 │</span></span>
-<span class="line"><span>│ Update        │  44.7514 │     4.76 % │  11.4564 │</span></span>
-<span class="line"><span>│ Convergence   │ 141.3307 │    19.97 % │  48.0524 │</span></span>
-<span class="line"><span>│ Input/Output  │  27.5856 │     0.96 % │   2.3172 │</span></span>
-<span class="line"><span>│ Other         │  79.2197 │     8.43 % │  20.2802 │</span></span>
+<span class="line"><span>│ Update        │  43.6129 │     5.27 % │  11.1649 │</span></span>
+<span class="line"><span>│ Convergence   │  62.2648 │     9.99 % │  21.1700 │</span></span>
+<span class="line"><span>│ Input/Output  │  26.3382 │     1.04 % │   2.2124 │</span></span>
+<span class="line"><span>│ Other         │  24.9165 │     3.01 % │   6.3786 │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Total         │ 939.7206 │   100.00 % │ 240.5685 │</span></span>
+<span class="line"><span>│ Total         │ 828.0348 │   100.00 % │ 211.9769 │</span></span>
 <span class="line"><span>╰───────────────┴──────────┴────────────┴──────────╯</span></span>
 <span class="line"><span>✔️ Validation of CellParameters passed: No issues found.</span></span>
 <span class="line"><span>──────────────────────────────────────────────────</span></span>
@@ -223,18 +223,18 @@ import{_ as a,c as i,o as n,aA as p}from"./chunks/framework.BFbzQv2c.js";const t
 <span class="line"><span>│ Timing type   │     Each │   Relative │    Total │</span></span>
 <span class="line"><span>│               │       μs │ Percentage │       ms │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Properties    │  31.6708 │     3.66 % │   8.1394 │</span></span>
-<span class="line"><span>│ Equations     │ 199.6020 │    30.58 % │  68.0643 │</span></span>
-<span class="line"><span>│ Assembly      │  68.2662 │    10.46 % │  23.2788 │</span></span>
-<span class="line"><span>│ Linear solve  │ 318.7841 │    36.81 % │  81.9275 │</span></span>
+<span class="line"><span>│ Properties    │  30.6883 │     3.60 % │   7.8869 │</span></span>
+<span class="line"><span>│ Equations     │ 168.6451 │    26.26 % │  57.5080 │</span></span>
+<span class="line"><span>│ Assembly      │  64.0414 │     9.97 % │  21.8381 │</span></span>
+<span class="line"><span>│ Linear solve  │ 356.5174 │    41.84 % │  91.6250 │</span></span>
 <span class="line"><span>│ Linear setup  │   0.0000 │     0.00 % │   0.0000 │</span></span>
 <span class="line"><span>│ Precond apply │   0.0000 │     0.00 % │   0.0000 │</span></span>
-<span class="line"><span>│ Update        │  43.6957 │     5.04 % │  11.2298 │</span></span>
-<span class="line"><span>│ Convergence   │  62.4891 │     9.57 % │  21.3088 │</span></span>
-<span class="line"><span>│ Input/Output  │  26.9111 │     1.02 % │   2.2605 │</span></span>
-<span class="line"><span>│ Other         │  24.8414 │     2.87 % │   6.3842 │</span></span>
+<span class="line"><span>│ Update        │  42.5476 │     4.99 % │  10.9347 │</span></span>
+<span class="line"><span>│ Convergence   │  60.4882 │     9.42 % │  20.6265 │</span></span>
+<span class="line"><span>│ Input/Output  │  25.8425 │     0.99 % │   2.1708 │</span></span>
+<span class="line"><span>│ Other         │  24.8762 │     2.92 % │   6.3932 │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Total         │ 866.1220 │   100.00 % │ 222.5934 │</span></span>
+<span class="line"><span>│ Total         │ 852.0744 │   100.00 % │ 218.9831 │</span></span>
 <span class="line"><span>╰───────────────┴──────────┴────────────┴──────────╯</span></span>
 <span class="line"><span>✔️ Validation of CellParameters passed: No issues found.</span></span>
 <span class="line"><span>──────────────────────────────────────────────────</span></span>
@@ -256,18 +256,18 @@ import{_ as a,c as i,o as n,aA as p}from"./chunks/framework.BFbzQv2c.js";const t
 <span class="line"><span>│ Timing type   │     Each │   Relative │    Total │</span></span>
 <span class="line"><span>│               │       μs │ Percentage │       ms │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Properties    │  31.0889 │     3.63 % │   9.6065 │</span></span>
-<span class="line"><span>│ Equations     │ 166.4228 │    24.92 % │  65.9034 │</span></span>
-<span class="line"><span>│ Assembly      │  68.2256 │    10.21 % │  27.0173 │</span></span>
-<span class="line"><span>│ Linear solve  │ 367.8378 │    42.97 % │ 113.6619 │</span></span>
+<span class="line"><span>│ Properties    │  31.1032 │     3.72 % │   9.6109 │</span></span>
+<span class="line"><span>│ Equations     │ 169.4062 │    25.93 % │  67.0849 │</span></span>
+<span class="line"><span>│ Assembly      │  87.0607 │    13.33 % │  34.4761 │</span></span>
+<span class="line"><span>│ Linear solve  │ 324.5069 │    38.76 % │ 100.2726 │</span></span>
 <span class="line"><span>│ Linear setup  │   0.0000 │     0.00 % │   0.0000 │</span></span>
 <span class="line"><span>│ Precond apply │   0.0000 │     0.00 % │   0.0000 │</span></span>
-<span class="line"><span>│ Update        │  44.6912 │     5.22 % │  13.8096 │</span></span>
-<span class="line"><span>│ Convergence   │  62.8652 │     9.41 % │  24.8946 │</span></span>
-<span class="line"><span>│ Input/Output  │  27.5742 │     0.91 % │   2.3990 │</span></span>
-<span class="line"><span>│ Other         │  23.2980 │     2.72 % │   7.1991 │</span></span>
+<span class="line"><span>│ Update        │  43.0980 │     5.15 % │  13.3173 │</span></span>
+<span class="line"><span>│ Convergence   │  61.8302 │     9.47 % │  24.4847 │</span></span>
+<span class="line"><span>│ Input/Output  │  26.1799 │     0.88 % │   2.2776 │</span></span>
+<span class="line"><span>│ Other         │  23.1310 │     2.76 % │   7.1475 │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Total         │ 855.9590 │   100.00 % │ 264.4913 │</span></span>
+<span class="line"><span>│ Total         │ 837.1248 │   100.00 % │ 258.6716 │</span></span>
 <span class="line"><span>╰───────────────┴──────────┴────────────┴──────────╯</span></span></code></pre></div><p>Now, plot the discharge curves for each reaction rate:</p><div class="language-julia vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">julia</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">using</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> Printf</span></span>
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">fig </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> Figure</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">()</span></span>
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">ax </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> Axis</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(fig[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">], ylabel </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;"> &quot;Voltage / V&quot;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, xlabel </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;"> &quot;Time / s&quot;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">, title </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;"> &quot;Discharge curve&quot;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">)</span></span>
