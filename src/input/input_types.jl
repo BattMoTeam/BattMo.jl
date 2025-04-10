@@ -114,6 +114,30 @@ function Base.iterate(ps::AbstractInput, state = nothing)
 	return iterate(ps.all, state)
 end
 
+function Base.show(io::IO, dict::Dict)
+	pretty_print_dict(io, dict, 0)
+end
+
+function pretty_print_dict(io::IO, dict::Dict, indent_level::Int)
+	indent = "    "^indent_level
+	println(io, indent * "{")
+	for (i, (k, v)) in enumerate(dict)
+		key_str = repr(k)
+		print(io, indent * "    " * key_str * " => ")
+		if isa(v, Dict)
+			pretty_print_dict(io, v, indent_level + 1)
+			println(io)  # Ensure newline after nested dict
+		else
+			println(io, repr(v))
+		end
+	end
+	print(io, indent * "}")
+end
+
+function Base.show(io::IO, ob::AbstractInput)
+	pretty_print_dict(io, ob.all, 0)
+end
+
 
 
 ##################################################################
@@ -151,9 +175,9 @@ function search_parameter(ps::ParameterSet, query::String)
 
 			if occursin(lowercase(query), lowercase(key))
 				formatted_key_path = "[" * join(vcat(key_path, key), "][") * "]"
-				if !(value isa Dict)  
-                    push!(search_matches, formatted_key_path * " => " * string(value))
-                end
+				if !(value isa Dict)
+					push!(search_matches, formatted_key_path * " => " * string(value))
+				end
 			end
 			if value isa Dict
 				push!(dicts_to_search, (value, vcat(key_path, key)))

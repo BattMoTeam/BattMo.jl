@@ -5,7 +5,7 @@ This document provides an overview of the public API for using `BattMo`. The API
 ## Loading Parameters
 Input parameter files are stored in JSON format and define the characteristics of the battery model and the simulation environment. For more information in the input terminilogy have a look at the [input terminology](./terminology) section.
 
-Parameters are loaded using helper functions that read JSON files and return structured data. These functions are [`read_cell_parameters`](@ref), [`read_cycling_protocol`](@ref), [`read_model_settings`](@ref), and [`read_simulation_settings`](@ref). Each function takes a file path as input and returns a dictionary containing the respective settings.
+Parameters are loaded using helper functions that read JSON files and return structured data. These functions are [`load_cell_parameters`](@ref), [`load_cycling_protocol`](@ref), [`load_model_settings`](@ref), and [`load_simulation_settings`](@ref). Each function takes a file path as input and returns a dictionary containing the respective settings.
 
 ## Model Initialization
 A model can be instantiated using the sub classes of abstract type [`BatteryModel`](@ref). At the moment only the [`LithiumIonBatteryModel`](@ref) constructor is available. By passing a [`ModelSettings`](@ref) object to the constructor, the user can personalize the model to be solved.
@@ -19,6 +19,7 @@ A simulation can be solved by passing a [`Simulation`](@ref) object to the [`sol
 ## Example Usage
 Below is an example of a complete workflow:
 
+
 ```julia
 # Define file paths
 file_path_cell = "path/to/cell_parameters.json"
@@ -27,9 +28,9 @@ file_path_cycling = "path/to/cycling_protocol.json"
 file_path_simulation = "path/to/simulation_settings.json"
 
 # Load parameters
-cell_parameters = read_cell_parameters(file_path_cell)
-cycling_protocol = read_cycling_protocol(file_path_cycling)
-model_settings = read_model_settings(file_path_model)
+cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
+cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
+model_settings = load_model_settings(; from_file_path = file_path_model)
 simulation_settings = read_simulation_settings(file_path_simulation)
 
 # Initialize model and simulation

@@ -15,7 +15,7 @@ tests = [
 			@test begin
 
 				fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/", test[:name], ".mat")
-				inputparams = read_matlab_battmo_input(fn)
+				inputparams = load_matlab_battmo_input(fn)
 				inputparams["use_state_ref"] = true
 				states, cellSpecifications, reports, extra = run_battery(inputparams, max_step = nothing)
 

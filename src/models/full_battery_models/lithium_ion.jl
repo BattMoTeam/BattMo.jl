@@ -59,10 +59,8 @@ end
 function get_default_model_settings(::Type{LithiumIonBatteryModel})
 	settings = Dict(
 		"ModelGeometry" => "1D",
-		"UseThermalModel" => false,
-		"UseCurrentCollectors" => false,
-		"UseSEIModel" => false,
-		"UseRampUp" => true,
+		"UseDiffusionModel" => "full",
+		"UseRampUp" => "Generic",
 	)
 	return ModelSettings(settings)
 end

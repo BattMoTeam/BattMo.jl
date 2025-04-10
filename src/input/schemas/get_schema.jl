@@ -222,9 +222,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
-					),
-					"required" => ["ElectrodeCoating", "ActiveMaterial", "Interphase", "Binder", "ConductiveAdditive"],
-				),
+					)),
+				"required" => ["ElectrodeCoating", "ActiveMaterial", "Binder", "ConductiveAdditive"],
 			),
 			"PositiveElectrode" => Dict(
 				"type" => "object",
@@ -305,9 +304,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
-					),
-					"required" => ["ElectrodeCoating", "ActiveMaterial", "Binder", "ConductiveAdditive"],
-				),
+					)),
+				"required" => ["ElectrodeCoating", "ActiveMaterial", "Binder", "ConductiveAdditive"],
 			),
 			"Separator" => Dict(
 				"type" => "object",
@@ -340,16 +338,17 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 	)
 
 	cell_required = schema["properties"]["Cell"]["required"]
+	ne_required = schema["properties"]["NegativeElectrode"]["required"]
 	ne_coating_required = schema["properties"]["NegativeElectrode"]["properties"]["ElectrodeCoating"]["required"]
 	pe_coating_required = schema["properties"]["PositiveElectrode"]["properties"]["ElectrodeCoating"]["required"]
 
-	ne_am_required = schema["properties"]["PositiveElectrode"]["properties"]["ActiveMaterial"]["required"]
+	ne_am_required = schema["properties"]["NegativeElectrode"]["properties"]["ActiveMaterial"]["required"]
 	pe_am_required = schema["properties"]["PositiveElectrode"]["properties"]["ActiveMaterial"]["required"]
 
-	ne_ca_required = schema["properties"]["PositiveElectrode"]["properties"]["ConductiveAdditive"]["required"]
+	ne_ca_required = schema["properties"]["NegativeElectrode"]["properties"]["ConductiveAdditive"]["required"]
 	pe_ca_required = schema["properties"]["PositiveElectrode"]["properties"]["ConductiveAdditive"]["required"]
 
-	ne_b_required = schema["properties"]["PositiveElectrode"]["properties"]["Binder"]["required"]
+	ne_b_required = schema["properties"]["NegativeElectrode"]["properties"]["Binder"]["required"]
 	pe_b_required = schema["properties"]["PositiveElectrode"]["properties"]["Binder"]["required"]
 
 	sep_required = schema["properties"]["Separator"]["required"]
@@ -359,7 +358,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 	if model_settings_dict["ModelGeometry"] == "1D"
 		push!(cell_required, "ElectrodeGeometricSurfaceArea")
-		if model_settings_dict["UseThermalModel"]
+		if haskey(model_settings_dict, "UseThermalModel")
 			push!(cell_required, "DeviceSurfaceArea")
 			push!(cell_required, "HeatTransferCoefficient")
 			push!(ne_coating_required, "SurfaceCoefficientOfHeatTransfer")
@@ -419,7 +418,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 		push!(pe_coating_required, "Width")
 		push!(pe_coating_required, "Length")
 
-		if model_settings_dict["UseThermalModel"]
+		if haskey(model_settings_dict, "UseThermalModel")
 			push!(cell_required, "DeviceSurfaceArea")
 			push!(cell_required, "HeatTransferCoefficient")
 			push!(ne_coating_required, "SurfaceCoefficientOfHeatTransfer")
@@ -443,6 +442,10 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 		end
 
+	end
+
+	if haskey(model_settings_dict, "UseSEIModel") && model_settings_dict["UseSEIModel"] == "Bolay"
+		push!(ne_required, "Interphase")
 	end
 
 	return schema
@@ -555,7 +558,7 @@ function get_schema_simulation_settings(model_settings)
 		push!(required_grid_points, "ElectrodeWidth")
 		push!(required_grid_points, "ElectrodeLength")
 
-		if model_settings["UseCurrentCollectors"]
+		if haskey(model_settings, "UseCurrentCollectors")
 			push!(required_grid_points, "PositiveElectrodeCurrentCollector")
 			push!(required_grid_points, "PositiveElectrodeCurrentCollectorTabWidth")
 			push!(required_grid_points, "PositiveElectrodeCurrentCollectorTabLength")
@@ -580,44 +583,35 @@ function get_schema_model_settings()
 			"UseCurrentCollectors" => create_property(parameter_meta, "UseCurrentCollectors"),
 			"UseRampUp" => create_property(parameter_meta, "UseRampUp"),
 			"UseSEIModel" => create_property(parameter_meta, "UseSEIModel"),
-			"SEIModel" => create_property(parameter_meta, "SEIModel"),
+			"UseDiffusionModel" => create_property(parameter_meta, "UseDiffusionModel"),
 		),
 		"required" => [
 			"ModelGeometry",
-			"UseThermalModel",
-			"UseCurrentCollectors",
-			"UseRampUp",
-			"UseSEIModel",
 		],
 		"allOf" => [
-			# 🔹 If UseSEIModel is true, SEIModel must be present
-			Dict(
-				"if" => Dict(
-					"properties" => Dict("UseSEIModel" => Dict("const" => true)),
-					"required" => ["UseSEIModel"],
-				),
-				"then" => Dict(
-					"required" => ["SEIModel"],
-				),
-			),
-			# 🔹 If UseSEIModel is false, SEIModel must not be present
-			Dict(
-				"if" => Dict(
-					"properties" => Dict("UseSEIModel" => Dict("const" => false)),
-					"required" => ["UseSEIModel"],
-				),
-				"then" => Dict(
-					"not" => Dict("required" => ["SEIModel"]),
-				),
-			),
-			# 🔹 Enforce UseCurrentCollectors == false if ModelGeometry is 1D
+			# 🚫 Disallow UseCurrentCollectors if ModelGeometry is "1D"
 			Dict(
 				"if" => Dict(
 					"properties" => Dict("ModelGeometry" => Dict("const" => "1D")),
 					"required" => ["ModelGeometry"],
 				),
 				"then" => Dict(
-					"properties" => Dict("UseCurrentCollectors" => Dict("const" => false)),
+					"not" => Dict(
+						"required" => ["UseCurrentCollectors"],
+					),
+				),
+			),
+
+			# 🚫 Disallow UseThermalModel if ModelGeometry is "3D-demo"
+			Dict(
+				"if" => Dict(
+					"properties" => Dict("ModelGeometry" => Dict("const" => "3D-demo")),
+					"required" => ["ModelGeometry"],
+				),
+				"then" => Dict(
+					"not" => Dict(
+						"required" => ["UseThermalModel"],
+					),
 				),
 			),
 		],
