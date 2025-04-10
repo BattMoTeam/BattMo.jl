@@ -27,9 +27,9 @@ file_path_cycling = "path/to/cycling_protocol.json"
 file_path_simulation = "path/to/simulation_settings.json"
 
 # Load parameters
-cell_parameters = read_cell_parameters(file_path_cell)
-cycling_protocol = read_cycling_protocol(file_path_cycling)
-model_settings = read_model_settings(file_path_model)
+cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
+cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
+model_settings = load_model_settings(; from_file_path = file_path_model)
 simulation_settings = read_simulation_settings(file_path_simulation)
 
 # Initialize model and simulation

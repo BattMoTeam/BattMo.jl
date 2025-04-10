@@ -15,8 +15,8 @@ set_preferences!(Jutul, "precompile_workload" => false; force = true)
 
 name = "p2d_40_jl_chen2020"
 
-fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/old/", name, ".json")
-inputparams = read_battmo_formatted_input(fn)
+fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
+inputparams = load_battmo_formatted_input(fn)
 
 
 simple = false
@@ -27,8 +27,8 @@ if (!simple)
 	facz  = 2
 	fac2p = 1
 
-	fn                                                                         = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/old/3d_demo_geometry.json")
-	inputparams_geometry                                                       = read_battmo_formatted_input(fn)
+	fn                                                                         = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
+	inputparams_geometry                                                       = load_battmo_formatted_input(fn)
 	inputparams_geometry["Geometry"]["Nh"]                                     *= facy
 	inputparams_geometry["Geometry"]["Nw"]                                     *= facx
 	inputparams_geometry["Separator"]["N"]                                     *= facz
@@ -43,8 +43,8 @@ if (!simple)
 
 else
 	#fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
-	fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/old/1D_geometry.json")
-	inputparams_geometry_org = read_battmo_formatted_input(fn)
+	fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/1D_geometry.json")
+	inputparams_geometry_org = load_battmo_formatted_input(fn)
 	inputparams_geometry = deepcopy(inputparams_geometry_org)
 	inputparams_geometry["include_current_collectors"] = false
 end

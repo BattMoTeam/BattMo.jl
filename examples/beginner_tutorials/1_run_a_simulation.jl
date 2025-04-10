@@ -16,11 +16,11 @@ using BattMo, GLMakie
 # the cell parameter set from a NMC811 vs Graphite-SiOx cell whose parameters were determined in the [Chen 2020 paper](https://doi.org/10.1149/1945-7111/ab9050). 
 # We also read an example cycling protocol for a simple Constant Current Discharge.
 
-file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_chen2020_calibrated.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCDischarge.json")
+file_path_cell = string(dirname(pathof(BattMo)), "/../src/input/defaults/cell_parameters/", "Chen2020_calibrated.json")
+file_path_cycling = string(dirname(pathof(BattMo)), "/../src/input/defaults/cycling_protocols/", "CCDischarge.json")
 
-cell_parameters = read_cell_parameters(file_path_cell)
-cycling_protocol = read_cycling_protocol(file_path_cycling)
+cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
+cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
 nothing # hide
 
 
