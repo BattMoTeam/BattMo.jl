@@ -24,7 +24,7 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 		dict["enum"] = get(meta, "options", nothing)  # Enforce max value if present
 		dict["description"] = get(meta, "description", "")  # Optional documentation
 
-	elseif meta["type"] == Function
+	elseif meta["type"] isa Vector{Type}
 
 		oneof_list = []
 		push!(oneof_list, Dict("type" => "number"))

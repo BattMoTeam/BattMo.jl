@@ -113,8 +113,9 @@ function print_parameter_info(from_name::String)
 			header3 = "unit"
 			println(rpad(header1, 30), rpad(header2, 30), header3)
 			println("-"^80)
-
-			println(rpad(from_name, 30), rpad(meta_data[from_name]["type"], 30), meta_data[from_name]["unit"])
+			types = meta_data[from_name]["type"]
+			types_str = isa(types, AbstractArray) ? join(types, ", ") : string(types)
+			println(rpad(from_name, 30), rpad(types_str, 30), meta_data[from_name]["unit"])
 		elseif haskey(meta_data[from_name], "options")
 			header3 = "options"
 			println(rpad(header1, 30), rpad(header2, 30), header3)
