@@ -12,8 +12,8 @@ using BattMo
 
 # Let’s begin by loading the default model settings for a P2D simulation. This will return a ModelSettings object:
 
-file_path_model = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/model_settings/", "model_settings_P2D.json")
-model_settings = read_model_settings(file_path_model)
+file_path_model = string(dirname(pathof(BattMo)), "/input/defaults/model_settings/", "P2D.json")
+model_settings = load_model_settings(; from_file_path = file_path_model)
 nothing #hide 
 
 # We can inspect all current settings with:
@@ -33,11 +33,11 @@ model = LithiumIonBatteryModel(; model_settings);
 # In this case, because we set the "UseSEIModel" parameter to true, the validator provides a warning that we should define which SEI model we would like to use.
 # If we ignore the warnings and pass the model to the Simulation constructor then we get an error:
 
-file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_SEI_example.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCCV.json")
+file_path_cell = string(dirname(pathof(BattMo)), "/input/defaults/cell_parameters/", "SEI_example.json")
+file_path_cycling = string(dirname(pathof(BattMo)), "/input/defaults/cycling_protocols/", "CCCV.json")
 
-cell_parameters_sei = read_cell_parameters(file_path_cell)
-cccv_protocol = read_cycling_protocol(file_path_cycling)
+cell_parameters_sei = load_cell_parameters(; from_file_path = file_path_cell)
+cccv_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
 
 try  # hide
 	sim = Simulation(model, cell_parameters_sei, cccv_protocol)
