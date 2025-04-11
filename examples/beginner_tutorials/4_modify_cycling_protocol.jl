@@ -1,7 +1,6 @@
 # # Exploring the Impact of C-Rate in a CC Discharge Protocol
 
-# In this tutorial, we’ll demonstrate how to programmatically modify a cycling protocol—specifically, the C-rate in a constant-current (CC) 
-# discharge protocol—and examine its effect on battery performance and capacity.
+# In this tutorial, we demonstrate the effect that the CRate has on battery performance during discharge, using a constant-current (CC) discharge protocol.
 
 # ### Load Required Packages and Data
 # We start by loading the necessary parameters sets and instantiating a model. For the cyling protocol, we'll start from the default constant current discharge protocol.
