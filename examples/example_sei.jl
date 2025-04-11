@@ -5,12 +5,12 @@ using Jutul, BattMo, GLMakie
 
 # We use the SEI model presented in [bolay2022](@cite). We use the json data given in [bolay.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/bolay.json#L157) which contains the parameters for the SEI layer. 
 
-file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_SEI_example.json")
+file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "SEI_example.json")
 file_path_cycling = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCCV.json")
 file_path_simulation = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/simulation_settings/", "simulation_settings_P2D.json")
 
-cell_parameters = read_cell_parameters(file_path_cell)
-cycling_protocol = read_cycling_protocol(file_path_cycling)
+cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
+cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
 simulation_settings = read_simulation_settings(file_path_simulation)
 
 nothing # hide
@@ -24,9 +24,7 @@ Dict(interphaseparams)
 model = LithiumIonBatteryModel();
 
 model_settings = model.model_settings
-model_settings["UseSEIModel"] = true
-model_settings["SEIModel"] = "Bolay"
-
+model_settings["UseSEIModel"] = "Bolay"
 
 cycling_protocol["TotalNumberOfCycles"] = 10
 

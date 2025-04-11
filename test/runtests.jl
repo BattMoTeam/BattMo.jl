@@ -1,6 +1,7 @@
 using BattMo
 using Test
 
+include("test_loader.jl")
 include("examples_battmo_formatted_input.jl")
 include("matlab_input.jl")
 include("3d_examples.jl")

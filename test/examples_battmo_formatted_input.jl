@@ -14,8 +14,8 @@ names = [
 	for name in names
 		@testset "$name" begin
 			@test begin
-				fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/old/", name, ".json")
-				inputparams = read_battmo_formatted_input(fn)
+				fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
+				inputparams = load_battmo_formatted_input(fn)
 				function hook(simulator,
 					model,
 					state0,
