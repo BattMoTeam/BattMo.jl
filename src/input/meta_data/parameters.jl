@@ -175,22 +175,26 @@ function get_parameter_meta_data()
 		"UseSEIModel" => Dict(
 			"type" => String,
 			"options" => ["Bolay"],
+			"is_sub_model" => true,
 		),
 		"UseDiffusionModel" => Dict(
 			"type" => String,
 			"options" => ["full"],
+			"is_sub_model" => true,
 		),
 		"UseThermalModel" => Dict(
 			"type" => String,
 			"options" => ["Sequential"],
 			"context_type" => "UseThermalModel",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_thermal_model",
+			"is_sub_model" => true,
 		),
 		"UseCurrentCollectors" => Dict(
 			"type" => String,
 			"options" => ["Generic"],
 			"context_type" => "UseCurrentCollectors",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_current_collectors",
+			"is_sub_model" => true,
 		),
 		"GridPointsElectrodeWidth" => Dict(
 			"type" => Int,
@@ -293,6 +297,7 @@ function get_parameter_meta_data()
 			"options" => ["Generic"],
 			"context_type" => "UseRampUp",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_rampup",
+			"is_sub_model" => true,
 		),
 		"RampUpSteps" => Dict(
 			"type" => Int,
@@ -452,7 +457,7 @@ function get_parameter_meta_data()
 		"OpenCircuitVoltage" => Dict("context_type" => ["OpenCircuitVoltage", "Expression"],
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_9c657fdc_b9d3_4964_907c_f9a6e8c5f52b",
 			"description" => "The open-circuit potential of the active material under given concentration and temperature conditions",
-			"type" => Function,
+			"type" => [String, Vector, Real],
 			"unit" => "V",
 			"unit_name" => "emmo:Volt",
 			"unit_iri" => "https://w3id.org/emmo#Volt",
@@ -579,7 +584,7 @@ function get_parameter_meta_data()
 			"context_type" => ["IonicConductivity", "Expression"],
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_25dabdc2_68bf_4a38_8cbe_11be017358bc",
 			"description" => "The ionic conductivity of the electrolyte under given concentration and temperature conditions",
-			"type" => Function,
+			"type" => [String, Vector, Real],
 			"unit" => "S·cm⁻¹",
 			"unit_name" => "emmo:SiemensPerCentiMetre",
 			"unit_iri" => "https://w3id.org/emmo#SiemensPerCentiMetre",
@@ -591,7 +596,7 @@ function get_parameter_meta_data()
 			"unit_name" => "emmo:AreaPerTimeUnit",
 			"unit_iri" => "https://w3id.org/emmo#EMMO_10f703b5_8b2a_4c5a_a734_f0cfb29622ad",
 			"description" => "The diffusion coefficient of the charge carrier in the electrolyte",
-			"type" => Function,
+			"type" => [String, Vector, Real],
 		),
 		"Thickness" => Dict(
 			"context_type" => "Thickness",

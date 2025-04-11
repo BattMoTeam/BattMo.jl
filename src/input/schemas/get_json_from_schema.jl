@@ -1,34 +1,58 @@
 export get_empty_cell_parameter_set
 
-function get_empty_cell_parameter_set(model)
-	if model.is_valid == true
+function get_empty_cell_parameter_set(model; accept_invalid::Bool = false)
+	if accept_invalid == true
 		schema = get_schema_cell_parameters(model.model_settings)
 		set = generate_empty_parameter_set_from_schema(schema)
 		return set
 	else
-		error("""
-		Oops! Your Model object is not valid. 🛑
+		if model.is_valid == true
+			schema = get_schema_cell_parameters(model.model_settings)
+			set = generate_empty_parameter_set_from_schema(schema)
+			return set
+		else
+			error("""
+				Oops! Your Simulation object is not valid. 🛑
 
-		TIP: Validation happens when instantiating the Model object. 
-		Check the warnings to see exactly where things went wrong. 🔍
+				TIP: Validation happens when instantiating the Simulation object. 
+				Check the warnings to see exactly where things went wrong. 🔍
 
-		""")
+				If you’re confident you know what you're doing, you can bypass the validation result 
+				by setting the flag "accept_invalid = true": 
+
+					solve(sim; accept_invalid = true)
+
+				But proceed with caution! 😎 
+				""")
+		end
 	end
 end
 
-function get_empty_simulation_settings(model)
-	if model.is_valid == true
+function get_empty_simulation_settings(model; accept_invalid::Bool = false)
+	if accept_invalid == true
 		schema = get_schema_simulation_settings(model.model_settings)
 		set = generate_empty_parameter_set_from_schema(schema)
 		return set
 	else
-		error("""
-		Oops! Your Model object is not valid. 🛑
+		if model.is_valid == true
+			schema = get_schema_simulation_settings(model.model_settings)
+			set = generate_empty_parameter_set_from_schema(schema)
+			return set
+		else
+			error("""
+				Oops! Your Simulation object is not valid. 🛑
 
-		TIP: Validation happens when instantiating the Model object. 
-		Check the warnings to see exactly where things went wrong. 🔍
+				TIP: Validation happens when instantiating the Simulation object. 
+				Check the warnings to see exactly where things went wrong. 🔍
 
-		""")
+				If you’re confident you know what you're doing, you can bypass the validation result 
+				by setting the flag "accept_invalid = true": 
+
+					solve(sim; accept_invalid = true)
+
+				But proceed with caution! 😎 
+				""")
+		end
 	end
 end
 
