@@ -175,22 +175,26 @@ function get_parameter_meta_data()
 		"UseSEIModel" => Dict(
 			"type" => String,
 			"options" => ["Bolay"],
+			"is_sub_model" => true,
 		),
 		"UseDiffusionModel" => Dict(
 			"type" => String,
 			"options" => ["full"],
+			"is_sub_model" => true,
 		),
 		"UseThermalModel" => Dict(
 			"type" => String,
 			"options" => ["Sequential"],
 			"context_type" => "UseThermalModel",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_thermal_model",
+			"is_sub_model" => true,
 		),
 		"UseCurrentCollectors" => Dict(
 			"type" => String,
 			"options" => ["Generic"],
 			"context_type" => "UseCurrentCollectors",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_current_collectors",
+			"is_sub_model" => true,
 		),
 		"GridPointsElectrodeWidth" => Dict(
 			"type" => Int,
@@ -293,6 +297,7 @@ function get_parameter_meta_data()
 			"options" => ["Generic"],
 			"context_type" => "UseRampUp",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_rampup",
+			"is_sub_model" => true,
 		),
 		"RampUpSteps" => Dict(
 			"type" => Int,
