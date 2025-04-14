@@ -171,21 +171,23 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 
 
 include("utils/physical_constants.jl")
-
 include("input/input_types.jl")
-include("input/reader.jl")
-include("input/function_input_tools.jl")
-include("input/formatter.jl")
-include("input/experiment.jl")
 include("input/meta_data/parameters.jl")
+include("input/defaults/print_defaults.jl")
 include("input/schemas/get_schema.jl")
-include("input/defaults/cell_parameter_set.jl")
-include("input/validator.jl")
-
+include("input/schemas/get_json_from_schema.jl")
 
 include("models/battmo_types.jl")
 include("models/full_battery_models/battery_model.jl")
 include("models/full_battery_models/lithium_ion.jl")
+
+include("input/loader.jl")
+include("input/function_input_tools.jl")
+include("input/formatter.jl")
+include("input/validator.jl")
+
+
+
 include("models/thermal.jl")
 include("models/elyte.jl")
 include("models/current_collector.jl")

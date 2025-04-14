@@ -162,7 +162,7 @@ end
 	run_battery(inputparams::AbstractInputParams; hook = nothing)
 
 Simulate a battery for a given input. The input is expected to be an instance of AbstractInputParams. Such input can be
-prepared from a json file using the function [`read_battmo_formatted_input`](@ref).
+prepared from a json file using the function [`load_battmo_formatted_input`](@ref).
 
 
 """

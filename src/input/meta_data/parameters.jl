@@ -173,19 +173,22 @@ function get_parameter_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_geometry",
 		),
 		"UseSEIModel" => Dict(
-			"type" => Bool,
-		),
-		"SEIModel" => Dict(
 			"type" => String,
 			"options" => ["Bolay"],
 		),
+		"UseDiffusionModel" => Dict(
+			"type" => String,
+			"options" => ["full"],
+		),
 		"UseThermalModel" => Dict(
-			"type" => Bool,
+			"type" => String,
+			"options" => ["Sequential"],
 			"context_type" => "UseThermalModel",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_thermal_model",
 		),
 		"UseCurrentCollectors" => Dict(
-			"type" => Bool,
+			"type" => String,
+			"options" => ["Generic"],
 			"context_type" => "UseCurrentCollectors",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_current_collectors",
 		),
@@ -286,7 +289,8 @@ function get_parameter_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_grid",
 		),
 		"UseRampUp" => Dict(
-			"type" => Bool,
+			"type" => String,
+			"options" => ["Generic"],
 			"context_type" => "UseRampUp",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_rampup",
 		),

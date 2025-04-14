@@ -36,12 +36,34 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 	grid_points = get_key_value(simulation_settings, "GridPoints")
 
 
+	##################
+	# Model settings
+
+	if isnothing(get_key_value(model_settings, "UseThermalModel"))
+		use_thermal = false
+	else
+		use_thermal = true
+	end
+
+	if isnothing(get_key_value(model_settings, "UseCurrentCollectors"))
+		use_cc = false
+	else
+		use_cc = true
+	end
+
+	if isnothing(get_key_value(model_settings, "UseRampUp"))
+		use_ramp_up = false
+	else
+		use_ramp_up = true
+	end
+
+
 	battmo_input = Dict(
 		"G" => get_key_value(simulation_settings, "Grid"),
 		"SOC" => get_key_value(cycling_protocol, "InitialStateOfCharge"),
 		"initT" => get_key_value(cycling_protocol, "InitialKelvinTemperature"),
-		"use_thermal" => get_key_value(model_settings, "UseThermalModel"),
-		"include_current_collectors" => get_key_value(model_settings, "UseCurrentCollectors"),
+		"use_thermal" => use_thermal,
+		"include_current_collectors" => use_cc,
 		"Control" => Dict(
 			"controlPolicy" => get_key_value(cycling_protocol, "Protocol"),
 			"numberOfCycles" => get_key_value(cycling_protocol, "TotalNumberOfCycles"),
@@ -65,7 +87,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 					"specificHeatCapacity" => get_key_value(ne_am, "SpecificHeatCapacity"),
 					"thermalConductivity" => get_key_value(ne_am, "ThermalConductivity"),
 					"electronicConductivity" => get_key_value(ne_am, "ElectronicConductivity"),
-					"SEImodel" => get_key_value(model_settings, "SEIModel"),
+					"SEImodel" => get_key_value(model_settings, "UseSEIModel"),
 					"Interface" => Dict(
 						"saturationConcentration" => get_key_value(ne_am, "MaximumConcentration"),
 						"volumetricSurfaceArea" => get_key_value(ne_am, "VolumetricSurfaceArea"),
@@ -86,7 +108,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 						"SEIlengthRef" => get_key_value(ne_interphase, "InitialThickness"),
 						"density" => get_key_value(ne_am, "Density"),
 					),
-					"diffusionModelType" => "full",
+					"diffusionModelType" => get_key_value(model_settings, "UseDiffusionModel"),
 					"SolidDiffusion" => Dict(
 						"activationEnergyOfDiffusion" => get_key_value(ne_am, "ActivationEnergyOfDiffusion"),
 						"referenceDiffusionCoefficient" => get_key_value(ne_am, "DiffusionCoefficient"),
@@ -224,7 +246,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"Nh" => get_key_value(grid_points, "ElectrodeLength"),
 		),
 		"TimeStepping" => Dict(
-			"useRampup" => get_key_value(model_settings, "UseRampUp"),
+			"useRampup" => use_ramp_up,
 			"numberOfRampupSteps" => get_key_value(simulation_settings, "RampUpSteps"),
 			"timeStepDuration" => get_key_value(simulation_settings, "TimeStepDuration"),
 		),
