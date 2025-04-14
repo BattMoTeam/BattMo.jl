@@ -1,11 +1,20 @@
-# # How to run a model
+# # How to run a simulation
 #
-# Lets how we can run a model in BattMo in the most simple way. We ofcourse start with importing the BattMo package.
+# BattMo simulations repicate the voltage-current response of a cell. To run a Battmo simulation, the basic workflow is:    
+# * Set up cell parameters 
+# * Set up a cycling protocol  
+# * Select a model
+# * Prepare a simulation
+# * Run the simulation
+# * Inspect and visualize the outputs of the simulation  
+
+# To start, we load BattMo (battery models and simulations) and GLMakie (plotting). 
 
 using BattMo, GLMakie
 
-# BattMo utilizes the JSON format to store all the input parameters of a model in a clear and intuitive way. We can use one of the default 
-# parameter sets, for example the Li-ion parameter set that has been created from the [Chen 2020 paper](https://doi.org/10.1149/1945-7111/ab9050). 
+# BattMo stores cell parameters, cycling protocols and settings in a user-friendly JSON format to facilitate reuse. For our example, we read 
+# the cell parameter set from a NMC811 vs Graphite-SiOx cell whose parameters were determined in the [Chen 2020 paper](https://doi.org/10.1149/1945-7111/ab9050). 
+# We also read an example cycling protocol for a simple Constant Current Discharge.
 
 file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_chen2020_calibrated.json")
 file_path_cycling = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCDischarge.json")
@@ -15,18 +24,24 @@ cycling_protocol = read_cycling_protocol(file_path_cycling)
 nothing # hide
 
 
-# We instantiate a Lithium-ion battery model with default model settings
+# Next, we select the Lithium-Ion Battery Model with default model settings. A model can be thought as a mathematical implementation of the electrochemical and 
+# transport phenomena occuring in a real battery cell. The implementation consist of a system of partial differential equations and their corresponding parameters, constants and boundary conditions. 
+# The default Lithium-Ion Battery Model selected below corresponds to a basic P2D model, where neither current collectors nor thermal effects are considered.
 model = LithiumIonBatteryModel()
 
-# Then we setup a Simulation object to validate our parameter sets to the intsnatiated battery model.
+# Then we setup a Simulation by passing the model, cell parameters and a cycling protocol. A Simulation can be thought as a procedure to predict how the cell responds to the cycling protocol, 
+# by solving the equations in the model using the cell parameters passed.  
+# We first prepare the simulation: 
+
 sim = Simulation(model, cell_parameters, cycling_protocol);
 
-# check if the Simulation object is valid
+# When the simulation is prepared, there are some validation checks happening in the background, which verify whether i) the cell parameters, cycling protocol and settings are sensible and complete 
+# to run a simulation. It is good practice to ensure that the Simulation has been properly configured by checking if has passed the validation procedure:   
 sim.is_valid
 
-# Now we can solve the simulation
+# Now we can run the simulation
 output = solve(sim)
-
+nothing # hide
 
 
 # Now we'll have a look into what the output entail. The ouput is of type NamedTuple and contains multiple dicts. Lets print the

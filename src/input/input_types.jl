@@ -1,3 +1,4 @@
+#%%
 export ParameterSet
 export CellParameters, CyclingProtocol, ModelSettings, SimulationSettings, FullSimulationInput
 
@@ -35,7 +36,7 @@ Extends `Base.getindex` to enable dictionary-like access to subtypes of `Abstrac
 The value associated with `key`. If the key is not found, an error is thrown.
 """
 function Base.getindex(ps::AbstractInput, key::String)
-	value = get(ps.dict, key, nothing)
+	value = get(ps.all, key, nothing)
 	if value === nothing
 		error("Parameter not found: $key")
 	else
@@ -55,7 +56,7 @@ Extends `Base.setindex!` to allow setting values in the parameter set.
 - `key ::String` : The key to assign the value to.
 """
 function Base.setindex!(ps::AbstractInput, value, key::String)
-	ps.dict[key] = value
+	ps.all[key] = value
 end
 
 """
@@ -72,7 +73,7 @@ Extends `Base.get` to retrieve values from the parameter set with a default fall
 The value associated with `key` or `default` if the key is not found.
 """
 function Base.get(ps::AbstractInput, key, default = nothing)
-	return get(ps.dict, key, default)
+	return get(ps.all, key, default)
 end
 
 
@@ -80,21 +81,21 @@ end
 New method extending Base.keys to enable listing all keys in the ParameterSet
 """
 function Base.keys(ps::AbstractInput)
-	return keys(ps.dict)
+	return keys(ps.all)
 end
 
 """
 New method extending Base.haskey to check if key exists
 """
 function Base.haskey(ps::AbstractInput, key::String)
-	return haskey(ps.dict, key)
+	return haskey(ps.all, key)
 end
 
 """
 New method extending Base.push! to insert a new parameter-value pair
 """
 function Base.push!(ps::AbstractInput, pair::Pair{String, Any})
-	push!(ps.dict, pair)
+	push!(ps.all, pair)
 	return ps
 end
 
@@ -102,7 +103,7 @@ end
 New method extending Base.delete! to remove a parameter-value pair
 """
 function Base.delete!(ps::AbstractInput, key::String)
-	delete!(ps.dict, key)
+	delete!(ps.all, key)
 end
 
 """
@@ -110,7 +111,7 @@ New method extending Base.iterate to enable iteration in for loops
 """
 # Extend Base.iterate() - Enable iteration (for loops)
 function Base.iterate(ps::AbstractInput, state = nothing)
-	return iterate(ps.dict, state)
+	return iterate(ps.all, state)
 end
 
 
@@ -140,14 +141,19 @@ A list of matching parameter key paths if found, otherwise `nothing`.
 """
 function search_parameter(ps::ParameterSet, query::String)
 	search_matches = []
-	dicts_to_search = [(ps.dict, [])]
+	dicts_to_search = [(ps.all, [])]
 
 	while !isempty(dicts_to_search)
+
 		dict, key_path = pop!(dicts_to_search)
+
 		for (key, value) in dict
+
 			if occursin(lowercase(query), lowercase(key))
 				formatted_key_path = "[" * join(vcat(key_path, key), "][") * "]"
-				push!(search_matches, formatted_key_path)
+				if !(value isa Dict)  
+                    push!(search_matches, formatted_key_path * " => " * string(value))
+                end
 			end
 			if value isa Dict
 				push!(dicts_to_search, (value, vcat(key_path, key)))
@@ -163,29 +169,29 @@ end
 
 "Cell parameter set type that represents the cell parameters"
 struct CellParameters <: ParameterSet
-	dict::Dict{String, Any}
+	all::Dict{String, Any}
 
 end
 
 "Parameter set type that represents the cycling protocol related parameters"
 struct CyclingProtocol <: ParameterSet
-	dict::Dict{String, Any}
+	all::Dict{String, Any}
 end
 
 "Parameter set type that represents the model related settings"
 struct ModelSettings <: ParameterSet
-	dict::Dict{String, Any}
+	all::Dict{String, Any}
 end
 
 
 "Parameter set type that represents the simulation related settings"
 struct SimulationSettings <: ParameterSet
-	dict::Dict{String, Any}
+	all::Dict{String, Any}
 end
 
 "Parameter set type that includes all other parameter set types"
 struct FullSimulationInput <: ParameterSet
-	dict::Dict{String, Any}
+	all::Dict{String, Any}
 end
 
 
@@ -208,10 +214,10 @@ abstract type BattMoFormattedInput <: AbstractInput end
 Represents a validated and backend-formatted set of input parameters for a BattMo simulation.
 
 # Fields
-- `dict ::Dict{String, Any}` : A dictionary storing the input parameters for BattMo.
+- `data ::Dict{String, Any}` : A dictionary storing the input parameters for BattMo.
 """
 struct InputParams <: BattMoFormattedInput
-	dict::Dict{String, Any}
+	all::Dict{String, Any}
 
 end
 
@@ -222,10 +228,10 @@ end
 Represents input parameters derived from MATLAB-generated files, formatted for BattMo compatibility.
 
 # Fields
-- `dict ::Dict{String, Any}` : A dictionary storing MATLAB-extracted input parameters.
+- `data ::Dict{String, Any}` : A dictionary storing MATLAB-extracted input parameters.
 """
 struct MatlabInputParams <: BattMoFormattedInput
-	dict::Dict{String, Any}
+	all::Dict{String, Any}
 end
 
 
@@ -264,8 +270,8 @@ A `AbstractInput` structure whose field are the composition of the two input par
 """
 function merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: AbstractInput}
 
-	dict1 = inputparams1.dict
-	dict2 = inputparams2.dict
+	dict1 = inputparams1.all
+	dict2 = inputparams2.all
 
 	combiner(d1, d2) = recursive_merge_dict(d1, d2; warn = warn)
 	dict = mergewith!(combiner, dict1, dict2)
@@ -273,6 +279,3 @@ function merge_input_params(inputparams1::T, inputparams2::T; warn = false) wher
 	return T(dict)
 
 end
-
-
-

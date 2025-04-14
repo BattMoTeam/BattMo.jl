@@ -192,7 +192,7 @@ function computeEnergyEfficiency(inputparams::InputParams)
 
 	# setup a schedule with just one cycle and very fine refinement
 
-	jsondict = inputparams.dict
+	jsondict = inputparams.data
 
 	ctrldict = jsondict["Control"]
 
@@ -280,7 +280,7 @@ end
 function computeDischargeEnergy(inputparams::InputParams)
 	# setup a schedule with just discharge half cycle and very fine refinement
 
-	jsondict = inputparams.dict
+	jsondict = inputparams.data
 
 	ctrldict = jsondict["Control"]
 

@@ -7,21 +7,17 @@
   "Cell": {
     "Name": "",
     "Case": "3D-demo",
-    "DeviceSurfaceArea": 0.0,
+    "ElectrodeWidth": 1.0e-2,
+    "ElectrodeLength": 2.0e-2,
+    "ElectrodeGeometricSurfaceArea": 0.0002,
     "DoubleCoatedElectrodes": null,
-    "NominalVoltage": 0.0,
-    "NominalCapacity": 0.0,
-    "HeatTransferCoefficient": 1000.0,
-    "InnerCellRadius": 0.0
+    "HeatTransferCoefficient": 1000.0
   },
   "NegativeElectrode": {
     "ElectrodeCoating": {
       "BruggemanCoefficient": 1.5,
       "EffectiveDensity": 1900.0,
       "Thickness": 1.0e-4,
-      "Width": 1.0e-2,
-      "Length": 2.0e-2,
-      "Area": 0.0002,
       "SurfaceCoefficientOfHeatTransfer": 1000
     },
     "ActiveMaterial": {
@@ -94,9 +90,6 @@
       "BruggemanCoefficient": 1.5,
       "EffectiveDensity": 3500.0,
       "Thickness": 8.0e-5,
-      "Width": 1.0e-2,
-      "Length": 2.0e-2,
-      "Area": 0.0002,
       "SurfaceCoefficientOfHeatTransfer": 1000
     },
     "ActiveMaterial": {

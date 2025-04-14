@@ -28,9 +28,9 @@ function build_battmo_docs(build_format              = nothing;
 	# Convert examples as .jl files to markdown
 	tutorials = [
 		"Tutorial 1 - Run a simulation" => "1_run_a_simulation",
-		"Tutorial 2 - Modify cell parameters" => "2_modify_cell_parameters",
-		"Tutorial 3 - Specify a model" => "3_specify_a_model",
-		"Tutorial 4 - Modify simulation settings" => "4_modify_simulation_settings"]
+		"Tutorial 2 - Specify a model" => "2_specify_a_model",
+		"Tutorial 3 - Modify cell parameters" => "3_modify_cell_parameters",
+		"Tutorial 4 - Modify cycling protocol" => "4_modify_cycling_protocol"]
 
 	examples = [
 		"Cycle example" => "example_cycle",

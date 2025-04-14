@@ -7,6 +7,9 @@
     "Cell": {
         "Name": "LG INR 21700 M50",
         "Case": "Cylindrical",
+        "ElectrodeWidth": 0.065,
+        "ElectrodeLength": 1.58,
+        "ElectrodeGeometricSurfaceArea": 0.1027,
         "DeviceSurfaceArea": 0.0053,
         "DoubleCoatedElectrodes": true,
         "NominalVoltage": 3.71,
@@ -19,9 +22,6 @@
             "BruggemanCoefficient": 2.91,
             "EffectiveDensity": 1695,
             "Thickness": 8.52e-5,
-            "Width": 0.065,
-            "Length": 1.58,
-            "Area": 0.1027,
             "SurfaceCoefficientOfHeatTransfer": 1000
         },
         "ActiveMaterial": {
@@ -79,9 +79,6 @@
             "BruggemanCoefficient": 2.43,
             "EffectiveDensity": 3292,
             "Thickness": 7.56e-5,
-            "Width": 0.065,
-            "Length": 1.58,
-            "Area": 0.1027,
             "SurfaceCoefficientOfHeatTransfer": 1000
         },
         "ActiveMaterial": {

@@ -10,8 +10,16 @@ using RuntimeGeneratedFunctions                   # Code generation
 # ─────────────────────────────────────────────────────────────────────────────
 # 📂 File Handling & Data Processing
 # ─────────────────────────────────────────────────────────────────────────────
-using MAT: matread
 using JSON: JSON                                  # JSON parsing
+using MAT: matread
+
+# Internally exported JSONSchema functions and types
+using JSONSchema: Schema, SingleIssue
+
+# Non-exported JSONSchema functions and types
+import JSONSchema: show, isvalid, _resolve_refs
+
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -169,6 +177,10 @@ include("input/reader.jl")
 include("input/function_input_tools.jl")
 include("input/formatter.jl")
 include("input/experiment.jl")
+include("input/meta_data/parameters.jl")
+include("input/schemas/get_schema.jl")
+include("input/defaults/cell_parameter_set.jl")
+include("input/validator.jl")
 
 
 include("models/battmo_types.jl")
