@@ -75,7 +75,7 @@ function print_submodels_info()
 
 	# Print the submodels information with the same design as your example
 	println("="^80)
-	println("📁  Submodels Information")
+	println("ℹ️  Submodels Information")
 	println("="^80)
 
 	# Table header
@@ -102,7 +102,7 @@ function print_parameter_info(from_name::String)
 	if haskey(meta_data, from_name)
 		# Print the information
 		println("="^80)
-		println("📁  Parameter Information")
+		println("ℹ️  Parameter Information")
 		println("="^80)
 
 		# Table header

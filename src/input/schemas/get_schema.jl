@@ -218,7 +218,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						"type" => "object",
 						"properties" => Dict(
 							"Density" => create_property(parameter_meta, "Density"),
-							"MassFraction" => create_property(parameter_meta, "MassFraction"),
+							"Thickness" => create_property(parameter_meta, "Thickness"),
 							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
@@ -300,7 +300,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						"type" => "object",
 						"properties" => Dict(
 							"Density" => create_property(parameter_meta, "Density"),
-							"MassFraction" => create_property(parameter_meta, "MassFraction"),
+							"Thickness" => create_property(parameter_meta, "Thickness"),
 							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
@@ -339,6 +339,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 	cell_required = schema["properties"]["Cell"]["required"]
 	ne_required = schema["properties"]["NegativeElectrode"]["required"]
+	pe_required = schema["properties"]["PositiveElectrode"]["required"]
 	ne_coating_required = schema["properties"]["NegativeElectrode"]["properties"]["ElectrodeCoating"]["required"]
 	pe_coating_required = schema["properties"]["PositiveElectrode"]["properties"]["ElectrodeCoating"]["required"]
 
@@ -382,10 +383,14 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 		end
 
-	elseif model_settings_dict["ModelGeometry"] == "3D Pouch"
+	elseif model_settings_dict["ModelGeometry"] == "3D-demo"
 		push!(cell_required, "ElectrodeWidth")
 		push!(cell_required, "ElectrodeLength")
-		if model_settings_dict["UseThermalModel"]
+		if haskey(model_settings, "UseCurrentCollectors")
+			push!(ne_required, "CurrentCollector")
+			push!(pe_required, "CurrentCollector")
+		end
+		if haskey(model_settings_dict, "UseThermalModel")
 			push!(cell_required, "DeviceSurfaceArea")
 			push!(cell_required, "HeatTransferCoefficient")
 			push!(ne_coating_required, "SurfaceCoefficientOfHeatTransfer")
@@ -406,9 +411,10 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 			push!(sep_required, "ThermalConductivity")
 			push!(elyte_required, "SpecificHeatCapacity")
 			push!(elyte_required, "ThermalConductivity")
+
 		end
 
-	elseif model_settings_dict["ModelGeometry"] == "3D Cyclindrical"
+	elseif model_settings_dict["ModelGeometry"] == "3D Cylindrical"
 
 		push!(cell_required, "DubbelCoatedElectrodes")
 		push!(cell_required, "InnerCellRadius")
