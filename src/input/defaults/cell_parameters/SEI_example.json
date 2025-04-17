@@ -1,7 +1,6 @@
 {
   "Metadata": {
     "Title": "SEI example",
-    "Source": "",
     "Description": "Parameter set to test SEI simulations. Obtained from the Julia repository but with unknown source."
   },
   "Cell": {

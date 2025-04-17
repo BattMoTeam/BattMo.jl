@@ -57,12 +57,8 @@ function print_required_cell_parameters(::LithiumIonBatteryModel)
 end
 
 function get_default_model_settings(::Type{LithiumIonBatteryModel})
-	settings = Dict(
-		"ModelGeometry" => "1D",
-		"UseDiffusionModel" => "full",
-		"UseRampUp" => "Generic",
-	)
-	return ModelSettings(settings)
+	settings = load_model_settings(; from_default_set = "P2D")
+	return settings
 end
 
 

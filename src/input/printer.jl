@@ -15,16 +15,25 @@ function print_default_parameter_sets()
 
 			# Table header
 			header1 = "Parameter Set"
-			header2 = "Description"
-			println(rpad(header1, 30), header2)
+			header2 = "Source"
+			header3 = "Description"
+			println(rpad(header1, 20), rpad(header2, 10), header3)
 			println("-"^80)
 
 			files = readdir(entry; join = true)
+
 			for file in files
 				if isfile(file)
-					file_name = splitext(basename(file))[1]  # Remove extension
-					description = read_meta_data(file)
-					println(rpad(file_name, 30), description)
+					file_name = splitext(basename(file))[1]
+					description = read_description_from_meta_data(file)
+					source = read_source_from_meta_data(file)
+
+					if isnothing(source)
+						link = rpad("-", 10)
+					else
+						link = source == "-" ? "-" : padded_link("visit", source, 10)
+					end
+					println(rpad(file_name, 20), link, description)
 				end
 			end
 
@@ -33,8 +42,17 @@ function print_default_parameter_sets()
 	end
 end
 
+function terminal_link(text, url)
+	return "\e]8;;$url\a$text\e]8;;\a"
+end
 
-function read_meta_data(file::String)
+function padded_link(text, url, width)
+	link = terminal_link(text, url)
+	pad_spaces = max(width - length(text), 0)
+	return link * " "^pad_spaces
+end
+
+function read_description_from_meta_data(file::String)
 	content = read(file, String)
 
 	if isempty(strip(content))
@@ -50,7 +68,26 @@ function read_meta_data(file::String)
 		return "(Invalid metadata format)"
 	end
 
-	return "(No description found)"
+	return "-"
+end
+
+function read_source_from_meta_data(file::String)
+	content = read(file, String)
+
+	if isempty(strip(content))
+		return "(File is empty or not valid JSON)"
+	end
+
+	json_file = JSON.parse(content)
+	try
+		if haskey(json_file, "Metadata") && haskey(json_file["Metadata"], "Source")
+			return String(json_file["Metadata"]["Source"])
+		end
+	catch e
+		return "(Invalid metadata format)"
+	end
+
+	return nothing
 end
 
 function print_submodels_info()
@@ -62,8 +99,9 @@ function print_submodels_info()
 	for (param, info) in meta_data
 		if get(info, "is_sub_model", false)
 			options = get(info, "options", "N/A")
+			doc_url = get(info, "documentation", nothing)
 			options_str = isa(options, AbstractArray) ? join(options, ", ") : string(options)
-			push!(submodel_params, (param, options_str))
+			push!(submodel_params, (param, options_str, doc_url))
 		end
 	end
 
@@ -81,16 +119,25 @@ function print_submodels_info()
 	# Table header
 	header1 = "Parameter"
 	header2 = "Options"
-	println(rpad(header1, 30), header2)
+	header3 = "Documentation"
+
+	println(rpad(header1, 30), rpad(header2, 30), header3)
 	println("-"^80)
 
 	# Print each parameter and its options
-	for (param, options) in submodel_params
-		println(rpad(param, 30), options)
+	for (param, options, doc_url) in submodel_params
+		if isnothing(doc_url)
+			url = rpad("-", 10)
+		else
+			url = doc_url == "-" ? "-" : padded_link("visit", doc_url, 10)
+		end
+		println(rpad(param, 30), rpad(options, 30), url)
 	end
 
 	println()  # Extra line after the table
 end
+
+
 
 function print_parameter_info(from_name::String)
 

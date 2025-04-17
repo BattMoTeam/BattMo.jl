@@ -1,7 +1,6 @@
 {
   "Metadata": {
     "Title": "3d_demo_case",
-    "Source": "",
     "Description": "Parameter set to test P4D simulations. Obtained from the Julia repository but with unknwon source."
   },
   "Cell": {

@@ -179,8 +179,9 @@ function get_parameter_meta_data()
 		),
 		"UseDiffusionModel" => Dict(
 			"type" => String,
-			"options" => ["full"],
+			"options" => ["PXD", "NoParticleDiffusion"],
 			"is_sub_model" => true,
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/models",
 		),
 		"UseThermalModel" => Dict(
 			"type" => String,
