@@ -562,6 +562,11 @@ function setup_submodels(inputparams::InputParams;
 			ctrl["initialControl"],
 			ctrl["numberOfCycles"])
 
+	elseif controlPolicy == "Generic"
+		ctrl = jsondict["Control"]
+
+		policy = GenericPolicy(ctrl)
+
 	else
 
 		error("controlPolicy not recognized.")
@@ -842,6 +847,41 @@ function setup_battery_parameters(inputparams::InputParams,
 		CRate                       = inputparams["Control"]["CRate"]
 		prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
 		prm_control[:ImaxCharge]    = (cap / con.hour) * CRate
+
+		parameters[:Control] = setup_parameters(model[:Control], prm_control)
+
+	elseif controlPolicy == "Generic"
+		control_steps = inputparams["Control"]["controlsteps"]
+
+		prm_steps = []
+		cap = computeCellCapacity(model)
+		con = Constants()
+
+		for step in control_steps
+			mode = step["controltype"] # e.g., "discharge", "charge", "rest", etc.
+
+			step_params = Dict{Symbol, Any}()
+
+			# if haskey(step, "CRate")
+			# 	step_params[:current] = (cap / con.hour) * step["CRate"]
+			# elseif haskey(step, "DRate")
+			# 	step_params[:current] = (cap / con.hour) * step["DRate"]
+			# end
+
+			# if haskey(step, "voltage")
+			# 	step_params[:voltage] = step["voltage"]
+			# end
+
+			# if haskey(step, "duration")
+			# 	step_params[:duration] = step["duration"]
+			# end
+
+			step_params[:mode] = mode
+
+			push!(prm_steps, step_params)
+		end
+
+		prm_control[:steps] = prm_steps
 
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
@@ -1428,25 +1468,25 @@ function setup_config(sim::JutulSimulator,
 
 		cfg[:post_ministep_hook] = post_hook
 
-	elseif model[:Control].system.policy isa GenericPolicy
-		cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+		# elseif model[:Control].system.policy isa GenericPolicy
+		# 	cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
 
-		function post_hook(done, report, sim, dt, forces, max_iter, cfg)
+		# 	function post_hook(done, report, sim, dt, forces, max_iter, cfg)
 
-			s = get_simulator_storage(sim)
-			m = get_simulator_model(sim)
+		# 		s = get_simulator_storage(sim)
+		# 		m = get_simulator_model(sim)
 
-			if s.state.Control.GenericController.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-				report[:stopnow] = true
-			else
-				report[:stopnow] = false
-			end
+		# 		if s.state.Control.GenericController.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+		# 			report[:stopnow] = true
+		# 		else
+		# 			report[:stopnow] = false
+		# 		end
 
-			return (done, report)
+		# 		return (done, report)
 
-		end
+		# 	end
 
-		cfg[:post_ministep_hook] = post_hook
+		# 	cfg[:post_ministep_hook] = post_hook
 
 	end
 

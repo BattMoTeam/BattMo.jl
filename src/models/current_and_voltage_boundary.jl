@@ -6,7 +6,8 @@ export
 	sineup,
 	SimpleCVPolicy,
 	CyclingCVPolicy,
-	OperationalMode
+	OperationalMode,
+	AbstractControl
 
 ################################
 # Define the operational modes #
@@ -49,9 +50,9 @@ struct ImaxCharge <: ScalarVariable end
 
 ## In Jutul, a system is part of a model and contains data
 
-abstract type AbstractCVPolicy end
+abstract type AbstractControl end
 
-struct CurrentAndVoltageSystem{P <: AbstractCVPolicy} <: JutulSystem
+struct CurrentAndVoltageSystem{P <: AbstractControl} <: JutulSystem
 
 	# Control policy
 	policy::P
@@ -72,7 +73,7 @@ Jutul.number_of_cells(::CurrentAndVoltageDomain) = 1
 
 """ Simple constant current policy. Stops when lower cut-off value is reached
 """
-mutable struct SimpleCVPolicy{R} <: AbstractCVPolicy
+mutable struct SimpleCVPolicy{R} <: AbstractControl
 	current_function::Any
 	Imax::R
 	voltage::R
@@ -83,12 +84,12 @@ end
 
 """ No policy means that the control is kept fixed throughout the simulation
 """
-struct NoPolicy <: AbstractCVPolicy end
+struct NoPolicy <: AbstractControl end
 
 
 """ Standard CC-CV policy
 """
-mutable struct CyclingCVPolicy{R, I} <: AbstractCVPolicy
+mutable struct CyclingCVPolicy{R, I} <: AbstractControl
 
 	ImaxDischarge::R
 	ImaxCharge::R
@@ -546,7 +547,7 @@ function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{Cu
 end
 
 
-function update_controller!(state, state0, policy::AbstractCVPolicy, dt)
+function update_controller!(state, state0, policy::AbstractControl, dt)
 
 	update_control_type_in_controller!(state, state0, policy, dt)
 	update_values_in_controller!(state, policy)
@@ -802,6 +803,18 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 		end
 
 		ctrl.numberOfCycles = ncycles
+
+	elseif policy isa GenericPolicy
+
+		copyController!(storage.state0[:GenericController], ctrl)
+
+		# Optional: Handle completed outer cycles if relevant
+		# Example logic:
+		if ctrl.cycles_remaining < storage.state0[:GenericController].cycles_remaining
+			ctrl.numberOfCycles = storage.state0[:GenericController].numberOfCycles + 1
+		else
+			ctrl.numberOfCycles = storage.state0[:GenericController].numberOfCycles
+		end
 
 	elseif policy isa SimpleCVPolicy
 

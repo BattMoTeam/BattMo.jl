@@ -182,6 +182,7 @@ include("models/full_battery_models/battery_model.jl")
 include("models/full_battery_models/lithium_ion.jl")
 
 include("input/loader.jl")
+include("input/experiment.jl")
 include("input/function_input_tools.jl")
 include("input/formatter.jl")
 include("input/validator.jl")
@@ -195,6 +196,7 @@ include("models/ocp.jl")
 include("models/activematerial.jl")
 include("models/sei_layer.jl")
 include("models/current_and_voltage_boundary.jl")
+include("models/generic_control.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")
 
