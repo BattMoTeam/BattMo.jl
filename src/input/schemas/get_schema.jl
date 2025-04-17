@@ -24,10 +24,29 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 		dict["enum"] = get(meta, "options", nothing)  # Enforce max value if present
 		dict["description"] = get(meta, "description", "")  # Optional documentation
 
-	elseif meta["type"] isa Vector{Type}
+	elseif isa(meta["type"], Vector) && all(isa.(meta["type"], DataType))
+
 
 		oneof_list = []
 		push!(oneof_list, Dict("type" => "number"))
+		push!(
+			oneof_list,
+			Dict(
+				"type" => "object",
+				"properties" => Dict(
+					"V" => Dict("type" => "array"),
+					"SOC" => Dict("type" => "array"),
+				),
+				"required" => ["V", "SOC"],
+				"additionalProperties" => false,
+			),
+		)
+		push!(
+			oneof_list,
+			Dict(
+				"type" => "string",
+			),
+		)
 		push!(
 			oneof_list,
 			Dict(
@@ -41,45 +60,6 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 					),
 				),
 				"required" => ["type", "functionname", "argumentlist"],
-				"additionalProperties" => false,
-			),
-		)
-		push!(
-			oneof_list,
-			Dict(
-				"type" => "object",
-				"properties" => Dict(
-					"type" => Dict("type" => "string", "enum" => ["function"]),
-					"function" => Dict("type" => "string"),
-					"argumentlist" => Dict(
-						"type" => "array",
-						"items" => Dict("type" => "string"),
-					),
-				),
-				"required" => ["type", "function", "argumentlist"],
-				"additionalProperties" => false,
-			),
-		)
-		push!(
-			oneof_list,
-			Dict(
-				"type" => "object",
-				"properties" => Dict(
-					"type" => Dict("type" => "string", "enum" => ["function"]),
-					"data_x" => Dict(
-						"type" => "array",
-						"items" => Dict("type" => "number"),
-					),
-					"data_y" => Dict(
-						"type" => "array",
-						"items" => Dict("type" => "number"),
-					),
-					"argumentlist" => Dict(
-						"type" => "array",
-						"items" => Dict("type" => "string"),
-					),
-				),
-				"required" => ["type", "data_x", "data_y", "argumentlist"],
 				"additionalProperties" => false,
 			),
 		)
@@ -173,12 +153,13 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"OpenCircuitVoltage" => create_property(parameter_meta, "OpenCircuitVoltage"),
 							"NumberOfElectronsTransfered" => create_property(parameter_meta, "NumberOfElectronsTransfered"),
 							"ActivationEnergyOfReaction" => create_property(parameter_meta, "ActivationEnergyOfReaction"),
+							"ActivationEnergyOfDiffusion" => create_property(parameter_meta, "ActivationEnergyOfDiffusion"),
 							"ReactionRateConstant" => create_property(parameter_meta, "ReactionRateConstant"),
 							"ChargeTransferCoefficient" => create_property(parameter_meta, "ChargeTransferCoefficient"),
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitVoltage", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ReactionRateConstant", "ChargeTransferCoefficient"],
+							"OpenCircuitVoltage", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ActivationEnergyOfDiffusion", "ReactionRateConstant", "ChargeTransferCoefficient"],
 					),
 					"Interphase" => Dict(
 						"type" => "object",
@@ -255,12 +236,13 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"OpenCircuitVoltage" => create_property(parameter_meta, "OpenCircuitVoltage"),
 							"NumberOfElectronsTransfered" => create_property(parameter_meta, "NumberOfElectronsTransfered"),
 							"ActivationEnergyOfReaction" => create_property(parameter_meta, "ActivationEnergyOfReaction"),
+							"ActivationEnergyOfDiffusion" => create_property(parameter_meta, "ActivationEnergyOfDiffusion"),
 							"ReactionRateConstant" => create_property(parameter_meta, "ReactionRateConstant"),
 							"ChargeTransferCoefficient" => create_property(parameter_meta, "ChargeTransferCoefficient"),
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitVoltage", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ReactionRateConstant", "ChargeTransferCoefficient"],
+							"OpenCircuitVoltage", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ActivationEnergyOfDiffusion", "ReactionRateConstant", "ChargeTransferCoefficient"],
 					),
 					"Interphase" => Dict(
 						"type" => "object",

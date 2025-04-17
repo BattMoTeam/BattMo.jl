@@ -57,6 +57,98 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		use_ramp_up = true
 	end
 
+	ne_ocp_value = get_key_value(ne_am, "OpenCircuitVoltage")
+	if isa(ne_ocp_value, AbstractDict)
+		if haskey(ne_ocp_value, "functionname")
+			ne_ocp = ne_ocp_value
+		else
+			ne_ocp = Dict(
+				"type" => "function",
+				"data_x" => ne_ocp_value["SOC"],
+				"data_y" => ne_ocp_value["V"],
+				"argumentlist" => [
+					"theta",
+				],
+			)
+		end
+	elseif isa(ne_ocp_value, String)
+		ne_ocp = Dict(
+			"type" => "function",
+			"function" => ne_ocp_value,
+		)
+	else
+		error("Function type not recognized")
+	end
+
+	pe_ocp_value = get_key_value(pe_am, "OpenCircuitVoltage")
+	if isa(pe_ocp_value, AbstractDict)
+		if haskey(pe_ocp_value, "functionname")
+			pe_ocp = pe_ocp_value
+		else
+			pe_ocp = Dict(
+				"type" => "function",
+				"data_x" => pe_ocp_value["SOC"],
+				"data_y" => pe_ocp_value["V"],
+				"argumentlist" => [
+					"theta",
+				],
+			)
+		end
+	elseif isa(pe_ocp_value, String)
+		pe_ocp = Dict(
+			"type" => "function",
+			"function" => pe_ocp_value,
+		)
+	else
+		error("Function type not recognized")
+	end
+
+	diff_value = get_key_value(elyte, "DiffusionCoefficient")
+	if isa(diff_value, AbstractDict)
+		if haskey(diff_value, "functionname")
+			diff = diff_value
+		else
+			diff = Dict(
+				"type" => "function",
+				"data_x" => diff_value["C"],
+				"data_y" => diff_value["m^2/s"],
+				"argumentlist" => [
+					"theta",
+				],
+			)
+		end
+	elseif isa(diff_value, String)
+		diff = Dict(
+			"type" => "function",
+			"function" => diff_value,
+		)
+	else
+		error("Function type not recognized")
+	end
+
+	cond_value = get_key_value(elyte, "IonicConductivity")
+	if isa(cond_value, AbstractDict)
+		if haskey(cond_value, "functionname")
+			cond = cond_value
+		else
+			cond = Dict(
+				"type" => "function",
+				"data_x" => cond_value["C"],
+				"data_y" => cond_value["S/m"],
+				"argumentlist" => [
+					"theta",
+				],
+			)
+		end
+	elseif isa(cond_value, String)
+		cond = Dict(
+			"type" => "function",
+			"function" => cond_value,
+		)
+	else
+		error("Function type not recognized")
+	end
+
 
 	battmo_input = Dict(
 		"G" => get_key_value(simulation_settings, "Grid"),
@@ -97,7 +189,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 						"guestStoichiometry100" => get_key_value(ne_am, "StoichiometricCoefficientAtSOC100"),
 						"guestStoichiometry0" => get_key_value(ne_am, "StoichiometricCoefficientAtSOC0"),
 						"chargeTransferCoefficient" => get_key_value(ne_am, "ChargeTransferCoefficient"),
-						"openCircuitPotential" => get_key_value(ne_am, "OpenCircuitVoltage"),
+						"openCircuitPotential" => ne_ocp,
 						"SEImolarVolume" => get_key_value(ne_interphase, "MolarVolume"),
 						"SEIionicConductivity" => get_key_value(ne_interphase, "IonicConductivity"),
 						"SEIelectronicDiffusionCoefficient" => get_key_value(ne_interphase, "ElectronicDiffusionCoefficient"),
@@ -168,7 +260,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 						"guestStoichiometry100" => get_key_value(pe_am, "StoichiometricCoefficientAtSOC100"),
 						"guestStoichiometry0" => get_key_value(pe_am, "StoichiometricCoefficientAtSOC0"),
 						"chargeTransferCoefficient" => get_key_value(pe_am, "ChargeTransferCoefficient"),
-						"openCircuitPotential" => get_key_value(pe_am, "OpenCircuitVoltage"),
+						"openCircuitPotential" => pe_ocp,
 					), "diffusionModelType" => "full",
 					"SolidDiffusion" => Dict(
 						"activationEnergyOfDiffusion" => get_key_value(pe_am, "ActivationEnergyOfDiffusion"),
@@ -214,8 +306,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"thermalConductivity" => get_key_value(elyte, "ThermalConductivity"),
 			"density" => get_key_value(elyte, "Density"),
 			"initialConcentration" => get_key_value(elyte, "Concentration"),
-			"ionicConductivity" => get_key_value(elyte, "IonicConductivity"),
-			"diffusionCoefficient" => get_key_value(elyte, "DiffusionCoefficient"),
+			"ionicConductivity" => cond,
+			"diffusionCoefficient" => diff,
 			"species" => Dict(
 				"chargeNumber" => get_key_value(elyte, "ChargeNumber"),
 				"transferenceNumber" => get_key_value(elyte, "TransferenceNumber"),

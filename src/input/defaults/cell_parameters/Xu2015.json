@@ -44,22 +44,26 @@
             "MassFraction": 0.0,
             "StoichiometricCoefficientAtSOC100": 0.14778,
             "ActivationEnergyOfReaction": 4000,
-            "OpenCircuitVoltage": 0.0,
+            "ActivationEnergyOfDiffusion": 20000,
+            "OpenCircuitVoltage": {
+                "type": "function",
+                "functionname": "computeOCP_LFP_Xu2015"
+            },
             "MaximumConcentration": 26390,
             "VolumetricSurfaceArea": 1878260,
-            "SpecificHeatCapacity": 0.0,
-            "DiffusionCoefficient": 0.0,
-            "ParticleRadius": 0.0,
+            "SpecificHeatCapacity": 1260.2,
+            "DiffusionCoefficient": 1.25e-15,
+            "ParticleRadius": 1.15e-6,
             "Density": 1500,
-            "ElectronicConductivity": 0.0,
-            "ThermalConductivity": 0.0,
-            "ChargeTransferCoefficient": 0.0
+            "ElectronicConductivity": 0.01,
+            "ThermalConductivity": 1.48,
+            "ChargeTransferCoefficient": 0.5
         },
         "ElectrodeCoating": {
             "SurfaceCoefficientOfHeatTransfer": 1260.2,
             "BruggemanCoefficient": 0.0,
             "EffectiveDensity": 0.0,
-            "Thickness": 0.0
+            "Thickness": 92e-6
         },
         "Binder": {
             "MassFraction": 0.0,
@@ -80,52 +84,49 @@
             "Thickness": 16e-06,
             "Density": 2700,
             "ElectronicConductivity": 3.83e7,
-            "ThermalConductivity": 0,
-            "SpecificHeatCapacity": 0,
+            "ThermalConductivity": 160,
+            "SpecificHeatCapacity": 903,
             "TabWidth": 15e-3,
             "TabLength": 10e-3
         }
     },
     "Separator": {
-        "SpecificHeatCapacity": 1692,
+        "SpecificHeatCapacity": 1978,
         "Density": 779,
         "BruggemanCoefficient": 0.0,
-        "Thickness": 0.0,
+        "Thickness": 20e-6,
         "ThermalConductivity": 0.334,
         "Porosity": 0.4
     },
     "NegativeElectrode": {
-        "Interphase": {
-            "IntersticialConcentration": 0.0,
-            "ElectronicDiffusionCoefficient": 0.0,
-            "InitialThickness": 0.0,
-            "IonicConductivity": 0.0,
-            "StoichiometricCoefficient": 0.0,
-            "MolarVolume": 0.0
-        },
         "ActiveMaterial": {
-            "NumberOfElectronsTransfered": 0.0,
-            "StoichiometricCoefficientAtSOC0": 0.0,
-            "ReactionRateConstant": 0.0,
+            "Description": "Graphite",
+            "NumberOfElectronsTransfered": 1,
+            "StoichiometricCoefficientAtSOC0": 0.001,
+            "ReactionRateConstant": 1.764e-11,
             "MassFraction": 0.0,
-            "StoichiometricCoefficientAtSOC100": 0.0,
-            "ActivationEnergyOfReaction": 0.0,
-            "OpenCircuitVoltage": 0.0,
-            "MaximumConcentration": 0.0,
+            "StoichiometricCoefficientAtSOC100": 0.51873811,
+            "ActivationEnergyOfReaction": 4000,
+            "ActivationEnergyOfDiffusion": 4000,
+            "OpenCircuitVoltage": {
+                "type": "function",
+                "functionname": "computeOCP_Graphite_Xu2015"
+            },
+            "MaximumConcentration": 31540,
             "VolumetricSurfaceArea": 0.0,
-            "SpecificHeatCapacity": 0.0,
-            "DiffusionCoefficient": 0.0,
-            "ParticleRadius": 0.0,
-            "Density": 0.0,
-            "ElectronicConductivity": 0.0,
-            "ThermalConductivity": 0.0,
-            "ChargeTransferCoefficient": 0.0
+            "SpecificHeatCapacity": 1437.4,
+            "DiffusionCoefficient": 3.9e-14,
+            "ParticleRadius": 14.75e-6,
+            "Density": 2660,
+            "ElectronicConductivity": 2,
+            "ThermalConductivity": 1.04,
+            "ChargeTransferCoefficient": 0.5
         },
         "ElectrodeCoating": {
             "SurfaceCoefficientOfHeatTransfer": 0.0,
             "BruggemanCoefficient": 0.0,
             "EffectiveDensity": 0.0,
-            "Thickness": 0.0
+            "Thickness": 59e-6
         },
         "Binder": {
             "MassFraction": 0.0,
@@ -146,8 +147,8 @@
             "Thickness": 9e-06,
             "Density": 8900,
             "ElectronicConductivity": 6.33e7,
-            "ThermalConductivity": 0,
-            "SpecificHeatCapacity": 0,
+            "ThermalConductivity": 400,
+            "SpecificHeatCapacity": 385,
             "TabWidth": 15e-3,
             "TabLength": 10e-3
         }
