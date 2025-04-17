@@ -1,5 +1,5 @@
 {
     "ModelGeometry": "1D",
-    "UseDiffusionModel": "full",
+    "UseDiffusionModel": "PXD",
     "UseRampUp": "Generic"
 }

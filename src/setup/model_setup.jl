@@ -95,12 +95,22 @@ Throws an error if the `Simulation` object is not valid, prompting the user to c
 """
 function solve(problem::Simulation; accept_invalid = false, hook = nothing, kwargs...)
 
+	if problem.model.model_settings["UseDiffusionModel"] == "PXD"
+		use_p2d = true
+	else
+		use_p2d = false
+	end
+
 	if accept_invalid == true
-		output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings; hook = nothing,
+		output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;
+			hook = nothing,
+			use_p2d = use_p2d,
 			kwargs...)
 	else
 		if problem.is_valid == true
-			output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings; hook = nothing,
+			output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;
+				hook = nothing,
+				use_p2d = use_p2d,
 				kwargs...)
 
 			return output
@@ -144,6 +154,7 @@ The output of the battery simulation after executing `run_battery` with formatte
 """
 function run_battery(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings;
 	hook = nothing,
+	use_p2d = true,
 	kwargs...)
 
 	model_settings = model.model_settings
@@ -152,7 +163,7 @@ function run_battery(model::BatteryModel, cell_parameters::CellParameters, cycli
 
 	# @info JSON.json(battmo_formatted_input, 2)
 
-	output = run_battery(battmo_formatted_input)
+	output = run_battery(battmo_formatted_input; hook = hook, use_p2d = use_p2d)
 
 	return output
 end
@@ -168,13 +179,14 @@ prepared from a json file using the function [`load_battmo_formatted_input`](@re
 """
 function run_battery(inputparams::BattMoFormattedInput;
 	hook = nothing,
+	use_p2d = true,
 	kwargs...)
 	"""
 		Run battery wrapper method. Call setup_simulation function and run the simulation with the setup that is returned. A hook function can be given to modify the setup after the call to setup_simulation
 	"""
 
 	#Setup simulation
-	output = setup_simulation(deepcopy(inputparams); kwargs...)
+	output = setup_simulation(deepcopy(inputparams); use_p2d = use_p2d, kwargs...)
 
 	simulator = output[:simulator]
 	model     = output[:model]
@@ -231,6 +243,7 @@ function setup_simulation(inputparams::BattMoFormattedInput;
 	model, parameters = setup_model(inputparams;
 		use_groups = use_groups,
 		general_ad = general_ad,
+		use_p2d = use_p2d,
 		model_kwargs...)
 
 	state0 = setup_initial_state(inputparams, model)

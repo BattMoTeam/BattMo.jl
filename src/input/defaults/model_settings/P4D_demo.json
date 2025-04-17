@@ -1,6 +1,6 @@
 {
     "ModelGeometry": "3D-demo",
-    "UseDiffusionModel": "full",
+    "UseDiffusionModel": "PXD",
     "UseCurrentCollectors": "Generic",
     "UseRampUp": "Generic"
 }
