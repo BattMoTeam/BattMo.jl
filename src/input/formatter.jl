@@ -251,6 +251,19 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"timeStepDuration" => get_key_value(simulation_settings, "TimeStepDuration"),
 		),
 	)
+
+
+	if cycling_protocol["Protocol"] == "Experiment"
+		control = convert_experiment_to_battmo_control_input(Experiment(cycling_protocol["Experiment"]))
+
+		battmo_input["Control"] = control["Control"]
+
+		battmo_input["SOC"] = cycling_protocol["InitialStateOfCharge"]
+		battmo_input["initT"] = cycling_protocol["InitialKelvinTemperature"]
+		battmo_input["ThermalModel"]["externalTemperature"] = cycling_protocol["AmbientKelvinTemperature"]
+
+	end
+
 	return InputParams(battmo_input)
 
 end

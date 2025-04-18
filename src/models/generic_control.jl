@@ -7,8 +7,6 @@ struct Termination
 	comparison::Union{String, Nothing}
 	value::Float64
 	function Termination(quantity, value; comparison = nothing)
-		@info quantity
-		@info value
 		return new{}(quantity, comparison, value)
 	end
 end
@@ -17,37 +15,52 @@ struct CurrentStep <: AbstractControlStep
 	value::Float64
 	direction::Union{String, Nothing}
 	termination::Termination
-	timeStepSize::Union{Nothing, Float64}
+	time_step_size::Union{Nothing, Float64}
 end
 
 struct VoltageStep <: AbstractControlStep
 	value::Float64
 	direction::Union{String, Nothing}
 	termination::Termination
-	timeStepSize::Union{Nothing, Float64}
+	time_step_size::Union{Nothing, Float64}
 end
 
 struct RestStep <: AbstractControlStep
 	value::Union{Nothing, Float64}
 	direction::Union{Nothing, String}
 	termination::Termination
-	timeStepSize::Union{Nothing, Float64}
+	time_step_size::Union{Nothing, Float64}
 end
 
 struct CycleStep <: AbstractControlStep
-	numberOfCycles::Int
+	number_of_cycles::Int
 	termination::Union{Nothing, Termination}
-	cycleControlSteps::Vector{AbstractControlStep}
+	cycle_control_steps::Vector{AbstractControlStep}
 end
 
 mutable struct GenericPolicy <: AbstractControl
-	controlPolicy::String
-	controlsteps::Vector{AbstractControlStep}
-	ImaxDischarge::Float64
-	ImaxCharge::Float64
+	control_policy::String
+	control_steps::Vector{AbstractControlStep}
+	initial_control::AbstractControlStep
+	number_of_control_steps::Int
 	function GenericPolicy(json::Dict)
-		steps = [parse_control_step(step) for step in json["controlsteps"]]
-		return new(json["controlPolicy"], steps, 0.0, 0.0)  # default Imax values (set later)
+		steps = []
+		for step in json["controlsteps"]
+			parsed_step = parse_control_step(step)
+
+			if isa(parsed_step, CycleStep)
+				# If the parsed step is a compound cycle, expand it
+				for cycle_step in parsed_step.cycle_control_steps
+					push!(steps, cycle_step)
+				end
+			else
+				# Otherwise, it's a single step — push directly
+				push!(steps, parsed_step)
+			end
+		end
+
+		number_of_steps = length(steps)
+		return new(json["controlPolicy"], steps, steps[1], number_of_steps)
 	end
 end
 
@@ -82,43 +95,81 @@ function parse_control_step(json::Dict)
 	end
 end
 
+function getInitCurrent(policy::GenericPolicy)
+	control = policy.initial_control
+	if isa(control, VoltageStep)
+		error("Voltage control cannot be the first control step")
+	elseif isa(control, CurrentStep)
+		if control.direction == "discharge"
+			I = control.value
+		elseif control.direction == "charge"
+			I = -control.value
+		else
+			error("Initial control direction not recognized")
+		end
+		return I
+
+	elseif isa(control, RestStep)
+		return 0.0
+	else
+		error("initial control not recognized")
+	end
+
+end
+
+
 function setup_initial_control_policy!(policy::GenericPolicy, inputparams::InputParams, parameters)
 
-	policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
-	policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])
+	# policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
+	# policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])
 
 end
 
-mutable struct GenericController
+mutable struct GenericController{S <: AbstractControlStep} <: ControllerCV
 	policy::GenericPolicy
-	current_step::Int
-	time_in_step::Float64
-	numberOfCycles::Int
+	current_step::S
+	current_step_number::Int
+	time::Real
+	number_of_steps::Int
+	target::Real
+	dIdt::Real
+	dEdt::Real
+
+	function GenericController(policy::GenericPolicy, current_step::S, current_step_number::Int, time::Real, number_of_steps::Int; target::Real = 0.0, dEdt::Real = 0.0, dIdt::Real = 0.0) where {S <: Union{Nothing, AbstractControlStep}}
+		new{S}(policy, current_step, current_step_number, time, number_of_steps, target, dIdt, dEdt)
+	end
 end
 
+GenericController() = GenericController(nothing, nothing, 0, 0.0, 0)
+
+@inline function Jutul.numerical_type(x::GenericController{S}) where {S}
+	return S
+end
 
 """
-Function to create (deep) copy of GenericController
+Function to create (deep) copy of generic controller
 """
 function copyController!(cv_copy::GenericController, cv::GenericController)
 
 	cv_copy.policy = cv.policy
 	cv_copy.current_step = cv.current_step
-	cv_copy.time_in_step = cv.time_in_step
-	cv_copy.cycles_remaining = cv.cycles_remaining
+	cv_copy.current_step_number = cv.current_step_number
+	cv_copy.time = cv.time
+	cv_copy.number_of_steps = cv.number_of_steps
+	cv_copy.target = cv.target
+	cv_copy.dEdt = cv.dEdt
+	cv_copy.dIdt = cv.dIdt
 
 end
 
 """
 Overload function to copy GenericController
 """
-function Base.copy(cv::GenericController)
-
-	cv_copy = GenericController()
-	copyController!(cv_copy, cv)
+function Base.copy(cv::GenericController{S}) where {S <: AbstractControlStep}
+	# Construct using the known type parameter S
+	cv_copy = GenericController(cv.policy, cv.current_step, cv.current_step_number, cv.time, cv.number_of_steps; target = cv.target, dIdt = cv.dIdt, dEdt = cv.dEdt)
 
 	return cv_copy
-
 end
 
 
@@ -141,7 +192,7 @@ function Jutul.reset_state_to_previous_state!(
 		storage,
 		model)
 
-	copyController!(storage.state[:GenericController], storage.state0[:GenericController])
+	copyController!(storage.state[:ControllerCV], storage.state0[:ControllerCV])
 end
 
 
@@ -154,8 +205,8 @@ The setupRegionSwitchFlags function detects from the current state and control, 
 - beforeSwitchRegion : the state is before the switch region for the current control
 - afterSwitchRegion : the state is after the switch region for the current control
 """
-function setupRegionSwitchFlags(policy::GenericPolicy, controller::GenericController, state)
-	step = policy.controlsteps[controller.current_step]
+function setupRegionSwitchFlags(policy::P, state, controller::GenericController) where P <: AbstractControlStep
+	step = policy
 	termination = step.termination
 
 	E = only(state.Phi)
@@ -180,16 +231,16 @@ function setupRegionSwitchFlags(policy::GenericPolicy, controller::GenericContro
 		target = termination.value
 		tol = 1e-4
 
-		if isnothing(termination.comparison) || termination.comparison == "below"
+		if isnothing(termination.comparison) || termination.comparison == "absolute value below"
 			before = abs(I) > target * (1 + tol)
 			after  = abs(I) < target * (1 - tol)
-		elseif termination.comparison == "above"
+		elseif termination.comparison == "absolute value above"
 			before = abs(I) < target * (1 - tol)
 			after  = abs(I) > target * (1 + tol)
 		end
 
 	elseif termination.quantity == "time"
-		t = controller.time_in_step
+		t = controller.time
 		target = termination.value
 		tol = 1e-6
 
@@ -214,7 +265,7 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 	E0 = only(value(state0[:Phi]))
 	I0 = only(value(state0[:Current]))
 
-	controller = state.ControllerCV
+	controller = state[:ControllerCV]
 
 	# Update time and rates of change
 	controller.time = state0.ControllerCV.time + dt
@@ -222,8 +273,8 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 	controller.dEdt = (E - E0) / dt
 
 	# Get control step info
-	step_idx = controller.current_step
-	control_steps = policy.controlsteps
+	step_idx = controller.current_step_number
+	control_steps = policy.control_steps
 
 	# Stay within bounds of control steps
 	if step_idx > length(control_steps)
@@ -240,7 +291,7 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 		# Stay in current control step
 		next_step_idx = step_idx
 	else
-		if controller.current_step == controller.current_step0  # Control hasn't changed in current iteration
+		if controller.current_step == state0.ControllerCV.current_step  # Control hasn't changed in current iteration
 			if rsw.afterSwitchRegion
 				next_step_idx = step_idx + 1
 			else
@@ -255,7 +306,7 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 	end
 
 	# Update controller with the selected step index
-	controller.current_step = min(next_step_idx, length(control_steps))  # Stay within bounds
+	controller.current_step_number = min(next_step_idx, length(control_steps))  # Stay within bounds
 
 end
 
@@ -265,10 +316,10 @@ Update controller target value (current or voltage) based on the active control 
 """
 function update_values_in_controller!(state, policy::GenericPolicy)
 
-	controller = state[:GenericController]
-	step_idx = controller.current_step
+	controller = state[:ControllerCV]
+	step_idx = controller.current_step_number
 
-	control_steps = policy.controlsteps
+	control_steps = policy.control_steps
 
 	if step_idx > length(control_steps)
 		error("Step index $step_idx exceeds number of control steps $(length(control_steps))")
@@ -278,22 +329,18 @@ function update_values_in_controller!(state, policy::GenericPolicy)
 
 	if step isa CurrentStep
 		target = step.value
-		target_is_voltage = false
 
 	elseif step isa VoltageStep
 		target = step.value
-		target_is_voltage = true
 
 	elseif step isa RestStep
 		# Assume voltage hold during rest
-		target = isnothing(step.value) ? only(state[:Phi]) : step.value
-		target_is_voltage = true
+		target = 0.0
 
 	else
 		error("Unsupported step type: $(typeof(step))")
 	end
 
-	controller.target_is_voltage = target_is_voltage
-	controller.target            = target
+	controller.target = target
 
 end

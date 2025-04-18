@@ -1,24 +1,20 @@
-using BattMo
+using BattMo, GLMakie
 
-experiment = Experiment([
-	"Rest for 4000 s",
-	"Discharge at 1 mA until 3.0 V",
+cycling_protocol = load_cycling_protocol(; from_default_set = "experiment")
+cycling_protocol["Experiment"] = [
+	"Discharge at 5 mA until 4.0 V",
 	"Hold at 3.0 V until 1e-4 A",
 	"Charge at 1 A until 4.0 V",
 	"Rest for 1 hour",
-]);
+]
 
-cycling_protocol = convert_experiment_to_battmo_control_input(experiment)
+cell_parameters = load_cell_parameters(; from_default_set = "3D_demo_example")
 
-@info cycling_protocol
+model = LithiumIonBatteryModel()
 
-fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", "p2d_40", ".json")
-inputparams = load_battmo_formatted_input(fn)
-inputparams.all["Control"] = cycling_protocol["Control"]
+sim = Simulation(model, cell_parameters, cycling_protocol)
 
-@info inputparams
-
-ouput = run_battery(inputparams)
+output = solve(sim)
 
 
 states = output[:states]
@@ -75,3 +71,4 @@ scatterlines!(ax,
 	marker = :cross,
 	markercolor = :black,
 )
+f

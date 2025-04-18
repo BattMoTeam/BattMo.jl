@@ -88,7 +88,7 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 
 		# Functions aren't directly representable in JSON, treating as string (function name or identifier)
 
-	elseif meta["type"] == Vector
+	elseif meta["type"] == Vector{String}
 		dict["type"] = "array"  # JSON schema type for arrays (Vector in Julia)
 	else
 		type = meta["type"]
@@ -460,6 +460,7 @@ function get_schema_cycling_protocol()
 		"type" => "object",
 		"properties" => Dict(
 			"Protocol" => create_property(parameter_meta, "Protocol"),
+			"Experiment" => create_property(parameter_meta, "Experiment"),
 			"InitialStateOfCharge" => create_property(parameter_meta, "InitialStateOfCharge"),
 			"TotalNumberOfCycles" => create_property(parameter_meta, "TotalNumberOfCycles"),
 			"CRate" => create_property(parameter_meta, "CRate"),
@@ -501,6 +502,17 @@ function get_schema_cycling_protocol()
 						"LowerVoltageLimit",
 						"UpperVoltageLimit",
 						"InitialControl",
+						"AmbientKelvinTemperature",
+						"InitialKelvinTemperature",
+					],
+				),
+			),
+			Dict(
+				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "Experiment"))),
+				"then" => Dict(
+					"required" => [
+						"InitialStateOfCharge",
+						"Experiment",
 						"AmbientKelvinTemperature",
 						"InitialKelvinTemperature",
 					],

@@ -136,7 +136,7 @@ function get_parameter_meta_data()
 		),
 		"Protocol" => Dict(
 			"type" => String,
-			"options" => ["CCDischarge", "CCCharge", "CCCV"],
+			"options" => ["CCDischarge", "CCCharge", "CCCV", "Experiment"],
 			"context_type" => "Protocol",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_789012",
 		),
@@ -603,6 +603,10 @@ function get_parameter_meta_data()
 			"unit" => "m",
 			"unit_name" => "emmo:Metre",
 			"unit_iri" => "https://w3id.org/emmo#Metre",
+		),
+		"Experiment" => Dict(
+			"description" => "A set of control step policies that form a virtual experiment.",
+			"type" => Vector{String},
 		),
 		"StartWithCharge" => Dict(
 			"description" => "Starting charge state of the system",

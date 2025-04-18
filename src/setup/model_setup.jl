@@ -191,7 +191,7 @@ function run_battery(inputparams::BattMoFormattedInput;
 			timesteps,
 			cfg)
 	end
-
+	@info timesteps
 	# Perform simulation
 	states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
 
@@ -1386,6 +1386,11 @@ function setup_timesteps(inputparams::InputParams;
 
 		timesteps = repeat([dt], n)
 
+	elseif controlPolicy == "Generic"
+		dt = 100
+		n = 1000
+		timesteps = repeat([dt], n)
+
 	else
 
 		error("Control policy $controlPolicy not recognized")
@@ -1422,6 +1427,7 @@ function setup_config(sim::JutulSimulator,
 
 	cfg[:linear_solver]            = battery_linsolve(model, linear_solver)
 	cfg[:debug_level]              = 0
+	cfg[:info_level]               = 1
 	cfg[:max_timestep_cuts]        = 10
 	cfg[:max_residual]             = 1e20
 	cfg[:output_substates]         = true
@@ -1447,7 +1453,7 @@ function setup_config(sim::JutulSimulator,
 		end
 	end
 
-	if model[:Control].system.policy isa CyclingCVPolicy
+	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa GenericPolicy
 
 		cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
 
@@ -1455,10 +1461,24 @@ function setup_config(sim::JutulSimulator,
 
 			s = get_simulator_storage(sim)
 			m = get_simulator_model(sim)
+			@info typeof(s.state.Control.ControllerCV)
+			@info typeof(m[:Control].system.policy)
+			if hasproperty(s.state.Control.ControllerCV, :numberOfCycles) && hasproperty(m[:Control].system.policy, :numberOfCycles)
+				if s.state.Control.ControllerCV.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+					report[:stopnow] = true
+				else
+					report[:stopnow] = false
+				end
 
-			if s.state.Control.ControllerCV.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-				report[:stopnow] = true
+			elseif hasproperty(s.state.Control.ControllerCV, :current_step_number) && hasproperty(m[:Control].system.policy, :number_of_steps)
+				if s.state.Control.ControllerCV.current_step_number >= m[:Control].system.policy.number_of_steps
+					report[:stopnow] = true
+				else
+					report[:stopnow] = false
+				end
+
 			else
+				@warn "Neither numberOfCycles nor number_of_steps found in controller or policy"
 				report[:stopnow] = false
 			end
 
@@ -1467,26 +1487,6 @@ function setup_config(sim::JutulSimulator,
 		end
 
 		cfg[:post_ministep_hook] = post_hook
-
-		# elseif model[:Control].system.policy isa GenericPolicy
-		# 	cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
-
-		# 	function post_hook(done, report, sim, dt, forces, max_iter, cfg)
-
-		# 		s = get_simulator_storage(sim)
-		# 		m = get_simulator_model(sim)
-
-		# 		if s.state.Control.GenericController.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-		# 			report[:stopnow] = true
-		# 		else
-		# 			report[:stopnow] = false
-		# 		end
-
-		# 		return (done, report)
-
-		# 	end
-
-		# 	cfg[:post_ministep_hook] = post_hook
 
 	end
 

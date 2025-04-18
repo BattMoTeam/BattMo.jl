@@ -472,15 +472,34 @@ function check_constraints(model, storage)
 	state0 = storage.state0[:Control]
 
 	controller = state[:ControllerCV]
-	ctrlType   = state[:ControllerCV].ctrlType
-	ctrlType0  = state0[:ControllerCV].ctrlType
+	if hasproperty(state[:ControllerCV], :ctrlType)
+		ctrlType  = state[:ControllerCV].ctrlType
+		ctrlType0 = state0[:ControllerCV].ctrlType
 
-	nextCtrlType = getNextCtrlType(ctrlType0)
+		nextCtrlType = getNextCtrlType(ctrlType0)
 
-	arefulfilled = true
+		arefulfilled = true
 
-	rsw  = setupRegionSwitchFlags(policy, state, ctrlType)
-	rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
+		rsw  = setupRegionSwitchFlags(policy, state, ctrlType)
+		rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
+
+	else
+		ctrlType  = state[:ControllerCV].current_step
+		ctrlType0 = state0[:ControllerCV].current_step
+
+		current_step_number = controller.current_step_number
+
+		nextCtrlType = policy.control_steps[current_step_number]
+
+		arefulfilled = true
+
+		rsw  = setupRegionSwitchFlags(ctrlType, state, controller)
+		rswN = setupRegionSwitchFlags(nextCtrlType, state, controller)
+
+	end
+
+
+
 
 	if (ctrlType == ctrlType0 && rsw.afterSwitchRegion) || (ctrlType == nextCtrlType && !rswN.beforeSwitchRegion)
 
@@ -747,10 +766,23 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquati
 
 	ctrl = state[:ControllerCV]
 
-	if ctrl.target_is_voltage
-		v[] = phi - ctrl.target
+	if ctrl isa GenericController
+
+		if ctrl.current_step isa VoltageStep
+			v[] = phi - ctrl.target
+		elseif ctrl.current_step isa CurrentStep
+			v[] = I - ctrl.target
+		elseif ctrl.current_step isa RestStep
+			v[] = I - ctrl.target
+		end
+
 	else
-		v[] = I - ctrl.target
+
+		if ctrl.target_is_voltage
+			v[] = phi - ctrl.target
+		else
+			v[] = I - ctrl.target
+		end
 	end
 
 end
@@ -806,15 +838,7 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 
 	elseif policy isa GenericPolicy
 
-		copyController!(storage.state0[:GenericController], ctrl)
-
-		# Optional: Handle completed outer cycles if relevant
-		# Example logic:
-		if ctrl.cycles_remaining < storage.state0[:GenericController].cycles_remaining
-			ctrl.numberOfCycles = storage.state0[:GenericController].numberOfCycles + 1
-		else
-			ctrl.numberOfCycles = storage.state0[:GenericController].numberOfCycles
-		end
+		copyController!(storage.state0[:ControllerCV], ctrl)
 
 	elseif policy isa SimpleCVPolicy
 
@@ -871,7 +895,16 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 
 		update_values_in_controller!(state, policy)
 
+	elseif policy isa GenericPolicy
+		number_of_steps = policy.number_of_control_steps
+		current_step_number = 1
+		current_step = policy.initial_control
+		time_in_step = 0.0
+		state[:ControllerCV] = GenericController(policy, current_step, current_step_number, time_in_step, number_of_steps)
+
 	end
+
+
 
 end
 
