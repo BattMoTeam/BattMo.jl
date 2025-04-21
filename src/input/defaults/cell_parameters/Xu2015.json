@@ -1,29 +1,4 @@
 {
-    "Electrolyte": {
-        "Description": "1.5 mol/l LiPF6 dissolved in a mixture of ethylene carbonate (EC):  dimethyl carbonate (DMC) (1:1)",
-        "TransferenceNumber": 0.363,
-        "SpecificHeatCapacity": 1518.0,
-        "DiffusionCoefficient": {
-            "type": "function",
-            "function": "1e-4 * 10^(-4.43 - 54/(T - 229 - 5*c*1e-3) - 0.22*c*1e-3)",
-            "argumentlist": [
-                "c",
-                "T"
-            ]
-        },
-        "IonicConductivity": {
-            "type": "function",
-            "function": "1e-4*c*((-10.5 + 0.668e-3*c + 0.494e-6*c^2) + (0.074 - 1.78e-5*c - 8.86e-10*c^2)*T + (-6.96e-5 + 2.80e-8*c)*T^2)^2",
-            "argumentlist": [
-                "c",
-                "T"
-            ]
-        },
-        "Density": 1210,
-        "ThermalConductivity": 0.099,
-        "ChargeNumber": 1,
-        "Concentration": 1500
-    },
     "Cell": {
         "Name": "LP2770120",
         "Case": "Pouch",
@@ -34,6 +9,17 @@
         "ElectrodeGeometricSurfaceArea": 0.007035,
         "HeatTransferCoefficient": 0.0,
         "DeviceSurfaceArea": 0.0
+    },
+    "Electrolyte": {
+        "Description": "1.5 mol/l LiPF6 dissolved in a mixture of ethylene carbonate (EC):  dimethyl carbonate (DMC) (1:1)",
+        "TransferenceNumber": 0.363,
+        "SpecificHeatCapacity": 1518.0,
+        "DiffusionCoefficient": "1e-4 * 10^(-4.43 - 54/(T - 229 - 5*c*1e-3) - 0.22*c*1e-3)",
+        "IonicConductivity": "1e-4*c*((-10.5 + 0.668e-3*c + 0.494e-6*c^2) + (0.074 - 1.78e-5*c - 8.86e-10*c^2)*T + (-6.96e-5 + 2.80e-8*c)*T^2)^2",
+        "Density": 1210,
+        "ThermalConductivity": 0.099,
+        "ChargeNumber": 1,
+        "Concentration": 1500
     },
     "PositiveElectrode": {
         "ActiveMaterial": {
@@ -61,23 +47,25 @@
         },
         "ElectrodeCoating": {
             "SurfaceCoefficientOfHeatTransfer": 1260.2,
-            "BruggemanCoefficient": 0.0,
+            "BruggemanCoefficient": 1.5,
             "EffectiveDensity": 0.0,
             "Thickness": 92e-6
         },
-        "Binder": {
-            "MassFraction": 0.0,
-            "SpecificHeatCapacity": 0.0,
-            "Density": 0.0,
-            "ElectronicConductivity": 0.0,
-            "ThermalConductivity": 0.0
-        },
         "ConductiveAdditive": {
+            "Description": "Unknown",
+            "Density": 1950.0,
             "MassFraction": 0.0,
-            "SpecificHeatCapacity": 0.0,
-            "Density": 0.0,
-            "ElectronicConductivity": 0.0,
-            "ThermalConductivity": 0.0
+            "ElectronicConductivity": 100.0,
+            "SpecificHeatCapacity": 632.0,
+            "ThermalConductivity": 1.04
+        },
+        "Binder": {
+            "Description": "Unknown",
+            "Density": 1100.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100.0,
+            "SpecificHeatCapacity": 632.0,
+            "ThermalConductivity": 1.04
         },
         "CurrentCollector": {
             "Description": "Aluminum",
@@ -93,7 +81,7 @@
     "Separator": {
         "SpecificHeatCapacity": 1978,
         "Density": 779,
-        "BruggemanCoefficient": 0.0,
+        "BruggemanCoefficient": 1.5,
         "Thickness": 20e-6,
         "ThermalConductivity": 0.334,
         "Porosity": 0.4
@@ -124,23 +112,25 @@
         },
         "ElectrodeCoating": {
             "SurfaceCoefficientOfHeatTransfer": 0.0,
-            "BruggemanCoefficient": 0.0,
+            "BruggemanCoefficient": 1.5,
             "EffectiveDensity": 0.0,
             "Thickness": 59e-6
         },
-        "Binder": {
-            "MassFraction": 0.0,
-            "SpecificHeatCapacity": 0.0,
-            "Density": 0.0,
-            "ElectronicConductivity": 0.0,
-            "ThermalConductivity": 0.0
-        },
         "ConductiveAdditive": {
+            "Description": "Unknown",
+            "Density": 1950.0,
             "MassFraction": 0.0,
-            "SpecificHeatCapacity": 0.0,
-            "Density": 0.0,
-            "ElectronicConductivity": 0.0,
-            "ThermalConductivity": 0.0
+            "ElectronicConductivity": 100.0,
+            "SpecificHeatCapacity": 632.0,
+            "ThermalConductivity": 1.04
+        },
+        "Binder": {
+            "Description": "Unknown",
+            "Density": 1100.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100.0,
+            "SpecificHeatCapacity": 632.0,
+            "ThermalConductivity": 1.04
         },
         "CurrentCollector": {
             "Description": "Copper",
