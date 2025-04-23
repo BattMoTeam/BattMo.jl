@@ -2,7 +2,7 @@
 using Jutul, BattMo, GLMakie
 
 # ## Setup input parameters
-file_path_cell = string(dirname(pathof(BattMo)), "/../src/input/defaults/cell_parameters/", "3D_demo_example.json")
+file_path_cell = string(dirname(pathof(BattMo)), "/../src/input/defaults/cell_parameters/", "Xu2015.json")
 file_path_model = string(dirname(pathof(BattMo)), "/../src/input/defaults/model_settings/", "P4D_demo.json")
 file_path_cycling = string(dirname(pathof(BattMo)), "/../src/input/defaults/cycling_protocols/", "CCDischarge.json")
 file_path_simulation = string(dirname(pathof(BattMo)), "/../src/input/defaults/simulation_settings/", "3D_demo.json")

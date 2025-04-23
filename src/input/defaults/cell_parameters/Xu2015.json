@@ -23,7 +23,7 @@
             "NumberOfElectronsTransfered": 1,
             "StoichiometricCoefficientAtSOC0": 0.999,
             "ReactionRateConstant": 3.626e-11,
-            "MassFraction": 0.0,
+            "MassFraction": 1.0,
             "StoichiometricCoefficientAtSOC100": 0.14778,
             "ActivationEnergyOfReaction": 4000,
             "ActivationEnergyOfDiffusion": 20000,
@@ -32,7 +32,7 @@
                 "functionname": "computeOCP_LFP_Xu2015"
             },
             "MaximumConcentration": 26390,
-            "VolumetricSurfaceArea": 1878260,
+            "VolumetricSurfaceArea": 1878261,
             "DiffusionCoefficient": 1.25e-15,
             "ParticleRadius": 1.15e-6,
             "Density": 1500,
@@ -41,7 +41,7 @@
         },
         "ElectrodeCoating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 0.0,
+            "EffectiveDensity": 1080,
             "Thickness": 92e-6
         },
         "ConductiveAdditive": {
@@ -77,7 +77,7 @@
             "NumberOfElectronsTransfered": 1,
             "StoichiometricCoefficientAtSOC0": 0.001,
             "ReactionRateConstant": 1.764e-11,
-            "MassFraction": 0.0,
+            "MassFraction": 1.0,
             "StoichiometricCoefficientAtSOC100": 0.51873811,
             "ActivationEnergyOfReaction": 4000,
             "ActivationEnergyOfDiffusion": 4000,
@@ -86,7 +86,7 @@
                 "functionname": "computeOCP_Graphite_Xu2015"
             },
             "MaximumConcentration": 31540,
-            "VolumetricSurfaceArea": 0.0,
+            "VolumetricSurfaceArea": 142373,
             "DiffusionCoefficient": 3.9e-14,
             "ParticleRadius": 14.75e-6,
             "Density": 2660,
@@ -95,7 +95,7 @@
         },
         "ElectrodeCoating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 0.0,
+            "EffectiveDensity": 1862,
             "Thickness": 59e-6
         },
         "ConductiveAdditive": {

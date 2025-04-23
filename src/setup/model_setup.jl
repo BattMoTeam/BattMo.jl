@@ -161,7 +161,7 @@ function run_battery(model::BatteryModel, cell_parameters::CellParameters, cycli
 
 	battmo_formatted_input = convert_parameter_sets_to_battmo_input(model_settings, cell_parameters, cycling_protocol, simulation_settings)
 
-	# @info JSON.json(battmo_formatted_input, 2)
+	@info JSON.json(battmo_formatted_input, 2)
 
 	output = run_battery(battmo_formatted_input; hook = hook, use_p2d = use_p2d)
 
@@ -1395,6 +1395,7 @@ function setup_config(sim::JutulSimulator,
 
 	cfg[:linear_solver]            = battery_linsolve(model, linear_solver)
 	cfg[:debug_level]              = 0
+	cfg[:info_level]               = 1
 	cfg[:max_timestep_cuts]        = 10
 	cfg[:max_residual]             = 1e20
 	cfg[:output_substates]         = true

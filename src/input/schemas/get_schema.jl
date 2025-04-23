@@ -54,12 +54,8 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 				"properties" => Dict(
 					"type" => Dict("type" => "string", "enum" => ["function"]),
 					"functionname" => Dict("type" => "string"),
-					"argumentlist" => Dict(
-						"type" => "array",
-						"items" => Dict("type" => "string"),
-					),
 				),
-				"required" => ["type", "functionname", "argumentlist"],
+				"required" => ["type", "functionname"],
 				"additionalProperties" => false,
 			),
 		)
