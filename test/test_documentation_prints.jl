@@ -16,11 +16,11 @@ using HTTP
 
 			@testset "$param" begin
 				try
-					response = HTTP.request("GET", doc_url)
+					response = HTTP.get(doc_url; redirect_limit = 5, readtimeout = 10)
 					@test response.status == 200
 				catch e
-					@warn "Failed to access URL for $param: $doc_url"
-					@test false  # Fail the test if any URL throws an error
+					@warn "Failed to access URL for $param: $doc_url" exception = e
+					@test false  # Fails the test
 				end
 			end
 		end

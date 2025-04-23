@@ -41,6 +41,18 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	diff_type = "full"
 
+	if isnothing(get_key_value(model_settings, "ModelGeometry"))
+		geom_case = nothing
+	else
+		geom = get_key_value(model_settings, "ModelGeometry")
+		if geom == "1D"
+			geom_case = geom
+
+		elseif geom == "3D Pouch"
+			geom_case = "3D-demo"
+
+		end
+	end
 
 	if isnothing(get_key_value(model_settings, "UseThermalModel"))
 		use_thermal = false
@@ -333,7 +345,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"externalHeatTransferCoefficientTab" => get_key_value(cell, "HeatTransferCoefficient"),
 		),
 		"Geometry" => Dict(
-			"case" => get_key_value(model_settings, "ModelGeometry"),
+			"case" => geom_case,
 			"faceArea" => get_key_value(cell, "ElectrodeGeometricSurfaceArea"),
 			"width" => get_key_value(cell, "ElectrodeWidth"),
 			"height" => get_key_value(cell, "ElectrodeLength"),

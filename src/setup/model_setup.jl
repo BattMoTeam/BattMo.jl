@@ -95,10 +95,13 @@ Throws an error if the `Simulation` object is not valid, prompting the user to c
 """
 function solve(problem::Simulation; accept_invalid = false, hook = nothing, kwargs...)
 
-	if problem.model.model_settings["UseDiffusionModel"] == "PXD"
+	diffusion_model = problem.model.model_settings["UseDiffusionModel"]
+	if diffusion_model == "PXD"
 		use_p2d = true
-	else
+	elseif diffusion_model == "NoParticleDiffusion"
 		use_p2d = false
+	else
+		error("DiffusionModel $diffusion_model not recognized.")
 	end
 
 	if accept_invalid == true
@@ -161,9 +164,9 @@ function run_battery(model::BatteryModel, cell_parameters::CellParameters, cycli
 
 	battmo_formatted_input = convert_parameter_sets_to_battmo_input(model_settings, cell_parameters, cycling_protocol, simulation_settings)
 
-	@info JSON.json(battmo_formatted_input, 2)
+	# @info JSON.json(battmo_formatted_input, 2)
 
-	output = run_battery(battmo_formatted_input; hook = hook, use_p2d = use_p2d)
+	output = run_battery(battmo_formatted_input; hook = hook, use_p2d = use_p2d, kwargs...)
 
 	return output
 end
@@ -1395,7 +1398,6 @@ function setup_config(sim::JutulSimulator,
 
 	cfg[:linear_solver]            = battery_linsolve(model, linear_solver)
 	cfg[:debug_level]              = 0
-	cfg[:info_level]               = 1
 	cfg[:max_timestep_cuts]        = 10
 	cfg[:max_residual]             = 1e20
 	cfg[:output_substates]         = true

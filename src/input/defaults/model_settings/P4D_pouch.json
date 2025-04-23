@@ -1,5 +1,5 @@
 {
-    "ModelGeometry": "3D-demo",
+    "ModelGeometry": "3D Pouch",
     "UseDiffusionModel": "PXD",
     "UseCurrentCollectors": "Generic",
     "UseRampUp": "Generic"

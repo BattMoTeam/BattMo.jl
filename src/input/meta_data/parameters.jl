@@ -168,7 +168,7 @@ function get_parameter_meta_data()
 		),
 		"ModelGeometry" => Dict(
 			"type" => String,
-			"options" => ["1D", "3D-demo"],
+			"options" => ["1D", "3D Pouch"],
 			"context_type" => "ModelGeometry",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_geometry",
 		),
@@ -182,13 +182,6 @@ function get_parameter_meta_data()
 			"options" => ["PXD", "NoParticleDiffusion"],
 			"is_sub_model" => true,
 			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/models",
-		),
-		"UseThermalModel" => Dict(
-			"type" => String,
-			"options" => ["Sequential"],
-			"context_type" => "UseThermalModel",
-			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_thermal_model",
-			"is_sub_model" => true,
 		),
 		"UseCurrentCollectors" => Dict(
 			"type" => String,

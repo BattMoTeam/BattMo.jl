@@ -38,7 +38,7 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 					"SOC" => Dict("type" => "array"),
 				),
 				"required" => ["V", "SOC"],
-				"additionalProperties" => false,
+				"additionalProperties" => true,
 			),
 		)
 		push!(
@@ -56,7 +56,7 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 					"functionname" => Dict("type" => "string"),
 				),
 				"required" => ["type", "functionname"],
-				"additionalProperties" => false,
+				"additionalProperties" => true,
 			),
 		)
 
@@ -402,7 +402,6 @@ function get_schema_cycling_protocol()
 						"InitialControl",
 						"CurrentChangeLimit",
 						"VoltageChangeLimit",
-						"AmbientKelvinTemperature",
 						"InitialKelvinTemperature",
 					],
 				),
@@ -416,7 +415,6 @@ function get_schema_cycling_protocol()
 						"LowerVoltageLimit",
 						"UpperVoltageLimit",
 						"InitialControl",
-						"AmbientKelvinTemperature",
 						"InitialKelvinTemperature",
 					],
 				),
@@ -494,7 +492,6 @@ function get_schema_model_settings()
 		"type" => "object",
 		"properties" => Dict(
 			"ModelGeometry" => create_property(parameter_meta, "ModelGeometry"),
-			"UseThermalModel" => create_property(parameter_meta, "UseThermalModel"),
 			"UseCurrentCollectors" => create_property(parameter_meta, "UseCurrentCollectors"),
 			"UseRampUp" => create_property(parameter_meta, "UseRampUp"),
 			"UseSEIModel" => create_property(parameter_meta, "UseSEIModel"),
