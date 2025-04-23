@@ -5,6 +5,5 @@
   "LowerVoltageLimit": 2.5,
   "UpperVoltageLimit": 4.1,
   "InitialControl": "discharging",
-  "AmbientKelvinTemperature": 298.15,
   "InitialKelvinTemperature": 298.15
 }

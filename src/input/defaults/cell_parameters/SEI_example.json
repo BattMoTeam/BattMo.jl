@@ -8,16 +8,13 @@
     "Case": "3D-demo",
     "ElectrodeWidth": 1.0e-2,
     "ElectrodeLength": 2.0e-2,
-    "ElectrodeGeometricSurfaceArea": 0.0002,
-    "DoubleCoatedElectrodes": null,
-    "HeatTransferCoefficient": 1000.0
+    "ElectrodeGeometricSurfaceArea": 0.0002
   },
   "NegativeElectrode": {
     "ElectrodeCoating": {
       "BruggemanCoefficient": 1.5,
       "EffectiveDensity": 1900.0,
-      "Thickness": 1.0e-4,
-      "SurfaceCoefficientOfHeatTransfer": 1000
+      "Thickness": 1.0e-4
     },
     "ActiveMaterial": {
       "Description": "Graphite",
@@ -25,8 +22,6 @@
       "Density": 2240.0,
       "VolumetricSurfaceArea": 723600.0,
       "ElectronicConductivity": 100.0,
-      "SpecificHeatCapacity": 632.0,
-      "ThermalConductivity": 1.04,
       "DiffusionCoefficient": 3.9e-14,
       "ActivationEnergyOfDiffusion": 5000.0,
       "ParticleRadius": 1.0e-6,
@@ -61,25 +56,19 @@
       "Description": "Unknown",
       "Density": 1950.0,
       "MassFraction": 0.03,
-      "ElectronicConductivity": 100.0,
-      "SpecificHeatCapacity": 632.0,
-      "ThermalConductivity": 1.04
+      "ElectronicConductivity": 100.0
     },
     "Binder": {
       "Description": "Unknown",
       "Density": 1100.0,
       "MassFraction": 0.03,
-      "ElectronicConductivity": 100.0,
-      "SpecificHeatCapacity": 632.0,
-      "ThermalConductivity": 1.04
+      "ElectronicConductivity": 100.0
     },
     "CurrentCollector": {
       "Description": "Copper",
       "Thickness": 1.0e-5,
       "Density": 8960.0,
       "ElectronicConductivity": 5.96e7,
-      "ThermalConductivity": 398.0,
-      "SpecificHeatCapacity": 385.0,
       "TabWidth": 4.0e-3,
       "TabLength": 1.0e-3
     }
@@ -88,8 +77,7 @@
     "ElectrodeCoating": {
       "BruggemanCoefficient": 1.5,
       "EffectiveDensity": 3500.0,
-      "Thickness": 8.0e-5,
-      "SurfaceCoefficientOfHeatTransfer": 1000
+      "Thickness": 8.0e-5
     },
     "ActiveMaterial": {
       "Description": "NCM111",
@@ -97,8 +85,6 @@
       "Density": 4650.0,
       "VolumetricSurfaceArea": 885000.0,
       "ElectronicConductivity": 100.0,
-      "SpecificHeatCapacity": 700.0,
-      "ThermalConductivity": 2.1,
       "DiffusionCoefficient": 1.0e-14,
       "ActivationEnergyOfDiffusion": 5000.0,
       "ParticleRadius": 1.0e-6,
@@ -123,25 +109,19 @@
       "Description": "Unknown",
       "Density": 1830.0,
       "MassFraction": 0.025,
-      "ElectronicConductivity": 100.0,
-      "SpecificHeatCapacity": 700.0,
-      "ThermalConductivity": 2.1
+      "ElectronicConductivity": 100.0
     },
     "Binder": {
       "Description": "Unknown",
       "Density": 1750.0,
       "MassFraction": 0.025,
-      "ElectronicConductivity": 100.0,
-      "SpecificHeatCapacity": 700.0,
-      "ThermalConductivity": 2.1
+      "ElectronicConductivity": 100.0
     },
     "CurrentCollector": {
       "Description": "Aluminum",
       "Thickness": 1.0e-05,
       "Density": 2700.0,
       "ElectronicConductivity": 3.55e7,
-      "SpecificHeatCapacity": 875.0,
-      "ThermalConductivity": 170.0,
       "TabWidth": 4.0e-3,
       "TabLength": 1.0e-3
     }
@@ -151,14 +131,10 @@
     "Porosity": 0.55,
     "Density": 946.0,
     "BruggemanCoefficient": 1.5,
-    "Thickness": 5.0e-5,
-    "SpecificHeatCapacity": 1978.0,
-    "ThermalConductivity": 0.334
+    "Thickness": 5.0e-5
   },
   "Electrolyte": {
     "Description": "Ethylene carbonate based electrolyte",
-    "SpecificHeatCapacity": 2055.0,
-    "ThermalConductivity": 0.6,
     "Density": 1200.0,
     "Concentration": 1000.0,
     "ChargeNumber": 1,

@@ -39,6 +39,9 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 	##################
 	# Model settings
 
+	diff_type = "full"
+
+
 	if isnothing(get_key_value(model_settings, "UseThermalModel"))
 		use_thermal = false
 	else
@@ -200,7 +203,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 						"SEIlengthRef" => get_key_value(ne_interphase, "InitialThickness"),
 						"density" => get_key_value(ne_am, "Density"),
 					),
-					"diffusionModelType" => get_key_value(model_settings, "UseDiffusionModel"),
+					"diffusionModelType" => diff_type,
 					"SolidDiffusion" => Dict(
 						"activationEnergyOfDiffusion" => get_key_value(ne_am, "ActivationEnergyOfDiffusion"),
 						"referenceDiffusionCoefficient" => get_key_value(ne_am, "DiffusionCoefficient"),
@@ -261,7 +264,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 						"guestStoichiometry0" => get_key_value(pe_am, "StoichiometricCoefficientAtSOC0"),
 						"chargeTransferCoefficient" => get_key_value(pe_am, "ChargeTransferCoefficient"),
 						"openCircuitPotential" => pe_ocp,
-					), "diffusionModelType" => "full",
+					), "diffusionModelType" => diff_type,
 					"SolidDiffusion" => Dict(
 						"activationEnergyOfDiffusion" => get_key_value(pe_am, "ActivationEnergyOfDiffusion"),
 						"referenceDiffusionCoefficient" => get_key_value(pe_am, "DiffusionCoefficient"),
