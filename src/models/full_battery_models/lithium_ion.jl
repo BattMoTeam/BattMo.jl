@@ -57,12 +57,8 @@ function print_required_cell_parameters(::LithiumIonBatteryModel)
 end
 
 function get_default_model_settings(::Type{LithiumIonBatteryModel})
-	settings = Dict(
-		"ModelGeometry" => "1D",
-		"UseDiffusionModel" => "full",
-		"UseRampUp" => "Generic",
-	)
-	return ModelSettings(settings)
+	settings = load_model_settings(; from_default_set = "P2D")
+	return settings
 end
 
 
@@ -79,13 +75,13 @@ function get_default_simulation_settings(st::LithiumIonBatteryModel)
 			"PositiveElectrodeCoating" => 10,
 			"PositiveElectrodeActiveMaterial" => 10,
 			"PositiveElectrodeCurrentCollector" => 10,
-			"PositiveElectrodeCurrentCollectorTabWidth" => 10,
-			"PositiveElectrodeCurrentCollectorTabLength" => 10,
+			"PositiveElectrodeCurrentCollectorTabWidth" => 2,
+			"PositiveElectrodeCurrentCollectorTabLength" => 2,
 			"NegativeElectrodeCoating" => 10,
 			"NegativeElectrodeActiveMaterial" => 10,
 			"NegativeElectrodeCurrentCollector" => 10,
-			"NegativeElectrodeCurrentCollectorTabWidth" => 10,
-			"NegativeElectrodeCurrentCollectorTabLength" => 10,
+			"NegativeElectrodeCurrentCollectorTabWidth" => 2,
+			"NegativeElectrodeCurrentCollectorTabLength" => 2,
 			"Separator" => 10,
 		),
 	)
