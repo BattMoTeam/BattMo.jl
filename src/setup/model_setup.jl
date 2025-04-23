@@ -96,11 +96,11 @@ Throws an error if the `Simulation` object is not valid, prompting the user to c
 function solve(problem::Simulation; accept_invalid = false, hook = nothing, kwargs...)
 
 	if accept_invalid == true
-		output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings; hook = nothing,
+		output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings; hook = hook,
 			kwargs...)
 	else
 		if problem.is_valid == true
-			output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings; hook = nothing,
+			output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings; hook = hook,
 				kwargs...)
 
 			return output
@@ -152,7 +152,7 @@ function run_battery(model::BatteryModel, cell_parameters::CellParameters, cycli
 
 	# @info JSON.json(battmo_formatted_input, 2)
 
-	output = run_battery(battmo_formatted_input)
+	output = run_battery(battmo_formatted_input; hook = hook, kwargs...)
 
 	return output
 end
@@ -1388,7 +1388,7 @@ function setup_timesteps(inputparams::InputParams;
 
 	elseif controlPolicy == "Generic"
 		dt = 100
-		n = 1000
+		n = 10000
 		timesteps = repeat([dt], n)
 
 	else
@@ -1427,7 +1427,6 @@ function setup_config(sim::JutulSimulator,
 
 	cfg[:linear_solver]            = battery_linsolve(model, linear_solver)
 	cfg[:debug_level]              = 0
-	cfg[:info_level]               = 1
 	cfg[:max_timestep_cuts]        = 10
 	cfg[:max_residual]             = 1e20
 	cfg[:output_substates]         = true
