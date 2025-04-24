@@ -16,7 +16,7 @@ using BattMo, GLMakie
 # the cell parameter set from a NMC811 vs Graphite-SiOx cell whose parameters were determined in the [Chen 2020 paper](https://doi.org/10.1149/1945-7111/ab9050). 
 # We also read an example cycling protocol for a simple Constant Current Discharge.
 
-file_path_cell = string(dirname(pathof(BattMo)), "/../src/input/defaults/cell_parameters/", "Chen2020_calibrated.json")
+file_path_cell = string(dirname(pathof(BattMo)), "/../src/input/defaults/cell_parameters/", "Chen2020.json")
 file_path_cycling = string(dirname(pathof(BattMo)), "/../src/input/defaults/cycling_protocols/", "CCDischarge.json")
 
 cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
@@ -88,7 +88,7 @@ keys(cell_specifications)
 
 states = output[:states]
 
-t = [state[:Control][:ControllerCV].time for state in states]
+t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 nothing # hide

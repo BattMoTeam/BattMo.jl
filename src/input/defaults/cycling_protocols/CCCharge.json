@@ -1,7 +1,7 @@
 {
   "Protocol": "CCCharge",
   "InitialStateOfCharge": 0.01,
-  "DRate": 1.0,
+  "DRate": 0.5,
   "LowerVoltageLimit": 2.5,
   "UpperVoltageLimit": 4.1,
   "InitialControl": "charging",

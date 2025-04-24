@@ -6,7 +6,7 @@ using BattMo
 
 # Let’s begin by loading the default model settings for a P2D simulation. This will return a ModelSettings object:
 
-file_path_model = string(dirname(pathof(BattMo)), "/../src/input/defaults/model_settings/", "model_settings_P2D.json")
+file_path_model = string(dirname(pathof(BattMo)), "/../src/input/defaults/model_settings/", "P2D.json")
 model_settings = load_model_settings(; from_file_path = file_path_model)
 nothing #hide 
 
@@ -63,7 +63,7 @@ nothing # hide
 
 states = output[:states]
 
-t = [state[:Control][:ControllerCV].time for state in states]
+t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 

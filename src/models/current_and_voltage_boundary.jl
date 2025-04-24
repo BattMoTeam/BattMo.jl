@@ -49,9 +49,9 @@ struct ImaxCharge <: ScalarVariable end
 
 ## In Jutul, a system is part of a model and contains data
 
-abstract type AbstractCVPolicy end
+abstract type AbstractPolicy end
 
-struct CurrentAndVoltageSystem{P <: AbstractCVPolicy} <: JutulSystem
+struct CurrentAndVoltageSystem{P <: AbstractPolicy} <: JutulSystem
 
 	# Control policy
 	policy::P
@@ -72,7 +72,7 @@ Jutul.number_of_cells(::CurrentAndVoltageDomain) = 1
 
 """ Simple constant current policy. Stops when lower cut-off value is reached
 """
-mutable struct SimpleCVPolicy{R} <: AbstractCVPolicy
+mutable struct SimpleCVPolicy{R} <: AbstractPolicy
 	current_function::Any
 	Imax::R
 	voltage::R
@@ -83,12 +83,12 @@ end
 
 """ No policy means that the control is kept fixed throughout the simulation
 """
-struct NoPolicy <: AbstractCVPolicy end
+struct NoPolicy <: AbstractPolicy end
 
 
 """ Standard CC-CV policy
 """
-mutable struct CyclingCVPolicy{R, I} <: AbstractCVPolicy
+mutable struct CyclingCVPolicy{R, I} <: AbstractPolicy
 
 	ImaxDischarge::R
 	ImaxCharge::R
@@ -184,11 +184,11 @@ end
 
 ## The controller are implemented as mutable structures and will be attached to the state
 
-abstract type ControllerCV end
+abstract type Controller end
 
-## SimpleControllerCV
+## SimpleController
 
-mutable struct SimpleControllerCV{R} <: ControllerCV
+mutable struct SimpleController{R} <: Controller
 
 	target::R
 	time::R
@@ -197,40 +197,40 @@ mutable struct SimpleControllerCV{R} <: ControllerCV
 
 end
 
-SimpleControllerCV() = SimpleControllerCV(0.0, 0.0, true, none)
+SimpleController() = SimpleController(0.0, 0.0, true, none)
 
-## CcCvControllerCV
+## CcCvController
 
-mutable struct CcCvControllerCV{R, I <: Integer} <: ControllerCV
+mutable struct CcCvController{R, I <: Integer} <: Controller
 
-	maincontroller::SimpleControllerCV{R}
+	maincontroller::SimpleController{R}
 	numberOfCycles::I
 	dEdt::Union{R, Missing}
 	dIdt::Union{R, Missing}
 
 end
 
-function CcCvControllerCV()
+function CcCvController()
 
-	maincontroller = SimpleControllerCV()
+	maincontroller = SimpleController()
 
-	return CcCvControllerCV(maincontroller, 0, missing, missing)
+	return CcCvController(maincontroller, 0, missing, missing)
 
 end
 
 
-## Helper for CcCvControllerCV so that the fields of SimpleControllerCV appears as inherrited.
+## Helper for CcCvController so that the fields of SimpleController appears as inherrited.
 
-function Base.getproperty(c::CcCvControllerCV, f::Symbol)
-	if f in fieldnames(SimpleControllerCV)
+function Base.getproperty(c::CcCvController, f::Symbol)
+	if f in fieldnames(SimpleController)
 		return getfield(c.maincontroller, f)
 	else
 		return getfield(c, f)
 	end
 end
 
-function Base.setproperty!(c::CcCvControllerCV, f::Symbol, v)
-	if f in fieldnames(SimpleControllerCV)
+function Base.setproperty!(c::CcCvController, f::Symbol, v)
+	if f in fieldnames(SimpleController)
 		setfield!(c.maincontroller, f, v)
 	else
 		setfield!(c, f, v)
@@ -238,18 +238,18 @@ function Base.setproperty!(c::CcCvControllerCV, f::Symbol, v)
 end
 
 
-@inline function Jutul.numerical_type(x::SimpleControllerCV{R}) where {R}
+@inline function Jutul.numerical_type(x::SimpleController{R}) where {R}
 	return R
 end
 
-@inline function Jutul.numerical_type(x::CcCvControllerCV{R, I}) where {R, I}
+@inline function Jutul.numerical_type(x::CcCvController{R, I}) where {R, I}
 	return R
 end
 
 """
 Function to create (deep) copy of simple controller
 """
-function copyController!(cv_copy::SimpleControllerCV, cv::SimpleControllerCV)
+function copyController!(cv_copy::SimpleController, cv::SimpleController)
 
 	cv_copy.target            = cv.target
 	cv_copy.time              = cv.time
@@ -261,7 +261,7 @@ end
 """
 Function to create (deep) copy of CC-CV controller
 """
-function copyController!(cv_copy::CcCvControllerCV, cv::CcCvControllerCV)
+function copyController!(cv_copy::CcCvController, cv::CcCvController)
 
 	copyController!(cv_copy.maincontroller, cv.maincontroller)
 	cv_copy.numberOfCycles = cv.numberOfCycles
@@ -271,9 +271,9 @@ end
 """
 Overload function to copy simple controller
 """
-function Base.copy(cv::SimpleControllerCV)
+function Base.copy(cv::SimpleController)
 
-	cv_copy = SimpleControllerCV()
+	cv_copy = SimpleController()
 	copyController!(cv_copy, cv)
 
 	return cv_copy
@@ -283,9 +283,9 @@ end
 """
 Overload function to copy CC-CV controller
 """
-function Base.copy(cv::CcCvControllerCV)
+function Base.copy(cv::CcCvController)
 
-	cv_copy = CcCvControllerCV()
+	cv_copy = CcCvController()
 	copyController!(cv_copy, cv)
 
 	return cv_copy
@@ -300,7 +300,7 @@ function Jutul.select_minimum_output_variables!(outputs,
 	model::SimulationModel,
 ) where {R}
 
-	push!(outputs, :ControllerCV)
+	push!(outputs, :Controller)
 
 end
 
@@ -425,7 +425,7 @@ function setupRegionSwitchFlags(policy::CyclingCVPolicy, state, ctrlType)
 
 	elseif ctrlType == cc_discharge2
 
-		dEdt = state.ControllerCV.dEdt
+		dEdt = state.Controller.dEdt
 		if !ismissing(dEdt)
 			before = abs(dEdt) > dEdtMin * (1 + tol)
 			after  = abs(dEdt) < dEdtMin * (1 - tol)
@@ -441,7 +441,7 @@ function setupRegionSwitchFlags(policy::CyclingCVPolicy, state, ctrlType)
 
 	elseif ctrlType == cv_charge2
 
-		dIdt = state.ControllerCV.dIdt
+		dIdt = state.Controller.dIdt
 		if !ismissing(dIdt)
 			before = abs(dIdt) > dIdtMin * (1 + tol)
 			after  = abs(dIdt) < dIdtMin * (1 - tol)
@@ -470,9 +470,9 @@ function check_constraints(model, storage)
 	state  = storage.state[:Control]
 	state0 = storage.state0[:Control]
 
-	controller = state[:ControllerCV]
-	ctrlType   = state[:ControllerCV].ctrlType
-	ctrlType0  = state0[:ControllerCV].ctrlType
+	controller = state[:Controller]
+	ctrlType   = state[:Controller].ctrlType
+	ctrlType0  = state0[:Controller].ctrlType
 
 	nextCtrlType = getNextCtrlType(ctrlType0)
 
@@ -495,13 +495,13 @@ end
 # Functions to update values in the controller #
 ################################################
 
-function Jutul.update_values!(old::SimpleControllerCV, new::SimpleControllerCV)
+function Jutul.update_values!(old::SimpleController, new::SimpleController)
 
 	copyController!(old, new)
 
 end
 
-function Jutul.update_values!(old::CcCvControllerCV, new::CcCvControllerCV)
+function Jutul.update_values!(old::CcCvController, new::CcCvController)
 
 	copyController!(old, new)
 
@@ -542,11 +542,11 @@ function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{Cu
 			SimulationModel},
 		storage,
 		model)
-	copyController!(storage.state[:ControllerCV], storage.state0[:ControllerCV])
+	copyController!(storage.state[:Controller], storage.state0[:Controller])
 end
 
 
-function update_controller!(state, state0, policy::AbstractCVPolicy, dt)
+function update_controller!(state, state0, policy::AbstractPolicy, dt)
 
 	update_control_type_in_controller!(state, state0, policy, dt)
 	update_values_in_controller!(state, policy)
@@ -567,7 +567,7 @@ function update_control_type_in_controller!(state, state0, policy::SimpleCVPolic
 
 	phi_p = policy.voltage
 
-	controller = state.ControllerCV
+	controller = state.Controller
 
 	phi = only(state.Phi)
 
@@ -575,7 +575,7 @@ function update_control_type_in_controller!(state, state0, policy::SimpleCVPolic
 
 	controller.target_is_voltage = target_is_voltage
 	controller.ctrlType          = discharge # for the moment only discharge in a simple controller
-	controller.time              = state0.ControllerCV.time + dt
+	controller.time              = state0.Controller.time + dt
 
 end
 
@@ -589,13 +589,13 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
 	E0 = only(value(state0[:Phi]))
 	I0 = only(value(state0[:Current]))
 
-	controller = state.ControllerCV
+	controller = state.Controller
 
-	controller.time = state0.ControllerCV.time + dt
+	controller.time = state0.Controller.time + dt
 	controller.dIdt = (I - I0) / dt
 	controller.dEdt = (E - E0) / dt
 
-	ctrlType0 = state0.ControllerCV.ctrlType
+	ctrlType0 = state0.Controller.ctrlType
 
 	nextCtrlType = getNextCtrlType(ctrlType0)
 
@@ -611,7 +611,7 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
 
 		# We entered the switch region in the previous time step. We consider switching control
 
-		currentCtrlType = state.ControllerCV.ctrlType # current control in the the Newton iteration
+		currentCtrlType = state.Controller.ctrlType # current control in the the Newton iteration
 		nextCtrlType0   = getNextCtrlType(ctrlType0) # next control that can occur after the previous time step control (if it changes)
 
 		rsw0 = setupRegionSwitchFlags(policy, state, ctrlType0)
@@ -660,7 +660,7 @@ end
 
 function update_values_in_controller!(state, policy::SimpleCVPolicy)
 
-	controller = state.ControllerCV
+	controller = state.Controller
 
 	if controller.target_is_voltage
 
@@ -687,7 +687,7 @@ end
 
 function update_values_in_controller!(state, policy::CyclingCVPolicy)
 
-	controller = state[:ControllerCV]
+	controller = state[:Controller]
 
 	ctrlType = controller.ctrlType
 
@@ -744,7 +744,7 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquati
 	I   = only(state.Current)
 	phi = only(state.Phi)
 
-	ctrl = state[:ControllerCV]
+	ctrl = state[:Controller]
 
 	if ctrl.target_is_voltage
 		v[] = phi - ctrl.target
@@ -772,7 +772,7 @@ end
 """
 function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces; time = NaN)
 
-	ctrl = storage.state[:ControllerCV]
+	ctrl = storage.state[:Controller]
 
 	policy = model.system.policy
 
@@ -782,10 +782,10 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 
 		ctrlType = ctrl.ctrlType
 
-		ctrlType0 = storage.state0[:ControllerCV].ctrlType
-		ncycles   = storage.state0[:ControllerCV].numberOfCycles
+		ctrlType0 = storage.state0[:Controller].ctrlType
+		ncycles   = storage.state0[:Controller].numberOfCycles
 
-		copyController!(storage.state0[:ControllerCV], ctrl)
+		copyController!(storage.state0[:Controller], ctrl)
 
 		if initctrl == charging
 
@@ -805,7 +805,7 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 
 	elseif policy isa SimpleCVPolicy
 
-		copyController!(storage.state0[:ControllerCV], ctrl)
+		copyController!(storage.state0[:Controller], ctrl)
 
 	else
 
@@ -838,19 +838,19 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 		end
 		target_is_voltage = false
 		ctrlType = discharging
-		state[:ControllerCV] = SimpleControllerCV(target, time, target_is_voltage, ctrlType)
+		state[:Controller] = SimpleController(target, time, target_is_voltage, ctrlType)
 
 	elseif policy isa CyclingCVPolicy
 
-		state[:ControllerCV] = CcCvControllerCV()
+		state[:Controller] = CcCvController()
 
 		if policy.initialControl == discharging
 
-			state[:ControllerCV].ctrlType = cc_discharge1
+			state[:Controller].ctrlType = cc_discharge1
 
 		elseif policy.initialControl == charging
 
-			state[:ControllerCV].ctrlType = cc_charge1
+			state[:Controller].ctrlType = cc_charge1
 
 		else
 			error("initialControl not recognized")
