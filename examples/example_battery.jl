@@ -7,7 +7,7 @@ using Jutul, BattMo, GLMakie
 # We load the matlab input file
 name = "p2d_40"
 fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/", name, ".mat")
-inputparams = read_matlab_battmo_input(fn)
+inputparams = load_matlab_battmo_input(fn)
 nothing # hide
 
 # We want to compare the solution obtained in julia with the solution computed in Matlab. We set the option to load the

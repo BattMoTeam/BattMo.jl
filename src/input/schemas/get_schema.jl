@@ -24,7 +24,8 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 		dict["enum"] = get(meta, "options", nothing)  # Enforce max value if present
 		dict["description"] = get(meta, "description", "")  # Optional documentation
 
-	elseif meta["type"] == Function
+	elseif isa(meta["type"], Vector) && all(isa.(meta["type"], DataType))
+
 
 		oneof_list = []
 		push!(oneof_list, Dict("type" => "number"))
@@ -33,54 +34,29 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 			Dict(
 				"type" => "object",
 				"properties" => Dict(
+					"V" => Dict("type" => "array"),
+					"SOC" => Dict("type" => "array"),
+				),
+				"required" => ["V", "SOC"],
+				"additionalProperties" => true,
+			),
+		)
+		push!(
+			oneof_list,
+			Dict(
+				"type" => "string",
+			),
+		)
+		push!(
+			oneof_list,
+			Dict(
+				"type" => "object",
+				"properties" => Dict(
 					"type" => Dict("type" => "string", "enum" => ["function"]),
 					"functionname" => Dict("type" => "string"),
-					"argumentlist" => Dict(
-						"type" => "array",
-						"items" => Dict("type" => "string"),
-					),
 				),
-				"required" => ["type", "functionname", "argumentlist"],
-				"additionalProperties" => false,
-			),
-		)
-		push!(
-			oneof_list,
-			Dict(
-				"type" => "object",
-				"properties" => Dict(
-					"type" => Dict("type" => "string", "enum" => ["function"]),
-					"function" => Dict("type" => "string"),
-					"argumentlist" => Dict(
-						"type" => "array",
-						"items" => Dict("type" => "string"),
-					),
-				),
-				"required" => ["type", "function", "argumentlist"],
-				"additionalProperties" => false,
-			),
-		)
-		push!(
-			oneof_list,
-			Dict(
-				"type" => "object",
-				"properties" => Dict(
-					"type" => Dict("type" => "string", "enum" => ["function"]),
-					"data_x" => Dict(
-						"type" => "array",
-						"items" => Dict("type" => "number"),
-					),
-					"data_y" => Dict(
-						"type" => "array",
-						"items" => Dict("type" => "number"),
-					),
-					"argumentlist" => Dict(
-						"type" => "array",
-						"items" => Dict("type" => "string"),
-					),
-				),
-				"required" => ["type", "data_x", "data_y", "argumentlist"],
-				"additionalProperties" => false,
+				"required" => ["type", "functionname"],
+				"additionalProperties" => true,
 			),
 		)
 
@@ -173,12 +149,13 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"OpenCircuitVoltage" => create_property(parameter_meta, "OpenCircuitVoltage"),
 							"NumberOfElectronsTransfered" => create_property(parameter_meta, "NumberOfElectronsTransfered"),
 							"ActivationEnergyOfReaction" => create_property(parameter_meta, "ActivationEnergyOfReaction"),
+							"ActivationEnergyOfDiffusion" => create_property(parameter_meta, "ActivationEnergyOfDiffusion"),
 							"ReactionRateConstant" => create_property(parameter_meta, "ReactionRateConstant"),
 							"ChargeTransferCoefficient" => create_property(parameter_meta, "ChargeTransferCoefficient"),
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitVoltage", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ReactionRateConstant", "ChargeTransferCoefficient"],
+							"OpenCircuitVoltage", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ActivationEnergyOfDiffusion", "ReactionRateConstant", "ChargeTransferCoefficient"],
 					),
 					"Interphase" => Dict(
 						"type" => "object",
@@ -218,7 +195,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						"type" => "object",
 						"properties" => Dict(
 							"Density" => create_property(parameter_meta, "Density"),
-							"MassFraction" => create_property(parameter_meta, "MassFraction"),
+							"Thickness" => create_property(parameter_meta, "Thickness"),
 							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
@@ -255,12 +232,13 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"OpenCircuitVoltage" => create_property(parameter_meta, "OpenCircuitVoltage"),
 							"NumberOfElectronsTransfered" => create_property(parameter_meta, "NumberOfElectronsTransfered"),
 							"ActivationEnergyOfReaction" => create_property(parameter_meta, "ActivationEnergyOfReaction"),
+							"ActivationEnergyOfDiffusion" => create_property(parameter_meta, "ActivationEnergyOfDiffusion"),
 							"ReactionRateConstant" => create_property(parameter_meta, "ReactionRateConstant"),
 							"ChargeTransferCoefficient" => create_property(parameter_meta, "ChargeTransferCoefficient"),
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitVoltage", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ReactionRateConstant", "ChargeTransferCoefficient"],
+							"OpenCircuitVoltage", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ActivationEnergyOfDiffusion", "ReactionRateConstant", "ChargeTransferCoefficient"],
 					),
 					"Interphase" => Dict(
 						"type" => "object",
@@ -300,7 +278,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						"type" => "object",
 						"properties" => Dict(
 							"Density" => create_property(parameter_meta, "Density"),
-							"MassFraction" => create_property(parameter_meta, "MassFraction"),
+							"Thickness" => create_property(parameter_meta, "Thickness"),
 							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
@@ -339,6 +317,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 	cell_required = schema["properties"]["Cell"]["required"]
 	ne_required = schema["properties"]["NegativeElectrode"]["required"]
+	pe_required = schema["properties"]["PositiveElectrode"]["required"]
 	ne_coating_required = schema["properties"]["NegativeElectrode"]["properties"]["ElectrodeCoating"]["required"]
 	pe_coating_required = schema["properties"]["PositiveElectrode"]["properties"]["ElectrodeCoating"]["required"]
 
@@ -358,57 +337,16 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 	if model_settings_dict["ModelGeometry"] == "1D"
 		push!(cell_required, "ElectrodeGeometricSurfaceArea")
-		if haskey(model_settings_dict, "UseThermalModel")
-			push!(cell_required, "DeviceSurfaceArea")
-			push!(cell_required, "HeatTransferCoefficient")
-			push!(ne_coating_required, "SurfaceCoefficientOfHeatTransfer")
-			push!(pe_coating_required, "SurfaceCoefficientOfHeatTransfer")
-			push!(ne_am_required, "SpecificHeatCapacity")
-			push!(ne_am_required, "ThermalConductivity")
-			push!(pe_am_required, "SpecificHeatCapacity")
-			push!(pe_am_required, "ThermalConductivity")
-			push!(ne_ca_required, "SpecificHeatCapacity")
-			push!(ne_ca_required, "ThermalConductivity")
-			push!(pe_ca_required, "SpecificHeatCapacity")
-			push!(pe_ca_required, "ThermalConductivity")
-			push!(ne_b_required, "SpecificHeatCapacity")
-			push!(ne_b_required, "ThermalConductivity")
-			push!(pe_b_required, "SpecificHeatCapacity")
-			push!(pe_b_required, "ThermalConductivity")
-			push!(sep_required, "SpecificHeatCapacity")
-			push!(sep_required, "ThermalConductivity")
-			push!(elyte_required, "SpecificHeatCapacity")
-			push!(elyte_required, "ThermalConductivity")
 
-		end
-
-	elseif model_settings_dict["ModelGeometry"] == "3D Pouch"
+	elseif model_settings_dict["ModelGeometry"] == "3D-demo"
 		push!(cell_required, "ElectrodeWidth")
 		push!(cell_required, "ElectrodeLength")
-		if model_settings_dict["UseThermalModel"]
-			push!(cell_required, "DeviceSurfaceArea")
-			push!(cell_required, "HeatTransferCoefficient")
-			push!(ne_coating_required, "SurfaceCoefficientOfHeatTransfer")
-			push!(pe_coating_required, "SurfaceCoefficientOfHeatTransfer")
-			push!(ne_am_required, "SpecificHeatCapacity")
-			push!(ne_am_required, "ThermalConductivity")
-			push!(pe_am_required, "SpecificHeatCapacity")
-			push!(pe_am_required, "ThermalConductivity")
-			push!(ne_ca_required, "SpecificHeatCapacity")
-			push!(ne_ca_required, "ThermalConductivity")
-			push!(pe_ca_required, "SpecificHeatCapacity")
-			push!(pe_ca_required, "ThermalConductivity")
-			push!(ne_b_required, "SpecificHeatCapacity")
-			push!(ne_b_required, "ThermalConductivity")
-			push!(pe_b_required, "SpecificHeatCapacity")
-			push!(pe_b_required, "ThermalConductivity")
-			push!(sep_required, "SpecificHeatCapacity")
-			push!(sep_required, "ThermalConductivity")
-			push!(elyte_required, "SpecificHeatCapacity")
-			push!(elyte_required, "ThermalConductivity")
+		if haskey(model_settings, "UseCurrentCollectors")
+			push!(ne_required, "CurrentCollector")
+			push!(pe_required, "CurrentCollector")
 		end
 
-	elseif model_settings_dict["ModelGeometry"] == "3D Cyclindrical"
+	elseif model_settings_dict["ModelGeometry"] == "3D Cylindrical"
 
 		push!(cell_required, "DubbelCoatedElectrodes")
 		push!(cell_required, "InnerCellRadius")
@@ -418,29 +356,6 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 		push!(pe_coating_required, "Width")
 		push!(pe_coating_required, "Length")
 
-		if haskey(model_settings_dict, "UseThermalModel")
-			push!(cell_required, "DeviceSurfaceArea")
-			push!(cell_required, "HeatTransferCoefficient")
-			push!(ne_coating_required, "SurfaceCoefficientOfHeatTransfer")
-			push!(pe_coating_required, "SurfaceCoefficientOfHeatTransfer")
-			push!(ne_am_required, "SpecificHeatCapacity")
-			push!(ne_am_required, "ThermalConductivity")
-			push!(pe_am_required, "SpecificHeatCapacity")
-			push!(pe_am_required, "ThermalConductivity")
-			push!(ne_ca_required, "SpecificHeatCapacity")
-			push!(ne_ca_required, "ThermalConductivity")
-			push!(pe_ca_required, "SpecificHeatCapacity")
-			push!(pe_ca_required, "ThermalConductivity")
-			push!(ne_b_required, "SpecificHeatCapacity")
-			push!(ne_b_required, "ThermalConductivity")
-			push!(pe_b_required, "SpecificHeatCapacity")
-			push!(pe_b_required, "ThermalConductivity")
-			push!(sep_required, "SpecificHeatCapacity")
-			push!(sep_required, "ThermalConductivity")
-			push!(elyte_required, "SpecificHeatCapacity")
-			push!(elyte_required, "ThermalConductivity")
-
-		end
 
 	end
 
@@ -487,7 +402,6 @@ function get_schema_cycling_protocol()
 						"InitialControl",
 						"CurrentChangeLimit",
 						"VoltageChangeLimit",
-						"AmbientKelvinTemperature",
 						"InitialKelvinTemperature",
 					],
 				),
@@ -501,7 +415,6 @@ function get_schema_cycling_protocol()
 						"LowerVoltageLimit",
 						"UpperVoltageLimit",
 						"InitialControl",
-						"AmbientKelvinTemperature",
 						"InitialKelvinTemperature",
 					],
 				),
@@ -579,7 +492,6 @@ function get_schema_model_settings()
 		"type" => "object",
 		"properties" => Dict(
 			"ModelGeometry" => create_property(parameter_meta, "ModelGeometry"),
-			"UseThermalModel" => create_property(parameter_meta, "UseThermalModel"),
 			"UseCurrentCollectors" => create_property(parameter_meta, "UseCurrentCollectors"),
 			"UseRampUp" => create_property(parameter_meta, "UseRampUp"),
 			"UseSEIModel" => create_property(parameter_meta, "UseSEIModel"),
