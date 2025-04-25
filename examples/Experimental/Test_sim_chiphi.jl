@@ -376,7 +376,7 @@ else
 	state0[:Control][:Phi][1] = 4.2
 	state0[:Control][:Current][1] = 0
 	discharging = BattMo.cc_discharge1
-	state0[:Control][:Controller] = BattMo.SimpleController{Float64}(0.0, 0.0, false, discharging)
+	state0[:Control][:Controller] = BattMo.SimpleControllerCV{Float64}(0.0, 0.0, false, discharging)
 	cfg[:failure_cuts_timestep] = false
 	states, reports = Jutul.simulate(state0, sim, timesteps, forces = forces, config = cfg)
 	##

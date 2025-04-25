@@ -1,7 +1,8 @@
 {
-  "Protocol": "CCCharge",
+  "Protocol": "CC",
   "InitialStateOfCharge": 0.01,
-  "DRate": 0.5,
+  "NumberOfCycles": 0,
+  "CRate": 0.5,
   "LowerVoltageLimit": 2.5,
   "UpperVoltageLimit": 4.1,
   "InitialControl": "charging",

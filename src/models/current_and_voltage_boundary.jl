@@ -70,7 +70,20 @@ Jutul.number_of_cells(::CurrentAndVoltageDomain) = 1
 
 ## A policy is used to compute the next control from the current control and state
 
-""" Simple constant current policy. Stops when lower cut-off value is reached
+""" Simple constant current. Stops when lower cut-off value is reached
+"""
+mutable struct CCPolicy{R} <: AbstractPolicy
+	initialControl::String
+	current_function::Any
+	Imax::R
+	voltage::R
+	function CCPolicy(; initialControl = "discharging", current_function = missing, Imax::T = 0.0, voltage = missing) where T <: Real
+		new{Union{Missing, T}}(initialControl, current_function, Imax, voltage)
+	end
+end
+
+
+""" Simple constant current, constant voltage policy. Stops when lower cut-off value is reached
 """
 mutable struct SimpleCVPolicy{R} <: AbstractPolicy
 	current_function::Any
@@ -163,9 +176,17 @@ end
 #########################
 
 function Jutul.select_parameters!(S,
+	system::CurrentAndVoltageSystem{CCPolicy{R}},
+	model::SimulationModel) where {R}
+	S[:ImaxDischarge] = ImaxDischarge()
+	S[:ImaxCharge] = ImaxCharge()
+end
+
+function Jutul.select_parameters!(S,
 	system::CurrentAndVoltageSystem{SimpleCVPolicy{R}},
 	model::SimulationModel) where {R}
 	S[:ImaxDischarge] = ImaxDischarge()
+
 end
 
 function Jutul.select_parameters!(S,
@@ -186,9 +207,7 @@ end
 
 abstract type Controller end
 
-## SimpleController
-
-mutable struct SimpleController{R} <: Controller
+mutable struct CCController{R} <: Controller
 
 	target::R
 	time::R
@@ -197,13 +216,26 @@ mutable struct SimpleController{R} <: Controller
 
 end
 
-SimpleController() = SimpleController(0.0, 0.0, true, none)
+CCController() = CCController(0.0, 0.0, false, none)
+
+## SimpleControllerCV
+
+mutable struct SimpleControllerCV{R} <: Controller
+
+	target::R
+	time::R
+	target_is_voltage::Bool
+	ctrlType::OperationalMode
+
+end
+
+SimpleControllerCV() = SimpleControllerCV(0.0, 0.0, true, none)
 
 ## CcCvController
 
 mutable struct CcCvController{R, I <: Integer} <: Controller
 
-	maincontroller::SimpleController{R}
+	maincontroller::SimpleControllerCV{R}
 	numberOfCycles::I
 	dEdt::Union{R, Missing}
 	dIdt::Union{R, Missing}
@@ -212,17 +244,17 @@ end
 
 function CcCvController()
 
-	maincontroller = SimpleController()
+	maincontroller = SimpleControllerCV()
 
 	return CcCvController(maincontroller, 0, missing, missing)
 
 end
 
 
-## Helper for CcCvController so that the fields of SimpleController appears as inherrited.
+## Helper for CcCvController so that the fields of SimpleControllerCV appears as inherrited.
 
 function Base.getproperty(c::CcCvController, f::Symbol)
-	if f in fieldnames(SimpleController)
+	if f in fieldnames(SimpleControllerCV)
 		return getfield(c.maincontroller, f)
 	else
 		return getfield(c, f)
@@ -230,15 +262,18 @@ function Base.getproperty(c::CcCvController, f::Symbol)
 end
 
 function Base.setproperty!(c::CcCvController, f::Symbol, v)
-	if f in fieldnames(SimpleController)
+	if f in fieldnames(SimpleControllerCV)
 		setfield!(c.maincontroller, f, v)
 	else
 		setfield!(c, f, v)
 	end
 end
 
+@inline function Jutul.numerical_type(x::CCController{R}) where {R}
+	return R
+end
 
-@inline function Jutul.numerical_type(x::SimpleController{R}) where {R}
+@inline function Jutul.numerical_type(x::SimpleControllerCV{R}) where {R}
 	return R
 end
 
@@ -246,10 +281,24 @@ end
 	return R
 end
 
+
 """
 Function to create (deep) copy of simple controller
 """
-function copyController!(cv_copy::SimpleController, cv::SimpleController)
+function copyController!(cv_copy::CCController, cv::CCController)
+
+	cv_copy.target = cv.target
+	cv_copy.time = cv.time
+	cv_copy.target_is_voltage = cv.target_is_voltage
+	cv_copy.ctrlType = cv.ctrlType
+
+end
+
+
+"""
+Function to create (deep) copy of simple controller
+"""
+function copyController!(cv_copy::SimpleControllerCV, cv::SimpleControllerCV)
 
 	cv_copy.target            = cv.target
 	cv_copy.time              = cv.time
@@ -271,9 +320,21 @@ end
 """
 Overload function to copy simple controller
 """
-function Base.copy(cv::SimpleController)
+function Base.copy(cv::CCController)
 
-	cv_copy = SimpleController()
+	cv_copy = CCController()
+	copyController!(cv_copy, cv)
+
+	return cv_copy
+
+end
+
+"""
+Overload function to copy simple controller
+"""
+function Base.copy(cv::SimpleControllerCV)
+
+	cv_copy = SimpleControllerCV()
 	copyController!(cv_copy, cv)
 
 	return cv_copy
@@ -308,12 +369,32 @@ end
 ###################################################################################################################
 # Functions to compute initial current given the policy, it used at initialization of the state in the simulation #
 ###################################################################################################################
+function getInitCurrent(policy::CCPolicy)
+	if !ismissing(policy.current_function)
+		val = policy.current_function(0.0)
+	else
+		if policy.initialControl == "charging"
+			val = -policy.Imax
+		elseif policy.initialControl == "discharging"
+			val = policy.Imax
+		else
+			error("initial control not recognized")
+		end
+	end
+	return val
+end
 
 function getInitCurrent(policy::SimpleCVPolicy)
 	if !ismissing(policy.current_function)
 		val = policy.current_function(0.0)
 	else
-		val = policy.Imax
+		if policy.initialControl == "charging"
+			val = -policy.Imax
+		elseif policy.initialControl == "discharging"
+			val = policy.Imax
+		else
+			error("initial control not recognized")
+		end
 	end
 	return val
 end
@@ -342,6 +423,29 @@ end
 ######################################################
 # Setup the initial policy from the input parameters #
 ######################################################
+
+function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParams, parameters)
+
+	tup = Float64(inputparams["Control"]["rampupTime"])
+	if policy.initialControl == "charging"
+		Imax = only(parameters[:Control][:ImaxCharge])
+	elseif policy.initialControl == "discharging"
+		Imax = only(parameters[:Control][:ImaxDischarge])
+	end
+
+	cFun(time) = currentFun(time, Imax, tup)
+
+	policy.current_function = cFun
+	policy.Imax             = Imax
+
+
+	if policy.initialControl == "charging"
+		policy.voltage = inputparams["Control"]["higherCutoffVoltage"]
+	elseif policy.initialControl == "discharging"
+		policy.voltage = inputparams["Control"]["lowerCutoffVoltage"]
+	end
+
+end
 
 function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::InputParams, parameters)
 
@@ -495,7 +599,13 @@ end
 # Functions to update values in the controller #
 ################################################
 
-function Jutul.update_values!(old::SimpleController, new::SimpleController)
+function Jutul.update_values!(old::CCController, new::CCController)
+
+	copyController!(old, new)
+
+end
+
+function Jutul.update_values!(old::SimpleControllerCV, new::SimpleControllerCV)
 
 	copyController!(old, new)
 
@@ -559,6 +669,16 @@ end
 ##################################
 
 # Given a policy, a current control and state, we compute the next control
+
+"""
+Implementation of the simple CV policy
+"""
+function update_control_type_in_controller!(state, state0, policy::CCPolicy, dt)
+
+	controller = state.Controller
+	controller.time = state0.Controller.time + dt
+
+end
 
 """
 Implementation of the simple CV policy
@@ -657,6 +777,23 @@ end
 
 # Once the controller has been assigned the given control, we adjust the target value which is used in the equation
 # assembly
+
+function update_values_in_controller!(state, policy::CCPolicy)
+
+	controller = state.Controller
+
+	cf = policy.current_function
+
+	if cf isa Real
+		I_p = cf
+	else
+		# Function of time at the end of interval
+		I_p = cf(controller.time)
+	end
+
+	controller.target = I_p
+
+end
 
 function update_values_in_controller!(state, policy::SimpleCVPolicy)
 
@@ -807,6 +944,10 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 
 		copyController!(storage.state0[:Controller], ctrl)
 
+	elseif policy isa CCPolicy
+
+		copyController!(storage.state0[:Controller], ctrl)
+
 	else
 
 		error("policy not recognized")
@@ -838,8 +979,24 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 		end
 		target_is_voltage = false
 		ctrlType = discharging
-		state[:Controller] = SimpleController(target, time, target_is_voltage, ctrlType)
+		state[:Controller] = SimpleControllerCV(target, time, target_is_voltage, ctrlType)
 
+	elseif policy isa CCPolicy
+
+		time = 0.0
+		Imax = policy.Imax
+		if !ismissing(policy.current_function)
+			target = policy.current_function(time)
+		else
+			target = Imax
+		end
+		if policy.initialControl == "discharging"
+			ctrlType = discharging
+		elseif policy.initialControl == "charging"
+			ctrlType = charging
+		end
+		target_is_voltage = false
+		state[:Controller] = CCController(target, time, target_is_voltage, ctrlType)
 	elseif policy isa CyclingCVPolicy
 
 		state[:Controller] = CcCvController()

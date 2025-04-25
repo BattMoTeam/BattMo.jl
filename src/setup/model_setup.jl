@@ -561,11 +561,14 @@ function setup_submodels(inputparams::InputParams;
 
 	controlPolicy = jsondict["Control"]["controlPolicy"]
 
-	if controlPolicy == "CCDischarge"
+	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge"
 
-		minE = jsondict["Control"]["lowerCutoffVoltage"]
+		if jsondict["Control"]["useCVswitch"]
 
-		policy = SimpleCVPolicy()
+			policy = SimpleCVPolicy()
+		else
+			policy = CCPolicy()
+		end
 
 	elseif controlPolicy == "CCCV"
 
@@ -845,7 +848,19 @@ function setup_battery_parameters(inputparams::InputParams,
 		con = Constants()
 
 		DRate = inputparams["Control"]["DRate"]
+
 		prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
+
+		parameters[:Control] = setup_parameters(model[:Control], prm_control)
+
+
+	elseif controlPolicy == "CCCharge"
+		cap = computeCellCapacity(model)
+		con = Constants()
+
+		CRate = inputparams["Control"]["CRate"]
+
+		prm_control[:ImaxCharge] = (cap / con.hour) * CRate
 
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
@@ -1308,11 +1323,16 @@ function setup_timesteps(inputparams::InputParams;
 
 	controlPolicy = inputparams["Control"]["controlPolicy"]
 
-	if controlPolicy == "CCDischarge"
+	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge"
 
-		DRate = inputparams["Control"]["DRate"]
+		if controlPolicy == "CCDischarge"
+			CRate = inputparams["Control"]["DRate"]
+		else
+			CRate = inputparams["Control"]["CRate"]
+		end
+
 		con = Constants()
-		totalTime = 1.1 * con.hour / DRate
+		totalTime = 1.1 * con.hour / CRate
 
 		if haskey(inputparams["TimeStepping"], "totalTime")
 			@warn "totalTime value is given but not used"

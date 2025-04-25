@@ -164,6 +164,23 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		error("Function type not recognized")
 	end
 
+	###################
+	# Control policy
+	###################
+
+	if cycling_protocol["Protocol"] == "CC"
+		use_cv_switch = false
+		if cycling_protocol["InitialControl"] == "discharging"
+			control = "CCDischarge"
+		else
+			control = "CCCharge"
+		end
+	elseif cycling_protocol["Control"] == "CCCV"
+		use_cv_switch = true
+
+	else
+		error("Cycling policy not recognized.")
+	end
 
 	battmo_input = Dict(
 		"G" => get_key_value(simulation_settings, "Grid"),
@@ -172,7 +189,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		"use_thermal" => use_thermal,
 		"include_current_collectors" => use_cc,
 		"Control" => Dict(
-			"controlPolicy" => get_key_value(cycling_protocol, "Protocol"),
+			"controlPolicy" => control,
+			"useCVswitch" => use_cv_switch,
 			"numberOfCycles" => get_key_value(cycling_protocol, "TotalNumberOfCycles"),
 			"rampupTime" => get_key_value(simulation_settings, "RampUpTime"),
 			"CRate" => get_key_value(cycling_protocol, "CRate"),

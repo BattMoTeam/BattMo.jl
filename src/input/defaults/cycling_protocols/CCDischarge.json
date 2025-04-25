@@ -1,7 +1,7 @@
 {
-  "Protocol": "CCDischarge",
+  "Protocol": "CC",
   "InitialStateOfCharge": 0.99,
-  "DRate": 1.0,
+  "DRate": 0.5,
   "LowerVoltageLimit": 2.4,
   "UpperVoltageLimit": 4.1,
   "InitialControl": "discharging",
