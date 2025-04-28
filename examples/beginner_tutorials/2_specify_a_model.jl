@@ -2,7 +2,7 @@
 # In this tutorial, we’ll configure a custom battery model using BattMo, with a specific focus on SEI (Solid Electrolyte Interphase) growth within a P2D simulation framework.
 
 # ### Load BattMo and Model Settings
-using BattMo
+using BattMo, GLMakie
 
 # Let’s begin by loading the default model settings for a P2D simulation. This will return a ModelSettings object:
 
