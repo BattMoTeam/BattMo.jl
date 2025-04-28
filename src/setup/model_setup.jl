@@ -1443,19 +1443,44 @@ function setup_config(sim::JutulSimulator,
 		end
 	end
 
-	if model[:Control].system.policy isa CyclingCVPolicy
+	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy
+		if model[:Control].system.policy isa CyclingCVPolicy
 
-		cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+			cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+		end
 
 		function post_hook(done, report, sim, dt, forces, max_iter, cfg)
 
 			s = get_simulator_storage(sim)
 			m = get_simulator_model(sim)
 
-			if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-				report[:stopnow] = true
-			else
-				report[:stopnow] = false
+			if model[:Control].system.policy isa CyclingCVPolicy
+
+				if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+					report[:stopnow] = true
+				else
+					report[:stopnow] = false
+				end
+
+			elseif model[:Control].system.policy isa CCPolicy
+				@info typeof(s.state)
+				if m[:Control].system.policy.initialControl == "charging"
+
+					if s.state.Control.Phi >= m[:Control].system.policy.upperCutoffVoltage
+						done = true
+					else
+						done = false
+					end
+
+				elseif m[:Control].system.policy.initialControl == "discharging"
+					if s.state.Control.Phi <= m[:Control].system.policy.lowerCutoffVoltage
+						done = true
+
+					else
+
+						done = false
+					end
+				end
 			end
 
 			return (done, report)
@@ -1464,7 +1489,9 @@ function setup_config(sim::JutulSimulator,
 
 		cfg[:post_ministep_hook] = post_hook
 
+
 	end
+
 
 	return cfg
 

@@ -136,7 +136,7 @@ function get_parameter_meta_data()
 		),
 		"Protocol" => Dict(
 			"type" => String,
-			"options" => ["CCDischarge", "CCCharge", "CCCV"],
+			"options" => ["CC", "CCCV"],
 			"context_type" => "Protocol",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_789012",
 		),
