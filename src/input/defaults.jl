@@ -1,4 +1,4 @@
-export parameter_file_path
+export parameter_file_path, generate_default_json_files
 
 """
     parameter_file_path("cell_parameters", "Chen2020_calibrated")
@@ -46,3 +46,36 @@ function defaults_folder_path()
     return normpath(battmo_root, "src", "input", "defaults")
 end
 
+"""
+    generate_default_json_files()
+    generate_default_json_files("/some/path", force = true)
+    generate_default_json_files("/some/path", name = "my_json_files")
+
+Make a local copy of the default JSON files in the specified directory. The
+default name is "battmo_json". If the directory already exists, an error is thrown
+unless `force` is set to true. The default path is the current working directory.
+"""
+function generate_default_json_files(
+        pth = pwd(),
+        name = "battmo_json";
+        print = true,
+        force = false
+    )
+    if !ispath(pth)
+        error("Destination $pth does not exist. Specify a folder.")
+    end
+    dest = joinpath(pth, name)
+    json_dir = defaults_folder_path()
+
+    if ispath(dest)
+        if !force
+            error("Folder $name already already exists in $pth. Specify force = true, or choose another name.")
+        end
+    end
+    cp(json_dir, dest, force = force)
+    if print
+        println("🛠 JSON files successfully written! Path:\n\t$dest")
+    end
+    chmod(dest, 0o777, recursive = true)
+    return dest
+end
