@@ -302,7 +302,7 @@ function setup_model(inputparams::BattMoFormattedInput;
 
 	# setup the cross terms which couples the submodels.
 	setup_coupling_cross_terms!(inputparams, model, parameters, couplings)
-
+	@info "par = ", model[:Control].system.policy
 	setup_initial_control_policy!(model[:Control].system.policy, inputparams, parameters)
 	#model.context = DefaultContext()
 	return model, parameters
@@ -562,12 +562,15 @@ function setup_submodels(inputparams::InputParams;
 	controlPolicy = jsondict["Control"]["controlPolicy"]
 
 	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge"
-
+		ctrl = jsondict["Control"]
 		if jsondict["Control"]["useCVswitch"]
 
 			policy = SimpleCVPolicy()
 		else
-			policy = CCPolicy()
+			policy = CCPolicy(ctrl["initialControl"],
+				ctrl["lowerCutoffVoltage"],
+				ctrl["upperCutoffVoltage"],
+			)
 		end
 
 	elseif controlPolicy == "CCCV"
@@ -851,6 +854,7 @@ function setup_battery_parameters(inputparams::InputParams,
 
 		prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
 
+
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
 
@@ -861,7 +865,7 @@ function setup_battery_parameters(inputparams::InputParams,
 		CRate = inputparams["Control"]["CRate"]
 
 		prm_control[:ImaxCharge] = (cap / con.hour) * CRate
-
+		@info "init = ", prm_control[:ImaxCharge]
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
 	elseif controlPolicy == "CCCV"
@@ -1463,22 +1467,24 @@ function setup_config(sim::JutulSimulator,
 				end
 
 			elseif model[:Control].system.policy isa CCPolicy
-				@info typeof(s.state)
+				@info s.state.Control.Phi[1]
+				@info s.state.Control.Current[1]
 				if m[:Control].system.policy.initialControl == "charging"
 
-					if s.state.Control.Phi >= m[:Control].system.policy.upperCutoffVoltage
-						done = true
+					if s.state.Control.Phi[1] >= m[:Control].system.policy.upperCutoffVoltage
+						report[:stopnow] = true
 					else
-						done = false
+						report[:stopnow] = false
 					end
 
 				elseif m[:Control].system.policy.initialControl == "discharging"
-					if s.state.Control.Phi <= m[:Control].system.policy.lowerCutoffVoltage
-						done = true
+
+					if s.state.Control.Phi[1] <= m[:Control].system.policy.lowerCutoffVoltage
+						report[:stopnow] = true
 
 					else
 
-						done = false
+						report[:stopnow] = false
 					end
 				end
 			end

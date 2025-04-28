@@ -40,7 +40,7 @@ sim = Simulation(model, cell_parameters, cycling_protocol);
 sim.is_valid
 
 # Now we can run the simulation
-output = solve(sim; accept_invalid = true, config_kwargs = (info_level = 1,))
+output = solve(sim;)
 nothing # hide
 
 

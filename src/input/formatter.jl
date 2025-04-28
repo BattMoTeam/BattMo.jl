@@ -175,8 +175,9 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		else
 			control = "CCCharge"
 		end
-	elseif cycling_protocol["Control"] == "CCCV"
+	elseif cycling_protocol["Protocol"] == "CCCV"
 		use_cv_switch = true
+		control = "CCCV"
 
 	else
 		error("Cycling policy not recognized.")

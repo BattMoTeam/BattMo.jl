@@ -74,11 +74,13 @@ Jutul.number_of_cells(::CurrentAndVoltageDomain) = 1
 """
 mutable struct CCPolicy{R} <: AbstractPolicy
 	initialControl::String
+	ImaxDischarge::R
+	ImaxCharge::R
+	lowerCutoffVoltage::R
+	upperCutoffVoltage::R
 	current_function::Any
-	Imax::R
-	voltage::R
-	function CCPolicy(; initialControl = "discharging", current_function = missing, Imax::T = 0.0, voltage = missing) where T <: Real
-		new{Union{Missing, T}}(initialControl, current_function, Imax, voltage)
+	function CCPolicy(initialControl::String, lowerCutoffVoltage::T, upperCutoffVoltage::T; current_function = missing, ImaxDischarge::T = 0.0, ImaxCharge::T = 0.0) where T <: Real
+		new{Union{Missing, T}}(initialControl, ImaxDischarge, ImaxCharge, lowerCutoffVoltage, upperCutoffVoltage, current_function)
 	end
 end
 
@@ -374,13 +376,15 @@ function getInitCurrent(policy::CCPolicy)
 		val = policy.current_function(0.0)
 	else
 		if policy.initialControl == "charging"
-			val = -policy.Imax
+			val = -policy.ImaxCharge
 		elseif policy.initialControl == "discharging"
-			val = policy.Imax
+			val = policy.ImaxDischarge
 		else
 			error("initial control not recognized")
 		end
 	end
+	@info "val = ", val
+	@info "con = ", policy.initialControl
 	return val
 end
 
@@ -388,13 +392,9 @@ function getInitCurrent(policy::SimpleCVPolicy)
 	if !ismissing(policy.current_function)
 		val = policy.current_function(0.0)
 	else
-		if policy.initialControl == "charging"
-			val = -policy.Imax
-		elseif policy.initialControl == "discharging"
-			val = policy.Imax
-		else
-			error("initial control not recognized")
-		end
+
+		val = policy.Imax
+
 	end
 	return val
 end
@@ -403,7 +403,8 @@ end
 function getInitCurrent(policy::CyclingCVPolicy)
 
 	if policy.initialControl == charging
-		return -policy.ImaxCharge
+		val = -policy.ImaxCharge
+		return val
 	elseif policy.initialControl == discharging
 		return policy.ImaxDischarge
 	else
@@ -427,22 +428,28 @@ end
 function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParams, parameters)
 
 	tup = Float64(inputparams["Control"]["rampupTime"])
+	@info "control = ", policy.initialControl
 	if policy.initialControl == "charging"
-		Imax = only(parameters[:Control][:ImaxCharge])
+		Imax = -only(parameters[:Control][:ImaxCharge])
+
 	elseif policy.initialControl == "discharging"
 		Imax = only(parameters[:Control][:ImaxDischarge])
+	else
+		error("Initial control is not recognized")
 	end
-
+	@info "I = ", Imax
 	cFun(time) = currentFun(time, Imax, tup)
 
 	policy.current_function = cFun
-	policy.Imax             = Imax
+
 
 
 	if policy.initialControl == "charging"
-		policy.voltage = inputparams["Control"]["higherCutoffVoltage"]
+		policy.ImaxCharge = Imax
+		policy.upperCutoffVoltage = inputparams["Control"]["upperCutoffVoltage"]
 	elseif policy.initialControl == "discharging"
-		policy.voltage = inputparams["Control"]["lowerCutoffVoltage"]
+		policy.ImaxDischarge = Imax
+		policy.lowerCutoffVoltage = inputparams["Control"]["lowerCutoffVoltage"]
 	end
 
 end
@@ -984,16 +991,20 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 	elseif policy isa CCPolicy
 
 		time = 0.0
-		Imax = policy.Imax
+
+		if policy.initialControl == "discharging"
+			ctrlType = discharging
+			Imax = policy.ImaxDischarge
+		elseif policy.initialControl == "charging"
+			ctrlType = charging
+			Imax = policy.ImaxCharge
+
+		end
+
 		if !ismissing(policy.current_function)
 			target = policy.current_function(time)
 		else
 			target = Imax
-		end
-		if policy.initialControl == "discharging"
-			ctrlType = discharging
-		elseif policy.initialControl == "charging"
-			ctrlType = charging
 		end
 		target_is_voltage = false
 		state[:Controller] = CCController(target, time, target_is_voltage, ctrlType)
