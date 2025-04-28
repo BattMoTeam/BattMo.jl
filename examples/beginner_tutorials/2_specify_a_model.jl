@@ -6,7 +6,7 @@ using BattMo
 
 # Let’s begin by loading the default model settings for a P2D simulation. This will return a ModelSettings object:
 
-file_path_model = parameter_file_path("model_settings", "model_settings_P2D.json")
+file_path_model = parameter_file_path("model_settings", "P2D.json")
 model_settings = load_model_settings(; from_file_path = file_path_model)
 nothing #hide 
 
