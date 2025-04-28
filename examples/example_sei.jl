@@ -5,9 +5,9 @@ using Jutul, BattMo, GLMakie
 
 # We use the SEI model presented in [bolay2022](@cite). We use the json data given in [bolay.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/bolay.json#L157) which contains the parameters for the SEI layer. 
 
-file_path_cell = string(dirname(pathof(BattMo)), "/../src/input/defaults/cell_parameters/", "SEI_example.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/../src/input/defaults/cycling_protocols/", "CCCV.json")
-file_path_simulation = string(dirname(pathof(BattMo)), "/../src/input/defaults/simulation_settings/", "P2D.json")
+file_path_cell = parameter_file_path("cell_parameters", "SEI_example.json")
+file_path_cycling = parameter_file_path("cycling_protocols", "CCCV.json")
+file_path_simulation = parameter_file_path("simulation_settings", "P2D.json")
 
 cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
 cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)

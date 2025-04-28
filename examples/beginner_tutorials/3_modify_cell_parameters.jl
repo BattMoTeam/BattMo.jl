@@ -11,8 +11,8 @@
 
 using BattMo
 
-file_path_cell = string(dirname(pathof(BattMo)), "/../src/input/defaults/cell_parameters/", "Chen2020_calibrated.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/../src/input/defaults/cycling_protocols/", "CCDischarge.json")
+file_path_cell = parameter_file_path("cell_parameters", "Chen2020_calibrated.json")
+file_path_cycling = parameter_file_path("cycling_protocols", "CCDischarge.json")
 
 cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
 cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)

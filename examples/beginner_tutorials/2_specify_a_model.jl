@@ -6,7 +6,7 @@ using BattMo
 
 # Let’s begin by loading the default model settings for a P2D simulation. This will return a ModelSettings object:
 
-file_path_model = string(dirname(pathof(BattMo)), "/../src/input/defaults/model_settings/", "model_settings_P2D.json")
+file_path_model = parameter_file_path("model_settings", "model_settings_P2D.json")
 model_settings = load_model_settings(; from_file_path = file_path_model)
 nothing #hide 
 
@@ -27,8 +27,8 @@ model = LithiumIonBatteryModel(; model_settings);
 # In this case, because we set the "UseSEIModel" parameter to true, the validator provides a warning that we should define which SEI model we would like to use.
 # If we ignore the warnings and pass the model to the Simulation constructor then we get an error:
 
-file_path_cell = string(dirname(pathof(BattMo)), "/../src/input/defaults/cell_parameters/", "SEI_example.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/../src/input/defaults/cycling_protocols/", "CCCV.json")
+file_path_cell = parameter_file_path("cell_parameters", "SEI_example.json")
+file_path_cycling = parameter_file_path("cycling_protocols", "CCCV.json")
 
 cell_parameters_sei = load_cell_parameters(; from_file_path = file_path_cell)
 cccv_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
