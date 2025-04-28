@@ -13,9 +13,11 @@ nothing #hide
 # We can inspect all current settings with:
 model_settings.all
 
-# By default, the "UseSEIModel" parameter is set to false. Since we want to observe SEI effects, we’ll enable it:
+# By default, the "UseSEIModel" parameter is set to false. Since we want to
+# observe SEI effects, we’ll enable and set it to Bolay, which is a specific SEI
+# model.
 
-model_settings["UseSEIModel"] = true
+model_settings["UseSEIModel"] = "Bolay"
 model_settings.all
 
 # ### Initialize the Model
