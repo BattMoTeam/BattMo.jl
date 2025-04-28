@@ -302,7 +302,7 @@ function setup_model(inputparams::BattMoFormattedInput;
 
 	# setup the cross terms which couples the submodels.
 	setup_coupling_cross_terms!(inputparams, model, parameters, couplings)
-	@info "par = ", model[:Control].system.policy
+
 	setup_initial_control_policy!(model[:Control].system.policy, inputparams, parameters)
 	#model.context = DefaultContext()
 	return model, parameters
@@ -567,7 +567,16 @@ function setup_submodels(inputparams::InputParams;
 
 			policy = SimpleCVPolicy()
 		else
-			policy = CCPolicy(ctrl["initialControl"],
+			if haskey(ctrl, "initialControl")
+				initial_control = ctrl["initialControl"]
+			else
+				if controlPolicy == "CCDischarge"
+					initial_control = "discharging"
+				else
+					initial_control = "charging"
+				end
+			end
+			policy = CCPolicy(initial_control,
 				ctrl["lowerCutoffVoltage"],
 				ctrl["upperCutoffVoltage"],
 			)
@@ -865,7 +874,7 @@ function setup_battery_parameters(inputparams::InputParams,
 		CRate = inputparams["Control"]["CRate"]
 
 		prm_control[:ImaxCharge] = (cap / con.hour) * CRate
-		@info "init = ", prm_control[:ImaxCharge]
+
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
 	elseif controlPolicy == "CCCV"
@@ -1467,8 +1476,7 @@ function setup_config(sim::JutulSimulator,
 				end
 
 			elseif model[:Control].system.policy isa CCPolicy
-				@info s.state.Control.Phi[1]
-				@info s.state.Control.Current[1]
+
 				if m[:Control].system.policy.initialControl == "charging"
 
 					if s.state.Control.Phi[1] >= m[:Control].system.policy.upperCutoffVoltage

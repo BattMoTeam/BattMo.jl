@@ -383,8 +383,6 @@ function getInitCurrent(policy::CCPolicy)
 			error("initial control not recognized")
 		end
 	end
-	@info "val = ", val
-	@info "con = ", policy.initialControl
 	return val
 end
 
@@ -428,7 +426,7 @@ end
 function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParams, parameters)
 
 	tup = Float64(inputparams["Control"]["rampupTime"])
-	@info "control = ", policy.initialControl
+
 	if policy.initialControl == "charging"
 		Imax = -only(parameters[:Control][:ImaxCharge])
 
@@ -437,7 +435,7 @@ function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParam
 	else
 		error("Initial control is not recognized")
 	end
-	@info "I = ", Imax
+
 	cFun(time) = currentFun(time, Imax, tup)
 
 	policy.current_function = cFun
