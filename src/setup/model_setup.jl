@@ -85,7 +85,7 @@ struct Optimization <: SolvingProblem
 	sensitivities::Any
 	initial_results::Any
 
-	function Optimization(initial_results, objective::Function)
+	function Optimization(initial_results, objective::Function; info_level = 0, end_report = false)
 
 		function_to_solve = run_optimization
 
@@ -103,8 +103,8 @@ struct Optimization <: SolvingProblem
 		dG = solve_adjoint_sensitivities(model, states, reports, objective,
 			forces = forces, state0 = state0, parameters = parameters)
 
-		config[:info_level] = -1
-		config[:end_report] = false
+		config[:info_level] = info_level
+		config[:end_report] = end_report
 
 		cfg = optimization_config(model, parameters, rel_min = 0.5, rel_max = 5, use_scaling = true)
 
@@ -135,7 +135,9 @@ The output of the simulation if the problem is valid.
 # Throws
 Throws an error if the `Simulation` object is not valid, prompting the user to check warnings during instantiation.
 """
-function solve(problem::Simulation; accept_invalid = false, hook = nothing, kwargs...)
+function solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, kwargs...)
+
+	config_kwargs = (info_level = info_level,)
 
 	diffusion_model = problem.model.model_settings["UseDiffusionModel"]
 	if diffusion_model == "PXD"
@@ -150,12 +152,14 @@ function solve(problem::Simulation; accept_invalid = false, hook = nothing, kwar
 		output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;
 			hook = nothing,
 			use_p2d = use_p2d,
+			config_kwargs = config_kwargs,
 			kwargs...)
 	else
 		if problem.is_valid == true
 			output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;
 				hook = nothing,
 				use_p2d = use_p2d,
+				config_kwargs = config_kwargs,
 				kwargs...)
 
 			return output
@@ -180,11 +184,12 @@ function solve(problem::Simulation; accept_invalid = false, hook = nothing, kwar
 end
 
 
-function solve(problem::Optimization; hook = nothing, kwargs...)
+function solve(problem::Optimization; hook = nothing, info_level = 0, kwargs...)
 
 
 	output = problem.function_to_solve(problem.setup, problem.initial_results,
 		hook = nothing,
+		info_level = info_level,
 		kwargs...)
 
 	return output
@@ -196,7 +201,7 @@ end
 # Run optimization #
 ######################
 
-function run_optimization(opt_setup, initial_results; hook = nothing)
+function run_optimization(opt_setup, initial_results; hook = nothing, info_level = 0, kwargs...)
 
 	extra = initial_results[:extra]
 	parameters = extra[:parameters]
@@ -205,6 +210,8 @@ function run_optimization(opt_setup, initial_results; hook = nothing)
 	forces = extra[:forces]
 	config = extra[:cfg]
 	time_steps = extra[:timesteps]
+
+	config[:info_level] = info_level
 
 	## Print starting values
 

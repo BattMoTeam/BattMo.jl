@@ -27,11 +27,13 @@ end
 # # Setup the optimization problem
 
 opt = Optimization(output_0, objective)
-
+nothing # hide
 # # Solve the optimization problem
 
 output_tuned = solve(opt)
+nothing # hide
 
+# # Plot results
 states_tuned = output_tuned[:states]
 report_tuned = output_tuned[:report]
 final_x = output_tuned[:final_x]
@@ -47,7 +49,7 @@ parameters = opt.parameters
 opt_model = opt.model
 data = opt.setup.data
 
-# # Plot results
+
 
 fig = Figure()
 ys = log10
