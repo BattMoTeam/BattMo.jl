@@ -1,9 +1,8 @@
-using BattMo, Jutul
+using BattMo, Jutul, GLMakie
 
+# # Initial simulation
 
-#######################################################################################################
-
-# Very rough battery optimization example
+# Run a simulation witht the initial parameter values
 name = "Chen2020_calibrated"
 cell_parameters = load_cell_parameters(; from_default_set = name)
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
@@ -15,17 +14,21 @@ sim = Simulation(model, cell_parameters, cycling_protocol)
 output_0 = solve(sim)
 
 states = output_0[:states]
+nothing # hide
 
-## Compute sensitivities
+# # Specify an objective
 
-# Objective: Penalize any voltage less than target value of 4.2 (higher than
-# initial voltage for battery)
+# Objective: Penalize any voltage less than target value of 4.2 (higher than initial voltage for battery)
 v_target = 4.2
 function objective(model, state, dt, step_no, forces)
 	return dt * max(v_target - state[:Control][:Phi][1], 0)^2
 end
 
+# # Setup the optimization problem
+
 opt = Optimization(output_0, objective)
+
+# # Solve the optimization problem
 
 output_tuned = solve(opt)
 
@@ -44,9 +47,7 @@ parameters = opt.parameters
 opt_model = opt.model
 data = opt.setup.data
 
-## Plot results
-
-using GLMakie
+# # Plot results
 
 fig = Figure()
 ys = log10
@@ -63,7 +64,7 @@ lines!(ax1, upper, label = "Upper bound")
 axislegend()
 fig
 
-## Create a "state" that contains the relative change in all parameters
+# Create a "state" that contains the relative change in all parameters
 
 rel_change = final_x ./ x0
 changed_param = deepcopy(parameters)
@@ -74,7 +75,7 @@ for (mk, mv) in changed_param
 	end
 end
 
-## Plot difference in the main objective input
+# Plot difference in the main objective input
 
 F = s -> map(x -> only(x[:Control][:Phi]), s)
 fig = Figure()
