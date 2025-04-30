@@ -4,12 +4,13 @@ export
 	setup_simulation,
 	setup_model,
 	Simulation,
+	Optimization,
 	solve
 
 
-###############
-# Run battery #
-###############
+#########################
+# Solving problem types #
+#########################
 
 """
 	abstract type SolvingProblem
@@ -76,6 +77,47 @@ struct Simulation <: SolvingProblem
 	end
 end
 
+struct Optimization <: SolvingProblem
+	function_to_solve::Function
+	setup::Any
+	parameters::Any
+	model::Any
+	sensitivities::Any
+	initial_results::Any
+
+	function Optimization(initial_results, objective::Function)
+
+		function_to_solve = run_optimization
+
+		reports = initial_results[:reports]
+		states = initial_results[:states]
+		extra = initial_results[:extra]
+		parameters = extra[:parameters]
+		model = extra[:model]
+		state0 = extra[:state0]
+		forces = extra[:forces]
+		config = extra[:cfg]
+		time_steps = extra[:timesteps]
+
+
+		dG = solve_adjoint_sensitivities(model, states, reports, objective,
+			forces = forces, state0 = state0, parameters = parameters)
+
+		config[:info_level] = -1
+		config[:end_report] = false
+
+		cfg = optimization_config(model, parameters, rel_min = 0.5, rel_max = 5, use_scaling = true)
+
+		opt_setup = setup_parameter_optimization(model, state0, parameters, time_steps, forces, objective, cfg, config = config)
+
+		return new{}(function_to_solve, opt_setup, parameters, model, dG, initial_results)
+	end
+end
+
+
+#########
+# Solve #
+#########
 
 """
 	solve(problem::Simulation; hook=nothing, kwargs...)
@@ -136,6 +178,70 @@ function solve(problem::Simulation; accept_invalid = false, hook = nothing, kwar
 	end
 
 end
+
+
+function solve(problem::Optimization; hook = nothing, kwargs...)
+
+
+	output = problem.function_to_solve(problem.setup, problem.initial_results,
+		hook = nothing,
+		kwargs...)
+
+	return output
+
+
+end
+
+######################
+# Run optimization #
+######################
+
+function run_optimization(opt_setup, initial_results; hook = nothing)
+
+	extra = initial_results[:extra]
+	parameters = extra[:parameters]
+	model = extra[:model]
+	state0 = extra[:state0]
+	forces = extra[:forces]
+	config = extra[:cfg]
+	time_steps = extra[:timesteps]
+
+	## Print starting values
+
+	x0 = opt_setup.x0
+	F0 = opt_setup.F!(x0)
+	dF0 = opt_setup.dF!(similar(x0), x0)
+
+	@info "Initial objective: $F0, gradient norm $(sum(abs, dF0))"
+
+	## Perform optimization loop using LBFGSB package
+
+
+	lower = opt_setup.limits.min
+	upper = opt_setup.limits.max
+	x0 = opt_setup.x0
+	prt = 1
+	f! = opt_setup.F!
+	g! = opt_setup.dF!
+	results, final_x = lbfgsb(f!, g!, x0, lb = lower, ub = upper, iprint = prt, maxfun = 200, maxiter = 100)
+
+	## Verify the results
+
+	F_final = opt_setup.F!(final_x)
+	prm_tuned = deepcopy(parameters)
+	data = opt_setup.data
+	devectorize_variables!(prm_tuned, model, final_x, data[:mapper], config = data[:config])
+	states_t, rep_t = simulate(state0, model, time_steps, parameters = prm_tuned, forces = forces, config = config)
+
+	return (states = states_t, report = rep_t, final_x = final_x)
+end
+
+
+###############
+# Run battery #
+###############
+
+
 
 """
 	run_battery(model::BatteryModel, cell_parameters::CellParameters, 
