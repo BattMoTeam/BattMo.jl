@@ -17,7 +17,7 @@ using BattMo, GLMakie
 # We also read an example cycling protocol for a simple Constant Current Discharge.
 
 file_path_cell = string(dirname(pathof(BattMo)), "/../src/input/defaults/cell_parameters/", "Chen2020_calibrated.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/../src/input/defaults/cycling_protocols/", "CCDischarge.json")
+file_path_cycling = string(dirname(pathof(BattMo)), "/../src/input/defaults/cycling_protocols/", "CCCharge.json")
 
 cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
 cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
@@ -40,7 +40,7 @@ sim = Simulation(model, cell_parameters, cycling_protocol);
 sim.is_valid
 
 # Now we can run the simulation
-output = solve(sim;)
+output = solve(sim; config_kwargs = (info_level = 1,))
 nothing # hide
 
 

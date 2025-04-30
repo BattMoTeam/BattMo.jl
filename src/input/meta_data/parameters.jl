@@ -622,7 +622,7 @@ function get_parameter_meta_data()
 			"context_type" => "NumberOfEntities",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_41efdf5d_0c9c_4ea0_bb65_f8236e663be5",
 			"max_value" => 1500,
-			"min_value" => 1,
+			"min_value" => 0,
 			"description" => "Total number of charge-discharge cycles",
 			"type" => Int,
 			"unit" => "1",

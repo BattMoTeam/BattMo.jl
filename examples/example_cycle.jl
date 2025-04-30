@@ -4,7 +4,7 @@ using BattMo, GLMakie
 # We use the setup provided in the [p2d_40.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/p2d_40.json#L152) file. In particular, see the data under the `Control` key.
 file_path_cell = string(dirname(pathof(BattMo)), "/../src/input/defaults/cell_parameters/", "Chen2020_calibrated.json")
 file_path_model = string(dirname(pathof(BattMo)), "/../src/input/defaults/model_settings/", "P2D.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/../src/input/defaults/cycling_protocols/", "CCCV.json")
+file_path_cycling = string(dirname(pathof(BattMo)), "/../src/input/defaults/cycling_protocols/", "CCCycling.json")
 file_path_simulation = string(dirname(pathof(BattMo)), "/../src/input/defaults/simulation_settings/", "P2D.json")
 
 cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
@@ -19,7 +19,7 @@ simulation_settings = load_simulation_settings(; from_file_path = file_path_simu
 model = LithiumIonBatteryModel(; model_settings);
 
 sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
-output = solve(sim)
+output = solve(sim; config_kwargs = (info_level = 1,))
 
 nothing # hide
 
