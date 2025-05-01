@@ -1339,6 +1339,7 @@ function setup_timesteps(inputparams::InputParams;
 	"""
 
 	controlPolicy = inputparams["Control"]["controlPolicy"]
+	@info "policy = ", controlPolicy
 
 	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge"
 
@@ -1467,7 +1468,7 @@ function setup_config(sim::JutulSimulator,
 	cfg[:min_nonlinear_iterations] = 1
 	cfg[:extra_timing]             = extra_timing
 	# cfg[:max_nonlinear_iterations] = 5
-	cfg[:safe_mode]             = false
+	cfg[:safe_mode]             = true
 	cfg[:error_on_incomplete]   = false
 	cfg[:failure_cuts_timestep] = true
 

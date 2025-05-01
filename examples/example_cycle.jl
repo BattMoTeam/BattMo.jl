@@ -15,6 +15,9 @@ simulation_settings = load_simulation_settings(; from_file_path = file_path_simu
 
 ########################################
 
+# cycling_protocol["InitialControl"] = "discharging"
+# cycling_protocol["InitialStateOfCharge"] = 0.99
+# cycling_protocol["CRate"] = 0.5
 
 model = LithiumIonBatteryModel(; model_settings);
 

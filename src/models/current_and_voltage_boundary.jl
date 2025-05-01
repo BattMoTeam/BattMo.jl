@@ -284,7 +284,7 @@ function Base.setproperty!(c::CcCvController, f::Symbol, v)
 	end
 end
 
-@inline function Jutul.numerical_type(x::CCController{R}) where {R}
+@inline function Jutul.numerical_type(x::CCController{R, I}) where {R, I}
 	return R
 end
 
@@ -447,12 +447,13 @@ function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParam
 	tup = Float64(inputparams["Control"]["rampupTime"])
 
 	if policy.initialControl == "charging"
-		Imax = -only(parameters[:Control][:ImaxCharge])
+		Imax = only(parameters[:Control][:ImaxCharge])
 		@info "Imax2 = ", Imax
+
 
 	elseif policy.initialControl == "discharging"
 		Imax = only(parameters[:Control][:ImaxDischarge])
-		@info "Imax2 = ", Imax
+		@info "Imax = ", Imax
 	else
 		error("Initial control is not recognized")
 	end
@@ -636,7 +637,7 @@ function check_constraints(model, storage)
 		arefulfilled = false
 
 	end
-
+	@info "Switch flag = ", arefulfilled
 	return arefulfilled
 
 end
@@ -692,6 +693,16 @@ end
 We need to add the specific treatment of the controller variables
 """
 function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{CyclingCVPolicy{T1, T2}}, T3, T4}) where {T1, T2, T3, T4}
+
+	invoke(reset_state_to_previous_state!,
+		Tuple{typeof(storage),
+			SimulationModel},
+		storage,
+		model)
+	copyController!(storage.state[:Controller], storage.state0[:Controller])
+end
+
+function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{CCPolicy{T1}}, T3, T4}) where {T1, T3, T4}
 
 	invoke(reset_state_to_previous_state!,
 		Tuple{typeof(storage),
@@ -816,11 +827,6 @@ function update_control_type_in_controller!(state, state0, policy::CCPolicy, dt)
 		controller.time = state0.Controller.time + dt
 	else
 
-		E  = only(value(state[:Phi]))
-		I  = only(value(state[:Current]))
-		E0 = only(value(state0[:Phi]))
-		I0 = only(value(state0[:Current]))
-
 		controller = state.Controller
 
 		controller.time = state0.Controller.time + dt
@@ -840,6 +846,7 @@ function update_control_type_in_controller!(state, state0, policy::CCPolicy, dt)
 			# We have not entered the switching region in the time step. We are not going to change control
 			# in this step.
 			ctrlType = ctrlType0
+			@info "control type = ", ctrlType
 
 		else
 
@@ -902,40 +909,61 @@ end
 function update_values_in_controller!(state, policy::CCPolicy)
 
 	controller = state.Controller
-
-	# cf = policy.current_function
-
-	# if cf isa Real
-	# 	I_p = cf
-	# else
-	# 	# Function of time at the end of interval
-	# 	I_p = cf(controller.time)
-	# end
-
-	# controller.target = I_p
-
 	ctrlType = controller.ctrlType
 
-	if ctrlType == "discharging"
+	cf = policy.current_function
 
-		I_t = policy.ImaxDischarge
+	if !ismissing(cf)
+
+		if cf isa Real
+			I_t = cf
+		else
+			# Function of time at the end of interval
+			I_t = cf(controller.time)
+		end
+
+		if ctrlType == "discharging"
+
+			I_t = I_t
 
 
 
-	elseif ctrlType == "charging"
+		elseif ctrlType == "charging"
+			@info "cur = ", I_t
+			# minus sign below follows from convention
+			I_t = -I_t
 
-		# minus sign below follows from convention
-		I_t = -policy.ImaxCharge
 
+		else
 
+			error("ctrlType $ctrlType not recognized")
+
+		end
 	else
 
-		error("ctrlType $ctrlType not recognized")
 
+
+		if ctrlType == "discharging"
+
+			I_t = policy.ImaxDischarge
+
+
+
+		elseif ctrlType == "charging"
+
+
+			I_t = -policy.ImaxCharge
+
+
+		else
+
+			error("ctrlType $ctrlType not recognized")
+
+		end
 	end
 
 	target = I_t
-
+	@info "target = ", target
 	controller.target = target
 
 
@@ -1024,7 +1052,8 @@ Jutul.local_discretization(::ControlEquation, i) = nothing
 
 function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquation, model, dt, ldisc = local_discretization(eq, i))
 
-	I   = only(state.Current)
+	I = only(state.Current)
+	@info "I = ", I
 	phi = only(state.Phi)
 
 	ctrl = state[:Controller]
@@ -1032,6 +1061,8 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquati
 	if ctrl.target_is_voltage
 		v[] = phi - ctrl.target
 	else
+		@info "I_t = ", ctrl.target
+
 		v[] = I - ctrl.target
 	end
 
