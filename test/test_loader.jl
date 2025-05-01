@@ -10,10 +10,10 @@ using Test
 
 		# We instantiate a Lithium-ion battery model with default model settings
 		model = LithiumIonBatteryModel(; model_settings)
-		file_path_cell = string(dirname(pathof(BattMo)), "/../src/input/defaults/cell_parameters/", "Chen2020_calibrated.json")
-		file_path_cycling = string(dirname(pathof(BattMo)), "/../src/input/defaults/cycling_protocols/", "CCDischarge.json")
-		file_path_model = string(dirname(pathof(BattMo)), "/../src/input/defaults/model_settings/", "P2D.json")
-		file_path_simulation = string(dirname(pathof(BattMo)), "/../src/input/defaults/simulation_settings/", "P2D.json")
+		file_path_cell = parameter_file_path("cell_parameters", "Chen2020_calibrated.json")
+		file_path_cycling = parameter_file_path("cycling_protocols", "CCDischarge.json")
+		file_path_model = parameter_file_path("model_settings", "P2D.json")
+		file_path_simulation = parameter_file_path("simulation_settings", "P2D.json")
 
 		model_settings = load_model_settings(; from_file_path = file_path_model)
 		cell_parameter_set = load_cell_parameters(; from_file_path = file_path_cell)
@@ -35,5 +35,11 @@ using Test
 
 end
 
-
-
+@testset "paths" begin
+	@test isa(parameter_file_path(), String)
+	@test isdir(parameter_file_path())
+	@test isfile(parameter_file_path("cell_parameters", "Chen2020_calibrated"))
+	@test parameter_file_path("cell_parameters", "Chen2020_calibrated") |> splitext |> last == ".json"
+	@test_throws "File not found at" parameter_file_path("cell_parameters", "BadName")
+	@test isa(parameter_file_path("cell_parameters", "BadName", check = false), String)
+end

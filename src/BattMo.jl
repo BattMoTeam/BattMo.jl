@@ -19,8 +19,12 @@ using JSONSchema: Schema, SingleIssue
 # Non-exported JSONSchema functions and types
 import JSONSchema: show, isvalid, _resolve_refs
 
-
-
+# ─────────────────────────────────────────────────────────────────────────────
+# 🧮 Optimization and Adjoint solving
+# ─────────────────────────────────────────────────────────────────────────────
+using LBFGSB: lbfgsb
+using Jutul: solve_adjoint_sensitivities, optimization_config, setup_parameter_optimization
+using Jutul: devectorize_variables!
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🧮 Mathematical & Computational Tools
@@ -182,6 +186,7 @@ include("models/full_battery_models/battery_model.jl")
 include("models/full_battery_models/lithium_ion.jl")
 
 include("input/loader.jl")
+include("input/defaults.jl")
 include("input/writer.jl")
 include("input/function_input_tools.jl")
 include("input/formatter.jl")

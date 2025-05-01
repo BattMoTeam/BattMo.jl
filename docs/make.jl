@@ -36,6 +36,8 @@ function build_battmo_docs(build_format              = nothing;
 		"Cycle example" => "example_cycle",
 		"3D demo example" => "example_3d_demo",
 		"SEI layer growth" => "example_sei",
+		"Optimization" => "example_optimization",
+		"Matlab example" => "example_battery",
 	]
 
 	tutorials_markdown = []
@@ -129,7 +131,7 @@ function build_battmo_docs(build_format              = nothing;
 		authors  = "SINTEF BattMo team and contributors",
 		repo     = "https://github.com/BattMoTeam/BattMo.jl/blob/{commit}{path}#{line}",
 		sitename = "BattMo.jl",
-		warnonly = true,
+		warnonly = [:missing_docs],
 		plugins  = [bib],
 		format   = build_format,
 		draft    = false,

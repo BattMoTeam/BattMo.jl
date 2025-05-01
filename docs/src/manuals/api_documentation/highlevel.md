@@ -4,7 +4,7 @@
 ## Input types
 
 ```@docs
-AbstractInput
+BattMo.AbstractInput
 ParameterSet
 CellParameters
 CyclingProtocol
@@ -12,11 +12,11 @@ ModelSettings
 SimulationSettings
 FullSimulationInput
 BattMoFormattedInput
-InputParams
-MatlabInputParams
+BattMo.InputParams
+BattMo.MatlabInputParams
 ```
 
-## Read input 
+## Read input
 
 ```@docs
 load_cell_parameters
@@ -28,15 +28,16 @@ load_matlab_battmo_input
 ```
 
 ## Battery model types
+
 ```@docs
 BatteryModel
 LithiumIonBatteryModel
 ```
 
 ## Forward simulation
+
 ```@docs
 Simulation
 solve
 run_battery
 ```
-
