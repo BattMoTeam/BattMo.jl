@@ -1,4 +1,4 @@
-using BattMo, Jutul, GLMakie
+using BattMo, GLMakie
 
 # # Initial simulation
 
