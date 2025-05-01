@@ -20,7 +20,7 @@
         "theta0": 0.1429,
         "OCP": {
           "type": "function",
-          "functionname": "computeOCP_graphite",
+          "functionname": "computeOCP_Graphite_Torchio",
           "argumentlist": [
             "cElectrode",
             "T",
@@ -61,7 +61,7 @@
         "theta0": 0.99174,
         "OCP": {
           "type": "function",
-          "functionname": "computeOCP_nmc111",
+          "functionname": "computeOCP_NMC111",
           "argumentlist": [
             "cElectrode",
             "T",

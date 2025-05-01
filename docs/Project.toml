@@ -1,0 +1,8 @@
+[deps]
+BattMo = "6f0c0536-3c2c-4762-a987-c605a8a6f898"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
+DocumenterVitepress = "4710194d-e776-4893-9690-8d956a29c365"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+Jutul = "2b460a1a-8a2b-45b2-b125-b5c536396eb9"
+Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
