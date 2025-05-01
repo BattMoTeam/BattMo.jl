@@ -66,17 +66,6 @@ lines!(ax1, upper, label = "Upper bound")
 axislegend()
 fig
 
-# Create a "state" that contains the relative change in all parameters
-
-rel_change = final_x ./ x0
-changed_param = deepcopy(parameters)
-devectorize_variables!(changed_param, opt_model, final_x, data[:mapper], config = data[:config])
-for (mk, mv) in changed_param
-	for (k, v) in mv
-		@. v = v / parameters[mk][k]
-	end
-end
-
 # Plot difference in the main objective input
 
 F = s -> map(x -> only(x[:Control][:Phi]), s)
