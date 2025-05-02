@@ -967,7 +967,6 @@ function setup_battery_parameters(inputparams::InputParams,
 	prm_control = Dict{Symbol, Any}()
 
 	controlPolicy = inputparams["Control"]["controlPolicy"]
-	@info "policy = ", controlPolicy
 
 	if controlPolicy == "CCDischarge"
 
@@ -1452,7 +1451,6 @@ function setup_timesteps(inputparams::InputParams;
 	"""
 
 	controlPolicy = inputparams["Control"]["controlPolicy"]
-	@info "policy = ", controlPolicy
 
 	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge"
 
