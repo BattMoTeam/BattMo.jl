@@ -16,11 +16,9 @@ using BattMo, GLMakie
 # the cell parameter set from a NMC811 vs Graphite-SiOx cell whose parameters were determined in the [Chen 2020 paper](https://doi.org/10.1149/1945-7111/ab9050). 
 # We also read an example cycling protocol for a simple Constant Current Discharge.
 
-file_path_cell = parameter_file_path("cell_parameters", "Chen2020_calibrated.json")
-file_path_cycling = parameter_file_path("cycling_protocols", "CCDischarge.json")
 
-cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
-cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 nothing # hide
 
 
@@ -44,47 +42,7 @@ output = solve(sim)
 nothing # hide
 
 
-# Now we'll have a look into what the output entail. The ouput is of type NamedTuple and contains multiple dicts. Lets print the
-# keys of each dict. 
-
-keys(output)
-
-# So we can see the the output contains state data, cell specifications, reports on the simulation, the input parameters of the simulation, and some extra data.
-# The most important dicts, that we'll dive a bit deeper into, are the states and cell specifications. First let's see how the states output is structured.
-
-# ### States
-states = output[:states]
-typeof(states)
-
-# As we can see, the states output is a Vector that contains dicts.
-
-keys(states)
-
-# In this case it consists of 77 dicts. Each dict represents 
-# a time step in the simulation and each time step stores quantities divided into battery component related group. This structure agrees with the overal model structure of BattMo.
-
-initial_state = states[1]
-keys(initial_state)
-
-# So each time step contains quantities related to the electrolyte, the negative electrode active material, the cycling control, and the positive electrode active material.
-# Lets print the stored quantities for each group.
-
-# Electrolyte keys:
-keys(initial_state[:Elyte])
-# Negative electrode active material keys:
-keys(initial_state[:NeAm])
-# Positive electrode active material keys:
-keys(initial_state[:PeAm])
-# Control keys:
-keys(initial_state[:Control])
-
-# ### Cell specifications
-# Now lets see what quantities are stored within the cellSpecifications dict in the simulation output.
-
-cell_specifications = output[:cellSpecifications];
-keys(cell_specifications)
-
-# Let's say we want to plot the cell current and cell voltage over time. First we'll retrieve these three quantities from the output.
+# The ouput is a NamedTuple storing the results of the simulation within multiple dictionaries. Let's plot the cell current and cell voltage over time and make a plot with the GLMakie package.
 
 states = output[:states]
 
@@ -92,8 +50,6 @@ t = [state[:Control][:ControllerCV].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 nothing # hide
-
-# Now we can use GLMakie to create a plot. Lets first plot the cell voltage.
 
 f = Figure(size = (1000, 400))
 
@@ -119,7 +75,6 @@ scatterlines!(ax,
 
 f # hide
 
-# And the cell current.
 
 ax = Axis(f[1, 2],
 	title = "Current",
