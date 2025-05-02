@@ -1,10 +1,10 @@
-export BatteryModel
+export BatteryModelSetup
 
 
 """
-	abstract type BatteryModel
+	abstract type BatteryModelSetup
 
 Abstract type representing a battery model.
 All battery models should inherit from this type.
 """
-abstract type BatteryModel end
+abstract type BatteryModelSetup end

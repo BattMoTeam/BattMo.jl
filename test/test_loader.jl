@@ -9,7 +9,7 @@ using Test
 
 
 		# We instantiate a Lithium-ion battery model with default model settings
-		model = LithiumIonBatteryModel(; model_settings)
+		model_setup = LithiumIonBattery(; model_settings)
 		file_path_cell = parameter_file_path("cell_parameters", "Chen2020_calibrated.json")
 		file_path_cycling = parameter_file_path("cycling_protocols", "CCDischarge.json")
 		file_path_model = parameter_file_path("model_settings", "P2D.json")
@@ -26,8 +26,8 @@ using Test
 		cyling_settings = load_cycling_protocol(; from_default_set = "CCCV")
 
 
-		cell_parameter_set = load_cell_parameters(; from_model_template = model)
-		simulation_settings = load_simulation_settings(; from_model_template = model)
+		cell_parameter_set = load_cell_parameters(; from_model_template = model_setup)
+		simulation_settings = load_simulation_settings(; from_model_template = model_setup)
 
 		true
 
