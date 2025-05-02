@@ -69,7 +69,7 @@ sim = Simulation(model_setup, cell_parameters, cycling_protocol)
 output = solve(sim);
 
 states = output[:states]
-t = [state[:Control][:Controller].time for state in states]
+t = [state[:Control][:ControllerCV].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 using GLMakie # hide
@@ -89,7 +89,7 @@ nothing # hide
 
 # Now, we plot the original and modified results:
 
-t2 = [state[:Control][:Controller].time for state in output2[:states]]
+t2 = [state[:Control][:ControllerCV].time for state in output2[:states]]
 E2 = [state[:Control][:Phi][1] for state in output2[:states]]
 I2 = [state[:Control][:Current][1] for state in output2[:states]]
 
