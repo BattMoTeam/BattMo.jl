@@ -1525,7 +1525,7 @@ function setup_timesteps(inputparams::InputParams;
 
 		con = Constants()
 
-		totalTime = ncycles * 1.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
+		totalTime = ncycles * 2.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
 		if haskey(inputparams["TimeStepping"], "totalTime")
 			@warn "totalTime value is given but not used"
