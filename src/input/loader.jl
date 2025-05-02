@@ -23,7 +23,7 @@ function load_model_settings(; from_file_path::Union{String, Nothing} = nothing,
 		model_settings_instance = JSON.parsefile(from_file_path) |> ModelSettings
 	elseif !isnothing(from_default_set)
 		# Logic to load from default set (replace this with actual code)
-		file_path = string(dirname(pathof(BattMo)), "/../src/input/defaults/model_settings/", from_default_set, ".json")
+		file_path = parameter_file_path("model_settings", from_default_set)
 		model_settings_instance = load_model_settings(; from_file_path = file_path)
 	else
 		throw(ArgumentError("Either 'from_file_path' or 'from_default_set' must be provided."))
@@ -54,7 +54,7 @@ function load_cell_parameters(; from_file_path::Union{String, Nothing} = nothing
 		cell_parameters_instance = JSON.parsefile(from_file_path) |> CellParameters
 	elseif !isnothing(from_default_set)
 		# Logic to load from default set (replace this with actual code)
-		file_path = string(dirname(pathof(BattMo)), "/../src/input/defaults/cell_parameters/", from_default_set, ".json")
+		file_path = parameter_file_path("cell_parameters", from_default_set)
 		cell_parameters_instance = load_cell_parameters(; from_file_path = file_path)
 	elseif !isnothing(from_model_template)
 		# Logic to load from model template (replace this with actual code)
@@ -88,7 +88,7 @@ function load_cycling_protocol(; from_file_path::Union{String, Nothing} = nothin
 		cycling_protocol_instance = JSON.parsefile(from_file_path) |> CyclingProtocol
 	elseif !isnothing(from_default_set)
 		# Logic to load from default set (replace this with actual code)
-		file_path = string(dirname(pathof(BattMo)), "/../src/input/defaults/cycling_protocols/", from_default_set, ".json")
+		file_path = parameter_file_path("cycling_protocols", from_default_set)
 		cycling_protocol_instance = load_cycling_protocol(; from_file_path = file_path)
 	else
 		throw(ArgumentError("Either 'from_file_path' or 'from_default_set' must be provided."))
@@ -118,7 +118,7 @@ function load_simulation_settings(; from_file_path::Union{String, Nothing} = not
 		simulation_settings_instance = JSON.parsefile(from_file_path) |> SimulationSettings
 	elseif !isnothing(from_default_set)
 		# Logic to load from default set (replace this with actual code)
-		file_path = string(dirname(pathof(BattMo)), "/../src/input/defaults/simulation_settings/", from_default_set, ".json")
+		file_path = parameter_file_path("simulation_settings", from_default_set)
 		simulation_settings_instance = load_simulation_settings(; from_file_path = file_path)
 	elseif !isnothing(from_model_template)
 		# Logic to load from model template (replace this with actual code)

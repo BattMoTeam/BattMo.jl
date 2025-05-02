@@ -4,10 +4,12 @@ authors = ["Olav Møyner <olav.moyner@gmail.com>"]
 version = "0.1.9"
 
 [deps]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 JSONSchema = "7d188eb4-7ad8-530c-ae41-71a32a6d4692"
 Jutul = "2b460a1a-8a2b-45b2-b125-b5c536396eb9"
+LBFGSB = "5be7bae1-8223-5378-bac3-9e7378a2f6e6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MAT = "23992714-dd62-5051-b70f-ba57cb901cac"
 Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
@@ -20,7 +22,6 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 x264_jll = "1270edf5-f2f9-52d2-97e9-ab00b5d0237a"
-ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 
 [compat]
 ForwardDiff = "0.10.38"
@@ -28,6 +29,7 @@ JLD2 = "0.4.31"
 JSON = "0.21.4"
 JSONSchema = "1.4.1"
 Jutul = "0.3.0"
+LBFGSB = "0.4.1"
 MAT = "0.10.4"
 Polynomials = "3.2.11 - 4"
 PrecompileTools = "1.1.1"

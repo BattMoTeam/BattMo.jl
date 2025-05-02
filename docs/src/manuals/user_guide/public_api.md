@@ -3,22 +3,26 @@
 This document provides an overview of the public API for using `BattMo`. The API allows users to load parameter sets, define battery models, setup simulation objects and run simulations.
 
 ## Loading Parameters
-Input parameter files are stored in JSON format and define the characteristics of the battery model and the simulation environment. For more information in the input terminilogy have a look at the [input terminology](./terminology) section.
+
+Input parameter files are stored in JSON format and define the characteristics of the battery model and the simulation environment. For more information in the input terminilogy have a look at the [input terminology](terminology.md) section.
 
 Parameters are loaded using helper functions that read JSON files and return structured data. These functions are [`load_cell_parameters`](@ref), [`load_cycling_protocol`](@ref), [`load_model_settings`](@ref), and [`load_simulation_settings`](@ref). Each function takes a file path as input and returns a dictionary containing the respective settings.
 
 ## Model Initialization
+
 A model can be instantiated using the sub classes of abstract type [`BatteryModel`](@ref). At the moment only the [`LithiumIonBatteryModel`](@ref) constructor is available. By passing a [`ModelSettings`](@ref) object to the constructor, the user can personalize the model to be solved.
 
 ## Simulation Initialization
+
 A Simulation object can be instantiated using the [`Simulation`](@ref) constructor. This constructor requires the instantiated model object, [`CellParameters`](@ref) struct and [`CyclingProtocol`](@ref) structs as arguments and takes a instantiated [`SimulationSettings`](@ref) struct as an optional argument.
 
 ## Solve for a simulation
+
 A simulation can be solved by passing a [`Simulation`](@ref) object to the [`solve`](@ref) function. This function will return the simulation output.
 
 ## Example Usage
-Below is an example of a complete workflow:
 
+Below is an example of a complete workflow:
 
 ```julia
 # Define file paths

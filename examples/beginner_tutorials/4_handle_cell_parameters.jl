@@ -9,11 +9,9 @@
 using BattMo, GLMakie, Printf
 
 # Load cell and model setup
-file_path_cell = string(dirname(pathof(BattMo)), "/input/defaults/cell_parameters/", "Chen2020_calibrated.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/input/defaults/cycling_protocols/", "CCDischarge.json")
 
-cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
-cc_discharge_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+cc_discharge_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
 # Load default model
 model = LithiumIonBatteryModel()
