@@ -28,14 +28,20 @@ function build_battmo_docs(build_format              = nothing;
 	# Convert examples as .jl files to markdown
 	tutorials = [
 		"Tutorial 1 - Run a simulation" => "1_run_a_simulation",
-		"Tutorial 2 - Specify a model" => "2_specify_a_model",
-		"Tutorial 3 - Modify cell parameters" => "3_modify_cell_parameters",
-		"Tutorial 4 - Modify cycling protocol" => "4_modify_cycling_protocol"]
+		"Tutorial 2 - Select a model" => "2_select_a_model",
+		"Tutorial 3 - Handle outputs" => "3_handle_outputs",
+		"Tutorial 4 - Handle cell parameters" => "4_handle_cell_parameters",
+		"Tutorial 5 - Handle cycling protocol" => "5_handle_cycling_protocols",
+		"Tutorial 6 - Compute cell KPIs" => "6_compute_cell_kpis",
+		"Tutorial 7 - Run a parameter sweep" => "7_run_parameter_sweep",
+	]
 
 	examples = [
 		"Cycle example" => "example_cycle",
 		"3D demo example" => "example_3d_demo",
 		"SEI layer growth" => "example_sei",
+		"Optimization" => "example_optimization",
+		"Matlab example" => "example_battery",
 	]
 
 	tutorials_markdown = []
@@ -129,7 +135,7 @@ function build_battmo_docs(build_format              = nothing;
 		authors  = "SINTEF BattMo team and contributors",
 		repo     = "https://github.com/BattMoTeam/BattMo.jl/blob/{commit}{path}#{line}",
 		sitename = "BattMo.jl",
-		warnonly = true,
+		warnonly = [:missing_docs],
 		plugins  = [bib],
 		format   = build_format,
 		draft    = false,
