@@ -16,14 +16,14 @@ dfs = [df_05, df_1, df_2]
 cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
-model = LithiumIonBatteryModel()
+model_setup = LithiumIonBattery()
 
 CRates = [0.5, 1, 2]
 outputs = []
 
 for CRate in CRates
 	cycling_protocol["DRate"] = CRate
-	sim = Simulation(model, cell_parameters, cycling_protocol)
+	sim = Simulation(model_setup, cell_parameters, cycling_protocol)
 
 	output = solve(sim)
 	push!(outputs, (CRate = CRate, output = output))
