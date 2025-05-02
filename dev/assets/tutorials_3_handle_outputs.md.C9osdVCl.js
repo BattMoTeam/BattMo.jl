@@ -25,20 +25,20 @@ import{_ as a,c as n,o as i,aA as t}from"./chunks/framework.7C67B1-w.js";const c
 <span class="line"><span>│ Linear solver  │  3.07143 │      3.07143 │  258 (0) │</span></span>
 <span class="line"><span>│ Precond apply  │      0.0 │          0.0 │    0 (0) │</span></span>
 <span class="line"><span>╰────────────────┴──────────┴──────────────┴──────────╯</span></span>
-<span class="line"><span>╭───────────────┬────────┬────────────┬──────────╮</span></span>
-<span class="line"><span>│ Timing type   │   Each │   Relative │    Total │</span></span>
-<span class="line"><span>│               │     ms │ Percentage │       ms │</span></span>
-<span class="line"><span>├───────────────┼────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Properties    │ 0.0307 │     2.89 % │   7.9322 │</span></span>
-<span class="line"><span>│ Equations     │ 0.2660 │    33.14 % │  90.9666 │</span></span>
-<span class="line"><span>│ Assembly      │ 0.0680 │     8.47 % │  23.2456 │</span></span>
-<span class="line"><span>│ Linear solve  │ 0.2702 │    25.39 % │  69.7050 │</span></span>
-<span class="line"><span>│ Linear setup  │ 0.0000 │     0.00 % │   0.0000 │</span></span>
-<span class="line"><span>│ Precond apply │ 0.0000 │     0.00 % │   0.0000 │</span></span>
-<span class="line"><span>│ Update        │ 0.2018 │    18.97 % │  52.0668 │</span></span>
-<span class="line"><span>│ Convergence   │ 0.0626 │     7.81 % │  21.4250 │</span></span>
-<span class="line"><span>│ Input/Output  │ 0.0277 │     0.85 % │   2.3250 │</span></span>
-<span class="line"><span>│ Other         │ 0.0265 │     2.49 % │   6.8290 │</span></span>
-<span class="line"><span>├───────────────┼────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Total         │ 1.0639 │   100.00 % │ 274.4952 │</span></span>
-<span class="line"><span>╰───────────────┴────────┴────────────┴──────────╯</span></span></code></pre></div><p>UPDATE WITH NEW OUTPUT API</p><h3 id="The-simulation-output" tabindex="-1">The simulation output <a class="header-anchor" href="#The-simulation-output" aria-label="Permalink to &quot;The simulation output {#The-simulation-output}&quot;">​</a></h3><h3 id="Access-overpotentials" tabindex="-1">Access overpotentials <a class="header-anchor" href="#Access-overpotentials" aria-label="Permalink to &quot;Access overpotentials {#Access-overpotentials}&quot;">​</a></h3><h3 id="Plot-cell-states" tabindex="-1">Plot cell states <a class="header-anchor" href="#Plot-cell-states" aria-label="Permalink to &quot;Plot cell states {#Plot-cell-states}&quot;">​</a></h3><h3 id="Save-and-load-outputs" tabindex="-1">Save and load outputs <a class="header-anchor" href="#Save-and-load-outputs" aria-label="Permalink to &quot;Save and load outputs {#Save-and-load-outputs}&quot;">​</a></h3><h2 id="Example-on-GitHub" tabindex="-1">Example on GitHub <a class="header-anchor" href="#Example-on-GitHub" aria-label="Permalink to &quot;Example on GitHub {#Example-on-GitHub}&quot;">​</a></h2><p>If you would like to run this example yourself, it can be downloaded from the BattMo.jl GitHub repository <a href="https://github.com/BattMoTeam/BattMo.jl/blob/main/examples/3_handle_outputs.jl" target="_blank" rel="noreferrer">as a script</a>, or as a <a href="https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/3_handle_outputs.ipynb" target="_blank" rel="noreferrer">Jupyter Notebook</a></p><hr><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl" target="_blank" rel="noreferrer">Literate.jl</a>.</em></p>`,15)]))}const k=a(e,[["render",l]]);export{c as __pageData,k as default};
+<span class="line"><span>╭───────────────┬──────────┬────────────┬──────────╮</span></span>
+<span class="line"><span>│ Timing type   │     Each │   Relative │    Total │</span></span>
+<span class="line"><span>│               │       μs │ Percentage │       ms │</span></span>
+<span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
+<span class="line"><span>│ Properties    │  34.5635 │     3.55 % │   8.9174 │</span></span>
+<span class="line"><span>│ Equations     │ 182.1715 │    24.81 % │  62.3026 │</span></span>
+<span class="line"><span>│ Assembly      │  73.8557 │    10.06 % │  25.2586 │</span></span>
+<span class="line"><span>│ Linear solve  │ 272.6579 │    28.01 % │  70.3457 │</span></span>
+<span class="line"><span>│ Linear setup  │   0.0000 │     0.00 % │   0.0000 │</span></span>
+<span class="line"><span>│ Precond apply │   0.0000 │     0.00 % │   0.0000 │</span></span>
+<span class="line"><span>│ Update        │  47.4305 │     4.87 % │  12.2371 │</span></span>
+<span class="line"><span>│ Convergence   │  68.6503 │     9.35 % │  23.4784 │</span></span>
+<span class="line"><span>│ Input/Output  │  29.9337 │     1.00 % │   2.5144 │</span></span>
+<span class="line"><span>│ Other         │ 178.5368 │    18.34 % │  46.0625 │</span></span>
+<span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
+<span class="line"><span>│ Total         │ 973.3209 │   100.00 % │ 251.1168 │</span></span>
+<span class="line"><span>╰───────────────┴──────────┴────────────┴──────────╯</span></span></code></pre></div><p>UPDATE WITH NEW OUTPUT API</p><h3 id="The-simulation-output" tabindex="-1">The simulation output <a class="header-anchor" href="#The-simulation-output" aria-label="Permalink to &quot;The simulation output {#The-simulation-output}&quot;">​</a></h3><h3 id="Access-overpotentials" tabindex="-1">Access overpotentials <a class="header-anchor" href="#Access-overpotentials" aria-label="Permalink to &quot;Access overpotentials {#Access-overpotentials}&quot;">​</a></h3><h3 id="Plot-cell-states" tabindex="-1">Plot cell states <a class="header-anchor" href="#Plot-cell-states" aria-label="Permalink to &quot;Plot cell states {#Plot-cell-states}&quot;">​</a></h3><h3 id="Save-and-load-outputs" tabindex="-1">Save and load outputs <a class="header-anchor" href="#Save-and-load-outputs" aria-label="Permalink to &quot;Save and load outputs {#Save-and-load-outputs}&quot;">​</a></h3><h2 id="Example-on-GitHub" tabindex="-1">Example on GitHub <a class="header-anchor" href="#Example-on-GitHub" aria-label="Permalink to &quot;Example on GitHub {#Example-on-GitHub}&quot;">​</a></h2><p>If you would like to run this example yourself, it can be downloaded from the BattMo.jl GitHub repository <a href="https://github.com/BattMoTeam/BattMo.jl/blob/main/examples/3_handle_outputs.jl" target="_blank" rel="noreferrer">as a script</a>, or as a <a href="https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/3_handle_outputs.ipynb" target="_blank" rel="noreferrer">Jupyter Notebook</a></p><hr><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl" target="_blank" rel="noreferrer">Literate.jl</a>.</em></p>`,15)]))}const k=a(e,[["render",l]]);export{c as __pageData,k as default};
