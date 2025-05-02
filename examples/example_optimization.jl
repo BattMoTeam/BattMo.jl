@@ -11,10 +11,14 @@ model_setup = LithiumIonBattery()
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol)
 
-output_0 = solve(sim)
+output_0 = solve(sim; info_level = 1)
 
 states = output_0[:states]
 nothing # hide
+
+reports = output_0[:reports]
+@info "length reports = ", length(reports)
+@info "length states = ", length(states)
 
 # # Specify an objective
 

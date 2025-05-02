@@ -61,7 +61,7 @@ ax1 = Axis(fig[1, 1], title = "Voltage vs Time", xlabel = "Time / s", ylabel = "
 for result in outputs
 
 	states = result.output[:states]
-	t = [state[:Control][:ControllerCV].time for state in states]
+	t = [state[:Control][:Controller].time for state in states]
 	E = [state[:Control][:Phi][1] for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 

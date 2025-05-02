@@ -99,7 +99,6 @@ struct Optimization <: SolvingProblem
 		config = extra[:cfg]
 		time_steps = extra[:timesteps]
 
-
 		dG = solve_adjoint_sensitivities(model, states, reports, objective,
 			forces = forces, state0 = state0, parameters = parameters)
 
@@ -692,7 +691,11 @@ function setup_submodels(inputparams::InputParams;
 			if haskey(ctrl, "numberOfCycles")
 				number_of_cycles = ctrl["numberOfCycles"]
 			else
-				number_of_cycles = 0
+				if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge"
+					number_of_cycles = 0
+				else
+					error("CCCycling parameters miss numberOfcycles")
+				end
 			end
 			policy = CCPolicy(number_of_cycles,
 				initial_control,

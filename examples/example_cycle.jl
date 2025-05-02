@@ -13,12 +13,6 @@ model_settings = load_model_settings(; from_file_path = file_path_model)
 simulation_settings = load_simulation_settings(; from_file_path = file_path_simulation)
 
 
-########################################
-
-# cycling_protocol["InitialControl"] = "discharging"
-# cycling_protocol["InitialStateOfCharge"] = 0.99
-# cycling_protocol["CRate"] = 0.5
-
 model_setup = LithiumIonBattery(; model_settings);
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
