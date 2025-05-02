@@ -26,8 +26,8 @@ using Test
 		cyling_settings = load_cycling_protocol(; from_default_set = "CCCV")
 
 
-		cell_parameter_set = load_cell_parameters(; from_model_template = model)
-		simulation_settings = load_simulation_settings(; from_model_template = model)
+		cell_parameter_set = load_cell_parameters(; from_model_template = model_setup)
+		simulation_settings = load_simulation_settings(; from_model_template = model_setup)
 
 		true
 

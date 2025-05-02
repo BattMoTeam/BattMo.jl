@@ -48,13 +48,13 @@ struct Simulation <: SolvingProblem
 	simulation_settings::SimulationSettings
 	is_valid::Bool
 
-	function Simulation(model_setup::BatteryModelSetup, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
+	function Simulation(model_setup::BatteryModelSetup, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model_setup))
 
-		if model.is_valid
+		if model_setup.is_valid
 			function_to_solve = run_battery
 
 			# Here will come a validation function
-			model_settings = model.model_settings
+			model_settings = model_setup.model_settings
 			cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
 			cycling_protocol_is_valid = validate_parameter_set(cycling_protocol)
 			simulation_settings_is_valid = validate_parameter_set(simulation_settings, model_settings)
@@ -139,7 +139,7 @@ function solve(problem::Simulation; accept_invalid = false, hook = nothing, info
 
 	config_kwargs = (info_level = info_level,)
 
-	diffusion_model = problem.model.model_settings["UseDiffusionModel"]
+	diffusion_model = problem.model_setup.model_settings["UseDiffusionModel"]
 	if diffusion_model == "PXD"
 		use_p2d = true
 	elseif diffusion_model == "NoParticleDiffusion"
@@ -149,14 +149,14 @@ function solve(problem::Simulation; accept_invalid = false, hook = nothing, info
 	end
 
 	if accept_invalid == true
-		output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;
+		output = problem.function_to_solve(problem.model_setup, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;
 			hook = nothing,
 			use_p2d = use_p2d,
 			config_kwargs = config_kwargs,
 			kwargs...)
 	else
 		if problem.is_valid == true
-			output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;
+			output = problem.function_to_solve(problem.model_setup, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;
 				hook = nothing,
 				use_p2d = use_p2d,
 				config_kwargs = config_kwargs,

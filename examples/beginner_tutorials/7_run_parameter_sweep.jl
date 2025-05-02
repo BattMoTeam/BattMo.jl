@@ -63,7 +63,7 @@ outputs_diff = []
 
 for d in range(log_D_start, log_D_stop, length = 10)
 	cell_parameters["PositiveElectrode"]["ActiveMaterial"]["DiffusionCoefficient"] = 10^d
-	sim = Simulation(model, cell_parameters, cycling_protocol)
+	sim = Simulation(model_setup, cell_parameters, cycling_protocol)
 	result = solve(sim; config_kwargs = (; end_report = false))
 	push!(outputs_diff, (d = d, output = result))  # store r together with output
 end
