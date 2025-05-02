@@ -30,7 +30,7 @@ load_matlab_battmo_input
 ## Battery model types
 
 ```@docs
-BatteryModel
+BatteryModelSetup
 LithiumIonBattery
 ```
 

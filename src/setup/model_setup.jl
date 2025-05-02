@@ -28,27 +28,27 @@ Represents a battery simulation problem to be solved.
 
 # Fields
 - `function_to_solve ::Function` : The function responsible for running the simulation.
-- `model ::BatteryModel` : The battery model being simulated.
+- `model ::BatteryModelSetup` : The battery model being simulated.
 - `cell_parameters ::CellParameters` : The cell parameters for the simulation.
 - `cycling_protocol ::CyclingProtocol` : The cycling protocol used.
 - `simulation_settings ::SimulationSettings` : The simulation settings applied.
 - `is_valid ::Bool` : A flag indicating if the simulation is valid.
 
 # Constructor
-	Simulation(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
+	Simulation(model::BatteryModelSetup, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
 
 Creates an instance of `Simulation`, initializing it with the given parameters and defaulting
 simulation settings if not provided.
 """
 struct Simulation <: SolvingProblem
 	function_to_solve::Function
-	model::BatteryModel
+	model_setup::BatteryModelSetup
 	cell_parameters::CellParameters
 	cycling_protocol::CyclingProtocol
 	simulation_settings::SimulationSettings
 	is_valid::Bool
 
-	function Simulation(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
+	function Simulation(model_setup::BatteryModelSetup, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
 
 		if model.is_valid
 			function_to_solve = run_battery
@@ -73,7 +73,7 @@ struct Simulation <: SolvingProblem
 
 			""")
 		end
-		return new{}(function_to_solve, model, cell_parameters, cycling_protocol, simulation_settings, is_valid)
+		return new{}(function_to_solve, model_setup, cell_parameters, cycling_protocol, simulation_settings, is_valid)
 	end
 end
 
@@ -251,14 +251,14 @@ end
 
 
 """
-	run_battery(model::BatteryModel, cell_parameters::CellParameters, 
+	run_battery(model::BatteryModelSetup, cell_parameters::CellParameters, 
 				cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings; 
 				hook=nothing, kwargs...)
 
 Runs a battery simulation using the provided model, cell parameters, cycling protocol, and simulation settings.
 
 # Arguments
-- `model ::BatteryModel` : The battery model to be used.
+- `model ::BatteryModelSetup` : The battery model to be used.
 - `cell_parameters ::CellParameters` : The cell parameter set.
 - `cycling_protocol ::CyclingProtocol` : The cycling protocol parameter set.
 - `simulation_settings ::SimulationSettings` : The simulation settings parameter set.
@@ -268,7 +268,7 @@ Runs a battery simulation using the provided model, cell parameters, cycling pro
 # Returns
 The output of the battery simulation after executing `run_battery` with formatted input.
 """
-function run_battery(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings;
+function run_battery(model::BatteryModelSetup, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings;
 	hook = nothing,
 	use_p2d = true,
 	kwargs...)

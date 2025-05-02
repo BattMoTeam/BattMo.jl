@@ -3,7 +3,7 @@ export print_required_cell_parameters, get_lithium_ion_default_model_settings
 
 
 """
-	struct LithiumIonBattery <: BatteryModel
+	struct LithiumIonBattery <: BatteryModelSetup
 
 Represents a lithium-ion battery model based on the Doyle-Fuller-Newman approach.
 
