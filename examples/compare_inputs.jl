@@ -11,11 +11,11 @@ cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 # cycling_protocol["CRate"] = 2
 # cycling_protocol["DRate"] = 2
 
-model = LithiumIonBatteryModel(; model_settings);
+model_setup = LithiumIonBattery(; model_settings);
 
 
 
-sim = Simulation(model, cell_parameters, cycling_protocol);
+sim = Simulation(model_setup, cell_parameters, cycling_protocol);
 
 output1 = solve(sim; accept_invalid = true)
 

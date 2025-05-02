@@ -10,7 +10,7 @@ Parameters are loaded using helper functions that read JSON files and return str
 
 ## Model Initialization
 
-A model can be instantiated using the sub classes of abstract type [`BatteryModel`](@ref). At the moment only the [`LithiumIonBatteryModel`](@ref) constructor is available. By passing a [`ModelSettings`](@ref) object to the constructor, the user can personalize the model to be solved.
+A model can be instantiated using the sub classes of abstract type [`BatteryModelSetup`](@ref). At the moment only the [`LithiumIonBattery`](@ref) constructor is available. By passing a [`ModelSettings`](@ref) object to the constructor, the user can personalize the model to be solved.
 
 ## Simulation Initialization
 
@@ -38,7 +38,7 @@ model_settings = load_model_settings(; from_file_path = file_path_model)
 simulation_settings = read_simulation_settings(file_path_simulation)
 
 # Initialize model and simulation
-model = LithiumIonBatteryModel(; model_settings)
+model = LithiumIonBattery(; model_settings)
 sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
 
 # Run simulation
