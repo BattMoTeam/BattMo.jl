@@ -1,21 +1,29 @@
-# # Setting Up a Custom Battery Model
-# In this tutorial, we’ll configure a custom battery model using BattMo, with a specific focus on SEI (Solid Electrolyte Interphase) growth within a P2D simulation framework.
+# # Selecting a model
+
+# As mentioned in the first tutorial, a model can be thought as a mathematical implementation of the electrochemical and transport phenomena occuring in a real battery cell. 
+# The implementation consist of a system of partial differential equations and their corresponding parameters, constants, boundary conditions and assumptions. 
+
+# The default Lithium-Ion Battery Model corresponds to a basic P2D model, where neither current collectors, degradation nor thermal effects are considered. 
+# BattMo has implemented several variants of the Lithium-Ion Battery Model, which can be accessed by *configuring the model object*. In this tutorial, we’ll configure a
+# P2D model with degradation driven by SEI (Solid Electrolyte Interphase) growth.
 
 # ### Load BattMo and Model Settings
 using BattMo, GLMakie
 
 # Let’s begin by loading the default model settings for a P2D simulation. This will return a ModelSettings object:
 
-file_path_model = parameter_file_path("model_settings", "P2D.json")
-model_settings = load_model_settings(; from_file_path = file_path_model)
+model_settings = load_model_settings(; from_default_set = "P2D")
 nothing #hide 
 
 # We can inspect all current settings with:
 model_settings.all
 
-# By default, the "UseSEIModel" parameter is set to false. Since we want to
-# observe SEI effects, we’ll enable and set it to Bolay, which is a specific SEI
-# model.
+# By default, the "UseSEIModel" parameter is set to false. Since we want to observe SEI-driven degradation effects, we’ll specify which SEI model we'd like to use, and with that enable the use of 
+# the SEI model during the simulation. Let's have a look at which models are available to include in the settings:
+
+print_submodels_info()
+
+# For the SEI model, we can see there's one model to enable which is the "Bolay" model. We enable it in the model settings:
 
 model_settings["UseSEIModel"] = "Bolay"
 model_settings.all
@@ -23,41 +31,45 @@ model_settings.all
 # ### Initialize the Model
 # Let’s now create the battery model using the modified settings:
 
-model = LithiumIonBatteryModel(; model_settings);
+model_setup = LithiumIonBattery(; model_settings);
 
-# We can see that some warnings are given in the terminal. When setting up the model, the LithiumIonBatteryModel constructor runs a validation on the model_settings. 
+# When setting up the model, the LithiumIonBattery constructor runs a validation on the model_settings. 
 # In this case, because we set the "UseSEIModel" parameter to true, the validator provides a warning that we should define which SEI model we would like to use.
-# If we ignore the warnings and pass the model to the Simulation constructor then we get an error:
+# If we ignore any warnings and pass the model to the Simulation constructor then we get an error. Let's create such a situation:
 
-file_path_cell = parameter_file_path("cell_parameters", "SEI_example.json")
-file_path_cycling = parameter_file_path("cycling_protocols", "CCCV.json")
+model_settings["UseSEIModel"] = "Bola"
 
-cell_parameters_sei = load_cell_parameters(; from_file_path = file_path_cell)
-cccv_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
+
+model_setup = LithiumIonBattery(; model_settings);
+
+
+# We get a warning that a validation issue has been encountered. For now we ignore it:
+
+cell_parameters_sei = load_cell_parameters(; from_default_set = "SEI_example")
+cccv_protocol = load_cycling_protocol(; from_default_set = "CCCV")
 
 try  # hide
-	sim = Simulation(model, cell_parameters_sei, cccv_protocol)
+	sim = Simulation(model_setup, cell_parameters_sei, cccv_protocol)
 catch err # hide
 	showerror(stderr, err) # hide
 end  # hide
 
-# As expected, this results in an error because we haven't yet specified the SEI model type.
+# As expected, this results in an error because we didn't specify the SEI model correctly.
 
 # ### Specify SEI Model and Rebuild
-# To resolve this, we’ll explicitly set the SEI model to "Bolay":
+# Let's resolve the issue again and run the simulation:
 
-model_settings["SEIModel"] = "Bolay"
+model_settings["UseSEIModel"] = "Bolay"
 nothing # hide
 
 # Now rebuild the model:
 
-model = LithiumIonBatteryModel(; model_settings);
+model_setup = LithiumIonBattery(; model_settings);
 
-# Run the Simulation
 # Now we can setup the simulation and run it.
 
-sim = Simulation(model, cell_parameters_sei, cccv_protocol)
-output = solve(sim);
+sim = Simulation(model_setup, cell_parameters_sei, cccv_protocol)
+output = solve(sim)
 nothing # hide
 
 

@@ -458,7 +458,6 @@ function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParam
 		Imax = only(parameters[:Control][:ImaxCharge])
 
 
-
 	elseif policy.initialControl == "discharging"
 		Imax = only(parameters[:Control][:ImaxDischarge])
 
@@ -542,7 +541,6 @@ function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, mode
 	nu            = length(active)
 	ImaxDischarge = model.system.policy.ImaxDischarge
 	ImaxCharge    = model.system.policy.ImaxCharge
-
 
 	Imax = max(ImaxCharge, ImaxDischarge)
 
@@ -876,7 +874,6 @@ function update_control_type_in_controller!(state, state0, policy::CCPolicy, dt)
 			# We have not entered the switching region in the time step. We are not going to change control
 			# in this step.
 			ctrlType = ctrlType0
-
 
 		else
 
