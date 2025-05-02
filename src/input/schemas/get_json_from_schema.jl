@@ -1,35 +1,20 @@
 export get_empty_cell_parameter_set
 
 function get_empty_cell_parameter_set(model)
-	if model.is_valid == true
-		schema = get_schema_cell_parameters(model.model_settings)
-		set = generate_empty_parameter_set_from_schema(schema)
-		return set
-	else
-		error("""
-		Oops! Your Model object is not valid. 🛑
 
-		TIP: Validation happens when instantiating the Model object. 
-		Check the warnings to see exactly where things went wrong. 🔍
+	schema = get_schema_cell_parameters(model.model_settings)
+	set = generate_empty_parameter_set_from_schema(schema)
+	return set
 
-		""")
-	end
+
 end
 
 function get_empty_simulation_settings(model)
-	if model.is_valid == true
-		schema = get_schema_simulation_settings(model.model_settings)
-		set = generate_empty_parameter_set_from_schema(schema)
-		return set
-	else
-		error("""
-		Oops! Your Model object is not valid. 🛑
 
-		TIP: Validation happens when instantiating the Model object. 
-		Check the warnings to see exactly where things went wrong. 🔍
+	schema = get_schema_simulation_settings(model.model_settings)
+	set = generate_empty_parameter_set_from_schema(schema)
+	return set
 
-		""")
-	end
 end
 
 

@@ -8,8 +8,8 @@
 using BattMo, GLMakie, Printf
 
 # Load cell and model setup
-cell_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "Chen2020_calibrated.json")
-cycling_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCDischarge.json")
+cell_path = parameter_file_path("cell_parameters", "Chen2020_calibrated.json")
+cycling_path = parameter_file_path("cycling_protocols", "CCDischarge.json")
 
 cell_parameters = load_cell_parameters(; from_file_path = cell_path)
 cc_discharge_protocol = load_cycling_protocol(; from_file_path = cycling_path)

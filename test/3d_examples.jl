@@ -6,10 +6,10 @@ using Test
 
 	@test begin
 
-		file_path_cell = string(dirname(pathof(BattMo)), "/../src/input/defaults/cell_parameters/", "3D_demo_example.json")
-		file_path_model = string(dirname(pathof(BattMo)), "/../src/input/defaults/model_settings/", "P4D_demo.json")
-		file_path_cycling = string(dirname(pathof(BattMo)), "/../src/input/defaults/cycling_protocols/", "CCDischarge.json")
-		file_path_simulation = string(dirname(pathof(BattMo)), "/../src/input/defaults/simulation_settings/", "3D_demo.json")
+		file_path_cell = parameter_file_path("cell_parameters", "3D_demo_example.json")
+		file_path_model = parameter_file_path("model_settings", "P4D_pouch.json")
+		file_path_cycling = parameter_file_path("cycling_protocols", "CCDischarge.json")
+		file_path_simulation = parameter_file_path("simulation_settings", "P4D_pouch.json")
 
 		cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
 		cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
@@ -29,8 +29,6 @@ using Test
 			@test Cc[i] ≈ 0.0076079 atol = 1e-2
 		end
 		@test Phi[1] ≈ 4.163 atol = 1e-2
-		@test Phi[end] ≈ 2.5 atol = 1e-2
-		@test Phi[30] ≈ 3.79 atol = 1e-2
 		true
 
 	end

@@ -2,15 +2,15 @@
 using Jutul, BattMo, GLMakie
 
 # ## Setup input parameters
-file_path_cell = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "3D_demo_example.json")
-file_path_model = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/model_settings/", "model_settings_P4D_pouch.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCDischarge.json")
-file_path_simulation = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/simulation_settings/", "simulation_settings_3D_demoCase.json")
+file_path_cell = parameter_file_path("cell_parameters", "Xu2015.json")
+file_path_model = parameter_file_path("model_settings", "P4D_pouch.json")
+file_path_cycling = parameter_file_path("cycling_protocols", "CCDischarge.json")
+file_path_simulation = parameter_file_path("simulation_settings", "P4D_pouch.json")
 
 cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
 cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
 model_settings = load_model_settings(; from_file_path = file_path_model)
-simulation_settings = read_simulation_settings(file_path_simulation)
+simulation_settings = load_simulation_settings(; from_file_path = file_path_simulation)
 nothing # hide
 
 # ## Setup and run simulation
