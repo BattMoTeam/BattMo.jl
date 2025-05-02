@@ -34,7 +34,6 @@ function build_battmo_docs(build_format              = nothing;
 		"Tutorial 5 - Handle cycling protocol" => "5_handle_cycling_protocols",
 		"Tutorial 6 - Compute cell KPIs" => "6_compute_cell_kpis",
 		"Tutorial 7 - Run a parameter sweep" => "7_run_parameter_sweep",
-		"Tutorial 8 - Study power capability" => "8_study_power_capability",
 	]
 
 	examples = [
