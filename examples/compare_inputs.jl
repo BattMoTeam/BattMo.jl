@@ -11,7 +11,7 @@ cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 # cycling_protocol["CRate"] = 2
 # cycling_protocol["DRate"] = 2
 
-model = LithiumIonBatteryModel(; model_settings);
+model = LithiumIonBattery(; model_settings);
 
 
 

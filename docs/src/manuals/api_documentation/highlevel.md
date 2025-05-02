@@ -31,7 +31,7 @@ load_matlab_battmo_input
 
 ```@docs
 BatteryModel
-LithiumIonBatteryModel
+LithiumIonBattery
 ```
 
 ## Forward simulation

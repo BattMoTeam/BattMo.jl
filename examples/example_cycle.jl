@@ -16,7 +16,7 @@ simulation_settings = load_simulation_settings(; from_file_path = file_path_simu
 ########################################
 
 
-model = LithiumIonBatteryModel(; model_settings);
+model = LithiumIonBattery(; model_settings);
 
 sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
 output = solve(sim)

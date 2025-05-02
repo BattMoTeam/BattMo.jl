@@ -16,7 +16,7 @@ using Test
 		model_settings = load_model_settings(; from_file_path = file_path_model)
 		simulation_settings = load_simulation_settings(; from_file_path = file_path_simulation)
 
-		model = LithiumIonBatteryModel(; model_settings)
+		model = LithiumIonBattery(; model_settings)
 
 		sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
 		output = solve(sim)
