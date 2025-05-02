@@ -689,7 +689,12 @@ function setup_submodels(inputparams::InputParams;
 					initial_control = "charging"
 				end
 			end
-			policy = CCPolicy(ctrl["numberOfCycles"],
+			if haskey(ctrl, "numberOfCycles")
+				number_of_cycles = ctrl["numberOfCycles"]
+			else
+				number_of_cycles = 0
+			end
+			policy = CCPolicy(number_of_cycles,
 				initial_control,
 				ctrl["lowerCutoffVoltage"],
 				ctrl["upperCutoffVoltage"],
@@ -967,7 +972,6 @@ function setup_battery_parameters(inputparams::InputParams,
 	prm_control = Dict{Symbol, Any}()
 
 	controlPolicy = inputparams["Control"]["controlPolicy"]
-	@info "policy = ", controlPolicy
 
 	if controlPolicy == "CCDischarge"
 
@@ -989,7 +993,6 @@ function setup_battery_parameters(inputparams::InputParams,
 		CRate = inputparams["Control"]["CRate"]
 
 		prm_control[:ImaxCharge] = (cap / con.hour) * CRate
-		@info "Imax = ", prm_control[:ImaxCharge]
 
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
@@ -1452,7 +1455,6 @@ function setup_timesteps(inputparams::InputParams;
 	"""
 
 	controlPolicy = inputparams["Control"]["controlPolicy"]
-	@info "policy = ", controlPolicy
 
 	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge"
 

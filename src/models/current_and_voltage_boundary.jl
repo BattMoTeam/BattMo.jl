@@ -386,10 +386,10 @@ end
 # Functions to compute initial current given the policy, it used at initialization of the state in the simulation #
 ###################################################################################################################
 function getInitCurrent(policy::CCPolicy)
-	@info "pol =", policy.current_function
+
 	if !ismissing(policy.current_function)
 		val = policy.current_function(0.0)
-		@info "....."
+
 	else
 		if policy.initialControl == "charging"
 
@@ -401,7 +401,7 @@ function getInitCurrent(policy::CCPolicy)
 			error("initial control not recognized")
 		end
 	end
-	@info "val =", val
+
 	return val
 end
 
@@ -448,12 +448,11 @@ function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParam
 
 	if policy.initialControl == "charging"
 		Imax = only(parameters[:Control][:ImaxCharge])
-		@info "Imax2 = ", Imax
 
 
 	elseif policy.initialControl == "discharging"
 		Imax = only(parameters[:Control][:ImaxDischarge])
-		@info "Imax = ", Imax
+
 	else
 		error("Initial control is not recognized")
 	end
@@ -512,7 +511,6 @@ function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, mode
 	nu            = length(active)
 	ImaxDischarge = model.system.policy.ImaxDischarge
 	ImaxCharge    = model.system.policy.ImaxCharge
-	@info "charge = ", ImaxCharge
 
 	Imax = max(ImaxCharge, ImaxDischarge)
 
@@ -637,7 +635,7 @@ function check_constraints(model, storage)
 		arefulfilled = false
 
 	end
-	@info "Switch flag = ", arefulfilled
+
 	return arefulfilled
 
 end
@@ -846,7 +844,6 @@ function update_control_type_in_controller!(state, state0, policy::CCPolicy, dt)
 			# We have not entered the switching region in the time step. We are not going to change control
 			# in this step.
 			ctrlType = ctrlType0
-			@info "control type = ", ctrlType
 
 		else
 
@@ -893,7 +890,7 @@ function update_control_type_in_controller!(state, state0, policy::CCPolicy, dt)
 		end
 
 		controller.ctrlType = ctrlType
-		@info ctrlType
+
 	end
 
 end
@@ -929,7 +926,7 @@ function update_values_in_controller!(state, policy::CCPolicy)
 
 
 		elseif ctrlType == "charging"
-			@info "cur = ", I_t
+
 			# minus sign below follows from convention
 			I_t = -I_t
 
@@ -963,7 +960,7 @@ function update_values_in_controller!(state, policy::CCPolicy)
 	end
 
 	target = I_t
-	@info "target = ", target
+
 	controller.target = target
 
 
@@ -1053,7 +1050,7 @@ Jutul.local_discretization(::ControlEquation, i) = nothing
 function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquation, model, dt, ldisc = local_discretization(eq, i))
 
 	I = only(state.Current)
-	@info "I = ", I
+
 	phi = only(state.Phi)
 
 	ctrl = state[:Controller]
@@ -1061,7 +1058,6 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquati
 	if ctrl.target_is_voltage
 		v[] = phi - ctrl.target
 	else
-		@info "I_t = ", ctrl.target
 
 		v[] = I - ctrl.target
 	end
@@ -1073,8 +1069,6 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::CurrentEquati
 	# Sign is strange here due to cross term?
 	I   = only(state.Current)
 	phi = only(state.Phi)
-	@info "V = ", phi
-	@info "I = ", I
 
 	v[] = I + phi * 1e-10
 
@@ -1219,7 +1213,6 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 		end
 
 		state[:Controller] = CCController(number_of_cycles, target, time, target_is_voltage, ctrlType)
-		@info number_of_cycles
 
 	elseif policy isa CyclingCVPolicy
 
