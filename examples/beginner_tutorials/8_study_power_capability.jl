@@ -7,11 +7,8 @@
 
 using BattMo, GLMakie, Printf
 
-file_path_cell = string(dirname(pathof(BattMo)), "/input/defaults/cell_parameters/", "Chen2020_calibrated.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/input/defaults/cycling_protocols/", "CCDischarge.json")
-
-cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
-cc_discharge_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+cc_discharge_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
 model = LithiumIonBatteryModel()
 #%%
@@ -24,10 +21,10 @@ thicknesses = range(8.0e-5, 10.0e-5, length = 9)
 
 function compute_discharge_capacity(output::NamedTuple)
 	t = [state[:Control][:ControllerCV].time for state in output[:states]]
-	I = [state[:Control][:Current][1] for state in  output[:states]]
+	I = [state[:Control][:Current][1] for state in output[:states]]
 	diff_t = diff(t)
 	insert!(diff_t, 1, t[1])
-	return sum(diff_t.*I)/3600
+	return sum(diff_t .* I) / 3600
 end
 
 # Now we loop through both DRates and thicknesses to run a simulation for each combination. For each simulation, we will calculate the discharge capacity, and store it for
