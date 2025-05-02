@@ -15,9 +15,9 @@ cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 nothing # hide
 
-model = LithiumIonBatteryModel()
+model_setup = LithiumIonBattery()
 
-sim = Simulation(model, cell_parameters, cycling_protocol);
+sim = Simulation(model_setup, cell_parameters, cycling_protocol);
 
 output = solve(sim)
 nothing # hide

@@ -21,11 +21,11 @@ using Test
 
 		model_settings["UseSEIModel"] = "Bolay"
 
-		model = LithiumIonBattery(; model_settings)
+		model_setup = LithiumIonBattery(; model_settings)
 
 		cycling_protocol["TotalNumberOfCycles"] = 10
 
-		sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
+		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 
 		output = solve(sim)
 

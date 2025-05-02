@@ -9,7 +9,7 @@ using Test
 
 
 		# We instantiate a Lithium-ion battery model with default model settings
-		model = LithiumIonBattery(; model_settings)
+		model_setup = LithiumIonBattery(; model_settings)
 		file_path_cell = parameter_file_path("cell_parameters", "Chen2020_calibrated.json")
 		file_path_cycling = parameter_file_path("cycling_protocols", "CCDischarge.json")
 		file_path_model = parameter_file_path("model_settings", "P2D.json")
