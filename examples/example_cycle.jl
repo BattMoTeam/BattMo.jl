@@ -19,10 +19,10 @@ simulation_settings = load_simulation_settings(; from_file_path = file_path_simu
 # cycling_protocol["InitialStateOfCharge"] = 0.99
 # cycling_protocol["CRate"] = 0.5
 
-model = LithiumIonBatteryModel(; model_settings);
+model_setup = LithiumIonBattery(; model_settings);
 
-sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
-output = solve(sim; config_kwargs = (info_level = 1,))
+sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
+output = solve(sim)
 
 nothing # hide
 

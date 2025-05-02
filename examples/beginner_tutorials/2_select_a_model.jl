@@ -31,16 +31,16 @@ model_settings.all
 # ### Initialize the Model
 # Let’s now create the battery model using the modified settings:
 
-model = LithiumIonBatteryModel(; model_settings);
+model_setup = LithiumIonBattery(; model_settings);
 
-# When setting up the model, the LithiumIonBatteryModel constructor runs a validation on the model_settings. 
+# When setting up the model, the LithiumIonBattery constructor runs a validation on the model_settings. 
 # In this case, because we set the "UseSEIModel" parameter to true, the validator provides a warning that we should define which SEI model we would like to use.
 # If we ignore any warnings and pass the model to the Simulation constructor then we get an error. Let's create such a situation:
 
 model_settings["UseSEIModel"] = "Bola"
 
 
-model = LithiumIonBatteryModel(; model_settings);
+model_setup = LithiumIonBattery(; model_settings);
 
 
 # We get a warning that a validation issue has been encountered. For now we ignore it:
@@ -49,7 +49,7 @@ cell_parameters_sei = load_cell_parameters(; from_default_set = "SEI_example")
 cccv_protocol = load_cycling_protocol(; from_default_set = "CCCV")
 
 try  # hide
-	sim = Simulation(model, cell_parameters_sei, cccv_protocol)
+	sim = Simulation(model_setup, cell_parameters_sei, cccv_protocol)
 catch err # hide
 	showerror(stderr, err) # hide
 end  # hide
@@ -64,11 +64,11 @@ nothing # hide
 
 # Now rebuild the model:
 
-model = LithiumIonBatteryModel(; model_settings);
+model_setup = LithiumIonBattery(; model_settings);
 
 # Now we can setup the simulation and run it.
 
-sim = Simulation(model, cell_parameters_sei, cccv_protocol)
+sim = Simulation(model_setup, cell_parameters_sei, cccv_protocol)
 output = solve(sim)
 nothing # hide
 

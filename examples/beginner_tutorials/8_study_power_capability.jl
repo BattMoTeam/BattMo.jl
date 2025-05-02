@@ -10,7 +10,7 @@ using BattMo, GLMakie, Printf
 cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
 cc_discharge_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
-model = LithiumIonBatteryModel()
+model_setup = LithiumIonBattery()
 #%%
 # ### Outline our experiment
 # We will change the thickness of the positive electrode, and evaluate the cell capacity at different CRates. Lets define the DRates to use, the range of thicknesses
@@ -39,7 +39,7 @@ for thickness in thicknesses
 	for d_rate in d_rates
 
 		cc_discharge_protocol["DRate"] = d_rate
-		sim = Simulation(model, cell_parameters, cc_discharge_protocol)
+		sim = Simulation(model_setup, cell_parameters, cc_discharge_protocol)
 		print("###### Simulation of thickness $thickness | d_rate $d_rate #########")
 		output = solve(sim; config_kwargs = (; end_report = false))
 
