@@ -1,0 +1,44 @@
+import{_ as a,c as n,o as i,aA as t}from"./chunks/framework.C79ir1Fw.js";const c=JSON.parse('{"title":"Handling simulation outputs","description":"","frontmatter":{},"headers":[],"relativePath":"tutorials/3_handle_outputs.md","filePath":"tutorials/3_handle_outputs.md","lastUpdated":null}'),e={name:"tutorials/3_handle_outputs.md"};function l(p,s,o,r,h,u){return i(),n("div",null,s[0]||(s[0]=[t(`<h1 id="Handling-simulation-outputs" tabindex="-1">Handling simulation outputs <a class="header-anchor" href="#Handling-simulation-outputs" aria-label="Permalink to &quot;Handling simulation outputs {#Handling-simulation-outputs}&quot;">​</a></h1><p>In this tutorial we will explore the outputs of a simulation for interesting tasks:</p><ul><li><p>Plot voltage and current curves</p></li><li><p>Plot overpotentials</p></li><li><p>Plot cell states in space and time</p></li><li><p>Save outputs</p></li><li><p>Load outputs.</p></li></ul><p>Lets start with loading some pre-defined cell parameters, cycling protocols, and running a simulation.</p><div class="language-julia vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">julia</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">using</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> BattMo, GLMakie</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">cell_parameters </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> load_cell_parameters</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(; from_default_set </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;"> &quot;Chen2020_calibrated&quot;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">)</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">cycling_protocol </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> load_cycling_protocol</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(; from_default_set </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;"> &quot;CCDischarge&quot;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">model_setup </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> LithiumIonBattery</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">()</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">sim </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> Simulation</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(model_setup, cell_parameters, cycling_protocol);</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">output </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> solve</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(sim)</span></span></code></pre></div><div class="language- vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span>✔️ Validation of ModelSettings passed: No issues found.</span></span>
+<span class="line"><span>──────────────────────────────────────────────────</span></span>
+<span class="line"><span>✔️ Validation of CellParameters passed: No issues found.</span></span>
+<span class="line"><span>──────────────────────────────────────────────────</span></span>
+<span class="line"><span>✔️ Validation of CyclingProtocol passed: No issues found.</span></span>
+<span class="line"><span>──────────────────────────────────────────────────</span></span>
+<span class="line"><span>✔️ Validation of SimulationSettings passed: No issues found.</span></span>
+<span class="line"><span>──────────────────────────────────────────────────</span></span>
+<span class="line"><span>Jutul: Simulating 1 hour, 6 minutes as 84 report steps</span></span>
+<span class="line"><span>╭────────────────┬──────────┬──────────────┬──────────╮</span></span>
+<span class="line"><span>│ Iteration type │ Avg/step │ Avg/ministep │    Total │</span></span>
+<span class="line"><span>│                │ 84 steps │ 84 ministeps │ (wasted) │</span></span>
+<span class="line"><span>├────────────────┼──────────┼──────────────┼──────────┤</span></span>
+<span class="line"><span>│ Newton         │  3.07143 │      3.07143 │  258 (0) │</span></span>
+<span class="line"><span>│ Linearization  │  4.07143 │      4.07143 │  342 (0) │</span></span>
+<span class="line"><span>│ Linear solver  │  3.07143 │      3.07143 │  258 (0) │</span></span>
+<span class="line"><span>│ Precond apply  │      0.0 │          0.0 │    0 (0) │</span></span>
+<span class="line"><span>╰────────────────┴──────────┴──────────────┴──────────╯</span></span>
+<span class="line"><span>╭───────────────┬──────────┬────────────┬──────────╮</span></span>
+<span class="line"><span>│ Timing type   │     Each │   Relative │    Total │</span></span>
+<span class="line"><span>│               │       μs │ Percentage │       ms │</span></span>
+<span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
+<span class="line"><span>│ Properties    │  30.5025 │     3.06 % │   7.8697 │</span></span>
+<span class="line"><span>│ Equations     │ 168.3795 │    22.36 % │  57.5858 │</span></span>
+<span class="line"><span>│ Assembly      │  65.2303 │     8.66 % │  22.3088 │</span></span>
+<span class="line"><span>│ Linear solve  │ 496.0629 │    49.68 % │ 127.9842 │</span></span>
+<span class="line"><span>│ Linear setup  │   0.0000 │     0.00 % │   0.0000 │</span></span>
+<span class="line"><span>│ Precond apply │   0.0000 │     0.00 % │   0.0000 │</span></span>
+<span class="line"><span>│ Update        │  44.9724 │     4.50 % │  11.6029 │</span></span>
+<span class="line"><span>│ Convergence   │  62.7964 │     8.34 % │  21.4764 │</span></span>
+<span class="line"><span>│ Input/Output  │  25.8246 │     0.84 % │   2.1693 │</span></span>
+<span class="line"><span>│ Other         │  25.5734 │     2.56 % │   6.5979 │</span></span>
+<span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
+<span class="line"><span>│ Total         │ 998.4298 │   100.00 % │ 257.5949 │</span></span>
+<span class="line"><span>╰───────────────┴──────────┴────────────┴──────────╯</span></span></code></pre></div><p>UPDATE WITH NEW OUTPUT API</p><h3 id="The-simulation-output" tabindex="-1">The simulation output <a class="header-anchor" href="#The-simulation-output" aria-label="Permalink to &quot;The simulation output {#The-simulation-output}&quot;">​</a></h3><h3 id="Access-overpotentials" tabindex="-1">Access overpotentials <a class="header-anchor" href="#Access-overpotentials" aria-label="Permalink to &quot;Access overpotentials {#Access-overpotentials}&quot;">​</a></h3><h3 id="Plot-cell-states" tabindex="-1">Plot cell states <a class="header-anchor" href="#Plot-cell-states" aria-label="Permalink to &quot;Plot cell states {#Plot-cell-states}&quot;">​</a></h3><h3 id="Save-and-load-outputs" tabindex="-1">Save and load outputs <a class="header-anchor" href="#Save-and-load-outputs" aria-label="Permalink to &quot;Save and load outputs {#Save-and-load-outputs}&quot;">​</a></h3><h2 id="Example-on-GitHub" tabindex="-1">Example on GitHub <a class="header-anchor" href="#Example-on-GitHub" aria-label="Permalink to &quot;Example on GitHub {#Example-on-GitHub}&quot;">​</a></h2><p>If you would like to run this example yourself, it can be downloaded from the BattMo.jl GitHub repository <a href="https://github.com/BattMoTeam/BattMo.jl/blob/main/examples/3_handle_outputs.jl" target="_blank" rel="noreferrer">as a script</a>, or as a <a href="https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/3_handle_outputs.ipynb" target="_blank" rel="noreferrer">Jupyter Notebook</a></p><hr><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl" target="_blank" rel="noreferrer">Literate.jl</a>.</em></p>`,15)]))}const k=a(e,[["render",l]]);export{c as __pageData,k as default};
