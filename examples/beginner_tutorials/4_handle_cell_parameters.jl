@@ -83,7 +83,7 @@ fig
 # Let’s reload the original parameters and simulate again to compare:
 
 cell_parameters_2 = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
-sim2 = Simulation(model, cell_parameters_2, cycling_protocol);
+sim2 = Simulation(model_setup, cell_parameters_2, cycling_protocol);
 output2 = solve(sim2)
 nothing # hide
 
