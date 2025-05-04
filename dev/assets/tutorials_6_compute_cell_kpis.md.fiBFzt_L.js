@@ -30,18 +30,18 @@ import{_ as a,c as i,o as n,aA as e}from"./chunks/framework.7C67B1-w.js";const d
 <span class="line"><span>│ Timing type   │     Each │   Relative │    Total │</span></span>
 <span class="line"><span>│               │       μs │ Percentage │       ms │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Properties    │  34.7358 │     4.21 % │   8.9618 │</span></span>
-<span class="line"><span>│ Equations     │ 181.4705 │    29.17 % │  62.0629 │</span></span>
-<span class="line"><span>│ Assembly      │  75.6921 │    12.17 % │  25.8867 │</span></span>
-<span class="line"><span>│ Linear solve  │ 272.8347 │    33.08 % │  70.3913 │</span></span>
+<span class="line"><span>│ Properties    │  35.6586 │     3.67 % │   9.1999 │</span></span>
+<span class="line"><span>│ Equations     │ 184.0500 │    25.08 % │  62.9451 │</span></span>
+<span class="line"><span>│ Assembly      │  77.3038 │    10.54 % │  26.4379 │</span></span>
+<span class="line"><span>│ Linear solve  │ 404.7871 │    41.62 % │ 104.4351 │</span></span>
 <span class="line"><span>│ Linear setup  │   0.0000 │     0.00 % │   0.0000 │</span></span>
 <span class="line"><span>│ Precond apply │   0.0000 │     0.00 % │   0.0000 │</span></span>
-<span class="line"><span>│ Update        │  48.4080 │     5.87 % │  12.4893 │</span></span>
-<span class="line"><span>│ Convergence   │  68.4500 │    11.00 % │  23.4099 │</span></span>
-<span class="line"><span>│ Input/Output  │  29.2976 │     1.16 % │   2.4610 │</span></span>
-<span class="line"><span>│ Other         │  27.5313 │     3.34 % │   7.1031 │</span></span>
+<span class="line"><span>│ Update        │  50.7294 │     5.22 % │  13.0882 │</span></span>
+<span class="line"><span>│ Convergence   │  73.0436 │     9.96 % │  24.9809 │</span></span>
+<span class="line"><span>│ Input/Output  │  32.6550 │     1.09 % │   2.7430 │</span></span>
+<span class="line"><span>│ Other         │  27.5131 │     2.83 % │   7.0984 │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Total         │ 824.6744 │   100.00 % │ 212.7660 │</span></span>
+<span class="line"><span>│ Total         │ 972.5910 │   100.00 % │ 250.9285 │</span></span>
 <span class="line"><span>╰───────────────┴──────────┴────────────┴──────────╯</span></span></code></pre></div><h3 id="Cell-KPIs-from-the-parameter-set" tabindex="-1">Cell KPIs from the parameter set <a class="header-anchor" href="#Cell-KPIs-from-the-parameter-set" aria-label="Permalink to &quot;Cell KPIs from the parameter set {#Cell-KPIs-from-the-parameter-set}&quot;">​</a></h3><p>Some KPIs are directly computable from the cell parameter set. Here below we list the main KPIs we can compute with BattMo. For illustration, we create a Dictionary storing the values of the computations.</p><div class="language-julia vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">julia</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">cell_kpis_from_set </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> Dict</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span></span>
 <span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">	&quot;Positive Electrode Coating Mass&quot;</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> =&gt;</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> compute_electrode_coating_mass</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(cell_parameters, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">&quot;PositiveElectrode&quot;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">),</span></span>
 <span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">	&quot;Negative Electrode Coating Mass&quot;</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> =&gt;</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> compute_electrode_coating_mass</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(cell_parameters, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">&quot;NegativeElectrode&quot;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">),</span></span>
