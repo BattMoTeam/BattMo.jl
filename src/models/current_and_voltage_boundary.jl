@@ -79,13 +79,15 @@ mutable struct CCPolicy{R} <: AbstractPolicy
 	ImaxCharge::R
 	lowerCutoffVoltage::R
 	upperCutoffVoltage::R
+	use_ramp_up::Bool
 	current_function::Union{Missing, Any}
 	tolerances::Dict{String, Real}
 	function CCPolicy(
 		numberOfCycles::Int,
 		initialControl::String,
 		lowerCutoffVoltage::T,
-		upperCutoffVoltage::T;
+		upperCutoffVoltage::T,
+		use_ramp_up::Bool;
 		current_function = missing,
 		ImaxDischarge::T = 0.0,
 		ImaxCharge::T = 0.0,
@@ -93,7 +95,7 @@ mutable struct CCPolicy{R} <: AbstractPolicy
 			"charging" => 1e-4),
 	) where T <: Real
 
-		new{Union{Missing, T}}(numberOfCycles, initialControl, ImaxDischarge, ImaxCharge, lowerCutoffVoltage, upperCutoffVoltage, current_function, tolerances)
+		new{Union{Missing, T}}(numberOfCycles, initialControl, ImaxDischarge, ImaxCharge, lowerCutoffVoltage, upperCutoffVoltage, use_ramp_up, current_function, tolerances)
 	end
 end
 
@@ -127,6 +129,7 @@ mutable struct CyclingCVPolicy{R, I} <: AbstractPolicy
 	initialControl::OperationalMode
 	numberOfCycles::I
 	tolerances::Any
+	use_ramp_up::Bool
 	current_function::Any
 
 end
@@ -139,6 +142,7 @@ function CyclingCVPolicy(lowerCutoffVoltage,
 	numberOfCycles;
 	ImaxDischarge = 0 * lowerCutoffVoltage,
 	ImaxCharge = 0 * lowerCutoffVoltage,
+	use_ramp_up::Bool,
 	current_function = missing,
 )
 
@@ -164,6 +168,7 @@ function CyclingCVPolicy(lowerCutoffVoltage,
 		initialControl,
 		numberOfCycles,
 		tolerances,
+		use_ramp_up,
 		current_function)
 end
 
@@ -452,8 +457,6 @@ end
 
 function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParams, parameters)
 
-	tup = Float64(inputparams["Control"]["rampupTime"])
-
 	if policy.initialControl == "charging"
 		Imax = only(parameters[:Control][:ImaxCharge])
 
@@ -465,11 +468,14 @@ function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParam
 		error("Initial control is not recognized")
 	end
 
-	cFun(time) = currentFun(time, Imax, tup)
+	if policy.use_ramp_up
 
-	policy.current_function = cFun
+		tup = Float64(inputparams["Control"]["rampupTime"])
 
+		cFun(time) = currentFun(time, Imax, tup)
 
+		policy.current_function = cFun
+	end
 
 	if policy.initialControl == "charging"
 		policy.ImaxCharge = Imax
@@ -498,8 +504,6 @@ end
 
 function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::InputParams, parameters)
 
-	tup = Float64(inputparams["Control"]["rampupTime"])
-
 
 	if policy.initialControl == charging
 		Imax = only(parameters[:Control][:ImaxCharge])
@@ -513,9 +517,15 @@ function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::Inp
 		error("Initial control is not recognized")
 	end
 
-	cFun(time) = currentFun(time, Imax, tup)
+	if policy.use_ramp_up
 
-	policy.current_function = cFun
+		tup = Float64(inputparams["Control"]["rampupTime"])
+
+		cFun(time) = currentFun(time, Imax, tup)
+
+		policy.current_function = cFun
+	end
+
 
 	policy.ImaxCharge = only(parameters[:Control][:ImaxCharge])
 	policy.upperCutoffVoltage = inputparams["Control"]["upperCutoffVoltage"]

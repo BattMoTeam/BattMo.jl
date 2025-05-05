@@ -674,6 +674,7 @@ function setup_submodels(inputparams::InputParams;
 	#######################
 
 	controlPolicy = jsondict["Control"]["controlPolicy"]
+	use_ramp_up = jsondict["TimeStepping"]["useRampup"]
 
 	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge" || controlPolicy == "CCCycling"
 		ctrl = jsondict["Control"]
@@ -703,6 +704,7 @@ function setup_submodels(inputparams::InputParams;
 				initial_control,
 				ctrl["lowerCutoffVoltage"],
 				ctrl["upperCutoffVoltage"],
+				use_ramp_up,
 			)
 		end
 
@@ -715,7 +717,9 @@ function setup_submodels(inputparams::InputParams;
 			ctrl["dIdtLimit"],
 			ctrl["dEdtLimit"],
 			ctrl["initialControl"],
-			ctrl["numberOfCycles"])
+			ctrl["numberOfCycles"];
+			use_ramp_up = use_ramp_up)
+
 
 	else
 
