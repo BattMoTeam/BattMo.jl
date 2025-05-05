@@ -1136,13 +1136,13 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 
 			if initctrl == "charging"
 
-				if ctrlType0 == "charging" && ctrlType == "discharging"
+				if ctrlType0 == "discharging" && ctrlType == "charging"
 					ncycles = ncycles + 1
 				end
 
 			elseif initctrl == "discharging"
 
-				if ctrlType0 == "discharging" && ctrlType == "charging"
+				if ctrlType0 == "charging" && ctrlType == "discharging"
 					ncycles = ncycles + 1
 				end
 
@@ -1205,12 +1205,8 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 		end
 		target_is_voltage = false
 
-		if policy.numberOfCycles == 0
-			number_of_cycles = 0
-		else
-			number_of_cycles = 1
 
-		end
+		number_of_cycles = 0
 
 		state[:Controller] = CCController(number_of_cycles, target, time, target_is_voltage, ctrlType)
 

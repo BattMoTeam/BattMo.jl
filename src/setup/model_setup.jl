@@ -99,6 +99,8 @@ struct Optimization <: SolvingProblem
 		config = extra[:cfg]
 		time_steps = extra[:timesteps]
 
+		reports = reports[1:end-1]
+
 		dG = solve_adjoint_sensitivities(model, states, reports, objective,
 			forces = forces, state0 = state0, parameters = parameters)
 
@@ -1499,7 +1501,8 @@ function setup_timesteps(inputparams::InputParams;
 
 		con = Constants()
 
-		totalTime = ncycles * 1.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
+		totalTime = ncycles * 2 * (1 * con.hour / CRate + 1 * con.hour / DRate)
+
 
 		if haskey(inputparams["TimeStepping"], "totalTime")
 			@warn "totalTime value is given but not used"
