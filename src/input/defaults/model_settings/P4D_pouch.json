@@ -2,5 +2,5 @@
     "ModelGeometry": "3D Pouch",
     "UseDiffusionModel": "PXD",
     "UseCurrentCollectors": "Generic",
-    "UseRampUp": "Generic"
+    "UseRampUp": "Sinusoidal"
 }

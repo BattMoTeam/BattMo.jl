@@ -79,13 +79,15 @@ mutable struct CCPolicy{R} <: AbstractPolicy
 	ImaxCharge::R
 	lowerCutoffVoltage::R
 	upperCutoffVoltage::R
+	use_ramp_up::Bool
 	current_function::Union{Missing, Any}
 	tolerances::Dict{String, Real}
 	function CCPolicy(
 		numberOfCycles::Int,
 		initialControl::String,
 		lowerCutoffVoltage::T,
-		upperCutoffVoltage::T;
+		upperCutoffVoltage::T,
+		use_ramp_up::Bool;
 		current_function = missing,
 		ImaxDischarge::T = 0.0,
 		ImaxCharge::T = 0.0,
@@ -93,7 +95,7 @@ mutable struct CCPolicy{R} <: AbstractPolicy
 			"charging" => 1e-4),
 	) where T <: Real
 
-		new{Union{Missing, T}}(numberOfCycles, initialControl, ImaxDischarge, ImaxCharge, lowerCutoffVoltage, upperCutoffVoltage, current_function, tolerances)
+		new{Union{Missing, T}}(numberOfCycles, initialControl, ImaxDischarge, ImaxCharge, lowerCutoffVoltage, upperCutoffVoltage, use_ramp_up, current_function, tolerances)
 	end
 end
 
@@ -127,6 +129,8 @@ mutable struct CyclingCVPolicy{R, I} <: AbstractPolicy
 	initialControl::OperationalMode
 	numberOfCycles::I
 	tolerances::Any
+	use_ramp_up::Bool
+	current_function::Any
 
 end
 
@@ -138,6 +142,8 @@ function CyclingCVPolicy(lowerCutoffVoltage,
 	numberOfCycles;
 	ImaxDischarge = 0 * lowerCutoffVoltage,
 	ImaxCharge = 0 * lowerCutoffVoltage,
+	use_ramp_up::Bool,
+	current_function = missing,
 )
 
 	if initialControl == "charging"
@@ -161,7 +167,9 @@ function CyclingCVPolicy(lowerCutoffVoltage,
 		dEdtLimit,
 		initialControl,
 		numberOfCycles,
-		tolerances)
+		tolerances,
+		use_ramp_up,
+		current_function)
 end
 
 ################################
@@ -418,15 +426,20 @@ end
 
 
 function getInitCurrent(policy::CyclingCVPolicy)
+	if !ismissing(policy.current_function)
+		val = policy.current_function(0.0)
 
-	if policy.initialControl == charging
-		val = -policy.ImaxCharge
-		return val
-	elseif policy.initialControl == discharging
-		return policy.ImaxDischarge
 	else
-		error("initial control not recognized")
+		if policy.initialControl == charging
+			val = -policy.ImaxCharge
+
+		elseif policy.initialControl == discharging
+			val = policy.ImaxDischarge
+		else
+			error("initial control not recognized")
+		end
 	end
+	return val
 
 end
 
@@ -444,8 +457,6 @@ end
 
 function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParams, parameters)
 
-	tup = Float64(inputparams["Control"]["rampupTime"])
-
 	if policy.initialControl == "charging"
 		Imax = only(parameters[:Control][:ImaxCharge])
 
@@ -457,11 +468,14 @@ function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParam
 		error("Initial control is not recognized")
 	end
 
-	cFun(time) = currentFun(time, Imax, tup)
+	if policy.use_ramp_up
 
-	policy.current_function = cFun
+		tup = Float64(inputparams["Control"]["rampupTime"])
 
+		cFun(time) = currentFun(time, Imax, tup)
 
+		policy.current_function = cFun
+	end
 
 	if policy.initialControl == "charging"
 		policy.ImaxCharge = Imax
@@ -490,8 +504,35 @@ end
 
 function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::InputParams, parameters)
 
+
+	if policy.initialControl == charging
+		Imax = only(parameters[:Control][:ImaxCharge])
+
+
+
+	elseif policy.initialControl == discharging
+		Imax = only(parameters[:Control][:ImaxDischarge])
+
+	else
+		error("Initial control is not recognized")
+	end
+
+	if policy.use_ramp_up
+
+		tup = Float64(inputparams["Control"]["rampupTime"])
+
+		cFun(time) = currentFun(time, Imax, tup)
+
+		policy.current_function = cFun
+	end
+
+
+	policy.ImaxCharge = only(parameters[:Control][:ImaxCharge])
+	policy.upperCutoffVoltage = inputparams["Control"]["upperCutoffVoltage"]
 	policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
-	policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])
+	policy.lowerCutoffVoltage = inputparams["Control"]["lowerCutoffVoltage"]
+
+
 
 end
 
@@ -999,9 +1040,23 @@ function update_values_in_controller!(state, policy::CyclingCVPolicy)
 
 	ctrlType = controller.ctrlType
 
+	cf = policy.current_function
+
+
 	if ctrlType == cc_discharge1
 
-		I_t = policy.ImaxDischarge
+		if !ismissing(cf)
+
+			if cf isa Real
+				I_t = cf
+			else
+				# Function of time at the end of interval
+				I_t = cf(controller.time)
+			end
+		else
+
+			I_t = policy.ImaxDischarge
+		end
 		target_is_voltage = false
 
 	elseif ctrlType == cc_discharge2
@@ -1012,7 +1067,18 @@ function update_values_in_controller!(state, policy::CyclingCVPolicy)
 	elseif ctrlType == cc_charge1
 
 		# minus sign below follows from convention
-		I_t = -policy.ImaxCharge
+		if !ismissing(cf)
+
+			if cf isa Real
+				I_t = cf
+			else
+				# Function of time at the end of interval
+				I_t = cf(controller.time)
+			end
+			I_t = -I_t
+		else
+			I_t = -policy.ImaxCharge
+		end
 		target_is_voltage = false
 
 	elseif ctrlType == cv_charge2

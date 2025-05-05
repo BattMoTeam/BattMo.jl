@@ -288,7 +288,7 @@ function get_parameter_meta_data()
 		),
 		"UseRampUp" => Dict(
 			"type" => String,
-			"options" => ["Generic"],
+			"options" => ["Sinusoidal"],
 			"context_type" => "UseRampUp",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_rampup",
 			"is_sub_model" => true,
