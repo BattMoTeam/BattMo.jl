@@ -99,6 +99,7 @@ struct Optimization <: SolvingProblem
 		config = extra[:cfg]
 		time_steps = extra[:timesteps]
 
+		reports = reports[1:end-1]
 
 		dG = solve_adjoint_sensitivities(model, states, reports, objective,
 			forces = forces, state0 = state0, parameters = parameters)
@@ -674,11 +675,36 @@ function setup_submodels(inputparams::InputParams;
 
 	controlPolicy = jsondict["Control"]["controlPolicy"]
 
-	if controlPolicy == "CCDischarge"
+	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge" || controlPolicy == "CCCycling"
+		ctrl = jsondict["Control"]
+		if jsondict["Control"]["useCVswitch"]
 
-		minE = jsondict["Control"]["lowerCutoffVoltage"]
-
-		policy = SimpleCVPolicy()
+			policy = SimpleCVPolicy()
+		else
+			if haskey(ctrl, "initialControl")
+				initial_control = ctrl["initialControl"]
+			else
+				if controlPolicy == "CCDischarge"
+					initial_control = "discharging"
+				else
+					initial_control = "charging"
+				end
+			end
+			if haskey(ctrl, "numberOfCycles")
+				number_of_cycles = ctrl["numberOfCycles"]
+			else
+				if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge"
+					number_of_cycles = 0
+				else
+					error("CCCycling parameters miss numberOfcycles")
+				end
+			end
+			policy = CCPolicy(number_of_cycles,
+				initial_control,
+				ctrl["lowerCutoffVoltage"],
+				ctrl["upperCutoffVoltage"],
+			)
+		end
 
 	elseif controlPolicy == "CCCV"
 
@@ -958,11 +984,24 @@ function setup_battery_parameters(inputparams::InputParams,
 		con = Constants()
 
 		DRate = inputparams["Control"]["DRate"]
+
 		prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
+
 
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
-	elseif controlPolicy == "CCCV"
+
+	elseif controlPolicy == "CCCharge"
+		cap = computeCellCapacity(model)
+		con = Constants()
+
+		CRate = inputparams["Control"]["CRate"]
+
+		prm_control[:ImaxCharge] = (cap / con.hour) * CRate
+
+		parameters[:Control] = setup_parameters(model[:Control], prm_control)
+
+	elseif controlPolicy == "CCCV" || controlPolicy == "CCCycling"
 
 		cap = computeCellCapacity(model)
 		con = Constants()
@@ -971,6 +1010,7 @@ function setup_battery_parameters(inputparams::InputParams,
 		CRate                       = inputparams["Control"]["CRate"]
 		prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
 		prm_control[:ImaxCharge]    = (cap / con.hour) * CRate
+
 
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
@@ -1421,11 +1461,16 @@ function setup_timesteps(inputparams::InputParams;
 
 	controlPolicy = inputparams["Control"]["controlPolicy"]
 
-	if controlPolicy == "CCDischarge"
+	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge"
 
-		DRate = inputparams["Control"]["DRate"]
+		if controlPolicy == "CCDischarge"
+			CRate = inputparams["Control"]["DRate"]
+		else
+			CRate = inputparams["Control"]["CRate"]
+		end
+
 		con = Constants()
-		totalTime = 1.1 * con.hour / DRate
+		totalTime = 1.1 * con.hour / CRate
 
 		if haskey(inputparams["TimeStepping"], "totalTime")
 			@warn "totalTime value is given but not used"
@@ -1448,6 +1493,33 @@ function setup_timesteps(inputparams::InputParams;
 
 		timesteps = rampupTimesteps(totalTime, dt, nr)
 
+	elseif controlPolicy == "CCCycling"
+
+		ncycles = inputparams["Control"]["numberOfCycles"]
+		DRate = inputparams["Control"]["DRate"]
+		CRate = inputparams["Control"]["CRate"]
+
+		con = Constants()
+
+		totalTime = ncycles * 2 * (1 * con.hour / CRate + 1 * con.hour / DRate)
+
+
+		if haskey(inputparams["TimeStepping"], "totalTime")
+			@warn "totalTime value is given but not used"
+		end
+
+		if haskey(inputparams["TimeStepping"], "timeStepDuration")
+			dt = inputparams["TimeStepping"]["timeStepDuration"]
+			n  = Int64(floor(totalTime / dt))
+			if haskey(inputparams["TimeStepping"], "numberOfTimeSteps")
+				@warn "Number of time steps is given but not used"
+			end
+		else
+			n  = inputparams["TimeStepping"]["numberOfTimeSteps"]
+			dt = totalTime / n
+		end
+		timesteps = repeat([dt], n)
+
 	elseif controlPolicy == "CCCV"
 
 		ncycles = inputparams["Control"]["numberOfCycles"]
@@ -1456,7 +1528,7 @@ function setup_timesteps(inputparams::InputParams;
 
 		con = Constants()
 
-		totalTime = ncycles * 1.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
+		totalTime = ncycles * 2.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
 		if haskey(inputparams["TimeStepping"], "totalTime")
 			@warn "totalTime value is given but not used"
@@ -1517,7 +1589,7 @@ function setup_config(sim::JutulSimulator,
 	cfg[:min_nonlinear_iterations] = 1
 	cfg[:extra_timing]             = extra_timing
 	# cfg[:max_nonlinear_iterations] = 5
-	cfg[:safe_mode]             = false
+	cfg[:safe_mode]             = true
 	cfg[:error_on_incomplete]   = false
 	cfg[:failure_cuts_timestep] = true
 
@@ -1536,19 +1608,57 @@ function setup_config(sim::JutulSimulator,
 		end
 	end
 
-	if model[:Control].system.policy isa CyclingCVPolicy
+	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy
+		if model[:Control].system.policy isa CyclingCVPolicy
 
-		cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+			cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+
+		elseif model[:Control].system.policy isa CCPolicy && model[:Control].system.policy.numberOfCycles > 0
+			cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+		end
 
 		function post_hook(done, report, sim, dt, forces, max_iter, cfg)
 
 			s = get_simulator_storage(sim)
 			m = get_simulator_model(sim)
 
-			if s.state.Control.ControllerCV.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-				report[:stopnow] = true
-			else
-				report[:stopnow] = false
+			if model[:Control].system.policy isa CyclingCVPolicy
+
+				if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+					report[:stopnow] = true
+				else
+					report[:stopnow] = false
+				end
+
+			elseif model[:Control].system.policy isa CCPolicy
+
+				if m[:Control].system.policy.numberOfCycles == 0
+
+					if m[:Control].system.policy.initialControl == "charging"
+
+						if s.state.Control.Phi[1] >= m[:Control].system.policy.upperCutoffVoltage
+							report[:stopnow] = true
+						else
+							report[:stopnow] = false
+						end
+
+					elseif m[:Control].system.policy.initialControl == "discharging"
+
+						if s.state.Control.Phi[1] <= m[:Control].system.policy.lowerCutoffVoltage
+							report[:stopnow] = true
+
+						else
+
+							report[:stopnow] = false
+						end
+					end
+				else
+					if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+						report[:stopnow] = true
+					else
+						report[:stopnow] = false
+					end
+				end
 			end
 
 			return (done, report)
@@ -1557,7 +1667,9 @@ function setup_config(sim::JutulSimulator,
 
 		cfg[:post_ministep_hook] = post_hook
 
+
 	end
+
 
 	return cfg
 

@@ -20,7 +20,7 @@ d_rates = [0.05, 0.1, 0.2, 0.5, 1.0, 2.0]
 thicknesses = range(8.0e-5, 10.0e-5, length = 9)
 
 function compute_discharge_capacity(output::NamedTuple)
-	t = [state[:Control][:ControllerCV].time for state in output[:states]]
+	t = [state[:Control][:Controller].time for state in output[:states]]
 	I = [state[:Control][:Current][1] for state in output[:states]]
 	diff_t = diff(t)
 	insert!(diff_t, 1, t[1])

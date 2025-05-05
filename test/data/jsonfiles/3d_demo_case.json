@@ -6,6 +6,7 @@
   "include_current_collectors": true,
   "Control": {
     "controlPolicy": "CCDischarge",
+    "useCVswitch": false,
     "rampupTime": 0.1,
     "DRate": 1,
     "lowerCutoffVoltage": 2.4,
@@ -14,7 +15,7 @@
     "dEdtLimit": 0.01
   },
   "NegativeElectrode": {
-    "use_normed_current_collector" : false,
+    "use_normed_current_collector": false,
     "Coating": {
       "effectiveDensity": 1900,
       "bruggemanCoefficient": 1.5,
@@ -84,7 +85,7 @@
     }
   },
   "PositiveElectrode": {
-    "use_normed_current_collector" : false,
+    "use_normed_current_collector": false,
     "Coating": {
       "effectiveDensity": 3500,
       "bruggemanCoefficient": 1.5,
