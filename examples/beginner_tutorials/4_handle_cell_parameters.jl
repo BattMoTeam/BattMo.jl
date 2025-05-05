@@ -1,76 +1,109 @@
-# # Handling cycling protocols
+# # Handling Cell Parameters
 
-# In this tutorial, we demonstrate functionality to handle cycling protcols. We will illustrate the effect that the DRate has on battery 
-# performance during discharge, using a constant-current (CC) discharge protocol.
+# To change cell parameters, cycling protocols and settings, we can modify the JSON files directly, or we can read 
+# them into objects in the script and modify them as Dictionaries. 
 
-# ### Load required packages and data
-# We start by loading the necessary parameters sets and instantiating a model. For the cyling protocol, we'll start from the default constant current discharge protocol.
+# ###  Load parameter files and initialize Model
 
-using BattMo, GLMakie, Printf
+# We begin by loading pre-defined parameters from JSON files:
 
-# Load cell and model setup
+using BattMo
 
 cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
-cc_discharge_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
-
-# Load default model
-model_setup = LithiumIonBattery()
-
-# ### Handle, access and edit cycling protocols
-# We manipulate a cycling protocol in the same was as we do cell parameters in the previous tutorial. To list all outermost keys:
-keys(cc_discharge_protocol)
-
-# Show all keys and values
-cc_discharge_protocol.all
-
-# Search for a specific parameter
-search_parameter(cc_discharge_protocol, "rate")
-
-# Access a specific parameter
-cc_discharge_protocol["DRate"]
-
-# Change protocol parameters as dicitonaries
-cc_discharge_protocol["DRate"] = 2.0
-
-# ### Compare cell performance across DRates
-# Lets now do something more fun. Since we can edit scalar valued parameters as we edit dictionaries, we can loop through different DRates and run
-# a simulation for each. We can then compare the cell voltage profiles for each DRate.
-
-# Let’s define the range of C-rates to explore:
-d_rates = [0.2, 0.5, 1.0, 2.0]
-
-# Now loop through these values, update the protocol, and store the results:
-outputs = []
-
-for d_rate in d_rates
-	protocol = deepcopy(cc_discharge_protocol)
-	protocol["DRate"] = d_rate
-
-	sim = Simulation(model_setup, cell_parameters, protocol)
-	output = solve(sim; config_kwargs = (; end_report = false))
-	push!(outputs, (d_rate = d_rate, output = output))
-end
+cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 nothing # hide
 
-# ### Analyze Voltage and Capacity
-# We'll extract the voltage vs. time and delivered capacity for each C-rate:
+# ### Access parameters
+# Cell parameters, cycling protocols, model settings and simulation settings are all Dictionary-like objects, which come with additional handy functions.
+# First, lets list the outermost keys of the cell parameters object.
+keys(cell_parameters)
 
-fig = Figure(size = (1000, 400))
-ax1 = Axis(fig[1, 1], title = "Voltage vs Time", xlabel = "Time / s", ylabel = "Voltage / V")
+# Now we access the Separator key.
+cell_parameters["Separator"]
 
-for result in outputs
+# We have a flat list of parameters and values for the separator. In other cases, a key might nest other dictionaries, 
+# which can be accessed using the normal dictionary notation. Lets see for instance the  active material parameters of 
+# the negative electrode.
+cell_parameters["NegativeElectrode"]["ActiveMaterial"]
 
-	states = result.output[:states]
-	t = [state[:Control][:Controller].time for state in states]
-	E = [state[:Control][:Phi][1] for state in states]
-	I = [state[:Control][:Current][1] for state in states]
+# In addition to manipulating parameters as dictionaries, we provide additional handy attributes and functions. 
+# For instance, we can display all cell parameters:
+cell_parameters.all
 
-	label_str = @sprintf("%.1fC", result.d_rate)
-	lines!(ax1, t, E, label = label_str)
+# However, there are many parameters, nested into dictionaries. Often, we are more interested in a specific subset of parameters. 
+# We can find a parameter with the search_parameter function. For example, we'd like to now how electrode related objects and parameters are named:
+search_parameter(cell_parameters, "Electrode")
 
-end
+# Another example where we'd like to now which concentration parameters are part of the parameter set:
+search_parameter(cell_parameters, "Concentration")
 
-fig[1, 3] = Legend(fig, ax1, "C-rates", framevisible = false)
+# The search function also accepts partial matches and it is case-insentive.
+search_parameter(cell_parameters, "char")
+
+# ### Editing scalar parameters
+
+# Parameter that take single numerical values (e.g. real, integers, booleans) can be directly modified. Examples:
+cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 1e-13
+nothing # hide
+
+cell_parameters["PositiveElectrode"]["ElectrodeCoating"]["Thickness"] = 8.2e-5
+nothing # hide
+
+
+# ### Editing non-scalar parameters
+
+# Some parameters are described as functions or arrays, since the parameter value depends on other variables. For instance
+# the Open Circuit Potentials of the Active Materials depend on the lithium stoichiometry and temperature. 
+
+# > MISSING 
+
+# ### Compare simulations 
+
+# After the updates, we instantiate the model and the simulations, verify the simulation to be valid, 
+# and run it as in the first tutorial.
+
+model_setup = LithiumIonBattery()
+
+sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+
+output = solve(sim);
+
+states = output[:states]
+t = [state[:Control][:ControllerCV].time for state in states]
+E = [state[:Control][:Phi][1] for state in states]
+I = [state[:Control][:Current][1] for state in states]
+using GLMakie # hide
+fig = Figure()
+ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
+lines!(ax, t, E)
+ax = Axis(fig[1, 2], ylabel = "Current / I", xlabel = "Time / s", title = "Discharge curve")
+lines!(ax, t, I)
 fig
 
-# We see this cell has poor power capabilities since its capacity decreases quite rapidly with DRate.
+# Let’s reload the original parameters and simulate again to compare:
+
+cell_parameters_2 = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+sim2 = Simulation(model_setup, cell_parameters_2, cycling_protocol);
+output2 = solve(sim2)
+nothing # hide
+
+# Now, we plot the original and modified results:
+
+t2 = [state[:Control][:ControllerCV].time for state in output2[:states]]
+E2 = [state[:Control][:Phi][1] for state in output2[:states]]
+I2 = [state[:Control][:Current][1] for state in output2[:states]]
+
+fig = Figure()
+ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
+lines!(ax, t, E)
+lines!(ax, t2, E2)
+ax = Axis(fig[1, 2], ylabel = "Current / A", xlabel = "Time / s")
+lines!(ax, t, I, label = "intial value")
+lines!(ax, t2, I2, label = "updated value")
+fig[1, 3] = Legend(fig, ax, "Reaction rate", framevisible = false)
+fig # hide
+
+# Note that not only the voltage profiles are different but also the currents, even if the cycling protocols have the same DRate.
+# The change in current originates form our change in electrode thickness. By changing this thickness, we have also changed the
+# cell capacity used to translate from DRate to cell current. As a conclusion, we should be mindful that some parameters might
+# influence the simulation in ways we might not anticipate.
