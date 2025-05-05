@@ -26,23 +26,23 @@ import{_ as a,c as i,o as n,aA as e}from"./chunks/framework.7C67B1-w.js";const d
 <span class="line"><span>│ Linear solver  │   2.32877 │       2.32877 │  340 (0) │</span></span>
 <span class="line"><span>│ Precond apply  │       0.0 │           0.0 │    0 (0) │</span></span>
 <span class="line"><span>╰────────────────┴───────────┴───────────────┴──────────╯</span></span>
-<span class="line"><span>╭───────────────┬──────────┬────────────┬──────────╮</span></span>
-<span class="line"><span>│ Timing type   │     Each │   Relative │    Total │</span></span>
-<span class="line"><span>│               │       μs │ Percentage │       ms │</span></span>
-<span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Properties    │  31.7858 │     3.36 % │  10.8072 │</span></span>
-<span class="line"><span>│ Equations     │ 171.2949 │    25.88 % │  83.2493 │</span></span>
-<span class="line"><span>│ Assembly      │ 151.0602 │    22.82 % │  73.4152 │</span></span>
-<span class="line"><span>│ Linear solve  │ 270.3698 │    28.58 % │  91.9257 │</span></span>
-<span class="line"><span>│ Linear setup  │   0.0000 │     0.00 % │   0.0000 │</span></span>
-<span class="line"><span>│ Precond apply │   0.0000 │     0.00 % │   0.0000 │</span></span>
-<span class="line"><span>│ Update        │  48.0940 │     5.08 % │  16.3520 │</span></span>
-<span class="line"><span>│ Convergence   │  63.6123 │     9.61 % │  30.9156 │</span></span>
-<span class="line"><span>│ Input/Output  │  27.1576 │     1.23 % │   3.9650 │</span></span>
-<span class="line"><span>│ Other         │  32.4648 │     3.43 % │  11.0380 │</span></span>
-<span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Total         │ 946.0824 │   100.00 % │ 321.6680 │</span></span>
-<span class="line"><span>╰───────────────┴──────────┴────────────┴──────────╯</span></span></code></pre></div><h3 id="Cell-KPIs-from-the-parameter-set" tabindex="-1">Cell KPIs from the parameter set <a class="header-anchor" href="#Cell-KPIs-from-the-parameter-set" aria-label="Permalink to &quot;Cell KPIs from the parameter set {#Cell-KPIs-from-the-parameter-set}&quot;">​</a></h3><p>Some KPIs are directly computable from the cell parameter set. Here below we list the main KPIs we can compute with BattMo. For illustration, we create a Dictionary storing the values of the computations.</p><div class="language-julia vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">julia</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">cell_kpis_from_set </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> Dict</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span></span>
+<span class="line"><span>╭───────────────┬────────┬────────────┬──────────╮</span></span>
+<span class="line"><span>│ Timing type   │   Each │   Relative │    Total │</span></span>
+<span class="line"><span>│               │     ms │ Percentage │       ms │</span></span>
+<span class="line"><span>├───────────────┼────────┼────────────┼──────────┤</span></span>
+<span class="line"><span>│ Properties    │ 0.0330 │     3.10 % │  11.2206 │</span></span>
+<span class="line"><span>│ Equations     │ 0.1737 │    23.35 % │  84.4309 │</span></span>
+<span class="line"><span>│ Assembly      │ 0.1477 │    19.85 % │  71.7656 │</span></span>
+<span class="line"><span>│ Linear solve  │ 0.2732 │    25.69 % │  92.8901 │</span></span>
+<span class="line"><span>│ Linear setup  │ 0.0000 │     0.00 % │   0.0000 │</span></span>
+<span class="line"><span>│ Precond apply │ 0.0000 │     0.00 % │   0.0000 │</span></span>
+<span class="line"><span>│ Update        │ 0.0493 │     4.63 % │  16.7543 │</span></span>
+<span class="line"><span>│ Convergence   │ 0.1404 │    18.87 % │  68.2385 │</span></span>
+<span class="line"><span>│ Input/Output  │ 0.0304 │     1.23 % │   4.4314 │</span></span>
+<span class="line"><span>│ Other         │ 0.0349 │     3.28 % │  11.8662 │</span></span>
+<span class="line"><span>├───────────────┼────────┼────────────┼──────────┤</span></span>
+<span class="line"><span>│ Total         │ 1.0635 │   100.00 % │ 361.5976 │</span></span>
+<span class="line"><span>╰───────────────┴────────┴────────────┴──────────╯</span></span></code></pre></div><h3 id="Cell-KPIs-from-the-parameter-set" tabindex="-1">Cell KPIs from the parameter set <a class="header-anchor" href="#Cell-KPIs-from-the-parameter-set" aria-label="Permalink to &quot;Cell KPIs from the parameter set {#Cell-KPIs-from-the-parameter-set}&quot;">​</a></h3><p>Some KPIs are directly computable from the cell parameter set. Here below we list the main KPIs we can compute with BattMo. For illustration, we create a Dictionary storing the values of the computations.</p><div class="language-julia vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">julia</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">cell_kpis_from_set </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> Dict</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span></span>
 <span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">	&quot;Positive Electrode Coating Mass&quot;</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> =&gt;</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> compute_electrode_coating_mass</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(cell_parameters, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">&quot;PositiveElectrode&quot;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">),</span></span>
 <span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">	&quot;Negative Electrode Coating Mass&quot;</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> =&gt;</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> compute_electrode_coating_mass</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(cell_parameters, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">&quot;NegativeElectrode&quot;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">),</span></span>
 <span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">	&quot;Separator Mass&quot;</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> =&gt;</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> compute_separator_mass</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(cell_parameters),</span></span>
