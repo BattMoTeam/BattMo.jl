@@ -99,8 +99,6 @@ struct Optimization <: SolvingProblem
 		config = extra[:cfg]
 		time_steps = extra[:timesteps]
 
-		reports = reports[1:end-1]
-
 		dG = solve_adjoint_sensitivities(model, states, reports, objective,
 			forces = forces, state0 = state0, parameters = parameters)
 
@@ -323,6 +321,10 @@ function run_battery(inputparams::BattMoFormattedInput;
 
 	# Perform simulation
 	states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+
+	if length(reports) - length(states) == 1
+		reports = reports[1:end-1]
+	end
 
 	extra = output
 	extra[:timesteps] = timesteps

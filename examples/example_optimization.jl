@@ -17,8 +17,6 @@ states = output_0[:states]
 nothing # hide
 
 reports = output_0[:reports]
-@info "length reports = ", length(reports)
-@info "length states = ", length(states)
 
 # # Specify an objective
 
