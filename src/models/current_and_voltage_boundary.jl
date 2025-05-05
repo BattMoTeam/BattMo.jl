@@ -500,6 +500,7 @@ function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::Inp
 
 	tup = Float64(inputparams["Control"]["rampupTime"])
 
+
 	if policy.initialControl == charging
 		Imax = only(parameters[:Control][:ImaxCharge])
 
