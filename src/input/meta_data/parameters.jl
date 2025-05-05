@@ -179,7 +179,7 @@ function get_parameter_meta_data()
 		),
 		"UseDiffusionModel" => Dict(
 			"type" => String,
-			"options" => ["PXD", "NoParticleDiffusion"],
+			"options" => ["PXD"],
 			"is_sub_model" => true,
 			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/models",
 		),
