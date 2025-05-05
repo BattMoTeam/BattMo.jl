@@ -29,16 +29,16 @@ import{_ as a,c as n,o as i,aA as t}from"./chunks/framework.Bu1rAwjv.js";const c
 <span class="line"><span>│ Timing type   │   Each │   Relative │    Total │</span></span>
 <span class="line"><span>│               │     ms │ Percentage │       ms │</span></span>
 <span class="line"><span>├───────────────┼────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Properties    │ 0.0335 │     3.23 % │  11.3749 │</span></span>
-<span class="line"><span>│ Equations     │ 0.2423 │    33.45 % │ 117.7539 │</span></span>
-<span class="line"><span>│ Assembly      │ 0.0701 │     9.68 % │  34.0681 │</span></span>
-<span class="line"><span>│ Linear solve  │ 0.3742 │    36.15 % │ 127.2385 │</span></span>
+<span class="line"><span>│ Properties    │ 0.0331 │     3.19 % │  11.2617 │</span></span>
+<span class="line"><span>│ Equations     │ 0.1760 │    24.21 % │  85.5597 │</span></span>
+<span class="line"><span>│ Assembly      │ 0.0702 │     9.66 % │  34.1392 │</span></span>
+<span class="line"><span>│ Linear solve  │ 0.3650 │    35.11 % │ 124.0992 │</span></span>
 <span class="line"><span>│ Linear setup  │ 0.0000 │     0.00 % │   0.0000 │</span></span>
 <span class="line"><span>│ Precond apply │ 0.0000 │     0.00 % │   0.0000 │</span></span>
-<span class="line"><span>│ Update        │ 0.0468 │     4.52 % │  15.8951 │</span></span>
-<span class="line"><span>│ Convergence   │ 0.0630 │     8.69 % │  30.6019 │</span></span>
-<span class="line"><span>│ Input/Output  │ 0.0270 │     1.12 % │   3.9395 │</span></span>
-<span class="line"><span>│ Other         │ 0.0328 │     3.16 % │  11.1408 │</span></span>
+<span class="line"><span>│ Update        │ 0.0493 │     4.75 % │  16.7770 │</span></span>
+<span class="line"><span>│ Convergence   │ 0.0657 │     9.03 % │  31.9271 │</span></span>
+<span class="line"><span>│ Input/Output  │ 0.2625 │    10.85 % │  38.3311 │</span></span>
+<span class="line"><span>│ Other         │ 0.0333 │     3.21 % │  11.3302 │</span></span>
 <span class="line"><span>├───────────────┼────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Total         │ 1.0353 │   100.00 % │ 352.0126 │</span></span>
+<span class="line"><span>│ Total         │ 1.0395 │   100.00 % │ 353.4251 │</span></span>
 <span class="line"><span>╰───────────────┴────────┴────────────┴──────────╯</span></span></code></pre></div><p>UPDATE WITH NEW OUTPUT API</p><h3 id="The-simulation-output" tabindex="-1">The simulation output <a class="header-anchor" href="#The-simulation-output" aria-label="Permalink to &quot;The simulation output {#The-simulation-output}&quot;">​</a></h3><h3 id="Access-overpotentials" tabindex="-1">Access overpotentials <a class="header-anchor" href="#Access-overpotentials" aria-label="Permalink to &quot;Access overpotentials {#Access-overpotentials}&quot;">​</a></h3><h3 id="Plot-cell-states" tabindex="-1">Plot cell states <a class="header-anchor" href="#Plot-cell-states" aria-label="Permalink to &quot;Plot cell states {#Plot-cell-states}&quot;">​</a></h3><h3 id="Save-and-load-outputs" tabindex="-1">Save and load outputs <a class="header-anchor" href="#Save-and-load-outputs" aria-label="Permalink to &quot;Save and load outputs {#Save-and-load-outputs}&quot;">​</a></h3><h2 id="Example-on-GitHub" tabindex="-1">Example on GitHub <a class="header-anchor" href="#Example-on-GitHub" aria-label="Permalink to &quot;Example on GitHub {#Example-on-GitHub}&quot;">​</a></h2><p>If you would like to run this example yourself, it can be downloaded from the BattMo.jl GitHub repository <a href="https://github.com/BattMoTeam/BattMo.jl/blob/main/examples/3_handle_outputs.jl" target="_blank" rel="noreferrer">as a script</a>, or as a <a href="https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/3_handle_outputs.ipynb" target="_blank" rel="noreferrer">Jupyter Notebook</a></p><hr><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl" target="_blank" rel="noreferrer">Literate.jl</a>.</em></p>`,15)]))}const k=a(e,[["render",l]]);export{c as __pageData,k as default};
