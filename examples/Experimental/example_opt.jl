@@ -2,16 +2,17 @@ using BattMo, Jutul
 
 # Very rough battery optimization example
 name = "p2d_40"
-fn = string(dirname(pathof(BattMo)), "/../test/battery/data/jsonfiles/", name, ".json")
-init = JSONFile(fn)
+fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
+# init = JSONFile(fn)
+init = load_battmo_formatted_input(fn)
 
-states, reports, extra = run_battery(init, use_p2d = true, info_level = 1, max_step = nothing, general_ad = true);
+states, cell_, reports, _, extra = run_battery(init, use_p2d = true, config_kwargs = (info_level = 1,), max_step = nothing, general_ad = true);
 
 prm       = extra[:parameters]
 model     = extra[:model]
 state0    = extra[:state0]
 forces    = extra[:forces]
-sim_cfg   = extra[:config]
+sim_cfg   = extra[:cfg]
 timesteps = extra[:timesteps]
 
 ## Compute sensitivities
@@ -20,12 +21,12 @@ timesteps = extra[:timesteps]
 # initial voltage for battery)
 v_target = 4.2
 function voltage_objective(model, state, dt, step_no, forces)
-    return dt*max(v_target - state[:Control][:Phi][1], 0)^2
+	return dt * max(v_target - state[:Control][:Phi][1], 0)^2
 end
 
 G = voltage_objective
 dG = solve_adjoint_sensitivities(model, states, reports, G,
-                                 forces = forces, state0 = state0, parameters = prm)
+	forces = forces, state0 = state0, parameters = prm)
 
 sim_cfg[:info_level] = -1
 sim_cfg[:end_report] = false
@@ -52,7 +53,7 @@ x0 = opt_setup.x0
 prt = 1
 f! = opt_setup.F!
 g! = opt_setup.dF!
-results, final_x = lb.lbfgsb(f!, g!, x0, lb=lower, ub=upper, iprint=prt, maxfun=200, maxiter=100)
+results, final_x = lb.lbfgsb(f!, g!, x0, lb = lower, ub = upper, iprint = prt, maxfun = 200, maxiter = 100)
 
 ## Verify the results
 
@@ -83,13 +84,13 @@ fig
 
 ## Create a "state" that contains the relative change in all parameters
 
-rel_change = final_x./x0
+rel_change = final_x ./ x0
 changed_param = deepcopy(prm)
 devectorize_variables!(changed_param, model, final_x, data[:mapper], config = data[:config])
 for (mk, mv) in changed_param
-    for (k, v) in mv
-        @. v = v/prm[mk][k]
-    end
+	for (k, v) in mv
+		@. v = v / prm[mk][k]
+	end
 end
 
 ## Plot difference in the main objective input

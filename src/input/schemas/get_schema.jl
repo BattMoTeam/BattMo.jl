@@ -387,7 +387,7 @@ function get_schema_cycling_protocol()
 			"AmbientKelvinTemperature" => create_property(parameter_meta, "AmbientKelvinTemperature"),
 			"InitialKelvinTemperature" => create_property(parameter_meta, "InitialKelvinTemperature"),
 		),
-		"required" => ["Protocol"],
+		"required" => ["Protocol", "TotalNumberOfCycles", "InitialControl"],
 		"allOf" => [
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CCCV"))),
@@ -399,7 +399,6 @@ function get_schema_cycling_protocol()
 						"DRate",
 						"LowerVoltageLimit",
 						"UpperVoltageLimit",
-						"InitialControl",
 						"CurrentChangeLimit",
 						"VoltageChangeLimit",
 						"InitialKelvinTemperature",
@@ -407,14 +406,41 @@ function get_schema_cycling_protocol()
 				),
 			),
 			Dict(
-				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CCDischarge"))),
+				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
+					"TotalNumberOfCycles" => Dict("const" => 0),
+					"InitialControl" => Dict("const" => "discharging"))),
 				"then" => Dict(
 					"required" => [
 						"InitialStateOfCharge",
 						"DRate",
 						"LowerVoltageLimit",
+						"InitialKelvinTemperature",
+					],
+				),
+			),
+			Dict(
+				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
+					"TotalNumberOfCycles" => Dict("const" => 0),
+					"InitialControl" => Dict("const" => "charging"))),
+				"then" => Dict(
+					"required" => [
+						"InitialStateOfCharge",
+						"CRate",
 						"UpperVoltageLimit",
-						"InitialControl",
+						"InitialKelvinTemperature",
+					],
+				),
+			),
+			Dict(
+				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
+					"TotalNumberOfCycles" => Dict("not" => Dict("const" => 0)))),
+				"then" => Dict(
+					"required" => [
+						"InitialStateOfCharge",
+						"CRate",
+						"DRate",
+						"UpperVoltageLimit",
+						"LowerVoltageLimit",
 						"InitialKelvinTemperature",
 					],
 				),

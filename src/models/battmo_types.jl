@@ -153,6 +153,14 @@ struct ButlerVolmerInterfaceFluxCT{T} <: AdditiveCrossTerm
 end
 
 ## Transmissibilities
+function data_domain_helper(d::DataDomain, k::Symbol)
+	r = physical_representation(d)
+	if r isa DataDomain
+		d = r
+	end
+	return d[k]
+end
+
 struct ECTransmissibilities <: ScalarVariable end
 Jutul.variable_scale(::ECTransmissibilities) = 1e-10
 Jutul.associated_entity(::ECTransmissibilities) = Faces()
@@ -166,7 +174,7 @@ end
 
 function Jutul.default_parameter_values(d::DataDomain, model, ::ECTransmissibilities, symb)
 
-	return d.representation[:trans]
+	return data_domain_helper(d, :trans)
 
 end
 
@@ -182,9 +190,7 @@ function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O,
 end
 
 function Jutul.default_parameter_values(d::DataDomain, model, ::Volume, symb)
-
-	return d.representation[:volumes]
-
+	return data_domain_helper(d, :volumes)
 end
 
 Jutul.minimum_value(::Volume) = eps()
@@ -201,9 +207,7 @@ function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O,
 end
 
 function Jutul.default_parameter_values(d::DataDomain, model, ::VolumeFraction, symb)
-
-	return d.representation[:volumeFraction]
-
+	return data_domain_helper(d, :volumeFraction)
 end
 
 

@@ -23,7 +23,7 @@ function load_model_settings(; from_file_path::Union{String, Nothing} = nothing,
 		model_settings_instance = JSON.parsefile(from_file_path) |> ModelSettings
 	elseif !isnothing(from_default_set)
 		# Logic to load from default set (replace this with actual code)
-		file_path = string(dirname(pathof(BattMo)), "/../src/input/defaults/model_settings/", from_default_set, ".json")
+		file_path = parameter_file_path("model_settings", from_default_set)
 		model_settings_instance = load_model_settings(; from_file_path = file_path)
 	else
 		throw(ArgumentError("Either 'from_file_path' or 'from_default_set' must be provided."))
@@ -33,14 +33,14 @@ end
 
 
 """
-	load_cell_parameters(; from_file_path::String = nothing, from_default_set::String = nothing, from_model_template::BatteryModel = nothing)
+	load_cell_parameters(; from_file_path::String = nothing, from_default_set::String = nothing, from_model_template::BatteryModelSetup = nothing)
 
 Reads and loads cell parameters either from a JSON file, a default set, or a model template.
 
 # Arguments
 - `from_file_path ::String` : (Optional) Path to the JSON file containing cell parameters.
 - `from_default_set ::String` : (Optional) The name of the default set to load cell parameters from.
-- `from_model_template ::BatteryModel` : (Optional) A `BatteryModel` instance used to load an empty set of cell parameters required for the concerning model.
+- `from_model_template ::BatteryModelSetup` : (Optional) A `BatteryModelSetup` instance used to load an empty set of cell parameters required for the concerning model.
 
 # Returns
 An instance of `CellParameters`.
@@ -48,13 +48,13 @@ An instance of `CellParameters`.
 # Errors
 Throws an `ArgumentError` if none of the arguments are provided.
 """
-function load_cell_parameters(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing, from_model_template::Union{BatteryModel, Nothing} = nothing)
+function load_cell_parameters(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing, from_model_template::Union{BatteryModelSetup, Nothing} = nothing)
 	if !isnothing(from_file_path)
 		# Assuming JSON and CellParameters are correctly defined
 		cell_parameters_instance = JSON.parsefile(from_file_path) |> CellParameters
 	elseif !isnothing(from_default_set)
 		# Logic to load from default set (replace this with actual code)
-		file_path = string(dirname(pathof(BattMo)), "/../src/input/defaults/cell_parameters/", from_default_set, ".json")
+		file_path = parameter_file_path("cell_parameters", from_default_set)
 		cell_parameters_instance = load_cell_parameters(; from_file_path = file_path)
 	elseif !isnothing(from_model_template)
 		# Logic to load from model template (replace this with actual code)
@@ -88,7 +88,7 @@ function load_cycling_protocol(; from_file_path::Union{String, Nothing} = nothin
 		cycling_protocol_instance = JSON.parsefile(from_file_path) |> CyclingProtocol
 	elseif !isnothing(from_default_set)
 		# Logic to load from default set (replace this with actual code)
-		file_path = string(dirname(pathof(BattMo)), "/../src/input/defaults/cycling_protocols/", from_default_set, ".json")
+		file_path = parameter_file_path("cycling_protocols", from_default_set)
 		cycling_protocol_instance = load_cycling_protocol(; from_file_path = file_path)
 	else
 		throw(ArgumentError("Either 'from_file_path' or 'from_default_set' must be provided."))
@@ -97,14 +97,14 @@ function load_cycling_protocol(; from_file_path::Union{String, Nothing} = nothin
 end
 
 """
-	load_simulation_settings(; from_file_path::String = nothing, from_default_set::String = nothing, from_model_template::BatteryModel = nothing)
+	load_simulation_settings(; from_file_path::String = nothing, from_default_set::String = nothing, from_model_template::BatteryModelSetup = nothing)
 
 Reads and loads simulation settings either from a JSON file, a default set, or a model template.
 
 # Arguments
 - `from_file_path ::String` : (Optional) Path to the JSON file containing simulation settings.
 - `from_default_set ::String` : (Optional) The name of the default set to load simulation settings from.
-- `from_model_template ::BatteryModel` : (Optional) A `BatteryModel` instance used to load an empty set of simulation settings required for the concerning model.
+- `from_model_template ::BatteryModelSetup` : (Optional) A `BatteryModelSetup` instance used to load an empty set of simulation settings required for the concerning model.
 
 # Returns
 An instance of `SimulationSettings`.
@@ -112,13 +112,13 @@ An instance of `SimulationSettings`.
 # Errors
 Throws an `ArgumentError` if none of the arguments are provided.
 """
-function load_simulation_settings(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing, from_model_template::Union{BatteryModel, Nothing} = nothing)
+function load_simulation_settings(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing, from_model_template::Union{BatteryModelSetup, Nothing} = nothing)
 	if !isnothing(from_file_path)
 		# Assuming JSON and SimulationSettings are correctly defined
 		simulation_settings_instance = JSON.parsefile(from_file_path) |> SimulationSettings
 	elseif !isnothing(from_default_set)
 		# Logic to load from default set (replace this with actual code)
-		file_path = string(dirname(pathof(BattMo)), "/../src/input/defaults/simulation_settings/", from_default_set, ".json")
+		file_path = parameter_file_path("simulation_settings", from_default_set)
 		simulation_settings_instance = load_simulation_settings(; from_file_path = file_path)
 	elseif !isnothing(from_model_template)
 		# Logic to load from model template (replace this with actual code)

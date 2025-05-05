@@ -46,7 +46,7 @@ output = run_battery(inputparams);
 # Plot result
 using GLMakie
 states = output[:states]
-t = [state[:Control][:ControllerCV].time for state in states]
+t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 fig = Figure()
@@ -85,7 +85,7 @@ shift[:NAM] = dx
 shift[:PAM] = dx
 shift[:CC] = dx
 shift[:PP] = dx
-plot_multimodel_interactive(extra[:model], states, shift = shift, colormap = :curl)
+plot_multimodel_interactive(extra[:model], states, shift = shift, colormap = :curl) 
 ```
 
 ![3D plot](docs/src/assets/3d_plot.png)

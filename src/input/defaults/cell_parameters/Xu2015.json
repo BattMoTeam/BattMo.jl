@@ -1,4 +1,9 @@
 {
+    "Metadata": {
+        "Title": "Xu2015",
+        "Source": "https://doi.org/10.1016/j.energy.2014.11.073",
+        "Description": "Parameter set of a commercial Type LP2770120 prismatic LiFePO4/graphite cell, for an electrochemical pseudo-two-dimensional (P2D) model."
+    },
     "Cell": {
         "Name": "LP2770120",
         "Case": "Pouch",

@@ -2,10 +2,10 @@
 using Jutul, BattMo, GLMakie
 
 # ## Setup input parameters
-file_path_cell = string(dirname(pathof(BattMo)), "/../src/input/defaults/cell_parameters/", "Xu2015.json")
-file_path_model = string(dirname(pathof(BattMo)), "/../src/input/defaults/model_settings/", "P4D_pouch.json")
-file_path_cycling = string(dirname(pathof(BattMo)), "/../src/input/defaults/cycling_protocols/", "CCDischarge.json")
-file_path_simulation = string(dirname(pathof(BattMo)), "/../src/input/defaults/simulation_settings/", "P4D_pouch.json")
+file_path_cell = parameter_file_path("cell_parameters", "Xu2015.json")
+file_path_model = parameter_file_path("model_settings", "P4D_pouch.json")
+file_path_cycling = parameter_file_path("cycling_protocols", "CCDischarge.json")
+file_path_simulation = parameter_file_path("simulation_settings", "P4D_pouch.json")
 
 cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
 cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
@@ -15,9 +15,9 @@ nothing # hide
 
 # ## Setup and run simulation
 
-model = LithiumIonBatteryModel(; model_settings)
+model_setup = LithiumIonBattery(; model_settings)
 
-sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
+sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
 output = solve(sim)
 nothing # hide
 
@@ -26,7 +26,7 @@ nothing # hide
 states = output[:states]
 model  = output[:extra][:model]
 
-t = [state[:Control][:ControllerCV].time for state in states]
+t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
