@@ -27,6 +27,7 @@ function build_battmo_docs(build_format              = nothing;
 	battmo_dir = realpath(joinpath(@__DIR__, ".."))
 	# Convert examples as .jl files to markdown
 	tutorials = [
+		"Tutorial 1 - Useful tools" => "1_useful_tools",
 		"Tutorial 1 - Run a simulation" => "1_run_a_simulation",
 		"Tutorial 2 - Select a model" => "2_select_a_model",
 		"Tutorial 3 - Handle outputs" => "3_handle_outputs",
@@ -147,10 +148,12 @@ function build_battmo_docs(build_format              = nothing;
 		"Getting started" => "manuals/user_guide/getting_started.md"
 	],
 		"Models and architecture" => [
-		"Models" => "manuals/user_guide/models.md"
+		"PXD model" => "manuals/user_guide/pxd_model.md",
+		"Ramp up model" => "manuals/user_guide/ramp_up.md"
 	],
 		"Public API" => [
 		"Input terminology" => "manuals/user_guide/terminology.md",
+		"Simulation dependent input parameters" => "manuals/user_guide/simulation_dependent_input.md",
 		"Functions and types" => "manuals/user_guide/public_api.md"
 	],
 		"Tutorials" => tutorials_markdown
