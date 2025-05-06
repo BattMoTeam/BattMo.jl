@@ -10,4 +10,4 @@ model_setup = LithiumIonBattery(; model_settings)
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
 output = solve(sim)
 
-plot_3D_results(output; shift = shift, colormap = :curl)
+plot_3D_results(output; colormap = :curl)
