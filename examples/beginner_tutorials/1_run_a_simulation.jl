@@ -8,7 +8,7 @@
 # * Run the simulation
 # * Inspect and visualize the outputs of the simulation  
 
-# To start, we load BattMo (battery models and simulations) and GLMakie (plotting). 
+# To start, we load BattMo (battery models and simulations) and Plotly (plotting). 
 
 using BattMo, GLMakie
 
@@ -50,6 +50,7 @@ t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 nothing # hide
+
 
 f = Figure(size = (1000, 400))
 
