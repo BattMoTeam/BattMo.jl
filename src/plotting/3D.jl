@@ -20,9 +20,10 @@ function plot_3D_results(results::NamedTuple; shift = nothing, colormap = :curl)
 		if haskey(shift, "Electrolyte")
 			shift_copy[:Elyte] = shift["Electrolyte"]
 		end
+		shift_copy[:PP] = shift["NegativeActiveMaterial"]
 
 	end
-	shift_copy[:PP] = shift["NegativeActiveMaterial"]
+
 	states = results[:states]
 	solved_model = results[:extra][:model]
 
