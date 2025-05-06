@@ -38,7 +38,7 @@ function build_battmo_docs(build_format              = nothing;
 
 	examples = [
 		"Cycle example" => "example_cycle",
-		"3D demo example" => "example_3d_demo",
+		"3D Pouch example" => "example_3D_pouch",
 		"SEI layer growth" => "example_sei",
 		"Matlab example" => "example_battery",
 	]
