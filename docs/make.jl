@@ -28,13 +28,14 @@ function build_battmo_docs(build_format              = nothing;
 	# Convert examples as .jl files to markdown
 	tutorials = [
 		"Tutorial 1 - Useful tools" => "1_useful_tools",
-		"Tutorial 1 - Run a simulation" => "1_run_a_simulation",
-		"Tutorial 2 - Select a model" => "2_select_a_model",
+		"Tutorial 2 - Run a simulation" => "2_run_a_simulation",
 		"Tutorial 3 - Handle outputs" => "3_handle_outputs",
-		"Tutorial 4 - Handle cell parameters" => "4_handle_cell_parameters",
-		"Tutorial 5 - Handle cycling protocol" => "5_handle_cycling_protocols",
-		"Tutorial 6 - Compute cell KPIs" => "6_compute_cell_kpis",
-		"Tutorial 7 - Run a parameter sweep" => "7_run_parameter_sweep",
+		"Tutorial 4 - Select a model" => "4_select_a_model",
+		"Tutorial 5 - Create parameter sets" => "5_create_parameter_sets",
+		"Tutorial 6 - Handle cell parameters" => "6_handle_cell_parameters",
+		"Tutorial 7 - Handle cycling protocol" => "7_handle_cycling_protocols",
+		"Tutorial 8 - Compute cell KPIs" => "8_compute_cell_kpis",
+		"Tutorial 9 - Run a parameter sweep" => "9_run_parameter_sweep",
 	]
 
 	examples = [

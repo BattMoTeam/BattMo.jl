@@ -28,7 +28,7 @@ print_default_parameter_sets_info()
 # ## Inspecting Individual Parameters
 # If you're unsure how a specific parameter should be defined or what it represents, you can print detailed information about it. For example:
 
-parameter_name = "OpenCircuitVoltage"
+parameter_name = "OpenCircuitPotential"
 
 print_parameter_info(parameter_name)
 
@@ -47,5 +47,14 @@ print_parameter_info(parameter_name)
 print_submodels_info()
 
 
+# ## Write a parameter set object to a JSON file
+
+# You can use the following function to save your ParameterSet object to a JSON file:
+
+file_path = "path_to_json_file/file.json"
+parameter_set = CellParameters(Dict("NegativeElectrode" => Dict("ElectrodeCoating" => Dict("Thickness" => 100e-6))))
+
+write_to_json_file(file_path, parameter_set)
+nothing # hide
 
 

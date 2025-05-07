@@ -40,25 +40,41 @@ The string is parsed into a function during initialization and can be evaluated 
 "DiffusionCoefficient": "8.794*10^(-11)*(c/1000)^2 - 3.972*10^(-10)*(c/1000) + 4.862*10^(-10)"
 ```
 
+**Supported variables:**
+
+| Parameter                 | Supported variables  | Battery component |
+|---------------------------|----------------------|-------------------|
+| `OpenCircuitPotential`    | `c,cmax,T,refT`      | `ActiveMaterial`  |
+| `IonicConductivity`       | `c,T`                | `Electrolyte`     |
+| `DiffusionCoefficient`    | `c,T`                | `Electrolyte`     |
 
 
 
 
-### 3. `Dict` — Lookup Table (SOC-Dependent)
+
+### 3. `Dict` — Tabular data
 
 For parameters like OCV curves, a dictionary with pre-tabulated data can be used. The dictionary must contain two keys:
 
-- `V` – An array of voltage values  
-- `SOC` – Corresponding state-of-charge (SOC) values (ranging from 0 to 1)
+- `x` – Representing the data of the dependent variable 
+- `y` – Representing the data of the input parameter
 
 **Example:**
 
 ```JSON
 "DiffusionCoefficient": {
-    "V": [0.01, 0.05, 0.10, 0.15, 0.20],
-    "SOC": [0.0, 0.25, 0.5, 0.75, 1.0]}
+    "x": [0.01, 0.05, 0.10, 0.15, 0.20],
+    "y": [0.0, 0.25, 0.5, 0.75, 1.0]}
 ```
 
-The simulation uses interpolation to evaluate the OCV value at any given SOC during the run.
+The simulation uses interpolation to evaluate the y-quantity at any given x during the run.
 
 > **Note:** Ensure that both arrays are of equal length.
+
+**Supported data:**
+
+| Parameter                 | Supported x data                  | Battery component |
+|---------------------------|-----------------------------------|-------------------|
+| `OpenCircuitPotential`    | `StoichiometricCoefficient`       | `ActiveMaterial`  |
+| `IonicConductivity`       | `Concentration`                   | `Electrolyte`     |
+| `DiffusionCoefficient`    | `Concentration`                   | `Electrolyte`     |
