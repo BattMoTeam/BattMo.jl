@@ -239,6 +239,15 @@ function get_parameter_meta_data()
 			"context_type" => "GridPointsNegativeElectrode",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_grid_negative",
 		),
+		"TabWidth" => Dict(
+			"type" => Int,
+			"min_value" => 1e-8,
+			"max_value" => 1000,),
+		"TabLength" => Dict(
+			"type" => Int,
+			"min_value" => 1e-8,
+			"max_value" => 1000,
+		),
 		"GridPointsPositiveElectrodeCurrentCollectorTabLength" => Dict(
 			"type" => Int,
 			"min_value" => 1,
