@@ -506,7 +506,7 @@ function get_schema_simulation_settings(model_settings)
 
 	required_grid_points = schema["properties"]["GridPoints"]["required"]
 
-	if model_settings["ModelGeometry"] == "3D-demo"
+	if model_settings["ModelGeometry"] == "3D Pouch"
 		push!(required_grid_points, "ElectrodeWidth")
 		push!(required_grid_points, "ElectrodeLength")
 
@@ -518,6 +518,10 @@ function get_schema_simulation_settings(model_settings)
 			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabWidth")
 			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabLength")
 		end
+	end
+	if haskey(model_settings, "UseRampUp") && model_settings["UseRampUp"] == "Sinusoidal"
+		push!(required_grid_points, "RampUpTime")
+		push!(required_grid_points, "RampUpSteps")
 	end
 
 	return schema
