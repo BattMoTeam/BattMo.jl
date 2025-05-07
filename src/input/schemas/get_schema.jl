@@ -197,6 +197,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"Density" => create_property(parameter_meta, "Density"),
 							"Thickness" => create_property(parameter_meta, "Thickness"),
 							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
+							"TabWidth" => create_property(parameter_meta, "TabWidth"),
+							"TabLength" => create_property(parameter_meta, "TabLength"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					)),
@@ -280,6 +282,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"Density" => create_property(parameter_meta, "Density"),
 							"Thickness" => create_property(parameter_meta, "Thickness"),
 							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
+							"TabWidth" => create_property(parameter_meta, "TabWidth"),
+							"TabLength" => create_property(parameter_meta, "TabLength"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					)),
@@ -330,6 +334,9 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 	ne_b_required = schema["properties"]["NegativeElectrode"]["properties"]["Binder"]["required"]
 	pe_b_required = schema["properties"]["PositiveElectrode"]["properties"]["Binder"]["required"]
 
+	ne_cc_required = schema["properties"]["NegativeElectrode"]["properties"]["CurrentCollector"]["required"]
+	pe_cc_required = schema["properties"]["PositiveElectrode"]["properties"]["CurrentCollector"]["required"]
+
 	sep_required = schema["properties"]["Separator"]["required"]
 	elyte_required = schema["properties"]["Electrolyte"]["required"]
 
@@ -338,12 +345,18 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 	if model_settings_dict["ModelGeometry"] == "1D"
 		push!(cell_required, "ElectrodeGeometricSurfaceArea")
 
-	elseif model_settings_dict["ModelGeometry"] == "3D-demo"
+	elseif model_settings_dict["ModelGeometry"] == "3D Pouch"
 		push!(cell_required, "ElectrodeWidth")
 		push!(cell_required, "ElectrodeLength")
+		push!(cell_required, "ElectrodeGeometricSurfaceArea")
 		if haskey(model_settings, "UseCurrentCollectors")
 			push!(ne_required, "CurrentCollector")
 			push!(pe_required, "CurrentCollector")
+
+			push!(ne_cc_required, "TabWidth")
+			push!(pe_cc_required, "TabWidth")
+			push!(ne_cc_required, "TabLength")
+			push!(pe_cc_required, "TabLength")
 		end
 
 	elseif model_settings_dict["ModelGeometry"] == "3D Cylindrical"
