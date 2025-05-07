@@ -29,16 +29,16 @@ import{_ as a,c as n,o as i,aA as t}from"./chunks/framework.DtjhvcBY.js";const c
 <span class="line"><span>│ Timing type   │     Each │   Relative │    Total │</span></span>
 <span class="line"><span>│               │       μs │ Percentage │       ms │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Properties    │  30.6706 │     3.43 % │  10.4280 │</span></span>
-<span class="line"><span>│ Equations     │ 165.9314 │    26.51 % │  80.6427 │</span></span>
-<span class="line"><span>│ Assembly      │  65.9240 │    10.53 % │  32.0391 │</span></span>
-<span class="line"><span>│ Linear solve  │ 355.7440 │    39.77 % │ 120.9530 │</span></span>
+<span class="line"><span>│ Properties    │  30.6613 │     3.15 % │  10.4248 │</span></span>
+<span class="line"><span>│ Equations     │ 164.9617 │    24.23 % │  80.1714 │</span></span>
+<span class="line"><span>│ Assembly      │  65.3764 │     9.60 % │  31.7729 │</span></span>
+<span class="line"><span>│ Linear solve  │ 437.0405 │    44.92 % │ 148.5938 │</span></span>
 <span class="line"><span>│ Linear setup  │   0.0000 │     0.00 % │   0.0000 │</span></span>
 <span class="line"><span>│ Precond apply │   0.0000 │     0.00 % │   0.0000 │</span></span>
-<span class="line"><span>│ Update        │  46.1916 │     5.16 % │  15.7051 │</span></span>
-<span class="line"><span>│ Convergence   │  61.6698 │     9.85 % │  29.9715 │</span></span>
-<span class="line"><span>│ Input/Output  │  25.3833 │     1.22 % │   3.7060 │</span></span>
-<span class="line"><span>│ Other         │  31.5378 │     3.53 % │  10.7228 │</span></span>
+<span class="line"><span>│ Update        │  45.0214 │     4.63 % │  15.3073 │</span></span>
+<span class="line"><span>│ Convergence   │  61.9057 │     9.09 % │  30.0862 │</span></span>
+<span class="line"><span>│ Input/Output  │  25.4540 │     1.12 % │   3.7163 │</span></span>
+<span class="line"><span>│ Other         │  31.6253 │     3.25 % │  10.7526 │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Total         │ 894.6123 │   100.00 % │ 304.1682 │</span></span>
+<span class="line"><span>│ Total         │ 973.0155 │   100.00 % │ 330.8253 │</span></span>
 <span class="line"><span>╰───────────────┴──────────┴────────────┴──────────╯</span></span></code></pre></div><p>UPDATE WITH NEW OUTPUT API</p><h3 id="The-simulation-output" tabindex="-1">The simulation output <a class="header-anchor" href="#The-simulation-output" aria-label="Permalink to &quot;The simulation output {#The-simulation-output}&quot;">​</a></h3><h3 id="Access-overpotentials" tabindex="-1">Access overpotentials <a class="header-anchor" href="#Access-overpotentials" aria-label="Permalink to &quot;Access overpotentials {#Access-overpotentials}&quot;">​</a></h3><h3 id="Plot-cell-states" tabindex="-1">Plot cell states <a class="header-anchor" href="#Plot-cell-states" aria-label="Permalink to &quot;Plot cell states {#Plot-cell-states}&quot;">​</a></h3><h3 id="Save-and-load-outputs" tabindex="-1">Save and load outputs <a class="header-anchor" href="#Save-and-load-outputs" aria-label="Permalink to &quot;Save and load outputs {#Save-and-load-outputs}&quot;">​</a></h3><h2 id="Example-on-GitHub" tabindex="-1">Example on GitHub <a class="header-anchor" href="#Example-on-GitHub" aria-label="Permalink to &quot;Example on GitHub {#Example-on-GitHub}&quot;">​</a></h2><p>If you would like to run this example yourself, it can be downloaded from the BattMo.jl GitHub repository <a href="https://github.com/BattMoTeam/BattMo.jl/blob/main/examples/3_handle_outputs.jl" target="_blank" rel="noreferrer">as a script</a>, or as a <a href="https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/3_handle_outputs.ipynb" target="_blank" rel="noreferrer">Jupyter Notebook</a></p><hr><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl" target="_blank" rel="noreferrer">Literate.jl</a>.</em></p>`,15)]))}const k=a(e,[["render",l]]);export{c as __pageData,k as default};
