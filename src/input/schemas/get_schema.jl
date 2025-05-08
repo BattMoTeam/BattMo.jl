@@ -198,6 +198,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
 							"TabWidth" => create_property(parameter_meta, "TabWidth"),
 							"TabLength" => create_property(parameter_meta, "TabLength"),
+							"TabFractions" => create_property(parameter_meta, "TabFractions"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					)),
@@ -283,6 +284,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
 							"TabWidth" => create_property(parameter_meta, "TabWidth"),
 							"TabLength" => create_property(parameter_meta, "TabLength"),
+							"TabFractions" => create_property(parameter_meta, "TabFractions"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					)),
@@ -367,6 +369,11 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 		if haskey(model_settings, "UseCurrentCollectors")
 			push!(ne_required, "CurrentCollector")
 			push!(pe_required, "CurrentCollector")
+
+			push!(ne_cc_required, "TabWidth")
+			push!(pe_cc_required, "TabWidth")
+			push!(ne_cc_required, "TabFractions")
+			push!(pe_cc_required, "TabFractions")
 		end
 
 

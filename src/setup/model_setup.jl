@@ -798,7 +798,7 @@ function setup_grids_and_couplings(inputparams::InputParams)
 		grids, couplings = pouch_grid(inputparams)
 
 	else
-
+		# Add case_type = "jellyRoll"
 		error("geometry case type not recognized")
 
 	end

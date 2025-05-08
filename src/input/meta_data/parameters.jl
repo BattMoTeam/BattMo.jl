@@ -34,7 +34,17 @@ function get_parameter_meta_data()
 			"context_type" => "NominalVoltage",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_67890",
 		),
-		"InnerCellRadius" => Dict(
+		"InnerRadius" => Dict(
+			"type" => Real,
+			"min_value" => 0.001,
+			"max_value" => 0.05,
+			"unit" => "m",
+			"unit_name" => "emmo:Metre",
+			"unit_iri" => "https://w3id.org/emmo#Metre",
+			"context_type" => "InnerCellRadius",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_54321",
+		),
+		"OuterRadius" => Dict(
 			"type" => Real,
 			"min_value" => 0.001,
 			"max_value" => 0.05,
@@ -168,7 +178,7 @@ function get_parameter_meta_data()
 		),
 		"ModelGeometry" => Dict(
 			"type" => String,
-			"options" => ["1D", "3D Pouch"],
+			"options" => ["1D", "3D Pouch", "3D Cylindrical"],
 			"context_type" => "ModelGeometry",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_geometry",
 		),
@@ -267,6 +277,11 @@ function get_parameter_meta_data()
 		"TabLength" => Dict(
 			"type" => Real,
 			"min_value" => 1e-8,
+			"max_value" => 1000,
+		),
+		"TabFractions" => Dict(
+			"type" => Real,
+			"min_value" => 1e-3,
 			"max_value" => 1000,
 		),
 		"GridPointsPositiveElectrodeCurrentCollectorTabLength" => Dict(
