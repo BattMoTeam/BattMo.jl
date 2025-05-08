@@ -43,11 +43,12 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	if isnothing(get_key_value(model_settings, "ModelGeometry"))
 		geom_case = nothing
+		height = nothing
 	else
 		geom = get_key_value(model_settings, "ModelGeometry")
 		if geom == "1D"
 			geom_case = geom
-
+			height = nothing
 		elseif geom == "3D Pouch"
 			geom_case = "3D-demo"
 			height = get_key_value(cell, "ElectrodeLength")
