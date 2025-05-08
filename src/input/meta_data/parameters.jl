@@ -197,6 +197,27 @@ function get_parameter_meta_data()
 			"context_type" => "GridPointsPositiveElectrode",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_grid_positive",
 		),
+		"GridPointsHeight" => Dict(
+			"type" => Int,
+			"min_value" => 1,
+			"max_value" => 1000,
+			"context_type" => "GridPointsPositiveElectrode",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_grid_positive",
+		),
+		"GridPointsRadius" => Dict(
+			"type" => Int,
+			"min_value" => 1,
+			"max_value" => 1000,
+			"context_type" => "GridPointsPositiveElectrode",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_grid_positive",
+		),
+		"HeightRefinement" => Dict(
+			"type" => Real,
+			"min_value" => 1e-3,
+			"max_value" => 1000,
+			"context_type" => "GridPointsPositiveElectrode",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_grid_positive",
+		),
 		"GridPointsElectrodeLength" => Dict(
 			"type" => Int,
 			"min_value" => 1,

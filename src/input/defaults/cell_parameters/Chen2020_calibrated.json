@@ -10,6 +10,9 @@
         "ElectrodeWidth": 0.065,
         "ElectrodeLength": 1.58,
         "ElectrodeGeometricSurfaceArea": 0.1027,
+        "Height": 0.065,
+        "InnerRadius": 2e-3,
+        "OuterRadius": 2e-3,
         "NominalVoltage": 3.71,
         "NominalCapacity": 4.8
     },
@@ -53,7 +56,9 @@
             "Description": "Copper",
             "Thickness": 1.17e-5,
             "Density": 8960,
-            "ElectronicConductivity": 3.55e7
+            "ElectronicConductivity": 3.55e7,
+            "TabFractions": 2,
+            "TabWidth": 2e-3
         }
     },
     "PositiveElectrode": {
@@ -96,7 +101,9 @@
             "Description": "Aluminum",
             "Thickness": 1.63e-05,
             "Density": 2700,
-            "ElectronicConductivity": 5.96e7
+            "ElectronicConductivity": 5.96e7,
+            "TabFractions": 2,
+            "TabWidth": 2e-3
         }
     },
     "Separator": {

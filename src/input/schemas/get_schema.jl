@@ -108,12 +108,11 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 				"properties" => Dict(
 					"Case" => create_property(parameter_meta, "Case"),
 					"DeviceSurfaceArea" => create_property(parameter_meta, "DeviceSurfaceArea"),
-					"DubbelCoatedElectrodes" => create_property(parameter_meta, "DubbelCoatedElectrodes"),
+					"InnerRadius" => create_property(parameter_meta, "InnerRadius"),
+					"OuterRadius" => create_property(parameter_meta, "OuterRadius"),
 					"NominalVoltage" => create_property(parameter_meta, "NominalVoltage"),
 					"NominalCapacity" => create_property(parameter_meta, "NominalCapacity"),
-					"HeatTransferCoefficient" => create_property(parameter_meta, "HeatTransferCoefficient"),
-					"InnerCellRadius" => create_property(parameter_meta, "InnerCellRadius"),
-					"ElectrodeWidth" => create_property(parameter_meta, "ElectrodeWidth"),
+					"HeatTransferCoefficient" => create_property(parameter_meta, "HeatTransferCoefficient"), "ElectrodeWidth" => create_property(parameter_meta, "ElectrodeWidth"),
 					"ElectrodeLength" => create_property(parameter_meta, "ElectrodeLength"),
 					"ElectrodeGeometricSurfaceArea" => create_property(parameter_meta, "ElectrodeGeometricSurfaceArea"),
 				),
@@ -348,13 +347,14 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 	elseif model_settings_dict["ModelGeometry"] == "3D Cylindrical"
 
-		push!(cell_required, "DubbelCoatedElectrodes")
-		push!(cell_required, "InnerCellRadius")
+		push!(cell_required, "OuterRadius")
+		push!(cell_required, "InnerRadius")
+		push!(cell_required, "Height")
 
-		push!(ne_coating_required, "Width")
-		push!(ne_coating_required, "Length")
-		push!(pe_coating_required, "Width")
-		push!(pe_coating_required, "Length")
+		if haskey(model_settings, "UseCurrentCollectors")
+			push!(ne_required, "CurrentCollector")
+			push!(pe_required, "CurrentCollector")
+		end
 
 
 	end
@@ -460,6 +460,9 @@ function get_schema_simulation_settings(model_settings)
 				"type" => "object",
 				"properties" => Dict(
 					"ElectrodeWidth" => create_property(parameter_meta, "GridPointsElectrodeWidth"),
+					"Height" => create_property(parameter_meta, "GridPointsElectrodeWidth"),
+					"Radius" => create_property(parameter_meta, "GridPointsRadius"),
+					"HeightRefinement" => create_property(parameter_meta, "HeightRefinement"),
 					"ElectrodeLength" => create_property(parameter_meta, "GridPointsElectrodeLength"),
 					"PositiveElectrodeCoating" => create_property(parameter_meta, "GridPointsPositiveElectrodeCoating"),
 					"PositiveElectrodeActiveMaterial" => create_property(parameter_meta, "GridPointsPositiveElectrodeActiveMaterial"),
@@ -505,6 +508,19 @@ function get_schema_simulation_settings(model_settings)
 			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabWidth")
 			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabLength")
 		end
+	end
+
+	if model_settings["ModelGeometry"] == "3D Cylindrical"
+		push!(required_grid_points, "Height")
+		push!(required_grid_points, "Radius")
+		push!(required_grid_points, "HeightRefinement")
+		if haskey(model_settings, "UseCurrentCollectors")
+			push!(required_grid_points, "PositiveElectrodeCurrentCollector")
+			push!(required_grid_points, "PositiveElectrodeCurrentCollectorTabWidth")
+			push!(required_grid_points, "NegativeElectrodeCurrentCollector")
+			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabWidth")
+		end
+
 	end
 
 	return schema
