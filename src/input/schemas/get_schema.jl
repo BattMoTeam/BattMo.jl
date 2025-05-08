@@ -504,6 +504,7 @@ function get_schema_simulation_settings(model_settings)
 		"required" => ["GridPoints", "Grid", "TimeStepDuration", "RampUpTime", "RampUpSteps"],
 	)
 
+	required = schema["required"]
 	required_grid_points = schema["properties"]["GridPoints"]["required"]
 
 	if model_settings["ModelGeometry"] == "3D Pouch"
@@ -520,8 +521,8 @@ function get_schema_simulation_settings(model_settings)
 		end
 	end
 	if haskey(model_settings, "UseRampUp") && model_settings["UseRampUp"] == "Sinusoidal"
-		push!(required_grid_points, "RampUpTime")
-		push!(required_grid_points, "RampUpSteps")
+		push!(required, "RampUpTime")
+		push!(required, "RampUpSteps")
 	end
 
 	return schema

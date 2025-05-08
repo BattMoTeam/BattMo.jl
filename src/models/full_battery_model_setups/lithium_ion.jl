@@ -65,25 +65,25 @@ end
 function get_default_simulation_settings(st::LithiumIonBattery)
 
 	settings = Dict(
+		"GridPoints" => Dict(
+			"ElectrodeWidth" => 10,
+			"ElectrodeLength" => 10,
+			"PositiveElectrodeCoating" => 3,
+			"PositiveElectrodeActiveMaterial" => 10,
+			"PositiveElectrodeCurrentCollector" => 2,
+			"PositiveElectrodeCurrentCollectorTabWidth" => 3,
+			"PositiveElectrodeCurrentCollectorTabLength" => 3,
+			"NegativeElectrodeCoating" => 3,
+			"NegativeElectrodeActiveMaterial" => 10,
+			"NegativeElectrodeCurrentCollector" => 2,
+			"NegativeElectrodeCurrentCollectorTabWidth" => 3,
+			"NegativeElectrodeCurrentCollectorTabLength" => 3,
+			"Separator" => 3,
+		),
 		"Grid" => [],
 		"TimeStepDuration" => 50,
-		"RampUpSteps" => 5,
 		"RampUpTime" => 10,
-		"GridPoints" => Dict(
-			"ElectrodeWidth" => 5,
-			"ElectrodeLength" => 5,
-			"PositiveElectrodeCoating" => 10,
-			"PositiveElectrodeActiveMaterial" => 10,
-			"PositiveElectrodeCurrentCollector" => 10,
-			"PositiveElectrodeCurrentCollectorTabWidth" => 2,
-			"PositiveElectrodeCurrentCollectorTabLength" => 2,
-			"NegativeElectrodeCoating" => 10,
-			"NegativeElectrodeActiveMaterial" => 10,
-			"NegativeElectrodeCurrentCollector" => 10,
-			"NegativeElectrodeCurrentCollectorTabWidth" => 2,
-			"NegativeElectrodeCurrentCollectorTabLength" => 2,
-			"Separator" => 10,
-		),
+		"RampUpSteps" => 5,
 	)
 	return SimulationSettings(settings)
 
