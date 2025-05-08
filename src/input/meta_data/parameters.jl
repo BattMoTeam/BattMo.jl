@@ -239,6 +239,15 @@ function get_parameter_meta_data()
 			"context_type" => "GridPointsNegativeElectrode",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_grid_negative",
 		),
+		"TabWidth" => Dict(
+			"type" => Real,
+			"min_value" => 1e-9,
+			"max_value" => 1000),
+		"TabLength" => Dict(
+			"type" => Real,
+			"min_value" => 1e-8,
+			"max_value" => 1000,
+		),
 		"GridPointsPositiveElectrodeCurrentCollectorTabLength" => Dict(
 			"type" => Int,
 			"min_value" => 1,
@@ -448,7 +457,7 @@ function get_parameter_meta_data()
 			"unit_name" => "emmo:Metre",
 			"unit_iri" => "https://w3id.org/emmo#Metre",
 		),
-		"OpenCircuitVoltage" => Dict("context_type" => ["OpenCircuitVoltage", "Expression"],
+		"OpenCircuitPotential" => Dict("context_type" => ["OpenCircuitPotential", "Expression"],
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_9c657fdc_b9d3_4964_907c_f9a6e8c5f52b",
 			"description" => "The open-circuit potential of the active material under given concentration and temperature conditions",
 			"type" => [String, Dict{String, Vector}, Real],
