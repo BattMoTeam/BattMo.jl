@@ -1,0 +1,20 @@
+{
+    "GridPoints": {
+        "Height": 10,
+        "Radius": 20,
+        "HeightRefinement": 2,
+        "PositiveElectrodeCoating": 3,
+        "PositiveElectrodeActiveMaterial": 10,
+        "PositiveElectrodeCurrentCollector": 2,
+        "PositiveElectrodeCurrentCollectorTabWidth": 3,
+        "NegativeElectrodeCoating": 3,
+        "NegativeElectrodeActiveMaterial": 10,
+        "NegativeElectrodeCurrentCollector": 2,
+        "NegativeElectrodeCurrentCollectorTabWidth": 3,
+        "Separator": 3
+    },
+    "Grid": [],
+    "TimeStepDuration": 50,
+    "RampUpTime": 10,
+    "RampUpSteps": 5
+}
