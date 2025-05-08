@@ -72,15 +72,15 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		use_ramp_up = true
 	end
 
-	ne_ocp_value = get_key_value(ne_am, "OpenCircuitVoltage")
+	ne_ocp_value = get_key_value(ne_am, "OpenCircuitPotential")
 	if isa(ne_ocp_value, AbstractDict)
 		if haskey(ne_ocp_value, "functionname")
 			ne_ocp = ne_ocp_value
 		else
 			ne_ocp = Dict(
 				"type" => "function",
-				"data_x" => ne_ocp_value["SOC"],
-				"data_y" => ne_ocp_value["V"],
+				"data_x" => ne_ocp_value["x"],
+				"data_y" => ne_ocp_value["y"],
 				"argumentlist" => [
 					"theta",
 				],
@@ -95,15 +95,15 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		error("Function type not recognized")
 	end
 
-	pe_ocp_value = get_key_value(pe_am, "OpenCircuitVoltage")
+	pe_ocp_value = get_key_value(pe_am, "OpenCircuitPotential")
 	if isa(pe_ocp_value, AbstractDict)
 		if haskey(pe_ocp_value, "functionname")
 			pe_ocp = pe_ocp_value
 		else
 			pe_ocp = Dict(
 				"type" => "function",
-				"data_x" => pe_ocp_value["SOC"],
-				"data_y" => pe_ocp_value["V"],
+				"data_x" => pe_ocp_value["x"],
+				"data_y" => pe_ocp_value["y"],
 				"argumentlist" => [
 					"theta",
 				],
@@ -125,8 +125,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		else
 			diff = Dict(
 				"type" => "function",
-				"data_x" => diff_value["C"],
-				"data_y" => diff_value["m^2/s"],
+				"data_x" => diff_value["x"],
+				"data_y" => diff_value["y"],
 				"argumentlist" => [
 					"theta",
 				],
@@ -148,8 +148,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		else
 			cond = Dict(
 				"type" => "function",
-				"data_x" => cond_value["C"],
-				"data_y" => cond_value["S/m"],
+				"data_x" => cond_value["x"],
+				"data_y" => cond_value["y"],
 				"argumentlist" => [
 					"theta",
 				],

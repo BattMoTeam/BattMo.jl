@@ -32,7 +32,7 @@
             "StoichiometricCoefficientAtSOC100": 0.14778,
             "ActivationEnergyOfReaction": 4000,
             "ActivationEnergyOfDiffusion": 20000,
-            "OpenCircuitVoltage": {
+            "OpenCircuitPotential": {
                 "type": "function",
                 "functionname": "computeOCP_LFP_Xu2015"
             },
@@ -86,7 +86,7 @@
             "StoichiometricCoefficientAtSOC100": 0.51873811,
             "ActivationEnergyOfReaction": 4000,
             "ActivationEnergyOfDiffusion": 4000,
-            "OpenCircuitVoltage": {
+            "OpenCircuitPotential": {
                 "type": "function",
                 "functionname": "computeOCP_Graphite_Xu2015"
             },

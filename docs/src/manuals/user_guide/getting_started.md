@@ -1,6 +1,6 @@
 # Getting Started with BattMo
 
-Welcome to **BattMo**, a powerful simulation framework for modeling lithium-ion battery behavior. This guide will help you get started by directing you to the most relevant resources for learning how to use BattMo effectively.
+Welcome to **BattMo**, a powerful simulation framework for modeling battery behavior. This guide will help you get started by directing you to the most relevant resources for learning how to use BattMo effectively.
 
 ## Step 1: Start with the Beginner Tutorials
 
@@ -10,14 +10,12 @@ If you are new to BattMo, we recommend starting with the **Beginner Tutorials**.
 - Defining cycling protocols
 - Running simulations and analyzing outputs
 
-By following these tutorials, you will gain hands-on experience and a solid foundation in using BattMo for battery modeling.
 
 ## Step 2: Explore the Examples
 
 Once you are comfortable with the basics, you can explore the **Examples** section. The examples cover a range of specific cases and advanced features, such as:
 
 - Modeling of 3D geometries
-- Thermal effects modeling
 - Modeling SEI growth
 
 These examples provide practical insights into how to extend BattMo for various research and engineering applications.

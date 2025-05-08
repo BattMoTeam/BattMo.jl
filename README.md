@@ -9,10 +9,6 @@
 
 The Battery Modelling Toolbox (**BattMo**) is a resource for continuum modelling of electrochemical devices in MATLAB. The initial development features a pseudo X-dimensional (PXD) framework for the Doyle-Fuller-Newman model of lithium-ion battery cells. This is currently a early release that implements a subset of features from the [MATLAB version of BattMo](https://github.com/BattMoTeam/BattMo) with improved numerical performance. **BattMo.jl** is based on [Jutul.jl](https://github.com/sintefmath/Jutul.jl) and uses finite-volume discretizations and automatic differentiation to simulate models in 1D, 2D and 3D.
 
-The current implementation has two options for setting up simulation cases:
-
-- You can read in input data prepared in the MATLAB version of BattMo (general 3D grids)
-- Or you can use the common BattMo JSON format to run cases
 
 <img src="docs/src/assets/battmologo_text.png" style="margin-left: 5cm" width="300px">
 
@@ -36,23 +32,42 @@ Pkg.add("GLMakie")
 You can then run the following to simulate the predefined `p2d_40` case:
 
 ```julia
-using BattMo
-# Simulate case
-filename = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/p2d_40.json")
-# Read input from json file
-inputparams = readBattMoJsonInputFile(filename)
-# run simulation from given input
-output = run_battery(inputparams);
-# Plot result
-using GLMakie
+using BattMo, GLMakie
+
+# BattMo stores cell parameters, cycling protocols and settings in a user-friendly JSON format to facilitate reuse. For our example, we load 
+# the cell parameter set from a NMC811 vs Graphite-SiOx cell whose parameters were determined in the [Chen 2020 paper](https://doi.org/10.1149/1945-7111/ab9050). 
+# We also load an example cycling protocol for a simple Constant Current Discharge.
+
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+
+# Next, we select the Lithium-Ion Battery Model setup with default model settings. 
+# The default Lithium-Ion Battery Model Setup selected below corresponds to a basic P2D model setup, where neither current collectors nor thermal effects are considered.
+
+model_setup = LithiumIonBattery()
+
+# Then we setup a Simulation by passing the model, cell parameters and a cycling protocol. 
+
+# We first prepare the simulation: 
+
+sim = Simulation(model_setup, cell_parameters, cycling_protocol);
+
+# When the simulation is prepared, there are some validation checks happening in the background, which verify whether i) the cell parameters, cycling protocol and settings are sensible and complete 
+
+# Now we can run the simulation
+output = solve(sim;)
+
+# The output is a NamedTuple storing the results of the simulation within multiple dictionaries. Let's plot the cell current and cell voltage over time and make a plot with the GLMakie package.
+
 states = output[:states]
+
 t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 lines!(ax, t, E)
-ax = Axis(fig[1, 2], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
+ax = Axis(fig[1, 2], ylabel = "Current / A", xlabel = "Time / s", title = "Discharge curve")
 lines!(ax, t, I)
 display(fig)
 ```
@@ -62,30 +77,26 @@ This should produce the following plot:
 
 ### 3D simulation example
 
-This example uses plotting from Jutul, so we need to add that package to our environment.
-
-```julia
-using Pkg
-Pkg.add("Jutul")
-```
-
 Run a 3D model and plot the results in an interactive viewer.
 
 ```julia
 using BattMo
-# Simulate case
-states, reports, extra, exported = run_battery("3d_demo_case");
-# Parts of the battery overlap in physical space - shift them a bit and plot
-# with Jutul's interactive GLMakie plotting viewer.
-using GLMakie
-using Jutul
-dx = [0.02 0 0]
-shift = Dict()
-shift[:NAM] = dx
-shift[:PAM] = dx
-shift[:CC] = dx
-shift[:PP] = dx
-plot_multimodel_interactive(extra[:model], states, shift = shift, colormap = :curl) 
+
+# For our example, we load 
+# the cell parameter set from of a commercial Type LP2770120 prismatic LiFePO4/graphite cell whose parameters were determined in the [xU 2015 paper](https://doi.org/10.1016/j.energy.2014.11.073). 
+# We also load an example cycling protocol for a simple Constant Current Discharge.
+
+cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
+cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+model_settings = load_model_settings(; from_default_set = "P4D_pouch")
+simulation_settings = load_simulation_settings(; from_default_set = "P4D_pouch")
+
+model_setup = LithiumIonBattery(; model_settings)
+
+sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
+output = solve(sim)
+
+plot_3D_results(output)
 ```
 
 ![3D plot](docs/src/assets/3d_plot.png)

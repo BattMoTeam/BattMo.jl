@@ -34,10 +34,10 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 			Dict(
 				"type" => "object",
 				"properties" => Dict(
-					"V" => Dict("type" => "array"),
-					"SOC" => Dict("type" => "array"),
+					"x" => Dict("type" => "array"),
+					"y" => Dict("type" => "array"),
 				),
-				"required" => ["V", "SOC"],
+				"required" => ["x", "y"],
 				"additionalProperties" => true,
 			),
 		)
@@ -145,7 +145,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"MaximumConcentration" => create_property(parameter_meta, "MaximumConcentration"),
 							"StoichiometricCoefficientAtSOC0" => create_property(parameter_meta, "StoichiometricCoefficientAtSOC0"),
 							"StoichiometricCoefficientAtSOC100" => create_property(parameter_meta, "StoichiometricCoefficientAtSOC100"),
-							"OpenCircuitVoltage" => create_property(parameter_meta, "OpenCircuitVoltage"),
+							"OpenCircuitPotential" => create_property(parameter_meta, "OpenCircuitPotential"),
 							"NumberOfElectronsTransfered" => create_property(parameter_meta, "NumberOfElectronsTransfered"),
 							"ActivationEnergyOfReaction" => create_property(parameter_meta, "ActivationEnergyOfReaction"),
 							"ActivationEnergyOfDiffusion" => create_property(parameter_meta, "ActivationEnergyOfDiffusion"),
@@ -154,7 +154,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitVoltage", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ActivationEnergyOfDiffusion", "ReactionRateConstant", "ChargeTransferCoefficient"],
+							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ActivationEnergyOfDiffusion", "ReactionRateConstant", "ChargeTransferCoefficient"],
 					),
 					"Interphase" => Dict(
 						"type" => "object",
@@ -196,6 +196,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"Density" => create_property(parameter_meta, "Density"),
 							"Thickness" => create_property(parameter_meta, "Thickness"),
 							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
+							"TabWidth" => create_property(parameter_meta, "TabWidth"),
+							"TabLength" => create_property(parameter_meta, "TabLength"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					)),
@@ -228,7 +230,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"MaximumConcentration" => create_property(parameter_meta, "MaximumConcentration"),
 							"StoichiometricCoefficientAtSOC0" => create_property(parameter_meta, "StoichiometricCoefficientAtSOC0"),
 							"StoichiometricCoefficientAtSOC100" => create_property(parameter_meta, "StoichiometricCoefficientAtSOC100"),
-							"OpenCircuitVoltage" => create_property(parameter_meta, "OpenCircuitVoltage"),
+							"OpenCircuitPotential" => create_property(parameter_meta, "OpenCircuitPotential"),
 							"NumberOfElectronsTransfered" => create_property(parameter_meta, "NumberOfElectronsTransfered"),
 							"ActivationEnergyOfReaction" => create_property(parameter_meta, "ActivationEnergyOfReaction"),
 							"ActivationEnergyOfDiffusion" => create_property(parameter_meta, "ActivationEnergyOfDiffusion"),
@@ -237,7 +239,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitVoltage", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ActivationEnergyOfDiffusion", "ReactionRateConstant", "ChargeTransferCoefficient"],
+							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ActivationEnergyOfDiffusion", "ReactionRateConstant", "ChargeTransferCoefficient"],
 					),
 					"Interphase" => Dict(
 						"type" => "object",
@@ -279,6 +281,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"Density" => create_property(parameter_meta, "Density"),
 							"Thickness" => create_property(parameter_meta, "Thickness"),
 							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
+							"TabWidth" => create_property(parameter_meta, "TabWidth"),
+							"TabLength" => create_property(parameter_meta, "TabLength"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					)),
@@ -329,6 +333,9 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 	ne_b_required = schema["properties"]["NegativeElectrode"]["properties"]["Binder"]["required"]
 	pe_b_required = schema["properties"]["PositiveElectrode"]["properties"]["Binder"]["required"]
 
+	ne_cc_required = schema["properties"]["NegativeElectrode"]["properties"]["CurrentCollector"]["required"]
+	pe_cc_required = schema["properties"]["PositiveElectrode"]["properties"]["CurrentCollector"]["required"]
+
 	sep_required = schema["properties"]["Separator"]["required"]
 	elyte_required = schema["properties"]["Electrolyte"]["required"]
 
@@ -337,12 +344,18 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 	if model_settings_dict["ModelGeometry"] == "1D"
 		push!(cell_required, "ElectrodeGeometricSurfaceArea")
 
-	elseif model_settings_dict["ModelGeometry"] == "3D-demo"
+	elseif model_settings_dict["ModelGeometry"] == "3D Pouch"
 		push!(cell_required, "ElectrodeWidth")
 		push!(cell_required, "ElectrodeLength")
+		push!(cell_required, "ElectrodeGeometricSurfaceArea")
 		if haskey(model_settings, "UseCurrentCollectors")
 			push!(ne_required, "CurrentCollector")
 			push!(pe_required, "CurrentCollector")
+
+			push!(ne_cc_required, "TabWidth")
+			push!(pe_cc_required, "TabWidth")
+			push!(ne_cc_required, "TabLength")
+			push!(pe_cc_required, "TabLength")
 		end
 
 	elseif model_settings_dict["ModelGeometry"] == "3D Cylindrical"
@@ -494,9 +507,10 @@ function get_schema_simulation_settings(model_settings)
 		"required" => ["GridPoints", "Grid", "TimeStepDuration", "RampUpTime", "RampUpSteps"],
 	)
 
+	required = schema["required"]
 	required_grid_points = schema["properties"]["GridPoints"]["required"]
 
-	if model_settings["ModelGeometry"] == "3D-demo"
+	if model_settings["ModelGeometry"] == "3D Pouch"
 		push!(required_grid_points, "ElectrodeWidth")
 		push!(required_grid_points, "ElectrodeLength")
 
@@ -508,6 +522,10 @@ function get_schema_simulation_settings(model_settings)
 			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabWidth")
 			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabLength")
 		end
+	end
+	if haskey(model_settings, "UseRampUp") && model_settings["UseRampUp"] == "Sinusoidal"
+		push!(required, "RampUpTime")
+		push!(required, "RampUpSteps")
 	end
 
 	if model_settings["ModelGeometry"] == "3D Cylindrical"

@@ -8,7 +8,7 @@
 # * Run the simulation
 # * Inspect and visualize the outputs of the simulation  
 
-# To start, we load BattMo (battery models and simulations) and GLMakie (plotting). 
+# To start, we load BattMo (battery models and simulations) and Plotly (plotting). 
 
 using BattMo, GLMakie
 
@@ -51,51 +51,26 @@ E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 nothing # hide
 
+
 f = Figure(size = (1000, 400))
 
-ax = Axis(f[1, 1],
-	title = "Voltage",
-	xlabel = "Time / s",
-	ylabel = "Voltage / V",
+ax = Axis(f[1, 1], title = "Voltage", xlabel = "Time / s", ylabel = "Voltage / V",
 	xlabelsize = 25,
 	ylabelsize = 25,
 	xticklabelsize = 25,
 	yticklabelsize = 25,
 )
+scatterlines!(ax, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
+f
 
-scatterlines!(ax,
-	t,
-	E;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-)
-
-f # hide
-
-
-ax = Axis(f[1, 2],
-	title = "Current",
-	xlabel = "Time / s",
-	ylabel = "Current / V",
+ax = Axis(f[1, 2], title = "Current", xlabel = "Time / s", ylabel = "Current / V",
 	xlabelsize = 25,
 	ylabelsize = 25,
 	xticklabelsize = 25,
 	yticklabelsize = 25,
 )
+scatterlines!(ax, t, I; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
-
-scatterlines!(ax,
-	t,
-	I;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-)
-
-
-f # hide
+f
 
