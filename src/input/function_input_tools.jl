@@ -160,6 +160,25 @@ function update_json_input(; file_path::String = nothing,
 
 end
 
+function setup_function_from_function_name(function_name::String)
+    """
+    Function to create a julia function given by the name of the function. In the case of user-defined functions, the file where the function is defined must have the same name as the function.
+    """
+
+    symb = Symbol(function_name)
+
+    if isdefined(BattMo, symb)
+        # Function in BattMo
+        return getfield(BattMo, symb)
+    else
+        # User defined function
+        filename = function_name * ".jl"
+        code_str = read(filename, String)
+        expr = Meta.parse(code_str)
+        return @RuntimeGeneratedFunction(expr)
+    end
+
+end
 
 function setup_ocp_evaluation_expression_from_string(str)
 	""" setup the Expr from a sting for the OCP function, with the proper signature."""
