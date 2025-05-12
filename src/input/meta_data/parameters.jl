@@ -181,7 +181,7 @@ function get_parameter_meta_data()
 			"type" => String,
 			"options" => ["PXD"],
 			"is_sub_model" => true,
-			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/models",
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/pxd_model",
 		),
 		"UseCurrentCollectors" => Dict(
 			"type" => String,
@@ -300,6 +300,7 @@ function get_parameter_meta_data()
 			"options" => ["Sinusoidal"],
 			"context_type" => "UseRampUp",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_rampup",
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/ramp_up",
 			"is_sub_model" => true,
 		),
 		"RampUpSteps" => Dict(
