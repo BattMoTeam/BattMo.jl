@@ -1,4 +1,4 @@
-using BattMo, GLMakie
+using BattMo, GLMakie, Jutul
 
 model_setup = LithiumIonBattery()
 
