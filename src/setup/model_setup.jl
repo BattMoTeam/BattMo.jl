@@ -1462,14 +1462,14 @@ function setup_config(sim::JutulSimulator,
 			m = get_simulator_model(sim)
 			@info typeof(s.state.Control.ControllerCV)
 			@info typeof(m[:Control].system.policy)
-			if hasproperty(s.state.Control.ControllerCV, :numberOfCycles) && hasproperty(m[:Control].system.policy, :numberOfCycles)
+			if model[:Control].system.policy isa CyclingCVPolicy
 				if s.state.Control.ControllerCV.numberOfCycles >= m[:Control].system.policy.numberOfCycles
 					report[:stopnow] = true
 				else
 					report[:stopnow] = false
 				end
 
-			elseif hasproperty(s.state.Control.ControllerCV, :current_step_number) && hasproperty(m[:Control].system.policy, :number_of_steps)
+			elseif model[:Control].system.policy isa GenericPolicy
 				if s.state.Control.ControllerCV.current_step_number >= m[:Control].system.policy.number_of_steps
 					report[:stopnow] = true
 				else
