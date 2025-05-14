@@ -521,3 +521,15 @@ function setup_pouch_cell_geometry(H_mother, paramsz)
 	return grids, couplings
 
 end
+
+function spiral_grid(geomparams::InputGeometryParams)
+
+    Ns = [3, 4, 2, 6, 1]
+    ls = [1., 2., 2.1, 3.2, 1.1]
+    dxs = ls./Ns
+
+    mapreduce((dx, N) -> repeat([dx], N), vcat, dxs, Ns)
+    
+end
+
+
