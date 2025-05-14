@@ -5,19 +5,14 @@ using Jutul, BattMo, GLMakie
 
 # We use the SEI model presented in [bolay2022](@cite). We use the json data given in [bolay.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/bolay.json#L157) which contains the parameters for the SEI layer. 
 
-file_path_cell = parameter_file_path("cell_parameters", "SEI_example.json")
-file_path_cycling = parameter_file_path("cycling_protocols", "CCCV.json")
-file_path_simulation = parameter_file_path("simulation_settings", "P2D.json")
-
-cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
-cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
-simulation_settings = load_simulation_settings(; from_file_path = file_path_simulation)
+cell_parameters = load_cell_parameters(; from_default_set = "SEI_example")
+cycling_protocol = load_cycling_protocol(; from_default_set = "CCCV")
+simulation_settings = load_simulation_settings(; from_default_set = "P2D")
 
 nothing # hide
 
-# We retrieve the parameters for the SEI layer, using the fact that their names have a "SEI" prefix.
-interphaseparams = cell_parameters["NegativeElectrode"]["Interphase"]
-Dict(interphaseparams)
+# We have a look at the SEI related parameters.
+interphase_parameters = cell_parameters["NegativeElectrode"]["Interphase"]
 
 # ## We start the simulation and retrieve the result
 
@@ -86,17 +81,18 @@ scatterlines!(ax,
 display(GLMakie.Screen(), f) # hide
 f # hide
 
-# ## Plot of SEI length
+# ## Plot of SEI thickness
 
-# We recover the SEI length from the `state` output
-seilength = [state[:NeAm][:SEIlength][end] for state in states]
+# We recover the SEI thickness from the `state` output
+seilength_x1 = [state[:NeAm][:SEIlength][1] for state in states]
+seilength_xend = [state[:NeAm][:SEIlength][end] for state in states]
 
 f = Figure(size = (1000, 400))
 
 ax = Axis(f[1, 1],
 	title = "Length",
 	xlabel = "Time / s",
-	ylabel = "Length / m",
+	ylabel = "Thickness / m",
 	xlabelsize = 25,
 	ylabelsize = 25,
 	xticklabelsize = 25,
@@ -105,14 +101,22 @@ ax = Axis(f[1, 1],
 
 scatterlines!(ax,
 	t,
-	seilength;
+	seilength_x1;
+	linewidth = 4,
+	markersize = 10,
+	marker = :cross,
+	markercolor = :black)
+
+scatterlines!(ax,
+	t,
+	seilength_xend;
 	linewidth = 4,
 	markersize = 10,
 	marker = :cross,
 	markercolor = :black)
 
 ax = Axis(f[2, 1],
-	title = "Length",
+	title = "SEI thicknesss",
 	xlabel = "Time / s",
 	ylabel = "Voltage / V",
 	xlabelsize = 25,
@@ -133,3 +137,73 @@ display(GLMakie.Screen(), f) # hide
 f # hide
 
 
+# ## Plot of voltage drop 
+
+u_x1 = [state[:NeAm][:SEIvoltageDrop][1] for state in states]
+u_xend = [state[:NeAm][:SEIvoltageDrop][end] for state in states]
+
+f = Figure(size = (1000, 400))
+
+ax = Axis(f[1, 1],
+	title = "SEI voltage drop",
+	xlabel = "Time / s",
+	ylabel = "Voltage / V",
+	xlabelsize = 25,
+	ylabelsize = 25,
+	xticklabelsize = 25,
+	yticklabelsize = 25,
+)
+
+scatterlines!(ax,
+	t,
+	u_x1;
+	linewidth = 4,
+	markersize = 10,
+	marker = :cross,
+	markercolor = :blue,
+	label = "xmin")
+
+scatterlines!(ax,
+	t,
+	u_xend;
+	linewidth = 4,
+	markersize = 10,
+	marker = :cross,
+	markercolor = :black,
+	label = "xmax")
+
+
+# ## Plot of the lithium content
+
+u_x1 = [state[:NeAm][:SEIvoltageDrop][1] for state in states]
+u_xend = [state[:NeAm][:SEIvoltageDrop][end] for state in states]
+
+f = Figure(size = (1000, 400))
+
+ax = Axis(f[1, 1],
+	title = "SEI voltage drop",
+	xlabel = "Time / s",
+	ylabel = "Voltage / V",
+	xlabelsize = 25,
+	ylabelsize = 25,
+	xticklabelsize = 25,
+	yticklabelsize = 25,
+)
+
+scatterlines!(ax,
+	t,
+	u_x1;
+	linewidth = 4,
+	markersize = 10,
+	marker = :cross,
+	markercolor = :blue,
+	label = "xmin")
+
+scatterlines!(ax,
+	t,
+	u_xend;
+	linewidth = 4,
+	markersize = 10,
+	marker = :cross,
+	markercolor = :black,
+	label = "xmax")
