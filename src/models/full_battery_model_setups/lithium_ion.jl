@@ -1,9 +1,9 @@
-export LithiumIonBatteryModel
+export LithiumIonBattery
 export print_required_cell_parameters, get_lithium_ion_default_model_settings
 
 
 """
-	struct LithiumIonBatteryModel <: BatteryModel
+	struct LithiumIonBattery <: BatteryModelSetup
 
 Represents a lithium-ion battery model based on the Doyle-Fuller-Newman approach.
 
@@ -12,18 +12,18 @@ Represents a lithium-ion battery model based on the Doyle-Fuller-Newman approach
 - `model_settings ::ModelSettings` : Settings specific to the model.
 
 # Constructor
-	LithiumIonBatteryModel(; model_settings = get_default_model_settings(LithiumIonBatteryModel))
+	LithiumIonBattery(; model_settings = get_default_model_settings(LithiumIonBattery))
 
-Creates an instance of `LithiumIonBatteryModel` with the specified or default model settings.
+Creates an instance of `LithiumIonBattery` with the specified or default model settings.
 The model name is automatically generated based on the model geometry.
 """
-struct LithiumIonBatteryModel <: BatteryModel
+struct LithiumIonBattery <: BatteryModelSetup
 	name::String
 	model_settings::ModelSettings
 	is_valid::Bool
 
 
-	function LithiumIonBatteryModel(; model_settings = get_default_model_settings(LithiumIonBatteryModel))
+	function LithiumIonBattery(; model_settings = get_default_model_settings(LithiumIonBattery))
 
 		model_geometry = model_settings["ModelGeometry"]
 		name = "$model_geometry Doyle-Fuller-Newman lithium-ion model"
@@ -39,7 +39,7 @@ struct LithiumIonBatteryModel <: BatteryModel
 	end
 end
 
-function print_required_cell_parameters(::LithiumIonBatteryModel)
+function print_required_cell_parameters(::LithiumIonBattery)
 
 	required_cell_parameters = [
 		("CoatingThickness", "m", "Real"),
@@ -56,38 +56,34 @@ function print_required_cell_parameters(::LithiumIonBatteryModel)
 
 end
 
-function get_default_model_settings(::Type{LithiumIonBatteryModel})
-	settings = Dict(
-		"ModelGeometry" => "1D",
-		"UseDiffusionModel" => "full",
-		"UseRampUp" => "Generic",
-	)
-	return ModelSettings(settings)
+function get_default_model_settings(::Type{LithiumIonBattery})
+	settings = load_model_settings(; from_default_set = "P2D")
+	return settings
 end
 
 
-function get_default_simulation_settings(st::LithiumIonBatteryModel)
+function get_default_simulation_settings(st::LithiumIonBattery)
 
 	settings = Dict(
+		"GridPoints" => Dict(
+			"ElectrodeWidth" => 10,
+			"ElectrodeLength" => 10,
+			"PositiveElectrodeCoating" => 3,
+			"PositiveElectrodeActiveMaterial" => 10,
+			"PositiveElectrodeCurrentCollector" => 2,
+			"PositiveElectrodeCurrentCollectorTabWidth" => 3,
+			"PositiveElectrodeCurrentCollectorTabLength" => 3,
+			"NegativeElectrodeCoating" => 3,
+			"NegativeElectrodeActiveMaterial" => 10,
+			"NegativeElectrodeCurrentCollector" => 2,
+			"NegativeElectrodeCurrentCollectorTabWidth" => 3,
+			"NegativeElectrodeCurrentCollectorTabLength" => 3,
+			"Separator" => 3,
+		),
 		"Grid" => [],
 		"TimeStepDuration" => 50,
-		"RampUpSteps" => 5,
 		"RampUpTime" => 10,
-		"GridPoints" => Dict(
-			"ElectrodeWidth" => 5,
-			"ElectrodeLength" => 5,
-			"PositiveElectrodeCoating" => 10,
-			"PositiveElectrodeActiveMaterial" => 10,
-			"PositiveElectrodeCurrentCollector" => 10,
-			"PositiveElectrodeCurrentCollectorTabWidth" => 10,
-			"PositiveElectrodeCurrentCollectorTabLength" => 10,
-			"NegativeElectrodeCoating" => 10,
-			"NegativeElectrodeActiveMaterial" => 10,
-			"NegativeElectrodeCurrentCollector" => 10,
-			"NegativeElectrodeCurrentCollectorTabWidth" => 10,
-			"NegativeElectrodeCurrentCollectorTabLength" => 10,
-			"Separator" => 10,
-		),
+		"RampUpSteps" => 5,
 	)
 	return SimulationSettings(settings)
 

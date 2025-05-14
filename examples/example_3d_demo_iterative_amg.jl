@@ -116,7 +116,7 @@ states, reports = simulate(state0, simulator, timesteps; forces = forces, config
 #states = output[:states]
 #model  = output[:extra][:model]
 
-t = [state[:Control][:ControllerCV].time for state in states]
+t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 

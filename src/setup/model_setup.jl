@@ -4,12 +4,13 @@ export
 	setup_simulation,
 	setup_model,
 	Simulation,
+	Optimization,
 	solve
 
 
-###############
-# Run battery #
-###############
+#########################
+# Solving problem types #
+#########################
 
 """
 	abstract type SolvingProblem
@@ -27,33 +28,33 @@ Represents a battery simulation problem to be solved.
 
 # Fields
 - `function_to_solve ::Function` : The function responsible for running the simulation.
-- `model ::BatteryModel` : The battery model being simulated.
+- `model ::BatteryModelSetup` : The battery model being simulated.
 - `cell_parameters ::CellParameters` : The cell parameters for the simulation.
 - `cycling_protocol ::CyclingProtocol` : The cycling protocol used.
 - `simulation_settings ::SimulationSettings` : The simulation settings applied.
 - `is_valid ::Bool` : A flag indicating if the simulation is valid.
 
 # Constructor
-	Simulation(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
+	Simulation(model::BatteryModelSetup, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
 
 Creates an instance of `Simulation`, initializing it with the given parameters and defaulting
 simulation settings if not provided.
 """
 struct Simulation <: SolvingProblem
 	function_to_solve::Function
-	model::BatteryModel
+	model_setup::BatteryModelSetup
 	cell_parameters::CellParameters
 	cycling_protocol::CyclingProtocol
 	simulation_settings::SimulationSettings
 	is_valid::Bool
 
-	function Simulation(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
+	function Simulation(model_setup::BatteryModelSetup, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model_setup))
 
-		if model.is_valid
+		if model_setup.is_valid
 			function_to_solve = run_battery
 
 			# Here will come a validation function
-			model_settings = model.model_settings
+			model_settings = model_setup.model_settings
 			cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
 			cycling_protocol_is_valid = validate_parameter_set(cycling_protocol)
 			simulation_settings_is_valid = validate_parameter_set(simulation_settings, model_settings)
@@ -72,10 +73,52 @@ struct Simulation <: SolvingProblem
 
 			""")
 		end
-		return new{}(function_to_solve, model, cell_parameters, cycling_protocol, simulation_settings, is_valid)
+		return new{}(function_to_solve, model_setup, cell_parameters, cycling_protocol, simulation_settings, is_valid)
 	end
 end
 
+struct Optimization <: SolvingProblem
+	function_to_solve::Function
+	setup::Any
+	parameters::Any
+	model::Any
+	sensitivities::Any
+	initial_results::Any
+
+	function Optimization(initial_results, objective::Function; info_level = 0, end_report = false)
+
+		function_to_solve = run_optimization
+
+		reports = initial_results[:reports]
+		states = initial_results[:states]
+		extra = initial_results[:extra]
+		parameters = extra[:parameters]
+		model = extra[:model]
+		state0 = extra[:state0]
+		forces = extra[:forces]
+		config = extra[:cfg]
+		time_steps = extra[:timesteps]
+
+		reports = reports[1:end-1]
+
+		dG = solve_adjoint_sensitivities(model, states, reports, objective,
+			forces = forces, state0 = state0, parameters = parameters)
+
+		config[:info_level] = info_level
+		config[:end_report] = end_report
+
+		cfg = optimization_config(model, parameters, rel_min = 0.5, rel_max = 5, use_scaling = true)
+
+		opt_setup = setup_parameter_optimization(model, state0, parameters, time_steps, forces, objective, cfg, config = config)
+
+		return new{}(function_to_solve, opt_setup, parameters, model, dG, initial_results)
+	end
+end
+
+
+#########
+# Solve #
+#########
 
 """
 	solve(problem::Simulation; hook=nothing, kwargs...)
@@ -93,14 +136,31 @@ The output of the simulation if the problem is valid.
 # Throws
 Throws an error if the `Simulation` object is not valid, prompting the user to check warnings during instantiation.
 """
-function solve(problem::Simulation; accept_invalid = false, hook = nothing, kwargs...)
+function solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, kwargs...)
+
+	config_kwargs = (info_level = info_level,)
+
+	diffusion_model = problem.model_setup.model_settings["UseDiffusionModel"]
+	if diffusion_model == "PXD"
+		use_p2d = true
+	elseif diffusion_model == "NoParticleDiffusion"
+		use_p2d = false
+	else
+		error("DiffusionModel $diffusion_model not recognized.")
+	end
 
 	if accept_invalid == true
-		output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings; hook = hook,
+		output = problem.function_to_solve(problem.model_setup, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;
+			hook = nothing,
+			use_p2d = use_p2d,
+			config_kwargs = config_kwargs,
 			kwargs...)
 	else
 		if problem.is_valid == true
-			output = problem.function_to_solve(problem.model, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings; hook = hook,
+			output = problem.function_to_solve(problem.model_setup, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;
+				hook = nothing,
+				use_p2d = use_p2d,
+				config_kwargs = config_kwargs,
 				kwargs...)
 
 			return output
@@ -124,15 +184,82 @@ function solve(problem::Simulation; accept_invalid = false, hook = nothing, kwar
 
 end
 
+
+function solve(problem::Optimization; hook = nothing, info_level = 0, kwargs...)
+
+
+	output = problem.function_to_solve(problem.setup, problem.initial_results,
+		hook = nothing,
+		info_level = info_level,
+		kwargs...)
+
+	return output
+
+
+end
+
+######################
+# Run optimization #
+######################
+
+function run_optimization(opt_setup, initial_results; hook = nothing, info_level = 0, kwargs...)
+
+	extra = initial_results[:extra]
+	parameters = extra[:parameters]
+	model = extra[:model]
+	state0 = extra[:state0]
+	forces = extra[:forces]
+	config = extra[:cfg]
+	time_steps = extra[:timesteps]
+
+	config[:info_level] = info_level
+
+	## Print starting values
+
+	x0 = opt_setup.x0
+	F0 = opt_setup.F!(x0)
+	dF0 = opt_setup.dF!(similar(x0), x0)
+
+	@info "Initial objective: $F0, gradient norm $(sum(abs, dF0))"
+
+	## Perform optimization loop using LBFGSB package
+
+
+	lower = opt_setup.limits.min
+	upper = opt_setup.limits.max
+	x0 = opt_setup.x0
+	prt = 1
+	f! = opt_setup.F!
+	g! = opt_setup.dF!
+	results, final_x = lbfgsb(f!, g!, x0, lb = lower, ub = upper, iprint = prt, maxfun = 200, maxiter = 100)
+
+	## Verify the results
+
+	F_final = opt_setup.F!(final_x)
+	prm_tuned = deepcopy(parameters)
+	data = opt_setup.data
+	devectorize_variables!(prm_tuned, model, final_x, data[:mapper], config = data[:config])
+	states_t, rep_t = simulate(state0, model, time_steps, parameters = prm_tuned, forces = forces, config = config)
+
+	return (states = states_t, report = rep_t, final_x = final_x)
+end
+
+
+###############
+# Run battery #
+###############
+
+
+
 """
-	run_battery(model::BatteryModel, cell_parameters::CellParameters, 
+	run_battery(model::BatteryModelSetup, cell_parameters::CellParameters, 
 				cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings; 
 				hook=nothing, kwargs...)
 
 Runs a battery simulation using the provided model, cell parameters, cycling protocol, and simulation settings.
 
 # Arguments
-- `model ::BatteryModel` : The battery model to be used.
+- `model ::BatteryModelSetup` : The battery model to be used.
 - `cell_parameters ::CellParameters` : The cell parameter set.
 - `cycling_protocol ::CyclingProtocol` : The cycling protocol parameter set.
 - `simulation_settings ::SimulationSettings` : The simulation settings parameter set.
@@ -142,8 +269,9 @@ Runs a battery simulation using the provided model, cell parameters, cycling pro
 # Returns
 The output of the battery simulation after executing `run_battery` with formatted input.
 """
-function run_battery(model::BatteryModel, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings;
+function run_battery(model::BatteryModelSetup, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings;
 	hook = nothing,
+	use_p2d = true,
 	kwargs...)
 
 	model_settings = model.model_settings
@@ -152,7 +280,7 @@ function run_battery(model::BatteryModel, cell_parameters::CellParameters, cycli
 
 	# @info JSON.json(battmo_formatted_input, 2)
 
-	output = run_battery(battmo_formatted_input; hook = hook, kwargs...)
+	output = run_battery(battmo_formatted_input; hook = hook, use_p2d = use_p2d, kwargs...)
 
 	return output
 end
@@ -168,13 +296,14 @@ prepared from a json file using the function [`load_battmo_formatted_input`](@re
 """
 function run_battery(inputparams::BattMoFormattedInput;
 	hook = nothing,
+	use_p2d = true,
 	kwargs...)
 	"""
 		Run battery wrapper method. Call setup_simulation function and run the simulation with the setup that is returned. A hook function can be given to modify the setup after the call to setup_simulation
 	"""
 
 	#Setup simulation
-	output = setup_simulation(deepcopy(inputparams); kwargs...)
+	output = setup_simulation(deepcopy(inputparams); use_p2d = use_p2d, kwargs...)
 
 	simulator = output[:simulator]
 	model     = output[:model]
@@ -231,6 +360,7 @@ function setup_simulation(inputparams::BattMoFormattedInput;
 	model, parameters = setup_model(inputparams;
 		use_groups = use_groups,
 		general_ad = general_ad,
+		use_p2d = use_p2d,
 		model_kwargs...)
 
 	state0 = setup_initial_state(inputparams, model)
@@ -544,12 +674,39 @@ function setup_submodels(inputparams::InputParams;
 	#######################
 
 	controlPolicy = jsondict["Control"]["controlPolicy"]
+	use_ramp_up = jsondict["TimeStepping"]["useRampup"]
 
-	if controlPolicy == "CCDischarge"
+	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge" || controlPolicy == "CCCycling"
+		ctrl = jsondict["Control"]
+		if jsondict["Control"]["useCVswitch"]
 
-		minE = jsondict["Control"]["lowerCutoffVoltage"]
-
-		policy = SimpleCVPolicy()
+			policy = SimpleCVPolicy()
+		else
+			if haskey(ctrl, "initialControl")
+				initial_control = ctrl["initialControl"]
+			else
+				if controlPolicy == "CCDischarge"
+					initial_control = "discharging"
+				else
+					initial_control = "charging"
+				end
+			end
+			if haskey(ctrl, "numberOfCycles")
+				number_of_cycles = ctrl["numberOfCycles"]
+			else
+				if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge"
+					number_of_cycles = 0
+				else
+					error("CCCycling parameters miss numberOfcycles")
+				end
+			end
+			policy = CCPolicy(number_of_cycles,
+				initial_control,
+				ctrl["lowerCutoffVoltage"],
+				ctrl["upperCutoffVoltage"],
+				use_ramp_up,
+			)
+		end
 
 	elseif controlPolicy == "CCCV"
 
@@ -834,11 +991,24 @@ function setup_battery_parameters(inputparams::InputParams,
 		con = Constants()
 
 		DRate = inputparams["Control"]["DRate"]
+
 		prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
+
 
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
-	elseif controlPolicy == "CCCV"
+
+	elseif controlPolicy == "CCCharge"
+		cap = computeCellCapacity(model)
+		con = Constants()
+
+		CRate = inputparams["Control"]["CRate"]
+
+		prm_control[:ImaxCharge] = (cap / con.hour) * CRate
+
+		parameters[:Control] = setup_parameters(model[:Control], prm_control)
+
+	elseif controlPolicy == "CCCV" || controlPolicy == "CCCycling"
 
 		cap = computeCellCapacity(model)
 		con = Constants()
@@ -847,6 +1017,42 @@ function setup_battery_parameters(inputparams::InputParams,
 		CRate                       = inputparams["Control"]["CRate"]
 		prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
 		prm_control[:ImaxCharge]    = (cap / con.hour) * CRate
+
+
+		parameters[:Control] = setup_parameters(model[:Control], prm_control)
+
+	elseif controlPolicy == "Generic"
+		control_steps = inputparams["Control"]["controlsteps"]
+
+		prm_steps = []
+		cap = computeCellCapacity(model)
+		con = Constants()
+
+		for step in control_steps
+			mode = step["controltype"] # e.g., "discharge", "charge", "rest", etc.
+
+			step_params = Dict{Symbol, Any}()
+
+			# if haskey(step, "CRate")
+			# 	step_params[:current] = (cap / con.hour) * step["CRate"]
+			# elseif haskey(step, "DRate")
+			# 	step_params[:current] = (cap / con.hour) * step["DRate"]
+			# end
+
+			# if haskey(step, "voltage")
+			# 	step_params[:voltage] = step["voltage"]
+			# end
+
+			# if haskey(step, "duration")
+			# 	step_params[:duration] = step["duration"]
+			# end
+
+			step_params[:mode] = mode
+
+			push!(prm_steps, step_params)
+		end
+
+		prm_control[:steps] = prm_steps
 
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
@@ -1332,11 +1538,16 @@ function setup_timesteps(inputparams::InputParams;
 
 	controlPolicy = inputparams["Control"]["controlPolicy"]
 
-	if controlPolicy == "CCDischarge"
+	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge"
 
-		DRate = inputparams["Control"]["DRate"]
+		if controlPolicy == "CCDischarge"
+			CRate = inputparams["Control"]["DRate"]
+		else
+			CRate = inputparams["Control"]["CRate"]
+		end
+
 		con = Constants()
-		totalTime = 1.1 * con.hour / DRate
+		totalTime = 1.1 * con.hour / CRate
 
 		if haskey(inputparams["TimeStepping"], "totalTime")
 			@warn "totalTime value is given but not used"
@@ -1359,6 +1570,33 @@ function setup_timesteps(inputparams::InputParams;
 
 		timesteps = rampupTimesteps(totalTime, dt, nr)
 
+	elseif controlPolicy == "CCCycling"
+
+		ncycles = inputparams["Control"]["numberOfCycles"]
+		DRate = inputparams["Control"]["DRate"]
+		CRate = inputparams["Control"]["CRate"]
+
+		con = Constants()
+
+		totalTime = ncycles * 2 * (1 * con.hour / CRate + 1 * con.hour / DRate)
+
+
+		if haskey(inputparams["TimeStepping"], "totalTime")
+			@warn "totalTime value is given but not used"
+		end
+
+		if haskey(inputparams["TimeStepping"], "timeStepDuration")
+			dt = inputparams["TimeStepping"]["timeStepDuration"]
+			n  = Int64(floor(totalTime / dt))
+			if haskey(inputparams["TimeStepping"], "numberOfTimeSteps")
+				@warn "Number of time steps is given but not used"
+			end
+		else
+			n  = inputparams["TimeStepping"]["numberOfTimeSteps"]
+			dt = totalTime / n
+		end
+		timesteps = repeat([dt], n)
+
 	elseif controlPolicy == "CCCV"
 
 		ncycles = inputparams["Control"]["numberOfCycles"]
@@ -1367,7 +1605,7 @@ function setup_timesteps(inputparams::InputParams;
 
 		con = Constants()
 
-		totalTime = ncycles * 1.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
+		totalTime = ncycles * 2.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
 		if haskey(inputparams["TimeStepping"], "totalTime")
 			@warn "totalTime value is given but not used"
@@ -1433,7 +1671,7 @@ function setup_config(sim::JutulSimulator,
 	cfg[:min_nonlinear_iterations] = 1
 	cfg[:extra_timing]             = extra_timing
 	# cfg[:max_nonlinear_iterations] = 5
-	cfg[:safe_mode]             = false
+	cfg[:safe_mode]             = true
 	cfg[:error_on_incomplete]   = false
 	cfg[:failure_cuts_timestep] = true
 
@@ -1452,9 +1690,14 @@ function setup_config(sim::JutulSimulator,
 		end
 	end
 
-	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa GenericPolicy
+	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy
+		if model[:Control].system.policy isa CyclingCVPolicy
 
-		cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+			cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+
+		elseif model[:Control].system.policy isa CCPolicy && model[:Control].system.policy.numberOfCycles > 0
+			cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+		end
 
 		function post_hook(done, report, sim, dt, forces, max_iter, cfg)
 
@@ -1463,22 +1706,55 @@ function setup_config(sim::JutulSimulator,
 			@info typeof(s.state.Control.ControllerCV)
 			@info typeof(m[:Control].system.policy)
 			if model[:Control].system.policy isa CyclingCVPolicy
-				if s.state.Control.ControllerCV.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-					report[:stopnow] = true
+				if model[:Control].system.policy isa CyclingCVPolicy
+
+					if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+						report[:stopnow] = true
+					else
+						report[:stopnow] = false
+					end
+
+				elseif model[:Control].system.policy isa GenericPolicy
+					if s.state.Control.ControllerCV.current_step_number >= m[:Control].system.policy.number_of_steps
+						report[:stopnow] = true
+					else
+						report[:stopnow] = false
+					end
+
 				else
+					@warn "Neither numberOfCycles nor number_of_steps found in controller or policy"
 					report[:stopnow] = false
 				end
 
-			elseif model[:Control].system.policy isa GenericPolicy
-				if s.state.Control.ControllerCV.current_step_number >= m[:Control].system.policy.number_of_steps
-					report[:stopnow] = true
-				else
-					report[:stopnow] = false
-				end
+			elseif model[:Control].system.policy isa CCPolicy
 
-			else
-				@warn "Neither numberOfCycles nor number_of_steps found in controller or policy"
-				report[:stopnow] = false
+				if m[:Control].system.policy.numberOfCycles == 0
+
+					if m[:Control].system.policy.initialControl == "charging"
+
+						if s.state.Control.Phi[1] >= m[:Control].system.policy.upperCutoffVoltage
+							report[:stopnow] = true
+						else
+							report[:stopnow] = false
+						end
+
+					elseif m[:Control].system.policy.initialControl == "discharging"
+
+						if s.state.Control.Phi[1] <= m[:Control].system.policy.lowerCutoffVoltage
+							report[:stopnow] = true
+
+						else
+
+							report[:stopnow] = false
+						end
+					end
+				else
+					if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+						report[:stopnow] = true
+					else
+						report[:stopnow] = false
+					end
+				end
 			end
 
 			return (done, report)
@@ -1487,7 +1763,9 @@ function setup_config(sim::JutulSimulator,
 
 		cfg[:post_ministep_hook] = post_hook
 
+
 	end
+
 
 	return cfg
 

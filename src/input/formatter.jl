@@ -39,6 +39,21 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 	##################
 	# Model settings
 
+	diff_type = "full"
+
+	if isnothing(get_key_value(model_settings, "ModelGeometry"))
+		geom_case = nothing
+	else
+		geom = get_key_value(model_settings, "ModelGeometry")
+		if geom == "1D"
+			geom_case = geom
+
+		elseif geom == "3D Pouch"
+			geom_case = "3D-demo"
+
+		end
+	end
+
 	if isnothing(get_key_value(model_settings, "UseThermalModel"))
 		use_thermal = false
 	else
@@ -57,6 +72,122 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		use_ramp_up = true
 	end
 
+	ne_ocp_value = get_key_value(ne_am, "OpenCircuitPotential")
+	if isa(ne_ocp_value, AbstractDict)
+		if haskey(ne_ocp_value, "functionname")
+			ne_ocp = ne_ocp_value
+		else
+			ne_ocp = Dict(
+				"type" => "function",
+				"data_x" => ne_ocp_value["x"],
+				"data_y" => ne_ocp_value["y"],
+				"argumentlist" => [
+					"theta",
+				],
+			)
+		end
+	elseif isa(ne_ocp_value, String)
+		ne_ocp = Dict(
+			"type" => "function",
+			"function" => ne_ocp_value,
+		)
+	else
+		error("Function type not recognized")
+	end
+
+	pe_ocp_value = get_key_value(pe_am, "OpenCircuitPotential")
+	if isa(pe_ocp_value, AbstractDict)
+		if haskey(pe_ocp_value, "functionname")
+			pe_ocp = pe_ocp_value
+		else
+			pe_ocp = Dict(
+				"type" => "function",
+				"data_x" => pe_ocp_value["x"],
+				"data_y" => pe_ocp_value["y"],
+				"argumentlist" => [
+					"theta",
+				],
+			)
+		end
+	elseif isa(pe_ocp_value, String)
+		pe_ocp = Dict(
+			"type" => "function",
+			"function" => pe_ocp_value,
+		)
+	else
+		error("Function type not recognized")
+	end
+
+	diff_value = get_key_value(elyte, "DiffusionCoefficient")
+	if isa(diff_value, AbstractDict)
+		if haskey(diff_value, "functionname")
+			diff = diff_value
+		else
+			diff = Dict(
+				"type" => "function",
+				"data_x" => diff_value["x"],
+				"data_y" => diff_value["y"],
+				"argumentlist" => [
+					"theta",
+				],
+			)
+		end
+	elseif isa(diff_value, String)
+		diff = Dict(
+			"type" => "function",
+			"function" => diff_value,
+		)
+	else
+		error("Function type not recognized")
+	end
+
+	cond_value = get_key_value(elyte, "IonicConductivity")
+	if isa(cond_value, AbstractDict)
+		if haskey(cond_value, "functionname")
+			cond = cond_value
+		else
+			cond = Dict(
+				"type" => "function",
+				"data_x" => cond_value["x"],
+				"data_y" => cond_value["y"],
+				"argumentlist" => [
+					"theta",
+				],
+			)
+		end
+	elseif isa(cond_value, String)
+		cond = Dict(
+			"type" => "function",
+			"function" => cond_value,
+		)
+	else
+		error("Function type not recognized")
+	end
+
+	###################
+	# Control policy
+	###################
+
+	if cycling_protocol["Protocol"] == "CC"
+		use_cv_switch = false
+		if cycling_protocol["TotalNumberOfCycles"] == 0
+			if cycling_protocol["InitialControl"] == "discharging"
+				control = "CCDischarge"
+			else
+				control = "CCCharge"
+
+			end
+		else
+			control = "CCCycling"
+
+		end
+	elseif cycling_protocol["Protocol"] == "CCCV"
+		use_cv_switch = true
+		control = "CCCV"
+
+	else
+		error("Cycling policy not recognized.")
+	end
 
 	battmo_input = Dict(
 		"G" => get_key_value(simulation_settings, "Grid"),
@@ -65,7 +196,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		"use_thermal" => use_thermal,
 		"include_current_collectors" => use_cc,
 		"Control" => Dict(
-			"controlPolicy" => get_key_value(cycling_protocol, "Protocol"),
+			"controlPolicy" => control,
+			"useCVswitch" => use_cv_switch,
 			"numberOfCycles" => get_key_value(cycling_protocol, "TotalNumberOfCycles"),
 			"rampupTime" => get_key_value(simulation_settings, "RampUpTime"),
 			"CRate" => get_key_value(cycling_protocol, "CRate"),
@@ -97,7 +229,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 						"guestStoichiometry100" => get_key_value(ne_am, "StoichiometricCoefficientAtSOC100"),
 						"guestStoichiometry0" => get_key_value(ne_am, "StoichiometricCoefficientAtSOC0"),
 						"chargeTransferCoefficient" => get_key_value(ne_am, "ChargeTransferCoefficient"),
-						"openCircuitPotential" => get_key_value(ne_am, "OpenCircuitVoltage"),
+						"openCircuitPotential" => ne_ocp,
 						"SEImolarVolume" => get_key_value(ne_interphase, "MolarVolume"),
 						"SEIionicConductivity" => get_key_value(ne_interphase, "IonicConductivity"),
 						"SEIelectronicDiffusionCoefficient" => get_key_value(ne_interphase, "ElectronicDiffusionCoefficient"),
@@ -108,7 +240,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 						"SEIlengthRef" => get_key_value(ne_interphase, "InitialThickness"),
 						"density" => get_key_value(ne_am, "Density"),
 					),
-					"diffusionModelType" => get_key_value(model_settings, "UseDiffusionModel"),
+					"diffusionModelType" => diff_type,
 					"SolidDiffusion" => Dict(
 						"activationEnergyOfDiffusion" => get_key_value(ne_am, "ActivationEnergyOfDiffusion"),
 						"referenceDiffusionCoefficient" => get_key_value(ne_am, "DiffusionCoefficient"),
@@ -168,8 +300,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 						"guestStoichiometry100" => get_key_value(pe_am, "StoichiometricCoefficientAtSOC100"),
 						"guestStoichiometry0" => get_key_value(pe_am, "StoichiometricCoefficientAtSOC0"),
 						"chargeTransferCoefficient" => get_key_value(pe_am, "ChargeTransferCoefficient"),
-						"openCircuitPotential" => get_key_value(pe_am, "OpenCircuitVoltage"),
-					), "diffusionModelType" => "full",
+						"openCircuitPotential" => pe_ocp,
+					), "diffusionModelType" => diff_type,
 					"SolidDiffusion" => Dict(
 						"activationEnergyOfDiffusion" => get_key_value(pe_am, "ActivationEnergyOfDiffusion"),
 						"referenceDiffusionCoefficient" => get_key_value(pe_am, "DiffusionCoefficient"),
@@ -214,8 +346,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"thermalConductivity" => get_key_value(elyte, "ThermalConductivity"),
 			"density" => get_key_value(elyte, "Density"),
 			"initialConcentration" => get_key_value(elyte, "Concentration"),
-			"ionicConductivity" => get_key_value(elyte, "IonicConductivity"),
-			"diffusionCoefficient" => get_key_value(elyte, "DiffusionCoefficient"),
+			"ionicConductivity" => cond,
+			"diffusionCoefficient" => diff,
 			"species" => Dict(
 				"chargeNumber" => get_key_value(elyte, "ChargeNumber"),
 				"transferenceNumber" => get_key_value(elyte, "TransferenceNumber"),
@@ -238,7 +370,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"externalHeatTransferCoefficientTab" => get_key_value(cell, "HeatTransferCoefficient"),
 		),
 		"Geometry" => Dict(
-			"case" => get_key_value(model_settings, "ModelGeometry"),
+			"case" => geom_case,
 			"faceArea" => get_key_value(cell, "ElectrodeGeometricSurfaceArea"),
 			"width" => get_key_value(cell, "ElectrodeWidth"),
 			"height" => get_key_value(cell, "ElectrodeLength"),

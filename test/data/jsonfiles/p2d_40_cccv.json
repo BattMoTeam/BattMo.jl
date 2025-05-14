@@ -133,12 +133,13 @@
     "controlPolicy": "CCCV",
     "initialControl": "charging",
     "numberOfCycles": 3,
-    "CRate": 0.5,
-    "DRate": 1.0,
+    "CRate": 3,
+    "DRate": 3,
     "lowerCutoffVoltage": 3.0,
     "upperCutoffVoltage": 4.0,
     "dIdtLimit": 1e-6,
-    "dEdtLimit": 1e-4
+    "dEdtLimit": 1e-4,
+    "rampupTime": 10
   },
   "Electrolyte": {
     "initialConcentration": 1000,

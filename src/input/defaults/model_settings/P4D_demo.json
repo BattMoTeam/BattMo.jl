@@ -1,6 +1,0 @@
-{
-    "ModelGeometry": "3D-demo",
-    "UseDiffusionModel": "full",
-    "UseCurrentCollectors": "Generic",
-    "UseRampUp": "Generic"
-}

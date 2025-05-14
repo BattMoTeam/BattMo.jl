@@ -1,0 +1,6 @@
+{
+    "ModelGeometry": "3D Pouch",
+    "UseDiffusionModel": "PXD",
+    "UseCurrentCollectors": "Generic",
+    "UseRampUp": "Sinusoidal"
+}

@@ -7,7 +7,7 @@ using Jutul, BattMo, GLMakie
 # We load the matlab input file
 name = "p2d_40"
 fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/", name, ".mat")
-inputparams = read_matlab_battmo_input(fn)
+inputparams = load_matlab_battmo_input(fn)
 nothing # hide
 
 # We want to compare the solution obtained in julia with the solution computed in Matlab. We set the option to load the
@@ -49,7 +49,7 @@ output = run_battery(inputparams;
 	max_step = nothing);
 states = output[:states]
 
-t = [state[:Control][:ControllerCV].time for state in states]
+t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
