@@ -34,7 +34,7 @@ print_parameter_info(parameter_name)
 
 # Another example
 
-parameter_name = "ModelGeometry"
+parameter_name = "ModelFramework"
 
 print_parameter_info(parameter_name)
 

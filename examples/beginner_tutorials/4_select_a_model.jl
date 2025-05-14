@@ -18,14 +18,14 @@ nothing #hide
 # We can inspect all current settings with:
 model_settings.all
 
-# By default, the "UseSEIModel" parameter is set to false. Since we want to observe SEI-driven degradation effects, we’ll specify which SEI model we'd like to use, and with that enable the use of 
+# By default, the "SEIModel" parameter is set to false. Since we want to observe SEI-driven degradation effects, we’ll specify which SEI model we'd like to use, and with that enable the use of 
 # the SEI model during the simulation. Let's have a look at which models are available to include in the settings:
 
 print_submodels_info()
 
 # For the SEI model, we can see there's one model to enable which is the "Bolay" model. We enable it in the model settings:
 
-model_settings["UseSEIModel"] = "Bolay"
+model_settings["SEIModel"] = "Bolay"
 model_settings.all
 
 # ### Initialize the Model
@@ -34,10 +34,10 @@ model_settings.all
 model_setup = LithiumIonBattery(; model_settings);
 
 # When setting up the model, the LithiumIonBattery constructor runs a validation on the model_settings. 
-# In this case, because we set the "UseSEIModel" parameter to true, the validator provides a warning that we should define which SEI model we would like to use.
+# In this case, because we set the "SEIModel" parameter to true, the validator provides a warning that we should define which SEI model we would like to use.
 # If we ignore any warnings and pass the model to the Simulation constructor then we get an error. Let's create such a situation:
 
-model_settings["UseSEIModel"] = "Bola"
+model_settings["SEIModel"] = "Bola"
 
 
 model_setup = LithiumIonBattery(; model_settings);
@@ -59,7 +59,7 @@ end  # hide
 # ### Specify SEI Model and Rebuild
 # Let's resolve the issue again and run the simulation:
 
-model_settings["UseSEIModel"] = "Bolay"
+model_settings["SEIModel"] = "Bolay"
 nothing # hide
 
 # Now rebuild the model:

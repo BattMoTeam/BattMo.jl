@@ -140,14 +140,8 @@ function solve(problem::Simulation; accept_invalid = false, hook = nothing, info
 
 	config_kwargs = (info_level = info_level,)
 
-	diffusion_model = problem.model_setup.model_settings["UseDiffusionModel"]
-	if diffusion_model == "PXD"
-		use_p2d = true
-	elseif diffusion_model == "NoParticleDiffusion"
-		use_p2d = false
-	else
-		error("DiffusionModel $diffusion_model not recognized.")
-	end
+	use_p2d = true
+
 
 	if accept_invalid == true
 		output = problem.function_to_solve(problem.model_setup, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;

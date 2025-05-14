@@ -24,7 +24,7 @@ Dict(interphaseparams)
 model_setup = LithiumIonBattery();
 
 model_settings = model_setup.model_settings
-model_settings["UseSEIModel"] = "Bolay"
+model_settings["SEIModel"] = "Bolay"
 
 cycling_protocol["TotalNumberOfCycles"] = 10
 

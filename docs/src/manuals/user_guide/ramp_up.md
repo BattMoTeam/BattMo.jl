@@ -19,5 +19,5 @@ Our implementation uses a **sinusoidal ramp function**, providing a smooth, diff
 The user can choose to use the ramp up function in their simulation by setting the following model setting:
 
 ```JSON
-{"UseRampUp": "Sinusoidal"}
+{"RampUp": "Sinusoidal"}
 ``` 
