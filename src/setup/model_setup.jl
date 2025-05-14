@@ -1690,8 +1690,8 @@ function setup_config(sim::JutulSimulator,
 		end
 	end
 
-	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy
-		if model[:Control].system.policy isa CyclingCVPolicy
+	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy || model[:Control].system.policy isa GenericPolicy
+		if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa GenericPolicy
 
 			cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
 
@@ -1703,8 +1703,7 @@ function setup_config(sim::JutulSimulator,
 
 			s = get_simulator_storage(sim)
 			m = get_simulator_model(sim)
-			@info typeof(s.state.Control.ControllerCV)
-			@info typeof(m[:Control].system.policy)
+
 			if model[:Control].system.policy isa CyclingCVPolicy
 				if model[:Control].system.policy isa CyclingCVPolicy
 
@@ -1715,7 +1714,16 @@ function setup_config(sim::JutulSimulator,
 					end
 
 				elseif model[:Control].system.policy isa GenericPolicy
-					if s.state.Control.ControllerCV.current_step_number >= m[:Control].system.policy.number_of_steps
+					# if s.state.Control.Controller.current_step_number == m[:Control].system.policy.number_of_steps
+
+					# 	# rsw = setupRegionSwitchFlags(s.state.Control.Controller.current_step, state, controller)
+
+					# 	if rsw.afterSwitchRegion
+					# 		report[:stopnow] = true
+					# 	else
+					# 		report[:stopnow] = false
+					# 	end
+					if s.state.Control.Controller.current_step_number > m[:Control].system.policy.number_of_steps
 						report[:stopnow] = true
 					else
 						report[:stopnow] = false

@@ -184,6 +184,9 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 	elseif cycling_protocol["Protocol"] == "CCCV"
 		use_cv_switch = true
 		control = "CCCV"
+	elseif cycling_protocol["Protocol"] == "Experiment"
+		use_cv_switch = nothing
+		control = "Generic"
 
 	else
 		error("Cycling policy not recognized.")
@@ -395,7 +398,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		battmo_input["ThermalModel"]["externalTemperature"] = cycling_protocol["AmbientKelvinTemperature"]
 
 	end
-
+	@info battmo_input["Control"]
 	return InputParams(battmo_input)
 
 end

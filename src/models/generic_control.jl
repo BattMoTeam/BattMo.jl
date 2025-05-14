@@ -11,11 +11,12 @@ struct Termination
 	end
 end
 
-struct CurrentStep <: AbstractControlStep
+mutable struct CurrentStep <: AbstractControlStep
 	value::Float64
 	direction::Union{String, Nothing}
 	termination::Termination
 	time_step_size::Union{Nothing, Float64}
+	current_function::Union{Missing, Any}
 end
 
 struct VoltageStep <: AbstractControlStep
@@ -38,7 +39,7 @@ struct CycleStep <: AbstractControlStep
 	cycle_control_steps::Vector{AbstractControlStep}
 end
 
-mutable struct GenericPolicy <: AbstractControl
+mutable struct GenericPolicy <: AbstractPolicy
 	control_policy::String
 	control_steps::Vector{AbstractControlStep}
 	initial_control::AbstractControlStep
@@ -72,7 +73,8 @@ function parse_control_step(json::Dict)
 			json["value"],
 			get(json, "direction", nothing),
 			Termination(json["termination"]["quantity"], json["termination"]["value"]; comparison = json["termination"]["comparison"]),
-			get(json, "timeStepSize", nothing))
+			get(json, "timeStepSize", nothing),
+			missing)
 	elseif ctype == "voltage"
 		return VoltageStep(
 			json["value"],
@@ -100,12 +102,16 @@ function getInitCurrent(policy::GenericPolicy)
 	if isa(control, VoltageStep)
 		error("Voltage control cannot be the first control step")
 	elseif isa(control, CurrentStep)
-		if control.direction == "discharge"
-			I = control.value
-		elseif control.direction == "charge"
-			I = -control.value
+		if !ismissing(policy.current_function)
+			val = policy.current_function(0.0)
 		else
-			error("Initial control direction not recognized")
+			if control.direction == "discharging"
+				I = control.value
+			elseif control.direction == "charging"
+				I = -control.value
+			else
+				error("Initial control direction not recognized")
+			end
 		end
 		return I
 
@@ -119,15 +125,31 @@ end
 
 
 function setup_initial_control_policy!(policy::GenericPolicy, inputparams::InputParams, parameters)
+	control = policy.initial_control
+	if isa(control, VoltageStep)
+		error("Voltage control cannot be the first control step")
+	elseif isa(control, CurrentStep)
+		if ismissing(policy.current_function)
+			tup = 100# Float64(inputparams["Control"]["rampupTime"])
 
-	# policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
-	# policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])
+			cFun(time) = currentFun(time, Imax, tup)
+
+			policy.current_function = cFun
+		end
+		return I
+
+	elseif isa(control, RestStep)
+		print("Rest step")
+	else
+		error("initial control not recognized")
+	end
+
 
 end
 
-mutable struct GenericController{S <: AbstractControlStep} <: ControllerCV
+mutable struct GenericController <: Controller
 	policy::GenericPolicy
-	current_step::S
+	current_step::AbstractControlStep
 	current_step_number::Int
 	time::Real
 	number_of_steps::Int
@@ -135,15 +157,15 @@ mutable struct GenericController{S <: AbstractControlStep} <: ControllerCV
 	dIdt::Real
 	dEdt::Real
 
-	function GenericController(policy::GenericPolicy, current_step::S, current_step_number::Int, time::Real, number_of_steps::Int; target::Real = 0.0, dEdt::Real = 0.0, dIdt::Real = 0.0) where {S <: Union{Nothing, AbstractControlStep}}
-		new{S}(policy, current_step, current_step_number, time, number_of_steps, target, dIdt, dEdt)
+	function GenericController(policy::GenericPolicy, current_step::Union{Nothing, AbstractControlStep}, current_step_number::Int, time::Real, number_of_steps::Int; target::Real = 0.0, dEdt::Real = 0.0, dIdt::Real = 0.0)
+		new(policy, current_step, current_step_number, time, number_of_steps, target, dIdt, dEdt)
 	end
 end
 
 GenericController() = GenericController(nothing, nothing, 0, 0.0, 0)
 
-@inline function Jutul.numerical_type(x::GenericController{S}) where {S}
-	return S
+@inline function Jutul.numerical_type(x::GenericController)
+	return typeof(x.current_step)
 end
 
 """
@@ -165,7 +187,7 @@ end
 """
 Overload function to copy GenericController
 """
-function Base.copy(cv::GenericController{S}) where {S <: AbstractControlStep}
+function Base.copy(cv::GenericController)
 	# Construct using the known type parameter S
 	cv_copy = GenericController(cv.policy, cv.current_step, cv.current_step_number, cv.time, cv.number_of_steps; target = cv.target, dIdt = cv.dIdt, dEdt = cv.dEdt)
 
@@ -192,7 +214,7 @@ function Jutul.reset_state_to_previous_state!(
 		storage,
 		model)
 
-	copyController!(storage.state[:ControllerCV], storage.state0[:ControllerCV])
+	copyController!(storage.state[:Controller], storage.state0[:Controller])
 end
 
 
@@ -242,15 +264,20 @@ function setupRegionSwitchFlags(policy::P, state, controller::GenericController)
 	elseif termination.quantity == "time"
 		t = controller.time
 		target = termination.value
-		tol = 1e-6
+		tol = 1
 
 		before = t < target - tol
 		after  = t > target + tol
 
+
 	else
 		error("Unsupported termination quantity: $(termination.quantity)")
 	end
-
+	@info "step = ", controller.current_step
+	@info "E = ", E
+	@info "I = ", I
+	@info "target = ", target
+	@info "after = ", after
 	return (beforeSwitchRegion = before, afterSwitchRegion = after)
 end
 
@@ -265,41 +292,74 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 	E0 = only(value(state0[:Phi]))
 	I0 = only(value(state0[:Current]))
 
-	controller = state[:ControllerCV]
+	controller = state[:Controller]
 
 	# Update time and rates of change
-	controller.time = state0.ControllerCV.time + dt
+	controller.time = state0.Controller.time + dt
 	controller.dIdt = (I - I0) / dt
 	controller.dEdt = (E - E0) / dt
 
 	# Get control step info
-	step_idx = controller.current_step_number
+	step_idx = state0.Controller.current_step_number
 	control_steps = policy.control_steps
 
-	# Stay within bounds of control steps
-	if step_idx > length(control_steps)
-		error("Step index $step_idx exceeds number of control steps $(length(control_steps))")
-	end
+	ctrlType0 = state0.Controller.current_step
 
+	# We entered the switch region in the previous time step. We consider switching control
 	step = control_steps[step_idx]
 
 	# Check if we should switch to next step based on region switch flags
 	rsw0 = setupRegionSwitchFlags(step, state0, controller)
 	rsw  = setupRegionSwitchFlags(step, state, controller)
 
+	@info controller.current_step
+
+	# Stay within bounds of control steps
+	if step_idx > length(control_steps)
+		error("Step index $step_idx exceeds number of control steps $(length(control_steps))")
+	end
+
 	if rsw0.beforeSwitchRegion
 		# Stay in current control step
 		next_step_idx = step_idx
+		ctrlType = ctrlType0
 	else
-		if controller.current_step == state0.ControllerCV.current_step  # Control hasn't changed in current iteration
-			if rsw.afterSwitchRegion
-				next_step_idx = step_idx + 1
+
+		currentCtrlType = state.Controller.current_step # current control in the the Newton iteration
+		@info state.Controller.current_step_number
+
+		if controller.current_step_number == step_idx
+
+			# The control has not changed from previous time step and we want to determine if we should change it. 
+
+			if rsw0.afterSwitchRegion
+				# We switch to a new control because we are no longer in the acceptable region for the current
+				# control
+				if controller.current_step_number < length(control_steps)
+					nextCtrlType0 = control_steps[step_idx+1] # next control that can occur after the previous time step control (if it changes)
+					ctrlType = nextCtrlType0
+					next_step_idx = step_idx + 1
+				else
+					nextCtrlType0 = nothing
+					ctrlType = currentCtrlType
+					next_step_idx = controller.current_step_number
+				end
+
 			else
 				next_step_idx = step_idx
+				ctrlType = ctrlType0
 			end
-		elseif controller.current_step == step_idx + 1
+		elseif controller.current_step_number == step_idx + 1
 			# Avoid switching back if we already moved forward in this Newton iteration
-			next_step_idx = step_idx + 1
+			if controller.current_step_number < length(control_steps)
+				nextCtrlType0 = control_steps[step_idx+1] # next control that can occur after the previous time step control (if it changes)
+				ctrlType = nextCtrlType0
+				next_step_idx = step_idx + 1
+			else
+				nextCtrlType0 = nothing
+				ctrlType = currentCtrlType
+				next_step_idx = controller.current_step_number
+			end
 		else
 			error("Unexpected control state transition at step $step_idx")
 		end
@@ -307,6 +367,8 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 
 	# Update controller with the selected step index
 	controller.current_step_number = min(next_step_idx, length(control_steps))  # Stay within bounds
+	controller.current_step = ctrlType
+	@info "step", controller.current_step_number
 
 end
 
@@ -316,7 +378,7 @@ Update controller target value (current or voltage) based on the active control 
 """
 function update_values_in_controller!(state, policy::GenericPolicy)
 
-	controller = state[:ControllerCV]
+	controller = state[:Controller]
 	step_idx = controller.current_step_number
 
 	control_steps = policy.control_steps
@@ -326,19 +388,65 @@ function update_values_in_controller!(state, policy::GenericPolicy)
 	end
 
 	step = control_steps[step_idx]
+	ctrlType = state.Controller.current_step.direction
 
-	if step isa CurrentStep
-		target = step.value
+	cf = hasproperty(step, :current_function) ? getproperty(step, :current_function) : missing
 
-	elseif step isa VoltageStep
-		target = step.value
+	if !ismissing(cf)
 
-	elseif step isa RestStep
-		# Assume voltage hold during rest
-		target = 0.0
+		if cf isa Real
+			I_t = cf
+		else
+			# Function of time at the end of interval
+			I_t = cf(controller.time)
+		end
+		if ctrlType == "discharging"
 
+			target = I_t
+
+
+
+		elseif ctrlType == "charging"
+
+			# minus sign below follows from convention
+			target = -I_t
+		end
 	else
-		error("Unsupported step type: $(typeof(step))")
+		if step isa CurrentStep
+
+			tup = state.Controller.time + 100 #Float64(inputparams["Control"]["rampupTime"])
+			cFun(time) = currentFun(time, step.value, tup)
+
+			state.Controller.current_step.current_function = cFun
+			cf = state.Controller.current_step.current_function
+			if cf isa Real
+				I_t = cf
+			else
+				# Function of time at the end of interval
+				I_t = cf(controller.time)
+			end
+			if ctrlType == "discharging"
+
+				target = I_t
+
+
+
+			elseif ctrlType == "charging"
+
+				# minus sign below follows from convention
+				target = -I_t
+			end
+
+		elseif step isa VoltageStep
+			target = step.value
+
+		elseif step isa RestStep
+			# Assume voltage hold during rest
+			target = 0.0
+
+		else
+			error("Unsupported step type: $(typeof(step))")
+		end
 	end
 
 	controller.target = target

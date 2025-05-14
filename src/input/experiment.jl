@@ -27,7 +27,7 @@ function convert_experiment_to_battmo_control_input(experiment::Experiment)
 			step_dict["timeStepSize"] = 600
 
 		elseif containsi(step, "Discharge") || containsi(step, "Charge")
-			direction = containsi(step, "Discharge") ? "discharge" : "charge"
+			direction = containsi(step, "Discharge") ? "discharging" : "charging"
 			comparison = containsi(step, "Discharge") ? "below" : "above"
 
 			values, units = extract_numeric_values(step)

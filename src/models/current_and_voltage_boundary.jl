@@ -664,13 +664,16 @@ function check_constraints(model, storage)
 		rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
 
 	else
-		ctrlType  = state[:ControllerCV].current_step
-		ctrlType0 = state0[:ControllerCV].current_step
+		ctrlType  = state[:Controller].current_step
+		ctrlType0 = state0[:Controller].current_step
 
 		current_step_number = controller.current_step_number
 
-		nextCtrlType = policy.control_steps[current_step_number]
-
+		if current_step_number == length(policy.control_steps)
+			nextCtrlType = ctrlType
+		else
+			nextCtrlType = policy.control_steps[current_step_number+1]
+		end
 		arefulfilled = true
 
 		rsw  = setupRegionSwitchFlags(ctrlType, state, controller)
@@ -1129,7 +1132,7 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquati
 
 	phi = only(state.Phi)
 
-	ctrl = state[:ControllerCV]
+	ctrl = state[:Controller]
 
 	if ctrl isa GenericController
 
@@ -1239,43 +1242,10 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 			ctrl.numberOfCycles = ncycles
 		end
 
-
-	elseif policy isa SimpleCVPolicy
+	elseif policy isa GenericPolicy
 
 		copyController!(storage.state0[:Controller], ctrl)
 
-	elseif policy isa CCPolicy
-
-		if policy.numberOfCycles == 0
-			copyController!(storage.state0[:Controller], ctrl)
-
-		else
-
-			initctrl = policy.initialControl
-
-			ctrlType = ctrl.ctrlType
-
-			ctrlType0 = storage.state0[:Controller].ctrlType
-			ncycles   = storage.state0[:Controller].numberOfCycles
-
-			copyController!(storage.state0[:Controller], ctrl)
-
-			if initctrl == "charging"
-
-				if ctrlType0 == "discharging" && ctrlType == "charging"
-					ncycles = ncycles + 1
-				end
-
-			elseif initctrl == "discharging"
-
-				if ctrlType0 == "charging" && ctrlType == "discharging"
-					ncycles = ncycles + 1
-				end
-
-			end
-
-			ctrl.numberOfCycles = ncycles
-		end
 
 
 	else
@@ -1359,7 +1329,7 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 		current_step_number = 1
 		current_step = policy.initial_control
 		time_in_step = 0.0
-		state[:ControllerCV] = GenericController(policy, current_step, current_step_number, time_in_step, number_of_steps)
+		state[:Controller] = GenericController(policy, current_step, current_step_number, time_in_step, number_of_steps)
 
 	end
 
