@@ -136,9 +136,9 @@ The output of the simulation if the problem is valid.
 # Throws
 Throws an error if the `Simulation` object is not valid, prompting the user to check warnings during instantiation.
 """
-function solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, kwargs...)
+function solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, end_report = true, kwargs...)
 
-	config_kwargs = (info_level = info_level,)
+	config_kwargs = (info_level = info_level, end_report = end_report)
 
 	use_p2d = true
 
@@ -179,12 +179,13 @@ function solve(problem::Simulation; accept_invalid = false, hook = nothing, info
 end
 
 
-function solve(problem::Optimization; hook = nothing, info_level = 0, kwargs...)
+function solve(problem::Optimization; hook = nothing, info_level = 0, end_report = false, kwargs...)
 
 
 	output = problem.function_to_solve(problem.setup, problem.initial_results,
 		hook = nothing,
 		info_level = info_level,
+		end_report = end_report,
 		kwargs...)
 
 	return output
@@ -196,7 +197,7 @@ end
 # Run optimization #
 ######################
 
-function run_optimization(opt_setup, initial_results; hook = nothing, info_level = 0, kwargs...)
+function run_optimization(opt_setup, initial_results; hook = nothing, info_level = 0, end_report = false, kwargs...)
 
 	extra = initial_results[:extra]
 	parameters = extra[:parameters]
@@ -207,6 +208,7 @@ function run_optimization(opt_setup, initial_results; hook = nothing, info_level
 	time_steps = extra[:timesteps]
 
 	config[:info_level] = info_level
+	config[:end_report] = end_report
 
 	## Print starting values
 

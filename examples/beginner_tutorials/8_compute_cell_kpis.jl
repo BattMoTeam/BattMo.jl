@@ -32,19 +32,25 @@ cell_kpis_from_set = Dict(
 	"Negative Electrode Current Collector Mass" => compute_current_collector_mass(cell_parameters, "NegativeElectrode"),
 	"Electrolyte Mass" => compute_electrolyte_mass(cell_parameters),
 	"Cell Mass" => compute_cell_mass(cell_parameters),
+	"Cell Volume" => compute_cell_volume(cell_parameters),
 	"Positive Electrode Mass Loading" => compute_electrode_mass_loading(cell_parameters, "PositiveElectrode"),
 	"Negative Electrode Mass Loading" => compute_electrode_mass_loading(cell_parameters, "NegativeElectrode"),
 	"Cell Theoretical Capacity" => compute_cell_theoretical_capacity(cell_parameters),
 	"Cell N:P Ratio" => compute_np_ratio(cell_parameters),
 )
 
-print(cell_kpis_from_set)
 
-# The function to compute the cell mass also offers an option to print the breakdown of masses without returning the total mass. The breakdown can be useful to 
+
+# The functions to compute the cell mass and cell volume also offer an option to print the breakdown of masses without returning the total mass. The breakdown can be useful to 
 # verify the parameters are sensible, and to calculate a Bill of Materials (BOM)
 compute_cell_mass(cell_parameters; print_breakdown = true)
 
 # ### Cell KPIs from simulation output
 # Once we run a simulation we can access additional cell KPIs such as energy density, specific energy, mean power output, etc.
 
-# >>>>>>>> TO BE COMPLETED
+cell_kpis_from_output = Dict(
+	"Discharge capacity" => compute_discharge_capacity(output),
+	"Discharge energy" => compute_discharge_energy(output),
+	"Energy density" => compute_discharge_energy(output) / compute_cell_volume(cell_parameters),
+	"Specific energy" => compute_discharge_energy(output) / compute_cell_mass(cell_parameters),
+)

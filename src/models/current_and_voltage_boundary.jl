@@ -722,6 +722,7 @@ function Jutul.perform_step_solve_impl!(report, storage, model::MultiModel{:Batt
 
 	state  = storage.state[:Control]
 	state0 = storage.state0[:Control]
+
 	policy = model[:Control].system.policy
 
 	update_controller!(state, state0, policy, dt)
@@ -807,6 +808,7 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
 	nextCtrlType = getNextCtrlTypeCCCV(ctrlType0)
 
 	rsw00 = setupRegionSwitchFlags(policy, state0, ctrlType0)
+
 
 	if rsw00.beforeSwitchRegion
 
