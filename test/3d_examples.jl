@@ -16,14 +16,14 @@ using Test
 		model_settings = load_model_settings(; from_file_path = file_path_model)
 		simulation_settings = load_simulation_settings(; from_file_path = file_path_simulation)
 
-		model = LithiumIonBatteryModel(; model_settings)
+		model_setup = LithiumIonBattery(; model_settings)
 
-		sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
+		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 		output = solve(sim)
 
 		Cc = map(x -> x[:Control][:Current][1], output.states)
 		Phi = map(x -> x[:Control][:Phi][1], output.states)
-		@test length(output.states) == 84
+		@test length(output.states) == 148
 		@test Cc[2] ≈ 0.00343 atol = 1e-2
 		for i in 3:length(Cc)
 			@test Cc[i] ≈ 0.0076079 atol = 1e-2

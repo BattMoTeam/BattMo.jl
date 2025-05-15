@@ -12,20 +12,16 @@ cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
 model_settings = load_model_settings(; from_file_path = file_path_model)
 simulation_settings = load_simulation_settings(; from_file_path = file_path_simulation)
 
+model_setup = LithiumIonBattery(; model_settings);
 
-########################################
-
-
-model = LithiumIonBatteryModel(; model_settings);
-
-sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
-output = solve(sim)
+sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
+output = solve(sim; info_level = 1)
 
 nothing # hide
 
 states = output[:states]
 
-t = [state[:Control][:ControllerCV].time for state in states]
+t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 nothing # hide

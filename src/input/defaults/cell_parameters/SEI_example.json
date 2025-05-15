@@ -28,7 +28,7 @@
       "MaximumConcentration": 30555.0,
       "StoichiometricCoefficientAtSOC0": 0.1429,
       "StoichiometricCoefficientAtSOC100": 0.88551,
-      "OpenCircuitVoltage": {
+      "OpenCircuitPotential": {
         "type": "function",
         "functionname": "computeOCP_Graphite_Torchio",
         "argumentlist": [
@@ -91,7 +91,7 @@
       "MaximumConcentration": 55554.0,
       "StoichiometricCoefficientAtSOC0": 0.99174,
       "StoichiometricCoefficientAtSOC100": 0.4955,
-      "OpenCircuitVoltage": {
+      "OpenCircuitPotential": {
         "type": "function",
         "functionname": "computeOCP_NMC111",
         "argumentlist": [

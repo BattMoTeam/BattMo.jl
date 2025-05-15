@@ -15,9 +15,9 @@ nothing # hide
 
 # ## Setup and run simulation
 
-model = LithiumIonBatteryModel(; model_settings)
+model_setup = LithiumIonBattery(; model_settings)
 
-sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
+sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
 output = solve(sim)
 nothing # hide
 
@@ -26,7 +26,7 @@ nothing # hide
 states = output[:states]
 model  = output[:extra][:model]
 
-t = [state[:Control][:ControllerCV].time for state in states]
+t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 

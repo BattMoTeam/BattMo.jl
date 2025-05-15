@@ -21,20 +21,20 @@ Dict(interphaseparams)
 
 # ## We start the simulation and retrieve the result
 
-model = LithiumIonBatteryModel();
+model_setup = LithiumIonBattery();
 
-model_settings = model.model_settings
+model_settings = model_setup.model_settings
 model_settings["UseSEIModel"] = "Bolay"
 
 cycling_protocol["TotalNumberOfCycles"] = 10
 
-sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
+sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
 
 output = solve(sim)
 
 states = output[:states]
 
-t = [state[:Control][:ControllerCV].time for state in states]
+t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 nothing # hide

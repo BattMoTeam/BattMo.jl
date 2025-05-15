@@ -10,9 +10,9 @@ using Test
 		cell_parameters = load_cell_parameters(; from_default_set = name)
 		cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
-		model = LithiumIonBatteryModel()
+		model_setup = LithiumIonBattery()
 
-		sim = Simulation(model, cell_parameters, cycling_protocol)
+		sim = Simulation(model_setup, cell_parameters, cycling_protocol)
 
 		output_0 = solve(sim)
 

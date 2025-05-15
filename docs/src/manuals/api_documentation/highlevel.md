@@ -30,8 +30,8 @@ load_matlab_battmo_input
 ## Battery model types
 
 ```@docs
-BatteryModel
-LithiumIonBatteryModel
+BatteryModelSetup
+LithiumIonBattery
 ```
 
 ## Forward simulation

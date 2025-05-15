@@ -20,6 +20,13 @@ using JSONSchema: Schema, SingleIssue
 import JSONSchema: show, isvalid, _resolve_refs
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 🧮 Plotting and visualization
+# ─────────────────────────────────────────────────────────────────────────────
+
+using Jutul: plot_multimodel_interactive
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 🧮 Optimization and Adjoint solving
 # ─────────────────────────────────────────────────────────────────────────────
 using LBFGSB: lbfgsb
@@ -185,8 +192,8 @@ include("utils/battery_kpis.jl")
 
 
 include("models/battmo_types.jl")
-include("models/full_battery_models/battery_model.jl")
-include("models/full_battery_models/lithium_ion.jl")
+include("models/full_battery_model_setups/battery_model.jl")
+include("models/full_battery_model_setups/lithium_ion.jl")
 
 include("input/loader.jl")
 include("input/defaults.jl")
@@ -209,6 +216,8 @@ include("models/battery_utils.jl")
 
 include("setup/model_setup.jl")
 include("setup/matlab_model_setup.jl")
+
+include("plotting/3D.jl")
 
 include("utils/battery_cell_specifications.jl")
 

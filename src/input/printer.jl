@@ -1,7 +1,7 @@
-export print_default_parameter_sets, print_submodels_info, print_parameter_info
+export print_default_parameter_sets_info, print_submodels_info, print_parameter_info
 
 
-function print_default_parameter_sets()
+function print_default_parameter_sets_info()
 	script_dir = @__DIR__  # Directory where this script is located
 	defaults_dir = joinpath(script_dir, "defaults")
 	entries = readdir(defaults_dir; join = true)

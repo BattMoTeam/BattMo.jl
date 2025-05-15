@@ -136,7 +136,7 @@ function get_parameter_meta_data()
 		),
 		"Protocol" => Dict(
 			"type" => String,
-			"options" => ["CCDischarge", "CCCharge", "CCCV"],
+			"options" => ["CC", "CCCV"],
 			"context_type" => "Protocol",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_789012",
 		),
@@ -179,9 +179,9 @@ function get_parameter_meta_data()
 		),
 		"UseDiffusionModel" => Dict(
 			"type" => String,
-			"options" => ["PXD", "NoParticleDiffusion"],
+			"options" => ["PXD"],
 			"is_sub_model" => true,
-			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/models",
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/pxd_model",
 		),
 		"UseCurrentCollectors" => Dict(
 			"type" => String,
@@ -239,6 +239,15 @@ function get_parameter_meta_data()
 			"context_type" => "GridPointsNegativeElectrode",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_grid_negative",
 		),
+		"TabWidth" => Dict(
+			"type" => Real,
+			"min_value" => 1e-9,
+			"max_value" => 1000),
+		"TabLength" => Dict(
+			"type" => Real,
+			"min_value" => 1e-8,
+			"max_value" => 1000,
+		),
 		"GridPointsPositiveElectrodeCurrentCollectorTabLength" => Dict(
 			"type" => Int,
 			"min_value" => 1,
@@ -288,9 +297,10 @@ function get_parameter_meta_data()
 		),
 		"UseRampUp" => Dict(
 			"type" => String,
-			"options" => ["Generic"],
+			"options" => ["Sinusoidal"],
 			"context_type" => "UseRampUp",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_rampup",
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/ramp_up",
 			"is_sub_model" => true,
 		),
 		"RampUpSteps" => Dict(
@@ -448,7 +458,7 @@ function get_parameter_meta_data()
 			"unit_name" => "emmo:Metre",
 			"unit_iri" => "https://w3id.org/emmo#Metre",
 		),
-		"OpenCircuitVoltage" => Dict("context_type" => ["OpenCircuitVoltage", "Expression"],
+		"OpenCircuitPotential" => Dict("context_type" => ["OpenCircuitPotential", "Expression"],
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_9c657fdc_b9d3_4964_907c_f9a6e8c5f52b",
 			"description" => "The open-circuit potential of the active material under given concentration and temperature conditions",
 			"type" => [String, Dict{String, Vector}, Real],
@@ -622,7 +632,7 @@ function get_parameter_meta_data()
 			"context_type" => "NumberOfEntities",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_41efdf5d_0c9c_4ea0_bb65_f8236e663be5",
 			"max_value" => 1500,
-			"min_value" => 1,
+			"min_value" => 0,
 			"description" => "Total number of charge-discharge cycles",
 			"type" => Int,
 			"unit" => "1",

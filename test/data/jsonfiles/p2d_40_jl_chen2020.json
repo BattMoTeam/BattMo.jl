@@ -171,7 +171,8 @@
    "include_current_collectors": false,
    "Control": {
       "controlPolicy": "CCDischarge",
-      "initialControl": "discharge",
+      "useCVswitch": false,
+      "initialControl": "discharging",
       "numberOfCycles": 10,
       "CRate": 1.0,
       "DRate": 1.0,

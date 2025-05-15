@@ -138,7 +138,8 @@
     "lowerCutoffVoltage": 3.0,
     "upperCutoffVoltage": 4.0,
     "dIdtLimit": 1e-6,
-    "dEdtLimit": 1e-4
+    "dEdtLimit": 1e-4,
+    "rampupTime": 10
   },
   "Electrolyte": {
     "initialConcentration": 1000,

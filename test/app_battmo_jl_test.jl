@@ -109,7 +109,7 @@ function setup_config(cfg,
 			s = Jutul.get_simulator_storage(sim)
 			m = Jutul.get_simulator_model(sim)
 
-			if s.state.Control.ControllerCV.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+			if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
 				report[:stopnow] = true
 			else
 				report[:stopnow] = false

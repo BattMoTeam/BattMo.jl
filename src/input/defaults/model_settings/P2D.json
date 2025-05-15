@@ -1,5 +1,5 @@
 {
     "ModelGeometry": "1D",
     "UseDiffusionModel": "PXD",
-    "UseRampUp": "Generic"
+    "UseRampUp": "Sinusoidal"
 }

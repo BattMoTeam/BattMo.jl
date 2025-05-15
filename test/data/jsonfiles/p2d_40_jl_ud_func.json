@@ -147,6 +147,7 @@
   "include_current_collectors": true,
   "Control": {
     "controlPolicy": "CCDischarge",
+    "useCVswitch": false,
     "DRate": 1,
     "lowerCutoffVoltage": 2.4,
     "upperCutoffVoltage": 4.1,
