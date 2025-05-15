@@ -300,7 +300,7 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 	controller.dEdt = (E - E0) / dt
 
 	# Get control step info
-	step_idx = state0.Controller.current_step_number
+	step_idx = state0.Controller.current_step_number + 1
 	control_steps = policy.control_steps
 
 	ctrlType0 = state0.Controller.current_step
@@ -321,45 +321,47 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 
 	if rsw0.beforeSwitchRegion
 		# Stay in current control step
-		next_step_idx = step_idx
+		next_step_idx = step_idx - 1
 		ctrlType = ctrlType0
 	else
 
 		currentCtrlType = state.Controller.current_step # current control in the the Newton iteration
 		@info state.Controller.current_step_number
 
-		if controller.current_step_number == step_idx
+		if controller.current_step_number == step_idx - 1
 
 			# The control has not changed from previous time step and we want to determine if we should change it. 
 
 			if rsw0.afterSwitchRegion
 				# We switch to a new control because we are no longer in the acceptable region for the current
 				# control
-				if controller.current_step_number < length(control_steps)
-					nextCtrlType0 = control_steps[step_idx+1] # next control that can occur after the previous time step control (if it changes)
-					ctrlType = nextCtrlType0
-					next_step_idx = step_idx + 1
+				if step_idx == length(policy.control_steps)
+					nextCtrlType0 = policy.control_steps[1]
 				else
-					nextCtrlType0 = nothing
-					ctrlType = currentCtrlType
-					next_step_idx = controller.current_step_number
+					nextCtrlType0 = policy.control_steps[step_idx+1]
+
 				end
+				# next control that can occur after the previous time step control (if it changes)
+				ctrlType = nextCtrlType0
+				next_step_idx = step_idx
 
 			else
-				next_step_idx = step_idx
+				next_step_idx = step_idx - 1
 				ctrlType = ctrlType0
 			end
-		elseif controller.current_step_number == step_idx + 1
+		elseif controller.current_step_number == step_idx
 			# Avoid switching back if we already moved forward in this Newton iteration
-			if controller.current_step_number < length(control_steps)
-				nextCtrlType0 = control_steps[step_idx+1] # next control that can occur after the previous time step control (if it changes)
-				ctrlType = nextCtrlType0
-				next_step_idx = step_idx + 1
+
+			if step_idx == length(policy.control_steps)
+				nextCtrlType0 = policy.control_steps[1]
 			else
-				nextCtrlType0 = nothing
-				ctrlType = currentCtrlType
-				next_step_idx = controller.current_step_number
+				nextCtrlType0 = policy.control_steps[step_idx+1]
+
 			end
+			# next control that can occur after the previous time step control (if it changes)
+			ctrlType = nextCtrlType0
+			next_step_idx = step_idx
+
 		else
 			error("Unexpected control state transition at step $step_idx")
 		end
@@ -379,7 +381,7 @@ Update controller target value (current or voltage) based on the active control 
 function update_values_in_controller!(state, policy::GenericPolicy)
 
 	controller = state[:Controller]
-	step_idx = controller.current_step_number
+	step_idx = controller.current_step_number + 1
 
 	control_steps = policy.control_steps
 
@@ -388,6 +390,7 @@ function update_values_in_controller!(state, policy::GenericPolicy)
 	end
 
 	step = control_steps[step_idx]
+	@info "step =", step
 	ctrlType = state.Controller.current_step.direction
 
 	cf = hasproperty(step, :current_function) ? getproperty(step, :current_function) : missing

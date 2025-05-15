@@ -3,10 +3,10 @@ using BattMo, GLMakie
 cycling_protocol = load_cycling_protocol(; from_default_set = "experiment")
 cycling_protocol["Experiment"] = [
 	"Rest for 4000 s",
-	"Discharge at 500 mA until 3.0 V"]
-# "Hold at 3.0 V until 1e-4 A",
-# "Charge at 1 A until 4.0 V",
-# "Rest for 1 hour"]
+	"Discharge at 500 mA until 3.0 V",
+	"Hold at 3.0 V until 1e-4 A",
+	"Charge at 1 A until 4.0 V",
+	"Rest for 1 hour"]
 
 cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
 

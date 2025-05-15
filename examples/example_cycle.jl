@@ -4,7 +4,7 @@ using BattMo, GLMakie
 # We use the setup provided in the [p2d_40.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/p2d_40.json#L152) file. In particular, see the data under the `Control` key.
 file_path_cell = parameter_file_path("cell_parameters", "Chen2020_calibrated.json")
 file_path_model = parameter_file_path("model_settings", "P2D.json")
-file_path_cycling = parameter_file_path("cycling_protocols", "CCCV.json")
+file_path_cycling = parameter_file_path("cycling_protocols", "CCCycling.json")
 file_path_simulation = parameter_file_path("simulation_settings", "P2D.json")
 
 cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)

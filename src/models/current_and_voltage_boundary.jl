@@ -667,13 +667,15 @@ function check_constraints(model, storage)
 		ctrlType  = state[:Controller].current_step
 		ctrlType0 = state0[:Controller].current_step
 
-		current_step_number = controller.current_step_number
+		stepidx = controller.current_step_number + 1
 
-		if current_step_number == length(policy.control_steps)
-			nextCtrlType = ctrlType
+		if stepidx == length(policy.control_steps)
+			nextCtrlType = policy.control_steps[1]
 		else
-			nextCtrlType = policy.control_steps[current_step_number+1]
+			nextCtrlType = policy.control_steps[stepidx+1]
+
 		end
+
 		arefulfilled = true
 
 		rsw  = setupRegionSwitchFlags(ctrlType, state, controller)
@@ -885,11 +887,7 @@ function update_control_type_in_controller!(state, state0, policy::CCPolicy, dt)
 
 		ctrlType0 = state0.Controller.ctrlType
 
-		if ctrlType0 == "discharging"
-			nextCtrlType = "charging"
-		else
-			nextCtrlType = "discharging"
-		end
+		nextCtrlType0 = getNextCtrlType(ctrlType0)
 
 		rsw00 = setupRegionSwitchFlags(policy, state0, ctrlType0)
 
@@ -904,11 +902,6 @@ function update_control_type_in_controller!(state, state0, policy::CCPolicy, dt)
 			# We entered the switch region in the previous time step. We consider switching control
 
 			currentCtrlType = state.Controller.ctrlType # current control in the the Newton iteration
-			if ctrlType0 == "discharging"
-				nextCtrlType0 = "charging"
-			else
-				nextCtrlType0 = "discharging"
-			end # next control that can occur after the previous time step control (if it changes)
 
 			rsw0 = setupRegionSwitchFlags(policy, state, ctrlType0)
 
@@ -1326,7 +1319,7 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 
 	elseif policy isa GenericPolicy
 		number_of_steps = policy.number_of_control_steps
-		current_step_number = 1
+		current_step_number = 0
 		current_step = policy.initial_control
 		time_in_step = 0.0
 		state[:Controller] = GenericController(policy, current_step, current_step_number, time_in_step, number_of_steps)
@@ -1341,7 +1334,7 @@ end
 # Utility functions for CC-CV control #
 #######################################
 
-function getNextCtrlTypeCCCV(ctrlType::OperationalMode)
+function getNextCtrlType(ctrlType::OperationalMode)
 
 	if ctrlType == cc_discharge1
 
@@ -1367,6 +1360,16 @@ function getNextCtrlTypeCCCV(ctrlType::OperationalMode)
 
 	return nextCtrlType
 
+end
+
+function getNextCtrlType(ctrlType::String)
+
+	if ctrlType == "discharging"
+		nextCtrlType = "charging"
+	else
+		nextCtrlType = "discharging"
+	end
+	return nextCtrlType
 end
 
 ############################################
