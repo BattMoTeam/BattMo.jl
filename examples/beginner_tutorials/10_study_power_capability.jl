@@ -17,7 +17,7 @@ model_setup = LithiumIonBattery()
 # to explore, and a handy function to calculate the discharge capacity, using a basic trapezoidal rule to integrate time and current.
 #%%
 d_rates = [0.05, 0.1, 0.2, 0.5, 1.0, 2.0]
-thicknesses = collect(8.0e-5:3.0e-5:30e-5)
+thicknesses = collect(8.0e-5 : 0.5e-5 : 11.0e-5)
 
 function compute_discharge_capacity(output::NamedTuple)
 	t = [state[:Control][:Controller].time for state in output[:states]]
@@ -69,4 +69,6 @@ end
 fig[1, 2] = Legend(fig, ax, "Thicknesses", framevisible = false)
 fig
 
-# WHY CELL CAPACITY INCREASES WHITH NEGATIVE ELECTRODE THICKNESS, AFTER IT HAS PASSED NP>1? STRANGE!!!!!!!!!
+# We see that increasing the thickness of the Positive Electrode increases its capacity at low DRates. However, thicker electrodes result in a sharp decline of delivered
+# cell capacity at higher DRates. Note that the delivered cell capacity at low rates increases with thickness up to a point (ca. 110 um) which corresponds to an NP ratio ~ 1.0.
+# As the positive electrode becomes thicker, the NP ratio of the cell decreases below 1.0, meaning the cell capacity becomes limited by the capacity of the negative electrode.
