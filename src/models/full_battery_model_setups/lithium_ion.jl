@@ -25,8 +25,8 @@ struct LithiumIonBattery <: BatteryModelSetup
 
 	function LithiumIonBattery(; model_settings = get_default_model_settings(LithiumIonBattery))
 
-		model_geometry = model_settings["ModelGeometry"]
-		name = "$model_geometry Doyle-Fuller-Newman lithium-ion model"
+		model_geometry = model_settings["ModelFramework"]
+		name = "$model_geometry Setup object for a lithium-ion model"
 
 		is_valid = validate_parameter_set(model_settings)
 

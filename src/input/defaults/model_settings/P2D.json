@@ -1,5 +1,5 @@
 {
-    "ModelGeometry": "1D",
-    "UseDiffusionModel": "PXD",
-    "UseRampUp": "Sinusoidal"
+    "ModelFramework": "P2D",
+    "TransportInSolid": "FullDiffusion",
+    "RampUp": "Sinusoidal"
 }

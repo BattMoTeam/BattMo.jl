@@ -41,32 +41,32 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	diff_type = "full"
 
-	if isnothing(get_key_value(model_settings, "ModelGeometry"))
+	if isnothing(get_key_value(model_settings, "ModelFramework"))
 		geom_case = nothing
 	else
-		geom = get_key_value(model_settings, "ModelGeometry")
-		if geom == "1D"
-			geom_case = geom
+		geom = get_key_value(model_settings, "ModelFramework")
+		if geom == "P2D"
+			geom_case = "1D"
 
-		elseif geom == "3D Pouch"
+		elseif geom == "P4D Pouch"
 			geom_case = "3D-demo"
 
 		end
 	end
 
-	if isnothing(get_key_value(model_settings, "UseThermalModel"))
+	if isnothing(get_key_value(model_settings, "ThermalModel"))
 		use_thermal = false
 	else
 		use_thermal = true
 	end
 
-	if isnothing(get_key_value(model_settings, "UseCurrentCollectors"))
+	if isnothing(get_key_value(model_settings, "CurrentCollectors"))
 		use_cc = false
 	else
 		use_cc = true
 	end
 
-	if isnothing(get_key_value(model_settings, "UseRampUp"))
+	if isnothing(get_key_value(model_settings, "RampUp"))
 		use_ramp_up = false
 	else
 		use_ramp_up = true
@@ -219,7 +219,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 					"specificHeatCapacity" => get_key_value(ne_am, "SpecificHeatCapacity"),
 					"thermalConductivity" => get_key_value(ne_am, "ThermalConductivity"),
 					"electronicConductivity" => get_key_value(ne_am, "ElectronicConductivity"),
-					"SEImodel" => get_key_value(model_settings, "UseSEIModel"),
+					"SEImodel" => get_key_value(model_settings, "SEIModel"),
 					"Interface" => Dict(
 						"saturationConcentration" => get_key_value(ne_am, "MaximumConcentration"),
 						"volumetricSurfaceArea" => get_key_value(ne_am, "VolumetricSurfaceArea"),

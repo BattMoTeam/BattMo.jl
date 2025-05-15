@@ -342,14 +342,14 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 	model_settings_dict = model_settings.all
 
-	if model_settings_dict["ModelGeometry"] == "1D"
+	if model_settings_dict["ModelFramework"] == "P2D"
 		push!(cell_required, "ElectrodeGeometricSurfaceArea")
 
-	elseif model_settings_dict["ModelGeometry"] == "3D Pouch"
+	elseif model_settings_dict["ModelFramework"] == "P4D Pouch"
 		push!(cell_required, "ElectrodeWidth")
 		push!(cell_required, "ElectrodeLength")
 		push!(cell_required, "ElectrodeGeometricSurfaceArea")
-		if haskey(model_settings, "UseCurrentCollectors")
+		if haskey(model_settings, "CurrentCollectors")
 			push!(ne_required, "CurrentCollector")
 			push!(pe_required, "CurrentCollector")
 
@@ -359,7 +359,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 			push!(pe_cc_required, "TabLength")
 		end
 
-	elseif model_settings_dict["ModelGeometry"] == "3D Cylindrical"
+	elseif model_settings_dict["ModelFramework"] == "P4D Cylindrical"
 
 		push!(cell_required, "DubbelCoatedElectrodes")
 		push!(cell_required, "InnerCellRadius")
@@ -372,7 +372,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 	end
 
-	if haskey(model_settings_dict, "UseSEIModel") && model_settings_dict["UseSEIModel"] == "Bolay"
+	if haskey(model_settings_dict, "SEIModel") && model_settings_dict["SEIModel"] == "Bolay"
 		push!(ne_required, "Interphase")
 	end
 
@@ -507,11 +507,11 @@ function get_schema_simulation_settings(model_settings)
 	required = schema["required"]
 	required_grid_points = schema["properties"]["GridPoints"]["required"]
 
-	if model_settings["ModelGeometry"] == "3D Pouch"
+	if model_settings["ModelFramework"] == "P4D Pouch"
 		push!(required_grid_points, "ElectrodeWidth")
 		push!(required_grid_points, "ElectrodeLength")
 
-		if haskey(model_settings, "UseCurrentCollectors")
+		if haskey(model_settings, "CurrentCollectors")
 			push!(required_grid_points, "PositiveElectrodeCurrentCollector")
 			push!(required_grid_points, "PositiveElectrodeCurrentCollectorTabWidth")
 			push!(required_grid_points, "PositiveElectrodeCurrentCollectorTabLength")
@@ -520,7 +520,7 @@ function get_schema_simulation_settings(model_settings)
 			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabLength")
 		end
 	end
-	if haskey(model_settings, "UseRampUp") && model_settings["UseRampUp"] == "Sinusoidal"
+	if haskey(model_settings, "RampUp") && model_settings["RampUp"] == "Sinusoidal"
 		push!(required, "RampUpTime")
 		push!(required, "RampUpSteps")
 	end
@@ -535,38 +535,25 @@ function get_schema_model_settings()
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",
 		"properties" => Dict(
-			"ModelGeometry" => create_property(parameter_meta, "ModelGeometry"),
-			"UseCurrentCollectors" => create_property(parameter_meta, "UseCurrentCollectors"),
-			"UseRampUp" => create_property(parameter_meta, "UseRampUp"),
-			"UseSEIModel" => create_property(parameter_meta, "UseSEIModel"),
-			"UseDiffusionModel" => create_property(parameter_meta, "UseDiffusionModel"),
+			"ModelFramework" => create_property(parameter_meta, "ModelFramework"),
+			"CurrentCollectors" => create_property(parameter_meta, "CurrentCollectors"),
+			"RampUp" => create_property(parameter_meta, "RampUp"),
+			"SEIModel" => create_property(parameter_meta, "SEIModel"),
+			"TransportInSolid" => create_property(parameter_meta, "TransportInSolid"),
 		),
 		"required" => [
-			"ModelGeometry",
+			"ModelFramework", "TransportInSolid",
 		],
 		"allOf" => [
-			# 🚫 Disallow UseCurrentCollectors if ModelGeometry is "1D"
+			# 🚫 Disallow CurrentCollectors if ModelFramework is "1D"
 			Dict(
 				"if" => Dict(
-					"properties" => Dict("ModelGeometry" => Dict("const" => "1D")),
-					"required" => ["ModelGeometry"],
+					"properties" => Dict("ModelFramework" => Dict("const" => "P2D")),
+					"required" => ["ModelFramework"],
 				),
 				"then" => Dict(
 					"not" => Dict(
-						"required" => ["UseCurrentCollectors"],
-					),
-				),
-			),
-
-			# 🚫 Disallow UseThermalModel if ModelGeometry is "3D-demo"
-			Dict(
-				"if" => Dict(
-					"properties" => Dict("ModelGeometry" => Dict("const" => "3D-demo")),
-					"required" => ["ModelGeometry"],
-				),
-				"then" => Dict(
-					"not" => Dict(
-						"required" => ["UseThermalModel"],
+						"required" => ["CurrentCollectors"],
 					),
 				),
 			),
