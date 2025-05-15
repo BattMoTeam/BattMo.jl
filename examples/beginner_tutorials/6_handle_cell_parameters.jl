@@ -13,6 +13,9 @@ cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 nothing # hide
 
+# It is also possible to load parameters from a json file stored in a directory:
+cell_parameters = load_cell_parameters(; from_file_path="./src/input/defaults/cell_parameters/Chen2020_calibrated.json")
+
 # ### Access parameters
 # Cell parameters, cycling protocols, model settings and simulation settings are all Dictionary-like objects, which come with additional handy functions.
 # First, lets list the outermost keys of the cell parameters object.
