@@ -528,7 +528,10 @@ function spiral_grid(geomparams::InputGeometryParams)
     ls = [1., 2., 2.1, 3.2, 1.1]
     dxs = ls./Ns
 
-    mapreduce((dx, N) -> repeat([dx], N), vcat, dxs, Ns)
+    dx = mapreduce((dx, N) -> repeat([dx], N), vcat, dxs, Ns)
+
+    spacing = [0; cumsum(dx)]
+    spacing = spacing/spacing[end]
     
 end
 
