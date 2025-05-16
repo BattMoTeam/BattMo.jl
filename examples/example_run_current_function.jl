@@ -1,20 +1,25 @@
-using BattMo, GLMakie, Jutul
+using BattMo, GLMakie
 
 model_setup = LithiumIonBattery()
-
 cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCCycling")
+simulation_settings = load_simulation_settings(; from_default_set = "P2D")
+simulation_settings["TimeStepDuration"] = 20
 
 
-sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+cycling_protocol = load_cycling_protocol(; from_default_set = "user_defined_current_function")
 
-output = solve(sim)
+cycling_protocol["TotalTime"] = 10000
 
-states = output[:states]
+sim_current = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
 
-t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
-I = [state[:Control][:Current][1] for state in states]
+output2 = solve(sim_current);
+
+
+states2 = output2[:states]
+
+t = [state[:Control][:Controller].time for state in states2]
+E = [state[:Control][:Phi][1] for state in states2]
+I = [state[:Control][:Current][1] for state in states2]
 
 f = Figure(size = (1000, 400))
 
@@ -37,11 +42,3 @@ ax = Axis(f[1, 2], title = "Current", xlabel = "Time / s", ylabel = "Current / V
 scatterlines!(ax, t, I; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 f
-
-
-current_func = get_1d_interpolator(t, I, cap_endpoints = false)
-
-sim_current = Simulation(model_setup, cell_parameters, current_func)
-
-
-
