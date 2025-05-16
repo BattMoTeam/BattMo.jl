@@ -24,6 +24,7 @@ import{_ as s,c as n,o as e,aA as i}from"./chunks/framework.COglYQ7E.js";const d
 <span class="line"><span>CCCharge            -         -</span></span>
 <span class="line"><span>CCCycling           -         -</span></span>
 <span class="line"><span>CCDischarge         -         -</span></span>
+<span class="line"><span>user_defined_current_function-         -</span></span>
 <span class="line"><span></span></span>
 <span class="line"><span></span></span>
 <span class="line"><span>================================================================================</span></span>
