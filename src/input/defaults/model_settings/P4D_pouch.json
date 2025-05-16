@@ -1,0 +1,6 @@
+{
+    "ModelFramework": "P4D Pouch",
+    "TransportInSolid": "FullDiffusion",
+    "CurrentCollectors": "Generic",
+    "RampUp": "Sinusoidal"
+}

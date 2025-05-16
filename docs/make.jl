@@ -27,15 +27,22 @@ function build_battmo_docs(build_format              = nothing;
 	battmo_dir = realpath(joinpath(@__DIR__, ".."))
 	# Convert examples as .jl files to markdown
 	tutorials = [
-		"Tutorial 1 - Run a simulation" => "1_run_a_simulation",
-		"Tutorial 2 - Specify a model" => "2_specify_a_model",
-		"Tutorial 3 - Modify cell parameters" => "3_modify_cell_parameters",
-		"Tutorial 4 - Modify cycling protocol" => "4_modify_cycling_protocol"]
+		"Tutorial 1 - Useful tools" => "1_useful_tools",
+		"Tutorial 2 - Run a simulation" => "2_run_a_simulation",
+		"Tutorial 3 - Handle outputs" => "3_handle_outputs",
+		"Tutorial 4 - Select a model" => "4_select_a_model",
+		"Tutorial 5 - Create parameter sets" => "5_create_parameter_sets",
+		"Tutorial 6 - Handle cell parameters" => "6_handle_cell_parameters",
+		"Tutorial 7 - Handle cycling protocol" => "7_handle_cycling_protocols",
+		"Tutorial 8 - Compute cell KPIs" => "8_compute_cell_kpis",
+		"Tutorial 9 - Run a parameter sweep" => "9_run_parameter_sweep",
+	]
 
 	examples = [
 		"Cycle example" => "example_cycle",
-		"3D demo example" => "example_3d_demo",
+		"3D Pouch example" => "example_3D_pouch",
 		"SEI layer growth" => "example_sei",
+		"Matlab example" => "example_battery",
 	]
 
 	tutorials_markdown = []
@@ -129,7 +136,7 @@ function build_battmo_docs(build_format              = nothing;
 		authors  = "SINTEF BattMo team and contributors",
 		repo     = "https://github.com/BattMoTeam/BattMo.jl/blob/{commit}{path}#{line}",
 		sitename = "BattMo.jl",
-		warnonly = true,
+		warnonly = [:missing_docs],
 		plugins  = [bib],
 		format   = build_format,
 		draft    = false,
@@ -142,10 +149,13 @@ function build_battmo_docs(build_format              = nothing;
 		"Getting started" => "manuals/user_guide/getting_started.md"
 	],
 		"Models and architecture" => [
-		"Models" => "manuals/user_guide/models.md"
+		"PXD model" => "manuals/user_guide/pxd_model.md",
+		"Ramp up model" => "manuals/user_guide/ramp_up.md",
+		"SEI model" => "manuals/user_guide/sei_model.md"
 	],
 		"Public API" => [
 		"Input terminology" => "manuals/user_guide/terminology.md",
+		"Simulation dependent input parameters" => "manuals/user_guide/simulation_dependent_input.md",
 		"Functions and types" => "manuals/user_guide/public_api.md"
 	],
 		"Tutorials" => tutorials_markdown

@@ -1,0 +1,10 @@
+{
+  "Protocol": "CC",
+  "TotalNumberOfCycles": 0,
+  "InitialStateOfCharge": 0.01,
+  "CRate": 0.5,
+  "LowerVoltageLimit": 2.5,
+  "UpperVoltageLimit": 4.1,
+  "InitialControl": "charging",
+  "InitialKelvinTemperature": 298.15
+}

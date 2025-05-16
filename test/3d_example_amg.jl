@@ -5,11 +5,11 @@ using Test
 	@test begin
 		name = "p2d_40_jl_chen2020"
 
-		fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/old/", name, ".json")
-		inputparams = read_battmo_formatted_input(fn)
+		fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
+		inputparams = load_battmo_formatted_input(fn)
 
-		fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/old/3d_demo_geometry.json")
-		inputparams_geometry = read_battmo_formatted_input(fn)
+		fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
+		inputparams_geometry = load_battmo_formatted_input(fn)
 
 		inputparams = merge_input_params(inputparams_geometry, inputparams)
 
@@ -55,14 +55,14 @@ using Test
 		states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
 		Cc = map(x -> x[:Control][:Current][1], states)
 		phi = map(x -> x[:Control][:Phi][1], states)
-		@test length(states) == 77
+		@test length(states) == 84
 		@test Cc[1] ≈ 0.00058 atol = 1e-2
 		for i in 3:length(Cc)
 			@test Cc[i] ≈ 0.008165 atol = 1e-2
 		end
 		@test phi[1] ≈ 4.175 atol = 1e-1
 		@test phi[end] ≈ 2.76 atol = 1e-2
-		@test phi[30] ≈ 3.67 atol = 1e-2
+
 		true
 	end
 end

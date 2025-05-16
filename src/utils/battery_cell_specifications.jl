@@ -48,7 +48,7 @@ end
 
 function computeCellEnergy(states)
 	# Only take discharge curves
-	time = [state[:Control][:ControllerCV].time for state in states if state[:Control][:Current][1] > 0]
+	time = [state[:Control][:Controller].time for state in states if state[:Control][:Current][1] > 0]
 	E    = [state[:Control][:Phi][1] for state in states if state[:Control][:Current][1] > 0]
 	I    = [state[:Control][:Current][1] for state in states if state[:Control][:Current][1] > 0]
 
@@ -244,15 +244,26 @@ function computeEnergyEfficiency(inputparams::InputParams)
 
 end
 
-function computeEnergyEfficiency(states)
+function computeEnergyEfficiency(states; cycle_number = nothing)
 
-	time = [state[:Control][:ControllerCV].time for state in states]
-	E    = [state[:Control][:Phi][1] for state in states]
-	I    = [state[:Control][:Current][1] for state in states]
+	t = [state[:Control][:Controller].time for state in states]
+	E = [state[:Control][:Phi][1] for state in states]
+	I = [state[:Control][:Current][1] for state in states]
+
+	if !isnothing(cycle_number)
+		cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
+		total_number_of_cycles = states[end][:Control][:Controller].numberOfCycles
+
+		cycle_index = findall(x -> x == cycle_number, cycle_array)
+
+		I = I[cycle_index]
+		t = t[cycle_index]
+		E = E[cycle_index]
+	end
 
 	Iref = copy(I)
 
-	dt = diff(time)
+	dt = diff(t)
 
 	Emid = (E[2:end] + E[1:end-1]) ./ 2
 

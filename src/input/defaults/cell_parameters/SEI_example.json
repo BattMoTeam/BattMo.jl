@@ -1,0 +1,159 @@
+{
+  "Metadata": {
+    "Title": "SEI example",
+    "Description": "Parameter set to test SEI simulations. Obtained from the Julia repository but with unknown source."
+  },
+  "Cell": {
+    "Name": "",
+    "Case": "3D-demo",
+    "ElectrodeWidth": 1.0e-2,
+    "ElectrodeLength": 2.0e-2,
+    "ElectrodeGeometricSurfaceArea": 0.0002
+  },
+  "NegativeElectrode": {
+    "ElectrodeCoating": {
+      "BruggemanCoefficient": 1.5,
+      "EffectiveDensity": 1900.0,
+      "Thickness": 1.0e-4
+    },
+    "ActiveMaterial": {
+      "Description": "Graphite",
+      "MassFraction": 0.94,
+      "Density": 2240.0,
+      "VolumetricSurfaceArea": 723600.0,
+      "ElectronicConductivity": 100.0,
+      "DiffusionCoefficient": 3.9e-14,
+      "ActivationEnergyOfDiffusion": 5000.0,
+      "ParticleRadius": 1.0e-6,
+      "MaximumConcentration": 30555.0,
+      "StoichiometricCoefficientAtSOC0": 0.1429,
+      "StoichiometricCoefficientAtSOC100": 0.88551,
+      "OpenCircuitPotential": {
+        "type": "function",
+        "functionname": "computeOCP_Graphite_Torchio",
+        "argumentlist": [
+          "concentration",
+          "temperature",
+          "cmax"
+        ]
+      },
+      "NumberOfElectronsTransfered": 1,
+      "ActivationEnergyOfReaction": 5000.0,
+      "ReactionRateConstant": 5.031e-11,
+      "ChargeTransferCoefficient": 0.5
+    },
+    "Interphase": {
+      "Description": "EC-based CEI",
+      "MolarVolume": 95.86e-6,
+      "IonicConductivity": 1e-5,
+      "ElectronicDiffusionCoefficient": 1.6e-12,
+      "StoichiometricCoefficient": 2,
+      "IntersticialConcentration": 1.5e-2,
+      "InitialThickness": 10e-9,
+      "InitialPotentialDrop": 0.5
+    },
+    "ConductiveAdditive": {
+      "Description": "Unknown",
+      "Density": 1950.0,
+      "MassFraction": 0.03,
+      "ElectronicConductivity": 100.0
+    },
+    "Binder": {
+      "Description": "Unknown",
+      "Density": 1100.0,
+      "MassFraction": 0.03,
+      "ElectronicConductivity": 100.0
+    },
+    "CurrentCollector": {
+      "Description": "Copper",
+      "Thickness": 1.0e-5,
+      "Density": 8960.0,
+      "ElectronicConductivity": 5.96e7,
+      "TabWidth": 4.0e-3,
+      "TabLength": 1.0e-3
+    }
+  },
+  "PositiveElectrode": {
+    "ElectrodeCoating": {
+      "BruggemanCoefficient": 1.5,
+      "EffectiveDensity": 3500.0,
+      "Thickness": 8.0e-5
+    },
+    "ActiveMaterial": {
+      "Description": "NCM111",
+      "MassFraction": 0.95,
+      "Density": 4650.0,
+      "VolumetricSurfaceArea": 885000.0,
+      "ElectronicConductivity": 100.0,
+      "DiffusionCoefficient": 1.0e-14,
+      "ActivationEnergyOfDiffusion": 5000.0,
+      "ParticleRadius": 1.0e-6,
+      "MaximumConcentration": 55554.0,
+      "StoichiometricCoefficientAtSOC0": 0.99174,
+      "StoichiometricCoefficientAtSOC100": 0.4955,
+      "OpenCircuitPotential": {
+        "type": "function",
+        "functionname": "computeOCP_NMC111",
+        "argumentlist": [
+          "concentration",
+          "temperature",
+          "cmax"
+        ]
+      },
+      "NumberOfElectronsTransfered": 1,
+      "ActivationEnergyOfReaction": 5000.0,
+      "ReactionRateConstant": 2.33E-11,
+      "ChargeTransferCoefficient": 0.5
+    },
+    "ConductiveAdditive": {
+      "Description": "Unknown",
+      "Density": 1830.0,
+      "MassFraction": 0.025,
+      "ElectronicConductivity": 100.0
+    },
+    "Binder": {
+      "Description": "Unknown",
+      "Density": 1750.0,
+      "MassFraction": 0.025,
+      "ElectronicConductivity": 100.0
+    },
+    "CurrentCollector": {
+      "Description": "Aluminum",
+      "Thickness": 1.0e-05,
+      "Density": 2700.0,
+      "ElectronicConductivity": 3.55e7,
+      "TabWidth": 4.0e-3,
+      "TabLength": 1.0e-3
+    }
+  },
+  "Separator": {
+    "Description": "Unknown",
+    "Porosity": 0.55,
+    "Density": 946.0,
+    "BruggemanCoefficient": 1.5,
+    "Thickness": 5.0e-5
+  },
+  "Electrolyte": {
+    "Description": "Ethylene carbonate based electrolyte",
+    "Density": 1200.0,
+    "Concentration": 1000.0,
+    "ChargeNumber": 1,
+    "TransferenceNumber": 0.2594,
+    "IonicConductivity": {
+      "type": "function",
+      "functionname": "computeElectrolyteConductivity_default",
+      "argumentlist": [
+        "concentration",
+        "temperature"
+      ]
+    },
+    "DiffusionCoefficient": {
+      "type": "function",
+      "functionname": "computeDiffusionCoefficient_default",
+      "argumentlist": [
+        "concentration",
+        "temperature"
+      ]
+    }
+  }
+}

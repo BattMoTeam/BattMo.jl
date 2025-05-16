@@ -1,0 +1,5 @@
+{
+    "ModelFramework": "P2D",
+    "TransportInSolid": "FullDiffusion",
+    "RampUp": "Sinusoidal"
+}

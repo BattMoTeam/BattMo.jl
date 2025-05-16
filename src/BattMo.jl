@@ -19,8 +19,19 @@ using JSONSchema: Schema, SingleIssue
 # Non-exported JSONSchema functions and types
 import JSONSchema: show, isvalid, _resolve_refs
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 🧮 Plotting and visualization
+# ─────────────────────────────────────────────────────────────────────────────
+
+using Jutul: plot_multimodel_interactive
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 🧮 Optimization and Adjoint solving
+# ─────────────────────────────────────────────────────────────────────────────
+using LBFGSB: lbfgsb
+using Jutul: solve_adjoint_sensitivities, optimization_config, setup_parameter_optimization
+using Jutul: devectorize_variables!
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🧮 Mathematical & Computational Tools
@@ -170,22 +181,30 @@ timeit_debug_enabled() = Jutul.timeit_debug_enabled()
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
 
+include("input/input_types.jl")
+include("input/meta_data/parameters.jl")
+include("input/printer.jl")
+include("input/schemas/get_schema.jl")
+include("input/schemas/get_json_from_schema.jl")
+
 include("utils/physical_constants.jl")
 include("utils/simple_api.jl")
 
-include("input/input_types.jl")
-include("input/reader.jl")
-include("input/function_input_tools.jl")
-include("input/formatter.jl")
-include("input/meta_data/parameters.jl")
-include("input/schemas/get_schema.jl")
-include("input/defaults/cell_parameter_set.jl")
-include("input/validator.jl")
 
 
 include("models/battmo_types.jl")
-include("models/full_battery_models/battery_model.jl")
-include("models/full_battery_models/lithium_ion.jl")
+include("models/full_battery_model_setups/battery_model.jl")
+include("models/full_battery_model_setups/lithium_ion.jl")
+
+include("input/loader.jl")
+include("input/defaults.jl")
+include("input/writer.jl")
+include("input/function_input_tools.jl")
+include("input/formatter.jl")
+include("input/validator.jl")
+
+
+
 include("models/thermal.jl")
 include("models/elyte.jl")
 include("models/current_collector.jl")
@@ -199,7 +218,10 @@ include("models/battery_utils.jl")
 include("setup/model_setup.jl")
 include("setup/matlab_model_setup.jl")
 
+include("plotting/3D.jl")
+
 include("utils/battery_cell_specifications.jl")
+include("utils/battery_kpis.jl")
 
 include("solver/linsolve.jl")
 

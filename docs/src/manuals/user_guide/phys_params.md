@@ -1,8 +1,0 @@
-# Physical Parameters
-
-
-
-
-
-
-

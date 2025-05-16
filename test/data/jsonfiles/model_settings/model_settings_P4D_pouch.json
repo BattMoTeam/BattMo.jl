@@ -1,7 +1,0 @@
-{
-    "ModelGeometry": "3D-demo",
-    "UseThermalModel": false,
-    "UseCurrentCollectors": true,
-    "UseRampUp": true,
-    "UseSEIModel": false
-}

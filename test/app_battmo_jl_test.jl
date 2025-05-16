@@ -7,7 +7,7 @@ function runP2DBatt(json_file)
 	i            = 0
 
 	# read input parameters from json file
-	inputparams = read_battmo_formatted_input(json_file)
+	inputparams = load_battmo_formatted_input(json_file)
 
 	# setup simulation from the input parameters
 	output = setup_simulation(inputparams)
@@ -109,7 +109,7 @@ function setup_config(cfg,
 			s = Jutul.get_simulator_storage(sim)
 			m = Jutul.get_simulator_model(sim)
 
-			if s.state.Control.ControllerCV.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+			if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
 				report[:stopnow] = true
 			else
 				report[:stopnow] = false
@@ -135,7 +135,7 @@ function setup_config(cfg,
 
 end
 
-json_file = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/old/p2d_40_jl_chen2020.json")
+json_file = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/p2d_40_jl_chen2020.json")
 
 @testset "app test" begin
 	@test begin
