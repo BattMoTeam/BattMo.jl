@@ -498,8 +498,9 @@ function setup_submodels(inputparams::InputParams;
 
 		elseif haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionname")
 
-			funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
-			am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
+                        funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
+                        fcn = setup_function_from_function_name(funcname)
+                        am_params[:ocp_func] = fcn
 
 		else
 			am_params[:ocp_funcdata] = true
@@ -605,8 +606,9 @@ function setup_submodels(inputparams::InputParams;
 
 	elseif haskey(inputparams_elyte["diffusionCoefficient"], "functionname")
 
-		funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
-		params[:diffusivity_func] = getfield(BattMo, Symbol(funcname))
+                funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
+                fcn = setup_function_from_function_name(funcname)
+                params[:diffusivity_func] = fcn
 
 	else
 		data_x = inputparams_elyte["diffusionCoefficient"]["data_x"]
@@ -626,8 +628,9 @@ function setup_submodels(inputparams::InputParams;
 
 	elseif haskey(inputparams_elyte["ionicConductivity"], "functionname")
 
-		funcname = inputparams_elyte["ionicConductivity"]["functionname"]
-		params[:conductivity_func] = getfield(BattMo, Symbol(funcname))
+                funcname = inputparams_elyte["ionicConductivity"]["functionname"]
+                fcn = setup_function_from_function_name(funcname)
+                params[:conductivity_func] = fcn
 
 	else
 		data_x = inputparams_elyte["ionicConductivity"]["data_x"]
