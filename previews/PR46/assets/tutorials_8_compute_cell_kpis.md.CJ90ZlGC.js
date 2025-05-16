@@ -30,18 +30,18 @@ import{_ as a,c as i,o as n,aA as t}from"./chunks/framework.DISQyZYi.js";const g
 <span class="line"><span>│ Timing type   │     Each │   Relative │    Total │</span></span>
 <span class="line"><span>│               │       μs │ Percentage │       ms │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Properties    │  22.3328 │     2.46 % │   7.5708 │</span></span>
-<span class="line"><span>│ Equations     │ 362.6493 │    57.14 % │ 175.8849 │</span></span>
-<span class="line"><span>│ Assembly      │  61.0350 │     9.62 % │  29.6020 │</span></span>
-<span class="line"><span>│ Linear solve  │  99.3724 │    10.94 % │  33.6873 │</span></span>
+<span class="line"><span>│ Properties    │  20.6206 │     3.31 % │   6.9904 │</span></span>
+<span class="line"><span>│ Equations     │ 103.6984 │    23.81 % │  50.2937 │</span></span>
+<span class="line"><span>│ Assembly      │ 131.5219 │    30.20 % │  63.7881 │</span></span>
+<span class="line"><span>│ Linear solve  │  96.3877 │    15.47 % │  32.6754 │</span></span>
 <span class="line"><span>│ Linear setup  │   0.0000 │     0.00 % │   0.0000 │</span></span>
 <span class="line"><span>│ Precond apply │   0.0000 │     0.00 % │   0.0000 │</span></span>
-<span class="line"><span>│ Update        │  45.9913 │     5.06 % │  15.5911 │</span></span>
-<span class="line"><span>│ Convergence   │  63.1699 │     9.95 % │  30.6374 │</span></span>
-<span class="line"><span>│ Input/Output  │  27.3138 │     1.30 % │   3.9878 │</span></span>
-<span class="line"><span>│ Other         │  32.0531 │     3.53 % │  10.8660 │</span></span>
+<span class="line"><span>│ Update        │  42.1010 │     6.76 % │  14.2722 │</span></span>
+<span class="line"><span>│ Convergence   │  60.6627 │    13.93 % │  29.4214 │</span></span>
+<span class="line"><span>│ Input/Output  │  24.4061 │     1.69 % │   3.5633 │</span></span>
+<span class="line"><span>│ Other         │  30.1400 │     4.84 % │  10.2174 │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼──────────┤</span></span>
-<span class="line"><span>│ Total         │ 908.0449 │   100.00 % │ 307.8272 │</span></span>
+<span class="line"><span>│ Total         │ 623.0739 │   100.00 % │ 211.2220 │</span></span>
 <span class="line"><span>╰───────────────┴──────────┴────────────┴──────────╯</span></span></code></pre></div><h3 id="Cell-KPIs-from-the-parameter-set" tabindex="-1">Cell KPIs from the parameter set <a class="header-anchor" href="#Cell-KPIs-from-the-parameter-set" aria-label="Permalink to &quot;Cell KPIs from the parameter set {#Cell-KPIs-from-the-parameter-set}&quot;">​</a></h3><p>Some KPIs are directly computable from the cell parameter set. Here below we list the main KPIs we can compute with BattMo. For illustration, we create a Dictionary storing the values of the computations.</p><div class="language-julia vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">julia</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">cell_kpis_from_set </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> Dict</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span></span>
 <span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">	&quot;Positive Electrode Coating Mass&quot;</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> =&gt;</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> compute_electrode_coating_mass</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(cell_parameters, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">&quot;PositiveElectrode&quot;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">),</span></span>
 <span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">	&quot;Negative Electrode Coating Mass&quot;</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> =&gt;</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> compute_electrode_coating_mass</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(cell_parameters, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">&quot;NegativeElectrode&quot;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">),</span></span>
@@ -118,18 +118,18 @@ import{_ as a,c as i,o as n,aA as t}from"./chunks/framework.DISQyZYi.js";const g
 <span class="line"><span>│ Timing type   │     Each │   Relative │  Total │</span></span>
 <span class="line"><span>│               │       μs │ Percentage │      s │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼────────┤</span></span>
-<span class="line"><span>│ Properties    │  25.0343 │     2.91 % │ 0.0517 │</span></span>
-<span class="line"><span>│ Equations     │ 127.9189 │    20.75 % │ 0.3692 │</span></span>
-<span class="line"><span>│ Assembly      │  65.6307 │    10.65 % │ 0.1894 │</span></span>
-<span class="line"><span>│ Linear solve  │ 381.8176 │    44.31 % │ 0.7885 │</span></span>
+<span class="line"><span>│ Properties    │  23.4206 │     2.63 % │ 0.0484 │</span></span>
+<span class="line"><span>│ Equations     │ 110.0402 │    17.29 % │ 0.3176 │</span></span>
+<span class="line"><span>│ Assembly      │  62.5398 │     9.83 % │ 0.1805 │</span></span>
+<span class="line"><span>│ Linear solve  │ 149.1409 │    16.77 % │ 0.3080 │</span></span>
 <span class="line"><span>│ Linear setup  │   0.0000 │     0.00 % │ 0.0000 │</span></span>
 <span class="line"><span>│ Precond apply │   0.0000 │     0.00 % │ 0.0000 │</span></span>
-<span class="line"><span>│ Update        │  49.7702 │     5.78 % │ 0.1028 │</span></span>
-<span class="line"><span>│ Convergence   │  66.3284 │    10.76 % │ 0.1914 │</span></span>
-<span class="line"><span>│ Input/Output  │  26.1114 │     1.20 % │ 0.0214 │</span></span>
-<span class="line"><span>│ Other         │  31.4227 │     3.65 % │ 0.0649 │</span></span>
+<span class="line"><span>│ Update        │  94.3023 │    10.60 % │ 0.1947 │</span></span>
+<span class="line"><span>│ Convergence   │ 244.3044 │    38.39 % │ 0.7051 │</span></span>
+<span class="line"><span>│ Input/Output  │  23.4021 │     1.05 % │ 0.0192 │</span></span>
+<span class="line"><span>│ Other         │  30.5647 │     3.44 % │ 0.0631 │</span></span>
 <span class="line"><span>├───────────────┼──────────┼────────────┼────────┤</span></span>
-<span class="line"><span>│ Total         │ 861.6260 │   100.00 % │ 1.7793 │</span></span>
+<span class="line"><span>│ Total         │ 889.3613 │   100.00 % │ 1.8365 │</span></span>
 <span class="line"><span>╰───────────────┴──────────┴────────────┴────────╯</span></span></code></pre></div><p>As our data represents multiple cycles now, we can choose for which cycle we&#39;d like to compute the KPI.</p><div class="language-julia vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">julia</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">cell_kpis_from_output_cycle_0 </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> Dict</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span></span>
 <span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">	&quot;Discharge capacity&quot;</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> =&gt;</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> compute_discharge_capacity</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(output; cycle_number </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> 0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">),</span></span>
 <span class="line"><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;">	&quot;Discharge energy&quot;</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;"> =&gt;</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> compute_discharge_energy</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(output; cycle_number </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> 0</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">),</span></span>
