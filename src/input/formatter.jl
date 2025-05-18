@@ -48,15 +48,13 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		geom = get_key_value(model_settings, "ModelFramework")
 		if geom == "P2D"
 			geom_case = "1D"
-
+            height = nothing
 		elseif geom == "P4D Pouch"
 			geom_case = "3D-demo"
 			height = get_key_value(cell, "ElectrodeLength")
 		elseif geom == "3D Cylindrical"
 			height = get_key_value(cell, "Height")
 			geom_case = "jellyRoll"
-
-
 		end
 	end
 
