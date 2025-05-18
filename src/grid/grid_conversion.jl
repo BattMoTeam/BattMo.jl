@@ -43,7 +43,7 @@ function convert_to_mrst_grid(g)
                 current_index = inds[i]
             end
         end
-        push!(pos, n + 1)
+        push!(pos, length(inds) + 1)
         return pos
         
     end
