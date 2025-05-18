@@ -1,3 +1,5 @@
+using Infiltrator
+
 export convert_to_mrst_grid
 
 function add_order(list)
@@ -15,10 +17,68 @@ function convert_to_mrst_grid(g)
     G_raw_faces = Dict()
     G_raw_nodes = Dict()
 
+
+    ## setup cellface mapping
+    # Remove the separate boundary face indexing
+    
+    function get_pairs(pos, vals)
+        
+        cells = Int[]
+        sizehint!(cells, length(vals))
+        
+        for icell in eachindex(pos[1 : end - 1])
+            n = pos[icell + 1] - pos[icell]
+            if n > 0
+                cells = append!(cells, repeat(icell, n))
+            end
+        end
+
+        return hcat(cells, vals)
+        
+    end
+
+    int_cellface = get_pairs(g.faces.cells_to_faces.pos, g.faces.cells_to_faces.vals)
+    bd_cellface  = get_pairs(g.boundary_faces.cells_to_faces.pos, g.boundary_faces.cells_to_faces.vals)
+    
+    bd_cellface[: , 2] = bd_cellface[: , 2] .+ size(g.faces.cells_to_faces.neighbors, 1)
+    
+    cellface = vcat(int_cellface, bd_cellface)
+    cellface = sortslices(cellface, dims = 1)
+
+    ## setup facenode mapping
+    # Remove the separate boundary face indexing
+
+    int_facenode = get_pairs(g.faces.faces_to_nodes.pos, g.faces.faces_to_nodes.vals)
+    bd_facenode  = get_pairs(g.boundary_faces.faces_to_nodes.pos, g.boundary_faces.faces_to_nodes.vals)
+    
+    bd_facenode[: , 1] = bd_facenode[: , 1] .+ size(g.faces.cells_to_faces.neighbors, 1)
+
+    facenode = vcat(int_facenode, bd_facenode)
+    facenode = sortslices(facenode, dims = 1)
+
+    function set_pos(inds)
+        pos = Int[]
+        n = inds[end]
+        sizehint!(pos, n)
+        pos[1] = 1
+        current_index = 1
+        for i in eachindex(inds)
+            if inds[i] != current_index
+                push!(pos, i)
+                current_index = inds[i]
+            end
+        end
+        push!(pos, n + 1)
+        return pos
+    end
+    
+    g.faces.cells_to_faces.vals
+    
+    
     dim = length(g.node_points[1])
 
     cells_facePos = diff(g.faces.cells_to_faces.pos) + diff(g.boundary_faces.cells_to_faces.pos)
-
+    
     faces_neighbors          = findall(x -> 1 ∈ x, g.faces.neighbors)
     boundary_faces_neighbors = findall(x -> x == 1, g.boundary_faces.neighbors) .+ length(g.faces.neighbors)
     
