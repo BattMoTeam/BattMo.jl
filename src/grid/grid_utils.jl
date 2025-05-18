@@ -303,7 +303,18 @@ end
 #################################
 
 """ Create a single layer pouch grid
-	"""
+    returns two dictionaries containing the grids and the couplings.
+
+    The fields for the `grid` dictionary are:
+    + "NegativeCurrentCollector"
+    + "NegativeElectrode"
+    + "Separator"
+    + "PositiveElectrode",
+    + "PositiveCurrentCollector"
+
+    The fields for the `couplings` dictionary are the same as `grid`. For each component, we have again a dictionary
+    with field as in `grid` which provides the coupling with the two resulting components.
+"""
 function pouch_grid(geomparams::InputGeometryParams)
 
 	ne_cc_z  = geomparams["NegativeElectrode"]["CurrentCollector"]["thickness"]
@@ -480,7 +491,8 @@ function findBoundary(grid, dim, dir)
 end
 
 """ single layer pouch cell utility function,
-	From a global grid and the position of the z-values for the different components, returns the grids with the coupling
+From a global grid and the position of the z-values for the different components, returns the grids with the coupling.
+
 """
 function setup_pouch_cell_geometry(H_mother, paramsz)
 
@@ -488,10 +500,10 @@ function setup_pouch_cell_geometry(H_mother, paramsz)
 	global_maps = Dict()
 
 	components = ["NegativeCurrentCollector",
-		"NegativeElectrode",
-		"Separator",
-		"PositiveElectrode",
-		"PositiveCurrentCollector"]
+		      "NegativeElectrode",
+		      "Separator",
+		      "PositiveElectrode",
+		      "PositiveCurrentCollector"]
 
 	tags = find_tags(UnstructuredMesh(H_mother), paramsz)
 

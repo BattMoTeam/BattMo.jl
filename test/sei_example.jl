@@ -19,7 +19,7 @@ using Test
 
 		########################################
 
-		model_settings["UseSEIModel"] = "Bolay"
+		model_settings["SEIModel"] = "Bolay"
 
 		model_setup = LithiumIonBattery(; model_settings)
 
