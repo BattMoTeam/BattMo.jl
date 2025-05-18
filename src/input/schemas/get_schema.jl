@@ -559,7 +559,7 @@ function get_schema_simulation_settings(model_settings)
 		push!(required, "RampUpSteps")
 	end
 
-	if model_settings["ModelGeometry"] == "3D Cylindrical"
+	if model_settings["ModelFramework"] == "3D Cylindrical"
 		push!(required_grid_points, "Height")
 		push!(required_grid_points, "Radius")
 		push!(required_grid_points, "HeightRefinement")
