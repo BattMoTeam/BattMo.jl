@@ -98,16 +98,16 @@ function convert_geometry(grids, couplings; include_current_collectors = true)
 
 	if include_current_collectors
 		components = ["NegativeCurrentCollector",
-			"NegativeElectrode",
-			"Separator",
-			"PositiveElectrode",
-			"PositiveCurrentCollector",
-			"Electrolyte"]
+			          "NegativeElectrode",
+			          "Separator",
+			          "PositiveElectrode",
+			          "PositiveCurrentCollector",
+			          "Electrolyte"]
 	else
 		components = ["NegativeElectrode",
-			"Separator",
-			"PositiveElectrode",
-			"Electrolyte"]
+			          "Separator",
+			          "PositiveElectrode",
+			          "Electrolyte"]
 	end
 
 	ugrids = Dict()
