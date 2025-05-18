@@ -76,7 +76,7 @@ function convert_to_mrst_grid(g)
     facenode = sortslices(facenode, dims = 1)
 
     neighbors = g.faces.neighbors
-    neighbors = vcat(neighbors, hcat(g.boundary_faces.neighbors, zeros(Int, length(g.boundary_faces.neighbors)))
+    neighbors = vcat(neighbors, hcat(g.boundary_faces.neighbors, zeros(Int, length(g.boundary_faces.neighbors))))
 
     G_raw_faces = Dict()
     G_raw_faces["nodes"]     = facenode[:, 2]
@@ -89,10 +89,10 @@ function convert_to_mrst_grid(g)
     G_raw_nodes["coords"] = transpose(reduce(hcat, g.node_points))
 
     G_raw = Dict()
+    G_raw["cells"]   = G_raw_cells
     G_raw["faces"]   = G_raw_faces
     G_raw["nodes"]   = G_raw_nodes
-    G_raw["griddim"] = dim
-    G_raw["cells"]   = G_raw_cells
+    G_raw["griddim"] = length(g.node_points[1])
     G_raw["type"]    = Matrix{Any}(undef, 0, 0)
 
     return G_raw
