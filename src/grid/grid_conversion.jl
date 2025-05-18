@@ -20,7 +20,7 @@ function convert_to_mrst_grid(g)
         for icell in eachindex(pos[1 : end - 1])
             n = pos[icell + 1] - pos[icell]
             if n > 0
-                cells = append!(cells, repeat(icell, n))
+                cells = append!(cells, fill(icell, n))
             end
         end
 
@@ -30,12 +30,12 @@ function convert_to_mrst_grid(g)
     
     """ From an array of pair, create the indirection map. The pair should be sorted with respect to the first column
     """
-    function set_pos(inds)
+    function get_pos(inds)
         
         pos = Int[]
         n = inds[end]
         sizehint!(pos, n)
-        pos[1] = 1
+        push!(pos, 1)
         current_index = 1
         for i in eachindex(inds)
             if inds[i] != current_index
@@ -54,7 +54,7 @@ function convert_to_mrst_grid(g)
     int_cellface = get_pairs(g.faces.cells_to_faces.pos, g.faces.cells_to_faces.vals)
     bd_cellface  = get_pairs(g.boundary_faces.cells_to_faces.pos, g.boundary_faces.cells_to_faces.vals)
     
-    bd_cellface[: , 2] = bd_cellface[: , 2] .+ size(g.faces.cells_to_faces.neighbors, 1)
+    bd_cellface[: , 2] = bd_cellface[: , 2] .+ size(g.faces.neighbors, 1)
     
     cellface = vcat(int_cellface, bd_cellface)
     cellface = sortslices(cellface, dims = 1)
@@ -70,12 +70,12 @@ function convert_to_mrst_grid(g)
     int_facenode = get_pairs(g.faces.faces_to_nodes.pos, g.faces.faces_to_nodes.vals)
     bd_facenode  = get_pairs(g.boundary_faces.faces_to_nodes.pos, g.boundary_faces.faces_to_nodes.vals)
     
-    bd_facenode[: , 1] = bd_facenode[: , 1] .+ size(g.faces.cells_to_faces.neighbors, 1)
+    bd_facenode[: , 1] = bd_facenode[: , 1] .+ size(g.faces.neighbors, 1)
 
     facenode = vcat(int_facenode, bd_facenode)
     facenode = sortslices(facenode, dims = 1)
 
-    neighbors = g.faces.neighbors
+    neighbors = mapreduce(x -> [x[1] x[2]], vcat, g.faces.neighbors)
     neighbors = vcat(neighbors, hcat(g.boundary_faces.neighbors, zeros(Int, length(g.boundary_faces.neighbors))))
 
     G_raw_faces = Dict()
