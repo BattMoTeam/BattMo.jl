@@ -136,8 +136,18 @@ function get_parameter_meta_data()
 		),
 		"Protocol" => Dict(
 			"type" => String,
-			"options" => ["CC", "CCCV"],
+			"options" => ["CC", "CCCV", "Function"],
 			"context_type" => "Protocol",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_789012",
+		),
+		"FunctionName" => Dict(
+			"type" => String,
+			"context_type" => "Name",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_789012",
+		),
+		"TotalTime" => Dict(
+			"type" => Real,
+			"context_type" => "Time",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_789012",
 		),
 		"InitialControl" => Dict(
