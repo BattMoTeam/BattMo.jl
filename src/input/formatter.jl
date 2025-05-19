@@ -185,6 +185,10 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		use_cv_switch = true
 		control = "CCCV"
 
+	elseif cycling_protocol["Protocol"] == "Function"
+		use_cv_switch = nothing
+		control = "Function"
+
 	else
 		error("Cycling policy not recognized.")
 	end
@@ -197,6 +201,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		"include_current_collectors" => use_cc,
 		"Control" => Dict(
 			"controlPolicy" => control,
+			"functionName" => get_key_value(cycling_protocol, "FunctionName"),
 			"useCVswitch" => use_cv_switch,
 			"numberOfCycles" => get_key_value(cycling_protocol, "TotalNumberOfCycles"),
 			"rampupTime" => get_key_value(simulation_settings, "RampUpTime"),
@@ -381,8 +386,10 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"useRampup" => use_ramp_up,
 			"numberOfRampupSteps" => get_key_value(simulation_settings, "RampUpSteps"),
 			"timeStepDuration" => get_key_value(simulation_settings, "TimeStepDuration"),
+			"totalTime" => get_key_value(cycling_protocol, "TotalTime"),
 		),
 	)
+
 	return InputParams(battmo_input)
 
 end

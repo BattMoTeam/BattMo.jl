@@ -160,6 +160,36 @@ function update_json_input(; file_path::String = nothing,
 
 end
 
+function setup_function_from_function_name(function_name::String)
+	"""
+	Function to create a julia function given by the name of the function. In the case of user-defined functions, the file where the function is defined must have the same name as the function.
+	"""
+
+	symb = Symbol(function_name)
+
+	if isdefined(BattMo, symb)
+		# Function in BattMo
+		return getfield(BattMo, symb)
+	elseif isdefined(Main, symb)
+		return getfield(Main, symb)
+	else
+		# User defined function
+		filename = function_name * ".jl"
+		if isfile(filename)
+			Base.include(Main, filename)
+			if isdefined(Main, symb)
+				f = getfield(Main, symb)
+				return t -> Base.invokelatest(f, t)
+			else
+				error("Function '$function_name' not defined in file '$filename'.")
+			end
+		else
+			error("Function '$function_name' not found and file '$filename' does not exist.")
+		end
+	end
+
+end
+
 
 function setup_ocp_evaluation_expression_from_string(str)
 	""" setup the Expr from a sting for the OCP function, with the proper signature."""
