@@ -14,13 +14,13 @@ function get_output_time_series(output::NamedTuple, quantities::Vector{String})
 	voltage, current = extract_time_series_data(output)
 	time = extract_output_times(output)
 
-	push!(selected_pairs, "Time" => time)
+	push!(selected_pairs, :Time => time)
 
 	for q in quantities
 		if q == "Voltage"
-			push!(selected_pairs, "Voltage" => voltage)
+			push!(selected_pairs, :Voltage => voltage)
 		elseif q == "Current"
-			push!(selected_pairs, "Current" => current)
+			push!(selected_pairs, :Current => current)
 		else
 			error("Quantitiy $q is not available in this data")
 		end

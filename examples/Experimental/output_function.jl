@@ -11,9 +11,9 @@ output = solve(sim;)
 
 time_series = get_output_time_series(output, ["Voltage", "Current"])
 
-t = time_series["Time"]
-I = time_series["Current"]
-E = time_series["Voltage"]
+t = time_series[:Time]
+I = time_series[:Current]
+E = time_series[:Voltage]
 
 
 f = Figure(size = (1000, 400))
