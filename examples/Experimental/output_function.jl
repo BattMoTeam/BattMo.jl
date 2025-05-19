@@ -11,6 +11,31 @@ output = solve(sim;)
 
 time_series = get_output_time_series(output, ["Voltage", "Current"])
 
+
+function get_output_state(output::NamedTuple, quantities::Vector{String})
+
+	selected_pairs = []
+	available_quantities = [
+		"ConcentrationNegativeElectrodeActiveMaterial",
+		"ConcentrationPositiveElectrodeActiveMaterial",
+		"ConcentrationElectrolyte",
+		"PotentialNegativeElectrodeActiveMaterial",
+		"PotentialPositiveElectrodeActiveMaterial",
+		"PotentialElectrolyte"]
+
+
+	time = extract_output_times(output)
+
+	push!(selected_pairs, :Time => time)
+
+
+
+	return (; selected_pairs...)
+end
+
+
+time_series = get_output_state(output, ["Voltage", "Current"])
+
 t = time_series[:Time]
 I = time_series[:Current]
 E = time_series[:Voltage]

@@ -6,6 +6,7 @@ export get_model_coords
 export get_multimodel_centroids
 export get_simple_output
 
+
 function get_output_time_series(output::NamedTuple, quantities::Vector{String})
 
 	selected_pairs = []
@@ -29,6 +30,8 @@ function get_output_time_series(output::NamedTuple, quantities::Vector{String})
 
 	return (; selected_pairs...)
 end
+
+
 
 function extract_time_series_data(output::NamedTuple{(:states, :cellSpecifications, :reports, :inputparams, :extra)})
 
