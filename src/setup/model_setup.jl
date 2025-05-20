@@ -453,13 +453,9 @@ function setup_submodels(inputparams::InputParams;
 
 			compnames = [am, bd, ad]
 
-			specificVolumes = zeros(length(compnames))
-			for icomp in eachindex(compnames)
-				compname = compnames[icomp]
-				rho = codict[compname]["density"]
-				mf = codict[compname]["massFraction"]
-				specificVolumes[icomp] = mf / rho
-			end
+			# Do it this way since values could be AD.
+			get_specific_volume(compname) = codict[compname]["massFraction"] / codict[compname]["density"]
+			specificVolumes = map(get_specific_volume, compnames)
 
 			sumSpecificVolumes = sum(specificVolumes)
 			volumeFractions = [sv / sumSpecificVolumes for sv in specificVolumes]
@@ -1725,18 +1721,22 @@ end
 function setup_volume_fractions!(model::MultiModel, grids, coupling)
 
 	Nelyte      = number_of_cells(grids["Electrolyte"])
-	vfelyte     = zeros(Nelyte)
-	vfseparator = zeros(Nelyte)
 
 	names = [:NeAm, :PeAm]
 	stringNames = Dict(:NeAm => "NegativeElectrode",
 		:PeAm => "PositiveElectrode")
 
-	for name in names
+	vfracs = map(name -> model[name].system[:volume_fraction], names)
+	T = Base.promote_type(map(typeof, vfracs)...)
+
+	vfelyte     = zeros(T, Nelyte)
+	vfseparator = zeros(T, Nelyte)
+
+	for (i, name) in enumerate(names)
 		stringName = stringNames[name]
 		ncell = number_of_cells(grids[stringName])
 		ammodel = model[name]
-		vf = ammodel.system[:volume_fraction]
+		vf = vfracs[i]
 		ammodel.domain.representation[:volumeFraction] = vf * ones(ncell)
 		elytecells = coupling[stringName]["cells"]
 		vfelyte[elytecells] .= 1 - vf
