@@ -186,6 +186,7 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 include("input/input_types.jl")
 include("input/meta_data/parameters.jl")
 include("input/printer.jl")
+include("input/reader.jl")
 include("input/schemas/get_schema.jl")
 include("input/schemas/get_json_from_schema.jl")
 
