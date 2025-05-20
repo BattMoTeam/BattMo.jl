@@ -424,6 +424,7 @@ function setup_submodels(inputparams::InputParams;
 	use_groups::Bool = false,
 	general_ad::Bool = true,
 	use_p2d = true,
+	T = Float64,
 	kwargs...)
 
 	include_cc = include_current_collectors(inputparams)
@@ -707,6 +708,7 @@ function setup_submodels(inputparams::InputParams;
 				ctrl["lowerCutoffVoltage"],
 				ctrl["upperCutoffVoltage"],
 				use_ramp_up,
+				T = T
 			)
 		end
 
@@ -1704,8 +1706,8 @@ end
 # Current function #
 ####################
 
-function currentFun(t::T, inputI::T, tup::T = 0.1) where T
-	val::T = 0.0
+function currentFun(t::Real, inputI::Real, tup::Real = 0.1)
+	t, inputI, tup, val = promote(t, inputI, tup, 0.0)
 	if t <= tup
 		val = sineup(0.0, inputI, 0.0, tup, t)
 	else
