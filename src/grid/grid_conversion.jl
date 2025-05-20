@@ -73,7 +73,6 @@ function convert_to_mrst_grid(g)
     bd_facenode[: , 1] = bd_facenode[: , 1] .+ size(g.faces.neighbors, 1)
 
     facenode = vcat(int_facenode, bd_facenode)
-    facenode = sortslices(facenode, dims = 1)
 
     neighbors = mapreduce(x -> [x[1] x[2]], vcat, g.faces.neighbors)
     neighbors = vcat(neighbors, hcat(g.boundary_faces.neighbors, zeros(Int, length(g.boundary_faces.neighbors))))
