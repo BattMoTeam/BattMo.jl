@@ -1,46 +1,81 @@
 export print_default_parameter_sets_info, print_submodels_info, print_parameter_info
 
 
+# Format link depending on output format
+function format_link(label::String, url::String, width::Int, fmt::Symbol)
+	link = begin
+		if fmt == :markdown
+			"[$label]($url)"
+		elseif fmt == :ansi
+			"\e]8;;$url\e\\$label\e]8;;\e\\"
+		else
+			"$label: $url"
+		end
+	end
+	return rpad(link, width)
+end
+
+# Environment detection
+function detect_output_format()
+	if isdefined(Main, :IJulia) && Main.IJulia.inited
+		return :markdown  # Jupyter notebooks
+	elseif get(ENV, "LITERATE_RUNNING", "") == "true"
+		return :markdown  # Literate.jl environment
+	elseif get(ENV, "TERM", "") != "dumb"
+		return :ansi       # Rich terminal
+	else
+		return :plain      # Minimal terminal or unknown
+	end
+end
+
 function print_default_parameter_sets_info()
-	script_dir = @__DIR__  # Directory where this script is located
+
+	# Column layout
+	col1_width = 35
+	col2_width = 140
+	column_gap = "    "  # Control inter-column spacing here
+
+	# Begin main logic
+	output_fmt = detect_output_format()
+	script_dir = @__DIR__
 	defaults_dir = joinpath(script_dir, "defaults")
 	entries = readdir(defaults_dir; join = true)
 
 	for entry in entries
 		if isdir(entry)
 			folder_name = basename(entry)
-			println("\n" * "="^80)
+			println("\n" * "="^(col1_width + col2_width))
 			println("📁  $folder_name")
-			println("="^80)
+			println("="^(col1_width + col2_width + 40))
 
-			# Table header
 			header1 = "Parameter Set"
-			header2 = "Source"
-			header3 = "Description"
-			println(rpad(header1, 20), rpad(header2, 10), header3)
-			println("-"^80)
+			header2 = "Description"
+			header3 = "Source"
+
+			println(rpad(header1, col1_width), rpad(header2, col2_width), header3)
+			println("-"^(col1_width + col2_width + 40))
 
 			files = readdir(entry; join = true)
-
 			for file in files
 				if isfile(file)
 					file_name = splitext(basename(file))[1]
 					description = read_description_from_meta_data(file)
 					source = read_source_from_meta_data(file)
 
-					if isnothing(source)
-						link = rpad("-", 10)
+					link = if isnothing(source) || source == "-"
+						# rpad("-", col2_width)
 					else
-						link = source == "-" ? "-" : padded_link("visit", source, 10)
+						format_link("visit", source, col2_width, output_fmt)
 					end
-					println(rpad(file_name, 20), link, description)
+
+					println(rpad(file_name, col1_width), rpad(description, col2_width), link)
 				end
 			end
-
-			println()  # Extra line after each table
+			println()
 		end
 	end
 end
+
 
 function terminal_link(text, url)
 	return "\e]8;;$url\a$text\e]8;;\a"
