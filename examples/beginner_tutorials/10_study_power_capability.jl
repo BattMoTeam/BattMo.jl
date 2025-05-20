@@ -41,7 +41,7 @@ for thickness in thicknesses
 		cc_discharge_protocol["DRate"] = d_rate
 		sim = Simulation(model_setup, cell_parameters, cc_discharge_protocol)
 		print("###### Simulation of thickness $thickness | d_rate $d_rate #########")
-		output = solve(sim; config_kwargs = (; end_report = false))
+		output = solve(sim; end_report = false)
 
 		if length(output[:states]) > 0 #if simulation is successful
 			discharge_capacity = compute_discharge_capacity(output)

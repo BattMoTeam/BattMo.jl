@@ -1,6 +1,6 @@
 {
-    "ModelGeometry": "3D Pouch",
-    "UseDiffusionModel": "PXD",
-    "UseCurrentCollectors": "Generic",
-    "UseRampUp": "Sinusoidal"
+    "ModelFramework": "P4D Pouch",
+    "TransportInSolid": "FullDiffusion",
+    "CurrentCollectors": "Generic",
+    "RampUp": "Sinusoidal"
 }

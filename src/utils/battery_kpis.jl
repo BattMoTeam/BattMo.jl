@@ -1,17 +1,24 @@
 using LinearAlgebra
 
-export 
-    compute_electrode_coating_mass,
-    compute_electrode_theoretical_density,
-    compute_separator_mass,
-    compute_current_collector_mass,
-    compute_electrolyte_mass,
-    compute_cell_mass,
-    compute_electrode_volume_fraction,
-    compute_electrode_mass_loading,
-    compute_electrode_maximum_capacity,
-    compute_np_ratio,
-    compute_cell_theoretical_capacity
+export
+	compute_electrode_coating_mass,
+	compute_electrode_theoretical_density,
+	compute_separator_mass,
+	compute_current_collector_mass,
+	compute_electrolyte_mass,
+	compute_cell_mass,
+	compute_electrode_volume_fraction,
+	compute_electrode_mass_loading,
+	compute_electrode_maximum_capacity,
+	compute_np_ratio,
+	compute_cell_theoretical_capacity,
+	compute_round_trip_efficiency,
+	compute_discharge_capacity,
+	compute_charge_capacity,
+	compute_charge_energy,
+	compute_discharge_energy,
+	compute_cell_volume
+
 
 #########################################
 # Cell Mass calculations
@@ -107,29 +114,94 @@ function compute_cell_mass(params::CellParameters; print_breakdown::Bool = false
 	m_positive_e = compute_electrode_coating_mass(params, "PositiveElectrode")
 	m_negative_e = compute_electrode_coating_mass(params, "NegativeElectrode")
 	m_separator = compute_separator_mass(params)
-	m_positive_e_cc = compute_current_collector_mass(params, "PositiveElectrode")
-	m_negative_e_cc = compute_current_collector_mass(params, "NegativeElectrode")
 	m_electrolyte = compute_electrolyte_mass(params)
-	total_cell_mass = m_positive_e + m_negative_e + m_separator + m_positive_e_cc + m_negative_e_cc + m_electrolyte
+	total_cell_mass = m_positive_e + m_negative_e + m_separator + m_electrolyte
 
-    if print_breakdown
-        print("""
-                   Component                 | Mass/kg |  Percentage
-        -------------------------------------------------------------
-        Cell                                 | $(round(total_cell_mass, digits=5)) |    100
-        Positive Electrode                   | $(round(m_positive_e, digits=5)) |    $(round(100*m_positive_e/total_cell_mass, digits=1))
-        Negative Electrode                   | $(round(m_negative_e, digits=5)) |    $(round(100*m_negative_e/total_cell_mass, digits=1))
-        Positive Electrode Current Collector | $(round(m_positive_e_cc, digits=5)) |    $(round(100*m_positive_e_cc/total_cell_mass, digits=1))
-        Negative Electrode Current Collector | $(round(m_negative_e_cc, digits=5)) |    $(round(100*m_negative_e_cc/total_cell_mass, digits=1))
-        Electrolyte                          | $(round(m_electrolyte, digits=5)) |    $(round(100*m_electrolyte/total_cell_mass, digits=1))
-        Separator                            | $(round(m_separator, digits=5)) |    $(round(100*m_separator/total_cell_mass, digits=1))
-        """) 
-        return nothing
-    end
-    return total_cell_mass 
+	if haskey(params["NegativeElectrode"], "CurrentCollector")
+		m_positive_e_cc = compute_current_collector_mass(params, "PositiveElectrode")
+		m_negative_e_cc = compute_current_collector_mass(params, "NegativeElectrode")
+		total_cell_mass = total_cell_mass + m_positive_e_cc + m_negative_e_cc
+
+		if print_breakdown
+			print("""
+					Component                 | Mass/kg |  Percentage
+			-------------------------------------------------------------
+			Cell                                 | $(round(total_cell_mass, digits=5)) |    100
+			Positive Electrode                   | $(round(m_positive_e, digits=5)) |    $(round(100*m_positive_e/total_cell_mass, digits=1))
+			Negative Electrode                   | $(round(m_negative_e, digits=5)) |    $(round(100*m_negative_e/total_cell_mass, digits=1))
+			Positive Electrode Current Collector | $(round(m_positive_e_cc, digits=5)) |    $(round(100*m_positive_e_cc/total_cell_mass, digits=1))
+			Negative Electrode Current Collector | $(round(m_negative_e_cc, digits=5)) |    $(round(100*m_negative_e_cc/total_cell_mass, digits=1))
+			Electrolyte                          | $(round(m_electrolyte, digits=5)) |    $(round(100*m_electrolyte/total_cell_mass, digits=1))
+			Separator                            | $(round(m_separator, digits=5)) |    $(round(100*m_separator/total_cell_mass, digits=1))
+			""")
+
+		end
+	else
+
+		print("Mass calculated without taking into account current collectors.")
+
+		if print_breakdown
+			print("""
+					Component                 | Mass/kg |  Percentage
+			-------------------------------------------------------------
+			Cell                                 | $(round(total_cell_mass, digits=5)) |    100
+			Positive Electrode                   | $(round(m_positive_e, digits=5)) |    $(round(100*m_positive_e/total_cell_mass, digits=1))
+			Negative Electrode                   | $(round(m_negative_e, digits=5)) |    $(round(100*m_negative_e/total_cell_mass, digits=1))
+			Electrolyte                          | $(round(m_electrolyte, digits=5)) |    $(round(100*m_electrolyte/total_cell_mass, digits=1))
+			Separator                            | $(round(m_separator, digits=5)) |    $(round(100*m_separator/total_cell_mass, digits=1))
+			""")
+
+		end
+
+	end
+	return total_cell_mass
 end
 
+function compute_cell_volume(params::CellParameters)
+	case = params["Cell"]["Case"]
+	if case == "Pouch"
 
+		ne_thickness = params["NegativeElectrode"]["ElectrodeCoating"]["Thickness"]
+		pe_thickness = params["PositiveElectrode"]["ElectrodeCoating"]["Thickness"]
+		sep_thickness = params["Separator"]["Thickness"]
+		thickness = ne_thickness + pe_thickness + sep_thickness
+
+		if haskey(params["NegativeElectrode"], "CurrentCollector")
+			ne_cc_thickness = params["NegativeElectrode"]["CurrentCollector"]["Thickness"]
+			pe_cc_thickness = params["PositiveElectrode"]["CurrentCollector"]["Thickness"]
+			thickness = thickness + ne_cc_thickness + pe_cc_thickness
+		else
+
+			print("Volume calculated without taking into account current collectors.")
+		end
+		if haskey(params["Cell"], "ElectrodeGeometricSurfaceArea")
+			area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
+		else
+			length = params["Cell"]["ElectrodeLength"]
+			width = params["Cell"]["ElectrodeWidth"]
+			area = length * width
+		end
+
+		volume = area * thickness
+
+	elseif case == "Cylindrical"
+		if haskey(params["Cell"], "Height") && haskey(params["Cell"], "OuterRadius")
+			height = params["Cell"]["Height"]
+			radius = params["Cell"]["OuterRadius"]
+
+			volume = pi * radius^2 * height
+		else
+			volume = nothing
+			print("Parameter set doesn't contain the required parameters to calculate the volume: ['Cell']['Height'] and ['Cell']['OuterRadius']")
+		end
+
+
+	else
+		error("Cell Case not recognized: $case.")
+
+	end
+	return volume
+end
 
 #########################################
 # Cell XXXX calculations
@@ -189,7 +261,250 @@ function compute_np_ratio(params::CellParameters)
 end
 
 function compute_cell_theoretical_capacity(params::CellParameters)
-    pe_maximum_capacity = compute_electrode_maximum_capacity(params, "PositiveElectrode")
-    ne_maximum_capacity = compute_electrode_maximum_capacity(params, "NegativeElectrode")
-    return min(pe_maximum_capacity, ne_maximum_capacity)
+	pe_maximum_capacity = compute_electrode_maximum_capacity(params, "PositiveElectrode")
+	ne_maximum_capacity = compute_electrode_maximum_capacity(params, "NegativeElectrode")
+	return min(pe_maximum_capacity, ne_maximum_capacity)
+end
+
+
+#########################################
+# Cell XXXX from the output structure
+#########################################
+
+function compute_discharge_capacity(output::NamedTuple; cycle_number = nothing)
+	states = output[:states]
+
+	if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
+		if isnothing(cycle_number)
+
+			error("""Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
+
+							compute_discharge_capacity(output; cycle_number = 1)
+
+			""")
+
+		end
+	end
+	return compute_discharge_capacity(states; cycle_number = cycle_number)
+end
+
+function compute_discharge_capacity(states; cycle_number = nothing)
+
+	t = [state[:Control][:Controller].time for state in states]
+	I = [state[:Control][:Current][1] for state in states]
+
+	if !isnothing(cycle_number)
+		cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
+
+		total_number_of_cycles = states[end][:Control][:Controller].numberOfCycles
+
+		cycle_index = findall(x -> x == cycle_number, cycle_array)
+		I_cycle = I[cycle_index]
+		t_cycle = t[cycle_index]
+		@info length(cycle_array)
+		@info length(I)
+		discharge_index = findall(x -> x > 0, I_cycle)
+		I_discharge = I_cycle[discharge_index]
+		t_discharge = t_cycle[discharge_index]
+
+		diff_t = diff(t_discharge)
+		insert!(diff_t, 1, t_discharge[1])
+		capacity = sum(diff_t .* I_discharge) / 3600
+
+	else
+		diff_t = diff(t)
+		insert!(diff_t, 1, t[1])
+		capacity = sum(diff_t .* I) / 3600
+	end
+	return capacity
+end
+
+function compute_charge_capacity(output::NamedTuple; cycle_number = nothing)
+	states = output[:states]
+
+	if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
+		if isnothing(cycle_number)
+
+			error("""Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
+
+							compute_charge_capacity(output; cycle_number = 1)
+
+			""")
+
+		end
+	end
+
+	return compute_charge_capacity(states; cycle_number = cycle_number)
+end
+
+function compute_charge_capacity(states; cycle_number = nothing)
+
+	t = [state[:Control][:Controller].time for state in states]
+	I = [state[:Control][:Current][1] for state in states]
+
+	if !isnothing(cycle_number)
+		cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
+
+		total_number_of_cycles = states[end][:Control][:Controller].numberOfCycles
+
+		cycle_index = findall(x -> x == cycle_number, cycle_array)
+
+		I_cycle = I[cycle_index]
+		t_cycle = t[cycle_index]
+
+		charge_index = findall(x -> x < 0, I_cycle)
+		I_charge = I_cycle[charge_index]
+		t_charge = t_cycle[charge_index]
+
+		diff_t = diff(t_charge)
+		insert!(diff_t, 1, t_charge[1])
+		capacity = sum(diff_t .* abs.(I_charge)) / 3600
+
+
+	else
+		diff_t = diff(t)
+		insert!(diff_t, 1, t[1])
+		capacity = sum(diff_t .* abs.(I)) / 3600
+	end
+	return capacity
+end
+
+
+function compute_round_trip_efficiency(output::NamedTuple; cycle_number = nothing)
+	states = output[:states]
+	if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
+		if isnothing(cycle_number)
+
+			error("""Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
+
+							compute_round_trip_efficiency(output; cycle_number = 1)
+
+			""")
+
+		end
+	end
+
+	return computeEnergyEfficiency(states; cycle_number = cycle_number)
+end
+
+function compute_discharge_energy(output::NamedTuple; cycle_number = nothing)
+	states = output[:states]
+
+	if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
+		if isnothing(cycle_number)
+
+			error("""Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
+
+							compute_discharge_energy(output; cycle_number = 1)
+
+			""")
+
+		end
+	end
+
+	return compute_discharge_energy(states; cycle_number = cycle_number)
+end
+
+function compute_discharge_energy(states; cycle_number = nothing)
+	# Only take discharge curves
+	t = [state[:Control][:Controller].time for state in states]
+	E = [state[:Control][:Phi][1] for state in states]
+	I = [state[:Control][:Current][1] for state in states]
+
+	if !isnothing(cycle_number)
+		cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
+
+		total_number_of_cycles = states[end][:Control][:Controller].numberOfCycles
+
+		cycle_index = findall(x -> x == cycle_number, cycle_array)
+
+		I_cycle = I[cycle_index]
+		t_cycle = t[cycle_index]
+		E_cycle = E[cycle_index]
+
+		discharge_index = findall(x -> x > 0, I_cycle)
+		I_discharge = I_cycle[discharge_index]
+		t_discharge = t_cycle[discharge_index]
+		E_discharge = E_cycle[discharge_index]
+
+		dt = diff(t_discharge)
+
+		Emid = (E_discharge[2:end] + E_discharge[1:end-1]) ./ 2
+		Imid = (I_discharge[2:end] + I_discharge[1:end-1]) ./ 2
+
+		energy = sum(Emid .* Imid .* dt)
+
+	else
+		dt = diff(t)
+
+		Emid = (E[2:end] + E[1:end-1]) ./ 2
+		Imid = (I[2:end] + I[1:end-1]) ./ 2
+
+		energy = sum(Emid .* Imid .* dt)
+
+	end
+
+	return energy
+
+end
+
+function compute_charge_energy(output::NamedTuple; cycle_number = nothing)
+	states = output[:states]
+
+	if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
+		if isnothing(cycle_number)
+
+			error("""Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
+
+							compute_discharge_energy(output; cycle_number = 1)
+
+			""")
+
+		end
+	end
+
+	return compute_charge_energy(states; cycle_number = cycle_number)
+end
+
+function compute_charge_energy(states; cycle_number = nothing)
+	# Only take discharge curves
+	t = [state[:Control][:Controller].time for state in states]
+	E = [state[:Control][:Phi][1] for state in states]
+	I = [state[:Control][:Current][1] for state in states]
+
+	if !isnothing(cycle_number)
+		cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
+
+		total_number_of_cycles = states[end][:Control][:Controller].numberOfCycles
+
+		cycle_index = findall(x -> x == cycle_number, cycle_array)
+
+		I_cycle = I[cycle_index]
+		t_cycle = t[cycle_index]
+		E_cycle = E[cycle_index]
+
+		charge_index = findall(x -> x < 0, I_cycle)
+		I_charge = I_cycle[charge_index]
+		t_charge = t_cycle[charge_index]
+		E_charge = E_cycle[charge_index]
+
+		dt = diff(t_charge)
+
+		Emid = (E_charge[2:end] + E_charge[1:end-1]) ./ 2
+		Imid = (I_charge[2:end] + I_charge[1:end-1]) ./ 2
+
+		energy = sum(Emid .* abs.(Imid) .* dt)
+
+	else
+		dt = diff(t)
+
+		Emid = (E[2:end] + E[1:end-1]) ./ 2
+		Imid = (I[2:end] + I[1:end-1]) ./ 2
+
+		energy = sum(Emid .* abs.(Imid) .* dt)
+
+	end
+
+	return energy
+
 end

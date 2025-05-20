@@ -136,8 +136,18 @@ function get_parameter_meta_data()
 		),
 		"Protocol" => Dict(
 			"type" => String,
-			"options" => ["CC", "CCCV"],
+			"options" => ["CC", "CCCV", "Function"],
 			"context_type" => "Protocol",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_789012",
+		),
+		"FunctionName" => Dict(
+			"type" => String,
+			"context_type" => "Name",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_789012",
+		),
+		"TotalTime" => Dict(
+			"type" => Real,
+			"context_type" => "Time",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_789012",
 		),
 		"InitialControl" => Dict(
@@ -166,27 +176,27 @@ function get_parameter_meta_data()
 			"context_type" => "RestingTimeAfterDischarge",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_901234",
 		),
-		"ModelGeometry" => Dict(
+		"ModelFramework" => Dict(
 			"type" => String,
-			"options" => ["1D", "3D Pouch"],
-			"context_type" => "ModelGeometry",
+			"options" => ["P2D", "P4D Pouch"],
+			"context_type" => "ModelFramework",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_geometry",
+			"is_sub_model" => true,
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/pxd_model",
 		),
-		"UseSEIModel" => Dict(
+		"SEIModel" => Dict(
 			"type" => String,
 			"options" => ["Bolay"],
 			"is_sub_model" => true,
 		),
-		"UseDiffusionModel" => Dict(
+		"TransportInSolid" => Dict(
 			"type" => String,
-			"options" => ["PXD"],
-			"is_sub_model" => true,
-			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/pxd_model",
-		),
-		"UseCurrentCollectors" => Dict(
+			"options" => ["FullDiffusion"],
+			"is_sub_model" => true),
+		"CurrentCollectors" => Dict(
 			"type" => String,
 			"options" => ["Generic"],
-			"context_type" => "UseCurrentCollectors",
+			"context_type" => "CurrentCollectors",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_current_collectors",
 			"is_sub_model" => true,
 		),
@@ -295,10 +305,10 @@ function get_parameter_meta_data()
 			"context_type" => "Grid",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_grid",
 		),
-		"UseRampUp" => Dict(
+		"RampUp" => Dict(
 			"type" => String,
 			"options" => ["Sinusoidal"],
-			"context_type" => "UseRampUp",
+			"context_type" => "RampUp",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_rampup",
 			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/ramp_up",
 			"is_sub_model" => true,

@@ -7,8 +7,8 @@
     "Cell": {
         "Name": "LG INR 21700 M50",
         "Case": "Cylindrical",
-        "ElectrodeWidth": 0.065,
-        "ElectrodeLength": 1.58,
+        "Height": 0.065,
+        "OuterRadius": 0.021,
         "ElectrodeGeometricSurfaceArea": 0.1027,
         "NominalVoltage": 3.71,
         "NominalCapacity": 4.8
