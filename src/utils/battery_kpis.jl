@@ -355,7 +355,7 @@ function compute_charge_capacity(states; cycle_number = nothing)
 		t_cycle = t[cycle_index]
 
 		charge_index = findall(x -> x < -0.0000001, I_cycle)
-		if length(discharge_index) < 2
+		if length(charge_index) < 2
 			return 0.0  # Not enough points to compute
 		end
 

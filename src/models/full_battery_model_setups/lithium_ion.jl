@@ -26,7 +26,7 @@ struct LithiumIonBattery <: BatteryModelSetup
 	function LithiumIonBattery(; model_settings = get_default_model_settings(LithiumIonBattery))
 
 		model_geometry = model_settings["ModelFramework"]
-		name = "$model_geometry Setup object for a lithium-ion model"
+		name = "Setup object for a $model_geometry lithium-ion model"
 
 		is_valid = validate_parameter_set(model_settings)
 
@@ -68,13 +68,13 @@ function get_default_simulation_settings(st::LithiumIonBattery)
 		"GridPoints" => Dict(
 			"ElectrodeWidth" => 10,
 			"ElectrodeLength" => 10,
-			"PositiveElectrodeCoating" => 3,
-			"PositiveElectrodeActiveMaterial" => 10,
+			"PositiveElectrodeCoating" => 10,
+			"PositiveElectrodeActiveMaterial" => 3,
 			"PositiveElectrodeCurrentCollector" => 2,
 			"PositiveElectrodeCurrentCollectorTabWidth" => 3,
 			"PositiveElectrodeCurrentCollectorTabLength" => 3,
-			"NegativeElectrodeCoating" => 3,
-			"NegativeElectrodeActiveMaterial" => 10,
+			"NegativeElectrodeCoating" => 10,
+			"NegativeElectrodeActiveMaterial" => 4,
 			"NegativeElectrodeCurrentCollector" => 2,
 			"NegativeElectrodeCurrentCollectorTabWidth" => 3,
 			"NegativeElectrodeCurrentCollectorTabLength" => 3,
