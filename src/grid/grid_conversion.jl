@@ -93,7 +93,9 @@ function convert_to_mrst_grid(g)
     G_raw["nodes"]   = G_raw_nodes
     G_raw["griddim"] = length(g.node_points[1])
     G_raw["type"]    = Matrix{Any}(undef, 0, 0)
+
+    boundary_face_mapping = collect(1 : length(g.boundary_faces.neighbors)) .+ size(g.faces.neighbors, 1)
     
-    return G_raw
+    return (G_raw, boundary_face_mapping)
     
 end
