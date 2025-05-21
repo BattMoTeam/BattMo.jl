@@ -1,6 +1,5 @@
 using BattMo
 
-
 function getinput(name)
     return read_battmo_formatted_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
 end
@@ -13,12 +12,15 @@ inputparams_material = getinput("lithium_ion_battery_nmc_graphite.json")
 # load control parameters
 inputparams_control = getinput("cc_discharge_control.json")
 
-a = [inputparams_geometry, inputparams_material, inputparams_control]
+inputparams = merge_input_params([inputparams_geometry, inputparams_material, inputparams_control])
 
-inputparams = merge_input_params(a)
 inputparams["include_current_collectors"] = false
 inputparams["include_current_collectors"] = false
-inputparams["TimeStepping"] = Dict("useRampup" => true)
+inputparams["TimeStepping"] = Dict("useRampup" => true,
+                                   "numberOfTimeSteps" => 100,
+                                   "numberOfRampupSteps" => 5)
+inputparams["Control"]["useCVswitch"] = false
+
 
 run_battery(inputparams)
 
