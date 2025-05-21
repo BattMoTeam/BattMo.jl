@@ -14,17 +14,17 @@ function convert_to_mrst_grid(g)
     """
     function get_pairs(pos, vals)
         
-        cells = Int[]
-        sizehint!(cells, length(vals))
+        elts = Int[]
+        sizehint!(elts, length(vals))
         
-        for icell in eachindex(pos[1 : end - 1])
-            n = pos[icell + 1] - pos[icell]
+        for ielt in eachindex(pos[1 : end - 1])
+            n = pos[ielt + 1] - pos[ielt]
             if n > 0
-                cells = append!(cells, fill(icell, n))
+                elts = append!(elts, fill(ielt, n))
             end
         end
 
-        return hcat(cells, vals)
+        return hcat(elts, vals)
         
     end
     
@@ -93,7 +93,7 @@ function convert_to_mrst_grid(g)
     G_raw["nodes"]   = G_raw_nodes
     G_raw["griddim"] = length(g.node_points[1])
     G_raw["type"]    = Matrix{Any}(undef, 0, 0)
-
+    
     return G_raw
     
 end
