@@ -1721,7 +1721,9 @@ function setup_volume_fractions!(model::MultiModel, grids, coupling)
 		:PeAm => "PositiveElectrode")
 
 	vfracs = map(name -> model[name].system[:volume_fraction], names)
-	T = Base.promote_type(map(typeof, vfracs)...)
+	separator_porosity = model[:Elyte].system[:separator_porosity]
+
+	T = Base.promote_type(map(typeof, vfracs)..., typeof(separator_porosity))
 
 	vfelyte     = zeros(T, Nelyte)
 	vfseparator = zeros(T, Nelyte)
@@ -1736,7 +1738,6 @@ function setup_volume_fractions!(model::MultiModel, grids, coupling)
 		vfelyte[elytecells] .= 1 - vf
 	end
 
-	separator_porosity = model[:Elyte].system[:separator_porosity]
 	elytecells         = coupling["Separator"]["cells"]
 
 	vfelyte[elytecells]     .= separator_porosity * ones()
