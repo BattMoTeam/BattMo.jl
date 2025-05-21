@@ -533,8 +533,7 @@ end
 
 
 function setup_battery_parameters(inputparams::MatlabInputParams,
-	model::MultiModel;
-	T = Float64
+	model::MultiModel
 )
 
 	parameters = Dict{Symbol, Any}()
