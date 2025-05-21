@@ -43,6 +43,13 @@ thickness = sum(dxs)
 
 depths = [0; cumsum(repeat([height/nz], nz))]
 
+spacingtags = Dict()
+spacingtags[:NeCc]  = collect(1 : Ns[1])
+spacingtags[:NeAm]  = Ns[1] .+ collect(1 : Ns[2])
+spacingtags[:Elyte] = Ns[1] .+ collect(1 : sum(Ns[2 : 4]))
+spacingtags[:PeAm]  = sum(Ns[1 : 3]) .+ collect(1 : Ns[4])
+spacingtags[:PeCc]  = sum(Ns[1 : 4]) .+ collect(1 : Ns[5])
+                                       
 if false
     
     # We compute the arguments of spiral_mesh, nrot, A and C as function of router, rinner, thickness
