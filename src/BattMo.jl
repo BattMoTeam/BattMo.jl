@@ -188,9 +188,6 @@ include("input/schemas/get_schema.jl")
 include("input/schemas/get_json_from_schema.jl")
 
 include("utils/physical_constants.jl")
-include("utils/simple_api.jl")
-
-
 
 include("models/battmo_types.jl")
 include("models/full_battery_model_setups/battery_model.jl")
@@ -222,6 +219,9 @@ include("plotting/3D.jl")
 
 include("utils/battery_cell_specifications.jl")
 include("utils/battery_kpis.jl")
+include("utils/output_format.jl")
+include("utils/output_format.jl")
+
 
 include("solver/linsolve.jl")
 

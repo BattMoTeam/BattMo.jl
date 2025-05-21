@@ -160,37 +160,3 @@ function get_simple_output(output::NamedTuple{(:states, :cellSpecifications, :re
 		Temperature = spatial_data.Temperature)
 
 end
-# output.time = Vector{Float64}(nt)
-
-# output.coords
-# 			 .xyz = Array{Float64,2}(nc,3)
-# 			 .r = Array{Float64,1}(nr)
-
-# output.time_series
-#                   .potential = Array{Float64,1}(nt)
-#                   .concentration = Array{Float64}(nt)
-#                   .cycle_number = Array{Float64}(nt)
-# 				  .protocol_step = Array{Float64}(nt)
-
-# 	                                              
-# output.Elyte_potential = Array{Float64,2}(nc,nt)
-
-# output.PeAm_potential = Array{Float64,2}(nc,nt)
-
-# output.NeAm_potential = Array{Float64,2}(nc,nt)
-
-# output.PeAmParticle_potential = Array{Float64,3)(nc,nr,nt)
-
-# output.NeAmParticle_potential = Array{Float64,3)(nc,nr,nt)
-
-# output.Elyte_concentration  = Array{Float64,2}(nc,nt)
-
-# output.PeAm_concentrationn = Array{Float64,2}(nc,nt)
-
-# output.NeAm_concentration = Array{Float64,2}(nc,nt)
-
-# output.PeAmParticle_concentration = Array{Float64,3)(nc,nr,nt)
-
-# output.NeAmParticle_concentration = Array{Float64,3)(nc,nr,nt)
-
-# output.Temperature = Array{Float64,2}(nc,nt)
