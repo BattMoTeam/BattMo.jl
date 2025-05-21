@@ -232,9 +232,6 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
 	cinds = vcat(1, 1 .+ cumsum(ns))
 
 	uParentGrid = tpfv_geometry(uParentGrid)
-	x = uParentGrid.cell_centroids[1, :]
-	x = [[val, i] for (i, val) in enumerate(x)]
-	x = sort!(x, by = xx -> xx[1])
 
 	## setup the grid for each component
 	for (icomponent, component) in enumerate(components)
