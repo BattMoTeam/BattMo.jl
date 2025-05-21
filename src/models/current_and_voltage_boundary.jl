@@ -1327,7 +1327,7 @@ end
 """
 Function called when setting up state initially. We need to add the fields corresponding to the controller
 """
-function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVoltageModel)
+function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVoltageModel; T = Float64)
 
 	policy = model.system.policy
 
