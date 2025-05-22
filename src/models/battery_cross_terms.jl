@@ -50,8 +50,9 @@ end
 
 Jutul.cross_term_entities(ct::AccumulatorInterfaceFluxCT, eq::JutulEquation, model) = [ct.target_cell]
 
-function regularized_sqrt(x::T, th::Float64) where {T <: Any}
+function regularized_sqrt(x, th)
 	x, th = promote(x, th)
+	T = typeof(x)
 	y = zero(T)
 	if x <= th
 		y = x / th * sqrt(th)
