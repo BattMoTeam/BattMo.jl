@@ -1,5 +1,6 @@
 using BattMo, Jutul, GLMakie
 
+"local helper function to load data"
 function getinput(name)
     return read_battmo_formatted_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
 end
@@ -13,6 +14,17 @@ inputparams_control = getinput("cc_discharge_control.json")
 
 inputparams = merge_input_params([inputparams_geometry, inputparams_material, inputparams_control])
 
-output = run_battery(inputparams)
-# grids = jelly_roll_grid(inputparams)
+output = setup_simulation(deepcopy(inputparams))
+
+simulator = output[:simulator]
+model     = output[:model]
+state0    = output[:state0]
+forces    = output[:forces]
+timesteps = output[:timesteps]
+cfg       = output[:cfg]
+
+cfg[:info_level] = 10
+
+states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+
 nothing
