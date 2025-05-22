@@ -393,7 +393,6 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		),
 	)
 
-<<<<<<< HEAD
 
 	if cycling_protocol["Protocol"] == "Experiment"
 		control = convert_experiment_to_battmo_control_input(Experiment(cycling_protocol["Experiment"]))
@@ -406,8 +405,6 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	end
 	@info battmo_input["Control"]
-=======
->>>>>>> main
 	return InputParams(battmo_input)
 
 end
