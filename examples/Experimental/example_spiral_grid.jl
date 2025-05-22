@@ -49,15 +49,32 @@ spacingtags[:NeAm]  = Ns[1] .+ collect(1 : Ns[2])
 spacingtags[:Elyte] = Ns[1] .+ collect(1 : sum(Ns[2 : 4]))
 spacingtags[:PeAm]  = sum(Ns[1 : 3]) .+ collect(1 : Ns[4])
 spacingtags[:PeCc]  = sum(Ns[1 : 4]) .+ collect(1 : Ns[5])
-                                       
+
+C = rinner
+A = thickness/2*pi
+
+nrot = Int(round((router - rinner)/(2*pi*A)))
+
+g2d = Jutul.RadialMeshes.spiral_mesh(nangles, nrot; spacing = spacing, A = A, C = C)
+
+g3d = Jutul.extrude_mesh(g2d, depths)
+
+tags = Jutul.RadialMeshes.spiral_mesh_tags(g3d, spacing)
+
+elyte_cells = findall(x -> x in spacingtags[:NeAm], tags[:spacing])
+
+elyte_g3d = Jutul.extract_submesh(g3d, elyte_cells)
+
+fig, ax, plt = plot_mesh(elyte_g3d)
+Jutul.plot_mesh_edges_impl!(ax, elyte_g3d)
+
+fig
+
 if false
     
     # We compute the arguments of spiral_mesh, nrot, A and C as function of router, rinner, thickness
 
-    g2d = Jutul.RadialMeshes.spiral_mesh(nangles, nrot; spacing = spacing, A = A, C = C)
-
     # Depths must be in increasing order
-    g3d = Jutul.extrude_mesh(g2d, depths)
 
     tags = Jutul.RadialMeshes.spiral_mesh_tags(g3d, spacing)
 
@@ -86,4 +103,5 @@ if false
     plot_mesh!(ax, g3d, boundaryfaces = tf, color = :red, alpha = 0.5)
     plot_mesh!(ax, g3d, boundaryfaces = bf, color = :blue, alpha = 0.5)
     fig
+    
 end
