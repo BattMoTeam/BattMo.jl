@@ -13,5 +13,6 @@ inputparams_control = getinput("cc_discharge_control.json")
 
 inputparams = merge_input_params([inputparams_geometry, inputparams_material, inputparams_control])
 
-grids = jelly_roll_grid(inputparams)
+output = run_battery(inputparams)
+# grids = jelly_roll_grid(inputparams)
 nothing

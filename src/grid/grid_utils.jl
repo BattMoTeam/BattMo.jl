@@ -231,7 +231,7 @@ function jelly_roll_grid(geomparams::InputGeometryParams)
 
     tags = Jutul.RadialMeshes.spiral_mesh_tags(uParentGrid, spacing)
 
-	parentGrid, boundary_face_mapping = convert_to_mrst_grid(uParentGrid)
+	parentGrid = convert_to_mrst_grid(uParentGrid)
 
 	components = ["NegativeCurrentCollector",
 			      "NegativeElectrode",
@@ -310,7 +310,7 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
 
 	vars = ["thickness", "N"]
 	vals = Dict("thickness" => Vector{Float64}(),
-		"N" => Vector{Int}())
+		        "N" => Vector{Int}())
 
 	for var in vars
 		push!(vals[var], geomparams["NegativeElectrode"]["Coating"][var])

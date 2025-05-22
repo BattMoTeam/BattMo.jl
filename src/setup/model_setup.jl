@@ -778,8 +778,8 @@ function setup_submodels(inputparams::InputParams;
 	setup_volume_fractions!(model, grids, couplings["Electrolyte"])
 
 	output = (model     = model,
-		couplings = couplings,
-		grids     = grids)
+		      couplings = couplings,
+		      grids     = grids)
 
 	return output
 
@@ -802,6 +802,10 @@ function setup_grids_and_couplings(inputparams::InputParams)
 
 		grids, couplings = pouch_grid(inputparams)
 
+    elseif case_type == "jellyRoll"
+
+        grids, couplings = jelly_roll_grid(inputparams)
+        
 	else
 		# Add case_type = "jellyRoll"
 		error("geometry case type not recognized")

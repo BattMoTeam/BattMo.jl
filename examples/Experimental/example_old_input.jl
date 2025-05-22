@@ -15,12 +15,6 @@ inputparams_control = getinput("cc_discharge_control.json")
 inputparams = merge_input_params([inputparams_geometry, inputparams_material, inputparams_control])
 
 inputparams["include_current_collectors"] = false
-inputparams["include_current_collectors"] = false
-inputparams["TimeStepping"] = Dict("useRampup" => true,
-                                   "numberOfTimeSteps" => 100,
-                                   "numberOfRampupSteps" => 5)
-inputparams["Control"]["useCVswitch"] = false
-
 
 run_battery(inputparams)
 

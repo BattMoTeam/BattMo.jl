@@ -4,6 +4,11 @@
     "DRate": 1,
     "rampupTime": 0.1,
     "lowerCutoffVoltage": 2.4,
-    "upperCutoffVoltage": 4.1
-  }
+    "upperCutoffVoltage": 4.1,
+    "useCVswitch" : false
+  },
+  "TimeStepping": {
+    "useRampup": true,
+    "numberOfTimeSteps": 100,
+    "numberOfRampupSteps": 5}
 }
