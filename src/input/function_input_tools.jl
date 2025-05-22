@@ -179,7 +179,7 @@ function setup_function_from_function_name(function_name::String)
 			Base.include(Main, filename)
 			if isdefined(Main, symb)
 				f = getfield(Main, symb)
-				return t -> Base.invokelatest(f, t)
+				return (args...) -> Base.invokelatest(f, args...)
 			else
 				error("Function '$function_name' not defined in file '$filename'.")
 			end

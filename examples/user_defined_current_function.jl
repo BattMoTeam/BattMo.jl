@@ -78,7 +78,7 @@ current = [
 
 current_func = get_1d_interpolator(time, current, cap_endpoints = false)
 
-function user_defined_current_function(t)
+function user_defined_current_function(t, phi)
 
 	return current_func(t)
 end
