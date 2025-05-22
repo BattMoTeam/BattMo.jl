@@ -41,32 +41,32 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	diff_type = "full"
 
-	if isnothing(get_key_value(model_settings, "ModelGeometry"))
+	if isnothing(get_key_value(model_settings, "ModelFramework"))
 		geom_case = nothing
 	else
-		geom = get_key_value(model_settings, "ModelGeometry")
-		if geom == "1D"
-			geom_case = geom
+		geom = get_key_value(model_settings, "ModelFramework")
+		if geom == "P2D"
+			geom_case = "1D"
 
-		elseif geom == "3D Pouch"
+		elseif geom == "P4D Pouch"
 			geom_case = "3D-demo"
 
 		end
 	end
 
-	if isnothing(get_key_value(model_settings, "UseThermalModel"))
+	if isnothing(get_key_value(model_settings, "ThermalModel"))
 		use_thermal = false
 	else
 		use_thermal = true
 	end
 
-	if isnothing(get_key_value(model_settings, "UseCurrentCollectors"))
+	if isnothing(get_key_value(model_settings, "CurrentCollectors"))
 		use_cc = false
 	else
 		use_cc = true
 	end
 
-	if isnothing(get_key_value(model_settings, "UseRampUp"))
+	if isnothing(get_key_value(model_settings, "RampUp"))
 		use_ramp_up = false
 	else
 		use_ramp_up = true
@@ -188,6 +188,10 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		use_cv_switch = nothing
 		control = "Generic"
 
+	elseif cycling_protocol["Protocol"] == "Function"
+		use_cv_switch = nothing
+		control = "Function"
+
 	else
 		error("Cycling policy not recognized.")
 	end
@@ -200,6 +204,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		"include_current_collectors" => use_cc,
 		"Control" => Dict(
 			"controlPolicy" => control,
+			"functionName" => get_key_value(cycling_protocol, "FunctionName"),
 			"useCVswitch" => use_cv_switch,
 			"numberOfCycles" => get_key_value(cycling_protocol, "TotalNumberOfCycles"),
 			"rampupTime" => get_key_value(simulation_settings, "RampUpTime"),
@@ -222,7 +227,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 					"specificHeatCapacity" => get_key_value(ne_am, "SpecificHeatCapacity"),
 					"thermalConductivity" => get_key_value(ne_am, "ThermalConductivity"),
 					"electronicConductivity" => get_key_value(ne_am, "ElectronicConductivity"),
-					"SEImodel" => get_key_value(model_settings, "UseSEIModel"),
+					"SEImodel" => get_key_value(model_settings, "SEIModel"),
 					"Interface" => Dict(
 						"saturationConcentration" => get_key_value(ne_am, "MaximumConcentration"),
 						"volumetricSurfaceArea" => get_key_value(ne_am, "VolumetricSurfaceArea"),
@@ -384,9 +389,11 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"useRampup" => use_ramp_up,
 			"numberOfRampupSteps" => get_key_value(simulation_settings, "RampUpSteps"),
 			"timeStepDuration" => get_key_value(simulation_settings, "TimeStepDuration"),
+			"totalTime" => get_key_value(cycling_protocol, "TotalTime"),
 		),
 	)
 
+<<<<<<< HEAD
 
 	if cycling_protocol["Protocol"] == "Experiment"
 		control = convert_experiment_to_battmo_control_input(Experiment(cycling_protocol["Experiment"]))
@@ -399,6 +406,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	end
 	@info battmo_input["Control"]
+=======
+>>>>>>> main
 	return InputParams(battmo_input)
 
 end

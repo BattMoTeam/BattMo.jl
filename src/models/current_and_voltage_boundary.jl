@@ -117,6 +117,19 @@ end
 struct NoPolicy <: AbstractPolicy end
 
 
+"""
+Function Policy
+"""
+struct FunctionPolicy <: AbstractPolicy
+	current_function::Function
+
+	function FunctionPolicy(function_name::String)
+		current_function = setup_function_from_function_name(function_name)
+		new{}(current_function)
+	end
+
+end
+
 """ Standard CC-CV policy
 """
 mutable struct CyclingCVPolicy{R, I} <: AbstractPolicy
@@ -231,6 +244,14 @@ end
 
 abstract type Controller end
 
+mutable struct FunctionController{R <: Real} <: Controller
+	target::R
+	time::R
+	target_is_voltage::Bool
+end
+
+FunctionController() = FunctionController(0.0, 0.0, false)
+
 mutable struct CCController{I <: Integer, R <: Real} <: Controller
 	numberOfCycles::I
 	target::R
@@ -297,6 +318,10 @@ end
 	return R
 end
 
+@inline function Jutul.numerical_type(x::FunctionController{R}) where {R}
+	return R
+end
+
 @inline function Jutul.numerical_type(x::SimpleControllerCV{R}) where {R}
 	return R
 end
@@ -321,6 +346,17 @@ end
 
 
 """
+Function to create (deep) copy of function controller
+"""
+function copyController!(cv_copy::FunctionController, cv::FunctionController)
+
+	cv_copy.target = cv.target
+	cv_copy.time = cv.time
+	cv_copy.target_is_voltage = cv.target_is_voltage
+
+end
+
+"""
 Function to create (deep) copy of simple controller
 """
 function copyController!(cv_copy::SimpleControllerCV, cv::SimpleControllerCV)
@@ -341,6 +377,19 @@ function copyController!(cv_copy::CcCvController, cv::CcCvController)
 	cv_copy.numberOfCycles = cv.numberOfCycles
 
 end
+
+"""
+Overload function to copy simple controller
+"""
+function Base.copy(cv::FunctionController)
+
+	cv_copy = FunctionController()
+	copyController!(cv_copy, cv)
+
+	return cv_copy
+
+end
+
 
 """
 Overload function to copy simple controller
@@ -414,6 +463,10 @@ function getInitCurrent(policy::CCPolicy)
 	return val
 end
 
+function getInitCurrent(policy::FunctionPolicy)
+	return policy.current_function(0.0)
+end
+
 function getInitCurrent(policy::SimpleCVPolicy)
 	if !ismissing(policy.current_function)
 		val = policy.current_function(0.0)
@@ -485,6 +538,11 @@ function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParam
 		policy.ImaxDischarge = Imax
 		policy.lowerCutoffVoltage = inputparams["Control"]["lowerCutoffVoltage"]
 	end
+
+end
+
+
+function setup_initial_control_policy!(policy::FunctionPolicy, inputparams::InputParams, parameters)
 
 end
 
@@ -700,6 +758,13 @@ end
 # Functions to update values in the controller #
 ################################################
 
+
+function Jutul.update_values!(old::FunctionController, new::FunctionController)
+
+	copyController!(old, new)
+
+end
+
 function Jutul.update_values!(old::CCController, new::CCController)
 
 	copyController!(old, new)
@@ -737,6 +802,7 @@ function Jutul.perform_step_solve_impl!(report, storage, model::MultiModel{:Batt
 
 	state  = storage.state[:Control]
 	state0 = storage.state0[:Control]
+
 	policy = model[:Control].system.policy
 
 	update_controller!(state, state0, policy, dt)
@@ -780,7 +846,15 @@ end
 ##################################
 
 # Given a policy, a current control and state, we compute the next control
+"""
+Implementation of the function policy
+"""
+function update_control_type_in_controller!(state, state0, policy::FunctionPolicy, dt)
+	controller                   = state.Controller
+	controller.target_is_voltage = false
+	controller.time              = state0.Controller.time + dt
 
+end
 
 """
 Implementation of the simple CV policy
@@ -822,6 +896,7 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
 	nextCtrlType = getNextCtrlTypeCCCV(ctrlType0)
 
 	rsw00 = setupRegionSwitchFlags(policy, state0, ctrlType0)
+
 
 	if rsw00.beforeSwitchRegion
 
@@ -1009,6 +1084,19 @@ function update_values_in_controller!(state, policy::CCPolicy)
 	target = I_t
 
 	controller.target = target
+
+
+end
+
+function update_values_in_controller!(state, policy::FunctionPolicy)
+
+	controller = state.Controller
+
+	cf = policy.current_function
+
+	I_p = cf(controller.time)
+
+	controller.target = I_p
 
 
 end
@@ -1202,6 +1290,10 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 
 		copyController!(storage.state0[:Controller], ctrl)
 
+	elseif policy isa FunctionPolicy
+
+		copyController!(storage.state0[:Controller], ctrl)
+
 	elseif policy isa CCPolicy
 
 		if policy.numberOfCycles == 0
@@ -1273,6 +1365,16 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 		target_is_voltage = false
 		ctrlType = discharging
 		state[:Controller] = SimpleControllerCV(target, time, target_is_voltage, ctrlType)
+
+	elseif policy isa FunctionPolicy
+
+		time = 0.0
+
+		target = policy.current_function(time)
+
+		target_is_voltage = false
+
+		state[:Controller] = FunctionController(target, time, target_is_voltage)
 
 	elseif policy isa CCPolicy
 

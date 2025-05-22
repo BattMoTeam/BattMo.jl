@@ -59,11 +59,10 @@ Define numerical assumptions related to the battery model, such as diffusion met
 
 ```json
 {
-    "ModelGeometry": "1D",
-    "UseThermalModel": false,
-    "UseCurrentCollectors": false,
-    "UseRampUp": true,
-    "UseSEIModel": true,
+    "ModelFramework": "P2D",
+    "TransportInSolid": "FullDiffusion",
+    "CurrentCollectors": false,
+    "RampUp": "Sinusoidal",
     "SEIModel": "Bolay"
 }
 ```

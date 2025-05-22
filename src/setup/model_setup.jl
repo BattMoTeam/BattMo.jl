@@ -136,18 +136,12 @@ The output of the simulation if the problem is valid.
 # Throws
 Throws an error if the `Simulation` object is not valid, prompting the user to check warnings during instantiation.
 """
-function solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, kwargs...)
+function solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, end_report = true, kwargs...)
 
-	config_kwargs = (info_level = info_level,)
+	config_kwargs = (info_level = info_level, end_report = end_report)
 
-	diffusion_model = problem.model_setup.model_settings["UseDiffusionModel"]
-	if diffusion_model == "PXD"
-		use_p2d = true
-	elseif diffusion_model == "NoParticleDiffusion"
-		use_p2d = false
-	else
-		error("DiffusionModel $diffusion_model not recognized.")
-	end
+	use_p2d = true
+
 
 	if accept_invalid == true
 		output = problem.function_to_solve(problem.model_setup, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;
@@ -185,12 +179,13 @@ function solve(problem::Simulation; accept_invalid = false, hook = nothing, info
 end
 
 
-function solve(problem::Optimization; hook = nothing, info_level = 0, kwargs...)
+function solve(problem::Optimization; hook = nothing, info_level = 0, end_report = false, kwargs...)
 
 
 	output = problem.function_to_solve(problem.setup, problem.initial_results,
 		hook = nothing,
 		info_level = info_level,
+		end_report = end_report,
 		kwargs...)
 
 	return output
@@ -202,7 +197,7 @@ end
 # Run optimization #
 ######################
 
-function run_optimization(opt_setup, initial_results; hook = nothing, info_level = 0, kwargs...)
+function run_optimization(opt_setup, initial_results; hook = nothing, info_level = 0, end_report = false, kwargs...)
 
 	extra = initial_results[:extra]
 	parameters = extra[:parameters]
@@ -213,6 +208,7 @@ function run_optimization(opt_setup, initial_results; hook = nothing, info_level
 	time_steps = extra[:timesteps]
 
 	config[:info_level] = info_level
+	config[:end_report] = end_report
 
 	## Print starting values
 
@@ -503,7 +499,8 @@ function setup_submodels(inputparams::InputParams;
 		elseif haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionname")
 
 			funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
-			am_params[:ocp_func] = getfield(BattMo, Symbol(funcname))
+			fcn = setup_function_from_function_name(funcname)
+			am_params[:ocp_func] = fcn
 
 		else
 			am_params[:ocp_funcdata] = true
@@ -610,7 +607,8 @@ function setup_submodels(inputparams::InputParams;
 	elseif haskey(inputparams_elyte["diffusionCoefficient"], "functionname")
 
 		funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
-		params[:diffusivity_func] = getfield(BattMo, Symbol(funcname))
+		fcn = setup_function_from_function_name(funcname)
+		params[:diffusivity_func] = fcn
 
 	else
 		data_x = inputparams_elyte["diffusionCoefficient"]["data_x"]
@@ -631,7 +629,8 @@ function setup_submodels(inputparams::InputParams;
 	elseif haskey(inputparams_elyte["ionicConductivity"], "functionname")
 
 		funcname = inputparams_elyte["ionicConductivity"]["functionname"]
-		params[:conductivity_func] = getfield(BattMo, Symbol(funcname))
+		fcn = setup_function_from_function_name(funcname)
+		params[:conductivity_func] = fcn
 
 	else
 		data_x = inputparams_elyte["ionicConductivity"]["data_x"]
@@ -723,6 +722,12 @@ function setup_submodels(inputparams::InputParams;
 		ctrl = jsondict["Control"]
 
 		policy = GenericPolicy(ctrl)
+	elseif controlPolicy == "Function"
+
+		ctrl = jsondict["Control"]
+		function_name = ctrl["functionName"]
+
+		policy = FunctionPolicy(function_name)
 
 	else
 
@@ -1007,6 +1012,11 @@ function setup_battery_parameters(inputparams::InputParams,
 		prm_control[:ImaxCharge] = (cap / con.hour) * CRate
 
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
+
+	elseif controlPolicy == "Function"
+		cap = computeCellCapacity(model)
+		con = Constants()
+		parameters[:Control] = setup_parameters(model[:Control])
 
 	elseif controlPolicy == "CCCV" || controlPolicy == "CCCycling"
 
@@ -1549,7 +1559,7 @@ function setup_timesteps(inputparams::InputParams;
 		con = Constants()
 		totalTime = 1.1 * con.hour / CRate
 
-		if haskey(inputparams["TimeStepping"], "totalTime")
+		if haskey(inputparams["TimeStepping"], "totalTime") && !isnothing(inputparams["TimeStepping"]["totalTime"])
 			@warn "totalTime value is given but not used"
 		end
 
@@ -1581,7 +1591,7 @@ function setup_timesteps(inputparams::InputParams;
 		totalTime = ncycles * 2 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
 
-		if haskey(inputparams["TimeStepping"], "totalTime")
+		if haskey(inputparams["TimeStepping"], "totalTime") && !isnothing(inputparams["TimeStepping"]["totalTime"])
 			@warn "totalTime value is given but not used"
 		end
 
@@ -1607,7 +1617,7 @@ function setup_timesteps(inputparams::InputParams;
 
 		totalTime = ncycles * 2.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
-		if haskey(inputparams["TimeStepping"], "totalTime")
+		if haskey(inputparams["TimeStepping"], "totalTime") && !isnothing(inputparams["TimeStepping"]["totalTime"])
 			@warn "totalTime value is given but not used"
 		end
 
@@ -1628,6 +1638,12 @@ function setup_timesteps(inputparams::InputParams;
 		dt = 100
 		n = 10000
 		timesteps = repeat([dt], n)
+
+	elseif controlPolicy == "Function"
+		totalTime = inputparams["TimeStepping"]["totalTime"]
+		dt = inputparams["TimeStepping"]["timeStepDuration"]
+		n = totalTime / dt
+		timesteps = repeat([dt], Int64(floor(n)))
 
 	else
 
