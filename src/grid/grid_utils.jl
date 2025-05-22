@@ -190,14 +190,18 @@ function jelly_roll_grid(geomparams::InputGeometryParams)
     height  = geometry["height"] 
 
     function get_vector(geomparams, fdname)
-
+        # double coated electrode
         v = [geomparams["NegativeElectrode"]["CurrentCollector"][fdname],
              geomparams["NegativeElectrode"]["Coating"][fdname],
              geomparams["Separator"][fdname],
-             geomparams["NegativeElectrode"]["Coating"][fdname],
-             geomparams["NegativeElectrode"]["CurrentCollector"][fdname]]
-        return v
+             geomparams["PositiveElectrode"]["Coating"][fdname],
+             geomparams["PositiveElectrode"]["CurrentCollector"][fdname],
+             geomparams["PositiveElectrode"]["Coating"][fdname],
+             geomparams["Separator"][fdname],
+             geomparams["NegativeElectrode"]["Coating"][fdname]
+             ]
         
+        return v
     end
 
     Ns  = get_vector(geomparams, "N")
@@ -212,13 +216,29 @@ function jelly_roll_grid(geomparams::InputGeometryParams)
 
     depths = [0; cumsum(repeat([height/nz], nz))]
     
+    components = ["NegativeCurrentCollector",
+                  "NegativeElectrode",
+                  "Separator",
+                  "Electrolyte",
+                  "PositiveElectrode",
+                  "PositiveCurrentCollector"]
+
+    component_indices = Dict()
+    component_indices["NegativeCurrentCollector"] = [1]
+    component_indices["NegativeElectrode"]        = [2, 8]
+    component_indices["Electrolyte"]              = [2, 3, 4, 6, 7, 8]
+    component_indices["Separator"]                = [3, 7]
+    component_indices["PositiveElectrode"]        = [4, 6]
+    component_indices["PositiveCurrentCollector"] = [5]
+
     spacingtags = Dict()
-    spacingtags["NegativeCurrentCollector"] = collect(1 : Ns[1])
-    spacingtags["NegativeElectrode"]        = Ns[1] .+ collect(1 : Ns[2])
-    spacingtags["Electrolyte"]              = Ns[1] .+ collect(1 : sum(Ns[2 : 4]))
-    spacingtags["Separator"]                = sum(Ns[1 : 2]) .+ collect(1 : Ns[3])
-    spacingtags["PositiveElectrode"]        = sum(Ns[1 : 3]) .+ collect(1 : Ns[4])
-    spacingtags["PositiveCurrentCollector"] = sum(Ns[1 : 4]) .+ collect(1 : Ns[5])
+    for component in components
+        inds = Bool[]
+        for i in eachindex(Ns)
+            append!(inds, fill(i in component_indices[component], Ns[i]))
+        end
+        spacingtags[component] = findall(inds)
+    end
 
     C = rinner
     A = thickness/2*pi
@@ -262,7 +282,7 @@ function jelly_roll_grid(geomparams::InputGeometryParams)
     top_faces = Int[]
     top_cells = Int[]    
     geo = tpfv_geometry(g)
-    for bf in 1:number_of_boundary_faces(g)
+    for bf in 1 : number_of_boundary_faces(g)
         N = geo.boundary_normals[:, bf]
         Nz = N[3]
         if (abs(N[1]) + abs(N[2]) < 0.01*abs(Nz)) && (Nz > 0)
@@ -275,15 +295,15 @@ function jelly_roll_grid(geomparams::InputGeometryParams)
 
 	# Positive current collector external coupling
 
-    g = grids["NegativeCurrentCollector"]
+    g = grids["PositiveCurrentCollector"]
 
     bottom_faces = Int[]
     bottom_cells = Int[]    
     geo = tpfv_geometry(g)
-    for bf in 1:number_of_boundary_faces(g)
+    for bf in 1 : number_of_boundary_faces(g)
         N = geo.boundary_normals[:, bf]
         Nz = N[3]
-        if (abs(N[1]) + abs(N[2]) < 0.01*abs(Nz)) && (Nz > 0)
+        if (abs(N[1]) + abs(N[2]) < 0.01*abs(Nz)) && (Nz < 0)
             push!(bottom_faces, bf)
             push!(bottom_cells, g.boundary_faces.neighbors[bf])
         end
