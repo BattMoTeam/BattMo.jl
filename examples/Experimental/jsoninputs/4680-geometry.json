@@ -5,7 +5,7 @@
    "outerRadius" : 23e-3,
    "height" : 70e-3,
    "numberOfDiscretizationCellsVertical" : 3,
-   "numberOfDiscretizationCellsAngular"  : 10
+   "numberOfDiscretizationCellsAngular"  : 30
  },
  "NegativeElectrode": {
    "Coating": {
