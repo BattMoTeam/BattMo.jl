@@ -69,6 +69,15 @@ function solve(vc::VoltageCalibration)
         throw(ArgumentError("No free parameters set, unable to calibrate."))
     end
     sim = vc.sim
+    # Set up the objective function
+    V_fun = get_1d_interpolator(vc.t, vc.v)
+    function objective(model, state, dt, step_info, forces)
+        t = step_info[:time]
+        V_obs = V_fun(t)
+        V_sim = state[:Control][:Phi][1]
+        return dt * (V_obs - V_sim)^2
+    end
+
     # Set up the functions to serialize
     x, x_setup = Jutul.AdjointsDI.vectorize_nested(sim.cell_parameters.all,
         active = pkeys,
@@ -105,7 +114,7 @@ function solve(vc::VoltageCalibration)
 
     result = Jutul.simulate!(simulator, case.dt, forces = case.forces, config = cfg)
     # Solve adjoints
-    dg = solve_adjoint_generic(X, setup_battmo_case, result.states, result.reports)
+    dg = Jutul.AdjointsDI.solve_adjoint_generic(x, setup_battmo_case, result.states, result.reports, objective)
     # Scaling of dg...
     # Put inside optimizer unit_box_bfgs
 end
