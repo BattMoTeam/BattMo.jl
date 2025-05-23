@@ -8,7 +8,7 @@ struct VoltageCalibration
         for i in 2:length(t)
             @assert t[i] > t[i - 1]
         end
-        return new(t, v, sim, Dict{Vector{String}, Any}())
+        return new(t, v, deepcopy(sim), Dict{Vector{String}, Any}())
     end
 end
 
@@ -68,11 +68,44 @@ function solve(vc::VoltageCalibration)
     if length(pkeys) == 0
         throw(ArgumentError("No free parameters set, unable to calibrate."))
     end
+    sim = vc.sim
     # Set up the functions to serialize
-    x, x_setup = Jutul.AdjointsDI.vectorize_nested(vc.sim.cell_parameters.all,
+    x, x_setup = Jutul.AdjointsDI.vectorize_nested(sim.cell_parameters.all,
         active = pkeys,
         active_type = Real
     )
-    dg = solve_adjoint_generic()
+
+    function setup_battmo_case(X)
+        T = eltype(X)
+        Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, X, x_setup)
+        inputparams = convert_parameter_sets_to_battmo_input(
+            sim.model_setup.model_settings,
+            sim.cell_parameters,
+            sim.cycling_protocol,
+            sim.simulation_settings
+        )
+        model, parameters = setup_model(inputparams, T = T)
+        state0 = BattMo.setup_initial_state(inputparams, model)
+        forces = setup_forces(model)
+        timesteps = BattMo.setup_timesteps(inputparams)
+        output = setup_simulation(deepcopy(inputparams), use_p2d = true)
+
+        return Jutul.JutulCase(model, timesteps, forces, parameters = parameters, state0 = state0, input_data = inputparams)
+    end
+    case = setup_battmo_case(x)
+
+    simulator = Simulator(case)
+	cfg = setup_config(simulator,
+        case.model,
+        case.parameters,
+        :direct,
+        false,
+        true
+    )
+
+    result = Jutul.simulate!(simulator, case.dt, forces = case.forces, config = cfg)
+    # Solve adjoints
+    dg = solve_adjoint_generic(X, setup_battmo_case, result.states, result.reports)
     # Scaling of dg...
+    # Put inside optimizer unit_box_bfgs
 end
