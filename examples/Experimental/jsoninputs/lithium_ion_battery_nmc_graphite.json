@@ -3,15 +3,6 @@
   "SOC": 0.99,
   "initT": 298.15,
   "use_thermal": true,
-  "Control": {
-    "controlPolicy": "CCDischarge",
-    "rampupTime": 0.1,
-    "DRate": 1,
-    "lowerCutoffVoltage": 2.4,
-    "upperCutoffVoltage": 4.1,
-    "dIdtLimit": 0.01,
-    "dEdtLimit": 0.01
-  },
   "NegativeElectrode": {
     "Coating": {
       "effectiveDensity": 1900,
