@@ -1,13 +1,39 @@
 using BattMo, Jutul, GLMakie
 
-# Load geometry parameters
-inputparams = read_battmo_formatted_input(joinpath(pkgdir(BattMo),
-                                                   "examples",
-                                                   "Experimental",
-                                                   "jsoninputs",
-                                                   "4680-geometry.json"))
+case = "pouch"
 
-grids, couplings = jelly_roll_grid(inputparams)
+if case == "4680"
+    # Load geometry parameters
+    inputparams = read_battmo_formatted_input(joinpath(pkgdir(BattMo),
+                                                       "examples",
+                                                       "Experimental",
+                                                       "jsoninputs",
+                                                       "4680-geometry.json"))
+
+    grids, couplings = jelly_roll_grid(inputparams)
+elseif case =="pouch"
+    # Load geometry parameters
+    inputparams = read_battmo_formatted_input(joinpath(pkgdir(BattMo),
+                                                       "examples",
+                                                       "Experimental",
+                                                       "jsoninputs",
+                                                       "geometry-3d-demo.json"))
+
+    grids, couplings = pouch_grid(inputparams)
+
+else
+    error("stop")
+end
+
+# fig, ax = plot_mesh(grids["NegativeCurrentCollector"],
+#                     boundaryfaces = couplings["NegativeCurrentCollector"]["External"]["boundaryfaces"],
+#                     color = :red,
+#                     alpha = 0.5)
+# plot_mesh!(ax,
+#            grids["PositiveCurrentCollector"],
+#            boundaryfaces = couplings["PositiveCurrentCollector"]["External"]["boundaryfaces"],
+#            color = :blue,
+#            alpha = 0.5)
 
 # fig, ax = plot_mesh(grids["Electrolyte"]; color = :green)
 # plot_mesh!(ax, grids["Electrolyte"];  cells = couplings["Electrolyte"]["NegativeElectrode"]["cells"], color = :yellow)
@@ -17,7 +43,10 @@ grids, couplings = jelly_roll_grid(inputparams)
 # plot_mesh!(ax, grids["NegativeElectrode"];  cells = couplings["NegativeElectrode"]["Electrolyte"]["cells"], color = :yellow)
 
 # fig, ax = plot_mesh(grids["NegativeElectrode"]; color = :green)
-# plot_mesh!(ax, grids["NegativeElectrode"]; boundaryfaces  = couplings["NegativeElectrode"]["NegativeCurrentCollector"]["faces"], color = :blue)
+# plot_mesh!(ax,
+#            grids["NegativeElectrode"];
+#            boundaryfaces = couplings["NegativeElectrode"]["NegativeCurrentCollector"]["faces"],
+#            color = :blue)
 # plot_mesh!(ax, grids["NegativeCurrentCollector"];  color = :yellow)
 
 # fig, ax = plot_mesh(grids["NegativeCurrentCollector"]; color = :black)
@@ -26,10 +55,10 @@ grids, couplings = jelly_roll_grid(inputparams)
 #            boundaryfaces  = couplings["NegativeCurrentCollector"]["NegativeElectrode"]["faces"], color = :yellow)
 # plot_mesh!(ax, grids["NegativeElectrode"];  color = :blue, alpha = 0.3)
 
-fig, ax = plot_mesh(grids["PositiveCurrentCollector"]; color = :red)
-plot_mesh!(ax,
-           grids["PositiveCurrentCollector"];
-           boundaryfaces  = couplings["PositiveCurrentCollector"]["PositiveElectrode"]["faces"], color = :yellow)
+# fig, ax = plot_mesh(grids["PositiveCurrentCollector"]; color = :red)
+# plot_mesh!(ax,
+#            grids["PositiveCurrentCollector"];
+#            boundaryfaces  = couplings["PositiveCurrentCollector"]["PositiveElectrode"]["faces"], color = :yellow)
 # plot_mesh!(ax, grids["PositiveElectrode"];  color = :magenta, alpha = 0.3)
 
 
@@ -38,6 +67,8 @@ plot_mesh!(ax,
 # plot_mesh!(ax, grids["PositiveElectrode"]; color = :magenta)
 # plot_mesh!(ax, grids["NegativeCurrentCollector"]; color = :black)
 # plot_mesh!(ax, grids["NegativeElectrode"]; color = :blue)
+
+Jutul.plot_mesh_edges!(ax, grids["Global"])
 
 fig
 
