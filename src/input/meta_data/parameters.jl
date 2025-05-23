@@ -34,7 +34,17 @@ function get_parameter_meta_data()
 			"context_type" => "NominalVoltage",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_67890",
 		),
-		"InnerCellRadius" => Dict(
+		"InnerRadius" => Dict(
+			"type" => Real,
+			"min_value" => 0.001,
+			"max_value" => 0.05,
+			"unit" => "m",
+			"unit_name" => "emmo:Metre",
+			"unit_iri" => "https://w3id.org/emmo#Metre",
+			"context_type" => "InnerCellRadius",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_54321",
+		),
+		"OuterRadius" => Dict(
 			"type" => Real,
 			"min_value" => 0.001,
 			"max_value" => 0.05,
@@ -207,6 +217,27 @@ function get_parameter_meta_data()
 			"context_type" => "GridPointsPositiveElectrode",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_grid_positive",
 		),
+		"GridPointsHeight" => Dict(
+			"type" => Int,
+			"min_value" => 1,
+			"max_value" => 1000,
+			"context_type" => "GridPointsPositiveElectrode",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_grid_positive",
+		),
+		"GridPointsRadius" => Dict(
+			"type" => Int,
+			"min_value" => 1,
+			"max_value" => 1000,
+			"context_type" => "GridPointsPositiveElectrode",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_grid_positive",
+		),
+		"HeightRefinement" => Dict(
+			"type" => Real,
+			"min_value" => 1e-3,
+			"max_value" => 1000,
+			"context_type" => "GridPointsPositiveElectrode",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_grid_positive",
+		),
 		"GridPointsElectrodeLength" => Dict(
 			"type" => Int,
 			"min_value" => 1,
@@ -256,6 +287,11 @@ function get_parameter_meta_data()
 		"TabLength" => Dict(
 			"type" => Real,
 			"min_value" => 1e-8,
+			"max_value" => 1000,
+		),
+		"TabFractions" => Dict(
+			"type" => Real,
+			"min_value" => 1e-3,
 			"max_value" => 1000,
 		),
 		"GridPointsPositiveElectrodeCurrentCollectorTabLength" => Dict(

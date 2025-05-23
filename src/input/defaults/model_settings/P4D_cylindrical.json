@@ -1,0 +1,6 @@
+{
+    "ModelGeometry": "3D Cylindrical",
+    "UseDiffusionModel": "PXD",
+    "UseCurrentCollectors": "Generic",
+    "UseRampUp": "Sinusoidal"
+}
