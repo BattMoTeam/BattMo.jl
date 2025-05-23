@@ -401,7 +401,6 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 		battmo_input["SOC"] = cycling_protocol["InitialStateOfCharge"]
 		battmo_input["initT"] = cycling_protocol["InitialKelvinTemperature"]
-		battmo_input["ThermalModel"]["externalTemperature"] = cycling_protocol["AmbientKelvinTemperature"]
 
 	end
 	@info battmo_input["Control"]

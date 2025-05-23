@@ -2,7 +2,7 @@ export GenericPolicy
 
 abstract type AbstractControlStep end
 
-struct Termination
+mutable struct Termination
 	quantity::String
 	comparison::Union{String, Nothing}
 	value::Float64
@@ -26,7 +26,7 @@ struct VoltageStep <: AbstractControlStep
 	time_step_size::Union{Nothing, Float64}
 end
 
-struct RestStep <: AbstractControlStep
+mutable struct RestStep <: AbstractControlStep
 	value::Union{Nothing, Float64}
 	direction::Union{Nothing, String}
 	termination::Termination
@@ -273,10 +273,9 @@ function setupRegionSwitchFlags(policy::P, state, controller::GenericController)
 	else
 		error("Unsupported termination quantity: $(termination.quantity)")
 	end
-	@info "step = ", controller.current_step
-	@info "E = ", E
-	@info "I = ", I
-	@info "target = ", target
+
+	@info "t = ", controller.time
+	@info "termination target = ", target
 	@info "after = ", after
 	return (beforeSwitchRegion = before, afterSwitchRegion = after)
 end
@@ -299,78 +298,105 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 	controller.dIdt = (I - I0) / dt
 	controller.dEdt = (E - E0) / dt
 
+	@info "controller time = ", controller.time
 	# Get control step info
-	step_idx = state0.Controller.current_step_number + 1
+	step_idx_0 = state0.Controller.current_step_number + 1
 	control_steps = policy.control_steps
 
 	ctrlType0 = state0.Controller.current_step
 
-	# We entered the switch region in the previous time step. We consider switching control
-	step = control_steps[step_idx]
 
 	# Check if we should switch to next step based on region switch flags
-	rsw0 = setupRegionSwitchFlags(step, state0, controller)
-	rsw  = setupRegionSwitchFlags(step, state, controller)
-
-	@info controller.current_step
+	rsw00 = setupRegionSwitchFlags(ctrlType0, state0, controller)
 
 	# Stay within bounds of control steps
-	if step_idx > length(control_steps)
+	if step_idx_0 > length(control_steps)
 		error("Step index $step_idx exceeds number of control steps $(length(control_steps))")
 	end
 
-	if rsw0.beforeSwitchRegion
+	if rsw00.beforeSwitchRegion
 		# Stay in current control step
-		next_step_idx = step_idx - 1
+		next_step_idx = step_idx_0
 		ctrlType = ctrlType0
 	else
 
 		currentCtrlType = state.Controller.current_step # current control in the the Newton iteration
-		@info state.Controller.current_step_number
 
-		if controller.current_step_number == step_idx - 1
+		rsw0 = setupRegionSwitchFlags(ctrlType0, state, controller)
+
+
+		if controller.current_step_number == step_idx_0 - 1
 
 			# The control has not changed from previous time step and we want to determine if we should change it. 
 
 			if rsw0.afterSwitchRegion
 				# We switch to a new control because we are no longer in the acceptable region for the current
 				# control
-				if step_idx == length(policy.control_steps)
-					nextCtrlType0 = policy.control_steps[1]
+				if step_idx_0 == length(policy.control_steps)
+					ctrlType = currentCtrlType
+					if ctrlType.termination.quantity == "time"
+						if policy.control_steps[step_idx_0+1].termination.value < controller.time
+							termination_value = controller.time + policy.control_steps[step_idx_0+1].termination.value
+							policy.control_steps[step_idx_0+1].termination.value = termination_value
+						end
+					end
 				else
-					nextCtrlType0 = policy.control_steps[step_idx+1]
+					ctrlType = control_steps[step_idx_0+1]
+					if ctrlType.termination.quantity == "time"
+						if policy.control_steps[step_idx_0+1].termination.value < controller.time
+							@info "term_time = ", policy.control_steps[step_idx_0+1].termination.value
+							termination_value = controller.time + policy.control_steps[step_idx_0+1].termination.value
+							policy.control_steps[step_idx_0+1].termination.value = termination_value
+
+							@info "term_time2 = ", policy.control_steps[step_idx_0+1].termination.value
+						end
+					end
 
 				end
 				# next control that can occur after the previous time step control (if it changes)
-				ctrlType = nextCtrlType0
-				next_step_idx = step_idx
+
+				next_step_idx = step_idx_0 + 1
 
 			else
-				next_step_idx = step_idx - 1
+				next_step_idx = step_idx_0
 				ctrlType = ctrlType0
 			end
-		elseif controller.current_step_number == step_idx
+		elseif controller.current_step_number + 1 == step_idx_0 + 1
 			# Avoid switching back if we already moved forward in this Newton iteration
 
-			if step_idx == length(policy.control_steps)
-				nextCtrlType0 = policy.control_steps[1]
+			if step_idx_0 == length(policy.control_steps)
+
+				ctrlType = currentCtrlType
+				if ctrlType.termination.quantity == "time"
+					if policy.control_steps[step_idx_0+1].termination.value < controller.time
+						termination_value = controller.time + policy.control_steps[step_idx_0+1].termination.value
+						policy.control_steps[step_idx_0+1].termination.value = termination_value
+					end
+				end
 			else
-				nextCtrlType0 = policy.control_steps[step_idx+1]
+				ctrlType = control_steps[step_idx_0+1]
+
+				if ctrlType.termination.quantity == "time"
+					if policy.control_steps[step_idx_0+1].termination.value < controller.time
+						termination_value = controller.time + policy.control_steps[step_idx_0+1].termination.value
+						policy.control_steps[step_idx_0+1].termination.value = termination_value
+					end
+
+				end
 
 			end
 			# next control that can occur after the previous time step control (if it changes)
-			ctrlType = nextCtrlType0
-			next_step_idx = step_idx
+
+			next_step_idx = step_idx_0 + 1
 
 		else
-			error("Unexpected control state transition at step $step_idx")
+			error("Unexpected control state transition at step $step_idx_0")
 		end
 	end
 
 	# Update controller with the selected step index
-	controller.current_step_number = min(next_step_idx, length(control_steps))  # Stay within bounds
+	controller.current_step_number = min(next_step_idx - 1, length(control_steps))  # Stay within bounds
 	controller.current_step = ctrlType
-	@info "step", controller.current_step_number
 
 end
 
@@ -386,11 +412,11 @@ function update_values_in_controller!(state, policy::GenericPolicy)
 	control_steps = policy.control_steps
 
 	if step_idx > length(control_steps)
-		error("Step index $step_idx exceeds number of control steps $(length(control_steps))")
+		step_idx = length(control_steps)
 	end
 
 	step = control_steps[step_idx]
-	@info "step =", step
+
 	ctrlType = state.Controller.current_step.direction
 
 	cf = hasproperty(step, :current_function) ? getproperty(step, :current_function) : missing
@@ -413,6 +439,8 @@ function update_values_in_controller!(state, policy::GenericPolicy)
 
 			# minus sign below follows from convention
 			target = -I_t
+		else
+			error("Control type $ctrlType not recognized")
 		end
 	else
 		if step isa CurrentStep
@@ -438,6 +466,8 @@ function update_values_in_controller!(state, policy::GenericPolicy)
 
 				# minus sign below follows from convention
 				target = -I_t
+			else
+				error("Control type $ctrlType not recognized")
 			end
 
 		elseif step isa VoltageStep

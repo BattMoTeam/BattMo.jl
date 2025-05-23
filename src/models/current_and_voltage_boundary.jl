@@ -727,13 +727,13 @@ function check_constraints(model, storage)
 
 		stepidx = controller.current_step_number + 1
 
-		if stepidx == length(policy.control_steps)
-			nextCtrlType = policy.control_steps[1]
+		if stepidx >= length(policy.control_steps)
+			nextCtrlType = ctrlType
 		else
 			nextCtrlType = policy.control_steps[stepidx+1]
 
 		end
-
+		@info "next step = ", nextCtrlType
 		arefulfilled = true
 
 		rsw  = setupRegionSwitchFlags(ctrlType, state, controller)

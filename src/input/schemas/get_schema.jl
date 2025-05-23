@@ -496,8 +496,8 @@ function get_schema_cycling_protocol()
 					"required" => [
 						"InitialStateOfCharge",
 						"Experiment",
-						"AmbientKelvinTemperature",
 						"InitialKelvinTemperature",
+						"TotalTime",
 					],
 				),
 			),

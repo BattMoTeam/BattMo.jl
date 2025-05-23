@@ -1635,9 +1635,10 @@ function setup_timesteps(inputparams::InputParams;
 		timesteps = repeat([dt], n)
 
 	elseif controlPolicy == "Generic"
-		dt = 100
-		n = 10000
-		timesteps = repeat([dt], n)
+		totalTime = inputparams["TimeStepping"]["totalTime"]
+		dt = inputparams["TimeStepping"]["timeStepDuration"]
+		n = totalTime / dt
+		timesteps = repeat([dt], Int64(floor(n)))
 
 	elseif controlPolicy == "Function"
 		totalTime = inputparams["TimeStepping"]["totalTime"]
@@ -1720,7 +1721,7 @@ function setup_config(sim::JutulSimulator,
 			s = get_simulator_storage(sim)
 			m = get_simulator_model(sim)
 
-			if model[:Control].system.policy isa CyclingCVPolicy
+			if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa GenericPolicy
 				if model[:Control].system.policy isa CyclingCVPolicy
 
 					if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
@@ -1730,20 +1731,19 @@ function setup_config(sim::JutulSimulator,
 					end
 
 				elseif model[:Control].system.policy isa GenericPolicy
-					# if s.state.Control.Controller.current_step_number == m[:Control].system.policy.number_of_steps
+					@info "stop"
+					if s.state.Control.Controller.current_step_number + 1 >= length(m[:Control].system.policy.control_steps)
 
-					# 	# rsw = setupRegionSwitchFlags(s.state.Control.Controller.current_step, state, controller)
+						# rsw = setupRegionSwitchFlags(s.state.Control.Controller.current_step, s.state, s.state.Control.Controller)
+						# @info "stop2", rsw.afterSwitchRegion
 
-					# 	if rsw.afterSwitchRegion
-					# 		report[:stopnow] = true
-					# 	else
-					# 		report[:stopnow] = false
-					# 	end
-					if s.state.Control.Controller.current_step_number > m[:Control].system.policy.number_of_steps
+						# if rsw.afterSwitchRegion
 						report[:stopnow] = true
 					else
 						report[:stopnow] = false
 					end
+
+					# end
 
 				else
 					@warn "Neither numberOfCycles nor number_of_steps found in controller or policy"
