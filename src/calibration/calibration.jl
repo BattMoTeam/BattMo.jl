@@ -93,7 +93,7 @@ function solve(vc::VoltageCalibration)
     u0 = (x0 - lb) ./ (ub - lb)
 
     @info "Set up calibration" x0 ub lb u0
-    function setup_battmo_case(X)
+    function setup_battmo_case(X, step_info = nothing)
         T = eltype(X)
         Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, X, x_setup)
         inputparams = convert_parameter_sets_to_battmo_input(
@@ -153,6 +153,6 @@ function solve(vc::VoltageCalibration)
     # Put inside optimizer unit_box_bfgs
 
     v, u, history = Jutul.unit_box_bfgs(u0, solve_and_differentiate; minimize = true, print = 1)
-    # u = u .* (ub - lb) + lb
-
+    @. x = u * (ub - lb) + lb
+    Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, x, x_setup)
 end
