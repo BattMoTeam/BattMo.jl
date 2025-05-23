@@ -1,10 +1,4 @@
-export get_output_time_series
-
-export get_simple_coords
-export extract_spatial_data
-export get_model_coords
-export get_multimodel_centroids
-export get_simple_output
+export get_output_time_series, get_output_metrics, get_output_states
 
 
 function get_output_time_series(output::NamedTuple, quantities::Vector{String})
@@ -31,6 +25,125 @@ function get_output_time_series(output::NamedTuple, quantities::Vector{String})
 	return (; selected_pairs...)
 end
 
+function get_output_metrics(
+	output::NamedTuple,
+	metrics::Vector{String},
+)
+	model = output[:extra][:model]
+	states = output[:states]
+
+	cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
+
+	# Prepare selected output fields
+	selected = Dict{Symbol, Any}()
+	selected[:CycleNumber] = cycle_array
+
+	# Metric storage
+	discharge_cap::Vector{Float64} = Float64[]
+	charge_cap::Vector{Float64} = Float64[]
+	discharge_energy::Vector{Float64} = Float64[]
+	charge_energy::Vector{Float64} = Float64[]
+	round_trip_efficiency::Vector{Float64} = Float64[]
+
+	# Identify unique non-zero cycles
+	unique_cycles = unique(cycle_array)
+	cycles_above_zero = filter(x -> x > 0, unique_cycles)
+
+	if isempty(cycles_above_zero)
+		# Compute globally
+		push!(discharge_cap, compute_discharge_capacity(output))
+		push!(charge_cap, compute_charge_capacity(output))
+		push!(discharge_energy, compute_discharge_energy(output))
+		push!(charge_energy, compute_charge_energy(output))
+		push!(round_trip_efficiency, compute_round_trip_efficiency(output))
+	else
+		# Compute per cycle
+		for cycle in unique_cycles
+			push!(discharge_cap, compute_discharge_capacity(output; cycle_number = cycle))
+			push!(charge_cap, compute_charge_capacity(output; cycle_number = cycle))
+			push!(discharge_energy, compute_discharge_energy(output; cycle_number = cycle))
+			push!(charge_energy, compute_charge_energy(output; cycle_number = cycle))
+			push!(round_trip_efficiency, compute_round_trip_efficiency(output; cycle_number = cycle))
+		end
+	end
+
+	# Dictionary of all available quantities
+	available_quantities = Dict(
+		"DischargeCapacity"   => discharge_cap,
+		"ChargeCapacity"      => charge_cap,
+		"DischargeEnergy"     => discharge_energy,
+		"ChargeEnergy"        => charge_energy,
+		"RoundTripEfficiency" => round_trip_efficiency,
+	)
+
+	# Add only requested quantities
+	for q in metrics
+		if haskey(available_quantities, q)
+			selected[Symbol(q)] = available_quantities[q]
+		else
+			error("Metric \"$q\" is not available. Available metrics are: $(join(keys(available_quantities), ", "))")
+		end
+	end
+
+	return (; selected...)
+end
+
+function get_output_states(output::NamedTuple, quantities::Vector{String})
+	# Get time
+	time = extract_output_times(output)
+
+	# Get spatial grid centroids (xyz)
+	grid_data = get_multimodel_centroids(output[:extra][:model])
+	xyz = grid_data.mm_grid_centroids
+	map = grid_data.mm_grid_map
+
+	# Extract the spatial data
+	spatial_data = extract_spatial_data(output)
+
+	# Radial discretization points
+	radial_grid = nothing
+
+	# Prepare selected output fields
+	selected = Dict{Symbol, Any}()
+	selected[:Time] = time
+	selected[:xyz] = xyz
+	# selected[:Radius] = radial_grid
+
+
+	# Supported quantities
+	available_quantities = Dict(
+		"ElectrolytePotential" => spatial_data.Elyte_potential,
+		"PeAmPotential" => spatial_data.PeAm_potential,
+		"NeAmPotential" => spatial_data.NeAm_potential,
+		"ElectrolyteConcentration" => spatial_data.Elyte_concentration,
+		"PeAmSurfaceConcentration" => spatial_data.PeAm_surface_concentration,
+		"NeAmSurfaceConcentration" => spatial_data.NeAm_surface_concentration,
+		"PeAmConcentration" => spatial_data.PeAmParticle_concentration,
+		"NeAmConcentration" => spatial_data.NeAmParticle_concentration,
+		"NeAmTemperature" => spatial_data.NeAm_Temperature,
+		"PeAmTemperature" => spatial_data.PeAm_Temperature,
+		"NeAmOpenCicruitPotential" => spatial_data.NeAm_ocp,
+		"PeAmOpenCicruitPotential" => spatial_data.PeAm_ocp,
+		"NeAmCharge" => spatial_data.NeAm_charge,
+		"ElyteCharge" => spatial_data.Elyte_charge,
+		"PeAmCharge" => spatial_data.PeAm_charge,
+		"ElectrolyteMass" => spatial_data.Elyte_mass,
+		"ElectrolyteDiffusivity" => spatial_data.Elyte_diffusivity,
+		"ElectrolyteConductivity" => spatial_data.Elyte_conductivity,
+	)
+
+	# Add only requested quantities
+	for q in quantities
+		if haskey(available_quantities, q)
+			selected[Symbol(q)] = available_quantities[q]
+		else
+			error("Quantity $q is not available in the output.")
+		end
+	end
+
+	# Convert to NamedTuple
+	return (; selected...)
+end
 
 
 function extract_time_series_data(output::NamedTuple{(:states, :cellSpecifications, :reports, :inputparams, :extra)})
@@ -79,9 +192,9 @@ function get_multimodel_centroids(model::MultiModel{:Battery})
 
 
 	# TODO get this to loop through all the models in the multi model
-	Ne_grid = physical_representation(modelz[:NeAm])[:cell_centroids]
-	Pe_grid = physical_representation(modelz[:PeAm])[:cell_centroids]
-	Elyte_grid = physical_representation(modelz[:Elyte])[:cell_centroids]
+	Ne_grid = physical_representation(model[:NeAm])[:cell_centroids]
+	Pe_grid = physical_representation(model[:PeAm])[:cell_centroids]
+	Elyte_grid = physical_representation(model[:Elyte])[:cell_centroids]
 
 	mm_grid_centroids = cat(Ne_grid, Pe_grid, Elyte_grid, dims = 2)
 	mm_grid_centroids = unique(eachcol(mm_grid_centroids)) # unique coordinates
@@ -127,15 +240,69 @@ end
 function extract_spatial_data(output::NamedTuple{(:states, :cellSpecifications, :reports, :inputparams, :extra)})
 
 	states = output[:states]
-	nx = output[:cellSpecifications][:nx]
-	ny = output[:cellSpecifications][:ny]
-	nz = output[:cellSpecifications][:nz]
-	nt = output[:cellSpecifications][:nt]
-	Elyte_potential = Array{Float64, 4}(undef, nx, ny, nz, nt)
 
-	return states
+
+	# Surface Concentration (at the face of the surface cell)
+	NeAm_surface_concentration = [state[:NeAm][:Cs] for state in states]
+	PeAm_surface_concentration = [state[:PeAm][:Cs] for state in states]
+
+	# Concentration (at the center of the discretization cells)
+	NeAmParticle_concentration = [state[:NeAm][:Cp] for state in states]
+	PeAmParticle_concentration = [state[:PeAm][:Cp] for state in states]
+	Elyte_concentration = [state[:Elyte][:C] for state in states]
+
+	# Potential
+	NeAm_potential = [state[:NeAm][:Phi] for state in states]
+	Elyte_potential = [state[:Elyte][:Phi] for state in states]
+	PeAm_potential = [state[:PeAm][:Phi] for state in states]
+
+	# Temperature
+	NeAm_Temperature = [state[:NeAm][:Temperature] for state in states]
+	PeAm_Temperature = [state[:PeAm][:Temperature] for state in states]
+
+	# OCP
+	NeAm_ocp = [state[:NeAm][:Ocp] for state in states]
+	PeAm_ocp = [state[:PeAm][:Ocp] for state in states]
+
+	# charge
+	NeAm_charge = [state[:NeAm][:Charge] for state in states]
+	Elyte_charge = [state[:Elyte][:Charge] for state in states]
+	PeAm_charge = [state[:PeAm][:Charge] for state in states]
+
+	# Mass
+	Elyte_mass = [state[:Elyte][:Mass] for state in states]
+
+	# Diffusivity
+	Elyte_diffusivity = [state[:Elyte][:Diffusivity] for state in states]
+
+	# Conductivity
+	Elyte_conductivity = [state[:Elyte][:Conductivity] for state in states]
+
+
+
+
+	return (
+		NeAm_surface_concentration = NeAm_surface_concentration,
+		PeAm_surface_concentration = PeAm_surface_concentration,
+		NeAmParticle_concentration = NeAmParticle_concentration,
+		PeAmParticle_concentration = PeAmParticle_concentration,
+		Elyte_concentration = Elyte_concentration,
+		NeAm_potential = NeAm_potential,
+		Elyte_potential = Elyte_potential,
+		PeAm_potential = PeAm_potential,
+		NeAm_Temperature = NeAm_Temperature,
+		PeAm_Temperature = PeAm_Temperature,
+		NeAm_ocp = NeAm_ocp,
+		PeAm_ocp = PeAm_ocp,
+		NeAm_charge = NeAm_charge,
+		Elyte_charge = Elyte_charge,
+		PeAm_charge = PeAm_charge,
+		Elyte_mass = Elyte_mass,
+		Elyte_diffusivity = Elyte_diffusivity,
+		Elyte_conductivity = Elyte_conductivity)
 
 end
+
 
 function get_simple_output(output::NamedTuple{(:states, :cellSpecifications, :reports, :inputparams, :extra)})
 
