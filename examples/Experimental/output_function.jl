@@ -1,6 +1,6 @@
 using BattMo, GLMakie
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
 model_setup = LithiumIonBattery()

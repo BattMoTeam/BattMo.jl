@@ -10,7 +10,7 @@ using Test
 
 		# We instantiate a Lithium-ion battery model with default model settings
 		model_setup = LithiumIonBattery(; model_settings)
-		file_path_cell = parameter_file_path("cell_parameters", "Chen2020_calibrated.json")
+		file_path_cell = parameter_file_path("cell_parameters", "Chen2020.json")
 		file_path_cycling = parameter_file_path("cycling_protocols", "CCDischarge.json")
 		file_path_model = parameter_file_path("model_settings", "P2D.json")
 		file_path_simulation = parameter_file_path("simulation_settings", "P2D.json")
@@ -38,8 +38,8 @@ end
 @testset "paths" begin
 	@test isa(parameter_file_path(), String)
 	@test isdir(parameter_file_path())
-	@test isfile(parameter_file_path("cell_parameters", "Chen2020_calibrated"))
-	@test parameter_file_path("cell_parameters", "Chen2020_calibrated") |> splitext |> last == ".json"
+	@test isfile(parameter_file_path("cell_parameters", "Chen2020"))
+	@test parameter_file_path("cell_parameters", "Chen2020") |> splitext |> last == ".json"
 	@test_throws "File not found at" parameter_file_path("cell_parameters", "BadName")
 	@test isa(parameter_file_path("cell_parameters", "BadName", check = false), String)
 end

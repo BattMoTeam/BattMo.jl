@@ -10,7 +10,7 @@ using BattMo, GLMakie, Printf
 
 # Load cell and model setup
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 cc_discharge_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
 # Load default model

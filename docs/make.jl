@@ -151,7 +151,8 @@ function build_battmo_docs(build_format              = nothing;
 		"Models and architecture" => [
 		"PXD model" => "manuals/user_guide/pxd_model.md",
 		"Ramp up model" => "manuals/user_guide/ramp_up.md",
-		"SEI model" => "manuals/user_guide/sei_model.md"
+		"SEI model" => "manuals/user_guide/sei_model.md",
+		"Default parameter sets" => "manuals/user_guide/default_sets.md"
 	],
 		"Public API" => [
 		"Input terminology" => "manuals/user_guide/terminology.md",
