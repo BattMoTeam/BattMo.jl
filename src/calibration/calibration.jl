@@ -79,11 +79,20 @@ function solve(vc::VoltageCalibration)
     end
 
     # Set up the functions to serialize
-    x, x_setup = Jutul.AdjointsDI.vectorize_nested(sim.cell_parameters.all,
+    x0, x_setup = Jutul.AdjointsDI.vectorize_nested(sim.cell_parameters.all,
         active = pkeys,
         active_type = Real
     )
 
+    ub = similar(x0)
+    lb = similar(x0)
+    for (i, k) in enumerate(pkeys)
+        ub[i] = pt[k].vmax
+        lb[i] = pt[k].vmin
+    end
+    u0 = (x0 - lb) ./ (ub - lb)
+
+    @info "Set up calibration" x0 ub lb u0
     function setup_battmo_case(X)
         T = eltype(X)
         Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, X, x_setup)
@@ -101,20 +110,49 @@ function solve(vc::VoltageCalibration)
 
         return Jutul.JutulCase(model, timesteps, forces, parameters = parameters, state0 = state0, input_data = inputparams)
     end
-    case = setup_battmo_case(x)
 
-    simulator = Simulator(case)
-	cfg = setup_config(simulator,
-        case.model,
-        case.parameters,
-        :direct,
-        false,
-        true
-    )
+    simulator = cfg = missing
+    x = similar(x0)
+    function solve_and_differentiate(u)
+        for i in eachindex(x, ub, lb, u)
+            x[i] = u[i].*(lb[i] - lb[i]) + lb[i]
+        end
+        case = setup_battmo_case(x)
+        if ismissing(simulator)
+            simulator = Simulator(case)
+            cfg = setup_config(simulator,
+                case.model,
+                case.parameters,
+                :direct,
+                false,
+                true
+            )
+        end
+        result = Jutul.simulate!(simulator,
+            case.dt,
+            state0 = case.state0,
+            parameters = case.parameters,
+            forces = case.forces,
+            config = cfg
+        )
+        states, dt, = Jutul.expand_to_ministeps(result)
+        # Evaluate the objective function
+        f = Jutul.evaluate_objective(objective, case.model, states, dt, case.forces)
+        @info "Objective function value" f
+        # Solve adjoints
+        g = Jutul.AdjointsDI.solve_adjoint_generic(x, setup_battmo_case, states, dt, objective)
+        for i in eachindex(g, ub, lb)
+            g[i] = g[i] * (ub[i] - lb[i])
+        end
+        return (f, g)
+    end
 
-    result = Jutul.simulate!(simulator, case.dt, forces = case.forces, config = cfg)
-    # Solve adjoints
-    dg = Jutul.AdjointsDI.solve_adjoint_generic(x, setup_battmo_case, result.states, result.reports, objective)
+    # solve_and_differentiate(u0)
+
     # Scaling of dg...
     # Put inside optimizer unit_box_bfgs
+
+    v, u, history = Jutul.unit_box_bfgs(u0, solve_and_differentiate; minimize = true, print = 1)
+    # u = u .* (ub - lb) + lb
+
 end
