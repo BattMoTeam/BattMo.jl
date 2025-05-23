@@ -125,7 +125,7 @@ function get_output_states(output::NamedTuple, quantities::Vector{String})
 		"NeAmOpenCicruitPotential" => spatial_data.NeAm_ocp,
 		"PeAmOpenCicruitPotential" => spatial_data.PeAm_ocp,
 		"NeAmCharge" => spatial_data.NeAm_charge,
-		"ElyteCharge" => spatial_data.Elyte_charge,
+		"ElectrolyteCharge" => spatial_data.Elyte_charge,
 		"PeAmCharge" => spatial_data.PeAm_charge,
 		"ElectrolyteMass" => spatial_data.Elyte_mass,
 		"ElectrolyteDiffusivity" => spatial_data.Elyte_diffusivity,
