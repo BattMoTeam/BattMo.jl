@@ -317,7 +317,9 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 			),
 		),
 		"required" => ["Cell", "NegativeElectrode", "PositiveElectrode", "Separator", "Electrolyte"],
+		"allOf" => [],
 	)
+
 
 	cell_required = schema["properties"]["Cell"]["required"]
 	ne_required = schema["properties"]["NegativeElectrode"]["required"]
@@ -346,6 +348,18 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 		push!(cell_required, "ElectrodeGeometricSurfaceArea")
 
 	elseif model_settings_dict["ModelFramework"] == "P4D Pouch"
+
+		push!(schema["allOf"], Dict(
+			"properties" => Dict(
+				"Cell" => Dict(
+					"properties" => Dict(
+						"Case" => Dict("const" => "Pouch"),
+					),
+					"required" => ["Case"],
+				),
+			),
+		))
+
 		push!(cell_required, "ElectrodeWidth")
 		push!(cell_required, "ElectrodeLength")
 		push!(cell_required, "ElectrodeGeometricSurfaceArea")
@@ -360,6 +374,17 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 		end
 
 	elseif model_settings_dict["ModelFramework"] == "P4D Cylindrical"
+
+		push!(schema["allOf"], Dict(
+			"properties" => Dict(
+				"Cell" => Dict(
+					"properties" => Dict(
+						"Case" => Dict("const" => "Cylindrical"),
+					),
+					"required" => ["Case"],
+				),
+			),
+		))
 
 		push!(cell_required, "DubbelCoatedElectrodes")
 		push!(cell_required, "InnerCellRadius")
