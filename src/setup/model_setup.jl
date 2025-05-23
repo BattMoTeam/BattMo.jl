@@ -316,7 +316,7 @@ function run_battery(inputparams::BattMoFormattedInput;
 			timesteps,
 			cfg)
 	end
-
+	@info timesteps
 	# Perform simulation
 	states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
 
@@ -716,9 +716,12 @@ function setup_submodels(inputparams::InputParams;
 			ctrl["dIdtLimit"],
 			ctrl["dEdtLimit"],
 			ctrl["initialControl"],
-			ctrl["numberOfCycles"];
-			use_ramp_up = use_ramp_up)
+			ctrl["numberOfCycles"])
 
+	elseif controlPolicy == "Generic"
+		ctrl = jsondict["Control"]
+
+		policy = GenericPolicy(ctrl)
 	elseif controlPolicy == "Function"
 
 		ctrl = jsondict["Control"]
@@ -1025,6 +1028,76 @@ function setup_battery_parameters(inputparams::InputParams,
 		prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
 		prm_control[:ImaxCharge]    = (cap / con.hour) * CRate
 
+
+		parameters[:Control] = setup_parameters(model[:Control], prm_control)
+
+	elseif controlPolicy == "Generic"
+		control_steps = inputparams["Control"]["controlsteps"]
+
+		prm_steps = []
+		cap = computeCellCapacity(model)
+		con = Constants()
+
+		for step in control_steps
+			mode = step["controltype"] # e.g., "discharge", "charge", "rest", etc.
+
+			step_params = Dict{Symbol, Any}()
+
+			# if haskey(step, "CRate")
+			# 	step_params[:current] = (cap / con.hour) * step["CRate"]
+			# elseif haskey(step, "DRate")
+			# 	step_params[:current] = (cap / con.hour) * step["DRate"]
+			# end
+
+			# if haskey(step, "voltage")
+			# 	step_params[:voltage] = step["voltage"]
+			# end
+
+			# if haskey(step, "duration")
+			# 	step_params[:duration] = step["duration"]
+			# end
+
+			step_params[:mode] = mode
+
+			push!(prm_steps, step_params)
+		end
+
+		prm_control[:steps] = prm_steps
+
+		parameters[:Control] = setup_parameters(model[:Control], prm_control)
+
+	elseif controlPolicy == "Generic"
+		control_steps = inputparams["Control"]["controlsteps"]
+
+		prm_steps = []
+		cap = computeCellCapacity(model)
+		con = Constants()
+
+		for step in control_steps
+			mode = step["controltype"] # e.g., "discharge", "charge", "rest", etc.
+
+			step_params = Dict{Symbol, Any}()
+
+			# if haskey(step, "CRate")
+			# 	step_params[:current] = (cap / con.hour) * step["CRate"]
+			# elseif haskey(step, "DRate")
+			# 	step_params[:current] = (cap / con.hour) * step["DRate"]
+			# end
+
+			# if haskey(step, "voltage")
+			# 	step_params[:voltage] = step["voltage"]
+			# end
+
+			# if haskey(step, "duration")
+			# 	step_params[:duration] = step["duration"]
+			# end
+
+			step_params[:mode] = mode
+
+			push!(prm_steps, step_params)
+		end
+
+		prm_control[:steps] = prm_steps
 
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
@@ -1561,6 +1634,12 @@ function setup_timesteps(inputparams::InputParams;
 
 		timesteps = repeat([dt], n)
 
+	elseif controlPolicy == "Generic"
+		totalTime = inputparams["TimeStepping"]["totalTime"]
+		dt = inputparams["TimeStepping"]["timeStepDuration"]
+		n = totalTime / dt
+		timesteps = repeat([dt], Int64(floor(n)))
+
 	elseif controlPolicy == "Function"
 		totalTime = inputparams["TimeStepping"]["totalTime"]
 		dt = inputparams["TimeStepping"]["timeStepDuration"]
@@ -1628,8 +1707,8 @@ function setup_config(sim::JutulSimulator,
 		end
 	end
 
-	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy
-		if model[:Control].system.policy isa CyclingCVPolicy
+	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy || model[:Control].system.policy isa GenericPolicy
+		if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa GenericPolicy
 
 			cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
 
@@ -1642,11 +1721,32 @@ function setup_config(sim::JutulSimulator,
 			s = get_simulator_storage(sim)
 			m = get_simulator_model(sim)
 
-			if model[:Control].system.policy isa CyclingCVPolicy
+			if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa GenericPolicy
+				if model[:Control].system.policy isa CyclingCVPolicy
 
-				if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-					report[:stopnow] = true
+					if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+						report[:stopnow] = true
+					else
+						report[:stopnow] = false
+					end
+
+				elseif model[:Control].system.policy isa GenericPolicy
+					@info "stop"
+					if s.state.Control.Controller.current_step_number + 1 >= length(m[:Control].system.policy.control_steps)
+
+						# rsw = setupRegionSwitchFlags(s.state.Control.Controller.current_step, s.state, s.state.Control.Controller)
+						# @info "stop2", rsw.afterSwitchRegion
+
+						# if rsw.afterSwitchRegion
+						report[:stopnow] = true
+					else
+						report[:stopnow] = false
+					end
+
+					# end
+
 				else
+					@warn "Neither numberOfCycles nor number_of_steps found in controller or policy"
 					report[:stopnow] = false
 				end
 

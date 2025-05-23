@@ -6,7 +6,8 @@ export
 	sineup,
 	SimpleCVPolicy,
 	CyclingCVPolicy,
-	OperationalMode
+	OperationalMode,
+	AbstractControl
 
 ################################
 # Define the operational modes #
@@ -709,25 +710,39 @@ function check_constraints(model, storage)
 	state0 = storage.state0[:Control]
 
 	controller = state[:Controller]
-	ctrlType   = state[:Controller].ctrlType
-	ctrlType0  = state0[:Controller].ctrlType
+	if hasproperty(state[:Controller], :ctrlType)
+		ctrlType  = state[:Controller].ctrlType
+		ctrlType0 = state0[:Controller].ctrlType
 
-	if policy isa CyclingCVPolicy
-		nextCtrlType = getNextCtrlTypeCCCV(ctrlType0)
-	elseif policy isa CCPolicy
-		if ctrlType == "discharging"
-			nextCtrlType = "charging"
-		else
-			nextCtrlType = "discharging"
-		end
+		nextCtrlType = getNextCtrlType(ctrlType0)
+
+		arefulfilled = true
+
+		rsw  = setupRegionSwitchFlags(policy, state, ctrlType)
+		rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
+
 	else
-		error("Policy not recognized")
+		ctrlType  = state[:Controller].current_step
+		ctrlType0 = state0[:Controller].current_step
+
+		stepidx = controller.current_step_number + 1
+
+		if stepidx >= length(policy.control_steps)
+			nextCtrlType = ctrlType
+		else
+			nextCtrlType = policy.control_steps[stepidx+1]
+
+		end
+		@info "next step = ", nextCtrlType
+		arefulfilled = true
+
+		rsw  = setupRegionSwitchFlags(ctrlType, state, controller)
+		rswN = setupRegionSwitchFlags(nextCtrlType, state, controller)
+
 	end
 
-	arefulfilled = true
 
-	rsw  = setupRegionSwitchFlags(policy, state, ctrlType)
-	rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
+
 
 	if (ctrlType == ctrlType0 && rsw.afterSwitchRegion) || (ctrlType == nextCtrlType && !rswN.beforeSwitchRegion)
 
@@ -947,11 +962,7 @@ function update_control_type_in_controller!(state, state0, policy::CCPolicy, dt)
 
 		ctrlType0 = state0.Controller.ctrlType
 
-		if ctrlType0 == "discharging"
-			nextCtrlType = "charging"
-		else
-			nextCtrlType = "discharging"
-		end
+		nextCtrlType0 = getNextCtrlType(ctrlType0)
 
 		rsw00 = setupRegionSwitchFlags(policy, state0, ctrlType0)
 
@@ -966,11 +977,6 @@ function update_control_type_in_controller!(state, state0, policy::CCPolicy, dt)
 			# We entered the switch region in the previous time step. We consider switching control
 
 			currentCtrlType = state.Controller.ctrlType # current control in the the Newton iteration
-			if ctrlType0 == "discharging"
-				nextCtrlType0 = "charging"
-			else
-				nextCtrlType0 = "discharging"
-			end # next control that can occur after the previous time step control (if it changes)
 
 			rsw0 = setupRegionSwitchFlags(policy, state, ctrlType0)
 
@@ -1209,11 +1215,23 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquati
 
 	ctrl = state[:Controller]
 
-	if ctrl.target_is_voltage
-		v[] = phi - ctrl.target
+	if ctrl isa GenericController
+
+		if ctrl.current_step isa VoltageStep
+			v[] = phi - ctrl.target
+		elseif ctrl.current_step isa CurrentStep
+			v[] = I - ctrl.target
+		elseif ctrl.current_step isa RestStep
+			v[] = I - ctrl.target
+		end
+
 	else
 
-		v[] = I - ctrl.target
+		if ctrl.target_is_voltage
+			v[] = phi - ctrl.target
+		else
+			v[] = I - ctrl.target
+		end
 	end
 
 end
@@ -1309,6 +1327,11 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 			ctrl.numberOfCycles = ncycles
 		end
 
+	elseif policy isa GenericPolicy
+
+		copyController!(storage.state0[:Controller], ctrl)
+
+
 
 	else
 
@@ -1396,7 +1419,16 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 
 		update_values_in_controller!(state, policy)
 
+	elseif policy isa GenericPolicy
+		number_of_steps = policy.number_of_control_steps
+		current_step_number = 0
+		current_step = policy.initial_control
+		time_in_step = 0.0
+		state[:Controller] = GenericController(policy, current_step, current_step_number, time_in_step, number_of_steps)
+
 	end
+
+
 
 end
 
@@ -1404,7 +1436,7 @@ end
 # Utility functions for CC-CV control #
 #######################################
 
-function getNextCtrlTypeCCCV(ctrlType::OperationalMode)
+function getNextCtrlType(ctrlType::OperationalMode)
 
 	if ctrlType == cc_discharge1
 
@@ -1430,6 +1462,16 @@ function getNextCtrlTypeCCCV(ctrlType::OperationalMode)
 
 	return nextCtrlType
 
+end
+
+function getNextCtrlType(ctrlType::String)
+
+	if ctrlType == "discharging"
+		nextCtrlType = "charging"
+	else
+		nextCtrlType = "discharging"
+	end
+	return nextCtrlType
 end
 
 ############################################

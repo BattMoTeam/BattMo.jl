@@ -3,7 +3,7 @@ export ParameterSet
 export CellParameters, CyclingProtocol, ModelSettings, SimulationSettings, FullSimulationInput
 
 export BattMoFormattedInput
-export BattMoInput, MatlabBattMoInput
+export InputParams, MatlabInputParams
 
 export merge_input_params, search_parameter
 

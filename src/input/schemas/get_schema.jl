@@ -64,7 +64,7 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 
 		# Functions aren't directly representable in JSON, treating as string (function name or identifier)
 
-	elseif meta["type"] == Vector
+	elseif meta["type"] == Vector{String}
 		dict["type"] = "array"  # JSON schema type for arrays (Vector in Julia)
 	else
 		type = meta["type"]
@@ -388,6 +388,7 @@ function get_schema_cycling_protocol()
 		"type" => "object",
 		"properties" => Dict(
 			"Protocol" => create_property(parameter_meta, "Protocol"),
+			"Experiment" => create_property(parameter_meta, "Experiment"),
 			"InitialStateOfCharge" => create_property(parameter_meta, "InitialStateOfCharge"),
 			"FunctionName" => create_property(parameter_meta, "FunctionName"),
 			"TotalTime" => create_property(parameter_meta, "TotalTime"),
@@ -411,6 +412,7 @@ function get_schema_cycling_protocol()
 						"InitialStateOfCharge",
 						"InitialControl",
 						"TotalNumberOfCycles",
+						"InitialControl",
 						"CRate",
 						"DRate",
 						"LowerVoltageLimit",
@@ -449,6 +451,8 @@ function get_schema_cycling_protocol()
 				"then" => Dict(
 					"required" => [
 						"InitialStateOfCharge",
+						"TotalNumberOfCycles",
+						"InitialControl",
 						"DRate",
 						"LowerVoltageLimit",
 						"InitialKelvinTemperature",
@@ -462,6 +466,8 @@ function get_schema_cycling_protocol()
 				"then" => Dict(
 					"required" => [
 						"InitialStateOfCharge",
+						"TotalNumberOfCycles",
+						"InitialControl",
 						"CRate",
 						"UpperVoltageLimit",
 						"InitialKelvinTemperature",
@@ -474,11 +480,24 @@ function get_schema_cycling_protocol()
 				"then" => Dict(
 					"required" => [
 						"InitialStateOfCharge",
+						"TotalNumberOfCycles",
+						"InitialControl",
 						"CRate",
 						"DRate",
 						"UpperVoltageLimit",
 						"LowerVoltageLimit",
 						"InitialKelvinTemperature",
+					],
+				),
+			),
+			Dict(
+				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "Experiment"))),
+				"then" => Dict(
+					"required" => [
+						"InitialStateOfCharge",
+						"Experiment",
+						"InitialKelvinTemperature",
+						"TotalTime",
 					],
 				),
 			),

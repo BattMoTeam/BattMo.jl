@@ -184,6 +184,9 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 	elseif cycling_protocol["Protocol"] == "CCCV"
 		use_cv_switch = true
 		control = "CCCV"
+	elseif cycling_protocol["Protocol"] == "Experiment"
+		use_cv_switch = nothing
+		control = "Generic"
 
 	elseif cycling_protocol["Protocol"] == "Function"
 		use_cv_switch = nothing
@@ -390,6 +393,19 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		),
 	)
 
+
+	if cycling_protocol["Protocol"] == "Experiment"
+		control = convert_experiment_to_battmo_control_input(Experiment(cycling_protocol["Experiment"]))
+
+		battmo_input["Control"] = control["Control"]
+
+		battmo_input["SOC"] = cycling_protocol["InitialStateOfCharge"]
+		battmo_input["initT"] = cycling_protocol["InitialKelvinTemperature"]
+
+	end
+	@info battmo_input["Control"]
 	return InputParams(battmo_input)
 
 end
+
+
