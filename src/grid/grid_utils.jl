@@ -262,6 +262,8 @@ function jelly_roll_grid(geomparams::InputGeometryParams)
 
     grids = Dict()
     global_maps = Dict()
+
+    grids["Global"] = uParentGrid
     
 	for component in components
 		allinds = collect(1 : parentGrid["cells"]["num"])
