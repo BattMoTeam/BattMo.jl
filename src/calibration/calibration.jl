@@ -61,3 +61,18 @@ end
 function set_calibration_parameter!(vc::VoltageCalibration, parameter_name::Vector{String}, value)
     set_nested_json_value!(vc.sim.cell_parameters, parameter_name, value)
 end
+
+function solve(vc::VoltageCalibration)
+    pt = vc.parameter_targets
+    pkeys = collect(keys(pt))
+    if length(pkeys) == 0
+        throw(ArgumentError("No free parameters set, unable to calibrate."))
+    end
+    # Set up the functions to serialize
+    x, x_setup = Jutul.AdjointsDI.vectorize_nested(vc.sim.cell_parameters.all,
+        active = pkeys,
+        active_type = Real
+    )
+    dg = solve_adjoint_generic()
+    # Scaling of dg...
+end
