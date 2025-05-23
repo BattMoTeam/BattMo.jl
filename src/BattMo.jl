@@ -215,7 +215,8 @@ include("models/battery_utils.jl")
 include("setup/model_setup.jl")
 include("setup/matlab_model_setup.jl")
 
-include("plotting/3D.jl")
+include("plotting/3d.jl")
+include("plotting/1d.jl")
 
 include("utils/battery_cell_specifications.jl")
 include("utils/battery_kpis.jl")
