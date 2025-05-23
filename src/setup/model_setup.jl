@@ -142,7 +142,7 @@ function solve(problem::Simulation; accept_invalid = false, hook = nothing, info
 
 	use_p2d = true
 
-
+	# Note: Typically function_to_solve is run_battery
 	if accept_invalid == true
 		output = problem.function_to_solve(problem.model_setup, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;
 			hook = nothing,
