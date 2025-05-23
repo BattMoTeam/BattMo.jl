@@ -1,4 +1,4 @@
-using BattMo
+using BattMo, GLMakie
 
 ####################
 # setup simulation #
@@ -49,13 +49,33 @@ ax = Axis(f[1, 1],
 )
 
 scatterlines!(ax,
-	t,
-	E;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-	label = "Julia",
+	          t,
+	          E;
+	          linewidth = 4,
+	          markersize = 10,
+	          marker = :cross,
+	          markercolor = :black
+              )
+
+ax = Axis(f[1, 2],
+	title = "Current",
+	xlabel = "Time / s",
+	ylabel = "Current / A",
+	xlabelsize = 25,
+	ylabelsize = 25,
+	xticklabelsize = 25,
+	yticklabelsize = 25,
 )
 
+scatterlines!(ax,
+	          t,
+	          I;
+	          linewidth = 4,
+	          markersize = 10,
+	          marker = :cross,
+	          markercolor = :black
+              )
+
 f
+
+
