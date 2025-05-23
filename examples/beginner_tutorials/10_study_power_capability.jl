@@ -9,6 +9,7 @@ using BattMo, GLMakie, Printf
 
 cell_parameters = load_cell_parameters(; from_file_path="./src/input/defaults/cell_parameters/Chen2020_calibrated_ocv_corrected.json")
 cc_discharge_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+cc_discharge_protocol["LowerVoltageLimit"] = 2.5
 
 model_setup = LithiumIonBattery()
 #%%
