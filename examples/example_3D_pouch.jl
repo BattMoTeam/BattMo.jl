@@ -1,4 +1,4 @@
-using BattMo, GLMakie
+using BattMo, GLMakie, Jutul
 
 cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
@@ -10,4 +10,6 @@ model_setup = LithiumIonBattery(; model_settings)
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
 output = solve(sim)
 
-plot_3D_results(output; colormap = :curl)
+plot_interactive_3d(output; colormap = :curl)
+
+

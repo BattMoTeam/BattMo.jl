@@ -38,7 +38,7 @@ using BattMo, GLMakie
 # the cell parameter set from a NMC811 vs Graphite-SiOx cell whose parameters were determined in the [Chen 2020 paper](https://doi.org/10.1149/1945-7111/ab9050). 
 # We also load an example cycling protocol for a simple Constant Current Discharge.
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
 # Next, we select the Lithium-Ion Battery Model setup with default model settings. 

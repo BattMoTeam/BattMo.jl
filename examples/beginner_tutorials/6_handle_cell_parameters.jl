@@ -9,7 +9,7 @@
 
 using BattMo
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 nothing # hide
 
@@ -82,7 +82,7 @@ fig
 
 # Let’s reload the original parameters and simulate again to compare:
 
-cell_parameters_2 = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+cell_parameters_2 = load_cell_parameters(; from_default_set = "Chen2020")
 sim2 = Simulation(model_setup, cell_parameters_2, cycling_protocol);
 output2 = solve(sim2)
 nothing # hide

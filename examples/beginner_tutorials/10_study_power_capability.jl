@@ -7,7 +7,7 @@
 
 using BattMo, GLMakie, Printf
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 cc_discharge_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
 model_setup = LithiumIonBattery()
@@ -55,7 +55,7 @@ end
 nothing # hide
 #%%
 # ### Analyze Capacities
-# Now we plot capacities vs Drate at different thicknesses of the positive electrode:
+# Now we plot capacities vs Drate at different thicknesses of the negative electrode:
 
 fig = Figure(size = (1000, 400))
 ax = Axis(fig[1, 1], title = "Power capability vs Thickness of Negative Electrode", xlabel = "DRate", ylabel = "Capacity/Ah")
