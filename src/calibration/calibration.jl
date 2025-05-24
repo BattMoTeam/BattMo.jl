@@ -128,7 +128,8 @@ function solve(vc::VoltageCalibration)
                 case.parameters,
                 :direct,
                 false,
-                true
+                true,
+                info_level = -1
             )
         end
         result = Jutul.simulate!(simulator,
@@ -151,5 +152,7 @@ function solve(vc::VoltageCalibration)
     end
     v, u, history = Jutul.unit_box_bfgs(u0, solve_and_differentiate; maximize = false, print = 1)
     @. x = u * (ub - lb) + lb
-    Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, x, x_setup)
+    cell_prm_out = deepcopy(sim.cell_parameters)
+    Jutul.AdjointsDI.devectorize_nested!(cell_prm_out.all, x, x_setup)
+    return (cell_prm_out, history)
 end
