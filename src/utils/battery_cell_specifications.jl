@@ -9,10 +9,13 @@ export
 
 
 function computeElectrodeCapacity(model::MultiModel, name::Symbol)
+	ammodel = model[name]
+	return computeElectrodeCapacity(ammodel, name)
+end
 
+function computeElectrodeCapacity(ammodel::SimulationModel, name)
 	con = Constants()
 
-	ammodel = model[name]
 	sys = ammodel.system
 	F = con.F
 	n = sys[:n_charge_carriers]
