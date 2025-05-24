@@ -86,9 +86,13 @@ function solve(vc::VoltageCalibration)
 
     ub = similar(x0)
     lb = similar(x0)
-    for (i, k) in enumerate(pkeys)
-        ub[i] = pt[k].vmax
-        lb[i] = pt[k].vmin
+    offsets = x_setup.offsets
+    for (i, k) in enumerate(x_setup.names)
+        (; vmin, vmax) = pt[k]
+        for j in offsets[i]:(offsets[i+1]-1)
+            lb[j] = vmin
+            ub[j] = vmax
+        end
     end
     u0 = (x0 - lb) ./ (ub - lb)
 
@@ -114,7 +118,7 @@ function solve(vc::VoltageCalibration)
     x = similar(x0)
     function solve_and_differentiate(u)
         for i in eachindex(x, ub, lb, u)
-            x[i] = u[i].*(lb[i] - lb[i]) + lb[i]
+            x[i] = u[i].*(ub[i] - lb[i]) + lb[i]
         end
         case = setup_battmo_case(x)
         if ismissing(simulator)
@@ -145,12 +149,6 @@ function solve(vc::VoltageCalibration)
         end
         return (f, g)
     end
-
-    # solve_and_differentiate(u0)
-
-    # Scaling of dg...
-    # Put inside optimizer unit_box_bfgs
-
     v, u, history = Jutul.unit_box_bfgs(u0, solve_and_differentiate; maximize = false, print = 1)
     @. x = u * (ub - lb) + lb
     Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, x, x_setup)
