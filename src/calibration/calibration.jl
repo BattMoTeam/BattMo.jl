@@ -106,7 +106,6 @@ function solve(vc::VoltageCalibration)
         state0 = BattMo.setup_initial_state(inputparams, model)
         forces = setup_forces(model)
         timesteps = BattMo.setup_timesteps(inputparams)
-        output = setup_simulation(deepcopy(inputparams), use_p2d = true)
 
         return Jutul.JutulCase(model, timesteps, forces, parameters = parameters, state0 = state0, input_data = inputparams)
     end
