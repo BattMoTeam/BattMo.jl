@@ -696,12 +696,24 @@ function setup_submodels(inputparams::InputParams;
 					error("CCCycling parameters miss numberOfcycles")
 				end
 			end
+			DRate = get(inputparams["Control"], "DRate", 0.0)
+			CRate = get(inputparams["Control"], "CRate", 0.0)
+			if !isnothing(DRate)
+				DRate = 0.0
+			end
+			if !isnothing(DRate)
+				CRate = 0.0
+			end
+			# Capacity goes into actual realized rates, so check the type for AD/promotion
+			cap = min(computeElectrodeCapacity(model_neam, :NeAm), computeElectrodeCapacity(model_peam, :PeAm))
+			T_i = promote_type(typeof(DRate), typeof(CRate), typeof(cap), T)
+
 			policy = CCPolicy(number_of_cycles,
 				initial_control,
 				ctrl["lowerCutoffVoltage"],
 				ctrl["upperCutoffVoltage"],
 				use_ramp_up,
-				T = T
+				T = T_i
 			)
 		end
 
@@ -996,7 +1008,6 @@ function setup_battery_parameters(inputparams::InputParams,
 
 
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
-
 
 	elseif controlPolicy == "CCCharge"
 		cap = computeCellCapacity(model)
