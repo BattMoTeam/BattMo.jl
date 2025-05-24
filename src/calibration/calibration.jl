@@ -19,17 +19,17 @@ function free_calibration_parameter!(vc::VoltageCalibration, parameter_name::Vec
         )
 
     if ismissing(lower_bound) || ismissing(upper_bound)
-        throw(ArgumentError("Bounds must be set for free parameters (defaults not implemented)"))
+        throw(ArgumentError("$parameter_name: Bounds must be set for free parameters (defaults not implemented)"))
     end
     if !ismissing(initial_value)
         set_calibration_parameter!(vc, parameter_name, initial_value)
     end
     initial_value = get_nested_json_value(vc.sim.cell_parameters, parameter_name)
     if initial_value < lower_bound || initial_value > upper_bound
-        throw(ArgumentError("Initial value $initial_value out of bounds [$lower_bound, $upper_bound]"))
+        throw(ArgumentError("Initial value for for $parameter_name $initial_value out of bounds [$lower_bound, $upper_bound]"))
     end
     if lower_bound >= upper_bound
-        throw(ArgumentError("Lower bound $lower_bound must be less than upper bound $upper_bound"))
+        throw(ArgumentError("Lower bound for $parameter_name $lower_bound must be less than upper bound $upper_bound"))
     end
     vc.parameter_targets[parameter_name] = (v0 = initial_value, vmin = lower_bound, vmax = upper_bound)
     return vc
@@ -151,7 +151,7 @@ function solve(vc::VoltageCalibration)
     # Scaling of dg...
     # Put inside optimizer unit_box_bfgs
 
-    v, u, history = Jutul.unit_box_bfgs(u0, solve_and_differentiate; minimize = true, print = 1)
+    v, u, history = Jutul.unit_box_bfgs(u0, solve_and_differentiate; maximize = false, print = 1)
     @. x = u * (ub - lb) + lb
     Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, x, x_setup)
 end
