@@ -70,9 +70,9 @@ function solve(vc::VoltageCalibration)
     end
     sim = vc.sim
     # Set up the objective function
-    V_fun = get_1d_interpolator(vc.t, vc.v)
+    V_fun = get_1d_interpolator(vc.t, vc.v, cap_endpoints = false)
     function objective(model, state, dt, step_info, forces)
-        t = step_info[:time]
+        t = step_info[:time] + dt
         V_obs = V_fun(t)
         V_sim = state[:Control][:Phi][1]
         return dt * (V_obs - V_sim)^2
