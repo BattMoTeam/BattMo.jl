@@ -1,4 +1,6 @@
-struct VoltageCalibration
+abstract type AbstractCalibration end
+
+struct VoltageCalibration <:AbstractCalibration
     t
     v
     sim
@@ -12,7 +14,7 @@ struct VoltageCalibration
     end
 end
 
-function free_calibration_parameter!(vc::VoltageCalibration, parameter_name::Vector{String};
+function free_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String};
             initial_value = missing,
             lower_bound = missing,
             upper_bound = missing
@@ -35,14 +37,14 @@ function free_calibration_parameter!(vc::VoltageCalibration, parameter_name::Vec
     return vc
 end
 
-function freeze_calibration_parameter!(vc::VoltageCalibration, parameter_name::Vector{String}, val = missing)
+function freeze_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String}, val = missing)
     if !ismissing(val)
         set_calibration_parameter!(vc, parameter_name, val)
     end
     delete!(vc.parameter_targets, parameter_name)
 end
 
-function print_calibration_overview(vc::VoltageCalibration)
+function print_calibration_overview(vc::AbstractCalibration)
     header = ["Parameter name", "Initial Value", "Lower Bound", "Upper Bound"]
     pt = vc.parameter_targets
     pkeys = keys(pt)
@@ -58,17 +60,11 @@ function print_calibration_overview(vc::VoltageCalibration)
     Jutul.PrettyTables.pretty_table(tab, header=header)
 end
 
-function set_calibration_parameter!(vc::VoltageCalibration, parameter_name::Vector{String}, value)
+function set_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String}, value)
     set_nested_json_value!(vc.sim.cell_parameters, parameter_name, value)
 end
 
-function solve(vc::VoltageCalibration)
-    pt = vc.parameter_targets
-    pkeys = collect(keys(pt))
-    if length(pkeys) == 0
-        throw(ArgumentError("No free parameters set, unable to calibrate."))
-    end
-    sim = vc.sim
+function setup_objective(vc::VoltageCalibration)
     # Set up the objective function
     V_fun = get_1d_interpolator(vc.t, vc.v, cap_endpoints = false)
     function objective(model, state, dt, step_info, forces)
@@ -77,6 +73,18 @@ function solve(vc::VoltageCalibration)
         V_sim = state[:Control][:Phi][1]
         return dt * (V_obs - V_sim)^2
     end
+    return objective
+end
+
+function solve(vc::AbstractCalibration)
+    pt = vc.parameter_targets
+    pkeys = collect(keys(pt))
+    if length(pkeys) == 0
+        throw(ArgumentError("No free parameters set, unable to calibrate."))
+    end
+    sim = vc.sim
+    # Set up the objective function
+    objective = setup_objective(vc)
 
     # Set up the functions to serialize
     x0, x_setup = Jutul.AdjointsDI.vectorize_nested(sim.cell_parameters.all,
