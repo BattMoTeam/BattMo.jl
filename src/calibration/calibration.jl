@@ -64,7 +64,7 @@ function set_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vec
     set_nested_json_value!(vc.sim.cell_parameters, parameter_name, value)
 end
 
-function setup_objective(vc::VoltageCalibration)
+function setup_calibration_objective(vc::VoltageCalibration)
     # Set up the objective function
     V_fun = get_1d_interpolator(vc.t, vc.v, cap_endpoints = false)
     function objective(model, state, dt, step_info, forces)
@@ -76,6 +76,16 @@ function setup_objective(vc::VoltageCalibration)
     return objective
 end
 
+function evaluate_calibration_objective(vc::VoltageCalibration, objective, case, states, dt)
+    f = Jutul.evaluate_objective(objective, case.model, states, dt, case.forces)
+    # Time varies - so add in a term if the simulation ends early.
+    total_time = sum(dt)
+    time_delta = max(vc.t[end] - total_time, 0)
+    # V_end = states[end][:Control][:Phi][1]
+    # f += time_delta*(vc.v[end] - V_end)^2
+    return f
+end
+
 function solve(vc::AbstractCalibration)
     pt = vc.parameter_targets
     pkeys = collect(keys(pt))
@@ -84,7 +94,7 @@ function solve(vc::AbstractCalibration)
     end
     sim = vc.sim
     # Set up the objective function
-    objective = setup_objective(vc)
+    objective = setup_calibration_objective(vc)
 
     # Set up the functions to serialize
     x0, x_setup = Jutul.AdjointsDI.vectorize_nested(sim.cell_parameters.all,
@@ -140,12 +150,19 @@ function solve(vc::AbstractCalibration)
             state0 = case.state0,
             parameters = case.parameters,
             forces = case.forces,
-            config = cfg
+            config = cfg,
         )
+        #last_solves = result.reports[end][:ministeps][end]
+        # if !result.reports[end][:ministeps][end][:success]
+            # TODO: handle case where the solver fails.
+        #    g = fill(1e20, length(x))
+        #    return (1e20, g)
+        #end
         states, dt, = Jutul.expand_to_ministeps(result)
         # Evaluate the objective function
-        f = Jutul.evaluate_objective(objective, case.model, states, dt, case.forces)
-        # @info "Objective function value" f
+        f = evaluate_calibration_objective(vc, objective, case, states, dt)
+        # @info "Objective function value" f x
+        # error()
         # Solve adjoints
         g = Jutul.AdjointsDI.solve_adjoint_generic(x, setup_battmo_case, states, dt, objective)
         if false
