@@ -5,7 +5,7 @@ using BattMo, GLMakie
 ####################
 
 function getinput(name)
-    return read_battmo_formatted_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
+    return load_battmo_formatted_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
 end
 
 # load geometry parameters
