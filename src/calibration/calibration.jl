@@ -94,9 +94,8 @@ function solve(vc::VoltageCalibration)
             ub[j] = vmax
         end
     end
-    u0 = (x0 - lb) ./ (ub - lb)
 
-    @info "Set up calibration" x0 ub lb u0
+    # @info "Set up calibration" x0 ub lb
     function setup_battmo_case(X, step_info = nothing)
         T = eltype(X)
         Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, X, x_setup)
@@ -115,11 +114,7 @@ function solve(vc::VoltageCalibration)
     end
 
     simulator = cfg = missing
-    x = similar(x0)
-    function solve_and_differentiate(u)
-        for i in eachindex(x, ub, lb, u)
-            x[i] = u[i].*(ub[i] - lb[i]) + lb[i]
-        end
+    function solve_and_differentiate(x)
         case = setup_battmo_case(x)
         if ismissing(simulator)
             simulator = Simulator(case)
@@ -142,16 +137,26 @@ function solve(vc::VoltageCalibration)
         states, dt, = Jutul.expand_to_ministeps(result)
         # Evaluate the objective function
         f = Jutul.evaluate_objective(objective, case.model, states, dt, case.forces)
-        @info "Objective function value" f
+        # @info "Objective function value" f
         # Solve adjoints
         g = Jutul.AdjointsDI.solve_adjoint_generic(x, setup_battmo_case, states, dt, objective)
-        for i in eachindex(g, ub, lb)
-            g[i] = g[i] * (ub[i] - lb[i])
+        if false
+            ϵ = 1e-12*only(x)
+            case_delta = setup_battmo_case(x .+ ϵ)
+            result_delta = Jutul.simulate!(simulator,
+                case_delta.dt,
+                state0 = case_delta.state0,
+                parameters = case_delta.parameters,
+                forces = case_delta.forces,
+                config = cfg
+            )
+            states2, dt2, = Jutul.expand_to_ministeps(result_delta)
+            f_delta = Jutul.evaluate_objective(objective, case_delta.model, states2, dt2, case_delta.forces)
+            # @info "Numerical gradient" (f_delta - f)/ϵ
         end
         return (f, g)
     end
-    v, u, history = Jutul.unit_box_bfgs(u0, solve_and_differentiate; maximize = false, print = 1)
-    @. x = u * (ub - lb) + lb
+    v, x, history = Jutul.LBFGS.box_bfgs(x0, solve_and_differentiate, lb, ub; maximize = false, print = 1)
     cell_prm_out = deepcopy(sim.cell_parameters)
     Jutul.AdjointsDI.devectorize_nested!(cell_prm_out.all, x, x_setup)
     return (cell_prm_out, history)
