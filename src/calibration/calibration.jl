@@ -71,7 +71,7 @@ function setup_calibration_objective(vc::VoltageCalibration)
         t = step_info[:time] + dt
         V_obs = V_fun(t)
         V_sim = state[:Control][:Phi][1]
-        return dt * (V_obs - V_sim)^2
+        return dt * (V_obs - V_sim)^2 / step_info[:total_time]
     end
     return objective
 end
@@ -79,8 +79,8 @@ end
 function evaluate_calibration_objective(vc::VoltageCalibration, objective, case, states, dt)
     f = Jutul.evaluate_objective(objective, case.model, states, dt, case.forces)
     # Time varies - so add in a term if the simulation ends early.
-    total_time = sum(dt)
-    time_delta = max(vc.t[end] - total_time, 0)
+    # total_time = sum(dt)
+    # time_delta = max(vc.t[end] - total_time, 0)
     # V_end = states[end][:Control][:Phi][1]
     # f += time_delta*(vc.v[end] - V_end)^2
     return f
@@ -161,12 +161,12 @@ function solve(vc::AbstractCalibration)
         states, dt, = Jutul.expand_to_ministeps(result)
         # Evaluate the objective function
         f = evaluate_calibration_objective(vc, objective, case, states, dt)
-        # @info "Objective function value" f x
+        # @info "Objective function value" f x x_setup.names
         # error()
         # Solve adjoints
         g = Jutul.AdjointsDI.solve_adjoint_generic(x, setup_battmo_case, states, dt, objective)
-        if false
-            ϵ = 1e-12*only(x)
+        if true
+            ϵ = 1e-12# *only(x)
             case_delta = setup_battmo_case(x .+ ϵ)
             result_delta = Jutul.simulate!(simulator,
                 case_delta.dt,
@@ -177,7 +177,10 @@ function solve(vc::AbstractCalibration)
             )
             states2, dt2, = Jutul.expand_to_ministeps(result_delta)
             f_delta = Jutul.evaluate_objective(objective, case_delta.model, states2, dt2, case_delta.forces)
-            # @info "Numerical gradient" (f_delta - f)/ϵ
+            d_num = (f_delta - f)/ϵ
+            @info "Numerical gradient" d_num only(g)
+            # g[1] = d_num
+            g = [d_num]
         end
         return (f, g)
     end
