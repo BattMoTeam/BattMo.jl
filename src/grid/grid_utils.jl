@@ -4,7 +4,8 @@ export
 	find_common,
 	findBoundary,
 	convert_geometry,
-	one_dimensional_grid
+	one_dimensional_grid,
+    jelly_roll_grid
 
 #####################
 # utility functions #
@@ -37,6 +38,10 @@ function find_common(map_grid1, map_grid2)
 end
 
 """ Generic function to compute the couplings structure between the components
+    Arguments:
+    - components  : vector of strings that gives the name of the component to be coupled
+    - grids       : dictionnay of grids
+    - global_maps : maps from the subgrid to the global grid
 """
 function setup_couplings(components, grids, global_maps)
 
@@ -98,16 +103,16 @@ function convert_geometry(grids, couplings; include_current_collectors = true)
 
 	if include_current_collectors
 		components = ["NegativeCurrentCollector",
-			"NegativeElectrode",
-			"Separator",
-			"PositiveElectrode",
-			"PositiveCurrentCollector",
-			"Electrolyte"]
+			          "NegativeElectrode",
+			          "Separator",
+			          "PositiveElectrode",
+			          "PositiveCurrentCollector",
+			          "Electrolyte"]
 	else
 		components = ["NegativeElectrode",
-			"Separator",
-			"PositiveElectrode",
-			"Electrolyte"]
+			          "Separator",
+			          "PositiveElectrode",
+			          "Electrolyte"]
 	end
 
 	ugrids = Dict()
@@ -170,6 +175,148 @@ function convert_geometry(grids, couplings; include_current_collectors = true)
 
 end
 
+#########################
+# jelly roll grid setup #
+#########################
+
+function jelly_roll_grid(geomparams::InputGeometryParams)
+
+    geometry = geomparams["Geometry"]
+
+    nangles = geometry["numberOfDiscretizationCellsAngular"]
+    nz      = geometry["numberOfDiscretizationCellsVertical"]
+    rinner  = geometry["innerRadius"]
+    router  = geometry["outerRadius"] 
+    height  = geometry["height"] 
+
+    function get_vector(geomparams, fdname)
+        # double coated electrode
+        v = [geomparams["NegativeElectrode"]["CurrentCollector"][fdname],
+             geomparams["NegativeElectrode"]["Coating"][fdname],
+             geomparams["Separator"][fdname],
+             geomparams["PositiveElectrode"]["Coating"][fdname],
+             geomparams["PositiveElectrode"]["CurrentCollector"][fdname],
+             geomparams["PositiveElectrode"]["Coating"][fdname],
+             geomparams["Separator"][fdname],
+             geomparams["NegativeElectrode"]["Coating"][fdname]
+             ]
+        
+        return v
+    end
+
+    Ns  = get_vector(geomparams, "N")
+    dxs = get_vector(geomparams, "thickness")
+
+    dx = mapreduce((dx, N) -> repeat([dx], N), vcat, dxs, Ns)
+
+    spacing = [0; cumsum(dx)]
+    spacing = spacing/spacing[end]
+
+    thickness = sum(dxs)
+
+    depths = [0; cumsum(repeat([height/nz], nz))]
+    
+    components = ["NegativeCurrentCollector",
+                  "NegativeElectrode",
+                  "Separator",
+                  "Electrolyte",
+                  "PositiveElectrode",
+                  "PositiveCurrentCollector"]
+
+    component_indices = Dict()
+    component_indices["NegativeCurrentCollector"] = [1]
+    component_indices["NegativeElectrode"]        = [2, 8]
+    component_indices["Electrolyte"]              = [2, 3, 4, 6, 7, 8]
+    component_indices["Separator"]                = [3, 7]
+    component_indices["PositiveElectrode"]        = [4, 6]
+    component_indices["PositiveCurrentCollector"] = [5]
+
+    spacingtags = Dict()
+    for component in components
+        inds = Bool[]
+        for i in eachindex(Ns)
+            append!(inds, fill(i in component_indices[component], Ns[i]))
+        end
+        spacingtags[component] = findall(inds)
+    end
+
+    C = rinner
+    A = thickness/2*pi
+
+    nrot = Int(round((router - rinner)/(2*pi*A)))
+
+    uParentGrid = Jutul.RadialMeshes.spiral_mesh(nangles, nrot; spacing = spacing, A = A, C = C)
+
+    uParentGrid = Jutul.extrude_mesh(uParentGrid, depths)
+
+    tags = Jutul.RadialMeshes.spiral_mesh_tags(uParentGrid, spacing)
+
+	parentGrid = convert_to_mrst_grid(uParentGrid)
+
+	components = ["NegativeCurrentCollector",
+			      "NegativeElectrode",
+			      "Separator",
+                  "Electrolyte",
+			      "PositiveElectrode",
+			      "PositiveCurrentCollector"]
+
+    grids = Dict()
+    global_maps = Dict()
+
+    grids["Global"] = uParentGrid
+    
+	for component in components
+		allinds = collect(1 : parentGrid["cells"]["num"])
+		inds = findall(x -> x in spacingtags[component], tags[:spacing])
+		G, maps... = remove_cells(parentGrid, setdiff!(allinds, inds))
+		grids[component] = G
+		global_maps[component] = maps
+	end
+    
+	couplings = setup_couplings(components, grids, global_maps)
+
+    grids, couplings = convert_geometry(grids, couplings)
+    
+	# Negative current collector external coupling
+
+    g = grids["NegativeCurrentCollector"]
+
+    top_faces = Int[]
+    top_cells = Int[]    
+    geo = tpfv_geometry(g)
+    for bf in 1 : number_of_boundary_faces(g)
+        N = geo.boundary_normals[:, bf]
+        Nz = N[3]
+        if (abs(N[1]) + abs(N[2]) < 0.01*abs(Nz)) && (Nz > 0)
+            push!(top_faces, bf)
+            push!(top_cells, g.boundary_faces.neighbors[bf])
+        end
+    end
+    
+	couplings["NegativeCurrentCollector"]["External"] = Dict("cells" => top_cells, "boundaryfaces" => top_faces)
+
+	# Positive current collector external coupling
+
+    g = grids["PositiveCurrentCollector"]
+
+    bottom_faces = Int[]
+    bottom_cells = Int[]    
+    geo = tpfv_geometry(g)
+    for bf in 1 : number_of_boundary_faces(g)
+        N = geo.boundary_normals[:, bf]
+        Nz = N[3]
+        if (abs(N[1]) + abs(N[2]) < 0.01*abs(Nz)) && (Nz < 0)
+            push!(bottom_faces, bf)
+            push!(bottom_cells, g.boundary_faces.neighbors[bf])
+        end
+    end
+    
+	couplings["PositiveCurrentCollector"]["External"] = Dict("cells" => bottom_cells, "boundaryfaces" => bottom_faces)
+    
+    return grids, couplings
+    
+end
+
 ##############################
 # one dimensional grid setup #
 ##############################
@@ -185,7 +332,7 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
 
 	vars = ["thickness", "N"]
 	vals = Dict("thickness" => Vector{Float64}(),
-		"N" => Vector{Int}())
+		        "N" => Vector{Int}())
 
 	for var in vars
 		push!(vals[var], geomparams["NegativeElectrode"]["Coating"][var])
@@ -202,18 +349,18 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
 		end
 
 		components = ["NegativeCurrentCollector",
-			"NegativeElectrode",
-			"Separator",
-			"PositiveElectrode",
-			"PositiveCurrentCollector"]
+			          "NegativeElectrode",
+			          "Separator",
+			          "PositiveElectrode",
+			          "PositiveCurrentCollector"]
 
 		elyte_comp_start = 2
 
 	else
 
 		components = ["NegativeElectrode",
-			"Separator",
-			"PositiveElectrode"]
+			          "Separator",
+			          "PositiveElectrode"]
 
 		elyte_comp_start = 1
 
@@ -441,7 +588,7 @@ function pouch_grid(geomparams::InputGeometryParams)
 
 end
 
-"""
+s"""
 Single layer pouch cell utility function
 find the tags of each cell (tag from 1 to 5 for each grid component such as negative current collector and so
 on). Returns a list with 5 elements, each element containing a list of cells for the corresponding tag
@@ -500,10 +647,10 @@ function setup_pouch_cell_geometry(H_mother, paramsz)
 	global_maps = Dict()
 
 	components = ["NegativeCurrentCollector",
-		      "NegativeElectrode",
-		      "Separator",
-		      "PositiveElectrode",
-		      "PositiveCurrentCollector"]
+		          "NegativeElectrode",
+		          "Separator",
+		          "PositiveElectrode",
+		          "PositiveCurrentCollector"]
 
 	tags = find_tags(UnstructuredMesh(H_mother), paramsz)
 
@@ -533,3 +680,18 @@ function setup_pouch_cell_geometry(H_mother, paramsz)
 	return grids, couplings
 
 end
+
+function spiral_grid(geomparams::InputGeometryParams)
+
+    Ns = [3, 4, 2, 6, 1]
+    ls = [1., 2., 2.1, 3.2, 1.1]
+    dxs = ls./Ns
+
+    dx = mapreduce((dx, N) -> repeat([dx], N), vcat, dxs, Ns)
+
+    spacing = [0; cumsum(dx)]
+    spacing = spacing/spacing[end]
+    
+end
+
+

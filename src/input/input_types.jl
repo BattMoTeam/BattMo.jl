@@ -3,7 +3,7 @@ export ParameterSet
 export CellParameters, CyclingProtocol, ModelSettings, SimulationSettings, FullSimulationInput
 
 export BattMoFormattedInput
-export BattMoInput, MatlabBattMoInput
+export InputParams, MatlabInputParams
 
 export merge_input_params, search_parameter
 
@@ -303,3 +303,20 @@ function merge_input_params(inputparams1::T, inputparams2::T; warn = false) wher
 	return T(dict)
 
 end
+
+function merge_input_params(inputparams_list::Vector{T}; warn = false) where {T <: AbstractInput}
+
+    if length(inputparams_list) == 0
+        return nothing
+    end
+
+    inputparams = inputparams_list[1]
+
+    for i in 2:length(inputparams_list)
+        inputparams = merge_input_params(inputparams, inputparams_list[i], warn = warn)
+    end
+
+    return inputparams
+    
+end
+

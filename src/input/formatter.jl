@@ -43,14 +43,18 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	if isnothing(get_key_value(model_settings, "ModelFramework"))
 		geom_case = nothing
+		height = nothing
 	else
 		geom = get_key_value(model_settings, "ModelFramework")
 		if geom == "P2D"
 			geom_case = "1D"
-
+            height = nothing
 		elseif geom == "P4D Pouch"
 			geom_case = "3D-demo"
-
+			height = get_key_value(cell, "ElectrodeLength")
+		elseif geom == "3D Cylindrical"
+			height = get_key_value(cell, "Height")
+			geom_case = "jellyRoll"
 		end
 	end
 
@@ -280,6 +284,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 				"tab" => Dict(
 					"width" => get_key_value(ne_cc, "TabWidth"),
 					"height" => get_key_value(ne_cc, "TabLength"),
+					"fractions" => get_key_value(ne_cc, "TabFraction"),
 					"Nw" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabWidth"),
 					"Nh" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabLength"),
 				),
@@ -341,6 +346,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 				"tab" => Dict(
 					"width" => get_key_value(pe_cc, "TabWidth"),
 					"height" => get_key_value(pe_cc, "TabLength"),
+					"fractions" => get_key_value(pe_cc, "TabFraction"),
 					"Nw" => get_key_value(grid_points, "PositiveElectrodeCurrentCollectorTabWidth"),
 					"Nh" => get_key_value(grid_points, "PositiveElectrodeCurrentCollectorTabLength"),
 				),
@@ -378,9 +384,14 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"case" => geom_case,
 			"faceArea" => get_key_value(cell, "ElectrodeGeometricSurfaceArea"),
 			"width" => get_key_value(cell, "ElectrodeWidth"),
-			"height" => get_key_value(cell, "ElectrodeLength"),
+			"height" => height,
+			"innerRadius" => get_key_value(cell, "InnerRadius"),
+			"outerRadius" => get_key_value(cell, "OuterRadius"),
 			"Nw" => get_key_value(grid_points, "ElectrodeWidth"),
 			"Nh" => get_key_value(grid_points, "ElectrodeLength"),
+			"numberOfDiscretizationCellsVertical" => get_key_value(grid_points, "Height"),
+			"numberOfDiscretizationCellsAngular" => get_key_value(grid_points, "Radius"),
+			"verticalRefinementParameter" => get_key_value(grid_points, "HeightRefinement"),
 		),
 		"TimeStepping" => Dict(
 			"useRampup" => use_ramp_up,
