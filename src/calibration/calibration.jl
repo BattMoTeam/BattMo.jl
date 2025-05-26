@@ -45,16 +45,21 @@ function freeze_calibration_parameter!(vc::AbstractCalibration, parameter_name::
 end
 
 function print_calibration_overview(vc::AbstractCalibration)
-    header = ["Parameter name", "Initial Value", "Lower Bound", "Upper Bound"]
+    header = ["Parameter name", "Initial Value", "Lower Bound", "Upper Bound", "Optimized value", "Change"]
     pt = vc.parameter_targets
     pkeys = keys(pt)
 
-    tab = Matrix{Any}(undef, length(pkeys), 4)
+    tab = Matrix{Any}(undef, length(pkeys), 6)
     for (i, k) in enumerate(pkeys)
+        v0 = pt[k].v0
+        v = get_nested_json_value(vc.sim.cell_parameters, k)
+        perc = round(100*(v-v0)/max(v0, 1e-20), digits = 2)
         tab[i, 1] = join(k, ".")
-        tab[i, 2] = pt[k].v0
+        tab[i, 2] = v0
         tab[i, 3] = pt[k].vmin
         tab[i, 4] = pt[k].vmax
+        tab[i, 5] = v
+        tab[i, 6] = "$perc%"
     end
     # TODO: Do this properly instead of via Jutul's import...
     Jutul.PrettyTables.pretty_table(tab, header=header)
@@ -165,8 +170,9 @@ function solve(vc::AbstractCalibration)
         # error()
         # Solve adjoints
         g = Jutul.AdjointsDI.solve_adjoint_generic(x, setup_battmo_case, states, dt, objective)
-        if true
-            ϵ = 1e-12# *only(x)
+        if false
+            # ϵ = 1e-10*only(x)
+            ϵ = 1e-12
             case_delta = setup_battmo_case(x .+ ϵ)
             result_delta = Jutul.simulate!(simulator,
                 case_delta.dt,
@@ -178,14 +184,15 @@ function solve(vc::AbstractCalibration)
             states2, dt2, = Jutul.expand_to_ministeps(result_delta)
             f_delta = Jutul.evaluate_objective(objective, case_delta.model, states2, dt2, case_delta.forces)
             d_num = (f_delta - f)/ϵ
-            @info "Numerical gradient" d_num only(g)
+            @info "Numerical gradient" d_num only(g) length(dt)
             # g[1] = d_num
-            g = [d_num]
+            # g = [d_num]
         end
         return (f, g)
     end
     v, x, history = Jutul.LBFGS.box_bfgs(x0, solve_and_differentiate, lb, ub; maximize = false, print = 1)
+    # Also remove AD from the internal ones and update them
+    Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, x, x_setup)
     cell_prm_out = deepcopy(sim.cell_parameters)
-    Jutul.AdjointsDI.devectorize_nested!(cell_prm_out.all, x, x_setup)
     return (cell_prm_out, history)
 end
