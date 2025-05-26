@@ -87,12 +87,12 @@ The Julia extension for VS Code provides useful tools tailored to develop Julia 
 * Create a new folder
 * Open VS Code on the folder. In VS Code, go to `File -> Open Folder` and navigate to your created folder.
 * Open the Julia REPL from VS Code: Run the `Shift + Ctrl + P` command and select "Julia: Start REPL". 
-* In the REPL, run the following commands:
+* In the REPL, run the following commands one by one:
 ```
 julia> using Pkg: Pkg
-julia> using Pkg.activate("./")
-julia> using Pkg.instantiate()
-julia> using Pkg.add("IJulia")
+julia> Pkg.activate("./")
+julia> Pkg.instantiate()
+julia> Pkg.add("IJulia")
 ```
 * These commands do:
    * Load the Package manager of Julia `Pkg`.
@@ -100,33 +100,12 @@ julia> using Pkg.add("IJulia")
    * Instantiate the environment, which installs all the packages listed in the `Project.toml`, and creates a new `Manifest.toml` that tracks dependencies to other packages.
    * Install a package called IJulia to run [interavtive Julia notebooks](https://juliapackages.com/p/IJulia) - more about notebooks when we get to the BattMo tutorials.
 
-### Install BattMo.jl and other packages
-* To install BattMo.jl in your newly created environment, ensure you are in the REPLs Package mode (`]`) and simply run `pkg> add BattMo` from the Package mode of the Julia REPL.
-```
-julia> ]
-pkg> add BattMo
-```
-* Optionally you can install other Julia packages that you might need, e.g. `pkg> add DataFrames` to manipulate tabular data, or `pkg> add PlotlyJS` to make interactive plots. After you finish installing packages, press the `BackSpace` key to abandon Package mode and get back to the Julia REPL.
-```
-pkg> add DataFrames
-pkg> add PlotlyJS
-pkg> #BackSpace
-julia>
-```
-
 ### Verify the installation
-HOW TO VERIFY THAT THE ENVIRONMENT IS SET AND THE PACKAGES INSTALLED
+We will try running a code notebook to verify the installation is OK. 
+* Go to the [notebook we have prepared for the workshop](https://github.com/BattMoTeam/BattMo-workshop-2025-06-13/blob/main/tutorials/Installation.ipynb).
+* Download the file by clicking on the "Download Raw" button on the top right of the file preview.
+* Move the file into the folder where you previously created your environment.
+* Follow the instructions in the notebook.
 
-# 5. Start a new coding session
-Once set up, you simply reopen your project and pick up where you left off.
-* Open VS Code on the folder: `File -> Open Folder` and navigate to your project.
-* Open the Julia REPL: press `Shift + Ctrl + P` and select "Julia: Start REPL".
-* Activate and instantiate your environment, and then come back to the Julia REPL with `BackSpace`:
-```
-julia> ]
-pkg> activate .
-pkg> instantiate
-pkg> #BackSpace
-julia>
-```
-* Create your julia files, where you will write and run code. In the side bar of VS Code, ensure you are in Explorer mode, i.e. you see your files in the current folder. Hover over the Folder name and click "New File". Give it an appropiate name and add the .jl extension, e.g. `my_first_julia_code.jl`.
+> If the notebook runs fine, **you are ready for BattMo workshp!**
+
