@@ -149,6 +149,7 @@ end
 
 mutable struct GenericController <: Controller
 	policy::GenericPolicy
+	stop_simulation::Bool
 	current_step::AbstractControlStep
 	current_step_number::Int
 	time::Real
@@ -157,12 +158,12 @@ mutable struct GenericController <: Controller
 	dIdt::Real
 	dEdt::Real
 
-	function GenericController(policy::GenericPolicy, current_step::Union{Nothing, AbstractControlStep}, current_step_number::Int, time::Real, number_of_steps::Int; target::Real = 0.0, dEdt::Real = 0.0, dIdt::Real = 0.0)
-		new(policy, current_step, current_step_number, time, number_of_steps, target, dIdt, dEdt)
+	function GenericController(policy::GenericPolicy, stop_simulation::Bool, current_step::Union{Nothing, AbstractControlStep}, current_step_number::Int, time::Real, number_of_steps::Int; target::Real = 0.0, dEdt::Real = 0.0, dIdt::Real = 0.0)
+		new(policy, stop_simulation, current_step, current_step_number, time, number_of_steps, target, dIdt, dEdt)
 	end
 end
 
-GenericController() = GenericController(nothing, nothing, 0, 0.0, 0)
+GenericController() = GenericController(nothing, false, nothing, 0, 0.0, 0)
 
 @inline function Jutul.numerical_type(x::GenericController)
 	return typeof(x.current_step)
@@ -189,7 +190,7 @@ Overload function to copy GenericController
 """
 function Base.copy(cv::GenericController)
 	# Construct using the known type parameter S
-	cv_copy = GenericController(cv.policy, cv.current_step, cv.current_step_number, cv.time, cv.number_of_steps; target = cv.target, dIdt = cv.dIdt, dEdt = cv.dEdt)
+	cv_copy = GenericController(cv.policy, cv.stop_simulation, cv.current_step, cv.current_step_number, cv.time, cv.number_of_steps; target = cv.target, dIdt = cv.dIdt, dEdt = cv.dEdt)
 
 	return cv_copy
 end
@@ -231,15 +232,22 @@ function setupRegionSwitchFlags(policy::P, state, controller::GenericController)
 	step = policy
 	termination = step.termination
 
-	E = only(state.Phi)
-	I = only(state.Current)
+	if haskey(state, :Phi)
+		E = only(state.Phi)
+		I = only(state.Current)
+	else
+		E = ForwardDiff.value(only(state.Control.Phi))
+		I = ForwardDiff.value(only(state.Control.Current))
+	end
 
 	before = false
 	after = false
 
+	@info "phi = ", E
+
 	if termination.quantity == "voltage"
 		target = termination.value
-		tol = 1e-4  # Adjust or pull from policy.tolerances if defined
+		tol = 1e-4
 
 		if isnothing(termination.comparison) || termination.comparison == "below"
 			before = E > target * (1 + tol)
@@ -264,7 +272,7 @@ function setupRegionSwitchFlags(policy::P, state, controller::GenericController)
 	elseif termination.quantity == "time"
 		t = controller.time
 		target = termination.value
-		tol = 1
+		tol = 0.001
 
 		before = t < target - tol
 		after  = t > target + tol
@@ -280,6 +288,34 @@ function setupRegionSwitchFlags(policy::P, state, controller::GenericController)
 	return (beforeSwitchRegion = before, afterSwitchRegion = after)
 end
 
+
+"""
+We need a more fine-tuned update of the variables when we use a cycling policies, to avoid convergence problem.
+"""
+function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, model::P, dx, w) where {Q <: GenericPolicy, P <: CurrentAndVoltageModel{Q}}
+
+	entity = associated_entity(p)
+	active = active_entities(model.domain, entity, for_variables = true)
+	v = state[state_symbol]
+
+	nu = length(active)
+	# ImaxDischarge = model.system.policy.ImaxDischarge
+	# ImaxCharge    = model.system.policy.ImaxCharge
+
+	# Imax = max(ImaxCharge, ImaxDischarge)
+
+	# abs_max = 0.2 * Imax
+	abs_max = nothing
+	rel_max = relative_increment_limit(p)
+	maxval = maximum_value(p)
+	minval = minimum_value(p)
+	scale = variable_scale(p)
+	@inbounds for i in 1:nu
+		a_i = active[i]
+		v[a_i] = update_value(v[a_i], w * dx[i], abs_max, rel_max, minval, maxval, scale)
+	end
+
+end
 
 """
 Implementation of the generic control policy
@@ -318,6 +354,7 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 		# Stay in current control step
 		next_step_idx = step_idx_0
 		ctrlType = ctrlType0
+		stop_simulation = false
 	else
 
 		currentCtrlType = state.Controller.current_step # current control in the the Newton iteration
@@ -334,14 +371,11 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 				# control
 				if step_idx_0 == length(policy.control_steps)
 					ctrlType = currentCtrlType
-					if ctrlType.termination.quantity == "time"
-						if policy.control_steps[step_idx_0+1].termination.value < controller.time
-							termination_value = controller.time + policy.control_steps[step_idx_0+1].termination.value
-							policy.control_steps[step_idx_0+1].termination.value = termination_value
-						end
-					end
+					stop_simulation = true
+
 				else
 					ctrlType = control_steps[step_idx_0+1]
+					stop_simulation = false
 					if ctrlType.termination.quantity == "time"
 						if policy.control_steps[step_idx_0+1].termination.value < controller.time
 							@info "term_time = ", policy.control_steps[step_idx_0+1].termination.value
@@ -357,25 +391,27 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 
 				next_step_idx = step_idx_0 + 1
 
+			elseif rsw0.beforeSwitchRegion == false && step_idx_0 == length(policy.control_steps)
+				ctrlType = currentCtrlType
+				stop_simulation = true
+
+
 			else
 				next_step_idx = step_idx_0
 				ctrlType = ctrlType0
+				stop_simulation = false
+
 			end
 		elseif controller.current_step_number + 1 == step_idx_0 + 1
 			# Avoid switching back if we already moved forward in this Newton iteration
 
 			if step_idx_0 == length(policy.control_steps)
-
+				stop_simulation = true
 				ctrlType = currentCtrlType
-				if ctrlType.termination.quantity == "time"
-					if policy.control_steps[step_idx_0+1].termination.value < controller.time
-						termination_value = controller.time + policy.control_steps[step_idx_0+1].termination.value
-						policy.control_steps[step_idx_0+1].termination.value = termination_value
-					end
-				end
+
 			else
 				ctrlType = control_steps[step_idx_0+1]
-
+				stop_simulation = false
 				if ctrlType.termination.quantity == "time"
 					if policy.control_steps[step_idx_0+1].termination.value < controller.time
 						termination_value = controller.time + policy.control_steps[step_idx_0+1].termination.value
@@ -393,10 +429,11 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 			error("Unexpected control state transition at step $step_idx_0")
 		end
 	end
-
+	@info "stop_sim = ", stop_simulation
 	# Update controller with the selected step index
 	controller.current_step_number = min(next_step_idx - 1, length(control_steps))  # Stay within bounds
 	controller.current_step = ctrlType
+	controller.stop_simulation = stop_simulation
 
 end
 

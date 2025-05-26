@@ -716,7 +716,8 @@ function setup_submodels(inputparams::InputParams;
 			ctrl["dIdtLimit"],
 			ctrl["dEdtLimit"],
 			ctrl["initialControl"],
-			ctrl["numberOfCycles"])
+			ctrl["numberOfCycles"],
+			jsondict["TimeStepping"]["useRampup"])
 
 	elseif controlPolicy == "Generic"
 		ctrl = jsondict["Control"]
@@ -1731,19 +1732,25 @@ function setup_config(sim::JutulSimulator,
 					end
 
 				elseif model[:Control].system.policy isa GenericPolicy
-					@info "stop"
-					if s.state.Control.Controller.current_step_number + 1 >= length(m[:Control].system.policy.control_steps)
+					@info "stop", s.state.Control.Controller.stop_simulation
+					@info "stop", s.state.Control.Controller.current_step_number
+					@info "stop", length(m[:Control].system.policy.control_steps)
+					if s.state.Control.Controller.current_step_number + 1 >= length(m[:Control].system.policy.control_steps) && s.state.Control.Controller.stop_simulation
 
 						# rsw = setupRegionSwitchFlags(s.state.Control.Controller.current_step, s.state, s.state.Control.Controller)
 						# @info "stop2", rsw.afterSwitchRegion
+						# @info "stop3", rsw.beforeSwitchRegion
 
-						# if rsw.afterSwitchRegion
+						# if rsw.afterSwitchRegion || rsw.beforeSwitchRegion == false
 						report[:stopnow] = true
+						# else
+						# 	report[:stopnow] = false
+						# end
 					else
 						report[:stopnow] = false
 					end
 
-					# end
+					@info "report = ", report[:stopnow]
 
 				else
 					@warn "Neither numberOfCycles nor number_of_steps found in controller or policy"

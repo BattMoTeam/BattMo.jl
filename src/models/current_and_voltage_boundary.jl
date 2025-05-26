@@ -1236,6 +1236,8 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquati
 
 end
 
+
+
 function Jutul.update_equation_in_entity!(v, i, state, state0, eq::CurrentEquation, model, dt, ldisc = local_discretization(eq, i))
 
 	# Sign is strange here due to cross term?
@@ -1424,7 +1426,7 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 		current_step_number = 0
 		current_step = policy.initial_control
 		time_in_step = 0.0
-		state[:Controller] = GenericController(policy, current_step, current_step_number, time_in_step, number_of_steps)
+		state[:Controller] = GenericController(policy, false, current_step, current_step_number, time_in_step, number_of_steps)
 
 	end
 
