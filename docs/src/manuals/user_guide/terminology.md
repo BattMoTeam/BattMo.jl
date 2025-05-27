@@ -40,8 +40,8 @@ These parameters define the operational conditions of the battery during a simul
   "LowerVoltageLimit": 2.5,
   "UpperVoltageLimit": 4.1,
   "InitialControl": "discharging",
-  "AmbientKelvinTemperature": 298.15,
-  "InitialKelvinTemperature": 298.15
+  "AmbientTemperature": 298.15,
+  "InitialTemperature": 298.15
 }
 ```
 

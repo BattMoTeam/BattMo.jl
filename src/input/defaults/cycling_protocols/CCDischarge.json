@@ -6,5 +6,5 @@
   "DRate": 0.5,
   "LowerVoltageLimit": 2.4,
   "UpperVoltageLimit": 4.1,
-  "InitialKelvinTemperature": 298.15
+  "InitialTemperature": 298.15
 }

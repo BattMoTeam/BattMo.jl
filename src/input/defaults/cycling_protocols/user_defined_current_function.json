@@ -3,5 +3,5 @@
     "FunctionName": "user_defined_current_function",
     "InitialStateOfCharge": 0.01,
     "TotalTime": 1000,
-    "InitialKelvinTemperature": 298.15
+    "InitialTemperature": 298.15
 }

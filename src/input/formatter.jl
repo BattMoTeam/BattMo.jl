@@ -196,7 +196,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 	battmo_input = Dict(
 		"G" => get_key_value(simulation_settings, "Grid"),
 		"SOC" => get_key_value(cycling_protocol, "InitialStateOfCharge"),
-		"initT" => get_key_value(cycling_protocol, "InitialKelvinTemperature"),
+		"initT" => get_key_value(cycling_protocol, "InitialTemperature"),
 		"use_thermal" => use_thermal,
 		"include_current_collectors" => use_cc,
 		"Control" => Dict(
@@ -239,7 +239,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 						"SEIionicConductivity" => get_key_value(ne_interphase, "IonicConductivity"),
 						"SEIelectronicDiffusionCoefficient" => get_key_value(ne_interphase, "ElectronicDiffusionCoefficient"),
 						"SEIstoichiometricCoefficient" => get_key_value(ne_interphase, "StoichiometricCoefficient"),
-						"SEIintersticialConcentration" => get_key_value(ne_interphase, "IntersticialConcentration"),
+						"SEIinterstitialConcentration" => get_key_value(ne_interphase, "InterstitialConcentration"),
 						"SEIlengthInitial" => get_key_value(ne_interphase, "InitialThickness"),
 						"SEIvoltageDropRef" => get_key_value(ne_interphase, "InitialPotentialDrop"),
 						"SEIlengthRef" => get_key_value(ne_interphase, "InitialThickness"),
@@ -371,7 +371,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		),
 		"ThermalModel" => Dict(
 			"externalHeatTransferCoefficient" => get_key_value(cell, "HeatTransferCoefficient"),
-			"externalTemperature" => get_key_value(cycling_protocol, "AmbientKelvinTemperature"),
+			"externalTemperature" => get_key_value(cycling_protocol, "AmbientTemperature"),
 			"externalHeatTransferCoefficientTab" => get_key_value(cell, "HeatTransferCoefficient"),
 		),
 		"Geometry" => Dict(
