@@ -48,11 +48,12 @@ function print_calibration_overview(vc::AbstractCalibration)
     header = ["Parameter name", "Initial Value", "Lower Bound", "Upper Bound", "Optimized value", "Change"]
     pt = vc.parameter_targets
     pkeys = keys(pt)
-
     tab = Matrix{Any}(undef, length(pkeys), 6)
+    # widths = zeros(Int, size(tab, 2))
+    # widths[1] = 40
     for (i, k) in enumerate(pkeys)
         v0 = pt[k].v0
-        v = get_nested_json_value(vc.sim.cell_parameters, k)
+        v = value(get_nested_json_value(vc.sim.cell_parameters, k))
         perc = round(100*(v-v0)/max(v0, 1e-20), digits = 2)
         tab[i, 1] = join(k, ".")
         tab[i, 2] = v0
@@ -62,7 +63,7 @@ function print_calibration_overview(vc::AbstractCalibration)
         tab[i, 6] = "$perc%"
     end
     # TODO: Do this properly instead of via Jutul's import...
-    Jutul.PrettyTables.pretty_table(tab, header=header)
+    Jutul.PrettyTables.pretty_table(tab, header=header)#,autowrap=true,columns_width=widths)
 end
 
 function set_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String}, value)
@@ -76,6 +77,7 @@ function setup_calibration_objective(vc::VoltageCalibration)
         t = step_info[:time] + dt
         V_obs = V_fun(t)
         V_sim = state[:Control][:Phi][1]
+        # return (V_sim - 3.0)^2
         return dt * (V_obs - V_sim)^2 / step_info[:total_time]
     end
     return objective
@@ -139,7 +141,7 @@ function solve(vc::AbstractCalibration)
     simulator = cfg = missing
     function solve_and_differentiate(x)
         case = setup_battmo_case(x)
-        if ismissing(simulator)
+        if ismissing(simulator) || true
             simulator = Simulator(case)
             cfg = setup_config(simulator,
                 case.model,
@@ -157,7 +159,7 @@ function solve(vc::AbstractCalibration)
             forces = case.forces,
             config = cfg,
         )
-        #last_solves = result.reports[end][:ministeps][end]
+        # last_solves = result.reports[end][:ministeps][end]
         # if !result.reports[end][:ministeps][end][:success]
             # TODO: handle case where the solver fails.
         #    g = fill(1e20, length(x))
