@@ -181,8 +181,9 @@ function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objec
         g = Jutul.AdjointsDI.solve_adjoint_generic(
             x, setup_battmo_case, states, dt, objective,
             use_sparsity = false,
+            di_sparse = true,
             single_step_sparsity = false,
-            do_prep = false
+            do_prep = true
         )
     else
         g = missing
