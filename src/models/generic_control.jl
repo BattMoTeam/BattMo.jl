@@ -229,6 +229,7 @@ The setupRegionSwitchFlags function detects from the current state and control, 
 - afterSwitchRegion : the state is after the switch region for the current control
 """
 function setupRegionSwitchFlags(policy::P, state, controller::GenericController) where P <: AbstractControlStep
+   
 	step = policy
 	termination = step.termination
 
@@ -246,6 +247,7 @@ function setupRegionSwitchFlags(policy::P, state, controller::GenericController)
 	# @info "phi = ", E
 
 	if termination.quantity == "voltage"
+        
 		target = termination.value
 		tol = 1e-4
 
@@ -286,6 +288,7 @@ function setupRegionSwitchFlags(policy::P, state, controller::GenericController)
 	# @info "termination target = ", target
 	# @info "after = ", after
 	return (beforeSwitchRegion = before, afterSwitchRegion = after)
+    
 end
 
 
@@ -341,7 +344,6 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 
 	ctrlType0 = state0.Controller.current_step
 
-
 	# Check if we should switch to next step based on region switch flags
 	rsw00 = setupRegionSwitchFlags(ctrlType0, state0, controller)
 
@@ -351,26 +353,29 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 	end
 
 	if rsw00.beforeSwitchRegion
+
 		# Stay in current control step
-		next_step_idx = step_idx_0
-		ctrlType = ctrlType0
+		next_step_idx   = step_idx_0
+		ctrlType        = ctrlType0
 		stop_simulation = false
+        
 	else
 
 		currentCtrlType = state.Controller.current_step # current control in the the Newton iteration
 
 		rsw0 = setupRegionSwitchFlags(ctrlType0, state, controller)
 
-
-		if controller.current_step_number == step_idx_0 - 1
+		if controller.current_step_number == state0.Controller.current_step_number
 
 			# The control has not changed from previous time step and we want to determine if we should change it. 
 
 			if rsw0.afterSwitchRegion
+
 				# We switch to a new control because we are no longer in the acceptable region for the current
 				# control
 				if step_idx_0 == length(policy.control_steps)
-					ctrlType = currentCtrlType
+                    
+					ctrlType        = currentCtrlType
 					stop_simulation = true
 
 				else
@@ -392,16 +397,19 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 				next_step_idx = step_idx_0 + 1
 
 			elseif rsw0.beforeSwitchRegion == false && step_idx_0 == length(policy.control_steps)
+
 				ctrlType = currentCtrlType
 				stop_simulation = true
-
+				next_step_idx = step_idx_0 + 1
 
 			else
+                
 				next_step_idx = step_idx_0
 				ctrlType = ctrlType0
 				stop_simulation = false
 
 			end
+            
 		elseif controller.current_step_number + 1 == step_idx_0 + 1
 			# Avoid switching back if we already moved forward in this Newton iteration
 
