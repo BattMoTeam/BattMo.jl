@@ -141,35 +141,7 @@ function solve(vc::AbstractCalibration)
     # @info "Set up calibration" x0 ub lb
 
     setup_battmo_case(X, step_info = missing) = setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
-    function solve_and_differentiate(x)
-        case = setup_battmo_case(x)
-        states, dt = simulate_battmo_case_for_calibration(case)
-        # Evaluate the objective function
-        f = evaluate_calibration_objective(vc, objective, case, states, dt)
-        # @info "Objective function value" f x x_setup.names
-        # error()
-        # Solve adjoints
-        g = Jutul.AdjointsDI.solve_adjoint_generic(
-            x, setup_battmo_case, states, dt, objective,
-            use_sparsity = false,
-            single_step_sparsity = false,
-            do_prep = false
-        )
-        # @info "Updated" f g
-        if false
-            # ϵ = 1e-10*only(x)
-            ϵ = 1e-3
-            case_delta = setup_battmo_case(x .+ ϵ)
-            states2, dt2, = simulate_battmo_case_for_calibration(case_delta)
-            f_delta = Jutul.evaluate_objective(objective, case_delta.model, states2, dt2, case_delta.forces)
-            d_num = (f_delta - f)/ϵ
-            @info "Numerical gradient" d_num only(g) length(dt)
-            # g[1] = d_num
-            # g = [d_num]
-        end
-        return (f, g)
-    end
-
+    solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective)
     if true
         v, x, history = Jutul.LBFGS.box_bfgs(x0, solve_and_differentiate, lb, ub; maximize = false, print = 1)
     else
@@ -196,6 +168,36 @@ function solve(vc::AbstractCalibration)
     cell_prm_out = deepcopy(sim.cell_parameters)
     return (cell_prm_out, history)
 end
+
+function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective)
+    case = setup_battmo_case(x)
+    states, dt = simulate_battmo_case_for_calibration(case)
+    # Evaluate the objective function
+    f = evaluate_calibration_objective(vc, objective, case, states, dt)
+    # @info "Objective function value" f x x_setup.names
+    # error()
+    # Solve adjoints
+    g = Jutul.AdjointsDI.solve_adjoint_generic(
+        x, setup_battmo_case, states, dt, objective,
+        use_sparsity = false,
+        single_step_sparsity = false,
+        do_prep = false
+    )
+    # @info "Updated" f g
+    if false
+        # ϵ = 1e-10*only(x)
+        ϵ = 1e-3
+        case_delta = setup_battmo_case(x .+ ϵ)
+        states2, dt2, = simulate_battmo_case_for_calibration(case_delta)
+        f_delta = Jutul.evaluate_objective(objective, case_delta.model, states2, dt2, case_delta.forces)
+        d_num = (f_delta - f)/ϵ
+        @info "Numerical gradient" d_num only(g) length(dt)
+        # g[1] = d_num
+        # g = [d_num]
+    end
+    return (f, g)
+end
+
 
 function vectorize_cell_parameters_for_calibration(vc)
     pt = vc.parameter_targets
