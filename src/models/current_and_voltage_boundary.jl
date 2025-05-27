@@ -123,7 +123,7 @@ struct FunctionPolicy <: AbstractPolicy
 	current_function::Function
 
 	function FunctionPolicy(function_name::String, file_path::String)
-		current_function = setup_function_from_function_name(function_name, file_path)
+		current_function = setup_function_from_function_name(function_name; file_path = file_path)
 		new{}(current_function)
 	end
 

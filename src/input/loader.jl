@@ -21,7 +21,7 @@ function load_model_settings(; from_file_path::Union{String, Nothing} = nothing,
 	if !isnothing(from_file_path)
 		# Assuming JSON and ModelSettings are correctly defined
 		model_settings_instance = JSON.parsefile(from_file_path)
-		return ModelSettings(model_settings_instance, from_file_path)
+		return ModelSettings(model_settings_instance; source_path = from_file_path)
 	elseif !isnothing(from_default_set)
 		# Logic to load from default set (replace this with actual code)
 		file_path = parameter_file_path("model_settings", from_default_set)
@@ -52,7 +52,7 @@ function load_cell_parameters(; from_file_path::Union{String, Nothing} = nothing
 	if !isnothing(from_file_path)
 		# Assuming JSON and CellParameters are correctly defined
 		cell_parameters_data = JSON.parsefile(from_file_path)
-		return CellParameters(cell_parameters_data, from_file_path)
+		return CellParameters(cell_parameters_data; source_path = from_file_path)
 	elseif !isnothing(from_default_set)
 		# Logic to load from default set (replace this with actual code)
 		file_path = parameter_file_path("cell_parameters", from_default_set)
@@ -60,7 +60,7 @@ function load_cell_parameters(; from_file_path::Union{String, Nothing} = nothing
 	elseif !isnothing(from_model_template)
 		# Logic to load from model template (replace this with actual code)
 		cell_parameters_data = get_empty_cell_parameter_set(from_model_template)
-		return CellParameters(cell_parameters_data, nothing)
+		return CellParameters(cell_parameters_data; source_path = nothing)
 	else
 		throw(ArgumentError("Either 'from_file_path', 'from_default_set', or 'from_model_template' must be provided."))
 	end
@@ -88,7 +88,7 @@ function load_cycling_protocol(; from_file_path::Union{String, Nothing} = nothin
 	if !isnothing(from_file_path)
 		# Assuming JSON and CyclingProtocol are correctly defined
 		cycling_protocol_instance = JSON.parsefile(from_file_path)
-		return CyclingProtocol(cycling_protocol_instance, from_file_path)
+		return CyclingProtocol(cycling_protocol_instance; source_path = from_file_path)
 	elseif !isnothing(from_default_set)
 		# Logic to load from default set (replace this with actual code)
 		file_path = parameter_file_path("cycling_protocols", from_default_set)
@@ -119,7 +119,7 @@ function load_simulation_settings(; from_file_path::Union{String, Nothing} = not
 	if !isnothing(from_file_path)
 		# Assuming JSON and SimulationSettings are correctly defined
 		simulation_settings_instance = JSON.parsefile(from_file_path)
-		return SimulationSettings(simulation_settings_instance, from_file_path)
+		return SimulationSettings(simulation_settings_instance; source_path = from_file_path)
 	elseif !isnothing(from_default_set)
 		# Logic to load from default set (replace this with actual code)
 		file_path = parameter_file_path("simulation_settings", from_default_set)
@@ -127,7 +127,7 @@ function load_simulation_settings(; from_file_path::Union{String, Nothing} = not
 	elseif !isnothing(from_model_template)
 		# Logic to load from model template (replace this with actual code)
 		simulation_settings_instance = get_empty_simulation_settings(from_model_template)
-		return SimulationSettings(simulation_settings_instance, nothing)
+		return SimulationSettings(simulation_settings_instance; source_path = nothing)
 	else
 		throw(ArgumentError("Either 'from_file_path', 'from_default_set', or 'from_model_template' must be provided."))
 	end

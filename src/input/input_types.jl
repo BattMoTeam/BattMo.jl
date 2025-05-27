@@ -195,6 +195,9 @@ end
 struct CellParameters <: ParameterSet
 	all::Dict{String, Any}
 	source_path::Union{String, Nothing}
+	function CellParameters(all::Dict; source_path::Union{String, Nothing} = nothing)
+		return new{}(all, source_path)
+	end
 
 end
 
@@ -202,12 +205,18 @@ end
 struct CyclingProtocol <: ParameterSet
 	all::Dict{String, Any}
 	source_path::Union{String, Nothing}
+	function CyclingProtocol(all::Dict{String, Any}; source_path::Union{String, Nothing} = nothing)
+		return new{}(all, source_path)
+	end
 end
 
 "Parameter set type that represents the model related settings"
 struct ModelSettings <: ParameterSet
 	all::Dict{String, Any}
 	source_path::Union{String, Nothing}
+	function ModelSettings(all::Dict{String, Any}; source_path::Union{String, Nothing} = nothing)
+		return new{}(all, source_path)
+	end
 end
 
 
@@ -215,6 +224,9 @@ end
 struct SimulationSettings <: ParameterSet
 	all::Dict{String, Any}
 	source_path::Union{String, Nothing}
+	function SimulationSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
+		return new{}(all, source_path)
+	end
 end
 
 "Parameter set type that includes all other parameter set types"

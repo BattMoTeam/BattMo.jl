@@ -161,12 +161,12 @@ function update_json_input(; file_path::String = nothing,
 end
 
 
-function setup_function_from_function_name(function_name::String, file_path::String)
+function setup_function_from_function_name(function_name::String; file_path::Union{String, Nothing} = nothing)
 	symb = Symbol(function_name)
 
 	if isdefined(BattMo, symb)
 		return getfield(BattMo, symb)
-	else
+	elseif !isnothing(file_path)
 		if isfile(file_path)
 			Base.include(Main, file_path)
 			if isdefined(Main, symb)
@@ -177,6 +177,8 @@ function setup_function_from_function_name(function_name::String, file_path::Str
 		else
 			error("Function '$function_name' not found and file '$file_path' does not exist.")
 		end
+	else
+		error("Function is not found within BattMo and no path file is provided.")
 	end
 end
 
