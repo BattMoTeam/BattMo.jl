@@ -301,8 +301,8 @@ function compute_discharge_capacity(states; cycle_number = nothing)
 		cycle_index = findall(x -> x == cycle_number, cycle_array)
 		I_cycle = I[cycle_index]
 		t_cycle = t[cycle_index]
-		@info length(cycle_array)
-		@info length(I)
+		# @info length(cycle_array)
+		# @info length(I)
 		discharge_index = findall(x -> x > 0, I_cycle)
 		I_discharge = I_cycle[discharge_index]
 		t_discharge = t_cycle[discharge_index]

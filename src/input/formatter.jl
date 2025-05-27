@@ -403,7 +403,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		battmo_input["initT"] = cycling_protocol["InitialKelvinTemperature"]
 
 	end
-	@info battmo_input["Control"]
+	# @info battmo_input["Control"]
 	return InputParams(battmo_input)
 
 end

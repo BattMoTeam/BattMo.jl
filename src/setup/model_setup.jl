@@ -216,7 +216,7 @@ function run_optimization(opt_setup, initial_results; hook = nothing, info_level
 	F0 = opt_setup.F!(x0)
 	dF0 = opt_setup.dF!(similar(x0), x0)
 
-	@info "Initial objective: $F0, gradient norm $(sum(abs, dF0))"
+	# @info "Initial objective: $F0, gradient norm $(sum(abs, dF0))"
 
 	## Perform optimization loop using LBFGSB package
 
@@ -316,7 +316,7 @@ function run_battery(inputparams::BattMoFormattedInput;
 			timesteps,
 			cfg)
 	end
-	@info timesteps
+	# @info timesteps
 	# Perform simulation
 	states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
 
@@ -1732,9 +1732,9 @@ function setup_config(sim::JutulSimulator,
 					end
 
 				elseif model[:Control].system.policy isa GenericPolicy
-					@info "stop", s.state.Control.Controller.stop_simulation
-					@info "stop", s.state.Control.Controller.current_step_number
-					@info "stop", length(m[:Control].system.policy.control_steps)
+					# @info "stop", s.state.Control.Controller.stop_simulation
+					# @info "stop", s.state.Control.Controller.current_step_number
+					# @info "stop", length(m[:Control].system.policy.control_steps)
 					if s.state.Control.Controller.current_step_number + 1 >= length(m[:Control].system.policy.control_steps) && s.state.Control.Controller.stop_simulation
 
 						# rsw = setupRegionSwitchFlags(s.state.Control.Controller.current_step, s.state, s.state.Control.Controller)
@@ -1750,7 +1750,7 @@ function setup_config(sim::JutulSimulator,
 						report[:stopnow] = false
 					end
 
-					@info "report = ", report[:stopnow]
+					# @info "report = ", report[:stopnow]
 
 				else
 					@warn "Neither numberOfCycles nor number_of_steps found in controller or policy"
