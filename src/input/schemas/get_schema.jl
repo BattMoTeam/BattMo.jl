@@ -419,6 +419,7 @@ function get_schema_cycling_protocol()
 						"VoltageChangeLimit",
 						"InitialKelvinTemperature",
 					],
+					"additionalProperties" => false,
 				),
 			),
 			Dict(
@@ -440,7 +441,7 @@ function get_schema_cycling_protocol()
 						"TotalTime",
 						"InitialKelvinTemperature",
 					],
-				),
+					"additionalProperties" => false,),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
@@ -453,6 +454,7 @@ function get_schema_cycling_protocol()
 						"LowerVoltageLimit",
 						"InitialKelvinTemperature",
 					],
+					"additionalProperties" => false,
 				),
 			),
 			Dict(
@@ -462,10 +464,13 @@ function get_schema_cycling_protocol()
 				"then" => Dict(
 					"required" => [
 						"InitialStateOfCharge",
+						"InitialControl",
+						"TotalNumberOfCycles",
 						"CRate",
 						"UpperVoltageLimit",
 						"InitialKelvinTemperature",
 					],
+					"additionalProperties" => false,
 				),
 			),
 			Dict(
@@ -480,6 +485,7 @@ function get_schema_cycling_protocol()
 						"LowerVoltageLimit",
 						"InitialKelvinTemperature",
 					],
+					"additionalProperties" => false,
 				),
 			),
 		],
