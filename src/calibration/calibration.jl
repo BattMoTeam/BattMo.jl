@@ -94,18 +94,19 @@ end
 function setup_calibration_objective(vc::VoltageCalibration)
     # Set up the objective function
     V_fun = get_1d_interpolator(vc.t, vc.v, cap_endpoints = true)
+    total_time = vc.t[end]
     function objective(model, state, dt, step_info, forces)
         t = step_info[:time] + dt
         V_obs = V_fun(t)
         V_sim = state[:Control][:Phi][1]
         # return (V_sim - 3.0)^2
-        return voltage_squared_error(V_obs, V_sim, dt, step_info)
+        return voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
     end
     return objective
 end
 
-function voltage_squared_error(V_obs, V_sim, dt, step_info)
-    return dt * (V_obs - V_sim)^2/ step_info[:total_time]
+function voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
+    return dt * (V_obs - V_sim)^2/total_time
 end
 
 function evaluate_calibration_objective(vc::VoltageCalibration, objective, case, states, dt)
@@ -147,23 +148,8 @@ function solve(vc::AbstractCalibration)
     end
 
     # @info "Set up calibration" x0 ub lb
-    function setup_battmo_case(X, step_info = nothing)
-        T = eltype(X)
-        Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, X, x_setup)
-        inputparams = convert_parameter_sets_to_battmo_input(
-            sim.model_setup.model_settings,
-            sim.cell_parameters,
-            sim.cycling_protocol,
-            sim.simulation_settings
-        )
-        model, parameters = setup_model(inputparams, T = T)
-        state0 = BattMo.setup_initial_state(inputparams, model)
-        forces = setup_forces(model)
-        timesteps = BattMo.setup_timesteps(inputparams)
 
-        return Jutul.JutulCase(model, timesteps, forces, parameters = parameters, state0 = state0, input_data = inputparams)
-    end
-
+    setup_battmo_case(X, step_info = missing) = setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
     simulator = cfg = missing
     function solve_and_differentiate(x)
         case = setup_battmo_case(x)
@@ -199,10 +185,11 @@ function solve(vc::AbstractCalibration)
         # Solve adjoints
         g = Jutul.AdjointsDI.solve_adjoint_generic(
             x, setup_battmo_case, states, dt, objective,
-            use_sparsity = true,
+            use_sparsity = false,
             single_step_sparsity = false,
-            do_prep = true
+            do_prep = false
         )
+        @info "Updated" f g
         if false
             # ϵ = 1e-10*only(x)
             ϵ = 1e-3
@@ -222,6 +209,23 @@ function solve(vc::AbstractCalibration)
             # g = [d_num]
         end
         return (f, g)
+    end
+
+    function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing)
+        T = eltype(X)
+        Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, X, x_setup)
+        inputparams = convert_parameter_sets_to_battmo_input(
+            sim.model_setup.model_settings,
+            sim.cell_parameters,
+            sim.cycling_protocol,
+            sim.simulation_settings
+        )
+        model, parameters = setup_model(inputparams, T = T)
+        state0 = BattMo.setup_initial_state(inputparams, model)
+        forces = setup_forces(model)
+        timesteps = BattMo.setup_timesteps(inputparams)
+
+        return Jutul.JutulCase(model, timesteps, forces, parameters = parameters, state0 = state0, input_data = inputparams)
     end
 
 
