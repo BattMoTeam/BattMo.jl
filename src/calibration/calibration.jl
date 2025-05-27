@@ -96,10 +96,10 @@ function setup_calibration_objective(vc::VoltageCalibration)
     V_fun = get_1d_interpolator(vc.t, vc.v, cap_endpoints = true)
     total_time = vc.t[end]
     function objective(model, state, dt, step_info, forces)
-        t = step_info[:time] + dt
+        # t = step_info[:time]
+        t = state[:Control][:Controller].time
         V_obs = V_fun(t)
         V_sim = state[:Control][:Phi][1]
-        # return (V_sim - 3.0)^2
         return voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
     end
     return objective
