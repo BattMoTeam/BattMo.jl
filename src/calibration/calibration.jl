@@ -169,7 +169,7 @@ function solve(vc::AbstractCalibration)
     return (cell_prm_out, history)
 end
 
-function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective)
+function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective; gradient = true)
     case = setup_battmo_case(x)
     states, dt = simulate_battmo_case_for_calibration(case)
     # Evaluate the objective function
@@ -177,12 +177,16 @@ function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objec
     # @info "Objective function value" f x x_setup.names
     # error()
     # Solve adjoints
-    g = Jutul.AdjointsDI.solve_adjoint_generic(
-        x, setup_battmo_case, states, dt, objective,
-        use_sparsity = false,
-        single_step_sparsity = false,
-        do_prep = false
-    )
+    if gradient
+        g = Jutul.AdjointsDI.solve_adjoint_generic(
+            x, setup_battmo_case, states, dt, objective,
+            use_sparsity = false,
+            single_step_sparsity = false,
+            do_prep = false
+        )
+    else
+        g = missing
+    end
     # @info "Updated" f g
     if false
         # ϵ = 1e-10*only(x)
