@@ -77,8 +77,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		if haskey(ne_ocp_value, "FunctionName")
 			ne_ocp = Dict(
 				"type" => "function",
-				"functionName" => ne_ocp_value["FunctionName"],
-				"functionPath" => joinpath(dirname(cell_parameters.source_path), ne_ocp_value["FilePath"]),
+				"functionname" => ne_ocp_value["FunctionName"],
+				"functionpath" => isnothing(get_key_value(ne_ocp_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(ne_ocp_value, "FilePath")),
 			)
 		else
 			ne_ocp = Dict(
@@ -102,10 +102,10 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 	pe_ocp_value = get_key_value(pe_am, "OpenCircuitPotential")
 	if isa(pe_ocp_value, AbstractDict)
 		if haskey(pe_ocp_value, "FunctionName")
-			ne_ocp = Dict(
+			pe_ocp = Dict(
 				"type" => "function",
-				"functionName" => pe_ocp_value["FunctionName"],
-				"functionPath" => joinpath(dirname(cell_parameters.source_path), pe_ocp_value["FilePath"]),
+				"functionname" => pe_ocp_value["FunctionName"],
+				"functionpath" => isnothing(get_key_value(pe_ocp_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(pe_ocp_value, "FilePath")),
 			)
 		else
 			pe_ocp = Dict(
@@ -131,8 +131,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		if haskey(diff_value, "FunctionName")
 			diff = Dict(
 				"type" => "function",
-				"functionName" => diff_value["FunctionName"],
-				"functionPath" => joinpath(dirname(cell_parameters.source_path), diff_value["FilePath"]),
+				"functionname" => diff_value["FunctionName"],
+				"functionpath" => isnothing(get_key_value(diff_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(diff_value, "FilePath")),
 			)
 		else
 			diff = Dict(
@@ -158,8 +158,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		if haskey(cond_value, "FunctionName")
 			cond = Dict(
 				"type" => "function",
-				"functionName" => cond_value["FunctionName"],
-				"functionPath" => joinpath(dirname(cell_parameters.source_path), cond_value["FilePath"]),
+				"functionname" => cond_value["FunctionName"],
+				"functionpath" => isnothing(get_key_value(cond_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(cond_value, "FilePath")),
 			)
 		else
 			cond = Dict(
@@ -218,7 +218,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		"Control" => Dict(
 			"controlPolicy" => control,
 			"functionName" => get_key_value(cycling_protocol, "FunctionName"),
-			"filePath" => joinpath(dirname(cycling_protocol.source_path), get_key_value(cycling_protocol, "FilePath")),
+			"filePath" => isnothing(get_key_value(cycling_protocol, "FilePath")) ? nothing : joinpath(dirname(cycling_protocol.source_path), get_key_value(cycling_protocol, "FilePath")),
 			"useCVswitch" => use_cv_switch,
 			"numberOfCycles" => get_key_value(cycling_protocol, "TotalNumberOfCycles"),
 			"rampupTime" => get_key_value(simulation_settings, "RampUpTime"),

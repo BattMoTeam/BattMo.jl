@@ -10,14 +10,15 @@ using BattMo
 		simulation_settings["TimeStepDuration"] = 1
 
 
-		cycling_protocol = load_cycling_protocol(; from_file_path = "../src/input/defaults/cycling_protocols/user_defined_current_function.json")
+		cycling_protocol = load_cycling_protocol(; from_default_set = "user_defined_current_function")
 
 		cycling_protocol["TotalTime"] = 1800
-		cycling_protocol["FilePath"] = "../examples/example_functions/wltp_current_function.jl"
 
-		sim_current = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
+		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 
-		output2 = solve(sim_current)
+		output = solve(sim)
+
+		true
 	end
 
 end

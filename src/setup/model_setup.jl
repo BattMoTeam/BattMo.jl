@@ -499,7 +499,8 @@ function setup_submodels(inputparams::InputParams;
 		elseif haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionname")
 
 			funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
-			fcn = setup_function_from_function_name(funcname)
+			funcpath = inputparams_am["Interface"]["openCircuitPotential"]["functionpath"]
+			fcn = setup_function_from_function_name(funcname, funcpath)
 			am_params[:ocp_func] = fcn
 
 		else
@@ -607,7 +608,8 @@ function setup_submodels(inputparams::InputParams;
 	elseif haskey(inputparams_elyte["diffusionCoefficient"], "functionname")
 
 		funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
-		fcn = setup_function_from_function_name(funcname)
+		funcpath = inputparams_elyte["diffusionCoefficient"]["functionpath"]
+		fcn = setup_function_from_function_name(funcname, funcpath)
 		params[:diffusivity_func] = fcn
 
 	else
@@ -629,7 +631,8 @@ function setup_submodels(inputparams::InputParams;
 	elseif haskey(inputparams_elyte["ionicConductivity"], "functionname")
 
 		funcname = inputparams_elyte["ionicConductivity"]["functionname"]
-		fcn = setup_function_from_function_name(funcname)
+		funcpath = inputparams_elyte["ionicConductivity"]["functionpath"]
+		fcn = setup_function_from_function_name(funcname, funcpath)
 		params[:conductivity_func] = fcn
 
 	else

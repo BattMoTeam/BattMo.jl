@@ -162,24 +162,15 @@ end
 
 
 function setup_function_from_function_name(function_name::String, file_path::String)
-	"""
-	Function to create a julia function given by the name of the function. In the case of user-defined functions, the file where the function is defined must have the same name as the function.
-	"""
-
 	symb = Symbol(function_name)
 
 	if isdefined(BattMo, symb)
-		# Function in BattMo
 		return getfield(BattMo, symb)
-	elseif isdefined(Main, symb)
-		return getfield(Main, symb)
 	else
-		# User defined function
 		if isfile(file_path)
 			Base.include(Main, file_path)
 			if isdefined(Main, symb)
-				f = getfield(Main, symb)
-				return (args...) -> Base.invokelatest(f, args...)
+				return (args...) -> Base.invokelatest(getfield(Main, symb), args...)
 			else
 				error("Function '$function_name' not defined in file '$file_path'.")
 			end
@@ -187,7 +178,6 @@ function setup_function_from_function_name(function_name::String, file_path::Str
 			error("Function '$function_name' not found and file '$file_path' does not exist.")
 		end
 	end
-
 end
 
 
