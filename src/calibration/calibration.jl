@@ -45,25 +45,37 @@ function freeze_calibration_parameter!(vc::AbstractCalibration, parameter_name::
 end
 
 function print_calibration_overview(vc::AbstractCalibration)
-    header = ["Parameter name", "Initial Value", "Lower Bound", "Upper Bound", "Optimized value", "Change"]
+        function print_table(subkeys, t)
+        header = ["Parameter name", "Initial Value", "Lower Bound", "Upper Bound", "Optimized value", "Change"]
+        tab = Matrix{Any}(undef, length(subkeys), 6)
+        # widths = zeros(Int, size(tab, 2))
+        # widths[1] = 40
+        for (i, k) in enumerate(subkeys)
+            v0 = pt[k].v0
+            v = value(get_nested_json_value(vc.sim.cell_parameters, k))
+            perc = round(100*(v-v0)/max(v0, 1e-20), digits = 2)
+            tab[i, 1] = join(k[2:end], ".")
+            tab[i, 2] = v0
+            tab[i, 3] = pt[k].vmin
+            tab[i, 4] = pt[k].vmax
+            tab[i, 5] = v
+            tab[i, 6] = "$perc%"
+        end
+        # TODO: Do this properly instead of via Jutul's import...
+        Jutul.PrettyTables.pretty_table(tab, header=header, title = t)#,autowrap=true,columns_width=widths)
+    end
+
     pt = vc.parameter_targets
     pkeys = keys(pt)
-    tab = Matrix{Any}(undef, length(pkeys), 6)
-    # widths = zeros(Int, size(tab, 2))
-    # widths[1] = 40
-    for (i, k) in enumerate(pkeys)
-        v0 = pt[k].v0
-        v = value(get_nested_json_value(vc.sim.cell_parameters, k))
-        perc = round(100*(v-v0)/max(v0, 1e-20), digits = 2)
-        tab[i, 1] = join(k, ".")
-        tab[i, 2] = v0
-        tab[i, 3] = pt[k].vmin
-        tab[i, 4] = pt[k].vmax
-        tab[i, 5] = v
-        tab[i, 6] = "$perc%"
+    outer_keys = String[]
+    for k in pkeys
+        push!(outer_keys, first(k))
     end
-    # TODO: Do this properly instead of via Jutul's import...
-    Jutul.PrettyTables.pretty_table(tab, header=header)#,autowrap=true,columns_width=widths)
+    outer_keys = unique!(outer_keys)
+    for outer_key in outer_keys
+        subkeys = filter(x -> x[1] == outer_key, pkeys)
+        print_table(subkeys, "$outer_key: Active calibration parameters")
+    end
 end
 
 function set_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String}, value)
