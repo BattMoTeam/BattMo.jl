@@ -130,8 +130,7 @@ function setup_initial_control_policy!(policy::GenericPolicy, inputparams::Input
 		error("Voltage control cannot be the first control step")
 	elseif isa(control, CurrentStep)
 		if ismissing(policy.current_function)
-			tup = 100# Float64(inputparams["Control"]["rampupTime"])
-
+			tup = Float64(inputparams["Control"]["rampupTime"])
 			cFun(time) = currentFun(time, Imax, tup)
 
 			policy.current_function = cFun
@@ -229,7 +228,7 @@ The setupRegionSwitchFlags function detects from the current state and control, 
 - afterSwitchRegion : the state is after the switch region for the current control
 """
 function setupRegionSwitchFlags(policy::P, state, controller::GenericController) where P <: AbstractControlStep
-   
+
 	step = policy
 	termination = step.termination
 
@@ -244,10 +243,8 @@ function setupRegionSwitchFlags(policy::P, state, controller::GenericController)
 	before = false
 	after = false
 
-	# @info "phi = ", E
-
 	if termination.quantity == "voltage"
-        
+
 		target = termination.value
 		tol = 1e-4
 
@@ -284,11 +281,8 @@ function setupRegionSwitchFlags(policy::P, state, controller::GenericController)
 		error("Unsupported termination quantity: $(termination.quantity)")
 	end
 
-	# @info "t = ", controller.time
-	# @info "termination target = ", target
-	# @info "after = ", after
 	return (beforeSwitchRegion = before, afterSwitchRegion = after)
-    
+
 end
 
 
@@ -337,7 +331,6 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 	controller.dIdt = (I - I0) / dt
 	controller.dEdt = (E - E0) / dt
 
-	# @info "controller time = ", controller.time
 	# Get control step info
 	step_idx_0 = state0.Controller.current_step_number + 1
 	control_steps = policy.control_steps
@@ -358,7 +351,7 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 		next_step_idx   = step_idx_0
 		ctrlType        = ctrlType0
 		stop_simulation = false
-        
+
 	else
 
 		currentCtrlType = state.Controller.current_step # current control in the the Newton iteration
@@ -374,7 +367,7 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 				# We switch to a new control because we are no longer in the acceptable region for the current
 				# control
 				if step_idx_0 == length(policy.control_steps)
-                    
+
 					ctrlType        = currentCtrlType
 					stop_simulation = true
 
@@ -383,11 +376,9 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 					stop_simulation = false
 					if ctrlType.termination.quantity == "time"
 						if policy.control_steps[step_idx_0+1].termination.value < controller.time
-							# @info "term_time = ", policy.control_steps[step_idx_0+1].termination.value
 							termination_value = controller.time + policy.control_steps[step_idx_0+1].termination.value
 							policy.control_steps[step_idx_0+1].termination.value = termination_value
 
-							# @info "term_time2 = ", policy.control_steps[step_idx_0+1].termination.value
 						end
 					end
 
@@ -403,13 +394,13 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 				next_step_idx = step_idx_0 + 1
 
 			else
-                
+
 				next_step_idx = step_idx_0
 				ctrlType = ctrlType0
 				stop_simulation = false
 
 			end
-            
+
 		elseif controller.current_step_number + 1 == step_idx_0 + 1
 			# Avoid switching back if we already moved forward in this Newton iteration
 
@@ -437,7 +428,7 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 			error("Unexpected control state transition at step $step_idx_0")
 		end
 	end
-	# @info "stop_sim = ", stop_simulation
+
 	# Update controller with the selected step index
 	controller.current_step_number = min(next_step_idx - 1, length(control_steps))  # Stay within bounds
 	controller.current_step = ctrlType
