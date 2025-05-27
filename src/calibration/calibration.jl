@@ -150,34 +150,9 @@ function solve(vc::AbstractCalibration)
     # @info "Set up calibration" x0 ub lb
 
     setup_battmo_case(X, step_info = missing) = setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
-    simulator = cfg = missing
     function solve_and_differentiate(x)
         case = setup_battmo_case(x)
-        if ismissing(simulator) || true
-            simulator = Simulator(case)
-            cfg = setup_config(simulator,
-                case.model,
-                case.parameters,
-                :direct,
-                false,
-                true,
-                info_level = -1
-            )
-        end
-        result = Jutul.simulate!(simulator,
-            case.dt,
-            state0 = case.state0,
-            parameters = case.parameters,
-            forces = case.forces,
-            config = cfg,
-        )
-        # last_solves = result.reports[end][:ministeps][end]
-        # if !result.reports[end][:ministeps][end][:success]
-            # TODO: handle case where the solver fails.
-        #    g = fill(1e20, length(x))
-        #    return (1e20, g)
-        #end
-        states, dt, = Jutul.expand_to_ministeps(result)
+        states, dt = simulate_battmo_case_for_calibration(case)
         # Evaluate the objective function
         f = evaluate_calibration_objective(vc, objective, case, states, dt)
         # @info "Objective function value" f x x_setup.names
@@ -189,19 +164,12 @@ function solve(vc::AbstractCalibration)
             single_step_sparsity = false,
             do_prep = false
         )
-        @info "Updated" f g
+        # @info "Updated" f g
         if false
             # ϵ = 1e-10*only(x)
             ϵ = 1e-3
             case_delta = setup_battmo_case(x .+ ϵ)
-            result_delta = Jutul.simulate!(simulator,
-                case_delta.dt,
-                state0 = case_delta.state0,
-                parameters = case_delta.parameters,
-                forces = case_delta.forces,
-                config = cfg
-            )
-            states2, dt2, = Jutul.expand_to_ministeps(result_delta)
+            states2, dt2, = simulate_battmo_case_for_calibration(case_delta)
             f_delta = Jutul.evaluate_objective(objective, case_delta.model, states2, dt2, case_delta.forces)
             d_num = (f_delta - f)/ϵ
             @info "Numerical gradient" d_num only(g) length(dt)
@@ -210,24 +178,6 @@ function solve(vc::AbstractCalibration)
         end
         return (f, g)
     end
-
-    function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing)
-        T = eltype(X)
-        Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, X, x_setup)
-        inputparams = convert_parameter_sets_to_battmo_input(
-            sim.model_setup.model_settings,
-            sim.cell_parameters,
-            sim.cycling_protocol,
-            sim.simulation_settings
-        )
-        model, parameters = setup_model(inputparams, T = T)
-        state0 = BattMo.setup_initial_state(inputparams, model)
-        forces = setup_forces(model)
-        timesteps = BattMo.setup_timesteps(inputparams)
-
-        return Jutul.JutulCase(model, timesteps, forces, parameters = parameters, state0 = state0, input_data = inputparams)
-    end
-
 
     if true
         v, x, history = Jutul.LBFGS.box_bfgs(x0, solve_and_differentiate, lb, ub; maximize = false, print = 1)
@@ -254,4 +204,56 @@ function solve(vc::AbstractCalibration)
     Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, x, x_setup)
     cell_prm_out = deepcopy(sim.cell_parameters)
     return (cell_prm_out, history)
+end
+
+function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing)
+    T = eltype(X)
+    Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, X, x_setup)
+    inputparams = convert_parameter_sets_to_battmo_input(
+        sim.model_setup.model_settings,
+        sim.cell_parameters,
+        sim.cycling_protocol,
+        sim.simulation_settings
+    )
+    model, parameters = setup_model(inputparams, T = T)
+    state0 = BattMo.setup_initial_state(inputparams, model)
+    forces = setup_forces(model)
+    timesteps = BattMo.setup_timesteps(inputparams)
+
+    return Jutul.JutulCase(model, timesteps, forces, parameters = parameters, state0 = state0, input_data = inputparams)
+end
+
+function simulate_battmo_case_for_calibration(case;
+        simulator = missing,
+        config = missing
+    )
+    if ismissing(simulator)
+        simulator = Simulator(case)
+    end
+    if ismissing(config)
+        config = setup_config(simulator,
+            case.model,
+            case.parameters,
+            :direct,
+            false,
+            true,
+            info_level = -1
+        )
+    end
+    
+    result = Jutul.simulate!(simulator,
+        case.dt,
+        state0 = case.state0,
+        parameters = case.parameters,
+        forces = case.forces,
+        config = config,
+    )
+    # last_solves = result.reports[end][:ministeps][end]
+    # if !result.reports[end][:ministeps][end][:success]
+        # TODO: handle case where the solver fails.
+    #    g = fill(1e20, length(x))
+    #    return (1e20, g)
+    #end
+    states, dt, = Jutul.expand_to_ministeps(result)
+    return (states, dt)
 end
