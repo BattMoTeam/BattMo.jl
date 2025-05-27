@@ -1742,6 +1742,7 @@ function setup_config(sim::JutulSimulator,
 						# @info "stop3", rsw.beforeSwitchRegion
 
 						# if rsw.afterSwitchRegion || rsw.beforeSwitchRegion == false
+                        done = true
 						report[:stopnow] = true
 						# else
 						# 	report[:stopnow] = false
