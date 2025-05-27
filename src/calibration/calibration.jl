@@ -14,6 +14,15 @@ struct VoltageCalibration <:AbstractCalibration
     end
 end
 
+function VoltageCalibration(t_and_v, sim; normalize_time = false)
+    t = t_and_v[:, 1]
+    v = t_and_v[:, 2]
+    if normalize_time
+        t = t .- minimum(t)  # Normalize time to start at zero
+    end
+    return VoltageCalibration(t, v, sim)
+end
+
 function free_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String};
             initial_value = missing,
             lower_bound = missing,
@@ -188,7 +197,12 @@ function solve(vc::AbstractCalibration)
         # @info "Objective function value" f x x_setup.names
         # error()
         # Solve adjoints
-        g = Jutul.AdjointsDI.solve_adjoint_generic(x, setup_battmo_case, states, dt, objective)
+        g = Jutul.AdjointsDI.solve_adjoint_generic(
+            x, setup_battmo_case, states, dt, objective,
+            use_sparsity = true,
+            single_step_sparsity = false,
+            do_prep = true
+        )
         if false
             # ϵ = 1e-10*only(x)
             ϵ = 1e-3
