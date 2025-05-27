@@ -72,15 +72,19 @@ end
 
 function setup_calibration_objective(vc::VoltageCalibration)
     # Set up the objective function
-    V_fun = get_1d_interpolator(vc.t, vc.v, cap_endpoints = false)
+    V_fun = get_1d_interpolator(vc.t, vc.v, cap_endpoints = true)
     function objective(model, state, dt, step_info, forces)
         t = step_info[:time] + dt
         V_obs = V_fun(t)
         V_sim = state[:Control][:Phi][1]
         # return (V_sim - 3.0)^2
-        return dt * (V_obs - V_sim)^2 / step_info[:total_time]
+        return voltage_squared_error(V_obs, V_sim, dt, step_info)
     end
     return objective
+end
+
+function voltage_squared_error(V_obs, V_sim, dt, step_info)
+    return dt * (V_obs - V_sim)^2/ step_info[:total_time]
 end
 
 function evaluate_calibration_objective(vc::VoltageCalibration, objective, case, states, dt)
@@ -89,7 +93,8 @@ function evaluate_calibration_objective(vc::VoltageCalibration, objective, case,
     # total_time = sum(dt)
     # time_delta = max(vc.t[end] - total_time, 0)
     # V_end = states[end][:Control][:Phi][1]
-    # f += time_delta*(vc.v[end] - V_end)^2
+    # # time_delta*(vc.v[end] - V_end)^2
+    # f += voltage_squared_error(vc., )
     return f
 end
 
@@ -174,7 +179,7 @@ function solve(vc::AbstractCalibration)
         g = Jutul.AdjointsDI.solve_adjoint_generic(x, setup_battmo_case, states, dt, objective)
         if false
             # ϵ = 1e-10*only(x)
-            ϵ = 1e-12
+            ϵ = 1e-3
             case_delta = setup_battmo_case(x .+ ϵ)
             result_delta = Jutul.simulate!(simulator,
                 case_delta.dt,
