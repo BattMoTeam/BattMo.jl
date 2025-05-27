@@ -121,26 +121,17 @@ function evaluate_calibration_objective(vc::VoltageCalibration, objective, case,
 end
 
 function solve(vc::AbstractCalibration)
-    pt = vc.parameter_targets
-    pkeys = collect(keys(pt))
-    if length(pkeys) == 0
-        throw(ArgumentError("No free parameters set, unable to calibrate."))
-    end
+    x0, x_setup = vectorize_cell_parameters_for_calibration(vc)
     sim = vc.sim
     # Set up the objective function
     objective = setup_calibration_objective(vc)
 
-    # Set up the functions to serialize
-    x0, x_setup = Jutul.AdjointsDI.vectorize_nested(sim.cell_parameters.all,
-        active = pkeys,
-        active_type = Real
-    )
 
     ub = similar(x0)
     lb = similar(x0)
     offsets = x_setup.offsets
     for (i, k) in enumerate(x_setup.names)
-        (; vmin, vmax) = pt[k]
+        (; vmin, vmax) = vc.parameter_targets[k]
         for j in offsets[i]:(offsets[i+1]-1)
             lb[j] = vmin
             ub[j] = vmax
@@ -204,6 +195,21 @@ function solve(vc::AbstractCalibration)
     Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, x, x_setup)
     cell_prm_out = deepcopy(sim.cell_parameters)
     return (cell_prm_out, history)
+end
+
+function vectorize_cell_parameters_for_calibration(vc)
+    pt = vc.parameter_targets
+    pkeys = collect(keys(pt))
+    if length(pkeys) == 0
+        throw(ArgumentError("No free parameters set, unable to calibrate."))
+    end
+    sim = vc.sim
+    # Set up the functions to serialize
+    x0, x_setup = Jutul.AdjointsDI.vectorize_nested(sim.cell_parameters.all,
+        active = pkeys,
+        active_type = Real
+    )
+    return (x0, x_setup)
 end
 
 function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing)
