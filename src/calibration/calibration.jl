@@ -218,7 +218,7 @@ function vectorize_cell_parameters_for_calibration(vc)
     return (x0, x_setup)
 end
 
-function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing)
+function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing; stepix = missing)
     T = eltype(X)
     Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, X, x_setup)
     inputparams = convert_parameter_sets_to_battmo_input(
@@ -231,6 +231,9 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing)
     state0 = BattMo.setup_initial_state(inputparams, model)
     forces = setup_forces(model)
     timesteps = BattMo.setup_timesteps(inputparams)
+    if !ismissing(stepix)
+        timesteps = timesteps[stepix]
+    end
 
     return Jutul.JutulCase(model, timesteps, forces, parameters = parameters, state0 = state0, input_data = inputparams)
 end
