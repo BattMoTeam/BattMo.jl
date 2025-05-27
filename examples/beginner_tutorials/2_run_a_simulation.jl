@@ -19,6 +19,7 @@ using BattMo, GLMakie
 
 cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+
 nothing # hide
 
 # Next, we select the Lithium-Ion Battery Model with default model settings. A model can be thought as a mathematical implementation of the electrochemical and 

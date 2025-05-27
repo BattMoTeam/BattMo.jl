@@ -678,8 +678,12 @@ function setup_submodels(inputparams::InputParams;
 	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge" || controlPolicy == "CCCycling"
 		ctrl = jsondict["Control"]
 		if jsondict["Control"]["useCVswitch"]
+			if controlPolicy == "CCDischarge"
 
-			policy = SimpleCVPolicy()
+				policy = SimpleCVPolicy()
+			else
+				error("UseCVSwitch is not handled for $controlPolicy control.")
+			end
 		else
 			if haskey(ctrl, "initialControl")
 				initial_control = ctrl["initialControl"]

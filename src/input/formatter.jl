@@ -169,7 +169,12 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 	###################
 
 	if cycling_protocol["Protocol"] == "CC"
-		use_cv_switch = false
+		if haskey(cycling_protocol, "UseCVSwitch")
+			use_cv_switch = cycling_protocol["UseCVSwitch"]
+		else
+			use_cv_switch = false
+
+		end
 		if cycling_protocol["TotalNumberOfCycles"] == 0
 			if cycling_protocol["InitialControl"] == "discharging"
 				control = "CCDischarge"
