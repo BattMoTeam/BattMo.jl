@@ -223,7 +223,29 @@ function solve(vc::AbstractCalibration)
         end
         return (f, g)
     end
-    v, x, history = Jutul.LBFGS.box_bfgs(x0, solve_and_differentiate, lb, ub; maximize = false, print = 1)
+
+
+    if true
+        v, x, history = Jutul.LBFGS.box_bfgs(x0, solve_and_differentiate, lb, ub; maximize = false, print = 1)
+    else
+        self_cache = Dict()
+        function f!(x)
+            f, g = solve_and_differentiate(x)
+            self_cache[:f] = f
+            self_cache[:g] = g
+            self_cache[:x] = x
+            return f
+        end
+
+        function g!(z, x)
+            if self_cache[:x] !== x
+                f!(x)  # Update the cache if the vector has changed
+            end
+            g = self_cache[:g]
+            return z .= g
+        end
+        history, x = Main.lbfgsb(f!, g!, x0, lb = lb, ub = ub, iprint = 1, maxfun = 200, maxiter = 100)
+    end
     # Also remove AD from the internal ones and update them
     Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, x, x_setup)
     cell_prm_out = deepcopy(sim.cell_parameters)
