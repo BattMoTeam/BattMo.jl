@@ -723,8 +723,9 @@ function setup_submodels(inputparams::InputParams;
 
 		ctrl = jsondict["Control"]
 		function_name = ctrl["functionName"]
+		file_path = ctrl["filePath"]
 
-		policy = FunctionPolicy(function_name)
+		policy = FunctionPolicy(function_name, file_path)
 
 	else
 

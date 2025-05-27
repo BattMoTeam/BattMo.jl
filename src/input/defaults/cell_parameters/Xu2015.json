@@ -33,8 +33,8 @@
             "ActivationEnergyOfReaction": 4000,
             "ActivationEnergyOfDiffusion": 20000,
             "OpenCircuitPotential": {
-                "type": "function",
-                "functionname": "computeOCP_LFP_Xu2015"
+                "FunctionName": "open_circuit_potential_lfp_Xu_2015",
+                "FilePath": "function_parameters_Xu2015.jl"
             },
             "MaximumConcentration": 26390,
             "VolumetricSurfaceArea": 1878261,
@@ -87,8 +87,8 @@
             "ActivationEnergyOfReaction": 4000,
             "ActivationEnergyOfDiffusion": 4000,
             "OpenCircuitPotential": {
-                "type": "function",
-                "functionname": "computeOCP_Graphite_Xu2015"
+                "FunctionName": "open_circuit_potential_graphite_Xu_2015",
+                "FilePath": "function_parameters_Xu2015.jl"
             },
             "MaximumConcentration": 31540,
             "VolumetricSurfaceArea": 142373,
