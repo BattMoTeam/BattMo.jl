@@ -481,8 +481,6 @@ function setup_submodels(inputparams::InputParams;
 		am_params[:theta0]                  = inputparams_am["Interface"]["guestStoichiometry0"]
 		am_params[:theta100]                = inputparams_am["Interface"]["guestStoichiometry100"]
 
-		@info "???" am_params[:theta100]
-
 		k0  = inputparams_am["Interface"]["reactionRateConstant"]
 		Eak = inputparams_am["Interface"]["activationEnergyOfReaction"]
 
