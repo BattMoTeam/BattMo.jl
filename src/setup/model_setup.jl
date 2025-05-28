@@ -481,6 +481,8 @@ function setup_submodels(inputparams::InputParams;
 		am_params[:theta0]                  = inputparams_am["Interface"]["guestStoichiometry0"]
 		am_params[:theta100]                = inputparams_am["Interface"]["guestStoichiometry100"]
 
+		@info "???" am_params[:theta100]
+
 		k0  = inputparams_am["Interface"]["reactionRateConstant"]
 		Eak = inputparams_am["Interface"]["activationEnergyOfReaction"]
 
@@ -1078,12 +1080,12 @@ function setup_initial_state(inputparams::InputParams,
 		SOC       = SOC_init
 		nc        = count_entities(model[name].data_domain, Cells())
 		init      = Dict()
-		init[:Cs] = c * ones(nc)
-		init[:Cp] = c * ones(N, nc)
+		init[:Cs] = fill(c, nc)
+		init[:Cp] = fill(c, N, nc)
 
 		if model[name] isa SEImodel
-			init[:normalizedSEIlength] = 1.0 * ones(nc)
-			init[:normalizedSEIvoltageDrop] = 0.0 * ones(nc)
+			init[:normalizedSEIlength] = ones(nc)
+			init[:normalizedSEIvoltageDrop] = zeros(nc)
 		end
 
 		if haskey(model[name].system.params, :ocp_funcexp)
@@ -1103,7 +1105,7 @@ function setup_initial_state(inputparams::InputParams,
 	function setup_current_collector(name, phi, model)
 		nc = count_entities(model[name].data_domain, Cells())
 		init = Dict()
-		init[:Phi] = phi * ones(nc)
+		init[:Phi] = fill(phi, nc)
 		return init
 	end
 
@@ -1112,7 +1114,7 @@ function setup_initial_state(inputparams::InputParams,
 	# Setup initial state in negative active material
 
 	init, nc, negOCP = setup_init_am(:NeAm, model)
-	init[:Phi] = zeros(nc)
+	init[:Phi] = zeros(typeof(negOCP), nc)
 	initState[:NeAm] = init
 
 	# Setup initial state in electrolyte
@@ -1121,14 +1123,14 @@ function setup_initial_state(inputparams::InputParams,
 
 	init       = Dict()
 	init[:C]   = inputparams["Electrolyte"]["initialConcentration"] * ones(nc)
-	init[:Phi] = -negOCP * ones(nc)
+	init[:Phi] = fill(-negOCP, nc)
 
 	initState[:Elyte] = init
 
 	# Setup initial state in positive active material
 
 	init, nc, posOCP = setup_init_am(:PeAm, model)
-	init[:Phi] = (posOCP - negOCP) * ones(nc)
+	init[:Phi] = fill(posOCP - negOCP, nc)
 
 	initState[:PeAm] = init
 
