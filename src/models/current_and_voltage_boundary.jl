@@ -772,27 +772,12 @@ end
 """
 In addition to update the values in all primary variables, we need also to update the values in the controller. We do that by specializing the method perform_step_solve_impl!
 """
-function Jutul.perform_step_solve_impl!(report, storage, model::MultiModel{:Battery, T}, config, dt, iteration, rec, relaxation, executor) where {T}
-
-	invoke(perform_step_solve_impl!,
-		Tuple{typeof(report),
-			typeof(storage),
-			MultiModel,
-			typeof(config),
-			typeof(dt),
-			typeof(iteration),
-			typeof(rec),
-			typeof(relaxation),
-			typeof(executor)},
-		report, storage, model, config, dt, iteration, rec, relaxation, executor)
-
-	state  = storage.state[:Control]
-	state0 = storage.state0[:Control]
-
-	policy = model[:Control].system.policy
-
+function Jutul.update_extra_state_fields!(storage, model::SimulationModel{CurrentAndVoltageDomain, <:CurrentAndVoltageSystem}, dt, time)
+	state  = storage.state
+	state0 = storage.state0
+	policy = model.system.policy
 	update_controller!(state, state0, policy, dt)
-
+	return storage
 end
 
 """
