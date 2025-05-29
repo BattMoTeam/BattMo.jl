@@ -24,16 +24,19 @@ function print_default_parameter_sets_info()
 
 			for file in files
 				if isfile(file)
-					file_name = splitext(basename(file))[1]
-					description = read_description_from_meta_data(file)
-					source = read_source_from_meta_data(file)
+					ext = splitext(file)[2]
+					if ext == ".json"
+						file_name = splitext(basename(file))[1]
+						description = read_description_from_meta_data(file)
+						source = read_source_from_meta_data(file)
 
-					if isnothing(source)
-						link = rpad("-", 10)
-					else
-						link = source == "-" ? "-" : padded_link("visit", source, 10)
+						if isnothing(source)
+							link = rpad("-", 10)
+						else
+							link = source == "-" ? "-" : padded_link("visit", source, 10)
+						end
+						println(rpad(file_name, 20), link, description)
 					end
-					println(rpad(file_name, 20), link, description)
 				end
 			end
 

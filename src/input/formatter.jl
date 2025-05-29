@@ -74,8 +74,12 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	ne_ocp_value = get_key_value(ne_am, "OpenCircuitPotential")
 	if isa(ne_ocp_value, AbstractDict)
-		if haskey(ne_ocp_value, "functionname")
-			ne_ocp = ne_ocp_value
+		if haskey(ne_ocp_value, "FunctionName")
+			ne_ocp = Dict(
+				"type" => "function",
+				"functionname" => ne_ocp_value["FunctionName"],
+				"functionpath" => isnothing(get_key_value(ne_ocp_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(ne_ocp_value, "FilePath")),
+			)
 		else
 			ne_ocp = Dict(
 				"type" => "function",
@@ -97,8 +101,12 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	pe_ocp_value = get_key_value(pe_am, "OpenCircuitPotential")
 	if isa(pe_ocp_value, AbstractDict)
-		if haskey(pe_ocp_value, "functionname")
-			pe_ocp = pe_ocp_value
+		if haskey(pe_ocp_value, "FunctionName")
+			pe_ocp = Dict(
+				"type" => "function",
+				"functionname" => pe_ocp_value["FunctionName"],
+				"functionpath" => isnothing(get_key_value(pe_ocp_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(pe_ocp_value, "FilePath")),
+			)
 		else
 			pe_ocp = Dict(
 				"type" => "function",
@@ -120,8 +128,12 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	diff_value = get_key_value(elyte, "DiffusionCoefficient")
 	if isa(diff_value, AbstractDict)
-		if haskey(diff_value, "functionname")
-			diff = diff_value
+		if haskey(diff_value, "FunctionName")
+			diff = Dict(
+				"type" => "function",
+				"functionname" => diff_value["FunctionName"],
+				"functionpath" => isnothing(get_key_value(diff_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(diff_value, "FilePath")),
+			)
 		else
 			diff = Dict(
 				"type" => "function",
@@ -143,8 +155,12 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	cond_value = get_key_value(elyte, "IonicConductivity")
 	if isa(cond_value, AbstractDict)
-		if haskey(cond_value, "functionname")
-			cond = cond_value
+		if haskey(cond_value, "FunctionName")
+			cond = Dict(
+				"type" => "function",
+				"functionname" => cond_value["FunctionName"],
+				"functionpath" => isnothing(get_key_value(cond_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(cond_value, "FilePath")),
+			)
 		else
 			cond = Dict(
 				"type" => "function",
@@ -207,6 +223,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		"Control" => Dict(
 			"controlPolicy" => control,
 			"functionName" => get_key_value(cycling_protocol, "FunctionName"),
+			"filePath" => isnothing(get_key_value(cycling_protocol, "FilePath")) ? nothing : joinpath(dirname(cycling_protocol.source_path), get_key_value(cycling_protocol, "FilePath")),
 			"useCVswitch" => use_cv_switch,
 			"numberOfCycles" => get_key_value(cycling_protocol, "TotalNumberOfCycles"),
 			"rampupTime" => get_key_value(simulation_settings, "RampUpTime"),

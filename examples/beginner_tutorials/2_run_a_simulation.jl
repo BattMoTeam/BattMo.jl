@@ -17,7 +17,7 @@ using BattMo, GLMakie
 # We also read an example cycling protocol for a simple Constant Current Discharge.
 
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
 nothing # hide

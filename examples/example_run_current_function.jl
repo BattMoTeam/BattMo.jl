@@ -1,14 +1,15 @@
 using BattMo, GLMakie
 
+
 model_setup = LithiumIonBattery()
 cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
 simulation_settings = load_simulation_settings(; from_default_set = "P2D")
-simulation_settings["TimeStepDuration"] = 20
+simulation_settings["TimeStepDuration"] = 1
 
 
 cycling_protocol = load_cycling_protocol(; from_default_set = "user_defined_current_function")
 
-cycling_protocol["TotalTime"] = 10000
+cycling_protocol["TotalTime"] = 1800
 
 sim_current = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
 
@@ -33,7 +34,7 @@ scatterlines!(ax, t, E; linewidth = 4, markersize = 10, marker = :cross, markerc
 
 f
 
-ax = Axis(f[1, 2], title = "Current", xlabel = "Time / s", ylabel = "Current / V",
+ax = Axis(f[2, 1], title = "Current", xlabel = "Time / s", ylabel = "Current / V",
 	xlabelsize = 25,
 	ylabelsize = 25,
 	xticklabelsize = 25,
