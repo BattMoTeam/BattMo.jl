@@ -69,13 +69,14 @@ function print_default_parameter_sets_info()
 						description = read_description_from_meta_data(file)
 						source = read_source_from_meta_data(file)
 
-					link = if isnothing(source) || source == "-"
+						if isnothing(source) || source == "-"
+							link = "-"
+						else
+							link = format_link("visit", source, col2_width, output_fmt)
+						end
 
-					else
-						format_link("visit", source, col2_width, output_fmt)
+						println(rpad(file_name, col1_width), rpad(description, col2_width), link)
 					end
-
-					println(rpad(file_name, col1_width), rpad(description, col2_width), link)
 				end
 			end
 			println()
@@ -218,66 +219,72 @@ end
 
 
 function print_parameter_info(from_name::String)
-
 	# Get the metadata dictionary
 	meta_data = get_parameter_meta_data()
-
 	output_fmt = detect_output_format()
-	# Find parameter
 
 	if haskey(meta_data, from_name)
-		# Print the information
+		param_info = meta_data[from_name]
+
 		println("="^80)
 		println("ℹ️  Parameter Information")
 		println("="^80)
 
-		# Table header
-		header1 = "Parameter"
-		header2 = "type"
+		# Name
+		println("🔹 Name:         	", from_name)
 
-		if haskey(meta_data[from_name], "documentation")
-			header4 = "Documentation"
-			doc_url = meta_data[from_name]["documentation"]
-			link = doc_url == "-" ? "-" : format_link("visit", doc_url, 50, output_fmt)
-			if haskey(meta_data[from_name], "unit")
-				header3 = "unit"
-				println(rpad(header1, 30), rpad(header2, 40), rpad(header3, 20), header4)
-				println("-"^80)
-				types = meta_data[from_name]["type"]
-				types_str = isa(types, AbstractArray) ? join(types, ", ") : string(types)
-				println(rpad(from_name, 30), rpad(types_str, 40), rpad(meta_data[from_name]["unit"], 20), link)
-			elseif haskey(meta_data[from_name], "options")
-				header3 = "options"
-				println(rpad(header1, 30), rpad(header2, 40), rpad(header3, 40), header4)
-				println("-"^80)
-				options = meta_data[from_name]["options"]
-				options_str = isa(options, AbstractArray) ? join(options, ", ") : string(options)
-				println(rpad(from_name, 30), rpad(meta_data[from_name]["type"], 40), rpad(options_str, 40), link)
-			end
-		else
-
-			if haskey(meta_data[from_name], "unit")
-				header3 = "unit"
-				println(rpad(header1, 30), rpad(header2, 40), header3)
-				println("-"^80)
-				types = meta_data[from_name]["type"]
-				types_str = isa(types, AbstractArray) ? join(types, ", ") : string(types)
-				println(rpad(from_name, 30), rpad(types_str, 40), meta_data[from_name]["unit"])
-			elseif haskey(meta_data[from_name], "options")
-				header3 = "options"
-				println(rpad(header1, 30), rpad(header2, 40), header3)
-				println("-"^80)
-				options = meta_data[from_name]["options"]
-				options_str = isa(options, AbstractArray) ? join(options, ", ") : string(options)
-				println(rpad(from_name, 30), rpad(meta_data[from_name]["type"], 40), options_str)
-			end
+		# Description
+		if haskey(param_info, "description")
+			description = param_info["description"]
+			println("🔹 Description:		", description)
 		end
 
+		# Type
+		if haskey(param_info, "type")
+			types = param_info["type"]
+			types_str = isa(types, AbstractArray) ? join(types, ", ") : string(types)
+			println("🔹 Type:         	", types_str)
+		end
 
+		# Unit
+		if haskey(param_info, "unit")
+			println("🔹 Unit:         	", param_info["unit"])
+		end
+
+		# Options
+		if haskey(param_info, "options")
+			options = param_info["options"]
+			options_str = isa(options, AbstractArray) ? join(options, ", ") : string(options)
+			println("🔹 Options:      	", options_str)
+		end
+
+		# Validation bounds
+		if haskey(param_info, "min_value")
+			min_value = param_info["min_value"]
+			println("🔹 Minimum value:      	", min_value)
+		end
+		if haskey(param_info, "max_value")
+			max_value = param_info["max_value"]
+			println("🔹 Maximum value:      	", max_value)
+		end
+
+		# Documentation
+		if haskey(param_info, "documentation")
+			doc_url = param_info["documentation"]
+			link = doc_url == "-" ? "-" : format_link("visit", doc_url, 50, output_fmt)
+			println("🔹 Documentation:	", link)
+		end
+
+		# Ontology
+		if haskey(param_info, "context_type_iri")
+			context_type_iri = param_info["context_type_iri"]
+			iri = context_type_iri == "-" ? "-" : format_link("visit", context_type_iri, 50, output_fmt)
+			println("🔹 Ontology link:	", iri)
+		end
 	else
-		println("Parameter not found.")
+		println("❌ Parameter not found.")
 	end
 
-
-	println()  # Extra line after the table
+	println()  # Extra spacing
 end
+
