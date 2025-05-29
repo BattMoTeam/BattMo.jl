@@ -1,6 +1,6 @@
-export plot_3D_results
+export plot_interactive_3d
 
-function plot_3D_results(results::NamedTuple; shift = nothing, colormap = :curl)
+function plot_interactive_3d(results::NamedTuple; shift = nothing, colormap = :curl)
 
 	if isnothing(shift)
 		shift_copy = Dict()

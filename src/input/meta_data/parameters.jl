@@ -188,6 +188,7 @@ function get_parameter_meta_data()
 			"type" => String,
 			"options" => ["Bolay"],
 			"is_sub_model" => true,
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/sei_model",
 		),
 		"TransportInSolid" => Dict(
 			"type" => String,
@@ -484,6 +485,7 @@ function get_parameter_meta_data()
 			"unit" => "V",
 			"unit_name" => "emmo:Volt",
 			"unit_iri" => "https://w3id.org/emmo#Volt",
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
 		),
 		"AmbientKelvinTemperature" => Dict("context_type" => "AmbientThermodynamicTemperature",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_39a44af0_0e1a_4859_b550_bdabad64386e",
@@ -611,6 +613,7 @@ function get_parameter_meta_data()
 			"unit" => "S·cm⁻¹",
 			"unit_name" => "emmo:SiemensPerCentiMetre",
 			"unit_iri" => "https://w3id.org/emmo#SiemensPerCentiMetre",
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
 		),
 		"DiffusionCoefficient" => Dict(
 			"context_type" => ["DiffusionCoefficient", "Expression"],
@@ -620,6 +623,7 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#EMMO_10f703b5_8b2a_4c5a_a734_f0cfb29622ad",
 			"description" => "The diffusion coefficient of the charge carrier in the electrolyte",
 			"type" => [String, Dict{String, Vector}, Real],
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
 		),
 		"Thickness" => Dict(
 			"context_type" => "Thickness",

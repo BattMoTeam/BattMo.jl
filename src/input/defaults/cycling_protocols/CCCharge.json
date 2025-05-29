@@ -1,4 +1,8 @@
 {
+  "Metadata": {
+    "Title": "CCCharge",
+    "Description": "Parameter set for a constant current charging protocol."
+  },
   "Protocol": "CC",
   "TotalNumberOfCycles": 0,
   "InitialStateOfCharge": 0.01,

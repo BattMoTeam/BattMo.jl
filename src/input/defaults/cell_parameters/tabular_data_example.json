@@ -1,7 +1,17 @@
 {
   "Metadata": {
     "Title": "SEI example",
-    "Description": "Parameter set to test SEI simulations. Obtained from the Julia repository but with unknown source."
+    "Description": "Parameter set to test SEI simulations. Obtained from the Julia repository but with unknown source.",
+    "Models": {
+      "ModelFramework": [
+        "P2D",
+        "P4D Pouch"
+      ],
+      "TransportInSolid": "FullDiffusion",
+      "SEIModel": "Bolay",
+      "CurrentCollectors": "Generic",
+      "RampUp": "Sinusoidal"
+    }
   },
   "Cell": {
     "Name": "",
