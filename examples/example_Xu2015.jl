@@ -7,9 +7,9 @@ using Printf
 
 
 # Read Experimental voltage curves
-df_05 = CSV.read("voltage_curves/Xu_2015_voltageCurve_05C.csv", DataFrame)
-df_1 = CSV.read("voltage_curves/Xu_2015_voltageCurve_1C.csv", DataFrame)
-df_2 = CSV.read("voltage_curves/Xu_2015_voltageCurve_2C.csv", DataFrame)
+df_05 = CSV.read("./examples/voltage_curves/Xu_2015_voltageCurve_05C.csv", DataFrame)
+df_1 = CSV.read("./examples/voltage_curves/Xu_2015_voltageCurve_1C.csv", DataFrame)
+df_2 = CSV.read("./examples/voltage_curves/Xu_2015_voltageCurve_2C.csv", DataFrame)
 
 dfs = [df_05, df_1, df_2]
 
