@@ -193,7 +193,7 @@ function get_output_variables_meta_data()
 			"context_type" => "Temperature",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_12345",
 		),
-		"NeAmOpenCicruitPotential" => Dict(
+		"NeAmOpenCircuitPotential" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
 			"isdefault" => false,
@@ -203,7 +203,7 @@ function get_output_variables_meta_data()
 			"context_type" => "OpenCircuitPotential",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_12345",
 		),
-		"PeAmOpenCicruitPotential" => Dict(
+		"PeAmOpenCircuitPotential" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
 			"isdefault" => false,
