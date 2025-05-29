@@ -418,9 +418,7 @@ function get_schema_cycling_protocol()
 						"CurrentChangeLimit",
 						"VoltageChangeLimit",
 						"InitialKelvinTemperature",
-					],
-					
-				),
+					]),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"))),
@@ -442,7 +440,7 @@ function get_schema_cycling_protocol()
 						"TotalTime",
 						"InitialKelvinTemperature",
 					],
-					),
+				),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
@@ -454,9 +452,7 @@ function get_schema_cycling_protocol()
 						"DRate",
 						"LowerVoltageLimit",
 						"InitialKelvinTemperature",
-					],
-					
-				),
+					]),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
@@ -470,9 +466,7 @@ function get_schema_cycling_protocol()
 						"CRate",
 						"UpperVoltageLimit",
 						"InitialKelvinTemperature",
-					],
-					
-				),
+					]),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
@@ -485,9 +479,7 @@ function get_schema_cycling_protocol()
 						"UpperVoltageLimit",
 						"LowerVoltageLimit",
 						"InitialKelvinTemperature",
-					],
-					
-				),
+					]),
 			),
 		],
 	)
@@ -532,7 +524,7 @@ function get_schema_simulation_settings(model_settings)
 			"RampUpTime" => Dict("type" => "integer"),
 			"RampUpSteps" => Dict("type" => "integer"),
 		),
-		"required" => ["GridPoints", "Grid", "TimeStepDuration", "RampUpTime", "RampUpSteps"],
+		"required" => ["GridPoints", "Grid", "TimeStepDuration"],
 	)
 
 	required = schema["required"]

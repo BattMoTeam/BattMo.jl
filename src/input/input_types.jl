@@ -107,6 +107,13 @@ function Base.delete!(ps::AbstractInput, key::String)
 end
 
 """
+New method extending Base.delete! to remove a parameter-value pair
+"""
+function Base.pop!(ps::AbstractInput, key::String)
+	pop!(ps.all, key)
+end
+
+"""
 New method extending Base.iterate to enable iteration in for loops
 """
 # Extend Base.iterate() - Enable iteration (for loops)

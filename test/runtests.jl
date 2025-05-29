@@ -1,6 +1,7 @@
 using BattMo
 using Test
 
+include("test_input_schemas.jl")
 include("test_loader.jl")
 include("test_function_input.jl")
 include("test_documentation_prints.jl")
