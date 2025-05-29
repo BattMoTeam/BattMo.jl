@@ -223,7 +223,6 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing;
         sim.cycling_protocol,
         sim.simulation_settings
     )
-    @info "???" sim.cycling_protocol
     model, parameters = setup_model(inputparams, T = T)
     state0 = BattMo.setup_initial_state(inputparams, model)
     forces = setup_forces(model)
