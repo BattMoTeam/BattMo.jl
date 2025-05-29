@@ -98,6 +98,9 @@ function setup_calibration_objective(vc::VoltageCalibration)
     function objective(model, state, dt, step_info, forces)
         # t = step_info[:time]
         t = state[:Control][:Controller].time
+        if step_info[:step] == step_info[:Nstep]
+            dt = max(dt, total_time - t)
+        end
         V_obs = V_fun(t)
         V_sim = state[:Control][:Phi][1]
         return voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
@@ -120,7 +123,7 @@ function evaluate_calibration_objective(vc::VoltageCalibration, objective, case,
     return f
 end
 
-function solve(vc::AbstractCalibration)
+function solve(vc::AbstractCalibration; grad_tol = 1e-6, obj_change_tol = 1e-6, kwarg...)
     x0, x_setup = vectorize_cell_parameters_for_calibration(vc)
     sim = vc.sim
     # Set up the objective function
@@ -143,7 +146,13 @@ function solve(vc::AbstractCalibration)
     setup_battmo_case(X, step_info = missing) = setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
     solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective)
     if true
-        v, x, history = Jutul.LBFGS.box_bfgs(x0, solve_and_differentiate, lb, ub; maximize = false, print = 1)
+        v, x, history = Jutul.LBFGS.box_bfgs(x0, solve_and_differentiate, lb, ub;
+            maximize = false,
+            print = 1,
+            grad_tol = grad_tol,
+            obj_change_tol = obj_change_tol,
+            kwarg...
+        )
     else
         self_cache = Dict()
         function f!(x)
@@ -174,31 +183,17 @@ function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objec
     states, dt = simulate_battmo_case_for_calibration(case)
     # Evaluate the objective function
     f = evaluate_calibration_objective(vc, objective, case, states, dt)
-    # @info "Objective function value" f x x_setup.names
-    # error()
     # Solve adjoints
     if gradient
         g = Jutul.AdjointsDI.solve_adjoint_generic(
             x, setup_battmo_case, states, dt, objective,
             use_sparsity = false,
-            di_sparse = true,
+            di_sparse = false,
             single_step_sparsity = false,
-            do_prep = true
+            do_prep = false
         )
     else
         g = missing
-    end
-    # @info "Updated" f g
-    if false
-        # ϵ = 1e-10*only(x)
-        ϵ = 1e-3
-        case_delta = setup_battmo_case(x .+ ϵ)
-        states2, dt2, = simulate_battmo_case_for_calibration(case_delta)
-        f_delta = Jutul.evaluate_objective(objective, case_delta.model, states2, dt2, case_delta.forces)
-        d_num = (f_delta - f)/ϵ
-        @info "Numerical gradient" d_num only(g) length(dt)
-        # g[1] = d_num
-        # g = [d_num]
     end
     return (f, g)
 end
@@ -228,6 +223,7 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing;
         sim.cycling_protocol,
         sim.simulation_settings
     )
+    @info "???" sim.cycling_protocol
     model, parameters = setup_model(inputparams, T = T)
     state0 = BattMo.setup_initial_state(inputparams, model)
     forces = setup_forces(model)
