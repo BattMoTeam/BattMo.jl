@@ -1,5 +1,8 @@
 export get_output_time_series, get_output_metrics, get_output_states
 
+# for debugging
+export extract_time_series_data, extract_output_times, get_multimodel_centroids, extract_spatial_data, get_simple_output
+
 
 function get_output_time_series(output::NamedTuple, quantities::Vector{String})
 
@@ -88,63 +91,171 @@ function get_output_metrics(
 	return (; selected...)
 end
 
+
+
 function get_output_states(output::NamedTuple, quantities::Vector{String})
 	# Get time
 	time = extract_output_times(output)
 
-	# Get spatial grid centroids (xyz)
-	grid_data = get_multimodel_centroids(output[:extra][:model])
-	xyz = grid_data.mm_grid_centroids
-	map = grid_data.mm_grid_map
+	# Get padded states
+	padded_states = get_padded_states(output)
 
-	# Extract the spatial data
-	spatial_data = extract_spatial_data(output)
+	# Extract spatial data
+	output_data = extract_spatial_data(padded_states, quantities)
 
-	# Radial discretization points
-	radial_grid = nothing
+# NamedTuple("Time":[nt],"X":[nx],"NeAmRadius":[nr_ne],"PeAmRadius":[nr_pe], ...
+# "NeAmConcentration": [nt,nx,nr_ne], "PeAmPotential": [nt,nx,nr_pe])
 
-	# Prepare selected output fields
-	selected = Dict{Symbol, Any}()
-	selected[:Time] = time
-	selected[:xyz] = xyz
-	# selected[:Radius] = radial_grid
+	# Get coordinates
+	x = get_x_coords(output[:extra][:model]) 
 
+	return (; Time = time, x = x, output_data...)
 
-	# Supported quantities
-	available_quantities = Dict(
-		"ElectrolytePotential" => spatial_data.Elyte_potential,
-		"PeAmPotential" => spatial_data.PeAm_potential,
-		"NeAmPotential" => spatial_data.NeAm_potential,
-		"ElectrolyteConcentration" => spatial_data.Elyte_concentration,
-		"PeAmSurfaceConcentration" => spatial_data.PeAm_surface_concentration,
-		"NeAmSurfaceConcentration" => spatial_data.NeAm_surface_concentration,
-		"PeAmConcentration" => spatial_data.PeAmParticle_concentration,
-		"NeAmConcentration" => spatial_data.NeAmParticle_concentration,
-		"NeAmTemperature" => spatial_data.NeAm_Temperature,
-		"PeAmTemperature" => spatial_data.PeAm_Temperature,
-		"NeAmOpenCicruitPotential" => spatial_data.NeAm_ocp,
-		"PeAmOpenCicruitPotential" => spatial_data.PeAm_ocp,
-		"NeAmCharge" => spatial_data.NeAm_charge,
-		"ElectrolyteCharge" => spatial_data.Elyte_charge,
-		"PeAmCharge" => spatial_data.PeAm_charge,
-		"ElectrolyteMass" => spatial_data.Elyte_mass,
-		"ElectrolyteDiffusivity" => spatial_data.Elyte_diffusivity,
-		"ElectrolyteConductivity" => spatial_data.Elyte_conductivity,
-	)
-
-	# Add only requested quantities
-	for q in quantities
-		if haskey(available_quantities, q)
-			selected[Symbol(q)] = available_quantities[q]
-		else
-			error("Quantity $q is not available in the output.")
-		end
-	end
-
-	# Convert to NamedTuple
-	return (; selected...)
 end
 
+
+function extract_spatial_data(states::Vector, quantities::Vector{String})
+
+	# Define a mapping from variable names to symbol chains
+	var_map = Dict(
+		:NeAmSurfaceConcentration      => [:NeAm, :Cs],
+		:PeAmSurfaceConcentration      => [:PeAm, :Cs],
+		:NeAmConcentration            => [:NeAm, :Cp],
+		:PeAmConcentration            => [:PeAm, :Cp],
+		:ElectrolyteConcentration     => [:Elyte, :C],
+		:NeAmPotential                => [:NeAm, :Phi],
+		:ElectrolytePotential         => [:Elyte, :Phi],
+		:PeAmPotential                => [:PeAm, :Phi],
+		:NeAmTemperature              => [:NeAm, :Temperature],
+		:PeAmTemperature              => [:PeAm, :Temperature],
+		:NeAmOpenCircuitPotential     => [:NeAm, :Ocp],
+		:PeAmOpenCircuitPotential     => [:PeAm, :Ocp],
+		:NeAmCharge                   => [:NeAm, :Charge],
+		:ElectrolyteCharge            => [:Elyte, :Charge],
+		:PeAmCharge                   => [:PeAm, :Charge],
+		:ElectrolyteMass              => [:Elyte, :Mass],
+		:ElectrolyteDiffusivity       => [:Elyte, :Diffusivity],
+		:ElectrolyteConductivity      => [:Elyte, :Conductivity]
+	)
+
+	output_data = Dict{Symbol, Any}()
+	
+	for q in quantities
+
+		chain = var_map[Symbol(q)]
+		data = [foldl(getindex, chain; init=state) for state in states]
+		data = cat(data...; dims=3)
+		data = permutedims(data, (3,2,1))
+
+		if size(data, 2) == 1
+			output_data[Symbol(q)] = dropdims(data; dims=2)
+		else
+			output_data[Symbol(q)] = data
+		end
+
+	end
+	
+	return output_data
+end
+
+
+function get_x_coords(model::MultiModel{:Battery})
+
+	pp = physical_representation(model.models[:Elyte].data_domain)
+	primitives = Jutul.plot_primitives(pp, :meshscatter)
+
+	return primitives.points[:, 1]
+end
+
+function get_padded_states(output::NamedTuple{(:states, :cellSpecifications, :reports, :inputparams, :extra)})
+	model = output[:extra][:model]
+	states = output[:states]
+	model_keys = keys(model.models)
+
+	n = length(model_keys)
+	ncells = Dict{Symbol, Any}()
+	active = BitArray(undef, n)
+	active .= false
+	total_number_of_cells = 0
+	for (i, k) in enumerate(model_keys)
+		pp = physical_representation(model[k].data_domain)
+		if pp isa CurrentAndVoltageDomain
+			keep = false
+		else
+			gg = model[k].domain.representation
+			nc = maximum(size(gg[:volumes]))
+			ncells[k] = nc
+			keep = true
+		end
+		active[i] = keep
+	end
+	model_keys = model_keys[active]
+
+	# Setup some dicts
+	padded_state = Dict{Symbol, Any}()
+	start_idx = Dict{Symbol, Any}()
+	end_idx = Dict{Symbol, Any}()
+	for k in model_keys
+		start_idx[k] = Dict{Symbol, Any}()
+		end_idx[k] = Dict{Symbol, Any}()
+		padded_state[k] = Dict{Symbol, Any}()
+	end
+
+	# Get start indices
+	# mykeys = [:NeCc, :NeAm, :Elyte, :PeAm, :PeCc]
+	if :NeCc in model_keys
+		start_idx[:NeCc] = 1
+		start_idx[:NeAm] = ncells[:NeCc] + 1
+	else
+		start_idx[:NeAm] = 1
+	end
+
+	start_idx[:Elyte] = start_idx[:NeAm]
+	start_idx[:PeAm] = ncells[:Elyte] - ncells[:PeAm] + 1
+
+	if :PeCc in model_keys
+		start_idx[:PeCc] = ncells[:Elyte] + 1
+	end
+
+	for k in model_keys
+		end_idx[k] = start_idx[k] + ncells[k] - 1
+	end
+
+
+	total_number_of_cells = maximum(values(end_idx))
+
+	padded_states = Vector{Any}(undef, size(states))
+	# Find all possible state fields
+
+	for (i, state) in enumerate(states)
+		padded_state = Dict{Symbol, Any}()
+		for model_key in model_keys
+			nc = ncells[model_key]
+			padded_model_state = Dict{Symbol, Any}()
+			for (k, v) in state[model_key]
+				valid_vector = v isa AbstractVector && length(v) == nc
+				valid_matrix = v isa AbstractMatrix && size(v, 2) == nc
+
+				if valid_vector
+					data = zeros(total_number_of_cells)
+					data .= NaN
+					data[start_idx[model_key]:end_idx[model_key]] = state[model_key][k]
+				elseif valid_matrix
+					data = zeros(size(v, 1), total_number_of_cells)
+					data .= NaN
+					data[:, start_idx[model_key]:end_idx[model_key]] = state[model_key][k]
+				end
+
+				padded_model_state[k] = data
+			end
+			padded_state[model_key] = padded_model_state
+		end
+
+		padded_states[i] = padded_state
+	end
+	return padded_states
+
+end
 
 function extract_time_series_data(output::NamedTuple{(:states, :cellSpecifications, :reports, :inputparams, :extra)})
 
@@ -159,6 +270,7 @@ function extract_time_series_data(output::NamedTuple{(:states, :cellSpecificatio
 	return (voltage = E, current = I)
 
 end
+
 
 function extract_output_times(output::NamedTuple{(:states, :cellSpecifications, :reports, :inputparams, :extra)})
 
@@ -183,147 +295,5 @@ function get_model_coords(model_part::SimulationModel)
 	face_centroids = (x = centroids_boundaries[1, :], y = centroids_boundaries[2, :], z = centroids_boundaries[3, :])
 
 	return (cells = cell_centroids, faces = face_centroids)
-
-end
-
-
-
-function get_multimodel_centroids(model::MultiModel{:Battery})
-
-
-	# TODO get this to loop through all the models in the multi model
-	Ne_grid = physical_representation(model[:NeAm])[:cell_centroids]
-	Pe_grid = physical_representation(model[:PeAm])[:cell_centroids]
-	Elyte_grid = physical_representation(model[:Elyte])[:cell_centroids]
-
-	mm_grid_centroids = cat(Ne_grid, Pe_grid, Elyte_grid, dims = 2)
-	mm_grid_centroids = unique(eachcol(mm_grid_centroids)) # unique coordinates
-	mm_grid_centroids = hcat(mm_grid_centroids)
-
-
-	NeAm_map = zeros(Int, eachindex(Ne_grid[1, :]))
-	for i in eachindex(Ne_grid[1, :])  # Iterate over columns of Ne_grid
-		for j in eachindex(mm_grid_centroids)  # Iterate over columns of grd
-			if Ne_grid[:, i] == mm_grid_centroids[j]
-				NeAm_map[i] = j
-			end
-		end
-	end
-
-
-	PeAm_map = zeros(Int, eachindex(Pe_grid[1, :]))
-	for i in eachindex(Pe_grid[1, :])  # Iterate over columns of Pe_grid
-		for j in eachindex(mm_grid_centroids)  # Iterate over columns of grd
-			if Pe_grid[:, i] == mm_grid_centroids[j]
-				PeAm_map[i] = j
-			end
-		end
-	end
-
-	Elyte_map = zeros(Int, eachindex(Elyte_grid[1, :]))
-	for i in eachindex(Elyte_grid[1, :])  # Iterate over columns of Elyte_grid
-		for j in eachindex(mm_grid_centroids)  # Iterate over columns of grd
-			if Elyte_grid[:, i] == mm_grid_centroids[j]
-				Elyte_map[i] = j
-			end
-		end
-	end
-
-	mm_grid_map = Dict(:NeAm => NeAm_map, :PeAm => PeAm_map, :Elyte => Elyte_map)
-
-
-	return (mm_grid_centroids = mm_grid_centroids, mm_grid_map = mm_grid_map)
-
-end
-
-
-function extract_spatial_data(output::NamedTuple{(:states, :cellSpecifications, :reports, :inputparams, :extra)})
-
-	states = output[:states]
-
-
-	# Surface Concentration (at the face of the surface cell)
-	NeAm_surface_concentration = [state[:NeAm][:Cs] for state in states]
-	PeAm_surface_concentration = [state[:PeAm][:Cs] for state in states]
-
-	# Concentration (at the center of the discretization cells)
-	NeAmParticle_concentration = [state[:NeAm][:Cp] for state in states]
-	PeAmParticle_concentration = [state[:PeAm][:Cp] for state in states]
-	Elyte_concentration = [state[:Elyte][:C] for state in states]
-
-	# Potential
-	NeAm_potential = [state[:NeAm][:Phi] for state in states]
-	Elyte_potential = [state[:Elyte][:Phi] for state in states]
-	PeAm_potential = [state[:PeAm][:Phi] for state in states]
-
-	# Temperature
-	NeAm_Temperature = [state[:NeAm][:Temperature] for state in states]
-	PeAm_Temperature = [state[:PeAm][:Temperature] for state in states]
-
-	# OCP
-	NeAm_ocp = [state[:NeAm][:Ocp] for state in states]
-	PeAm_ocp = [state[:PeAm][:Ocp] for state in states]
-
-	# charge
-	NeAm_charge = [state[:NeAm][:Charge] for state in states]
-	Elyte_charge = [state[:Elyte][:Charge] for state in states]
-	PeAm_charge = [state[:PeAm][:Charge] for state in states]
-
-	# Mass
-	Elyte_mass = [state[:Elyte][:Mass] for state in states]
-
-	# Diffusivity
-	Elyte_diffusivity = [state[:Elyte][:Diffusivity] for state in states]
-
-	# Conductivity
-	Elyte_conductivity = [state[:Elyte][:Conductivity] for state in states]
-
-
-
-
-	return (
-		NeAm_surface_concentration = NeAm_surface_concentration,
-		PeAm_surface_concentration = PeAm_surface_concentration,
-		NeAmParticle_concentration = NeAmParticle_concentration,
-		PeAmParticle_concentration = PeAmParticle_concentration,
-		Elyte_concentration = Elyte_concentration,
-		NeAm_potential = NeAm_potential,
-		Elyte_potential = Elyte_potential,
-		PeAm_potential = PeAm_potential,
-		NeAm_Temperature = NeAm_Temperature,
-		PeAm_Temperature = PeAm_Temperature,
-		NeAm_ocp = NeAm_ocp,
-		PeAm_ocp = PeAm_ocp,
-		NeAm_charge = NeAm_charge,
-		Elyte_charge = Elyte_charge,
-		PeAm_charge = PeAm_charge,
-		Elyte_mass = Elyte_mass,
-		Elyte_diffusivity = Elyte_diffusivity,
-		Elyte_conductivity = Elyte_conductivity)
-
-end
-
-
-function get_simple_output(output::NamedTuple{(:states, :cellSpecifications, :reports, :inputparams, :extra)})
-
-	# Extract the time series data
-	time_series = extract_time_series_data(output)
-
-	# Extract output times
-	output_times = extract_output_times(output)
-
-	# Extract the model coordinates
-	model_coords, mm_grid_map = get_multimodel_centroids(output[:extra][:model])
-
-	# Extract the spatial data
-	spatial_data = extract_spatial_data(output)
-
-	return (time = output_times, coords = model_coords, time_series = time_series,
-		Elyte_potential = spatial_data.Elyte_potential, PeAm_potential = spatial_data.PeAm_potential,
-		NeAm_potential = spatial_data.NeAm_potential, PeAmParticle_potential = spatial_data.PeAmParticle_potential,
-		NeAmParticle_potential = spatial_data.NeAmParticle_potential, Elyte_concentration = spatial_data.Elyte_concentration,
-		PeAm_concentration = spatial_data.PeAm_concentration, NeAm_concentration = spatial_data.NeAm_concentration,
-		PeAmParticle_concentration = spatial_data.PeAmParticle_concentration, NeAmParticle_concentration = spatial_data.NeAmParticle_concentration,
-		Temperature = spatial_data.Temperature)
 
 end
