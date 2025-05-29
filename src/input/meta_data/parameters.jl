@@ -321,6 +321,15 @@ function get_parameter_meta_data()
 			"context_type" => "RampUpSteps",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_rampup_steps",
 		),
+		"RampUpTime" => Dict(
+			"type" => Int,
+			"min_value" => 0,
+			"max_value" => 500,
+			"unit" => "s",
+			"unit_name" => "emmo:Second",
+			"context_type" => "RampUpTime",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_rampup_time",
+		),
 		"MaximumConcentration" => Dict(
 			"context_type" => "MaximumConcentration",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47287d09_6108_45ca_ac65_8b9451b1065e",

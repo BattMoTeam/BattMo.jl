@@ -160,34 +160,26 @@ function update_json_input(; file_path::String = nothing,
 
 end
 
-function setup_function_from_function_name(function_name::String)
-	"""
-	Function to create a julia function given by the name of the function. In the case of user-defined functions, the file where the function is defined must have the same name as the function.
-	"""
 
+function setup_function_from_function_name(function_name::String; file_path::Union{String, Nothing} = nothing)
 	symb = Symbol(function_name)
 
 	if isdefined(BattMo, symb)
-		# Function in BattMo
 		return getfield(BattMo, symb)
-	elseif isdefined(Main, symb)
-		return getfield(Main, symb)
-	else
-		# User defined function
-		filename = function_name * ".jl"
-		if isfile(filename)
-			Base.include(Main, filename)
+	elseif !isnothing(file_path)
+		if isfile(file_path)
+			Base.include(Main, file_path)
 			if isdefined(Main, symb)
-				f = getfield(Main, symb)
-				return t -> Base.invokelatest(f, t)
+				return (args...) -> Base.invokelatest(getfield(Main, symb), args...)
 			else
-				error("Function '$function_name' not defined in file '$filename'.")
+				error("Function '$function_name' not defined in file '$file_path'.")
 			end
 		else
-			error("Function '$function_name' not found and file '$filename' does not exist.")
+			error("Function '$function_name' not found and file '$file_path' does not exist.")
 		end
+	else
+		error("Function is not found within BattMo and no path file is provided.")
 	end
-
 end
 
 

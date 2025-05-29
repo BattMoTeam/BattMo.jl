@@ -499,7 +499,8 @@ function setup_submodels(inputparams::InputParams;
 		elseif haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionname")
 
 			funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
-			fcn = setup_function_from_function_name(funcname)
+			funcpath = haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionpath") ? inputparams_am["Interface"]["openCircuitPotential"]["functionpath"] : nothing
+			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 			am_params[:ocp_func] = fcn
 
 		else
@@ -607,7 +608,8 @@ function setup_submodels(inputparams::InputParams;
 	elseif haskey(inputparams_elyte["diffusionCoefficient"], "functionname")
 
 		funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
-		fcn = setup_function_from_function_name(funcname)
+		funcpath = haskey(inputparams_elyte["diffusionCoefficient"], "functionpath") ? inputparams_elyte["diffusionCoefficient"]["functionpath"] : nothing
+		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:diffusivity_func] = fcn
 
 	else
@@ -629,7 +631,8 @@ function setup_submodels(inputparams::InputParams;
 	elseif haskey(inputparams_elyte["ionicConductivity"], "functionname")
 
 		funcname = inputparams_elyte["ionicConductivity"]["functionname"]
-		fcn = setup_function_from_function_name(funcname)
+		funcpath = haskey(inputparams_elyte["ionicConductivity"], "functionpath") ? inputparams_elyte["ionicConductivity"]["functionpath"] : nothing
+		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:conductivity_func] = fcn
 
 	else
@@ -678,8 +681,12 @@ function setup_submodels(inputparams::InputParams;
 	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge" || controlPolicy == "CCCycling"
 		ctrl = jsondict["Control"]
 		if jsondict["Control"]["useCVswitch"]
+			if controlPolicy == "CCDischarge"
 
-			policy = SimpleCVPolicy()
+				policy = SimpleCVPolicy()
+			else
+				error("UseCVSwitch is not handled for $controlPolicy control.")
+			end
 		else
 			if haskey(ctrl, "initialControl")
 				initial_control = ctrl["initialControl"]
@@ -723,8 +730,9 @@ function setup_submodels(inputparams::InputParams;
 
 		ctrl = jsondict["Control"]
 		function_name = ctrl["functionName"]
+		file_path = ctrl["filePath"]
 
-		policy = FunctionPolicy(function_name)
+		policy = FunctionPolicy(function_name, file_path)
 
 	else
 

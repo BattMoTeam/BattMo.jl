@@ -122,8 +122,8 @@ Function Policy
 struct FunctionPolicy <: AbstractPolicy
 	current_function::Function
 
-	function FunctionPolicy(function_name::String)
-		current_function = setup_function_from_function_name(function_name)
+	function FunctionPolicy(function_name::String, file_path::String)
+		current_function = setup_function_from_function_name(function_name; file_path = file_path)
 		new{}(current_function)
 	end
 
@@ -463,7 +463,7 @@ function getInitCurrent(policy::CCPolicy)
 end
 
 function getInitCurrent(policy::FunctionPolicy)
-	return policy.current_function(0.0)
+	return 0.0
 end
 
 function getInitCurrent(policy::SimpleCVPolicy)
@@ -1088,7 +1088,7 @@ function update_values_in_controller!(state, policy::FunctionPolicy)
 
 	cf = policy.current_function
 
-	I_p = cf(controller.time)
+	I_p = cf(controller.time, ForwardDiff.value(only(state.Phi)))
 
 	controller.target = I_p
 
@@ -1346,8 +1346,7 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 	elseif policy isa FunctionPolicy
 
 		time = 0.0
-
-		target = policy.current_function(time)
+		target = 0.0
 
 		target_is_voltage = false
 

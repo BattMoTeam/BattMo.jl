@@ -63,10 +63,11 @@ function print_default_parameter_sets_info()
 			files = readdir(entry; join = true)
 			for file in files
 				if isfile(file)
-					file_name = splitext(basename(file))[1]
-					description = read_description_from_meta_data(file)
-
-					source = read_source_from_meta_data(file)
+					ext = splitext(file)[2]
+					if ext == ".json"
+						file_name = splitext(basename(file))[1]
+						description = read_description_from_meta_data(file)
+						source = read_source_from_meta_data(file)
 
 					link = if isnothing(source) || source == "-"
 
