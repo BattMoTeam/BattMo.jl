@@ -85,6 +85,6 @@ function get_default_simulation_settings(st::LithiumIonBattery)
 		"RampUpTime" => 10,
 		"RampUpSteps" => 5,
 	)
-	return SimulationSettings(settings, nothing)
+	return SimulationSettings(settings; source_path = nothing)
 
 end
