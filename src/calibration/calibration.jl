@@ -123,7 +123,7 @@ function evaluate_calibration_objective(vc::VoltageCalibration, objective, case,
     return f
 end
 
-function solve(vc::AbstractCalibration; grad_tol = 1e-6, obj_change_tol = 1e-6, kwarg...)
+function solve(vc::AbstractCalibration; grad_tol = 1e-6, obj_change_tol = 1e-12, kwarg...)
     x0, x_setup = vectorize_cell_parameters_for_calibration(vc)
     sim = vc.sim
     # Set up the objective function
