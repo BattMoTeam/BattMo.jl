@@ -1,4 +1,14 @@
 {
+    "Metadata": {
+        "Title": "P2D",
+        "Description": "Default simulation settings for a P2D simulation including a current ramp up, excluding current collectors and SEI effects.",
+        "Models": {
+            "ModelFramework": "P2D",
+            "TransportInSolid": "FullDiffusion",
+            "RampUp": "Sinusoidal",
+            "SEIModel": "Bolay"
+        }
+    },
     "GridPoints": {
         "PositiveElectrodeCoating": 10,
         "PositiveElectrodeActiveMaterial": 10,

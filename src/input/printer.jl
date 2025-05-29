@@ -1,4 +1,4 @@
-export print_default_parameter_sets_info, print_submodels_info, print_parameter_info
+export print_default_input_sets_info, print_submodels_info, print_parameter_info
 
 
 # Format link depending on output format
@@ -28,61 +28,93 @@ function detect_output_format()
 	end
 end
 
-function print_default_parameter_sets_info()
-
-	# Column layout
-	col1_width = 35
-	col2_width = 50
-
-	# Begin main logic
+function print_default_input_sets_info()
 	output_fmt = detect_output_format()
 	script_dir = @__DIR__
 	defaults_dir = joinpath(script_dir, "defaults")
 	entries = readdir(defaults_dir; join = true)
 
-	doc_link = "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/default_sets"
-	doc_link = format_link("documentation", doc_link, 50, output_fmt)
-	println("\n")
-	println("ℹ️  More detailed information can be found in the $doc_link")
+	category_col_width = 25
+
+	println("\n", "="^100)
+	println("📋 Overview of Available Default Sets")
+	println("="^100, "\n")
+
+	# Concise Aligned Overview
+	for entry in entries
+		if isdir(entry)
+			folder_name = basename(entry)
+			files = readdir(entry; join = true)
+
+			set_names = String[]
+			for file in files
+				if isfile(file) && splitext(file)[2] == ".json"
+					push!(set_names, splitext(basename(file))[1])
+				end
+			end
+
+			options_str = isempty(set_names) ? "-" : join(set_names, ", ")
+			println("📁 ", rpad(folder_name * ":", category_col_width), options_str)
+		end
+	end
+
+	# Detailed Descriptions
+	println("\n", "="^100)
+	println("📖 Detailed Descriptions")
+	println("="^100, "\n")
 
 	for entry in entries
 		if isdir(entry)
 			folder_name = basename(entry)
-
-			println("\n" * "="^(col1_width + col2_width + 40))
-			println("📁  $folder_name")
-			println("="^(col1_width + col2_width + 40))
-
-			header1 = "Parameter Set"
-			header2 = "Description"
-			header3 = "Source"
-
-			println(rpad(header1, col1_width), rpad(header2, col2_width), header3)
-			println("-"^(col1_width + col2_width + 40))
+			println("📂 $folder_name")
+			println("-"^100)
 
 			files = readdir(entry; join = true)
 			for file in files
-				if isfile(file)
-					ext = splitext(file)[2]
-					if ext == ".json"
-						file_name = splitext(basename(file))[1]
-						description = read_description_from_meta_data(file)
-						source = read_source_from_meta_data(file)
+				if isfile(file) && splitext(file)[2] == ".json"
+					file_name = splitext(basename(file))[1]
 
-						if isnothing(source) || source == "-"
-							link = "-"
-						else
-							link = format_link("visit", source, col2_width, output_fmt)
-						end
+					# Read metadata
+					description, cell_name, cell_case, models = read_meta_data(file)  # updated helper to also return full metadata dict
+					source = read_source_from_meta_data(file)
 
-						println(rpad(file_name, col1_width), rpad(description, col2_width), link)
+					link = (isnothing(source) || source == "-") ? nothing : format_link("visit", source, 50, output_fmt)
+
+					println(file_name)
+
+					if !isnothing(cell_name)
+						println("🔹 Cell name:       	", cell_name)
 					end
+
+					if !isnothing(cell_case)
+						println("🔹 Cell case:       	", cell_case)
+					end
+
+					if !isnothing(link)
+						println("🔹 Source:          	", link)
+					end
+
+
+					if models isa Dict
+						println("🔹 Suitable for:")
+						for (k, v) in models
+							val_str = isa(v, AbstractVector) ? join(v, ", ") : string(v)
+							println("   • ", rpad(k * ":", 20), val_str)
+						end
+					end
+
+					if !isempty(description)
+						println("🔹 Description:     	", description)
+					end
+
+					println()  # Extra space between sets
 				end
 			end
-			println()
 		end
 	end
 end
+
+
 
 
 function terminal_link(text, url)
@@ -122,7 +154,7 @@ function read_cell_information(file::String)
 
 end
 
-function read_description_from_meta_data(file::String)
+function read_meta_data(file::String)
 	content = read(file, String)
 
 	if isempty(strip(content))
@@ -131,21 +163,33 @@ function read_description_from_meta_data(file::String)
 
 	json_file = JSON.parse(content)
 
+	if haskey(json_file, "Metadata") && haskey(json_file["Metadata"], "Models")
+		models = json_file["Metadata"]["Models"]
+	else
+		models = ""
+	end
+
 	if haskey(json_file, "Cell")
 		cell_name, cell_case = read_cell_information(file)
-		return "$cell_name $cell_case"
 
-	else
-		try
-			if haskey(json_file, "Metadata") && haskey(json_file["Metadata"], "Description")
-				return String(json_file["Metadata"]["Description"])
-			end
-		catch e
-			return "(Invalid metadata format)"
+		if haskey(json_file, "Metadata") && haskey(json_file["Metadata"], "Description")
+			description = String(json_file["Metadata"]["Description"])
+		else
+			description = ""
 		end
 
-		return "-"
+	else
+
+		if haskey(json_file, "Metadata") && haskey(json_file["Metadata"], "Description")
+			description = String(json_file["Metadata"]["Description"])
+		else
+			description = ""
+		end
+
+		cell_name = nothing
+		cell_case = nothing
 	end
+	return description, cell_name, cell_case, models
 end
 
 function read_source_from_meta_data(file::String)

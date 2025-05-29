@@ -2,7 +2,13 @@
     "Metadata": {
         "Title": "Chen2020",
         "Source": "https://doi.org/10.1149/1945-7111/ab9050",
-        "Description": "Parameter set of a cylindrical 21700 commercial cell (LGM50), for an electrochemical pseudo-two-dimensional (P2D) model, after calibration."
+        "Description": "Parameter set of a cylindrical 21700 commercial cell (LGM50), for an electrochemical pseudo-two-dimensional (P2D) model, after calibration.",
+        "Models": {
+            "ModelFramework": "P2D",
+            "TransportInSolid": "FullDiffusion",
+            "CurrentCollectors": "Generic",
+            "RampUp": "Sinusoidal"
+        }
     },
     "Cell": {
         "Name": "LG INR 21700 M50",
