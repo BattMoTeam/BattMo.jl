@@ -487,7 +487,7 @@ end
 
 
 function get_schema_simulation_settings(model_settings)
-	parameter_meta = get_parameter_meta_data()
+	parameter_meta = get_setting_meta_data()
 	schema = Dict(
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",
@@ -553,7 +553,7 @@ end
 
 
 function get_schema_model_settings()
-	parameter_meta = get_parameter_meta_data()
+	parameter_meta = get_setting_meta_data()
 	return Dict(
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",
