@@ -524,7 +524,7 @@ function setup_submodels(inputparams::InputParams;
 					"SEIstoichiometricCoefficient",
 					"SEImolarVolume",
 					"SEIelectronicDiffusionCoefficient",
-					"SEIintersticialConcentration",
+					"SEIinterstitialConcentration",
 					"SEIionicConductivity"]
 				for fd in fds
 					am_params[Symbol(fd)] = inputparams_am["Interface"][fd]
@@ -1458,7 +1458,7 @@ function get_scalings(model, parameters)
 			push!(scalings, scaling)
 
 			De = model[elde].system[:SEIelectronicDiffusionCoefficient]
-			ce = model[elde].system[:SEIintersticialConcentration]
+			ce = model[elde].system[:SEIinterstitialConcentration]
 
 			scaling = (model_label = elde, equation_label = :sei_mass_cons, value = De * ce / L)
 			push!(scalings, scaling)

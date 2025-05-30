@@ -13,5 +13,5 @@
   "InitialControl": "charging",
   "CurrentChangeLimit": 1e-4,
   "VoltageChangeLimit": 1e-4,
-  "InitialKelvinTemperature": 298.15
+  "InitialTemperature": 298.15
 }
