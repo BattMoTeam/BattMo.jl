@@ -1,4 +1,4 @@
-using BattMo, Test, Jutul, LinearAlgebra
+using BattMo, Test, Jutul
 import BattMo: VoltageCalibration, free_calibration_parameter!, freeze_calibration_parameter!, print_calibration_overview
 
 function test_adjoints()
@@ -77,7 +77,8 @@ function test_adjoints()
     end
 
     f, g = BattMo.solve_and_differentiate_for_calibration(x0, setup_battmo_case, vc, obj)
-    @test norm(numg - g)/norm(numg) ≈ 0.0 atol = 1e-4
+    mynorm = x -> sum(x -> x^2, x)^(1/2)
+    @test mynorm(numg - g)/mynorm(numg) ≈ 0.0 atol = 1e-4
     for i in eachindex(numg)
         @testset "$(x_setup.names[i])" begin
             @test numg[i] ≈ g[i] rtol = 5e-3
