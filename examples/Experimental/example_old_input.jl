@@ -18,13 +18,11 @@ inputparams_geometry = getinput("4680-geometry.json")
 
 inputparams_material = getinput("lithium_ion_battery_nmc_graphite.json")
 
-
 ###########################
 # load control parameters #
 ###########################
 
 inputparams_control = getinput("cc_discharge_control.json")
-
 
 ####################
 # merge parameters #
@@ -39,7 +37,7 @@ inputparams["Control"]["useCVswitch"] = false
 # run simulation #
 ##################
     
-output = run_battery(inputparams; hook = myhook)
+output = run_battery(inputparams)
 
 ############
 # plotting #
