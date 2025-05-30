@@ -1,41 +1,43 @@
 using BattMo, GLMakie
 
-####################
-# setup simulation #
-####################
-
 function getinput(name)
     return load_battmo_formatted_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
 end
 
-# load geometry parameters
+############################
+# load geometry parameters #
+############################
+
 inputparams_geometry = getinput("4680-geometry.json")
 # inputparams_geometry = getinput("geometry-1d.json")
 # inputparams_geometry = getinput("geometry-3d-demo.json")
-# load material parameters
+
+############################
+# load material parameters #
+############################
+
 inputparams_material = getinput("lithium_ion_battery_nmc_graphite.json")
-# load control parameters
+
+
+###########################
+# load control parameters #
+###########################
+
 inputparams_control = getinput("cc_discharge_control.json")
+
+
+####################
+# merge parameters #
+####################
 
 inputparams = merge_input_params([inputparams_geometry, inputparams_material, inputparams_control])
 
-inputparams["Control"]["DRate"] = 0.1
-inputparams["Control"]["rampupTime"] = 3600*10
+inputparams["Control"]["DRate"]       = 1
+inputparams["Control"]["useCVswitch"] = false
 
 ##################
 # run simulation #
 ##################
-
-function myhook(simulator,
-			    model,
-			    state0,
-			    forces,
-			    timesteps,
-			    cfg)
-
-    cfg[:info_level] = 1
-    
-end
     
 output = run_battery(inputparams; hook = myhook)
 
@@ -49,7 +51,7 @@ t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:Phi][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
-f = Figure(size = (1000, 400))
+fig = Figure(size = (1000, 400))
 
 ax = Axis(f[1, 1],
 	title = "Voltage",
@@ -62,7 +64,7 @@ ax = Axis(f[1, 1],
 )
 
 scatterlines!(ax,
-	          t,
+	          t/3600,
 	          E;
 	          linewidth = 4,
 	          markersize = 10,
@@ -81,7 +83,7 @@ ax = Axis(f[1, 2],
 )
 
 scatterlines!(ax,
-	          t,
+	          t/3600,
 	          I;
 	          linewidth = 4,
 	          markersize = 10,
@@ -89,6 +91,6 @@ scatterlines!(ax,
 	          markercolor = :black
               )
 
-f
+fig
 
 
