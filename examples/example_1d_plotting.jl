@@ -1,8 +1,10 @@
-using BattMo
+using BattMo, GLMakie
 
 model_settings = load_model_settings(; from_default_set = "P2D")
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
+model_settings["SEIModel"] = "Bolay"
+cell_parameters = load_cell_parameters(; from_default_set = "SEI_example")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCCV")
+simulation_settings = load_simulation_settings(; from_default_set = "P2D")
 
 model_setup = LithiumIonBattery(; model_settings)
 
@@ -10,11 +12,22 @@ sim = Simulation(model_setup, cell_parameters, cycling_protocol);
 
 output = solve(sim;)
 
-time_series = get_output_time_series(output, ["Voltage", "Current"])
-states = get_output_states(output, ["PeAmPotential", "NeAmPotential", "ElectrolytePotential", "PeAmSurfaceConcentration", "NeAmSurfaceConcentration", "ElectrolyteConcentration"])
-metrics = get_output_metrics(output, ["DischargeEnergy", "DischargeCapacity"])
+time_series = get_output_time_series(output)
+states = get_output_states(output)
+metrics = get_output_metrics(output)
 
-plot_dashboard(output; plot_type = "line")
+NeAm_end_index = simulation_settings["GridPoints"]["NegativeElectrodeCoating"]
+
+plot_output(
+	output;
+	output_variables = [
+		["SEIThickness vs Time at Position index 1", "SEIThickness vs Time at Position index $NeAm_end_index"],
+		["NeAmConcentration vs Time and Position at Radius index 1"],
+	],
+	layout = (3, 1),
+)
+
+# plot_dashboard(output; plot_type = "line")
 
 # t = time_series[:Time]
 # I = time_series[:Current]

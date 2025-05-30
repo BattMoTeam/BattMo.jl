@@ -166,8 +166,9 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"StoichiometricCoefficient" => create_property(parameter_meta, "StoichiometricCoefficient"),
 							"IntersticialConcentration" => create_property(parameter_meta, "IntersticialConcentration"),
 							"InitialThickness" => create_property(parameter_meta, "InitialThickness"),
+							"InitialPotentialDrop" => create_property(parameter_meta, "InitialPotentialDrop"),
 						),
-						"required" => ["MolarVolume", "IonicConductivity", "ElectronicDiffusionCoefficient", "StoichiometricCoefficient", "IntersticialConcentration", "InitialThickness"],
+						"required" => ["MolarVolume", "IonicConductivity", "ElectronicDiffusionCoefficient", "StoichiometricCoefficient", "IntersticialConcentration", "InitialThickness", "InitialPotentialDrop"],
 					),
 					"ConductiveAdditive" => Dict(
 						"type" => "object",
@@ -443,9 +444,7 @@ function get_schema_cycling_protocol()
 						"CurrentChangeLimit",
 						"VoltageChangeLimit",
 						"InitialKelvinTemperature",
-					],
-					
-				),
+					],),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"))),
@@ -467,7 +466,7 @@ function get_schema_cycling_protocol()
 						"TotalTime",
 						"InitialKelvinTemperature",
 					],
-					),
+				),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
@@ -479,9 +478,7 @@ function get_schema_cycling_protocol()
 						"DRate",
 						"LowerVoltageLimit",
 						"InitialKelvinTemperature",
-					],
-					
-				),
+					],),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
@@ -495,9 +492,7 @@ function get_schema_cycling_protocol()
 						"CRate",
 						"UpperVoltageLimit",
 						"InitialKelvinTemperature",
-					],
-					
-				),
+					],),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
@@ -510,9 +505,7 @@ function get_schema_cycling_protocol()
 						"UpperVoltageLimit",
 						"LowerVoltageLimit",
 						"InitialKelvinTemperature",
-					],
-					
-				),
+					],),
 			),
 		],
 	)

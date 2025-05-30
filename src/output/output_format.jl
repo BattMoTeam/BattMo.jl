@@ -4,33 +4,41 @@ export get_output_time_series, get_output_metrics, get_output_states
 export extract_time_series_data, extract_output_times, get_multimodel_centroids, extract_spatial_data, get_simple_output
 
 
-function get_output_time_series(output::NamedTuple, quantities::Vector{String})
+function get_output_time_series(output::NamedTuple; quantities::Union{Nothing, Vector{String}} = nothing)
 
 	selected_pairs = []
-	available_quantities = ["Voltage", "Current"]
+	available_quantities = ["Time", "Voltage", "Current"]
 
 	voltage, current = extract_time_series_data(output)
 	time = extract_output_times(output)
 
 	push!(selected_pairs, :Time => time)
 
-	for q in quantities
-		if q == "Voltage"
-			push!(selected_pairs, :Voltage => voltage)
-		elseif q == "Current"
-			push!(selected_pairs, :Current => current)
-		else
-			error("Quantitiy $q is not available in this data")
-		end
-	end
+	if !isnothing(quantities)
 
+		for q in quantities
+			if q == "Voltage"
+				push!(selected_pairs, :Voltage => voltage)
+			elseif q == "Current"
+				push!(selected_pairs, :Current => current)
+			elseif q == "Time"
+				push!(selected_pairs, :Time => time)
+			else
+				error("Quantitiy $q is not available in this data")
+			end
+		end
+	else
+		push!(selected_pairs, :Time => time)
+		push!(selected_pairs, :Current => current)
+		push!(selected_pairs, :Voltage => voltage)
+	end
 
 	return (; selected_pairs...)
 end
 
 function get_output_metrics(
-	output::NamedTuple,
-	metrics::Vector{String},
+	output::NamedTuple;
+	metrics::Union{Nothing, Vector{String}} = nothing,
 )
 	model = output[:extra][:model]
 	states = output[:states]
@@ -39,7 +47,6 @@ function get_output_metrics(
 
 	# Prepare selected output fields
 	selected = Dict{Symbol, Any}()
-	selected[:CycleNumber] = cycle_array
 
 	# Metric storage
 	discharge_cap::Vector{Float64} = Float64[]
@@ -72,6 +79,7 @@ function get_output_metrics(
 
 	# Dictionary of all available quantities
 	available_quantities = Dict(
+		"CycleNumber"         => cycle_array,
 		"DischargeCapacity"   => discharge_cap,
 		"ChargeCapacity"      => charge_cap,
 		"DischargeEnergy"     => discharge_energy,
@@ -80,11 +88,22 @@ function get_output_metrics(
 	)
 
 	# Add only requested quantities
-	for q in metrics
-		if haskey(available_quantities, q)
-			selected[Symbol(q)] = available_quantities[q]
-		else
-			error("Metric \"$q\" is not available. Available metrics are: $(join(keys(available_quantities), ", "))")
+
+	if !isnothing(metrics)
+		for q in metrics
+			if haskey(available_quantities, q)
+				selected[Symbol(q)] = available_quantities[q]
+			else
+				error("Metric \"$q\" is not available. Available metrics are: $(join(keys(available_quantities), ", "))")
+			end
+		end
+	else
+		for q in keys(available_quantities)
+			if haskey(available_quantities, q)
+				selected[Symbol(q)] = available_quantities[q]
+			else
+				error("Metric \"$q\" is not available. Available metrics are: $(join(keys(available_quantities), ", "))")
+			end
 		end
 	end
 
@@ -93,26 +112,52 @@ end
 
 
 
-function get_output_states(output::NamedTuple, quantities::Vector{String})
-	# Get time
+function get_output_states(output::NamedTuple; quantities::Union{Nothing, Vector{String}} = nothing)
+	# Get time and coordinates
 	time = extract_output_times(output)
-
-	# Get padded states
 	padded_states = get_padded_states(output)
-
-	# Extract spatial data
-	output_data = extract_spatial_data(padded_states, quantities)
-
-	# NamedTuple("Time":[nt],"X":[nx],"NeAmRadius":[nr_ne],"PeAmRadius":[nr_pe], ...
-	# "NeAmConcentration": [nt,nx,nr_ne], "PeAmPotential": [nt,nx,nr_pe])
-
-	# Get coordinates
 	x = get_x_coords(output[:extra][:model])
 	r = get_r_coords(output)
 
-	return (; Time = time, x = x, r = r, output_data...)
+	# Extract data
+	output_data = extract_spatial_data(padded_states)
 
+	# Initialize available quantities
+	available_quantities = Dict{Symbol, Any}(
+		:Time     => time,
+		:Position => x,
+		:Radius   => r,
+	)
+
+	# Insert only available output_data
+	for (k, v) in output_data
+		available_quantities[k] = v
+	end
+
+	# Create selected output dict
+	selected = Dict{Symbol, Any}()
+
+	if isnothing(quantities)
+		# Return all available quantities
+		for (k, v) in available_quantities
+			if !isnothing(v)
+				selected[k] = v
+			end
+		end
+	else
+		# Return only requested and available quantities
+		for q in quantities
+			symq = Symbol(q)
+			if !haskey(available_quantities, symq) || isnothing(available_quantities[symq])
+				error("Quantity \"$q\" is not available. Available quantities are: $(join(Symbol.(keys(available_quantities)), ", "))")
+			end
+			selected[symq] = available_quantities[symq]
+		end
+	end
+
+	return (; selected...)
 end
+
 
 function get_r_coords(output)
 
@@ -124,7 +169,7 @@ function get_r_coords(output)
 end
 
 
-function extract_spatial_data(states::Vector, quantities::Vector{String})
+function extract_spatial_data(states::Vector)
 	# Map from quantity names to symbol chains used to extract data
 	var_map = Dict(
 		:NeAmSurfaceConcentration => [:NeAm, :Cs],
@@ -145,27 +190,38 @@ function extract_spatial_data(states::Vector, quantities::Vector{String})
 		:ElectrolyteMass          => [:Elyte, :Mass],
 		:ElectrolyteDiffusivity   => [:Elyte, :Diffusivity],
 		:ElectrolyteConductivity  => [:Elyte, :Conductivity],
-	)
+		:SEIThickness             => [:NeAm, :SEIlength],
+		:NormalizedSEIThickness   => [:NeAm, :normalizedSEIlength],
+		:SEIVoltageDrop           => [:NeAm, :SEIvoltageDrop],
+		:NormalizedSEIVoltageDrop => [:NeAm, :normalizedSEIvoltageDrop])
 
 	output_data = Dict{Symbol, Any}()
 
-	for q in quantities
+	for q in keys(var_map)
 		qsym = Symbol(q)
 
-		# Check if the quantity exists
+		# Validate if the quantity exists in the known map
 		@assert haskey(var_map, qsym) "Quantity \"$q\" is not a valid or supported variable."
 
-		# Build the data matrix/tensor: [nt, nx] or [nt, nx, nr]
+		# Check if the variable actually exists in the first state
 		chain = var_map[qsym]
-		raw = [foldl(getindex, chain; init = state) for state in states]  # returns a list of arrays
+		try
+			_ = foldl(getindex, chain; init = states[1])
+		catch
+			# Skip quantity if not available
+			continue
+		end
 
-		# Stack along 3rd dimension to get [nx, nr, nt]
+		# Extract data across all time steps
+		raw = [foldl(getindex, chain; init = state) for state in states]  # List of arrays
+
+		# Combine into [nx, nr, nt]
 		data = cat(raw...; dims = 3)
 
-		# Permute to get [nt, nx, nr]
+		# Permute to [nt, nx, nr]
 		data = permutedims(data, (3, 1, 2))
 
-		# If nr == 1, reduce to [nt, nx]
+		# If 3rd dimension is 1, reduce to [nt, nx]
 		if size(data, 3) == 1
 			output_data[qsym] = dropdims(data; dims = 3)
 		else
@@ -175,6 +231,7 @@ function extract_spatial_data(states::Vector, quantities::Vector{String})
 
 	return output_data
 end
+
 
 
 

@@ -21,11 +21,11 @@ function print_output_variables_overview()
 	function print_table(case_name::String, vars::Vector{NamedTuple})
 		println("\nCase: $(uppercase(case_name))")
 		println("="^50)
-		println(rpad("Variable", 35), rpad("Default", 10), "Unit")
+		println(rpad("Variable", 35), "Unit")
 		println("-"^50)
 		for v in sort(vars, by = x -> x.name)
 			default_str = v.isdefault ? "Yes" : "No"
-			println(rpad(v.name, 35), rpad(default_str, 10), v.unit)
+			println(rpad(v.name, 35), v.unit)
 		end
 		println("="^50)
 	end

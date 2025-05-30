@@ -1,7 +1,269 @@
 module BattMoGLMakieExt
 
-using BattMo
-using GLMakie
+using BattMo, GLMakie
+
+
+function BattMo.plot_output(output::NamedTuple, output_variables::Union{Vector{String}, Vector{Vector{String}}}; layout::Union{Nothing, Tuple{Int, Int}} = nothing)
+	BattMo.check_plotting_availability()
+	return BattMo.plot_impl(output, output_variables; layout = layout)
+end
+
+function BattMo.plot_impl(
+	output::NamedTuple,
+	output_variables::Union{Vector{String}, Vector{Vector{String}}};
+	layout::Union{Nothing, Tuple{Int, Int}} = nothing,
+)
+	grouped_vars = [isa(g, String) ? [g] : g for g in output_variables]
+	nplots = length(grouped_vars)
+
+	# Determine layout
+	if layout === nothing
+		nrows = floor(Int, sqrt(nplots))
+		ncols = ceil(Int, nplots / nrows)
+	else
+		nrows, ncols = layout
+		if nrows * ncols < nplots
+			error("Layout $(nrows)x$(ncols) is too small for $nplots plots.")
+		end
+	end
+
+	fig = Figure(size = (1000, 350 * nrows))
+	grid = fig[1, 1] = GridLayout()
+
+	# Get time info
+	time_series_data = get_output_time_series(output)
+	full_time = time_series_data[:Time]
+	nt = length(full_time)
+	available_time_vars = keys(time_series_data)
+
+	# Get metadata for units
+	meta_data = BattMo.get_output_variables_meta_data()
+
+	# Helper: Parse variable string
+	function parse_variable(varstr::String)
+		base = match(r"^[^v]+", varstr) |> x -> strip(x.match)
+		dims = occursin(r"vs", varstr) ? match(r"vs (.+?)(?: at|$)", varstr) |> x -> split(strip(x[1]), r" and ") : []
+		selectors = Dict{Symbol, Union{Nothing, Int, Symbol}}()
+		for cap in eachmatch(r"at (\w+) index (\w+)", varstr)
+			dim = Symbol(cap[1])
+			idx = cap[2] == "end" ? :end : parse(Int, cap[2])
+			selectors[dim] = idx
+		end
+		return (base = strip(base), dims = dims, selectors = selectors)
+	end
+
+	# Helper: Get unit string for main quantities only (with slash and spaces)
+	function get_main_unit_str(quantity)
+		if haskey(meta_data, quantity) && haskey(meta_data[quantity], "unit")
+			unit = meta_data[quantity]["unit"]
+			return isempty(unit) ? "" : "  / $unit"   # two spaces, slash, space, then unit
+		end
+		return ""
+	end
+
+	# Helper: Build title suffix with actual index values and units for dims if available (no slash, just space before unit)
+	function build_title_suffix(non_plot_dims, sel, known_dims)
+		parts = String[]
+		for d in non_plot_dims
+			idx = get(sel, d, nothing)
+			if idx === :end
+				idx = length(known_dims[d])
+			elseif idx === nothing
+				push!(parts, "$(d)=all")
+				continue
+			end
+			val = known_dims[d][idx]
+
+			# Determine unit string for dimension
+			unit_str = ""
+			if d == :Position || d == :Radius
+				unit_str = " μm"
+			elseif d == :Time
+				if haskey(meta_data, "Time") && haskey(meta_data["Time"], "unit")
+					u = meta_data["Time"]["unit"]
+					if !isempty(u)
+						unit_str = " $u"
+					end
+				end
+			else
+				if haskey(meta_data, string(d)) && haskey(meta_data[string(d)], "unit")
+					u = meta_data[string(d)]["unit"]
+					if !isempty(u)
+						unit_str = " $u"
+					end
+				end
+			end
+
+			val_str = isa(val, Number) ? string(round(val, digits = 3)) : string(val)
+			push!(parts, "$(d)=$val_str$unit_str")
+		end
+		isempty(parts) ? "" : " at " * join(parts, ", ")
+	end
+
+	# Helper: Warn and skip if all data are NaNs
+	function all_nan_warn(varstr, data)
+		if all(isnan, data)
+			@warn "All values are NaN for variable \"$varstr\". Data will not be visible in the plot."
+			return true
+		end
+		return false
+	end
+
+	# Main loop
+	for (i, var_group) in enumerate(grouped_vars)
+		row = div(i - 1, ncols) + 1
+		col = mod(i - 1, ncols) + 1
+		ax = Axis(grid[row, col])
+		plotted_lines = false
+		plot_type = nothing  # :line or :contour or nothing
+
+		for varstr in var_group
+			try
+				parsed = parse_variable(varstr)
+				clean_var = parsed.base
+				dims = parsed.dims
+				sel = parsed.selectors
+
+				main_unit_str = get_main_unit_str(clean_var)
+
+				# Time series simple plot
+				if Symbol(clean_var) in available_time_vars && (isempty(dims) || dims == ["Time"])
+					y = time_series_data[Symbol(clean_var)]
+					if all_nan_warn(varstr, y)
+						continue
+					end
+					lines!(ax, full_time, y, label = varstr)
+					ax.xlabel = "Time / s"
+					ax.ylabel = clean_var * main_unit_str
+					plotted_lines = true
+					plot_type = :line
+					continue
+				end
+
+				# State variable
+				data = get_output_states(output; quantities = [String(clean_var), "Position", "Radius", "Time"])
+				var_data = data[Symbol(clean_var)]
+				pos = data[:Position] * 1e6
+				rad = data[:Radius] * 1e6
+				nt = length(full_time)
+
+				known_dims = Dict(:Time => full_time, :Position => pos, :Radius => rad)
+				dim_lengths = Dict(:Time => nt, :Position => length(pos), :Radius => length(rad))
+				sz = size(var_data)
+
+				# Infer dimension assignments
+				dim_assignments = Dict{Int, Symbol}()
+				for (i, s) in enumerate(sz)
+					for (k, v) in dim_lengths
+						if s == v && !(k in values(dim_assignments))
+							dim_assignments[i] = k
+							break
+						end
+					end
+				end
+
+				if length(dim_assignments) != ndims(var_data)
+					error("Could not assign all dimensions for variable $clean_var with size $(sz)")
+				end
+
+				plot_dims_syms = Symbol.(dims)
+				non_plot_dims = setdiff(collect(values(dim_assignments)), plot_dims_syms)
+
+				# Build slicing tuple
+				slices = Any[]
+				for i in 1:ndims(var_data)
+					dim_sym = dim_assignments[i]
+					if dim_sym in plot_dims_syms
+						push!(slices, Colon())
+					else
+						idx = get(sel, dim_sym, nothing)
+						if idx === :end
+							push!(slices, dim_lengths[dim_sym])
+						elseif idx isa Int
+							push!(slices, idx)
+						else
+							error("Missing selector for non-plotted dimension $dim_sym in \"$varstr\"")
+						end
+					end
+				end
+
+				# Extract data slice
+				data_slice = var_data[slices...]
+
+				# Check for all NaN slice and skip if so
+				if all_nan_warn(varstr, vec(data_slice))
+					continue
+				end
+
+				# Build axis values
+				x_sym = plot_dims_syms[1]
+				x_vals = known_dims[x_sym]
+				x_label = string(x_sym) * (x_sym == :Position || x_sym == :Radius ? " / μm" : " / s")
+
+				if length(plot_dims_syms) == 1
+					title_suffix = build_title_suffix(non_plot_dims, sel, known_dims)
+					label_with_suffix = isempty(title_suffix) ? varstr : "$title_suffix"
+
+					lines!(ax, x_vals, vec(data_slice), label = label_with_suffix)
+					ax.xlabel = x_label
+					ax.ylabel = clean_var * main_unit_str
+					# Set the title explicitly using title! function:
+					ax.title = isempty(title_suffix) ? varstr : "$clean_var"
+					plotted_lines = true
+					plot_type = :line
+
+				elseif length(plot_dims_syms) == 2
+					if plot_type == :line
+						@warn "Mixing line and contour plots in the same subplot is not supported."
+					end
+					plot_type = :contour
+
+					y_sym = plot_dims_syms[2]
+					y_vals = known_dims[y_sym]
+					y_label = string(y_sym) * (y_sym == :Position || y_sym == :Radius ? " / μm" : " / s")
+
+					if size(data_slice) == (length(y_vals), length(x_vals))
+						z = data_slice
+					elseif size(data_slice) == (length(x_vals), length(y_vals))
+						z = data_slice'
+					else
+						error("Unexpected shape $(size(data_slice)), expected (y,x)=($(length(y_vals)),$(length(x_vals)))")
+					end
+
+					contourf!(ax, x_vals, y_vals, z'; colormap = :viridis)
+
+					ax.xlabel = x_label
+					ax.ylabel = y_label
+
+					title_suffix = build_title_suffix(non_plot_dims, sel, known_dims)
+					ax.title = isempty(title_suffix) ? varstr : "$clean_var$title_suffix"
+
+				else
+					error("More than 2 plot dimensions not supported: $dims")
+				end
+
+			catch e
+				error("Failed to plot \"$varstr\": $(e.msg)")
+			end
+		end
+
+		if plotted_lines
+			axislegend(ax)
+			# Clear title if multiple lines to avoid clutter, or you can customize
+			if var_group isa Vector && length(var_group) > 1
+				ax.title = ""
+			end
+		end
+	end
+
+	display(fig)
+	return fig
+end
+
+
+
+
+
 
 function BattMo.plot_dashboard(output::NamedTuple; plot_type = "line")
 	BattMo.check_plotting_availability()
@@ -10,13 +272,12 @@ end
 
 function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "line")
 
-	time_series = get_output_time_series(output, ["Voltage", "Current"])
+	time_series = get_output_time_series(output; quantities = ["Time", "Voltage", "Current"])
 	t = time_series[:Time]
 	I = time_series[:Current]
 	E = time_series[:Voltage]
 
-	states = get_output_states(output, ["NeAmSurfaceConcentration", "PeAmSurfaceConcentration", "ElectrolyteConcentration",
-		"NeAmPotential", "PeAmPotential", "ElectrolytePotential"])
+	states = get_output_states(output)
 
 	n_steps = length(t)
 	x = states[:x] * 10^6
