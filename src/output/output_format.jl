@@ -103,60 +103,79 @@ function get_output_states(output::NamedTuple, quantities::Vector{String})
 	# Extract spatial data
 	output_data = extract_spatial_data(padded_states, quantities)
 
-# NamedTuple("Time":[nt],"X":[nx],"NeAmRadius":[nr_ne],"PeAmRadius":[nr_pe], ...
-# "NeAmConcentration": [nt,nx,nr_ne], "PeAmPotential": [nt,nx,nr_pe])
+	# NamedTuple("Time":[nt],"X":[nx],"NeAmRadius":[nr_ne],"PeAmRadius":[nr_pe], ...
+	# "NeAmConcentration": [nt,nx,nr_ne], "PeAmPotential": [nt,nx,nr_pe])
 
 	# Get coordinates
-	x = get_x_coords(output[:extra][:model]) 
+	x = get_x_coords(output[:extra][:model])
+	r = get_r_coords(output)
 
-	return (; Time = time, x = x, output_data...)
+	return (; Time = time, x = x, r = r, output_data...)
+
+end
+
+function get_r_coords(output)
+
+	particle_radius = output[:inputparams]["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["particleRadius"]
+	number_of_cells = output[:inputparams]["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"]
+
+	return range(0; stop = particle_radius, length = number_of_cells)
 
 end
 
 
 function extract_spatial_data(states::Vector, quantities::Vector{String})
-
-	# Define a mapping from variable names to symbol chains
+	# Map from quantity names to symbol chains used to extract data
 	var_map = Dict(
-		:NeAmSurfaceConcentration      => [:NeAm, :Cs],
-		:PeAmSurfaceConcentration      => [:PeAm, :Cs],
-		:NeAmConcentration            => [:NeAm, :Cp],
-		:PeAmConcentration            => [:PeAm, :Cp],
-		:ElectrolyteConcentration     => [:Elyte, :C],
-		:NeAmPotential                => [:NeAm, :Phi],
-		:ElectrolytePotential         => [:Elyte, :Phi],
-		:PeAmPotential                => [:PeAm, :Phi],
-		:NeAmTemperature              => [:NeAm, :Temperature],
-		:PeAmTemperature              => [:PeAm, :Temperature],
-		:NeAmOpenCircuitPotential     => [:NeAm, :Ocp],
-		:PeAmOpenCircuitPotential     => [:PeAm, :Ocp],
-		:NeAmCharge                   => [:NeAm, :Charge],
-		:ElectrolyteCharge            => [:Elyte, :Charge],
-		:PeAmCharge                   => [:PeAm, :Charge],
-		:ElectrolyteMass              => [:Elyte, :Mass],
-		:ElectrolyteDiffusivity       => [:Elyte, :Diffusivity],
-		:ElectrolyteConductivity      => [:Elyte, :Conductivity]
+		:NeAmSurfaceConcentration => [:NeAm, :Cs],
+		:PeAmSurfaceConcentration => [:PeAm, :Cs],
+		:NeAmConcentration        => [:NeAm, :Cp],
+		:PeAmConcentration        => [:PeAm, :Cp],
+		:ElectrolyteConcentration => [:Elyte, :C],
+		:NeAmPotential            => [:NeAm, :Phi],
+		:ElectrolytePotential     => [:Elyte, :Phi],
+		:PeAmPotential            => [:PeAm, :Phi],
+		:NeAmTemperature          => [:NeAm, :Temperature],
+		:PeAmTemperature          => [:PeAm, :Temperature],
+		:NeAmOpenCircuitPotential => [:NeAm, :Ocp],
+		:PeAmOpenCircuitPotential => [:PeAm, :Ocp],
+		:NeAmCharge               => [:NeAm, :Charge],
+		:ElectrolyteCharge        => [:Elyte, :Charge],
+		:PeAmCharge               => [:PeAm, :Charge],
+		:ElectrolyteMass          => [:Elyte, :Mass],
+		:ElectrolyteDiffusivity   => [:Elyte, :Diffusivity],
+		:ElectrolyteConductivity  => [:Elyte, :Conductivity],
 	)
 
 	output_data = Dict{Symbol, Any}()
-	
+
 	for q in quantities
+		qsym = Symbol(q)
 
-		chain = var_map[Symbol(q)]
-		data = [foldl(getindex, chain; init=state) for state in states]
-		data = cat(data...; dims=3)
-		data = permutedims(data, (3,2,1))
+		# Check if the quantity exists
+		@assert haskey(var_map, qsym) "Quantity \"$q\" is not a valid or supported variable."
 
-		if size(data, 2) == 1
-			output_data[Symbol(q)] = dropdims(data; dims=2)
+		# Build the data matrix/tensor: [nt, nx] or [nt, nx, nr]
+		chain = var_map[qsym]
+		raw = [foldl(getindex, chain; init = state) for state in states]  # returns a list of arrays
+
+		# Stack along 3rd dimension to get [nx, nr, nt]
+		data = cat(raw...; dims = 3)
+
+		# Permute to get [nt, nx, nr]
+		data = permutedims(data, (3, 1, 2))
+
+		# If nr == 1, reduce to [nt, nx]
+		if size(data, 3) == 1
+			output_data[qsym] = dropdims(data; dims = 3)
 		else
-			output_data[Symbol(q)] = data
+			output_data[qsym] = data
 		end
-
 	end
-	
+
 	return output_data
 end
+
 
 
 function get_x_coords(model::MultiModel{:Battery})
