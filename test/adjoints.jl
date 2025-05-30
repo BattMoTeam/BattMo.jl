@@ -1,4 +1,4 @@
-using BattMo, Test, Jutul
+using BattMo, Test, Jutul, LinearAlgebra
 import BattMo: VoltageCalibration, free_calibration_parameter!, freeze_calibration_parameter!, print_calibration_overview
 
 function test_adjoints()
