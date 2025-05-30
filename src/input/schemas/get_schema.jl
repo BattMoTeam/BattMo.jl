@@ -418,9 +418,7 @@ function get_schema_cycling_protocol()
 						"CurrentChangeLimit",
 						"VoltageChangeLimit",
 						"InitialTemperature",
-					],
-					
-				),
+					]),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"))),
@@ -442,7 +440,7 @@ function get_schema_cycling_protocol()
 						"TotalTime",
 						"InitialTemperature",
 					],
-					),
+				),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
@@ -454,9 +452,7 @@ function get_schema_cycling_protocol()
 						"DRate",
 						"LowerVoltageLimit",
 						"InitialTemperature",
-					],
-					
-				),
+					]),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
@@ -470,9 +466,7 @@ function get_schema_cycling_protocol()
 						"CRate",
 						"UpperVoltageLimit",
 						"InitialTemperature",
-					],
-					
-				),
+					]),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
@@ -485,9 +479,7 @@ function get_schema_cycling_protocol()
 						"UpperVoltageLimit",
 						"LowerVoltageLimit",
 						"InitialTemperature",
-					],
-					
-				),
+					]),
 			),
 		],
 	)
@@ -500,22 +492,22 @@ function get_schema_simulation_settings(model_settings)
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",
 		"properties" => Dict(
-			"GridPoints" => Dict(
+			"GridResolution" => Dict(
 				"type" => "object",
 				"properties" => Dict(
-					"ElectrodeWidth" => create_property(parameter_meta, "GridPointsElectrodeWidth"),
-					"ElectrodeLength" => create_property(parameter_meta, "GridPointsElectrodeLength"),
-					"PositiveElectrodeCoating" => create_property(parameter_meta, "GridPointsPositiveElectrodeCoating"),
-					"PositiveElectrodeActiveMaterial" => create_property(parameter_meta, "GridPointsPositiveElectrodeActiveMaterial"),
-					"PositiveElectrodeCurrentCollector" => create_property(parameter_meta, "GridPointsPositiveElectrodeCurrentCollector"),
-					"PositiveElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridPointsPositiveElectrodeCurrentCollectorTabWidth"),
-					"PositiveElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridPointsPositiveElectrodeCurrentCollectorTabLength"),
-					"NegativeElectrodeCoating" => create_property(parameter_meta, "GridPointsNegativeElectrodeCoating"),
-					"NegativeElectrodeActiveMaterial" => create_property(parameter_meta, "GridPointsNegativeElectrodeActiveMaterial"),
-					"NegativeElectrodeCurrentCollector" => create_property(parameter_meta, "GridPointsNegativeElectrodeCurrentCollector"),
-					"NegativeElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridPointsNegativeElectrodeCurrentCollectorTabWidth"),
-					"NegativeElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridPointsNegativeElectrodeCurrentCollectorTabLength"),
-					"Separator" => create_property(parameter_meta, "GridPointsSeparator"),
+					"ElectrodeWidth" => create_property(parameter_meta, "GridResolutionElectrodeWidth"),
+					"ElectrodeLength" => create_property(parameter_meta, "GridResolutionElectrodeLength"),
+					"PositiveElectrodeCoating" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCoating"),
+					"PositiveElectrodeActiveMaterial" => create_property(parameter_meta, "GridResolutionPositiveElectrodeActiveMaterial"),
+					"PositiveElectrodeCurrentCollector" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollector"),
+					"PositiveElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabWidth"),
+					"PositiveElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabLength"),
+					"NegativeElectrodeCoating" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCoating"),
+					"NegativeElectrodeActiveMaterial" => create_property(parameter_meta, "GridResolutionNegativeElectrodeActiveMaterial"),
+					"NegativeElectrodeCurrentCollector" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollector"),
+					"NegativeElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabWidth"),
+					"NegativeElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabLength"),
+					"Separator" => create_property(parameter_meta, "GridResolutionSeparator"),
 				),
 				"required" => [
 					"PositiveElectrodeCoating",
@@ -532,11 +524,11 @@ function get_schema_simulation_settings(model_settings)
 			"RampUpTime" => Dict("type" => "integer"),
 			"RampUpSteps" => Dict("type" => "integer"),
 		),
-		"required" => ["GridPoints", "Grid", "TimeStepDuration", "RampUpTime", "RampUpSteps"],
+		"required" => ["GridResolution", "TimeStepDuration", "RampUpTime", "RampUpSteps"],
 	)
 
 	required = schema["required"]
-	required_grid_points = schema["properties"]["GridPoints"]["required"]
+	required_grid_points = schema["properties"]["GridResolution"]["required"]
 
 	if model_settings["ModelFramework"] == "P4D Pouch"
 		push!(required_grid_points, "ElectrodeWidth")

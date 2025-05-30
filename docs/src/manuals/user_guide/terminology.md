@@ -73,7 +73,7 @@ Define numerical assumptions specific to the simulation process, including time-
 
 ```json
 {
-    "GridPoints": {
+    "GridResolution": {
         "PositiveElectrodeCoating": 10,
         "PositiveElectrodeActiveMaterial": 10,
         "NegativeElectrodeCoating": 10,
