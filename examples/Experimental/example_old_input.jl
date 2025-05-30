@@ -36,8 +36,19 @@ inputparams["Control"]["useCVswitch"] = false
 ##################
 # run simulation #
 ##################
+
+function myhook(simulator,
+			    model,
+			    state0,
+			    forces,
+			    timesteps,
+			    cfg)
+
+    cfg[:info_level] = 2
     
-output = run_battery(inputparams)
+end
+     
+output = run_battery(inputparams; hook = myhook)
 
 ############
 # plotting #
@@ -51,7 +62,7 @@ I = [state[:Control][:Current][1] for state in states]
 
 fig = Figure(size = (1000, 400))
 
-ax = Axis(f[1, 1],
+ax = Axis(fig[1, 1],
 	title = "Voltage",
 	xlabel = "Time / s",
 	ylabel = "Voltage / V",
@@ -70,7 +81,7 @@ scatterlines!(ax,
 	          markercolor = :black
               )
 
-ax = Axis(f[1, 2],
+ax = Axis(fig[1, 2],
 	title = "Current",
 	xlabel = "Time / s",
 	ylabel = "Current / A",
