@@ -499,7 +499,8 @@ function setup_submodels(inputparams::InputParams;
 		elseif haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionname")
 
 			funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
-			fcn = setup_function_from_function_name(funcname)
+			funcpath = haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionpath") ? inputparams_am["Interface"]["openCircuitPotential"]["functionpath"] : nothing
+			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 			am_params[:ocp_func] = fcn
 
 		else
@@ -523,7 +524,7 @@ function setup_submodels(inputparams::InputParams;
 					"SEIstoichiometricCoefficient",
 					"SEImolarVolume",
 					"SEIelectronicDiffusionCoefficient",
-					"SEIintersticialConcentration",
+					"SEIinterstitialConcentration",
 					"SEIionicConductivity"]
 				for fd in fds
 					am_params[Symbol(fd)] = inputparams_am["Interface"][fd]
@@ -607,7 +608,8 @@ function setup_submodels(inputparams::InputParams;
 	elseif haskey(inputparams_elyte["diffusionCoefficient"], "functionname")
 
 		funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
-		fcn = setup_function_from_function_name(funcname)
+		funcpath = haskey(inputparams_elyte["diffusionCoefficient"], "functionpath") ? inputparams_elyte["diffusionCoefficient"]["functionpath"] : nothing
+		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:diffusivity_func] = fcn
 
 	else
@@ -629,7 +631,8 @@ function setup_submodels(inputparams::InputParams;
 	elseif haskey(inputparams_elyte["ionicConductivity"], "functionname")
 
 		funcname = inputparams_elyte["ionicConductivity"]["functionname"]
-		fcn = setup_function_from_function_name(funcname)
+		funcpath = haskey(inputparams_elyte["ionicConductivity"], "functionpath") ? inputparams_elyte["ionicConductivity"]["functionpath"] : nothing
+		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:conductivity_func] = fcn
 
 	else
@@ -727,8 +730,9 @@ function setup_submodels(inputparams::InputParams;
 
 		ctrl = jsondict["Control"]
 		function_name = ctrl["functionName"]
+		file_path = ctrl["filePath"]
 
-		policy = FunctionPolicy(function_name)
+		policy = FunctionPolicy(function_name, file_path)
 
 	else
 
@@ -1454,7 +1458,7 @@ function get_scalings(model, parameters)
 			push!(scalings, scaling)
 
 			De = model[elde].system[:SEIelectronicDiffusionCoefficient]
-			ce = model[elde].system[:SEIintersticialConcentration]
+			ce = model[elde].system[:SEIinterstitialConcentration]
 
 			scaling = (model_label = elde, equation_label = :sei_mass_cons, value = De * ce / L)
 			push!(scalings, scaling)

@@ -6,7 +6,7 @@ using Test
 
 	@test begin
 
-		name = "Chen2020_calibrated"
+		name = "Chen2020"
 		cell_parameters = load_cell_parameters(; from_default_set = name)
 		cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 

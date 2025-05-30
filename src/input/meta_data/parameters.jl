@@ -8,7 +8,7 @@ function get_parameter_meta_data()
 			"options" => ["3D-demo", "Cylindrical", "Pouch"],
 			"context_type" => "hasCase",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_3dcfe33d_6825_43c0_a798_68e871a68d39",
-			"description" => "Type of physical container encapsulating the electrochemical cell. Examples: Cylindrical, Pouch."
+			"description" => "Type of physical container encapsulating the electrochemical cell. Examples: Cylindrical, Pouch.",
 		),
 		"EffectiveDensity" => Dict(
 			"type" => Real,
@@ -19,13 +19,13 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#KilogramPerCubicMetre",
 			"context_type" => "EffectiveDensity",
 			"context_type_iri" => nothing,
-			"description" => "Density of a porous electrode, calculated from its geometrical volume and mass. It includes the volume occupied by pores."
+			"description" => "Density of a porous electrode, calculated from its geometrical volume and mass. It includes the volume occupied by pores.",
 		),
 		"DubbelCoatedElectrodes" => Dict(
 			"type" => Bool,
 			"context_type" => "DoubleCoatedElectrodes",
 			"context_type_iri" => nothing,
-			"description" => "Whether the electrode is double coated or not."
+			"description" => "Whether the electrode is double coated or not.",
 		),
 		"NominalVoltage" => Dict(
 			"type" => Real,
@@ -36,7 +36,7 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#Volt",
 			"context_type" => "NominalVoltage",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_639b844a_e801_436b_985d_28926129ead6",
-			"description" => "Reference voltage of the cell as reported by the manufacturer. Usually calculated from the cell's energy output and capacity under a standard cycling test."
+			"description" => "Reference voltage of the cell as reported by the manufacturer. Usually calculated from the cell's energy output and capacity under a standard cycling test.",
 		),
 		"InnerCellRadius" => Dict(
 			"type" => Real,
@@ -47,7 +47,7 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#Metre",
 			"context_type" => "InnerCellRadius",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_32dcd601_47c7_4028_b7fa_5e972ae57f12",
-			"description" => "Radius of the rolled electrodes within a cylindrical cell, measured from the center of the cell to the inner side of the cell wall."
+			"description" => "Radius of the rolled electrodes within a cylindrical cell, measured from the center of the cell to the inner side of the cell wall.",
 		),
 		"ElectrodeWidth" => Dict(
 			"type" => Real,
@@ -58,7 +58,7 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#Metre",
 			"context_type" => "Width",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_e4de48b1_dabb_4490_ac2b_040f926c64f0",
-			"description" => "Dimension of the shortest side of the face of a rectangular electrode."
+			"description" => "Dimension of the shortest side of the face of a rectangular electrode.",
 		),
 		"ElectrodeLength" => Dict(
 			"type" => Real,
@@ -69,7 +69,7 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#Metre",
 			"context_type" => "Length",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_cd2cd0de_e0cc_4ef1_b27e_2e88db027bac",
-			"description" => "Dimension of the longest side of the face of a rectangular electrode."
+			"description" => "Dimension of the longest side of the face of a rectangular electrode.",
 		),
 		"SurfaceCoefficientOfHeatTransfer" => Dict(
 			"type" => Real,
@@ -80,7 +80,7 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#WattPerSquareMetreKelvin",
 			"context_type" => "SurfaceCoefficientOfHeatTransfer",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_0b3295fa_f4bf_4f83_a603_9d98c03da5bb",
-			"description" => "Rate at which heat is exchanged between a cell’s surface and its surrounding environment"
+			"description" => "Rate at which heat is exchanged between a cell’s surface and its surrounding environment",
 		),
 		"ChargeTransferCoefficient" => Dict(
 			"type" => Real,
@@ -91,7 +91,7 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#Dimensionless",
 			"context_type" => "ChargeTransferCoefficient",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_a4dfa5c1_55a9_4285_b71d_90cf6613ca31",
-			"description" => "Constant alpha in the Butler-Volmer equation. It represents the fraction of the electrostatic potential energy affecting the reduction rate in an electrode reaction, with the remaining fraction affecting the corresponding oxidation rate."
+			"description" => "Constant alpha in the Butler-Volmer equation. It represents the fraction of the electrostatic potential energy affecting the reduction rate in an electrode reaction, with the remaining fraction affecting the corresponding oxidation rate.",
 		),
 		"MolarVolume" => Dict(
 			"type" => Real,
@@ -102,7 +102,7 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#CubicMetrePerMole",
 			"context_type" => "MolarVolume",
 			"context_type_iri" => "hhttps://w3id.org/emmo#EMMO_8b4af754_110a_4854_ac65_349ebafc1bed",
-			"description" => "Volume per amount of substance."
+			"description" => "Volume per amount of substance.",
 		),
 		"ElectronicDiffusionCoefficient" => Dict(
 			"type" => Real,
@@ -113,7 +113,7 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#SquareMetrePerSecond",
 			"context_type" => "ElectronicDiffusionCoefficient",
 			"context_type_iri" => nothing,
-			"description" => "Diffusion coefficient of electrons in a solid."
+			"description" => "Diffusion coefficient of electrons in a solid.",
 		),
 		"StoichiometricCoefficient" => Dict(
 			"type" => Real,
@@ -124,18 +124,18 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#Dimensionless",
 			"context_type" => "StoichiometricCoefficient",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_f0667139_6428_4e3d_ac0d_08c1dd7f36ea",
-			"description" => "Ratio of the concentration of an intercalant (e.g. Li+) at a given moment, to its maximum possible concentration within a solid host material."
+			"description" => "Ratio of the concentration of an intercalant (e.g. Li+) at a given moment, to its maximum possible concentration within a solid host material.",
 		),
-		"IntersticialConcentration" => Dict(
+		"InterstitialConcentration" => Dict(
 			"type" => Real,
 			"min_value" => 0,
 			"max_value" => 5000,
 			"unit" => "mol·m⁻³",
 			"unit_name" => "emmo:MolePerCubicMetre",
 			"unit_iri" => "https://w3id.org/emmo#MolePerCubicMetre",
-			"context_type" => "IntersticialConcentration",
+			"context_type" => "InterstitialConcentration",
 			"context_type_iri" => nothing,
-			"description" => "Amount of neutral intersticial sites of the intercalant (Li+) per volume of solid. See https://doi.org/10.1002/cssc.201800077."
+			"description" => "Amount of neutral intersticial sites of the intercalant (Li+) per volume of solid. See https://doi.org/10.1002/cssc.201800077.",
 		),
 		"InitialThickness" => Dict(
 			"type" => Real,
@@ -146,33 +146,33 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#Metre",
 			"context_type" => "InitialThickness",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_43003c86_9d15_433b_9789_ee2940920656",
-			"description" => "Thickness of the SEI layer at the start of the simulation. See https://doi.org/10.1016/j.powera.2022.100083."
+			"description" => "Thickness of the SEI layer at the start of the simulation. See https://doi.org/10.1016/j.powera.2022.100083.",
 		),
 		"Protocol" => Dict(
 			"type" => String,
 			"options" => ["CC", "CCCV", "Function"],
 			"context_type" => "Protocol",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_d3e2d213_d078_4b9a_8beb_62f063e57d69",
-			"description" => """Type of cycling procedure used to cycle a cell. For instance: Constant Current ("CC"), Constant Current - Constant Voltage ("CCCV")."""
+			"description" => """Type of cycling procedure used to cycle a cell. For instance: Constant Current ("CC"), Constant Current - Constant Voltage ("CCCV").""",
 		),
 		"FunctionName" => Dict(
 			"type" => String,
 			"context_type" => "Name",
 			"context_type_iri" => "https://schema.org/name",
-			"description" => "String of the name of a Julia function."
+			"description" => "String of the name of a Julia function.",
 		),
 		"TotalTime" => Dict(
 			"type" => Real,
 			"context_type" => "Time",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_0adabf6f_7404_44cb_9f65_32d83d8101a3",
-			"description" => "Maximum duration of the simulation."
+			"description" => "Maximum duration of the simulation.",
 		),
 		"InitialControl" => Dict(
 			"type" => String,
 			"options" => ["charging", "discharging"],
 			"context_type" => "Protocol",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_472a0ca2_58bf_4618_b561_6fe68bd9fd49",
-			"description" => """Whether a cycling protocol starts with "charging" or "discharging". """
+			"description" => """Whether a cycling protocol starts with "charging" or "discharging". """,
 		),
 		"RestingTimeAfterCharge" => Dict(
 			"type" => Real,
@@ -183,7 +183,7 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#Second",
 			"context_type" => "RestingTimeAfterCharge",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_2678a656_4a27_4706_8dde_b0a93e9b92fa",
-			"description" => "Time during which the cell is kept at open-circuit conditions after completing a charging step."
+			"description" => "Time during which the cell is kept at open-circuit conditions after completing a charging step.",
 		),
 		"RestingTimeAfterDischarge" => Dict(
 			"type" => Real,
@@ -194,7 +194,7 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#Second",
 			"context_type" => "RestingTimeAfterDischarge",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_2678a656_4a27_4706_8dde_b0a93e9b92fa",
-			"description" => "Time during which the cell is kept at open-circuit conditions after completing a discharging step."
+			"description" => "Time during which the cell is kept at open-circuit conditions after completing a discharging step.",
 		),
 		"ModelFramework" => Dict(
 			"type" => String,
@@ -203,29 +203,30 @@ function get_parameter_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo/domain/battery#battery_b1921f7b_afac_465a_a275_26f929f7f936",
 			"is_sub_model" => true,
 			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/pxd_model",
-			"description" => """Framework defining the dimensionality of the electrochemical model. Examples: "P2D", "P4D". """
+			"description" => """Framework defining the dimensionality of the electrochemical model. Examples: "P2D", "P4D". """,
 		),
 		"SEIModel" => Dict(
 			"type" => String,
 			"options" => ["Bolay"],
 			"is_sub_model" => true,
 			"context_type_iri" => nothing,
-			"description" => """Which SEI model is used. For instance: "Bolay" """
+			"description" => """Which SEI model is used. For instance: "Bolay" """,
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/sei_model",
 		),
 		"TransportInSolid" => Dict(
 			"type" => String,
 			"options" => ["FullDiffusion"],
 			"is_sub_model" => true,
 			"context_type_iri" => nothing,
-			"description" => """Which model is used to describe the intercalant diffusion in the solid particles. Example "FullDiffusion". """
-			),
+			"description" => """Which model is used to describe the intercalant diffusion in the solid particles. Example "FullDiffusion". """,
+		),
 		"CurrentCollectors" => Dict(
 			"type" => String,
 			"options" => ["Generic"],
 			"context_type" => "CurrentCollectors",
 			"context_type_iri" => nothing,
 			"is_sub_model" => true,
-			"description" => "Which model describes the current collectors."
+			"description" => "Which model describes the current collectors.",
 		),
 		"GridPointsElectrodeWidth" => Dict(
 			"type" => Int,
@@ -233,111 +234,111 @@ function get_parameter_meta_data()
 			"max_value" => 1000,
 			"context_type" => "GridPointsPositiveElectrode",
 			"context_type_iri" => nothing,
-			"description" => "Number of grid points along the width dimension of the electrode."
+			"description" => "Number of grid points along the width dimension of the electrode.",
 		),
 		"GridPointsElectrodeLength" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => nothing,
-			"description" => "Number of grid points along the length dimension of the electrode."
+			"description" => "Number of grid points along the length dimension of the electrode.",
 		),
 		"GridPointsPositiveElectrodeCoating" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => nothing,
-			"description" => "Number of grid points along the thickness dimension of the positive electrode."
+			"description" => "Number of grid points along the thickness dimension of the positive electrode.",
 		),
 		"GridPointsPositiveElectrodeActiveMaterial" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => nothing,
-			"description" => "Number of grid points along the radial pseudo dimension of the positive electrode active material particles."
+			"description" => "Number of grid points along the radial pseudo dimension of the positive electrode active material particles.",
 		),
 		"GridPointsNegativeElectrodeCoating" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => nothing,
-			"description" => "Number of grid points along the thickness dimension of the negative electrode."
+			"description" => "Number of grid points along the thickness dimension of the negative electrode.",
 		),
 		"GridPointsPositiveElectrodeCurrentCollector" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => nothing,
-			"description" => "Number of grid points along the thickness dimension of the positive electrode current collector."
+			"description" => "Number of grid points along the thickness dimension of the positive electrode current collector.",
 		),
 		"GridPointsPositiveElectrodeCurrentCollectorTabWidth" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => nothing,
-			"description" => "In the current collector tab at the positive electrode, the number of grid points along the width dimension of the tab's face."
+			"description" => "In the current collector tab at the positive electrode, the number of grid points along the width dimension of the tab's face.",
 		),
 		"TabWidth" => Dict(
 			"type" => Real,
 			"min_value" => 1e-9,
 			"max_value" => 1000,
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_e4de48b1_dabb_4490_ac2b_040f926c64f0",
-			"description" => "Dimension of the shortest side of the face of the rectangular tab of a current collector."
-			),
+			"description" => "Dimension of the shortest side of the face of the rectangular tab of a current collector.",
+		),
 		"TabLength" => Dict(
 			"type" => Real,
 			"min_value" => 1e-8,
 			"max_value" => 1000,
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_cd2cd0de_e0cc_4ef1_b27e_2e88db027bac",
-			"description" => "Dimension of the longest side of the face of the rectangular tab of a current collector."
+			"description" => "Dimension of the longest side of the face of the rectangular tab of a current collector.",
 		),
 		"GridPointsPositiveElectrodeCurrentCollectorTabLength" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a",
-			"description" => "In the current collector tab at the positive electrode, the number of grid points along the length dimension of the tab's face."
+			"description" => "In the current collector tab at the positive electrode, the number of grid points along the length dimension of the tab's face.",
 		),
 		"GridPointsNegativeElectrodeCurrentCollector" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a",
-			"description" => "Number of grid points along the thickness dimension of the negative electrode current collector."
+			"description" => "Number of grid points along the thickness dimension of the negative electrode current collector.",
 		),
 		"GridPointsNegativeElectrodeCurrentCollectorTabWidth" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a",
-			"description" => "In the current collector tab at the negative electrode, the number of grid points along the width dimension of the tab's face."
+			"description" => "In the current collector tab at the negative electrode, the number of grid points along the width dimension of the tab's face.",
 		),
 		"GridPointsNegativeElectrodeCurrentCollectorTabLength" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a",
-			"description" => "In the current collector tab at the negative electrode, the number of grid points along the length dimension of the tab's face."
+			"description" => "In the current collector tab at the negative electrode, the number of grid points along the length dimension of the tab's face.",
 		),
 		"GridPointsNegativeElectrodeActiveMaterial" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a",
-			"description" => "Number of grid points along the radial pseudo dimension of the negative electrode active material particles."
+			"description" => "Number of grid points along the radial pseudo dimension of the negative electrode active material particles.",
 		),
 		"GridPointsSeparator" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a",
-			"description" => "Number of grid points along the thickness dimension of the separator."
+			"description" => "Number of grid points along the thickness dimension of the separator.",
 		),
 		"Grid" => Dict(
 			"type" => Vector,
 			"context_type" => "Grid",
 			"context_type_iri" => nothing,
-			"description" => "Vector storing the numerical representation of the computational grid discretizing the spatial representation of the cell."
+			"description" => "Vector storing the numerical representation of the computational grid discretizing the spatial representation of the cell.",
 		),
 		"RampUp" => Dict(
 			"type" => String,
@@ -346,7 +347,7 @@ function get_parameter_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_rampup",
 			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/ramp_up",
 			"is_sub_model" => true,
-			"description" => """Type of signal of electric current used to initialize the cell simulation. Example: "Sinusoidal"."""
+			"description" => """Type of signal of electric current used to initialize the cell simulation. Example: "Sinusoidal".""",
 		),
 		"RampUpSteps" => Dict(
 			"type" => Int,
@@ -354,7 +355,17 @@ function get_parameter_meta_data()
 			"max_value" => 100,
 			"context_type" => "RampUpSteps",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_rampup_steps",
-			"description" => "Number of ramp-up steps applied to initialize the cell simulation."
+			"description" => "Number of ramp-up steps applied to initialize the cell simulation.",
+		),
+		"RampUpTime" => Dict(
+			"type" => Int,
+			"min_value" => 0,
+			"max_value" => 500,
+			"unit" => "s",
+			"unit_name" => "emmo:Second",
+			"context_type" => "RampUpTime",
+			"context_type_iri" => nothing,
+			"description" => "Ramp up time duration applied to initialize the cell simulation.",
 		),
 		"MaximumConcentration" => Dict(
 			"context_type" => "MaximumConcentration",
@@ -511,8 +522,9 @@ function get_parameter_meta_data()
 			"unit" => "V",
 			"unit_name" => "emmo:Volt",
 			"unit_iri" => "https://w3id.org/emmo#Volt",
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
 		),
-		"AmbientKelvinTemperature" => Dict("context_type" => "AmbientThermodynamicTemperature",
+		"AmbientTemperature" => Dict("context_type" => "AmbientThermodynamicTemperature",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_39a44af0_0e1a_4859_b550_bdabad64386e",
 			"max_value" => 373.15,
 			"min_value" => 238.15,
@@ -522,7 +534,7 @@ function get_parameter_meta_data()
 			"unit_name" => "emmo:Kelvin",
 			"unit_iri" => "https://w3id.org/emmo#Kelvin",
 		),
-		"InitialKelvinTemperature" => Dict("context_type" => "InititalThermodynamicTemperature",
+		"InitialTemperature" => Dict("context_type" => "InititalThermodynamicTemperature",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_9c9b80a4_a00b_4b91_8e17_3a7831f2bf2f",
 			"max_value" => 373.15,
 			"min_value" => 238.15,
@@ -638,6 +650,7 @@ function get_parameter_meta_data()
 			"unit" => "S·cm⁻¹",
 			"unit_name" => "emmo:SiemensPerCentiMetre",
 			"unit_iri" => "https://w3id.org/emmo#SiemensPerCentiMetre",
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
 		),
 		"DiffusionCoefficient" => Dict(
 			"context_type" => ["DiffusionCoefficient", "Expression"],
@@ -647,6 +660,7 @@ function get_parameter_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#EMMO_10f703b5_8b2a_4c5a_a734_f0cfb29622ad",
 			"description" => "The diffusion coefficient of the charge carrier in the electrolyte",
 			"type" => [String, Dict{String, Vector}, Real],
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
 		),
 		"Thickness" => Dict(
 			"context_type" => "Thickness",
