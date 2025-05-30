@@ -1,8 +1,8 @@
 using BattMo, GLMakie, Jutul
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCCV")
 model_settings = load_model_settings(; from_default_set = "P2D")
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
+cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
 model_setup = LithiumIonBattery(; model_settings)
 
@@ -20,9 +20,9 @@ E = time_series[:Voltage]
 
 using GLMakie
 
-NeAmC_t10 = states[:NeAmSurfaceConcentration][10,:,1]
-PeAmCSurf_t10 = states[:PeAmSurfaceConcentration][10,:]
-ElyteC_t10 = states[:ElectrolyteConcentration][10,:]
+NeAmC_t10 = states[:NeAmSurfaceConcentration][10, :, 1]
+PeAmCSurf_t10 = states[:PeAmSurfaceConcentration][10, :]
+ElyteC_t10 = states[:ElectrolyteConcentration][10, :]
 
 f = Figure()
 ax = Axis(f[1, 1], title = "Concentrations", xlabel = "Distance [m]", ylabel = "Concentration")

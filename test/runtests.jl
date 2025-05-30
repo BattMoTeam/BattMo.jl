@@ -2,6 +2,7 @@ using BattMo
 using Test
 
 include("test_loader.jl")
+include("test_function_input.jl")
 include("test_documentation_prints.jl")
 include("examples_battmo_formatted_input.jl")
 include("matlab_input.jl")

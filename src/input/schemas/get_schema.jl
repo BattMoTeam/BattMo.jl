@@ -52,10 +52,10 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 			Dict(
 				"type" => "object",
 				"properties" => Dict(
-					"type" => Dict("type" => "string", "enum" => ["function"]),
-					"functionname" => Dict("type" => "string"),
+					"FunctionName" => Dict("type" => "string"),
+					"FilePath" => Dict("type" => "string"),
 				),
-				"required" => ["type", "functionname"],
+				"required" => ["FunctionName", "FilePath"],
 				"additionalProperties" => true,
 			),
 		)
@@ -444,6 +444,7 @@ function get_schema_cycling_protocol()
 						"VoltageChangeLimit",
 						"InitialKelvinTemperature",
 					],
+					
 				),
 			),
 			Dict(
@@ -462,10 +463,11 @@ function get_schema_cycling_protocol()
 					"required" => [
 						"InitialStateOfCharge",
 						"FunctionName",
+						"FilePath",
 						"TotalTime",
 						"InitialKelvinTemperature",
 					],
-				),
+					),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
@@ -478,6 +480,7 @@ function get_schema_cycling_protocol()
 						"LowerVoltageLimit",
 						"InitialKelvinTemperature",
 					],
+					
 				),
 			),
 			Dict(
@@ -487,10 +490,13 @@ function get_schema_cycling_protocol()
 				"then" => Dict(
 					"required" => [
 						"InitialStateOfCharge",
+						"InitialControl",
+						"TotalNumberOfCycles",
 						"CRate",
 						"UpperVoltageLimit",
 						"InitialKelvinTemperature",
 					],
+					
 				),
 			),
 			Dict(
@@ -505,6 +511,7 @@ function get_schema_cycling_protocol()
 						"LowerVoltageLimit",
 						"InitialKelvinTemperature",
 					],
+					
 				),
 			),
 		],
