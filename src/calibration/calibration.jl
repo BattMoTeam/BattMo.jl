@@ -17,6 +17,12 @@ mutable struct VoltageCalibration <:AbstractCalibration
     calibrated_cell_parameters
     "History of the optimization process, containing information about the optimization steps."
     history
+    """
+        VoltageCalibration(t, v, sim)
+
+    Set up calibration for a voltage calibration problem for given time vector
+    `t` and voltage vector `v` and a `Simulation` instance `sim`
+    """
     function VoltageCalibration(t, v, sim)
         @assert length(t) == length(v)
         for i in 2:length(t)
@@ -35,6 +41,21 @@ function VoltageCalibration(t_and_v, sim; normalize_time = false)
     return VoltageCalibration(t, v, sim)
 end
 
+"""
+    free_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String};
+            initial_value = missing,
+            lower_bound = missing,
+            upper_bound = missing
+        )
+
+Set a calibration parameter to be free for optimization. The parameter is
+specified by `parameter_name`, which is a vector of strings representing the
+nested structure of the parameter in the simulation's cell parameters.
+
+# Notes
+- The `initial_value` is optional and can be set to `missing` if not provided.
+- The `lower_bound` and `upper_bound` must be provided and cannot be `missing`.
+"""
 function free_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String};
             initial_value = missing,
             lower_bound = missing,
@@ -58,6 +79,12 @@ function free_calibration_parameter!(vc::AbstractCalibration, parameter_name::Ve
     return vc
 end
 
+"""
+    freeze_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String}, val = missing)
+
+Remove a calibration parameter from the optimization process, optionally setting
+its value to `val`.
+"""
 function freeze_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String}, val = missing)
     if !ismissing(val)
         set_calibration_parameter!(vc, parameter_name, val)
@@ -65,6 +92,13 @@ function freeze_calibration_parameter!(vc::AbstractCalibration, parameter_name::
     delete!(vc.parameter_targets, parameter_name)
 end
 
+"""
+    print_calibration_overview(vc::AbstractCalibration)
+
+Print an overview of the calibration parameters and their current values. If the
+calibration has been performed, the table will also include the optimized values
+and the percentage change from the initial values.
+"""
 function print_calibration_overview(vc::AbstractCalibration)
         function print_table(subkeys, t)
             opt_cell = vc.calibrated_cell_parameters
@@ -106,6 +140,11 @@ function print_calibration_overview(vc::AbstractCalibration)
     end
 end
 
+"""
+    set_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String}, value)
+
+Set a calibration parameter to a specific value.
+"""
 function set_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String}, value)
     set_nested_json_value!(vc.sim.cell_parameters, parameter_name, value)
 end
