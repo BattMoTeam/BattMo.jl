@@ -52,11 +52,11 @@ end
 @inline grad(c_self, c_other, p::AbstractArray) = @inbounds (p[c_other] - p[c_self])
 
 @inline function half_face_two_point_kgrad(c_self::I,
-	c_other::I,
-	T::R,
-	phi::AbstractArray,
-	k::AbstractArray,
-) where {R <: Real, I <: Integer}
+	                                       c_other::I,
+	                                       T::R,
+	                                       phi::AbstractArray,
+	                                       k::AbstractArray,
+                                           ) where {R <: Real, I <: Integer}
 
 	k_av = harmonic_average(c_self, c_other, k)
 	grad_phi = grad(c_self, c_other, phi)
