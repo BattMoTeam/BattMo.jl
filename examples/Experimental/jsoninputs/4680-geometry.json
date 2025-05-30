@@ -2,10 +2,10 @@
  "Geometry" : {
    "case" : "jellyRoll",
    "innerRadius" : 2e-3,
-   "outerRadius" : 23e-3,
+   "outerRadius" : 10e-3,
    "height" : 70e-3,
-   "numberOfDiscretizationCellsVertical" : 3,
-   "numberOfDiscretizationCellsAngular"  : 10
+   "numberOfDiscretizationCellsVertical" : 2,
+   "numberOfDiscretizationCellsAngular"  : 8
  },
  "NegativeElectrode": {
    "Coating": {
