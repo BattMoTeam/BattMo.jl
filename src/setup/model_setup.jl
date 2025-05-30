@@ -136,7 +136,7 @@ The output of the simulation if the problem is valid.
 # Throws
 Throws an error if the `Simulation` object is not valid, prompting the user to check warnings during instantiation.
 """
-function solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, end_report = true, kwargs...)
+function solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, end_report = info_level > -1, kwargs...)
 
 	config_kwargs = (info_level = info_level, end_report = end_report)
 

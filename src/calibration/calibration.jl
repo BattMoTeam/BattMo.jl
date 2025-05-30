@@ -1,16 +1,24 @@
 abstract type AbstractCalibration end
 
-struct VoltageCalibration <:AbstractCalibration
+mutable struct VoltageCalibration <:AbstractCalibration
+    "Time vector for the calibration data."
     t
+    "Voltage vector for the calibration data."
     v
+    "The simulation object used for calibration. This is a copy of the original simulation object, so that the original simulation can be reused."
     sim
+    "A dictionary containing the calibration parameters and their targets. The keys are vectors of strings representing the parameter names, and the values are tuples with the initial value, lower bound, and upper bound."
     parameter_targets
+    "The optimized cell parameters after calibration."
+    optimized_cell_parameters
+    "History of the optimization process, containing information about the optimization steps."
+    history
     function VoltageCalibration(t, v, sim)
         @assert length(t) == length(v)
         for i in 2:length(t)
             @assert t[i] > t[i - 1]
         end
-        return new(t, v, deepcopy(sim), Dict{Vector{String}, Any}())
+        return new(t, v, deepcopy(sim), Dict{Vector{String}, Any}(), missing, missing)
     end
 end
 
@@ -55,24 +63,31 @@ end
 
 function print_calibration_overview(vc::AbstractCalibration)
         function print_table(subkeys, t)
-        header = ["Parameter name", "Initial Value", "Lower Bound", "Upper Bound", "Optimized value", "Change"]
-        tab = Matrix{Any}(undef, length(subkeys), 6)
-        # widths = zeros(Int, size(tab, 2))
-        # widths[1] = 40
-        for (i, k) in enumerate(subkeys)
-            v0 = pt[k].v0
-            v = value(get_nested_json_value(vc.sim.cell_parameters, k))
-            perc = round(100*(v-v0)/max(v0, 1e-20), digits = 2)
-            tab[i, 1] = join(k[2:end], ".")
-            tab[i, 2] = v0
-            tab[i, 3] = pt[k].vmin
-            tab[i, 4] = pt[k].vmax
-            tab[i, 5] = v
-            tab[i, 6] = "$perc%"
+            opt_cell = vc.optimized_cell_parameters
+            is_optimized = !ismissing(opt_cell)
+            header = ["Name", "Initial value", "Bounds"]
+            if is_optimized
+                push!(header, "Optimized value")
+                push!(header, "Change")
+            end
+            tab = Matrix{Any}(undef, length(subkeys), length(header))
+            # widths = zeros(Int, size(tab, 2))
+            # widths[1] = 40
+            for (i, k) in enumerate(subkeys)
+                v0 = pt[k].v0
+                tab[i, 1] = join(k[2:end], ".")
+                tab[i, 2] = v0
+                tab[i, 3] = "$(pt[k].vmin) - $(pt[k].vmax)"
+                if is_optimized
+                    v = value(get_nested_json_value(opt_cell, k))
+                    perc = round(100*(v-v0)/max(v0, 1e-20), digits = 2)
+                    tab[i, 4] = v
+                    tab[i, 5] = "$perc%"
+                end
+            end
+            # TODO: Do this properly instead of via Jutul's import...
+            Jutul.PrettyTables.pretty_table(tab, header=header, title = t)
         end
-        # TODO: Do this properly instead of via Jutul's import...
-        Jutul.PrettyTables.pretty_table(tab, header=header, title = t)#,autowrap=true,columns_width=widths)
-    end
 
     pt = vc.parameter_targets
     pkeys = keys(pt)
@@ -128,8 +143,8 @@ function solve(vc::AbstractCalibration;
         ),
         kwarg...
     )
-    x0, x_setup = vectorize_cell_parameters_for_calibration(vc)
-    sim = vc.sim
+    sim = deepcopy(vc.sim)
+    x0, x_setup = vectorize_cell_parameters_for_calibration(vc, sim)
     # Set up the objective function
     objective = setup_calibration_objective(vc)
 
@@ -183,6 +198,8 @@ function solve(vc::AbstractCalibration;
     # Also remove AD from the internal ones and update them
     Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, x, x_setup)
     cell_prm_out = deepcopy(sim.cell_parameters)
+    vc.optimized_cell_parameters = cell_prm_out
+    vc.history = history
     return (cell_prm_out, history)
 end
 
@@ -223,13 +240,12 @@ function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objec
 end
 
 
-function vectorize_cell_parameters_for_calibration(vc)
+function vectorize_cell_parameters_for_calibration(vc, sim)
     pt = vc.parameter_targets
     pkeys = collect(keys(pt))
     if length(pkeys) == 0
         throw(ArgumentError("No free parameters set, unable to calibrate."))
     end
-    sim = vc.sim
     # Set up the functions to serialize
     x0, x_setup = Jutul.AdjointsDI.vectorize_nested(sim.cell_parameters.all,
         active = pkeys,
