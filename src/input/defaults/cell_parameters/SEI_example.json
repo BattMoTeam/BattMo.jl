@@ -1,11 +1,21 @@
 {
   "Metadata": {
     "Title": "SEI example",
-    "Description": "Parameter set to test SEI simulations. Obtained from the Julia repository but with unknown source."
+    "Description": "Parameter set to test SEI simulations. Obtained from the Julia repository but with unknown source.",
+    "Models": {
+      "ModelFramework": [
+        "P2D",
+        "P4D Pouch"
+      ],
+      "TransportInSolid": "FullDiffusion",
+      "SEIModel": "Bolay",
+      "CurrentCollectors": "Generic",
+      "RampUp": "Sinusoidal"
+    }
   },
   "Cell": {
     "Name": "",
-    "Case": "3D-demo",
+    "Case": "Pouch",
     "ElectrodeWidth": 1.0e-2,
     "ElectrodeLength": 2.0e-2,
     "ElectrodeGeometricSurfaceArea": 0.0002
@@ -29,13 +39,8 @@
       "StoichiometricCoefficientAtSOC0": 0.1429,
       "StoichiometricCoefficientAtSOC100": 0.88551,
       "OpenCircuitPotential": {
-        "type": "function",
-        "functionname": "computeOCP_Graphite_Torchio",
-        "argumentlist": [
-          "concentration",
-          "temperature",
-          "cmax"
-        ]
+        "FunctionName": "computeOCP_Graphite_Torchio",
+        "FilePath": ""
       },
       "NumberOfElectronsTransfered": 1,
       "ActivationEnergyOfReaction": 5000.0,
@@ -92,13 +97,8 @@
       "StoichiometricCoefficientAtSOC0": 0.99174,
       "StoichiometricCoefficientAtSOC100": 0.4955,
       "OpenCircuitPotential": {
-        "type": "function",
-        "functionname": "computeOCP_NMC111",
-        "argumentlist": [
-          "concentration",
-          "temperature",
-          "cmax"
-        ]
+        "FunctionName": "computeOCP_NMC111",
+        "FilePath": ""
       },
       "NumberOfElectronsTransfered": 1,
       "ActivationEnergyOfReaction": 5000.0,
@@ -140,20 +140,12 @@
     "ChargeNumber": 1,
     "TransferenceNumber": 0.2594,
     "IonicConductivity": {
-      "type": "function",
-      "functionname": "computeElectrolyteConductivity_default",
-      "argumentlist": [
-        "concentration",
-        "temperature"
-      ]
+      "FunctionName": "computeElectrolyteConductivity_default",
+      "FilePath": ""
     },
     "DiffusionCoefficient": {
-      "type": "function",
-      "functionname": "computeDiffusionCoefficient_default",
-      "argumentlist": [
-        "concentration",
-        "temperature"
-      ]
+      "FunctionName": "computeDiffusionCoefficient_default",
+      "FilePath": ""
     }
   }
 }

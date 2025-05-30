@@ -1,4 +1,8 @@
 {
+  "Metadata": {
+    "Title": "CCCV",
+    "Description": "Parameter set for a constant current constant voltage cyling protocol."
+  },
   "Protocol": "CCCV",
   "InitialStateOfCharge": 0,
   "TotalNumberOfCycles": 3,
