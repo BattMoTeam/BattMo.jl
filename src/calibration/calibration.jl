@@ -1,3 +1,7 @@
+export VoltageCalibration
+export free_calibration_parameter!, freeze_calibration_parameter!, set_calibration_parameter!
+export print_calibration_overview
+
 abstract type AbstractCalibration end
 
 mutable struct VoltageCalibration <:AbstractCalibration
