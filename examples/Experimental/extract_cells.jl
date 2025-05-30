@@ -1,6 +1,6 @@
-using Jutul, BattMo, GLMakie, LinearAlgebra
+using Jutul, BattMo, GLMakie, LinearAlgebra, JLD2
 
-dosetup = false
+dosetup = true
 
 if dosetup
     
@@ -49,12 +49,19 @@ function get_cells(component; spmin = 0.01, spmax = 0.015)
 
     sp = vec(sp)
 
-    c = findall((n .< 2e-3) .& (sp .> spmin) .& (sp .< spmax))
+    c = findall((n .< 2e-3) .& (sp .> spmin) .& (sp .< spmax) .& (u[3, :] .< 0.03))
 
-    compspmin = minimum(sp[sp .>= spmin])
-    compspmax = maximum(sp[sp .<= spmax])
+    sp = sp[c]
+    
+    compspmin = minimum(sp)
+    compspmax = maximum(sp)
+
+    # reorder c
+    ind = sortperm(sp)
+    c = c[ind]
     
     return grid, c, compspmin, compspmax
+    
 end
 
 component = :NeCc
@@ -78,6 +85,19 @@ for (i, component) in enumerate(components)
         plot_mesh!(ax, grid; cells = c, color = colors[i], alpha = 0.5)
     end
 end
+
+push!(components, :NeCc)
+
+subcells = Dict()
+
+for component in components
+    let
+        grid, c, = get_cells(component; spmin = spmin, spmax = spmax)
+        subcells[component] = c
+    end
+end
+
+# JLD2.save("subcells.jld2", Dict("subcells" => subcells))
 
 # println(computeCellCapacity(output[:extra][:model])/ 3600) # in Ah
 # model = output[:extra][:model][:PeAm]
