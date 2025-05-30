@@ -114,12 +114,6 @@ end
 
 function evaluate_calibration_objective(vc::VoltageCalibration, objective, case, states, dt)
     f = Jutul.evaluate_objective(objective, case.model, states, dt, case.forces)
-    # Time varies - so add in a term if the simulation ends early.
-    # total_time = sum(dt)
-    # time_delta = max(vc.t[end] - total_time, 0)
-    # V_end = states[end][:Control][:Phi][1]
-    # # time_delta*(vc.v[end] - V_end)^2
-    # f += voltage_squared_error(vc., )
     return f
 end
 
@@ -134,7 +128,6 @@ function solve(vc::AbstractCalibration;
     # Set up the objective function
     objective = setup_calibration_objective(vc)
 
-
     ub = similar(x0)
     lb = similar(x0)
     offsets = x_setup.offsets
@@ -145,9 +138,12 @@ function solve(vc::AbstractCalibration;
             ub[j] = vmax
         end
     end
+    adj_cache = Dict()
 
     setup_battmo_case(X, step_info = missing) = setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
-    solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective)
+    solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
+        adj_cache = adj_cache
+    )
     if ismissing(opt_fun)
         v, x, history = Jutul.LBFGS.box_bfgs(x0, solve_and_differentiate, lb, ub;
             maximize = false,
@@ -181,20 +177,35 @@ function solve(vc::AbstractCalibration;
     return (cell_prm_out, history)
 end
 
-function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective; gradient = true)
+function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective; adj_cache = Dict(), gradient = true)
     case = setup_battmo_case(x)
     states, dt = simulate_battmo_case_for_calibration(case)
     # Evaluate the objective function
     f = evaluate_calibration_objective(vc, objective, case, states, dt)
     # Solve adjoints
     if gradient
-        g = Jutul.AdjointsDI.solve_adjoint_generic(
-            x, setup_battmo_case, states, dt, objective,
-            use_sparsity = false,
-            di_sparse = false,
-            single_step_sparsity = false,
-            do_prep = false
+        if !haskey(adj_cache, :storage)
+            adj_cache[:storage] = Jutul.AdjointsDI.setup_adjoint_storage_generic(
+                x, setup_battmo_case, states, dt, objective;
+                use_sparsity = false,
+                di_sparse = true,
+                single_step_sparsity = false,
+                do_prep = false,
+                info_level = 0
+            )
+        end
+        S = adj_cache[:storage]
+        g = similar(x)
+        Jutul.AdjointsDI.solve_adjoint_generic!(
+            g, x, setup_battmo_case, S, states, dt, objective,
         )
+        # g = Jutul.AdjointsDI.solve_adjoint_generic(
+        #     x, setup_battmo_case, states, dt, objective,
+        #     use_sparsity = false,
+        #     di_sparse = false,
+        #     single_step_sparsity = false,
+        #     do_prep = false
+        # )
     else
         g = missing
     end
@@ -254,7 +265,6 @@ function simulate_battmo_case_for_calibration(case;
             info_level = -1
         )
     end
-    
     result = Jutul.simulate!(simulator,
         case.dt,
         state0 = case.state0,
