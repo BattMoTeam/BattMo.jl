@@ -134,6 +134,16 @@ function get_parameter_meta_data()
 			"context_type" => "InitialThickness",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_654321",
 		),
+		"InitialPotentialDrop" => Dict(
+			"type" => Real,
+			"min_value" => 0,
+			"max_value" => 1,
+			"unit" => "V",
+			"unit_name" => "emmo:Volt",
+			"unit_iri" => "https://w3id.org/emmo#Metre",
+			"context_type" => "InitialPotentialDrop",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_654321",
+		),
 		"Protocol" => Dict(
 			"type" => String,
 			"options" => ["CC", "CCCV", "Function"],
