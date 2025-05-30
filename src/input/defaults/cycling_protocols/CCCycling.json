@@ -11,5 +11,5 @@
     "LowerVoltageLimit": 2.5,
     "UpperVoltageLimit": 4.1,
     "InitialControl": "charging",
-    "InitialKelvinTemperature": 298.15
+    "InitialTemperature": 298.15
 }

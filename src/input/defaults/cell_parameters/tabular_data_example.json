@@ -527,7 +527,7 @@
       "IonicConductivity": 1e-5,
       "ElectronicDiffusionCoefficient": 1.6e-12,
       "StoichiometricCoefficient": 2,
-      "IntersticialConcentration": 1.5e-2,
+      "InterstitialConcentration": 1.5e-2,
       "InitialThickness": 10e-9,
       "InitialPotentialDrop": 0.5
     },
