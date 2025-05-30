@@ -175,6 +175,7 @@ using Jutul: get_dependencies, get_entry, convert_to_immutable_storage
 using Jutul: tpfv_geometry, apply!, is_cell_major
 using Jutul: StaticCSR, ParallelCSRContext
 using ForwardDiff: ForwardDiff
+using Jutul: jutul_message
 
 
 timeit_debug_enabled() = Jutul.timeit_debug_enabled()

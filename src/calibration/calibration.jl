@@ -96,7 +96,6 @@ function setup_calibration_objective(vc::VoltageCalibration)
     V_fun = get_1d_interpolator(vc.t, vc.v, cap_endpoints = true)
     total_time = vc.t[end]
     function objective(model, state, dt, step_info, forces)
-        # t = step_info[:time]
         t = state[:Control][:Controller].time
         if step_info[:step] == step_info[:Nstep]
             dt = max(dt, total_time - t)
@@ -121,6 +120,12 @@ function solve(vc::AbstractCalibration;
         grad_tol = 1e-6,
         obj_change_tol = 1e-12,
         opt_fun = missing,
+        backend_arg = (
+            use_sparsity = false,
+            di_sparse = true,
+            single_step_sparsity = false,
+            do_prep = true,
+        ),
         kwarg...
     )
     x0, x_setup = vectorize_cell_parameters_for_calibration(vc)
@@ -142,9 +147,12 @@ function solve(vc::AbstractCalibration;
 
     setup_battmo_case(X, step_info = missing) = setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
     solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
-        adj_cache = adj_cache
+        adj_cache = adj_cache,
+        backend_arg
     )
-    if ismissing(opt_fun)
+    jutul_message("Calibration", "Starting calibration of $(length(x0)) parameters.", color = :green)
+
+    t_opt = @elapsed if ismissing(opt_fun)
         v, x, history = Jutul.LBFGS.box_bfgs(x0, solve_and_differentiate, lb, ub;
             maximize = false,
             print = 1,
@@ -171,13 +179,18 @@ function solve(vc::AbstractCalibration;
         end
         x, history = opt_fun(f!, g!, x0, lb, ub)
     end
+    jutul_message("Calibration", "Calibration finished in $t_opt seconds.", color = :green)
     # Also remove AD from the internal ones and update them
     Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, x, x_setup)
     cell_prm_out = deepcopy(sim.cell_parameters)
     return (cell_prm_out, history)
 end
 
-function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective; adj_cache = Dict(), gradient = true)
+function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
+        adj_cache = Dict(),
+        backend_arg = NamedTuple(),
+        gradient = true
+    )
     case = setup_battmo_case(x)
     states, dt = simulate_battmo_case_for_calibration(case)
     # Evaluate the objective function
@@ -187,10 +200,7 @@ function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objec
         if !haskey(adj_cache, :storage)
             adj_cache[:storage] = Jutul.AdjointsDI.setup_adjoint_storage_generic(
                 x, setup_battmo_case, states, dt, objective;
-                use_sparsity = false,
-                di_sparse = true,
-                single_step_sparsity = false,
-                do_prep = false,
+                backend_arg...,
                 info_level = 0
             )
         end
