@@ -65,7 +65,7 @@ end
 function get_default_simulation_settings(st::LithiumIonBattery)
 
 	settings = Dict(
-		"GridPoints" => Dict(
+		"GridResolution" => Dict(
 			"ElectrodeWidth" => 10,
 			"ElectrodeLength" => 10,
 			"PositiveElectrodeCoating" => 3,
