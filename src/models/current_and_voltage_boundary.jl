@@ -1074,7 +1074,7 @@ function update_values_in_controller!(state, policy::FunctionPolicy)
 
 	cf = policy.current_function
 
-	I_p = cf(controller.time, ForwardDiff.value(only(state.Phi)))
+	I_p = cf(controller.time, value(only(state.Phi)))
 
 	controller.target = I_p
 
