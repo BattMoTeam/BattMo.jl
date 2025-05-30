@@ -1103,6 +1103,9 @@ function setup_initial_state(inputparams::InputParams,
 	function setup_current_collector(name, phi, model)
 		nc = count_entities(model[name].data_domain, Cells())
 		init = Dict()
+		if phi isa Int
+			phi = convert(Float64, phi)
+		end
 		init[:Phi] = fill(phi, nc)
 		return init
 	end
