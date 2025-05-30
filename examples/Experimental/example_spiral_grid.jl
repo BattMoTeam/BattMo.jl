@@ -1,10 +1,10 @@
 using BattMo, Jutul, GLMakie
 
-case = "pouch"
+case = "4680"
 
 if case == "4680"
     # Load geometry parameters
-    inputparams = read_battmo_formatted_input(joinpath(pkgdir(BattMo),
+    inputparams = load_battmo_formatted_input(joinpath(pkgdir(BattMo),
                                                        "examples",
                                                        "Experimental",
                                                        "jsoninputs",
@@ -13,7 +13,7 @@ if case == "4680"
     grids, couplings = jelly_roll_grid(inputparams)
 elseif case =="pouch"
     # Load geometry parameters
-    inputparams = read_battmo_formatted_input(joinpath(pkgdir(BattMo),
+    inputparams = load_battmo_formatted_input(joinpath(pkgdir(BattMo),
                                                        "examples",
                                                        "Experimental",
                                                        "jsoninputs",
@@ -25,14 +25,25 @@ else
     error("stop")
 end
 
+fig, ax = plot_mesh(grids["Electrolyte"],
+                    boundaryfaces = collect(1 : number_of_boundary_faces(grids["Electrolyte"])),
+                    color = :red,
+                    alpha = 0.5)
+# 
 # fig, ax = plot_mesh(grids["NegativeCurrentCollector"],
 #                     boundaryfaces = couplings["NegativeCurrentCollector"]["External"]["boundaryfaces"],
 #                     color = :red,
 #                     alpha = 0.5)
+
 # plot_mesh!(ax,
 #            grids["PositiveCurrentCollector"],
 #            boundaryfaces = couplings["PositiveCurrentCollector"]["External"]["boundaryfaces"],
 #            color = :blue,
+#            alpha = 0.5)
+
+# plot_mesh!(ax,
+#            grids["NegativeCurrentCollector"],
+#            color = :red,
 #            alpha = 0.5)
 
 # fig, ax = plot_mesh(grids["Electrolyte"]; color = :green)
@@ -68,7 +79,7 @@ end
 # plot_mesh!(ax, grids["NegativeCurrentCollector"]; color = :black)
 # plot_mesh!(ax, grids["NegativeElectrode"]; color = :blue)
 
-Jutul.plot_mesh_edges!(ax, grids["Global"])
+# Jutul.plot_mesh_edges!(ax, grids["Global"])
 
 fig
 

@@ -19,12 +19,25 @@ inputparams_control = getinput("cc_discharge_control.json")
 
 inputparams = merge_input_params([inputparams_geometry, inputparams_material, inputparams_control])
 
+inputparams["Control"]["DRate"] = 0.1
+inputparams["Control"]["rampupTime"] = 3600*10
 
 ##################
 # run simulation #
 ##################
 
-output = run_battery(inputparams)
+function myhook(simulator,
+			    model,
+			    state0,
+			    forces,
+			    timesteps,
+			    cfg)
+
+    cfg[:info_level] = 1
+    
+end
+    
+output = run_battery(inputparams; hook = myhook)
 
 ############
 # plotting #
