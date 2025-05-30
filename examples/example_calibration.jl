@@ -44,14 +44,11 @@ model_setup = LithiumIonBattery()
 
 cycling_protocol["DRate"] = 0.5
 sim = Simulation(model_setup, cell_parameters, cycling_protocol)
-
 output0 = solve(sim)
-
 
 t0, V0 = get_tV(output0)
 t_exp_05, V_exp_05 = get_tV(df_05)
 t_exp_1, V_exp_1 = get_tV(df_1)
-
 
 fig = Figure()
 ax = Axis(fig[1, 1], title = "CRate = 0.5", xlabel = "Time / s", ylabel = "Voltage / V")
@@ -144,7 +141,6 @@ t2_0, V2_0 = get_tV(output2_0)
 
 vc2 = VoltageCalibration(t_exp_2, V_exp_2, sim2)
 
-
 free_calibration_parameter!(vc2,
     ["NegativeElectrode","ActiveMaterial", "ReactionRateConstant"];
     lower_bound = 1e-16, upper_bound = 1e-10)
@@ -230,4 +226,4 @@ for (i, df) in enumerate(dfs)
 end
 
 fig[1, 2] = Legend(fig, ax, "C rate", framevisible = false)
-fig # hide
+fig
