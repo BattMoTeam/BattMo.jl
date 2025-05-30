@@ -230,7 +230,7 @@ function jelly_roll_grid(geomparams::InputGeometryParams)
     component_indices["PositiveCurrentCollector"] = [6]
     component_indices["Electrolyte"]              = reduce(vcat, [component_indices["NegativeElectrode"],
                                                                   component_indices["Separator"],
-                                                                  component_indices["PositiveCurrentCollector"]])
+                                                                  component_indices["PositiveElectrode"]])
     spacingtags = Dict()
     for component in components
         inds = Bool[]
