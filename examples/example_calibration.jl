@@ -29,9 +29,10 @@ end
 
 # ## Load the experimental data and set up a base case
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
-df_05 = CSV.read(joinpath(battmo_base, "examples", "voltage_curves", "Xu_2015_voltageCurve_05C.csv"), DataFrame)
-df_1 = CSV.read(joinpath(battmo_base, "examples", "voltage_curves", "Xu_2015_voltageCurve_1C.csv"), DataFrame)
-df_2 = CSV.read(joinpath(battmo_base, "examples", "voltage_curves", "Xu_2015_voltageCurve_2C.csv"), DataFrame)
+exdata = joinpath(battmo_base, "examples", "example_data")
+df_05 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_05C.csv"), DataFrame)
+df_1 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_1C.csv"), DataFrame)
+df_2 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_2C.csv"), DataFrame)
 
 dfs = [df_05, df_1, df_2]
 
