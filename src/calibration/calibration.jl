@@ -176,7 +176,7 @@ end
 
 function solve(vc::AbstractCalibration;
         grad_tol = 1e-6,
-        obj_change_tol = 1e-12,
+        obj_change_tol = 1e-6,
         opt_fun = missing,
         backend_arg = (
             use_sparsity = false,

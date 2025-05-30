@@ -39,7 +39,7 @@ dfs = [df_05, df_1, df_2]
 cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
-cycling_protocol["LowerVoltageLimit"] = 2.0
+cycling_protocol["LowerVoltageLimit"] = 2.25
 model_setup = LithiumIonBattery()
 
 cycling_protocol["DRate"] = 0.5
