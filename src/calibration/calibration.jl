@@ -123,7 +123,12 @@ function evaluate_calibration_objective(vc::VoltageCalibration, objective, case,
     return f
 end
 
-function solve(vc::AbstractCalibration; grad_tol = 1e-6, obj_change_tol = 1e-12, kwarg...)
+function solve(vc::AbstractCalibration;
+        grad_tol = 1e-6,
+        obj_change_tol = 1e-12,
+        opt_fun = missing,
+        kwarg...
+    )
     x0, x_setup = vectorize_cell_parameters_for_calibration(vc)
     sim = vc.sim
     # Set up the objective function
@@ -141,11 +146,9 @@ function solve(vc::AbstractCalibration; grad_tol = 1e-6, obj_change_tol = 1e-12,
         end
     end
 
-    # @info "Set up calibration" x0 ub lb
-
     setup_battmo_case(X, step_info = missing) = setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
     solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective)
-    if true
+    if ismissing(opt_fun)
         v, x, history = Jutul.LBFGS.box_bfgs(x0, solve_and_differentiate, lb, ub;
             maximize = false,
             print = 1,
@@ -170,7 +173,7 @@ function solve(vc::AbstractCalibration; grad_tol = 1e-6, obj_change_tol = 1e-12,
             g = self_cache[:g]
             return z .= g
         end
-        history, x = Main.lbfgsb(f!, g!, x0, lb = lb, ub = ub, iprint = 1, maxfun = 200, maxiter = 100)
+        x, history = opt_fun(f!, g!, x0, lb, ub)
     end
     # Also remove AD from the internal ones and update them
     Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, x, x_setup)
