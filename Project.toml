@@ -24,7 +24,7 @@ Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 x264_jll = "1270edf5-f2f9-52d2-97e9-ab00b5d0237a"
 
 [weakdeps]
-GLMakie = ["e9467ef8-e4e7-5192-8a1a-b1aee30e663a"]
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 
 [extensions]
 BattMoGLMakieExt = "GLMakie"
@@ -47,8 +47,8 @@ julia = "1.8"
 
 
 [extras]
-GLMakie = ["e9467ef8-e4e7-5192-8a1a-b1aee30e663a"]
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 
 [targets]
-test = ["GLMakie"]
-docs = ["GLMakie"]
+test = "GLMakie"
+docs = "GLMakie"
