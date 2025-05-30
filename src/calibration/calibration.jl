@@ -13,8 +13,8 @@ mutable struct VoltageCalibration <:AbstractCalibration
     sim
     "A dictionary containing the calibration parameters and their targets. The keys are vectors of strings representing the parameter names, and the values are tuples with the initial value, lower bound, and upper bound."
     parameter_targets
-    "The optimized cell parameters after calibration."
-    optimized_cell_parameters
+    "The calibrated cell parameters (once solved)."
+    calibrated_cell_parameters
     "History of the optimization process, containing information about the optimization steps."
     history
     function VoltageCalibration(t, v, sim)
@@ -67,7 +67,7 @@ end
 
 function print_calibration_overview(vc::AbstractCalibration)
         function print_table(subkeys, t)
-            opt_cell = vc.optimized_cell_parameters
+            opt_cell = vc.calibrated_cell_parameters
             is_optimized = !ismissing(opt_cell)
             header = ["Name", "Initial value", "Bounds"]
             if is_optimized
@@ -202,7 +202,7 @@ function solve(vc::AbstractCalibration;
     # Also remove AD from the internal ones and update them
     Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, x, x_setup)
     cell_prm_out = deepcopy(sim.cell_parameters)
-    vc.optimized_cell_parameters = cell_prm_out
+    vc.calibrated_cell_parameters = cell_prm_out
     vc.history = history
     return (cell_prm_out, history)
 end
