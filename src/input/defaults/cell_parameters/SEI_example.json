@@ -74,8 +74,8 @@
       "Thickness": 1.0e-5,
       "Density": 8960.0,
       "ElectronicConductivity": 5.96e7,
-      "TabWidth": 4.0e-3,
-      "TabLength": 1.0e-3
+      "TabWidth": 0.01,
+      "TabLength": 1.0e-2
     }
   },
   "PositiveElectrode": {
@@ -122,8 +122,8 @@
       "Thickness": 1.0e-05,
       "Density": 2700.0,
       "ElectronicConductivity": 3.55e7,
-      "TabWidth": 4.0e-3,
-      "TabLength": 1.0e-3
+      "TabWidth": 0.01,
+      "TabLength": 1.0e-2
     }
   },
   "Separator": {

@@ -280,7 +280,7 @@ function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "line")
 	states = get_output_states(output)
 
 	n_steps = length(t)
-	x = states[:x] * 10^6
+	x = states[:Position] * 10^6
 
 	NeAm_conc = states[:NeAmSurfaceConcentration]
 	PeAm_conc = states[:PeAmSurfaceConcentration]
@@ -297,11 +297,11 @@ function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "line")
 		Label(grid[0, 1:3], "Line Dashboard", fontsize = 24, halign = :center)
 
 		ax_current = Axis(grid[1, 1:3], title = "Current  /  A")
-		ax_current.xlabel = "t  /  s"
+		ax_current.xlabel = "Time  /  s"
 		scatterlines!(ax_current, t, I; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		ax_voltage = Axis(grid[2, 1:3], title = "Voltage  /  V")
-		ax_voltage.xlabel = "t  /  s"
+		ax_voltage.xlabel = "Time  /  s"
 		scatterlines!(ax_voltage, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		slider = Slider(grid[6, 1:3], range = 1:n_steps, startvalue = 1)
@@ -322,7 +322,7 @@ function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "line")
 		function state_plot(ax, data, label)
 			obs_data = Observable(data[1, :])
 			plt = lines!(ax, x, obs_data, label = label; linewidth = 4)
-			ax.xlabel = "x  /  μm"
+			ax.xlabel = "Position  /  μm"
 			on(ts) do i
 				obs_data[] = data[i, :]
 				autolimits!(ax)
@@ -330,9 +330,9 @@ function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "line")
 		end
 
 		# Concentrations
-		state_plot(Axis(grid[3, 1], title = "NeAm Surface Concentration  /  mol·L⁻¹"), NeAm_conc, "NeAm Cs")
-		state_plot(Axis(grid[3, 2], title = "Electrolyte Concentration  /  mol·L⁻¹"), Elyte_conc, "Elyte C")
-		state_plot(Axis(grid[3, 3], title = "PeAm Surface Concentration  /  mol·L⁻¹"), PeAm_conc, "PeAm Cs")
+		state_plot(Axis(grid[3, 1], title = "NeAm Surface Concentration  /  mol·m⁻³"), NeAm_conc, "NeAm Cs")
+		state_plot(Axis(grid[3, 2], title = "Electrolyte Concentration  /  mol·m⁻³"), Elyte_conc, "Elyte C")
+		state_plot(Axis(grid[3, 3], title = "PeAm Surface Concentration  /  mol·m⁻³"), PeAm_conc, "PeAm Cs")
 
 		# Potentials
 		state_plot(Axis(grid[4, 1], title = "NeAm Potential  /  V"), NeAm_pot, "NeAm ϕ")
@@ -349,24 +349,24 @@ function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "line")
 		Label(grid[0, 1:3], "Contour Dashboard", fontsize = 24, halign = :center)
 
 		ax_current = Axis(grid[1, 1:3], title = "Current  /  A")
-		ax_current.xlabel = "t  /  s"
+		ax_current.xlabel = "Time  /  s"
 		scatterlines!(ax_current, t, I; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		ax_voltage = Axis(grid[2, 1:3], title = "Voltage  /  V")
-		ax_voltage.xlabel = "t  /  s"
+		ax_voltage.xlabel = "Time  /  s"
 		scatterlines!(ax_voltage, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		function contour_with_labels(ax, data, title)
 			contourf!(ax, t, x, data)
 			ax.xlabel = "Time  /  s"
-			ax.ylabel = "x  / μm"
+			ax.ylabel = "Position  / μm"
 			ax.title = title
 		end
 
 		# Concentration plots
-		contour_with_labels(Axis(grid[3, 1]), NeAm_conc, "NeAm Surface Concentration  /  mol·L⁻¹")
-		contour_with_labels(Axis(grid[3, 2]), Elyte_conc, "Electrolyte Concentration  /  mol·L⁻¹")
-		contour_with_labels(Axis(grid[3, 3]), PeAm_conc, "PeAm Surface Concentration  /  mol·L⁻¹")
+		contour_with_labels(Axis(grid[3, 1]), NeAm_conc, "NeAm Surface Concentration  /  mol·m⁻³")
+		contour_with_labels(Axis(grid[3, 2]), Elyte_conc, "Electrolyte Concentration  /  mol·m⁻³")
+		contour_with_labels(Axis(grid[3, 3]), PeAm_conc, "PeAm Surface Concentration  /  mol·m⁻³")
 
 		# Potential plots
 		contour_with_labels(Axis(grid[4, 1]), NeAm_pot, "NeAm Potential  /  V")

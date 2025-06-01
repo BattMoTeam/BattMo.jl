@@ -33,7 +33,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 	elyte = get_key_value(cell_parameters, "Electrolyte")
 	sep = get_key_value(cell_parameters, "Separator")
 
-	grid_points = get_key_value(simulation_settings, "GridPoints")
+	grid_points = get_key_value(simulation_settings, "GridResolution")
 
 
 	##################
@@ -215,7 +215,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 	end
 
 	battmo_input = Dict(
-		"G" => get_key_value(simulation_settings, "Grid"),
+		"G" => isnothing(get_key_value(simulation_settings, "Grid")) ? [] : get_key_value(simulation_settings, "Grid"),
 		"SOC" => get_key_value(cycling_protocol, "InitialStateOfCharge"),
 		"initT" => get_key_value(cycling_protocol, "InitialTemperature"),
 		"use_thermal" => use_thermal,

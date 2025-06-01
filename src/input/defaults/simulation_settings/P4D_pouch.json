@@ -13,7 +13,7 @@
             "SEIModel": "Bolay"
         }
     },
-    "GridPoints": {
+    "GridResolution": {
         "ElectrodeWidth": 10,
         "ElectrodeLength": 10,
         "PositiveElectrodeCoating": 3,
@@ -28,7 +28,6 @@
         "NegativeElectrodeCurrentCollectorTabLength": 3,
         "Separator": 3
     },
-    "Grid": [],
     "TimeStepDuration": 50,
     "RampUpTime": 10,
     "RampUpSteps": 5
