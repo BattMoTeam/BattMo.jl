@@ -12,11 +12,13 @@ sim = Simulation(model_setup, cell_parameters, cycling_protocol);
 
 output = solve(sim;)
 
+print_output_overview(output)
+
 time_series = get_output_time_series(output)
 states = get_output_states(output)
 metrics = get_output_metrics(output)
 
-NeAm_end_index = simulation_settings["GridPoints"]["NegativeElectrodeCoating"]
+NeAm_end_index = simulation_settings["GridResolution"]["NegativeElectrodeCoating"]
 
 plot_output(
 	output,

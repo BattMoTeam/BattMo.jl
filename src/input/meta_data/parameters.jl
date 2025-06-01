@@ -5,7 +5,7 @@ function get_parameter_meta_data()
 	meta_data = Dict(
 		"Case" => Dict(
 			"type" => String,
-			"options" => ["3D-demo", "Cylindrical", "Pouch"],
+			"options" => ["Cylindrical", "Pouch"],
 			"context_type" => "hasCase",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_3dcfe33d_6825_43c0_a798_68e871a68d39",
 			"description" => "Type of physical container encapsulating the electrochemical cell. Examples: Cylindrical, Pouch.",
@@ -101,7 +101,7 @@ function get_parameter_meta_data()
 			"unit_name" => "emmo:CubicMetrePerMole",
 			"unit_iri" => "https://w3id.org/emmo#CubicMetrePerMole",
 			"context_type" => "MolarVolume",
-			"context_type_iri" => "hhttps://w3id.org/emmo#EMMO_8b4af754_110a_4854_ac65_349ebafc1bed",
+			"context_type_iri" => "https://w3id.org/emmo#EMMO_8b4af754_110a_4854_ac65_349ebafc1bed",
 			"description" => "Volume per amount of substance.",
 		),
 		"ElectronicDiffusionCoefficient" => Dict(
@@ -118,7 +118,7 @@ function get_parameter_meta_data()
 		"StoichiometricCoefficient" => Dict(
 			"type" => Real,
 			"min_value" => 0.0,
-			"max_value" => 1.0,
+			"max_value" => 10.0,
 			"unit" => "-",
 			"unit_name" => "dimensionless",
 			"unit_iri" => "https://w3id.org/emmo#Dimensionless",
@@ -154,9 +154,10 @@ function get_parameter_meta_data()
 			"max_value" => 1,
 			"unit" => "V",
 			"unit_name" => "emmo:Volt",
-			"unit_iri" => "https://w3id.org/emmo#Metre",
+			"unit_iri" => "https://w3id.org/emmo#Volt",
 			"context_type" => "InitialPotentialDrop",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_654321",
+			"description" => "Electric potential difference across the SEI layer or electrode interface at the beginning of the simulation. Represents any initial voltage offset due to pre-formation or initial conditions of the cell.",
 		),
 		"Protocol" => Dict(
 			"type" => String,
@@ -187,8 +188,7 @@ function get_parameter_meta_data()
 			"options" => ["charging", "discharging"],
 			"context_type" => "Protocol",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_472a0ca2_58bf_4618_b561_6fe68bd9fd49",
-			"description" => """Whether a cycling protocol starts with "charging" or "discharging". """,
-		),
+			"description" => "Whether a cycling protocol starts with \"charging\" or \"discharging\"."),
 		"RestingTimeAfterCharge" => Dict(
 			"type" => Real,
 			"min_value" => 0.0,
@@ -497,12 +497,12 @@ function get_parameter_meta_data()
 			"context_type" => "IonConcentration",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_8177eae6_1631_430d_99f2_942669bcb784",
 			"min_value" => 0.0,
-			"max_value" => 5.0,
-			"description" => "Moles of the charge carrier species per liter of electrolyte.",
+			"max_value" => 5000,
+			"description" => "Moles of the charge carrier species per cubic meter of electrolyte.",
 			"type" => Real,
-			"unit" => "mol·L⁻¹",
-			"unit_name" => "emmo:MolPerLiter",
-			"unit_iri" => "https://w3id.org/emmo#MolePerCubicDeciMetre",
+			"unit" => "mol·m^(-3)",
+			"unit_name" => "emmo:MolePerCubicMetre",
+			"unit_iri" => "https://w3id.org/emmo#MolePerCubicMetre",
 		),
 		"IonicConductivity" => Dict(
 			"context_type" => ["IonicConductivity", "Expression"],
@@ -610,7 +610,7 @@ function get_parameter_meta_data()
 		"CurrentChangeLimit" => Dict(
 			"max_value" => 1.0e-1,
 			"min_value" => 1.0e-8,
-			"context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_71f10616_15eb_4dc4_bc8d_ffaac3838af2",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_71f10616_15eb_4dc4_bc8d_ffaac3838af2",
 			"description" => "A control limit placed on the rate of change of the electric current (dI/dt) in a constant-voltage step.",
 			"type" => Real,
 			"unit" => "A·s⁻¹",
@@ -618,7 +618,7 @@ function get_parameter_meta_data()
 		"VoltageChangeLimit" => Dict(
 			"max_value" => 0.1,
 			"min_value" => 0.0001,
-			"context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_09e64707_a17d_4405_84cc_ee9d91ed32ef",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_09e64707_a17d_4405_84cc_ee9d91ed32ef",
 			"description" => "A control limit placed on the rate of change of the cell voltage (dV/dt) in a constant-current step.",
 			"type" => Real,
 			"unit" => "V·s⁻¹",
