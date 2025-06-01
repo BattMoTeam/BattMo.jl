@@ -191,9 +191,6 @@ include("input/schemas/get_schema.jl")
 include("input/schemas/get_json_from_schema.jl")
 
 include("utils/physical_constants.jl")
-include("utils/simple_api.jl")
-
-
 
 include("models/battmo_types.jl")
 include("models/full_battery_model_setups/battery_model.jl")
@@ -221,10 +218,15 @@ include("models/battery_utils.jl")
 include("setup/model_setup.jl")
 include("setup/matlab_model_setup.jl")
 
-include("plotting/3D.jl")
+include("plotting/3d.jl")
+include("plotting/1d.jl")
 
 include("utils/battery_cell_specifications.jl")
 include("utils/battery_kpis.jl")
+include("output/output_format.jl")
+include("output/meta_data/variables.jl")
+include("output/printer.jl")
+
 
 include("solver/linsolve.jl")
 

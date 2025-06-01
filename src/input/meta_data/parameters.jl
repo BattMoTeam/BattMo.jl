@@ -148,6 +148,16 @@ function get_parameter_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_43003c86_9d15_433b_9789_ee2940920656",
 			"description" => "Thickness of the SEI layer at the start of the simulation. See https://doi.org/10.1016/j.powera.2022.100083.",
 		),
+		"InitialPotentialDrop" => Dict(
+			"type" => Real,
+			"min_value" => 0,
+			"max_value" => 1,
+			"unit" => "V",
+			"unit_name" => "emmo:Volt",
+			"unit_iri" => "https://w3id.org/emmo#Metre",
+			"context_type" => "InitialPotentialDrop",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_654321",
+		),
 		"Protocol" => Dict(
 			"type" => String,
 			"options" => ["CC", "CCCV", "Function"],
