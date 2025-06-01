@@ -14,10 +14,15 @@ output = solve(sim;)
 
 print_output_overview(output)
 
+
 time_series = get_output_time_series(output)
 states = get_output_states(output)
 metrics = get_output_metrics(output)
 
+# Plot a pre-defined dashboard
+plot_dashboard(output)
+
+# Or create your own dashboard
 NeAm_end_index = simulation_settings["GridResolution"]["NegativeElectrodeCoating"]
 
 plot_output(
@@ -29,25 +34,6 @@ plot_output(
 	layout = (2, 1),
 )
 
-# plot_dashboard(output; plot_type = "line")
-
-# t = time_series[:Time]
-# I = time_series[:Current]
-# E = time_series[:Voltage]
-
-
-# NeAmC_t10 = states[:NeAmSurfaceConcentration][10, :, 1]
-# PeAmCSurf_t10 = states[:PeAmSurfaceConcentration][10, :]
-# ElyteC_t10 = states[:ElectrolyteConcentration][10, :]
-
-# f = Figure()
-# ax = Axis(f[1, 1], title = "Concentrations", xlabel = "Distance [m]", ylabel = "Concentration")
-# lines!(ax, states.x, NeAmC_t10, color = :red, linewidth = 2, label = "NeAm Surface Conc")
-# lines!(ax, states.x, PeAmCSurf_t10, color = :blue, linewidth = 2, label = "PeAm Surface Conc")
-# lines!(ax, states.x, ElyteC_t10, color = :green, linewidth = 2, label = "Elyte Conc")
-# axislegend(ax, position = :rt, valign = :center)
-
-# display(f)
 
 
 

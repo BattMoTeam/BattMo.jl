@@ -33,19 +33,26 @@ function print_output_overview(output::NamedTuple)
 	state = output[:states][3]
 
 	for (name, info) in meta_data
-		# Check if the variable has a mapping and exists in the state
-		has_data = true
-		if haskey(var_map, name)
-			path = var_map[name]
-			has_data = try
-				getfield(state, path[1]) |> x -> hasproperty(x, path[2])
-			catch
-				false
+		case = get(info, "case", "uncategorized")
+		has_data = false
+
+		if case == "states"
+			symname = Symbol(name)
+			if haskey(var_map, symname)
+				path = var_map[symname]
+				has_data = try
+					value = state[path[1]][path[2]]
+					true
+				catch
+					false
+				end
 			end
+		else
+			# Always include time_series and metrics
+			has_data = true
 		end
 
 		if has_data
-			case = get(info, "case", "uncategorized")
 			if !haskey(case_groups, case)
 				case_groups[case] = NamedTuple[]
 			end
@@ -74,6 +81,7 @@ function print_output_overview(output::NamedTuple)
 		end
 	end
 end
+
 
 
 

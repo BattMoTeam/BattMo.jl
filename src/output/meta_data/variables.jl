@@ -153,7 +153,7 @@ function get_output_variables_meta_data()
 			"shape" => "(nTime, nPosition)",
 			"description" => "Concentration of lithium ions in the electrolyte.",
 			"isdefault" => false,
-			"unit" => "mol·L⁻¹",
+			"unit" => "mol·m⁻³",
 			"unit_name" => "emmo:MolPerLiter",
 			"unit_iri" => "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978",
 			"context_type" => "Concentration",
@@ -258,7 +258,7 @@ function get_output_variables_meta_data()
 		"NeAmCharge" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
-			"shape" => "(nTime,)",
+			"shape" => "(nTime, nPosition)",
 			"description" => "Charge stored in the negative electrode.",
 			"isdefault" => false,
 			"unit" => "C",
@@ -270,7 +270,7 @@ function get_output_variables_meta_data()
 		"ElectrolyteCharge" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
-			"shape" => "(nTime,)",
+			"shape" => "(nTime, nPosition)",
 			"description" => "Charge carried by the ions in the electrolyte.",
 			"isdefault" => false,
 			"unit" => "C",
@@ -282,7 +282,7 @@ function get_output_variables_meta_data()
 		"PeAmCharge" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
-			"shape" => "(nTime,)",
+			"shape" => "(nTime, nPosition)",
 			"description" => "Charge stored in the positive electrode.",
 			"isdefault" => false,
 			"unit" => "C",
@@ -294,7 +294,7 @@ function get_output_variables_meta_data()
 		"ElectrolyteMass" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
-			"shape" => "(nTime,)",
+			"shape" => "(nTime, nPosition)",
 			"description" => "Mass of the electrolyte in the system.",
 			"isdefault" => false,
 			"unit" => "g",
