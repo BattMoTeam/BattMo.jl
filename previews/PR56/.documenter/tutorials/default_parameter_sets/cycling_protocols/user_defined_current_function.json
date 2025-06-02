@@ -1,0 +1,12 @@
+{
+    "Metadata": {
+        "Title": "user_defined_current_function",
+        "Description": "Parameter set that shows an example of how to include a user defined function in the cycling protocol parameters."
+    },
+    "Protocol": "Function",
+    "FunctionName": "current_function",
+    "FilePath": "../../../../examples/example_functions/current_function.jl",
+    "InitialStateOfCharge": 0.99,
+    "TotalTime": 1800,
+    "InitialTemperature": 298.15
+}
