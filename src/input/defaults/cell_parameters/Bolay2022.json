@@ -2,7 +2,7 @@
     "Metadata": {
         "Title": "Bolay2022",
         "Source": "https://doi.org/10.1016/j.powera.2022.100083",
-        "Description": "Parameter set of a lithium ion pouch cell used within the satellite REIMEI and produced by NEC-Tokin Corporation, for an electrochemical pseudo-two-dimensional (P2D) model.",
+        "Description": "Parameter set of a lithium ion pouch cell used within the satellite REIMEI and produced by NEC-Tokin Corporation, for an electrochemical pseudo-two-dimensional (P2D) model. This set provided by Bolay et al. is not complete, therefore, some parameters like material densities and stochiometric coefficients are taken from https://ieeexplore.ieee.org/abstract/document/10530259",
         "Models": {
             "ModelFramework": [
                 "P2D"
@@ -25,7 +25,7 @@
     "Cell": {
         "ElectrodeGeometricSurfaceArea": 0.139,
         "Case": "Pouch",
-        "NominalVoltage": 4.2,
+        "NominalVoltage": 3.0,
         "NominalCapacity": 3
     },
     "PositiveElectrode": {
@@ -42,8 +42,8 @@
             "MaximumConcentration": 2.6e4,
             "VolumetricSurfaceArea": 2.14e5,
             "DiffusionCoefficient": 1.13e-13,
-            "ParticleRadius": 0.0,
-            "Density": 0.0,
+            "ParticleRadius": 1e-6,
+            "Density": 4140,
             "ElectronicConductivity": 0.0,
             "ChargeTransferCoefficient": 0.0
         },
