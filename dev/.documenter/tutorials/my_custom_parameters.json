@@ -1,0 +1,104 @@
+{
+    "Electrolyte": {
+        "TransferenceNumber": 0.0,
+        "DiffusionCoefficient": 0.0,
+        "IonicConductivity": 0.0,
+        "Density": 0.0,
+        "ChargeNumber": 0.0,
+        "Concentration": 0.0
+    },
+    "Cell": {
+        "ElectrodeGeometricSurfaceArea": 0.0,
+        "ElectrodeWidth": 0.0,
+        "ElectrodeLength": 0.0,
+        "Case": ""
+    },
+    "PositiveElectrode": {
+        "ActiveMaterial": {
+            "ActivationEnergyOfDiffusion": 0.0,
+            "NumberOfElectronsTransfered": 0.0,
+            "StoichiometricCoefficientAtSOC0": 0.0,
+            "OpenCircuitPotential": 0.0,
+            "ReactionRateConstant": 0.0,
+            "MassFraction": 0.0,
+            "StoichiometricCoefficientAtSOC100": 0.0,
+            "ActivationEnergyOfReaction": 0.0,
+            "MaximumConcentration": 0.0,
+            "VolumetricSurfaceArea": 0.0,
+            "DiffusionCoefficient": 0.0,
+            "ParticleRadius": 0.0,
+            "Density": 0.0,
+            "ElectronicConductivity": 0.0,
+            "ChargeTransferCoefficient": 0.0
+        },
+        "ElectrodeCoating": {
+            "BruggemanCoefficient": 0.0,
+            "EffectiveDensity": 0.0,
+            "Thickness": 0.0
+        },
+        "Binder": {
+            "MassFraction": 0.0,
+            "Density": 0.0,
+            "ElectronicConductivity": 0.0
+        },
+        "CurrentCollector": {
+            "TabLength": 0.0,
+            "Density": 0.0,
+            "ElectronicConductivity": 0.0,
+            "Thickness": 0.0,
+            "TabWidth": 0.0
+        },
+        "ConductiveAdditive": {
+            "MassFraction": 0.0,
+            "Density": 0.0,
+            "ElectronicConductivity": 0.0
+        }
+    },
+    "Separator": {
+        "Density": 0.0,
+        "BruggemanCoefficient": 0.0,
+        "Thickness": 0.0,
+        "Porosity": 0.0
+    },
+    "NegativeElectrode": {
+        "ActiveMaterial": {
+            "ActivationEnergyOfDiffusion": 0.0,
+            "NumberOfElectronsTransfered": 0.0,
+            "StoichiometricCoefficientAtSOC0": 0.0,
+            "OpenCircuitPotential": 0.0,
+            "ReactionRateConstant": 0.0,
+            "MassFraction": 0.0,
+            "StoichiometricCoefficientAtSOC100": 0.0,
+            "ActivationEnergyOfReaction": 0.0,
+            "MaximumConcentration": 0.0,
+            "VolumetricSurfaceArea": 0.0,
+            "DiffusionCoefficient": 0.0,
+            "ParticleRadius": 0.0,
+            "Density": 0.0,
+            "ElectronicConductivity": 0.0,
+            "ChargeTransferCoefficient": 0.0
+        },
+        "ElectrodeCoating": {
+            "BruggemanCoefficient": 0.0,
+            "EffectiveDensity": 0.0,
+            "Thickness": 0.0
+        },
+        "Binder": {
+            "MassFraction": 0.0,
+            "Density": 0.0,
+            "ElectronicConductivity": 0.0
+        },
+        "CurrentCollector": {
+            "TabLength": 0.0,
+            "Density": 0.0,
+            "ElectronicConductivity": 0.0,
+            "Thickness": 0.0,
+            "TabWidth": 0.0
+        },
+        "ConductiveAdditive": {
+            "MassFraction": 0.0,
+            "Density": 0.0,
+            "ElectronicConductivity": 0.0
+        }
+    }
+}

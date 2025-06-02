@@ -1,0 +1,142 @@
+{
+    "Metadata": {
+        "Title": "Xu2015",
+        "Source": "https://doi.org/10.1016/j.energy.2014.11.073",
+        "Description": "Parameter set of a commercial Type LP2770120 prismatic LiFePO4/graphite cell, for an electrochemical pseudo-two-dimensional (P2D) model.",
+        "Models": {
+            "ModelFramework": [
+                "P2D",
+                "P4D Pouch"
+            ],
+            "TransportInSolid": "FullDiffusion",
+            "CurrentCollectors": "Generic",
+            "RampUp": "Sinusoidal"
+        }
+    },
+    "Cell": {
+        "Name": "LP2770120",
+        "Case": "Pouch",
+        "NominalVoltage": 3.2,
+        "NominalCapacity": 16.5,
+        "ElectrodeWidth": 67e-3,
+        "ElectrodeLength": 105e-3,
+        "ElectrodeGeometricSurfaceArea": 0.007035
+    },
+    "Electrolyte": {
+        "Description": "1.5 mol/l LiPF6 dissolved in a mixture of ethylene carbonate (EC):  dimethyl carbonate (DMC) (1:1)",
+        "TransferenceNumber": 0.363,
+        "DiffusionCoefficient": {
+            "FunctionName": "electrolyte_diffusivity_Xu_2015",
+            "FilePath": "function_parameters_Xu2015.jl"
+        },
+        "IonicConductivity": {
+            "FunctionName": "electrolyte_conductivity_Xu_2015",
+            "FilePath": "function_parameters_Xu2015.jl"
+        },
+        "Density": 1210,
+        "ChargeNumber": 1,
+        "Concentration": 1500
+    },
+    "PositiveElectrode": {
+        "ActiveMaterial": {
+            "Description": "LiFePO4",
+            "NumberOfElectronsTransfered": 1,
+            "StoichiometricCoefficientAtSOC0": 0.999,
+            "ReactionRateConstant": 3.626e-11,
+            "MassFraction": 1.0,
+            "StoichiometricCoefficientAtSOC100": 0.14778,
+            "ActivationEnergyOfReaction": 4000,
+            "ActivationEnergyOfDiffusion": 20000,
+            "OpenCircuitPotential": {
+                "FunctionName": "open_circuit_potential_lfp_Xu_2015",
+                "FilePath": "function_parameters_Xu2015.jl"
+            },
+            "MaximumConcentration": 26390,
+            "VolumetricSurfaceArea": 1878261,
+            "DiffusionCoefficient": 1.25e-15,
+            "ParticleRadius": 1.15e-6,
+            "Density": 1500,
+            "ElectronicConductivity": 0.01,
+            "ChargeTransferCoefficient": 0.5
+        },
+        "ElectrodeCoating": {
+            "BruggemanCoefficient": 1.5,
+            "EffectiveDensity": 1080,
+            "Thickness": 92e-6
+        },
+        "ConductiveAdditive": {
+            "Description": "Unknown",
+            "Density": 1950.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100.0
+        },
+        "Binder": {
+            "Description": "Unknown",
+            "Density": 1100.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100.0
+        },
+        "CurrentCollector": {
+            "Description": "Aluminum",
+            "Thickness": 16e-06,
+            "Density": 2700,
+            "ElectronicConductivity": 3.83e7,
+            "TabWidth": 15e-3,
+            "TabLength": 10e-3
+        }
+    },
+    "Separator": {
+        "Density": 779,
+        "BruggemanCoefficient": 1.5,
+        "Thickness": 20e-6,
+        "Porosity": 0.4
+    },
+    "NegativeElectrode": {
+        "ActiveMaterial": {
+            "Description": "Graphite",
+            "NumberOfElectronsTransfered": 1,
+            "StoichiometricCoefficientAtSOC0": 0.001,
+            "ReactionRateConstant": 1.764e-11,
+            "MassFraction": 1.0,
+            "StoichiometricCoefficientAtSOC100": 0.51873811,
+            "ActivationEnergyOfReaction": 4000,
+            "ActivationEnergyOfDiffusion": 4000,
+            "OpenCircuitPotential": {
+                "FunctionName": "open_circuit_potential_graphite_Xu_2015",
+                "FilePath": "function_parameters_Xu2015.jl"
+            },
+            "MaximumConcentration": 31540,
+            "VolumetricSurfaceArea": 142373,
+            "DiffusionCoefficient": 3.9e-14,
+            "ParticleRadius": 14.75e-6,
+            "Density": 2660,
+            "ElectronicConductivity": 2,
+            "ChargeTransferCoefficient": 0.5
+        },
+        "ElectrodeCoating": {
+            "BruggemanCoefficient": 1.5,
+            "EffectiveDensity": 1862,
+            "Thickness": 59e-6
+        },
+        "ConductiveAdditive": {
+            "Description": "Unknown",
+            "Density": 1950.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100.0
+        },
+        "Binder": {
+            "Description": "Unknown",
+            "Density": 1100.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100.0
+        },
+        "CurrentCollector": {
+            "Description": "Copper",
+            "Thickness": 9e-06,
+            "Density": 8900,
+            "ElectronicConductivity": 6.33e7,
+            "TabWidth": 15e-3,
+            "TabLength": 10e-3
+        }
+    }
+}
