@@ -1,6 +1,5 @@
 using Jutul, BattMo, GLMakie
 using StatsBase
-using Plots
 using AlgebraicMultigrid
 using Preconditioners
 using Preferences
@@ -18,8 +17,8 @@ name = "p2d_40_jl_chen2020"
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
 inputparams = load_battmo_formatted_input(fn)
 
-
 simple = false
+
 if (!simple)
 
 	facx  = 2
@@ -50,6 +49,7 @@ else
 end
 
 inputparams = merge_input_params(deepcopy(inputparams_geometry), inputparams)
+
 ############################
 # setup and run simulation #
 ############################

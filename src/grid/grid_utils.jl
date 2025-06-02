@@ -191,15 +191,14 @@ function jelly_roll_grid(geomparams::InputGeometryParams)
 
     function get_vector(geomparams, fdname)
         # double coated electrode
-        v = [geomparams["NegativeElectrode"]["CurrentCollector"][fdname],
-             geomparams["NegativeElectrode"]["Coating"][fdname],
-             geomparams["Separator"][fdname],
-             geomparams["PositiveElectrode"]["Coating"][fdname],
+        v = [geomparams["PositiveElectrode"]["Coating"][fdname],
              geomparams["PositiveElectrode"]["CurrentCollector"][fdname],
              geomparams["PositiveElectrode"]["Coating"][fdname],
              geomparams["Separator"][fdname],
-             geomparams["NegativeElectrode"]["Coating"][fdname]
-             ]
+             geomparams["NegativeElectrode"]["Coating"][fdname],
+             geomparams["NegativeElectrode"]["CurrentCollector"][fdname],
+             geomparams["NegativeElectrode"]["Coating"][fdname],
+             geomparams["Separator"][fdname]]
         
         return v
     end
@@ -207,8 +206,8 @@ function jelly_roll_grid(geomparams::InputGeometryParams)
     Ns  = get_vector(geomparams, "N")
     dxs = get_vector(geomparams, "thickness")
 
-    dx = mapreduce((dx, N) -> repeat([dx], N), vcat, dxs, Ns)
-
+    dx = mapreduce((dx, N) -> repeat([dx], N), vcat, dxs./Ns, Ns)
+    
     spacing = [0; cumsum(dx)]
     spacing = spacing/spacing[end]
 
@@ -216,21 +215,22 @@ function jelly_roll_grid(geomparams::InputGeometryParams)
 
     depths = [0; cumsum(repeat([height/nz], nz))]
     
-    components = ["NegativeCurrentCollector",
-                  "NegativeElectrode",
+    components = ["PositiveCurrentCollector",
+                  "PositiveElectrode",
                   "Separator",
                   "Electrolyte",
-                  "PositiveElectrode",
-                  "PositiveCurrentCollector"]
+                  "NegativeElectrode",
+                  "NegativeCurrentCollector"]
 
     component_indices = Dict()
-    component_indices["NegativeCurrentCollector"] = [1]
-    component_indices["NegativeElectrode"]        = [2, 8]
-    component_indices["Electrolyte"]              = [2, 3, 4, 6, 7, 8]
-    component_indices["Separator"]                = [3, 7]
-    component_indices["PositiveElectrode"]        = [4, 6]
-    component_indices["PositiveCurrentCollector"] = [5]
-
+    component_indices["PositiveElectrode"]        = [1, 3]
+    component_indices["PositiveCurrentCollector"] = [2]
+    component_indices["Separator"]                = [4, 8]
+    component_indices["NegativeElectrode"]        = [5, 7]
+    component_indices["NegativeCurrentCollector"] = [6]
+    component_indices["Electrolyte"]              = reduce(vcat, [component_indices["PositiveElectrode"],
+                                                                  component_indices["Separator"],
+                                                                  component_indices["NegativeElectrode"]])
     spacingtags = Dict()
     for component in components
         inds = Bool[]
@@ -241,11 +241,11 @@ function jelly_roll_grid(geomparams::InputGeometryParams)
     end
 
     C = rinner
-    A = thickness/2*pi
+    A = thickness/(2*pi)
 
     nrot = Int(round((router - rinner)/(2*pi*A)))
 
-    uParentGrid = Jutul.RadialMeshes.spiral_mesh(nangles, nrot; spacing = spacing, A = A, C = C)
+    uParentGrid = Jutul.RadialMeshes.spiral_mesh(nangles, nrot; spacing = spacing, start = 0, A = A, C = C)
 
     uParentGrid = Jutul.extrude_mesh(uParentGrid, depths)
 
@@ -253,12 +253,12 @@ function jelly_roll_grid(geomparams::InputGeometryParams)
 
 	parentGrid = convert_to_mrst_grid(uParentGrid)
 
-	components = ["NegativeCurrentCollector",
-			      "NegativeElectrode",
+	components = ["PositiveCurrentCollector",
+			      "PositiveElectrode",
 			      "Separator",
                   "Electrolyte",
-			      "PositiveElectrode",
-			      "PositiveCurrentCollector"]
+			      "NegativeElectrode",
+			      "NegativeCurrentCollector"]
 
     grids = Dict()
     global_maps = Dict()
