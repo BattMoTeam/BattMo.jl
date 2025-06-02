@@ -38,17 +38,7 @@ function get_parameter_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_639b844a_e801_436b_985d_28926129ead6",
 			"description" => "Reference voltage of the cell as reported by the manufacturer. Usually calculated from the cell's energy output and capacity under a standard cycling test.",
 		),
-		"InnerRadius" => Dict(
-			"type" => Real,
-			"min_value" => 0.001,
-			"max_value" => 0.05,
-			"unit" => "m",
-			"unit_name" => "emmo:Metre",
-			"unit_iri" => "https://w3id.org/emmo#Metre",
-			"context_type" => "InnerCellRadius",
-			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_54321",
-		),
-		"OuterRadius" => Dict(
+		"InnerCellRadius" => Dict(
 			"type" => Real,
 			"min_value" => 0.01,
 			"max_value" => 0.2,
