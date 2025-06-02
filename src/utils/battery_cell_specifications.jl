@@ -288,7 +288,7 @@ function computeEnergyEfficiency(states; cycle_number = nothing)
 
 	efficiency = energy_discharge / energy_charge
 
-	return efficiency
+	return efficiency * 100 # %
 
 end
 function computeDischargeEnergy(inputparams::InputParams)

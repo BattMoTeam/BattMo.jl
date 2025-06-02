@@ -5,11 +5,11 @@ export print_default_input_sets_info, print_submodels_info, print_parameter_info
 function format_link(label::String, url::String, width::Int, fmt::Symbol)
 	link = begin
 		if fmt == :markdown
-			"[$label]($url)"
+			"$url"
 		elseif fmt == :ansi
 			"\e]8;;$url\e\\$label\e]8;;\e\\"
 		else
-			"$label: $url"
+			"$url"
 		end
 	end
 	return rpad(link, width)
@@ -213,7 +213,7 @@ end
 
 function print_submodels_info()
 	# Get the metadata dictionary
-	meta_data = get_parameter_meta_data()
+	meta_data = get_setting_meta_data()
 
 	# Filter parameters with "is_sub_model" == true
 	submodel_params = []
