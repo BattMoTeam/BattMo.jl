@@ -1,4 +1,4 @@
-using Jutul
+
 
 function open_circuit_potential_graphite_Xu_2015(c, T, cmax)
 
@@ -6,7 +6,7 @@ function open_circuit_potential_graphite_Xu_2015(c, T, cmax)
 	refT  = 298.15
 	theta = c ./ cmax
 
-	data1 = [                                                                            0.00 1.28683
+	data1 = [                                                                                 0.00 1.28683
 		0.01 0.65272
 		0.02 0.52621
 		0.03 0.44128
@@ -43,7 +43,7 @@ function open_circuit_potential_graphite_Xu_2015(c, T, cmax)
 
 	refOCP = itp_refOCP(theta)
 
-	data2 = [                                                                            0.01049 3.00E-04
+	data2 = [                                                                                 0.01049 3.00E-04
 		0.03146 2.47E-04
 		0.05244 1.95E-04
 		0.07711 1.33E-04
@@ -176,7 +176,7 @@ function electrolyte_diffusivity_Xu_2015(c::Real, T::Real)
 	""" Compute the diffusion coefficient as a function of concentration
 	"""
 	# Calculate diffusion coefficients constant for the diffusion coefficient calculation
-	cnst = [        -4.43  -54.0;
+	cnst = [            -4.43  -54.0;
 		-0.22   0.0]
 
 	Tgi = [229 5.0]
