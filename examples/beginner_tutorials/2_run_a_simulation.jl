@@ -1,6 +1,6 @@
 # # How to run a simulation
 #
-# BattMo simulations repicate the voltage-current response of a cell. To run a Battmo simulation, the basic workflow is:    
+# BattMo simulations replicates the voltage-current response of a cell. To run a Battmo simulation, the basic workflow is:    
 # * Set up cell parameters 
 # * Set up a cycling protocol  
 # * Select a model
@@ -8,7 +8,7 @@
 # * Run the simulation
 # * Inspect and visualize the outputs of the simulation  
 
-# To start, we load BattMo (battery models and simulations) and Plotly (plotting). 
+# To start, we load BattMo (battery models and simulations) and GLMakie (plotting). 
 
 using BattMo, GLMakie
 
@@ -17,8 +17,9 @@ using BattMo, GLMakie
 # We also read an example cycling protocol for a simple Constant Current Discharge.
 
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+
 nothing # hide
 
 # Next, we select the Lithium-Ion Battery Model with default model settings. A model can be thought as a mathematical implementation of the electrochemical and 
@@ -33,7 +34,7 @@ model_setup = LithiumIonBattery()
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol);
 
-# When the simulation is prepared, there are some validation checks happening in the background, which verify whether i) the cell parameters, cycling protocol and settings are sensible and complete 
+# When the simulation is prepared, there are some validation checks happening in the background, which verify whether the cell parameters, cycling protocol and settings are sensible and complete 
 # to run a simulation. It is good practice to ensure that the Simulation has been properly configured by checking if has passed the validation procedure:   
 sim.is_valid
 

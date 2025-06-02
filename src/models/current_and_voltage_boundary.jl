@@ -83,19 +83,20 @@ mutable struct CCPolicy{R} <: AbstractPolicy
 	current_function::Union{Missing, Any}
 	tolerances::Dict{String, Real}
 	function CCPolicy(
-		numberOfCycles::Int,
-		initialControl::String,
-		lowerCutoffVoltage::T,
-		upperCutoffVoltage::T,
-		use_ramp_up::Bool;
-		current_function = missing,
-		ImaxDischarge::T = 0.0,
-		ImaxCharge::T = 0.0,
-		tolerances = Dict("discharging" => 1e-4,
-			"charging" => 1e-4),
-	) where T <: Real
-
-		new{Union{Missing, T}}(numberOfCycles, initialControl, ImaxDischarge, ImaxCharge, lowerCutoffVoltage, upperCutoffVoltage, use_ramp_up, current_function, tolerances)
+			numberOfCycles::Int,
+			initialControl::String,
+			lowerCutoffVoltage::Real,
+			upperCutoffVoltage::Real,
+			use_ramp_up::Bool;
+			current_function = missing,
+			ImaxDischarge::Real = 0.0,
+			ImaxCharge::Real = 0.0,
+			T = missing,
+			tolerances = Dict("discharging" => 1e-4,
+				"charging" => 1e-4),
+		)
+		T = promote_type(T, typeof(lowerCutoffVoltage), typeof(upperCutoffVoltage), typeof(ImaxDischarge), typeof(ImaxCharge))
+		new{T}(numberOfCycles, initialControl, ImaxDischarge, ImaxCharge, lowerCutoffVoltage, upperCutoffVoltage, use_ramp_up, current_function, tolerances)
 	end
 end
 
@@ -122,8 +123,8 @@ Function Policy
 struct FunctionPolicy <: AbstractPolicy
 	current_function::Function
 
-	function FunctionPolicy(function_name::String)
-		current_function = setup_function_from_function_name(function_name)
+	function FunctionPolicy(function_name::String, file_path::String)
+		current_function = setup_function_from_function_name(function_name; file_path = file_path)
 		new{}(current_function)
 	end
 
@@ -463,7 +464,7 @@ function getInitCurrent(policy::CCPolicy)
 end
 
 function getInitCurrent(policy::FunctionPolicy)
-	return policy.current_function(0.0)
+	return 0.0
 end
 
 function getInitCurrent(policy::SimpleCVPolicy)
@@ -771,27 +772,12 @@ end
 """
 In addition to update the values in all primary variables, we need also to update the values in the controller. We do that by specializing the method perform_step_solve_impl!
 """
-function Jutul.perform_step_solve_impl!(report, storage, model::MultiModel{:Battery, T}, config, dt, iteration, rec, relaxation, executor) where {T}
-
-	invoke(perform_step_solve_impl!,
-		Tuple{typeof(report),
-			typeof(storage),
-			MultiModel,
-			typeof(config),
-			typeof(dt),
-			typeof(iteration),
-			typeof(rec),
-			typeof(relaxation),
-			typeof(executor)},
-		report, storage, model, config, dt, iteration, rec, relaxation, executor)
-
-	state  = storage.state[:Control]
-	state0 = storage.state0[:Control]
-
-	policy = model[:Control].system.policy
-
+function Jutul.update_extra_state_fields!(storage, model::SimulationModel{CurrentAndVoltageDomain, <:CurrentAndVoltageSystem}, dt, time)
+	state  = storage.state
+	state0 = storage.state0
+	policy = model.system.policy
 	update_controller!(state, state0, policy, dt)
-
+	return storage
 end
 
 """
@@ -1088,7 +1074,7 @@ function update_values_in_controller!(state, policy::FunctionPolicy)
 
 	cf = policy.current_function
 
-	I_p = cf(controller.time)
+	I_p = cf(controller.time, value(only(state.Phi)))
 
 	controller.target = I_p
 
@@ -1326,7 +1312,7 @@ end
 """
 Function called when setting up state initially. We need to add the fields corresponding to the controller
 """
-function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVoltageModel)
+function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVoltageModel; T = Float64)
 
 	policy = model.system.policy
 
@@ -1346,8 +1332,7 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 	elseif policy isa FunctionPolicy
 
 		time = 0.0
-
-		target = policy.current_function(time)
+		target = 0.0
 
 		target_is_voltage = false
 
@@ -1375,7 +1360,7 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 
 
 		number_of_cycles = 0
-
+		target, time = promote(target, time)
 		state[:Controller] = CCController(number_of_cycles, target, time, target_is_voltage, ctrlType)
 
 	elseif policy isa CyclingCVPolicy
@@ -1439,17 +1424,19 @@ end
 """
 sineup rampup function
 """
-function sineup(y1::T, y2::T, x1::T, x2::T, x::T) where {T <: Any}
+function sineup(y1, y2, x1, x2, x)
 	#SINEUP Creates a sine ramp function
 	#
 	#   res = sineup(y1, y2, x1, x2, x) creates a sine ramp
 	#   starting at value y1 at point x1 and ramping to value y2 at
 	#   point x2 over the vector x.
+	y1, y2, x1, x2, x = promote(y1, y2, x1, x2, x)
+	T = typeof(x)
 
 	dy = y1 - y2
 	dx = abs(x1 - x2)
 
-	res::T = 0.0
+	res = zero(T)
 
 	if (x >= x1) && (x <= x2)
 		res = dy / 2.0 .* cos(pi .* (x - x1) ./ dx) + y1 - (dy / 2)

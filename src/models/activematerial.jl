@@ -47,7 +47,7 @@ struct ActiveMaterial{label, D, T, Di} <: AbstractActiveMaterial{label} where {D
 	# - SEIstoichiometryCoefficient
 	# - SEImolarVolume
 	# - SEIelectronicDiffusionCoefficient
-	# - SEIintersticialConcentration
+	# - SEIinterstitialConcentration
 	# - SEIionicConductivity
 
 	discretization::D
@@ -124,12 +124,13 @@ function maximum_concentration(system::ActiveMaterial)
 end
 
 function setupSolidDiffusionDiscretization(rp, N, D)
+	rp, D = promote(rp, D)
+	T = typeof(rp)
 
 	N  = Int64(N)
-	rp = Float64(rp)
 
-	hT   = zeros(Float64, N + 1)
-	vols = zeros(Float64, N)
+	hT   = zeros(T, N + 1)
+	vols = zeros(T, N)
 
 	dr = rp / N
 	rc = [dr * (i - 1 / 2) for i ∈ 1:N]
@@ -143,7 +144,7 @@ function setupSolidDiffusionDiscretization(rp, N, D)
 		hT[i] = (4 * pi * rf[i]^2 / (dr / 2))
 	end
 
-	div = Vector{Tuple{Int64, Int64, Float64}}(undef, 2 * (N - 1))
+	div = Vector{Tuple{Int64, Int64, Int64}}(undef, 2 * (N - 1))
 
 	k = 1
 	for j ∈ 1:N-1

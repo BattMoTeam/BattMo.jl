@@ -26,7 +26,7 @@ struct LithiumIonBattery <: BatteryModelSetup
 	function LithiumIonBattery(; model_settings = get_default_model_settings(LithiumIonBattery))
 
 		model_geometry = model_settings["ModelFramework"]
-		name = "$model_geometry Setup object for a lithium-ion model"
+		name = "Setup object for a $model_geometry lithium-ion model"
 
 		is_valid = validate_parameter_set(model_settings)
 
@@ -65,16 +65,16 @@ end
 function get_default_simulation_settings(st::LithiumIonBattery)
 
 	settings = Dict(
-		"GridPoints" => Dict(
+		"GridResolution" => Dict(
 			"ElectrodeWidth" => 10,
 			"ElectrodeLength" => 10,
-			"PositiveElectrodeCoating" => 3,
-			"PositiveElectrodeActiveMaterial" => 10,
+			"PositiveElectrodeCoating" => 10,
+			"PositiveElectrodeActiveMaterial" => 5,
 			"PositiveElectrodeCurrentCollector" => 2,
 			"PositiveElectrodeCurrentCollectorTabWidth" => 3,
 			"PositiveElectrodeCurrentCollectorTabLength" => 3,
-			"NegativeElectrodeCoating" => 3,
-			"NegativeElectrodeActiveMaterial" => 10,
+			"NegativeElectrodeCoating" => 10,
+			"NegativeElectrodeActiveMaterial" => 5,
 			"NegativeElectrodeCurrentCollector" => 2,
 			"NegativeElectrodeCurrentCollectorTabWidth" => 3,
 			"NegativeElectrodeCurrentCollectorTabLength" => 3,
@@ -85,6 +85,6 @@ function get_default_simulation_settings(st::LithiumIonBattery)
 		"RampUpTime" => 10,
 		"RampUpSteps" => 5,
 	)
-	return SimulationSettings(settings)
+	return SimulationSettings(settings; source_path = nothing)
 
 end

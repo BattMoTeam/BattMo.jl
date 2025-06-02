@@ -155,6 +155,7 @@ function log_schema_issues(issues::Vector{SingleIssue}, set_name::String)
 				issue.reason == "minimum"  ? "Value is below the minimum allowed ($(issue.val))" :
 				issue.reason == "type"     ? "Expected type: $(issue.val)" :
 				issue.reason == "enum"     ? "Value must be one of: $(join(issue.val, ", "))" :
+				issue.reason == "const"    ? "Value must be exactly: $(issue.val)" :
 				"Schema violation: $(issue.reason)"
 
 			println(rpad("🛠  Issue:", label_width), msg, "\n")
