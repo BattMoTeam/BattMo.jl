@@ -19,10 +19,8 @@ time_series = get_output_time_series(output)
 states = get_output_states(output)
 metrics = get_output_metrics(output)
 
-@info metrics[:RoundTripEfficiency]
-
 # Plot a pre-defined dashboard
-plot_dashboard(output)
+plot_dashboard(output; plot_type = "contour")
 
 # Or create your own dashboard
 NeAm_end_index = simulation_settings["GridResolution"]["NegativeElectrodeCoating"]
