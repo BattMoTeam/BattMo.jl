@@ -37,7 +37,7 @@ inputparams["Control"]["useCVswitch"] = false
 # run simulation #
 ##################
 
-use_iterative_solver = true
+use_iterative_solver = false
 
 if use_iterative_solver
     
@@ -98,18 +98,18 @@ if use_iterative_solver
 
 else
     
-    function myhook(simulator,
-			        model,
-			        state0,
-			        forces,
-			        timesteps,
-			        cfg)
-
+    function hook(simulator,
+			      model,
+			      state0,
+			      forces,
+			      timesteps,
+			      cfg)
+        
         cfg[:info_level] = 2
         
     end
     
-    output = run_battery(inputparams; hook = myhook)
+    output = run_battery(inputparams; hook)
     states = output[:states]
     
 end
