@@ -1,9 +1,0 @@
-{
-    "Metadata": {
-        "Title": "P2D",
-        "Description": "Default model settings for a P2D simulation including a current ramp up, excluding current collectors and SEI effects."
-    },
-    "ModelFramework": "P2D",
-    "TransportInSolid": "FullDiffusion",
-    "RampUp": "Sinusoidal"
-}
