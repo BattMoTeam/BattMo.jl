@@ -1,5 +1,19 @@
 {
-    "GridPoints": {
+    "Metadata": {
+        "Title": "P4D_pouch",
+        "Description": "Default simulation settings for a P4D pouch simulation including a current ramp up, current collectors.",
+        "Models": {
+            "ModelFramework": [
+                "P2D",
+                "P4D Pouch"
+            ],
+            "TransportInSolid": "FullDiffusion",
+            "CurrentCollector": "Generic",
+            "RampUp": "Sinusoidal",
+            "SEIModel": "Bolay"
+        }
+    },
+    "GridResolution": {
         "ElectrodeWidth": 10,
         "ElectrodeLength": 10,
         "PositiveElectrodeCoating": 3,
@@ -14,7 +28,6 @@
         "NegativeElectrodeCurrentCollectorTabLength": 3,
         "Separator": 3
     },
-    "Grid": [],
     "TimeStepDuration": 50,
     "RampUpTime": 10,
     "RampUpSteps": 5

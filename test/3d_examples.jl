@@ -6,7 +6,7 @@ using Test
 
 	@test begin
 
-		file_path_cell = parameter_file_path("cell_parameters", "3D_demo_example.json")
+		file_path_cell = parameter_file_path("cell_parameters", "Xu2015.json")
 		file_path_model = parameter_file_path("model_settings", "P4D_pouch.json")
 		file_path_cycling = parameter_file_path("cycling_protocols", "CCDischarge.json")
 		file_path_simulation = parameter_file_path("simulation_settings", "P4D_pouch.json")
@@ -23,12 +23,12 @@ using Test
 
 		Cc = map(x -> x[:Control][:Current][1], output.states)
 		Phi = map(x -> x[:Control][:Phi][1], output.states)
-		@test length(output.states) == 148
-		@test Cc[2] ≈ 0.00343 atol = 1e-2
+		@test length(output.states) == 137
+		@test Cc[2] ≈ 0.02321200713128439 atol = 1e-2
 		for i in 3:length(Cc)
-			@test Cc[i] ≈ 0.0076079 atol = 1e-2
+			@test Cc[i] ≈ 0.0514688 atol = 1e-2
 		end
-		@test Phi[1] ≈ 4.163 atol = 1e-2
+		@test Phi[1] ≈ 3.3147 atol = 1e-2
 		true
 
 	end

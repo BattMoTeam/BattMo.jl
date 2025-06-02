@@ -22,7 +22,7 @@ nothing # hide
 
 # To quickly inspect which default parameter sets are included with BattMo and what each contains, you can use:
 
-print_default_parameter_sets_info()
+print_default_input_sets_info()
 
 
 # ## Inspecting Individual Parameters

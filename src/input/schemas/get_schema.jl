@@ -52,10 +52,10 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 			Dict(
 				"type" => "object",
 				"properties" => Dict(
-					"type" => Dict("type" => "string", "enum" => ["function"]),
-					"functionname" => Dict("type" => "string"),
+					"FunctionName" => Dict("type" => "string"),
+					"FilePath" => Dict("type" => "string"),
 				),
-				"required" => ["type", "functionname"],
+				"required" => ["FunctionName", "FilePath"],
 				"additionalProperties" => true,
 			),
 		)
@@ -163,10 +163,11 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"IonicConductivity" => create_property(parameter_meta, "IonicConductivity"),
 							"ElectronicDiffusionCoefficient" => create_property(parameter_meta, "ElectronicDiffusionCoefficient"),
 							"StoichiometricCoefficient" => create_property(parameter_meta, "StoichiometricCoefficient"),
-							"IntersticialConcentration" => create_property(parameter_meta, "IntersticialConcentration"),
+							"InterstitialConcentration" => create_property(parameter_meta, "InterstitialConcentration"),
 							"InitialThickness" => create_property(parameter_meta, "InitialThickness"),
+							"InitialPotentialDrop" => create_property(parameter_meta, "InitialPotentialDrop"),
 						),
-						"required" => ["MolarVolume", "IonicConductivity", "ElectronicDiffusionCoefficient", "StoichiometricCoefficient", "IntersticialConcentration", "InitialThickness"],
+						"required" => ["MolarVolume", "IonicConductivity", "ElectronicDiffusionCoefficient", "StoichiometricCoefficient", "InterstitialConcentration", "InitialThickness", "InitialPotentialDrop"],
 					),
 					"ConductiveAdditive" => Dict(
 						"type" => "object",
@@ -249,10 +250,10 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"IonicConductivity" => create_property(parameter_meta, "IonicConductivity"),
 							"ElectronicDiffusionCoefficient" => create_property(parameter_meta, "ElectronicDiffusionCoefficient"),
 							"StoichiometricCoefficient" => create_property(parameter_meta, "StoichiometricCoefficient"),
-							"IntersticialConcentration" => create_property(parameter_meta, "IntersticialConcentration"),
+							"InterstitialConcentration" => create_property(parameter_meta, "InterstitialConcentration"),
 							"InitialThickness" => create_property(parameter_meta, "InitialThickness"),
 						),
-						"required" => ["MolarVolume", "IonicConductivity", "ElectronicDiffusionCoefficient", "StoichiometricCoefficient", "IntersticialConcentration", "InitialThickness"],
+						"required" => ["MolarVolume", "IonicConductivity", "ElectronicDiffusionCoefficient", "StoichiometricCoefficient", "InterstitialConcentration", "InitialThickness"],
 					),
 					"ConductiveAdditive" => Dict(
 						"type" => "object",
@@ -318,7 +319,9 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 			),
 		),
 		"required" => ["Cell", "NegativeElectrode", "PositiveElectrode", "Separator", "Electrolyte"],
+		"allOf" => [],
 	)
+
 
 	cell_required = schema["properties"]["Cell"]["required"]
 	ne_required = schema["properties"]["NegativeElectrode"]["required"]
@@ -347,6 +350,18 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 		push!(cell_required, "ElectrodeGeometricSurfaceArea")
 
 	elseif model_settings_dict["ModelFramework"] == "P4D Pouch"
+
+		push!(schema["allOf"], Dict(
+			"properties" => Dict(
+				"Cell" => Dict(
+					"properties" => Dict(
+						"Case" => Dict("const" => "Pouch"),
+					),
+					"required" => ["Case"],
+				),
+			),
+		))
+
 		push!(cell_required, "ElectrodeWidth")
 		push!(cell_required, "ElectrodeLength")
 		push!(cell_required, "ElectrodeGeometricSurfaceArea")
@@ -362,9 +377,19 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 	elseif model_settings_dict["ModelFramework"] == "P4D Cylindrical"
 
-		push!(cell_required, "OuterRadius")
-		push!(cell_required, "InnerRadius")
-		push!(cell_required, "Height")
+		push!(schema["allOf"], Dict(
+			"properties" => Dict(
+				"Cell" => Dict(
+					"properties" => Dict(
+						"Case" => Dict("const" => "Cylindrical"),
+					),
+					"required" => ["Case"],
+				),
+			),
+		))
+
+		push!(cell_required, "DubbelCoatedElectrodes")
+		push!(cell_required, "InnerCellRadius")
 
 		if haskey(model_settings, "UseCurrentCollectors")
 			push!(ne_required, "CurrentCollector")
@@ -406,8 +431,8 @@ function get_schema_cycling_protocol()
 			"InitialControl" => create_property(parameter_meta, "InitialControl"),
 			"CurrentChangeLimit" => create_property(parameter_meta, "CurrentChangeLimit"),
 			"VoltageChangeLimit" => create_property(parameter_meta, "VoltageChangeLimit"),
-			"AmbientKelvinTemperature" => create_property(parameter_meta, "AmbientKelvinTemperature"),
-			"InitialKelvinTemperature" => create_property(parameter_meta, "InitialKelvinTemperature"),
+			"AmbientTemperature" => create_property(parameter_meta, "AmbientTemperature"),
+			"InitialTemperature" => create_property(parameter_meta, "InitialTemperature"),
 		),
 		"required" => ["Protocol"],
 		"allOf" => [
@@ -424,9 +449,8 @@ function get_schema_cycling_protocol()
 						"UpperVoltageLimit",
 						"CurrentChangeLimit",
 						"VoltageChangeLimit",
-						"InitialKelvinTemperature",
-					],
-				),
+						"InitialTemperature",
+					]),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"))),
@@ -444,8 +468,9 @@ function get_schema_cycling_protocol()
 					"required" => [
 						"InitialStateOfCharge",
 						"FunctionName",
+						"FilePath",
 						"TotalTime",
-						"InitialKelvinTemperature",
+						"InitialTemperature",
 					],
 				),
 			),
@@ -458,9 +483,8 @@ function get_schema_cycling_protocol()
 						"InitialStateOfCharge",
 						"DRate",
 						"LowerVoltageLimit",
-						"InitialKelvinTemperature",
-					],
-				),
+						"InitialTemperature",
+					]),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
@@ -469,11 +493,12 @@ function get_schema_cycling_protocol()
 				"then" => Dict(
 					"required" => [
 						"InitialStateOfCharge",
+						"InitialControl",
+						"TotalNumberOfCycles",
 						"CRate",
 						"UpperVoltageLimit",
-						"InitialKelvinTemperature",
-					],
-				),
+						"InitialTemperature",
+					]),
 			),
 			Dict(
 				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CC"),
@@ -485,9 +510,8 @@ function get_schema_cycling_protocol()
 						"DRate",
 						"UpperVoltageLimit",
 						"LowerVoltageLimit",
-						"InitialKelvinTemperature",
-					],
-				),
+						"InitialTemperature",
+					]),
 			),
 		],
 	)
@@ -495,30 +519,27 @@ end
 
 
 function get_schema_simulation_settings(model_settings)
-	parameter_meta = get_parameter_meta_data()
+	parameter_meta = get_setting_meta_data()
 	schema = Dict(
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",
 		"properties" => Dict(
-			"GridPoints" => Dict(
+			"GridResolution" => Dict(
 				"type" => "object",
 				"properties" => Dict(
-					"ElectrodeWidth" => create_property(parameter_meta, "GridPointsElectrodeWidth"),
-					"Height" => create_property(parameter_meta, "GridPointsElectrodeWidth"),
-					"Radius" => create_property(parameter_meta, "GridPointsRadius"),
-					"HeightRefinement" => create_property(parameter_meta, "HeightRefinement"),
-					"ElectrodeLength" => create_property(parameter_meta, "GridPointsElectrodeLength"),
-					"PositiveElectrodeCoating" => create_property(parameter_meta, "GridPointsPositiveElectrodeCoating"),
-					"PositiveElectrodeActiveMaterial" => create_property(parameter_meta, "GridPointsPositiveElectrodeActiveMaterial"),
-					"PositiveElectrodeCurrentCollector" => create_property(parameter_meta, "GridPointsPositiveElectrodeCurrentCollector"),
-					"PositiveElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridPointsPositiveElectrodeCurrentCollectorTabWidth"),
-					"PositiveElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridPointsPositiveElectrodeCurrentCollectorTabLength"),
-					"NegativeElectrodeCoating" => create_property(parameter_meta, "GridPointsNegativeElectrodeCoating"),
-					"NegativeElectrodeActiveMaterial" => create_property(parameter_meta, "GridPointsNegativeElectrodeActiveMaterial"),
-					"NegativeElectrodeCurrentCollector" => create_property(parameter_meta, "GridPointsNegativeElectrodeCurrentCollector"),
-					"NegativeElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridPointsNegativeElectrodeCurrentCollectorTabWidth"),
-					"NegativeElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridPointsNegativeElectrodeCurrentCollectorTabLength"),
-					"Separator" => create_property(parameter_meta, "GridPointsSeparator"),
+					"ElectrodeWidth" => create_property(parameter_meta, "GridResolutionElectrodeWidth"),
+					"ElectrodeLength" => create_property(parameter_meta, "GridResolutionElectrodeLength"),
+					"PositiveElectrodeCoating" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCoating"),
+					"PositiveElectrodeActiveMaterial" => create_property(parameter_meta, "GridResolutionPositiveElectrodeActiveMaterial"),
+					"PositiveElectrodeCurrentCollector" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollector"),
+					"PositiveElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabWidth"),
+					"PositiveElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabLength"),
+					"NegativeElectrodeCoating" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCoating"),
+					"NegativeElectrodeActiveMaterial" => create_property(parameter_meta, "GridResolutionNegativeElectrodeActiveMaterial"),
+					"NegativeElectrodeCurrentCollector" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollector"),
+					"NegativeElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabWidth"),
+					"NegativeElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabLength"),
+					"Separator" => create_property(parameter_meta, "GridResolutionSeparator"),
 				),
 				"required" => [
 					"PositiveElectrodeCoating",
@@ -535,11 +556,11 @@ function get_schema_simulation_settings(model_settings)
 			"RampUpTime" => Dict("type" => "integer"),
 			"RampUpSteps" => Dict("type" => "integer"),
 		),
-		"required" => ["GridPoints", "Grid", "TimeStepDuration", "RampUpTime", "RampUpSteps"],
+		"required" => ["GridResolution", "TimeStepDuration", "RampUpTime", "RampUpSteps"],
 	)
 
 	required = schema["required"]
-	required_grid_points = schema["properties"]["GridPoints"]["required"]
+	required_grid_points = schema["properties"]["GridResolution"]["required"]
 
 	if model_settings["ModelFramework"] == "P4D Pouch"
 		push!(required_grid_points, "ElectrodeWidth")
@@ -577,7 +598,7 @@ end
 
 
 function get_schema_model_settings()
-	parameter_meta = get_parameter_meta_data()
+	parameter_meta = get_setting_meta_data()
 	return Dict(
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",

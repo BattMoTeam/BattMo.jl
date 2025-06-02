@@ -48,6 +48,7 @@ using StatsBase: inverse_rle                      # Statistical utility
 using Tullio: @tullio                             # Einstein summation notation
 
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 🏗️ Jutul Core Structures & functions
 # ─────────────────────────────────────────────────────────────────────────────
@@ -175,6 +176,7 @@ using Jutul: get_diagonal_entries
 using Jutul: get_dependencies, get_entry, convert_to_immutable_storage
 using Jutul: tpfv_geometry, apply!, is_cell_major
 using Jutul: StaticCSR, ParallelCSRContext
+using Jutul: jutul_message
 
 
 timeit_debug_enabled() = Jutul.timeit_debug_enabled()
@@ -185,13 +187,12 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 
 include("input/input_types.jl")
 include("input/meta_data/parameters.jl")
+include("input/meta_data/settings.jl")
 include("input/printer.jl")
 include("input/schemas/get_schema.jl")
 include("input/schemas/get_json_from_schema.jl")
 
 include("utils/physical_constants.jl")
-
-
 
 include("models/battmo_types.jl")
 include("models/full_battery_model_setups/battery_model.jl")
@@ -219,10 +220,15 @@ include("models/battery_utils.jl")
 include("setup/model_setup.jl")
 include("setup/matlab_model_setup.jl")
 
-include("plotting/3D.jl")
+include("plotting/3d.jl")
+include("plotting/1d.jl")
 
 include("utils/battery_cell_specifications.jl")
 include("utils/battery_kpis.jl")
+include("output/output_format.jl")
+include("output/meta_data/variables.jl")
+include("output/printer.jl")
+
 
 include("solver/linsolve.jl")
 
@@ -233,6 +239,9 @@ include("grid/grid_utils.jl")
 include("solver/solver_as_preconditioner_system.jl")
 include("solver/precondgenneral.jl")
 include("solver/sparse_utils.jl")
+include("calibration/calibration.jl")
+include("calibration/calibration_utils.jl")
+
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 # @compile_workload begin
 #    for use_general_ad in [false, true]

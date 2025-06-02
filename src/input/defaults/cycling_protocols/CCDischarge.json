@@ -1,4 +1,8 @@
 {
+  "Metadata": {
+    "Title": "CCDischarge",
+    "Description": "Parameter set for a constant current discharging protocol."
+  },
   "Protocol": "CC",
   "TotalNumberOfCycles": 0,
   "InitialStateOfCharge": 0.99,
@@ -6,5 +10,5 @@
   "DRate": 0.5,
   "LowerVoltageLimit": 2.4,
   "UpperVoltageLimit": 4.1,
-  "InitialKelvinTemperature": 298.15
+  "InitialTemperature": 298.15
 }

@@ -6,7 +6,7 @@ using Test
 
 	@test begin
 
-		file_path_cell = parameter_file_path("cell_parameters", "SEI_example.json")
+		file_path_cell = parameter_file_path("cell_parameters", "Chen2020.json")
 		file_path_model = parameter_file_path("model_settings", "P2D.json")
 		file_path_cycling = parameter_file_path("cycling_protocols", "CCCV.json")
 		file_path_simulation = parameter_file_path("simulation_settings", "P2D.json")

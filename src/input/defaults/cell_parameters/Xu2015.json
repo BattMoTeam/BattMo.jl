@@ -2,7 +2,16 @@
     "Metadata": {
         "Title": "Xu2015",
         "Source": "https://doi.org/10.1016/j.energy.2014.11.073",
-        "Description": "Parameter set of a commercial Type LP2770120 prismatic LiFePO4/graphite cell, for an electrochemical pseudo-two-dimensional (P2D) model."
+        "Description": "Parameter set of a commercial Type LP2770120 prismatic LiFePO4/graphite cell, for an electrochemical pseudo-two-dimensional (P2D) model.",
+        "Models": {
+            "ModelFramework": [
+                "P2D",
+                "P4D Pouch"
+            ],
+            "TransportInSolid": "FullDiffusion",
+            "CurrentCollectors": "Generic",
+            "RampUp": "Sinusoidal"
+        }
     },
     "Cell": {
         "Name": "LP2770120",
@@ -16,8 +25,14 @@
     "Electrolyte": {
         "Description": "1.5 mol/l LiPF6 dissolved in a mixture of ethylene carbonate (EC):  dimethyl carbonate (DMC) (1:1)",
         "TransferenceNumber": 0.363,
-        "DiffusionCoefficient": "1e-4 * 10^(-4.43 - 54/(T - 229 - 5*c*1e-3) - 0.22*c*1e-3)",
-        "IonicConductivity": "1e-4*c*((-10.5 + 0.668e-3*c + 0.494e-6*c^2) + (0.074 - 1.78e-5*c - 8.86e-10*c^2)*T + (-6.96e-5 + 2.80e-8*c)*T^2)^2",
+        "DiffusionCoefficient": {
+            "FunctionName": "electrolyte_diffusivity_Xu_2015",
+            "FilePath": "function_parameters_Xu2015.jl"
+        },
+        "IonicConductivity": {
+            "FunctionName": "electrolyte_conductivity_Xu_2015",
+            "FilePath": "function_parameters_Xu2015.jl"
+        },
         "Density": 1210,
         "ChargeNumber": 1,
         "Concentration": 1500
@@ -33,8 +48,8 @@
             "ActivationEnergyOfReaction": 4000,
             "ActivationEnergyOfDiffusion": 20000,
             "OpenCircuitPotential": {
-                "type": "function",
-                "functionname": "computeOCP_LFP_Xu2015"
+                "FunctionName": "open_circuit_potential_lfp_Xu_2015",
+                "FilePath": "function_parameters_Xu2015.jl"
             },
             "MaximumConcentration": 26390,
             "VolumetricSurfaceArea": 1878261,
@@ -87,8 +102,8 @@
             "ActivationEnergyOfReaction": 4000,
             "ActivationEnergyOfDiffusion": 4000,
             "OpenCircuitPotential": {
-                "type": "function",
-                "functionname": "computeOCP_Graphite_Xu2015"
+                "FunctionName": "open_circuit_potential_graphite_Xu_2015",
+                "FilePath": "function_parameters_Xu2015.jl"
             },
             "MaximumConcentration": 31540,
             "VolumetricSurfaceArea": 142373,

@@ -136,13 +136,13 @@ The output of the simulation if the problem is valid.
 # Throws
 Throws an error if the `Simulation` object is not valid, prompting the user to check warnings during instantiation.
 """
-function solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, end_report = true, kwargs...)
+function solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, end_report = info_level > -1, kwargs...)
 
 	config_kwargs = (info_level = info_level, end_report = end_report)
 
 	use_p2d = true
 
-
+	# Note: Typically function_to_solve is run_battery
 	if accept_invalid == true
 		output = problem.function_to_solve(problem.model_setup, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;
 			hook = nothing,
@@ -424,6 +424,7 @@ function setup_submodels(inputparams::InputParams;
 	use_groups::Bool = false,
 	general_ad::Bool = true,
 	use_p2d = true,
+	T = Float64,
 	kwargs...)
 
 	include_cc = include_current_collectors(inputparams)
@@ -453,13 +454,9 @@ function setup_submodels(inputparams::InputParams;
 
 			compnames = [am, bd, ad]
 
-			specificVolumes = zeros(length(compnames))
-			for icomp in eachindex(compnames)
-				compname = compnames[icomp]
-				rho = codict[compname]["density"]
-				mf = codict[compname]["massFraction"]
-				specificVolumes[icomp] = mf / rho
-			end
+			# Do it this way since values could be AD.
+			get_specific_volume(compname) = codict[compname]["massFraction"] / codict[compname]["density"]
+			specificVolumes = map(get_specific_volume, compnames)
 
 			sumSpecificVolumes = sum(specificVolumes)
 			volumeFractions = [sv / sumSpecificVolumes for sv in specificVolumes]
@@ -499,7 +496,8 @@ function setup_submodels(inputparams::InputParams;
 		elseif haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionname")
 
 			funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
-			fcn = setup_function_from_function_name(funcname)
+			funcpath = haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionpath") ? inputparams_am["Interface"]["openCircuitPotential"]["functionpath"] : nothing
+			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 			am_params[:ocp_func] = fcn
 
 		else
@@ -523,7 +521,7 @@ function setup_submodels(inputparams::InputParams;
 					"SEIstoichiometricCoefficient",
 					"SEImolarVolume",
 					"SEIelectronicDiffusionCoefficient",
-					"SEIintersticialConcentration",
+					"SEIinterstitialConcentration",
 					"SEIionicConductivity"]
 				for fd in fds
 					am_params[Symbol(fd)] = inputparams_am["Interface"][fd]
@@ -607,7 +605,8 @@ function setup_submodels(inputparams::InputParams;
 	elseif haskey(inputparams_elyte["diffusionCoefficient"], "functionname")
 
 		funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
-		fcn = setup_function_from_function_name(funcname)
+		funcpath = haskey(inputparams_elyte["diffusionCoefficient"], "functionpath") ? inputparams_elyte["diffusionCoefficient"]["functionpath"] : nothing
+		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:diffusivity_func] = fcn
 
 	else
@@ -629,7 +628,8 @@ function setup_submodels(inputparams::InputParams;
 	elseif haskey(inputparams_elyte["ionicConductivity"], "functionname")
 
 		funcname = inputparams_elyte["ionicConductivity"]["functionname"]
-		fcn = setup_function_from_function_name(funcname)
+		funcpath = haskey(inputparams_elyte["ionicConductivity"], "functionpath") ? inputparams_elyte["ionicConductivity"]["functionpath"] : nothing
+		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:conductivity_func] = fcn
 
 	else
@@ -678,8 +678,12 @@ function setup_submodels(inputparams::InputParams;
 	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge" || controlPolicy == "CCCycling"
 		ctrl = jsondict["Control"]
 		if jsondict["Control"]["useCVswitch"]
+			if controlPolicy == "CCDischarge"
 
-			policy = SimpleCVPolicy()
+				policy = SimpleCVPolicy()
+			else
+				error("UseCVSwitch is not handled for $controlPolicy control.")
+			end
 		else
 			if haskey(ctrl, "initialControl")
 				initial_control = ctrl["initialControl"]
@@ -699,11 +703,24 @@ function setup_submodels(inputparams::InputParams;
 					error("CCCycling parameters miss numberOfcycles")
 				end
 			end
+			DRate = get(inputparams["Control"], "DRate", 0.0)
+			CRate = get(inputparams["Control"], "CRate", 0.0)
+			if !isnothing(DRate)
+				DRate = 0.0
+			end
+			if !isnothing(DRate)
+				CRate = 0.0
+			end
+			# Capacity goes into actual realized rates, so check the type for AD/promotion
+			cap = min(computeElectrodeCapacity(model_neam, :NeAm), computeElectrodeCapacity(model_peam, :PeAm))
+			T_i = promote_type(typeof(DRate), typeof(CRate), typeof(cap), T)
+
 			policy = CCPolicy(number_of_cycles,
 				initial_control,
 				ctrl["lowerCutoffVoltage"],
 				ctrl["upperCutoffVoltage"],
 				use_ramp_up,
+				T = T_i
 			)
 		end
 
@@ -723,8 +740,9 @@ function setup_submodels(inputparams::InputParams;
 
 		ctrl = jsondict["Control"]
 		function_name = ctrl["functionName"]
+		file_path = ctrl["filePath"]
 
-		policy = FunctionPolicy(function_name)
+		policy = FunctionPolicy(function_name, file_path)
 
 	else
 
@@ -1003,7 +1021,6 @@ function setup_battery_parameters(inputparams::InputParams,
 
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
-
 	elseif controlPolicy == "CCCharge"
 		cap = computeCellCapacity(model)
 		con = Constants()
@@ -1065,12 +1082,12 @@ function setup_initial_state(inputparams::InputParams,
 		SOC       = SOC_init
 		nc        = count_entities(model[name].data_domain, Cells())
 		init      = Dict()
-		init[:Cs] = c * ones(nc)
-		init[:Cp] = c * ones(N, nc)
+		init[:Cs] = fill(c, nc)
+		init[:Cp] = fill(c, N, nc)
 
 		if model[name] isa SEImodel
-			init[:normalizedSEIlength] = 1.0 * ones(nc)
-			init[:normalizedSEIvoltageDrop] = 0.0 * ones(nc)
+			init[:normalizedSEIlength] = ones(nc)
+			init[:normalizedSEIvoltageDrop] = zeros(nc)
 		end
 
 		if haskey(model[name].system.params, :ocp_funcexp)
@@ -1090,7 +1107,10 @@ function setup_initial_state(inputparams::InputParams,
 	function setup_current_collector(name, phi, model)
 		nc = count_entities(model[name].data_domain, Cells())
 		init = Dict()
-		init[:Phi] = phi * ones(nc)
+		if phi isa Int
+			phi = convert(Float64, phi)
+		end
+		init[:Phi] = fill(phi, nc)
 		return init
 	end
 
@@ -1099,7 +1119,7 @@ function setup_initial_state(inputparams::InputParams,
 	# Setup initial state in negative active material
 
 	init, nc, negOCP = setup_init_am(:NeAm, model)
-	init[:Phi] = zeros(nc)
+	init[:Phi] = zeros(typeof(negOCP), nc)
 	initState[:NeAm] = init
 
 	# Setup initial state in electrolyte
@@ -1108,14 +1128,14 @@ function setup_initial_state(inputparams::InputParams,
 
 	init       = Dict()
 	init[:C]   = inputparams["Electrolyte"]["initialConcentration"] * ones(nc)
-	init[:Phi] = -negOCP * ones(nc)
+	init[:Phi] = fill(-negOCP, nc)
 
 	initState[:Elyte] = init
 
 	# Setup initial state in positive active material
 
 	init, nc, posOCP = setup_init_am(:PeAm, model)
-	init[:Phi] = (posOCP - negOCP) * ones(nc)
+	init[:Phi] = fill(posOCP - negOCP, nc)
 
 	initState[:PeAm] = init
 
@@ -1454,7 +1474,7 @@ function get_scalings(model, parameters)
 			push!(scalings, scaling)
 
 			De = model[elde].system[:SEIelectronicDiffusionCoefficient]
-			ce = model[elde].system[:SEIintersticialConcentration]
+			ce = model[elde].system[:SEIinterstitialConcentration]
 
 			scaling = (model_label = elde, equation_label = :sei_mass_cons, value = De * ce / L)
 			push!(scalings, scaling)
@@ -1704,8 +1724,8 @@ end
 # Current function #
 ####################
 
-function currentFun(t::T, inputI::T, tup::T = 0.1) where T
-	val::T = 0.0
+function currentFun(t::Real, inputI::Real, tup::Real = 0.1)
+	t, inputI, tup, val = promote(t, inputI, tup, 0.0)
 	if t <= tup
 		val = sineup(0.0, inputI, 0.0, tup, t)
 	else
@@ -1721,24 +1741,29 @@ end
 function setup_volume_fractions!(model::MultiModel, grids, coupling)
 
 	Nelyte      = number_of_cells(grids["Electrolyte"])
-	vfelyte     = zeros(Nelyte)
-	vfseparator = zeros(Nelyte)
 
 	names = [:NeAm, :PeAm]
 	stringNames = Dict(:NeAm => "NegativeElectrode",
 		:PeAm => "PositiveElectrode")
 
-	for name in names
+	vfracs = map(name -> model[name].system[:volume_fraction], names)
+	separator_porosity = model[:Elyte].system[:separator_porosity]
+
+	T = Base.promote_type(map(typeof, vfracs)..., typeof(separator_porosity))
+
+	vfelyte     = zeros(T, Nelyte)
+	vfseparator = zeros(T, Nelyte)
+
+	for (i, name) in enumerate(names)
 		stringName = stringNames[name]
 		ncell = number_of_cells(grids[stringName])
 		ammodel = model[name]
-		vf = ammodel.system[:volume_fraction]
+		vf = vfracs[i]
 		ammodel.domain.representation[:volumeFraction] = vf * ones(ncell)
 		elytecells = coupling[stringName]["cells"]
 		vfelyte[elytecells] .= 1 - vf
 	end
 
-	separator_porosity = model[:Elyte].system[:separator_porosity]
 	elytecells         = coupling["Separator"]["cells"]
 
 	vfelyte[elytecells]     .= separator_porosity * ones()

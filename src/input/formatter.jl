@@ -33,7 +33,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 	elyte = get_key_value(cell_parameters, "Electrolyte")
 	sep = get_key_value(cell_parameters, "Separator")
 
-	grid_points = get_key_value(simulation_settings, "GridPoints")
+	grid_points = get_key_value(simulation_settings, "GridResolution")
 
 
 	##################
@@ -78,8 +78,12 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	ne_ocp_value = get_key_value(ne_am, "OpenCircuitPotential")
 	if isa(ne_ocp_value, AbstractDict)
-		if haskey(ne_ocp_value, "functionname")
-			ne_ocp = ne_ocp_value
+		if haskey(ne_ocp_value, "FunctionName")
+			ne_ocp = Dict(
+				"type" => "function",
+				"functionname" => ne_ocp_value["FunctionName"],
+				"functionpath" => isnothing(get_key_value(ne_ocp_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(ne_ocp_value, "FilePath")),
+			)
 		else
 			ne_ocp = Dict(
 				"type" => "function",
@@ -101,8 +105,12 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	pe_ocp_value = get_key_value(pe_am, "OpenCircuitPotential")
 	if isa(pe_ocp_value, AbstractDict)
-		if haskey(pe_ocp_value, "functionname")
-			pe_ocp = pe_ocp_value
+		if haskey(pe_ocp_value, "FunctionName")
+			pe_ocp = Dict(
+				"type" => "function",
+				"functionname" => pe_ocp_value["FunctionName"],
+				"functionpath" => isnothing(get_key_value(pe_ocp_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(pe_ocp_value, "FilePath")),
+			)
 		else
 			pe_ocp = Dict(
 				"type" => "function",
@@ -124,8 +132,12 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	diff_value = get_key_value(elyte, "DiffusionCoefficient")
 	if isa(diff_value, AbstractDict)
-		if haskey(diff_value, "functionname")
-			diff = diff_value
+		if haskey(diff_value, "FunctionName")
+			diff = Dict(
+				"type" => "function",
+				"functionname" => diff_value["FunctionName"],
+				"functionpath" => isnothing(get_key_value(diff_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(diff_value, "FilePath")),
+			)
 		else
 			diff = Dict(
 				"type" => "function",
@@ -147,8 +159,12 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	cond_value = get_key_value(elyte, "IonicConductivity")
 	if isa(cond_value, AbstractDict)
-		if haskey(cond_value, "functionname")
-			cond = cond_value
+		if haskey(cond_value, "FunctionName")
+			cond = Dict(
+				"type" => "function",
+				"functionname" => cond_value["FunctionName"],
+				"functionpath" => isnothing(get_key_value(cond_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(cond_value, "FilePath")),
+			)
 		else
 			cond = Dict(
 				"type" => "function",
@@ -173,7 +189,12 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 	###################
 
 	if cycling_protocol["Protocol"] == "CC"
-		use_cv_switch = false
+		if haskey(cycling_protocol, "UseCVSwitch")
+			use_cv_switch = cycling_protocol["UseCVSwitch"]
+		else
+			use_cv_switch = false
+
+		end
 		if cycling_protocol["TotalNumberOfCycles"] == 0
 			if cycling_protocol["InitialControl"] == "discharging"
 				control = "CCDischarge"
@@ -198,14 +219,15 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 	end
 
 	battmo_input = Dict(
-		"G" => get_key_value(simulation_settings, "Grid"),
+		"G" => isnothing(get_key_value(simulation_settings, "Grid")) ? [] : get_key_value(simulation_settings, "Grid"),
 		"SOC" => get_key_value(cycling_protocol, "InitialStateOfCharge"),
-		"initT" => get_key_value(cycling_protocol, "InitialKelvinTemperature"),
+		"initT" => get_key_value(cycling_protocol, "InitialTemperature"),
 		"use_thermal" => use_thermal,
 		"include_current_collectors" => use_cc,
 		"Control" => Dict(
 			"controlPolicy" => control,
 			"functionName" => get_key_value(cycling_protocol, "FunctionName"),
+			"filePath" => isnothing(get_key_value(cycling_protocol, "FilePath")) ? nothing : joinpath(dirname(cycling_protocol.source_path), get_key_value(cycling_protocol, "FilePath")),
 			"useCVswitch" => use_cv_switch,
 			"numberOfCycles" => get_key_value(cycling_protocol, "TotalNumberOfCycles"),
 			"rampupTime" => get_key_value(simulation_settings, "RampUpTime"),
@@ -243,7 +265,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 						"SEIionicConductivity" => get_key_value(ne_interphase, "IonicConductivity"),
 						"SEIelectronicDiffusionCoefficient" => get_key_value(ne_interphase, "ElectronicDiffusionCoefficient"),
 						"SEIstoichiometricCoefficient" => get_key_value(ne_interphase, "StoichiometricCoefficient"),
-						"SEIintersticialConcentration" => get_key_value(ne_interphase, "IntersticialConcentration"),
+						"SEIinterstitialConcentration" => get_key_value(ne_interphase, "InterstitialConcentration"),
 						"SEIlengthInitial" => get_key_value(ne_interphase, "InitialThickness"),
 						"SEIvoltageDropRef" => get_key_value(ne_interphase, "InitialPotentialDrop"),
 						"SEIlengthRef" => get_key_value(ne_interphase, "InitialThickness"),
@@ -377,7 +399,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		),
 		"ThermalModel" => Dict(
 			"externalHeatTransferCoefficient" => get_key_value(cell, "HeatTransferCoefficient"),
-			"externalTemperature" => get_key_value(cycling_protocol, "AmbientKelvinTemperature"),
+			"externalTemperature" => get_key_value(cycling_protocol, "AmbientTemperature"),
 			"externalHeatTransferCoefficientTab" => get_key_value(cell, "HeatTransferCoefficient"),
 		),
 		"Geometry" => Dict(
