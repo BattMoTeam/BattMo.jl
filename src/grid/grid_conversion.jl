@@ -1,7 +1,4 @@
-using Infiltrator
-
 export convert_to_mrst_grid
-
 
 """
 Convert grid from jutul format to mrst format
