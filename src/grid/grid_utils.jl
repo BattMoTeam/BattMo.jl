@@ -184,22 +184,26 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
 	faceArea = geomparams["Geometry"]["faceArea"]
 
 	vars = ["thickness", "N"]
-	vals = Dict("thickness" => Vector{Float64}(),
-		"N" => Vector{Int}())
 
-	for var in vars
-		push!(vals[var], geomparams["NegativeElectrode"]["Coating"][var])
-		push!(vals[var], geomparams["Separator"][var])
-		push!(vals[var], geomparams["PositiveElectrode"]["Coating"][var])
+	function getvals(var)
+		neval = geomparams["NegativeElectrode"]["Coating"][var]
+		sepval = geomparams["Separator"][var]
+		peval = geomparams["PositiveElectrode"]["Coating"][var]
+		if include_current_collectors
+			ne_ccval = geomparams["NegativeElectrode"]["CurrentCollector"][var]
+			pe_ccval = geomparams["PositiveElectrode"]["CurrentCollector"][var]
+			out = [ne_ccval, neval, sepval, peval, pe_ccval]
+		else
+			out = [neval, sepval, peval]
+		end
+		return out
 	end
-
+	vals = Dict(
+		"thickness" => getvals("thickness"),
+		"N" => Int.(getvals("N")),
+	)
 
 	if include_current_collectors
-
-		for var in vars
-			pushfirst!(vals[var], geomparams["NegativeElectrode"]["CurrentCollector"][var])
-			push!(vals[var], geomparams["PositiveElectrode"]["CurrentCollector"][var])
-		end
 
 		components = ["NegativeCurrentCollector",
 			"NegativeElectrode",
@@ -232,9 +236,6 @@ function one_dimensional_grid(geomparams::InputGeometryParams)
 	cinds = vcat(1, 1 .+ cumsum(ns))
 
 	uParentGrid = tpfv_geometry(uParentGrid)
-	x = uParentGrid.cell_centroids[1, :]
-	x = [[val, i] for (i, val) in enumerate(x)]
-	x = sort!(x, by = xx -> xx[1])
 
 	## setup the grid for each component
 	for (icomponent, component) in enumerate(components)

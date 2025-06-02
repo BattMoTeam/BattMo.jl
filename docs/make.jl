@@ -43,6 +43,7 @@ function build_battmo_docs(build_format              = nothing;
 		"1D plotting" => "example_1d_plotting",
 		"Drive cycle example" => "example_run_current_function",
 		"3D Pouch example" => "example_3D_pouch",
+		"Calibration example" => "example_calibration",
 		"SEI layer growth" => "example_sei",
 		"Matlab example" => "example_battery",
 	]
