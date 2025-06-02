@@ -243,18 +243,6 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
 							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ActivationEnergyOfDiffusion", "ReactionRateConstant", "ChargeTransferCoefficient"],
 					),
-					"Interphase" => Dict(
-						"type" => "object",
-						"properties" => Dict(
-							"MolarVolume" => create_property(parameter_meta, "MolarVolume"),
-							"IonicConductivity" => create_property(parameter_meta, "IonicConductivity"),
-							"ElectronicDiffusionCoefficient" => create_property(parameter_meta, "ElectronicDiffusionCoefficient"),
-							"StoichiometricCoefficient" => create_property(parameter_meta, "StoichiometricCoefficient"),
-							"InterstitialConcentration" => create_property(parameter_meta, "InterstitialConcentration"),
-							"InitialThickness" => create_property(parameter_meta, "InitialThickness"),
-						),
-						"required" => ["MolarVolume", "IonicConductivity", "ElectronicDiffusionCoefficient", "StoichiometricCoefficient", "InterstitialConcentration", "InitialThickness"],
-					),
 					"ConductiveAdditive" => Dict(
 						"type" => "object",
 						"properties" => Dict(
