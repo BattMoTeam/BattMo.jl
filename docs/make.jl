@@ -40,6 +40,7 @@ function build_battmo_docs(build_format              = nothing;
 
 	examples = [
 		"Cycle example" => "example_cycle",
+		"1D plotting" => "example_1d_plotting",
 		"Drive cycle example" => "example_run_current_function",
 		"3D Pouch example" => "example_3D_pouch",
 		"SEI layer growth" => "example_sei",

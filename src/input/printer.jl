@@ -1,4 +1,4 @@
-export print_default_input_sets_info, print_submodels_info, print_parameter_info
+export print_default_input_sets_info, print_submodels_info, print_parameter_info, print_setting_info
 
 
 # Format link depending on output format
@@ -260,6 +260,89 @@ function print_submodels_info()
 	println()  # Extra line after the table
 end
 
+function print_setting_info(from_name::String)
+	# Get the metadata dictionary
+	meta_data = get_setting_meta_data()
+	output_fmt = detect_output_format()
+
+	# Soft match: find keys containing `from_name` (case-insensitive)
+	matches = collect(filter(key -> occursin(lowercase(from_name), lowercase(key)), keys(meta_data)))
+
+	if isempty(matches)
+		println("❌ No settings found matching: ", from_name)
+	else
+		for actual_key in matches
+			param_info = meta_data[actual_key]
+
+			println("="^80)
+			println("ℹ️  Setting Information")
+			println("="^80)
+
+			# Name
+			println("🔹 Name:         	", actual_key)
+
+			# Description
+			if haskey(param_info, "description")
+				description = param_info["description"]
+				println("🔹 Description:		", description)
+			end
+
+			# Type
+			if haskey(param_info, "type")
+				types = param_info["type"]
+				types_str = isa(types, AbstractArray) ? join(types, ", ") : string(types)
+				println("🔹 Type:         	", types_str)
+			end
+
+			# Unit
+			if haskey(param_info, "unit")
+				println("🔹 Unit:         	", param_info["unit"])
+			end
+
+			# Options
+			if haskey(param_info, "options")
+				options = param_info["options"]
+				options_str = isa(options, AbstractArray) ? join(options, ", ") : string(options)
+				println("🔹 Options:      	", options_str)
+			end
+
+			# Validation bounds
+			if haskey(param_info, "min_value")
+				min_value = param_info["min_value"]
+				println("🔹 Minimum value:      	", min_value)
+			end
+			if haskey(param_info, "max_value")
+				max_value = param_info["max_value"]
+				println("🔹 Maximum value:      	", max_value)
+			end
+
+			# Documentation
+			doc_url = get(param_info, "documentation", nothing)
+			if isnothing(doc_url) || doc_url == "-"
+				link = "-"
+			elseif doc_url isa String
+				link = format_link("visit", doc_url, 50, output_fmt)
+			end
+			if @isdefined link
+				println("🔹 Documentation:	", link)
+			end
+
+			# Ontology
+			context_type_iri = get(param_info, "context_type_iri", nothing)
+			if isnothing(context_type_iri) || context_type_iri == "-"
+				iri = "-"
+			elseif context_type_iri isa String
+				iri = format_link("visit", context_type_iri, 50, output_fmt)
+			end
+			if @isdefined iri
+				println("🔹 Ontology link:	", iri)
+			end
+
+			println()  # Extra spacing between entries
+		end
+	end
+end
+
 
 
 function print_parameter_info(from_name::String)
@@ -267,68 +350,80 @@ function print_parameter_info(from_name::String)
 	meta_data = get_parameter_meta_data()
 	output_fmt = detect_output_format()
 
-	if haskey(meta_data, from_name)
-		param_info = meta_data[from_name]
+	# Soft match: find keys containing `from_name` (case-insensitive)
+	matches = collect(filter(key -> occursin(lowercase(from_name), lowercase(key)), keys(meta_data)))
 
-		println("="^80)
-		println("ℹ️  Parameter Information")
-		println("="^80)
-
-		# Name
-		println("🔹 Name:         	", from_name)
-
-		# Description
-		if haskey(param_info, "description")
-			description = param_info["description"]
-			println("🔹 Description:		", description)
-		end
-
-		# Type
-		if haskey(param_info, "type")
-			types = param_info["type"]
-			types_str = isa(types, AbstractArray) ? join(types, ", ") : string(types)
-			println("🔹 Type:         	", types_str)
-		end
-
-		# Unit
-		if haskey(param_info, "unit")
-			println("🔹 Unit:         	", param_info["unit"])
-		end
-
-		# Options
-		if haskey(param_info, "options")
-			options = param_info["options"]
-			options_str = isa(options, AbstractArray) ? join(options, ", ") : string(options)
-			println("🔹 Options:      	", options_str)
-		end
-
-		# Validation bounds
-		if haskey(param_info, "min_value")
-			min_value = param_info["min_value"]
-			println("🔹 Minimum value:      	", min_value)
-		end
-		if haskey(param_info, "max_value")
-			max_value = param_info["max_value"]
-			println("🔹 Maximum value:      	", max_value)
-		end
-
-		# Documentation
-		if haskey(param_info, "documentation")
-			doc_url = param_info["documentation"]
-			link = doc_url == "-" ? "-" : format_link("visit", doc_url, 50, output_fmt)
-			println("🔹 Documentation:	", link)
-		end
-
-		# Ontology
-		if haskey(param_info, "context_type_iri")
-			context_type_iri = param_info["context_type_iri"]
-			iri = context_type_iri == "-" ? "-" : format_link("visit", context_type_iri, 50, output_fmt)
-			println("🔹 Ontology link:	", iri)
-		end
+	if isempty(matches)
+		println("❌ No parameters found matching: ", from_name)
 	else
-		println("❌ Parameter not found.")
+		for actual_key in matches
+			param_info = meta_data[actual_key]
+
+			println("="^80)
+			println("ℹ️  Parameter Information")
+			println("="^80)
+
+			# Name
+			println("🔹 Name:         	", actual_key)
+
+			# Description
+			if haskey(param_info, "description")
+				description = param_info["description"]
+				println("🔹 Description:		", description)
+			end
+
+			# Type
+			if haskey(param_info, "type")
+				types = param_info["type"]
+				types_str = isa(types, AbstractArray) ? join(types, ", ") : string(types)
+				println("🔹 Type:         	", types_str)
+			end
+
+			# Unit
+			if haskey(param_info, "unit")
+				println("🔹 Unit:         	", param_info["unit"])
+			end
+
+			# Options
+			if haskey(param_info, "options")
+				options = param_info["options"]
+				options_str = isa(options, AbstractArray) ? join(options, ", ") : string(options)
+				println("🔹 Options:      	", options_str)
+			end
+
+			# Validation bounds
+			if haskey(param_info, "min_value")
+				min_value = param_info["min_value"]
+				println("🔹 Minimum value:      	", min_value)
+			end
+			if haskey(param_info, "max_value")
+				max_value = param_info["max_value"]
+				println("🔹 Maximum value:      	", max_value)
+			end
+
+			# Documentation
+			doc_url = get(param_info, "documentation", nothing)
+			if isnothing(doc_url) || doc_url == "-"
+				link = "-"
+			elseif doc_url isa String
+				link = format_link("visit", doc_url, 50, output_fmt)
+			end
+			if @isdefined link
+				println("🔹 Documentation:	", link)
+			end
+
+			# Ontology
+			context_type_iri = get(param_info, "context_type_iri", nothing)
+			if isnothing(context_type_iri) || context_type_iri == "-"
+				iri = "-"
+			elseif context_type_iri isa String
+				iri = format_link("visit", context_type_iri, 50, output_fmt)
+			end
+			if @isdefined iri
+				println("🔹 Ontology link:	", iri)
+			end
+
+			println()  # Extra spacing between entries
+		end
 	end
-
-	println()  # Extra spacing
 end
-

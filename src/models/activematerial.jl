@@ -47,7 +47,7 @@ struct ActiveMaterial{label, D, T, Di} <: AbstractActiveMaterial{label} where {D
 	# - SEIstoichiometryCoefficient
 	# - SEImolarVolume
 	# - SEIelectronicDiffusionCoefficient
-	# - SEIintersticialConcentration
+	# - SEIinterstitialConcentration
 	# - SEIionicConductivity
 
 	discretization::D

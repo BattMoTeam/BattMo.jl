@@ -40,8 +40,8 @@ These parameters define the operational conditions of the battery during a simul
   "LowerVoltageLimit": 2.5,
   "UpperVoltageLimit": 4.1,
   "InitialControl": "discharging",
-  "AmbientKelvinTemperature": 298.15,
-  "InitialKelvinTemperature": 298.15
+  "AmbientTemperature": 298.15,
+  "InitialTemperature": 298.15
 }
 ```
 
@@ -73,7 +73,7 @@ Define numerical assumptions specific to the simulation process, including time-
 
 ```json
 {
-    "GridPoints": {
+    "GridResolution": {
         "PositiveElectrodeCoating": 10,
         "PositiveElectrodeActiveMaterial": 10,
         "NegativeElectrodeCoating": 10,

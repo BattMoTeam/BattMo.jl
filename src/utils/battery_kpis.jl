@@ -289,34 +289,37 @@ function compute_discharge_capacity(output::NamedTuple; cycle_number = nothing)
 end
 
 function compute_discharge_capacity(states; cycle_number = nothing)
-
 	t = [state[:Control][:Controller].time for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
 	if !isnothing(cycle_number)
 		cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
-
-		total_number_of_cycles = states[end][:Control][:Controller].numberOfCycles
-
 		cycle_index = findall(x -> x == cycle_number, cycle_array)
+
 		I_cycle = I[cycle_index]
 		t_cycle = t[cycle_index]
 
-		discharge_index = findall(x -> x > 0, I_cycle)
+		discharge_index = findall(x -> x > 0.0000001, I_cycle)  # Assuming discharge = I > 0
+		if length(discharge_index) < 2
+			return 0.0  # Not enough points to compute
+		end
+
 		I_discharge = I_cycle[discharge_index]
 		t_discharge = t_cycle[discharge_index]
 
 		diff_t = diff(t_discharge)
-		insert!(diff_t, 1, t_discharge[1])
-		capacity = sum(diff_t .* I_discharge) / 3600
+		I_mid = I_discharge[2:end]  # Align with Δt
 
+		capacity = sum(diff_t .* I_mid) / 3600  # Convert to Ah
 	else
 		diff_t = diff(t)
-		insert!(diff_t, 1, t[1])
-		capacity = sum(diff_t .* I) / 3600
+		I_mid = I[2:end]
+		capacity = sum(diff_t .* I_mid) / 3600
 	end
+
 	return capacity
 end
+
 
 function compute_charge_capacity(output::NamedTuple; cycle_number = nothing)
 	states = output[:states]
@@ -351,19 +354,22 @@ function compute_charge_capacity(states; cycle_number = nothing)
 		I_cycle = I[cycle_index]
 		t_cycle = t[cycle_index]
 
-		charge_index = findall(x -> x < 0, I_cycle)
+		charge_index = findall(x -> x < -0.0000001, I_cycle)
+		if length(charge_index) < 2
+			return 0.0  # Not enough points to compute
+		end
+
 		I_charge = I_cycle[charge_index]
 		t_charge = t_cycle[charge_index]
 
 		diff_t = diff(t_charge)
-		insert!(diff_t, 1, t_charge[1])
-		capacity = sum(diff_t .* abs.(I_charge)) / 3600
+		I_mid = I_charge[2:end]  # Align with Δt
 
-
+		capacity = sum(diff_t .* I_mid) / 3600  # Convert to Ah
 	else
 		diff_t = diff(t)
-		insert!(diff_t, 1, t[1])
-		capacity = sum(diff_t .* abs.(I)) / 3600
+		I_mid = I[2:end]
+		capacity = sum(diff_t .* I_mid) / 3600
 	end
 	return capacity
 end
@@ -421,7 +427,7 @@ function compute_discharge_energy(states; cycle_number = nothing)
 		t_cycle = t[cycle_index]
 		E_cycle = E[cycle_index]
 
-		discharge_index = findall(x -> x > 0, I_cycle)
+		discharge_index = findall(x -> x > 0.0000001, I_cycle)
 		I_discharge = I_cycle[discharge_index]
 		t_discharge = t_cycle[discharge_index]
 		E_discharge = E_cycle[discharge_index]
@@ -482,7 +488,7 @@ function compute_charge_energy(states; cycle_number = nothing)
 		t_cycle = t[cycle_index]
 		E_cycle = E[cycle_index]
 
-		charge_index = findall(x -> x < 0, I_cycle)
+		charge_index = findall(x -> x < -0.0000001, I_cycle)
 		I_charge = I_cycle[charge_index]
 		t_charge = t_cycle[charge_index]
 		E_charge = E_cycle[charge_index]

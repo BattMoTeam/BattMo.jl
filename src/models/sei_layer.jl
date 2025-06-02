@@ -327,7 +327,7 @@ function Jutul.update_cross_term_in_entity!(out,
 	s    = params[:SEIstoichiometricCoefficient]
 	V    = params[:SEImolarVolume]
 	De   = params[:SEIelectronicDiffusionCoefficient]
-	ce0  = params[:SEIintersticialConcentration]
+	ce0  = params[:SEIinterstitialConcentration]
 	Lref = params[:SEIlengthInitial]
 
 	ind_t = ct.target_cells[ind]

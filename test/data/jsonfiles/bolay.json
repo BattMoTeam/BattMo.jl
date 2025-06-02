@@ -158,7 +158,7 @@
           "SEIionicConductivity": 1E-5,
           "SEIelectronicDiffusionCoefficient": 3.5E-15,
           "SEIstoichiometricCoefficient": 2.0,
-          "SEIintersticialConcentration": 0.015,
+          "SEIinterstitialConcentration": 0.015,
           "SEIlengthInitial": 1E-8,
           "SEIvoltageDropRef": 0.0024,
           "SEIlengthRef": 1E-8,
