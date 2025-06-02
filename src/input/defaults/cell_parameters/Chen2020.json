@@ -2,12 +2,13 @@
     "Metadata": {
         "Title": "Chen2020",
         "Source": "https://doi.org/10.1149/1945-7111/ab9050",
-        "Description": "Parameter set of a cylindrical 21700 commercial cell (LGM50), for an electrochemical pseudo-two-dimensional (P2D) model, after calibration.",
+        "Description": "Parameter set of a cylindrical 21700 commercial cell (LGM50), for an electrochemical pseudo-two-dimensional (P2D) model, after calibration. SEI parameters are from Bolay2022: https://doi.org/10.1016/j.powera.2022.100083 .",
         "Models": {
             "ModelFramework": "P2D",
             "TransportInSolid": "FullDiffusion",
             "CurrentCollectors": "Generic",
-            "RampUp": "Sinusoidal"
+            "RampUp": "Sinusoidal",
+            "SEIModel": "Bolay"
         }
     },
     "Cell": {
@@ -60,6 +61,16 @@
             "Thickness": 1.17e-5,
             "Density": 8960,
             "ElectronicConductivity": 3.55e7
+        },
+        "Interphase": {
+            "Description": "EC-based SEI, from Bolay2022.",
+            "MolarVolume": 95.86e-6,
+            "IonicConductivity": 1e-5,
+            "ElectronicDiffusionCoefficient": 1.6e-12,
+            "StoichiometricCoefficient": 2,
+            "InterstitialConcentration": 1.5e-2,
+            "InitialThickness": 10e-9,
+            "InitialPotentialDrop": 0.5
         }
     },
     "PositiveElectrode": {
