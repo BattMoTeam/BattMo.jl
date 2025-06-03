@@ -76,7 +76,7 @@ function BattMo.plot_impl(
 
 			# Determine unit string for dimension
 			unit_str = ""
-			if d == :Position || d == :Radius
+			if d == :Position || d == :NeAmRadius || :PeAmRadius
 				unit_str = " μm"
 			elseif d == :Time
 				if haskey(meta_data, "Time") && haskey(meta_data["Time"], "unit")
@@ -141,10 +141,23 @@ function BattMo.plot_impl(
 				end
 
 				# State variable
-				data = get_output_states(output; quantities = [String(clean_var), "Position", "Radius", "Time"])
+
+				if haskey(sel, :NeAmRadius)
+					data = get_output_states(output; quantities = [String(clean_var), "Position", "NeAmRadius", "Time"])
+
+					rad = data[:NeAmRadius] * 1e6
+				elseif haskey(sel, :PeAmRadius)
+					data = get_output_states(output; quantities = [String(clean_var), "Position", "PeAmRadius", "Time"])
+
+					rad = data[:PeAmRadius] * 1e6
+				else
+					data = get_output_states(output; quantities = [String(clean_var), "Position", "NeAmRadius", "PeAmRadius", "Time"])
+
+					rad = data[:PeAmRadius] * 1e6
+				end
+
 				var_data = data[Symbol(clean_var)]
 				pos = data[:Position] * 1e6
-				rad = data[:Radius] * 1e6
 				nt = length(full_time)
 
 				known_dims = Dict(:Time => full_time, :Position => pos, :Radius => rad)
@@ -265,12 +278,12 @@ end
 
 
 
-function BattMo.plot_dashboard(output::NamedTuple; plot_type = "line")
+function BattMo.plot_dashboard(output::NamedTuple; plot_type = "simple")
 	BattMo.check_plotting_availability()
 	return BattMo.plot_dashboard_impl(output; plot_type = plot_type)
 end
 
-function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "line")
+function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "simple")
 
 	time_series = get_output_time_series(output; quantities = ["Time", "Voltage", "Current"])
 	t = time_series[:Time]
@@ -289,8 +302,23 @@ function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "line")
 	NeAm_pot = states[:NeAmPotential]
 	PeAm_pot = states[:PeAmPotential]
 	Elyte_pot = states[:ElectrolytePotential]
+	if plot_type == "simple"
+		fig = Figure(size = (1200, 1000))
+		grid = fig[1, 1] = GridLayout()
 
-	if plot_type == "line"
+		Label(grid[0, 1:3], "Simple Dashboard", fontsize = 24, halign = :center)
+
+		ax_current = Axis(grid[1, 1:3], title = "Current  /  A")
+		ax_current.xlabel = "Time  /  s"
+		scatterlines!(ax_current, t, I; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
+
+		ax_voltage = Axis(grid[2, 1:3], title = "Voltage  /  V")
+		ax_voltage.xlabel = "Time  /  s"
+		scatterlines!(ax_voltage, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
+		display(fig)
+		return fig
+
+	elseif plot_type == "line"
 		fig = Figure(size = (1200, 1000))
 		grid = fig[1, 1] = GridLayout()
 
@@ -356,22 +384,27 @@ function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "line")
 		ax_voltage.xlabel = "Time  /  s"
 		scatterlines!(ax_voltage, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
-		function contour_with_labels(ax, data, title)
-			contourf!(ax, t, x, data)
+		function contour_with_labels(parent_grid, row, col, data, title)
+			subgrid = parent_grid[row, col] = GridLayout()
+
+			ax = Axis(subgrid[1, 1])
+			plt = contourf!(ax, t, x, data)
 			ax.xlabel = "Time  /  s"
 			ax.ylabel = "Position  / μm"
 			ax.title = title
+
+			Colorbar(subgrid[1, 2], plt, width = 15)
 		end
 
 		# Concentration plots
-		contour_with_labels(Axis(grid[3, 1]), NeAm_conc, "NeAm Surface Concentration  /  mol·m⁻³")
-		contour_with_labels(Axis(grid[3, 2]), Elyte_conc, "Electrolyte Concentration  /  mol·m⁻³")
-		contour_with_labels(Axis(grid[3, 3]), PeAm_conc, "PeAm Surface Concentration  /  mol·m⁻³")
+		contour_with_labels(grid, 3, 1, NeAm_conc, "NeAm Surface Concentration  /  mol·m⁻³")
+		contour_with_labels(grid, 3, 2, Elyte_conc, "Electrolyte Concentration  /  mol·m⁻³")
+		contour_with_labels(grid, 3, 3, PeAm_conc, "PeAm Surface Concentration  /  mol·m⁻³")
 
 		# Potential plots
-		contour_with_labels(Axis(grid[4, 1]), NeAm_pot, "NeAm Potential  /  V")
-		contour_with_labels(Axis(grid[4, 2]), Elyte_pot, "Electrolyte Potential  /  V")
-		contour_with_labels(Axis(grid[4, 3]), PeAm_pot, "PeAm Potential  /  V")
+		contour_with_labels(grid, 4, 1, NeAm_pot, "NeAm Potential  /  V")
+		contour_with_labels(grid, 4, 2, Elyte_pot, "Electrolyte Potential  /  V")
+		contour_with_labels(grid, 4, 3, PeAm_pot, "PeAm Potential  /  V")
 
 		display(fig)
 		return fig

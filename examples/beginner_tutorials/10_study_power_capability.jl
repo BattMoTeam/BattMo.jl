@@ -17,7 +17,7 @@ model_setup = LithiumIonBattery()
 # to explore, and a handy function to calculate the discharge capacity, using a basic trapezoidal rule to integrate time and current.
 #%%
 d_rates = [0.05, 0.1, 0.2, 0.5, 1.0, 2.0]
-thicknesses = range(8.0e-5, 10.0e-5, length = 9)
+thicknesses = range(8.0e-5, 11.0e-5, length = 9)
 
 function compute_discharge_capacity(output::NamedTuple)
 	t = [state[:Control][:Controller].time for state in output[:states]]
