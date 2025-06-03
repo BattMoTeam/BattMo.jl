@@ -315,7 +315,7 @@ function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "simple")
 		ax_voltage = Axis(grid[2, 1:3], title = "Voltage  /  V")
 		ax_voltage.xlabel = "Time  /  s"
 		scatterlines!(ax_voltage, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
-		display(fig)
+
 		return fig
 
 	elseif plot_type == "line"
@@ -367,7 +367,6 @@ function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "simple")
 		state_plot(Axis(grid[4, 2], title = "Electrolyte Potential  /  V"), Elyte_pot, "Elyte ϕ")
 		state_plot(Axis(grid[4, 3], title = "PeAm Potential  /  V"), PeAm_pot, "PeAm ϕ")
 
-		display(fig)
 		return fig
 
 	elseif plot_type == "contour"
@@ -405,8 +404,6 @@ function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "simple")
 		contour_with_labels(grid, 4, 1, NeAm_pot, "NeAm Potential  /  V")
 		contour_with_labels(grid, 4, 2, Elyte_pot, "Electrolyte Potential  /  V")
 		contour_with_labels(grid, 4, 3, PeAm_pot, "PeAm Potential  /  V")
-
-		display(fig)
 		return fig
 
 	else
