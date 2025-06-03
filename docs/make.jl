@@ -53,8 +53,8 @@ function build_battmo_docs(build_format              = nothing;
 	function update_footer(content, pth, dir)
 		return content * "\n\n # ## Example on GitHub\n " *
 			   "# If you would like to run this example yourself, it can be downloaded from " *
-			   "the BattMo.jl GitHub repository [as a script](https://github.com/BattMoTeam/BattMo.jl/blob/main/$dir/$pth.jl), " *
-			   "or as a [Jupyter Notebook](https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/$pth.ipynb)"
+			   "the BattMo.jl GitHub repository [as a script](https://github.com/BattMoTeam/BattMo.jl/blob/main/$dir/$pth.jl)."#, " *
+			   #"or as a [Jupyter Notebook](https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/$pth.ipynb)"
 	end
 	if clean
 		for (ex, pth) in tutorials
@@ -99,7 +99,7 @@ function build_battmo_docs(build_format              = nothing;
 		end
 		if do_build
 			push!(ex_dest, ex => joinpath("tutorials", "$pth.md"))
-			upd(content) = update_footer(content, pth, "beginner_tutorials")
+			upd(content) = update_footer(content, pth, "examples/beginner_tutorials")
 			Literate.markdown(in_pth, tutorials_out_dir, preprocess = upd)
 		end
 	end
