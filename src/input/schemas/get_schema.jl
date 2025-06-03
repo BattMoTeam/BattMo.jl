@@ -376,9 +376,9 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 			),
 		))
 
-		push!(cell_required, "DubbelCoatedElectrodes")
-		push!(cell_required, "InnerCellRadius")
-
+		push!(cell_required, "InnerRadius")
+		push!(cell_required, "OuterRadius")
+        
 		if haskey(model_settings, "UseCurrentCollectors")
 			push!(ne_required, "CurrentCollector")
 			push!(pe_required, "CurrentCollector")
@@ -515,6 +515,8 @@ function get_schema_simulation_settings(model_settings)
 			"GridResolution" => Dict(
 				"type" => "object",
 				"properties" => Dict(
+                    "Height" => create_property(parameter_meta, "GridResolutionHeight"),
+                    "Angular" => create_property(parameter_meta, "GridResolutionAngular"),
 					"ElectrodeWidth" => create_property(parameter_meta, "GridResolutionElectrodeWidth"),
 					"ElectrodeLength" => create_property(parameter_meta, "GridResolutionElectrodeLength"),
 					"PositiveElectrodeCoating" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCoating"),
