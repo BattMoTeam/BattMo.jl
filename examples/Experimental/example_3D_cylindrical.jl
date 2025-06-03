@@ -8,6 +8,20 @@ simulation_settings = load_simulation_settings(; from_default_set = "P4D_cylindr
 model_setup = LithiumIonBattery(; model_settings)
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
-output = solve(sim)
+
+
+function hook(simulator,
+			  model,
+			  state0,
+			  forces,
+			  timesteps,
+			  cfg)
+    
+    cfg[:info_level] = 10
+    
+end
+
+output = solve(sim; hook)
+
 
 plot_3D_results(output; colormap = :curl)
