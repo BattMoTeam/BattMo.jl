@@ -5,7 +5,7 @@ export print_default_input_sets_info, print_submodels_info, print_parameter_info
 function format_link(label::String, url::String, width::Int, fmt::Symbol)
 	link = begin
 		if fmt == :markdown
-			Markdown.parse("[$label]($url)")
+			parse("[$label]($url)")
 		elseif fmt == :ansi
 			"\e]8;;$url\e\\$label\e]8;;\e\\"
 		else
