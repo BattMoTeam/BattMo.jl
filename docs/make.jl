@@ -50,10 +50,10 @@ function build_battmo_docs(build_format              = nothing;
 
 	tutorials_markdown = []
 	examples_markdown = []
-	function update_footer(content, pth)
+	function update_footer(content, pth, dir)
 		return content * "\n\n # ## Example on GitHub\n " *
 			   "# If you would like to run this example yourself, it can be downloaded from " *
-			   "the BattMo.jl GitHub repository [as a script](https://github.com/BattMoTeam/BattMo.jl/blob/main/examples/$pth.jl), " *
+			   "the BattMo.jl GitHub repository [as a script](https://github.com/BattMoTeam/BattMo.jl/blob/main/$dir/$pth.jl), " *
 			   "or as a [Jupyter Notebook](https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/$pth.ipynb)"
 	end
 	if clean
@@ -99,7 +99,7 @@ function build_battmo_docs(build_format              = nothing;
 		end
 		if do_build
 			push!(ex_dest, ex => joinpath("tutorials", "$pth.md"))
-			upd(content) = update_footer(content, pth)
+			upd(content) = update_footer(content, pth, "beginner_tutorials")
 			Literate.markdown(in_pth, tutorials_out_dir, preprocess = upd)
 		end
 	end
@@ -121,7 +121,7 @@ function build_battmo_docs(build_format              = nothing;
 		end
 		if do_build
 			push!(ex_dest, ex => joinpath("examples", "$pth.md"))
-			upd(content) = update_footer(content, pth)
+			upd(content) = update_footer(content, pth, "examples")
 			Literate.markdown(in_pth, examples_out_dir, preprocess = upd)
 		end
 	end
@@ -179,7 +179,7 @@ function build_battmo_docs(build_format              = nothing;
 	)
 	if build_notebooks
 		# Subfolder of final site build folder
-		notebook_dir = joinpath(@__DIR__, "build", "final_site", "notebooks")
+		notebook_dir = joinpath(@__DIR__, "src", "public", "notebooks")
 		mkpath(notebook_dir)
 		for (ex, pth) in examples
 			in_pth = example_path(pth)
