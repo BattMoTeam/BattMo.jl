@@ -11,8 +11,10 @@ if case == "4680"
                                                        "jsoninputs",
                                                        "4680-geometry.json"))
 
-    inputparams["Geometry"]["numberOfDiscretizationCellsVertical"] = 2
-    inputparams["Geometry"]["numberOfDiscretizationCellsAngular"]  = 30
+    inputparams["Geometry"]["numberOfDiscretizationCellsVertical"]    = 2
+    inputparams["NegativeElectrode"]["CurrentCollector"]["thickness"] = 60e-6
+    inputparams["PositiveElectrode"]["CurrentCollector"]["thickness"] = 60e-6
+    inputparams["Geometry"]["numberOfDiscretizationCellsAngular"]     = 30
     
     grids, couplings = jelly_roll_grid(inputparams)
     
