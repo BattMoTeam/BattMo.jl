@@ -117,16 +117,19 @@ function get_output_states(output::NamedTuple; quantities::Union{Nothing, Vector
 	time = extract_output_times(output)
 	padded_states = get_padded_states(output)
 	x = get_x_coords(output[:extra][:model])
-	r = get_r_coords(output)
+	r_coords = get_r_coords(output)
+	r_ne = r_coords.ne_radii
+	r_pe = r_coords.pe_radii
 
 	# Extract data
 	output_data = extract_spatial_data(padded_states)
 
 	# Initialize available quantities
 	available_quantities = Dict{Symbol, Any}(
-		:Time     => time,
+		:Time => time,
 		:Position => x,
-		:Radius   => r,
+		:NeAmRadius => r_ne,
+		:PeAmRadius => r_pe,
 	)
 
 	# Insert only available output_data
@@ -161,10 +164,14 @@ end
 
 function get_r_coords(output)
 
-	particle_radius = output[:inputparams]["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["particleRadius"]
-	number_of_cells = output[:inputparams]["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"]
+	particle_radius_ne = output[:inputparams]["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["particleRadius"]
+	number_of_cells_ne = output[:inputparams]["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"]
+	particle_radius_pe = output[:inputparams]["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["particleRadius"]
+	number_of_cells_pe = output[:inputparams]["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"]
 
-	return range(0; stop = particle_radius, length = number_of_cells)
+	ne_radii = range(0; stop = particle_radius_ne, length = number_of_cells_ne)
+	pe_radii = range(0; stop = particle_radius_pe, length = number_of_cells_pe)
+	return (ne_radii = ne_radii, pe_radii = pe_radii)
 
 end
 
