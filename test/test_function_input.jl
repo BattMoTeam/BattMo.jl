@@ -4,6 +4,7 @@ using BattMo
 
 	@test begin
 
+		include("../examples/example_functions/current_function.jl")
 		model_setup = LithiumIonBattery()
 		cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 		simulation_settings = load_simulation_settings(; from_default_set = "P2D")
