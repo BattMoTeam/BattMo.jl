@@ -83,18 +83,18 @@ mutable struct CCPolicy{R} <: AbstractPolicy
 	current_function::Union{Missing, Any}
 	tolerances::Dict{String, Real}
 	function CCPolicy(
-			numberOfCycles::Int,
-			initialControl::String,
-			lowerCutoffVoltage::Real,
-			upperCutoffVoltage::Real,
-			use_ramp_up::Bool;
-			current_function = missing,
-			ImaxDischarge::Real = 0.0,
-			ImaxCharge::Real = 0.0,
-			T = missing,
-			tolerances = Dict("discharging" => 1e-4,
-				"charging" => 1e-4),
-		)
+		numberOfCycles::Int,
+		initialControl::String,
+		lowerCutoffVoltage::Real,
+		upperCutoffVoltage::Real,
+		use_ramp_up::Bool;
+		current_function = missing,
+		ImaxDischarge::Real = 0.0,
+		ImaxCharge::Real = 0.0,
+		T = missing,
+		tolerances = Dict("discharging" => 1e-4,
+			"charging" => 1e-4),
+	)
 		T = promote_type(T, typeof(lowerCutoffVoltage), typeof(upperCutoffVoltage), typeof(ImaxDischarge), typeof(ImaxCharge))
 		new{T}(numberOfCycles, initialControl, ImaxDischarge, ImaxCharge, lowerCutoffVoltage, upperCutoffVoltage, use_ramp_up, current_function, tolerances)
 	end
@@ -123,7 +123,7 @@ Function Policy
 struct FunctionPolicy <: AbstractPolicy
 	current_function::Function
 
-	function FunctionPolicy(function_name::String, file_path::String)
+	function FunctionPolicy(function_name::String; file_path::Union{Nothing, String} = nothing)
 		current_function = setup_function_from_function_name(function_name; file_path = file_path)
 		new{}(current_function)
 	end

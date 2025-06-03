@@ -1,5 +1,6 @@
 using BattMo, GLMakie
 
+include("example_functions/current_function.jl")
 
 model_setup = LithiumIonBattery()
 cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")

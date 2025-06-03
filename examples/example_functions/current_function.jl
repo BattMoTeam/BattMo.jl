@@ -22,4 +22,4 @@ function current_function(time, voltage)
 	return power_func(time) / voltage / factor
 end
 
-
+@eval Main current_function = $current_function

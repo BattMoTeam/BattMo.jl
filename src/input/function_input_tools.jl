@@ -166,6 +166,11 @@ function setup_function_from_function_name(function_name::String; file_path::Uni
 
 	if isdefined(BattMo, symb)
 		return getfield(BattMo, symb)
+	elseif isdefined(Main, symb)
+		# If the function is defined in Main, we can return it directly. We
+		# assume it has not changed. The main reason is the perfomance
+		# penalty of always using include to replace the function.
+		return (args...) -> Base.invokelatest(getfield(Main, symb), args...)
 	elseif !isnothing(file_path)
 		if isdefined(Main, symb)
 			# If the function is defined in Main, we can return it directly. We

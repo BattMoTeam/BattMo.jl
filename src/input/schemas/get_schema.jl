@@ -55,7 +55,7 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 					"FunctionName" => Dict("type" => "string"),
 					"FilePath" => Dict("type" => "string"),
 				),
-				"required" => ["FunctionName", "FilePath"],
+				"required" => ["FunctionName"],
 				"additionalProperties" => true,
 			),
 		)
@@ -450,7 +450,6 @@ function get_schema_cycling_protocol()
 					"required" => [
 						"InitialStateOfCharge",
 						"FunctionName",
-						"FilePath",
 						"TotalTime",
 						"InitialTemperature",
 					],

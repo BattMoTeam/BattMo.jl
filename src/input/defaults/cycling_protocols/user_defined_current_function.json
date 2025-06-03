@@ -5,7 +5,6 @@
     },
     "Protocol": "Function",
     "FunctionName": "current_function",
-    "FilePath": "../../../../examples/example_functions/current_function.jl",
     "InitialStateOfCharge": 0.99,
     "TotalTime": 1800,
     "InitialTemperature": 298.15

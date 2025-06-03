@@ -720,7 +720,7 @@ function setup_submodels(inputparams::InputParams;
 				ctrl["lowerCutoffVoltage"],
 				ctrl["upperCutoffVoltage"],
 				use_ramp_up,
-				T = T_i
+				T = T_i,
 			)
 		end
 
@@ -742,7 +742,7 @@ function setup_submodels(inputparams::InputParams;
 		function_name = ctrl["functionName"]
 		file_path = ctrl["filePath"]
 
-		policy = FunctionPolicy(function_name, file_path)
+		policy = FunctionPolicy(function_name; file_path)
 
 	else
 
@@ -1736,7 +1736,7 @@ end
 
 function setup_volume_fractions!(model::MultiModel, grids, coupling)
 
-	Nelyte      = number_of_cells(grids["Electrolyte"])
+	Nelyte = number_of_cells(grids["Electrolyte"])
 
 	names = [:NeAm, :PeAm]
 	stringNames = Dict(:NeAm => "NegativeElectrode",
@@ -1760,7 +1760,7 @@ function setup_volume_fractions!(model::MultiModel, grids, coupling)
 		vfelyte[elytecells] .= 1 - vf
 	end
 
-	elytecells         = coupling["Separator"]["cells"]
+	elytecells = coupling["Separator"]["cells"]
 
 	vfelyte[elytecells]     .= separator_porosity * ones()
 	vfseparator[elytecells] .= (1 - separator_porosity)
