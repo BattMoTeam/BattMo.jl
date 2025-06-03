@@ -12,6 +12,7 @@ Jutul = "2b460a1a-8a2b-45b2-b125-b5c536396eb9"
 LBFGSB = "5be7bae1-8223-5378-bac3-9e7378a2f6e6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MAT = "23992714-dd62-5051-b70f-ba57cb901cac"
+Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 RuntimeGeneratedFunctions = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
@@ -37,6 +38,7 @@ JSONSchema = "1.4.1"
 Jutul = "0.4.0"
 LBFGSB = "0.4.1"
 MAT = "0.10.4"
+Markdown = "1.11.0"
 Polynomials = "3.2.11 - 4"
 PrecompileTools = "1.1.1"
 RuntimeGeneratedFunctions = "0.5"
@@ -45,10 +47,9 @@ StatsBase = "0.34"
 Tullio = "0.3.5"
 julia = "1.8"
 
-
 [extras]
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 
 [targets]
-test = ["GLMakie"]
 docs = ["GLMakie"]
+test = ["GLMakie"]
