@@ -78,7 +78,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			ne_ocp = Dict(
 				"type" => "function",
 				"functionname" => ne_ocp_value["FunctionName"],
-				"functionpath" => isnothing(get_key_value(ne_ocp_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(ne_ocp_value, "FilePath")),
+				"functionpath" => isnothing(get_key_value(ne_ocp_value, "FilePath")) ? nothing : normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(ne_ocp_value, "FilePath"))),
 			)
 		else
 			ne_ocp = Dict(
@@ -105,7 +105,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			pe_ocp = Dict(
 				"type" => "function",
 				"functionname" => pe_ocp_value["FunctionName"],
-				"functionpath" => isnothing(get_key_value(pe_ocp_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(pe_ocp_value, "FilePath")),
+				"functionpath" => isnothing(get_key_value(pe_ocp_value, "FilePath")) ? nothing : normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(pe_ocp_value, "FilePath"))),
 			)
 		else
 			pe_ocp = Dict(
@@ -132,7 +132,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			diff = Dict(
 				"type" => "function",
 				"functionname" => diff_value["FunctionName"],
-				"functionpath" => isnothing(get_key_value(diff_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(diff_value, "FilePath")),
+				"functionpath" => isnothing(get_key_value(diff_value, "FilePath")) ? nothing : normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(diff_value, "FilePath"))),
 			)
 		else
 			diff = Dict(
@@ -159,7 +159,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			cond = Dict(
 				"type" => "function",
 				"functionname" => cond_value["FunctionName"],
-				"functionpath" => isnothing(get_key_value(cond_value, "FilePath")) ? nothing : joinpath(dirname(cell_parameters.source_path), get_key_value(cond_value, "FilePath")),
+				"functionpath" => isnothing(get_key_value(cond_value, "FilePath")) ? nothing : normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(cond_value, "FilePath"))),
 			)
 		else
 			cond = Dict(
@@ -223,7 +223,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		"Control" => Dict(
 			"controlPolicy" => control,
 			"functionName" => get_key_value(cycling_protocol, "FunctionName"),
-			"filePath" => isnothing(get_key_value(cycling_protocol, "FilePath")) ? nothing : joinpath(dirname(cycling_protocol.source_path), get_key_value(cycling_protocol, "FilePath")),
+			"filePath" => isnothing(get_key_value(cycling_protocol, "FilePath")) ? nothing : normpath(joinpath(dirname(cycling_protocol.source_path), get_key_value(cycling_protocol, "FilePath"))),
 			"useCVswitch" => use_cv_switch,
 			"numberOfCycles" => get_key_value(cycling_protocol, "TotalNumberOfCycles"),
 			"rampupTime" => get_key_value(simulation_settings, "RampUpTime"),
