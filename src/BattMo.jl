@@ -12,6 +12,7 @@ using RuntimeGeneratedFunctions                   # Code generation
 # ─────────────────────────────────────────────────────────────────────────────
 using JSON: JSON                                  # JSON parsing
 using MAT: matread
+using Markdown: parse
 
 # Internally exported JSONSchema functions and types
 using JSONSchema: Schema, SingleIssue
