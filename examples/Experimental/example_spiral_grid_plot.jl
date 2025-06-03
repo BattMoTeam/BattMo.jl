@@ -29,25 +29,27 @@ elseif case =="pouch"
 
 else
     
-    error("stop")
+    error("case not recognized")
     
 end
 
-components = [
-    "NegativeElectrode",
-    "PositiveElectrode",
-    "NegativeCurrentCollector",
-    "PositiveCurrentCollector"
-]
 
-colors = [
-    :gray,
-    :green,
-    :red,
-    :black
-]
+let ax, components, colors
 
-let ax
+    components = [
+        "NegativeElectrode",
+        "PositiveElectrode",
+        "NegativeCurrentCollector",
+        "PositiveCurrentCollector"
+    ]
+
+    colors = [
+        :gray,
+        :green,
+        :blue,
+        :black
+    ]
+
     for (i, component) in enumerate(components)
         if i == 1
             fig, ax = plot_mesh(grids[component],
@@ -58,6 +60,17 @@ let ax
                        color = colors[i])
         end
     end
+
+    components = [
+        "NegativeCurrentCollector",
+        "PositiveCurrentCollector"
+    ]
+
+    for component in components
+        plot_mesh!(ax, grids[component],
+                   boundaryfaces = couplings[component]["External"]["boundaryfaces"],
+                   color = :red)
+    end
+
 end
 
-fig
