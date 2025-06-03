@@ -22,17 +22,10 @@ metrics = get_output_metrics(output)
 # Plot a pre-defined dashboard
 plot_dashboard(output)
 
-# Or create your own dashboard
-NeAm_end_index = simulation_settings["GridResolution"]["NegativeElectrodeCoating"]
+plot_dashboard(output; plot_type = "line")
 
-plot_output(
-	output,
-	[
-		["SEIThickness vs Time at Position index 1", "SEIThickness vs Time at Position index $NeAm_end_index"],
-		["NeAmConcentration vs Time and Position at Radius index 1"],
-	];
-	layout = (2, 1),
-)
+
+plot_dashboard(output; plot_type = "contour")
 
 
 

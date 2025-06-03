@@ -162,7 +162,7 @@ function get_setting_meta_data()
 		),
 		"TimeStepDuration" => Dict(
 			"max_value" => 500,
-			"min_value" => 10,
+			"min_value" => 1,
 			"context_type" => "StepDuration",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_85e39686_9658_4c74_bb91_a935704c174a",
 			"description" => "Duration of each time step in simulations",

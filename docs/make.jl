@@ -194,7 +194,7 @@ function build_battmo_docs(build_format              = nothing;
 		end
 	end
 	if deploy
-		deploydocs(;
+		DocumenterVitepress.deploydocs(;
 			repo = "github.com/BattMoTeam/BattMo.jl",
 			devbranch = "main",
 			target = "build", # this is where Vitepress stores its output

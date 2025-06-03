@@ -288,12 +288,32 @@ function compute_discharge_capacity(output::NamedTuple; cycle_number = nothing)
 	return compute_discharge_capacity(states; cycle_number = cycle_number)
 end
 
+# Helper function to get valid (non-singleton) cycle numbers
+function get_valid_cycles(states)
+	cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
+	cycle_counts = Dict{Int, Int}()
+
+	for cycle in cycle_array
+		cycle_counts[cycle] = get(cycle_counts, cycle, 0) + 1
+	end
+
+	# Only keep cycles that appear more than once
+	valid_cycles = [cycle for (cycle, count) in cycle_counts if count > 1]
+	return valid_cycles, cycle_array
+end
+
+# Updated discharge capacity function
 function compute_discharge_capacity(states; cycle_number = nothing)
 	t = [state[:Control][:Controller].time for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
+	valid_cycles, cycle_array = get_valid_cycles(states)
+
 	if !isnothing(cycle_number)
-		cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
+		if cycle_number ∉ valid_cycles
+			return 0.0  # Skip singleton cycle
+		end
+
 		cycle_index = findall(x -> x == cycle_number, cycle_array)
 
 		I_cycle = I[cycle_index]
@@ -319,6 +339,7 @@ function compute_discharge_capacity(states; cycle_number = nothing)
 
 	return capacity
 end
+
 
 
 function compute_charge_capacity(output::NamedTuple; cycle_number = nothing)

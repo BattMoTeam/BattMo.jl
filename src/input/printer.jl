@@ -5,26 +5,31 @@ export print_default_input_sets_info, print_submodels_info, print_parameter_info
 function format_link(label::String, url::String, width::Int, fmt::Symbol)
 	link = begin
 		if fmt == :markdown
-			"[$label]($url)"
+			parse("[$label]($url)")
 		elseif fmt == :ansi
 			"\e]8;;$url\e\\$label\e]8;;\e\\"
 		else
-			"$label: $url"
+			"$url"
 		end
 	end
-	return rpad(link, width)
+
+	return fmt == :markdown ? link : rpad(link, width)
 end
 
 # Environment detection
 function detect_output_format()
+	# Check if running in IJulia (Jupyter)
 	if isdefined(Main, :IJulia) && Main.IJulia.inited
-		return :markdown  # Jupyter notebooks
+		return :markdown
+		# Check if Markdown display is available (e.g., in VSCode or other notebooks)
+	elseif get(ENV, "JULIA_EDITOR", "") == "code" || get(ENV, "VSCODE_PID", "") != ""
+		return :markdown
 	elseif get(ENV, "LITERATE_RUNNING", "") == "true"
-		return :markdown  # Literate.jl environment
+		return :markdown
 	elseif get(ENV, "TERM", "") != "dumb"
-		return :ansi       # Rich terminal
+		return :ansi
 	else
-		return :plain      # Minimal terminal or unknown
+		return :plain
 	end
 end
 
@@ -213,7 +218,7 @@ end
 
 function print_submodels_info()
 	# Get the metadata dictionary
-	meta_data = get_parameter_meta_data()
+	meta_data = get_setting_meta_data()
 
 	# Filter parameters with "is_sub_model" == true
 	submodel_params = []

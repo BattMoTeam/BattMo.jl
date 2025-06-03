@@ -12,6 +12,7 @@ using RuntimeGeneratedFunctions                   # Code generation
 # ─────────────────────────────────────────────────────────────────────────────
 using JSON: JSON                                  # JSON parsing
 using MAT: matread
+using Markdown: parse
 
 # Internally exported JSONSchema functions and types
 using JSONSchema: Schema, SingleIssue
@@ -175,6 +176,7 @@ using Jutul: get_dependencies, get_entry, convert_to_immutable_storage
 using Jutul: tpfv_geometry, apply!, is_cell_major
 using Jutul: StaticCSR, ParallelCSRContext
 using Jutul: jutul_message
+using Jutul: get_1d_interpolator
 
 
 timeit_debug_enabled() = Jutul.timeit_debug_enabled()
@@ -198,6 +200,7 @@ include("models/full_battery_model_setups/lithium_ion.jl")
 
 include("input/loader.jl")
 include("input/defaults.jl")
+include("input/defaults/cell_parameters/function_parameters_Xu2015.jl")
 include("input/writer.jl")
 include("input/function_input_tools.jl")
 include("input/formatter.jl")

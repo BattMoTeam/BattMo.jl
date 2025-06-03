@@ -46,6 +46,9 @@ function print_output_overview(output::NamedTuple)
 				catch
 					false
 				end
+
+			else
+				has_data = true
 			end
 		else
 			# Always include time_series and metrics
