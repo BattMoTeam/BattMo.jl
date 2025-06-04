@@ -6,7 +6,7 @@ using CSV
 using DataFrames
 using Jutul
 
-path = joinpath(@__DIR__, "../example_data/wltp.csv")
+path = joinpath(@__DIR__, "example_data/wltp.csv")
 df = CSV.read(path, DataFrame)
 
 t = df[:, 1]
