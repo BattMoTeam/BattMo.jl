@@ -355,21 +355,21 @@ function setup_simulation(problem::Simulation; kwargs...)
 end
 
 function setup_simulation(inputparams::BattMoFormattedInput;
-	use_p2d::Bool                     = true,
-	use_model_scaling::Bool           = true,
-	extra_timing::Bool                = false,
-	max_step::Union{Integer, Nothing} = nothing,
-	linear_solver::Symbol             = :direct,
-	general_ad::Bool                  = true,
-	use_groups::Bool                  = false,
-	model_kwargs::NamedTuple          = NamedTuple(),
-	config_kwargs::NamedTuple         = NamedTuple())
+	                      use_p2d::Bool                     = true,
+	                      use_model_scaling::Bool           = true,
+	                      extra_timing::Bool                = false,
+	                      max_step::Union{Integer, Nothing} = nothing,
+	                      linear_solver::Symbol             = :direct,
+	                      general_ad::Bool                  = true,
+	                      use_groups::Bool                  = false,
+	                      model_kwargs::NamedTuple          = NamedTuple(),
+	                      config_kwargs::NamedTuple         = NamedTuple())
 
 	model, parameters, couplings = setup_model(inputparams;
-		use_groups = use_groups,
-		general_ad = general_ad,
-		use_p2d = use_p2d,
-		model_kwargs...)
+		                                       use_groups = use_groups,
+		                                       general_ad = general_ad,
+		                                       use_p2d = use_p2d,
+		                                       model_kwargs...)
 
 	state0 = setup_initial_state(inputparams, model)
 
@@ -380,12 +380,13 @@ function setup_simulation(inputparams::BattMoFormattedInput;
 	timesteps = setup_timesteps(inputparams; max_step = max_step)
 
 	cfg = setup_config(simulator,
-		model,
-		parameters,
-		linear_solver,
-		extra_timing,
-		use_model_scaling;
-		config_kwargs...)
+		               model,
+		               parameters,
+		               linear_solver,
+		               extra_timing,
+		               use_model_scaling;
+		               config_kwargs...)
+
 
     grids = get_grids(model)
     
