@@ -24,11 +24,20 @@ inputparams_material = getinput("lithium_ion_battery_nmc_graphite.json")
 
 inputparams_control = getinput("cc_discharge_control.json")
 
+##########################
+# load solver parameters #
+##########################
+
+inputparams_solver = getinput("linear_solver_setup.json")
+
 ####################
 # merge parameters #
 ####################
 
-inputparams = merge_input_params([inputparams_geometry, inputparams_material, inputparams_control])
+inputparams = merge_input_params([inputparams_geometry,
+                                  inputparams_material,
+                                  inputparams_control,
+                                  inputparams_solver])
 
 inputparams["Control"]["DRate"]       = 1
 inputparams["Control"]["useCVswitch"] = false
