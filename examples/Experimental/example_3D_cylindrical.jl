@@ -11,6 +11,7 @@ sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_sett
 
 output = setup_simulation(sim)
 
+# fig, ax = plot_mesh(physical_representation(output[:model][:Elyte]))
 fig, ax = plot_mesh(physical_representation(output[:model][:Elyte]).representation)
 
 # plot_3D_results(output; colormap = :curl)
