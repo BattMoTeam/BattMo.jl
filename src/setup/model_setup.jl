@@ -365,7 +365,7 @@ function setup_simulation(inputparams::BattMoFormattedInput;
 	model_kwargs::NamedTuple          = NamedTuple(),
 	config_kwargs::NamedTuple         = NamedTuple())
 
-	model, parameters = setup_model(inputparams;
+	model, parameters, couplings = setup_model(inputparams;
 		use_groups = use_groups,
 		general_ad = general_ad,
 		use_p2d = use_p2d,
@@ -387,14 +387,18 @@ function setup_simulation(inputparams::BattMoFormattedInput;
 		use_model_scaling;
 		config_kwargs...)
 
+    grids = get_grids(model)
+    
 	output = Dict(:simulator   => simulator,
-		:forces      => forces,
-		:state0      => state0,
-		:parameters  => parameters,
-		:inputparams => inputparams,
-		:model       => model,
-		:timesteps   => timesteps,
-		:cfg         => cfg)
+		          :forces      => forces,
+		          :state0      => state0,
+		          :parameters  => parameters,
+		          :inputparams => inputparams,
+		          :model       => model,
+                  :couplings   => couplings,
+                  :grids       => grids,
+		          :timesteps   => timesteps,
+		          :cfg         => cfg)
 
 	return output
 
@@ -427,7 +431,12 @@ function setup_model(inputparams::BattMoFormattedInput;
 
 	setup_initial_control_policy!(model[:Control].system.policy, inputparams, parameters)
 	#model.context = DefaultContext()
-	return model, parameters
+
+    output = (model = model,
+              parameters = parameters,
+              couplings = couplings)
+    
+	return output
 
 end
 
