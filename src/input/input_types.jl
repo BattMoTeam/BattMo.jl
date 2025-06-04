@@ -5,7 +5,7 @@ export CellParameters, CyclingProtocol, ModelSettings, SimulationSettings, FullS
 export BattMoFormattedInput
 export InputParams, MatlabInputParams
 
-export merge_input_params, search_parameter
+export merge_input_params, search_parameter, set_input_params
 
 
 """
@@ -296,8 +296,7 @@ function recursive_merge_dict(d1, d2; warn = false)
 end
 
 """ 
-   merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: AbstractInput}
-
+   merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: BattMoFormattedInput}
 
 # Arguments
 
@@ -306,9 +305,9 @@ end
 - `warn = false` : If option `warn` is true, then give a warning when two distinct values are given for the same field. The first value has other precedence.
 
 # Returns
-A `AbstractInput` structure whose field are the composition of the two input parameter structures.
+A `BattMoFormattedInput` structure whose field are the composition of the two input parameter structures.
 """
-function merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: AbstractInput}
+function merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: BattMoFormattedInput}
 
 	dict1 = inputparams1.all
 	dict2 = inputparams2.all
@@ -320,7 +319,7 @@ function merge_input_params(inputparams1::T, inputparams2::T; warn = false) wher
 
 end
 
-function merge_input_params(inputparams_list::Vector{T}; warn = false) where {T <: AbstractInput}
+function merge_input_params(inputparams_list::Vector{T}; warn = false) where {T <: BattMoFormattedInput}
 
     if length(inputparams_list) == 0
         return nothing
@@ -336,3 +335,85 @@ function merge_input_params(inputparams_list::Vector{T}; warn = false) where {T 
     
 end
 
+"""
+    Set the value of a field in the input parameters.
+
+# Arguments
+    - `inputparams ::BattMoFormattedInput` : The input parameters structure.
+    - `fieldnamelist ::Vector{String}` : A vector of field names to set.
+    - `value` : The value to assign to the specified fields.
+    - `handleMismatch = :error` : How to handle mismatches in field types. Options are `:error`, `:warn`, or `:ignore`.
+
+# Returns
+    The updated input parameters structure with the specified fields set to the given value.
+    """
+function set_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoFormattedInput}
+
+    fieldname = fieldnamelist[1]
+    
+    if !isa(inputparams, Union{T, Dict} where {T<:BattMoFormattedInput})
+        
+        if handleMismatch in (:warn, :ignore)
+
+            inputparams = Dict{String, Any}()
+
+            if handleMismatch == :warn
+                println("Warning: some field in input was not a dictionary, but new input requires it. We create a dictionary.")
+            end
+
+        else
+            error("some field in input was expected but is not a dictionary.")
+        end
+
+    end
+            
+    if length(fieldnamelist) > 1
+        
+        if isa(inputparams[fieldname], Dict)
+            
+            inputparams[fieldname] = set_input_params(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch = handleMismatch)
+            
+        elseif  handleMismatch in (:warn, :ignore)
+
+            if handleMismatch == :warn
+                println("Warning: Field $fieldname was not a dictionary and we overwrite the value.")
+            end
+
+            inputparams[fieldname] = Dict{String, Any}()
+            inputparams[fieldname] = set_input_params(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch = handleMismatch)
+            
+        else handleMismatch == :error
+            
+            error("Mismatch for $fieldname")
+            
+        end
+
+    else
+
+        # We set the value
+        if haskey(inputparams, fieldname)
+            
+            if inputparams[fieldname] != value
+                    
+                if handleMismatch in (:warn, :ignore)
+                    println("Warning: Field $fieldname was not equal to the value and we overwrite it.")
+                    inputparams[fieldname] = value
+                elseif handleMismatch == :error
+                    error("Mismatch for $fieldname")
+                end
+    
+            end
+            
+        else
+
+            inputparams[fieldname] = value
+            
+        end
+
+    end
+            
+    return inputparams
+
+end
+# function set_default_input_params()
+# end
