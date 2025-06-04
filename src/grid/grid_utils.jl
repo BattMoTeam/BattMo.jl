@@ -1,10 +1,11 @@
 export
-	pouch_grid,
 	find_coupling,
 	find_common,
 	findBoundary,
 	convert_geometry,
+    get_grids,
 	one_dimensional_grid,
+	pouch_grid,
     jelly_roll_grid
 
 #####################
@@ -174,6 +175,36 @@ function convert_geometry(grids, couplings; include_current_collectors = true)
 	return ugrids, ucouplings
 
 end
+
+""" retrieve the grids from a model"""
+function get_grids(model::MultiModel{:Battery})
+
+    has_cc = include_current_collectors(model)
+    
+    components = [:NeCc, :NeAm, :Elyte, :PeAm, :PeCc]
+    names = ["NegativeCurrentCollector",
+             "NegativeElectrode",
+             "Electrolyte",
+             "PositiveElectrode",
+             "PositiveCurrentCollector"]
+
+    if !has_cc
+        components = components[2 : 4]
+        names = names[2 : 4]
+    end
+    
+    grids = Dict()
+
+    for (name, component) in zip(names, components)
+
+        grids[name] = physical_representation(model[component]).representation
+        
+    end
+
+    return grids
+end
+
+
 
 #########################
 # jelly roll grid setup #
