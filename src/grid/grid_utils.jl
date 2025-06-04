@@ -347,6 +347,9 @@ function setup_tab_couplings(grids, inputparams, component)
 
         for interval in tab_intervals
             inds = findall(l -> ((l > interval[1]) && (l < interval[2])), spiral_lengths)
+            if isempty(inds)
+                inds = findfirst(l -> (l > interval[1]), spiral_lengths)
+            end
             push!(tab_vert_faces, vectbcface[inds])
         end
 
