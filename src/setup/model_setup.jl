@@ -343,6 +343,17 @@ end
 # Setup simulation #
 ####################
 
+function setup_simulation(problem::Simulation; kwargs...)
+
+	inputparams = convert_parameter_sets_to_battmo_input(problem.model_setup.model_settings,
+                                                         problem.cell_parameters,
+                                                         problem.cycling_protocol,
+                                                         problem.simulation_settings)
+
+    output = setup_simulation(inputparams; kwargs...)
+
+end
+
 function setup_simulation(inputparams::BattMoFormattedInput;
 	use_p2d::Bool                     = true,
 	use_model_scaling::Bool           = true,
