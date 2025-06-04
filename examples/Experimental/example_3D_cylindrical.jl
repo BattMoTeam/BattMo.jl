@@ -53,7 +53,7 @@ nothing #hide
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
 nothing #hide
 
-# ## We preprocess the simulation object to retrieve the grids and coupling structure, which we want to visualize prior running the simulation
+# We preprocess the simulation object to retrieve the grids and coupling structure, which we want to visualize prior running the simulation
 
 output = setup_simulation(sim)
 grids     = output[:grids]
