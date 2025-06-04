@@ -223,14 +223,15 @@ function extract_spatial_data(states::Vector)
 		raw = [foldl(getindex, chain; init = state) for state in states]  # List of arrays
 
 		# Combine into [nx, nr, nt]
+		data = [foldl(getindex, chain; init=state) for state in states]
+
 		data = cat(raw...; dims = 3)
 
 		# Permute to [nt, nx, nr]
-		data = permutedims(data, (3, 1, 2))
+		data = permutedims(data, (3,2,1))
 
-		# If 3rd dimension is 1, reduce to [nt, nx]
-		if size(data, 3) == 1
-			output_data[qsym] = dropdims(data; dims = 3)
+		if size(data, 2) == 1
+			output_data[qsym] = dropdims(data; dims = 2)
 		else
 			output_data[qsym] = data
 		end
