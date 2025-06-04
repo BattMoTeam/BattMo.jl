@@ -308,7 +308,7 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 					"Nw" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabWidth"),
 					"Nh" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabLength")),
                 "tabparams" => Dict(
-					"usetab" => false,
+					"usetab" => true,
 					"width" => get_key_value(ne_cc, "TabWidth"),
                     "fractions" => get_key_value(ne_cc, "TabFractions")
                 ),
