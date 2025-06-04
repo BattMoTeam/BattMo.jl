@@ -9,19 +9,8 @@ model_setup = LithiumIonBattery(; model_settings)
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
 
+output = setup_simulation(sim)
 
-function hook(simulator,
-			  model,
-			  state0,
-			  forces,
-			  timesteps,
-			  cfg)
-    
-    cfg[:info_level] = 10
-    
-end
+fig, ax = plot_mesh(physical_representation(output[:model][:Elyte]).representation)
 
-output = solve(sim; hook)
-
-
-plot_3D_results(output; colormap = :curl)
+# plot_3D_results(output; colormap = :curl)
