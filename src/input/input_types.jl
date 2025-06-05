@@ -5,7 +5,7 @@ export CellParameters, CyclingProtocol, ModelSettings, SimulationSettings, FullS
 export BattMoFormattedInput
 export InputParams, MatlabInputParams
 
-export merge_input_params, search_parameter, set_input_params
+export merge_input_params, search_parameter, set_input_params, get_input_params, set_default_input_params
 
 
 """
@@ -335,6 +335,41 @@ function merge_input_params(inputparams_list::Vector{T}; warn = false) where {T 
     
 end
 
+
+"""
+    get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}) where {T <: BattMoFormattedInput}
+
+Recursively retrieves the value of a field in the input parameters.
+"""
+function get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}) where {T <: BattMoFormattedInput}
+
+    fieldname = fieldnamelist[1]
+
+    if length(fieldnamelist) == 1
+
+        if isa(inputparams, Union{T, Dict} where {T<:BattMoFormattedInput}) && haskey(inputparams, fieldname)
+            return inputparams[fieldname]
+        else
+            return missing
+        end
+
+    else
+
+        if isa(inputparams, Union{T, Dict} where {T<:BattMoFormattedInput}) && haskey(inputparams, fieldname) && isa(inputparams[fieldname], Union{T, Dict} where {T<:BattMoFormattedInput})
+            
+            return get_input_params(inputparams[fieldname], fieldnamelist[2:end])
+            
+        else
+            
+            return missing
+            
+        end
+
+    end
+    
+end
+
+
 """
     Set the value of a field in the input parameters.
 
@@ -415,5 +450,17 @@ function set_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{Str
     return inputparams
 
 end
-# function set_default_input_params()
-# end
+
+function set_default_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoFormattedInput}
+
+    current_value = get_input_params(inputparams, fieldnamelist)
+
+    if ismissing(current_value)
+
+        inputparams = set_input_params(inputparams, fieldnamelist, value; handleMismatch)
+
+    end
+
+    return inputparams
+    
+end
