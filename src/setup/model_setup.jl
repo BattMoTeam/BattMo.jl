@@ -354,16 +354,15 @@ function get_simulation_input(problem::Simulation; kwargs...)
 
 end
 
-function setup_simulation(inputparams::BattMoFormattedInput;
-	                      use_p2d::Bool                     = true,
-	                      use_model_scaling::Bool           = true,
-	                      extra_timing::Bool                = false,
-	                      max_step::Union{Integer, Nothing} = nothing,
-	                      linear_solver::Symbol             = :direct,
-	                      general_ad::Bool                  = true,
-	                      use_groups::Bool                  = false,
-	                      model_kwargs::NamedTuple          = NamedTuple(),
-	                      config_kwargs::NamedTuple         = NamedTuple())
+function get_simulation_input(inputparams::BattMoFormattedInput;
+	                          use_p2d::Bool                     = true,
+	                          use_model_scaling::Bool           = true,
+	                          extra_timing::Bool                = false,
+	                          max_step::Union{Integer, Nothing} = nothing,
+	                          general_ad::Bool                  = true,
+	                          use_groups::Bool                  = false,
+	                          model_kwargs::NamedTuple          = NamedTuple(),
+	                          config_kwargs::NamedTuple         = NamedTuple())
 
 	model, parameters, couplings = setup_model(inputparams;
 		                                       use_groups = use_groups,
@@ -382,7 +381,7 @@ function setup_simulation(inputparams::BattMoFormattedInput;
 	cfg = setup_config(simulator,
 		               model,
 		               parameters,
-		               linear_solver,
+                       inputparams,
 		               extra_timing,
 		               use_model_scaling;
 		               config_kwargs...)
@@ -1638,26 +1637,34 @@ setup is the same for json and mat files. The specific setup values should
 probably be given as inputs in future versions of BattMo.jl
 """
 function setup_config(sim::JutulSimulator,
-	model::MultiModel,
-	parameters,
-	linear_solver::Symbol,
-	extra_timing::Bool,
-	use_model_scaling::Bool;
-	kwargs...)
+	                  model::MultiModel,
+	                  parameters,
+                      inputparams::BattMoFormattedInput,
+	                  extra_timing::Bool,
+	                  use_model_scaling::Bool;
+	                  kwargs...)
 
 	cfg = simulator_config(sim; kwargs...)
 
-	cfg[:linear_solver]            = battery_linsolve(model, linear_solver)
+    set_default_input_params!(inputparams, ["NonLinearSolver", "maxTimestepCuts"], 10)
+    set_default_input_params!(inputparams, ["NonLinearSolver", "maxIterations"], 20)
+    set_default_input_params!(inputparams, ["NonLinearSolver", "LinearSolver", "method"], "direct")
+    set_default_input_params!(inputparams, ["NonLinearSolver", "LinearSolver", "max_size"], 1000000)
+    
+	cfg[:linear_solver]            = battery_linsolve(model,
+                                                      Symbol(inputparams["NonLinearSolver"]["LinearSolver"]["method"]),
+                                                      max_size = inputparams["NonLinearSolver"]["LinearSolver"]["max_size"]
+                                                      )
 	cfg[:debug_level]              = 0
-	cfg[:max_timestep_cuts]        = 10
+	cfg[:max_timestep_cuts]        = inputparams["NonLinearSolver"]["maxTimestepCuts"]
 	cfg[:max_residual]             = 1e20
 	cfg[:output_substates]         = true
 	cfg[:min_nonlinear_iterations] = 1
 	cfg[:extra_timing]             = extra_timing
-	# cfg[:max_nonlinear_iterations] = 5
-	cfg[:safe_mode]             = true
-	cfg[:error_on_incomplete]   = false
-	cfg[:failure_cuts_timestep] = true
+	cfg[:max_nonlinear_iterations] = inputparams["NonLinearSolver"]["maxIterations"]
+	cfg[:safe_mode]                = true
+	cfg[:error_on_incomplete]      = false
+	cfg[:failure_cuts_timestep]    = true
 
 	if use_model_scaling
 		scalings = get_scalings(model, parameters)
