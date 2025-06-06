@@ -1,0 +1,58 @@
+"LinearSolver" : {
+          "type" : "object",
+          "library" : {
+            "type" : "string",
+            "description" : "list of (partially) supported linear solver library",
+            "enum" : ["julia", "matlab"]
+          },
+          "verbose" : {"type" : "integer"},
+          "method" : {
+            "type" : "string",
+            "description" : "name of the method used by the solver - depends on the chosen library. if not given a default solver for the library is given"
+          },
+          "oneOf" : [
+            {"properties" :
+             {"library" : {"const" : "julia"},
+              "description" : "We have the following methods for the julia solvers",
+              "method" : {
+                "type" : "string",
+                "description" : "Different linear solvers are available to solver the system of equations for the battery model",
+                "enum" : ["amg", "ilu0", "direct", "cphi", "cphi_ilu", "cphi_ilu_ilu"],
+                "oneOf": [
+                  {"properties" : {
+                    "method" : {"const": "direct"},
+                    "description": "direct solver using LUsolver",
+                    "options" : {
+                      "type" : "object",
+                      "properties" : {
+                        "max_size" : {
+                          "type" : "integer",
+                          "description": "maximum system size accepted for LU solver. If size limitation is not respected, then solver returns an error"}
+                      }
+                    }
+                  }},
+                  {"properties" : {
+                    "method" : {"const": "ilu0"},
+                    "description": "direct solver using LUsolver"}
+                  },
+                  {"properties" : {
+                    "method" : {"const": "cphi"},
+                    "description": "preconditioner"}
+                  },
+                  {"properties" : {
+                    "method" : {"const": "cphi_ilu"},
+                    "description": "preconditioner"}
+                  },
+                  {"properties" : {
+                    "method" : {"const": "cphi_ilu_ilu"},
+                    "description": "preconditioner"}
+                  }]}}},
+            { "properties" : {
+              "library" : {"const" : "matlab"}},
+              "description" : "We have the following methods for the matlab solver. If no method is given, a direct solver is used",
+              "method" : {
+                "type" : "string",
+                "description" : "linear solver available in matlab interface"
+                "enum"  : ["direct", "amg", "amgcl"]
+              }
+            }]}
