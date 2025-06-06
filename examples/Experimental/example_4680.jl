@@ -10,7 +10,7 @@ end
 
 inputparams_geometry = getinput("4680-geometry.json")
 set_input_params!(inputparams_geometry, ["Geometry", "numberOfDiscretizationCellsAngular"], 4, handleMismatch = :warn)
-set_input_params!(inputparams_geometry, ["Geometry", "outerRadius"], 10e-3, handleMismatch = :warn)
+set_input_params!(inputparams_geometry, ["Geometry", "outerRadius"], 4e-3, handleMismatch = :warn)
 set_input_params!(inputparams_geometry, ["NegativeElectrode", "CurrentCollector", "tabparams", "usetab"] , false, handleMismatch = :warn)
 set_input_params!(inputparams_geometry, ["PositiveElectrode", "CurrentCollector", "tabparams", "usetab"] , false, handleMismatch = :warn)
 # inputparams_geometry = getinput("geometry-1d.json")
@@ -33,7 +33,7 @@ inputparams_control = getinput("cc_discharge_control.json")
 ##########################
 
 inputparams_solver = getinput("solver_setup.json")
-
+set_input_params!(inputparams_solver, ["NonLinearSolver", "LinearSolver", "method"], "direct", handleMismatch = :warn)
 ####################
 # merge parameters #
 ####################
@@ -43,7 +43,7 @@ inputparams = merge_input_params([inputparams_geometry,
                                   inputparams_control,
                                   inputparams_solver])
 
-inputparams["Control"]["DRate"]       = 1
+inputparams["Control"]["DRate"]       = 0.001
 inputparams["Control"]["useCVswitch"] = false
 
 ##################
@@ -77,7 +77,7 @@ fig = Figure(size = (1000, 400))
 
 ax = Axis(fig[1, 1],
 	title = "Voltage",
-	xlabel = "Time / s",
+	xlabel = "Time / hour",
 	ylabel = "Voltage / V",
 	xlabelsize = 25,
 	ylabelsize = 25,
@@ -96,7 +96,7 @@ scatterlines!(ax,
 
 ax = Axis(fig[1, 2],
 	title = "Current",
-	xlabel = "Time / s",
+	xlabel = "Time / hour",
 	ylabel = "Current / A",
 	xlabelsize = 25,
 	ylabelsize = 25,
