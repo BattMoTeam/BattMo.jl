@@ -8,8 +8,8 @@ end
 # load geometry parameters #
 ############################
 
-inputparams_geometry = getinput("4680-geometry.json")
-# inputparams_geometry = getinput("geometry-1d.json")
+# inputparams_geometry = getinput("4680-geometry.json")
+inputparams_geometry = getinput("geometry-1d.json")
 # inputparams_geometry = getinput("geometry-3d-demo.json")
 
 ############################
@@ -51,7 +51,7 @@ use_iterative_solver = false
 if use_iterative_solver
     
     model_kwargs = (context = Jutul.DefaultContext(),)
-    output = setup_simulation(inputparams; model_kwargs)
+    output = get_simulation_input(inputparams; model_kwargs)
 
     simulator = output[:simulator]
     model     = output[:model]
@@ -64,7 +64,7 @@ if use_iterative_solver
     cfg[:info_level] = 10
 
     solver  = :fgmres
-    fac     = 1e-3  #NEEDED  1e-4 ok for 3D case 1e-7 need for 1D case
+    fac     = 1e-3  # NEEDED  1e-4 ok for 3D case 1e-7 need for 1D case
     rtol    = 1e-4 * fac  # for simple face rtol=1e7 and atol 1e-9 seems give same number ononlinear as direct
     atol    = 1e-5 * fac # seems important
     max_it  = 100
