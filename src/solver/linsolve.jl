@@ -397,38 +397,81 @@ function setup_subset_equation_map(multi_model::MultiModel, storage, model_label
 	return vcat(M...)
 end
 
-
 Jutul.operator_nrows(p::BatteryCPhiPreconditioner) = p.data.n
 
-function battery_linsolve(model, method = :ilu0;
-	                      rtol = 0.001,
-	                      solver = :gmres,
-	                      verbose = 0,
-                          max_size = 1000000,
-	                      kwarg...)
-	if method == :amg
-		prec = amg_precond()
-	elseif method == :ilu0
-		prec = ILUZeroPreconditioner()
-	elseif method == :direct
-		return LUSolver(;max_size)
-	elseif method == :cphi
-		prec = BatteryCPhiPreconditioner() # c_preconditioner =amg  p_preconditioner =amg
-	elseif method == :cphi_ilu
-		prec = BatteryCPhiPreconditioner(ILUZeroPreconditioner())
-	elseif method == :cphi_ilu_ilu
-		prec = BatteryCPhiPreconditioner(ILUZeroPreconditioner(), ILUZeroPreconditioner())
-	else
+function battery_linsolve(inputparams)
+
+    set_default_input_params!(inputparams, ["method"], "direct")
+
+    method = inputparams["method"]
+    
+	if method == "direct"
+        
+        set_default_input_params!(inputparams, ["max_size"], 1000000)
+		return LUSolver(;max_size = inputparams["max_size"])
+        
+	elseif method == "iterative"
+
+        solver  = :fgmres
+        
+        set_default_input_params!(inputparams, ["tolerance"], 1e-7)
+        set_default_input_params!(inputparams, ["max_iterations"], 50)
+        set_default_input_params!(inputparams, ["verbosity"], 0)
+        
+        tolerance      = inputparams["tolerance"]
+        atol           = 1e-28
+        max_iterations = inputparams["max_iterations"]
+        verbosity      = inputparams["verbosity"]
+
+        # Battery general preconditioner that combines different preconditioners for different variables as
+        # follows. First we solve for the control variables which are removed from the system, We use AMG for electric
+        # potential variables (phi) and charge convervation equations in combination with a global smoother which is
+        # ILU0. Afte this, we recover the control variables We combine two preconditioners.
+        
+        varpreconds = Vector{BattMo.VariablePrecond}()
+        push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Phi, :charge_conservation, nothing))
+
+        # Experimental options for using extra smoothing of concentration in positive and negative active material.
+        use_extra_options = false
+        if use_extra_options
+            push!(varpreconds,BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(),:Cp,:mass_conservation, [:PeAm,:NeAm]))
+        end
+        
+        # Experimental options for AMG used on concentration in electrolyte
+        use_extra_options = false
+        if use_extra_options
+            push!(varpreconds,BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:C,:mass_conservation, [:Elyte]))
+        end
+
+        # We setup the global preconditioner
+        g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global, nothing)
+
+        params = Dict()
+        
+        # Type of method used for the block preconditioners. Here "block" means separatly (other options can be found
+        # BatteryGeneralPreconditione)
+        params["method"] = "block"
+        # Option for post- and pre-solve of the control system. 
+        params["post_solve_control"] = true
+        params["pre_solve_control"]  = true
+
+        # We setup the preconditioner, which combines both the block and global preconditioners
+        prec = BattMo.BatteryGeneralPreconditioner(varpreconds, g_varprecond, params)
+        #prec = Jutul.ILUZeroPreconditioner()
+
+        lsolve = Jutul.GenericKrylov(solver,
+                               verbose = verbosity,
+	                           preconditioner = prec,
+	                           relative_tolerance = tolerance,
+	                           absolute_tolerance = atol, ## may skip linear iterations all to getter.
+	                           max_iterations = max_iterations)
+        
+	    return lsolve
+
+    else        
+
 		error("Wrong input for preconditioner")
 		return nothing
 	end
-	max_it = 200
-	atol = nothing
 
-	lsolve = GenericKrylov(solver, verbose = verbose,
-		                   preconditioner = prec,
-		                   relative_tolerance = rtol,
-		                   absolute_tolerance = atol,
-		                   max_iterations = max_it; kwarg...)
-	return lsolve
 end
