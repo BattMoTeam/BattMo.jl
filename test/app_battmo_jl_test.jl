@@ -10,7 +10,7 @@ function runP2DBatt(json_file)
 	inputparams = load_battmo_formatted_input(json_file)
 
 	# setup simulation from the input parameters
-	output = setup_simulation(inputparams)
+	output = get_simulation_input(inputparams)
 
 	simulator = output[:simulator]
 	model     = output[:model]

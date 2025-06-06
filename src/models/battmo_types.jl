@@ -210,7 +210,6 @@ function Jutul.default_parameter_values(d::DataDomain, model, ::VolumeFraction, 
 	return data_domain_helper(d, :volumeFraction)
 end
 
-
 Jutul.minimum_value(::VolumeFraction) = eps(Float64)
 
 mutable struct VariablePrecond # mutable needed?
@@ -221,6 +220,7 @@ mutable struct VariablePrecond # mutable needed?
 	data::Any
 
 end
+
 function VariablePrecond(precond, var, eq, models)
 	return VariablePrecond(precond, var, eq, models, nothing)
 end
@@ -231,8 +231,6 @@ mutable struct BatteryGeneralPreconditioner <: JutulPreconditioner
 	params::Any
 	data::Any
 end
-
-
 
 function BatteryGeneralPreconditioner(varpreconds, g_precond, params)
 	return BatteryGeneralPreconditioner(varpreconds, g_precond, params, nothing)
@@ -249,15 +247,3 @@ function BatteryGeneralPreconditioner()
 	return BatteryGeneralPreconditioner(varpreconds, g_varprecond, params, nothing)
 end
 
-
-mutable struct BatteryCPhiPreconditioner <: JutulPreconditioner
-	c_precond::Any
-	p_precond::Any
-	g_precond::Any
-	data::Any
-end
-
-function BatteryCPhiPreconditioner(c_precond = Jutul.AMGPreconditioner(:ruge_stuben),
-	p_precond = Jutul.AMGPreconditioner(:ruge_stuben), g_precond = nothing)
-	return BatteryCPhiPreconditioner(c_precond, p_precond, g_precond, nothing)
-end

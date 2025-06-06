@@ -5,7 +5,7 @@ function get_setting_meta_data()
 	meta_data = Dict(
 		"ModelFramework" => Dict(
 			"type" => String,
-			"options" => ["P2D", "P4D Pouch"],
+			"options" => ["P2D", "P4D Pouch", "P4D Cylindrical"],
 			"context_type" => "ModelFramework",
 			"context_type_iri" => "https://w3id.org/emmo/domain/battery#battery_b1921f7b_afac_465a_a275_26f929f7f936",
 			"is_sub_model" => true,
@@ -34,6 +34,22 @@ function get_setting_meta_data()
 			"context_type_iri" => nothing,
 			"is_sub_model" => true,
 			"description" => "Which model describes the current collectors.",
+		),
+        "GridResolutionHeight" => Dict(
+			"type" => Int,
+			"min_value" => 1,
+			"max_value" => 100,
+			"context_type" => "Cell",
+			"context_type_iri" => nothing,
+			"description" => "Number of grid points along the height of the cell (used in P4D cylindrical)",
+		),
+        "GridResolutionAngular" => Dict(
+			"type" => Int,
+			"min_value" => 1,
+			"max_value" => 100,
+			"context_type" => "Cell",
+			"context_type_iri" => nothing,
+			"description" => "Number of discretisation angles for a cylindrical cell (used in P4D cylindrical)",
 		),
 		"GridResolutionElectrodeWidth" => Dict(
 			"type" => Int,

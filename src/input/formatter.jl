@@ -47,10 +47,13 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		geom = get_key_value(model_settings, "ModelFramework")
 		if geom == "P2D"
 			geom_case = "1D"
-
 		elseif geom == "P4D Pouch"
 			geom_case = "3D-demo"
 
+        elseif geom == "P4D Cylindrical"
+			geom_case = "jellyRoll"
+        else
+            error("ModelFramework not recognized. Please use 'P2D', 'P4D Pouch' or 'P4D Cylindrical'.")
 		end
 	end
 
@@ -303,8 +306,12 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 					"width" => get_key_value(ne_cc, "TabWidth"),
 					"height" => get_key_value(ne_cc, "TabLength"),
 					"Nw" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabWidth"),
-					"Nh" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabLength"),
-				),
+					"Nh" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabLength")),
+                "tabparams" => Dict(
+					"usetab" => true,
+					"width" => get_key_value(ne_cc, "TabWidth"),
+                    "fractions" => get_key_value(ne_cc, "TabFractions")
+                ),
 			),
 		),
 		"PositiveElectrode" => Dict(
@@ -400,9 +407,13 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"case" => geom_case,
 			"faceArea" => get_key_value(cell, "ElectrodeGeometricSurfaceArea"),
 			"width" => get_key_value(cell, "ElectrodeWidth"),
-			"height" => get_key_value(cell, "ElectrodeLength"),
+			"height" => isnothing(get_key_value(cell, "ElectrodeLength")) ? get_key_value(cell, "Height") : get_key_value(cell, "ElectrodeLength"),
+            "innerRadius" => get_key_value(cell, "InnerRadius"),
+            "outerRadius" => get_key_value(cell, "OuterRadius"),
 			"Nw" => get_key_value(grid_points, "ElectrodeWidth"),
 			"Nh" => get_key_value(grid_points, "ElectrodeLength"),
+            "numberOfDiscretizationCellsVertical" => get_key_value(grid_points, "Height"),
+            "numberOfDiscretizationCellsAngular" => get_key_value(grid_points, "Angular")
 		),
 		"TimeStepping" => Dict(
 			"useRampup" => use_ramp_up,

@@ -26,26 +26,34 @@ function build_battmo_docs(build_format              = nothing;
 	# Base directory
 	battmo_dir = realpath(joinpath(@__DIR__, ".."))
 	# Convert examples as .jl files to markdown
-	tutorials = [
-		"Tutorial 1 - Useful tools" => "1_useful_tools",
-		"Tutorial 2 - Run a simulation" => "2_run_a_simulation",
-		"Tutorial 3 - Handle outputs" => "3_handle_outputs",
-		"Tutorial 4 - Select a model" => "4_select_a_model",
-		"Tutorial 5 - Create parameter sets" => "5_create_parameter_sets",
-		"Tutorial 6 - Handle cell parameters" => "6_handle_cell_parameters",
-		"Tutorial 7 - Handle cycling protocol" => "7_handle_cycling_protocols",
-		"Tutorial 8 - Compute cell KPIs" => "8_compute_cell_kpis",
-		"Tutorial 9 - Run a parameter sweep" => "9_run_parameter_sweep",
-	]
+	# tutorials = [
+	# 	"Tutorial 1 - Useful tools" => "1_useful_tools",
+	# 	"Tutorial 2 - Run a simulation" => "2_run_a_simulation",
+	# 	"Tutorial 3 - Handle outputs" => "3_handle_outputs",
+	# 	"Tutorial 4 - Select a model" => "4_select_a_model",
+	# 	"Tutorial 5 - Create parameter sets" => "5_create_parameter_sets",
+	# 	"Tutorial 6 - Handle cell parameters" => "6_handle_cell_parameters",
+	# 	"Tutorial 7 - Handle cycling protocol" => "7_handle_cycling_protocols",
+	# 	"Tutorial 8 - Compute cell KPIs" => "8_compute_cell_kpis",
+	# 	"Tutorial 9 - Run a parameter sweep" => "9_run_parameter_sweep",
+	# ]
 
+    tutorials = [
+        "Tutorial 1 - Useful tools" => "1_useful_tools"
+    ]
+
+	# examples = [
+	# 	"Cycle example" => "example_cycle",
+	# 	"1D plotting" => "example_1d_plotting",
+	# 	"Drive cycle example" => "example_run_current_function",
+	# 	"3D Pouch example" => "example_3D_pouch",
+	# 	"Calibration example" => "example_calibration",
+	# 	"SEI layer growth" => "example_sei",
+	# 	"Matlab example" => "example_battery",
+	# ]
+    
 	examples = [
-		"Cycle example" => "example_cycle",
-		"1D plotting" => "example_1d_plotting",
-		"Drive cycle example" => "example_run_current_function",
-		"3D Pouch example" => "example_3D_pouch",
-		"Calibration example" => "example_calibration",
-		"SEI layer growth" => "example_sei",
-		"Matlab example" => "example_battery",
+		"Jelly Roll" => "example_3D_cylindrical"
 	]
 
 	tutorials_markdown = []
@@ -77,7 +85,7 @@ function build_battmo_docs(build_format              = nothing;
 		end
 	end
 	tutorial_path(pth) = joinpath(battmo_dir, "examples", "beginner_tutorials", "$pth.jl")
-	example_path(pth) = joinpath(battmo_dir, "examples", "$pth.jl")
+	example_path(pth) = joinpath(battmo_dir, "examples", "Experimental", "$pth.jl")
 	examples_out_dir = joinpath(@__DIR__, "src", "examples")
 	tutorials_out_dir = joinpath(@__DIR__, "src", "tutorials")
 	notebook_dir = joinpath(@__DIR__, "assets")

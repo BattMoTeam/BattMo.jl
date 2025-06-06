@@ -180,142 +180,6 @@ function Jutul.post_update_linearized_system!(lsys, executor, storage, model::Mu
 end
 
 
-function Jutul.update_preconditioner!(prec::BatteryCPhiPreconditioner, lsys, context, model, storage, recorder, executor)
-	# Solve all Phi with AMG
-	# Solve the elyte C with another AMG
-	# Let the rest be (?)
-	A = lsys.jac
-	r = lsys.r
-
-	if isnothing(prec.data)
-		models_without_control = setdiff(keys(model.models), [:Control])
-		allmodels = keys(model.models)
-		# Set up various mappings
-		# Concentration part
-		#c_models = [:Elyte]
-		#c_models = nothing
-		c_models = models_without_control
-		c_map = setup_subset_residual_map(model, storage, c_models, :C)
-		mass_cons_map = setup_subset_equation_map(model, storage, c_models, :mass_conservation)
-		# Phi part
-		# p_models = nothing
-		p_models = allmodels#models_without_control
-		phi_map = setup_subset_residual_map(model, storage, p_models, :Phi)
-		charge_cons_map = setup_subset_equation_map(model, storage, p_models, :charge_conservation)
-		# @assert length(intersect(c_map, phi_map)) == 0
-		nc = length(r)
-		prec.data = (c = storage_chpi_precond(c_map),
-			phi = storage_chpi_precond(phi_map),
-			allvars = (r = zeros(nc), x = zeros(nc)),
-			n = length(r),
-			charge_map = charge_cons_map,
-			mass_map = mass_cons_map,
-			A = A,
-		)
-	else
-		@assert A == prec.data.A
-	end
-	#prec.data.A = A
-	(c, phi, allvars, n, charge_map, mass_map, A) = prec.data
-	if !isnothing(prec.g_precond)
-		update_preconditioner!(prec.g_precond, lsys, context, model, storage, recorder, executor)
-	end
-	update_local_cphi_preconditioner!(prec.c_precond, A, r, mass_map, c.ix, executor)
-	update_local_cphi_preconditioner!(prec.p_precond, A, r, charge_map, phi.ix, executor)
-	#Main.@infiltrate true
-	#pmat = A[charge_map, phi.ix]
-	#cmat = A[mass_map, c.ix]
-	#@exfiltrate mass_map, c, charge_map, phi
-end
-
-function Jutul.apply!(x, prec::BatteryCPhiPreconditioner, r)
-	(; c, phi, allvars, A) = prec.data
-	#@. x .= r
-	dx = allvars.x
-	x .= 0
-	r_local = allvars.r
-	r_local .= r
-	#@assert A[end,end] == 1
-	#@assert A[end-1,end] == 1
-	if A[end, end] == 1
-		@assert A[end-1, end] == 0
-		x[end] += r_local[end]
-		r_local[end] = 0
-	end
-	if A[end, end] == 1 && false
-		@assert A[end, end] == 1
-		@assert A[end-1, end] == 1
-		# seems to be needed
-		dx .= 0.0
-		dx[end] = r_local[end] / A[end, end]
-		r_local[end-1] -= A[end-1, end] * dx[end]
-		r_local[end] = 0.0
-		x .+= dx
-	else
-
-	end
-	#println(x)
-	#println(r_local)
-
-	## asume p_prec and c_prec is orthogonal
-	#println("Start consentration")
-	dx .= 0.0
-	apply_local_cphi_preconditioner!(dx, prec.p_precond, r_local, phi, arg...)
-	#apply_local_cphi_preconditioner!(dx, prec.c_precond, r_local, c, arg...)
-	#println(dx)
-	x .+= dx
-	#println(x)
-	#println(r_local)
-	#Jutul.mul!(r_local, A, dx, -1, true)
-	dx .= 0.0
-	#println("Start Volatage")
-	apply_local_cphi_preconditioner!(dx, prec.c_precond, r_local, c, arg...)
-	#println(dx)
-	#apply_local_cphi_preconditioner!(dx, prec.p_precond, r_local, phi, arg...)
-	x .+= dx
-	#println(x)
-	#println(r_local)
-	#NB just done to avoid to do gaus sidal
-	r_local .= r
-	#println(x)
-	mul!(r_local, A, x, -1, true)
-	#println(x)
-	#println(r_local)
-
-	#println(r_local)
-	#println("Norm after Voltage and consentration ")#,norm(r_local,2) )
-	#Jutul.mul!(r_local, A, dx, -1, true)
-	dx .= 0.0
-	if !isnothing(prec.g_precond)
-		#r_local = allvars.r
-		dx .= 0.0
-		#r_local .= r
-		#Jutul.mul!(r_local, A, x, -1, true)
-		apply!(dx, prec.g_precond, r_local, arg...)
-		@. x .+= dx
-		mul!(r_local, A, dx, -1, true)
-		dx .= 0.0
-	end
-	if A[end, end] == 1 && false
-		# seems to be needed
-		dx .= 0.0
-		dx[end] = r_local[end] / A[end, end]
-		r_local[end-1] -= A[end-1, end] * dx[end]
-		r_local[end] = 0.0
-		x .+= dx
-	else
-
-	end
-	if A[end, end] == 1
-		x[end] += r_local[end]
-		r_local[end] = 0
-	end
-	#println(x)
-	#println(r_local)
-	#error()
-	#apply_local_cphi_preconditioner!(x, prec.p_precond, r, allvar, arg...)
-end
-
 function storage_chpi_precond(index_map)
 	n = length(index_map)
 	return (ix = index_map, r = zeros(n), x = zeros(n))
@@ -398,36 +262,79 @@ function setup_subset_equation_map(multi_model::MultiModel, storage, model_label
 end
 
 
-Jutul.operator_nrows(p::BatteryCPhiPreconditioner) = p.data.n
+function battery_linsolve(inputparams)
 
-function battery_linsolve(model, method = :ilu0;
-	rtol = 0.001,
-	solver = :gmres,
-	verbose = 0,
-	kwarg...)
-	if method == :amg
-		prec = amg_precond()
-	elseif method == :ilu0
-		prec = ILUZeroPreconditioner()
-	elseif method == :direct
-		return LUSolver()
-	elseif method == :cphi
-		prec = BatteryCPhiPreconditioner() # c_preconditioner =amg  p_preconditioner =amg
-	elseif method == :cphi_ilu
-		prec = BatteryCPhiPreconditioner(ILUZeroPreconditioner())
-	elseif method == :cphi_ilu_ilu
-		prec = BatteryCPhiPreconditioner(ILUZeroPreconditioner(), ILUZeroPreconditioner())
-	else
+    set_default_input_params!(inputparams, ["method"], "direct")
+
+    method = inputparams["method"]
+    
+	if method == "direct"
+        
+        set_default_input_params!(inputparams, ["max_size"], 1000000)
+		return LUSolver(;max_size = inputparams["max_size"])
+        
+	elseif method == "iterative"
+
+        solver  = :fgmres
+        
+        set_default_input_params!(inputparams, ["tolerance"], 1e-7)
+        set_default_input_params!(inputparams, ["max_iterations"], 50)
+        set_default_input_params!(inputparams, ["verbosity"], 0)
+        
+        tolerance      = inputparams["tolerance"]
+        atol           = 1e-28
+        max_iterations = inputparams["max_iterations"]
+        verbosity      = inputparams["verbosity"]
+
+        # Battery general preconditioner that combines different preconditioners for different variables as
+        # follows. First we solve for the control variables which are removed from the system, We use AMG for electric
+        # potential variables (phi) and charge convervation equations in combination with a global smoother which is
+        # ILU0. Afte this, we recover the control variables We combine two preconditioners.
+        
+        varpreconds = Vector{BattMo.VariablePrecond}()
+        push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Phi, :charge_conservation, nothing))
+
+        # Experimental options for using extra smoothing of concentration in positive and negative active material.
+        use_extra_options = false
+        if use_extra_options
+            push!(varpreconds,BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(),:Cp,:mass_conservation, [:PeAm,:NeAm]))
+        end
+        
+        # Experimental options for AMG used on concentration in electrolyte
+        use_extra_options = false
+        if use_extra_options
+            push!(varpreconds,BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:C,:mass_conservation, [:Elyte]))
+        end
+
+        # We setup the global preconditioner
+        g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global, nothing)
+
+        params = Dict()
+        
+        # Type of method used for the block preconditioners. Here "block" means separatly (other options can be found
+        # BatteryGeneralPreconditione)
+        params["method"] = "block"
+        # Option for post- and pre-solve of the control system. 
+        params["post_solve_control"] = true
+        params["pre_solve_control"]  = true
+
+        # We setup the preconditioner, which combines both the block and global preconditioners
+        prec = BattMo.BatteryGeneralPreconditioner(varpreconds, g_varprecond, params)
+        #prec = Jutul.ILUZeroPreconditioner()
+
+        lsolve = Jutul.GenericKrylov(solver,
+                               verbose = verbosity,
+	                           preconditioner = prec,
+	                           relative_tolerance = tolerance,
+	                           absolute_tolerance = atol, ## may skip linear iterations all to getter.
+	                           max_iterations = max_iterations)
+        
+	    return lsolve
+
+    else        
+
 		error("Wrong input for preconditioner")
 		return nothing
 	end
-	max_it = 200
-	atol = nothing
 
-	lsolve = GenericKrylov(solver, verbose = verbose,
-		preconditioner = prec,
-		relative_tolerance = rtol,
-		absolute_tolerance = atol,
-		max_iterations = max_it; kwarg...)
-	return lsolve
 end

@@ -16,6 +16,7 @@
         "Case": "Cylindrical",
         "Height": 0.065,
         "OuterRadius": 0.021,
+        "InnerRadius": 2e-3,
         "ElectrodeGeometricSurfaceArea": 0.1027,
         "NominalVoltage": 3.71,
         "NominalCapacity": 4.8
@@ -59,6 +60,8 @@
         "CurrentCollector": {
             "Description": "Copper",
             "Thickness": 1.17e-5,
+            "TabWidth": 1e-3,
+            "TabFractions": [0.5],            
             "Density": 8960,
             "ElectronicConductivity": 3.55e7
         },
@@ -112,6 +115,8 @@
         "CurrentCollector": {
             "Description": "Aluminum",
             "Thickness": 1.63e-05,
+            "TabWidth": 1e-3,
+            "TabFractions": [0.5],
             "Density": 2700,
             "ElectronicConductivity": 5.96e7
         }
