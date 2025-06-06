@@ -401,16 +401,17 @@ end
 Jutul.operator_nrows(p::BatteryCPhiPreconditioner) = p.data.n
 
 function battery_linsolve(model, method = :ilu0;
-	rtol = 0.001,
-	solver = :gmres,
-	verbose = 0,
-	kwarg...)
+	                      rtol = 0.001,
+	                      solver = :gmres,
+	                      verbose = 0,
+                          max_size = 1000000,
+	                      kwarg...)
 	if method == :amg
 		prec = amg_precond()
 	elseif method == :ilu0
 		prec = ILUZeroPreconditioner()
 	elseif method == :direct
-		return LUSolver(max_size = 1000000)
+		return LUSolver(;max_size)
 	elseif method == :cphi
 		prec = BatteryCPhiPreconditioner() # c_preconditioner =amg  p_preconditioner =amg
 	elseif method == :cphi_ilu
@@ -425,9 +426,9 @@ function battery_linsolve(model, method = :ilu0;
 	atol = nothing
 
 	lsolve = GenericKrylov(solver, verbose = verbose,
-		preconditioner = prec,
-		relative_tolerance = rtol,
-		absolute_tolerance = atol,
-		max_iterations = max_it; kwarg...)
+		                   preconditioner = prec,
+		                   relative_tolerance = rtol,
+		                   absolute_tolerance = atol,
+		                   max_iterations = max_it; kwarg...)
 	return lsolve
 end
