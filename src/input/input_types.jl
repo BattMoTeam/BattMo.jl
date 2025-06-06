@@ -384,6 +384,8 @@ end
     """
 function set_input_params!(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoFormattedInput}
 
+    @assert(handleMismatch in (:error, :warn, :ignore), "handleMismatch must be one of :error, :warn, or :ignore")
+    
     fieldname = fieldnamelist[1]
     
     if !isa(inputparams, Union{T, Dict} where {T<:BattMoFormattedInput})
