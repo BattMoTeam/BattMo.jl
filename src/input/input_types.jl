@@ -5,7 +5,7 @@ export CellParameters, CyclingProtocol, ModelSettings, SimulationSettings, FullS
 export BattMoFormattedInput
 export InputParams, MatlabInputParams
 
-export merge_input_params, search_parameter, set_input_params, get_input_params, set_default_input_params
+export merge_input_params, search_parameter, set_input_params!, get_input_params, set_default_input_params!
 
 
 """
@@ -382,7 +382,7 @@ end
 # Returns
     The updated input parameters structure with the specified fields set to the given value.
     """
-function set_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoFormattedInput}
+function set_input_params!(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoFormattedInput}
 
     fieldname = fieldnamelist[1]
     
@@ -406,7 +406,7 @@ function set_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{Str
         
         if isa(inputparams[fieldname], Dict)
             
-            inputparams[fieldname] = set_input_params(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch = handleMismatch)
+            set_input_params!(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch = handleMismatch)
             
         elseif  handleMismatch in (:warn, :ignore)
 
@@ -415,7 +415,7 @@ function set_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{Str
             end
 
             inputparams[fieldname] = Dict{String, Any}()
-            inputparams[fieldname] = set_input_params(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch = handleMismatch)
+            set_input_params!(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch = handleMismatch)
             
         else handleMismatch == :error
             
@@ -446,21 +446,17 @@ function set_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{Str
         end
 
     end
-            
-    return inputparams
 
 end
 
-function set_default_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoFormattedInput}
+function set_default_input_params!(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoFormattedInput}
 
     current_value = get_input_params(inputparams, fieldnamelist)
 
     if ismissing(current_value)
 
-        inputparams = set_input_params(inputparams, fieldnamelist, value; handleMismatch)
+        set_input_params!(inputparams, fieldnamelist, value; handleMismatch)
 
     end
 
-    return inputparams
-    
 end
