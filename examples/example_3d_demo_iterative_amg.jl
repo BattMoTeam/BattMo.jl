@@ -55,7 +55,7 @@ inputparams = merge_input_params(deepcopy(inputparams_geometry), inputparams)
 ############################
 
 model_kwargs = (context = Jutul.DefaultContext(),)
-output = setup_simulation(inputparams; model_kwargs)
+output = get_simulation_input(inputparams; model_kwargs)
 
 simulator = output[:simulator]
 model     = output[:model]

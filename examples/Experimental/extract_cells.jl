@@ -22,7 +22,7 @@ if dosetup
     inputparams["Control"]["DRate"] = 0.1
     inputparams["Control"]["rampupTime"] = 3600*10
 
-    output = setup_simulation(deepcopy(inputparams))
+    output = get_simulation_input(deepcopy(inputparams))
     
 	model = output[:model]
 end

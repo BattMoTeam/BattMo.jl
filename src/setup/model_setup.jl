@@ -1,7 +1,7 @@
 
 export
 	run_battery,
-	setup_simulation,
+	get_simulation_input,
 	setup_model,
 	Simulation,
 	Optimization,
@@ -295,11 +295,11 @@ function run_battery(inputparams::BattMoFormattedInput;
 	use_p2d = true,
 	kwargs...)
 	"""
-		Run battery wrapper method. Call setup_simulation function and run the simulation with the setup that is returned. A hook function can be given to modify the setup after the call to setup_simulation
+		Run battery wrapper method. Call get_simulation_input function and run the simulation with the setup that is returned. A hook function can be given to modify the setup after the call to get_simulation_input
 	"""
 
 	#Setup simulation
-	output = setup_simulation(deepcopy(inputparams); use_p2d = use_p2d, kwargs...)
+	output = get_simulation_input(deepcopy(inputparams); use_p2d = use_p2d, kwargs...)
 
 	simulator = output[:simulator]
 	model     = output[:model]
@@ -343,14 +343,14 @@ end
 # Setup simulation #
 ####################
 
-function setup_simulation(problem::Simulation; kwargs...)
+function get_simulation_input(problem::Simulation; kwargs...)
 
 	inputparams = convert_parameter_sets_to_battmo_input(problem.model_setup.model_settings,
                                                          problem.cell_parameters,
                                                          problem.cycling_protocol,
                                                          problem.simulation_settings)
 
-    output = setup_simulation(inputparams; kwargs...)
+    output = get_simulation_input(inputparams; kwargs...)
 
 end
 

@@ -15,7 +15,7 @@ using Test
 
 		inputparams = merge_input_params(inputparams_geometry, inputparams)
 
-		output = setup_simulation(inputparams)
+		output = get_simulation_input(inputparams)
 
 		simulator = output[:simulator]
 		model     = output[:model]

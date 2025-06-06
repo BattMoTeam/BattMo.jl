@@ -55,7 +55,7 @@ nothing #hide
 
 # We preprocess the simulation object to retrieve the grids and coupling structure, which we want to visualize prior running the simulation
 
-output = setup_simulation(sim)
+output = get_simulation_input(sim)
 grids     = output[:grids]
 couplings = output[:couplings]
 nothing #hide

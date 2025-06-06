@@ -14,7 +14,7 @@ inputparams_control = getinput("cc_discharge_control.json")
 
 inputparams = merge_input_params([inputparams_geometry, inputparams_material, inputparams_control])
 
-output = setup_simulation(deepcopy(inputparams))
+output = get_simulation_input(deepcopy(inputparams))
 
 simulator = output[:simulator]
 model     = output[:model]
