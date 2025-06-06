@@ -1648,13 +1648,9 @@ function setup_config(sim::JutulSimulator,
 
     set_default_input_params!(inputparams, ["NonLinearSolver", "maxTimestepCuts"], 10)
     set_default_input_params!(inputparams, ["NonLinearSolver", "maxIterations"], 20)
-    set_default_input_params!(inputparams, ["NonLinearSolver", "LinearSolver", "method"], "direct")
-    set_default_input_params!(inputparams, ["NonLinearSolver", "LinearSolver", "max_size"], 1000000)
+    set_default_input_params!(inputparams, ["NonLinearSolver", "Linearsolver"],  Dict())
     
-	cfg[:linear_solver]            = battery_linsolve(model,
-                                                      Symbol(inputparams["NonLinearSolver"]["LinearSolver"]["method"]),
-                                                      max_size = inputparams["NonLinearSolver"]["LinearSolver"]["max_size"]
-                                                      )
+	cfg[:linear_solver]            = battery_linsolve(inputparams["NonLinearSolver"]["LinearSolver"])
 	cfg[:debug_level]              = 0
 	cfg[:max_timestep_cuts]        = inputparams["NonLinearSolver"]["maxTimestepCuts"]
 	cfg[:max_residual]             = 1e20
