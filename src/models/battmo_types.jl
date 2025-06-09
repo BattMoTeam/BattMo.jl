@@ -17,7 +17,7 @@ function Base.getindex(system::BattMoSystem, key::Symbol)
 	return system.params[key]
 end
 
-abstract type ElectroChemicalGrid <: JutulMesh end
+abstract type BattMoGrid <: JutulMesh end
 
 # Potential variables
 
@@ -75,7 +75,7 @@ end
 
 Jutul.associated_entity(::BoundaryCurrent) = BoundaryDirichletFaces()
 
-struct MinimalECTPFAGrid{V, N, B, BT, M} <: ElectroChemicalGrid
+struct MinimalECTPFAGrid{V, N, B, BT, M} <: BattMoGrid
 	"""
 	Simple grid for a electro chemical component
 	"""
