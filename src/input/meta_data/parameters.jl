@@ -453,7 +453,7 @@ function get_parameter_meta_data()
 			"context_type" => "BruggemanCoefficient",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_5c34b3b5_c9c4_477d_809a_3f682f995aa9",
 			"max_value" => 5.0,
-			"min_value" => 1.0,
+			"min_value" => 0.5,
 			"description" => "Exponent relating the tortuosity and porosity of porous media.",
 			"type" => Real,
 			"unit" => "1",
