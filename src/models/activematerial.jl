@@ -19,7 +19,7 @@ end
 
 struct NoParticleDiffusion <: SolidDiffusionDiscretization end
 
-abstract type AbstractActiveMaterial{label} <: ElectroChemicalComponent end
+abstract type AbstractActiveMaterial{label} <: BattMoSystem end
 
 activematerial_label(::AbstractActiveMaterial{label}) where label = label
 

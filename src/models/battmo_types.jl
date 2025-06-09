@@ -1,4 +1,4 @@
-export ElectroChemicalComponent, CurrentCollector
+export BattMoSystem, CurrentCollector
 export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
 export ChargeFlow, BoundaryPotential, BoundaryCurrent
 export Phi, C, Temperature, Charge, Mass
@@ -6,16 +6,16 @@ export BCCurrent
 export TPFAInterfaceFluxCT, ButlerVolmerActmatToElyteCT, ButlerVolmerElyteToActmatCT, ButlerVolmerInterfaceFluxCT
 export BoundaryDirichletFaces
 
-struct BoundaryDirichletFaces <: JutulEntity end
-
-abstract type ElectroChemicalComponent <: JutulSystem end
+abstract type BattMoSystem <: JutulSystem end
 # Alias for a general electro-chemical model
 
-function Base.getindex(system::ElectroChemicalComponent, key::Symbol)
+const BattMoModel = SimulationModel{<:Any, <:BattMoSystem, <:Any, <:Any}
+
+struct BoundaryDirichletFaces <: JutulEntity end
+
+function Base.getindex(system::BattMoSystem, key::Symbol)
 	return system.params[key]
 end
-
-const ElectroChemicalComponentModel = SimulationModel{<:Any, <:ElectroChemicalComponent, <:Any, <:Any}
 
 abstract type ElectroChemicalGrid <: JutulMesh end
 
