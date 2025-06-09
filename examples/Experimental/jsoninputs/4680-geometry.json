@@ -2,10 +2,10 @@
  "Geometry" : {
    "case" : "jellyRoll",
    "innerRadius" : 2e-3,
-   "outerRadius" : 10e-3,
+   "outerRadius" : 0.005,
    "height" : 70e-3,
    "numberOfDiscretizationCellsVertical" : 2,
-   "numberOfDiscretizationCellsAngular"  : 8
+   "numberOfDiscretizationCellsAngular"  : 5
  },
  "NegativeElectrode": {
    "Coating": {
@@ -17,7 +17,7 @@
      "thickness" : 25e-6,
      "N" : 3,
      "tabparams" : {
-       "usetab" : true,
+       "usetab" : false,
        "width" : 3.5e-3,
        "fractions" : [0.01, 0.1, 0.366, 0.544, 0.722, 0.9]}}},
  "PositiveElectrode": {
@@ -30,7 +30,7 @@
      "thickness" : 10e-6,
      "N" : 3,
      "tabparams" : {
-       "usetab" : true,
+       "usetab" : false,
        "width" : 3.5e-3,
        "fractions" : [0.01, 0.1, 0.366, 0.544, 0.722, 0.9]}}},
  "Separator" : {

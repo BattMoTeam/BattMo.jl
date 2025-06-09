@@ -9,10 +9,11 @@ end
 ############################
 
 inputparams_geometry = getinput("4680-geometry.json")
-set_input_params!(inputparams_geometry, ["Geometry", "numberOfDiscretizationCellsAngular"], 4, handleMismatch = :warn)
-set_input_params!(inputparams_geometry, ["Geometry", "outerRadius"], 4e-3, handleMismatch = :warn)
-set_input_params!(inputparams_geometry, ["NegativeElectrode", "CurrentCollector", "tabparams", "usetab"] , false, handleMismatch = :warn)
-set_input_params!(inputparams_geometry, ["PositiveElectrode", "CurrentCollector", "tabparams", "usetab"] , false, handleMismatch = :warn)
+
+# set_input_params!(inputparams_geometry, ["Geometry", "numberOfDiscretizationCellsAngular"], 4, handleMismatch = :warn)
+# set_input_params!(inputparams_geometry, ["Geometry", "outerRadius"], 4e-3, handleMismatch = :warn)
+# set_input_params!(inputparams_geometry, ["NegativeElectrode", "CurrentCollector", "tabparams", "usetab"] , false, handleMismatch = :warn)
+# set_input_params!(inputparams_geometry, ["PositiveElectrode", "CurrentCollector", "tabparams", "usetab"] , false, handleMismatch = :warn)
 # inputparams_geometry = getinput("geometry-1d.json")
 # inputparams_geometry = getinput("geometry-3d-demo.json")
 
