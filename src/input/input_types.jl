@@ -388,36 +388,26 @@ function set_input_params!(inputparams::Union{T, Dict}, fieldnamelist::Vector{St
     
     fieldname = fieldnamelist[1]
     
-    if !isa(inputparams, Union{T, Dict} where {T<:BattMoFormattedInput})
-        
-        if handleMismatch in (:warn, :ignore)
-
-            inputparams = Dict{String, Any}()
-
-            if handleMismatch == :warn
-                println("Warning: some field in input was not a dictionary, but new input requires it. We create a dictionary.")
-            end
-
-        else
-            error("some field in input was expected but is not a dictionary.")
-        end
-
-    end
-            
     if length(fieldnamelist) > 1
         
+        if !haskey(inputparams, fieldname)
+
+            inputparams[fieldname] = Dict{String, Any}()
+            
+        end
+
         if isa(inputparams[fieldname], Dict)
             
-            set_input_params!(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch = handleMismatch)
+            set_input_params!(inputparams[fieldname], fieldnamelist[2 : end], value; handleMismatch)
             
-        elseif  handleMismatch in (:warn, :ignore)
+        elseif handleMismatch in (:warn, :ignore)
 
             if handleMismatch == :warn
                 println("Warning: Field $fieldname was not a dictionary and we overwrite the value.")
             end
 
             inputparams[fieldname] = Dict{String, Any}()
-            set_input_params!(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch = handleMismatch)
+            set_input_params!(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch)
             
         else handleMismatch == :error
             
