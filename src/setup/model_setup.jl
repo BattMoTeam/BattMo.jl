@@ -499,6 +499,9 @@ function setup_submodels(inputparams::InputParams;
 			funcpath = haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionpath") ? inputparams_am["Interface"]["openCircuitPotential"]["functionpath"] : nothing
 			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 			am_params[:ocp_func] = fcn
+		elseif isa(inputparams_am["Interface"]["openCircuitPotential"], Real)
+			am_params[:ocp_funcconstant] = true
+			am_params[:ocp_constant] = inputparams_am["Interface"]["openCircuitPotential"]
 
 		else
 			am_params[:ocp_funcdata] = true
@@ -609,6 +612,10 @@ function setup_submodels(inputparams::InputParams;
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:diffusivity_func] = fcn
 
+	elseif isa(inputparams_elyte["diffusionCoefficient"], Real)
+
+		params[:diffusivity_constant] = inputparams_elyte["diffusionCoefficient"]
+
 	else
 		data_x = inputparams_elyte["diffusionCoefficient"]["data_x"]
 		data_y = inputparams_elyte["diffusionCoefficient"]["data_y"]
@@ -631,6 +638,10 @@ function setup_submodels(inputparams::InputParams;
 		funcpath = haskey(inputparams_elyte["ionicConductivity"], "functionpath") ? inputparams_elyte["ionicConductivity"]["functionpath"] : nothing
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:conductivity_func] = fcn
+
+	elseif isa(inputparams_elyte["ionicConductivity"], Real)
+
+		params[:conductivity_constant] = inputparams_elyte["ionicConductivity"]
 
 	else
 		data_x = inputparams_elyte["ionicConductivity"]["data_x"]
@@ -1091,6 +1102,8 @@ function setup_initial_state(inputparams::InputParams,
 		elseif haskey(model[name].system.params, :ocp_funcdata)
 
 			OCP = model[name].system[:ocp_func](theta)
+		elseif haskey(model[name].system.params, :ocp_constant)
+			OCP = model[name].system[:ocp_constant]
 
 		else
 			OCP = model[name].system[:ocp_func](c, T, cmax)

@@ -95,6 +95,10 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"type" => "function",
 			"function" => ne_ocp_value,
 		)
+
+	elseif isa(ne_ocp_value, Real)
+		ne_ocp = ne_ocp_value
+
 	else
 		error("Function type not recognized")
 	end
@@ -122,6 +126,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"type" => "function",
 			"function" => pe_ocp_value,
 		)
+	elseif isa(pe_ocp_value, Real)
+		pe_ocp = pe_ocp_value
 	else
 		error("Function type not recognized")
 	end
@@ -149,6 +155,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"type" => "function",
 			"function" => diff_value,
 		)
+	elseif isa(diff_value, Real)
+		diff = diff_value
 	else
 		error("Function type not recognized")
 	end
@@ -176,6 +184,8 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"type" => "function",
 			"function" => cond_value,
 		)
+	elseif isa(cond_value, Real)
+		cond = cond_value
 	else
 		error("Function type not recognized")
 	end

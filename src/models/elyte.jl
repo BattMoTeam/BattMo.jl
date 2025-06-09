@@ -174,7 +174,7 @@ end
 	""" Compute the diffusion coefficient as a function of concentration
 	"""
 	# Calculate diffusion coefficients constant for the diffusion coefficient calculation
-	cnst = [            -4.43 -54
+	cnst = [                                            -4.43 -54
 		-0.22 0.0]
 
 	Tgi = [229 5.0]
@@ -208,7 +208,8 @@ end
 			if haskey(model.system.params, :conductivity_data)
 
 				@inbounds kappa[i] = model.system[:conductivity_func](C[i]) * VolumeFraction[i]^b
-
+			elseif haskey(model.system.params, :conductivity_constant)
+				@inbounds kappa[i] = model.system[:conductivity_constant] * VolumeFraction[i]^b
 			else
 				@inbounds kappa[i] = model.system[:conductivity_func](C[i], Temperature[i]) * VolumeFraction[i]^b
 			end
@@ -225,6 +226,9 @@ end
 		if haskey(model.system.params, :diffusivity_data)
 
 			@inbounds D[i] = model.system[:diffusivity_func](C[i]) * VolumeFraction[i]^b
+
+		elseif haskey(model.system.params, :diffusivity_constant)
+			@inbounds D[i] = model.system[:diffusivity_constant] * VolumeFraction[i]^b
 
 		else
 
