@@ -486,7 +486,11 @@ function setup_submodels(inputparams::InputParams;
 
 		am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
 
-		if haskey(inputparams_am["Interface"]["openCircuitPotential"], "function")
+		if isa(inputparams_am["Interface"]["openCircuitPotential"], Real)
+			am_params[:ocp_funcconstant] = true
+			am_params[:ocp_constant] = inputparams_am["Interface"]["openCircuitPotential"]
+
+		elseif haskey(inputparams_am["Interface"]["openCircuitPotential"], "function")
 
 			am_params[:ocp_funcexp] = true
 			ocp_exp = inputparams_am["Interface"]["openCircuitPotential"]["function"]
@@ -499,9 +503,6 @@ function setup_submodels(inputparams::InputParams;
 			funcpath = haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionpath") ? inputparams_am["Interface"]["openCircuitPotential"]["functionpath"] : nothing
 			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 			am_params[:ocp_func] = fcn
-		elseif isa(inputparams_am["Interface"]["openCircuitPotential"], Real)
-			am_params[:ocp_funcconstant] = true
-			am_params[:ocp_constant] = inputparams_am["Interface"]["openCircuitPotential"]
 
 		else
 			am_params[:ocp_funcdata] = true
@@ -600,7 +601,10 @@ function setup_submodels(inputparams::InputParams;
 	params[:separator_density]   = inputparams_elyte["density"]
 
 	# setup diffusion coefficient function
-	if haskey(inputparams_elyte["diffusionCoefficient"], "function")
+	if isa(inputparams_elyte["diffusionCoefficient"], Real)
+
+		params[:diffusivity_constant] = inputparams_elyte["diffusionCoefficient"]
+	elseif haskey(inputparams_elyte["diffusionCoefficient"], "function")
 
 		exp = setup_diffusivity_evaluation_expression_from_string(inputparams_elyte["diffusionCoefficient"]["function"])
 		params[:diffusivity_func] = @RuntimeGeneratedFunction(exp)
@@ -611,10 +615,6 @@ function setup_submodels(inputparams::InputParams;
 		funcpath = haskey(inputparams_elyte["diffusionCoefficient"], "functionpath") ? inputparams_elyte["diffusionCoefficient"]["functionpath"] : nothing
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:diffusivity_func] = fcn
-
-	elseif isa(inputparams_elyte["diffusionCoefficient"], Real)
-
-		params[:diffusivity_constant] = inputparams_elyte["diffusionCoefficient"]
 
 	else
 		data_x = inputparams_elyte["diffusionCoefficient"]["data_x"]
@@ -627,7 +627,10 @@ function setup_submodels(inputparams::InputParams;
 	end
 
 	# setup conductivity function
-	if haskey(inputparams_elyte["ionicConductivity"], "function")
+	if isa(inputparams_elyte["ionicConductivity"], Real)
+
+		params[:conductivity_constant] = inputparams_elyte["ionicConductivity"]
+	elseif haskey(inputparams_elyte["ionicConductivity"], "function")
 
 		exp = setup_conductivity_evaluation_expression_from_string(inputparams_elyte["ionicConductivity"]["function"])
 		params[:conductivity_func] = @RuntimeGeneratedFunction(exp)
@@ -638,10 +641,6 @@ function setup_submodels(inputparams::InputParams;
 		funcpath = haskey(inputparams_elyte["ionicConductivity"], "functionpath") ? inputparams_elyte["ionicConductivity"]["functionpath"] : nothing
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:conductivity_func] = fcn
-
-	elseif isa(inputparams_elyte["ionicConductivity"], Real)
-
-		params[:conductivity_constant] = inputparams_elyte["ionicConductivity"]
 
 	else
 		data_x = inputparams_elyte["ionicConductivity"]["data_x"]
