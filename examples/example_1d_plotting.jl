@@ -24,10 +24,38 @@ plot_dashboard(output)
 
 plot_dashboard(output; plot_type = "line")
 
-
 plot_dashboard(output; plot_type = "contour")
 
 
+# Access state data and plot for a specific time step
 
+
+quantities = ["Time", "Position", "NeAmRadius", "NeAmConcentration",
+	"NeAmSurfaceConcentration", "PeAmRadius", "PeAmConcentration",
+	"PeAmSurfaceConcentration", "ElectrolyteConcentration"]
+
+
+output_data = get_output_states(output, quantities = quantities);
+
+t = 100 # time step to plot
+
+d1 = output_data[:NeAmSurfaceConcentration][t, :]
+d2 = output_data[:PeAmSurfaceConcentration][t, :]
+d3 = output_data[:ElectrolyteConcentration][t, :]
+
+f = Figure()
+ax = Axis(f[1, 1], title = "Concentration at t = $(output_data[:Time][t]) s", xlabel = "Position [m]", ylabel = "Concentration")
+l1 = lines!(ax, output_data[:Position], d1, color = :red, linewidth = 2, label = "NeAmSurfaceConcentration")
+l2 = lines!(ax, output_data[:Position], d2, color = :blue, linewidth = 2, label = "PeAmSurfaceConcentration")
+l3 = lines!(ax, output_data[:Position], d3, color = :green, linewidth = 2, label = "ElectrolyteConcentration")
+axislegend(ax)
+display(GLMakie.Screen(), f)
+
+g = Figure()
+ax2 = Axis(g[1, 1], title = "Active Material Concentration at t = $(output_data[:Time][t]) s", xlabel = "Position", ylabel = "Depth")
+hm1 = contourf!(ax2, output_data[:Position], output_data[:NeAmRadius], output_data[:NeAmConcentration][t, :, :])
+hm2 = contourf!(ax2, output_data[:Position], output_data[:PeAmRadius], output_data[:PeAmConcentration][t, :, :])
+Colorbar(g[1, 2], hm1)
+display(GLMakie.Screen(), g)
 
 
