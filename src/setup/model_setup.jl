@@ -872,6 +872,7 @@ function setup_component(grid::FiniteVolumeMesh,
 
 	domain[:trans, Faces()]           = T
 	domain[:halfTrans, HalfFaces()]   = T_hf
+    domain[:halftransfaces, Faces()]  = setupHalfTransFaces(domain)
 	domain[:bcTrans, BoundaryFaces()] = T_b
 
 	if !isnothing(dirichletBoundary)
@@ -895,7 +896,7 @@ function setup_component(grid::FiniteVolumeMesh,
 	else
 		flow = TwoPointPotentialFlowHardCoded(grid)
 	end
-	disc = (charge_flow = flow,)
+    disc = (flow = flow,)
 	domain = DiscretizedDomain(domain, disc)
 
 	model = SimulationModel(domain, sys; kwargs...)
