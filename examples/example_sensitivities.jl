@@ -5,7 +5,7 @@ using GLMakie
 using MAT
 
 datacase = "Xu"
-# datacase = "MJ1"
+datacase = "MJ1"
 
 ratecase = "low"
 # ratecase = "high"
@@ -66,7 +66,7 @@ elseif datacase == "MJ1"
     end
 
     df = DataFrame(time=vec(matdata["time"][idx]), E=vec(matdata["voltage"][idx]), I=vec(matdata["current"][idx]), CRate=matdata["CRate"][idx])
-    rate = df.CRate[1]
+    rate = df.CRate[1] / 4
 
 elseif datacase == "Chen"
 
@@ -84,6 +84,8 @@ x_refinement = 1 #10
 
 simulation_settings["TimeStepDuration"] /= t_refinement
 
+simulation_settings["TimeStepDuration"] *= 20
+
 gr = "GridResolution"
 simulation_settings[gr]["NegativeElectrodeActiveMaterial"] *= x_refinement
 simulation_settings[gr]["NegativeElectrodeCoating"] *= x_refinement
@@ -91,7 +93,7 @@ simulation_settings[gr]["PositiveElectrodeActiveMaterial"] *= x_refinement
 simulation_settings[gr]["PositiveElectrodeCoating"] *= x_refinement
 simulation_settings[gr]["Separator"] *= x_refinement
 
-cycling_protocol["LowerVoltageLimit"] = 2.25
+cycling_protocol["LowerVoltageLimit"] = 2.5 #2.25
 model_setup = LithiumIonBattery()
 
 cycling_protocol["DRate"] = rate
@@ -102,17 +104,15 @@ output0 = solve(sim, accept_invalid=true)
 
 t0, V0 = get_tV(output0)
 t_exp, V_exp = get_tV(df)
-# t_exp_1, V_exp_1 = get_tV(df_1)
 
-# fig = Figure()
-# ax = Axis(fig[1, 1], title = "CRate = 0.5", xlabel = "Time / s", ylabel = "Voltage / V")
-# lines!(ax, t0, V0, label = "Base case")
-# lines!(ax, t_exp_05, V_exp_05, label = "Experimental data")
-# axislegend(position = :lb)
-# fig
+fig = Figure()
+ax = Axis(fig[1, 1], title = "CRate = 0.5", xlabel = "Time / s", ylabel = "Voltage / V")
+lines!(ax, t0/3600, V0, label = "Base case")
+lines!(ax, t_exp, V_exp, label = "Experimental data")
+axislegend(position = :lb)
+fig
 
 voltage_calibration = VoltageCalibration(t_exp, V_exp, sim)
-return
 
 if goalfunction == "least-squares"
     nothing
