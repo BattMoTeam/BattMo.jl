@@ -387,9 +387,9 @@ function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "simple")
 			subgrid = parent_grid[row, col] = GridLayout()
 
 			ax = Axis(subgrid[1, 1])
-			plt = contourf!(ax, t, x, data)
-			ax.xlabel = "Time  /  s"
-			ax.ylabel = "Position  / μm"
+			plt = contourf!(ax, x, t, data')
+			ax.ylabel = "Time  /  s"
+			ax.xlabel = "Position  / μm"
 			ax.title = title
 
 			Colorbar(subgrid[1, 2], plt, width = 15)
