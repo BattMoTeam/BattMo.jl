@@ -17,6 +17,8 @@ mutable struct VoltageCalibration <:AbstractCalibration
     calibrated_cell_parameters
     "History of the optimization process, containing information about the optimization steps."
     history
+    # "Goal function as string (least-squares or energy-density)."
+    # goal_function
     """
         VoltageCalibration(t, v, sim)
 
@@ -57,10 +59,10 @@ nested structure of the parameter in the simulation's cell parameters.
 - The `lower_bound` and `upper_bound` must be provided and cannot be `missing`.
 """
 function free_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String};
-            initial_value = missing,
-            lower_bound = missing,
-            upper_bound = missing
-        )
+                                     initial_value = missing,
+                                     lower_bound = missing,
+                                     upper_bound = missing
+                                     )
 
     if ismissing(lower_bound) || ismissing(upper_bound)
         throw(ArgumentError("$parameter_name: Bounds must be set for free parameters (defaults not implemented)"))
@@ -100,32 +102,32 @@ calibration has been performed, the table will also include the optimized values
 and the percentage change from the initial values.
 """
 function print_calibration_overview(vc::AbstractCalibration)
-        function print_table(subkeys, t)
-            opt_cell = vc.calibrated_cell_parameters
-            is_optimized = !ismissing(opt_cell)
-            header = ["Name", "Initial value", "Bounds"]
-            if is_optimized
-                push!(header, "Optimized value")
-                push!(header, "Change")
-            end
-            tab = Matrix{Any}(undef, length(subkeys), length(header))
-            # widths = zeros(Int, size(tab, 2))
-            # widths[1] = 40
-            for (i, k) in enumerate(subkeys)
-                v0 = pt[k].v0
-                tab[i, 1] = join(k[2:end], ".")
-                tab[i, 2] = v0
-                tab[i, 3] = "$(pt[k].vmin) - $(pt[k].vmax)"
-                if is_optimized
-                    v = value(get_nested_json_value(opt_cell, k))
-                    perc = round(100*(v-v0)/max(v0, 1e-20), digits = 2)
-                    tab[i, 4] = v
-                    tab[i, 5] = "$perc%"
-                end
-            end
-            # TODO: Do this properly instead of via Jutul's import...
-            Jutul.PrettyTables.pretty_table(tab, header=header, title = t)
+    function print_table(subkeys, t)
+        opt_cell = vc.calibrated_cell_parameters
+        is_optimized = !ismissing(opt_cell)
+        header = ["Name", "Initial value", "Bounds"]
+        if is_optimized
+            push!(header, "Optimized value")
+            push!(header, "Change")
         end
+        tab = Matrix{Any}(undef, length(subkeys), length(header))
+        # widths = zeros(Int, size(tab, 2))
+        # widths[1] = 40
+        for (i, k) in enumerate(subkeys)
+            v0 = pt[k].v0
+            tab[i, 1] = join(k[2:end], ".")
+            tab[i, 2] = v0
+            tab[i, 3] = "$(pt[k].vmin) - $(pt[k].vmax)"
+            if is_optimized
+                v = value(get_nested_json_value(opt_cell, k))
+                perc = round(100*(v-v0)/max(v0, 1e-20), digits = 2)
+                tab[i, 4] = v
+                tab[i, 5] = "$perc%"
+            end
+        end
+        # TODO: Do this properly instead of via Jutul's import...
+        Jutul.PrettyTables.pretty_table(tab, header=header, title = t)
+    end
 
     pt = vc.parameter_targets
     pkeys = keys(pt)
@@ -153,20 +155,55 @@ function setup_calibration_objective(vc::VoltageCalibration)
     # Set up the objective function
     V_fun = get_1d_interpolator(vc.t, vc.v, cap_endpoints = true)
     total_time = vc.t[end]
+
+    # function objective(model, state, dt, step_info, forces)
+    #     t = state[:Control][:Controller].time
+    #     if step_info[:step] == step_info[:Nstep]
+    #         dt = max(dt, total_time - t)
+    #     end
+    #     V_obs = V_fun(t)
+    #     V_sim = state[:Control][:Phi][1]
+    #     return voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
+    # end
+
+    cell_parameters = vc.sim.cell_parameters
+
     function objective(model, state, dt, step_info, forces)
-        t = state[:Control][:Controller].time
-        if step_info[:step] == step_info[:Nstep]
-            dt = max(dt, total_time - t)
-        end
-        V_obs = V_fun(t)
-        V_sim = state[:Control][:Phi][1]
-        return voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
+
+        E = state[:Control][:Phi]
+        I = state[:Control][:Current]
+
+        return energy_density(E, I, dt, cell_parameters)
+
     end
+
     return objective
 end
 
+
 function voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
     return dt * (V_obs - V_sim)^2/total_time
+end
+
+function energy_density(E, I, dt, cell_parameters)
+
+    # Emid = (E[2:end] + E[1:end-1]) ./ 2
+    # Imid = (I[2:end] + I[1:end-1]) ./ 2
+    # println("Emid: $(Emid)")
+    # println("Imid: $(Imid)")
+    # energy = sum(Emid .* Imid .* dt)
+
+    println("E: $(E)")
+    # println("I: $(I)")
+    # println("dt: $(dt)")
+    energy = E[1] .* I[1] .* dt
+
+    volume = compute_cell_volume(cell_parameters)
+
+    energy_density = energy / volume
+
+    return energy_density
+
 end
 
 function evaluate_calibration_objective(vc::VoltageCalibration, objective, case, states, dt)
@@ -175,19 +212,25 @@ function evaluate_calibration_objective(vc::VoltageCalibration, objective, case,
 end
 
 function solve(vc::AbstractCalibration;
-        grad_tol = 1e-6,
-        obj_change_tol = 1e-6,
-        opt_fun = missing,
-        backend_arg = (
-            use_sparsity = false,
-            di_sparse = true,
-            single_step_sparsity = false,
-            do_prep = true,
-        ),
-        kwarg...
-    )
+               grad_tol = 1e-6,
+               obj_change_tol = 1e-6,
+               opt_fun = missing,
+               backend_arg = (
+                   use_sparsity = false,
+                   di_sparse = true,
+                   single_step_sparsity = false,
+                   do_prep = true,
+               ),
+               kwarg...
+                   )
     sim = deepcopy(vc.sim)
     x0, x_setup = vectorize_cell_parameters_for_calibration(vc, sim)
+
+    #return x0, x_setup
+
+    #println("Initial parameters: $(x0)")
+    #println("x_setup: $(x_setup)")
+
     # Set up the objective function
     objective = setup_calibration_objective(vc)
 
@@ -205,19 +248,42 @@ function solve(vc::AbstractCalibration;
 
     setup_battmo_case(X, step_info = missing) = setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
     solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
-        adj_cache = adj_cache,
-        backend_arg
-    )
+                                                                         adj_cache = adj_cache,
+                                                                         backend_arg
+                                                                         )
     jutul_message("Calibration", "Starting calibration of $(length(x0)) parameters.", color = :green)
+
+    (f, g) = solve_and_differentiate(x0)
+
+    function scale_sensitivity!(f, x, g)
+        # Scale the sensitivity to the initial value
+        gsc = similar(g)
+        for i in eachindex(x)
+            gsc[i] = g[i] * x[i] / f
+        end
+        return gsc
+    end
+
+    println("Initial parameters: $(x0)")
+    println("Initial objective value: $f")
+    println("Initial gradient: $g")
+    println("Initial scaled sensitivity: $(scale_sensitivity!(f, x0, g))")
+
+    gsc = scale_sensitivity!(f, x0, g)
+    # for (i, k) in enumerate(x_setup.names)
+    #     println(k, gsc[i])
+    # end
+
+    return x_setup.names, x0, gsc, g, f
 
     t_opt = @elapsed if ismissing(opt_fun)
         v, x, history = Jutul.LBFGS.box_bfgs(x0, solve_and_differentiate, lb, ub;
-            maximize = false,
-            print = 1,
-            grad_tol = grad_tol,
-            obj_change_tol = obj_change_tol,
-            kwarg...
-        )
+                                             maximize = false,
+                                             print = 1,
+                                             grad_tol = grad_tol,
+                                             obj_change_tol = obj_change_tol,
+                                             kwarg...
+                                                 )
     else
         self_cache = Dict()
         function f!(x)
@@ -238,6 +304,13 @@ function solve(vc::AbstractCalibration;
         x, history = opt_fun(f!, g!, x0, lb, ub)
     end
     jutul_message("Calibration", "Calibration finished in $t_opt seconds.", color = :green)
+
+    (fopt, gopt) = solve_and_differentiate(x)
+    println("Optimized parameters: $(x)")
+    println("Final objective value: $fopt")
+    println("Final gradient: $gopt")
+    println("Final scaled sensitivity: $(scale_sensitivity!(fopt, x, gopt))")
+
     # Also remove AD from the internal ones and update them
     Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, x, x_setup)
     cell_prm_out = deepcopy(sim.cell_parameters)
@@ -247,10 +320,10 @@ function solve(vc::AbstractCalibration;
 end
 
 function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
-        adj_cache = Dict(),
-        backend_arg = NamedTuple(),
-        gradient = true
-    )
+                                                 adj_cache = Dict(),
+                                                 backend_arg = NamedTuple(),
+                                                 gradient = true
+                                                 )
     case = setup_battmo_case(x)
     states, dt = simulate_battmo_case_for_calibration(case)
     # Evaluate the objective function
@@ -291,9 +364,9 @@ function vectorize_cell_parameters_for_calibration(vc, sim)
     end
     # Set up the functions to serialize
     x0, x_setup = Jutul.AdjointsDI.vectorize_nested(sim.cell_parameters.all,
-        active = pkeys,
-        active_type = Real
-    )
+                                                    active = pkeys,
+                                                    active_type = Real
+                                                    )
     return (x0, x_setup)
 end
 
@@ -318,32 +391,32 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing;
 end
 
 function simulate_battmo_case_for_calibration(case;
-        simulator = missing,
-        config = missing
-    )
+                                              simulator = missing,
+                                              config = missing
+                                              )
     if ismissing(simulator)
         simulator = Simulator(case)
     end
     if ismissing(config)
         config = setup_config(simulator,
-            case.model,
-            case.parameters,
-            :direct,
-            false,
-            true,
-            info_level = -1
-        )
+                              case.model,
+                              case.parameters,
+                              :direct,
+                              false,
+                              true,
+                              info_level = -1
+                              )
     end
     result = Jutul.simulate!(simulator,
-        case.dt,
-        state0 = case.state0,
-        parameters = case.parameters,
-        forces = case.forces,
-        config = config,
-    )
+                             case.dt,
+                             state0 = case.state0,
+                             parameters = case.parameters,
+                             forces = case.forces,
+                             config = config,
+                             )
     # last_solves = result.reports[end][:ministeps][end]
     # if !result.reports[end][:ministeps][end][:success]
-        # TODO: handle case where the solver fails.
+    # TODO: handle case where the solver fails.
     #    g = fill(1e20, length(x))
     #    return (1e20, g)
     #end
