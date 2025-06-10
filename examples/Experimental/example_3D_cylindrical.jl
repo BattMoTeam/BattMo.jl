@@ -36,16 +36,18 @@ nothing #hide
 # will collect one third of the current
 
 cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabFractions"] = [0.5/3, 0.5, 0.5 + 0.5/3] 
+cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabFractions"] = [0.5/3, 0.5, 0.5 + 0.5/3]
 nothing #hide
 
 # We set the tab width to 2 mm
 
 cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"] = 0.002
+cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"] = 0.002
 nothing #hide
 
 # The angular discretization of the cell is determined by the number of angular grid points.
 
-simulation_settings["GridResolution"]["Angular"]                         = 30
+simulation_settings["GridResolution"]["Angular"] = 30
 nothing #hide
 
 # ## Create the simulation object
@@ -106,3 +108,20 @@ ax.azimuth[] = 4.0
 ax.elevation[] = 1.56
 
 fig #hide
+
+cell_parameters     = load_cell_parameters(; from_default_set = "Chen2020")
+cycling_protocol    = load_cycling_protocol(; from_default_set = "CCDischarge")
+model_settings      = load_model_settings(; from_default_set = "P4D_cylindrical")
+simulation_settings = load_simulation_settings(; from_default_set = "P4D_cylindrical")
+
+cell_parameters["Cell"]["OuterRadius"] = 0.004 
+cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabFractions"] = [0.5] 
+cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabFractions"] = [0.5] 
+cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
+cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
+simulation_settings["GridResolution"]["Angular"] = 8
+
+sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
+output = solve(sim; info_level = 2)
+
+plot_interactive_3d(output; colormap = :curl)
