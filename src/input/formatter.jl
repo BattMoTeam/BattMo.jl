@@ -423,6 +423,14 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		),
 	)
 
-	return InputParams(battmo_input)
+	battmo_input = InputParams(battmo_input)
+
+    if battmo_input["Geometry"]["case"] == "jellyRoll"
+
+        set_input_params!(battmo_input, ["NonLinearSolver", "LinearSolver", "method"], "iterative")
+        
+    end
+
+    return battmo_input
 
 end
