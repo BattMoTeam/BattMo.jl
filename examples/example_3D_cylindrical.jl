@@ -109,10 +109,16 @@ ax.elevation[] = 1.56
 
 fig #hide
 
+# ## Simulation
+
+# We reload the original parameters
+
 cell_parameters     = load_cell_parameters(; from_default_set = "Chen2020")
 cycling_protocol    = load_cycling_protocol(; from_default_set = "CCDischarge")
 model_settings      = load_model_settings(; from_default_set = "P4D_cylindrical")
 simulation_settings = load_simulation_settings(; from_default_set = "P4D_cylindrical")
+
+# We adjust the parameters so that the simulation in this example is not too long (around a couple of minutes)
 
 cell_parameters["Cell"]["OuterRadius"] = 0.004 
 cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabFractions"] = [0.5] 
@@ -121,7 +127,11 @@ cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
 cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
 simulation_settings["GridResolution"]["Angular"] = 8
 
+# We setup the simulation and run it
+
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
 output = solve(sim; info_level = 2)
+
+# We open the interactive visualization tool with the simulation output.
 
 plot_interactive_3d(output; colormap = :curl)
