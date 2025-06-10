@@ -884,7 +884,7 @@ function setup_component(grid::FiniteVolumeMesh,
 		bcDirFace = dirichletBoundary["boundaryfaces"] # in BoundaryFaces indexing
 		bcDirCell = dirichletBoundary["cells"]
 
-		bcDirInd                                          = Vector{Int64}(1:nb)
+		bcDirInd = Vector{Int64}(1:nb)
 		domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = domain[:bcTrans][bcDirFace]
 		domain[:bcDirCells, BoundaryDirichletFaces()]     = bcDirCell
 		domain[:bcDirInds, BoundaryDirichletFaces()]      = bcDirInd

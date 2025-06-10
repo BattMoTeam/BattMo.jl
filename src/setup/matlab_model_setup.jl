@@ -722,8 +722,7 @@ function setup_initial_state(inputparams::MatlabInputParams,
 
 end
 
-function exported_model_to_domain(exported; bcfaces = nothing,
-	general_ad = true)
+function exported_model_to_domain(exported; bcfaces = nothing, general_ad = true)
 
 	""" Returns domain"""
 
@@ -769,20 +768,27 @@ function exported_model_to_domain(exported; bcfaces = nothing,
 	S = []
 	T = exported["G"]["operators"]["T"] .* 1.0
 	G = MinimalECTPFAGrid(volumes, N, vec(T);
-		bc_cells = bc_cells,
-		bc_hfT   = bc_hfT,
-		P        = P,
-		S        = S,
-		vf       = vf)
-
+		                  bc_cells = bc_cells,
+		                  bc_hfT   = bc_hfT,
+		                  P        = P,
+		                  S        = S,
+		                  vf       = vf)
+    
 	nc = length(volumes)
 	if general_ad
 		flow = PotentialFlow(G)
 	else
 		flow = TwoPointPotentialFlowHardCoded(G)
 	end
+    
 	disc = (flow = flow,)
-	domain = DiscretizedDomain(G, disc)
+
+    domain = DataDomain(G)
+    
+	domain[:trans, Faces()]           = T
+	domain[:halfTrans, HalfFaces()]   = T_hf
+    
+	domain = DiscretizedDomain(domain, disc)
 
 	return domain
 
