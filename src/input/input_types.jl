@@ -258,9 +258,11 @@ Represents a validated and backend-formatted set of input parameters for a BattM
 """
 struct InputParams <: BattMoFormattedInput
 	all::Dict{String, Any}
-
 end
 
+function InputParams()
+    return InputParams(Dict{String, Any}())
+end
 
 """
 	struct MatlabInputParams <: BattMoFormattedInput
