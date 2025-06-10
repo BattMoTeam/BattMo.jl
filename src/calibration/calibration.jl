@@ -17,8 +17,6 @@ mutable struct VoltageCalibration <:AbstractCalibration
     calibrated_cell_parameters
     "History of the optimization process, containing information about the optimization steps."
     history
-    # "Goal function as string (least-squares or energy-density)."
-    # goal_function
     """
         VoltageCalibration(t, v, sim)
 
@@ -156,26 +154,26 @@ function setup_calibration_objective(vc::VoltageCalibration)
     V_fun = get_1d_interpolator(vc.t, vc.v, cap_endpoints = true)
     total_time = vc.t[end]
 
-    function objective(model, state, dt, step_info, forces)
-        t = state[:Control][:Controller].time
-        if step_info[:step] == step_info[:Nstep]
-            dt = max(dt, total_time - t)
-        end
-        V_obs = V_fun(t)
-        V_sim = state[:Control][:Phi][1]
-        return voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
-    end
-
-    # cell_parameters = vc.sim.cell_parameters
-
     # function objective(model, state, dt, step_info, forces)
-
-    #     E = state[:Control][:Phi]
-    #     I = state[:Control][:Current]
-
-    #     return energy_density(E, I, dt, cell_parameters)
-
+    #     t = state[:Control][:Controller].time
+    #     if step_info[:step] == step_info[:Nstep]
+    #         dt = max(dt, total_time - t)
+    #     end
+    #     V_obs = V_fun(t)
+    #     V_sim = state[:Control][:Phi][1]
+    #     return voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
     # end
+
+    cell_parameters = vc.sim.cell_parameters
+
+    function objective(model, state, dt, step_info, forces)
+
+        E = state[:Control][:Phi]
+        I = state[:Control][:Current]
+
+        return energy_density(E, I, dt, cell_parameters)
+
+    end
 
     return objective
 end
@@ -187,17 +185,7 @@ end
 
 function energy_density(E, I, dt, cell_parameters)
 
-    # Emid = (E[2:end] + E[1:end-1]) ./ 2
-    # Imid = (I[2:end] + I[1:end-1]) ./ 2
-    # println("Emid: $(Emid)")
-    # println("Imid: $(Imid)")
-    # energy = sum(Emid .* Imid .* dt)
-
-    # println("E: $(E)")
-    # println("I: $(I)")
-    # println("dt: $(dt)")
     energy = E[1] * I[1] * dt
-    # energy = only(E) * only(I) * dt  # Assuming E and I are constant over the time step
 
     #volume = compute_cell_volume(cell_parameters)
 

@@ -4,14 +4,11 @@ using DataFrames
 using GLMakie
 using MAT
 
-datacase = "Xu"
-# datacase = "MJ1"
+# datacase = "Xu"
+datacase = "MJ1"
 
 ratecase = "low"
 # ratecase = "high"
-
-goalfunction = "least-squares"
-goalfunction = "energy-density"
 
 function get_tV(x)
     t = [state[:Control][:Controller].time for state in x[:states]]
@@ -66,7 +63,8 @@ elseif datacase == "MJ1"
     end
 
     df = DataFrame(time=vec(matdata["time"][idx]), E=vec(matdata["voltage"][idx]), I=vec(matdata["current"][idx]), CRate=matdata["CRate"][idx])
-    rate = df.CRate[1] / 4
+
+    rate = df.CRate[1] / 10
 
 elseif datacase == "Chen"
 
@@ -84,7 +82,7 @@ x_refinement = 1 #10
 
 simulation_settings["TimeStepDuration"] /= t_refinement
 
-simulation_settings["TimeStepDuration"] *= 40
+simulation_settings["TimeStepDuration"] *= 160
 
 gr = "GridResolution"
 simulation_settings[gr]["NegativeElectrodeActiveMaterial"] *= x_refinement
@@ -93,13 +91,7 @@ simulation_settings[gr]["PositiveElectrodeActiveMaterial"] *= x_refinement
 simulation_settings[gr]["PositiveElectrodeCoating"] *= x_refinement
 simulation_settings[gr]["Separator"] *= x_refinement
 
-if datacase == "MJ1"
-    cycling_protocol["LowerVoltageLimit"] = 2.5
-elseif datacase == "Xu"
-    cycling_protocol["LowerVoltageLimit"] = 2.25
-else
-    error("Unknown data case: $datacase")
-end
+cycling_protocol["LowerVoltageLimit"] = 2.25
 model_setup = LithiumIonBattery()
 
 cycling_protocol["DRate"] = rate
@@ -110,23 +102,16 @@ output0 = solve(sim, accept_invalid=true)
 
 t0, V0 = get_tV(output0)
 t_exp, V_exp = get_tV(df)
+# t_exp_1, V_exp_1 = get_tV(df_1)
 
-fig = Figure()
-ax = Axis(fig[1, 1], title = "CRate = 0.5", xlabel = "Time / s", ylabel = "Voltage / V")
-lines!(ax, t0/3600, V0, label = "Base case")
-lines!(ax, t_exp, V_exp, label = "Experimental data")
-axislegend(position = :lb)
-fig
+# fig = Figure()
+# ax = Axis(fig[1, 1], title = "CRate = 0.5", xlabel = "Time / s", ylabel = "Voltage / V")
+# lines!(ax, t0, V0, label = "Base case")
+# lines!(ax, t_exp_05, V_exp_05, label = "Experimental data")
+# axislegend(position = :lb)
+# fig
 
-voltage_calibration = VoltageCalibration(t_exp, V_exp, sim)
-
-if goalfunction == "least-squares"
-    nothing
-elseif goalfunction == "energy-density"
-    nothing
-else
-    error("Unknown goal function: $goalfunction")
-end
+vc05 = VoltageCalibration(t_exp, V_exp, sim)
 
 # Loop over all cell parameters and add them as a free_calibration_parameter
 function flatten_dict(d::Dict, prefix=[])
@@ -173,12 +158,12 @@ end
 
 for k in sort(collect(keys(params)))
     #println(k, " ", params[k], " ", bounds[k][1], " ", bounds[k][2])
-    free_calibration_parameter!(voltage_calibration, k; lower_bound = bounds[k][1], upper_bound = bounds[k][2])
+    free_calibration_parameter!(vc05, k; lower_bound = bounds[k][1], upper_bound = bounds[k][2])
 end
 
-# print_calibration_overview(voltage_calibration)
+# print_calibration_overview(vc05)
 
-names0, x00, gsc0, g0, f0 = solve(voltage_calibration)
+names0, x00, gsc0, g0, f0 = solve(vc05)
 
 function print_sorted(names0, x0, str; N=30)
 
