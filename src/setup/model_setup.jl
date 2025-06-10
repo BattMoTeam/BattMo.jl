@@ -380,10 +380,10 @@ function get_simulation_input(inputparams::BattMoFormattedInput;
 
 	cfg = setup_config(simulator,
 		               model,
-		               parameters,
+		               parameters;
                        inputparams,
 		               extra_timing,
-		               use_model_scaling;
+		               use_model_scaling,
 		               config_kwargs...)
 
 
@@ -1628,9 +1628,11 @@ end
 
 """
 	setup_config(sim::JutulSimulator,
-					  model::MultiModel        ,
-					  linear_solver::Symbol    ,
-					  extra_timing::Bool;
+					  model::MultiModel,
+                      parameters;
+                      inputparams::BattMoFormattedInput,
+					  extra_timing::Bool,
+                      use_model_scaling,
 					  kwargs...)
 
 Sets up the config object used during simulation. In this current version this
@@ -1639,10 +1641,10 @@ probably be given as inputs in future versions of BattMo.jl
 """
 function setup_config(sim::JutulSimulator,
 	                  model::MultiModel,
-	                  parameters,
-                      inputparams::BattMoFormattedInput,
-	                  extra_timing::Bool,
-	                  use_model_scaling::Bool;
+	                  parameters;
+                      inputparams::BattMoFormattedInput = InputParams(),
+	                  extra_timing::Bool = false,
+	                  use_model_scaling::Bool = true,
 	                  kwargs...)
 
 	cfg = simulator_config(sim; kwargs...)

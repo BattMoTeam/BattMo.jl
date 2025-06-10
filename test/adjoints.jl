@@ -51,7 +51,6 @@ function test_adjoints()
     free_calibration_parameter!(vc,
         ["Electrolyte","Concentration"];
         lower_bound = 500.0, upper_bound = 2000.0)
-
     free_calibration_parameter!(vc,
         ["NegativeElectrode","ActiveMaterial", "ReactionRateConstant"];
         lower_bound = 1e-16, upper_bound = 1e-10)

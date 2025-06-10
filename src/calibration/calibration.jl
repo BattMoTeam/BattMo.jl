@@ -320,19 +320,18 @@ end
 function simulate_battmo_case_for_calibration(case;
         simulator = missing,
         config = missing
-    )
+                                              )
+    
     if ismissing(simulator)
         simulator = Simulator(case)
     end
+    
     if ismissing(config)
         config = setup_config(simulator,
-            case.model,
-            case.parameters,
-            :direct,
-            false,
-            true,
-            info_level = -1
-        )
+                              case.model,
+                              case.parameters;
+                              info_level = -1
+                              )
     end
     result = Jutul.simulate!(simulator,
         case.dt,
