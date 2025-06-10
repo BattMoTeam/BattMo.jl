@@ -45,24 +45,24 @@
             "ReactionRateConstant": 3.626e-11,
             "MassFraction": 1.0,
             "StoichiometricCoefficientAtSOC100": 0.14778,
-            "ActivationEnergyOfReaction": 4000,
-            "ActivationEnergyOfDiffusion": 20000,
+            "ActivationEnergyOfReaction": 4000.0,
+            "ActivationEnergyOfDiffusion": 20000.0,
             "OpenCircuitPotential": {
                 "FunctionName": "open_circuit_potential_lfp_Xu_2015",
                 "FilePath": "function_parameters_Xu2015.jl"
             },
-            "MaximumConcentration": 26390,
-            "VolumetricSurfaceArea": 1878261,
+            "MaximumConcentration": 26390.0,
+            "VolumetricSurfaceArea": 1878261.0,
             "DiffusionCoefficient": 1.25e-15,
             "ParticleRadius": 1.15e-6,
-            "Density": 1500,
+            "Density": 3600.0,
             "ElectronicConductivity": 0.01,
             "ChargeTransferCoefficient": 0.5
         },
         "ElectrodeCoating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 1080,
-            "Thickness": 92e-6
+            "EffectiveDensity": 2592.0,
+            "Thickness": 92.0e-6
         },
         "ConductiveAdditive": {
             "Description": "Unknown",
@@ -78,17 +78,17 @@
         },
         "CurrentCollector": {
             "Description": "Aluminum",
-            "Thickness": 16e-06,
-            "Density": 2700,
+            "Thickness": 16.0e-06,
+            "Density": 2700.0,
             "ElectronicConductivity": 3.83e7,
-            "TabWidth": 15e-3,
-            "TabLength": 10e-3
+            "TabWidth": 15.0e-3,
+            "TabLength": 10.0e-3
         }
     },
     "Separator": {
-        "Density": 779,
+        "Density": 779.0,
         "BruggemanCoefficient": 1.5,
-        "Thickness": 20e-6,
+        "Thickness": 20.0e-6,
         "Porosity": 0.4
     },
     "NegativeElectrode": {
@@ -99,24 +99,24 @@
             "ReactionRateConstant": 1.764e-11,
             "MassFraction": 1.0,
             "StoichiometricCoefficientAtSOC100": 0.51873811,
-            "ActivationEnergyOfReaction": 4000,
-            "ActivationEnergyOfDiffusion": 4000,
+            "ActivationEnergyOfReaction": 4000.0,
+            "ActivationEnergyOfDiffusion": 4000.0,
             "OpenCircuitPotential": {
                 "FunctionName": "open_circuit_potential_graphite_Xu_2015",
                 "FilePath": "function_parameters_Xu2015.jl"
             },
-            "MaximumConcentration": 31540,
-            "VolumetricSurfaceArea": 142373,
+            "MaximumConcentration": 31540.0,
+            "VolumetricSurfaceArea": 142373.0,
             "DiffusionCoefficient": 3.9e-14,
             "ParticleRadius": 14.75e-6,
-            "Density": 2660,
-            "ElectronicConductivity": 2,
+            "Density": 2660.0,
+            "ElectronicConductivity": 2.0,
             "ChargeTransferCoefficient": 0.5
         },
         "ElectrodeCoating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 1862,
-            "Thickness": 59e-6
+            "EffectiveDensity": 1862.0,
+            "Thickness": 59.0e-6
         },
         "ConductiveAdditive": {
             "Description": "Unknown",
@@ -132,11 +132,11 @@
         },
         "CurrentCollector": {
             "Description": "Copper",
-            "Thickness": 9e-06,
-            "Density": 8900,
+            "Thickness": 9.0e-06,
+            "Density": 8900.0,
             "ElectronicConductivity": 6.33e7,
-            "TabWidth": 15e-3,
-            "TabLength": 10e-3
+            "TabWidth": 15.0e-3,
+            "TabLength": 10.0e-3
         }
     }
 }
