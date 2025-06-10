@@ -5,7 +5,7 @@ using GLMakie
 using MAT
 
 datacase = "Xu"
-datacase = "MJ1"
+# datacase = "MJ1"
 
 ratecase = "low"
 # ratecase = "high"
@@ -84,7 +84,7 @@ x_refinement = 1 #10
 
 simulation_settings["TimeStepDuration"] /= t_refinement
 
-simulation_settings["TimeStepDuration"] *= 20
+simulation_settings["TimeStepDuration"] *= 40
 
 gr = "GridResolution"
 simulation_settings[gr]["NegativeElectrodeActiveMaterial"] *= x_refinement
@@ -93,7 +93,13 @@ simulation_settings[gr]["PositiveElectrodeActiveMaterial"] *= x_refinement
 simulation_settings[gr]["PositiveElectrodeCoating"] *= x_refinement
 simulation_settings[gr]["Separator"] *= x_refinement
 
-cycling_protocol["LowerVoltageLimit"] = 2.5 #2.25
+if datacase == "MJ1"
+    cycling_protocol["LowerVoltageLimit"] = 2.5
+elseif datacase == "Xu"
+    cycling_protocol["LowerVoltageLimit"] = 2.25
+else
+    error("Unknown data case: $datacase")
+end
 model_setup = LithiumIonBattery()
 
 cycling_protocol["DRate"] = rate
