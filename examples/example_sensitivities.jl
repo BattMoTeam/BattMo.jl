@@ -64,7 +64,8 @@ elseif datacase == "MJ1"
 
     df = DataFrame(time=vec(matdata["time"][idx]), E=vec(matdata["voltage"][idx]), I=vec(matdata["current"][idx]), CRate=matdata["CRate"][idx])
 
-    rate = df.CRate[1] / 10
+    rate = df.CRate[1]
+    println("Rate = ", rate)
 
 elseif datacase == "Chen"
 
@@ -80,9 +81,10 @@ simulation_settings = load_simulation_settings(; from_default_set = "P2D")
 t_refinement = 1 #10
 x_refinement = 1 #10
 
+N = 100
+simulation_settings["TimeStepDuration"] = 3600 / rate / N
 simulation_settings["TimeStepDuration"] /= t_refinement
 
-simulation_settings["TimeStepDuration"] *= 160
 
 gr = "GridResolution"
 simulation_settings[gr]["NegativeElectrodeActiveMaterial"] *= x_refinement
