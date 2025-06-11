@@ -131,6 +131,58 @@ simulation_settings["GridResolution"]["Angular"] = 8
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
 output = solve(sim; info_level = 2)
+nothing #hide
+
+# ## Visualization of the simulation output
+
+# We plot the discharge curve
+
+states = output[:states]
+model  = output[:extra][:model]
+
+t = [state[:Control][:Controller].time for state in states]
+E = [state[:Control][:Phi][1] for state in states]
+I = [state[:Control][:Current][1] for state in states]
+
+f = Figure(size = (1000, 400))
+
+ax = Axis(f[1, 1],
+	title = "Voltage",
+	xlabel = "Time / s",
+	ylabel = "Voltage / V",
+	xlabelsize = 25,
+	ylabelsize = 25,
+	xticklabelsize = 25,
+	yticklabelsize = 25)
+
+scatterlines!(ax,
+	t,
+	E;
+	linewidth = 4,
+	markersize = 10,
+	marker = :cross,
+	markercolor = :black,
+)
+
+ax = Axis(f[1, 2],
+	title = "Current",
+	xlabel = "Time / s",
+	ylabel = "Current / A",
+	xlabelsize = 25,
+	ylabelsize = 25,
+	xticklabelsize = 25,
+	yticklabelsize = 25,
+)
+
+scatterlines!(ax,
+	t,
+	I;
+	linewidth = 4,
+	markersize = 10,
+	marker = :cross,
+	markercolor = :black)
+
+f #hide
 
 # We open the interactive visualization tool with the simulation output.
 
