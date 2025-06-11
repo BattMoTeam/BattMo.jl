@@ -130,7 +130,7 @@ simulation_settings["GridResolution"]["Angular"] = 8
 # We setup the simulation and run it
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
-output = solve(sim; info_level = 2)
+output = solve(sim; info_level = -1)
 nothing #hide
 
 # ## Visualization of the simulation output
