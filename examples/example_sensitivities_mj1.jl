@@ -4,13 +4,9 @@ using DataFrames
 using GLMakie
 using MAT
 
-# datacase = "Xu"
-datacase = "MJ1"
-
 ratecase = "low"
-# ratecase = "high"
+ratecase = "high"
 
-# Use equilibrium parameters for MJ1
 # use_eqc = true
 
 hour = 3600
@@ -29,80 +25,50 @@ function get_tV(x::Tuple{Matrix{Any}, Matrix{Any}})
     return (x[1][1], x[2][1])
 end
 
-if datacase == "Xu"
-    # Load the experimental data and set up a base case
-    battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
-    exdata = joinpath(battmo_base, "examples", "example_data")
-    df_low = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_05C.csv"), DataFrame) # 0.5
-    df_high = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_2C.csv"), DataFrame) # 2
 
-    cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
+mj1file = "mj1-jl.json"
+cell_parameters = load_cell_parameters(; from_file_path=mj1file)
 
-    if ratecase == "low"
-        rate = 0.5;
-        df = df_low
-    elseif ratecase == "high"
-        rate = 2.0
-        df = df_high
-    else
-        error()
-    end
+# if use_eqc
+#     # Equilibrium parameters
+#     using JSON3
+#     eqcfile = "/home/august/Projects/Battery/2025 Battmo - Calibration and optimization-overleaf/scripts/parameters/mj1-low-rate-1d.json"
+#     eqc = JSON3.read(eqcfile)
 
-elseif datacase == "MJ1"
+#     ne = "NegativeElectrode"
+#     pe = "PositiveElectrode"
+#     am = "ActiveMaterial"
+#     eldes = [ne, pe]
 
-    mj1file = "mj1-jl.json"
-    cell_parameters = load_cell_parameters(; from_file_path=mj1file)
+#     for ielde = 1:2
+#         elde = eldes[ielde]
+#         cell_parameters[elde][am]["StoichiometricCoefficientAtSOC0"] = eqc[elde]["Coating"][am]["Interface"]["guestStoichiometry0"]
+#         cell_parameters[elde][am]["StoichiometricCoefficientAtSOC100"] = eqc[elde]["Coating"][am]["Interface"]["guestStoichiometry100"]
+#         cell_parameters[elde][am]["MaximumConcentration"] = eqc[elde]["Coating"][am]["Interface"]["saturationConcentration"]
+#     end
+# end
 
-    # if use_eqc
-    #     # Equilibrium parameters
-    #     using JSON3
-    #     eqcfile = "/home/august/Projects/Battery/2025 Battmo - Calibration and optimization-overleaf/scripts/parameters/mj1-low-rate-1d.json"
-    #     eqc = JSON3.read(eqcfile)
+matfile = "dlroutput.mat"
+matdata = MAT.matread(matfile)
+matdata = matdata["dlroutput"]
 
-    #     ne = "NegativeElectrode"
-    #     pe = "PositiveElectrode"
-    #     am = "ActiveMaterial"
-    #     eldes = [ne, pe]
-
-    #     for ielde = 1:2
-    #         elde = eldes[ielde]
-    #         cell_parameters[elde][am]["StoichiometricCoefficientAtSOC0"] = eqc[elde]["Coating"][am]["Interface"]["guestStoichiometry0"]
-    #         cell_parameters[elde][am]["StoichiometricCoefficientAtSOC100"] = eqc[elde]["Coating"][am]["Interface"]["guestStoichiometry100"]
-    #         cell_parameters[elde][am]["MaximumConcentration"] = eqc[elde]["Coating"][am]["Interface"]["saturationConcentration"]
-    #     end
-    # end
-
-    matfile = "dlroutput.mat"
-    matdata = MAT.matread(matfile)
-    matdata = matdata["dlroutput"]
-
-    if ratecase == "low"
-        # NB order
-        idx = 4
-    elseif ratecase == "high"
-        idx = 3
-    else
-        error()
-    end
-
-    df = DataFrame(time=vec(matdata["time"][idx]), E=vec(matdata["voltage"][idx]), I=vec(matdata["current"][idx]), CRate=matdata["CRate"][idx])
-
-    rate = df.CRate[1]  #/ 4
-    println("Rate = ", rate)
-
-elseif datacase == "Chen"
-
-    # cell_parameters = load_cell_parameters(; from_default_set="Chen2020")
-    error()
-
+if ratecase == "low"
+    # NB order
+    idx = 4
+elseif ratecase == "high"
+    idx = 3
 else
     error()
 end
 
+df = DataFrame(time=vec(matdata["time"][idx]), E=vec(matdata["voltage"][idx]), I=vec(matdata["current"][idx]), CRate=matdata["CRate"][idx])
+
+rate = df.CRate[1]
+println("Rate = ", rate)
+
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
-cycling_protocol["InitialStateOfCharge"] = 1.0
+#cycling_protocol["InitialStateOfCharge"] = 1.0
 cycling_protocol["UpperVoltageLimit"] = 4.5
-# cycling_protocol["LowerVoltageLimit"] = 2.25
 cycling_protocol["DRate"] = rate
 
 simulation_settings = load_simulation_settings(; from_default_set = "P2D")
@@ -158,6 +124,7 @@ julia> {
 #config_kwargs = (; info_level=10, nonlinear_tolerance=1e-2, tol_factor_final_iteration=1e1)#, relaxation=NoRelaxation())#, nonlinear_tolerance = 1e-3, relaxation = SimpleRelaxation())
 config_kwards = (; info_level=10)
 output0 = solve(sim, accept_invalid=true, config_kwargs=config_kwargs)
+println("Initial solve done at rate ", cycling_protocol["DRate"])
 
 # Extract time and voltage
 t0, V0 = get_tV(output0)
@@ -171,10 +138,11 @@ t_exp, V_exp = get_tV(df)
 # fig
 
 
-# Start with the voltage calibration
+# Voltage calibration
 voltage_calibration = VoltageCalibration(t_exp, V_exp, sim)
 
-# Loop over all cell parameters and add them as a free_calibration_parameter
+# Loop over all cell parameters and add them as a
+# free_calibration_parameter
 function flatten_dict(d::Dict, prefix=[])
     flat = Dict{Vector{String}, Any}()
     for (k, v) in d
