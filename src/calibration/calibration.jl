@@ -1,6 +1,7 @@
 export VoltageCalibration
 export free_calibration_parameter!, freeze_calibration_parameter!, set_calibration_parameter!
 export print_calibration_overview
+export sensitivities
 
 abstract type AbstractCalibration end
 
@@ -201,6 +202,51 @@ function evaluate_calibration_objective(vc::VoltageCalibration, objective, case,
     f = Jutul.evaluate_objective(objective, case.model, states, dt, case.forces)
     return f
 end
+
+function sensitivities(vc::AbstractCalibration;
+                       objective=missing,
+                       backend_arg = (
+                           use_sparsity = false,
+                           di_sparse = true,
+                           single_step_sparsity = false,
+                           do_prep = true,
+                       ),
+                       )
+
+    sim = deepcopy(vc.sim)
+    x0, x_setup = vectorize_cell_parameters_for_calibration(vc, sim)
+
+    # Set up the objective function
+    if ismissing(objective)
+        objective = setup_calibration_objective(vc)
+    else
+        error("not implemented")
+    end
+
+    ub = similar(x0)
+    lb = similar(x0)
+    offsets = x_setup.offsets
+    for (i, k) in enumerate(x_setup.names)
+        (; vmin, vmax) = vc.parameter_targets[k]
+        for j in offsets[i]:(offsets[i+1]-1)
+            lb[j] = vmin
+            ub[j] = vmax
+        end
+    end
+    adj_cache = Dict()
+
+    setup_battmo_case(X, step_info = missing) = setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
+    solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
+                                                                         adj_cache = adj_cache,
+                                                                         backend_arg
+                                                                         )
+    jutul_message("Calibration", "Evaluate sensitivities")
+
+    (f, g) = solve_and_differentiate(x0)
+
+    return x_setup.names, x0, g, f
+end
+
 
 function solve(vc::AbstractCalibration;
                grad_tol = 1e-6,
