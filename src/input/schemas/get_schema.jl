@@ -378,8 +378,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 		push!(cell_required, "InnerRadius")
 		push!(cell_required, "OuterRadius")
-        
-		if haskey(model_settings, "UseCurrentCollectors")
+
+		if haskey(model_settings, "CurrentCollectors")
 			push!(ne_required, "CurrentCollector")
 			push!(pe_required, "CurrentCollector")
 
@@ -514,8 +514,8 @@ function get_schema_simulation_settings(model_settings)
 			"GridResolution" => Dict(
 				"type" => "object",
 				"properties" => Dict(
-                    "Height" => create_property(parameter_meta, "GridResolutionHeight"),
-                    "Angular" => create_property(parameter_meta, "GridResolutionAngular"),
+					"Height" => create_property(parameter_meta, "GridResolutionHeight"),
+					"Angular" => create_property(parameter_meta, "GridResolutionAngular"),
 					"ElectrodeWidth" => create_property(parameter_meta, "GridResolutionElectrodeWidth"),
 					"ElectrodeLength" => create_property(parameter_meta, "GridResolutionElectrodeLength"),
 					"PositiveElectrodeCoating" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCoating"),
@@ -545,7 +545,7 @@ function get_schema_simulation_settings(model_settings)
 			"RampUpTime" => Dict("type" => "integer"),
 			"RampUpSteps" => Dict("type" => "integer"),
 		),
-		"required" => ["GridResolution", "TimeStepDuration", "RampUpTime", "RampUpSteps"],
+		"required" => ["GridResolution", "TimeStepDuration"],
 	)
 
 	required = schema["required"]
@@ -569,11 +569,10 @@ function get_schema_simulation_settings(model_settings)
 		push!(required, "RampUpSteps")
 	end
 
-	if model_settings["ModelFramework"] == "3D Cylindrical"
+	if model_settings["ModelFramework"] == "P4D Cylindrical"
 		push!(required_grid_points, "Height")
-		push!(required_grid_points, "Radius")
-		push!(required_grid_points, "HeightRefinement")
-		if haskey(model_settings, "UseCurrentCollectors")
+		push!(required_grid_points, "Angular")
+		if haskey(model_settings, "CurrentCollectors")
 			push!(required_grid_points, "PositiveElectrodeCurrentCollector")
 			push!(required_grid_points, "PositiveElectrodeCurrentCollectorTabWidth")
 			push!(required_grid_points, "NegativeElectrodeCurrentCollector")
@@ -612,6 +611,15 @@ function get_schema_model_settings()
 					"not" => Dict(
 						"required" => ["CurrentCollectors"],
 					),
+				),
+			),
+			Dict(
+				"if" => Dict(
+					"properties" => Dict("ModelFramework" => Dict("const" => "P4D Cylindrical")),
+					"required" => ["ModelFramework"],
+				),
+				"then" => Dict(
+					"required" => ["CurrentCollectors"],
 				),
 			),
 		],

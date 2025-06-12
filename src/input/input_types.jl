@@ -193,7 +193,7 @@ end
 
 "Cell parameter set type that represents the cell parameters"
 struct CellParameters <: ParameterSet
-	all::Dict{String, Any}
+	all::Dict
 	source_path::Union{String, Nothing}
 	function CellParameters(all::Dict; source_path::Union{String, Nothing} = nothing)
 		return new{}(all, source_path)
@@ -203,18 +203,18 @@ end
 
 "Parameter set type that represents the cycling protocol related parameters"
 struct CyclingProtocol <: ParameterSet
-	all::Dict{String, Any}
+	all::Dict
 	source_path::Union{String, Nothing}
-	function CyclingProtocol(all::Dict{String, Any}; source_path::Union{String, Nothing} = nothing)
+	function CyclingProtocol(all::Dict; source_path::Union{String, Nothing} = nothing)
 		return new{}(all, source_path)
 	end
 end
 
 "Parameter set type that represents the model related settings"
 struct ModelSettings <: ParameterSet
-	all::Dict{String, Any}
+	all::Dict
 	source_path::Union{String, Nothing}
-	function ModelSettings(all::Dict{String, Any}; source_path::Union{String, Nothing} = nothing)
+	function ModelSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
 		return new{}(all, source_path)
 	end
 end
@@ -222,7 +222,7 @@ end
 
 "Parameter set type that represents the simulation related settings"
 struct SimulationSettings <: ParameterSet
-	all::Dict{String, Any}
+	all::Dict
 	source_path::Union{String, Nothing}
 	function SimulationSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
 		return new{}(all, source_path)
@@ -231,7 +231,7 @@ end
 
 "Parameter set type that includes all other parameter set types"
 struct FullSimulationInput <: ParameterSet
-	all::Dict{String, Any}
+	all::Dict
 end
 
 
@@ -261,7 +261,7 @@ struct InputParams <: BattMoFormattedInput
 end
 
 function InputParams()
-    return InputParams(Dict{String, Any}())
+	return InputParams(Dict{String, Any}())
 end
 
 """
@@ -323,134 +323,135 @@ end
 
 function merge_input_params(inputparams_list::Vector{T}; warn = false) where {T <: BattMoFormattedInput}
 
-    if length(inputparams_list) == 0
-        return nothing
-    end
+	if length(inputparams_list) == 0
+		return nothing
+	end
 
-    inputparams = inputparams_list[1]
+	inputparams = inputparams_list[1]
 
-    for i in 2:length(inputparams_list)
-        inputparams = merge_input_params(inputparams, inputparams_list[i], warn = warn)
-    end
+	for i in 2:length(inputparams_list)
+		inputparams = merge_input_params(inputparams, inputparams_list[i], warn = warn)
+	end
 
-    return inputparams
-    
+	return inputparams
+
 end
 
 
 """
-    get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}) where {T <: BattMoFormattedInput}
+	get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}) where {T <: BattMoFormattedInput}
 
 Recursively retrieves the value of a field in the input parameters.
 """
 function get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}) where {T <: BattMoFormattedInput}
 
-    fieldname = fieldnamelist[1]
+	fieldname = fieldnamelist[1]
 
-    if length(fieldnamelist) == 1
+	if length(fieldnamelist) == 1
 
-        if isa(inputparams, Union{T, Dict} where {T<:BattMoFormattedInput}) && haskey(inputparams, fieldname)
-            return inputparams[fieldname]
-        else
-            return missing
-        end
+		if isa(inputparams, Union{T, Dict} where {T <: BattMoFormattedInput}) && haskey(inputparams, fieldname)
+			return inputparams[fieldname]
+		else
+			return missing
+		end
 
-    else
+	else
 
-        if isa(inputparams, Union{T, Dict} where {T<:BattMoFormattedInput}) && haskey(inputparams, fieldname) && isa(inputparams[fieldname], Union{T, Dict} where {T<:BattMoFormattedInput})
-            
-            return get_input_params(inputparams[fieldname], fieldnamelist[2:end])
-            
-        else
-            
-            return missing
-            
-        end
+		if isa(inputparams, Union{T, Dict} where {T <: BattMoFormattedInput}) && haskey(inputparams, fieldname) && isa(inputparams[fieldname], Union{T, Dict} where {T <: BattMoFormattedInput})
 
-    end
-    
+			return get_input_params(inputparams[fieldname], fieldnamelist[2:end])
+
+		else
+
+			return missing
+
+		end
+
+	end
+
 end
 
 
 """
-    Set the value of a field in the input parameters.
+	Set the value of a field in the input parameters.
 
 # Arguments
-    - `inputparams ::BattMoFormattedInput` : The input parameters structure.
-    - `fieldnamelist ::Vector{String}` : A vector of field names to set.
-    - `value` : The value to assign to the specified fields.
-    - `handleMismatch = :error` : How to handle mismatches in field types. Options are `:error`, `:warn`, or `:ignore`.
+	- `inputparams ::BattMoFormattedInput` : The input parameters structure.
+	- `fieldnamelist ::Vector{String}` : A vector of field names to set.
+	- `value` : The value to assign to the specified fields.
+	- `handleMismatch = :error` : How to handle mismatches in field types. Options are `:error`, `:warn`, or `:ignore`.
 
 # Returns
-    The updated input parameters structure with the specified fields set to the given value.
-    """
+	The updated input parameters structure with the specified fields set to the given value.
+	"""
 function set_input_params!(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoFormattedInput}
 
-    @assert(handleMismatch in (:error, :warn, :ignore), "handleMismatch must be one of :error, :warn, or :ignore")
-    
-    fieldname = fieldnamelist[1]
-    
-    if length(fieldnamelist) > 1
-        
-        if !haskey(inputparams, fieldname)
+	@assert(handleMismatch in (:error, :warn, :ignore), "handleMismatch must be one of :error, :warn, or :ignore")
 
-            inputparams[fieldname] = Dict{String, Any}()
-            
-        end
+	fieldname = fieldnamelist[1]
 
-        if isa(inputparams[fieldname], Dict)
-            
-            set_input_params!(inputparams[fieldname], fieldnamelist[2 : end], value; handleMismatch)
-            
-        elseif handleMismatch in (:warn, :ignore)
+	if length(fieldnamelist) > 1
 
-            if handleMismatch == :warn
-                println("Warning: Field $fieldname was not a dictionary and we overwrite the value.")
-            end
+		if !haskey(inputparams, fieldname)
 
-            inputparams[fieldname] = Dict{String, Any}()
-            set_input_params!(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch)
-            
-        else handleMismatch == :error
-            
-            error("Mismatch for $fieldname")
-            
-        end
+			inputparams[fieldname] = Dict{String, Any}()
 
-    else
+		end
 
-        # We set the value
-        if haskey(inputparams, fieldname)
-            
-            if inputparams[fieldname] != value
-                    
-                if handleMismatch in (:warn, :ignore)
-                    println("Warning: Field $fieldname was not equal to the value and we overwrite it.")
-                    inputparams[fieldname] = value
-                elseif handleMismatch == :error
-                    error("Mismatch for $fieldname")
-                end
-    
-            end
-            
-        else
+		if isa(inputparams[fieldname], Dict)
 
-            inputparams[fieldname] = value
-            
-        end
+			set_input_params!(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch)
 
-    end
+		elseif handleMismatch in (:warn, :ignore)
+
+			if handleMismatch == :warn
+				println("Warning: Field $fieldname was not a dictionary and we overwrite the value.")
+			end
+
+			inputparams[fieldname] = Dict{String, Any}()
+			set_input_params!(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch)
+
+		else
+			handleMismatch == :error
+
+			error("Mismatch for $fieldname")
+
+		end
+
+	else
+
+		# We set the value
+		if haskey(inputparams, fieldname)
+
+			if inputparams[fieldname] != value
+
+				if handleMismatch in (:warn, :ignore)
+					println("Warning: Field $fieldname was not equal to the value and we overwrite it.")
+					inputparams[fieldname] = value
+				elseif handleMismatch == :error
+					error("Mismatch for $fieldname")
+				end
+
+			end
+
+		else
+
+			inputparams[fieldname] = value
+
+		end
+
+	end
 
 end
 
 function set_default_input_params!(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoFormattedInput}
 
-    current_value = get_input_params(inputparams, fieldnamelist)
+	current_value = get_input_params(inputparams, fieldnamelist)
 
-    if ismissing(current_value)
+	if ismissing(current_value)
 
-        set_input_params!(inputparams, fieldnamelist, value; handleMismatch)
+		set_input_params!(inputparams, fieldnamelist, value; handleMismatch)
 
-    end
+	end
 
 end
