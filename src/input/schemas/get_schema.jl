@@ -108,12 +108,11 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 				"properties" => Dict(
 					"Case" => create_property(parameter_meta, "Case"),
 					"DeviceSurfaceArea" => create_property(parameter_meta, "DeviceSurfaceArea"),
-					"DubbelCoatedElectrodes" => create_property(parameter_meta, "DubbelCoatedElectrodes"),
+					"InnerRadius" => create_property(parameter_meta, "InnerRadius"),
+					"OuterRadius" => create_property(parameter_meta, "OuterRadius"),
 					"NominalVoltage" => create_property(parameter_meta, "NominalVoltage"),
 					"NominalCapacity" => create_property(parameter_meta, "NominalCapacity"),
-					"HeatTransferCoefficient" => create_property(parameter_meta, "HeatTransferCoefficient"),
-					"InnerCellRadius" => create_property(parameter_meta, "InnerCellRadius"),
-					"ElectrodeWidth" => create_property(parameter_meta, "ElectrodeWidth"),
+					"HeatTransferCoefficient" => create_property(parameter_meta, "HeatTransferCoefficient"), "ElectrodeWidth" => create_property(parameter_meta, "ElectrodeWidth"),
 					"ElectrodeLength" => create_property(parameter_meta, "ElectrodeLength"),
 					"ElectrodeGeometricSurfaceArea" => create_property(parameter_meta, "ElectrodeGeometricSurfaceArea"),
 				),
@@ -200,6 +199,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
 							"TabWidth" => create_property(parameter_meta, "TabWidth"),
 							"TabLength" => create_property(parameter_meta, "TabLength"),
+							"TabFractions" => create_property(parameter_meta, "TabFractions"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					)),
@@ -273,6 +273,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
 							"TabWidth" => create_property(parameter_meta, "TabWidth"),
 							"TabLength" => create_property(parameter_meta, "TabLength"),
+							"TabFractions" => create_property(parameter_meta, "TabFractions"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					)),
@@ -375,13 +376,18 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 			),
 		))
 
-		push!(cell_required, "DubbelCoatedElectrodes")
-		push!(cell_required, "InnerCellRadius")
+		push!(cell_required, "InnerRadius")
+		push!(cell_required, "OuterRadius")
+        
+		if haskey(model_settings, "UseCurrentCollectors")
+			push!(ne_required, "CurrentCollector")
+			push!(pe_required, "CurrentCollector")
 
-		push!(ne_coating_required, "Width")
-		push!(ne_coating_required, "Length")
-		push!(pe_coating_required, "Width")
-		push!(pe_coating_required, "Length")
+			push!(ne_cc_required, "TabWidth")
+			push!(pe_cc_required, "TabWidth")
+			push!(ne_cc_required, "TabFractions")
+			push!(pe_cc_required, "TabFractions")
+		end
 
 
 	end
@@ -508,6 +514,8 @@ function get_schema_simulation_settings(model_settings)
 			"GridResolution" => Dict(
 				"type" => "object",
 				"properties" => Dict(
+                    "Height" => create_property(parameter_meta, "GridResolutionHeight"),
+                    "Angular" => create_property(parameter_meta, "GridResolutionAngular"),
 					"ElectrodeWidth" => create_property(parameter_meta, "GridResolutionElectrodeWidth"),
 					"ElectrodeLength" => create_property(parameter_meta, "GridResolutionElectrodeLength"),
 					"PositiveElectrodeCoating" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCoating"),
@@ -559,6 +567,19 @@ function get_schema_simulation_settings(model_settings)
 	if haskey(model_settings, "RampUp") && model_settings["RampUp"] == "Sinusoidal"
 		push!(required, "RampUpTime")
 		push!(required, "RampUpSteps")
+	end
+
+	if model_settings["ModelFramework"] == "3D Cylindrical"
+		push!(required_grid_points, "Height")
+		push!(required_grid_points, "Radius")
+		push!(required_grid_points, "HeightRefinement")
+		if haskey(model_settings, "UseCurrentCollectors")
+			push!(required_grid_points, "PositiveElectrodeCurrentCollector")
+			push!(required_grid_points, "PositiveElectrodeCurrentCollectorTabWidth")
+			push!(required_grid_points, "NegativeElectrodeCurrentCollector")
+			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabWidth")
+		end
+
 	end
 
 	return schema

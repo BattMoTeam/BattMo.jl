@@ -2,7 +2,9 @@ using BattMo, Jutul
 using Test
 
 @testset "3d amg" begin
+    
 	@test begin
+        
 		name = "p2d_40_jl_chen2020"
 
 		fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
@@ -13,7 +15,7 @@ using Test
 
 		inputparams = merge_input_params(inputparams_geometry, inputparams)
 
-		output = setup_simulation(inputparams)
+		output = get_simulation_input(inputparams)
 
 		simulator = output[:simulator]
 		model     = output[:model]
@@ -26,8 +28,8 @@ using Test
 		cfg[:failure_cuts_timestep] = false
 
 		solver  = :fgmres
-		fac     = 1e-4  #NEEDED  
-		rtol    = 1e-4 * fac  # for simple face rtol=1e7 and atol 1e-9 seems give same number ononlinear as direct
+		fac     = 1e-4       # NEEDED  
+		rtol    = 1e-4 * fac # for simple face rtol=1e7 and atol 1e-9 seems give same number ononlinear as direct
 		atol    = 1e-5 * fac # seems important
 		max_it  = 100
 		verbose = 0
@@ -43,16 +45,17 @@ using Test
 
 		prec = BattMo.BatteryGeneralPreconditioner(varpreconds, g_varprecond, params)
 
-		cfg[:linear_solver] = GenericKrylov(solver, verbose = verbose,
-			preconditioner = prec,
-			relative_tolerance = rtol,
-			absolute_tolerance = atol,
-			max_iterations = max_it)
-		#cfg[:linear_solver]  = nothing
-
+		cfg[:linear_solver] = GenericKrylov(solver;
+                                            verbose            = verbose,
+			                                preconditioner     = prec,
+			                                relative_tolerance = rtol,
+			                                absolute_tolerance = atol,
+			                                max_iterations     = max_it)
+		# cfg[:linear_solver]  = nothing
 		# cfg[:extra_timing] = true
 
 		states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+        
 		Cc = map(x -> x[:Control][:Current][1], states)
 		phi = map(x -> x[:Control][:Phi][1], states)
 		@test length(states) == 84

@@ -2,7 +2,7 @@ export CurrentCollector
 
 const CurrentCollectorParameters = JutulStorage
 
-struct CurrentCollector{T, D} <: ElectroChemicalComponent where {T <: CurrentCollectorParameters, D <: AbstractDict}
+struct CurrentCollector{T, D} <: BattMoSystem where {T <: CurrentCollectorParameters, D <: AbstractDict}
 	params::T
 	# At the moment the following keys are include
 	# - density::Real
@@ -55,7 +55,7 @@ end
 function Jutul.select_equations!(eqs,
 	system::CurrentCollector,
 	model::SimulationModel)
-	disc = model.domain.discretizations.charge_flow
+	disc = model.domain.discretizations.flow
 
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 
