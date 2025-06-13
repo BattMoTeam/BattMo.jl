@@ -244,11 +244,21 @@ include("calibration/calibration.jl")
 include("calibration/calibration_utils.jl")
 
 # Precompilation of solver. Run a small battery simulation to precompile everything.
-# @compile_workload begin
-#    for use_general_ad in [false, true]
-#         init = "p2d_40"
-#         run_battery(init; general_ad = use_general_ad,info_level = -1);
-#    end
-# end
+@compile_workload begin
+    function workload_fn()
+        model_settings = load_model_settings(; from_default_set = "P2D")
+        cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
+        cycling_protocol = load_cycling_protocol(; from_default_set = "CCCV")
+        simulation_settings = load_simulation_settings(; from_default_set = "P2D")
+        model_setup = LithiumIonBattery(; model_settings)
+        sim = Simulation(model_setup, cell_parameters, cycling_protocol);
+        output = solve(sim)
+    end
+    try
+        redirect_stdout(workload_fn, devnull)
+    catch e
+        @warn "Precompilation failed with exception" e
+    end
+end
 
 end # module
