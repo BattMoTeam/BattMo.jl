@@ -7,7 +7,7 @@ hero:
   name: BattMo.jl
   text: Fast open-source battery simulation
   image:
-    src: battmologo_stacked.png
+    src: /battmologo_stacked.png
     alt: BattMo
   tagline: 1D, 2D and 3D open-source P2D/PXD Lithium-Ion battery simulation
   actions:
@@ -42,7 +42,7 @@ features:
     link: manuals/user_guide/public_api
 
   - icon:
-      src: battmologo_stacked.png
+      src: /battmologo_stacked.png
       height: 10pt
     title: BattMo Web App
     details: A BattMo web application is available to run the simulation online without any further installation steps.
