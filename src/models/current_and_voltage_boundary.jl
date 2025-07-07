@@ -540,9 +540,6 @@ function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParam
 	policy.ImaxCharge = only(parameters[:Control][:ImaxCharge])
 	policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
 
-	@info "charging = ", policy.ImaxCharge
-	@info "discharging = ", policy.ImaxDischarge
-
 end
 
 
@@ -1066,8 +1063,7 @@ function update_values_in_controller!(state, policy::CCPolicy)
 	end
 
 	target = I_t
-	@info "target = ", target
-	@info "policy.ImaxDischarge = ", policy.ImaxDischarge
+
 	controller.target = target
 
 

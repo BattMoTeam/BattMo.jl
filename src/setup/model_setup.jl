@@ -1078,9 +1078,6 @@ function setup_battery_parameters(inputparams::InputParams,
 		prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
 		prm_control[:ImaxCharge]    = (cap / con.hour) * CRate
 
-		@info "Id = ", prm_control[:ImaxDischarge]
-		@info "Ic = ", prm_control[:ImaxCharge]
-
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
 	else
