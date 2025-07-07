@@ -512,6 +512,7 @@ end
 function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParams, parameters)
 
 	if policy.initialControl == "charging"
+
 		Imax = only(parameters[:Control][:ImaxCharge])
 
 
@@ -531,13 +532,16 @@ function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParam
 		policy.current_function = cFun
 	end
 
-	if policy.initialControl == "charging"
-		policy.ImaxCharge = Imax
+	if haskey(inputparams["Control"], "upperCutoffVoltage")
 		policy.upperCutoffVoltage = inputparams["Control"]["upperCutoffVoltage"]
-	elseif policy.initialControl == "discharging"
-		policy.ImaxDischarge = Imax
+	elseif haskey(inputparams["Control"], "lowerCutoffVoltage")
 		policy.lowerCutoffVoltage = inputparams["Control"]["lowerCutoffVoltage"]
 	end
+	policy.ImaxCharge = only(parameters[:Control][:ImaxCharge])
+	policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
+
+	@info "charging = ", policy.ImaxCharge
+	@info "discharging = ", policy.ImaxDischarge
 
 end
 
@@ -1012,7 +1016,7 @@ function update_values_in_controller!(state, policy::CCPolicy)
 
 	cf = policy.current_function
 
-	if !ismissing(cf)
+	if controller.numberOfCycles == 0 && controller.ctrlType == policy.initialControl && !ismissing(cf)
 
 		if cf isa Real
 			I_t = cf
@@ -1062,7 +1066,8 @@ function update_values_in_controller!(state, policy::CCPolicy)
 	end
 
 	target = I_t
-
+	@info "target = ", target
+	@info "policy.ImaxDischarge = ", policy.ImaxDischarge
 	controller.target = target
 
 
@@ -1119,7 +1124,7 @@ function update_values_in_controller!(state, policy::CyclingCVPolicy)
 
 	if ctrlType == cc_discharge1
 
-		if !ismissing(cf)
+		if controller.numberOfCycles == 0 && controller.ctrlType == policy.initialControl && !ismissing(cf)
 
 			if cf isa Real
 				I_t = cf
@@ -1141,7 +1146,7 @@ function update_values_in_controller!(state, policy::CyclingCVPolicy)
 	elseif ctrlType == cc_charge1
 
 		# minus sign below follows from convention
-		if !ismissing(cf)
+		if controller.numberOfCycles == 0 && controller.ctrlType == policy.initialControl && !ismissing(cf)
 
 			if cf isa Real
 				I_t = cf
@@ -1171,6 +1176,7 @@ function update_values_in_controller!(state, policy::CyclingCVPolicy)
 	else
 		target = I_t
 	end
+
 
 	controller.target_is_voltage = target_is_voltage
 	controller.target            = target
@@ -1352,12 +1358,18 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 		end
 
 		if !ismissing(policy.current_function)
-			target = policy.current_function(time)
+			I = policy.current_function(time)
+			if policy.initialControl == "discharging"
+				target = I
+			elseif policy.initialControl == "charging"
+				target = -I
+
+			end
+
 		else
 			target = Imax
 		end
 		target_is_voltage = false
-
 
 		number_of_cycles = 0
 		target, time = promote(target, time)
