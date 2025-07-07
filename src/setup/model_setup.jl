@@ -308,7 +308,7 @@ function run_battery(inputparams::BattMoFormattedInput;
 	timesteps = output[:timesteps]
 	cfg       = output[:cfg]
 
-    
+
 	if !isnothing(hook)
 		hook(simulator,
 			model,
@@ -346,29 +346,29 @@ end
 function get_simulation_input(problem::Simulation; kwargs...)
 
 	inputparams = convert_parameter_sets_to_battmo_input(problem.model_setup.model_settings,
-                                                         problem.cell_parameters,
-                                                         problem.cycling_protocol,
-                                                         problem.simulation_settings)
+		problem.cell_parameters,
+		problem.cycling_protocol,
+		problem.simulation_settings)
 
-    output = get_simulation_input(inputparams; kwargs...)
+	output = get_simulation_input(inputparams; kwargs...)
 
 end
 
 function get_simulation_input(inputparams::BattMoFormattedInput;
-	                          use_p2d::Bool                     = true,
-	                          use_model_scaling::Bool           = true,
-	                          extra_timing::Bool                = false,
-	                          max_step::Union{Integer, Nothing} = nothing,
-	                          general_ad::Bool                  = true,
-	                          use_groups::Bool                  = false,
-	                          model_kwargs::NamedTuple          = NamedTuple(),
-	                          config_kwargs::NamedTuple         = NamedTuple())
+	use_p2d::Bool                     = true,
+	use_model_scaling::Bool           = true,
+	extra_timing::Bool                = false,
+	max_step::Union{Integer, Nothing} = nothing,
+	general_ad::Bool                  = true,
+	use_groups::Bool                  = false,
+	model_kwargs::NamedTuple          = NamedTuple(),
+	config_kwargs::NamedTuple         = NamedTuple())
 
 	model, parameters, couplings = setup_model(inputparams;
-		                                       use_groups = use_groups,
-		                                       general_ad = general_ad,
-		                                       use_p2d = use_p2d,
-		                                       model_kwargs...)
+		use_groups = use_groups,
+		general_ad = general_ad,
+		use_p2d = use_p2d,
+		model_kwargs...)
 
 	state0 = setup_initial_state(inputparams, model)
 
@@ -379,26 +379,26 @@ function get_simulation_input(inputparams::BattMoFormattedInput;
 	timesteps = setup_timesteps(inputparams; max_step = max_step)
 
 	cfg = setup_config(simulator,
-		               model,
-		               parameters;
-                       inputparams,
-		               extra_timing,
-		               use_model_scaling,
-		               config_kwargs...)
+		model,
+		parameters;
+		inputparams,
+		extra_timing,
+		use_model_scaling,
+		config_kwargs...)
 
 
-    grids = get_grids(model)
-    
+	grids = get_grids(model)
+
 	output = Dict(:simulator   => simulator,
-		          :forces      => forces,
-		          :state0      => state0,
-		          :parameters  => parameters,
-		          :inputparams => inputparams,
-		          :model       => model,
-                  :couplings   => couplings,
-                  :grids       => grids,
-		          :timesteps   => timesteps,
-		          :cfg         => cfg)
+		:forces      => forces,
+		:state0      => state0,
+		:parameters  => parameters,
+		:inputparams => inputparams,
+		:model       => model,
+		:couplings   => couplings,
+		:grids       => grids,
+		:timesteps   => timesteps,
+		:cfg         => cfg)
 
 	return output
 
@@ -432,10 +432,10 @@ function setup_model(inputparams::BattMoFormattedInput;
 	setup_initial_control_policy!(model[:Control].system.policy, inputparams, parameters)
 	#model.context = DefaultContext()
 
-    output = (model = model,
-              parameters = parameters,
-              couplings = couplings)
-    
+	output = (model = model,
+		parameters = parameters,
+		couplings = couplings)
+
 	return output
 
 end
@@ -739,7 +739,7 @@ function setup_submodels(inputparams::InputParams;
 			if !isnothing(DRate)
 				DRate = 0.0
 			end
-			if !isnothing(DRate)
+			if !isnothing(CRate)
 				CRate = 0.0
 			end
 			# Capacity goes into actual realized rates, so check the type for AD/promotion
@@ -827,8 +827,8 @@ function setup_submodels(inputparams::InputParams;
 	setup_volume_fractions!(model, grids, couplings["Electrolyte"])
 
 	output = (model     = model,
-		      couplings = couplings,
-		      grids     = grids)
+		couplings = couplings,
+		grids     = grids)
 
 	return output
 
@@ -851,10 +851,10 @@ function setup_grids_and_couplings(inputparams::InputParams)
 
 		grids, couplings = pouch_grid(inputparams)
 
-    elseif case_type == "jellyRoll"
+	elseif case_type == "jellyRoll"
 
-        grids, couplings = jelly_roll_grid(inputparams)
-        
+		grids, couplings = jelly_roll_grid(inputparams)
+
 	else
 		# Add case_type = "jellyRoll"
 		error("geometry case type not recognized")
@@ -882,7 +882,7 @@ function setup_component(grid::FiniteVolumeMesh,
 
 	domain[:trans, Faces()]           = T
 	domain[:halfTrans, HalfFaces()]   = T_hf
-    domain[:halftransfaces, Faces()]  = setupHalfTransFaces(domain)
+	domain[:halftransfaces, Faces()]  = setupHalfTransFaces(domain)
 	domain[:bcTrans, BoundaryFaces()] = T_b
 
 	if !isnothing(dirichletBoundary)
@@ -906,7 +906,7 @@ function setup_component(grid::FiniteVolumeMesh,
 	else
 		flow = TwoPointPotentialFlowHardCoded(grid)
 	end
-    disc = (flow = flow,)
+	disc = (flow = flow,)
 	domain = DiscretizedDomain(domain, disc)
 
 	model = SimulationModel(domain, sys; kwargs...)
@@ -1078,6 +1078,8 @@ function setup_battery_parameters(inputparams::InputParams,
 		prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
 		prm_control[:ImaxCharge]    = (cap / con.hour) * CRate
 
+		@info "Id = ", prm_control[:ImaxDischarge]
+		@info "Ic = ", prm_control[:ImaxCharge]
 
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
@@ -1641,10 +1643,10 @@ end
 """
 	setup_config(sim::JutulSimulator,
 					  model::MultiModel,
-                      parameters;
-                      inputparams::BattMoFormattedInput,
+					  parameters;
+					  inputparams::BattMoFormattedInput,
 					  extra_timing::Bool,
-                      use_model_scaling,
+					  use_model_scaling,
 					  kwargs...)
 
 Sets up the config object used during simulation. In this current version this
@@ -1652,18 +1654,18 @@ setup is the same for json and mat files. The specific setup values should
 probably be given as inputs in future versions of BattMo.jl
 """
 function setup_config(sim::JutulSimulator,
-	                  model::MultiModel,
-	                  parameters;
-                      inputparams::BattMoFormattedInput = InputParams(),
-	                  extra_timing::Bool = false,
-	                  use_model_scaling::Bool = true,
-	                  kwargs...)
+	model::MultiModel,
+	parameters;
+	inputparams::BattMoFormattedInput = InputParams(),
+	extra_timing::Bool = false,
+	use_model_scaling::Bool = true,
+	kwargs...)
 
 	cfg = simulator_config(sim; kwargs...)
 
-    set_default_input_params!(inputparams, ["NonLinearSolver", "maxTimestepCuts"], 10)
-    set_default_input_params!(inputparams, ["NonLinearSolver", "maxIterations"], 20)
-    set_default_input_params!(inputparams, ["NonLinearSolver", "LinearSolver"],  Dict())
+	set_default_input_params!(inputparams, ["NonLinearSolver", "maxTimestepCuts"], 10)
+	set_default_input_params!(inputparams, ["NonLinearSolver", "maxIterations"], 20)
+	set_default_input_params!(inputparams, ["NonLinearSolver", "LinearSolver"], Dict())
 
 	cfg[:linear_solver]            = battery_linsolve(inputparams["NonLinearSolver"]["LinearSolver"])
 	cfg[:debug_level]              = 0
