@@ -45,8 +45,6 @@ function BattMo.plot_impl(
 
 		dims = occursin(r"vs", varstr) ? match(r"vs (.+?)(?: at|$)", varstr) |> x -> split(strip(x[1]), r" and ") : []
 
-		@info "varstr = ", varstr
-
 		selectors = Dict{Symbol, Union{Nothing, Int, Symbol}}()
 		for cap in eachmatch(r"(\w+) index (\w+)", varstr)
 			dim = Symbol(cap[1])
@@ -131,58 +129,42 @@ function BattMo.plot_impl(
 		for varstr in var_group
 			try
 				parsed = parse_variable(varstr)
-				@info "parsed = ", parsed
 				clean_var = parsed.base
 				dims = parsed.dims
 				sel = parsed.selectors
 
 				main_unit_str = get_main_unit_str(clean_var)
 
-				@info "main_unit_str = ", main_unit_str
+				# State variables and metrics
+				states_data = get_output_states(output)
+				metric_data = get_output_metrics(output)
+				time_series = get_output_time_series(output)
 
+				data = merge(states_data, metric_data, time_series)
 
-				# Time series simple plot
-				if Symbol(clean_var) in available_time_vars && (isempty(dims) || dims == ["Time"])
-					y = time_series_data[Symbol(clean_var)]
-					if all_nan_warn(varstr, y)
-						continue
-					end
-					lines!(ax, full_time, y, label = varstr)
-					ax.xlabel = "Time / s"
-					ax.ylabel = clean_var * main_unit_str
-					plotted_lines = true
-					plot_type = :line
-					continue
-				end
-
-				# State variable
-
-				data = get_output_states(output; quantities = [String(clean_var), "Position", "NeAmRadius", "PeAmRadius", "Time"])
+				var_data = data[Symbol(clean_var)]
 
 				rad_pe = data[:PeAmRadius] * 1e6
 				rad_ne = data[:NeAmRadius] * 1e6
-
-				var_data = data[Symbol(clean_var)]
 				pos = data[:Position] * 1e6
 				nt = length(full_time)
+				cycles = metric_data[:CycleNumber]
 
-				known_dims = Dict(:Time => full_time, :Position => pos, :NeAmRadius => rad_ne, :PeAmRadius => rad_pe)
-				dim_lengths = Dict(:Time => nt, :Position => length(pos), :NeAmRadius => length(rad_ne), :PeAmRadius => length(rad_pe))
+				known_dims = Dict(pairs(data))#Dict(:Time => full_time, :Position => pos, :NeAmRadius => rad_ne, :PeAmRadius => rad_pe, :CycleNumber)
+				dim_lengths = Dict(:Time => nt, :Position => length(pos), :NeAmRadius => length(rad_ne), :PeAmRadius => length(rad_pe), :CycleNumber => length(cycles))
 				sz = size(var_data)
 
 				# Infer dimension assignments
 				dim_assignments = Dict{Int, Symbol}()
 				for (i, s) in enumerate(sz)
-					@info "s = ", s
-					for (k, v) in dim_lengths
-						if s == v && !(k in values(dim_assignments)) && (k in Symbol.(dims) || haskey(sel, k))
+					for k in keys(data)
+						v = data[k]
+						if s == length(v) && !(k in values(dim_assignments)) && (k in Symbol.(dims) || haskey(sel, k))
 							dim_assignments[i] = k
 							break
 						end
 					end
 				end
-				@info "dim_lengths = ", dim_lengths
-				@info "dim_assignments = ", dim_assignments
 
 				if length(dim_assignments) != ndims(var_data)
 					error("Could not assign all dimensions for variable $clean_var with size $(sz)")
@@ -190,12 +172,6 @@ function BattMo.plot_impl(
 
 				plot_dims_syms = Symbol.(dims)
 				non_plot_dims = setdiff(collect(values(dim_assignments)), plot_dims_syms)
-
-
-
-				@info "plot_dims_syms = ", plot_dims_syms
-				@info "non_plot_dims = ", non_plot_dims
-				@info "ndims(var_data) = ", ndims(var_data)
 
 				# Build slicing tuple
 				slices = Any[]
@@ -206,7 +182,7 @@ function BattMo.plot_impl(
 					elseif haskey(sel, dim_sym)
 						idx = get(sel, dim_sym, nothing)
 						if idx === :end
-							push!(slices, dim_lengths[dim_sym])
+							push!(slices, length(data[dim_sym]))
 						elseif idx isa Int
 							push!(slices, idx)
 						else
@@ -226,7 +202,7 @@ function BattMo.plot_impl(
 				# Build axis values
 				x_sym = plot_dims_syms[1]
 				x_vals = known_dims[x_sym]
-				x_label = string(x_sym) * (x_sym == :Position || x_sym == :NeAmRadius || x_sym == :PeAmRadius ? " / μm" : " / s")
+				x_label = string(x_sym) * "  /  " * meta_data[String(x_sym)]["unit"]
 
 				if length(plot_dims_syms) == 1
 					title_suffix = build_title_suffix(non_plot_dims, sel, known_dims)
@@ -248,7 +224,7 @@ function BattMo.plot_impl(
 
 					y_sym = plot_dims_syms[2]
 					y_vals = known_dims[y_sym]
-					y_label = string(y_sym) * (y_sym == :Position || y_sym == :NeAmRadius || y_sym == :PeAmRadius ? " / μm" : " / s")
+					y_label = string(y_sym) * "  /  " * meta_data[String(x_sym)]["unit"]
 
 					if size(data_slice) == (length(y_vals), length(x_vals))
 						z = data_slice
