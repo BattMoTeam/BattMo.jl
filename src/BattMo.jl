@@ -218,8 +218,10 @@ include("models/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")
 
-include("setup/model_setup.jl")
-include("setup/matlab_model_setup.jl")
+include("simulation/simulation.jl")
+include("simulation/simulation_utils.jl")
+
+include("matlab_interface/matlab_model_setup.jl")
 
 include("plotting/3d.jl")
 include("plotting/1d.jl")
@@ -237,6 +239,10 @@ include("grid/tensor_tools.jl")
 include("grid/remove_cells.jl") #Trenger StatsBase
 include("grid/grid_conversion.jl")
 include("grid/grid_utils.jl")
+include("grid/geometries/1d.jl")
+include("grid/geometries/pouch.jl")
+include("grid/geometries/jelly_roll.jl")
+
 include("solver/solver_as_preconditioner_system.jl")
 include("solver/precondgenneral.jl")
 include("solver/sparse_utils.jl")
@@ -245,20 +251,20 @@ include("calibration/calibration_utils.jl")
 
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 @compile_workload begin
-    function workload_fn()
-        model_settings = load_model_settings(; from_default_set = "P2D")
-        cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
-        cycling_protocol = load_cycling_protocol(; from_default_set = "CCCV")
-        simulation_settings = load_simulation_settings(; from_default_set = "P2D")
-        model_setup = LithiumIonBattery(; model_settings)
-        sim = Simulation(model_setup, cell_parameters, cycling_protocol);
-        output = solve(sim)
-    end
-    try
-        redirect_stdout(workload_fn, devnull)
-    catch e
-        @warn "Precompilation failed with exception" e
-    end
+	function workload_fn()
+		model_settings = load_model_settings(; from_default_set = "P2D")
+		cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
+		cycling_protocol = load_cycling_protocol(; from_default_set = "CCCV")
+		simulation_settings = load_simulation_settings(; from_default_set = "P2D")
+		model_setup = LithiumIonBattery(; model_settings)
+		sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+		output = solve(sim)
+	end
+	try
+		redirect_stdout(workload_fn, devnull)
+	catch e
+		@warn "Precompilation failed with exception" e
+	end
 end
 
 end # module

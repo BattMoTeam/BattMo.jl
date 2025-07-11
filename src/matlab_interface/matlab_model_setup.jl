@@ -533,7 +533,7 @@ end
 
 
 function setup_battery_parameters(inputparams::MatlabInputParams,
-	model::MultiModel
+	model::MultiModel,
 )
 
 	parameters = Dict{Symbol, Any}()
@@ -789,3 +789,12 @@ function exported_model_to_domain(exported; bcfaces = nothing,
 end
 
 
+function convert_to_int_vector(x::Float64)
+	vec = Int64.(Vector{Float64}([x]))
+	return vec
+end
+
+function convert_to_int_vector(x::Matrix{Float64})
+	vec = Int64.(Vector{Float64}(x[:, 1]))
+	return vec
+end

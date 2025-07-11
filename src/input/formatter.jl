@@ -1,4 +1,4 @@
-export convert_parameter_sets_to_battmo_input
+export convert_parameter_sets_to_old_input_format, convert_old_input_format_to_parameter_sets
 
 
 function get_key_value(dict::Union{AbstractInput, Dict, Nothing}, key)
@@ -10,7 +10,367 @@ function get_key_value(dict::Union{AbstractInput, Dict, Nothing}, key)
 	return value
 end
 
-function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings)
+function convert_old_input_format_to_parameter_sets(params::BattMoFormattedInput)
+
+	##################################
+	# ModelSettings
+
+	if params["Geometry"]["case"] == "1D"
+		geom = "P2D"
+
+	elseif params["Geometry"]["case"] == "3D-demo"
+		geom = "P4D Pouch"
+
+	elseif params["Geometry"]["case"] == "jellyRoll"
+		geom = "P4D Cylindrical"
+	else
+		error("ModelFramework not recognized. Please use '1D', '3D-demo' or 'jellyRoll'.")
+	end
+
+
+	model_settings = Dict(
+		"ModelFramework" => geom,
+		"TransportInSolid" => "FullDiffusion",
+	)
+
+	if haskey(params["NegativeElectrode"]["Coating"]["ActiveMaterial"], "SEImodel")
+		model_settings["SEIModel"] = "Bolay"
+	end
+
+	if haskey(params, "include_current_collectors") && params["include_current_collectors"] == true
+		if model_settings["ModelFramework"] != "P2D"
+			model_settings["CurrentCollectors"] = "Generic"
+		end
+	end
+
+	if haskey(params["TimeStepping"], "use_ramp_up") && params["TimeStepping"]["use_ramp_up"] == true
+		model_settings["RampUp"] = "Sinusoidal"
+	end
+
+
+	####################################
+	# SimulationSettings
+
+	simulation_settings = Dict(
+		"GridResolution" => Dict(
+			"PositiveElectrodeCoating" => params["PositiveElectrode"]["Coating"]["N"],
+			"PositiveElectrodeActiveMaterial" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"],
+			"NegativeElectrodeCoating" => params["NegativeElectrode"]["Coating"]["N"],
+			"NegativeElectrodeActiveMaterial" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"],
+			"Separator" => params["Separator"]["N"],
+		),
+		"TimeStepDuration" => params["TimeStepping"]["timeStepDuration"],
+	)
+
+	if haskey(model_settings, "RampUp")
+		simulation_settings["RampUpTime"] = params["Control"]["rampupTime"]
+		simulation_settings["RampUpSteps"] = params["TimeStepping"]["numberOfRampupSteps"]
+	end
+
+	if model_settings["ModelFramework"] == "P4D Cylindrical"
+		simulation_settings["GridResolution"]["Height"] = params["Geometry"]["numberOfDiscretizationCellsVertical"]
+		simulation_settings["GridResolution"]["Angular"] = params["Geometry"]["numberOfDiscretizationCellsAngular"]
+
+		if haskey(model_settings["ModelFramework"], "CurrentCollectors")
+			simulation_settings["GridResolution"]["PositiveElectrodeCurrentCollector"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["GridResolution"]["PositiveElectrodeCurrentCollectorTabWidth"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"]
+			simulation_settings["GridResolution"]["NegativeElectrodeCurrentCollector"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["GridResolution"]["NegativeElectrodeCurrentCollectorTabWidth"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"]
+		end
+	end
+
+	if model_settings["ModelFramework"] == "P4D Pouch"
+		simulation_settings["GridResolution"]["ElectrodeWidth"] = params["Geometry"]["numberOfDiscretizationCellsVertical"]
+		simulation_settings["GridResolution"]["ElectrodeLength"] = params["Geometry"]["numberOfDiscretizationCellsAngular"]
+
+		if haskey(model_settings["ModelFramework"], "CurrentCollectors")
+			simulation_settings["GridResolution"]["PositiveElectrodeCurrentCollector"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["GridResolution"]["PositiveElectrodeCurrentCollectorTabWidth"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"]
+			simulation_settings["GridResolution"]["PositiveElectrodeCurrentCollectorTabLength"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"]
+			simulation_settings["GridResolution"]["NegativeElectrodeCurrentCollector"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["GridResolution"]["NegativeElectrodeCurrentCollectorTabWidth"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"]
+			simulation_settings["GridResolution"]["NegativeElectrodeCurrentCollectorTabLength"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"]
+		end
+	end
+
+	###########################################
+	# CellParameters
+
+	ne_ocp_ = params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"]
+
+	if haskey(ne_ocp_, "function")
+		ne_ocp = ne_ocp_["function"]
+	elseif haskey(ne_ocp_, "functionname")
+		ne_ocp = Dict(
+			"FunctionName" => ne_ocp_["functionname"],
+		)
+	elseif haskey(ne_ocp_, "data_x")
+		ne_ocp = Dict(
+			"x" => ne_ocp_["data_x"],
+			"y" => ne_ocp_["data_y"],
+		)
+	else
+		ne_ocp = ne_ocp_
+
+	end
+
+	pe_ocp_ = params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"]
+
+	if haskey(pe_ocp_, "function")
+		pe_ocp = pe_ocp_["function"]
+	elseif haskey(ne_ocp_, "functionname")
+		pe_ocp = Dict(
+			"FunctionName" => pe_ocp_["functionname"],
+		)
+	elseif haskey(pe_ocp_, "data_x")
+		pe_ocp = Dict(
+			"x" => pe_ocp_["data_x"],
+			"y" => pe_ocp_["data_y"],
+		)
+	else
+		pe_ocp = pe_ocp_
+
+	end
+
+	cond_ = params["Electrolyte"]["ionicConductivity"]
+
+	if haskey(cond_, "function")
+		cond = cond_["function"]
+	elseif haskey(cond_, "functionname")
+		cond = Dict(
+			"FunctionName" => cond_["functionname"],
+		)
+	elseif haskey(cond_, "data_x")
+		cond = Dict(
+			"x" => cond_["data_x"],
+			"y" => cond_["data_y"],
+		)
+	else
+		cond = cond_
+
+	end
+
+	diff_ = params["Electrolyte"]["diffusionCoefficient"]
+
+	if haskey(diff_, "function")
+		diff = diff_["function"]
+	elseif haskey(diff_, "functionname")
+		diff = Dict(
+			"FunctionName" => diff_["functionname"],
+		)
+	elseif haskey(diff_, "data_x")
+		diff = Dict(
+			"x" => diff_["data_x"],
+			"y" => diff_["data_y"],
+		)
+	else
+		diff = diff_
+
+	end
+
+	cell_parameters = Dict(
+		"Cell" => Dict(),
+		"NegativeElectrode" => Dict(
+			"ElectrodeCoating" => Dict(
+				"BruggemanCoefficient" => params["NegativeElectrode"]["Coating"]["bruggemanCoefficient"],
+				"EffectiveDensity" => params["NegativeElectrode"]["Coating"]["effectiveDensity"],
+				"Thickness" => params["NegativeElectrode"]["Coating"]["thickness"],
+			),
+			"ActiveMaterial" => Dict(
+				"MassFraction" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["massFraction"],
+				"Density" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["density"],
+				"VolumetricSurfaceArea" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["volumetricSurfaceArea"],
+				"ElectronicConductivity" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["electronicConductivity"],
+				"DiffusionCoefficient" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["referenceDiffusionCoefficient"],
+				"ActivationEnergyOfDiffusion" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["activationEnergyOfDiffusion"],
+				"ParticleRadius" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["particleRadius"],
+				"MaximumConcentration" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["saturationConcentration"],
+				"StoichiometricCoefficientAtSOC0" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["guestStoichiometry0"],
+				"StoichiometricCoefficientAtSOC100" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["guestStoichiometry100"],
+				"OpenCircuitPotential" => ne_ocp,
+				"NumberOfElectronsTransfered" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["numberOfElectronsTransferred"],
+				"ActivationEnergyOfReaction" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["activationEnergyOfReaction"],
+				"ReactionRateConstant" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["reactionRateConstant"],
+				"ChargeTransferCoefficient" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["chargeTransferCoefficient"],
+			),
+			"ConductiveAdditive" => Dict(
+				"Density" => params["NegativeElectrode"]["Coating"]["ConductingAdditive"]["density"],
+				"MassFraction" => params["NegativeElectrode"]["Coating"]["ConductingAdditive"]["massFraction"],
+				"ElectronicConductivity" => params["NegativeElectrode"]["Coating"]["ConductingAdditive"]["electronicConductivity"],
+			),
+			"Binder" => Dict(
+				"Density" => params["NegativeElectrode"]["Coating"]["Binder"]["density"],
+				"MassFraction" => params["NegativeElectrode"]["Coating"]["Binder"]["massFraction"],
+				"ElectronicConductivity" => params["NegativeElectrode"]["Coating"]["Binder"]["electronicConductivity"],
+			)),
+		"PositiveElectrode" => Dict(
+			"ElectrodeCoating" => Dict(
+				"BruggemanCoefficient" => params["PositiveElectrode"]["Coating"]["bruggemanCoefficient"],
+				"EffectiveDensity" => params["PositiveElectrode"]["Coating"]["effectiveDensity"],
+				"Thickness" => params["PositiveElectrode"]["Coating"]["thickness"],
+			),
+			"ActiveMaterial" => Dict(
+				"MassFraction" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["massFraction"],
+				"Density" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["density"],
+				"VolumetricSurfaceArea" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["volumetricSurfaceArea"],
+				"ElectronicConductivity" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["electronicConductivity"],
+				"DiffusionCoefficient" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["referenceDiffusionCoefficient"],
+				"ActivationEnergyOfDiffusion" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["activationEnergyOfDiffusion"],
+				"ParticleRadius" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["particleRadius"],
+				"MaximumConcentration" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["saturationConcentration"],
+				"StoichiometricCoefficientAtSOC0" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["guestStoichiometry0"],
+				"StoichiometricCoefficientAtSOC100" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["guestStoichiometry100"],
+				"OpenCircuitPotential" => pe_ocp,
+				"NumberOfElectronsTransfered" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["numberOfElectronsTransferred"],
+				"ActivationEnergyOfReaction" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["activationEnergyOfReaction"],
+				"ReactionRateConstant" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["reactionRateConstant"],
+				"ChargeTransferCoefficient" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["chargeTransferCoefficient"],
+			),
+			"ConductiveAdditive" => Dict(
+				"Density" => params["PositiveElectrode"]["Coating"]["ConductingAdditive"]["density"],
+				"MassFraction" => params["PositiveElectrode"]["Coating"]["ConductingAdditive"]["massFraction"],
+				"ElectronicConductivity" => params["PositiveElectrode"]["Coating"]["ConductingAdditive"]["electronicConductivity"],
+			),
+			"Binder" => Dict(
+				"Density" => params["PositiveElectrode"]["Coating"]["Binder"]["density"],
+				"MassFraction" => params["PositiveElectrode"]["Coating"]["Binder"]["massFraction"],
+				"ElectronicConductivity" => params["PositiveElectrode"]["Coating"]["Binder"]["electronicConductivity"],
+			)),
+		"Separator" => Dict(
+			"Porosity" => params["Separator"]["porosity"],
+			"Density" => params["Separator"]["density"],
+			"BruggemanCoefficient" => params["Separator"]["bruggemanCoefficient"],
+			"Thickness" => params["Separator"]["thickness"],
+		),
+		"Electrolyte" => Dict(
+			"Density" => params["Electrolyte"]["density"],
+			"Concentration" => params["Electrolyte"]["initialConcentration"],
+			"ChargeNumber" => params["Electrolyte"]["species"]["chargeNumber"],
+			"TransferenceNumber" => params["Electrolyte"]["species"]["transferenceNumber"],
+			"IonicConductivity" => cond,
+			"DiffusionCoefficient" => diff,
+		),
+	)
+
+	if haskey(model_settings, "SEIModel")
+		inter = Dict(
+			"Interphase" => Dict(
+				"MolarVolume" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["SEImolarVolume"],
+				"IonicConductivity" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["SEIionicConductivity"],
+				"ElectronicDiffusionCoefficient" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["SEIelectronicDiffusionCoefficient"],
+				"StoichiometricCoefficient" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["SEIstoichiometricCoefficient"],
+				"InterstitialConcentration" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["SEIinterstitialConcentration"],
+				"InitialThickness" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["SEIlengthInitial"],
+				"InitialPotentialDrop" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["SEIvoltageDropRef"],
+			))
+
+		cell_parameters["NegativeElectrode"]["Interphase"] = inter["Interphase"]
+	end
+
+	if model_settings["ModelFramework"] == "P2D"
+		cell_parameters["Cell"]["ElectrodeGeometricSurfaceArea"] = params["Geometry"]["faceArea"]
+
+
+	elseif model_settings["ModelFramework"] == "P4D Pouch"
+		cell_parameters["Cell"]["ElectrodeWidth"] = params["Geometry"]["width"]
+		cell_parameters["Cell"]["ElectrodeLength"] = params["Geometry"]["height"]
+
+		if haskey(model_settings["ModelFramework"], "CurrentCollectors")
+			pos_cc = Dict(
+				"CurrentCollector" => Dict(
+					"Thickness" => params["PositiveElectrode"]["CurrentCollector"]["thickness"],
+					"TabWidth" => params["PositiveElectrode"]["CurrentCollector"]["tab"]["width"],
+					"TabLength" => params["PositiveElectrode"]["CurrentCollector"]["tab"]["height"],
+					"Density" => params["PositiveElectrode"]["CurrentCollector"]["density"],
+					"ElectronicConductivity" => params["PositiveElectrode"]["CurrentCollector"]["electronicConductivity"],
+				))
+
+			neg_cc = Dict(
+				"CurrentCollector" => Dict(
+					"Thickness" => params["NegativeElectrode"]["CurrentCollector"]["thickness"],
+					"TabWidth" => params["NegativeElectrode"]["CurrentCollector"]["tab"]["width"],
+					"TabLength" => params["NegativeElectrode"]["CurrentCollector"]["tab"]["height"],
+					"Density" => params["NegativeElectrode"]["CurrentCollector"]["density"],
+					"ElectronicConductivity" => params["NegativeElectrode"]["CurrentCollector"]["electronicConductivity"],
+				),
+			)
+
+			cell_parameters["NegativeElectrode"]["CurrentCollector"] = neg_cc["CurrentCollector"]
+			cell_parameters["PositiveElectrode"]["CurrentCollector"] = pos_cc["CurrentCollector"]
+		end
+
+	elseif model_settings["ModelFramework"] == "P4D Cylindrical"
+		cell_parameters["Cell"]["ElectrodeGeometricSurfaceArea"] = params["Geometry"]["faceArea"]
+		cell_parameters["Cell"]["Height"] = params["Geometry"]["height"]
+		cell_parameters["Cell"]["InnerRadius"] = params["Geometry"]["innerRadius"]
+		cell_parameters["Cell"]["OuterRadius"] = params["Geometry"]["outerRadius"]
+
+
+		if haskey(model_settings["ModelFramework"], "CurrentCollectors")
+			pos_cc = Dict(
+				"CurrentCollector" => Dict(
+					"Thickness" => params["PositiveElectrode"]["CurrentCollector"]["thickness"],
+					"TabWidth" => params["PositiveElectrode"]["CurrentCollector"]["tabparams"]["width"],
+					"TabFractions" => params["PositiveElectrode"]["CurrentCollector"]["tabparams"]["fractions"],
+					"Density" => params["PositiveElectrode"]["CurrentCollector"]["density"],
+					"ElectronicConductivity" => params["PositiveElectrode"]["CurrentCollector"]["electronicConductivity"],
+				))
+
+			neg_cc = Dict(
+				"CurrentCollector" => Dict(
+					"Thickness" => params["NegativeElectrode"]["CurrentCollector"]["thickness"],
+					"TabWidth" => params["NegativeElectrode"]["CurrentCollector"]["tabparams"]["width"],
+					"TabFractions" => params["NegativeElectrode"]["CurrentCollector"]["tabparams"]["fractions"],
+					"Density" => params["NegativeElectrode"]["CurrentCollector"]["density"],
+					"ElectronicConductivity" => params["NegativeElectrode"]["CurrentCollector"]["electronicConductivity"],
+				),
+			)
+
+			cell_parameters["NegativeElectrode"]["CurrentCollector"] = neg_cc["CurrentCollector"]
+			cell_parameters["PositiveElectrode"]["CurrentCollector"] = pos_cc["CurrentCollector"]
+		end
+
+
+	end
+	#########################################
+	# CyclingProtocol
+
+	if params["Control"]["controlPolicy"] == "CCDischarge"
+		protocol = "CC"
+		init_prot = "discharging"
+		n = 0
+	else
+		protocol = params["Control"]["controlPolicy"]
+		init_prot = params["Control"]["initialControl"]
+		n = params["Control"]["numberOfCycles"]
+
+	end
+
+	cycling_protocol = Dict(
+		"Protocol" => protocol,
+		"TotalNumberOfCycles" => n,
+		"InitialStateOfCharge" => params["SOC"],
+		"DRate" => params["Control"]["DRate"],
+		"LowerVoltageLimit" => params["Control"]["lowerCutoffVoltage"],
+		"UpperVoltageLimit" => params["Control"]["upperCutoffVoltage"],
+		"InitialTemperature" => params["initT"],
+		"InitialControl" => init_prot,
+	)
+
+	if cycling_protocol["Protocol"] == "CCCV"
+		cycling_protocol["CRate"] = params["Control"]["CRate"]
+		cycling_protocol["CurrentChangeLimit"] = params["Control"]["dIdtLimit"]
+		cycling_protocol["VoltageChangeLimit"] = params["Control"]["dEdtLimit"]
+	end
+
+	return (CellParameters(cell_parameters),
+		CyclingProtocol(cycling_protocol),
+		ModelSettings(model_settings),
+		SimulationSettings(simulation_settings))
+end
+
+
+function convert_parameter_sets_to_old_input_format(model_settings::ModelSettings, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings)
 
 	cell = get_key_value(cell_parameters, "Cell")
 	ne = get_key_value(cell_parameters, "NegativeElectrode")
@@ -50,10 +410,10 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 		elseif geom == "P4D Pouch"
 			geom_case = "3D-demo"
 
-        elseif geom == "P4D Cylindrical"
+		elseif geom == "P4D Cylindrical"
 			geom_case = "jellyRoll"
-        else
-            error("ModelFramework not recognized. Please use 'P2D', 'P4D Pouch' or 'P4D Cylindrical'.")
+		else
+			error("ModelFramework not recognized. Please use 'P2D', 'P4D Pouch' or 'P4D Cylindrical'.")
 		end
 	end
 
@@ -317,11 +677,11 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 					"height" => get_key_value(ne_cc, "TabLength"),
 					"Nw" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabWidth"),
 					"Nh" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabLength")),
-                "tabparams" => Dict(
+				"tabparams" => Dict(
 					"usetab" => true,
 					"width" => get_key_value(ne_cc, "TabWidth"),
-                    "fractions" => get_key_value(ne_cc, "TabFractions")
-                ),
+					"fractions" => get_key_value(ne_cc, "TabFractions"),
+				),
 			),
 		),
 		"PositiveElectrode" => Dict(
@@ -383,6 +743,11 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 					"Nw" => get_key_value(grid_points, "PositiveElectrodeCurrentCollectorTabWidth"),
 					"Nh" => get_key_value(grid_points, "PositiveElectrodeCurrentCollectorTabLength"),
 				),
+				"tabparams" => Dict(
+					"usetab" => true,
+					"width" => get_key_value(pe_cc, "TabWidth"),
+					"fractions" => get_key_value(pe_cc, "TabFractions"),
+				),
 			),
 		),
 		"Electrolyte" => Dict(
@@ -418,12 +783,12 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 			"faceArea" => get_key_value(cell, "ElectrodeGeometricSurfaceArea"),
 			"width" => get_key_value(cell, "ElectrodeWidth"),
 			"height" => isnothing(get_key_value(cell, "ElectrodeLength")) ? get_key_value(cell, "Height") : get_key_value(cell, "ElectrodeLength"),
-            "innerRadius" => get_key_value(cell, "InnerRadius"),
-            "outerRadius" => get_key_value(cell, "OuterRadius"),
+			"innerRadius" => get_key_value(cell, "InnerRadius"),
+			"outerRadius" => get_key_value(cell, "OuterRadius"),
 			"Nw" => get_key_value(grid_points, "ElectrodeWidth"),
 			"Nh" => get_key_value(grid_points, "ElectrodeLength"),
-            "numberOfDiscretizationCellsVertical" => get_key_value(grid_points, "Height"),
-            "numberOfDiscretizationCellsAngular" => get_key_value(grid_points, "Angular")
+			"numberOfDiscretizationCellsVertical" => get_key_value(grid_points, "Height"),
+			"numberOfDiscretizationCellsAngular" => get_key_value(grid_points, "Angular"),
 		),
 		"TimeStepping" => Dict(
 			"useRampup" => use_ramp_up,
@@ -435,12 +800,12 @@ function convert_parameter_sets_to_battmo_input(model_settings::ModelSettings, c
 
 	battmo_input = InputParams(battmo_input)
 
-    if battmo_input["Geometry"]["case"] == "jellyRoll"
+	if battmo_input["Geometry"]["case"] == "jellyRoll"
 
-        set_input_params!(battmo_input, ["NonLinearSolver", "LinearSolver", "method"], "iterative")
-        
-    end
+		set_input_params!(battmo_input, ["NonLinearSolver", "LinearSolver", "method"], "iterative")
 
-    return battmo_input
+	end
+
+	return battmo_input
 
 end
