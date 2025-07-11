@@ -134,14 +134,14 @@ end
 
 
 """
-	run_battery(inputparams::AbstractInputParams; hook = nothing)
+	run_battery(inputparams::AbstractInputParamsOld; hook = nothing)
 
-Simulate a battery for a given input. The input is expected to be an instance of AbstractInputParams. Such input can be
+Simulate a battery for a given input. The input is expected to be an instance of AbstractInputParamsOld. Such input can be
 prepared from a json file using the function [`load_battmo_formatted_input`](@ref).
 
 
 """
-function run_battery(inputparams::BattMoFormattedInput;
+function run_battery(inputparams::BattMoInputFormatOld;
 	hook = nothing,
 	use_p2d = true,
 	kwargs...)
@@ -175,7 +175,7 @@ function run_battery(inputparams::BattMoFormattedInput;
 	extra = output
 	extra[:timesteps] = timesteps
 
-	if isa(inputparams, MatlabInputParams)
+	if isa(inputparams, MatlabInputParamsOld)
 		cellSpecifications = nothing
 	else
 		cellSpecifications = computeCellSpecifications(model)
@@ -194,7 +194,7 @@ end
 # Setup model #
 ###############
 
-function setup_model(inputparams::BattMoFormattedInput;
+function setup_model(inputparams::BattMoInputFormatOld;
 	use_p2d::Bool    = true,
 	use_groups::Bool = false,
 	general_ad       = true,
@@ -226,7 +226,7 @@ function setup_model(inputparams::BattMoFormattedInput;
 end
 
 
-function setup_submodels(inputparams::InputParams;
+function setup_submodels(inputparams::InputParamsOld;
 	use_groups::Bool = false,
 	general_ad::Bool = true,
 	use_p2d = true,
@@ -673,7 +673,7 @@ end
 # Setup battery parameters #
 ############################
 
-function setup_battery_parameters(inputparams::InputParams,
+function setup_battery_parameters(inputparams::InputParamsOld,
 	model::MultiModel,
 )
 
@@ -846,7 +846,7 @@ end
 # Setup initial state #
 #######################
 
-function setup_initial_state(inputparams::InputParams,
+function setup_initial_state(inputparams::InputParamsOld,
 	model::MultiModel)
 
 	include_cc = include_current_collectors(model)
@@ -949,7 +949,7 @@ end
 # Setup coupling #
 ##################
 
-function setup_coupling_cross_terms!(inputparams::InputParams,
+function setup_coupling_cross_terms!(inputparams::InputParamsOld,
 	model::MultiModel,
 	parameters::Dict{Symbol, <:Any},
 	couplings)
@@ -1274,7 +1274,7 @@ function get_scalings(model, parameters)
 
 end
 
-function include_current_collectors(inputparams::InputParams)
+function include_current_collectors(inputparams::InputParamsOld)
 
 	jsondict = inputparams.all
 

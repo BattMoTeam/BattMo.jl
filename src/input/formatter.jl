@@ -10,7 +10,7 @@ function get_key_value(dict::Union{AbstractInput, Dict, Nothing}, key)
 	return value
 end
 
-function convert_old_input_format_to_parameter_sets(params::BattMoFormattedInput)
+function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld)
 
 	##################################
 	# ModelSettings
@@ -798,7 +798,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 		),
 	)
 
-	battmo_input = InputParams(battmo_input)
+	battmo_input = InputParamsOld(battmo_input)
 
 	if battmo_input["Geometry"]["case"] == "jellyRoll"
 

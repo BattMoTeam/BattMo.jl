@@ -11,9 +11,9 @@ CyclingProtocol
 ModelSettings
 SimulationSettings
 FullSimulationInput
-BattMoFormattedInput
-BattMo.InputParams
-BattMo.MatlabInputParams
+BattMoInputFormatOld
+BattMo.InputParamsOld
+BattMo.MatlabInputParamsOld
 ```
 
 ## Read input

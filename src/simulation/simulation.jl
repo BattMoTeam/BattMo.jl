@@ -145,7 +145,7 @@ function get_simulation_input(problem::Simulation; kwargs...)
 
 end
 
-function get_simulation_input(inputparams::BattMoFormattedInput;
+function get_simulation_input(inputparams::BattMoInputFormatOld;
 	use_p2d::Bool                     = true,
 	use_model_scaling::Bool           = true,
 	extra_timing::Bool                = false,
@@ -200,7 +200,7 @@ end
 # Setup timestepping #
 ######################
 
-function setup_timesteps(inputparams::InputParams;
+function setup_timesteps(inputparams::InputParamsOld;
 	kwargs...)
 	"""
 		Method setting up the timesteps from a json file object. 
@@ -453,7 +453,7 @@ end
 	setup_config(sim::JutulSimulator,
 					  model::MultiModel,
 					  parameters;
-					  inputparams::BattMoFormattedInput,
+					  inputparams::BattMoInputFormatOld,
 					  extra_timing::Bool,
 					  use_model_scaling,
 					  kwargs...)
@@ -465,7 +465,7 @@ probably be given as inputs in future versions of BattMo.jl
 function setup_config(sim::JutulSimulator,
 	model::MultiModel,
 	parameters;
-	inputparams::BattMoFormattedInput = InputParams(),
+	inputparams::BattMoInputFormatOld = InputParamsOld(),
 	extra_timing::Bool = false,
 	use_model_scaling::Bool = true,
 	kwargs...)
