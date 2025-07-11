@@ -164,7 +164,7 @@ function computeCellMass(model::MultiModel)
 end
 
 
-function computeCellSpecifications(inputparams::InputParams)
+function computeCellSpecifications(inputparams::InputParamsOld)
 
 	model = setup_submodels(inputparams)
 	return computeCellSpecifications(model)
@@ -191,7 +191,7 @@ function computeCellSpecifications(model::MultiModel; T = 298.15)
 end
 
 
-function computeEnergyEfficiency(inputparams::InputParams)
+function computeEnergyEfficiency(inputparams::InputParamsOld)
 
 	# setup a schedule with just one cycle and very fine refinement
 
@@ -239,7 +239,7 @@ function computeEnergyEfficiency(inputparams::InputParams)
 
 	end
 
-	inputparams2 = InputParams(jsondict)
+	inputparams2 = InputParamsOld(jsondict)
 
 	(; states) = run_battery(inputparams2; info_level = 0)
 
@@ -291,7 +291,7 @@ function computeEnergyEfficiency(states; cycle_number = nothing)
 	return efficiency * 100 # %
 
 end
-function computeDischargeEnergy(inputparams::InputParams)
+function computeDischargeEnergy(inputparams::InputParamsOld)
 	# setup a schedule with just discharge half cycle and very fine refinement
 
 	jsondict = inputparams.data
@@ -323,7 +323,7 @@ function computeDischargeEnergy(inputparams::InputParams)
 
 	end
 
-	inputparams2 = InputParams(jsondict)
+	inputparams2 = InputParamsOld(jsondict)
 
 	(; states) = run_battery(inputparams2; info_level = 0)
 

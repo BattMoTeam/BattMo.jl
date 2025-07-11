@@ -136,33 +136,33 @@ end
 """ 
 	load_matlab_battmo_input(inputFileName::String)
 
-Reads the input from a MATLAB output file which contains a description of the model and returns an `MatlabInputParams`
+Reads the input from a MATLAB output file which contains a description of the model and returns an `MatlabInputParamsOld`
 that can be sent to the simulator.
 
 # Arguments
 - `inputFileName ::String` : Path to the MATLAB file.
 
 # Returns
-An instance of `MatlabInputParams` that can be sent to the simulator via `run_battery`.
+An instance of `MatlabInputParamsOld` that can be sent to the simulator via `run_battery`.
 """
 function load_matlab_battmo_input(filepath::String)
-	inputparams = filepath |> matread |> MatlabInputParams
+	inputparams = filepath |> matread |> MatlabInputParamsOld
 	return inputparams
 end
 
 """
 	load_battmo_formatted_input(filepath::String)
 
-Reads and parses a JSON file into an `InputParams` instance.
+Reads and parses a JSON file into an `InputParamsOld` instance.
 
 # Arguments
 - `filepath ::String` : Path to the JSON file.
 
 # Returns
-An instance of `InputParams`.
+An instance of `InputParamsOld`.
 """
 function load_battmo_formatted_input(filepath::String)
-	inputparams = filepath |> JSON.parsefile |> InputParams
+	inputparams = filepath |> JSON.parsefile |> InputParamsOld
 	return inputparams
 end
 

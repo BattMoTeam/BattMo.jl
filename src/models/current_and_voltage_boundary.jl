@@ -509,7 +509,7 @@ end
 # Setup the initial policy from the input parameters #
 ######################################################
 
-function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParams, parameters)
+function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParamsOld, parameters)
 
 	if policy.initialControl == "charging"
 
@@ -543,11 +543,11 @@ function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParam
 end
 
 
-function setup_initial_control_policy!(policy::FunctionPolicy, inputparams::InputParams, parameters)
+function setup_initial_control_policy!(policy::FunctionPolicy, inputparams::InputParamsOld, parameters)
 
 end
 
-function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::InputParams, parameters)
+function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::InputParamsOld, parameters)
 
 	Imax = only(parameters[:Control][:ImaxDischarge])
 
@@ -562,7 +562,7 @@ function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::Inpu
 end
 
 
-function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::InputParams, parameters)
+function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::InputParamsOld, parameters)
 
 
 	if policy.initialControl == charging

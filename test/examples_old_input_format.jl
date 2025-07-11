@@ -16,6 +16,8 @@ names = [
 			@test begin
 				fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
 				inputparams = load_battmo_formatted_input(fn)
+				cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_old_input_format_to_parameter_sets(inputparams)
+
 				function hook(simulator,
 					model,
 					state0,
@@ -24,7 +26,10 @@ names = [
 					cfg)
 					cfg[:error_on_incomplete] = true
 				end
-				output = run_battery(inputparams; hook)
+
+				model_setup = LithiumIonBattery(; model_settings)
+				sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
+				output = solve(sim; hook, accept_invalid = true)
 				true
 			end
 		end
@@ -32,27 +37,27 @@ names = [
 end
 
 function getinput(name)
-    return load_battmo_formatted_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
+	return load_battmo_formatted_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
 end
 
 geometries = ["4680-geometry.json",
-              "geometry-1d.json", 
-              "geometry-3d-demo.json"]
+	"geometry-1d.json",
+	"geometry-3d-demo.json"]
 
 @testset "iterative solvers" begin
 	for geometry in geometries
 		@testset "$geometry" begin
 			@test begin
-                
-                inputparams_geometry = getinput(geometry)
-                inputparams_material = getinput("lithium_ion_battery_nmc_graphite.json")
-                inputparams_control  = getinput("cc_discharge_control.json")
-                inputparams_solver   = getinput("solver_setup.json")
 
-                inputparams = merge_input_params([inputparams_geometry,
-                                                  inputparams_material,
-                                                  inputparams_control,
-                                                  inputparams_solver])
+				inputparams_geometry = getinput(geometry)
+				inputparams_material = getinput("lithium_ion_battery_nmc_graphite.json")
+				inputparams_control  = getinput("cc_discharge_control.json")
+				inputparams_solver   = getinput("solver_setup.json")
+
+				inputparams = merge_input_params([inputparams_geometry,
+					inputparams_material,
+					inputparams_control,
+					inputparams_solver])
 
 				function hook(simulator,
 					model,
@@ -68,4 +73,4 @@ geometries = ["4680-geometry.json",
 		end
 	end
 end
-    
+
