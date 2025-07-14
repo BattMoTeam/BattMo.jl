@@ -12,8 +12,4 @@ function plot_dashboard end
 
 function plot_dashboard_impl end
 
-function check_plotting_availability end
-
-function check_plotting_availability_impl end
-
 

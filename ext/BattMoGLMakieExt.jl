@@ -4,7 +4,9 @@ using BattMo, GLMakie
 
 
 function BattMo.plot_output(output::NamedTuple, output_variables::Union{Vector{String}, Vector{Vector{String}}}; layout::Union{Nothing, Tuple{Int, Int}} = nothing)
-	BattMo.check_plotting_availability()
+	if !isdefined(Main, :GLMakie)
+		error("GLMakie must be explicitly imported (e.g., with `using GLMakie`) before calling `plot_dashboard`.")
+	end
 	return BattMo.plot_impl(output, output_variables; layout = layout)
 end
 
@@ -275,15 +277,14 @@ end
 
 
 
-
-
-
-function BattMo.plot_dashboard(output::NamedTuple; plot_type = "simple")
-	BattMo.check_plotting_availability()
+function BattMo.plot_dashboard(output; plot_type = "simple")
+	if !isdefined(Main, :GLMakie)
+		error("GLMakie must be explicitly imported (e.g., with `using GLMakie`) before calling `plot_dashboard`.")
+	end
 	return BattMo.plot_dashboard_impl(output; plot_type = plot_type)
 end
 
-function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "simple")
+function BattMo.plot_dashboard_impl(output; plot_type = "simple")
 
 	time_series = get_output_time_series(output; quantities = ["Time", "Voltage", "Current"])
 	t = time_series[:Time]
@@ -411,28 +412,6 @@ function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "simple")
 	end
 end
 
-
-function BattMo.check_plotting_availability(; throw = true)
-	ok = true
-	try
-		ok = BattMo.check_plotting_availability_impl()
-	catch e
-		if throw
-			if e isa MethodError
-				error("Plotting is not available. You need to have a Makie backend available. For 3D plots, GLMakie is recommended. To fix: using Pkg; Pkg.add(\"GLMakie\") and then call using GLMakie to enable plotting.")
-			else
-				rethrow(e)
-			end
-		else
-			ok = false
-		end
-	end
-	return ok
-end
-
-function BattMo.check_plotting_availability_impl()
-	return true
-end
 
 
 

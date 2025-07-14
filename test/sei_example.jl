@@ -29,6 +29,23 @@ using Test
 
 		output = solve(sim)
 
+		states = get_output_states(output)
+
+		sei_thickness = states.SEIThickness
+		voltage_drop = states.SEIVoltageDrop
+
+		@info size(sei_thickness)
+		@info size(voltage_drop)
+
+
+		@test length(sei_thickness[:, 2]) ≈ 2634 atol = 0
+		@test sei_thickness[2, 2] ≈ 1.0000000339846753e-8 atol = 1e-1
+		@test voltage_drop[2, 2] ≈ -0.001401323958482127 atol = 1e-1
+
+		@test sei_thickness[100, 2] ≈ 1.0000000339846753e-8 atol = 1e-1
+		@test voltage_drop[100, 2] ≈ -0.001401323958482127 atol = 1e-1
+
+
 		true
 
 	end
