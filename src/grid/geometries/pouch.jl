@@ -17,37 +17,40 @@ export pouch_grid
 	The fields for the `couplings` dictionary are the same as `grid`. For each component, we have again a dictionary
 	with field as in `grid` which provides the coupling with the two resulting components.
 """
-function pouch_grid(geomparams::InputGeometryParams)
+function pouch_grid(input)
 
-	ne_cc_z  = geomparams["NegativeElectrode"]["CurrentCollector"]["thickness"]
-	ne_cc_nz = geomparams["NegativeElectrode"]["CurrentCollector"]["N"]
+	cell_parameters = input.cell_parameters
+	grid_settings = input.simulation_settings["GridResolution"]
 
-	ne_co_z  = geomparams["NegativeElectrode"]["Coating"]["thickness"]
-	ne_co_nz = geomparams["NegativeElectrode"]["Coating"]["N"]
+	ne_cc_z  = cell_parameters["NegativeElectrode"]["CurrentCollector"]["Thickness"]
+	ne_cc_nz = grid_settings["NegativeElectrodeCurrentCollector"]
 
-	pe_cc_z  = geomparams["PositiveElectrode"]["CurrentCollector"]["thickness"]
-	pe_cc_nz = geomparams["PositiveElectrode"]["CurrentCollector"]["N"]
+	ne_co_z  = cell_parameters["NegativeElectrode"]["ElectrodeCoating"]["Thickness"]
+	ne_co_nz = grid_settings["NegativeElectrodeCoating"]
 
-	pe_co_z  = geomparams["PositiveElectrode"]["Coating"]["thickness"]
-	pe_co_nz = geomparams["PositiveElectrode"]["Coating"]["N"]
+	pe_cc_z  = cell_parameters["PositiveElectrode"]["CurrentCollector"]["Thickness"]
+	pe_cc_nz = grid_settings["PositiveElectrodeCurrentCollector"]
 
-	sep_z  = geomparams["Separator"]["thickness"]
-	sep_nz = geomparams["Separator"]["N"]
+	pe_co_z  = cell_parameters["PositiveElectrode"]["ElectrodeCoating"]["Thickness"]
+	pe_co_nz = grid_settings["PositiveElectrodeCoating"]
 
-	x  = geomparams["Geometry"]["width"]
-	y  = geomparams["Geometry"]["height"]
-	nx = geomparams["Geometry"]["Nw"]
-	ny = geomparams["Geometry"]["Nh"]
+	sep_z  = cell_parameters["Separator"]["Thickness"]
+	sep_nz = grid_settings["Separator"]
 
-	ne_tab_nx = geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"]
-	ne_tab_ny = geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"]
-	ne_tab_x  = geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]["width"]
-	ne_tab_y  = geomparams["NegativeElectrode"]["CurrentCollector"]["tab"]["height"]
+	x  = cell_parameters["Cell"]["ElectrodeWidth"]
+	y  = cell_parameters["Cell"]["ElectrodeLength"]
+	nx = grid_settings["ElectrodeWidth"]
+	ny = grid_settings["ElectrodeLength"]
 
-	pe_tab_nx = geomparams["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"]
-	pe_tab_ny = geomparams["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"]
-	pe_tab_x  = geomparams["PositiveElectrode"]["CurrentCollector"]["tab"]["width"]
-	pe_tab_y  = geomparams["PositiveElectrode"]["CurrentCollector"]["tab"]["height"]
+	ne_tab_nx = grid_settings["NegativeElectrodeCurrentCollectorTabWidth"]
+	ne_tab_ny = grid_settings["NegativeElectrodeCurrentCollectorTabLength"]
+	ne_tab_x  = cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"]
+	ne_tab_y  = cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabLength"]
+
+	pe_tab_nx = grid_settings["PositiveElectrodeCurrentCollectorTabWidth"]
+	pe_tab_ny = grid_settings["PositiveElectrodeCurrentCollectorTabLength"]
+	pe_tab_x  = cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"]
+	pe_tab_y  = cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabLength"]
 
 	nx = [ne_tab_nx, nx - (ne_tab_nx + pe_tab_nx), pe_tab_nx]
 	ny = [ne_tab_ny, ny - (ne_tab_ny + pe_tab_ny), pe_tab_ny]

@@ -71,19 +71,17 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 		simulation_settings["GridResolution"]["Height"] = params["Geometry"]["numberOfDiscretizationCellsVertical"]
 		simulation_settings["GridResolution"]["Angular"] = params["Geometry"]["numberOfDiscretizationCellsAngular"]
 
-		if haskey(model_settings["ModelFramework"], "CurrentCollectors")
+		if haskey(model_settings, "CurrentCollectors")
 			simulation_settings["GridResolution"]["PositiveElectrodeCurrentCollector"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
-			simulation_settings["GridResolution"]["PositiveElectrodeCurrentCollectorTabWidth"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"]
 			simulation_settings["GridResolution"]["NegativeElectrodeCurrentCollector"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
-			simulation_settings["GridResolution"]["NegativeElectrodeCurrentCollectorTabWidth"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"]
 		end
 	end
 
 	if model_settings["ModelFramework"] == "P4D Pouch"
-		simulation_settings["GridResolution"]["ElectrodeWidth"] = params["Geometry"]["numberOfDiscretizationCellsVertical"]
-		simulation_settings["GridResolution"]["ElectrodeLength"] = params["Geometry"]["numberOfDiscretizationCellsAngular"]
+		simulation_settings["GridResolution"]["ElectrodeWidth"] = params["Geometry"]["Nw"]
+		simulation_settings["GridResolution"]["ElectrodeLength"] = params["Geometry"]["Nh"]
 
-		if haskey(model_settings["ModelFramework"], "CurrentCollectors")
+		if haskey(model_settings, "CurrentCollectors")
 			simulation_settings["GridResolution"]["PositiveElectrodeCurrentCollector"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
 			simulation_settings["GridResolution"]["PositiveElectrodeCurrentCollectorTabWidth"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"]
 			simulation_settings["GridResolution"]["PositiveElectrodeCurrentCollectorTabLength"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"]
@@ -275,7 +273,7 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 		cell_parameters["Cell"]["ElectrodeWidth"] = params["Geometry"]["width"]
 		cell_parameters["Cell"]["ElectrodeLength"] = params["Geometry"]["height"]
 
-		if haskey(model_settings["ModelFramework"], "CurrentCollectors")
+		if haskey(model_settings, "CurrentCollectors")
 			pos_cc = Dict(
 				"CurrentCollector" => Dict(
 					"Thickness" => params["PositiveElectrode"]["CurrentCollector"]["thickness"],
@@ -300,13 +298,12 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 		end
 
 	elseif model_settings["ModelFramework"] == "P4D Cylindrical"
-		cell_parameters["Cell"]["ElectrodeGeometricSurfaceArea"] = params["Geometry"]["faceArea"]
 		cell_parameters["Cell"]["Height"] = params["Geometry"]["height"]
 		cell_parameters["Cell"]["InnerRadius"] = params["Geometry"]["innerRadius"]
 		cell_parameters["Cell"]["OuterRadius"] = params["Geometry"]["outerRadius"]
 
 
-		if haskey(model_settings["ModelFramework"], "CurrentCollectors")
+		if haskey(model_settings, "CurrentCollectors")
 			pos_cc = Dict(
 				"CurrentCollector" => Dict(
 					"Thickness" => params["PositiveElectrode"]["CurrentCollector"]["thickness"],

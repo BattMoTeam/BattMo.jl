@@ -384,7 +384,7 @@ end
 # Returns
 	The updated input parameters structure with the specified fields set to the given value.
 	"""
-function set_input_params!(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoInputFormatOld}
+function set_input_params!(inputparams::Union{T, Dict{String, Any}}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoInputFormatOld}
 
 	@assert(handleMismatch in (:error, :warn, :ignore), "handleMismatch must be one of :error, :warn, or :ignore")
 

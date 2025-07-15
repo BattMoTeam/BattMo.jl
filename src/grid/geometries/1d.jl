@@ -4,33 +4,49 @@ export one_dimensional_grid
 # one dimensional grid setup #
 ##############################
 
-function one_dimensional_grid(geomparams::InputGeometryParams)
+function one_dimensional_grid(input)
 
 	grids       = Dict()
 	global_maps = Dict()
 
-	include_current_collectors = geomparams["include_current_collectors"]
+	cell_parameters = input.cell_parameters
+	grid_settings = input.simulation_settings["GridResolution"]
 
-	faceArea = geomparams["Geometry"]["faceArea"]
+	include_current_collectors = haskey(input.model_settings, "CurrentCollectors")
 
-	vars = ["thickness", "N"]
+	faceArea = cell_parameters["Cell"]["ElectrodeGeometricSurfaceArea"]
 
-	function getvals(var)
-		neval = geomparams["NegativeElectrode"]["Coating"][var]
-		sepval = geomparams["Separator"][var]
-		peval = geomparams["PositiveElectrode"]["Coating"][var]
+	function get_cell_parameter_vals(var)
+		neval = cell_parameters["NegativeElectrode"]["ElectrodeCoating"][var]
+		sepval = cell_parameters["Separator"][var]
+		peval = cell_parameters["PositiveElectrode"]["ElectrodeCoating"][var]
 		if include_current_collectors
-			ne_ccval = geomparams["NegativeElectrode"]["CurrentCollector"][var]
-			pe_ccval = geomparams["PositiveElectrode"]["CurrentCollector"][var]
+			ne_ccval = cell_parameters["NegativeElectrode"]["CurrentCollector"][var]
+			pe_ccval = cell_parameters["PositiveElectrode"]["CurrentCollector"][var]
 			out = [ne_ccval, neval, sepval, peval, pe_ccval]
 		else
 			out = [neval, sepval, peval]
 		end
 		return out
 	end
+
+	function get_grid_settings_vals()
+		neval = grid_settings["NegativeElectrodeCoating"]
+		sepval = grid_settings["Separator"]
+		peval = grid_settings["PositiveElectrodeCoating"]
+		if include_current_collectors
+			ne_ccval = grid_settings["NegativeElectrodeCurrentCollector"]
+			pe_ccval = grid_settings["PositiveElectrodeCurrentCollector"]
+			out = [ne_ccval, neval, sepval, peval, pe_ccval]
+		else
+			out = [neval, sepval, peval]
+		end
+		return out
+	end
+
 	vals = Dict(
-		"thickness" => getvals("thickness"),
-		"N" => Int.(getvals("N")),
+		"thickness" => get_cell_parameter_vals("Thickness"),
+		"N" => Int.(get_grid_settings_vals()),
 	)
 
 	if include_current_collectors

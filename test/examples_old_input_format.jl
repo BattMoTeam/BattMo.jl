@@ -52,12 +52,22 @@ geometries = ["4680-geometry.json",
 				inputparams_geometry = getinput(geometry)
 				inputparams_material = getinput("lithium_ion_battery_nmc_graphite.json")
 				inputparams_control  = getinput("cc_discharge_control.json")
-				inputparams_solver   = getinput("solver_setup.json")
 
 				inputparams = merge_input_params([inputparams_geometry,
 					inputparams_material,
-					inputparams_control,
-					inputparams_solver])
+					inputparams_control])
+
+
+				cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_old_input_format_to_parameter_sets(inputparams)
+
+				simulation_settings["NonLinearSolver"] = Dict(
+					"maxIterations" => 20,
+					"verbose" => true,
+					"nonlinearTolerance" => 1e-5,
+					"LinearSolver" => Dict(
+						"method" => "iterative"),
+				)
+
 
 				function hook(simulator,
 					model,
@@ -67,7 +77,9 @@ geometries = ["4680-geometry.json",
 					cfg)
 					cfg[:error_on_incomplete] = true
 				end
-				output = run_battery(inputparams; hook)
+				model_setup = LithiumIonBattery(; model_settings)
+				sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
+				output = solve(sim; hook, accept_invalid = true)
 				true
 			end
 		end

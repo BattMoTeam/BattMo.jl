@@ -1,6 +1,5 @@
 using BattMo
 using Test
-using GLMakie
 
 @testset "Crate" begin
 

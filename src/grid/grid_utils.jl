@@ -11,25 +11,24 @@ export
 # Setup grids and coupling for the given geometrical parameters #
 #################################################################
 
-function setup_grids_and_couplings(inputparams::InputParamsOld)
+function setup_grids_and_couplings(input)
 
 
-	case_type = inputparams["Geometry"]["case"]
+	case_type = input.model_settings["ModelFramework"]
 
-	if case_type == "1D"
+	if case_type == "P2D"
 
-		grids, couplings = one_dimensional_grid(inputparams)
+		grids, couplings = one_dimensional_grid(input)
 
-	elseif case_type == "3D-demo"
+	elseif case_type == "P4D Pouch"
 
-		grids, couplings = pouch_grid(inputparams)
+		grids, couplings = pouch_grid(input)
 
-	elseif case_type == "jellyRoll"
+	elseif case_type == "P4D Cylindrical"
 
-		grids, couplings = jelly_roll_grid(inputparams)
+		grids, couplings = jelly_roll_grid(input)
 
 	else
-		# Add case_type = "jellyRoll"
 		error("geometry case type not recognized")
 
 	end

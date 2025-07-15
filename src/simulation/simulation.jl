@@ -1,6 +1,6 @@
 export Simulation
 export solve
-export get_simulation_input
+export setup_config
 
 """
 	abstract type AbstractSimulation
@@ -30,12 +30,22 @@ Creates an instance of `Simulation`, initializing it with the given parameters a
 simulation settings if not provided.
 """
 struct Simulation <: AbstractSimulation
-	function_to_solve::Function
 	model_setup::BatteryModelSetup
 	cell_parameters::CellParameters
 	cycling_protocol::CyclingProtocol
 	simulation_settings::SimulationSettings
 	is_valid::Bool
+	model::MultiModel
+	time_steps::Any
+	forces::Any
+	initial_state::Any
+	grids::Any
+	couplings::Any
+	cfg::Any
+	parameters::Any
+	simulator::Any
+
+
 
 	function Simulation(model_setup::BatteryModelSetup, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model_setup))
 
@@ -50,9 +60,50 @@ struct Simulation <: AbstractSimulation
 
 			if cell_parameters_is_valid && cycling_protocol_is_valid && simulation_settings_is_valid
 				is_valid = true
+
 			else
 				is_valid = false
 			end
+
+			# Set some default simulation settings that aren't required by the user
+			set_default_solver_and_simulation_settings!(simulation_settings)
+
+			# Combine the parameter sets and settings
+			input = (model_settings = model_settings,
+				cell_parameters = cell_parameters,
+				cycling_protocol = cycling_protocol,
+				simulation_settings = simulation_settings,
+			)
+
+			# Setup grids and couplings
+			grids, couplings = setup_grids_and_couplings(input)
+
+			# Setup simulation
+			model, parameters = setup_model(model_setup, input, grids, couplings)
+
+			# setup initial state
+			initial_state = setup_initial_state(input, model)
+
+			# setup forces
+			forces = setup_forces(model)
+
+			# setup jutul simulator
+			simulator = Simulator(model; state0 = initial_state, parameters = parameters, copy_state = true)
+
+			# setup time steps
+			time_steps = setup_timesteps(input)
+
+			# setup simulation configuration
+			cfg = setup_config(simulator,
+				model,
+				parameters,
+				input;
+			)
+
+
+			# grids = get_grids(model)
+
+
 		else
 			error("""
 			Oops! Your Model object is not valid. 🛑
@@ -62,7 +113,7 @@ struct Simulation <: AbstractSimulation
 
 			""")
 		end
-		return new{}(function_to_solve, model_setup, cell_parameters, cycling_protocol, simulation_settings, is_valid)
+		return new{}(model_setup, cell_parameters, cycling_protocol, simulation_settings, is_valid, model, time_steps, forces, initial_state, grids, couplings, cfg, parameters, simulator)
 	end
 end
 
@@ -95,14 +146,14 @@ function solve(problem::Simulation; accept_invalid = false, hook = nothing, info
 
 	# Note: Typically function_to_solve is run_battery
 	if accept_invalid == true
-		output = problem.function_to_solve(problem.model_setup, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;
+		output = solve_simulation(problem;
 			hook,
 			use_p2d = use_p2d,
 			config_kwargs = config_kwargs,
 			kwargs...)
 	else
 		if problem.is_valid == true
-			output = problem.function_to_solve(problem.model_setup, problem.cell_parameters, problem.cycling_protocol, problem.simulation_settings;
+			output = solve_simulation(problem;
 				hook,
 				use_p2d = use_p2d,
 				config_kwargs = config_kwargs,
@@ -129,321 +180,79 @@ function solve(problem::Simulation; accept_invalid = false, hook = nothing, info
 
 end
 
-
-####################
-# Setup simulation #
-####################
-
-function get_simulation_input(problem::Simulation; kwargs...)
-
-	inputparams = convert_parameter_sets_to_old_input_format(problem.model_setup.model_settings,
-		problem.cell_parameters,
-		problem.cycling_protocol,
-		problem.simulation_settings)
-
-	output = get_simulation_input(inputparams; kwargs...)
-
-end
-
-function get_simulation_input(inputparams::BattMoInputFormatOld;
-	use_p2d::Bool                     = true,
-	use_model_scaling::Bool           = true,
-	extra_timing::Bool                = false,
-	max_step::Union{Integer, Nothing} = nothing,
-	general_ad::Bool                  = true,
-	use_groups::Bool                  = false,
-	model_kwargs::NamedTuple          = NamedTuple(),
-	config_kwargs::NamedTuple         = NamedTuple())
-
-	model, parameters, couplings = setup_model(inputparams;
-		use_groups = use_groups,
-		general_ad = general_ad,
-		use_p2d = use_p2d,
-		model_kwargs...)
-
-	state0 = setup_initial_state(inputparams, model)
-
-	forces = setup_forces(model)
-
-	simulator = Simulator(model; state0 = state0, parameters = parameters, copy_state = true)
-
-	timesteps = setup_timesteps(inputparams; max_step = max_step)
-
-	cfg = setup_config(simulator,
-		model,
-		parameters;
-		inputparams,
-		extra_timing,
-		use_model_scaling,
-		config_kwargs...)
-
-
-	grids = get_grids(model)
-
-	output = Dict(:simulator   => simulator,
-		:forces      => forces,
-		:state0      => state0,
-		:parameters  => parameters,
-		:inputparams => inputparams,
-		:model       => model,
-		:couplings   => couplings,
-		:grids       => grids,
-		:timesteps   => timesteps,
-		:cfg         => cfg)
-
-	return output
-
-end
-
-
-######################
-# Setup timestepping #
-######################
-
-function setup_timesteps(inputparams::InputParamsOld;
+function solve_simulation(sim::Simulation;
+	hook = nothing,
+	use_p2d = true,
 	kwargs...)
-	"""
-		Method setting up the timesteps from a json file object. 
-	"""
 
-	controlPolicy = inputparams["Control"]["controlPolicy"]
+	simulator = sim.simulator
+	model = sim.model
+	state0 = sim.initial_state
+	forces = sim.forces
+	timesteps = sim.time_steps
+	grids = sim.grids
+	cfg = sim.cfg
+	couplings = sim.couplings
+	parameters = sim.parameters
+	model_setup = sim.model_setup
+	simulation_settings = sim.simulation_settings
+	cell_parameters = sim.cell_parameters
+	cycling_protocol = sim.cycling_protocol
 
-	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge"
-
-		if controlPolicy == "CCDischarge"
-			CRate = inputparams["Control"]["DRate"]
-		else
-			CRate = inputparams["Control"]["CRate"]
-		end
-
-		con = Constants()
-		totalTime = 1.1 * con.hour / CRate
-
-		if haskey(inputparams["TimeStepping"], "totalTime") && !isnothing(inputparams["TimeStepping"]["totalTime"])
-			@warn "totalTime value is given but not used"
-		end
-
-		if haskey(inputparams["TimeStepping"], "timeStepDuration")
-			dt = inputparams["TimeStepping"]["timeStepDuration"]
-			if haskey(inputparams["TimeStepping"], "numberOfTimeSteps")
-				@warn "Number of time steps is given but not used"
-			end
-		else
-			n = inputparams["TimeStepping"]["numberOfTimeSteps"]
-			dt = totalTime / n
-		end
-		if haskey(inputparams["TimeStepping"], "useRampup") && inputparams["TimeStepping"]["useRampup"]
-			nr = inputparams["TimeStepping"]["numberOfRampupSteps"]
-		else
-			nr = 1
-		end
-
-		timesteps = rampupTimesteps(totalTime, dt, nr)
-
-	elseif controlPolicy == "CCCycling"
-
-		ncycles = inputparams["Control"]["numberOfCycles"]
-		DRate = inputparams["Control"]["DRate"]
-		CRate = inputparams["Control"]["CRate"]
-
-		con = Constants()
-
-		totalTime = ncycles * 2 * (1 * con.hour / CRate + 1 * con.hour / DRate)
-
-
-		if haskey(inputparams["TimeStepping"], "totalTime") && !isnothing(inputparams["TimeStepping"]["totalTime"])
-			@warn "totalTime value is given but not used"
-		end
-
-		if haskey(inputparams["TimeStepping"], "timeStepDuration")
-			dt = inputparams["TimeStepping"]["timeStepDuration"]
-			n  = Int64(floor(totalTime / dt))
-			if haskey(inputparams["TimeStepping"], "numberOfTimeSteps")
-				@warn "Number of time steps is given but not used"
-			end
-		else
-			n  = inputparams["TimeStepping"]["numberOfTimeSteps"]
-			dt = totalTime / n
-		end
-		timesteps = repeat([dt], n)
-
-	elseif controlPolicy == "CCCV"
-
-		ncycles = inputparams["Control"]["numberOfCycles"]
-		DRate = inputparams["Control"]["DRate"]
-		CRate = inputparams["Control"]["CRate"]
-
-		con = Constants()
-
-		totalTime = ncycles * 2.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
-
-		if haskey(inputparams["TimeStepping"], "totalTime") && !isnothing(inputparams["TimeStepping"]["totalTime"])
-			@warn "totalTime value is given but not used"
-		end
-
-		if haskey(inputparams["TimeStepping"], "timeStepDuration")
-			dt = inputparams["TimeStepping"]["timeStepDuration"]
-			n  = Int64(floor(totalTime / dt))
-			if haskey(inputparams["TimeStepping"], "numberOfTimeSteps")
-				@warn "Number of time steps is given but not used"
-			end
-		else
-			n  = inputparams["TimeStepping"]["numberOfTimeSteps"]
-			dt = totalTime / n
-		end
-
-		timesteps = repeat([dt], n)
-
-	elseif controlPolicy == "Function"
-		totalTime = inputparams["TimeStepping"]["totalTime"]
-		dt = inputparams["TimeStepping"]["timeStepDuration"]
-		n = totalTime / dt
-		timesteps = repeat([dt], Int64(floor(n)))
-
-	else
-
-		error("Control policy $controlPolicy not recognized")
-
+	if !isnothing(hook)
+		hook(simulator,
+			model,
+			state0,
+			forces,
+			timesteps,
+			cfg)
 	end
 
-	return timesteps
-end
+	# Perform simulation
+	states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
 
+	extra = Dict(:simulator => simulator,
+		:forces => forces,
+		:state0 => state0,
+		:parameters => parameters,
+		:model_setup => model_setup,
+		:simulation_settings => simulation_settings,
+		:cell_parameters => cell_parameters,
+		:cycling_protocol => cycling_protocol,
+		:model => model,
+		:couplings => couplings,
+		:grids => grids,
+		:timesteps => timesteps,
+		:cfg => cfg)
+	extra[:timesteps] = timesteps
 
-######################
-# Transmissibilities #
-######################
+	input = Dict(
+		:model_setup => model_setup,
+		:simulation_settings => simulation_settings,
+		:cell_parameters => cell_parameters,
+		:cycling_protocol => cycling_protocol,
+	)
 
-function getTrans(model1::Dict{String, <:Any},
-	model2::Dict{String, Any},
-	faces,
-	cells,
-	quantity::String)
-	""" setup transmissibility for coupling between models at boundaries"""
+	cellSpecifications = computeCellSpecifications(model)
 
-	T_all1 = model1["G"]["operators"]["T_all"][faces[:, 1]]
-	T_all2 = model2["G"]["operators"]["T_all"][faces[:, 2]]
-
-
-	function getcellvalues(values, cellinds)
-
-		if length(values) == 1
-			values = values * ones(length(cellinds))
-		else
-			values = values[cellinds]
-		end
-		return values
-
-	end
-
-	s1 = getcellvalues(model1[quantity], cells[:, 1])
-	s2 = getcellvalues(model2[quantity], cells[:, 2])
-
-	T = 1.0 ./ ((1.0 ./ (T_all1 .* s1)) + (1.0 ./ (T_all2 .* s2)))
-
-	return T
+	return (states             = states,
+		cellSpecifications = cellSpecifications,
+		reports            = reports,
+		input              = input,
+		extra              = extra)
 
 end
 
-function getTrans(model1::SimulationModel,
-	model2::SimulationModel,
-	bcfaces,
-	bccells,
-	parameters1,
-	parameters2,
-	quantity)
-	""" setup transmissibility for coupling between models at boundaries. Intermediate 1d version"""
 
-	d1 = physical_representation(model1)
-	d2 = physical_representation(model2)
+function set_default_solver_and_simulation_settings!(simulation_settings)
+	set_default_input_params!(simulation_settings.all, ["NonLinearSolver", "MaxTimestepCuts"], 10)
+	set_default_input_params!(simulation_settings.all, ["NonLinearSolver", "MaxIterations"], 20)
+	set_default_input_params!(simulation_settings.all, ["NonLinearSolver", "LinearSolver"], Dict())
 
-	bcTrans1 = d1[:bcTrans][bcfaces[:, 1]]
-	bcTrans2 = d2[:bcTrans][bcfaces[:, 2]]
-	cells1   = bccells[:, 1]
-	cells2   = bccells[:, 2]
-
-	s1 = parameters1[quantity][cells1]
-	s2 = parameters2[quantity][cells2]
-
-	T = 1.0 ./ ((1.0 ./ (bcTrans1 .* s1)) + (1.0 ./ (bcTrans2 .* s2)))
-
-	return T
+	set_default_input_params!(simulation_settings.all, ["UseGroups"], false)
+	set_default_input_params!(simulation_settings.all, ["GeneralAD"], true)
 
 end
-
-function getHalfTrans(model::SimulationModel,
-	bcfaces,
-	bccells,
-	parameters,
-	quantity)
-	""" recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the corresponding given cells. Intermediate 1d version. Note the indexing in BoundaryFaces is used"""
-
-	d       = physical_representation(model)
-	bcTrans = d[:bcTrans][bcfaces]
-	s       = parameters[quantity][bccells]
-
-	T = bcTrans .* s
-
-	return T
-end
-
-function getHalfTrans(model::Dict{String, Any},
-	faces,
-	cells,
-	quantity::String)
-	""" recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the given cells.
-	Here, the faces should belong the corresponding cells at the same index"""
-
-	T_all = model["G"]["operators"]["T_all"]
-	s = model[quantity]
-	if length(s) == 1
-		s = s * ones(length(cells))
-	else
-		s = s[cells]
-	end
-
-	T = T_all[faces] .* s
-
-	return T
-
-end
-
-function getHalfTrans(model::Dict{String, <:Any},
-	faces)
-	""" recover the half transmissibilities for boundary faces"""
-
-	T_all = model["G"]["operators"]["T_all"]
-	T = T_all[faces]
-
-	return T
-
-end
-
-function rampupTimesteps(time::Real, dt::Real, n::Integer = 8)
-
-	ind = collect(range(n, 1, step = -1))
-	dt_init = [dt / 2^k for k in ind]
-	cs_time = cumsum(dt_init)
-	if any(cs_time .> time)
-		dt_init = dt_init[cs_time.<time]
-	end
-	dt_left = time .- sum(dt_init)
-
-	# Even steps
-	dt_rem = dt * ones(floor(Int64, dt_left / dt))
-	# Final ministep if present
-	dt_final = time - sum(dt_init) - sum(dt_rem)
-	# Less than to account for rounding errors leading to a very small
-	# negative time-step.
-	if dt_final <= 0
-		dt_final = []
-	end
-	# Combined timesteps
-	dT = [dt_init; dt_rem; dt_final]
-
-	return dT
-end
-
 
 ######################################
 # Setup solver configuration options #
@@ -464,26 +273,26 @@ probably be given as inputs in future versions of BattMo.jl
 """
 function setup_config(sim::JutulSimulator,
 	model::MultiModel,
-	parameters;
-	inputparams::BattMoInputFormatOld = InputParamsOld(),
+	parameters,
+	input;
 	extra_timing::Bool = false,
 	use_model_scaling::Bool = true,
 	kwargs...)
 
 	cfg = simulator_config(sim; kwargs...)
 
-	set_default_input_params!(inputparams, ["NonLinearSolver", "maxTimestepCuts"], 10)
-	set_default_input_params!(inputparams, ["NonLinearSolver", "maxIterations"], 20)
-	set_default_input_params!(inputparams, ["NonLinearSolver", "LinearSolver"], Dict())
+	simulation_settings = input.simulation_settings
+	lin_solv_dict = simulation_settings["NonLinearSolver"]["LinearSolver"]
+	lin_solv_dict_any = Dict{String, Any}(lin_solv_dict)
 
-	cfg[:linear_solver]            = battery_linsolve(inputparams["NonLinearSolver"]["LinearSolver"])
+	cfg[:linear_solver]            = battery_linsolve(lin_solv_dict_any)
 	cfg[:debug_level]              = 0
-	cfg[:max_timestep_cuts]        = inputparams["NonLinearSolver"]["maxTimestepCuts"]
+	cfg[:max_timestep_cuts]        = simulation_settings["NonLinearSolver"]["MaxTimestepCuts"]
 	cfg[:max_residual]             = 1e20
 	cfg[:output_substates]         = true
 	cfg[:min_nonlinear_iterations] = 1
 	cfg[:extra_timing]             = extra_timing
-	cfg[:max_nonlinear_iterations] = inputparams["NonLinearSolver"]["maxIterations"]
+	cfg[:max_nonlinear_iterations] = simulation_settings["NonLinearSolver"]["MaxIterations"]
 	cfg[:safe_mode]                = true
 	cfg[:error_on_incomplete]      = false
 	cfg[:failure_cuts_timestep]    = true
@@ -571,16 +380,199 @@ function setup_config(sim::JutulSimulator,
 end
 
 
-####################
-# Current function #
-####################
 
-function currentFun(t::Real, inputI::Real, tup::Real = 0.1)
-	t, inputI, tup, val = promote(t, inputI, tup, 0.0)
-	if t <= tup
-		val = sineup(0.0, inputI, 0.0, tup, t)
-	else
-		val = inputI
+function get_scalings(model, parameters)
+
+	refT = 298.15
+
+	electrolyte = model[:Elyte].system
+
+	eldes = (:NeAm, :PeAm)
+
+	j0s   = Array{Float64}(undef, 2)
+	Rvols = Array{Float64}(undef, 2)
+
+	F = FARADAY_CONSTANT
+
+	for (i, elde) in enumerate(eldes)
+
+		rate_func = model[elde].system.params[:reaction_rate_constant_func]
+		cmax      = model[elde].system[:maximum_concentration]
+		vsa       = model[elde].system[:volumetric_surface_area]
+
+		c_a            = 0.5 * cmax
+		R0             = rate_func(c_a, refT)
+		c_e            = 1000.0
+		activematerial = model[elde].system
+
+		j0s[i] = reaction_rate_coefficient(R0, c_e, c_a, activematerial)
+		Rvols[i] = j0s[i] * vsa / F
+
 	end
-	return val
+
+	j0Ref   = mean(j0s)
+	RvolRef = mean(Rvols)
+
+	if include_current_collectors(model)
+		component_names = (:NeCc, :NeAm, :Elyte, :PeAm, :PeCc)
+		cc_mapping      = Dict(:NeAm => :NeCc, :PeAm => :PeCc)
+	else
+		component_names = (:NeAm, :Elyte, :PeAm)
+	end
+
+	volRefs = Dict()
+
+	for name in component_names
+
+		rep = model[name].domain.representation
+		if rep isa MinimalECTPFAGrid
+			volRefs[name] = mean(rep.volumes)
+		else
+			volRefs[name] = mean(rep[:volumes])
+		end
+
+	end
+
+	scalings = []
+
+	scaling = (model_label = :Elyte, equation_label = :charge_conservation, value = F * volRefs[:Elyte] * RvolRef)
+	push!(scalings, scaling)
+
+	scaling = (model_label = :Elyte, equation_label = :mass_conservation, value = volRefs[:Elyte] * RvolRef)
+	push!(scalings, scaling)
+
+	for elde in eldes
+
+		scaling = (model_label = elde, equation_label = :charge_conservation, value = F * volRefs[elde] * RvolRef)
+		push!(scalings, scaling)
+
+		if include_current_collectors(model)
+
+			# We use the same scaling as for the coating multiplied by the conductivity ration
+			cc = cc_mapping[elde]
+			coef = parameters[cc][:Conductivity] / parameters[elde][:Conductivity]
+
+			scaling = (model_label = cc, equation_label = :charge_conservation, value = F * coef[1] * volRefs[elde] * RvolRef)
+			push!(scalings, scaling)
+
+		end
+
+		rp   = model[elde].system.discretization[:rp]
+		volp = 4 / 3 * pi * rp^3
+
+		coef = RvolRef * volp
+
+		scaling = (model_label = elde, equation_label = :mass_conservation, value = coef)
+		push!(scalings, scaling)
+		scaling = (model_label = elde, equation_label = :solid_diffusion_bc, value = coef)
+		push!(scalings, scaling)
+
+		if model[elde] isa SEImodel
+
+			vsa = model[elde].system[:volumetric_surface_area]
+			L   = model[elde].system[:InitialThickness]
+			k   = model[elde].system[:IonicConductivity]
+
+			SEIvoltageDropRef = F * RvolRef / vsa * L / k
+
+			scaling = (model_label = elde, equation_label = :sei_voltage_drop, value = SEIvoltageDropRef)
+			push!(scalings, scaling)
+
+			De = model[elde].system[:ElectronicDiffusionCoefficient]
+			ce = model[elde].system[:InterstitialConcentration]
+
+			scaling = (model_label = elde, equation_label = :sei_mass_cons, value = De * ce / L)
+			push!(scalings, scaling)
+
+		end
+
+	end
+
+	return scalings
+
+end
+
+
+
+function setup_timesteps(input;
+	kwargs...)
+	"""
+		Method setting up the timesteps from a json file object. 
+	"""
+	cycling_protocol = input.cycling_protocol
+	simulation_settings = input.simulation_settings
+
+	protocol = cycling_protocol["Protocol"]
+
+	if protocol == "CC"
+		if cycling_protocol["TotalNumberOfCycles"] == 0
+
+			if cycling_protocol["InitialControl"] == "discharging"
+				CRate = cycling_protocol["DRate"]
+			else
+				CRate = cycling_protocol["CRate"]
+			end
+
+			con = Constants()
+			totalTime = 1.1 * con.hour / CRate
+
+
+
+			dt = simulation_settings["TimeStepDuration"]
+
+			if haskey(input.model_settings, "RampUp")
+				nr = simulation_settings["RampUpSteps"]
+			else
+				nr = 1
+			end
+
+			timesteps = rampupTimesteps(totalTime, dt, nr)
+
+		else
+
+			ncycles = cycling_protocol["TotalNumberOfCycles"]
+			DRate = cycling_protocol["DRate"]
+			CRate = cycling_protocol["CRate"]
+
+			con = Constants()
+
+			totalTime = ncycles * 2 * (1 * con.hour / CRate + 1 * con.hour / DRate)
+
+
+
+			dt = simulation_settings["TimeStepDuration"]
+			n  = Int64(floor(totalTime / dt))
+
+			timesteps = repeat([dt], n)
+		end
+
+	elseif protocol == "CCCV"
+
+		ncycles = cycling_protocol["TotalNumberOfCycles"]
+		DRate = cycling_protocol["DRate"]
+		CRate = cycling_protocol["CRate"]
+
+		con = Constants()
+
+		totalTime = ncycles * 2.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
+
+		dt = simulation_settings["TimeStepDuration"]
+		n  = Int64(floor(totalTime / dt))
+
+
+		timesteps = repeat([dt], n)
+
+	elseif protocol == "Function"
+		totalTime = cycling_protocol["TotalTime"]
+		dt = simulation_settings["TimeStepDuration"]
+		n = totalTime / dt
+		timesteps = repeat([dt], Int64(floor(n)))
+
+	else
+
+		error("Control policy $controlPolicy not recognized")
+
+	end
+
+	return timesteps
 end

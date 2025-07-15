@@ -509,7 +509,9 @@ end
 # Setup the initial policy from the input parameters #
 ######################################################
 
-function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParamsOld, parameters)
+function setup_initial_control_policy!(policy::CCPolicy, input, parameters)
+
+	cycling_protocol = input.cycling_protocol
 
 	if policy.initialControl == "charging"
 
@@ -525,17 +527,17 @@ function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParam
 
 	if policy.use_ramp_up
 
-		tup = Float64(inputparams["Control"]["rampupTime"])
+		tup = Float64(input.simulation_settings["RampUpTime"])
 
 		cFun(time) = currentFun(time, Imax, tup)
 
 		policy.current_function = cFun
 	end
 
-	if haskey(inputparams["Control"], "upperCutoffVoltage")
-		policy.upperCutoffVoltage = inputparams["Control"]["upperCutoffVoltage"]
-	elseif haskey(inputparams["Control"], "lowerCutoffVoltage")
-		policy.lowerCutoffVoltage = inputparams["Control"]["lowerCutoffVoltage"]
+	if haskey(cycling_protocol, "UpperVoltageLimit")
+		policy.upperCutoffVoltage = cycling_protocol["UpperVoltageLimit"]
+	elseif haskey(cycling_protocol, "LowerVoltageLimit")
+		policy.lowerCutoffVoltage = cycling_protocol["LowerVoltageLimit"]
 	end
 	policy.ImaxCharge = only(parameters[:Control][:ImaxCharge])
 	policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
@@ -543,27 +545,30 @@ function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParam
 end
 
 
-function setup_initial_control_policy!(policy::FunctionPolicy, inputparams::InputParamsOld, parameters)
+function setup_initial_control_policy!(policy::FunctionPolicy, input, parameters)
 
 end
 
-function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::InputParamsOld, parameters)
+function setup_initial_control_policy!(policy::SimpleCVPolicy, input, parameters)
+
+	cycling_protocol = input.cycling_protocol
 
 	Imax = only(parameters[:Control][:ImaxDischarge])
 
-	tup = Float64(inputparams["Control"]["rampupTime"])
+	tup = Float64(input.simulation_settings["RampUpTime"])
 
 	cFun(time) = currentFun(time, Imax, tup)
 
 	policy.current_function = cFun
 	policy.Imax             = Imax
-	policy.voltage          = inputparams["Control"]["lowerCutoffVoltage"]
+	policy.voltage          = cycling_protocol["LowerVoltageLimit"]
 
 end
 
 
-function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::InputParamsOld, parameters)
+function setup_initial_control_policy!(policy::CyclingCVPolicy, input, parameters)
 
+	cycling_protocol = input.cycling_protocol
 
 	if policy.initialControl == charging
 		Imax = only(parameters[:Control][:ImaxCharge])
@@ -579,7 +584,7 @@ function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::Inp
 
 	if policy.use_ramp_up
 
-		tup = Float64(inputparams["Control"]["rampupTime"])
+		tup = Float64(input.simulation_settings["RampUpTime"])
 
 		cFun(time) = currentFun(time, Imax, tup)
 
@@ -588,9 +593,9 @@ function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::Inp
 
 
 	policy.ImaxCharge = only(parameters[:Control][:ImaxCharge])
-	policy.upperCutoffVoltage = inputparams["Control"]["upperCutoffVoltage"]
+	policy.upperCutoffVoltage = cycling_protocol["UpperVoltageLimit"]
 	policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
-	policy.lowerCutoffVoltage = inputparams["Control"]["lowerCutoffVoltage"]
+	policy.lowerCutoffVoltage = cycling_protocol["LowerVoltageLimit"]
 
 
 

@@ -164,10 +164,10 @@ end
 
 function get_r_coords(output)
 
-	particle_radius_ne = output[:inputparams]["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["particleRadius"]
-	number_of_cells_ne = output[:inputparams]["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"]
-	particle_radius_pe = output[:inputparams]["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["particleRadius"]
-	number_of_cells_pe = output[:inputparams]["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"]
+	particle_radius_ne = output[:extra][:cell_parameters]["NegativeElectrode"]["ActiveMaterial"]["ParticleRadius"]
+	number_of_cells_ne = output[:extra][:simulation_settings]["GridResolution"]["NegativeElectrodeActiveMaterial"]
+	particle_radius_pe = output[:extra][:cell_parameters]["PositiveElectrode"]["ActiveMaterial"]["ParticleRadius"]
+	number_of_cells_pe = output[:extra][:simulation_settings]["GridResolution"]["PositiveElectrodeActiveMaterial"]
 
 	ne_radii = range(0; stop = particle_radius_ne, length = number_of_cells_ne)
 	pe_radii = range(0; stop = particle_radius_pe, length = number_of_cells_pe)
@@ -223,12 +223,12 @@ function extract_spatial_data(states::Vector)
 		raw = [foldl(getindex, chain; init = state) for state in states]  # List of arrays
 
 		# Combine into [nx, nr, nt]
-		data = [foldl(getindex, chain; init=state) for state in states]
+		data = [foldl(getindex, chain; init = state) for state in states]
 
 		data = cat(raw...; dims = 3)
 
 		# Permute to [nt, nx, nr]
-		data = permutedims(data, (3,2,1))
+		data = permutedims(data, (3, 2, 1))
 
 		if size(data, 2) == 1
 			output_data[qsym] = dropdims(data; dims = 2)
@@ -251,7 +251,7 @@ function get_x_coords(model::MultiModel{:Battery})
 	return primitives.points[:, 1]
 end
 
-function get_padded_states(output::NamedTuple{(:states, :cellSpecifications, :reports, :inputparams, :extra)})
+function get_padded_states(output::NamedTuple)
 	model = output[:extra][:model]
 	states = output[:states]
 	model_keys = keys(model.models)
@@ -341,7 +341,7 @@ function get_padded_states(output::NamedTuple{(:states, :cellSpecifications, :re
 
 end
 
-function extract_time_series_data(output::NamedTuple{(:states, :cellSpecifications, :reports, :inputparams, :extra)})
+function extract_time_series_data(output::NamedTuple)
 
 	states = output[:states]
 
@@ -356,7 +356,7 @@ function extract_time_series_data(output::NamedTuple{(:states, :cellSpecificatio
 end
 
 
-function extract_output_times(output::NamedTuple{(:states, :cellSpecifications, :reports, :inputparams, :extra)})
+function extract_output_times(output::NamedTuple)
 
 	states = output[:states]
 	t = [state[:Control][:Controller].time for state in states]

@@ -5,10 +5,11 @@
     "rampupTime": 0.1,
     "upperCutoffVoltage": 4.1,
     "lowerCutoffVoltage": 2.4,
-    "useCVswitch" : false
+    "useCVswitch": false
   },
   "TimeStepping": {
     "useRampup": true,
-    "numberOfTimeSteps": 100,
-    "numberOfRampupSteps": 5}
+    "timeStepDuration": 50,
+    "numberOfRampupSteps": 5
+  }
 }

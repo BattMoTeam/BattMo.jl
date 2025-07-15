@@ -4,32 +4,49 @@ export jelly_roll_grid
 # jelly roll grid setup #
 #########################
 
-function jelly_roll_grid(geomparams::InputGeometryParams)
+function jelly_roll_grid(input)
 
-	geometry = geomparams["Geometry"]
+	cell_parameters = input.cell_parameters
+	grid_settings = input.simulation_settings["GridResolution"]
 
-	nangles = geometry["numberOfDiscretizationCellsAngular"]
-	nz      = geometry["numberOfDiscretizationCellsVertical"]
-	rinner  = geometry["innerRadius"]
-	router  = geometry["outerRadius"]
-	height  = geometry["height"]
+	cell = cell_parameters["Cell"]
+
+	nangles = grid_settings["Angular"]
+	nz      = grid_settings["Height"]
+	rinner  = cell["InnerRadius"]
+	router  = cell["OuterRadius"]
+	height  = cell["Height"]
 
 	function get_vector(geomparams, fdname)
 		# double coated electrode
-		v = [geomparams["PositiveElectrode"]["Coating"][fdname],
+		v = [geomparams["PositiveElectrode"]["ElectrodeCoating"][fdname],
 			geomparams["PositiveElectrode"]["CurrentCollector"][fdname],
-			geomparams["PositiveElectrode"]["Coating"][fdname],
+			geomparams["PositiveElectrode"]["ElectrodeCoating"][fdname],
 			geomparams["Separator"][fdname],
-			geomparams["NegativeElectrode"]["Coating"][fdname],
+			geomparams["NegativeElectrode"]["ElectrodeCoating"][fdname],
 			geomparams["NegativeElectrode"]["CurrentCollector"][fdname],
-			geomparams["NegativeElectrode"]["Coating"][fdname],
+			geomparams["NegativeElectrode"]["ElectrodeCoating"][fdname],
 			geomparams["Separator"][fdname]]
 
 		return v
 	end
 
-	Ns  = get_vector(geomparams, "N")
-	dxs = get_vector(geomparams, "thickness")
+	function get_grid_settings(grid_settings)
+		# double coated electrode
+		v = [grid_settings["PositiveElectrodeCoating"],
+			grid_settings["PositiveElectrodeCurrentCollector"],
+			grid_settings["PositiveElectrodeCoating"],
+			grid_settings["Separator"],
+			grid_settings["NegativeElectrodeCoating"],
+			grid_settings["NegativeElectrodeCurrentCollector"],
+			grid_settings["NegativeElectrodeCoating"],
+			grid_settings["Separator"]]
+
+		return v
+	end
+
+	Ns  = get_grid_settings(grid_settings)
+	dxs = get_vector(cell_parameters, "Thickness")
 
 	dx = mapreduce((dx, N) -> repeat([dx], N), vcat, dxs ./ Ns, Ns)
 
@@ -105,7 +122,7 @@ function jelly_roll_grid(geomparams::InputGeometryParams)
 	components = ["NegativeCurrentCollector", "PositiveCurrentCollector"]
 
 	for component in components
-		couplings[component]["External"] = setup_tab_couplings(grids, geomparams, component)
+		couplings[component]["External"] = setup_tab_couplings(grids, input, component)
 	end
 
 	return grids, couplings
@@ -113,7 +130,10 @@ function jelly_roll_grid(geomparams::InputGeometryParams)
 end
 
 """ returns the coupling cells and faces for the tabs for the given component ("NegativeCurrentCollector" or "PositiveCurrentCollector")"""
-function setup_tab_couplings(grids, inputparams, component)
+function setup_tab_couplings(grids, input, component)
+
+	cell_parameters = input.cell_parameters
+	grid_settings = input.simulation_settings["GridResolution"]
 
 	if component == "NegativeCurrentCollector"
 		ip_component = "NegativeElectrode"
@@ -121,7 +141,7 @@ function setup_tab_couplings(grids, inputparams, component)
 		ip_component = "PositiveElectrode"
 	end
 
-	if haskey(inputparams[ip_component]["CurrentCollector"], "tabparams") && inputparams[ip_component]["CurrentCollector"]["tabparams"]["usetab"]
+	if haskey(cell_parameters[ip_component]["CurrentCollector"], "TabWidth")
 		grid = grids[component]
 		geo = tpfv_geometry(grid)
 
@@ -136,7 +156,7 @@ function setup_tab_couplings(grids, inputparams, component)
 
 		zc = geo.boundary_centroids[3, vectbcface]
 
-		nz = inputparams["Geometry"]["numberOfDiscretizationCellsVertical"]
+		nz = grid_settings["Height"]
 
 		if component == "NegativeCurrentCollector"
 			vectbcface = vectbcface[abs.(zc .- maximum(zc)).<=0.01/nz*(maximum(zc)-minimum(zc))]
@@ -160,8 +180,8 @@ function setup_tab_couplings(grids, inputparams, component)
 		# We recover the parameters for the tabs. The location of the tabs is given by a fraction which determines the fraction
 		# of the total spiral length where the tab is located.
 
-		tab_width     = inputparams[ip_component]["CurrentCollector"]["tabparams"]["width"]
-		tab_fractions = inputparams[ip_component]["CurrentCollector"]["tabparams"]["fractions"]
+		tab_width     = cell_parameters[ip_component]["CurrentCollector"]["TabWidth"]
+		tab_fractions = cell_parameters[ip_component]["CurrentCollector"]["TabFractions"]
 
 		# The tab_intervals is an array of intervals given the lower and upper limit of the tab extent in term of the spiral
 		# length
@@ -225,8 +245,8 @@ function setup_tab_couplings(grids, inputparams, component)
 			radius = norm(c)
 			tabhorzfaces = []
 			for (i, (angle_topface, radius_topface)) in enumerate(zip(angle_horzfaces, radius_horzfaces))
-				if (abs(angle_topface - angle) < (0.1 * 2 * pi / inputparams["Geometry"]["numberOfDiscretizationCellsAngular"])) && (radius_topface >= radius) &&
-				   (radius_topface <= (radius + inputparams["NegativeElectrode"]["CurrentCollector"]["thickness"]))
+				if (abs(angle_topface - angle) < (0.1 * 2 * pi / grid_settings["Angular"])) && (radius_topface >= radius) &&
+				   (radius_topface <= (radius + cell_parameters["NegativeElectrode"]["CurrentCollector"]["Thickness"]))
 					push!(tabhorzfaces, i)
 				end
 			end

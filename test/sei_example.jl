@@ -34,9 +34,6 @@ using Test
 		sei_thickness = states.SEIThickness
 		voltage_drop = states.SEIVoltageDrop
 
-		@info size(sei_thickness)
-		@info size(voltage_drop)
-
 
 		@test length(sei_thickness[:, 2]) ≈ 2634 atol = 0
 		@test sei_thickness[2, 2] ≈ 1.0000000339846753e-8 atol = 1e-1
