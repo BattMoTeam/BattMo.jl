@@ -68,7 +68,7 @@ function get_output_metrics(
 		push!(round_trip_efficiency, compute_round_trip_efficiency(output))
 	else
 		# Compute per cycle
-		for cycle in unique_cycles
+		for cycle in cycle_array
 			push!(discharge_cap, compute_discharge_capacity(output; cycle_number = cycle))
 			push!(charge_cap, compute_charge_capacity(output; cycle_number = cycle))
 			push!(discharge_energy, compute_discharge_energy(output; cycle_number = cycle))
