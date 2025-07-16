@@ -127,7 +127,7 @@ function setupSolidDiffusionDiscretization(rp, N, D)
 	rp, D = promote(rp, D)
 	T = typeof(rp)
 
-	N  = Int64(N)
+	N = Int64(N)
 
 	hT   = zeros(T, N + 1)
 	vols = zeros(T, N)
@@ -223,7 +223,7 @@ function Jutul.select_equations!(eqs,
 	model::SimulationModel,
 )
 
-    disc = model.domain.discretizations.flow
+	disc                      = model.domain.discretizations.flow
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 	eqs[:mass_conservation]   = SolidMassCons()
 	eqs[:solid_diffusion_bc]  = SolidDiffusionBc()
@@ -263,24 +263,18 @@ end
 		ix,
 	) where {label, D, T, Di}
 
-		ocp_func = model.system.params[:ocp_func]
+		ocp_func = model.system.params[:OpenCircuitPotential]
 
 		cmax = model.system.params[:maximum_concentration]
 		refT = 298.15
 
-		if Jutul.haskey(model.system.params, :ocp_funcexp)
-			theta0   = model.system.params[:theta0]
-			theta100 = model.system.params[:theta100]
-		end
-
-
 		for cell in ix
 
-			if Jutul.haskey(model.system.params, :ocp_funcexp)
+			if isa(ocp_func, Function)
 
 				@inbounds Ocp[cell] = ocp_func(Cs[cell], refT, refT, cmax)
 
-			elseif Jutul.haskey(model.system.params, :ocp_funcdata)
+			elseif isa(ocp_func, Union{LinearInterpolant, BilinearInterpolant})
 
 				@inbounds Ocp[cell] = ocp_func(Cs[cell] / cmax)
 
@@ -451,7 +445,7 @@ function Jutul.select_equations!(eqs,
 	model::SimulationModel,
 )
 
-    disc = model.domain.discretizations.flow
+	disc                      = model.domain.discretizations.flow
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 	eqs[:mass_conservation]   = ConservationLaw(disc, :Mass)
 

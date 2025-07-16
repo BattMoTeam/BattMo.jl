@@ -339,30 +339,27 @@ end
 
 function setup_functional_parameter!(am_params, codict, name)
 	if isa(codict[name], Real)
-		am_params[:ocp_funcconstant] = true
-		am_params[:ocp_constant] = codict[name]
+		am_params[Symbol(name)] = codict[name]
 
 	elseif isa(codict[name], String)
 
-		am_params[:ocp_funcexp] = true
 		ocp_exp = codict[name]
 		exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
-		am_params[:ocp_func] = @RuntimeGeneratedFunction(exp)
+		am_params[Symbol(name)] = @RuntimeGeneratedFunction(exp)
 
 	elseif haskey(codict[name], "FunctionName")
 
 		funcname = codict[name]["FunctionName"]
 		funcpath = haskey(codict[name], "FilePath") ? codict[name]["FilePath"] : nothing
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-		am_params[:ocp_func] = fcn
+		am_params[Symbol(name)] = fcn
 
 	else
-		am_params[:ocp_funcdata] = true
 		data_x = codict[name]["x"]
 		data_y = codict[name]["y"]
 
 		interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-		am_params[:ocp_func] = interpolation_object
+		am_params[Symbol(name)] = interpolation_object
 	end
 
 end
