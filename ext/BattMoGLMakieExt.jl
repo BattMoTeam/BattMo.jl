@@ -3,7 +3,7 @@ module BattMoGLMakieExt
 using BattMo, GLMakie
 
 
-function BattMo.plot_output(output::NamedTuple, output_variables::Union{Vector{String}, Vector{Vector{String}}}; layout::Union{Nothing, Tuple{Int, Int}} = nothing)
+function BattMo.plot_output(output::NamedTuple, output_variables::Union{Vector{String}, Vector{Vector{String}}, Vector{Any}}; layout::Union{Nothing, Tuple{Int, Int}} = nothing)
 	if !isdefined(Main, :GLMakie)
 		error("GLMakie must be explicitly imported (e.g., with `using GLMakie`) before calling `plot_dashboard`.")
 	end
@@ -12,7 +12,7 @@ end
 
 function BattMo.plot_impl(
 	output::NamedTuple,
-	variables::Union{Vector{String}, Vector{Any}};
+	variables::Union{Vector{String}, Vector{Any}, Vector{Any}};
 	layout::Union{Nothing, Tuple{Int, Int}} = nothing,
 )
 	grouped_vars = [isa(g, String) ? [g] : g for g in variables]
