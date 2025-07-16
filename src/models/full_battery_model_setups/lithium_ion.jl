@@ -272,56 +272,10 @@ function setup_electrolyte(model_setup::LithiumIonBattery, input, grids)
 	params[:separator_density]   = cell_parameters["Separator"]["Density"]
 
 	# setup diffusion coefficient function
-	if isa(inputparams_elyte["DiffusionCoefficient"], Real)
-
-		params[:diffusivity_constant] = inputparams_elyte["DiffusionCoefficient"]
-	elseif isa(inputparams_elyte["DiffusionCoefficient"], String)
-
-		exp = setup_diffusivity_evaluation_expression_from_string(inputparams_elyte["DiffusionCoefficient"])
-		params[:diffusivity_func] = @RuntimeGeneratedFunction(exp)
-
-	elseif haskey(inputparams_elyte["DiffusionCoefficient"], "FunctionName")
-
-		funcname = inputparams_elyte["DiffusionCoefficient"]["FunctionName"]
-		funcpath = haskey(inputparams_elyte["DiffusionCoefficient"], "FilePath") ? inputparams_elyte["DiffusionCoefficient"]["FilePath"] : nothing
-		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-		params[:diffusivity_func] = fcn
-
-	else
-		data_x = inputparams_elyte["DiffusionCoefficient"]["x"]
-		data_y = inputparams_elyte["DiffusionCoefficient"]["y"]
-
-		interpolation = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-		params[:diffusivity_data] = true
-		params[:diffusivity_func] = interpolation
-
-	end
+	setup_functional_parameter!(params, inputparams_elyte, "DiffusionCoefficient")
 
 	# setup conductivity function
-	if isa(inputparams_elyte["IonicConductivity"], Real)
-
-		params[:conductivity_constant] = inputparams_elyte["IonicConductivity"]
-	elseif isa(inputparams_elyte["IonicConductivity"], String)
-
-		exp = setup_conductivity_evaluation_expression_from_string(inputparams_elyte["IonicConductivity"])
-		params[:conductivity_func] = @RuntimeGeneratedFunction(exp)
-
-	elseif haskey(inputparams_elyte["IonicConductivity"], "FunctionName")
-
-		funcname = inputparams_elyte["IonicConductivity"]["FunctionName"]
-		funcpath = haskey(inputparams_elyte["IonicConductivity"], "FilePath") ? inputparams_elyte["IonicConductivity"]["FilePath"] : nothing
-		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-		params[:conductivity_func] = fcn
-
-	else
-		data_x = inputparams_elyte["IonicConductivity"]["x"]
-		data_y = inputparams_elyte["IonicConductivity"]["y"]
-
-		interpolation = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-		params[:conductivity_data] = true
-		params[:conductivity_func] = interpolation
-
-	end
+	setup_functional_parameter!(params, inputparams_elyte, "IonicConductivity")
 
 	elyte = Electrolyte(params)
 
@@ -383,6 +337,36 @@ function compute_volume_fraction(codict)
 
 end
 
+function setup_functional_parameter!(am_params, codict, name)
+	if isa(codict[name], Real)
+		am_params[:ocp_funcconstant] = true
+		am_params[:ocp_constant] = codict[name]
+
+	elseif isa(codict[name], String)
+
+		am_params[:ocp_funcexp] = true
+		ocp_exp = codict[name]
+		exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
+		am_params[:ocp_func] = @RuntimeGeneratedFunction(exp)
+
+	elseif haskey(codict[name], "FunctionName")
+
+		funcname = codict[name]["FunctionName"]
+		funcpath = haskey(codict[name], "FilePath") ? codict[name]["FilePath"] : nothing
+		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
+		am_params[:ocp_func] = fcn
+
+	else
+		am_params[:ocp_funcdata] = true
+		data_x = codict[name]["x"]
+		data_y = codict[name]["y"]
+
+		interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
+		am_params[:ocp_func] = interpolation_object
+	end
+
+end
+
 """
 	Helper function to setup the active materials
 	"""
@@ -416,32 +400,7 @@ function setup_active_material(model_setup::LithiumIonBattery, name::Symbol, inp
 
 	am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
 
-	if isa(inputparams_active_material["OpenCircuitPotential"], Real)
-		am_params[:ocp_funcconstant] = true
-		am_params[:ocp_constant] = inputparams_active_material["OpenCircuitPotential"]
-
-	elseif isa(inputparams_active_material["OpenCircuitPotential"], String)
-
-		am_params[:ocp_funcexp] = true
-		ocp_exp = inputparams_active_material["OpenCircuitPotential"]
-		exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
-		am_params[:ocp_func] = @RuntimeGeneratedFunction(exp)
-
-	elseif haskey(inputparams_active_material["OpenCircuitPotential"], "FunctionName")
-
-		funcname = inputparams_active_material["OpenCircuitPotential"]["FunctionName"]
-		funcpath = haskey(inputparams_active_material["OpenCircuitPotential"], "FilePath") ? inputparams_active_material["OpenCircuitPotential"]["FilePath"] : nothing
-		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-		am_params[:ocp_func] = fcn
-
-	else
-		am_params[:ocp_funcdata] = true
-		data_x = inputparams_active_material["OpenCircuitPotential"]["x"]
-		data_y = inputparams_active_material["OpenCircuitPotential"]["y"]
-
-		interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-		am_params[:ocp_func] = interpolation_object
-	end
+	setup_functional_parameter!(am_params, inputparams_active_material, "OpenCircuitPotential")
 
 	if haskey(model_setup.model_settings, "TransportInSolid") && model_setup.model_settings["TransportInSolid"] == "FullDiffusion"
 		rp = inputparams_active_material["ParticleRadius"]
