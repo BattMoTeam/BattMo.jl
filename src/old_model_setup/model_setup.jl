@@ -7,14 +7,14 @@ export run_battery
 
 
 """
-	run_battery(model::BatteryModelSetup, cell_parameters::CellParameters, 
+	run_battery(model::ModelConfigured, cell_parameters::CellParameters, 
 				cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings; 
 				hook=nothing, kwargs...)
 
 Runs a battery simulation using the provided model, cell parameters, cycling protocol, and simulation settings.
 
 # Arguments
-- `model ::BatteryModelSetup` : The battery model to be used.
+- `model ::ModelConfigured` : The battery model to be used.
 - `cell_parameters ::CellParameters` : The cell parameter set.
 - `cycling_protocol ::CyclingProtocol` : The cycling protocol parameter set.
 - `simulation_settings ::SimulationSettings` : The simulation settings parameter set.
@@ -24,12 +24,12 @@ Runs a battery simulation using the provided model, cell parameters, cycling pro
 # Returns
 The output of the battery simulation after executing `run_battery` with formatted input.
 """
-function run_battery(model::BatteryModelSetup, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings;
+function run_battery(model::ModelConfigured, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings;
 	hook = nothing,
 	use_p2d = true,
 	kwargs...)
 
-	model_settings = model.model_settings
+	model_settings = model.settings
 
 	battmo_formatted_input = convert_parameter_sets_to_old_input_format(model_settings, cell_parameters, cycling_protocol, simulation_settings)
 

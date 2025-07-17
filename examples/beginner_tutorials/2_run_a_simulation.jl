@@ -26,13 +26,13 @@ nothing # hide
 # transport phenomena occuring in a real battery cell. The implementation consist of a system of partial differential equations and their corresponding parameters, constants and boundary conditions. 
 # The default Lithium-Ion Battery Model selected below corresponds to a basic P2D model, where neither current collectors nor thermal effects are considered.
 
-model_setup = LithiumIonBattery()
+model = LithiumIonBattery()
 
 # Then we setup a Simulation by passing the model, cell parameters and a cycling protocol. A Simulation can be thought as a procedure to predict how the cell responds to the cycling protocol, 
 # by solving the equations in the model using the cell parameters passed.  
 # We first prepare the simulation: 
 
-sim = Simulation(model_setup, cell_parameters, cycling_protocol);
+sim = Simulation(model, cell_parameters, cycling_protocol);
 
 # When the simulation is prepared, there are some validation checks happening in the background, which verify whether the cell parameters, cycling protocol and settings are sensible and complete 
 # to run a simulation. It is good practice to ensure that the Simulation has been properly configured by checking if has passed the validation procedure:   

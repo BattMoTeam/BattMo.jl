@@ -5,7 +5,7 @@ export setup_model
 
 
 """
-	struct LithiumIonBattery <: BatteryModelSetup
+	struct LithiumIonBattery <: ModelConfigured
 
 Represents a lithium-ion battery model based on the Doyle-Fuller-Newman approach.
 
@@ -19,11 +19,12 @@ Represents a lithium-ion battery model based on the Doyle-Fuller-Newman approach
 Creates an instance of `LithiumIonBattery` with the specified or default model settings.
 The model name is automatically generated based on the model geometry.
 """
-struct LithiumIonBattery <: BatteryModelSetup
+mutable struct LithiumIonBattery <: ModelConfigured
 	name::String
-	model_settings::ModelSettings
+	settings::ModelSettings
 	is_valid::Bool
-	model::MultiModel
+	multimodel::Union{Missing, MultiModel}
+
 
 	function LithiumIonBattery(; model_settings = get_default_model_settings(LithiumIonBattery))
 
@@ -92,25 +93,25 @@ function get_default_simulation_settings(st::LithiumIonBattery)
 end
 
 
-function setup_model(model_setup::LithiumIonBattery, input, grids, couplings; kwargs...)
+function setup_model(model::LithiumIonBattery, input, grids, couplings; kwargs...)
 
 	# setup the submodels and also return a coupling structure which is used to setup later the cross-terms
-	submodels = setup_submodels(model_setup, input, grids, couplings; kwargs...)
+	submodels = setup_submodels(model, input, grids, couplings; kwargs...)
 
 	# Combine sub models into MultiModel
-	model = setup_multimodel(model_setup, submodels, input)
+	model = setup_multimodel(model, submodels, input)
 
 	# Compute the volume fractions
 	setup_volume_fractions!(model, grids, couplings["Electrolyte"])
 
 	# setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
 	# sensitivities)
-	parameters = set_parameters(model_setup, input, model)
+	parameters = set_parameters(model, input)
 
 	# setup the cross terms which couples the submodels.
-	setup_coupling_cross_terms!(model_setup, model, parameters, couplings)
+	setup_coupling_cross_terms!(model, parameters, couplings)
 
-	setup_initial_control_policy!(model[:Control].system.policy, input, parameters)
+	setup_initial_control_policy!(model.multimodel[:Control].system.policy, input, parameters)
 	#model.context = DefaultContext()
 
 	output = (model = model,
@@ -120,19 +121,19 @@ function setup_model(model_setup::LithiumIonBattery, input, grids, couplings; kw
 
 end
 
-function setup_multimodel(model_setup::LithiumIonBattery, submodels, input)
+function setup_multimodel(model::LithiumIonBattery, submodels, input)
 
-	if !haskey(model_setup.model_settings, "CurrentCollectors")
+	if !haskey(model.settings, "CurrentCollectors")
 		groups = nothing
 
-		model = MultiModel(
+		multimodel = MultiModel(
 			(
 				NeAm    = submodels.model_neam,
 				Elyte   = submodels.model_elyte,
 				PeAm    = submodels.model_peam,
 				Control = submodels.model_control,
 			),
-			Val(:Battery);
+			Val(:LithiumIonBattery);
 			groups = groups)
 	else
 		models = (
@@ -153,19 +154,21 @@ function setup_multimodel(model_setup::LithiumIonBattery, submodels, input)
 			reduction = :reduction
 		end
 
-		model = MultiModel(models,
-			Val(:Battery);
+		multimodel = MultiModel(models,
+			Val(:LithiumIonBattery);
 			groups = groups, reduction = reduction)
 
 	end
+
+	model.multimodel = multimodel
 
 	return model
 
 end
 
-function setup_submodels(model_setup::LithiumIonBattery, input, grids, couplings; kwargs...)
+function setup_submodels(model::LithiumIonBattery, input, grids, couplings; kwargs...)
 
-	if haskey(model_setup.model_settings, "CurrentCollectors")
+	if haskey(model.settings, "CurrentCollectors")
 		include_cc = true
 		model_necc = setup_ne_current_collector(input, grids, couplings)
 		model_pecc = setup_pe_current_collector(input, grids, couplings)
@@ -175,10 +178,10 @@ function setup_submodels(model_setup::LithiumIonBattery, input, grids, couplings
 		model_pecc = nothing
 	end
 
-	model_neam = setup_active_material(model_setup, :NeAm, input, grids, couplings)
-	model_peam = setup_active_material(model_setup, :PeAm, input, grids, couplings)
+	model_neam = setup_active_material(model, :NeAm, input, grids, couplings)
+	model_peam = setup_active_material(model, :PeAm, input, grids, couplings)
 
-	model_elyte = setup_electrolyte(model_setup, input, grids)
+	model_elyte = setup_electrolyte(model, input, grids)
 
 	model_control = setup_control_model(input, model_neam, model_peam; kwargs...)
 
@@ -257,8 +260,43 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 
 end
 
+function setup_volume_fractions!(model::LithiumIonBattery, grids, coupling)
+	multimodel = model.multimodel
+	Nelyte = number_of_cells(grids["Electrolyte"])
 
-function setup_electrolyte(model_setup::LithiumIonBattery, input, grids)
+	names = [:NeAm, :PeAm]
+	stringNames = Dict(:NeAm => "NegativeElectrode",
+		:PeAm => "PositiveElectrode")
+
+	vfracs = map(name -> multimodel[name].system[:volume_fraction], names)
+	separator_porosity = multimodel[:Elyte].system[:separator_porosity]
+
+	T = Base.promote_type(map(typeof, vfracs)..., typeof(separator_porosity))
+
+	vfelyte     = zeros(T, Nelyte)
+	vfseparator = zeros(T, Nelyte)
+
+	for (i, name) in enumerate(names)
+		stringName = stringNames[name]
+		ncell = number_of_cells(grids[stringName])
+		ammodel = multimodel[name]
+		vf = vfracs[i]
+		ammodel.domain.representation[:volumeFraction] = vf * ones(ncell)
+		elytecells = coupling[stringName]["cells"]
+		vfelyte[elytecells] .= 1 - vf
+	end
+
+	elytecells = coupling["Separator"]["cells"]
+
+	vfelyte[elytecells]     .= separator_porosity * ones()
+	vfseparator[elytecells] .= (1 - separator_porosity)
+
+	multimodel[:Elyte].domain.representation[:volumeFraction] = vfelyte
+	multimodel[:Elyte].domain.representation[:separator_volume_fraction] = vfseparator
+
+end
+
+function setup_electrolyte(model::LithiumIonBattery, input, grids)
 	params = JutulStorage()
 
 	cell_parameters = input.cell_parameters
@@ -386,7 +424,7 @@ end
 """
 	Helper function to setup the active materials
 	"""
-function setup_active_material(model_setup::LithiumIonBattery, name::Symbol, input, grids, couplings)
+function setup_active_material(model::LithiumIonBattery, name::Symbol, input, grids, couplings)
 
 	stringNames = Dict(
 		:NeAm => "NegativeElectrode",
@@ -443,11 +481,11 @@ function setup_active_material(model_setup::LithiumIonBattery, name::Symbol, inp
 		am_params[:ocp_func] = interpolation_object
 	end
 
-	if haskey(model_setup.model_settings, "TransportInSolid") && model_setup.model_settings["TransportInSolid"] == "FullDiffusion"
+	if haskey(model.settings, "TransportInSolid") && model.settings["TransportInSolid"] == "FullDiffusion"
 		rp = inputparams_active_material["ParticleRadius"]
 		N  = Int64(input.simulation_settings["GridResolution"][stringName*"ActiveMaterial"])
 		D  = inputparams_active_material["DiffusionCoefficient"]
-		if haskey(model_setup.model_settings, "SEIModel") && model_setup.model_settings["SEIModel"] == "Bolay" && haskey(inputparams_electrode, "Interphase")
+		if haskey(model.settings, "SEIModel") && model.settings["SEIModel"] == "Bolay" && haskey(inputparams_electrode, "Interphase")
 			label = :sei
 			fds = ["InitialThickness",
 				"InitialPotentialDrop",
@@ -472,7 +510,7 @@ function setup_active_material(model_setup::LithiumIonBattery, name::Symbol, inp
 	coupling = couplings[stringName]
 
 	boundary = nothing
-	if !haskey(model_setup.model_settings, "CurrentCollectors") && name == :NeAm
+	if !haskey(model.settings, "CurrentCollectors") && name == :NeAm
 		addDirichlet = true
 		boundary = coupling["External"]
 	else
@@ -517,10 +555,9 @@ function compute_effective_conductivity(comodel, coinputparams)
 
 end
 
-function set_parameters(model_setup::LithiumIonBattery, input,
-	model::MultiModel,
+function set_parameters(model::LithiumIonBattery, input
 )
-
+	multimodel = model.multimodel
 	cycling_protocol = input.cycling_protocol
 	cell_parameters = input.cell_parameters
 
@@ -528,7 +565,7 @@ function set_parameters(model_setup::LithiumIonBattery, input,
 
 	T0 = cycling_protocol["InitialTemperature"]
 
-	if haskey(model_setup.model_settings, "CurrentCollectors")
+	if haskey(model.settings, "CurrentCollectors")
 
 		#######################################
 		# Negative current collector (if any) #
@@ -537,7 +574,7 @@ function set_parameters(model_setup::LithiumIonBattery, input,
 		prm_necc = Dict{Symbol, Any}()
 		inputparams_necc = cell_parameters["NegativeElectrode"]["CurrentCollector"]
 		prm_necc[:Conductivity] = inputparams_necc["ElectronicConductivity"]
-		parameters[:NeCc] = setup_parameters(model[:NeCc], prm_necc)
+		parameters[:NeCc] = setup_parameters(multimodel[:NeCc], prm_necc)
 
 	end
 
@@ -548,17 +585,17 @@ function set_parameters(model_setup::LithiumIonBattery, input,
 	prm_neam = Dict{Symbol, Any}()
 	inputparams_neam = cell_parameters["NegativeElectrode"]["ActiveMaterial"]
 
-	prm_neam[:Conductivity] = compute_effective_conductivity(model[:NeAm], cell_parameters["NegativeElectrode"])
+	prm_neam[:Conductivity] = compute_effective_conductivity(multimodel[:NeAm], cell_parameters["NegativeElectrode"])
 	prm_neam[:Temperature] = T0
 
-	if discretisation_type(model[:NeAm]) == :P2Ddiscretization
+	if discretisation_type(multimodel[:NeAm]) == :P2Ddiscretization
 		# nothing to do
 	else
-		@assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
+		@assert discretisation_type(multimodel[:NeAm]) == :NoParticleDiffusion
 		prm_neam[:Diffusivity] = inputparams_neam["DiffusionCoefficient"]
 	end
 
-	parameters[:NeAm] = setup_parameters(model[:NeAm], prm_neam)
+	parameters[:NeAm] = setup_parameters(multimodel[:NeAm], prm_neam)
 
 	###############
 	# Electrolyte #
@@ -569,7 +606,7 @@ function set_parameters(model_setup::LithiumIonBattery, input,
 	prm_elyte[:BruggemanCoefficient] = cell_parameters["Separator"]["BruggemanCoefficient"]
 
 
-	parameters[:Elyte] = setup_parameters(model[:Elyte], prm_elyte)
+	parameters[:Elyte] = setup_parameters(multimodel[:Elyte], prm_elyte)
 
 	############################
 	# Positive active material #
@@ -578,20 +615,20 @@ function set_parameters(model_setup::LithiumIonBattery, input,
 	prm_peam = Dict{Symbol, Any}()
 	inputparams_peam = cell_parameters["PositiveElectrode"]["ActiveMaterial"]
 
-	prm_peam[:Conductivity] = compute_effective_conductivity(model[:PeAm], cell_parameters["PositiveElectrode"])
+	prm_peam[:Conductivity] = compute_effective_conductivity(multimodel[:PeAm], cell_parameters["PositiveElectrode"])
 	prm_peam[:Temperature] = T0
 
 
-	if discretisation_type(model[:PeAm]) == :P2Ddiscretization
+	if discretisation_type(multimodel[:PeAm]) == :P2Ddiscretization
 		# nothing to do
 	else
-		@assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
+		@assert discretisation_type(multimodel[:NeAm]) == :NoParticleDiffusion
 		prm_peam[:Diffusivity] = inputparams_peam["DiffusionCoefficient"]
 	end
 
-	parameters[:PeAm] = setup_parameters(model[:PeAm], prm_peam)
+	parameters[:PeAm] = setup_parameters(multimodel[:PeAm], prm_peam)
 
-	if haskey(model_setup.model_settings, "CurrentCollectors")
+	if haskey(model.settings, "CurrentCollectors")
 
 		#######################################
 		# Positive current collector (if any) #
@@ -601,7 +638,7 @@ function set_parameters(model_setup::LithiumIonBattery, input,
 		inputparams_pecc = cell_parameters["PositiveElectrode"]["CurrentCollector"]
 		prm_pecc[:Conductivity] = inputparams_pecc["ElectronicConductivity"]
 
-		parameters[:PeCc] = setup_parameters(model[:PeCc], prm_pecc)
+		parameters[:PeCc] = setup_parameters(multimodel[:PeCc], prm_pecc)
 	end
 
 	###########
@@ -616,7 +653,7 @@ function set_parameters(model_setup::LithiumIonBattery, input,
 		if cycling_protocol["TotalNumberOfCycles"] == 0
 			if cycling_protocol["InitialControl"] == "discharging"
 
-				cap = computeCellCapacity(model)
+				cap = computeCellCapacity(multimodel)
 				con = Constants()
 
 				DRate = cycling_protocol["DRate"]
@@ -624,21 +661,21 @@ function set_parameters(model_setup::LithiumIonBattery, input,
 				prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
 
 
-				parameters[:Control] = setup_parameters(model[:Control], prm_control)
+				parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
 			else
-				cap = computeCellCapacity(model)
+				cap = computeCellCapacity(multimodel)
 				con = Constants()
 
 				CRate = cycling_protocol["CRate"]
 
 				prm_control[:ImaxCharge] = (cap / con.hour) * CRate
 
-				parameters[:Control] = setup_parameters(model[:Control], prm_control)
+				parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
 			end
 
 		else
 
-			cap = computeCellCapacity(model)
+			cap = computeCellCapacity(multimodel)
 			con = Constants()
 
 			DRate                       = cycling_protocol["DRate"]
@@ -646,18 +683,18 @@ function set_parameters(model_setup::LithiumIonBattery, input,
 			prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
 			prm_control[:ImaxCharge]    = (cap / con.hour) * CRate
 
-			parameters[:Control] = setup_parameters(model[:Control], prm_control)
+			parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
 		end
 
 
 	elseif protocol == "Function"
-		cap = computeCellCapacity(model)
+		cap = computeCellCapacity(multimodel)
 		con = Constants()
-		parameters[:Control] = setup_parameters(model[:Control])
+		parameters[:Control] = setup_parameters(multimodel[:Control])
 
 	elseif protocol == "CCCV"
 
-		cap = computeCellCapacity(model)
+		cap = computeCellCapacity(multimodel)
 		con = Constants()
 
 		DRate                       = cycling_protocol["DRate"]
@@ -665,7 +702,7 @@ function set_parameters(model_setup::LithiumIonBattery, input,
 		prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
 		prm_control[:ImaxCharge]    = (cap / con.hour) * CRate
 
-		parameters[:Control] = setup_parameters(model[:Control], prm_control)
+		parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
 
 	else
 		error("control policy $controlPolicy not recognized")
@@ -681,10 +718,11 @@ end
 # Setup coupling #
 ##################
 
-function setup_coupling_cross_terms!(model_setup::LithiumIonBattery,
-	model::MultiModel,
+function setup_coupling_cross_terms!(model::LithiumIonBattery,
 	parameters::Dict{Symbol, <:Any},
 	couplings)
+
+	multimodel = model.multimodel
 
 	stringNames = Dict(:NeCc => "NegativeCurrentCollector",
 		:NeAm => "NegativeElectrode",
@@ -698,36 +736,36 @@ function setup_coupling_cross_terms!(model_setup::LithiumIonBattery,
 	srange = collect(couplings["NegativeElectrode"]["Electrolyte"]["cells"])
 	trange = collect(couplings["Electrolyte"]["NegativeElectrode"]["cells"]) # electrolyte (negative side)
 
-	if discretisation_type(model[:NeAm]) == :P2Ddiscretization
+	if discretisation_type(multimodel[:NeAm]) == :P2Ddiscretization
 
 		ct = ButlerVolmerActmatToElyteCT(trange, srange)
 		ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 		ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 
 		ct = ButlerVolmerElyteToActmatCT(srange, trange)
 		ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :charge_conservation)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 		ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :solid_diffusion_bc)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 
-		if model[:NeAm] isa SEImodel
+		if multimodel[:NeAm] isa SEImodel
 			ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :sei_mass_cons)
-			add_cross_term!(model, ct_pair)
+			add_cross_term!(multimodel, ct_pair)
 			ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :sei_voltage_drop)
-			add_cross_term!(model, ct_pair)
+			add_cross_term!(multimodel, ct_pair)
 		end
 
 	else
 
-		@assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
+		@assert discretisation_type(multimodel[:NeAm]) == :NoParticleDiffusion
 
 		ct = ButlerVolmerInterfaceFluxCT(trange, srange)
 		ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 		ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 
 	end
 
@@ -738,33 +776,33 @@ function setup_coupling_cross_terms!(model_setup::LithiumIonBattery,
 	srange = collect(couplings["PositiveElectrode"]["Electrolyte"]["cells"])
 	trange = collect(couplings["Electrolyte"]["PositiveElectrode"]["cells"])
 
-	if discretisation_type(model[:PeAm]) == :P2Ddiscretization
+	if discretisation_type(multimodel[:PeAm]) == :P2Ddiscretization
 
 		ct = ButlerVolmerActmatToElyteCT(trange, srange)
 		ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 		ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 
 		ct = ButlerVolmerElyteToActmatCT(srange, trange)
 		ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :charge_conservation)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 		ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :solid_diffusion_bc)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 
 	else
 
-		@assert discretisation_type(model[:PeAm]) == :NoParticleDiffusion
+		@assert discretisation_type(multimodel[:PeAm]) == :NoParticleDiffusion
 
 		ct = ButlerVolmerInterfaceFluxCT(trange, srange)
 		ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 		ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 
 	end
 
-	if haskey(model_setup.model_settings, "CurrentCollectors")
+	if haskey(model.settings, "CurrentCollectors")
 
 		################################
 		# Setup coupling NeCc <-> NeAm #
@@ -778,8 +816,8 @@ function setup_coupling_cross_terms!(model_setup::LithiumIonBattery,
 		srange_faces = collect(couplings["NegativeCurrentCollector"]["NegativeElectrode"]["faces"])
 		trange_faces = collect(couplings["NegativeElectrode"]["NegativeCurrentCollector"]["faces"])
 
-		msource = model[:NeCc]
-		mtarget = model[:NeAm]
+		msource = multimodel[:NeCc]
+		mtarget = multimodel[:NeAm]
 
 		psource = parameters[:NeCc]
 		ptarget = parameters[:NeAm]
@@ -801,10 +839,10 @@ function setup_coupling_cross_terms!(model_setup::LithiumIonBattery,
 		@assert size(trans, 1) == size(srange_cells, 1)
 		ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
 		ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 		ct = TPFAInterfaceFluxCT(srange_cells, trange_cells, trans)
 		ct_pair = setup_cross_term(ct, target = :NeCc, source = :NeAm, equation = :charge_conservation)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 
 		################################
 		# setup coupling PeCc <-> PeAm #
@@ -818,8 +856,8 @@ function setup_coupling_cross_terms!(model_setup::LithiumIonBattery,
 		srange_faces = collect(couplings["PositiveCurrentCollector"]["PositiveElectrode"]["faces"])
 		trange_faces = collect(couplings["PositiveElectrode"]["PositiveCurrentCollector"]["faces"])
 
-		msource = model[:PeCc]
-		mtarget = model[:PeAm]
+		msource = multimodel[:PeCc]
+		mtarget = multimodel[:PeAm]
 
 		psource = parameters[:PeCc]
 		ptarget = parameters[:PeAm]
@@ -842,11 +880,11 @@ function setup_coupling_cross_terms!(model_setup::LithiumIonBattery,
 		@assert size(trans, 1) == size(srange_cells, 1)
 		ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
 		ct_pair = setup_cross_term(ct, target = :PeAm, source = :PeCc, equation = :charge_conservation)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 
 		ct = TPFAInterfaceFluxCT(srange_cells, trange_cells, trans)
 		ct_pair = setup_cross_term(ct, target = :PeCc, source = :PeAm, equation = :charge_conservation)
-		add_cross_term!(model, ct_pair)
+		add_cross_term!(multimodel, ct_pair)
 
 	end
 
@@ -854,7 +892,7 @@ function setup_coupling_cross_terms!(model_setup::LithiumIonBattery,
 	# setup coupling PeCc/NeAm <-> control #
 	########################################
 
-	if haskey(model_setup.model_settings, "CurrentCollectors")
+	if haskey(model.settings, "CurrentCollectors")
 		controlComp = :PeCc
 	else
 		controlComp = :PeAm
@@ -865,7 +903,7 @@ function setup_coupling_cross_terms!(model_setup::LithiumIonBattery,
 	trange = couplings[stringControlComp]["External"]["cells"]
 	srange = Int64.(ones(size(trange)))
 
-	msource     = model[controlComp]
+	msource     = multimodel[controlComp]
 	mparameters = parameters[controlComp]
 
 	# Here the indexing in BoundaryFaces in used
@@ -875,58 +913,60 @@ function setup_coupling_cross_terms!(model_setup::LithiumIonBattery,
 
 	ct = TPFAInterfaceFluxCT(trange, srange, trans)
 	ct_pair = setup_cross_term(ct, target = controlComp, source = :Control, equation = :charge_conservation)
-	add_cross_term!(model, ct_pair)
+	add_cross_term!(multimodel, ct_pair)
 
 	ct = AccumulatorInterfaceFluxCT(1, trange, trans)
 	ct_pair = setup_cross_term(ct, target = :Control, source = controlComp, equation = :charge_conservation)
-	add_cross_term!(model, ct_pair)
+	add_cross_term!(multimodel, ct_pair)
 
 	ct1 = AccumulatorInterfaceFluxCT(1, trange, trans * 0.0)
 	ct1_pair = setup_cross_term(ct1, target = :Control, source = controlComp, equation = :control)
-	add_cross_term!(model, ct1_pair)
+	add_cross_term!(multimodel, ct1_pair)
 
 
 end
 
 
-function setup_initial_state(input, model::MultiModel)
+function setup_initial_state(input, model::LithiumIonBattery)
 
-	include_cc = haskey(input.model_settings, "CurrentCollectors")
+	multimodel = model.multimodel
+
+	include_cc = haskey(model.settings, "CurrentCollectors")
 
 	T        = input.cycling_protocol["InitialTemperature"]
 	SOC_init = input.cycling_protocol["InitialStateOfCharge"]
 
-	function setup_init_am(name, model)
+	function setup_init_am(name, multimodel)
 
-		theta0   = model[name].system[:theta0]
-		theta100 = model[name].system[:theta100]
-		cmax     = model[name].system[:maximum_concentration]
-		N        = model[name].system.discretization[:N]
+		theta0   = multimodel[name].system[:theta0]
+		theta100 = multimodel[name].system[:theta100]
+		cmax     = multimodel[name].system[:maximum_concentration]
+		N        = multimodel[name].system.discretization[:N]
 		refT     = 298.15
 
 		theta     = SOC_init * (theta100 - theta0) + theta0
 		c         = theta * cmax
 		SOC       = SOC_init
-		nc        = count_entities(model[name].data_domain, Cells())
+		nc        = count_entities(multimodel[name].data_domain, Cells())
 		init      = Dict()
 		init[:Cs] = fill(c, nc)
 		init[:Cp] = fill(c, N, nc)
 
-		if model[name] isa SEImodel
+		if multimodel[name] isa SEImodel
 			init[:normalizedSEIlength] = ones(nc)
 			init[:normalizedSEIvoltageDrop] = zeros(nc)
 		end
 
-		if haskey(model[name].system.params, :ocp_funcexp)
-			OCP = model[name].system[:ocp_func](c, T, refT, cmax)
-		elseif haskey(model[name].system.params, :ocp_funcdata)
+		if haskey(multimodel[name].system.params, :ocp_funcexp)
+			OCP = multimodel[name].system[:ocp_func](c, T, refT, cmax)
+		elseif haskey(multimodel[name].system.params, :ocp_funcdata)
 
-			OCP = model[name].system[:ocp_func](theta)
-		elseif haskey(model[name].system.params, :ocp_constant)
-			OCP = model[name].system[:ocp_constant]
+			OCP = multimodel[name].system[:ocp_func](theta)
+		elseif haskey(multimodel[name].system.params, :ocp_constant)
+			OCP = multimodel[name].system[:ocp_constant]
 
 		else
-			OCP = model[name].system[:ocp_func](c, T, cmax)
+			OCP = multimodel[name].system[:ocp_func](c, T, cmax)
 		end
 
 		return (init, nc, OCP)
@@ -934,7 +974,8 @@ function setup_initial_state(input, model::MultiModel)
 	end
 
 	function setup_current_collector(name, phi, model)
-		nc = count_entities(model[name].data_domain, Cells())
+		multimodel = model.multimodel
+		nc = count_entities(multimodel[name].data_domain, Cells())
 		init = Dict()
 		if phi isa Int
 			phi = convert(Float64, phi)
@@ -947,13 +988,13 @@ function setup_initial_state(input, model::MultiModel)
 
 	# Setup initial state in negative active material
 
-	init, nc, negOCP = setup_init_am(:NeAm, model)
+	init, nc, negOCP = setup_init_am(:NeAm, multimodel)
 	init[:Phi] = zeros(typeof(negOCP), nc)
 	initState[:NeAm] = init
 
 	# Setup initial state in electrolyte
 
-	nc = count_entities(model[:Elyte].data_domain, Cells())
+	nc = count_entities(multimodel[:Elyte].data_domain, Cells())
 
 	init       = Dict()
 	init[:C]   = input.cell_parameters["Electrolyte"]["Concentration"] * ones(nc)
@@ -963,25 +1004,25 @@ function setup_initial_state(input, model::MultiModel)
 
 	# Setup initial state in positive active material
 
-	init, nc, posOCP = setup_init_am(:PeAm, model)
+	init, nc, posOCP = setup_init_am(:PeAm, multimodel)
 	init[:Phi] = fill(posOCP - negOCP, nc)
 
 	initState[:PeAm] = init
 
 	if include_cc
 		# Setup negative current collector
-		initState[:NeCc] = setup_current_collector(:NeCc, 0, model)
+		initState[:NeCc] = setup_current_collector(:NeCc, 0, multimodel)
 		# Setup positive current collector
-		initState[:PeCc] = setup_current_collector(:PeCc, posOCP - negOCP, model)
+		initState[:PeCc] = setup_current_collector(:PeCc, posOCP - negOCP, multimodel)
 	end
 
 	init           = Dict()
 	init[:Phi]     = posOCP - negOCP
-	init[:Current] = getInitCurrent(model[:Control])
+	init[:Current] = getInitCurrent(multimodel[:Control])
 
 	initState[:Control] = init
 
-	initState = setup_state(model, initState)
+	initState = setup_state(multimodel, initState)
 
 	return initState
 

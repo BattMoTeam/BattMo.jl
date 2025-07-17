@@ -17,25 +17,24 @@ Represents a battery simulation problem to be solved.
 
 # Fields
 - `function_to_solve ::Function` : The function responsible for running the simulation.
-- `model ::BatteryModelSetup` : The battery model being simulated.
+- `model ::ModelConfigured` : The battery model being simulated.
 - `cell_parameters ::CellParameters` : The cell parameters for the simulation.
 - `cycling_protocol ::CyclingProtocol` : The cycling protocol used.
 - `simulation_settings ::SimulationSettings` : The simulation settings applied.
 - `is_valid ::Bool` : A flag indicating if the simulation is valid.
 
 # Constructor
-	Simulation(model::BatteryModelSetup, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
+	Simulation(model::ModelConfigured, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
 
 Creates an instance of `Simulation`, initializing it with the given parameters and defaulting
 simulation settings if not provided.
 """
 struct Simulation <: AbstractSimulation
-	model_setup::BatteryModelSetup
+	is_valid::Bool
+	model::ModelConfigured
 	cell_parameters::CellParameters
 	cycling_protocol::CyclingProtocol
 	simulation_settings::SimulationSettings
-	is_valid::Bool
-	model::MultiModel
 	time_steps::Any
 	forces::Any
 	initial_state::Any
@@ -46,14 +45,13 @@ struct Simulation <: AbstractSimulation
 	simulator::Any
 
 
+	function Simulation(model::ModelConfigured, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
 
-	function Simulation(model_setup::BatteryModelSetup, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model_setup))
-
-		if model_setup.is_valid
+		if model.is_valid
 			function_to_solve = run_battery
 
 			# Here will come a validation function
-			model_settings = model_setup.model_settings
+			model_settings = model.settings
 			cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
 			cycling_protocol_is_valid = validate_parameter_set(cycling_protocol)
 			simulation_settings_is_valid = validate_parameter_set(simulation_settings, model_settings)
@@ -79,23 +77,23 @@ struct Simulation <: AbstractSimulation
 			grids, couplings = setup_grids_and_couplings(input)
 
 			# Setup simulation
-			model, parameters = setup_model(model_setup, input, grids, couplings)
+			model, parameters = setup_model(model, input, grids, couplings)
 
 			# setup initial state
 			initial_state = setup_initial_state(input, model)
 
 			# setup forces
-			forces = setup_forces(model)
+			forces = setup_forces(model.multimodel)
 
 			# setup jutul simulator
-			simulator = Simulator(model; state0 = initial_state, parameters = parameters, copy_state = true)
+			simulator = Simulator(model.multimodel; state0 = initial_state, parameters = parameters, copy_state = true)
 
 			# setup time steps
 			time_steps = setup_timesteps(input)
 
 			# setup simulation configuration
 			cfg = setup_config(simulator,
-				model,
+				model.multimodel,
 				parameters,
 				input;
 			)
@@ -113,7 +111,7 @@ struct Simulation <: AbstractSimulation
 
 			""")
 		end
-		return new{}(model_setup, cell_parameters, cycling_protocol, simulation_settings, is_valid, model, time_steps, forces, initial_state, grids, couplings, cfg, parameters, simulator)
+		return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, cfg, parameters, simulator)
 	end
 end
 
@@ -194,14 +192,13 @@ function solve_simulation(sim::Simulation;
 	cfg = sim.cfg
 	couplings = sim.couplings
 	parameters = sim.parameters
-	model_setup = sim.model_setup
 	simulation_settings = sim.simulation_settings
 	cell_parameters = sim.cell_parameters
 	cycling_protocol = sim.cycling_protocol
 
 	if !isnothing(hook)
 		hook(simulator,
-			model,
+			model.multimodel,
 			state0,
 			forces,
 			timesteps,
@@ -215,7 +212,6 @@ function solve_simulation(sim::Simulation;
 		:forces => forces,
 		:state0 => state0,
 		:parameters => parameters,
-		:model_setup => model_setup,
 		:simulation_settings => simulation_settings,
 		:cell_parameters => cell_parameters,
 		:cycling_protocol => cycling_protocol,
@@ -227,13 +223,13 @@ function solve_simulation(sim::Simulation;
 	extra[:timesteps] = timesteps
 
 	input = Dict(
-		:model_setup => model_setup,
+		:model_settings => model.settings,
 		:simulation_settings => simulation_settings,
 		:cell_parameters => cell_parameters,
 		:cycling_protocol => cycling_protocol,
 	)
 
-	cellSpecifications = computeCellSpecifications(model)
+	cellSpecifications = computeCellSpecifications(model.multimodel)
 
 	return (states             = states,
 		cellSpecifications = cellSpecifications,
