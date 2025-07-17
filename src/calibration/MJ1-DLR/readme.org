@@ -1,0 +1,4 @@
+From https://github.com/BattMoTeam/2022-DLR-params/tree/master, copy the files
+- ~MJ1/rawData/dlroutput.mat~
+- ~MJ1/rawData/MJ1_parameters-final.xlsx~
+in this data directory
