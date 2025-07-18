@@ -5,6 +5,7 @@
         "Description": "Parameter set of a commercial Type LP2770120 prismatic LiFePO4/graphite cell, for an electrochemical pseudo-two-dimensional (P2D) model.",
         "Models": {
             "ModelFramework": [
+                "P2D",
                 "P4D Pouch"
             ],
             "TransportInSolid": "FullDiffusion",
@@ -17,9 +18,9 @@
         "Case": "Pouch",
         "NominalVoltage": 3.635,
         "NominalCapacity": 3.5,
-        "ElectrodeWidth": 67e-3,
-        "ElectrodeLength": 105e-3,
-        "ElectrodeGeometricSurfaceArea": 0.007035
+        "ElectrodeWidth": 5.9e-2,
+        "ElectrodeLength": 124.5e-2,
+        "ElectrodeGeometricSurfaceArea": 0.073455
     },
     "Electrolyte": {
         "Description": "1.5 mol/l LiPF6 dissolved in a mixture of ethylene carbonate (EC):  dimethyl carbonate (DMC) (1:1)",
@@ -40,7 +41,7 @@
         "ActiveMaterial": {
             "Description": "NMC111",
             "NumberOfElectronsTransfered": 1,
-            "StoichiometricCoefficientAtSOC0": 0.8949,
+            "StoichiometricCoefficientAtSOC0": 0.9249,
             "ReactionRateConstant": 2.33e-11,
             "MassFraction": 0.93,
             "StoichiometricCoefficientAtSOC100": 0.2381,
@@ -50,18 +51,18 @@
                 "FunctionName": "computeOCPcathodeDLR2",
                 "FilePath": "function_parameters_MJ1.jl"
             },
-            "MaximumConcentration": 50785,
+            "MaximumConcentration": 52785,
             "VolumetricSurfaceArea": 885000.0,
             "DiffusionCoefficient": 4.0e-15,
             "ParticleRadius": 2.375e-6,
-            "Density": 1500,
+            "Density": 4650,
             "ElectronicConductivity": 0.25,
             "ChargeTransferCoefficient": 0.5
         },
         "ElectrodeCoating": {
             "BruggemanCoefficient": 0.6,
             "Thickness": 74.0e-6,
-            "EffectiveDensity": 3220.0
+            "EffectiveDensity": 3220.1
         },
         "ConductiveAdditive": {
             "Description": "Unknown",
@@ -80,8 +81,8 @@
             "Thickness": 17e-06,
             "Density": 2700,
             "ElectronicConductivity": 3.55e7,
-            "TabWidth": 15e-3,
-            "TabLength": 10e-3
+            "TabWidth": 3e-3,
+            "TabLength": 59e-3 
         }
     },
     "Separator": {
@@ -97,14 +98,14 @@
             "StoichiometricCoefficientAtSOC0": 0.0086,
             "ReactionRateConstant": 5.031e-11,
             "MassFraction": 0.96,
-            "StoichiometricCoefficientAtSOC100": 0.9608,
+            "StoichiometricCoefficientAtSOC100": 0.9808,
             "ActivationEnergyOfReaction": 47800.0,
             "ActivationEnergyOfDiffusion": 13820.0,
             "OpenCircuitPotential": {
                 "FunctionName": "computeOCPanodeDLR2",
                 "FilePath": "function_parameters_MJ1.jl"
             },
-            "MaximumConcentration": 32160,
+            "MaximumConcentration": 31160,
             "VolumetricSurfaceArea": 723600.0,
             "DiffusionCoefficient": 3.3e-14,
             "ParticleRadius": 4.785e-6,
@@ -134,8 +135,8 @@
             "Thickness": 11e-06,
             "Density": 8960,
             "ElectronicConductivity": 5.96e7,
-            "TabWidth": 15e-3,
-            "TabLength": 10e-3
+            "TabWidth": 4e-3,
+            "TabLength":  59e-3 
         }
     }
 }

@@ -42,7 +42,7 @@ function getExpData(rate="all", flow="discharge")
 
     # Determine file path
     if lowercase(flow) == "discharge"
-        fn = joinpath(getProjectDir(), "calibration", "MJ1-DLR", "dlroutput.mat")
+        fn = joinpath(@__DIR__,"MJ1-DLR", "dlroutput.mat")
     elseif lowercase(flow) == "charge"
         error("Charge data not available")
     else
@@ -53,7 +53,7 @@ function getExpData(rate="all", flow="discharge")
     data = matread(fn)
     dlroutput = data["dlroutput"]  # Dict with 1×4 matrices for each variable
 
-    @show keys(dlroutput)  # Show available keys in the data*
+    @show keys(dlroutput)  # Show available keys in the data
     @show size(dlroutput["current"][1])  # Show size of the time matrix
     
     # Get number of experiments (4 in this case)
@@ -119,26 +119,27 @@ battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 
 function runMJ1()
 
-    cell_parameters = load_cell_parameters(; from_file_path = "C:/Users/alexa/BattMo.jl/src/calibration/mj1p4d3.json")
+    cell_parameters = load_cell_parameters(; from_file_path = joinpath(@__DIR__,"mj1p4d3.json"))
     
     #cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
     println("successfully loaded cell parameters and cycling protocol")
-    cycling_protocol = load_cycling_protocol(; from_file_path = "C:/Users/alexa/BattMo.jl/src/calibration/custom_discharge2.json")
+    cycling_protocol = load_cycling_protocol(; from_file_path = joinpath(@__DIR__,"custom_discharge2.json"))
 
     
     
-
+    simulation_settings = load_simulation_settings(; from_file_path = joinpath(@__DIR__,"model2.json"))
+    simulation_settings = load_simulation_settings(; from_default_set = "P4D_pouch")
     
-    #model_settings = load_model_settings(;from_default_set = "P4D_pouch")
+    model_settings = load_model_settings(;from_default_set = "P4D_pouch")
     
-    model_settings = load_model_settings(;from_default_set = "P2D") 
+    #model_settings = load_model_settings(;from_default_set = "P2D") 
 
     model_setup = LithiumIonBattery(; model_settings)
 
-    sim = Simulation(model_setup, cell_parameters, cycling_protocol);
+    sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
     print(sim.is_valid)
     output0 = solve(sim;accept_invalid = true)
-    return sim,output0,cycling_protocol, cell_parameters, model_setup
+    return sim,output0,cycling_protocol, cell_parameters, model_setup, simulation_settings
 
 end
 
@@ -178,7 +179,7 @@ function lowRateCalibration(sim,exp_data)
 
     print_calibration_overview(vc_lr)
 
-    solve(vc_lr);
+    solve(vc_lr; grad_tol = 1e-0,obj_change_tol = 1e-10);
     cell_parameters_calibrated = vc_lr.calibrated_cell_parameters;
     print_calibration_overview(vc_lr)
     return cell_parameters_calibrated
@@ -222,11 +223,11 @@ function highRateCalibration(sim,exp_data,cycling_protocol2, cell_parameters_cal
 end
 
 
-sim,output,cycling_protocol,cell_parameters,model_setup = runMJ1()
+sim,output,cycling_protocol,cell_parameters,model_setup, simulation_settings = runMJ1()
 
-cell_parameters_calibrated2 = highRateCalibration(sim,exp_data,cycling_protocol,cell_parameters,model_setup)
-#cell_parameters_calibrated = lowRateCalibration(sim,exp_data)
-#cell_parameters_calibrated2 = highRateCalibration(sim,exp_data,cycling_protocol,cell_parameters_calibrated,model_setup)
+#cell_parameters_calibrated = highRateCalibration(sim,exp_data,cycling_protocol,cell_parameters,model_setup)
+cell_parameters_calibrated = lowRateCalibration(sim,exp_data)
+cell_parameters_calibrated2 = highRateCalibration(sim,exp_data,cycling_protocol,cell_parameters_calibrated,model_setup)
 
 println("Calibration done:")
 
@@ -236,7 +237,7 @@ outputs_calibrated = []
 
 for CRate in CRates
 	cycling_protocol["DRate"] = CRate
-	simuc = Simulation(model_setup, cell_parameters_calibrated2, cycling_protocol)
+	simuc = Simulation(model_setup, cell_parameters_calibrated2, cycling_protocol; simulation_settings)
 
 	output = solve(simuc, info_level = -1; accept_invalid = true)
 
@@ -248,8 +249,8 @@ for CRate in CRates
     # Store the output for the calibrated case
 	push!(outputs_base, (CRate = CRate, output = output))
 
-    simc = Simulation(model_setup, cell_parameters_calibrated2, cycling_protocol)
-	outputs_calibrated = solve(simc, info_level = -1;accept_invalid = true)
+    simc = Simulation(model_setup, cell_parameters_calibrated2, cycling_protocol; simulation_settings)
+	output_c = solve(simc, info_level = -1;accept_invalid = true)
 
     push!(outputs_calibrated, (CRate = CRate, output = output_c))
 end
@@ -259,10 +260,10 @@ colors = Makie.wong_colors()
 fig = Figure(size = (1200, 600))
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 
-for (i, data) in enumerate(outputs_base)
-    t_i, V_i = get_tV(data.output)
-    lines!(ax, t_i, V_i, label = "Simulation (initial) $(round(data.CRate, digits = 2))", color = colors[i])
-end
+#for (i, data) in enumerate(outputs_base)
+#   t_i, V_i = get_tV(data.output)
+#   lines!(ax, t_i, V_i, label = "Simulation (initial) $(round(data.CRate, digits = 2))", color = colors[i])
+#end
 
 for (i, data) in enumerate(outputs_calibrated)
     t_i, V_i = get_tV(data.output)
