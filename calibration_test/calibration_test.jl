@@ -128,29 +128,32 @@ function runMJ1()
     
     
     simulation_settings = load_simulation_settings(; from_file_path = joinpath(@__DIR__,"model2.json"))
-    simulation_settings = load_simulation_settings(; from_default_set = "P4D_pouch")
+    #simulation_settings = load_simulation_settings(; from_default_set = "P4D_pouch")
+    #simulation_settings = load_simulation_settings(; from_default_set = "P2D") # Ensure the model framework is set to P4D Pouch
     
-    model_settings = load_model_settings(;from_default_set = "P4D_pouch")
-    
-    #model_settings = load_model_settings(;from_default_set = "P2D") 
+    #model_settings = load_model_settings(;from_default_set = "P4D_pouch")
+    model_settings = load_model_settings(;from_default_set = "P2D") 
 
     model_setup = LithiumIonBattery(; model_settings)
 
     sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
     print(sim.is_valid)
-    output0 = solve(sim;accept_invalid = true)
-    return sim,output0,cycling_protocol, cell_parameters, model_setup, simulation_settings
+    #output0 = solve(sim;accept_invalid = true)
+    return cycling_protocol, cell_parameters, model_setup, simulation_settings
 
 end
 
 
 
-function lowRateCalibration(sim,exp_data)
-
+function lowRateCalibration(cell_parameters,simulation_settings,exp_data,model_setup)
+    
     
     t_exp_lr = vec(exp_data[1]["time"])
     V_exp_lr = vec(exp_data[1]["E"])
     
+    cycling_protocol = load_cycling_protocol(; from_file_path = joinpath(@__DIR__,"custom_discharge2.json"))
+    cycling_protocol["DRate"] = exp_data[1]["rawRate"]
+    sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
     #t_exp_lr, V_exp_lr = get_tV(df_05)
      
 
@@ -178,14 +181,14 @@ function lowRateCalibration(sim,exp_data)
         lower_bound = 10000.0, upper_bound = 1e5)
 
     print_calibration_overview(vc_lr)
-
-    solve(vc_lr; grad_tol = 1e-0,obj_change_tol = 1e-10);
-    cell_parameters_calibrated = vc_lr.calibrated_cell_parameters;
+    print("calibration en cours")
+    cell_parameters_calibrated, = solve(vc_lr);
+    
     print_calibration_overview(vc_lr)
     return cell_parameters_calibrated
 end
 
-function highRateCalibration(sim,exp_data,cycling_protocol2, cell_parameters_calibrated,model_setup)
+function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrated,model_setup)
 
     idx = lastindex(exp_data)
     print("index: ", idx, " for high rate calibration\n")
@@ -195,7 +198,7 @@ function highRateCalibration(sim,exp_data,cycling_protocol2, cell_parameters_cal
     #t_exp_hr,V_exp_hr = get_tV(df_2)
 
     cycling_protocol2 = deepcopy(cycling_protocol)
-    cycling_protocol2["DRate"] = 2.0
+    cycling_protocol2["DRate"] = exp_data[idx]["rawRate"]
     sim2 = Simulation(model_setup, cell_parameters_calibrated, cycling_protocol2)
     
 
@@ -223,11 +226,11 @@ function highRateCalibration(sim,exp_data,cycling_protocol2, cell_parameters_cal
 end
 
 
-sim,output,cycling_protocol,cell_parameters,model_setup, simulation_settings = runMJ1()
+cycling_protocol,cell_parameters,model_setup, simulation_settings = runMJ1()
 
-#cell_parameters_calibrated = highRateCalibration(sim,exp_data,cycling_protocol,cell_parameters,model_setup)
-cell_parameters_calibrated = lowRateCalibration(sim,exp_data)
-cell_parameters_calibrated2 = highRateCalibration(sim,exp_data,cycling_protocol,cell_parameters_calibrated,model_setup)
+#cell_parameters_calibrated = highRateCalibration(exp_data,cycling_protocol,cell_parameters,model_setup)
+cell_parameters_calibrated = lowRateCalibration(cell_parameters,simulation_settings,exp_data,model_setup)
+#cell_parameters_calibrated2 = highRateCalibration(sim,exp_data,cycling_protocol,cell_parameters_calibrated,model_setup)
 
 println("Calibration done:")
 
