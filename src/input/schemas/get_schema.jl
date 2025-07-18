@@ -590,6 +590,7 @@ function get_schema_model_settings()
 		"type" => "object",
 		"properties" => Dict(
 			"ModelFramework" => create_property(parameter_meta, "ModelFramework"),
+			"IncludeKPICalculation" => create_property(parameter_meta, "IncludeKPICalculation"),
 			"CurrentCollectors" => create_property(parameter_meta, "CurrentCollectors"),
 			"RampUp" => create_property(parameter_meta, "RampUp"),
 			"SEIModel" => create_property(parameter_meta, "SEIModel"),

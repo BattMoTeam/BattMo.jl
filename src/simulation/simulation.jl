@@ -45,23 +45,24 @@ struct Simulation <: AbstractSimulation
 	simulator::Any
 
 
-	function Simulation(model::ModelConfigured, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
+	function Simulation(model::M, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model)) where {M <: ModelConfigured}
 
 		if model.is_valid
 			function_to_solve = run_battery
 
 			# Here will come a validation function
 			model_settings = model.settings
-			cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
-			cycling_protocol_is_valid = validate_parameter_set(cycling_protocol)
-			simulation_settings_is_valid = validate_parameter_set(simulation_settings, model_settings)
+			# cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
+			# cycling_protocol_is_valid = validate_parameter_set(cycling_protocol)
+			# simulation_settings_is_valid = validate_parameter_set(simulation_settings, model_settings)
 
-			if cell_parameters_is_valid && cycling_protocol_is_valid && simulation_settings_is_valid
-				is_valid = true
+			# if cell_parameters_is_valid && cycling_protocol_is_valid && simulation_settings_is_valid
+			# 	is_valid = true
 
-			else
-				is_valid = false
-			end
+			# else
+			# 	is_valid = false
+			# end
+			is_valid = true
 
 			# Set some default simulation settings that aren't required by the user
 			set_default_solver_and_simulation_settings!(simulation_settings)
@@ -229,14 +230,21 @@ function solve_simulation(sim::Simulation;
 		:cycling_protocol => cycling_protocol,
 	)
 
-	cellSpecifications = computeCellSpecifications(model.multimodel)
+	if model.settings["IncludeKPICalculation"] == true
 
-	return (states             = states,
-		cellSpecifications = cellSpecifications,
-		reports            = reports,
-		input              = input,
-		extra              = extra)
+		cellSpecifications = computeCellSpecifications(model.multimodel)
 
+		return (states             = states,
+			cellSpecifications = cellSpecifications,
+			reports            = reports,
+			input              = input,
+			extra              = extra)
+	else
+		return (states  = states,
+			reports = reports,
+			input   = input,
+			extra   = extra)
+	end
 end
 
 

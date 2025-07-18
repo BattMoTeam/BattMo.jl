@@ -197,6 +197,7 @@ include("utils/physical_constants.jl")
 include("models/battmo_types.jl")
 include("models/full_battery_model_setups/battery_model.jl")
 include("models/full_battery_model_setups/lithium_ion.jl")
+include("models/full_battery_model_setups/sodium_ion.jl")
 
 include("input/loader.jl")
 include("input/defaults.jl")
