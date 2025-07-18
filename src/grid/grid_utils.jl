@@ -206,7 +206,7 @@ function convert_geometry(grids, couplings; include_current_collectors = true)
 end
 
 """ retrieve the grids from a model"""
-function get_grids(model::MultiModel{:Battery})
+function get_grids(model::MultiModel{:LithiumIonBattery})
 
 	has_cc = include_current_collectors(model)
 

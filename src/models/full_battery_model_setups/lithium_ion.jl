@@ -973,8 +973,7 @@ function setup_initial_state(input, model::LithiumIonBattery)
 
 	end
 
-	function setup_current_collector(name, phi, model)
-		multimodel = model.multimodel
+	function setup_current_collector(name, phi, multimodel)
 		nc = count_entities(multimodel[name].data_domain, Cells())
 		init = Dict()
 		if phi isa Int

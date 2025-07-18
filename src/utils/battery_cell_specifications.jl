@@ -8,8 +8,8 @@ export
 	computeDischargeEnergy
 
 
-function computeElectrodeCapacity(model::MultiModel, name::Symbol)
-	ammodel = model[name]
+function computeElectrodeCapacity(multimodel::MultiModel, name::Symbol)
+	ammodel = multimodel[name]
 	return computeElectrodeCapacity(ammodel, name)
 end
 

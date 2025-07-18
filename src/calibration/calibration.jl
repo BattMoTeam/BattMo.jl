@@ -301,24 +301,24 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing;
 	T = eltype(X)
 	Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, X, x_setup)
 	input = (
-		model_settings = sim.model_setup.model_settings,
+		model_settings = sim.model.settings,
 		cell_parameters = sim.cell_parameters,
 		cycling_protocol = sim.cycling_protocol,
 		simulation_settings = sim.simulation_settings)
 
-	model_setup = sim.model_setup
+	model = sim.model
 
 	grids, couplings = setup_grids_and_couplings(input)
 
-	model, parameters = setup_model(model_setup, input, grids, couplings; T = T)
+	model, parameters = setup_model(model, input, grids, couplings; T = T)
 	state0 = BattMo.setup_initial_state(input, model)
-	forces = setup_forces(model)
+	forces = setup_forces(model.multimodel)
 	timesteps = BattMo.setup_timesteps(input)
 	if !ismissing(stepix)
 		timesteps = timesteps[stepix]
 	end
 
-	return Jutul.JutulCase(model, timesteps, forces, parameters = parameters, state0 = state0, input_data = input)
+	return Jutul.JutulCase(model.multimodel, timesteps, forces, parameters = parameters, state0 = state0, input_data = input)
 end
 
 function simulate_battmo_case_for_calibration(case;

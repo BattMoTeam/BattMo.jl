@@ -116,7 +116,7 @@ function get_output_states(output::NamedTuple; quantities::Union{Nothing, Vector
 	# Get time and coordinates
 	time = extract_output_times(output)
 	padded_states = get_padded_states(output)
-	x = get_x_coords(output[:extra][:model])
+	x = get_x_coords(output[:extra][:model].multimodel)
 	r_coords = get_r_coords(output)
 	r_ne = r_coords.ne_radii
 	r_pe = r_coords.pe_radii
@@ -243,7 +243,7 @@ end
 
 
 
-function get_x_coords(model::MultiModel{:Battery})
+function get_x_coords(model::MultiModel{:LithiumIonBattery})
 
 	pp = physical_representation(model.models[:Elyte].data_domain)
 	primitives = Jutul.plot_primitives(pp, :meshscatter)
@@ -252,9 +252,9 @@ function get_x_coords(model::MultiModel{:Battery})
 end
 
 function get_padded_states(output::NamedTuple)
-	model = output[:extra][:model]
+	multimodel = output[:extra][:model].multimodel
 	states = output[:states]
-	model_keys = keys(model.models)
+	model_keys = keys(multimodel.models)
 
 	n = length(model_keys)
 	ncells = Dict{Symbol, Any}()
@@ -262,11 +262,11 @@ function get_padded_states(output::NamedTuple)
 	active .= false
 	total_number_of_cells = 0
 	for (i, k) in enumerate(model_keys)
-		pp = physical_representation(model[k].data_domain)
+		pp = physical_representation(multimodel[k].data_domain)
 		if pp isa CurrentAndVoltageDomain
 			keep = false
 		else
-			gg = model[k].domain.representation
+			gg = multimodel[k].domain.representation
 			nc = maximum(size(gg[:volumes]))
 			ncells[k] = nc
 			keep = true
