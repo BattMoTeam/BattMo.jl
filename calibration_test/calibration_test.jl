@@ -127,9 +127,9 @@ function runMJ1()
 
     
     
-    simulation_settings = load_simulation_settings(; from_file_path = joinpath(@__DIR__,"model2.json"))
+    #simulation_settings = load_simulation_settings(; from_file_path = joinpath(@__DIR__,"model2.json"))
     #simulation_settings = load_simulation_settings(; from_default_set = "P4D_pouch")
-    #simulation_settings = load_simulation_settings(; from_default_set = "P2D") # Ensure the model framework is set to P4D Pouch
+    simulation_settings = load_simulation_settings(; from_default_set = "P2D") # Ensure the model framework is set to P4D Pouch
     
     #model_settings = load_model_settings(;from_default_set = "P4D_pouch")
     model_settings = load_model_settings(;from_default_set = "P2D") 
@@ -154,6 +154,7 @@ function lowRateCalibration(cell_parameters,simulation_settings,exp_data,model_s
     cycling_protocol = load_cycling_protocol(; from_file_path = joinpath(@__DIR__,"custom_discharge2.json"))
     cycling_protocol["DRate"] = exp_data[1]["rawRate"]
     sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
+    print(sim.is_valid)
     #t_exp_lr, V_exp_lr = get_tV(df_05)
      
 
@@ -188,7 +189,7 @@ function lowRateCalibration(cell_parameters,simulation_settings,exp_data,model_s
     return cell_parameters_calibrated
 end
 
-function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrated,model_setup)
+function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrated,model_setup,simulation_settings)
 
     idx = lastindex(exp_data)
     print("index: ", idx, " for high rate calibration\n")
@@ -199,7 +200,7 @@ function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrat
 
     cycling_protocol2 = deepcopy(cycling_protocol)
     cycling_protocol2["DRate"] = exp_data[idx]["rawRate"]
-    sim2 = Simulation(model_setup, cell_parameters_calibrated, cycling_protocol2)
+    sim2 = Simulation(model_setup, cell_parameters_calibrated, cycling_protocol2; simulation_settings)
     
 
     vc2 = VoltageCalibration(t_exp_hr, V_exp_hr, sim2)
@@ -228,9 +229,9 @@ end
 
 cycling_protocol,cell_parameters,model_setup, simulation_settings = runMJ1()
 
-#cell_parameters_calibrated = highRateCalibration(exp_data,cycling_protocol,cell_parameters,model_setup)
+
 cell_parameters_calibrated = lowRateCalibration(cell_parameters,simulation_settings,exp_data,model_setup)
-#cell_parameters_calibrated2 = highRateCalibration(sim,exp_data,cycling_protocol,cell_parameters_calibrated,model_setup)
+cell_parameters_calibrated2 = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings)
 
 println("Calibration done:")
 
@@ -260,25 +261,29 @@ end
 
 colors = Makie.wong_colors()
 
-fig = Figure(size = (1200, 600))
-ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
+for (i, CRate) in enumerate(CRates)
+    local fig = Figure(size = (800, 500))
+    local ax = Axis(fig[1, 1],
+        ylabel = "Voltage / V",
+        xlabel = "Time / s",
+        title = "Discharge curve at $(round(CRate, digits = 2))C"
+    )
 
-#for (i, data) in enumerate(outputs_base)
-#   t_i, V_i = get_tV(data.output)
-#   lines!(ax, t_i, V_i, label = "Simulation (initial) $(round(data.CRate, digits = 2))", color = colors[i])
-#end
+    # Experimental curve
+    t_exp = vec(exp_data[i]["time"])
+    V_exp = vec(exp_data[i]["E"])
+    lines!(ax, t_exp, V_exp, linestyle = :dot, label = "Experimental", color = colors[1])
 
-for (i, data) in enumerate(outputs_calibrated)
-    t_i, V_i = get_tV(data.output)
-	lines!(ax, t_i, V_i, label = "Simulation (calibrated) $(round(data.CRate, digits = 2))", color = colors[i], linestyle = :dash)
+    # Simulated curve (calibrated)
+    t_sim, V_sim = get_tV(outputs_calibrated[i].output)
+    lines!(ax, t_sim, V_sim, linestyle = :dash, label = "Simulated (calibrated)", color = colors[2])
+
+    axislegend(ax, position = :rb)
+    display(fig)
+
+    # Save figure as PNG
+    save_path = joinpath(@__DIR__, "discharge_curve_$(round(CRate, digits=2))C.png")
+    save(save_path, fig)
+    println("Saved plot for $(round(CRate, digits=2))C at $save_path")
 end
 
-for i in 1:length(exp_data)
-    t_i = vec(exp_data[i]["time"])
-    V_i = vec(exp_data[i]["E"])
-    label = "Experimental $(round(CRates[i], digits = 2))"
-	lines!(ax, t_i, V_i, linestyle = :dot, label = label, color = colors[i])
-end
-
-fig[1, 2] = Legend(fig, ax, "C rate", framevisible = false)
-fig
