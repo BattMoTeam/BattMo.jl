@@ -20,6 +20,15 @@ function get_setting_meta_data()
 			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/pxd_model",
 			"description" => """When set to true, the some extra input parameters will be required to calculate battery kpis.""",
 		),
+		"ExchangeCurrentDensity" => Dict(
+			"type" => String,
+			"options" => ["UserDefined", "TemperatureDependent"],
+			"context_type" => "ExchangeCurrentDensity",
+			"context_type_iri" => "https://w3id.org/emmo/domain/battery#battery_b1921f7b_afac_465a_a275_26f929f7f936",
+			"is_sub_model" => true,
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/pxd_model",
+			"description" => """When set to UserDefined, the exchange current density will be a required cell parameter of type Function, String, Dict, or Real. When set to TemperatureDependent, an internal function will be used to calculate the exchange current density and some extra cell parameters will be required: ActivationEnergyOfReaction, ReactionRateConstant. Take a look into the documentation for more information.""",
+		),
 		"SEIModel" => Dict(
 			"type" => String,
 			"options" => ["Bolay"],

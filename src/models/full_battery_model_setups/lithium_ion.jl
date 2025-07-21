@@ -121,7 +121,7 @@ function setup_pe_current_collector(model::LithiumIonBattery, input, grids, coup
 	return _setup_pe_current_collector(model, input, grids, couplings)
 end
 
-function compute_volume_fraction(codict)
+function compute_volume_fraction(model_settings, codict)
 	# We compute the volume fraction form the coating data
 
 	am = "ActiveMaterial"
@@ -131,14 +131,27 @@ function compute_volume_fraction(codict)
 	compnames = [am, bd, ad]
 
 	# Do it this way since values could be AD.
-	get_specific_volume(compname) = codict[compname]["MassFraction"] / codict[compname]["Density"]
-	specificVolumes = map(get_specific_volume, compnames)
 
-	sumSpecificVolumes = sum(specificVolumes)
-	volumeFractions = [sv / sumSpecificVolumes for sv in specificVolumes]
+	if model_settings["IncludeKPICalculation"] == true
+		get_specific_volume_(compname) = codict[compname]["MassFraction"] / codict[compname]["Density"]
+		specificVolumes = map(get_specific_volume_, compnames)
 
-	effectiveDensity = codict["ElectrodeCoating"]["EffectiveDensity"]
-	volumeFraction = sumSpecificVolumes * effectiveDensity
+		sumSpecificVolumes = sum(specificVolumes)
+		volumeFractions = [sv / sumSpecificVolumes for sv in specificVolumes]
+
+		effectiveDensity = codict["ElectrodeCoating"]["EffectiveDensity"]
+		volumeFraction = sumSpecificVolumes * effectiveDensity
+	else
+		get_specific_volume(compname) = codict[compname]["VolumeFraction"]
+		specificVolumes = map(get_specific_volume, compnames)
+
+		sumSpecificVolumes = sum(specificVolumes)
+		volumeFractions = [sv / sumSpecificVolumes for sv in specificVolumes]
+		volumeFraction = 1 - codict["ElectrodeCoating"]["Porosity"]
+		effectiveDensity = nothing
+	end
+
+
 
 	return volumeFraction, volumeFractions, effectiveDensity
 
@@ -151,7 +164,7 @@ function setup_active_material(model::LithiumIonBattery, name::Symbol, input, gr
 	return _setup_active_material(model, name, input, grids, couplings)
 end
 
-function compute_effective_conductivity(comodel, coinputparams)
+function compute_effective_conductivity(model_settings, comodel, coinputparams)
 
 	# Compute effective conductivity for the coating
 
@@ -162,12 +175,17 @@ function compute_effective_conductivity(comodel, coinputparams)
 
 	compnames = [am, bd, ad]
 
-	vfs = comodel.system.params[:volume_fractions]
-	kappa = 0
-	for icomp in eachindex(compnames)
-		compname = compnames[icomp]
-		vf = vfs[icomp]
-		kappa += vf * coinputparams[compname]["ElectronicConductivity"]
+	if model_settings["IncludeKPICalculation"] == true
+
+		vfs = comodel.system.params[:volume_fractions]
+		kappa = 0
+		for icomp in eachindex(compnames)
+			compname = compnames[icomp]
+			vf = vfs[icomp]
+			kappa += vf * coinputparams[compname]["ElectronicConductivity"]
+		end
+	else
+		kappa = coinputparams["ElectrodeCoating"]["ElectronicConductivity"]
 	end
 
 	vf = comodel.system.params[:volume_fraction]

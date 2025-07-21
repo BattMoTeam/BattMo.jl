@@ -154,7 +154,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ActivationEnergyOfDiffusion", "ReactionRateConstant", "ChargeTransferCoefficient"],
+							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ReactionRateConstant", "ChargeTransferCoefficient"],
 					),
 					"Interphase" => Dict(
 						"type" => "object",
@@ -241,7 +241,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ActivationEnergyOfDiffusion", "ReactionRateConstant", "ChargeTransferCoefficient"],
+							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ReactionRateConstant", "ChargeTransferCoefficient"],
 					),
 					"ConductiveAdditive" => Dict(
 						"type" => "object",
@@ -597,7 +597,7 @@ function get_schema_model_settings()
 			"TransportInSolid" => create_property(parameter_meta, "TransportInSolid"),
 		),
 		"required" => [
-			"ModelFramework", "TransportInSolid",
+			"ModelFramework", "TransportInSolid", "IncludeKPICalculation",
 		],
 		"allOf" => [
 			# 🚫 Disallow CurrentCollectors if ModelFramework is "1D"

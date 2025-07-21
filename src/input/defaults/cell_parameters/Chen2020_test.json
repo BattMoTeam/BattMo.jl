@@ -4,10 +4,7 @@
         "Source": "https://doi.org/10.1149/1945-7111/ab9050",
         "Description": "Parameter set of a cylindrical 21700 commercial cell (LGM50), for an electrochemical pseudo-two-dimensional (P2D) model, after calibration. SEI parameters are from Bolay2022: https://doi.org/10.1016/j.powera.2022.100083 .",
         "Models": {
-            "ModelFramework": [
-                "P2D",
-                "P4D Cylindrical"
-            ],
+            "ModelFramework": "P2D",
             "TransportInSolid": "FullDiffusion",
             "CurrentCollectors": "Generic",
             "RampUp": "Sinusoidal",
@@ -36,7 +33,8 @@
             "Density": 2260.0,
             "VolumetricSurfaceArea": 383959.0,
             "ElectronicConductivity": 215,
-            "DiffusionCoefficient": 3.3e-14,
+            "DiffusionCoefficient": "-4.6741e-14 * (c/cmax)^6 - 1.3106e-12 * (c/cmax)^5 + -1.3034e-12 * (c/cmax)^4 + 5.4204e-13 (c/cmax)^3 - 8.865e-14 * (c/cmax)^2 + 7.9521e-15 * (c/cmax) + 1.5172e-16",
+            "ActivationEnergyOfDiffusion": 5000,
             "ParticleRadius": 5.86e-6,
             "MaximumConcentration": 33133.0,
             "StoichiometricCoefficientAtSOC0": 0.0279,
@@ -100,6 +98,7 @@
             "OpenCircuitPotential": "-0.8090 * (c/cmax) + 4.4875 - 0.0428 * tanh(18.5138*((c/cmax) - 0.5542)) - 17.7326 * tanh(15.7890*((c/cmax) - 0.3117)) + 17.5842 * tanh(15.9308*((c/cmax) - 0.3120))",
             "NumberOfElectronsTransfered": 1,
             "ActivationEnergyOfReaction": 17800.0,
+            "ActivationEnergyOfDiffusion": 5000,
             "ReactionRateConstant": 3.545e-11,
             "ChargeTransferCoefficient": 0.5
         },

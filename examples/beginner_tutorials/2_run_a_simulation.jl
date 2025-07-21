@@ -16,9 +16,13 @@ using BattMo, GLMakie
 # the cell parameter set from a NMC811 vs Graphite-SiOx cell whose parameters were determined in the [Chen 2020 paper](https://doi.org/10.1149/1945-7111/ab9050). 
 # We also read an example cycling protocol for a simple Constant Current Discharge.
 
-
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
+cell_parameters = load_cell_parameters(; from_default_set = "Chayambuka2022")
+@info cell
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+model_settings = load_model_settings(; from_default_set = "P2D")
+
+model_settings["ExchangeCurrentDensity"] = "UserDefined"
+model_settings["IncludeKPICalculation"] = false
 
 nothing # hide
 
@@ -26,7 +30,7 @@ nothing # hide
 # transport phenomena occuring in a real battery cell. The implementation consist of a system of partial differential equations and their corresponding parameters, constants and boundary conditions. 
 # The default Lithium-Ion Battery Model selected below corresponds to a basic P2D model, where neither current collectors nor thermal effects are considered.
 
-model = SodiumIonBattery()
+model = SodiumIonBattery(; model_settings)
 
 # Then we setup a Simulation by passing the model, cell parameters and a cycling protocol. A Simulation can be thought as a procedure to predict how the cell responds to the cycling protocol, 
 # by solving the equations in the model using the cell parameters passed.  
@@ -39,7 +43,7 @@ sim = Simulation(model, cell_parameters, cycling_protocol);
 sim.is_valid
 
 # Now we can run the simulation
-output = solve(sim;)
+output = solve(sim; accept_invalid = true, info_level = 1)
 nothing # hide
 
 

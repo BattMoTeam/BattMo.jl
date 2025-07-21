@@ -52,17 +52,16 @@ struct Simulation <: AbstractSimulation
 
 			# Here will come a validation function
 			model_settings = model.settings
-			# cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
-			# cycling_protocol_is_valid = validate_parameter_set(cycling_protocol)
-			# simulation_settings_is_valid = validate_parameter_set(simulation_settings, model_settings)
+			cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
+			cycling_protocol_is_valid = validate_parameter_set(cycling_protocol)
+			simulation_settings_is_valid = validate_parameter_set(simulation_settings, model_settings)
 
-			# if cell_parameters_is_valid && cycling_protocol_is_valid && simulation_settings_is_valid
-			# 	is_valid = true
+			if cell_parameters_is_valid && cycling_protocol_is_valid && simulation_settings_is_valid
+				is_valid = true
 
-			# else
-			# 	is_valid = false
-			# end
-			is_valid = true
+			else
+				is_valid = false
+			end
 
 			# Set some default simulation settings that aren't required by the user
 			set_default_solver_and_simulation_settings!(simulation_settings)

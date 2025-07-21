@@ -103,8 +103,14 @@ function reaction_rate(eta,
 
 	n = activematerial.params[:n_charge_carriers]
 
-	j0 = reaction_rate_coefficient(R0, c_e, c_a, activematerial)
-	R  = butler_volmer_equation(j0, 0.5, n, eta, T)
+	if activematerial.params[:setting_exchange_current_density] == "TemperatureDependent"
+
+		j0 = reaction_rate_coefficient(R0, c_e, c_a, activematerial)
+	elseif activematerial.params[:setting_exchange_current_density] == "UserDefined"
+		j0 = R0
+	end
+
+	R = butler_volmer_equation(j0, 0.5, n, eta, T)
 
 	return R / (n * F)
 
@@ -152,6 +158,14 @@ function Jutul.update_cross_term_in_entity!(out,
 	c_e   = state_t.C[ind_t]
 	c_a   = state_s.Cs[ind_s]
 	T     = state_s.Temperature[ind_s]
+
+
+	if activematerial.params[:setting_exchange_current_density] == "TemperatureDependent"
+
+		R0 = state_s.ReactionRateConst[ind_s]
+	elseif activematerial.params[:setting_exchange_current_density] == "UserDefined"
+		R0 = state_s.ExchangeCurrentDensity[ind_s]
+	end
 
 	# overpotential
 	eta = phi_a - phi_e - ocp

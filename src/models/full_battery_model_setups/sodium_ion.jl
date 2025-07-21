@@ -13,9 +13,7 @@ mutable struct SodiumIonBattery <: BatteryModel
 		model_geometry = model_settings["ModelFramework"]
 		name = "Setup object for a $model_geometry sodium-ion model"
 
-		# is_valid = validate_parameter_set(model_settings)
-		is_valid = true
-
+		is_valid = validate_parameter_set(model_settings)
 
 		return new{}(
 			name,

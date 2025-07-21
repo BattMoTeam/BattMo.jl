@@ -351,7 +351,7 @@ function _setup_active_material(model::B, name::Symbol, input, grids, couplings)
 	inputparams_active_material = cell_parameters[stringName]["ActiveMaterial"]
 
 	am_params                           = JutulStorage()
-	vf, vfs, eff_dens                   = compute_volume_fraction(inputparams_electrode)
+	vf, vfs, eff_dens                   = compute_volume_fraction(model.settings, inputparams_electrode)
 	am_params[:volume_fraction]         = vf
 	am_params[:volume_fractions]        = vfs
 	am_params[:effective_density]       = eff_dens
@@ -361,10 +361,47 @@ function _setup_active_material(model::B, name::Symbol, input, grids, couplings)
 	am_params[:theta0]                  = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
 	am_params[:theta100]                = inputparams_active_material["StoichiometricCoefficientAtSOC100"]
 
-	k0  = inputparams_active_material["ReactionRateConstant"]
-	Eak = inputparams_active_material["ActivationEnergyOfReaction"]
+	if model.settings["ExchangeCurrentDensity"] == "TemperatureDependent"
+		am_params[:setting_exchange_current_density] = "TemperatureDependent"
 
-	am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
+		k0 = inputparams_active_material["ReactionRateConstant"]
+		Eak = inputparams_active_material["ActivationEnergyOfReaction"]
+		am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
+
+	elseif model.settings["ExchangeCurrentDensity"] == "UserDefined"
+		am_params[:setting_exchange_current_density] = "UserDefined"
+
+		if isa(inputparams_active_material["ExchangeCurrentDensity"], Real)
+			am_params[:ecd_funcconstant] = true
+			am_params[:ecd_constant] = inputparams_active_material["ExchangeCurrentDensity"]
+
+		elseif isa(inputparams_active_material["ExchangeCurrentDensity"], String)
+
+			am_params[:ecd_funcexp] = true
+			ocp_exp = inputparams_active_material["ExchangeCurrentDensity"]
+			exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
+			am_params[:ecd_func] = @RuntimeGeneratedFunction(exp)
+
+		elseif haskey(inputparams_active_material["ExchangeCurrentDensity"], "FunctionName")
+
+			funcname = inputparams_active_material["ExchangeCurrentDensity"]["FunctionName"]
+			funcpath = haskey(inputparams_active_material["ExchangeCurrentDensity"], "FilePath") ? inputparams_active_material["ExchangeCurrentDensity"]["FilePath"] : nothing
+			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
+			am_params[:ecd_func] = fcn
+
+		else
+			am_params[:ecd_funcdata] = true
+			data_x = inputparams_active_material["ExchangeCurrentDensity"]["x"]
+			data_y = inputparams_active_material["ExchangeCurrentDensity"]["y"]
+
+			interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
+			am_params[:ecd_func] = interpolation_object
+		end
+
+
+	end
+
+
 
 	if isa(inputparams_active_material["OpenCircuitPotential"], Real)
 		am_params[:ocp_funcconstant] = true
@@ -393,10 +430,11 @@ function _setup_active_material(model::B, name::Symbol, input, grids, couplings)
 		am_params[:ocp_func] = interpolation_object
 	end
 
-	if haskey(model.settings, "TransportInSolid") && model.settings["TransportInSolid"] == "FullDiffusion"
+	if model.settings["TransportInSolid"] == "FullDiffusion"
 		rp = inputparams_active_material["ParticleRadius"]
 		N  = Int64(input.simulation_settings["GridResolution"][stringName*"ActiveMaterial"])
 		D  = inputparams_active_material["DiffusionCoefficient"]
+
 		if haskey(model.settings, "SEIModel") && model.settings["SEIModel"] == "Bolay" && haskey(inputparams_electrode, "Interphase")
 			label = :sei
 			fds = ["InitialThickness",
@@ -414,6 +452,7 @@ function _setup_active_material(model::B, name::Symbol, input, grids, couplings)
 			label = nothing
 		end
 		sys_am = ActiveMaterialP2D(am_params, rp, N, D; label = label)
+
 	else
 		sys_am = ActiveMaterialNoParticleDiffusion(am_params)
 	end
@@ -469,7 +508,7 @@ function _set_parameters(model::B, input) where {B <: BatteryModel}
 	prm_neam = Dict{Symbol, Any}()
 	inputparams_neam = cell_parameters["NegativeElectrode"]["ActiveMaterial"]
 
-	prm_neam[:Conductivity] = compute_effective_conductivity(multimodel[:NeAm], cell_parameters["NegativeElectrode"])
+	prm_neam[:Conductivity] = compute_effective_conductivity(model.settings, multimodel[:NeAm], cell_parameters["NegativeElectrode"])
 	prm_neam[:Temperature] = T0
 
 	if discretisation_type(multimodel[:NeAm]) == :P2Ddiscretization
@@ -499,7 +538,13 @@ function _set_parameters(model::B, input) where {B <: BatteryModel}
 	prm_peam = Dict{Symbol, Any}()
 	inputparams_peam = cell_parameters["PositiveElectrode"]["ActiveMaterial"]
 
-	prm_peam[:Conductivity] = compute_effective_conductivity(multimodel[:PeAm], cell_parameters["PositiveElectrode"])
+	if model.settings["IncludeKPICalculation"] == true
+		prm_peam[:Conductivity] = compute_effective_conductivity(model.settings, multimodel[:NeAm], cell_parameters["PositiveElectrode"])
+	else
+		prm_peam[:Conductivity] = cell_parameters["PositiveElectrode"]["ElectrodeCoating"]["ElectronicConductivity"]
+
+	end
+
 	prm_peam[:Temperature] = T0
 
 

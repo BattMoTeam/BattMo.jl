@@ -66,12 +66,18 @@ function Jutul.select_secondary_variables!(S,
 	model::SEImodel,
 )
 
-	S[:Charge]            = Charge()
-	S[:Ocp]               = Ocp()
-	S[:ReactionRateConst] = ReactionRateConst()
-	S[:SolidDiffFlux]     = SolidDiffFlux()
-	S[:SEIlength]         = SEIlength()
-	S[:SEIvoltageDrop]    = SEIvoltageDrop()
+	S[:Charge] = Charge()
+	S[:Ocp]    = Ocp()
+	if model.system.params[:setting_exchange_current_density] == "TemperatureDependent"
+		S[:ReactionRateConst] = ReactionRateConst()
+	elseif model.system.params[:setting_exchange_current_density] == "UserDefined"
+		S[:ExchangeCurrentDensity] = ExchangeCurrentDensity()
+	else
+		error(":setting_exchange_current_density not recognized")
+	end
+	S[:SolidDiffFlux]  = SolidDiffFlux()
+	S[:SEIlength]      = SEIlength()
+	S[:SEIvoltageDrop] = SEIvoltageDrop()
 
 end
 

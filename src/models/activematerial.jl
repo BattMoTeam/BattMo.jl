@@ -62,6 +62,7 @@ const ActiveMaterialNoParticleDiffusion{T} = ActiveMaterial{nothing, NoParticleD
 struct Ocp <: ScalarVariable end
 struct DiffusionCoef <: ScalarVariable end
 struct ReactionRateConst <: ScalarVariable end
+struct ExchangeCurrentDensity <: ScalarVariable end
 struct Cp <: VectorVariables end # particle concentrations in p2d model
 struct Cs <: ScalarVariable end # surface variable in p2d model
 struct SolidDiffFlux <: VectorVariables end # flux in P2D model
@@ -127,7 +128,7 @@ function setupSolidDiffusionDiscretization(rp, N, D)
 	rp, D = promote(rp, D)
 	T = typeof(rp)
 
-	N  = Int64(N)
+	N = Int64(N)
 
 	hT   = zeros(T, N + 1)
 	vols = zeros(T, N)
@@ -210,10 +211,19 @@ function Jutul.select_secondary_variables!(S,
 	system::ActiveMaterialP2D,
 	model::SimulationModel,
 )
-	S[:Charge]            = Charge()
-	S[:Ocp]               = Ocp()
-	S[:ReactionRateConst] = ReactionRateConst()
-	S[:SolidDiffFlux]     = SolidDiffFlux()
+
+	model.system.params[:setting_exchange_current_density]
+	S[:Charge] = Charge()
+	S[:Ocp]    = Ocp()
+	# S[:DiffusionCoef]     = DiffusionCoef()
+	if model.system.params[:setting_exchange_current_density] == "TemperatureDependent"
+		S[:ReactionRateConst] = ReactionRateConst()
+	elseif model.system.params[:setting_exchange_current_density] == "UserDefined"
+		S[:ExchangeCurrentDensity] = ExchangeCurrentDensity()
+	else
+		error(":setting_exchange_current_density not recognized")
+	end
+	S[:SolidDiffFlux] = SolidDiffFlux()
 
 end
 
@@ -223,7 +233,7 @@ function Jutul.select_equations!(eqs,
 	model::SimulationModel,
 )
 
-    disc = model.domain.discretizations.flow
+	disc                      = model.domain.discretizations.flow
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 	eqs[:mass_conservation]   = SolidMassCons()
 	eqs[:solid_diffusion_bc]  = SolidDiffusionBc()
@@ -254,6 +264,39 @@ end
 ##############################
 # Update secondary variables #
 ##############################
+
+# @jutul_secondary(
+# 	function update_diffusivity!(DiffusionCoef,
+# 		tv::DiffusionCoef,
+# 		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
+# 		Cs,
+# 		ix,
+# 	) where {label, D, T, Di}
+
+# 		diff_func = model.system.params[:diff_func]
+
+# 		cmax = model.system.params[:maximum_concentration]
+# 		refT = 298.15
+
+
+# 		for cell in ix
+
+# 			if Jutul.haskey(model.system.params, :diff_funcexp)
+
+# 				@inbounds DiffusionCoef[cell] = diff_func(Cs[cell], refT, refT, cmax)
+
+# 			elseif Jutul.haskey(model.system.params, :diff_funcdata)
+
+# 				@inbounds DiffusionCoef[cell] = diff_func(Cs[cell] / cmax)
+
+# 			else
+
+# 				@inbounds DiffusionCoef[cell] = diff_func(Cs[cell], refT, cmax)
+
+# 			end
+# 		end
+# 	end
+# )
 
 @jutul_secondary(
 	function update_vocp!(Ocp,
@@ -287,6 +330,38 @@ end
 			else
 
 				@inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)
+
+			end
+		end
+	end
+)
+
+@jutul_secondary(
+	function update_exchange_current_density!(ExchangeCurrentDensity,
+		tv::ExchangeCurrentDensity,
+		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
+		Cs,
+		ix,
+	) where {label, D, T, Di}
+
+		ecd_func = model.system.params[:ecd_func]
+
+		cmax = model.system.params[:maximum_concentration]
+		refT = 298.15
+
+		for cell in ix
+
+			if Jutul.haskey(model.system.params, :ecd_funcexp)
+
+				@inbounds Ocp[cell] = ecd_func(Cs[cell], refT, refT, cmax)
+
+			elseif Jutul.haskey(model.system.params, :ecd_funcdata)
+
+				@inbounds Ocp[cell] = ecd_func(Cs[cell] / cmax)
+
+			else
+
+				@inbounds Ocp[cell] = ecd_func(Cs[cell], refT, cmax)
 
 			end
 		end
@@ -451,7 +526,7 @@ function Jutul.select_equations!(eqs,
 	model::SimulationModel,
 )
 
-    disc = model.domain.discretizations.flow
+	disc                      = model.domain.discretizations.flow
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 	eqs[:mass_conservation]   = ConservationLaw(disc, :Mass)
 
