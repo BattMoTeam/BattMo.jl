@@ -165,7 +165,8 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 	elseif protocol == "Function"
 
 		function_name = cycling_protocol["FunctionName"]
-		file_path = get(cycling_protocol, "FilePath", nothing)
+		file_path = isnothing(get_key_value(cycling_protocol, "FilePath")) ? nothing :
+					normpath(joinpath(dirname(cycling_protocol.source_path), get_key_value(cycling_protocol, "FilePath")))
 
 		policy = FunctionPolicy(function_name; file_path)
 
@@ -247,7 +248,8 @@ function _setup_electrolyte(model::B, input, grids) where {B <: BatteryModel}
 	elseif haskey(inputparams_elyte["DiffusionCoefficient"], "FunctionName")
 
 		funcname = inputparams_elyte["DiffusionCoefficient"]["FunctionName"]
-		funcpath = haskey(inputparams_elyte["DiffusionCoefficient"], "FilePath") ? inputparams_elyte["DiffusionCoefficient"]["FilePath"] : nothing
+		funcpath = isnothing(get_key_value(inputparams_elyte["DiffusionCoefficient"], "FilePath")) ? nothing :
+				   normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(inputparams_elyte["DiffusionCoefficient"], "FilePath")))
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:diffusivity_func] = fcn
 
@@ -273,7 +275,8 @@ function _setup_electrolyte(model::B, input, grids) where {B <: BatteryModel}
 	elseif haskey(inputparams_elyte["IonicConductivity"], "FunctionName")
 
 		funcname = inputparams_elyte["IonicConductivity"]["FunctionName"]
-		funcpath = haskey(inputparams_elyte["IonicConductivity"], "FilePath") ? inputparams_elyte["IonicConductivity"]["FilePath"] : nothing
+		funcpath = isnothing(get_key_value(inputparams_elyte["IonicConductivity"], "FilePath")) ? nothing :
+				   normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(inputparams_elyte["IonicConductivity"], "FilePath")))
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:conductivity_func] = fcn
 
@@ -361,41 +364,43 @@ function _setup_active_material(model::B, name::Symbol, input, grids, couplings)
 	am_params[:theta0]                  = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
 	am_params[:theta100]                = inputparams_active_material["StoichiometricCoefficientAtSOC100"]
 
-	if model.settings["ExchangeCurrentDensity"] == "TemperatureDependent"
+	if model.settings["ReactionRateConstant"] == "TemperatureDependent"
 		am_params[:setting_exchange_current_density] = "TemperatureDependent"
 
 		k0 = inputparams_active_material["ReactionRateConstant"]
 		Eak = inputparams_active_material["ActivationEnergyOfReaction"]
 		am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
 
-	elseif model.settings["ExchangeCurrentDensity"] == "UserDefined"
+	elseif model.settings["ReactionRateConstant"] == "UserDefined"
 		am_params[:setting_exchange_current_density] = "UserDefined"
 
-		if isa(inputparams_active_material["ExchangeCurrentDensity"], Real)
+		if isa(inputparams_active_material["ReactionRateConstant"], Real)
 			am_params[:ecd_funcconstant] = true
-			am_params[:ecd_constant] = inputparams_active_material["ExchangeCurrentDensity"]
+			am_params[:reaction_rate_constant_func] = inputparams_active_material["ReactionRateConstant"]
 
-		elseif isa(inputparams_active_material["ExchangeCurrentDensity"], String)
+		elseif isa(inputparams_active_material["ReactionRateConstant"], String)
 
 			am_params[:ecd_funcexp] = true
-			ocp_exp = inputparams_active_material["ExchangeCurrentDensity"]
+			ocp_exp = inputparams_active_material["ReactionRateConstant"]
 			exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
-			am_params[:ecd_func] = @RuntimeGeneratedFunction(exp)
+			am_params[:reaction_rate_constant_func] = @RuntimeGeneratedFunction(exp)
 
-		elseif haskey(inputparams_active_material["ExchangeCurrentDensity"], "FunctionName")
+		elseif haskey(inputparams_active_material["ReactionRateConstant"], "FunctionName")
 
-			funcname = inputparams_active_material["ExchangeCurrentDensity"]["FunctionName"]
-			funcpath = haskey(inputparams_active_material["ExchangeCurrentDensity"], "FilePath") ? inputparams_active_material["ExchangeCurrentDensity"]["FilePath"] : nothing
+			funcname = inputparams_active_material["ReactionRateConstant"]["FunctionName"]
+			funcpath =
+				isnothing(get_key_value(inputparams_active_material["ReactionRateConstant"], "FilePath")) ? nothing :
+				normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(inputparams_active_material["ReactionRateConstant"], "FilePath")))
 			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-			am_params[:ecd_func] = fcn
+			am_params[:reaction_rate_constant_func] = fcn
 
 		else
 			am_params[:ecd_funcdata] = true
-			data_x = inputparams_active_material["ExchangeCurrentDensity"]["x"]
-			data_y = inputparams_active_material["ExchangeCurrentDensity"]["y"]
+			data_x = inputparams_active_material["ReactionRateConstant"]["x"]
+			data_y = inputparams_active_material["ReactionRateConstant"]["y"]
 
 			interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-			am_params[:ecd_func] = interpolation_object
+			am_params[:reaction_rate_constant_func] = interpolation_object
 		end
 
 
@@ -417,7 +422,9 @@ function _setup_active_material(model::B, name::Symbol, input, grids, couplings)
 	elseif haskey(inputparams_active_material["OpenCircuitPotential"], "FunctionName")
 
 		funcname = inputparams_active_material["OpenCircuitPotential"]["FunctionName"]
-		funcpath = haskey(inputparams_active_material["OpenCircuitPotential"], "FilePath") ? inputparams_active_material["OpenCircuitPotential"]["FilePath"] : nothing
+		funcpath =
+			isnothing(get_key_value(inputparams_active_material["OpenCircuitPotential"], "FilePath")) ? nothing :
+			normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(inputparams_active_material["OpenCircuitPotential"], "FilePath")))
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		am_params[:ocp_func] = fcn
 
@@ -508,7 +515,13 @@ function _set_parameters(model::B, input) where {B <: BatteryModel}
 	prm_neam = Dict{Symbol, Any}()
 	inputparams_neam = cell_parameters["NegativeElectrode"]["ActiveMaterial"]
 
-	prm_neam[:Conductivity] = compute_effective_conductivity(model.settings, multimodel[:NeAm], cell_parameters["NegativeElectrode"])
+	if model.settings["IncludeKPICalculation"] == true
+		prm_neam[:Conductivity] = compute_effective_conductivity(model.settings, multimodel[:NeAm], cell_parameters["NegativeElectrode"])
+	else
+		prm_neam[:Conductivity] = cell_parameters["NegativeElectrode"]["ElectrodeCoating"]["ElectronicConductivity"]
+
+	end
+
 	prm_neam[:Temperature] = T0
 
 	if discretisation_type(multimodel[:NeAm]) == :P2Ddiscretization
@@ -539,7 +552,7 @@ function _set_parameters(model::B, input) where {B <: BatteryModel}
 	inputparams_peam = cell_parameters["PositiveElectrode"]["ActiveMaterial"]
 
 	if model.settings["IncludeKPICalculation"] == true
-		prm_peam[:Conductivity] = compute_effective_conductivity(model.settings, multimodel[:NeAm], cell_parameters["PositiveElectrode"])
+		prm_peam[:Conductivity] = compute_effective_conductivity(model.settings, multimodel[:PeAm], cell_parameters["PositiveElectrode"])
 	else
 		prm_peam[:Conductivity] = cell_parameters["PositiveElectrode"]["ElectrodeCoating"]["ElectronicConductivity"]
 

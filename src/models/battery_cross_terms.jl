@@ -149,23 +149,14 @@ function Jutul.update_cross_term_in_entity!(out,
 	ind_t = ct.target_cells[ind]
 	ind_s = ct.source_cells[ind]
 
-	vols = state_t.Volume[ind_t]
-
+	vols  = state_t.Volume[ind_t]
+	R0    = state_s.ReactionRateConst[ind_s]
 	phi_e = state_t.Phi[ind_t]
 	phi_a = state_s.Phi[ind_s]
 	ocp   = state_s.Ocp[ind_s]
-	R0    = state_s.ReactionRateConst[ind_s]
 	c_e   = state_t.C[ind_t]
 	c_a   = state_s.Cs[ind_s]
 	T     = state_s.Temperature[ind_s]
-
-
-	if activematerial.params[:setting_exchange_current_density] == "TemperatureDependent"
-
-		R0 = state_s.ReactionRateConst[ind_s]
-	elseif activematerial.params[:setting_exchange_current_density] == "UserDefined"
-		R0 = state_s.ExchangeCurrentDensity[ind_s]
-	end
 
 	# overpotential
 	eta = phi_a - phi_e - ocp
@@ -216,15 +207,15 @@ function Jutul.update_cross_term_in_entity!(out,
 	ind_t = ct.target_cells[ind]
 	ind_s = ct.source_cells[ind]
 
-	vols = state_t.Volume[ind_t]
-
+	vols  = state_t.Volume[ind_t]
+	R0    = state_t.ReactionRateConst[ind_t]
 	phi_e = state_s.Phi[ind_s]
 	phi_a = state_t.Phi[ind_t]
 	ocp   = state_t.Ocp[ind_t]
-	R0    = state_t.ReactionRateConst[ind_t]
 	c_e   = state_s.C[ind_s]
 	c_a   = state_t.Cs[ind_t]
 	T     = state_t.Temperature[ind_t]
+
 
 	# overpotential
 	eta = phi_a - phi_e - ocp

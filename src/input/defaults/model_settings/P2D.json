@@ -5,7 +5,8 @@
     },
     "ModelFramework": "P2D",
     "TransportInSolid": "FullDiffusion",
-    "ExchangeCurrentDensity": "TemperatureDependent",
+    "ReactionRateConstant": "TemperatureDependent",
     "IncludeKPICalculation": true,
+    "ElectrodeCoating": "ActiveMaterialBinderAdditive",
     "RampUp": "Sinusoidal"
 }

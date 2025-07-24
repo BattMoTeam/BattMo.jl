@@ -62,7 +62,6 @@ const ActiveMaterialNoParticleDiffusion{T} = ActiveMaterial{nothing, NoParticleD
 struct Ocp <: ScalarVariable end
 struct DiffusionCoef <: ScalarVariable end
 struct ReactionRateConst <: ScalarVariable end
-struct ExchangeCurrentDensity <: ScalarVariable end
 struct Cp <: VectorVariables end # particle concentrations in p2d model
 struct Cs <: ScalarVariable end # surface variable in p2d model
 struct SolidDiffFlux <: VectorVariables end # flux in P2D model
@@ -216,13 +215,9 @@ function Jutul.select_secondary_variables!(S,
 	S[:Charge] = Charge()
 	S[:Ocp]    = Ocp()
 	# S[:DiffusionCoef]     = DiffusionCoef()
-	if model.system.params[:setting_exchange_current_density] == "TemperatureDependent"
-		S[:ReactionRateConst] = ReactionRateConst()
-	elseif model.system.params[:setting_exchange_current_density] == "UserDefined"
-		S[:ExchangeCurrentDensity] = ExchangeCurrentDensity()
-	else
-		error(":setting_exchange_current_density not recognized")
-	end
+
+	S[:ReactionRateConst] = ReactionRateConst()
+
 	S[:SolidDiffFlux] = SolidDiffFlux()
 
 end
@@ -336,37 +331,6 @@ end
 	end
 )
 
-@jutul_secondary(
-	function update_exchange_current_density!(ExchangeCurrentDensity,
-		tv::ExchangeCurrentDensity,
-		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
-		Cs,
-		ix,
-	) where {label, D, T, Di}
-
-		ecd_func = model.system.params[:ecd_func]
-
-		cmax = model.system.params[:maximum_concentration]
-		refT = 298.15
-
-		for cell in ix
-
-			if Jutul.haskey(model.system.params, :ecd_funcexp)
-
-				@inbounds Ocp[cell] = ecd_func(Cs[cell], refT, refT, cmax)
-
-			elseif Jutul.haskey(model.system.params, :ecd_funcdata)
-
-				@inbounds Ocp[cell] = ecd_func(Cs[cell] / cmax)
-
-			else
-
-				@inbounds Ocp[cell] = ecd_func(Cs[cell], refT, cmax)
-
-			end
-		end
-	end
-)
 
 @jutul_secondary(
 	function update_reaction_rate!(ReactionRateConst,
@@ -376,8 +340,22 @@ end
 		ix) where {label, D, T, Di}
 		rate_func = model.system.params[:reaction_rate_constant_func]
 		refT = 298.15
+
 		for cell in ix
-			@inbounds ReactionRateConst[cell] = rate_func(Cs[cell], refT)
+
+			if Jutul.haskey(model.system.params, :ecd_funcexp)
+
+				@inbounds ReactionRateConst[cell] = rate_func(Cs[cell], refT)
+
+			elseif Jutul.haskey(model.system.params, :ecd_funcdata)
+
+				@inbounds ReactionRateConst[cell] = rate_func(Cs[cell], refT)
+
+			else
+
+				@inbounds ReactionRateConst[cell] = rate_func(Cs[cell], refT)
+
+			end
 		end
 	end
 )

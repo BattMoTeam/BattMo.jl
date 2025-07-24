@@ -23,6 +23,16 @@ abstract type AbstractInput end
 #########################################################
 # Extensions for Abstract type AbstractInput
 
+
+function get_key_value(dict::Union{AbstractInput, Dict, Nothing}, key)
+	if isnothing(dict)
+		value = nothing
+	else
+		value = get(dict, key, nothing)
+	end
+	return value
+end
+
 """
 	Base.getindex(ps::AbstractInput, key::String)
 

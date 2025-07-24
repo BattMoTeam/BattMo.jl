@@ -28,15 +28,14 @@
             "NumberOfElectronsTransfered": 1,
             "StoichiometricCoefficientAtSOC0": 1.0,
             "OpenCircuitPotential": "(116.1647 - 940.2551*(c/cmax)^2 + 3101.9987*(c/cmax)^4 - 5292.6225*(c/cmax)^6 + 4040.4367*(c/cmax)^8)/(27.9167 - 228.18310*(c/cmax)^2 + 769.0709*(c/cmax)^4 - 1353.4191*(c/cmax)^6 + 1063.2453*(c/cmax)^8)",
-            "ExchangeCurrentDensity": {
-                "FunctionName": "exchange_current_density_ne",
+            "ReactionRateConstant": {
+                "FunctionName": "reaction_rate_constant_pe",
                 "FilePath": "function_parameters_Chayambuka2022.jl"
             },
-            "VolumeFraction": 0.714,
+            "VolumeFraction": 0.55,
             "StoichiometricCoefficientAtSOC100": 0.25,
-            "ActivationEnergyOfReaction": 0.0,
             "MaximumConcentration": 15320,
-            "VolumetricSurfaceArea": 0.0,
+            "VolumetricSurfaceArea": 2796610.169,
             "DiffusionCoefficient": 8.4351e-13,
             "ParticleRadius": 0.59e-6,
             "ChargeTransferCoefficient": 0.5
@@ -51,7 +50,7 @@
             "VolumeFraction": 0.0
         },
         "ConductiveAdditive": {
-            "VolumeFraction": 0.286
+            "VolumeFraction": 0.22
         }
     },
     "Separator": {
@@ -61,19 +60,17 @@
     },
     "NegativeElectrode": {
         "ActiveMaterial": {
-            "ActivationEnergyOfDiffusion": 0.0,
-            "NumberOfElectronsTransfered": 0.0,
+            "NumberOfElectronsTransfered": 1.0,
             "StoichiometricCoefficientAtSOC0": 0.14,
             "OpenCircuitPotential": "1856.4*(c/cmax)^8 - 8475.44*(c/cmax)^7 + 16255.9*(c/cmax)^6 - 16989.6*(c/cmax)^5 + 10492.1*(c/cmax)^4 - 3883.79*(c/cmax)^3 + 838.052*(c/cmax)^2 - 99.3537*(c/cmax) + 5.92005",
-            "ExchangeCurrentDensity": {
-                "FunctionName": "exchange_current_density_ne",
+            "ReactionRateConstant": {
+                "FunctionName": "reaction_rate_constant_ne",
                 "FilePath": "function_parameters_Chayambuka2022.jl"
             },
-            "VolumeFraction": 0.998,
+            "VolumeFraction": 0.488,
             "StoichiometricCoefficientAtSOC100": 1.0,
-            "ActivationEnergyOfReaction": 0.0,
             "MaximumConcentration": 14540,
-            "VolumetricSurfaceArea": 0.0,
+            "VolumetricSurfaceArea": 420689.655,
             "DiffusionCoefficient": 1.3106e-12,
             "ParticleRadius": 3.48e-6,
             "ChargeTransferCoefficient": 0.5
@@ -88,7 +85,7 @@
             "VolumeFraction": 0.0
         },
         "ConductiveAdditive": {
-            "VolumeFraction": 0.002
+            "VolumeFraction": 0.001
         }
     }
 }

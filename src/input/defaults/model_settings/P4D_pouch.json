@@ -5,7 +5,7 @@
     },
     "ModelFramework": "P4D Pouch",
     "TransportInSolid": "FullDiffusion",
-    "ExchangeCurrentDensity": "TemperatureDependent",
+    "ReactionRateConstant": "TemperatureDependent",
     "CurrentCollectors": "Generic",
     "IncludeKPICalculation": true,
     "RampUp": "Sinusoidal"

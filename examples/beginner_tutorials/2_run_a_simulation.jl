@@ -17,13 +17,14 @@ using BattMo, GLMakie
 # We also read an example cycling protocol for a simple Constant Current Discharge.
 
 cell_parameters = load_cell_parameters(; from_default_set = "Chayambuka2022")
-@info cell
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 model_settings = load_model_settings(; from_default_set = "P2D")
 
-model_settings["ExchangeCurrentDensity"] = "UserDefined"
+model_settings["ReactionRateConstant"] = "UserDefined"
 model_settings["IncludeKPICalculation"] = false
+model_settings["ElectrodeCoating"] = "ActiveMaterialFiller"
 
+cycling_protocol["DRate"] = 0.5
 nothing # hide
 
 # Next, we select the Lithium-Ion Battery Model with default model settings. A model can be thought as a mathematical implementation of the electrochemical and 

@@ -1,15 +1,5 @@
 export convert_parameter_sets_to_old_input_format, convert_old_input_format_to_parameter_sets
 
-
-function get_key_value(dict::Union{AbstractInput, Dict, Nothing}, key)
-	if isnothing(dict)
-		value = nothing
-	else
-		value = get(dict, key, nothing)
-	end
-	return value
-end
-
 function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld)
 
 	##################################

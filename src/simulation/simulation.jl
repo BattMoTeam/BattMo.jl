@@ -96,6 +96,7 @@ struct Simulation <: AbstractSimulation
 				model.multimodel,
 				parameters,
 				input;
+				info_level = 10,
 			)
 
 
