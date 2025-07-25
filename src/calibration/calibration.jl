@@ -1,9 +1,64 @@
-export VoltageCalibration
+export AbstractCalibration, VoltageCalibration
 export free_calibration_parameter!, freeze_calibration_parameter!, set_calibration_parameter!
 export print_calibration_overview
 
+
+"""
+	AbstractCalibration
+
+Abstract type for calibration objects.
+"""
 abstract type AbstractCalibration end
 
+
+"""
+	mutable struct VoltageCalibration <: AbstractCalibration
+
+Represents a voltage calibration problem for a battery simulation.
+
+# Fields
+- `t::Any`  
+  Time vector corresponding to the calibration voltage data points.
+
+- `v::Any`  
+  Voltage vector containing calibration voltage data.
+
+- `sim::Any`  
+  A deep copy of the `Simulation` object used for calibration, allowing reuse of the original simulation.
+
+- `parameter_targets::Any`  
+  Dictionary mapping parameter name vectors (keys) to tuples `(initial_value, lower_bound, upper_bound)` specifying calibration targets.
+
+- `calibrated_cell_parameters::Any`  
+  Holds the cell parameters obtained after calibration is solved.
+
+- `history::Any`  
+  Stores the optimization process history, including iteration details and convergence info.
+
+# Constructors
+
+- `VoltageCalibration(t, v, sim)`
+
+  Creates a new calibration object from time vector `t`, voltage vector `v`, and a simulation `sim`.  
+  Ensures time vector `t` is strictly increasing and matches length of `v`.
+
+- `VoltageCalibration(t_and_v, sim; normalize_time = false)`
+
+  Alternative constructor that takes a 2D array `t_and_v` where the first column is time and the second is voltage.  
+  Optionally normalizes the time vector to start at zero if `normalize_time` is true.
+
+# Example
+```julia
+t = [0.0, 10.0, 20.0, 30.0]
+v = [3.7, 3.6, 3.5, 3.4]
+sim = Simulation(...)
+calib = VoltageCalibration(t, v, sim)
+
+# or with combined data
+data = [0.0 3.7; 10.0 3.6; 20.0 3.5; 30.0 3.4]
+calib2 = VoltageCalibration(data, sim, normalize_time=true)
+```
+"""
 mutable struct VoltageCalibration <: AbstractCalibration
 	"Time vector for the calibration data."
 	t::Any
@@ -174,6 +229,30 @@ function evaluate_calibration_objective(vc::VoltageCalibration, objective, case,
 	return f
 end
 
+
+"""
+	solve(vc::AbstractCalibration; kwargs...) -> (calibrated_parameters, history)
+
+Solve the calibration problem by optimizing model parameters to fit target data.
+
+# Description
+Performs parameter calibration for a model using the LBFGS optimizer (or a user-supplied optimizer). The method minimizes an objective function derived from the discrepancy between simulation output and calibration targets.
+
+# Keyword Arguments
+- `grad_tol`: Gradient norm stopping tolerance (default: `1e-6`)
+- `obj_change_tol`: Objective change tolerance (default: `1e-6`)
+- `opt_fun`: Optional custom optimization function
+- `backend_arg`: Tuple controlling sparsity and preprocessing (default settings shown in source)
+- Other keyword arguments are passed to the optimizer.
+
+# Returns
+A tuple `(calibrated_cell_parameters, optimization_history)`.
+
+# Example
+```julia
+calibrated_params, history = solve(vc; grad_tol = 1e-7)
+```
+"""
 function solve(vc::AbstractCalibration;
 	grad_tol = 1e-6,
 	obj_change_tol = 1e-6,
@@ -304,7 +383,7 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing;
 		model_settings = sim.model.settings,
 		cell_parameters = sim.cell_parameters,
 		cycling_protocol = sim.cycling_protocol,
-		simulation_settings = sim.simulation_settings)
+		simulation_settings = sim.settings)
 
 	model = sim.model
 

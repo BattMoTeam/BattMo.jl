@@ -3,7 +3,37 @@ export get_output_time_series, get_output_metrics, get_output_states
 # for debugging
 export extract_time_series_data, extract_output_times, get_multimodel_centroids, extract_spatial_data, get_simple_output
 
+"""
+	get_output_time_series(output::NamedTuple; quantities::Union{Nothing, Vector{String}} = nothing)
 
+Extracts selected time-series data (e.g., voltage, current, time) from a simulation output.
+
+# Arguments
+- `output::NamedTuple`: The simulation result, typically produced by `solve_simulation`, containing computed states and metadata.
+- `quantities::Union{Nothing, Vector{String}}` (optional): A list of quantity names to extract from the output. Supported values include `"Time"`, `"Voltage"`, and `"Current"`. If `nothing` (default), all available quantities are returned.
+
+# Behavior
+- Extracts time, voltage, and current data from the simulation output.
+- If specific quantities are requested, filters and returns only those.
+- Validates requested quantity names against the list of available quantities.
+- Returns the selected data as a named tuple of vectors, keyed by quantity name.
+
+# Returns
+A `NamedTuple` of selected time-series data, where each entry is a vector of values over time. Possible keys include:
+- `:Time`
+- `:Voltage`
+- `:Current`
+
+# Throws
+- An error if an unsupported or unknown quantity name is provided in `quantities`.
+
+# Example
+```julia
+output = solve_simulation(sim)
+ts = get_output_time_series(output; quantities=["Time", "Voltage"])
+plot(ts.Time, ts.Voltage)
+```
+"""
 function get_output_time_series(output::NamedTuple; quantities::Union{Nothing, Vector{String}} = nothing)
 
 	selected_pairs = []
@@ -36,6 +66,47 @@ function get_output_time_series(output::NamedTuple; quantities::Union{Nothing, V
 	return (; selected_pairs...)
 end
 
+
+"""
+	get_output_metrics(output::NamedTuple; metrics::Union{Nothing, Vector{String}} = nothing)
+
+Computes key performance metrics from a battery simulation output, either globally or per cycle, and returns them as a named tuple.
+
+# Arguments
+- `output::NamedTuple`: The result of a simulation, typically returned from `solve_simulation`, containing time-series states and metadata.
+- `metrics::Union{Nothing, Vector{String}}` (optional): A list of metric names to extract. If `nothing` (default), all available metrics are returned.
+
+# Behavior
+- Extracts the model and state history from the output.
+- Detects the number of cycles in the simulation via the controller state.
+- Computes the following metrics, either globally or per cycle:
+  - `DischargeCapacity` (Ah)
+  - `ChargeCapacity` (Ah)
+  - `DischargeEnergy` (Wh)
+  - `ChargeEnergy` (Wh)
+  - `RoundTripEfficiency` (%)
+- Constructs and returns a dictionary of requested metrics (or all metrics by default).
+
+# Returns
+A `NamedTuple` where each field is a vector containing the computed metric values (one value per cycle, or globally if no cycles are detected). Possible fields include:
+- `:CycleNumber`
+- `:DischargeCapacity`
+- `:ChargeCapacity`
+- `:DischargeEnergy`
+- `:ChargeEnergy`
+- `:RoundTripEfficiency`
+
+# Throws
+- An error if a requested metric is not recognized or unavailable.
+- Errors include a helpful message listing all valid metric names.
+
+# Example
+```julia
+output = solve_simulation(sim)
+metrics = get_output_metrics(output; metrics=["DischargeCapacity", "RoundTripEfficiency"])
+plot(metrics.CycleNumber, metrics.DischargeCapacity)
+```
+"""
 function get_output_metrics(
 	output::NamedTuple;
 	metrics::Union{Nothing, Vector{String}} = nothing,
@@ -111,7 +182,46 @@ function get_output_metrics(
 end
 
 
+"""
+	get_output_states(output::NamedTuple; quantities::Union{Nothing, Vector{String}} = nothing)
 
+Extracts spatially resolved state variables and associated coordinates from a battery simulation `output`.
+
+# Arguments
+- `output::NamedTuple`: The simulation result returned from `solve_simulation`, containing time series, model metadata, and padded states.
+- `quantities::Union{Nothing, Vector{String}}` (optional): A list of quantity names to extract. If `nothing` (default), all available spatial and coordinate data is returned.
+
+# Behavior
+- Retrieves simulation time points and spatial coordinates:
+  - `:Time`: Simulation time vector
+  - `:Position`: 1D spatial grid along the cell (x-direction)
+  - `:NeAmRadius`: Radial coordinate for the negative electrode active material
+  - `:PeAmRadius`: Radial coordinate for the positive electrode active material
+- Extracts spatially resolved state data (e.g., concentration, potential) using `extract_spatial_data`.
+- Filters and returns only requested quantities if `quantities` is specified.
+- Ensures returned data is not `nothing`; raises an error if a requested quantity is missing or unavailable.
+
+# Returns
+A `NamedTuple` containing the selected spatial quantities and coordinates. Possible keys include:
+- `:Time`
+- `:Position`
+- `:NeAmRadius`
+- `:PeAmRadius`
+- Additional quantities from `extract_spatial_data`, such as:
+  - Concentration profiles
+  - Potential distributions
+  - Temperature fields, etc.
+
+# Throws
+- An error if a requested quantity is unavailable or not present in the extracted state data.
+
+# Example
+```julia
+output = solve_simulation(sim)
+states = get_output_states(output; quantities=["Time", "Position", "ElectrolyteConcentration"])
+heatmap(states.Position, states.Time, states.ElectrolyteConcentration)
+```
+"""
 function get_output_states(output::NamedTuple; quantities::Union{Nothing, Vector{String}} = nothing)
 	# Get time and coordinates
 	time = extract_output_times(output)

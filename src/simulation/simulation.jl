@@ -11,30 +11,41 @@ abstract type AbstractSimulation end
 
 
 """
-	struct Simulation <: AbstractSimulation
-
-Represents a battery simulation problem to be solved.
-
-# Fields
-- `function_to_solve ::Function` : The function responsible for running the simulation.
-- `model ::ModelConfigured` : The battery model being simulated.
-- `cell_parameters ::CellParameters` : The cell parameters for the simulation.
-- `cycling_protocol ::CyclingProtocol` : The cycling protocol used.
-- `simulation_settings ::SimulationSettings` : The simulation settings applied.
-- `is_valid ::Bool` : A flag indicating if the simulation is valid.
-
-# Constructor
 	Simulation(model::ModelConfigured, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
 
-Creates an instance of `Simulation`, initializing it with the given parameters and defaulting
-simulation settings if not provided.
+Constructs a `Simulation` object that sets up and validates all necessary components for simulating a battery model.
+
+# Arguments
+- `model::ModelConfigured`: A fully configured model object that includes the physical and numerical setup.
+- `cell_parameters::CellParameters`: Parameters defining the physical characteristics of the battery cell.
+- `cycling_protocol::CyclingProtocol`: The protocol specifying the charging/discharging cycles for the simulation.
+- `simulation_settings::SimulationSettings` (optional): Configuration settings controlling solver behavior, time stepping, etc. If not provided, default settings are generated based on the model.
+
+# Behavior
+- Validates `model`, `cell_parameters`, `cycling_protocol`, and `simulation_settings`.
+- Sets up default solver options if not explicitly defined.
+- Initializes computational grids and couplings.
+- Configures the physical model and parameters.
+- Prepares the initial simulation state and external forcing functions.
+- Instantiates a `Simulator` from the Jutul framework with the prepared state and parameters.
+- Defines the time-stepping strategy for the simulation.
+- Assembles a simulation configuration object used to control execution.
+
+# Returns
+A `Simulation` struct instance that includes:
+- Validation flag (`is_valid`)
+- Prepared simulation components: model, grids, couplings, parameters, initial state, forces, time steps, and simulator instance.
+
+# Throws
+- An error if `model.is_valid == false`, halting construction with a helpful message.
+
 """
 struct Simulation <: AbstractSimulation
 	is_valid::Bool
 	model::ModelConfigured
 	cell_parameters::CellParameters
 	cycling_protocol::CyclingProtocol
-	simulation_settings::SimulationSettings
+	settings::SimulationSettings
 	time_steps::Any
 	forces::Any
 	initial_state::Any
@@ -45,7 +56,7 @@ struct Simulation <: AbstractSimulation
 	simulator::Any
 
 
-	function Simulation(model::ModelConfigured, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
+	function Simulation(model::M, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model)) where {M <: ModelConfigured}
 
 		if model.is_valid
 			function_to_solve = run_battery
@@ -121,20 +132,34 @@ end
 #########
 
 """
-	solve(problem::Simulation; hook=nothing, kwargs...)
+	solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, end_report = info_level > -1, kwargs...)
 
-Solves a given `Simulation` problem by running the associated simulation function.
+Solves a battery `Simulation` problem by executing the simulation workflow defined in `solve_simulation`.
 
 # Arguments
-- `problem ::Simulation` : The simulation problem instance.
-- `hook` (optional) : A user-defined function or callback to modify the solving process.
-- `kwargs...` : Additional keyword arguments passed to the solver.
+- `problem::Simulation`: A fully constructed `Simulation` object, containing all model parameters, solver settings, and initial conditions.
+- `accept_invalid::Bool` (optional): If `true`, bypasses the internal validation check on the `Simulation` object. Use with caution. Default is `false`.
+- `hook` (optional): A user-defined callback or observer function that can be inserted into the simulation loop.
+- `info_level::Int` (optional): Controls verbosity of simulation logging and output. Default is `0`.
+- `end_report::Bool` (optional): Whether to print a summary report after simulation. Defaults to `true` if `info_level > -1`.
+- `kwargs...`: Additional keyword arguments forwarded to `solve_simulation`.
+
+# Behavior
+- Validates the `Simulation` object unless `accept_invalid` is `true`.
+- Prepares simulation configuration options, including verbosity and report behavior.
+- Calls `solve_simulation`, passing in the simulation problem and configuration.
 
 # Returns
-The output of the simulation if the problem is valid. 
+- The result of `solve_simulation`, typically containing simulation outputs such as state trajectories, solver diagnostics, and performance metrics.
 
 # Throws
-Throws an error if the `Simulation` object is not valid, prompting the user to check warnings during instantiation.
+- An error if the `Simulation` object is invalid and `accept_invalid` is not set to `true`.
+
+# Example
+```julia
+sim = Simulation(model, cell_parameters, cycling_protocol)
+result = solve(sim; info_level = 1)
+```
 """
 function solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, end_report = info_level > -1, kwargs...)
 
@@ -178,6 +203,42 @@ function solve(problem::Simulation; accept_invalid = false, hook = nothing, info
 
 end
 
+
+"""
+	solve_simulation(sim::Simulation; hook = nothing, use_p2d = true, kwargs...)
+
+Executes the simulation workflow for a battery `Simulation` object by advancing the system state over the defined time steps using the configured solver and model.
+
+# Arguments
+- `sim::Simulation`: A `Simulation` instance containing all preconfigured simulation components including model, state, solver, time steps, and settings.
+- `hook` (optional): A user-supplied callback function to be invoked *before* the simulation begins. Useful for modifying or logging internal simulation structures (e.g., for debugging, monitoring, or visualization).
+- `use_p2d::Bool` (optional): Currently unused placeholder; included for compatibility or future extensions. Default is `true`.
+- `kwargs...`: Additional keyword arguments passed to the lower-level `simulate` function.
+
+# Behavior
+- Extracts all relevant simulation components from the `Simulation` object.
+- Optionally invokes a user-defined `hook` function with simulation internals.
+- Calls the `simulate` function to perform time integration across defined time steps.
+- Constructs a set of metadata dictionaries for downstream analysis or inspection.
+
+# Returns
+A named tuple with the following fields:
+- `states`: The computed simulation states over all time steps.
+- `cellSpecifications`: Cell-level metrics computed from the final model state.
+- `reports`: Simulation logs and diagnostics generated during execution.
+- `input`: A dictionary of the original input settings used in the simulation.
+- `extra`: A dictionary containing internal simulation structures such as:
+  - Simulator, initial state, parameters
+  - Grids and couplings
+  - Time steps and configuration
+  - Model, cell parameters, cycling protocol
+
+# Example
+```julia
+result = solve_simulation(sim)
+plot(result.states)
+```
+"""
 function solve_simulation(sim::Simulation;
 	hook = nothing,
 	use_p2d = true,
@@ -192,7 +253,7 @@ function solve_simulation(sim::Simulation;
 	cfg = sim.cfg
 	couplings = sim.couplings
 	parameters = sim.parameters
-	simulation_settings = sim.simulation_settings
+	simulation_settings = sim.settings
 	cell_parameters = sim.cell_parameters
 	cycling_protocol = sim.cycling_protocol
 
