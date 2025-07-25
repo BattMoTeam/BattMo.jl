@@ -3,6 +3,8 @@ using BattMo, Jutul
 using CSV
 using DataFrames
 using GLMakie
+include("equilibrium_calibration.jl")
+include("function_parameters_MJ1.jl")
 
 function get_tV(x)
     t = [state[:Control][:Controller].time for state in x[:states]]
@@ -119,14 +121,12 @@ battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 
 function runMJ1()
 
-    cell_parameters = load_cell_parameters(; from_file_path = joinpath(@__DIR__,"mj1p4d3.json"))
+    cell_parameters = load_cell_parameters(; from_file_path = joinpath(@__DIR__,"mj1_tab1.json"))
     
     #cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
     println("successfully loaded cell parameters and cycling protocol")
     cycling_protocol = load_cycling_protocol(; from_file_path = joinpath(@__DIR__,"custom_discharge2.json"))
 
-    
-    
     #simulation_settings = load_simulation_settings(; from_file_path = joinpath(@__DIR__,"model2.json"))
     #simulation_settings = load_simulation_settings(; from_default_set = "P4D_pouch")
     simulation_settings = load_simulation_settings(; from_default_set = "P2D") # Ensure the model framework is set to P4D Pouch
@@ -144,6 +144,65 @@ function runMJ1()
 end
 
 
+
+
+function equilibriumCalibration(sim)
+
+
+    t_exp = vec(exp_data[1]["time"])
+    V_exp = vec(exp_data[1]["E"])
+    I = exp_data[1]["I"]
+
+    println("I = ", I  )
+
+
+    vc = VoltageCalibration(t_exp, V_exp, sim)
+
+    free_calibration_parameter!(vc, ["PositiveElectrode","ActiveMaterial","MaximumConcentration"];
+        lower_bound=1e4, upper_bound=1e5)
+    free_calibration_parameter!(vc, ["NegativeElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC100"];
+        lower_bound=0.0, upper_bound=1.0)
+    free_calibration_parameter!(vc, ["PositiveElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC100"];
+        lower_bound=0.0, upper_bound=1.0)
+    free_calibration_parameter!(vc, ["NegativeElectrode","ActiveMaterial","MaximumConcentration"];
+        lower_bound=1e4, upper_bound=1e5)
+    
+
+
+    x = solve_equilibrium!(vc; I=I)
+    
+    set_calibration_parameter!(vc,["NegativeElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC100"], x[3])
+    set_calibration_parameter!(vc,["PositiveElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC100"], x[4])
+    set_calibration_parameter!(vc,["NegativeElectrode","ActiveMaterial","MaximumConcentration"], x[1])
+    set_calibration_parameter!(vc,["PositiveElectrode","ActiveMaterial","MaximumConcentration"], x[2])
+
+    
+    output = get_simulation_input(vc.sim)
+    model = output[:model]
+    ocp_ne = model[:NeAm].system.params[:ocp_func]
+    ocp_pe = model[:PeAm].system.params[:ocp_func]
+
+    Vne = sum(model[:NeAm].domain.representation[:volumes])
+    Vpe = sum(model[:PeAm].domain.representation[:volumes])
+
+    eps_ne = model[:NeAm].system.params[:volume_fraction]
+    eps_pe = model[:PeAm].system.params[:volume_fraction]
+
+    a_ne = model[:NeAm].system.params[:volume_fractions][1]
+    a_pe = model[:PeAm].system.params[:volume_fractions][1]
+
+    Xparam = [
+        Vpe, Vne, a_pe, a_ne, eps_pe, eps_ne
+    ]
+
+    # Compute mpe and mne based on the calibrated parameters
+    Veq = compute_equilibrium_voltage(t_exp, x, Xparam, exp_data[1]["I"], ocp_pe, ocp_ne)
+
+
+    return (vc.sim.cell_parameters, Veq, t_exp)
+
+
+end
 
 function lowRateCalibration(cell_parameters,simulation_settings,exp_data,model_setup)
     
@@ -186,6 +245,9 @@ function lowRateCalibration(cell_parameters,simulation_settings,exp_data,model_s
     cell_parameters_calibrated, = solve(vc_lr);
     
     print_calibration_overview(vc_lr)
+
+    
+
     return cell_parameters_calibrated
 end
 
@@ -229,9 +291,11 @@ end
 
 cycling_protocol,cell_parameters,model_setup, simulation_settings = runMJ1()
 
+sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 
-cell_parameters_calibrated = lowRateCalibration(cell_parameters,simulation_settings,exp_data,model_setup)
-cell_parameters_calibrated2 = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings)
+cell_parameters_calibrated2, V_eq, t_eq = equilibriumCalibration(sim)
+#cell_parameters_calibrated = lowRateCalibration(cell_parameters,simulation_settings,exp_data,model_setup)
+#cell_parameters_calibrated2 = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings)
 
 println("Calibration done:")
 
@@ -241,7 +305,7 @@ outputs_calibrated = []
 
 for CRate in CRates
 	cycling_protocol["DRate"] = CRate
-	simuc = Simulation(model_setup, cell_parameters_calibrated2, cycling_protocol; simulation_settings)
+	simuc = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 
 	output = solve(simuc, info_level = -1; accept_invalid = true)
 
@@ -256,6 +320,7 @@ for CRate in CRates
     simc = Simulation(model_setup, cell_parameters_calibrated2, cycling_protocol; simulation_settings)
 	output_c = solve(simc, info_level = -1;accept_invalid = true)
 
+
     push!(outputs_calibrated, (CRate = CRate, output = output_c))
 end
 
@@ -269,6 +334,11 @@ for (i, CRate) in enumerate(CRates)
         title = "Discharge curve at $(round(CRate, digits = 2))C"
     )
 
+    if CRate == CRates[1]
+      lines!(ax, t_eq, V_eq, linestyle = :dash, label = "Equilibrium", color = colors[4])
+    
+    end
+
     # Experimental curve
     t_exp = vec(exp_data[i]["time"])
     V_exp = vec(exp_data[i]["E"])
@@ -277,6 +347,10 @@ for (i, CRate) in enumerate(CRates)
     # Simulated curve (calibrated)
     t_sim, V_sim = get_tV(outputs_calibrated[i].output)
     lines!(ax, t_sim, V_sim, linestyle = :dash, label = "Simulated (calibrated)", color = colors[2])
+
+    # Simulated curve (base)
+    t_b, V_b = get_tV(outputs_base[i].output)
+    lines!(ax, t_b, V_b, linestyle = :dash, label = "Simulated (base)", color = colors[3])
 
     axislegend(ax, position = :rb)
     display(fig)
