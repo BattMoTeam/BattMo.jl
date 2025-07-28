@@ -99,7 +99,15 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 				"type" => "object",
 				"properties" => Dict(
 					"Title" => Dict("type" => "string"),
-					"Source" => Dict("type" => "string", "format" => "uri"),
+					"Source" => Dict(
+						"anyOf" => [
+							Dict("type" => "string", "format" => "uri"),
+							Dict(
+								"type" => "array",
+								"items" => Dict("type" => "string", "format" => "uri"),
+							),
+						],
+					),
 					"Description" => Dict("type" => "string"),
 				),
 			),

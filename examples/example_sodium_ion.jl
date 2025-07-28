@@ -1,15 +1,3 @@
-# # How to run a simulation
-#
-# BattMo simulations replicates the voltage-current response of a cell. To run a Battmo simulation, the basic workflow is:    
-# * Set up cell parameters 
-# * Set up a cycling protocol  
-# * Select a model
-# * Prepare a simulation
-# * Run the simulation
-# * Inspect and visualize the outputs of the simulation  
-
-# To start, we load BattMo (battery models and simulations) and GLMakie (plotting). 
-
 using BattMo, GLMakie
 
 # BattMo stores cell parameters, cycling protocols and settings in a user-friendly JSON format to facilitate reuse. For our example, we read 
@@ -17,10 +5,14 @@ using BattMo, GLMakie
 # We also read an example cycling protocol for a simple Constant Current Discharge.
 
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
+cell_parameters = load_cell_parameters(; from_default_set = "Chayambuka2022")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
 cycling_protocol["DRate"] = 0.5
+# cell_parameters["NegativeElectrode"]["ActiveMaterial"]["DiffusionCoefficient"] = 3.3e-14
+# cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 6.716e-12
+# cell_parameters["PositiveElectrode"]["ActiveMaterial"]["DiffusionCoefficient"] = 4.0e-15
+# cell_parameters["PositiveElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 3.545e-11
 
 nothing # hide
 
@@ -41,7 +33,7 @@ sim = Simulation(model, cell_parameters, cycling_protocol);
 sim.is_valid
 
 # Now we can run the simulation
-output = solve(sim;)
+output = solve(sim; accept_invalid = true)
 nothing # hide
 
 

@@ -1,0 +1,114 @@
+{
+    "Metadata": {
+        "Title": "Chayambuka2022",
+        "Source": [
+            "https://doi.org/10.1016/j.electacta.2021.139726",
+            "https://doi.org/10.1016/j.electacta.2021.139764",
+            "https://doi.org/10.1016/j.electacta.2024.145573"
+        ],
+        "Description": "Parameter set for a Sodium ion cell.",
+        "Models": {
+            "ModelFramework": "P2D",
+            "TransportInSolid": "FullDiffusion",
+            "RampUp": "Sinusoidal"
+        }
+    },
+    "Cell": {
+        "Name": "LG INR 21700 M50",
+        "Case": "Cylindrical",
+        "Height": 0.065,
+        "OuterRadius": 0.021,
+        "InnerRadius": 2e-3,
+        "ElectrodeGeometricSurfaceArea": 0.1027,
+        "NominalVoltage": 3.71,
+        "NominalCapacity": 4.8
+    },
+    "NegativeElectrode": {
+        "ElectrodeCoating": {
+            "BruggemanCoefficient": 0.5,
+            "EffectiveDensity": 955.5,
+            "Thickness": 64e-6
+        },
+        "ActiveMaterial": {
+            "Description": "Hard Carbon",
+            "MassFraction": 1.0,
+            "Density": 1950.0,
+            "VolumetricSurfaceArea": 420689.655,
+            "ElectronicConductivity": 256,
+            "DiffusionCoefficient": 2e-15,
+            "ParticleRadius": 3.48e-6,
+            "MaximumConcentration": 14540,
+            "StoichiometricCoefficientAtSOC0": 0.14,
+            "StoichiometricCoefficientAtSOC100": 1.0,
+            "OpenCircuitPotential": "1856.4*(c/cmax)^8 - 8475.44*(c/cmax)^7 + 16255.9*(c/cmax)^6 - 16989.6*(c/cmax)^5 + 10492.1*(c/cmax)^4 - 3883.79*(c/cmax)^3 + 838.052*(c/cmax)^2 - 99.3537*(c/cmax) + 5.92005",
+            "NumberOfElectronsTransfered": 1,
+            "ActivationEnergyOfReaction": 35000,
+            "ReactionRateConstant": 9e-11,
+            "ChargeTransferCoefficient": 0.5
+        },
+        "ConductiveAdditive": {
+            "Description": "Unknown",
+            "Density": 1950.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100.0
+        },
+        "Binder": {
+            "Description": "Unknown",
+            "Density": 1100.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100.0
+        }
+    },
+    "PositiveElectrode": {
+        "ElectrodeCoating": {
+            "BruggemanCoefficient": 0.5,
+            "EffectiveDensity": 2464,
+            "Thickness": 68e-6
+        },
+        "ActiveMaterial": {
+            "Description": "NVPF",
+            "MassFraction": 1.0,
+            "Density": 3200,
+            "VolumetricSurfaceArea": 2796610.169,
+            "ElectronicConductivity": 50,
+            "DiffusionCoefficient": 4.0e-15,
+            "ParticleRadius": 0.59e-6,
+            "MaximumConcentration": 15320,
+            "StoichiometricCoefficientAtSOC0": 1.0,
+            "StoichiometricCoefficientAtSOC100": 0.25,
+            "OpenCircuitPotential": "(116.1647 - 940.2551*(c/cmax)^2 + 3101.9987*(c/cmax)^4 - 5292.6225*(c/cmax)^6 + 4040.4367*(c/cmax)^8)/(27.9167 - 228.18310*(c/cmax)^2 + 769.0709*(c/cmax)^4 - 1353.4191*(c/cmax)^6 + 1063.2453*(c/cmax)^8)",
+            "NumberOfElectronsTransfered": 1,
+            "ActivationEnergyOfReaction": 17800.0,
+            "ReactionRateConstant": 2e-10,
+            "ChargeTransferCoefficient": 0.5
+        },
+        "ConductiveAdditive": {
+            "Description": "Unknown",
+            "Density": 1800.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100
+        },
+        "Binder": {
+            "Description": "Unknown",
+            "Density": 1780.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100
+        }
+    },
+    "Separator": {
+        "Description": "",
+        "Porosity": 0.55,
+        "Density": 1400,
+        "BruggemanCoefficient": 0.5,
+        "Thickness": 25e-6
+    },
+    "Electrolyte": {
+        "Description": "1 kmol m^-3 NaPF6 salt dissolved in equal weight mixtures of ethylene carbonate (EC) and propylene carbonate (PC) EC0.5:PC0.5, (w/w) solvent",
+        "Density": 1260,
+        "Concentration": 1000,
+        "ChargeNumber": 1,
+        "TransferenceNumber": 0.45,
+        "IonicConductivity": "-6.8163e-14*c^4 + 5.2618e-10*c^3 - 1.5716e-5*c^2 + 0.001948*c - 0.0017252",
+        "DiffusionCoefficient": "0.8*(8.7549e-26*c^4 - 1.7006e-21*c^3 + 9.403e-18*c^2 - 2.3662e-14*c + 4.1152e-11)"
+    }
+}
