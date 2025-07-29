@@ -22,7 +22,7 @@ function current_function(time, voltage)
 
 	factor = 4000 # Tot account for the fact that we're simulating a single cell instead of a battery pack
 
-	return 1
+	return 12
 end
 
 @eval Main current_function = $current_function

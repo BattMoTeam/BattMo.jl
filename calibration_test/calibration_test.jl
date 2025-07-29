@@ -143,9 +143,6 @@ function runMJ1()
 
 end
 
-
-
-
 function equilibriumCalibration(sim)
 
 
@@ -258,22 +255,38 @@ function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrat
     t_exp_hr = vec(exp_data[idx]["time"])
     V_exp_hr = vec(exp_data[idx]["E"])
 
-    #t_exp_hr,V_exp_hr = get_tV(df_2)
+    I = exp_data[idx]["I"]
+    
 
     cycling_protocol2 = deepcopy(cycling_protocol)
     cycling_protocol2["DRate"] = exp_data[idx]["rawRate"]
     sim2 = Simulation(model_setup, cell_parameters_calibrated, cycling_protocol2; simulation_settings)
-    
+    output = get_simulation_input(sim2)
+    model2 = output[:model]
+    sim2.cycling_protocol["DRate"] = I * 3600 / computeCellCapacity(model2)  
 
     vc2 = VoltageCalibration(t_exp_hr, V_exp_hr, sim2)
 
     free_calibration_parameter!(vc2,
-        ["NegativeElectrode","ActiveMaterial", "ReactionRateConstant"];
-        lower_bound = 1e-16, upper_bound = 1e-10)
+        ["NegativeElectrode","ActiveMaterial", "VolumetricSurfaceArea"];
+        lower_bound = 1e3, upper_bound = 1e6)
     free_calibration_parameter!(vc2,
-        ["PositiveElectrode","ActiveMaterial", "ReactionRateConstant"];
-        lower_bound = 1e-16, upper_bound = 1e-10)
+        ["PositiveElectrode","ActiveMaterial", "VolumetricSurfaceArea"];
+        lower_bound = 1e3, upper_bound = 1e6)
 
+
+    free_calibration_parameter!(vc2,
+        ["Separator", "BruggemanCoefficient"];
+        lower_bound = 1e-3, upper_bound = 1e2)
+   
+
+    free_calibration_parameter!(vc2,
+        ["NegativeElectrode","ElectrodeCoating", "BruggemanCoefficient"];
+        lower_bound = 1e-3, upper_bound = 1e2)
+    free_calibration_parameter!(vc2,
+        ["PositiveElectrode","ElectrodeCoating", "BruggemanCoefficient"];
+        lower_bound = 1e-3, upper_bound = 1e2)
+    
     free_calibration_parameter!(vc2,
         ["NegativeElectrode","ActiveMaterial", "DiffusionCoefficient"];
         lower_bound = 1e-16, upper_bound = 1e-12)
@@ -297,31 +310,50 @@ cell_parameters_calibrated2, V_eq, t_eq = equilibriumCalibration(sim)
 #cell_parameters_calibrated = lowRateCalibration(cell_parameters,simulation_settings,exp_data,model_setup)
 #cell_parameters_calibrated2 = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings)
 
+
+
+@eval Main current_function = $current_function
+
+
 println("Calibration done:")
 
 CRates = [exp_data[i]["rawRate"] for i in 1:length(exp_data)]
 outputs_base = []
 outputs_calibrated = []
 
-for CRate in CRates
-	cycling_protocol["DRate"] = CRate
+for i in 1:length(exp_data)
+    
+    I = exp_data[i]["I"]
+    println("Running simulation for I = ", I)
+
+    
 	simuc = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
+    output = get_simulation_input(simuc)
+    model = output[:model]
+    simuc.cycling_protocol["DRate"] = I * 3600 / computeCellCapacity(model) 
+
+    # Solve the simulation with the base parameters
+    println("Running simulation for I = ", I)
 
 	output = solve(simuc, info_level = -1; accept_invalid = true)
 
     # Store the output for the base case
-    if CRate == CRates[1]
+    if i == 1
         output0 = output
     end
 
     # Store the output for the calibrated case
-	push!(outputs_base, (CRate = CRate, output = output))
+	push!(outputs_base, (I = I, output = output))
 
+    
     simc = Simulation(model_setup, cell_parameters_calibrated2, cycling_protocol; simulation_settings)
+    outputc = get_simulation_input(simc)
+    modelc = outputc[:model]
+    simc.cycling_protocol["DRate"] =  I * 3600 / computeCellCapacity(modelc)
 	output_c = solve(simc, info_level = -1;accept_invalid = true)
 
 
-    push!(outputs_calibrated, (CRate = CRate, output = output_c))
+    push!(outputs_calibrated, (I = I, output = output_c))
 end
 
 colors = Makie.wong_colors()
@@ -334,7 +366,7 @@ for (i, CRate) in enumerate(CRates)
         title = "Discharge curve at $(round(CRate, digits = 2))C"
     )
 
-    if CRate == CRates[1]
+    if i == 1
       lines!(ax, t_eq, V_eq, linestyle = :dash, label = "Equilibrium", color = colors[4])
     
     end

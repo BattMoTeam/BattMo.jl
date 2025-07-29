@@ -21,6 +21,7 @@ model_setup = LithiumIonBattery(; model_settings)
 
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
+sim.cycling_protocol["DRate"] = 10.0
 
 output = get_simulation_input(sim)
 grids     = output[:grids]
@@ -40,7 +41,7 @@ for (i, component) in enumerate(components)
                    color = colors[i])
     end
 end
-
+"""
 
 output = solve(sim; accept_invalid = true)
 
@@ -50,4 +51,3 @@ output = solve(sim; accept_invalid = true)
 @show length(output.states)
 
 plot_interactive_3d(output; colormap = :curl)
-"""

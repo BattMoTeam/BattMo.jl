@@ -107,7 +107,7 @@
                 },
             "MaximumConcentration": 31160,
             "VolumetricSurfaceArea": 723600.0,
-            "DiffusionCoefficient": 3.3e-14,
+            "DiffusionCoefficient": 4.0e-15,
             "ParticleRadius": 4.785e-6,
             "Density": 2240,
             "ElectronicConductivity": 215.0,
