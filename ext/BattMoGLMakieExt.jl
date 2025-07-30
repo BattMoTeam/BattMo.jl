@@ -3,17 +3,17 @@ module BattMoGLMakieExt
 using BattMo, GLMakie
 
 
-function BattMo.plot_output(output::NamedTuple, output_variables::Union{Vector{String}, Vector{Vector{String}}}; layout::Union{Nothing, Tuple{Int, Int}} = nothing)
+function BattMo.plot_output(output::NamedTuple, variables::Union{Vector{String}, Vector{Any}}; layout::Union{Nothing, Tuple{Int, Int}} = nothing)
 	BattMo.check_plotting_availability()
-	return BattMo.plot_impl(output, output_variables; layout = layout)
+	return BattMo.plot_impl(output, variables; layout = layout)
 end
 
 function BattMo.plot_impl(
 	output::NamedTuple,
-	output_variables::Union{Vector{String}, Vector{Vector{String}}};
+	variables::Union{Vector{String}, Vector{Any}};
 	layout::Union{Nothing, Tuple{Int, Int}} = nothing,
 )
-	grouped_vars = [isa(g, String) ? [g] : g for g in output_variables]
+	grouped_vars = [isa(g, String) ? [g] : g for g in variables]
 	nplots = length(grouped_vars)
 
 	# Determine layout
@@ -42,11 +42,17 @@ function BattMo.plot_impl(
 	# Helper: Parse variable string
 	function parse_variable(varstr::String)
 		base = match(r"^[^v]+", varstr) |> x -> strip(x.match)
+
 		dims = occursin(r"vs", varstr) ? match(r"vs (.+?)(?: at|$)", varstr) |> x -> split(strip(x[1]), r" and ") : []
+
 		selectors = Dict{Symbol, Union{Nothing, Int, Symbol}}()
-		for cap in eachmatch(r"at (\w+) index (\w+)", varstr)
+		for cap in eachmatch(r"(\w+) index (\w+)", varstr)
 			dim = Symbol(cap[1])
-			idx = cap[2] == "end" ? :end : parse(Int, cap[2])
+			idx = if cap[2] == "end"
+				:end
+			else
+				parse(Int, cap[2])
+			end
 			selectors[dim] = idx
 		end
 		return (base = strip(base), dims = dims, selectors = selectors)
@@ -76,7 +82,7 @@ function BattMo.plot_impl(
 
 			# Determine unit string for dimension
 			unit_str = ""
-			if d == :Position || d == :NeAmRadius || :PeAmRadius
+			if d == :Position || d == :NeAmRadius || d == :PeAmRadius
 				unit_str = " μm"
 			elseif d == :Time
 				if haskey(meta_data, "Time") && haskey(meta_data["Time"], "unit")
@@ -113,7 +119,10 @@ function BattMo.plot_impl(
 	for (i, var_group) in enumerate(grouped_vars)
 		row = div(i - 1, ncols) + 1
 		col = mod(i - 1, ncols) + 1
-		ax = Axis(grid[row, col])
+		subgrid = GridLayout()
+		grid[row, col] = subgrid
+
+		ax = Axis(subgrid[1, 1])
 		plotted_lines = false
 		plot_type = nothing  # :line or :contour or nothing
 
@@ -126,49 +135,31 @@ function BattMo.plot_impl(
 
 				main_unit_str = get_main_unit_str(clean_var)
 
-				# Time series simple plot
-				if Symbol(clean_var) in available_time_vars && (isempty(dims) || dims == ["Time"])
-					y = time_series_data[Symbol(clean_var)]
-					if all_nan_warn(varstr, y)
-						continue
-					end
-					lines!(ax, full_time, y, label = varstr)
-					ax.xlabel = "Time / s"
-					ax.ylabel = clean_var * main_unit_str
-					plotted_lines = true
-					plot_type = :line
-					continue
-				end
+				# State variables and metrics
+				states_data = get_output_states(output)
+				metric_data = get_output_metrics(output)
+				time_series = get_output_time_series(output)
 
-				# State variable
-
-				if haskey(sel, :NeAmRadius)
-					data = get_output_states(output; quantities = [String(clean_var), "Position", "NeAmRadius", "Time"])
-
-					rad = data[:NeAmRadius] * 1e6
-				elseif haskey(sel, :PeAmRadius)
-					data = get_output_states(output; quantities = [String(clean_var), "Position", "PeAmRadius", "Time"])
-
-					rad = data[:PeAmRadius] * 1e6
-				else
-					data = get_output_states(output; quantities = [String(clean_var), "Position", "NeAmRadius", "PeAmRadius", "Time"])
-
-					rad = data[:PeAmRadius] * 1e6
-				end
+				data = merge(states_data, metric_data, time_series)
 
 				var_data = data[Symbol(clean_var)]
+
+				rad_pe = data[:PeAmRadius] * 1e6
+				rad_ne = data[:NeAmRadius] * 1e6
 				pos = data[:Position] * 1e6
 				nt = length(full_time)
+				cycles = metric_data[:CycleNumber]
 
-				known_dims = Dict(:Time => full_time, :Position => pos, :Radius => rad)
-				dim_lengths = Dict(:Time => nt, :Position => length(pos), :Radius => length(rad))
+				known_dims = Dict(pairs(data))#Dict(:Time => full_time, :Position => pos, :NeAmRadius => rad_ne, :PeAmRadius => rad_pe, :CycleNumber)
+				dim_lengths = Dict(:Time => nt, :Position => length(pos), :NeAmRadius => length(rad_ne), :PeAmRadius => length(rad_pe), :CycleNumber => length(cycles))
 				sz = size(var_data)
 
 				# Infer dimension assignments
 				dim_assignments = Dict{Int, Symbol}()
 				for (i, s) in enumerate(sz)
-					for (k, v) in dim_lengths
-						if s == v && !(k in values(dim_assignments))
+					for k in keys(data)
+						v = data[k]
+						if s == length(v) && !(k in values(dim_assignments)) && (k in Symbol.(dims) || haskey(sel, k))
 							dim_assignments[i] = k
 							break
 						end
@@ -188,14 +179,14 @@ function BattMo.plot_impl(
 					dim_sym = dim_assignments[i]
 					if dim_sym in plot_dims_syms
 						push!(slices, Colon())
-					else
+					elseif haskey(sel, dim_sym)
 						idx = get(sel, dim_sym, nothing)
 						if idx === :end
-							push!(slices, dim_lengths[dim_sym])
+							push!(slices, length(data[dim_sym]))
 						elseif idx isa Int
 							push!(slices, idx)
 						else
-							error("Missing selector for non-plotted dimension $dim_sym in \"$varstr\"")
+							error("Selector index has wrong type for non-plotted dimension $dim_sym in \"$varstr\"")
 						end
 					end
 				end
@@ -211,7 +202,7 @@ function BattMo.plot_impl(
 				# Build axis values
 				x_sym = plot_dims_syms[1]
 				x_vals = known_dims[x_sym]
-				x_label = string(x_sym) * (x_sym == :Position || x_sym == :Radius ? " / μm" : " / s")
+				x_label = string(x_sym) * "  /  " * meta_data[String(x_sym)]["unit"]
 
 				if length(plot_dims_syms) == 1
 					title_suffix = build_title_suffix(non_plot_dims, sel, known_dims)
@@ -233,7 +224,7 @@ function BattMo.plot_impl(
 
 					y_sym = plot_dims_syms[2]
 					y_vals = known_dims[y_sym]
-					y_label = string(y_sym) * (y_sym == :Position || y_sym == :Radius ? " / μm" : " / s")
+					y_label = string(y_sym) * "  /  " * meta_data[String(x_sym)]["unit"]
 
 					if size(data_slice) == (length(y_vals), length(x_vals))
 						z = data_slice
@@ -243,10 +234,11 @@ function BattMo.plot_impl(
 						error("Unexpected shape $(size(data_slice)), expected (y,x)=($(length(y_vals)),$(length(x_vals)))")
 					end
 
-					contourf!(ax, x_vals, y_vals, z'; colormap = :viridis)
+					co = contourf!(ax, x_vals, y_vals, z'; colormap = :viridis)
 
 					ax.xlabel = x_label
 					ax.ylabel = y_label
+					Colorbar(subgrid[1, 2], co, label = "$main_unit_str")
 
 					title_suffix = build_title_suffix(non_plot_dims, sel, known_dims)
 					ax.title = isempty(title_suffix) ? varstr : "$clean_var$title_suffix"

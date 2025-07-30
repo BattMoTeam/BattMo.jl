@@ -14,6 +14,11 @@ simulation_settings = load_simulation_settings(; from_file_path = file_path_simu
 
 model_setup = LithiumIonBattery(; model_settings);
 
+cycling_protocol["TotalNumberOfCycles"] = 40
+cycling_protocol["DRate"] = 1
+cycling_protocol["CRate"] = 1
+
+
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
 output = solve(sim; info_level = 1)
 
