@@ -60,7 +60,7 @@ const ActiveMaterialP2D{label, D, T, Di} = ActiveMaterial{label, D, T, Di}
 const ActiveMaterialNoParticleDiffusion{T} = ActiveMaterial{nothing, NoParticleDiffusion, T}
 
 struct Ocp <: ScalarVariable end
-struct DiffusionCoef <: ScalarVariable end
+struct DiffusionCoefficient <: ScalarVariable end
 struct ReactionRateConst <: ScalarVariable end
 struct Cp <: VectorVariables end # particle concentrations in p2d model
 struct Cs <: ScalarVariable end # surface variable in p2d model
@@ -127,7 +127,7 @@ function setupSolidDiffusionDiscretization(rp, N, D)
 	rp, D = promote(rp, D)
 	T = typeof(rp)
 
-	N  = Int64(N)
+	N = Int64(N)
 
 	hT   = zeros(T, N + 1)
 	vols = zeros(T, N)
@@ -210,10 +210,11 @@ function Jutul.select_secondary_variables!(S,
 	system::ActiveMaterialP2D,
 	model::SimulationModel,
 )
-	S[:Charge]            = Charge()
-	S[:Ocp]               = Ocp()
+	S[:Charge] = Charge()
+	S[:Ocp] = Ocp()
 	S[:ReactionRateConst] = ReactionRateConst()
-	S[:SolidDiffFlux]     = SolidDiffFlux()
+	S[:SolidDiffFlux] = SolidDiffFlux()
+	S[:DiffusionCoefficient] = DiffusionCoefficient()
 
 end
 
@@ -223,7 +224,7 @@ function Jutul.select_equations!(eqs,
 	model::SimulationModel,
 )
 
-    disc = model.domain.discretizations.flow
+	disc                      = model.domain.discretizations.flow
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 	eqs[:mass_conservation]   = SolidMassCons()
 	eqs[:solid_diffusion_bc]  = SolidDiffusionBc()
@@ -247,6 +248,8 @@ function Jutul.select_minimum_output_variables!(out,
 	push!(out, :Charge)
 	push!(out, :Ocp)
 	push!(out, :Temperature)
+	push!(out, :ReactionRateConst)
+	push!(out, :DiffusionCoefficient)
 
 end
 
@@ -284,9 +287,51 @@ end
 
 				@inbounds Ocp[cell] = ocp_func(Cs[cell] / cmax)
 
+			elseif Jutul.haskey(model.system.params, :ocp_funcconstant)
+				@inbounds Ocp[cell] = ocp_func
 			else
 
 				@inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)
+
+			end
+		end
+	end
+)
+
+@jutul_secondary(
+	function update_diffusion_coefficient!(DiffusionCoefficient,
+		tv::DiffusionCoefficient,
+		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
+		Cs,
+		ix,
+	) where {label, D, T, Di}
+
+		diff_func = model.system.params[:diff_func]
+
+		cmax = model.system.params[:maximum_concentration]
+		refT = 298.15
+
+		if Jutul.haskey(model.system.params, :diff_funcexp)
+			theta0   = model.system.params[:theta0]
+			theta100 = model.system.params[:theta100]
+		end
+
+
+		for cell in ix
+
+			if Jutul.haskey(model.system.params, :diff_funcexp)
+
+				@inbounds DiffusionCoefficient[cell] = diff_func(Cs[cell], refT, refT, cmax)
+
+			elseif Jutul.haskey(model.system.params, :diff_funcdata)
+
+				@inbounds DiffusionCoefficient[cell] = diff_func(Cs[cell] / cmax)
+
+			elseif Jutul.haskey(model.system.params, :diff_funcconstant)
+				@inbounds DiffusionCoefficient[cell] = diff_func
+			else
+
+				@inbounds DiffusionCoefficient[cell] = diff_func(Cs[cell], refT, cmax)
 
 			end
 		end
@@ -301,8 +346,18 @@ end
 		ix) where {label, D, T, Di}
 		rate_func = model.system.params[:reaction_rate_constant_func]
 		refT = 298.15
+
 		for cell in ix
-			@inbounds ReactionRateConst[cell] = rate_func(Cs[cell], refT)
+
+			if Jutul.haskey(model.system.params, :ecd_funcconstant)
+
+				@inbounds ReactionRateConst[cell] = rate_func
+
+			else
+
+				@inbounds ReactionRateConst[cell] = rate_func(Cs[cell], refT)
+
+			end
 		end
 	end
 )
@@ -451,7 +506,7 @@ function Jutul.select_equations!(eqs,
 	model::SimulationModel,
 )
 
-    disc = model.domain.discretizations.flow
+	disc                      = model.domain.discretizations.flow
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 	eqs[:mass_conservation]   = ConservationLaw(disc, :Mass)
 

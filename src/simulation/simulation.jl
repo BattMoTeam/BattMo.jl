@@ -457,12 +457,17 @@ function get_scalings(model, parameters)
 		cmax      = model[elde].system[:maximum_concentration]
 		vsa       = model[elde].system[:volumetric_surface_area]
 
-		c_a            = 0.5 * cmax
-		R0             = rate_func(c_a, refT)
+		c_a = 0.5 * cmax
+
+		if isa(rate_func, Real)
+			R0 = rate_func
+		else
+			R0 = rate_func(c_a, refT)
+		end
 		c_e            = 1000.0
 		activematerial = model[elde].system
 
-		j0s[i] = reaction_rate_coefficient(R0, c_e, c_a, activematerial)
+		j0s[i] = reaction_rate_coefficient(R0, c_e, c_a, activematerial, c_a, c_e)
 		Rvols[i] = j0s[i] * vsa / F
 
 	end

@@ -449,21 +449,60 @@ function setup_active_material(model::LithiumIonBattery, name::Symbol, input, gr
 	am_params[:theta0]                  = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
 	am_params[:theta100]                = inputparams_active_material["StoichiometricCoefficientAtSOC100"]
 
-	k0  = inputparams_active_material["ReactionRateConstant"]
-	Eak = inputparams_active_material["ActivationEnergyOfReaction"]
+	if model.settings["ReactionRateConstant"] == "TemperatureDependent"
+		am_params[:setting_exchange_current_density] = "TemperatureDependent"
 
-	am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
+		k0 = inputparams_active_material["ReactionRateConstant"]
+		Eak = inputparams_active_material["ActivationEnergyOfReaction"]
+		am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
+
+	elseif model.settings["ReactionRateConstant"] == "UserDefined"
+		am_params[:setting_exchange_current_density] = "UserDefined"
+
+		if isa(inputparams_active_material["ReactionRateConstant"], Real)
+			am_params[:ecd_funcconstant] = true
+			am_params[:reaction_rate_constant_func] = inputparams_active_material["ReactionRateConstant"]
+
+		elseif isa(inputparams_active_material["ReactionRateConstant"], String)
+
+			am_params[:ecd_funcexp] = true
+			ocp_exp = inputparams_active_material["ReactionRateConstant"]
+			exp = setup_reaction_rate_constant_evaluation_expression_from_string(ocp_exp)
+			f_generated = @RuntimeGeneratedFunction(exp)
+			am_params[:reaction_rate_constant_func] = f_generated
+
+		elseif haskey(inputparams_active_material["ReactionRateConstant"], "FunctionName")
+
+			funcname = inputparams_active_material["ReactionRateConstant"]["FunctionName"]
+			funcpath =
+				isnothing(get_key_value(inputparams_active_material["ReactionRateConstant"], "FilePath")) ? nothing :
+				normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(inputparams_active_material["ReactionRateConstant"], "FilePath")))
+			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
+			am_params[:reaction_rate_constant_func] = fcn
+
+		else
+			am_params[:ecd_funcdata] = true
+			data_x = inputparams_active_material["ReactionRateConstant"]["x"]
+			data_y = inputparams_active_material["ReactionRateConstant"]["y"]
+
+			interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
+			am_params[:reaction_rate_constant_func] = interpolation_object
+		end
+
+
+	end
 
 	if isa(inputparams_active_material["OpenCircuitPotential"], Real)
 		am_params[:ocp_funcconstant] = true
-		am_params[:ocp_constant] = inputparams_active_material["OpenCircuitPotential"]
+		am_params[:ocp_func] = inputparams_active_material["OpenCircuitPotential"]
 
 	elseif isa(inputparams_active_material["OpenCircuitPotential"], String)
 
 		am_params[:ocp_funcexp] = true
 		ocp_exp = inputparams_active_material["OpenCircuitPotential"]
 		exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
-		am_params[:ocp_func] = @RuntimeGeneratedFunction(exp)
+		f_generated = @RuntimeGeneratedFunction(exp)
+		am_params[:ocp_func] = f_generated
 
 	elseif haskey(inputparams_active_material["OpenCircuitPotential"], "FunctionName")
 
@@ -481,10 +520,52 @@ function setup_active_material(model::LithiumIonBattery, name::Symbol, input, gr
 		am_params[:ocp_func] = interpolation_object
 	end
 
+	T        = input.cycling_protocol["InitialTemperature"]
+	SOC_init = input.cycling_protocol["InitialStateOfCharge"]
+
+	theta0   = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
+	theta100 = inputparams_active_material["StoichiometricCoefficientAtSOC100"]
+	cmax     = inputparams_active_material["MaximumConcentration"]
+	refT     = 298.15
+
+	theta = SOC_init * (theta100 - theta0) + theta0
+	c     = theta * cmax
+
 	if haskey(model.settings, "TransportInSolid") && model.settings["TransportInSolid"] == "FullDiffusion"
 		rp = inputparams_active_material["ParticleRadius"]
 		N  = Int64(input.simulation_settings["GridResolution"][stringName*"ActiveMaterial"])
-		D  = inputparams_active_material["DiffusionCoefficient"]
+
+		if isa(inputparams_active_material["DiffusionCoefficient"], Real)
+			am_params[:diff_funcconstant] = true
+			am_params[:diff_func] = inputparams_active_material["DiffusionCoefficient"]
+			D = am_params[:diff_func]
+
+		elseif isa(inputparams_active_material["DiffusionCoefficient"], String)
+
+			am_params[:diff_funcexp] = true
+			diff_exp = inputparams_active_material["DiffusionCoefficient"]
+			exp = setup_electrode_diff_evaluation_expression_from_string(diff_exp)
+			f_generated = @RuntimeGeneratedFunction(exp)
+			am_params[:diff_func] = f_generated
+			D = am_params[:diff_func](c, T, refT, cmax)
+		elseif haskey(inputparams_active_material["DiffusionCoefficient"], "FunctionName")
+
+			funcname = inputparams_active_material["DiffusionCoefficient"]["FunctionName"]
+			funcpath = haskey(inputparams_active_material["DiffusionCoefficient"], "FilePath") ? inputparams_active_material["DiffusionCoefficient"]["FilePath"] : nothing
+			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
+			am_params[:diff_func] = fcn
+			D = am_params[:diff_func](c, T, refT, cmax)
+
+		else
+			am_params[:diff_funcdata] = true
+			data_x = inputparams_active_material["DiffusionCoefficient"]["x"]
+			data_y = inputparams_active_material["DiffusionCoefficient"]["y"]
+
+			interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
+			am_params[:diff_func] = interpolation_object
+			D = am_params[:diff_func](c / cmax)
+		end
+
 		if haskey(model.settings, "SEIModel") && model.settings["SEIModel"] == "Bolay" && haskey(inputparams_electrode, "Interphase")
 			label = :sei
 			fds = ["InitialThickness",

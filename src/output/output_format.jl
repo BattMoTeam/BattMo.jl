@@ -126,6 +126,7 @@ function get_output_metrics(
 	charge_energy::Vector{Float64} = Float64[]
 	round_trip_efficiency::Vector{Float64} = Float64[]
 
+
 	# Identify unique non-zero cycles
 	unique_cycles = unique(cycle_array)
 	cycles_above_zero = filter(x -> x > 0, unique_cycles)
@@ -137,6 +138,7 @@ function get_output_metrics(
 		push!(discharge_energy, compute_discharge_energy(output))
 		push!(charge_energy, compute_charge_energy(output))
 		push!(round_trip_efficiency, compute_round_trip_efficiency(output))
+		capacity = compute_capacity(output)
 	else
 		# Compute per cycle
 		for cycle in cycle_array
@@ -146,6 +148,8 @@ function get_output_metrics(
 			push!(charge_energy, compute_charge_energy(output; cycle_number = cycle))
 			push!(round_trip_efficiency, compute_round_trip_efficiency(output; cycle_number = cycle))
 		end
+		capacity = compute_capacity(output)
+
 	end
 
 	# Dictionary of all available quantities
@@ -156,6 +160,7 @@ function get_output_metrics(
 		"DischargeEnergy"     => discharge_energy,
 		"ChargeEnergy"        => charge_energy,
 		"RoundTripEfficiency" => round_trip_efficiency,
+		"Capacity"            => capacity,
 	)
 
 	# Add only requested quantities
@@ -293,6 +298,10 @@ function extract_spatial_data(states::Vector)
 		:PeAmSurfaceConcentration => [:PeAm, :Cs],
 		:NeAmConcentration        => [:NeAm, :Cp],
 		:PeAmConcentration        => [:PeAm, :Cp],
+		:NeAmDiffusionCoefficient => [:NeAm, :DiffusionCoefficient],
+		:PeAmDiffusionCoefficient => [:PeAm, :DiffusionCoefficient],
+		:NeAmReactionRateConst    => [:NeAm, :ReactionRateConst],
+		:PeAmReactionRateConst    => [:PeAm, :ReactionRateConst],
 		:ElectrolyteConcentration => [:Elyte, :C],
 		:NeAmPotential            => [:NeAm, :Phi],
 		:ElectrolytePotential     => [:Elyte, :Phi],

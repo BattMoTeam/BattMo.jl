@@ -14,42 +14,41 @@
         }
     },
     "Cell": {
-        "Name": "LG INR 21700 M50",
-        "Case": "Cylindrical",
+        "Name": "",
+        "Case": "Pouch",
         "Height": 0.065,
         "OuterRadius": 0.021,
         "InnerRadius": 2e-3,
-        "ElectrodeGeometricSurfaceArea": 0.1027,
+        "ElectrodeGeometricSurfaceArea": 2.54e-4,
         "NominalVoltage": 3.71,
         "NominalCapacity": 4.8
     },
     "NegativeElectrode": {
         "ElectrodeCoating": {
             "BruggemanCoefficient": 0.5,
-            "EffectiveDensity": 955.5,
+            "EffectiveDensity": 954.67,
             "Thickness": 64e-6
         },
         "ActiveMaterial": {
             "Description": "Hard Carbon",
-            "MassFraction": 1.0,
+            "MassFraction": 0.999,
             "Density": 1950.0,
             "VolumetricSurfaceArea": 420689.655,
             "ElectronicConductivity": 256,
-            "DiffusionCoefficient": 2e-15,
+            "DiffusionCoefficient": "-4.6741e-13*(c/cmax)^6 + 1.3106e-12*(c/cmax)^5 - 1.3034e-12*(c/cmax)^4 + 5.4204e-13*(c/cmax)^3 - 8.865e-14*(c/cmax)^2 + 7.9521e-15*(c/cmax) + 1.5172e-16",
             "ParticleRadius": 3.48e-6,
             "MaximumConcentration": 14540,
             "StoichiometricCoefficientAtSOC0": 0.14,
             "StoichiometricCoefficientAtSOC100": 1.0,
             "OpenCircuitPotential": "1856.4*(c/cmax)^8 - 8475.44*(c/cmax)^7 + 16255.9*(c/cmax)^6 - 16989.6*(c/cmax)^5 + 10492.1*(c/cmax)^4 - 3883.79*(c/cmax)^3 + 838.052*(c/cmax)^2 - 99.3537*(c/cmax) + 5.92005",
             "NumberOfElectronsTransfered": 1,
-            "ActivationEnergyOfReaction": 35000,
-            "ReactionRateConstant": 9e-11,
+            "ReactionRateConstant": "0.6 * (-1.4132e-29 * (c)^5 + 5.5715e-25 * (c)^4 - 7.5952e-21 * (c)^3 + 4.0981e-17(c)^2 - 6.9205e-14 * (c) + 4.1515e-11)",
             "ChargeTransferCoefficient": 0.5
         },
         "ConductiveAdditive": {
             "Description": "Unknown",
             "Density": 1950.0,
-            "MassFraction": 0.0,
+            "MassFraction": 0.001,
             "ElectronicConductivity": 100.0
         },
         "Binder": {
@@ -62,30 +61,29 @@
     "PositiveElectrode": {
         "ElectrodeCoating": {
             "BruggemanCoefficient": 0.5,
-            "EffectiveDensity": 2464,
+            "EffectiveDensity": 2155.69,
             "Thickness": 68e-6
         },
         "ActiveMaterial": {
             "Description": "NVPF",
-            "MassFraction": 1.0,
+            "MassFraction": 0.8161,
             "Density": 3200,
             "VolumetricSurfaceArea": 2796610.169,
             "ElectronicConductivity": 50,
-            "DiffusionCoefficient": 4.0e-15,
+            "DiffusionCoefficient": "1.55 * (5.878e-14*(c/cmax)^8 - 2.6e-13*(c/cmax)^7 + 5.442e-13*(c/cmax)^6 - 7.388e-13(c/cmax)^5 + 7.003e-13*(c/cmax)^4 - 4.426e-13*(c/cmax)^3 + 1.702e-13*(c/cmax)^2 - 3.496e-14*(c/cmax) + 2.952e-15)",
             "ParticleRadius": 0.59e-6,
             "MaximumConcentration": 15320,
             "StoichiometricCoefficientAtSOC0": 1.0,
             "StoichiometricCoefficientAtSOC100": 0.25,
             "OpenCircuitPotential": "(116.1647 - 940.2551*(c/cmax)^2 + 3101.9987*(c/cmax)^4 - 5292.6225*(c/cmax)^6 + 4040.4367*(c/cmax)^8)/(27.9167 - 228.18310*(c/cmax)^2 + 769.0709*(c/cmax)^4 - 1353.4191*(c/cmax)^6 + 1063.2453*(c/cmax)^8)",
             "NumberOfElectronsTransfered": 1,
-            "ActivationEnergyOfReaction": 17800.0,
-            "ReactionRateConstant": 2e-10,
+            "ReactionRateConstant": "1.5e-10 * (4.2884e-24 * (c)^6 - 2.641e-19 * (c)^5 + 6.4845e-15 * (c)^4 - 8.06e-11 * (c)^3 + 5.3039e-7 * (c)^2 - 1.7493e-3 * (c) + 2.3728)",
             "ChargeTransferCoefficient": 0.5
         },
         "ConductiveAdditive": {
             "Description": "Unknown",
             "Density": 1800.0,
-            "MassFraction": 0.0,
+            "MassFraction": 0.1839,
             "ElectronicConductivity": 100
         },
         "Binder": {

@@ -32,7 +32,7 @@ function get_parameter_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_639b844a_e801_436b_985d_28926129ead6",
 			"description" => "Reference voltage of the cell as reported by the manufacturer. Usually calculated from the cell's energy output and capacity under a standard cycling test.",
 		),
-        "TabFractions" => Dict(
+		"TabFractions" => Dict(
 			"type" => Vector,
 			"unit" => "-",
 			"unit_name" => "dimensionless",
@@ -51,7 +51,7 @@ function get_parameter_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_32dcd601_47c7_4028_b7fa_5e972ae57f12",
 			"description" => "Radius of the rolled electrodes within a cylindrical cell, measured from the center of the cell to the inner side of the cell wall.",
 		),
-        "OuterRadius" => Dict(
+		"OuterRadius" => Dict(
 			"type" => Real,
 			"min_value" => 0.001,
 			"max_value" => 0.2,
@@ -335,7 +335,7 @@ function get_parameter_meta_data()
 			"max_value" => 1e-2,
 			"min_value" => 1.0e-14,
 			"description" => "Proportionality constant quantifying the rate and direction of a chemical reaction by relating it with the concentration of reactants.",
-			"type" => Real,
+			"type" => [String, Dict{String, Vector}, Real],
 			"unit" => "mol·m⁻²·s⁻¹",
 			"unit_name" => "emmo:MolePerSquareMetrePerSecond",
 			"unit_iri" => "https://w3id.org/emmo#MolePerSquareMetrePerSecond",
