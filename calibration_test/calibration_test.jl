@@ -311,10 +311,6 @@ cell_parameters_calibrated2, V_eq, t_eq = equilibriumCalibration(sim)
 #cell_parameters_calibrated2 = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings)
 
 
-
-@eval Main current_function = $current_function
-
-
 println("Calibration done:")
 
 CRates = [exp_data[i]["rawRate"] for i in 1:length(exp_data)]
