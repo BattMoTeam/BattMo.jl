@@ -517,7 +517,9 @@ function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParam
 
 
 	elseif policy.initialControl == "discharging"
+		
 		Imax = only(parameters[:Control][:ImaxDischarge])
+		@show "Imax = $Imax"
 
 	else
 		error("Initial control is not recognized")

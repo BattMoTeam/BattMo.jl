@@ -167,11 +167,16 @@ function equilibriumCalibration(sim)
 
 
     x = solve_equilibrium!(vc; I=I)
+
+    println("calibration parameters: ", x)
     
     set_calibration_parameter!(vc,["NegativeElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC100"], x[3])
     set_calibration_parameter!(vc,["PositiveElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC100"], x[4])
     set_calibration_parameter!(vc,["NegativeElectrode","ActiveMaterial","MaximumConcentration"], x[1])
     set_calibration_parameter!(vc,["PositiveElectrode","ActiveMaterial","MaximumConcentration"], x[2])
+
+    
+
 
     
     output = get_simulation_input(vc.sim)
@@ -188,10 +193,31 @@ function equilibriumCalibration(sim)
     a_ne = model[:NeAm].system.params[:volume_fractions][1]
     a_pe = model[:PeAm].system.params[:volume_fractions][1]
 
+    
+    F = 96485.33289 # Faraday constant in C/mol
+    C_exp = exp_data[1]["I"]*exp_data[1]["time"][end] # Capacity in Ah
+    print("C_exp = ", C_exp, " Ah\n")
+    
+   
     Xparam = [
         Vpe, Vne, a_pe, a_ne, eps_pe, eps_ne
     ]
 
+    
+    mne = vc.sim.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["MaximumConcentration"] * Vne * a_ne * eps_ne
+    mpe = vc.sim.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["MaximumConcentration"] * Vpe * a_pe * eps_pe
+
+    θ_100_ne = vc.sim.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["StoichiometricCoefficientAtSOC100"]
+    θ_100_pe = vc.sim.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["StoichiometricCoefficientAtSOC100"]
+    θ_0_ne = vc.sim.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["StoichiometricCoefficientAtSOC100"] - C_exp/(F*mne)
+    θ_0_pe = vc.sim.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["StoichiometricCoefficientAtSOC100"] + C_exp/(F*mpe)
+
+    println("θ_100_ne = ", θ_100_ne, " θ_100_pe = ", θ_100_pe)
+    println("θ_0_ne = ", θ_0_ne, " θ_0_pe = ", θ_0_pe)
+    set_calibration_parameter!(vc,["NegativeElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC0"], θ_0_ne)
+    set_calibration_parameter!(vc,["PositiveElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC0"], θ_0_pe)
+   
+    @info "calibrated mpe = $mpe, mne = $mne"
     # Compute mpe and mne based on the calibrated parameters
     Veq = compute_equilibrium_voltage(t_exp, x, Xparam, exp_data[1]["I"], ocp_pe, ocp_ne)
 
@@ -250,16 +276,16 @@ end
 
 function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrated,model_setup,simulation_settings)
 
-    idx = lastindex(exp_data)
-    print("index: ", idx, " for high rate calibration\n")
-    t_exp_hr = vec(exp_data[idx]["time"])
-    V_exp_hr = vec(exp_data[idx]["E"])
+   
+    
+    t_exp_hr = vec(exp_data[end]["time"])
+    V_exp_hr = vec(exp_data[end]["E"])
 
-    I = exp_data[idx]["I"]
+    I = exp_data[end]["I"]
     
 
     cycling_protocol2 = deepcopy(cycling_protocol)
-    cycling_protocol2["DRate"] = exp_data[idx]["rawRate"]
+    cycling_protocol2["DRate"] = exp_data[end]["rawRate"]
     sim2 = Simulation(model_setup, cell_parameters_calibrated, cycling_protocol2; simulation_settings)
     output = get_simulation_input(sim2)
     model2 = output[:model]
@@ -320,6 +346,7 @@ outputs_calibrated = []
 for i in 1:length(exp_data)
     
     I = exp_data[i]["I"]
+
     println("Running simulation for I = ", I)
 
     
@@ -327,6 +354,8 @@ for i in 1:length(exp_data)
     output = get_simulation_input(simuc)
     model = output[:model]
     simuc.cycling_protocol["DRate"] = I * 3600 / computeCellCapacity(model) 
+
+    
 
     # Solve the simulation with the base parameters
     println("Running simulation for I = ", I)
@@ -343,10 +372,33 @@ for i in 1:length(exp_data)
 
     
     simc = Simulation(model_setup, cell_parameters_calibrated2, cycling_protocol; simulation_settings)
+    println(simc.cell_parameters)
     outputc = get_simulation_input(simc)
     modelc = outputc[:model]
     simc.cycling_protocol["DRate"] =  I * 3600 / computeCellCapacity(modelc)
 	output_c = solve(simc, info_level = -1;accept_invalid = true)
+
+    println("calibrated simulation done for I = ", I, "\n")
+
+    ocp_ne = modelc[:NeAm].system.params[:ocp_func]
+    ocp_pe = modelc[:PeAm].system.params[:ocp_func]
+
+    Vne = sum(modelc[:NeAm].domain.representation[:volumes])
+    Vpe = sum(modelc[:PeAm].domain.representation[:volumes])
+
+    eps_ne = modelc[:NeAm].system.params[:volume_fraction]
+    eps_pe = modelc[:PeAm].system.params[:volume_fraction]
+
+    a_ne = modelc[:NeAm].system.params[:volume_fractions][1]
+    a_pe = modelc[:PeAm].system.params[:volume_fractions][1]
+
+    cpe = simc.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["MaximumConcentration"]
+    cne = simc.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["MaximumConcentration"]
+    
+    mpe = cpe * Vpe * a_pe * eps_pe 
+    mne = cne * Vne * a_ne * eps_ne 
+
+    @info "mpe = $mpe, mne = $mne"
 
 
     push!(outputs_calibrated, (I = I, output = output_c))

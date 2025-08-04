@@ -2366,7 +2366,7 @@ function computeJ0anodeDLR(soc)
     ] .* 10.0  # Convert mA/cm² → A/m²
 
     # Linear interpolator with extrapolation
-    itp = LinearInterpolation(soc_vals, j0_vals, extrapolation_bc=Line())
+    itp = get_1d_interpolator(soc_vals, j0_vals, cap_endpoints = false)
 
     j0 = itp(soc)  # [A/m²]
     return j0
@@ -2390,7 +2390,7 @@ function computeJ0cathodeDLR(soc)
     ] .* 10.0  # Convert mA/cm² to A/m²
 
     # Interpolation linéaire avec extrapolation
-    itp = LinearInterpolation(soc_vals, j0_vals, extrapolation_bc=Line())
+    itp = get_1d_interpolator(soc_vals, j0_vals, cap_endpoints = false)
     j0 = itp(soc)
     return j0
 end
