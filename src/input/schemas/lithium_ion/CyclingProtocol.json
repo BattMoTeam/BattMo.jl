@@ -1,0 +1,240 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "CyclingProtocol",
+    "type": "object",
+    "properties": {
+        "Protocol": {
+            "type": "string",
+            "enum": [
+                "CC",
+                "CCCV",
+                "Function"
+            ],
+            "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('CCCV'), or a custom Function."
+        },
+        "TotalTime": {
+            "type": "number",
+            "minimum": 1.0,
+            "maximum": 1000000000.0,
+            "description": "Maximum duration of the simulation.",
+            "unit": "s"
+        },
+        "InitialControl": {
+            "type": "string",
+            "enum": [
+                "charging",
+                "discharging"
+            ],
+            "description": "Whether a cycling protocol starts with 'charging' or 'discharging'."
+        },
+        "InitialTemperature": {
+            "type": "number",
+            "minimum": 238.15,
+            "maximum": 373.15,
+            "description": "The thermodynamic temperature at some point in time designated to be the initial state.",
+            "context_type": "InititalThermodynamicTemperature",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_9c9b80a4_a00b_4b91_8e17_3a7831f2bf2f",
+            "unit": "K",
+            "unit_name": "emmo:Kelvin",
+            "unit_iri": "https://w3id.org/emmo#Kelvin"
+        },
+        "InitialStateOfCharge": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "State of charge of the cell at the start of a simulation.",
+            "unit": "1"
+        },
+        "TotalNumberOfCycles": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000,
+            "description": "Total count of charge-discharge cycles executed during the simulation.",
+            "unit": "1"
+        },
+        "DRate": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 50,
+            "description": "An indicator of the electric current at which a cell discharged relative to a defined capacity. 1C corresponds to discharging the entire defined capacity in one hour.",
+            "context_type": "DischargingCRate",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_25e20915_c35d_4bee_ad31_736235a79780",
+            "unit": "1",
+            "unit_name": "emmo:UnitOne",
+            "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+        },
+        "CRate": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 50,
+            "description": "An indicator of the electric current at which a cell discharged relative to a defined capacity. 1C corresponds to charging the entire defined capacity in one hour.",
+            "context_type": "CRate",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_a7dc73e2_d4aa_4dfc_8b4d_cb611f1501fb",
+            "unit": "1",
+            "unit_name": "emmo:UnitOne",
+            "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+        },
+        "LowerVoltageLimit": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 6.0,
+            "description": "Minimum voltage limit when the discharge step stops.",
+            "context_type": "LowerVoltageLimit",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_534dd59c_904c_45d9_8550_ae9d2eb6bbc9",
+            "unit": "V",
+            "unit_name": "emmo:Volt",
+            "unit_iri": "https://w3id.org/emmo#Volt"
+        },
+        "UpperVoltageLimit": {
+            "type": "number",
+            "minimum": 1.0,
+            "maximum": 6.0,
+            "description": "Maximum voltage limit when the charge step stops.",
+            "context_type": "UpperVoltageLimit",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_6dcd5baf_58cd_43f5_a692_51508e036c88",
+            "unit": "V",
+            "unit_name": "emmo:Volt",
+            "unit_iri": "https://w3id.org/emmo#Volt"
+        },
+        "CurrentChangeLimit": {
+            "type": "number",
+            "minimum": 1.0e-8,
+            "maximum": 1.0e-1,
+            "description": "A control limit placed on the rate of change of the electric current (dI/dt) in a constant-voltage step.",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_71f10616_15eb_4dc4_bc8d_ffaac3838af2",
+            "unit": "A·s⁻¹"
+        },
+        "VoltageChangeLimit": {
+            "type": "number",
+            "minimum": 0.0001,
+            "maximum": 0.1,
+            "description": "A control limit placed on the rate of change of the cell voltage (dV/dt) in a constant-current step.",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_09e64707_a17d_4405_84cc_ee9d91ed32ef",
+            "unit": "V·s⁻¹",
+            "unit_name": "emmo:VoltPerSecond",
+            "unit_iri": "https://w3id.org/emmo#VoltPerSecond"
+        }
+    },
+    "required": [
+        "Protocol",
+        "InitialStateOfCharge",
+        "InitialTemperature"
+    ],
+    "allOf": [
+        {
+            "if": {
+                "properties": {
+                    "Protocol": {
+                        "const": "CC"
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "InitialControl",
+                    "TotalNumberOfCycles"
+                ]
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "Protocol": {
+                        "const": "CC"
+                    },
+                    "TotalNumberOfCycles": {
+                        "const": 0
+                    },
+                    "InitialControl": {
+                        "const": "discharging"
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "DRate",
+                    "LowerVoltageLimit"
+                ]
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "Protocol": {
+                        "const": "CC"
+                    },
+                    "TotalNumberOfCycles": {
+                        "const": 0
+                    },
+                    "InitialControl": {
+                        "const": "charging"
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "CRate",
+                    "UpperVoltageLimit"
+                ]
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "Protocol": {
+                        "const": "CC"
+                    },
+                    "TotalNumberOfCycles": {
+                        "not": {
+                            "const": 0
+                        }
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "DRate",
+                    "CRate",
+                    "LowerVoltageLimit",
+                    "UpperVoltageLimit"
+                ]
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "Protocol": {
+                        "const": "CCCV"
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "DRate",
+                    "CRate",
+                    "LowerVoltageLimit",
+                    "UpperVoltageLimit",
+                    "CurrentChangeLimit",
+                    "VoltageChangeLimit",
+                    "InitialControl",
+                    "TotalNumberOfCycles"
+                ]
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "Protocol": {
+                        "const": "Function"
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "FunctionName",
+                    "TotalTime"
+                ]
+            }
+        }
+    ]
+}
