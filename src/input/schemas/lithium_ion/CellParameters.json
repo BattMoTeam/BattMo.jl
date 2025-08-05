@@ -1,0 +1,27 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "CellParameters",
+    "type": "object",
+    "properties": {
+        "Cell": {
+            "type": "object",
+            "$ref": "Cell.json"
+        },
+        "NegativeElectrode": {
+            "type": "object",
+            "$ref": "NegativeElectrode.json"
+        },
+        "PositiveElectrode": {
+            "type": "object",
+            "$ref": "PositiveElectrode.json"
+        },
+        "Electrolyte": {
+            "type": "object",
+            "$ref": "Electrolyte.json"
+        },
+        "Separator": {
+            "type": "object",
+            "$ref": "Separator.json"
+        }
+    }
+}

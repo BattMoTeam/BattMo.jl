@@ -1,0 +1,616 @@
+{
+  "$schema": "http://json-schema.org/draft/2020-12/schema",
+  "title": "Parameters",
+  "type": "object",
+  "properties": {
+    "Case": {
+      "type": "string",
+      "enum": [
+        "Cylindrical",
+        "Pouch"
+      ],
+      "context_type": "hasCase",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_3dcfe33d_6825_43c0_a798_68e871a68d39",
+      "description": "Type of physical container encapsulating the electrochemical cell. Examples: Cylindrical, Pouch."
+    },
+    "EffectiveDensity": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 23000.0,
+      "description": "Density of a porous electrode, calculated from its geometrical volume and mass. It includes the volume occupied by pores.",
+      "unit": "kg\u00b7m\u207b\u00b3"
+    },
+    "NominalVoltage": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 6.0,
+      "description": "Reference voltage of the cell as reported by the manufacturer. Usually calculated from the cell's energy output and capacity under a standard cycling test.",
+      "unit": "V"
+    },
+    "TabFractions": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Location of the tabs. The location of each tab is given by a fraction which determines the fraction of the total spiral length where the tab is located.",
+      "unit": "-"
+    },
+    "InnerRadius": {
+      "type": "number",
+      "minimum": 0.001,
+      "maximum": 0.1,
+      "description": "Radius of the rolled electrodes within a cylindrical cell, measured from the center of the cell to the inner side of the cell wall.",
+      "unit": "m"
+    },
+    "OuterRadius": {
+      "type": "number",
+      "minimum": 0.001,
+      "maximum": 0.2,
+      "description": "Radius of the rolled electrodes within a cylindrical cell, measured from the center of the cell to the outer side of the cell wall.",
+      "unit": "m"
+    },
+    "ElectrodeWidth": {
+      "type": "number",
+      "minimum": 0.01,
+      "maximum": 0.5,
+      "description": "Dimension of the shortest side of the face of a rectangular electrode.",
+      "unit": "m"
+    },
+    "ElectrodeLength": {
+      "type": "number",
+      "minimum": 0.01,
+      "maximum": 0.5,
+      "description": "Dimension of the longest side of the face of a rectangular electrode.",
+      "unit": "m"
+    },
+    "SurfaceCoefficientOfHeatTransfer": {
+      "type": "number",
+      "minimum": 1.0,
+      "maximum": 5000.0,
+      "description": "Rate at which heat is exchanged between a cell\u2019s surface and its surrounding environment",
+      "unit": "W\u00b7m\u207b\u00b2\u00b7K\u207b\u00b9"
+    },
+    "ChargeTransferCoefficient": {
+      "type": "number",
+      "minimum": 0.1,
+      "maximum": 0.9,
+      "description": "Constant alpha in the Butler-Volmer equation. It represents the fraction of the electrostatic potential energy affecting the reduction rate in an electrode reaction, with the remaining fraction affecting the corresponding oxidation rate.",
+      "unit": "-"
+    },
+    "MolarVolume": {
+      "type": "number",
+      "minimum": 1e-06,
+      "maximum": 0.03,
+      "description": "Volume per amount of substance.",
+      "unit": "m\u00b3\u00b7mol\u207b\u00b9"
+    },
+    "ElectronicDiffusionCoefficient": {
+      "type": "number",
+      "minimum": 1e-16,
+      "maximum": 1000.0,
+      "description": "Diffusion coefficient of electrons in a solid.",
+      "unit": "m\u00b2\u00b7s\u207b\u00b9"
+    },
+    "StoichiometricCoefficient": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 10.0,
+      "description": "Ratio of the concentration of an intercalant (e.g. Li+) at a given moment, to its maximum possible concentration within a solid host material.",
+      "unit": "-"
+    },
+    "InterstitialConcentration": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 100000.0,
+      "description": "Amount of neutral intersticial sites of the intercalant (Li+) per volume of solid.",
+      "unit": "mol\u00b7m\u207b\u00b3"
+    },
+    "InitialThickness": {
+      "type": "number",
+      "minimum": 1e-09,
+      "maximum": 0.01,
+      "description": "Thickness of the SEI layer at the start of the simulation.",
+      "unit": "m"
+    },
+    "InitialPotentialDrop": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Electric potential difference across the SEI layer or electrode interface at the beginning of the simulation.",
+      "unit": "V"
+    },
+    "Protocol": {
+      "type": "string",
+      "enum": [
+        "CC",
+        "CCCV",
+        "Function"
+      ],
+      "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('CCCV')."
+    },
+    "FunctionName": {
+      "type": "string",
+      "description": "String of the name of a Julia function."
+    },
+    "TotalTime": {
+      "type": "number",
+      "minimum": 1.0,
+      "maximum": 1000000000.0,
+      "description": "Maximum duration of the simulation.",
+      "unit": "s"
+    },
+    "InitialControl": {
+      "type": "string",
+      "enum": [
+        "charging",
+        "discharging"
+      ],
+      "description": "Whether a cycling protocol starts with 'charging' or 'discharging'."
+    },
+    "RestingTimeAfterCharge": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1000000.0,
+      "description": "Time during which the cell is kept at open-circuit conditions after charging.",
+      "unit": "s"
+    },
+    "RestingTimeAfterDischarge": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1000000.0,
+      "description": "Time during which the cell is kept at open-circuit conditions after discharging.",
+      "unit": "s"
+    },
+    "TabWidth": {
+      "type": "number",
+      "minimum": 0.0005,
+      "maximum": 0.5,
+      "description": "Dimension of the shortest side of the face of the rectangular tab of a current collector.",
+      "unit": "m"
+    },
+    "TabLength": {
+      "type": "number",
+      "minimum": 0.01,
+      "maximum": 0.5,
+      "description": "Dimension of the longest side of the face of the rectangular tab of a current collector.",
+      "unit": "m"
+    },
+    "MaximumConcentration": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0e6,
+      "description": "The saturation concentration of the guest molecule in the host material",
+      "unit": "mol·m⁻³"
+    },
+    "ElectrodeGeometricSurfaceArea": {
+      "type": "number",
+      "minimum": 0.0001,
+      "maximum": 0.2,
+      "description": "Face (or plate) area of an electrode. Electrode cross-sectional area.",
+      "context_type": "ElectrodeGeometricSurfaceArea",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_fa7790d6_07bb_4b0f_9965_55966828f5f3",
+      "unit": "m²",
+      "unit_name": "emmo:Metre",
+      "unit_iri": "https://w3id.org/emmo#Metre"
+    },
+    "VolumetricSurfaceArea": {
+      "type": "number",
+      "minimum": 0.001,
+      "maximum": 1e9,
+      "description": "Ratio of the electrochemically-active surface area of the electrode per volume of electrode",
+      "context_type": "VolumetricSurfaceArea",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_a5571263_f153_448f_84a3_cd18092cf8fa",
+      "unit": "m²m⁻³",
+      "unit_name": "emmo:Metre",
+      "unit_iri": "https://w3id.org/emmo#Metre"
+    },
+    "Density": {
+      "type": "number",
+      "minimum": 0.01,
+      "maximum": 100000.0,
+      "description": "Density of the material.",
+      "context_type": "Density",
+      "context_type_iri": "https://w3id.org/emmo#EMMO_06448f64_8db6_4304_8b2c_e785dba82044",
+      "unit": "kg·m⁻³",
+      "unit_name": "emmo:GramPerCubicMetre",
+      "unit_iri": "https://w3id.org/emmo#GramPerCubicMetre"
+    },
+    "SpecificHeatCapacity": {
+      "type": "number",
+      "minimum": 100.0,
+      "maximum": 20000.0,
+      "description": "Heat capacity of the material per unit of mass.",
+      "context_type": "SpecificHeatCapacity",
+      "context_type_iri": "https://w3id.org/emmo#EMMO_b4f4ed28_d24c_4a00_9583_62ab839abeca",
+      "unit": "J·kg⁻¹·K⁻¹",
+      "unit_name": "emmo:JoulePerKiloGramKelvin",
+      "unit_iri": "https://w3id.org/emmo#JoulePerKiloGramKelvin"
+    },
+    "ThermalConductivity": {
+      "type": "number",
+      "minimum": 0.01,
+      "maximum": 10000.0,
+      "description": "Material property characterizing its ability to transmit heat through a surface element.",
+      "context_type": "ThermalConductivity",
+      "context_type_iri": "https://w3id.org/emmo#EMMO_8dd40ec6_2c5a_43f3_bf64_cadcd447a1c1",
+      "unit": "W·m⁻¹·K⁻¹",
+      "unit_name": "emmo:WattPerMetreKelvin",
+      "unit_iri": "https://w3id.org/emmo#WattPerMetreKelvin"
+    },
+    "ElectronicConductivity": {
+      "type": "number",
+      "minimum": 1e-20,
+      "maximum": 1e9,
+      "description": "Measure of a material's ability to conduct an electric current.",
+      "context_type": "ElectricConductivity",
+      "context_type_iri": "https://w3id.org/emmo#EMMO_cde4368c_1d4d_4c94_8548_604749523c6d",
+      "unit": "S·m⁻¹",
+      "unit_name": "emmo:SiemensPerMetre",
+      "unit_iri": "https://w3id.org/emmo#SiemensPerMetre"
+    },
+    "ActivationEnergyOfReaction": {
+      "type": "number",
+      "minimum": 1000.0,
+      "maximum": 1000000.0,
+      "description": "Parameter of the empirical Arrhenius formulation, characterizing the exponential temperature dependence of the reaction rate of the material.",
+      "context_type": "Energy",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_d7f8cab9_b035_4ecd_be63_292672572526",
+      "unit": "J·mol⁻¹",
+      "unit_name": "emmo:JoulePerMole",
+      "unit_iri": "https://w3id.org/emmo#JoulePerMole"
+    },
+    "ReactionRateConstant": {
+      "type": "number",
+      "minimum": 1e-14,
+      "maximum": 1e-2,
+      "description": "Proportionality constant quantifying the rate and direction of a chemical reaction by relating it with the concentration of reactants.",
+      "context_type": "ReactionRateConstant",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_0335e3f6_d1d8_4daa_8376_a9285f1bc9f1",
+      "unit": "mol·m⁻²·s⁻¹",
+      "unit_name": "emmo:MolePerSquareMetrePerSecond",
+      "unit_iri": "https://w3id.org/emmo#MolePerSquareMetrePerSecond"
+    },
+    "StoichiometricCoefficientAtSOC100": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Stoichiometry of the intercalant within the host material, at the upper cell voltage limit.",
+      "context_type": "StoichiometricNumberOfSubstance",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_38ab058e_3912_48c2_a7eb_76d25d000820",
+      "unit": "1",
+      "unit_name": "emmo:UnitOne",
+      "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+    },
+    "StoichiometricCoefficientAtSOC0": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Stoichiometry of the intercalant within the host material, at the lower cell voltage limit.",
+      "context_type": "StoichiometricNumberOfSubstance",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_f22bd1ec_faca_4335_92a5_a1687154c622",
+      "unit": "1",
+      "unit_name": "emmo:UnitOne",
+      "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+    },
+    "ActivationEnergyOfDiffusion": {
+      "type": "number",
+      "minimum": 1000.0,
+      "maximum": 1000000.0,
+      "description": "Parameter of the empirical Arrhenius formulation, characterizing the exponential temperature dependence of the diffusion coefficient of the material.",
+      "context_type": "ActivationEnergy",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_d7f8cab9_b035_4ecd_be63_292672572526",
+      "unit": "J·mol⁻¹",
+      "unit_name": "emmo:JoulePerMole",
+      "unit_iri": "https://w3id.org/emmo#JoulePerMole"
+    },
+    "diffusion_pre_exponential_factor": {
+      "type": "number",
+      "minimum": 1e-15,
+      "maximum": 1.0,
+      "description": null,
+      "unit": "s⁻¹",
+      "unit_name": "emmo:ReciprocalSecond",
+      "unit_iri": "https://w3id.org/emmo#ReciprocalSecond"
+    },
+    "ParticleRadius": {
+      "type": "number",
+      "minimum": 1e-8,
+      "maximum": 0.001,
+      "description": "Radius of an spherical particle.",
+      "context_type": "ParticleRadius",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_b92e382f_5109_4f60_ab5e_c89d340419a9",
+      "unit": "m",
+      "unit_name": "emmo:Metre",
+      "unit_iri": "https://w3id.org/emmo#Metre"
+    },
+    "OpenCircuitPotential": {
+      "type": [
+        "string",
+        "number",
+        "object"
+      ],
+      "description": "The open-circuit potential of the active material under a given intercalant stoichimetry and temperature.",
+      "context_type": [
+        "OpenCircuitPotential",
+        "Expression"
+      ],
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_9c657fdc_b9d3_4964_907c_f9a6e8c5f52b",
+      "unit": "V",
+      "unit_name": "emmo:Volt",
+      "unit_iri": "https://w3id.org/emmo#Volt",
+      "documentation": "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input"
+    },
+    "AmbientTemperature": {
+      "type": "number",
+      "minimum": 238.15,
+      "maximum": 373.15,
+      "description": "The ambient temperature of the environment surrounding the electrochemical cell.",
+      "context_type": "AmbientThermodynamicTemperature",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_39a44af0_0e1a_4859_b550_bdabad64386e",
+      "unit": "K",
+      "unit_name": "emmo:Kelvin",
+      "unit_iri": "https://w3id.org/emmo#Kelvin"
+    },
+    "InitialTemperature": {
+      "type": "number",
+      "minimum": 238.15,
+      "maximum": 373.15,
+      "description": "The thermodynamic temperature at some point in time designated to be the initial state.",
+      "context_type": "InititalThermodynamicTemperature",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_9c9b80a4_a00b_4b91_8e17_3a7831f2bf2f",
+      "unit": "K",
+      "unit_name": "emmo:Kelvin",
+      "unit_iri": "https://w3id.org/emmo#Kelvin"
+    },
+    "HeatTransferCoefficient": {
+      "type": "number",
+      "minimum": 1.0,
+      "maximum": 1000000.0,
+      "description": "At a point on the surface separating two media with different thermodynamic temperatures, magnitude of the density of heat flow rate divided by the absolute value of temperature difference.",
+      "context_type": "CoefficientOfHeatTransfer",
+      "context_type_iri": "https://w3id.org/emmo#EMMO_43b349fc_c7ed_480d_b0ca_9db84b700813",
+      "unit": "W·m⁻²·K⁻¹",
+      "unit_name": "emmo:WattPerSquareMetreKelvin",
+      "unit_iri": "https://w3id.org/emmo#WattPerSquareMetreKelvin"
+    },
+    "NominalCapacity": {
+      "type": "number",
+      "minimum": 0.01,
+      "maximum": 100.0,
+      "description": "Expected charge capacity of a cell under standard conditions, as defined by the manufacturer.",
+      "context_type": "NominalCapacity",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_8abde9d0_84f6_4b4f_a87e_86028a397100",
+      "unit": "Ah",
+      "unit_name": "emmo:AmpereHour",
+      "unit_iri": "https://w3id.org/emmo#AmpereHour",
+      "is_shown_to_user": false
+    },
+    "DeviceSurfaceArea": {
+      "type": "number",
+      "minimum": 0.0001,
+      "maximum": 1.0,
+      "description": "Total external surface area of an electrochemical device.",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47ab1dad_cc09_4fd8_af23_acb36fb680dd",
+      "unit": "m²",
+      "unit_name": "emmo:SquareMetre",
+      "unit_iri": "https://w3id.org/emmo#SquareMetre"
+    },
+    "Volume": {
+      "type": "number",
+      "minimum": 1.0e-6,
+      "maximum": 1.0e-1,
+      "description": "Three dimensional space occupied by a material or device.",
+      "context_type": "Volume",
+      "context_type_iri": "https://w3id.org/emmo#EMMO_f1a51559_aa3d_43a0_9327_918039f0dfed",
+      "unit": "m³",
+      "unit_name": "emmo:CubicMetre",
+      "unit_iri": "https://w3id.org/emmo#CubicMetre"
+    },
+    "BruggemanCoefficient": {
+      "type": "number",
+      "minimum": 0.5,
+      "maximum": 5.0,
+      "description": "Exponent relating the tortuosity and porosity of porous media.",
+      "context_type": "BruggemanCoefficient",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_5c34b3b5_c9c4_477d_809a_3f682f995aa9",
+      "unit": "1",
+      "unit_name": "emmo:UnitOne",
+      "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+    },
+    "MassFraction": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Mass of an electrode constituent divided by the total mass of all constituents in the solid mixture.",
+      "context_type": "MassFraction",
+      "context_type_iri": "https://w3id.org/emmo#EMMO_7c055d65_2929_40e1_af4f_4bf10995ad50",
+      "unit": "1",
+      "unit_name": "emmo:UnitOne",
+      "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+    },
+    "ChargeNumber": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4,
+      "description": "Electric charge of an ion divided by the elementary charge.",
+      "context_type": "ChargeNumber",
+      "context_type_iri": "https://w3id.org/emmo#EMMO_dc467621_3b49_4f31_9b09_82290f29da52",
+      "unit": "1",
+      "unit_name": "emmo:UnitOne",
+      "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+    },
+    "TransferenceNumber": {
+      "type": "number",
+      "minimum": 0.01,
+      "maximum": 0.99,
+      "description": "Fraction of the total ionic current in an electrolyte that is carried by lithium ions under the influence of an electric field.",
+      "context_type": "IonTransportNumber",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_e3e78df2_d568_4ab7_8c0d_d3a2ee3ae282",
+      "unit": "1",
+      "unit_name": "emmo:UnitOne",
+      "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+    },
+    "Concentration": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 5000,
+      "description": "Moles of the charge carrier species per cubic meter of electrolyte.",
+      "context_type": "IonConcentration",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_8177eae6_1631_430d_99f2_942669bcb784",
+      "unit": "mol·m⁻³",
+      "unit_name": "emmo:MolePerCubicMetre",
+      "unit_iri": "https://w3id.org/emmo#MolePerCubicMetre"
+    },
+    "IonicConductivity": {
+      "type": [
+        "string",
+        "object",
+        "number"
+      ],
+      "minimum": 1.0e-10,
+      "maximum": 1.0e3,
+      "description": "Measure of the ionic conduction of ions in the electrolyte under given concentration and temperature conditions",
+      "context_type": [
+        "IonicConductivity",
+        "Expression"
+      ],
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_25dabdc2_68bf_4a38_8cbe_11be017358bc",
+      "unit": "S·m⁻¹",
+      "unit_name": "emmo:SiemensPerMetre",
+      "unit_iri": "https://w3id.org/emmo#SiemensPerMetre",
+      "documentation": "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input"
+    },
+    "DiffusionCoefficient": {
+      "type": [
+        "string",
+        "object",
+        "number"
+      ],
+      "description": "Proportionality constant between the molar flux of the charge carrier and its negative concentration gradient in a material.",
+      "context_type": [
+        "DiffusionCoefficient",
+        "Expression"
+      ],
+      "context_type_iri": "https://w3id.org/emmo#EMMO_931a725b_926d_4f60_8955_61fe17fce98b",
+      "unit": "m²·t⁻¹",
+      "unit_name": "emmo:AreaPerTimeUnit",
+      "unit_iri": "https://w3id.org/emmo#EMMO_10f703b5_8b2a_4c5a_a734_f0cfb29622ad",
+      "documentation": "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input"
+    },
+    "Thickness": {
+      "type": "number",
+      "minimum": 1e-6,
+      "maximum": 1.0e-1,
+      "description": "The dimension of a battery component measured along the direction of ionic transport, perpendicular to the major surfaces.",
+      "context_type": "Thickness",
+      "context_type_iri": "https://w3id.org/emmo#EMMO_43003c86_9d15_433b_9789_ee2940920656",
+      "unit": "m",
+      "unit_name": "emmo:Metre",
+      "unit_iri": "https://w3id.org/emmo#Metre"
+    },
+    "StartWithCharge": {
+      "type": "boolean",
+      "description": "Whether the cell simulation starts with a Charging step."
+    },
+    "InitialStateOfCharge": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "State of charge of the cell at the start of a simulation.",
+      "unit": "1"
+    },
+    "TotalNumberOfCycles": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000,
+      "description": "Total count of charge-discharge cycles executed during the simulation.",
+      "unit": "1"
+    },
+    "DRate": {
+      "type": "number",
+      "minimum": 0.001,
+      "maximum": 50,
+      "description": "An indicator of the electric current at which a cell discharged relative to a defined capacity. 1C corresponds to discharging the entire defined capacity in one hour.",
+      "context_type": "DischargingCRate",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_25e20915_c35d_4bee_ad31_736235a79780",
+      "unit": "1",
+      "unit_name": "emmo:UnitOne",
+      "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+    },
+    "CRate": {
+      "type": "number",
+      "minimum": 0.001,
+      "maximum": 50,
+      "description": "An indicator of the electric current at which a cell discharged relative to a defined capacity. 1C corresponds to charging the entire defined capacity in one hour.",
+      "context_type": "CRate",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_a7dc73e2_d4aa_4dfc_8b4d_cb611f1501fb",
+      "unit": "1",
+      "unit_name": "emmo:UnitOne",
+      "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+    },
+    "LowerVoltageLimit": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 6.0,
+      "description": "Minimum voltage limit when the discharge step stops.",
+      "context_type": "LowerVoltageLimit",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_534dd59c_904c_45d9_8550_ae9d2eb6bbc9",
+      "unit": "V",
+      "unit_name": "emmo:Volt",
+      "unit_iri": "https://w3id.org/emmo#Volt"
+    },
+    "UpperVoltageLimit": {
+      "type": "number",
+      "minimum": 1.0,
+      "maximum": 6.0,
+      "description": "Maximum voltage limit when the charge step stops.",
+      "context_type": "UpperVoltageLimit",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_6dcd5baf_58cd_43f5_a692_51508e036c88",
+      "unit": "V",
+      "unit_name": "emmo:Volt",
+      "unit_iri": "https://w3id.org/emmo#Volt"
+    },
+    "CurrentChangeLimit": {
+      "type": "number",
+      "minimum": 1.0e-8,
+      "maximum": 1.0e-1,
+      "description": "A control limit placed on the rate of change of the electric current (dI/dt) in a constant-voltage step.",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_71f10616_15eb_4dc4_bc8d_ffaac3838af2",
+      "unit": "A·s⁻¹"
+    },
+    "VoltageChangeLimit": {
+      "type": "number",
+      "minimum": 0.0001,
+      "maximum": 0.1,
+      "description": "A control limit placed on the rate of change of the cell voltage (dV/dt) in a constant-current step.",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_09e64707_a17d_4405_84cc_ee9d91ed32ef",
+      "unit": "V·s⁻¹",
+      "unit_name": "emmo:VoltPerSecond",
+      "unit_iri": "https://w3id.org/emmo#VoltPerSecond"
+    },
+    "Porosity": {
+      "type": "number",
+      "minimum": 0.05,
+      "maximum": 0.95,
+      "description": "Ratio of the pore volume to the total volume of a porous material.",
+      "context_type": "Porosity",
+      "context_type_iri": "https://w3id.org/emmo#EMMO_3a6578ac_aee0_43b9_9bc6_1eb208c8c9a9",
+      "unit": "1",
+      "unit_name": "emmo:UnitOne",
+      "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+    },
+    "NumberOfElectronsTransfered": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4,
+      "description": "Number of electrons transferred between an electrode and an entity (ion, molecule) during an electrochemical reaction.",
+      "context_type": "ElectronsTransferred",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_abfadc99_6e43_4d37_9b04_7fc5b0f327ae",
+      "unit": "1",
+      "unit_name": "emmo:UnitOne",
+      "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+    }
+  },
+  "required": [],
+  "additionalProperties": true
+}

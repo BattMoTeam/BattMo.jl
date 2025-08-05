@@ -1,0 +1,84 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "NegativeElectrode",
+    "type": "object",
+    "properties": {
+        "ElectrodeCoating": {
+            "type": "object",
+            "$ref": "ElectrodeCoating.json"
+        },
+        "ActiveMaterial": {
+            "type": "object",
+            "$ref": "ActiveMaterial.json"
+        },
+        "Binder": {
+            "type": "object",
+            "$ref": "Binder.json"
+        },
+        "ConductiveAdditive": {
+            "type": "object",
+            "$ref": "ConductiveAdditive.json"
+        },
+        "CurrentCollector": {
+            "type": "object",
+            "$ref": "CurrentCollector.json"
+        },
+        "Interphase": {
+            "type": "object",
+            "$ref": "Interphase.json"
+        },
+        "ModelSettings": {
+            "$ref": "ModelSettings.json"
+        }
+    },
+    "required": [
+        "ElectrodeCoating",
+        "ActiveMaterial",
+        "Binder",
+        "ConductiveAdditive"
+    ],
+    "allof": [
+        {
+            "if": {
+                "properties": {
+                    "ModelSettings": {
+                        "properties": {
+                            "CurrentCollectors": {
+                                "const": "Generic"
+                            }
+                        },
+                        "required": [
+                            "CurrentCollectors"
+                        ]
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "CurrentCollector"
+                ]
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "ModelSettings": {
+                        "properties": {
+                            "SEIModel": {
+                                "const": "Bolay"
+                            }
+                        },
+                        "required": [
+                            "SEIModel"
+                        ]
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "Interphase"
+                ]
+            }
+        }
+    ]
+}

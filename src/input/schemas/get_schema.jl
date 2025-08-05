@@ -574,9 +574,7 @@ function get_schema_simulation_settings(model_settings)
 		push!(required_grid_points, "Angular")
 		if haskey(model_settings, "CurrentCollectors")
 			push!(required_grid_points, "PositiveElectrodeCurrentCollector")
-			push!(required_grid_points, "PositiveElectrodeCurrentCollectorTabWidth")
 			push!(required_grid_points, "NegativeElectrodeCurrentCollector")
-			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabWidth")
 		end
 
 	end

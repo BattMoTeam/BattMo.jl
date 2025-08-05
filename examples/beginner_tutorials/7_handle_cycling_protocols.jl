@@ -14,7 +14,7 @@ cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 cc_discharge_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
 # Load default model
-model_setup = LithiumIonBattery()
+model = LithiumIonBattery()
 
 # ### Handle, access and edit cycling protocols
 # We manipulate a cycling protocol in the same was as we do cell parameters in the previous tutorial. To list all outermost keys:
@@ -46,7 +46,7 @@ for d_rate in d_rates
 	protocol = deepcopy(cc_discharge_protocol)
 	protocol["DRate"] = d_rate
 
-	sim = Simulation(model_setup, cell_parameters, protocol)
+	sim = Simulation(model, cell_parameters, protocol)
 	output = solve(sim; config_kwargs = (; end_report = false))
 	push!(outputs, (d_rate = d_rate, output = output))
 end

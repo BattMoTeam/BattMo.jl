@@ -146,8 +146,7 @@ end
 		normalizedSEIlength,
 		ix,
 	)
-
-		scaling = model.system.params[:SEIlengthRef]
+		scaling = model.system.params[:InitialThickness]
 
 		for cell in ix
 			@inbounds SEIlength[cell] = scaling * normalizedSEIlength[cell]
@@ -164,7 +163,7 @@ end
 		ix,
 	)
 
-		scaling = model.system.params[:SEIvoltageDropRef]
+		scaling = model.system.params[:InitialPotentialDrop]
 		for cell in ix
 			@inbounds SEIvoltageDrop[cell] = scaling * normalizedSEIvoltageDrop[cell]
 		end
@@ -324,11 +323,11 @@ function Jutul.update_cross_term_in_entity!(out,
 
 	params = model_t.system.params
 
-	s    = params[:SEIstoichiometricCoefficient]
-	V    = params[:SEImolarVolume]
-	De   = params[:SEIelectronicDiffusionCoefficient]
-	ce0  = params[:SEIinterstitialConcentration]
-	Lref = params[:SEIlengthInitial]
+	s    = params[:StoichiometricCoefficient]
+	V    = params[:MolarVolume]
+	De   = params[:ElectronicDiffusionCoefficient]
+	ce0  = params[:InterstitialConcentration]
+	Lref = params[:InitialThickness]
 
 	ind_t = ct.target_cells[ind]
 	ind_s = ct.source_cells[ind]
@@ -373,7 +372,7 @@ function Jutul.update_cross_term_in_entity!(out,
 	activematerial = model_t.system
 	params         = activematerial.params
 
-	k = params[:SEIionicConductivity]
+	k = params[:IonicConductivity]
 
 	ind_t = ct.target_cells[ind]
 	ind_s = ct.source_cells[ind]

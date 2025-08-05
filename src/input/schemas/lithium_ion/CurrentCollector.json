@@ -1,0 +1,62 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "CurrentCollector",
+    "type": "object",
+    "properties": {
+        "Thickness": {
+            "type": "number",
+            "minimum": 1e-6,
+            "maximum": 1.0e-1,
+            "description": "The dimension of a battery component measured along the direction of ionic transport, perpendicular to the major surfaces.",
+            "context_type": "Thickness",
+            "context_type_iri": "https://w3id.org/emmo#EMMO_43003c86_9d15_433b_9789_ee2940920656",
+            "unit": "m",
+            "unit_name": "emmo:Metre",
+            "unit_iri": "https://w3id.org/emmo#Metre"
+        },
+        "TabWidth": {
+            "type": "number",
+            "minimum": 0.0005,
+            "maximum": 0.5,
+            "description": "Dimension of the shortest side of the face of the rectangular tab of a current collector.",
+            "unit": "m"
+        },
+        "TabFractions": {
+            "type": "array",
+            "items": {
+                "type": "number"
+            },
+            "description": "Location of the tabs. The location of each tab is given by a fraction which determines the fraction of the total spiral length where the tab is located.",
+            "unit": "-"
+        },
+        "TabLength": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 0.5,
+            "description": "Dimension of the longest side of the face of the rectangular tab of a current collector.",
+            "unit": "m"
+        },
+        "Density": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 100000.0,
+            "description": "Density of the material.",
+            "context_type": "Density",
+            "context_type_iri": "https://w3id.org/emmo#EMMO_06448f64_8db6_4304_8b2c_e785dba82044",
+            "unit": "kg·m⁻³",
+            "unit_name": "emmo:GramPerCubicMetre",
+            "unit_iri": "https://w3id.org/emmo#GramPerCubicMetre"
+        },
+        "ElectronicConductivity": {
+            "type": "number",
+            "minimum": 1e-20,
+            "maximum": 1e9,
+            "description": "Measure of a material's ability to conduct an electric current.",
+            "context_type": "ElectricConductivity",
+            "context_type_iri": "https://w3id.org/emmo#EMMO_cde4368c_1d4d_4c94_8548_604749523c6d",
+            "unit": "S·m⁻¹",
+            "unit_name": "emmo:SiemensPerMetre",
+            "unit_iri": "https://w3id.org/emmo#SiemensPerMetre"
+        }
+    }
+}

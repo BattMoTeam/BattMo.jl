@@ -1,5 +1,10 @@
 export plot_interactive_3d
 
+"""
+plot_interactive_3d
+
+Launch an interactive plot for visualizing simulation results of 3D geometries.
+"""
 function plot_interactive_3d(results::NamedTuple; shift = nothing, colormap = :curl)
 
 	if isnothing(shift)
@@ -25,7 +30,7 @@ function plot_interactive_3d(results::NamedTuple; shift = nothing, colormap = :c
 	end
 
 	states = results[:states]
-	solved_model = results[:extra][:model]
+	solved_model = results[:extra][:model].multimodel
 
 
 	plot_multimodel_interactive(solved_model, states; shift = shift_copy, colormap = colormap)

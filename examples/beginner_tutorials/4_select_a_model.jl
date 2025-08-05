@@ -31,7 +31,7 @@ model_settings.all
 # ### Initialize the Model
 # Let’s now create the battery model using the modified settings:
 
-model_setup = LithiumIonBattery(; model_settings);
+model = LithiumIonBattery(; model_settings);
 
 # When setting up the model, the LithiumIonBattery constructor runs a validation on the model_settings. 
 # In this case, because we set the "SEIModel" parameter to true, the validator provides a warning that we should define which SEI model we would like to use.
@@ -40,7 +40,7 @@ model_setup = LithiumIonBattery(; model_settings);
 model_settings["SEIModel"] = "Bola"
 
 
-model_setup = LithiumIonBattery(; model_settings);
+model = LithiumIonBattery(; model_settings);
 
 
 # We get a warning that a validation issue has been encountered. For now we ignore it:
@@ -49,7 +49,7 @@ cell_parameters_sei = load_cell_parameters(; from_default_set = "Chen2020")
 cccv_protocol = load_cycling_protocol(; from_default_set = "CCCV")
 
 try  # hide
-	sim = Simulation(model_setup, cell_parameters_sei, cccv_protocol)
+	sim = Simulation(model, cell_parameters_sei, cccv_protocol)
 catch err # hide
 	showerror(stderr, err) # hide
 end  # hide
@@ -64,112 +64,32 @@ nothing # hide
 
 # Now rebuild the model:
 
-model_setup = LithiumIonBattery(; model_settings);
+model = LithiumIonBattery(; model_settings);
 
 # Now we can setup the simulation and run it.
 
-sim = Simulation(model_setup, cell_parameters_sei, cccv_protocol)
+sim = Simulation(model, cell_parameters_sei, cccv_protocol)
 output = solve(sim)
 nothing # hide
 
 
 # ## Plot of voltage and current
 
-states = output[:states]
-
-t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
-I = [state[:Control][:Current][1] for state in states]
-
-f = Figure(size = (1000, 400))
-
-ax = Axis(f[1, 1],
-	title = "Voltage",
-	xlabel = "Time / s",
-	ylabel = "Voltage / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
-)
-
-scatterlines!(ax,
-	t,
-	E;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-	label = "Julia",
-)
-
-ax = Axis(f[1, 2],
-	title = "Current",
-	xlabel = "Time / s",
-	ylabel = "Current / A",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
-)
-
-scatterlines!(ax,
-	t,
-	I;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-	label = "Julia",
-)
-
-display(GLMakie.Screen(), f) # hide
-f # hide
+plot_dashboard(output; plot_type = "simple")
 
 # ## Plot of SEI length
 
 # We recover the SEI length from the `state` output
-seilength = [state[:NeAm][:SEIlength][end] for state in states]
+states = get_output_states(output)
+seilength = states[:SEIThickness]
 
-f = Figure(size = (1000, 400))
+# We can plot it using the plot_ouput function
 
-ax = Axis(f[1, 1],
-	title = "Length",
-	xlabel = "Time / s",
-	ylabel = "Length / m",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
-)
+ne_index = sim.settings["GridResolution"]["NegativeElectrodeCoating"]
 
-scatterlines!(ax,
-	t,
-	seilength;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black)
-
-ax = Axis(f[2, 1],
-	title = "Length",
-	xlabel = "Time / s",
-	ylabel = "Voltage / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
-)
-
-scatterlines!(ax,
-	t,
-	E;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black)
-
-display(GLMakie.Screen(), f) # hide
-f # hide
+plot_output(output,
+	["SEIThickness vs Time at Position index $ne_index",
+		"Voltage vs Time"],
+	layout = (2, 1))
 
 

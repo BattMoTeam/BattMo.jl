@@ -1,0 +1,68 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Interphase",
+    "type": "object",
+    "properties": {
+        "MolarVolume": {
+            "type": "number",
+            "minimum": 1e-06,
+            "maximum": 0.03,
+            "description": "Volume per amount of substance.",
+            "unit": "m\u00b3\u00b7mol\u207b\u00b9"
+        },
+        "IonicConductivity": {
+            "type": [
+                "string",
+                "object",
+                "number"
+            ],
+            "minimum": 1.0e-10,
+            "maximum": 1.0e3,
+            "description": "Measure of the ionic conduction of ions in the electrolyte under given concentration and temperature conditions",
+            "context_type": [
+                "IonicConductivity",
+                "Expression"
+            ],
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_25dabdc2_68bf_4a38_8cbe_11be017358bc",
+            "unit": "S·m⁻¹",
+            "unit_name": "emmo:SiemensPerMetre",
+            "unit_iri": "https://w3id.org/emmo#SiemensPerMetre",
+            "documentation": "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input"
+        },
+        "ElectronicDiffusionCoefficient": {
+            "type": "number",
+            "minimum": 1e-16,
+            "maximum": 1000.0,
+            "description": "Diffusion coefficient of electrons in a solid.",
+            "unit": "m\u00b2\u00b7s\u207b\u00b9"
+        },
+        "StoichiometricCoefficient": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 10.0,
+            "description": "Ratio of the concentration of an intercalant (e.g. Li+) at a given moment, to its maximum possible concentration within a solid host material.",
+            "unit": "-"
+        },
+        "InterstitialConcentration": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 100000.0,
+            "description": "Amount of neutral intersticial sites of the intercalant (Li+) per volume of solid.",
+            "unit": "mol\u00b7m\u207b\u00b3"
+        },
+        "InitialThickness": {
+            "type": "number",
+            "minimum": 1e-09,
+            "maximum": 0.01,
+            "description": "Thickness of the SEI layer at the start of the simulation.",
+            "unit": "m"
+        },
+        "InitialPotentialDrop": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Electric potential difference across the SEI layer or electrode interface at the beginning of the simulation.",
+            "unit": "V"
+        }
+    }
+}

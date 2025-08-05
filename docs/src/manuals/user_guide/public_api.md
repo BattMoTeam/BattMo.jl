@@ -10,7 +10,7 @@ Parameters are loaded using helper functions that read JSON files and return str
 
 ## Model Initialization
 
-A model can be instantiated using the sub classes of abstract type [`BatteryModelSetup`](@ref). At the moment only the [`LithiumIonBattery`](@ref) constructor is available. By passing a [`ModelSettings`](@ref) object to the constructor, the user can personalize the model to be solved.
+A model can be instantiated using the sub classes of abstract type [`ModelConfigured`](@ref). At the moment only the [`LithiumIonBattery`](@ref) constructor is available. By passing a [`ModelSettings`](@ref) object to the constructor, the user can personalize the model to be solved.
 
 ## Simulation Initialization
 

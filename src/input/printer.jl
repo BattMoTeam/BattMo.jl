@@ -33,6 +33,38 @@ function detect_output_format()
 	end
 end
 
+"""
+	print_default_input_sets_info()
+
+Prints a structured overview of all available default input sets for battery simulations, including high-level summaries and detailed metadata for each set.
+
+# Behavior
+- Scans the `defaults/` directory (located relative to the script file) for available JSON input sets organized by category (subfolders).
+- Prints:
+  1. 📋 A concise aligned list of categories and their corresponding default set names.
+  2. 📖 A detailed description for each default set, including:
+	 - Cell name and case
+	 - Source (with optional formatted link)
+	 - Supported models
+	 - Set description
+
+- Metadata is extracted using helper functions such as `read_meta_data` and `read_source_from_meta_data`, which pull structured data (e.g., description, model support) from the JSON files.
+
+# Output
+- Prints directly to the console using `println`, formatted for clarity with Unicode symbols and horizontal dividers.
+- Output includes:
+  - Folder/category names (e.g., `CellParameters"`)
+  - Available JSON set names (e.g., `"Chen2020"`)
+  - Descriptions and intended use cases for each set
+
+# Use Case
+- Helps users quickly understand what predefined inputs are available for simulation without needing to inspect the files manually.
+- Useful for educational purposes, rapid prototyping, or configuration setup.
+
+# Notes
+- Only `.json` files are considered valid input sets.
+- Requires that the `defaults/` directory structure and expected metadata fields are present and correctly formatted.
+"""
 function print_default_input_sets_info()
 	output_fmt = detect_output_format()
 	script_dir = @__DIR__
@@ -216,6 +248,33 @@ function read_source_from_meta_data(file::String)
 	return nothing
 end
 
+
+"""
+	print_submodels_info()
+
+Prints an overview of configurable submodels available within the simulation framework, including valid options and documentation links.
+
+# Behavior
+- Retrieves model configuration metadata using `get_setting_meta_data()`.
+- Filters the metadata to include only entries marked with `"is_sub_model" => true`.
+- Extracts:
+  - The submodel parameter name
+  - The list of valid options (or `"N/A"` if not specified)
+  - A documentation link (if available)
+- Prints a well-formatted table summarizing each submodel, with aligned columns:
+  - **Parameter** – the submodel key name (e.g., `"electrolyte_transport"`)
+  - **Options** – available values that can be assigned to the parameter
+  - **Documentation** – a URL (formatted with `format_link`) or `-` if missing
+
+# Output
+- Directly prints a structured table to the console.
+- Uses consistent width formatting for readability.
+- Includes Unicode symbols and horizontal lines for visual structure.
+
+# Use Case
+- Helps users understand which submodels are configurable and how to select between them.
+- Useful for exploring model flexibility and guiding configuration in notebooks, scripts, or GUIs.
+"""
 function print_submodels_info()
 	# Get the metadata dictionary
 	meta_data = get_setting_meta_data()
@@ -265,6 +324,34 @@ function print_submodels_info()
 	println()  # Extra line after the table
 end
 
+
+"""
+	print_setting_info(from_name::String)
+
+Displays detailed metadata for any model or simulation setting whose name matches (fully or partially) the provided `from_name` string.
+
+# Arguments
+- `from_name::String`: A (partial or full) string used to search for matching parameter names in the settings metadata.
+
+# Behavior
+- Performs a case-insensitive fuzzy match across all available setting keys.
+- For each matching setting, prints detailed metadata including:
+  - Name
+  - Description
+  - Allowed types
+  - Units (if specified)
+  - Valid options
+  - Validation bounds (min/max values)
+  - Documentation links
+  - Ontology (context IRI) links
+
+- Uses Unicode symbols and structured formatting to produce readable output.
+- Uses helper functions like `get_setting_meta_data()` and `format_link()` to retrieve metadata and produce clickable/documented links depending on output format.
+
+# Output
+- If no matches are found: prints a ❌ message indicating no results.
+- If matches are found: prints a block of detailed metadata for each, separated by horizontal lines.
+"""
 function print_setting_info(from_name::String)
 	# Get the metadata dictionary
 	meta_data = get_setting_meta_data()
@@ -349,7 +436,34 @@ function print_setting_info(from_name::String)
 end
 
 
+"""
+	print_parameter_info(from_name::String)
 
+Prints detailed metadata for physical or model parameters whose names match (fully or partially) the provided `from_name` string.
+
+# Arguments
+- `from_name::String`: A case-insensitive search term used to match parameter names from the metadata registry.
+
+# Behavior
+- Loads parameter metadata using `get_parameter_meta_data()`.
+- Performs a fuzzy search for parameter names containing the given `from_name` string.
+- For each matched parameter, prints:
+  - Parameter name
+  - Description (if available)
+  - Accepted types
+  - Units
+  - List of allowed options (if any)
+  - Minimum and maximum bounds (if defined)
+  - Documentation URL (formatted using `format_link`)
+  - Ontology/context type IRI link (if provided)
+
+# Output
+- Prints the information directly to the console in a structured, readable format with aligned labels and Unicode icons.
+- If no parameters match the search, a ❌ warning message is printed.
+
+# Returns
+- Nothing (side-effect only: prints to console).
+"""
 function print_parameter_info(from_name::String)
 	# Get the metadata dictionary
 	meta_data = get_parameter_meta_data()

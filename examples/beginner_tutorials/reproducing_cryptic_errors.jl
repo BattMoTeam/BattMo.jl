@@ -10,9 +10,9 @@ cc_discharge_protocol = read_cycling_protocol(cycling_path)
 cc_discharge_protocol["DRate"] = 2.0
 cell_parameters["NegativeElectrode"]["ElectrodeCoating"]["Thickness"] = 0.00011
 
-model_setup = LithiumIonBattery()
+model = LithiumIonBattery()
 
-sim = Simulation(model_setup, cell_parameters, cc_discharge_protocol)
+sim = Simulation(model, cell_parameters, cc_discharge_protocol)
 
 output = solve(sim)
 nothing # hide

@@ -5,9 +5,9 @@ cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 model_settings = load_model_settings(; from_default_set = "P4D_pouch")
 simulation_settings = load_simulation_settings(; from_default_set = "P4D_pouch")
 
-model_setup = LithiumIonBattery(; model_settings)
+model = LithiumIonBattery(; model_settings)
 
-sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
+sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
 output = solve(sim)
 
 plot_interactive_3d(output; colormap = :curl)

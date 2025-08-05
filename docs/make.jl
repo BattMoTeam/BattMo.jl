@@ -43,7 +43,7 @@ function build_battmo_docs(build_format              = nothing;
 		"1D plotting" => "example_1d_plotting",
 		"Drive cycle example" => "example_run_current_function",
 		"3D Pouch example" => "example_3D_pouch",
-        "3D cylindrical" => "example_3D_cylindrical",
+		"3D cylindrical" => "example_3D_cylindrical",
 		"Calibration example" => "example_calibration",
 		"SEI layer growth" => "example_sei",
 	]
@@ -54,7 +54,7 @@ function build_battmo_docs(build_format              = nothing;
 		return content * "\n\n # ## Example on GitHub\n " *
 			   "# If you would like to run this example yourself, it can be downloaded from " *
 			   "the BattMo.jl GitHub repository [as a script](https://github.com/BattMoTeam/BattMo.jl/blob/main/$dir/$pth.jl)."#, " *
-			   #"or as a [Jupyter Notebook](https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/$pth.ipynb)"
+		#"or as a [Jupyter Notebook](https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/$pth.ipynb)"
 	end
 	if clean
 		for (ex, pth) in tutorials
@@ -151,8 +151,10 @@ function build_battmo_docs(build_format              = nothing;
 		"Installation" => "manuals/user_guide/installation.md",
 		"Getting started" => "manuals/user_guide/getting_started.md"
 	],
-		"Models and architecture" => [
-		"PXD model" => "manuals/user_guide/pxd_model.md",
+		"Battery models" => [
+		"Lithium ion model" => "manuals/user_guide/pxd_model.md"
+	],
+		"Sub-models" => [
 		"Ramp up model" => "manuals/user_guide/ramp_up.md",
 		"SEI model" => "manuals/user_guide/sei_model.md"
 	],

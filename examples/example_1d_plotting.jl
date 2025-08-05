@@ -6,11 +6,11 @@ cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCCV")
 simulation_settings = load_simulation_settings(; from_default_set = "P2D")
 
-model_setup = LithiumIonBattery(; model_settings)
+model = LithiumIonBattery(; model_settings)
 
 cycling_protocol["TotalNumberOfCycles"] = 10
 
-sim = Simulation(model_setup, cell_parameters, cycling_protocol);
+sim = Simulation(model, cell_parameters, cycling_protocol);
 
 output = solve(sim;)
 

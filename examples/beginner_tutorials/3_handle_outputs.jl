@@ -15,9 +15,9 @@ cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 nothing # hide
 
-model_setup = LithiumIonBattery()
+model = LithiumIonBattery()
 
-sim = Simulation(model_setup, cell_parameters, cycling_protocol);
+sim = Simulation(model, cell_parameters, cycling_protocol);
 
 output = solve(sim)
 nothing # hide
@@ -143,7 +143,7 @@ positive_electrode_potential = [state[:PeAm][:Phi] for state in states];
 using Jutul
 
 extra = output[:extra]
-model = extra[:model]
+model = extra[:model].multimodel
 negative_electrode_grid_wrap = physical_representation(model[:NeAm]);
 electrolyte_grid_wrap = physical_representation(model[:Elyte]);
 positive_electrode_grid_wrap = physical_representation(model[:PeAm]);

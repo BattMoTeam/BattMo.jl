@@ -1,0 +1,11 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "LithiumIonBattery",
+    "type": "object",
+    "properties": {
+        "ModelSettings": {
+            "type": "object",
+            "$ref": "ModelSettings.json"
+        }
+    }
+}

@@ -2,7 +2,7 @@ export get_empty_cell_parameter_set
 
 function get_empty_cell_parameter_set(model)
 
-	schema = get_schema_cell_parameters(model.model_settings)
+	schema = get_schema_cell_parameters(model.settings)
 	set = generate_empty_parameter_set_from_schema(schema)
 	return set
 
@@ -11,7 +11,7 @@ end
 
 function get_empty_simulation_settings(model)
 
-	schema = get_schema_simulation_settings(model.model_settings)
+	schema = get_schema_simulation_settings(model.settings)
 	set = generate_empty_parameter_set_from_schema(schema)
 	return set
 

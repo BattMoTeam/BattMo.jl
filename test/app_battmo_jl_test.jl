@@ -8,40 +8,51 @@ function runP2DBatt(json_file)
 
 	# read input parameters from json file
 	inputparams = load_battmo_formatted_input(json_file)
+	cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_old_input_format_to_parameter_sets(inputparams)
 
-	# setup simulation from the input parameters
-	output = get_simulation_input(inputparams)
+	# # setup simulation from the input parameters
+	# output = get_simulation_input(inputparams)
 
-	simulator = output[:simulator]
-	model     = output[:model]
-	state0    = output[:state0]
-	forces    = output[:forces]
-	timesteps = output[:timesteps]
-	cfg       = output[:cfg]
+	# simulator = output[:simulator]
+	# model     = output[:model]
+	# state0    = output[:state0]
+	# forces    = output[:forces]
+	# timesteps = output[:timesteps]
+	# cfg       = output[:cfg]
 
-	# We modify the configuration using specific setup
-	cfg = setup_config(cfg,
-		model,
-		timesteps,
-		fraction_tot,
-		dt_tot,
-		i)
+	# # We modify the configuration using specific setup
+	# cfg = setup_config(cfg,
+	# 	model,
+	# 	timesteps,
+	# 	fraction_tot,
+	# 	dt_tot,
+	# 	i)
 
-	states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+	# states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+
+	model_setup = LithiumIonBattery(; model_settings)
+	sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
+	output = solve(sim; accept_invalid = true)
+
+	states = output[:states]
+	model = output[:extra][:model]
+	multimodel = model.multimodel
 
 	energy_efficiency = computeEnergyEfficiency(states)
 	discharge_energy  = computeCellEnergy(states)
 
 	con = BattMo.Constants()
 
+	time_series = get_output_time_series(output)
+
 	# Get some result values
 	number_of_states                 = size(states)
-	time_values                      = cumsum(timesteps) / con.hour
+	time_values                      = time_series[:Time]
 	cell_voltage                     = [state[:Control][:Phi][1] for state in states]
 	cell_current                     = [state[:Control][:Current][1] for state in states]
-	negative_electrode_grid_wrap     = physical_representation(model[:NeAm])
-	electrolyte_grid_wrap            = physical_representation(model[:Elyte])
-	positive_electrode_grid_wrap     = physical_representation(model[:PeAm])
+	negative_electrode_grid_wrap     = physical_representation(multimodel[:NeAm])
+	electrolyte_grid_wrap            = physical_representation(multimodel[:Elyte])
+	positive_electrode_grid_wrap     = physical_representation(multimodel[:PeAm])
 	negative_electrode_concentration = Array([[state[:NeAm][:Cs] for state in states] / 1000])
 	electrolyte_concentration        = [state[:Elyte][:C] for state in states] / 1000
 	positive_electrode_concentration = Array([[state[:PeAm][:Cs] for state in states]] / 1000)

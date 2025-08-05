@@ -2,8 +2,8 @@
 export ParameterSet
 export CellParameters, CyclingProtocol, ModelSettings, SimulationSettings, FullSimulationInput
 
-export BattMoFormattedInput
-export InputParams, MatlabInputParams
+export BattMoInputFormatOld
+export InputParamsOld, MatlabInputParamsOld
 
 export merge_input_params, search_parameter, set_input_params!, get_input_params, set_default_input_params!
 
@@ -239,45 +239,45 @@ end
 ################################################################
 # BattMo formatted input types (the validated and to the backend formatted input prameters)
 """
-	abstract type BattMoFormattedInput <: AbstractInput
+	abstract type BattMoInputFormatOld <: AbstractInput
 
 Abstract type representing input parameters formatted for BattMo.
 This type is used exclusively in the backend as an input to the simulation.
-Subtypes of `BattMoFormattedInput` contain parameter dictionaries structured for BattMo compatibility.
+Subtypes of `BattMoInputFormatOld` contain parameter dictionaries structured for BattMo compatibility.
 """
-abstract type BattMoFormattedInput <: AbstractInput end
+abstract type BattMoInputFormatOld <: AbstractInput end
 
 
 """
-	struct InputParams <: BattMoFormattedInput
+	struct InputParamsOld <: BattMoInputFormatOld
 
 Represents a validated and backend-formatted set of input parameters for a BattMo simulation.
 
 # Fields
 - `data ::Dict{String, Any}` : A dictionary storing the input parameters for BattMo.
 """
-struct InputParams <: BattMoFormattedInput
+struct InputParamsOld <: BattMoInputFormatOld
 	all::Dict{String, Any}
 end
 
-function InputParams()
-	return InputParams(Dict{String, Any}())
+function InputParamsOld()
+	return InputParamsOld(Dict{String, Any}())
 end
 
 """
-	struct MatlabInputParams <: BattMoFormattedInput
+	struct MatlabInputParamsOld <: BattMoInputFormatOld
 
 Represents input parameters derived from MATLAB-generated files, formatted for BattMo compatibility.
 
 # Fields
 - `data ::Dict{String, Any}` : A dictionary storing MATLAB-extracted input parameters.
 """
-struct MatlabInputParams <: BattMoFormattedInput
+struct MatlabInputParamsOld <: BattMoInputFormatOld
 	all::Dict{String, Any}
 end
 
 
-const InputGeometryParams = InputParams
+const InputGeometryParams = InputParamsOld
 
 function recursive_merge_dict(d1, d2; warn = false)
 
@@ -298,7 +298,7 @@ function recursive_merge_dict(d1, d2; warn = false)
 end
 
 """ 
-   merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: BattMoFormattedInput}
+   merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: BattMoInputFormatOld}
 
 # Arguments
 
@@ -307,9 +307,9 @@ end
 - `warn = false` : If option `warn` is true, then give a warning when two distinct values are given for the same field. The first value has other precedence.
 
 # Returns
-A `BattMoFormattedInput` structure whose field are the composition of the two input parameter structures.
+A `BattMoInputFormatOld` structure whose field are the composition of the two input parameter structures.
 """
-function merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: BattMoFormattedInput}
+function merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: BattMoInputFormatOld}
 
 	dict1 = inputparams1.all
 	dict2 = inputparams2.all
@@ -321,7 +321,7 @@ function merge_input_params(inputparams1::T, inputparams2::T; warn = false) wher
 
 end
 
-function merge_input_params(inputparams_list::Vector{T}; warn = false) where {T <: BattMoFormattedInput}
+function merge_input_params(inputparams_list::Vector{T}; warn = false) where {T <: BattMoInputFormatOld}
 
 	if length(inputparams_list) == 0
 		return nothing
@@ -339,17 +339,17 @@ end
 
 
 """
-	get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}) where {T <: BattMoFormattedInput}
+	get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}) where {T <: BattMoInputFormatOld}
 
 Recursively retrieves the value of a field in the input parameters.
 """
-function get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}) where {T <: BattMoFormattedInput}
+function get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}) where {T <: BattMoInputFormatOld}
 
 	fieldname = fieldnamelist[1]
 
 	if length(fieldnamelist) == 1
 
-		if isa(inputparams, Union{T, Dict} where {T <: BattMoFormattedInput}) && haskey(inputparams, fieldname)
+		if isa(inputparams, Union{T, Dict} where {T <: BattMoInputFormatOld}) && haskey(inputparams, fieldname)
 			return inputparams[fieldname]
 		else
 			return missing
@@ -357,7 +357,7 @@ function get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{Str
 
 	else
 
-		if isa(inputparams, Union{T, Dict} where {T <: BattMoFormattedInput}) && haskey(inputparams, fieldname) && isa(inputparams[fieldname], Union{T, Dict} where {T <: BattMoFormattedInput})
+		if isa(inputparams, Union{T, Dict} where {T <: BattMoInputFormatOld}) && haskey(inputparams, fieldname) && isa(inputparams[fieldname], Union{T, Dict} where {T <: BattMoInputFormatOld})
 
 			return get_input_params(inputparams[fieldname], fieldnamelist[2:end])
 
@@ -376,7 +376,7 @@ end
 	Set the value of a field in the input parameters.
 
 # Arguments
-	- `inputparams ::BattMoFormattedInput` : The input parameters structure.
+	- `inputparams ::BattMoInputFormatOld` : The input parameters structure.
 	- `fieldnamelist ::Vector{String}` : A vector of field names to set.
 	- `value` : The value to assign to the specified fields.
 	- `handleMismatch = :error` : How to handle mismatches in field types. Options are `:error`, `:warn`, or `:ignore`.
@@ -384,7 +384,7 @@ end
 # Returns
 	The updated input parameters structure with the specified fields set to the given value.
 	"""
-function set_input_params!(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoFormattedInput}
+function set_input_params!(inputparams::Union{T, Dict{String, Any}}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoInputFormatOld}
 
 	@assert(handleMismatch in (:error, :warn, :ignore), "handleMismatch must be one of :error, :warn, or :ignore")
 
@@ -444,7 +444,7 @@ function set_input_params!(inputparams::Union{T, Dict}, fieldnamelist::Vector{St
 
 end
 
-function set_default_input_params!(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoFormattedInput}
+function set_default_input_params!(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoInputFormatOld}
 
 	current_value = get_input_params(inputparams, fieldnamelist)
 

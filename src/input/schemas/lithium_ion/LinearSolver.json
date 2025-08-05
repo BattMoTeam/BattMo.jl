@@ -1,0 +1,115 @@
+{
+    "$id": "LinearSolver.schema.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "description": "linear solver",
+    "type": "object",
+    "library": {
+        "type": "string",
+        "description": "list of upported linear solver library. Default is jutul",
+        "enum": [
+            "jutul"
+        ]
+    },
+    "verbose": {
+        "type": "integer"
+    },
+    "method": {
+        "type": "string",
+        "description": "name of the method used by the solver - depends on the chosen library. if not given a default solver for the library is given"
+    },
+    "oneOf": [
+        {
+            "properties": {
+                "library": {
+                    "const": "jutul"
+                },
+                "description": "We have the following methods for the julia solvers",
+                "method": {
+                    "type": "string",
+                    "description": "Different linear solvers are available to solver the system of equations for the battery model. The default method is \"direct\"",
+                    "enum": [
+                        "direct",
+                        "iterative"
+                    ],
+                    "oneOf": [
+                        {
+                            "properties": {
+                                "method": {
+                                    "const": "direct"
+                                },
+                                "description": "direct solver using LUsolver",
+                                "options": {
+                                    "type": "object",
+                                    "properties": {
+                                        "max_size": {
+                                            "type": "integer",
+                                            "description": "maximum system size accepted for LU solver. If size limitation is not respected, then solver returns an error. The default value is 1000000"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "properties": {
+                                "method": {
+                                    "const": "iterative"
+                                },
+                                "description": "This is an iterative solver using amg preconitioner for phi type variable in combintation with global smoothing with ilu",
+                                "options": {
+                                    "type": "object",
+                                    "properties": {
+                                        "solver": {
+                                            "type": "string",
+                                            "description": "Krylov solver. The default is \"fgmres\"",
+                                            "enum": [
+                                                "fgmres"
+                                            ]
+                                        },
+                                        "tolerance": {
+                                            "type": "number",
+                                            "description": "tolerance for the iterative solver. The default is 1e-7"
+                                        },
+                                        "max_iterations": {
+                                            "type": "integer",
+                                            "description": "maximum number of iterations for the iterative solver. The default is 50"
+                                        },
+                                        "restart": {
+                                            "type": "integer",
+                                            "description": "restart parameter for the iterative solver. The default value is 30"
+                                        },
+                                        "verbosity": {
+                                            "type": "integer",
+                                            "description": "verbosity level for the iterative solver. The default value is 0"
+                                        },
+                                        "preconditioner": {
+                                            "type": "object",
+                                            "properties": {
+                                                "type": {
+                                                    "type": "string",
+                                                    "description": "predefined type for the preconditioner. Default is \"battery_general\"",
+                                                    "enum": [
+                                                        "battery_general"
+                                                    ]
+                                                }
+                                            },
+                                            "oneOf": [
+                                                {
+                                                    "properties": {
+                                                        "type": {
+                                                            "const": "battery_general",
+                                                            "description": "Battery general preconditioner that combines different preconditioners for different variables as follows. First we solve for the control variables which are removed from the system, We use AMG for electric potential variables (phi) and charge convervation equations in combination with a global smoother which is ILU0. Afte this, we recover the control variables"
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}

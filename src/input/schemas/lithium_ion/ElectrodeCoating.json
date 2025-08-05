@@ -1,0 +1,36 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "ElectrodeCoating",
+    "type": "object",
+    "properties": {
+        "BruggemanCoefficient": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 5.0,
+            "description": "Exponent relating the tortuosity and porosity of porous media.",
+            "context_type": "BruggemanCoefficient",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_5c34b3b5_c9c4_477d_809a_3f682f995aa9",
+            "unit": "1",
+            "unit_name": "emmo:UnitOne",
+            "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+        },
+        "EffectiveDensity": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 23000.0,
+            "description": "Density of a porous electrode, calculated from its geometrical volume and mass. It includes the volume occupied by pores.",
+            "unit": "kg\u00b7m\u207b\u00b3"
+        },
+        "Thickness": {
+            "type": "number",
+            "minimum": 1e-6,
+            "maximum": 1.0e-1,
+            "description": "The dimension of a battery component measured along the direction of ionic transport, perpendicular to the major surfaces.",
+            "context_type": "Thickness",
+            "context_type_iri": "https://w3id.org/emmo#EMMO_43003c86_9d15_433b_9789_ee2940920656",
+            "unit": "m",
+            "unit_name": "emmo:Metre",
+            "unit_iri": "https://w3id.org/emmo#Metre"
+        }
+    }
+}
