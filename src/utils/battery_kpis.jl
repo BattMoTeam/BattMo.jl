@@ -249,7 +249,7 @@ function compute_electrode_maximum_capacity(params::CellParameters, electrode::S
 
 	stoichiometric_range = abs(stoichiometry_100 - stoichiometry_0)
 	active_material_mass = electrode_mass * mass_fraction
-	faraday_constant_Ah = 96500.0 / 3600.0
+	faraday_constant_Ah = FARADAY_CONSTANT / 3600.0
 
 	return stoichiometric_range * (max_concentration / density) * active_material_mass * faraday_constant_Ah
 end
