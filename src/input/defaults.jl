@@ -19,7 +19,7 @@ function parameter_file_path(typename::AbstractString, filename::AbstractString;
 		ext = ".json"
 	else
 		if check
-			error("File extension must be .json")
+			error("File extension must be .json, not $ext")
 		end
 	end
 	return parameter_file_path(joinpath(typename, fname * ext), check = check)

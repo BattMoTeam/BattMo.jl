@@ -777,7 +777,7 @@ function setup_submodels(inputparams::InputParams;
 
 	else
 
-		error("controlPolicy not recognized.")
+		error("Control policy $controlPolicy not recognized.")
 
 	end
 
@@ -857,7 +857,7 @@ function setup_grids_and_couplings(inputparams::InputParams)
 
 	else
 		# Add case_type = "jellyRoll"
-		error("geometry case type not recognized")
+		error("Geometry case type $case_type not recognized")
 
 	end
 
@@ -1081,7 +1081,7 @@ function setup_battery_parameters(inputparams::InputParams,
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
 	else
-		error("control policy $controlPolicy not recognized")
+		error("Control policy $controlPolicy not recognized")
 	end
 
 	return parameters
