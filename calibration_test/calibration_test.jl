@@ -1,8 +1,9 @@
-
+using Revise
 using BattMo, Jutul
 using CSV
 using DataFrames
 using GLMakie
+using Optimisers
 include("equilibrium_calibration.jl")
 include("function_parameters_MJ1.jl")
 
@@ -227,54 +228,8 @@ function equilibriumCalibration(sim)
 
 end
 
-function lowRateCalibration(cell_parameters,simulation_settings,exp_data,model_setup)
-    
-    
-    t_exp_lr = vec(exp_data[1]["time"])
-    V_exp_lr = vec(exp_data[1]["E"])
-    
-    cycling_protocol = load_cycling_protocol(; from_file_path = joinpath(@__DIR__,"custom_discharge2.json"))
-    cycling_protocol["DRate"] = exp_data[1]["rawRate"]
-    sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
-    print(sim.is_valid)
-    #t_exp_lr, V_exp_lr = get_tV(df_05)
-     
 
-    vc_lr= VoltageCalibration(t_exp_lr, V_exp_lr, sim)
-
-    free_calibration_parameter!(vc_lr,
-        ["NegativeElectrode","ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
-        lower_bound = 0.0, upper_bound = 1.0)
-    free_calibration_parameter!(vc_lr,
-        ["PositiveElectrode","ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
-        lower_bound = 0.0, upper_bound = 1.0)
-
-    free_calibration_parameter!(vc_lr,
-        ["NegativeElectrode","ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
-        lower_bound = 0.0, upper_bound = 1.0)
-    free_calibration_parameter!(vc_lr,
-        ["PositiveElectrode","ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
-        lower_bound = 0.0, upper_bound = 1.0)
-
-    free_calibration_parameter!(vc_lr,
-        ["NegativeElectrode","ActiveMaterial", "MaximumConcentration"];
-        lower_bound = 10000.0, upper_bound = 1e5)
-    free_calibration_parameter!(vc_lr,
-        ["PositiveElectrode","ActiveMaterial", "MaximumConcentration"];
-        lower_bound = 10000.0, upper_bound = 1e5)
-
-    print_calibration_overview(vc_lr)
-    print("calibration en cours")
-    cell_parameters_calibrated, = solve(vc_lr);
-    
-    print_calibration_overview(vc_lr)
-
-    
-
-    return cell_parameters_calibrated
-end
-
-function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrated,model_setup,simulation_settings)
+function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrated,model_setup,simulation_settings; scaling = :linear)
 
    
     
@@ -315,13 +270,13 @@ function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrat
     
     free_calibration_parameter!(vc2,
         ["NegativeElectrode","ActiveMaterial", "DiffusionCoefficient"];
-        lower_bound = 1e-16, upper_bound = 1e-12)
+        lower_bound = 1e-16, upper_bound = 1e-10)
     free_calibration_parameter!(vc2,
         ["PositiveElectrode","ActiveMaterial", "DiffusionCoefficient"];
-        lower_bound = 1e-16, upper_bound = 1e-12)
+        lower_bound = 1e-16, upper_bound = 1e-10)
     print_calibration_overview(vc2)
 
-    cell_parameters_calibrated2, = solve(vc2);
+    cell_parameters_calibrated2, = solve(vc2;scaling = scaling);
     print_calibration_overview(vc2)
 
     return cell_parameters_calibrated2
@@ -332,10 +287,10 @@ cycling_protocol,cell_parameters,model_setup, simulation_settings = runMJ1()
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 
-cell_parameters_calibrated2, V_eq, t_eq = equilibriumCalibration(sim)
-#cell_parameters_calibrated = lowRateCalibration(cell_parameters,simulation_settings,exp_data,model_setup)
-#cell_parameters_calibrated2 = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings)
+cell_parameters_calibrated, V_eq, t_eq = equilibriumCalibration(sim)
 
+cell_parameters_calibrated2 = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings; scaling = :log)
+#cell_parameters_calibrated2 = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings)
 
 println("Calibration done:")
 
@@ -372,7 +327,7 @@ for i in 1:length(exp_data)
 
     
     simc = Simulation(model_setup, cell_parameters_calibrated2, cycling_protocol; simulation_settings)
-    println(simc.cell_parameters)
+    #println(simc.cell_parameters)
     outputc = get_simulation_input(simc)
     modelc = outputc[:model]
     simc.cycling_protocol["DRate"] =  I * 3600 / computeCellCapacity(modelc)
