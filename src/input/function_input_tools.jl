@@ -194,14 +194,19 @@ function setup_function_from_function_name(fn::String; file_path::Union{String, 
 	    if isdefined(Main, symb)
 		return (args...) -> Base.invokelatest(getfield(Main, symb), args...)
 	    else
-		error("Function '$function_name' not defined in file '$file_path'.")
+		error("Function '$functionname' not defined in file '$file_path'.")
 	    end
 	else
-	    error("Function '$function_name' not found and file '$file_path' does not exist.")
+	    error("Function '$functionname' not found and file '$file_path' does not exist.")
 	end
+    elseif !endswith(fn, ".jl")
+        # Perhaps the fn is a file, but without the .jl extension
+        fn_with_extension = fn * ".jl"
+        setup_function_from_function_name(fn_with_extension; file_path)
     else
-	error("Function $function_name is not found within BattMo and no path file is provided.")
+        error("Function $functionname is not found within BattMo and no path file is provided.")
     end
+    
 end
 
 

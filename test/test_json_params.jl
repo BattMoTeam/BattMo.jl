@@ -1,8 +1,14 @@
 using BattMo
 using Test
 
-function load_json(name)
+function load_json(name::String)
     return load_battmo_formatted_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
+end
+
+function clean_up(fn::String)
+    if isfile(fn)
+        rm(fn)
+    end
 end
 
 
@@ -30,9 +36,7 @@ end
 
 function create_ocp(fn::String, fcn_name::String)
 
-    if isfile(fn)
-        rm(fn)
-    end
+    clean_up(fn)
 
     str = """
     function $fcn_name(c, T, cmax)
@@ -45,18 +49,16 @@ function create_ocp(fn::String, fcn_name::String)
 
 end
 
-function create_ocp_and_diffusivity(fn::String, ocp_fcn_name::String, diffusivity_fcn_name::String)
+function create_ocp_and_diffusion(fn::String, ocp_fcn_name::String, diffusion_fcn_name::String)
 
-    if isfile(fn)
-        rm(fn)
-    end
+    clean_up(fn)
 
     str = """
     function $ocp_fcn_name(c, T, cmax)
         return 0.0
     end
 
-    function $diffusivity_fcn_name(c, T, cmax)
+    function $diffusion_fcn_name(c, T, cmax)
         return 1.0
     end
     """
@@ -74,50 +76,30 @@ end
 
     input = get_input()
     return true
+
 end
 
 
 @testset "test_ocp_from_included_function" begin
-    # Test the possibility to have the OCP be given by a file
-    # accessible in the BattMo path. This file is added to julia's
-    # (global) scope.
+    # Test having the OCP be given by a file accessible in the BattMo
+    # path. This file is added to julia's (global) scope. The file
+    # name and function name are different.
 
     fn = joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", "dummy_filename.jl")
     fcn = "dummy_ocp"
     create_ocp(fn, fcn)
 
-    let
-        include(fn)
-        # eval(Meta.parse(read(fn, String)))
-        input = get_input(fcn)
-    end
-    if isfile(fn)
-        rm(fn)
-    end
+    #let
+    include(fn)
+    # eval(Meta.parse(read(fn, String)))
+    input = get_input(fcn)
+    #end
+
+    clean_up(fn)
 
     return true
 
 end
-
-
-
-# @testset "test_ocp_from_included_function2" begin
-#     # The OCP is given by a file accessible in the BattMo path, and
-#     # this file is added to julia's (global) scope
-
-#     fn = joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", "dummy_ocp.jl")
-#     create_ocp(fn)
-
-#     let
-#         # include(fn)
-#         eval(Meta.parse(read(fn, String)))
-#         input = get_input("dummy_ocp") # function name, not file name
-#     end
-#     rm(fn)
-
-#     return true
-
-# end
 
 
 @testset "test_ocp_from_file_in_path" begin
@@ -128,32 +110,55 @@ end
     fn = joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", fcn * ".jl")
     create_ocp(fn, fcn)
     input = get_input(fn) # full path inside BattMo.jl
-    if isfile(fn)
-        rm(fn)
-    end
+    clean_up(fn)
+
     return true
 
 end
 
 
 @testset "test_ocp_from_file_outside_path" begin
-    # Test having the OCP as a function in a file in the BattMo.jl
-    # path. The file must have the same name as the function.
+    # Test having the OCP as a function in a file outside the
+    # BattMo.jl path. The file must have the same name as the
+    # function.
 
     fcn = "dummy_ocp3"
     fn = joinpath(tempdir(), fcn * ".jl")
     create_ocp(fn, fcn)
     input = get_input(fn) # full path outside BattMo.jl
-    if isfile(fn)
-        rm(fn)
-    end
+    clean_up(fn)
+
     return true
 
 end
 
 
-# @testset "test_ocp_and_diffusivity_from_same_file" begin
-#     # The OCP and diffusivity are both given in a single file outside
-#     # the BattMo.jl path
+@testset "test_ocp_from_file_without_extension" begin
+    # To have json file compatability with julia and other programming
+    # languages, we should be able to handle names without the .jl
+    # extension in the json file
 
-# end
+    fcn = "dummy_ocp4_without_extension"
+    filename_in_json = joinpath(tempdir(), fcn)
+    filename_of_file = filename_in_json * ".jl"
+    create_ocp(filename_of_file, fcn)
+    input = get_input(filename_in_json)
+    clean_up(filename_of_file)
+
+    return true
+
+end
+
+@testset "test_ocp_and_diffusion_in_same_file" begin
+    # # The OCP and diffusion are given in a single file. This is
+    # # not supported in all BattMo versions.
+
+    # fcn = "dummy_ocp_and_diffusion"
+    # fn = joinpath(tempdir(), fcn * ".jl")
+    # create_ocp_and_diffusion(fn, "dummy_ocp", "dummy_diffusion")
+    # input = get_input(fn)
+    # clean_up(fn)
+
+    return true
+
+end
