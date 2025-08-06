@@ -177,16 +177,31 @@ function setup_function_from_function_name(fn::String; file_path::Union{String, 
     symb = Symbol(functionname)
 
     if isdefined(BattMo, symb)
-        return getfield(BattMo, symb)
+	return getfield(BattMo, symb)
     elseif isdefined(Main, symb)
-        # If the function is defined in Main, we can return it directly. We
-        # assume it has not changed. The main reason is the perfomance
-        # penalty of always using include to replace the function.
-        return (args...) -> Base.invokelatest(getfield(Main, symb), args...)
+	# If the function is defined in Main, we can return it directly. We
+	# assume it has not changed. The main reason is the perfomance
+	# penalty of always using include to replace the function.
+	return (args...) -> Base.invokelatest(getfield(Main, symb), args...)
+    elseif !isnothing(file_path)
+	if isdefined(Main, symb)
+	    # If the function is defined in Main, we can return it directly. We
+	    # assume it has not changed. The main reason is the perfomance
+	    # penalty of always using include to replace the function.
+	    return (args...) -> Base.invokelatest(getfield(Main, symb), args...)
+	elseif isfile(file_path)
+	    Base.include(Main, file_path)
+	    if isdefined(Main, symb)
+		return (args...) -> Base.invokelatest(getfield(Main, symb), args...)
+	    else
+		error("Function '$function_name' not defined in file '$file_path'.")
+	    end
+	else
+	    error("Function '$function_name' not found and file '$file_path' does not exist.")
+	end
     else
-        error("Function '$functionname' not found in BattMo or Main.")
+	error("Function $function_name is not found within BattMo and no path file is provided.")
     end
-
 end
 
 

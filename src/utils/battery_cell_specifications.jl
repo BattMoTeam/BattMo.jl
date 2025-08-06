@@ -30,7 +30,7 @@ function computeElectrodeCapacity(ammodel::SimulationModel, name)
 		thetaMax = sys[:theta0]
 		thetaMin = sys[:theta100]
 	else
-		error("name not recognized")
+		error("Electrode name $name not recognized")
 	end
 
 	vols = ammodel.domain.representation[:volumes]
@@ -235,7 +235,7 @@ function computeEnergyEfficiency(inputparams::InputParams)
 
 	else
 
-		error("controlPolicy not recognized.")
+		error("Control policy $controlPolicy not recognized.")
 
 	end
 
@@ -319,7 +319,7 @@ function computeDischargeEnergy(inputparams::InputParams)
 
 	else
 
-		error("controlPolicy not recognized.")
+		error("Control policy $controlPolicy not recognized.")
 
 	end
 

@@ -1,7 +1,7 @@
 name = "BattMo"
 uuid = "6f0c0536-3c2c-4762-a987-c605a8a6f898"
 authors = ["Olav Møyner <olav.moyner@gmail.com>"]
-version = "0.1.12"
+version = "0.1.14"
 
 [deps]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"

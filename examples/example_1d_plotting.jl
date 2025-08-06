@@ -8,6 +8,8 @@ simulation_settings = load_simulation_settings(; from_default_set = "P2D")
 
 model_setup = LithiumIonBattery(; model_settings)
 
+cycling_protocol["TotalNumberOfCycles"] = 10
+
 sim = Simulation(model_setup, cell_parameters, cycling_protocol);
 
 output = solve(sim;)
@@ -19,12 +21,49 @@ time_series = get_output_time_series(output)
 states = get_output_states(output)
 metrics = get_output_metrics(output)
 
-# Plot a pre-defined dashboard
+# Plot a simple pre-defined dashboard
 plot_dashboard(output)
 
+# Plot a dashboard with line plots
 plot_dashboard(output; plot_type = "line")
 
+# Plot a dashboard with contour plots
 plot_dashboard(output; plot_type = "contour")
+
+# Some simple examples plotting time series quantities using the `plot_output` function
+plot_output(output,
+	[
+		"Current vs Time",
+		"Voltage vs Time",
+	];
+	layout = (2, 1),
+)
+
+# Some simple examples plotting state quantities using the `plot_output` function
+
+plot_output(output,
+	[
+		["NeAmSurfaceConcentration vs Time at Position index 10", "NeAmSurfaceConcentration vs Time at Position index 1"],
+		"NeAmConcentration vs Time at Position index 10 and NeAmRadius index 5",
+		"NeAmSurfaceConcentration vs Position and Time",
+		"PeAmConcentration vs Time and Position at PeAmRadius index end",
+		"NeAmPotential vs Time at Position index 10",
+	];
+	layout = (4, 2),
+)
+
+# Some simple examples plotting metrics using the `plot_output` function
+plot_output(output,
+	[
+		"DischargeCapacity vs CycleNumber",
+		"CycleNumber vs Time",
+		"RoundTripEfficiency vs Time",
+		"RoundTripEfficiency vs DischargeCapacity",
+	];
+	layout = (4, 2),
+)
+
+
 
 
 # Access state data and plot for a specific time step

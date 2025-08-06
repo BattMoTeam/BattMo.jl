@@ -68,7 +68,7 @@ function get_output_metrics(
 		push!(round_trip_efficiency, compute_round_trip_efficiency(output))
 	else
 		# Compute per cycle
-		for cycle in unique_cycles
+		for cycle in cycle_array
 			push!(discharge_cap, compute_discharge_capacity(output; cycle_number = cycle))
 			push!(charge_cap, compute_charge_capacity(output; cycle_number = cycle))
 			push!(discharge_energy, compute_discharge_energy(output; cycle_number = cycle))
@@ -223,12 +223,12 @@ function extract_spatial_data(states::Vector)
 		raw = [foldl(getindex, chain; init = state) for state in states]  # List of arrays
 
 		# Combine into [nx, nr, nt]
-		data = [foldl(getindex, chain; init=state) for state in states]
+		data = [foldl(getindex, chain; init = state) for state in states]
 
 		data = cat(raw...; dims = 3)
 
 		# Permute to [nt, nx, nr]
-		data = permutedims(data, (3,2,1))
+		data = permutedims(data, (3, 2, 1))
 
 		if size(data, 2) == 1
 			output_data[qsym] = dropdims(data; dims = 2)
