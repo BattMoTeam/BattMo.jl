@@ -56,7 +56,7 @@ struct Simulation <: AbstractSimulation
 	simulator::Any
 
 
-	function Simulation(model::M, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model)) where {M <: ModelConfigured}
+	function Simulation(model::M, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model), logger = nothing) where {M <: ModelConfigured}
 
 		if model.is_valid
 			function_to_solve = run_battery
@@ -107,6 +107,7 @@ struct Simulation <: AbstractSimulation
 				model.multimodel,
 				parameters,
 				input;
+				logger,
 			)
 
 
@@ -332,6 +333,7 @@ function setup_config(sim::JutulSimulator,
 	model::MultiModel,
 	parameters,
 	input;
+	logger = nothing,
 	extra_timing::Bool = false,
 	use_model_scaling::Bool = true,
 	kwargs...)
@@ -353,6 +355,10 @@ function setup_config(sim::JutulSimulator,
 	cfg[:safe_mode]                = true
 	cfg[:error_on_incomplete]      = false
 	cfg[:failure_cuts_timestep]    = true
+
+	if !isnothing(logger)
+		cfg[:post_iteration_hook] = logger
+	end
 
 	if use_model_scaling
 		scalings = get_scalings(model, parameters)

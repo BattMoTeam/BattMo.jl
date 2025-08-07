@@ -1,0 +1,176 @@
+{
+  "$schema": "http://json-schema.org/draft/2020-12/schema",
+  "title": "Settings",
+  "type": "object",
+  "properties": {
+    "ModelFramework": {
+      "type": "string",
+      "enum": [
+        "P2D",
+        "P4D Pouch",
+        "P4D Cylindrical"
+      ],
+      "description": "Framework defining the dimensionality of the electrochemical model. Examples: \"P2D\", \"P4D Pouch\"."
+    },
+    "SEIModel": {
+      "type": "string",
+      "enum": [
+        "Bolay"
+      ],
+      "description": "Which SEI model is used. For instance: \"Bolay\"."
+    },
+    "TransportInSolid": {
+      "type": "string",
+      "enum": [
+        "FullDiffusion"
+      ],
+      "description": "Which model is used to describe the intercalant diffusion in the solid particles. Example \"FullDiffusion\"."
+    },
+    "CurrentCollectors": {
+      "type": "string",
+      "enum": [
+        "Generic"
+      ],
+      "description": "Which model describes the current collectors."
+    },
+    "GridResolutionHeight": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "description": "Number of grid points along the height of the cell (used in P4D cylindrical)."
+    },
+    "GridResolutionAngular": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "description": "Number of discretisation angles for a cylindrical cell (used in P4D cylindrical)."
+    },
+    "GridResolutionElectrodeWidth": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000,
+    "description": "Number of grid points along the width dimension of the electrode.",
+    "context_type": "GridResolutionPositiveElectrode",
+    "context_type_iri": null
+  },
+  "GridResolutionElectrodeLength": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000,
+    "description": "Number of grid points along the length dimension of the electrode.",
+    "context_type_iri": null
+  },
+  "GridResolutionPositiveElectrodeCoating": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000,
+    "description": "Number of grid points along the thickness dimension of the positive electrode.",
+    "context_type_iri": null
+  },
+  "GridResolutionPositiveElectrodeActiveMaterial": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000,
+    "description": "Number of grid points along the radial pseudo dimension of the positive electrode active material particles.",
+    "context_type_iri": null
+  },
+  "GridResolutionNegativeElectrodeCoating": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000,
+    "description": "Number of grid points along the thickness dimension of the negative electrode.",
+    "context_type_iri": null
+  },
+  "GridResolutionPositiveElectrodeCurrentCollector": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000,
+    "description": "Number of grid points along the thickness dimension of the positive electrode current collector.",
+    "context_type_iri": null
+  },
+  "GridResolutionPositiveElectrodeCurrentCollectorTabWidth": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000,
+    "description": "In the current collector tab at the positive electrode, the number of grid points along the width dimension of the tab's face.",
+    "context_type_iri": null
+  },
+  "GridResolutionPositiveElectrodeCurrentCollectorTabLength": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000,
+    "description": "In the current collector tab at the positive electrode, the number of grid points along the length dimension of the tab's face.",
+    "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
+  },
+  "GridResolutionNegativeElectrodeCurrentCollector": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000,
+    "description": "Number of grid points along the thickness dimension of the negative electrode current collector.",
+    "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
+  },
+  "GridResolutionNegativeElectrodeCurrentCollectorTabWidth": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000,
+    "description": "In the current collector tab at the negative electrode, the number of grid points along the width dimension of the tab's face.",
+    "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
+  },
+  "GridResolutionNegativeElectrodeCurrentCollectorTabLength": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000,
+    "description": "In the current collector tab at the negative electrode, the number of grid points along the length dimension of the tab's face.",
+    "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
+  },
+  "GridResolutionNegativeElectrodeActiveMaterial": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000,
+    "description": "Number of grid points along the radial pseudo dimension of the negative electrode active material particles.",
+    "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
+  },
+  "GridResolutionSeparator": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 1000,
+    "description": "Number of grid points along the thickness dimension of the separator.",
+    "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
+  },
+  "Grid": {
+    "type": "array",
+    "description": "Vector storing the numerical representation of the computational grid discretizing the spatial representation of the cell.",
+    "context_type": "Grid",
+    "context_type_iri": null
+  },
+    "RampUp": {
+      "type": "string",
+      "enum": [
+        "Sinusoidal"
+      ],
+      "description": "Type of signal of electric current used to initialize the cell simulation. Example: \"Sinusoidal\"."
+    },
+    "RampUpSteps": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "description": "Number of ramp-up steps applied to initialize the cell simulation."
+    },
+    "RampUpTime": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 500,
+      "description": "Ramp up time duration applied to initialize the cell simulation.",
+      "unit": "s"
+    },
+    "TimeStepDuration": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 500,
+      "description": "Duration of each time step in simulations.",
+      "unit": "s"
+    }
+  },
+  "required": [],
+  "additionalProperties": true
+}

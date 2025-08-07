@@ -159,6 +159,7 @@ using Jutul: check_convergence, convergence_criterion, linear_solve!
 using Jutul: update_preconditioner!, apply!, mul!, operator_nrows
 using Jutul: perform_step_solve_impl!, reset_state_to_previous_state!, partial_update_preconditioner!
 using Jutul: is_left_preconditioner, is_right_preconditioner, opEye
+using Jutul: add_option!
 
 
 # ─────────────────────────────────────────────────────────────────────────────
