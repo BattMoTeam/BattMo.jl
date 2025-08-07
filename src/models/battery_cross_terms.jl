@@ -62,14 +62,22 @@ function regularized_sqrt(x, th)
 	return y
 end
 
+function safe_div(x, y, th = 1e-3)
+	if abs(y) < th
+		return x / (y + th)
+	else
+		return x / y
+	end
+end
+
 function butler_volmer_equation(j0, alpha, n, eta, T, cmax, c_a_surf, c_e, c_a, c_av, c_av_e)
 
 	F = FARADAY_CONSTANT
 	R = GAS_CONSTANT
 
-
+	th = 1e-3 * cmax
 	# val = j0 * (exp(alpha * n * F * eta / (R * T)) - exp(-(1 - alpha) * n * F * eta / (R * T)))
-	val = j0 * ((c_a_surf / c_av) * exp(alpha * n * F * eta / (R * T)) - ((cmax - c_a_surf) / (cmax - c_av) * (c_e / c_av_e)) * exp(-(1 - alpha) * n * F * eta / (R * T)))
+	val = j0 * (safe_div(c_a_surf, c_av, th) * exp(alpha * n * F * eta / (R * T)) - (safe_div((cmax - c_a_surf), (cmax - c_av), th) * safe_div(c_e, c_av_e, th)) * exp(-(1 - alpha) * n * F * eta / (R * T)))
 
 	return val
 

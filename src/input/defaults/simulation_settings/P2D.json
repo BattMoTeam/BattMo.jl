@@ -14,7 +14,7 @@
         "PositiveElectrodeActiveMaterial": 10,
         "NegativeElectrodeCoating": 10,
         "NegativeElectrodeActiveMaterial": 10,
-        "Separator": 10
+        "Separator": 3
     },
     "TimeStepDuration": 50,
     "RampUpTime": 10,

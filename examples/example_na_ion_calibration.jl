@@ -27,21 +27,29 @@ dfs = [df_01, df_06, df_14]
 cell_parameters = load_cell_parameters(; from_default_set = "Chayambuka2022")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 model_settings = load_model_settings(; from_default_set = "P2D")
+simulation_settings = load_simulation_settings(; from_default_set = "P2D")
+
+
+simulation_settings["GridResolution"]["NegativeElectrodeCoating"] = 10
+simulation_settings["GridResolution"]["PositiveElectrodeCoating"] = 10
+simulation_settings["GridResolution"]["NegativeElectrodeActiveMaterial"] = 10
+simulation_settings["GridResolution"]["PositiveElectrodeActiveMaterial"] = 10
+simulation_settings["GridResolution"]["Separator"] = 10
 
 model_settings["ReactionRateConstant"] = "UserDefined"
 
-cell_parameters["NegativeElectrode"]["ActiveMaterial"]["DiffusionCoefficient"] = 2.0306459345750275e-15
-cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 4.542183772045386e-11
-cell_parameters["PositiveElectrode"]["ActiveMaterial"]["DiffusionCoefficient"] = 1.2952951004386266e-16
+# cell_parameters["NegativeElectrode"]["ActiveMaterial"]["DiffusionCoefficient"] = 2.0306459345750275e-15
+# cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 4.542183772045386e-11
+# cell_parameters["PositiveElectrode"]["ActiveMaterial"]["DiffusionCoefficient"] = 1.2952951004386266e-16
 
-cell_parameters["PositiveElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 1.6787424917471138e-11
+# cell_parameters["PositiveElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 1.6787424917471138e-11
 
 cycling_protocol["LowerVoltageLimit"] = 2.0
 cycling_protocol["UpperVoltageLimit"] = 4.2
 model = LithiumIonBattery(; model_settings)
 
 cycling_protocol["DRate"] = 0.6
-sim = Simulation(model, cell_parameters, cycling_protocol)
+sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
 output0 = solve(sim; accept_invalid = true)
 
 t0 = get_output_time_series(output0)[:Time]
@@ -65,6 +73,13 @@ fig
 
 # setup before calibration starts.
 vc06 = VoltageCalibration(t_exp_06, V_exp_06, sim)
+
+# free_calibration_parameter!(vc06,
+# 	["NegativeElectrode", "ActiveMaterial", "DiffusionCoefficient"];
+# 	lower_bound = 1e-16, upper_bound = 1e-12)
+# free_calibration_parameter!(vc06,
+# 	["PositiveElectrode", "ActiveMaterial", "DiffusionCoefficient"];
+# 	lower_bound = 1e-16, upper_bound = 1e-12)
 
 free_calibration_parameter!(vc06,
 	["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
