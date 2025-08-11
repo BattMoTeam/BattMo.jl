@@ -1,11 +1,25 @@
+using AdvancedHMC, ForwardDiff
+using LogDensityProblems
+using LinearAlgebra
+using Plots
+using BattMo
+
+
+#BattMo setup
+
 using Revise
 using BattMo, Jutul
 using CSV
 using DataFrames
 using GLMakie
-using Optimisers
+
 include("equilibrium_calibration.jl")
 include("function_parameters_MJ1.jl")
+
+struct LogTargetDensity
+        dim::Int
+end
+
 
 function get_tV(x)
     t = [state[:Control][:Controller].time for state in x[:states]]
@@ -166,7 +180,6 @@ function equilibriumCalibration(sim)
         lower_bound=1e4, upper_bound=1e5)
     
 
-    @info typeof(vc.parameter_targets)
 
     x = solve_equilibrium!(vc; I=I)
 
@@ -230,58 +243,10 @@ function equilibriumCalibration(sim)
 end
 
 
-function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrated,model_setup,simulation_settings; scaling = :linear)
-
-   
-    
-    t_exp_hr = vec(exp_data[end]["time"])
-    V_exp_hr = vec(exp_data[end]["E"])
-
-    I = exp_data[end]["I"]
-    
-
-    cycling_protocol2 = deepcopy(cycling_protocol)
-    cycling_protocol2["DRate"] = exp_data[end]["rawRate"]
-    sim2 = Simulation(model_setup, cell_parameters_calibrated, cycling_protocol2; simulation_settings)
-    output = get_simulation_input(sim2)
-    model2 = output[:model]
-    sim2.cycling_protocol["DRate"] = I * 3600 / computeCellCapacity(model2)  
-
-    vc2 = VoltageCalibration(t_exp_hr, V_exp_hr, sim2)
-
-    free_calibration_parameter!(vc2,
-        ["NegativeElectrode","ActiveMaterial", "VolumetricSurfaceArea"];
-        lower_bound = 1e3, upper_bound = 1e6)
-    free_calibration_parameter!(vc2,
-        ["PositiveElectrode","ActiveMaterial", "VolumetricSurfaceArea"];
-        lower_bound = 1e3, upper_bound = 1e6)
 
 
-    free_calibration_parameter!(vc2,
-        ["Separator", "BruggemanCoefficient"];
-        lower_bound = 1e-3, upper_bound = 1e2)
-   
 
-    free_calibration_parameter!(vc2,
-        ["NegativeElectrode","ElectrodeCoating", "BruggemanCoefficient"];
-        lower_bound = 1e-3, upper_bound = 1e2)
-    free_calibration_parameter!(vc2,
-        ["PositiveElectrode","ElectrodeCoating", "BruggemanCoefficient"];
-        lower_bound = 1e-3, upper_bound = 1e2)
-    
-    free_calibration_parameter!(vc2,
-        ["NegativeElectrode","ActiveMaterial", "DiffusionCoefficient"];
-        lower_bound = 1e-16, upper_bound = 1e-10)
-    free_calibration_parameter!(vc2,
-        ["PositiveElectrode","ActiveMaterial", "DiffusionCoefficient"];
-        lower_bound = 1e-16, upper_bound = 1e-10)
-    print_calibration_overview(vc2)
 
-    cell_parameters_calibrated2, = solve(vc2;scaling = scaling);
-    print_calibration_overview(vc2)
-
-    return cell_parameters_calibrated2
-end
 
 
 cycling_protocol,cell_parameters,model_setup, simulation_settings = runMJ1()
@@ -290,110 +255,190 @@ sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_sett
 
 cell_parameters_calibrated, V_eq, t_eq = equilibriumCalibration(sim)
 
-cell_parameters_calibrated2 = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings; scaling = :log)
-#cell_parameters_calibrated2 = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings)
 
-println("Calibration done:")
 
-CRates = [exp_data[i]["rawRate"] for i in 1:length(exp_data)]
-outputs_base = []
-outputs_calibrated = []
+###
 
-for i in 1:length(exp_data)
-    
-    I = exp_data[i]["I"]
+t_exp_hr = vec(exp_data[end]["time"])
+V_exp_hr = vec(exp_data[end]["E"])
 
-    println("Running simulation for I = ", I)
-
-    
-	simuc = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
-    output = get_simulation_input(simuc)
-    model = output[:model]
-    simuc.cycling_protocol["DRate"] = I * 3600 / computeCellCapacity(model) 
-
+I = exp_data[end]["I"]
     
 
-    # Solve the simulation with the base parameters
-    println("Running simulation for I = ", I)
+cycling_protocol2 = deepcopy(cycling_protocol)
+cycling_protocol2["DRate"] = exp_data[end]["rawRate"]
+sim2 = Simulation(model_setup, cell_parameters_calibrated, cycling_protocol2; simulation_settings)
+output = get_simulation_input(sim2)
+model2 = output[:model]
+sim2.cycling_protocol["DRate"] = I * 3600 / computeCellCapacity(model2)  
 
-	output = solve(simuc, info_level = -1; accept_invalid = true)
+vc = VoltageCalibration(t_exp_hr, V_exp_hr, sim2)
 
-    # Store the output for the base case
-    if i == 1
-        output0 = output
+free_calibration_parameter!(vc,
+        ["NegativeElectrode","ActiveMaterial", "VolumetricSurfaceArea"];
+        lower_bound = 1e3, upper_bound = 1e6)
+free_calibration_parameter!(vc,
+        ["PositiveElectrode","ActiveMaterial", "VolumetricSurfaceArea"];
+        lower_bound = 1e3, upper_bound = 1e6)
+
+
+free_calibration_parameter!(vc,
+        ["Separator", "BruggemanCoefficient"];
+        lower_bound = 1e-3, upper_bound = 1e2)
+   
+
+free_calibration_parameter!(vc,
+        ["NegativeElectrode","ElectrodeCoating", "BruggemanCoefficient"];
+        lower_bound = 1e-3, upper_bound = 1e2)
+free_calibration_parameter!(vc,
+        ["PositiveElectrode","ElectrodeCoating", "BruggemanCoefficient"];
+        lower_bound = 1e-3, upper_bound = 1e2)
+    
+free_calibration_parameter!(vc,
+        ["NegativeElectrode","ActiveMaterial", "DiffusionCoefficient"];
+        lower_bound = 1e-16, upper_bound = 1e-10)
+free_calibration_parameter!(vc,
+        ["PositiveElectrode","ActiveMaterial", "DiffusionCoefficient"];
+        lower_bound = 1e-16, upper_bound = 1e-10)
+print_calibration_overview(vc)
+
+
+#Setting up the HMC framework
+    
+sim = deepcopy(vc.sim)
+x0, x_setup = BattMo.vectorize_cell_parameters_for_calibration(vc, sim)
+# Set up the objective function
+objective = BattMo.setup_calibration_objective(vc)
+
+ub = similar(x0)
+lb = similar(x0)
+offsets = x_setup.offsets
+for (i, k) in enumerate(x_setup.names)
+    (; vmin, vmax) = vc.parameter_targets[k]
+    for j in offsets[i]:(offsets[i+1]-1)
+        lb[j] = vmin
+        ub[j] = vmax
     end
-
-    # Store the output for the calibrated case
-	push!(outputs_base, (I = I, output = output))
-
-    
-    simc = Simulation(model_setup, cell_parameters_calibrated2, cycling_protocol; simulation_settings)
-    #println(simc.cell_parameters)
-    outputc = get_simulation_input(simc)
-    modelc = outputc[:model]
-    simc.cycling_protocol["DRate"] =  I * 3600 / computeCellCapacity(modelc)
-	output_c = solve(simc, info_level = -1;accept_invalid = true)
-
-    println("calibrated simulation done for I = ", I, "\n")
-
-    ocp_ne = modelc[:NeAm].system.params[:ocp_func]
-    ocp_pe = modelc[:PeAm].system.params[:ocp_func]
-
-    Vne = sum(modelc[:NeAm].domain.representation[:volumes])
-    Vpe = sum(modelc[:PeAm].domain.representation[:volumes])
-
-    eps_ne = modelc[:NeAm].system.params[:volume_fraction]
-    eps_pe = modelc[:PeAm].system.params[:volume_fraction]
-
-    a_ne = modelc[:NeAm].system.params[:volume_fractions][1]
-    a_pe = modelc[:PeAm].system.params[:volume_fractions][1]
-
-    cpe = simc.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["MaximumConcentration"]
-    cne = simc.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["MaximumConcentration"]
-    
-    mpe = cpe * Vpe * a_pe * eps_pe 
-    mne = cne * Vne * a_ne * eps_ne 
-
-    @info "mpe = $mpe, mne = $mne"
+end
+adj_cache = Dict()
 
 
-    push!(outputs_calibrated, (I = I, output = output_c))
+# Log-transform bounds
+log_lb = log.(lb)
+log_ub = log.(ub)
+δ_log = log_ub .- log_lb
+
+# Transformation functions
+function x_to_u(x)
+    log_x = log.(x)
+    u = (log_x .- log_lb) ./ δ_log
+    return u
 end
 
-colors = Makie.wong_colors()
+function u_to_x(u)
+    log_x = u .* δ_log .+ log_lb
+    x = exp.(log_x)
+    return x
+end
 
-for (i, CRate) in enumerate(CRates)
-    local fig = Figure(size = (800, 500))
-    local ax = Axis(fig[1, 1],
-        ylabel = "Voltage / V",
-        xlabel = "Time / s",
-        title = "Discharge curve at $(round(CRate, digits = 2))C"
-    )
+function dx_to_du!(g, x)
+    g .= g .* x .* δ_log  # Chain rule: df/du = df/dx * dx/du
+end
 
-    if i == 1
-      lines!(ax, t_eq, V_eq, linestyle = :dash, label = "Equilibrium", color = colors[4])
-    
+# Wrapped objective function
+function F(u)
+    x = u_to_x(u)
+    obj, g = f(x)
+    dx_to_du!(g, x)
+    return (obj, g)
+end
+
+
+setup_battmo_case(X, step_info = missing) = BattMo.setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
+solve_and_differentiate(x) = BattMo.solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
+            adj_cache = adj_cache,
+        )
+        
+function evaluate(x)
+    @info "Evaluating x = $x"
+
+    # Default fallback values
+    log_llh = -Inf
+    grad_log_llh = zero(x)
+
+    try
+        log_llh, grad_log_llh = solve_and_differentiate(x)
+
+        # Sanity checks
+        if !isfinite(log_llh) || any(!isfinite, grad_log_llh)
+            @warn "Invalid result from solver at x = $x"
+            log_llh = -Inf
+            grad_log_llh = zero(x)
+        end
+    catch e
+        @error "Error during solve_and_differentiate: $(e)"
     end
 
-    # Experimental curve
-    t_exp = vec(exp_data[i]["time"])
-    V_exp = vec(exp_data[i]["E"])
-    lines!(ax, t_exp, V_exp, linestyle = :dot, label = "Experimental", color = colors[1])
+    return (log_llh, grad_log_llh)
+end
 
-    # Simulated curve (calibrated)
-    t_sim, V_sim = get_tV(outputs_calibrated[i].output)
-    lines!(ax, t_sim, V_sim, linestyle = :dash, label = "Simulated (calibrated)", color = colors[2])
+    
+    
+function LogDensityProblems.logdensity_and_gradient(p::LogTargetDensity, θ)
+    #θ is a (log-)normalized vector of parameters (θ∈[0,1]^D)
+    @info "Calculating log density and gradient for θ = $θ"
+    x = u_to_x(θ)
+    log_llh, grad_log_llh = evaluate(x)
+        
+    log_prior = 0
+    grad_log_prior = 0
+        
+    log_density = log_llh .+ log_prior
+    gradient = grad_log_llh .+ grad_log_prior
 
-    # Simulated curve (base)
-    t_b, V_b = get_tV(outputs_base[i].output)
-    lines!(ax, t_b, V_b, linestyle = :dash, label = "Simulated (base)", color = colors[3])
+    gradient = dx_to_du!(gradient, x) 
+        
+    return (log_density, gradient)
+end
 
-    axislegend(ax, position = :rb)
-    display(fig)
+LogDensityProblems.logdensity(p::LogTargetDensity, θ) = first(LogDensityProblems.logdensity_and_gradient(p, θ))
+LogDensityProblems.dimension(p::LogTargetDensity) = p.dim
+function LogDensityProblems.capabilities(::Type{LogTargetDensity})
+    return LogDensityProblems.LogDensityOrder{1}()
+end
 
-    # Save figure as PNG
-    save_path = joinpath(@__DIR__, "discharge_curve_$(round(CRate, digits=2))C.png")
-    save(save_path, fig)
-    println("Saved plot for $(round(CRate, digits=2))C at $save_path")
+    # Parameters
+D = length(vc.parameter_targets) #2 Dimension
+initial_θ = x_to_u(x0)
+    
+    # Create target distribution
+target = LogTargetDensity(D)
+    
+    # HMC parameters
+n_samples, n_adapts = 1_0, 2_0
+    
+# Define Hamiltonian system
+metric = DiagEuclideanMetric(D)
+hamiltonian = Hamiltonian(metric, target)
+    
+    # Find initial step size
+initial_ϵ = find_good_stepsize(hamiltonian, initial_θ)
+integrator = Leapfrog(initial_ϵ)
+    
+    # Define sampler
+kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
+adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
+    
+    # Run sampling
+samples, stats = sample(
+        hamiltonian, kernel, initial_θ, n_samples, adaptor, n_adapts; progress=true
+    )
+
+
+# Post-processing
+
+
+function devectorize(X,X_setup)
+    
 end
 

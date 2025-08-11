@@ -1,11 +1,22 @@
+
 using Revise
 using BattMo, Jutul
 using CSV
 using DataFrames
 using GLMakie
-using Optimisers
+
 include("equilibrium_calibration.jl")
 include("function_parameters_MJ1.jl")
+
+
+function dict_to_vec(parameter_targets::Dict{Vector{String}, Any})
+    #Converts the vc.parameter_targets dict to a vector output (using lexographical order)
+    keys_ordered = sort(collect(keys(parameter_targets)))
+    values = [parameter_targets[k].v0 for k in keys_ordered]
+    
+    return values
+end
+
 
 function get_tV(x)
     t = [state[:Control][:Controller].time for state in x[:states]]
@@ -166,7 +177,6 @@ function equilibriumCalibration(sim)
         lower_bound=1e4, upper_bound=1e5)
     
 
-    @info typeof(vc.parameter_targets)
 
     x = solve_equilibrium!(vc; I=I)
 
@@ -229,11 +239,15 @@ function equilibriumCalibration(sim)
 
 end
 
+cycling_protocol,cell_parameters,model_setup, simulation_settings = runMJ1()
+
+sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
+
+cell_parameters_calibrated, V_eq, t_eq = equilibriumCalibration(sim)
+
 
 function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrated,model_setup,simulation_settings; scaling = :linear)
 
-   
-    
     t_exp_hr = vec(exp_data[end]["time"])
     V_exp_hr = vec(exp_data[end]["E"])
 
@@ -277,123 +291,31 @@ function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrat
         lower_bound = 1e-16, upper_bound = 1e-10)
     print_calibration_overview(vc2)
 
-    cell_parameters_calibrated2, = solve(vc2;scaling = scaling);
+    sim = deepcopy(vc2.sim)
+    x0, x_setup = BattMo.vectorize_cell_parameters_for_calibration(vc2, sim)
+    # Set up the objective function
+    objective = BattMo.setup_calibration_objective(vc2)
+
+    adj_cache = Dict()
+
+    setup_battmo_case(X, step_info = missing) = BattMo.setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
+    solve_and_differentiate(x) = BattMo.solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
+            adj_cache = adj_cache,
+        )
+        
+
+    @info length(vc2.parameter_targets)
+    @info x0
+    @info x_setup
+    #cell_parameters_calibrated2, = solve(vc2;scaling = scaling);
     print_calibration_overview(vc2)
+
 
     return cell_parameters_calibrated2
 end
-
-
-cycling_protocol,cell_parameters,model_setup, simulation_settings = runMJ1()
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 
 cell_parameters_calibrated, V_eq, t_eq = equilibriumCalibration(sim)
 
 cell_parameters_calibrated2 = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings; scaling = :log)
-#cell_parameters_calibrated2 = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings)
-
-println("Calibration done:")
-
-CRates = [exp_data[i]["rawRate"] for i in 1:length(exp_data)]
-outputs_base = []
-outputs_calibrated = []
-
-for i in 1:length(exp_data)
-    
-    I = exp_data[i]["I"]
-
-    println("Running simulation for I = ", I)
-
-    
-	simuc = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
-    output = get_simulation_input(simuc)
-    model = output[:model]
-    simuc.cycling_protocol["DRate"] = I * 3600 / computeCellCapacity(model) 
-
-    
-
-    # Solve the simulation with the base parameters
-    println("Running simulation for I = ", I)
-
-	output = solve(simuc, info_level = -1; accept_invalid = true)
-
-    # Store the output for the base case
-    if i == 1
-        output0 = output
-    end
-
-    # Store the output for the calibrated case
-	push!(outputs_base, (I = I, output = output))
-
-    
-    simc = Simulation(model_setup, cell_parameters_calibrated2, cycling_protocol; simulation_settings)
-    #println(simc.cell_parameters)
-    outputc = get_simulation_input(simc)
-    modelc = outputc[:model]
-    simc.cycling_protocol["DRate"] =  I * 3600 / computeCellCapacity(modelc)
-	output_c = solve(simc, info_level = -1;accept_invalid = true)
-
-    println("calibrated simulation done for I = ", I, "\n")
-
-    ocp_ne = modelc[:NeAm].system.params[:ocp_func]
-    ocp_pe = modelc[:PeAm].system.params[:ocp_func]
-
-    Vne = sum(modelc[:NeAm].domain.representation[:volumes])
-    Vpe = sum(modelc[:PeAm].domain.representation[:volumes])
-
-    eps_ne = modelc[:NeAm].system.params[:volume_fraction]
-    eps_pe = modelc[:PeAm].system.params[:volume_fraction]
-
-    a_ne = modelc[:NeAm].system.params[:volume_fractions][1]
-    a_pe = modelc[:PeAm].system.params[:volume_fractions][1]
-
-    cpe = simc.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["MaximumConcentration"]
-    cne = simc.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["MaximumConcentration"]
-    
-    mpe = cpe * Vpe * a_pe * eps_pe 
-    mne = cne * Vne * a_ne * eps_ne 
-
-    @info "mpe = $mpe, mne = $mne"
-
-
-    push!(outputs_calibrated, (I = I, output = output_c))
-end
-
-colors = Makie.wong_colors()
-
-for (i, CRate) in enumerate(CRates)
-    local fig = Figure(size = (800, 500))
-    local ax = Axis(fig[1, 1],
-        ylabel = "Voltage / V",
-        xlabel = "Time / s",
-        title = "Discharge curve at $(round(CRate, digits = 2))C"
-    )
-
-    if i == 1
-      lines!(ax, t_eq, V_eq, linestyle = :dash, label = "Equilibrium", color = colors[4])
-    
-    end
-
-    # Experimental curve
-    t_exp = vec(exp_data[i]["time"])
-    V_exp = vec(exp_data[i]["E"])
-    lines!(ax, t_exp, V_exp, linestyle = :dot, label = "Experimental", color = colors[1])
-
-    # Simulated curve (calibrated)
-    t_sim, V_sim = get_tV(outputs_calibrated[i].output)
-    lines!(ax, t_sim, V_sim, linestyle = :dash, label = "Simulated (calibrated)", color = colors[2])
-
-    # Simulated curve (base)
-    t_b, V_b = get_tV(outputs_base[i].output)
-    lines!(ax, t_b, V_b, linestyle = :dash, label = "Simulated (base)", color = colors[3])
-
-    axislegend(ax, position = :rb)
-    display(fig)
-
-    # Save figure as PNG
-    save_path = joinpath(@__DIR__, "discharge_curve_$(round(CRate, digits=2))C.png")
-    save(save_path, fig)
-    println("Saved plot for $(round(CRate, digits=2))C at $save_path")
-end
-
