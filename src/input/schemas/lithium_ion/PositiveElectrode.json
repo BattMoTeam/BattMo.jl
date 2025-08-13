@@ -22,9 +22,6 @@
         "CurrentCollector": {
             "type": "object",
             "$ref": "CurrentCollector.json"
-        },
-        "ModelSettings": {
-            "$ref": "ModelSettings.json"
         }
     },
     "required": [
@@ -36,18 +33,7 @@
     "allof": [
         {
             "if": {
-                "properties": {
-                    "ModelSettings": {
-                        "properties": {
-                            "CurrentCollectors": {
-                                "const": "Generic"
-                            }
-                        },
-                        "required": [
-                            "CurrentCollectors"
-                        ]
-                    }
-                }
+                "$ref": "https://example.com/ModelSettings.json#/$defs/useCurrentCollectors"
             },
             "then": {
                 "required": [

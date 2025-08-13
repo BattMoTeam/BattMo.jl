@@ -48,11 +48,7 @@
             "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
         },
         "IonicConductivity": {
-            "type": [
-                "string",
-                "object",
-                "number"
-            ],
+            "$ref": "FunctionConductivity.json",
             "minimum": 1.0e-10,
             "maximum": 1.0e3,
             "description": "Measure of the ionic conduction of ions in the electrolyte under given concentration and temperature conditions",
@@ -67,11 +63,7 @@
             "documentation": "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input"
         },
         "DiffusionCoefficient": {
-            "type": [
-                "string",
-                "object",
-                "number"
-            ],
+            "$ref": "FunctionDiffusionCoefficient.json",
             "description": "Proportionality constant between the molar flux of the charge carrier and its negative concentration gradient in a material.",
             "context_type": [
                 "DiffusionCoefficient",

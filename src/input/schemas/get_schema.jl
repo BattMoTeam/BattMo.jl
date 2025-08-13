@@ -87,7 +87,9 @@ function create_property(parameter_meta, name)
 	return filter(x -> x.second !== nothing, property)
 end
 
-function get_schema_cell_parameters(model_settings::ModelSettings)
+
+
+function get_schema_cell_parameters_(model_settings::ModelSettings)
 	# Retrieve meta-data for validation
 	parameter_meta = get_parameter_meta_data()
 

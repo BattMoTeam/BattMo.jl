@@ -159,16 +159,14 @@
     "allOf": [
         {
             "if": {
-                "properties": {
-                    "ModelSettings": {
-                        "properties": {
-                            "CurrentCollectors": {
-                                "const": "Generic"
-                            },
-                            "ModelFramework": "P4D Pouch"
-                        }
+                "allof": [
+                    {
+                        "$ref": "https://example.com/ModelSettings.json#/$defs/useCurrentCollectors"
+                    },
+                    {
+                        "$ref": "https://example.com/ModelSettings.json#/$defs/useP4DPouch"
                     }
-                }
+                ]
             },
             "then": {
                 "required": [
@@ -185,16 +183,14 @@
         },
         {
             "if": {
-                "properties": {
-                    "ModelSettings": {
-                        "properties": {
-                            "CurrentCollectors": {
-                                "const": "Generic"
-                            },
-                            "ModelFramework": "P4D Cylindrical"
-                        }
+                "allof": [
+                    {
+                        "$ref": "https://example.com/ModelSettings.json#/$defs/useCurrentCollectors"
+                    },
+                    {
+                        "$ref": "https://example.com/ModelSettings.json#/$defs/useP4DCylindrical"
                     }
-                }
+                ]
             },
             "then": {
                 "required": [
@@ -210,15 +206,7 @@
         },
         {
             "if": {
-                "properties": {
-                    "ModelSettings": {
-                        "properties": {
-                            "RampUp": {
-                                "const": "Sinusoidal"
-                            }
-                        }
-                    }
-                }
+                "$ref": "https://example.com/ModelSettings.json#/$defs/useSinusoidalRampUp"
             },
             "then": {
                 "required": [

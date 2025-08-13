@@ -1,0 +1,54 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "FunctionConductivity",
+    "type": [
+        "object",
+        "number",
+        "string"
+    ],
+    "oneOf": [
+        {
+            "type": "string",
+            "description": "The parameter is provided as a string expression in Julia style. The possible variables within the string are: c (surface concentration), T (temperature)."
+        },
+        {
+            "type": "number",
+            "description": "The parameter is provided as a constant value."
+        },
+        {
+            "type": "object",
+            "properties": {
+                "FunctionName": {
+                    "type": "string",
+                    "description": "The name of the Julia function that represents the parameter."
+                },
+                "FilePath": {
+                    "type": "string",
+                    "description": "The path to the file the contains the parameter function."
+                }
+            },
+            "description": "The parameter is provided as a Julia function. The function can accept the following arguments: c (surface concentration), T (temperature).",
+            "required": [
+                "FunctionName"
+            ]
+        },
+        {
+            "type": "object",
+            "properties": {
+                "X": {
+                    "type": "array",
+                    "description": "The data for the x-variable"
+                },
+                "Y": {
+                    "type": "array",
+                    "description": "The data for the y-variable."
+                }
+            },
+            "description": "The parameter is provided as tabular data. The following x and y data can be provided, x: Concentration, y: DiffusionCoefficient ",
+            "required": [
+                "X",
+                "Y"
+            ]
+        }
+    ]
+}

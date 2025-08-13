@@ -90,5 +90,84 @@
                 ]
             }
         }
-    ]
+    ],
+    "$defs": {
+        "useP2D": {
+            "type": "object",
+            "properties": {
+                "ModelFramework": {
+                    "const": "P2D"
+                }
+            },
+            "required": [
+                "ModelFramework"
+            ]
+        },
+        "useP4DPouch": {
+            "type": "object",
+            "properties": {
+                "ModelFramework": {
+                    "const": "P4D Pouch"
+                }
+            },
+            "required": [
+                "ModelFramework"
+            ]
+        },
+        "useP4DCylindrical": {
+            "type": "object",
+            "properties": {
+                "ModelFramework": {
+                    "const": "P4D Cylindrical"
+                }
+            },
+            "required": [
+                "ModelFramework"
+            ]
+        },
+        "useBolaySEIModel": {
+            "type": "object",
+            "properties": {
+                "SEIModel": {
+                    "const": "Bolay"
+                }
+            },
+            "required": [
+                "SEIModel"
+            ]
+        },
+        "useFullDiffusion": {
+            "type": "object",
+            "properties": {
+                "TransportInSolid": {
+                    "const": "FullDiffusion"
+                }
+            },
+            "required": [
+                "TransportInSolid"
+            ]
+        },
+        "useCurrentCollectors": {
+            "type": "object",
+            "properties": {
+                "CurrentCollectors": {
+                    "const": "Generic"
+                }
+            },
+            "required": [
+                "CurrentCollectors"
+            ]
+        },
+        "useSinusoidalRampUp": {
+            "type": "object",
+            "properties": {
+                "RampUp": {
+                    "const": "Sinusoidal"
+                }
+            },
+            "required": [
+                "RampUp"
+            ]
+        }
+    }
 }
