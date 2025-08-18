@@ -1,6 +1,123 @@
 module BattMoGLMakieExt
 
-using BattMo, GLMakie
+using BattMo, GLMakie, RuntimeGeneratedFunctions
+RuntimeGeneratedFunctions.init(@__MODULE__)
+
+function BattMo.plot_cell_curves(cell_parameters::CellParameters)
+	if !isdefined(Main, :GLMakie)
+		error("GLMakie must be explicitly imported (e.g., with `using GLMakie`) before calling `plot_dashboard`.")
+	end
+	return BattMo.plot_cell_curves_(cell_parameters)
+end
+
+function BattMo.plot_cell_curves_(cell_parameters::CellParameters)
+	num_points = 100
+
+	# --- Define the known functional parameters ---
+	param_map = Dict(
+		"NegativeElectrode/ActiveMaterial/OpenCircuitPotential" => (BattMo.setup_ocp_evaluation_expression_from_string, [:c, :T, :refT, :cmax]),
+		"PositiveElectrode/ActiveMaterial/OpenCircuitPotential" => (BattMo.setup_ocp_evaluation_expression_from_string, [:c, :T, :refT, :cmax]),
+		"NegativeElectrode/ActiveMaterial/DiffusionCoefficient" => (BattMo.setup_electrode_diff_evaluation_expression_from_string, [:c, :T, :refT, :cmax]),
+		"PositiveElectrode/ActiveMaterial/DiffusionCoefficient" => (BattMo.setup_electrode_diff_evaluation_expression_from_string, [:c, :T, :refT, :cmax]),
+		"NegativeElectrode/ActiveMaterial/ReactionRateConstant" => (BattMo.setup_reaction_rate_constant_evaluation_expression_from_string, [:c, :T]),
+		"PositiveElectrode/ActiveMaterial/ReactionRateConstant" => (BattMo.setup_reaction_rate_constant_evaluation_expression_from_string, [:c, :T]),
+		"Electrolyte/IonicConductivity" => (BattMo.setup_conductivity_evaluation_expression_from_string, [:c, :T]),
+		"Electrolyte/DiffusionCoefficient" => (BattMo.setup_diffusivity_evaluation_expression_from_string, [:c, :T]),
+	)
+
+	# --- Plot setup ---
+	fig_234 = Figure(size = (1200, 800))
+	functional_params = collect(keys(param_map))
+	n = length(functional_params)
+	ncols = ceil(Int, sqrt(n))
+	nrows = ceil(Int, n / ncols)
+
+	for (i, param_path) in enumerate(functional_params)
+		# Retrieve value from nested Dict
+		keys = split(param_path, "/")
+		val = cell_parameters.all
+		for k in keys
+			val = val[k]
+		end
+
+		# Determine axis label and c range
+		if occursin("NegativeElectrode", param_path)
+			cmax = cell_parameters.all["NegativeElectrode"]["ActiveMaterial"]["MaximumConcentration"]
+			c_range = range(0, cmax, length = num_points)
+			x_values = c_range ./ cmax  # normalized
+			x_label = "c / cmax"
+		elseif occursin("PositiveElectrode", param_path)
+			cmax = cell_parameters.all["PositiveElectrode"]["ActiveMaterial"]["MaximumConcentration"]
+			c_range = range(0, cmax, length = num_points)
+			x_values = c_range ./ cmax  # normalized
+			x_label = "c / cmax"
+		elseif occursin("Electrolyte", param_path)
+			c0 = cell_parameters.all["Electrolyte"]["Concentration"]
+			c_range = range(0.2c0, 4c0, length = num_points)  # realistic range around initial conc.
+			x_values = c_range
+			x_label = "Electrolyte concentration [mol/m^3]"
+			cmax = missing
+		else
+			c_range = range(0, 1, length = num_points)
+			x_values = c_range
+			x_label = "c"
+			cmax = missing
+		end
+
+		row, col = divrem(i - 1, ncols)
+
+
+		y = Float64[]
+
+		T_val = 298.15
+		refT_val = 298.15
+
+		if isa(val, AbstractString) && haskey(param_map, param_path)
+
+			ax_234 = Axis(fig_234[row+1, col+1], title = param_path, xlabel = x_label, ylabel = "Value")
+			setup_func, args_symbols = param_map[param_path]
+			f_expr = setup_func(val)
+			f_generated = @RuntimeGeneratedFunction(f_expr)
+
+
+
+			# Evaluate function with the appropriate arguments
+			if :cmax in args_symbols && :refT in args_symbols
+				y = [f_generated(c, T_val, refT_val, cmax) for c in c_range]
+			elseif length(args_symbols) == 2
+				y = [f_generated(c, T_val) for c in c_range]
+			else
+				y = [f_generated(c) for c in c_range]
+			end
+			lines!(ax_234, x_values, y, color = :blue)
+		elseif isa(val, Dict)
+
+			ax_234 = Axis(fig_234[row+1, col+1], title = param_path, xlabel = x_label, ylabel = "Value")
+			if all(haskey(val, k) for k in ["X", "Y"])
+				x_values, y = val["X"], val["Y"]
+			elseif haskey(val, "FunctionName")
+				f = BattMo.setup_function_from_function_name(val["FunctionName"])
+				if isa(cmax, Missing)
+					y = [f(c, T_val) for c in c_range]
+				else
+					try
+						y = [f(c, T_val, T_val, cmax) for c in c_range]
+					catch
+						y = [f(c, T_val) for c in c_range]
+					end
+
+				end
+
+			end
+			lines!(ax_234, x_values, y, color = :blue)
+		end
+
+
+	end
+
+	fig_234
+end
+
 
 
 function BattMo.plot_output(output::NamedTuple, output_variables::Union{Vector{String}, Vector{Vector{String}}, Vector{Any}}; layout::Union{Nothing, Tuple{Int, Int}} = nothing)
@@ -29,8 +146,8 @@ function BattMo.plot_impl(
 		end
 	end
 
-	fig = Figure(size = (1000, 350 * nrows))
-	grid = fig[1, 1] = GridLayout()
+	fig_432 = Figure(size = (1000, 350 * nrows))
+	grid = fig_432[1, 1] = GridLayout()
 
 	# Get time info
 	time_series_data = get_output_time_series(output)
@@ -124,7 +241,7 @@ function BattMo.plot_impl(
 		subgrid = GridLayout()
 		grid[row, col] = subgrid
 
-		ax = Axis(subgrid[1, 1])
+		ax_432 = Axis(subgrid[1, 1])
 		plotted_lines = false
 		plot_type = nothing  # :line or :contour or nothing
 
@@ -210,11 +327,11 @@ function BattMo.plot_impl(
 					title_suffix = build_title_suffix(non_plot_dims, sel, known_dims)
 					label_with_suffix = isempty(title_suffix) ? varstr : "$title_suffix"
 
-					lines!(ax, x_vals, vec(data_slice), label = label_with_suffix)
-					ax.xlabel = x_label
-					ax.ylabel = clean_var * main_unit_str
+					lines!(ax_432, x_vals, vec(data_slice), label = label_with_suffix)
+					ax_432.xlabel = x_label
+					ax_432.ylabel = clean_var * main_unit_str
 					# Set the title explicitly using title! function:
-					ax.title = isempty(title_suffix) ? varstr : "$clean_var"
+					ax_432.title = isempty(title_suffix) ? varstr : "$clean_var"
 					plotted_lines = true
 					plot_type = :line
 
@@ -236,14 +353,14 @@ function BattMo.plot_impl(
 						error("Unexpected shape $(size(data_slice)), expected (y,x)=($(length(y_vals)),$(length(x_vals)))")
 					end
 
-					co = contourf!(ax, x_vals, y_vals, z'; colormap = :viridis)
+					co = contourf!(ax_432, x_vals, y_vals, z'; colormap = :viridis)
 
-					ax.xlabel = x_label
-					ax.ylabel = y_label
+					ax_432.xlabel = x_label
+					ax_432.ylabel = y_label
 					Colorbar(subgrid[1, 2], co, label = "$main_unit_str")
 
 					title_suffix = build_title_suffix(non_plot_dims, sel, known_dims)
-					ax.title = isempty(title_suffix) ? varstr : "$clean_var$title_suffix"
+					ax_432.title = isempty(title_suffix) ? varstr : "$clean_var$title_suffix"
 
 				else
 					error("More than 2 plot dimensions not supported: $dims")
@@ -255,7 +372,7 @@ function BattMo.plot_impl(
 		end
 
 		if plotted_lines
-			axislegend(ax)
+			axislegend(ax_432)
 			# Clear title if multiple lines to avoid clutter, or you can customize
 			if var_group isa Vector && length(var_group) > 1
 				ax.title = ""
@@ -263,8 +380,8 @@ function BattMo.plot_impl(
 		end
 	end
 
-	display(fig)
-	return fig
+	display(fig_432)
+	return fig_432
 end
 
 
@@ -296,8 +413,8 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple")
 	PeAm_pot = states[:PeAmPotential]
 	Elyte_pot = states[:ElectrolytePotential]
 	if plot_type == "simple"
-		fig = Figure(size = (1200, 1000))
-		grid = fig[1, 1] = GridLayout()
+		fig_678 = Figure(size = (1200, 1000))
+		grid = fig_678[1, 1] = GridLayout()
 
 		Label(grid[0, 1:3], "Simple Dashboard", fontsize = 24, halign = :center)
 
@@ -309,11 +426,11 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple")
 		ax_voltage.xlabel = "Time  /  s"
 		scatterlines!(ax_voltage, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
-		return fig
+		return fig_678
 
 	elseif plot_type == "line"
-		fig = Figure(size = (1200, 1000))
-		grid = fig[1, 1] = GridLayout()
+		fig_678 = Figure(size = (1200, 1000))
+		grid = fig_678[1, 1] = GridLayout()
 
 		Label(grid[0, 1:3], "Line Dashboard", fontsize = 24, halign = :center)
 
@@ -340,13 +457,13 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple")
 			t_line[] = t[i]
 		end
 
-		function state_plot(ax, data, label)
+		function state_plot(ax_678, data, label)
 			obs_data = Observable(data[1, :])
-			plt = lines!(ax, x, obs_data, label = label; linewidth = 4)
-			ax.xlabel = "Position  /  μm"
+			plt = lines!(ax_678, x, obs_data, label = label; linewidth = 4)
+			ax_678.xlabel = "Position  /  μm"
 			on(ts) do i
 				obs_data[] = data[i, :]
-				autolimits!(ax)
+				autolimits!(ax_678)
 			end
 		end
 
@@ -360,11 +477,11 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple")
 		state_plot(Axis(grid[4, 2], title = "Electrolyte Potential  /  V"), Elyte_pot, "Elyte ϕ")
 		state_plot(Axis(grid[4, 3], title = "PeAm Potential  /  V"), PeAm_pot, "PeAm ϕ")
 
-		return fig
+		return fig_678
 
 	elseif plot_type == "contour"
-		fig = Figure(size = (1200, 1000))
-		grid = fig[1, 1] = GridLayout()
+		fig_678 = Figure(size = (1200, 1000))
+		grid = fig_678[1, 1] = GridLayout()
 
 		Label(grid[0, 1:3], "Contour Dashboard", fontsize = 24, halign = :center)
 
@@ -379,11 +496,11 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple")
 		function contour_with_labels(parent_grid, row, col, data, title)
 			subgrid = parent_grid[row, col] = GridLayout()
 
-			ax = Axis(subgrid[1, 1])
-			plt = contourf!(ax, x, t, data')
-			ax.ylabel = "Time  /  s"
-			ax.xlabel = "Position  / μm"
-			ax.title = title
+			ax_678 = Axis(subgrid[1, 1])
+			plt = contourf!(ax_678, x, t, data')
+			ax_678.ylabel = "Time  /  s"
+			ax_678.xlabel = "Position  / μm"
+			ax_678.title = title
 
 			Colorbar(subgrid[1, 2], plt, width = 15)
 		end
@@ -397,7 +514,7 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple")
 		contour_with_labels(grid, 4, 1, NeAm_pot, "NeAm Potential  /  V")
 		contour_with_labels(grid, 4, 2, Elyte_pot, "Electrolyte Potential  /  V")
 		contour_with_labels(grid, 4, 3, PeAm_pot, "PeAm Potential  /  V")
-		return fig
+		return fig_678
 
 	else
 		error("Unsupported plot_type. Use \"line\" or \"contour\".")

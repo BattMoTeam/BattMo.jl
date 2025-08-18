@@ -62,11 +62,17 @@ function regularized_sqrt(x, th)
 	return y
 end
 
-function safe_div(x, y, th = 1e-3)
-	if abs(y) < th
-		return x / (y + th)
+function safe_div(x, y; th = 1e-8)
+
+	return x / y
+end
+
+function save_sqrt(x)
+
+	if x < 0
+		return zero(x)
 	else
-		return x / y
+		return sqrt(x)
 	end
 end
 
@@ -75,10 +81,11 @@ function butler_volmer_equation(j0, alpha, n, eta, T, cmax, c_a_surf, c_e, c_a, 
 	F = FARADAY_CONSTANT
 	R = GAS_CONSTANT
 
-	th = 1e-3 * cmax
+	th = 1e-2
 	# val = j0 * (exp(alpha * n * F * eta / (R * T)) - exp(-(1 - alpha) * n * F * eta / (R * T)))
-	val = j0 * (safe_div(c_a_surf, c_av, th) * exp(alpha * n * F * eta / (R * T)) - (safe_div((cmax - c_a_surf), (cmax - c_av), th) * safe_div(c_e, c_av_e, th)) * exp(-(1 - alpha) * n * F * eta / (R * T)))
+	val = j0 * (safe_div(c_a_surf, c_av; th) * exp(alpha * n * F * eta / (R * T)) - (safe_div((cmax - c_a_surf), (cmax - c_av); th) * safe_div(c_e, c_av_e; th)) * exp(-(1 - alpha) * n * F * eta / (R * T)))
 
+	# @info safe_div((cmax - c_a_surf), (cmax - c_av); th)
 	return val
 
 end
@@ -95,9 +102,9 @@ function reaction_rate_coefficient(R0,
 	n    = activematerial.params[:n_charge_carriers]
 	cmax = activematerial.params[:maximum_concentration]
 
-	th = 1e-3 * cmax
+	th = 1e-2 * cmax
 	# j0 = R0 * regularized_sqrt(c_e * (cmax - c_a) * c_a, th) * n * F
-	j0 = R0 * regularized_sqrt(c_av_e * (cmax - c_av) * c_av, th) * n * F
+	j0 = R0 * save_sqrt(c_av_e * (cmax - c_a) * c_a) * n * F
 
 	return j0
 

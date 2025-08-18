@@ -1,127 +1,125 @@
 
-# ## Load packages and set up helper functions
+## Load packages and set up helper functions
 using BattMo, Jutul
 using CSV
 using DataFrames
 using GLMakie
 
-function get_tV(x)
-	t = [state[:Control][:Controller].time for state in x[:states]]
-	V = [state[:Control][:Phi][1] for state in x[:states]]
-	return (t, V)
-end
+battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
+include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_functions.jl"))
 
-function get_tV(x::DataFrame)
-	return (x[:, 1], x[:, 2])
-end
-
-# ## Load the experimental data and set up a base case
+######### Load Experimental Data #########
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 exdata = joinpath(battmo_base, "examples", "example_data")
 df_01 = CSV.read(joinpath(exdata, "Chayambuka_voltage_0_1_crate.csv"), DataFrame)
 df_06 = CSV.read(joinpath(exdata, "Chayambuka_voltage_0_6_crate.csv"), DataFrame)
 df_14 = CSV.read(joinpath(exdata, "Chayambuka_voltage_1_4_crate.csv"), DataFrame)
 
-dfs = [df_01, df_06, df_14]
+######### Load Initial Simulation Data #########
 
 cell_parameters = load_cell_parameters(; from_default_set = "Chayambuka2022")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 model_settings = load_model_settings(; from_default_set = "P2D")
 simulation_settings = load_simulation_settings(; from_default_set = "P2D")
 
-
-simulation_settings["GridResolution"]["NegativeElectrodeCoating"] = 10
-simulation_settings["GridResolution"]["PositiveElectrodeCoating"] = 10
-simulation_settings["GridResolution"]["NegativeElectrodeActiveMaterial"] = 10
-simulation_settings["GridResolution"]["PositiveElectrodeActiveMaterial"] = 10
-simulation_settings["GridResolution"]["Separator"] = 10
-
-model_settings["ReactionRateConstant"] = "UserDefined"
-
-# cell_parameters["NegativeElectrode"]["ActiveMaterial"]["DiffusionCoefficient"] = 2.0306459345750275e-15
-# cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 4.542183772045386e-11
-# cell_parameters["PositiveElectrode"]["ActiveMaterial"]["DiffusionCoefficient"] = 1.2952951004386266e-16
-
-# cell_parameters["PositiveElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 1.6787424917471138e-11
-
-cycling_protocol["LowerVoltageLimit"] = 2.0
-cycling_protocol["UpperVoltageLimit"] = 4.2
-model = LithiumIonBattery(; model_settings)
-
-cycling_protocol["DRate"] = 0.6
-sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
-output0 = solve(sim; accept_invalid = true)
-
-t0 = get_output_time_series(output0)[:Time]
-V0 = get_output_time_series(output0)[:Voltage]
-
-cap_exp_01, V_exp_01 = get_tV(df_01)
-cap_exp_06, V_exp_06 = get_tV(df_06)
-
+######### Format experimental data ##########
 A = cell_parameters["Cell"]["ElectrodeGeometricSurfaceArea"]
 
-t_exp_01 = cap_exp_01 * 3600 / 1000 / A
-t_exp_06 = cap_exp_06 * 3600 / 1000 / A / 5
+t_exp_01 = (df_01[:, 1] .- minimum(df_01[:, 1])) .* 3600 ./ 1000 ./ A
+V_exp_01 = df_01[:, 2]
+
+t_exp_06 = (df_06[:, 1] .- minimum(df_06[:, 1])) .* 3600 ./ 1000 ./ A ./ 5
+V_exp_06 = df_06[:, 2]
+
+t_exp_14 = (df_14[:, 1] .- minimum(df_14[:, 1])) .* 3600 ./ 1000 ./ A ./ 12
+V_exp_14 = df_14[:, 2]
+
+######### Alter model settings #########
+model_settings["ReactionRateConstant"] = "UserDefined"
+
+######### Alter simulation settings #########
+simulation_settings["GridResolution"]["NegativeElectrodeCoating"] = 8
+simulation_settings["GridResolution"]["PositiveElectrodeCoating"] = 50
+simulation_settings["GridResolution"]["NegativeElectrodeActiveMaterial"] = 50
+simulation_settings["GridResolution"]["PositiveElectrodeActiveMaterial"] = 50
+simulation_settings["GridResolution"]["Separator"] = 5
+
+simulation_settings["TimeStepDuration"] = 200
+
+######### Alter cycling protocol #########
+cycling_protocol["LowerVoltageLimit"] = 2.0
+cycling_protocol["UpperVoltageLimit"] = 4.2
+
+
+######### Run initial simulation #########
+model = LithiumIonBattery(; model_settings)
+
+cycling_protocol["DRate"] = 0.1
+sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
+output0 = solve(sim)
+
+######### Plot initial results #########
+t0 = get_output_time_series(output0)[:Time]
+V0 = get_output_time_series(output0)[:Voltage]
 
 fig = Figure()
 ax = Axis(fig[1, 1], title = "CRate = 0.1", xlabel = "Time / s", ylabel = "Voltage / V")
 lines!(ax, t0, V0, label = "Base case")
-lines!(ax, t_exp_06, V_exp_06, label = "Experimental data")
+lines!(ax, t_exp_01, V_exp_01, label = "Experimental data")
 axislegend(position = :lb)
 fig
-# ## Set up the first calibration
 
-# setup before calibration starts.
-vc06 = VoltageCalibration(t_exp_06, V_exp_06, sim)
+######### Setup Crate 0.6 calibration #########
 
-# free_calibration_parameter!(vc06,
-# 	["NegativeElectrode", "ActiveMaterial", "DiffusionCoefficient"];
-# 	lower_bound = 1e-16, upper_bound = 1e-12)
-# free_calibration_parameter!(vc06,
-# 	["PositiveElectrode", "ActiveMaterial", "DiffusionCoefficient"];
-# 	lower_bound = 1e-16, upper_bound = 1e-12)
+calibration_06 = VoltageCalibration(t_exp_01, V_exp_01, sim)
 
-free_calibration_parameter!(vc06,
+# calibrate "StoichiometricCoefficientAtSOC100" at both electrodes
+free_calibration_parameter!(calibration_06,
 	["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
 	lower_bound = 0.6, upper_bound = 1.0)
-free_calibration_parameter!(vc06,
+free_calibration_parameter!(calibration_06,
 	["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
 	lower_bound = 0.0, upper_bound = 0.4)
 
-# "StoichiometricCoefficientAtSOC0" at both electrodes
-free_calibration_parameter!(vc06,
+# calibrate "StoichiometricCoefficientAtSOC0" at both electrodes
+free_calibration_parameter!(calibration_06,
 	["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
 	lower_bound = 0.0, upper_bound = 0.4)
-free_calibration_parameter!(vc06,
+free_calibration_parameter!(calibration_06,
 	["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
 	lower_bound = 0.6, upper_bound = 1.0)
 
-#  "MaximumConcentration" of both electrodes
-free_calibration_parameter!(vc06,
+#  calibrate "MaximumConcentration" of both electrodes
+free_calibration_parameter!(calibration_06,
 	["NegativeElectrode", "ActiveMaterial", "MaximumConcentration"];
 	lower_bound = 10000.0, upper_bound = 3e4)
-free_calibration_parameter!(vc06,
+free_calibration_parameter!(calibration_06,
 	["PositiveElectrode", "ActiveMaterial", "MaximumConcentration"];
 	lower_bound = 10000.0, upper_bound = 3e4)
 
-print_calibration_overview(vc06)
-# ### Solve the first calibration problem
-# The calibration is performed by solving the optimization problem. This makes
-# use of the adjoint method implemented in Jutul.jl and the LBFGS algorithm.
-solve(vc06);
-cell_parameters_calibrated = vc06.calibrated_cell_parameters;
-print_calibration_overview(vc06)
-# ## Compare the results of the calibration against the experimental data
-# We can now compare the results of the calibrated model against the
-# experimental data for the 0.5C discharge curve.
-sim_opt = Simulation(model, cell_parameters_calibrated, cycling_protocol)
+print_calibration_overview(calibration_06)
+
+######### Solve Crate 0.6 calibration problem #########
+
+solve(calibration_06);
+
+print_calibration_overview(calibration_06)
+
+
+######### Crate 0.6 calibration results #########
+simulation_settings["TimeStepDuration"] = 20
+
+sim_opt = Simulation(model, calibration_06.calibrated_cell_parameters, cycling_protocol; simulation_settings);
 output_opt = solve(sim_opt);
-t_opt, V_opt = get_tV(output_opt)
+
+time_series = get_output_time_series(output_opt)
+t_opt = time_series[:Time]
+V_opt = time_series[:Voltage]
 
 fig = Figure()
 ax = Axis(fig[1, 1], title = "CRate = 0.1")
 lines!(ax, t0, V0, label = "BattMo initial")
-lines!(ax, t_exp_06, V_exp_06, label = "Experimental data")
+lines!(ax, t_exp_01, V_exp_01, label = "Experimental data")
 lines!(ax, t_opt, V_opt, label = "BattMo calibrated", linestyle = :dash)
 axislegend(position = :lb)
 fig

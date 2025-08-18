@@ -1047,7 +1047,7 @@ function setup_initial_state(input, model::LithiumIonBattery)
 			OCP = multimodel[name].system[:ocp_constant]
 
 		else
-			OCP = multimodel[name].system[:ocp_func](c, T, cmax)
+			OCP = multimodel[name].system[:ocp_func](c, T, refT, cmax)
 		end
 
 		return (init, nc, OCP)

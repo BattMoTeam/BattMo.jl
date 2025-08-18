@@ -291,7 +291,7 @@ end
 				@inbounds Ocp[cell] = ocp_func
 			else
 
-				@inbounds Ocp[cell] = ocp_func(Cs[cell], refT, cmax)
+				@inbounds Ocp[cell] = ocp_func(Cs[cell], refT, refT, cmax)
 
 			end
 		end
@@ -331,7 +331,7 @@ end
 				@inbounds DiffusionCoefficient[cell] = diff_func
 			else
 
-				@inbounds DiffusionCoefficient[cell] = diff_func(Cs[cell], refT, cmax)
+				@inbounds DiffusionCoefficient[cell] = diff_func(Cs[cell], refT, refT, cmax)
 
 			end
 		end

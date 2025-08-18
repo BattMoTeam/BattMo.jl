@@ -1,8 +1,12 @@
-export plot_dashboard, plot_output
+export plot_dashboard, plot_output, plot_cell_curves
 
 #####################################################################################################
 # The actual functions within this script can be found within "../ext/BattMoGLMakieExt.jl"
 #####################################################################################################
+
+function plot_cell_curves end
+
+function plot_cell_curves_ end
 
 """
 	BattMo.plot_output(output, output_variables; layout=nothing)
