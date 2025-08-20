@@ -1,9 +1,10 @@
 using AdvancedHMC, ForwardDiff
+using AbstractMCMC
 using LogDensityProblems
 using LinearAlgebra
 using Plots
-using BattMo
 
+using MCMCDiagnosticTools
 
 #BattMo setup
 
@@ -142,9 +143,9 @@ function runMJ1()
     println("successfully loaded cell parameters and cycling protocol")
     cycling_protocol = load_cycling_protocol(; from_file_path = joinpath(@__DIR__,"custom_discharge2.json"))
 
-    #simulation_settings = load_simulation_settings(; from_file_path = joinpath(@__DIR__,"model2.json"))
+    simulation_settings = load_simulation_settings(; from_file_path = joinpath(@__DIR__,"simple.json"))
     #simulation_settings = load_simulation_settings(; from_default_set = "P4D_pouch")
-    simulation_settings = load_simulation_settings(; from_default_set = "P2D") # Ensure the model framework is set to P4D Pouch
+    #simulation_settings = load_simulation_settings(; from_default_set = "P2D") # Ensure the model framework is set to P4D Pouch
     
     #model_settings = load_model_settings(;from_default_set = "P4D_pouch")
     model_settings = load_model_settings(;from_default_set = "P2D") 
@@ -331,18 +332,18 @@ log_ub = log.(ub)
 # Transformation functions
 function x_to_u(x)
     log_x = log.(x)
-    u = (log_x .- log_lb) ./ δ_log
+    u = log_x
     return u
 end
 
 function u_to_x(u)
-    log_x = u .* δ_log .+ log_lb
+    log_x = u 
     x = exp.(log_x)
     return x
 end
 
 function dx_to_du!(g, x)
-    g .= g .* x .* δ_log  # Chain rule: df/du = df/dx * dx/du
+    g .= g .* x  # Chain rule: df/du = df/dx * dx/du
 end
 
 # Wrapped objective function
@@ -360,14 +361,16 @@ solve_and_differentiate(x) = BattMo.solve_and_differentiate_for_calibration(x, s
         )
         
 function evaluate(x)
-    @info "Evaluating x = $x"
+    #@info "Evaluating x = $x"
 
     # Default fallback values
     log_llh = -Inf
     grad_log_llh = zero(x)
 
     try
-        log_llh, grad_log_llh = solve_and_differentiate(x)
+        log_llh, grad_log_llh = solve_and_differentiate(x) #returns the sum squared error and its gradient
+        log_llh = -log_llh/(2*σ2)  # Convert to log-likelihood 
+        grad_log_llh = -grad_log_llh/(2*σ2)  # Convert to gradient of log-likelihood  
 
         # Sanity checks
         if !isfinite(log_llh) || any(!isfinite, grad_log_llh)
@@ -382,8 +385,35 @@ function evaluate(x)
     return (log_llh, grad_log_llh)
 end
 
+
+using SpecialFunctions  # for loggamma
+
+"""
+    logpdf_gamma_with_grad(x, k, θ; rate=false)
+
+Return both the log-density and derivative w.r.t. x for a Gamma distribution.
+"""
+function logpdf_gamma_with_grad(x, k, θ; rate::Bool=false)
+    if any(x .<= 0)
+        throw(ArgumentError("x must be > 0 for Gamma distribution"))
+    end
     
+    if rate
+        β = θ
+        logpdf = (k-1) .* log.(x) .- β .* x .+ k*log(β) .- loggamma(k)
+        grad    = (k-1) ./ x .- β
+    else
+        logpdf = (k-1) .* log.(x) .- x ./ θ .- k*log(θ) .- loggamma(k)
+        grad    = (k-1) ./ x .- 1/θ
+    end
     
+    return logpdf, grad
+end
+
+
+    
+σ2 = 1.0  # Variance of the Gaussian noise
+
 function LogDensityProblems.logdensity_and_gradient(p::LogTargetDensity, θ)
     #θ is a (log-)normalized vector of parameters (θ∈[0,1]^D)
     @info "Calculating log density and gradient for θ = $θ"
@@ -392,6 +422,8 @@ function LogDensityProblems.logdensity_and_gradient(p::LogTargetDensity, θ)
         
     log_prior = 0
     grad_log_prior = 0
+
+
         
     log_density = log_llh .+ log_prior
     gradient = grad_log_llh .+ grad_log_prior
@@ -401,24 +433,24 @@ function LogDensityProblems.logdensity_and_gradient(p::LogTargetDensity, θ)
     return (log_density, gradient)
 end
 
-LogDensityProblems.logdensity(p::LogTargetDensity, θ) = first(LogDensityProblems.logdensity_and_gradient(p, θ))
+#LogDensityProblems.logdensity(p::LogTargetDensity, θ) = first(LogDensityProblems.logdensity_and_gradient(p, θ))
 LogDensityProblems.dimension(p::LogTargetDensity) = p.dim
 function LogDensityProblems.capabilities(::Type{LogTargetDensity})
     return LogDensityProblems.LogDensityOrder{1}()
 end
 
     # Parameters
-D = length(vc.parameter_targets) #2 Dimension
+D = length(vc.parameter_targets) 
 initial_θ = x_to_u(x0)
     
     # Create target distribution
 target = LogTargetDensity(D)
     
     # HMC parameters
-n_samples, n_adapts = 1_0, 2_0
+n_samples, n_adapts = 1000, 500
     
 # Define Hamiltonian system
-metric = DiagEuclideanMetric(D)
+metric = DenseEuclideanMetric(D)
 hamiltonian = Hamiltonian(metric, target)
     
     # Find initial step size
@@ -426,19 +458,146 @@ initial_ϵ = find_good_stepsize(hamiltonian, initial_θ)
 integrator = Leapfrog(initial_ϵ)
     
     # Define sampler
-kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
+#kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
+kernel = HMCKernel(Trajectory{EndPointTS}(integrator, FixedNSteps(1)))
 adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
     
+
+
     # Run sampling
 samples, stats = sample(
         hamiltonian, kernel, initial_θ, n_samples, adaptor, n_adapts; progress=true
     )
 
 
-# Post-processing
 
+"""
+model = AdvancedHMC.LogDensityModel(target)
 
-function devectorize(X,X_setup)
+sampler = HMCSampler(kernel,metric,adaptor)
+
+samples = AbstractMCMC.sample(
+    model, sampler, n_adapts + n_samples; n_adapts=n_adapts, initial_params=initial_θ
+)
+"""
+
+using Statistics
+
+# Basic sampling statistics
+function analyze_sampling_results(samples::Vector, stats::Vector, n_adapts::Int)
+    println("\n" * "="^50)
+    println("ESSENTIAL HMC DIAGNOSTICS")
+    println("="^50)
     
+    # Extract post-adaptation samples
+    post_adapt_samples = samples[(n_adapts+1):end]
+    post_adapt_stats = stats[(n_adapts+1):end]
+    n_samples = length(post_adapt_samples)
+    n_params = length(samples[1])
+    
+    # Acceptance rate (using the field from your stats)
+    acceptance_rates = [s.acceptance_rate for s in post_adapt_stats]
+    avg_acceptance_rate = mean(acceptance_rates)
+    println("Average acceptance rate: $(round(avg_acceptance_rate*100, digits=1))%")
+    
+    # Numerical errors
+    n_numerical_errors = count(s.numerical_error for s in post_adapt_stats)
+    println("Numerical errors: $n_numerical_errors")
+    
+    # Step size statistics
+    step_sizes = [s.step_size for s in post_adapt_stats]
+    println("Final step size: $(round(step_sizes[end], digits=6))")
+    println("Step size range: $(round(minimum(step_sizes), digits=6)) - $(round(maximum(step_sizes), digits=6))")
+    
+    # Energy statistics
+    energies = [s.hamiltonian_energy for s in post_adapt_stats]
+    energy_errors = [s.hamiltonian_energy_error for s in post_adapt_stats]
+    println("Mean energy: $(round(mean(energies), digits=2))")
+    println("Mean energy error: $(round(mean(energy_errors), digits=4))")
+    
+    # Convert to matrix for parameter analysis
+    sample_matrix = reduce(hcat, post_adapt_samples)'
+    
+    println("\nParameter summary:")
+    println("-"^40)
+    
+    for i in 1:n_params
+        param_samples = sample_matrix[:, i]
+        ess = effective_sample_size(param_samples)
+        
+        println("Param $i: mean=$(round(mean(param_samples), digits=4)), " *
+                "std=$(round(std(param_samples), digits=4)), " *
+                "ESS=$(round(ess, digits=1))")
+    end
+    
+    return post_adapt_samples, post_adapt_stats
 end
 
+#Effective Sample Size calculation 
+function effective_sample_size(x::Vector{Float64})
+    n = length(x)
+    if n < 10
+        return n
+    end
+    
+    # Simple autocorrelation approximation
+    μ = mean(x)
+    autocorr_sum = 0.0
+    max_lag = min(100, n ÷ 2)
+    
+    for lag in 1:max_lag
+        if n - lag < 2
+            break
+        end
+        autocorr_val = cor(x[1:end-lag], x[lag+1:end])
+        autocorr_sum += autocorr_val
+    end
+    
+    ess = n / (1 + 2 * autocorr_sum)
+    return max(ess, 1.0)
+end
+
+
+function plot_essential_diagnostics(samples::Vector, stats::Vector, n_adapts::Int)
+    n_params = length(samples[1])
+    
+    fig = Figure(resolution=(800, 200 * (n_params + 2)))
+    
+    # Parameter trace plots
+    for i in 1:n_params
+        ax = Axis(fig[i, 1], title="Parameter $i - Trace")
+        param_values = [s[i] for s in samples]
+        lines!(ax, 1:length(samples), param_values, color=:blue)
+        vlines!(ax, [n_adapts], color=:red, linestyle=:dash, linewidth=2)
+    end
+    
+    # Energy plot
+    ax_energy = Axis(fig[n_params+1, 1], title="Hamiltonian Energy")
+    energies = [s.hamiltonian_energy for s in stats]
+    lines!(ax_energy, 1:length(energies), energies, color=:purple)
+    vlines!(ax_energy, [n_adapts], color=:red, linestyle=:dash, linewidth=2)
+    
+    # Energy error plot
+    ax_energy_err = Axis(fig[n_params+2, 1], title="Energy Error")
+    energy_errors = [s.hamiltonian_energy_error for s in stats]
+    lines!(ax_energy_err, 1:length(energy_errors), energy_errors, color=:orange)
+    vlines!(ax_energy_err, [n_adapts], color=:red, linestyle=:dash, linewidth=2)
+    hlines!(ax_energy_err, [0], color=:black, linestyle=:dash)
+    
+    return fig
+end
+
+# Main diagnostic function
+function run_essential_diagnostics(samples::Vector, stats::Vector, n_adapts::Int)
+    
+    post_adapt_samples, post_adapt_stats = analyze_sampling_results(samples, stats, n_adapts)
+    
+    
+    diag_fig = plot_essential_diagnostics(samples, stats, n_adapts)
+    
+    println("\nDiagnostics completed!")
+    return diag_fig
+end
+
+
+diag_fig = run_essential_diagnostics(samples, stats, n_adapts)

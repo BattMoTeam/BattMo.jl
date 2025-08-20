@@ -14,22 +14,22 @@
         }
     },
     "GridResolution": {
-        "ElectrodeWidth": 5,
-        "ElectrodeLength": 5,
-        "PositiveElectrodeCoating": 3,
-        "PositiveElectrodeActiveMaterial": 3,
+        "ElectrodeWidth": 3,
+        "ElectrodeLength": 3,
+        "PositiveElectrodeCoating": 2,
+        "PositiveElectrodeActiveMaterial": 2,
         "PositiveElectrodeCurrentCollector": 2,
         "PositiveElectrodeCurrentCollectorTabWidth": 2,
         "PositiveElectrodeCurrentCollectorTabLength": 2,
-        "NegativeElectrodeCoating": 3,
-        "NegativeElectrodeActiveMaterial": 3,
+        "NegativeElectrodeCoating": 2,
+        "NegativeElectrodeActiveMaterial": 2,
         "NegativeElectrodeCurrentCollector": 2,
         "NegativeElectrodeCurrentCollectorTabWidth": 2,
         "NegativeElectrodeCurrentCollectorTabLength": 2,
-        "Separator": 5
+        "Separator": 2
     },
     
-    "TimeStepDuration": 100,
+    "TimeStepDuration": 50,
     "RampUpTime": 10,
     "RampUpSteps": 5
 }

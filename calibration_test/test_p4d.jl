@@ -11,7 +11,7 @@ print("loaded")
 cycling_protocol = load_cycling_protocol(; from_file_path = joinpath(@__DIR__,"custom_discharge2.json"))
 #model_settings = load_model_settings(; from_default_set = "P4D_pouch")
 model_settings = load_model_settings(;from_default_set = "P2D") # Ensure the model framework is set to P4D Pouch
-simulation_settings = load_simulation_settings(; from_file_path = joinpath(@__DIR__,"model2.json"))
+simulation_settings = load_simulation_settings(; from_file_path = joinpath(@__DIR__,"simple.json"))
 #simulation_settings = load_simulation_settings(; from_default_set = "P4D_pouch")
 simulation_settings = load_simulation_settings(; from_default_set = "P2D") # Ensure the model framework is set to P4D Pouch
 
@@ -21,7 +21,7 @@ model_setup = LithiumIonBattery(; model_settings)
 
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
-sim.cycling_protocol["DRate"] = 10.0
+sim.cycling_protocol["DRate"] = 1.0
 
 """
 output = get_simulation_input(sim)

@@ -9,13 +9,6 @@ include("equilibrium_calibration.jl")
 include("function_parameters_MJ1.jl")
 
 
-function dict_to_vec(parameter_targets::Dict{Vector{String}, Any})
-    #Converts the vc.parameter_targets dict to a vector output (using lexographical order)
-    keys_ordered = sort(collect(keys(parameter_targets)))
-    values = [parameter_targets[k].v0 for k in keys_ordered]
-    
-    return values
-end
 
 
 function get_tV(x)
@@ -67,10 +60,9 @@ function getExpData(rate="all", flow="discharge")
     data = matread(fn)
     dlroutput = data["dlroutput"]  # Dict with 1×4 matrices for each variable
 
-    @show keys(dlroutput)  # Show available keys in the data
-    @show size(dlroutput["current"][1])  # Show size of the time matrix
-    
-    # Get number of experiments (4 in this case)
+    @show keys(dlroutput) 
+    @show size(dlroutput["current"][1])  
+    # Get number of experiments 
     num_experiments = size(dlroutput["time"], 2)
     
     # Process each experiment
@@ -79,10 +71,10 @@ function getExpData(rate="all", flow="discharge")
     for k in 1:num_experiments
         # Extract data for this experiment (column k from each matrix)
         time_h = dlroutput["time"][k]
-        time_s = time_h * 3600  # hours → seconds
+        time_s = time_h * 3600  
         
         current =dlroutput["current"][k]
-        current_segment =  Float64.(current[3:end-1])  # Skip first/last points
+        current_segment =  Float64.(current[3:end-1])  
 
         # Create experiment dictionary
         dlrdata[k] = Dict{String,Any}(
@@ -111,23 +103,23 @@ function getExpData(rate="all", flow="discharge")
     end
 end
 
-# Efficient trapezoidal integration
+
 function trapz(x, y)
     sum((x[i+1] - x[i]) * (y[i] + y[i+1]) / 2 for i in 1:length(x)-1)
 end
 
-# Project directory function 
+
 function getProjectDir()
     return dirname(@__DIR__)  
 end
 
-#Testing the getExpData function
+
 exp_data = getExpData("all", "discharge")
 println("Number of entries: ", length(exp_data))
 @show exp_data[1]["rawRate"] 
 @show exp_data[2]["rawRate"]
 @show exp_data[3]["rawRate"]
-@show exp_data[4]["rawRate"] # Show first entry for verification
+@show exp_data[4]["rawRate"]
 
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 
@@ -293,7 +285,7 @@ function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrat
 
     sim = deepcopy(vc2.sim)
     x0, x_setup = BattMo.vectorize_cell_parameters_for_calibration(vc2, sim)
-    # Set up the objective function
+    
     objective = BattMo.setup_calibration_objective(vc2)
 
     adj_cache = Dict()

@@ -57,7 +57,7 @@ function solve_equilibrium!(vc::VoltageCalibration;
     pkeys = collect(keys(pt))
     print("Calibrating parameters: $(pkeys)... ")
     if length(pkeys) != 4
-        throw(ArgumentError("Expected 4 parameters (θpe100, mpe, θne100, mne), got $(length(pkeys))"))
+        throw(ArgumentError("Expected 4 parameters got $(length(pkeys))"))
     end
 
     output = get_simulation_input(vc.sim)

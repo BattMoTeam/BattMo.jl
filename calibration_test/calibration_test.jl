@@ -4,6 +4,7 @@ using CSV
 using DataFrames
 using GLMakie
 using Optimisers
+using Distributions
 include("equilibrium_calibration.jl")
 include("function_parameters_MJ1.jl")
 
@@ -128,7 +129,7 @@ function runMJ1()
     println("successfully loaded cell parameters and cycling protocol")
     cycling_protocol = load_cycling_protocol(; from_file_path = joinpath(@__DIR__,"custom_discharge2.json"))
 
-    #simulation_settings = load_simulation_settings(; from_file_path = joinpath(@__DIR__,"model2.json"))
+    #simulation_settings = load_simulation_settings(; from_file_path = joinpath(@__DIR__,"simple.json"))
     #simulation_settings = load_simulation_settings(; from_default_set = "P4D_pouch")
     simulation_settings = load_simulation_settings(; from_default_set = "P2D") # Ensure the model framework is set to P4D Pouch
     
@@ -167,6 +168,7 @@ function equilibriumCalibration(sim)
     
 
     @info typeof(vc.parameter_targets)
+    @info keys(vc.parameter_targets)
 
     x = solve_equilibrium!(vc; I=I)
 
@@ -251,36 +253,60 @@ function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrat
 
     free_calibration_parameter!(vc2,
         ["NegativeElectrode","ActiveMaterial", "VolumetricSurfaceArea"];
-        lower_bound = 1e3, upper_bound = 1e6)
+        lower_bound = 1e3, upper_bound = 1e6, prior_mean = 1e4, prior_std = 10)
     free_calibration_parameter!(vc2,
         ["PositiveElectrode","ActiveMaterial", "VolumetricSurfaceArea"];
-        lower_bound = 1e3, upper_bound = 1e6)
+        lower_bound = 1e3, upper_bound = 1e6, prior_mean = 1e4, prior_std = 10)
 
 
     free_calibration_parameter!(vc2,
         ["Separator", "BruggemanCoefficient"];
-        lower_bound = 1e-3, upper_bound = 1e2)
+        lower_bound = 1e-3, upper_bound = 1e2, prior_mean = 1, prior_std = 10)
    
 
     free_calibration_parameter!(vc2,
         ["NegativeElectrode","ElectrodeCoating", "BruggemanCoefficient"];
-        lower_bound = 1e-3, upper_bound = 1e2)
+        lower_bound = 1e-3, upper_bound = 1e2, prior_mean = 1, prior_std = 10)
     free_calibration_parameter!(vc2,
         ["PositiveElectrode","ElectrodeCoating", "BruggemanCoefficient"];
-        lower_bound = 1e-3, upper_bound = 1e2)
+        lower_bound = 1e-3, upper_bound = 1e2, prior_mean = 1, prior_std = 10)
     
     free_calibration_parameter!(vc2,
         ["NegativeElectrode","ActiveMaterial", "DiffusionCoefficient"];
-        lower_bound = 1e-16, upper_bound = 1e-10)
+        lower_bound = 1e-16, upper_bound = 1e-10,prior_mean = 1e-13, prior_std = 10)
     free_calibration_parameter!(vc2,
         ["PositiveElectrode","ActiveMaterial", "DiffusionCoefficient"];
-        lower_bound = 1e-16, upper_bound = 1e-10)
+        lower_bound = 1e-16, upper_bound = 1e-10, prior_mean =1e-13, prior_std = 10)
     print_calibration_overview(vc2)
 
-    cell_parameters_calibrated2, = solve(vc2;scaling = scaling);
+    cell_parameters_calibrated2, history = solve(vc2;scaling = scaling,with_priors = true);
+
+    """
+    results = BattMo.solve_random_init(vc2;n_samples = 50, scaling = scaling)
+
+    #Boxplots of the results
+    for i in 1:length(results)
+        result = results[i]
+        fig = Figure(size = (800, 500))
+        ax = Axis(fig[1, 1],
+            ylabel = "Value",
+            xlabel = "Parameter",
+            title = "Calibration results "
+        )
+        boxplot!(ax, result[1], color = :blue, label = "Samples")
+        axislegend(ax, position = :rb)
+        display(fig)
+
+        # Save figure as PNG
+        save_path = joinpath(@__DIR__, "calibration_random_init.png")
+        save(save_path, fig)
+        println("Saved plot")
+    end
+    """
+
     print_calibration_overview(vc2)
 
-    return cell_parameters_calibrated2
+    return cell_parameters_calibrated2,history #,results
 end
 
 
@@ -290,7 +316,7 @@ sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_sett
 
 cell_parameters_calibrated, V_eq, t_eq = equilibriumCalibration(sim)
 
-cell_parameters_calibrated2 = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings; scaling = :log)
+cell_parameters_calibrated2,history  = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings; scaling = :log)
 #cell_parameters_calibrated2 = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings)
 
 println("Calibration done:")
