@@ -2,14 +2,23 @@ using CSV, DataFrames, Jutul
 
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 exdata = joinpath(battmo_base, "examples", "example_data")
-data_pe_ocp = CSV.read(joinpath(exdata, "Chayambuka_pe_ocp.csv"), DataFrame)
-data_ne_ocp = CSV.read(joinpath(exdata, "Chayambuka_ne_ocp.csv"), DataFrame)
+data_pe_ocp = CSV.read(joinpath("src/input/defaults/cell_parameters/sodium_ion/data", "U_p.csv"), DataFrame)
+
+# data_pe_ocp = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/U_p.csv"), DataFrame)
+data_ne_ocp = CSV.read(joinpath(exdata, "Chayambuka_ne_ocv_2.csv"), DataFrame)
+# data_ne_ocp = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/U_n.csv"), DataFrame)
 data_pe_D = CSV.read(joinpath(exdata, "Chayambuka_pe_D.csv"), DataFrame)
+# data_pe_D = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/D_p.csv"), DataFrame)
 data_ne_D = CSV.read(joinpath(exdata, "Chayambuka_ne_D.csv"), DataFrame)
+# data_ne_D = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/D_n.csv"), DataFrame)
 data_pe_k = CSV.read(joinpath(exdata, "Chayambuka_pe_k.csv"), DataFrame)
+# data_pe_k = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/k_p.csv"), DataFrame)
 data_ne_k = CSV.read(joinpath(exdata, "Chayambuka_ne_k.csv"), DataFrame)
+# data_ne_k = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/k_n.csv"), DataFrame)
 data_elyte_cond = CSV.read(joinpath(exdata, "Chayambuka_elyte_conductivity.csv"), DataFrame)
+# data_elyte_cond = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/sigma_e.csv"), DataFrame)
 data_elyte_diff = CSV.read(joinpath(exdata, "Chayambuka_elyte_D.csv"), DataFrame)
+# data_elyte_diff = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/D_e.csv"), DataFrame)
 
 pe_ocp = data_pe_ocp[:, 2]
 pe_transfered_charge = data_pe_ocp[:, 1] # mAh/g
@@ -57,15 +66,15 @@ function calc_ne_ocp(c, T, refT, cmax)
 	return ocp(c / cmax)
 end
 
-@eval Main ne_ocp = $ne_ocp
+@eval Main calc_ne_ocp = $calc_ne_ocp
 
 function calc_pe_ocp(c, T, refT, cmax)
 
-	ocp = get_1d_interpolator(x_pe, pe_ocp)
+	ocp = get_1d_interpolator(pe_transfered_charge, pe_ocp)
 	return ocp(c / cmax)
 end
 
-@eval Main pe_ocp = $pe_ocp
+@eval Main calc_pe_ocp = $calc_pe_ocp
 
 function calc_elyte_cond(c, T)
 

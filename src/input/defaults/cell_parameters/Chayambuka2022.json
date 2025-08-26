@@ -3,8 +3,7 @@
         "Title": "Chayambuka2022",
         "Source": [
             "https://doi.org/10.1016/j.electacta.2021.139726",
-            "https://doi.org/10.1016/j.electacta.2021.139764",
-            "https://doi.org/10.1016/j.electacta.2024.145573"
+            "https://doi.org/10.1016/j.electacta.2021.139764"
         ],
         "Description": "Parameter set for a Sodium ion cell.",
         "Models": {
@@ -16,9 +15,6 @@
     "Cell": {
         "Name": "",
         "Case": "Pouch",
-        "Height": 0.065,
-        "OuterRadius": 0.021,
-        "InnerRadius": 2e-3,
         "ElectrodeGeometricSurfaceArea": 2.54e-4,
         "NominalVoltage": 3.71,
         "NominalCapacity": 0.0025

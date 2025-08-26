@@ -3,7 +3,7 @@
 using BattMo, Jutul
 using CSV
 using DataFrames
-using GLMakie
+using GLMakie, StatsBase, Loess
 
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_functions.jl"))
@@ -11,9 +11,54 @@ include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_fun
 ######### Load Experimental Data #########
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 exdata = joinpath(battmo_base, "examples", "example_data")
-df_01 = CSV.read(joinpath(exdata, "Chayambuka_voltage_0_1_crate.csv"), DataFrame)
-df_06 = CSV.read(joinpath(exdata, "Chayambuka_voltage_0_6_crate.csv"), DataFrame)
-df_14 = CSV.read(joinpath(exdata, "Chayambuka_voltage_1_4_crate.csv"), DataFrame)
+# --- Load Data ---
+df_01 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_1C.csv"), DataFrame)
+df_06 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_05C.csv"), DataFrame)
+df_14 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_2C.csv"), DataFrame)
+
+
+# --- Smoothing functions ---
+function moving_average(data::AbstractVector, window::Int = 5)
+	[mean(data[max(1, i - window + 1):i]) for i in 1:length(data)]
+end
+
+function loess_smooth(x, y; span = 0.3)
+	model = loess(x, y; span = span)
+	Loess.predict(model, x)
+end
+
+function sort_df_by_x(df)
+	sort(df, by = r -> r[1])  # sort by first column
+end
+
+function smooth_df(df; window = 5, span = 0.3)
+	df = sort_df_by_x(df)
+	x, y = df[:, 1], df[:, 2]
+	df[:, :smooth_ma] = moving_average(y, window)      # <- use df[:, :symbol]
+	df[:, :smooth_loess] = loess_smooth(x, y; span = span)
+	return df
+end
+
+# df_01 = smooth_df(df_01)
+# df_06 = smooth_df(df_06)
+# df_14 = smooth_df(df_14)
+
+# --- Plotting ---
+# function plot_smoothed(df, title_str)
+# 	fig = Figure(resolution = (800, 500))
+# 	ax = Axis(fig[1, 1], title = title_str, xlabel = "X", ylabel = "Y")
+
+# 	lines!(ax, df[:, 1], df[:, 2], color = :gray, label = "Raw")
+# 	lines!(ax, df[:, 1], df[:, :smooth_ma], color = :blue, label = "Moving Avg")
+# 	lines!(ax, df[:, 1], df[:, :smooth_loess], color = :red, label = "LOESS")
+
+# 	axislegend(ax, position = :rb)
+# 	fig
+# end
+
+# display(plot_smoothed(df_01, "Chayambuka V 01C"))
+# display(plot_smoothed(df_06, "Chayambuka V 06C"))
+# display(plot_smoothed(df_14, "Chayambuka V 14C"))
 
 ######### Load Initial Simulation Data #########
 
@@ -123,6 +168,7 @@ lines!(ax, t_exp_01, V_exp_01, label = "Experimental data")
 lines!(ax, t_opt, V_opt, label = "BattMo calibrated", linestyle = :dash)
 axislegend(position = :lb)
 fig
+
 # ## Set up the second calibration
 # The second calibration is performed against the 2.0C discharge curve. In the
 # same manner as for the first discharge curve, we set up a set of parameters to
