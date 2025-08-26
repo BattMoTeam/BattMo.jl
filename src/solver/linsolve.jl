@@ -207,25 +207,25 @@ function apply_local_cphi_preconditioner!(x, prec, r, S, arg...)
 end
 
 
-function setup_subset_residual_map(multimodel::MultiModel, storage, model_labels, variable_label)
+function setup_subset_residual_map(multi_model::MultiModel, storage, model_labels, variable_label)
 	M = []
 	offsets = get_submodel_offsets(storage)
 	m_ix = 1
-	for (model_key, multimodel) in pairs(multimodel.models)
-		@assert !is_cell_major(matrix_layout(multimodel.context)) "Only supported for equation major"
+	for (model_key, model) in pairs(multi_model.models)
+		@assert !is_cell_major(matrix_layout(model.context)) "Only supported for equation major"
 		if isnothing(model_labels) || model_key in model_labels
 			offset = offsets[m_ix]
-			nc = number_of_cells(multimodel.domain)
-			for (plabel, pvar) in multimodel.primary_variables
+			nc = number_of_cells(model.domain)
+			for (plabel, pvar) in model.primary_variables
 				if plabel == variable_label
 					@assert associated_entity(pvar) == Cells()
-					dof_per_e = degrees_of_freedom_per_entity(multimodel, pvar)
+					dof_per_e = degrees_of_freedom_per_entity(model, pvar)
 					#@assert dof_per_e == 1 "Found $dof_per_e dof per entity, expected 1?"
 					ndof = nc * dof_per_e
 					push!(M, (offset+1):(offset+ndof))
 					break
 				else
-					offset += number_of_degrees_of_freedom(multimodel, pvar)
+					offset += number_of_degrees_of_freedom(model, pvar)
 				end
 			end
 		end
@@ -234,25 +234,25 @@ function setup_subset_residual_map(multimodel::MultiModel, storage, model_labels
 	return vcat(M...)
 end
 
-function setup_subset_equation_map(multimodel::MultiModel, storage, model_labels, equation_label)
+function setup_subset_equation_map(multi_model::MultiModel, storage, model_labels, equation_label)
 	M = []
 	offsets = get_submodel_offsets(storage)
 	m_ix = 1
-	for (model_key, multimodel) in pairs(multimodel.models)
-		@assert !is_cell_major(matrix_layout(multimodel.context)) "Only supported for equation major"
+	for (model_key, model) in pairs(multi_model.models)
+		@assert !is_cell_major(matrix_layout(model.context)) "Only supported for equation major"
 		if isnothing(model_labels) || model_key in model_labels
 			offset = offsets[m_ix]
-			nc = number_of_cells(multimodel.domain)
-			for (eqlabel, pvar) in multimodel.equations
+			nc = number_of_cells(model.domain)
+			for (eqlabel, pvar) in model.equations
 				if eqlabel == equation_label
 					@assert associated_entity(pvar) == Cells()
-					eq_per_e = number_of_equations_per_entity(multimodel, pvar)
+					eq_per_e = number_of_equations_per_entity(model, pvar)
 					#@assert eq_per_e == 1 "Found $eq_per_e eq for each entity, expected 1?"
 					neq = nc * eq_per_e
 					push!(M, (offset+1):(offset+neq))
 					break
 				else
-					offset += nc * number_of_equations_per_entity(multimodel, pvar)
+					offset += nc * number_of_equations_per_entity(model, pvar)
 				end
 			end
 		end
@@ -333,7 +333,7 @@ function battery_linsolve(inputparams)
 
 	else
 
-		error("Wrong input for preconditioner")
+		error("Wrong method $method for preconditioner")
 		return nothing
 	end
 

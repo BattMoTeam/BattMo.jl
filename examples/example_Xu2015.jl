@@ -1,15 +1,14 @@
-
 using BattMo, GLMakie
-
 using CSV
 using DataFrames
 using Printf
 
 
 # Read Experimental voltage curves
-df_05 = CSV.read("./examples/example_data/Xu_2015_voltageCurve_05C.csv", DataFrame)
-df_1 = CSV.read("./examples/example_data/Xu_2015_voltageCurve_1C.csv", DataFrame)
-df_2 = CSV.read("./examples/example_data/Xu_2015_voltageCurve_2C.csv", DataFrame)
+data_path = string(dirname(pathof(BattMo)),  "/../examples/example_data/")
+df_05 = CSV.read(string(data_path, "Xu_2015_voltageCurve_05C.csv"), DataFrame)
+df_1 = CSV.read(string(data_path, "Xu_2015_voltageCurve_1C.csv"), DataFrame)
+df_2 = CSV.read(string(data_path, "Xu_2015_voltageCurve_2C.csv"), DataFrame)
 
 dfs = [df_05, df_1, df_2]
 
@@ -28,7 +27,6 @@ for CRate in CRates
 	output = solve(sim)
 	push!(outputs, (CRate = CRate, output = output))
 end
-
 
 fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
