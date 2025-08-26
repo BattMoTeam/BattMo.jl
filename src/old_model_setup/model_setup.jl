@@ -987,7 +987,7 @@ end
 # Setup grids and coupling for the given geometrical parameters #
 #################################################################
 
-function setup_grids_and_couplings(inputparams::InputParams)
+function setup_grids_and_couplings(inputparams::InputParamsOld)
 
 
 	case_type = inputparams["Geometry"]["case"]
