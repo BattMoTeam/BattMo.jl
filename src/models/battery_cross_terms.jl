@@ -177,7 +177,7 @@ function Jutul.update_cross_term_in_entity!(out,
 	T        = state_s.Temperature[ind_s]
 
 	c_av = mean(c_a)
-	c_av_e = mean(state_t.C)
+	c_av_e = mean(state_t.Concentration)
 
 	# overpotential
 	eta = phi_a - phi_e - ocp
@@ -243,7 +243,7 @@ function Jutul.update_cross_term_in_entity!(out,
 	T = state_t.Temperature[ind_t]
 
 	c_av = mean(c_a)
-	c_av_e = mean(state_s.C)
+	c_av_e = mean(state_s.Concentration)
 
 	# overpotential
 	eta = phi_a - phi_e - ocp

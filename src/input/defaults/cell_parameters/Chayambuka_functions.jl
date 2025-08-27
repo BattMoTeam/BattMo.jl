@@ -2,23 +2,17 @@ using CSV, DataFrames, Jutul
 
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 exdata = joinpath(battmo_base, "examples", "example_data")
-data_pe_ocp = CSV.read(joinpath("src/input/defaults/cell_parameters/sodium_ion/data", "U_p.csv"), DataFrame)
+defaultdata = joinpath(battmo_base, "src", "input", "defaults", "cell_parameters", "data", "sodium_ion")
 
-# data_pe_ocp = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/U_p.csv"), DataFrame)
+data_pe_ocp = CSV.read(joinpath(exdata, "Chayambuka_pe_ocv_2.csv"), DataFrame)
 data_ne_ocp = CSV.read(joinpath(exdata, "Chayambuka_ne_ocv_2.csv"), DataFrame)
-# data_ne_ocp = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/U_n.csv"), DataFrame)
-data_pe_D = CSV.read(joinpath(exdata, "Chayambuka_pe_D.csv"), DataFrame)
-# data_pe_D = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/D_p.csv"), DataFrame)
-data_ne_D = CSV.read(joinpath(exdata, "Chayambuka_ne_D.csv"), DataFrame)
-# data_ne_D = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/D_n.csv"), DataFrame)
-data_pe_k = CSV.read(joinpath(exdata, "Chayambuka_pe_k.csv"), DataFrame)
-# data_pe_k = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/k_p.csv"), DataFrame)
-data_ne_k = CSV.read(joinpath(exdata, "Chayambuka_ne_k.csv"), DataFrame)
-# data_ne_k = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/k_n.csv"), DataFrame)
-data_elyte_cond = CSV.read(joinpath(exdata, "Chayambuka_elyte_conductivity.csv"), DataFrame)
-# data_elyte_cond = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/sigma_e.csv"), DataFrame)
-data_elyte_diff = CSV.read(joinpath(exdata, "Chayambuka_elyte_D.csv"), DataFrame)
-# data_elyte_diff = CSV.read(joinpath(battmo_base, "src/input/defaults/cell_parameters/sodium_ion/data/D_e.csv"), DataFrame)
+data_pe_D = CSV.read(joinpath(defaultdata, "Chayambuka_pe_D.csv"), DataFrame)
+data_ne_D = CSV.read(joinpath(defaultdata, "Chayambuka_ne_D.csv"), DataFrame)
+data_pe_k = CSV.read(joinpath(defaultdata, "Chayambuka_pe_k.csv"), DataFrame)
+data_ne_k = CSV.read(joinpath(defaultdata, "Chayambuka_ne_k.csv"), DataFrame)
+data_elyte_cond = CSV.read(joinpath(defaultdata, "Chayambuka_elyte_conductivity.csv"), DataFrame)
+
+data_elyte_diff = CSV.read(joinpath(defaultdata, "Chayambuka_elyte_D.csv"), DataFrame)
 
 pe_ocp = data_pe_ocp[:, 2]
 pe_transfered_charge = data_pe_ocp[:, 1] # mAh/g

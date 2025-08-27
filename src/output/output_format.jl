@@ -300,8 +300,8 @@ function extract_spatial_data(states::Vector)
 		:PeAmConcentration        => [:PeAm, :ParticleConcentration],
 		:NeAmDiffusionCoefficient => [:NeAm, :DiffusionCoefficient],
 		:PeAmDiffusionCoefficient => [:PeAm, :DiffusionCoefficient],
-		:NeAmReactionRateConst    => [:NeAm, :ReactionRateConst],
-		:PeAmReactionRateConst    => [:PeAm, :ReactionRateConst],
+		:NeAmReactionRateConst    => [:NeAm, :ReactionRateConstant],
+		:PeAmReactionRateConst    => [:PeAm, :ReactionRateConstant],
 		:ElectrolyteConcentration => [:Elyte, :Concentration],
 		:NeAmPotential            => [:NeAm, :Voltage],
 		:ElectrolytePotential     => [:Elyte, :Voltage],
@@ -362,7 +362,7 @@ end
 
 
 
-function get_x_coords(model::MultiModel{:LithiumIonBattery})
+function get_x_coords(model::MultiModel{:IntercalationBattery})
 
 	pp = physical_representation(model.models[:Elyte].data_domain)
 	primitives = Jutul.plot_primitives(pp, :meshscatter)

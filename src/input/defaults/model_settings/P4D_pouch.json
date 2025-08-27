@@ -6,6 +6,5 @@
     "ModelFramework": "P4D Pouch",
     "TransportInSolid": "FullDiffusion",
     "CurrentCollectors": "Generic",
-    "ReactionRateConstant": "TemperatureDependent",
     "RampUp": "Sinusoidal"
 }

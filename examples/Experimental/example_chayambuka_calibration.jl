@@ -5,17 +5,16 @@ using CSV
 using DataFrames
 using GLMakie, StatsBase, Loess
 
+
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_functions.jl"))
 
 ######### Load Experimental Data #########
-battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
-exdata = joinpath(battmo_base, "examples", "example_data")
-# --- Load Data ---
-df_01 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_1C.csv"), DataFrame)
-df_06 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_05C.csv"), DataFrame)
-df_14 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_2C.csv"), DataFrame)
 
+exdata = joinpath(battmo_base, "examples", "example_data")
+df_01 = CSV.read(joinpath(exdata, "Chayambuka_V_01C.csv"), DataFrame)
+df_06 = CSV.read(joinpath(exdata, "Chayambuka_V_06C.csv"), DataFrame)
+df_14 = CSV.read(joinpath(exdata, "Chayambuka_V_14C.csv"), DataFrame)
 
 # --- Smoothing functions ---
 function moving_average(data::AbstractVector, window::Int = 5)
@@ -39,48 +38,17 @@ function smooth_df(df; window = 5, span = 0.3)
 	return df
 end
 
-# df_01 = smooth_df(df_01)
-# df_06 = smooth_df(df_06)
-# df_14 = smooth_df(df_14)
+df_01 = smooth_df(df_01)
+df_06 = smooth_df(df_06)
+df_14 = smooth_df(df_14)
 
-# --- Plotting ---
-# function plot_smoothed(df, title_str)
-# 	fig = Figure(resolution = (800, 500))
-# 	ax = Axis(fig[1, 1], title = title_str, xlabel = "X", ylabel = "Y")
 
-# 	lines!(ax, df[:, 1], df[:, 2], color = :gray, label = "Raw")
-# 	lines!(ax, df[:, 1], df[:, :smooth_ma], color = :blue, label = "Moving Avg")
-# 	lines!(ax, df[:, 1], df[:, :smooth_loess], color = :red, label = "LOESS")
-
-# 	axislegend(ax, position = :rb)
-# 	fig
-# end
-
-# display(plot_smoothed(df_01, "Chayambuka V 01C"))
-# display(plot_smoothed(df_06, "Chayambuka V 06C"))
-# display(plot_smoothed(df_14, "Chayambuka V 14C"))
-
-######### Load Initial Simulation Data #########
+######### Load Simulation Data #########
 
 cell_parameters = load_cell_parameters(; from_default_set = "Chayambuka2022")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 model_settings = load_model_settings(; from_default_set = "P2D")
 simulation_settings = load_simulation_settings(; from_default_set = "P2D")
-
-######### Format experimental data ##########
-A = cell_parameters["Cell"]["ElectrodeGeometricSurfaceArea"]
-
-t_exp_01 = (df_01[:, 1] .- minimum(df_01[:, 1])) .* 3600 ./ 1000 ./ A
-V_exp_01 = df_01[:, 2]
-
-t_exp_06 = (df_06[:, 1] .- minimum(df_06[:, 1])) .* 3600 ./ 1000 ./ A ./ 5
-V_exp_06 = df_06[:, 2]
-
-t_exp_14 = (df_14[:, 1] .- minimum(df_14[:, 1])) .* 3600 ./ 1000 ./ A ./ 12
-V_exp_14 = df_14[:, 2]
-
-######### Alter model settings #########
-model_settings["ReactionRateConstant"] = "UserDefined"
 
 ######### Alter simulation settings #########
 simulation_settings["GridResolution"]["NegativeElectrodeCoating"] = 8
@@ -89,28 +57,68 @@ simulation_settings["GridResolution"]["NegativeElectrodeActiveMaterial"] = 50
 simulation_settings["GridResolution"]["PositiveElectrodeActiveMaterial"] = 50
 simulation_settings["GridResolution"]["Separator"] = 5
 
-simulation_settings["TimeStepDuration"] = 200
+simulation_settings["TimeStepDuration"] = 300
 
 ######### Alter cycling protocol #########
+cycling_protocol["InitialStateOfCharge"] = 0.99
+cycling_protocol["DRate"] = 0.1
+cycling_protocol["CRate"] = 1.4
 cycling_protocol["LowerVoltageLimit"] = 2.0
 cycling_protocol["UpperVoltageLimit"] = 4.2
 
+######### Alter cell parameters #########
+# cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = Dict(
+# 	"FunctionName" => "calc_ne_k",
+# )
+# cell_parameters["NegativeElectrode"]["ActiveMaterial"]["DiffusionCoefficient"] = Dict(
+# 	"FunctionName" => "calc_ne_D",
+# )
+# cell_parameters["PositiveElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = Dict(
+# 	"FunctionName" => "calc_pe_k",
+# )
+# cell_parameters["PositiveElectrode"]["ActiveMaterial"]["DiffusionCoefficient"] = Dict(
+# 	"FunctionName" => "calc_pe_D",
+# )
 
-######### Run initial simulation #########
-model = LithiumIonBattery(; model_settings)
+# cell_parameters["PositiveElectrode"]["ActiveMaterial"]["OpenCircuitPotential"] = Dict(
+# 	"FunctionName" => "calc_pe_ocp",
+# )
 
-cycling_protocol["DRate"] = 0.1
-sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
-output0 = solve(sim)
 
-######### Plot initial results #########
-t0 = get_output_time_series(output0)[:Time]
-V0 = get_output_time_series(output0)[:Voltage]
+######### Format experimental data ##########
+A = cell_parameters["Cell"]["ElectrodeGeometricSurfaceArea"]
+cap_exp_01 = df_01[:, 1]
+t_exp_01 = (df_01[:, 1] .- minimum(df_01[:, 1])) .* 3600 ./ 1000 ./ A
+V_exp_01 = df_01[:, 2]
+
+cap_exp_06 = df_06[:, 1]
+t_exp_06 = (df_06[:, 1] .- minimum(df_06[:, 1])) .* 3600 ./ 1000 ./ A ./ 5
+V_exp_06 = df_06[:, 2]
+
+
+cap_exp_14 = df_14[:, 1]
+t_exp_14 = (df_14[:, 1] .- minimum(df_14[:, 1])) .* 3600 ./ 1000 ./ A ./ 12
+V_exp_14 = df_14[:, 2]
+
+
+######### Run simulation ##########
+model = SodiumIonBattery(; model_settings);
+
+sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
+output = solve(sim; info_level = 0);
+
+
+######### Plot results ##########
+
+t0 = get_output_time_series(output)[:Time]
+V0 = get_output_time_series(output)[:Voltage]
+metrics = get_output_metrics(output)
+
 
 fig = Figure()
-ax = Axis(fig[1, 1], title = "CRate = 0.1", xlabel = "Time / s", ylabel = "Voltage / V")
-lines!(ax, t0, V0, label = "Base case")
-lines!(ax, t_exp_01, V_exp_01, label = "Experimental data")
+ax = Axis(fig[1, 1], title = "Voltage", xlabel = "Capacity / mAh", ylabel = "Voltage / V")
+lines!(ax, metrics[:Capacity] .* 1000, V0, label = "Simulation data")
+lines!(ax, cap_exp_01, V_exp_01, label = "Experimental data")
 axislegend(position = :lb)
 fig
 

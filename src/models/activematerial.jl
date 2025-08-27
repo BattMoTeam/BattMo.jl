@@ -248,7 +248,7 @@ function Jutul.select_minimum_output_variables!(out,
 	push!(out, :Charge)
 	push!(out, :OpenCircuitPotential)
 	push!(out, :Temperature)
-	push!(out, :ReactionRateConst)
+	push!(out, :ReactionRateConstant)
 	push!(out, :DiffusionCoefficient)
 
 end
@@ -302,7 +302,7 @@ end
 	function update_diffusion_coefficient!(DiffusionCoefficient,
 		tv::DiffusionCoefficient,
 		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
-		Cs,
+		SurfaceConcentration,
 		ix,
 	) where {label, D, T, Di}
 
@@ -321,17 +321,17 @@ end
 
 			if Jutul.haskey(model.system.params, :diff_funcexp)
 
-				@inbounds DiffusionCoefficient[cell] = diff_func(Cs[cell], refT, refT, cmax)
+				@inbounds DiffusionCoefficient[cell] = diff_func(SurfaceConcentration[cell], refT, refT, cmax)
 
 			elseif Jutul.haskey(model.system.params, :diff_funcdata)
 
-				@inbounds DiffusionCoefficient[cell] = diff_func(Cs[cell] / cmax)
+				@inbounds DiffusionCoefficient[cell] = diff_func(SurfaceConcentration[cell] / cmax)
 
 			elseif Jutul.haskey(model.system.params, :diff_funcconstant)
 				@inbounds DiffusionCoefficient[cell] = diff_func
 			else
 
-				@inbounds DiffusionCoefficient[cell] = diff_func(Cs[cell], refT, refT, cmax)
+				@inbounds DiffusionCoefficient[cell] = diff_func(SurfaceConcentration[cell], refT, refT, cmax)
 
 			end
 		end

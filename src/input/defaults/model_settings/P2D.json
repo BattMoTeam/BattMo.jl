@@ -5,6 +5,5 @@
     },
     "ModelFramework": "P2D",
     "TransportInSolid": "FullDiffusion",
-    "ReactionRateConstant": "TemperatureDependent",
     "RampUp": "Sinusoidal"
 }

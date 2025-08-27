@@ -342,17 +342,16 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 	sep_required = schema["properties"]["Separator"]["required"]
 	elyte_required = schema["properties"]["Electrolyte"]["required"]
 
-	model_settings_dict = model_settings.all
 
-	if model_settings_dict["ReactionRateConstant"] == "TemperatureDependent"
+	if haskey(model_settings, "ReactionRateConstant") && model_settings["ReactionRateConstant"] == "TemperatureDependent"
 		push!(ne_am_required, "ActivationEnergyOfReaction")
 		push!(pe_am_required, "ActivationEnergyOfReaction")
 	end
 
-	if model_settings_dict["ModelFramework"] == "P2D"
+	if model_settings["ModelFramework"] == "P2D"
 		push!(cell_required, "ElectrodeGeometricSurfaceArea")
 
-	elseif model_settings_dict["ModelFramework"] == "P4D Pouch"
+	elseif model_settings["ModelFramework"] == "P4D Pouch"
 
 		push!(schema["allOf"], Dict(
 			"properties" => Dict(
@@ -378,7 +377,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 			push!(pe_cc_required, "TabLength")
 		end
 
-	elseif model_settings_dict["ModelFramework"] == "P4D Cylindrical"
+	elseif model_settings["ModelFramework"] == "P4D Cylindrical"
 
 		push!(schema["allOf"], Dict(
 			"properties" => Dict(
@@ -407,7 +406,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 	end
 
-	if haskey(model_settings_dict, "SEIModel") && model_settings_dict["SEIModel"] == "Bolay"
+	if haskey(model_settings, "SEIModel") && model_settings["SEIModel"] == "Bolay"
 		push!(ne_required, "Interphase")
 	end
 
@@ -612,7 +611,7 @@ function get_schema_model_settings()
 			"ReactionRateConstant" => create_property(parameter_meta, "ReactionRateConstant"),
 		),
 		"required" => [
-			"ModelFramework", "TransportInSolid", "ReactionRateConstant",
+			"ModelFramework", "TransportInSolid",
 		],
 		"allOf" => [
 			# 🚫 Disallow CurrentCollectors if ModelFramework is "1D"
