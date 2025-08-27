@@ -188,7 +188,7 @@ function setup_function_from_function_name(function_name::String; file_path::Uni
 			error("Function '$function_name' not found and file '$file_path' does not exist.")
 		end
 	else
-		error("Function is not found within BattMo and no path file is provided.")
+		error("Function $function_name is not found within BattMo and no path file is provided.")
 	end
 end
 

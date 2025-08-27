@@ -165,7 +165,7 @@ function CyclingCVPolicy(lowerCutoffVoltage,
 	elseif initialControl == "discharging"
 		initialControl = discharging
 	else
-		error("initialControl not recognized")
+		error("InitialControl $initialControl not recognized")
 	end
 
 	tolerances = (cc_discharge1 = 1e-4,
@@ -456,7 +456,7 @@ function getInitCurrent(policy::CCPolicy)
 		elseif policy.initialControl == "discharging"
 			val = policy.ImaxDischarge
 		else
-			error("initial control not recognized")
+			error("Initial control $(policy.initialControl) not recognized")
 		end
 	end
 
@@ -490,7 +490,7 @@ function getInitCurrent(policy::CyclingCVPolicy)
 		elseif policy.initialControl == discharging
 			val = policy.ImaxDischarge
 		else
-			error("initial control not recognized")
+			error("Initial control $(policy.initialControl) not recognized")
 		end
 	end
 	return val
@@ -522,7 +522,7 @@ function setup_initial_control_policy!(policy::CCPolicy, input, parameters)
 		Imax = only(parameters[:Control][:ImaxDischarge])
 
 	else
-		error("Initial control is not recognized")
+		error("Initial control $(policy.initialControl) is not recognized")
 	end
 
 	if policy.use_ramp_up
@@ -579,7 +579,7 @@ function setup_initial_control_policy!(policy::CyclingCVPolicy, input, parameter
 		Imax = only(parameters[:Control][:ImaxDischarge])
 
 	else
-		error("Initial control is not recognized")
+		error("Initial control $(policy.initialControl) is not recognized")
 	end
 
 	if policy.use_ramp_up
@@ -697,7 +697,7 @@ function setupRegionSwitchFlags(policy::Union{CyclingCVPolicy, CCPolicy}, state,
 
 	else
 
-		error("control type not recognized")
+		error("Control type $ctrlType not recognized")
 
 	end
 
@@ -728,7 +728,7 @@ function check_constraints(model, storage)
 			nextCtrlType = "discharging"
 		end
 	else
-		error("Policy not recognized")
+		error("Policy $(typeof(policy)) not recognized")
 	end
 
 	arefulfilled = true
@@ -915,7 +915,7 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
 
 		else
 
-			error("control type not recognized")
+			error("Control type $currentCtrlType not recognized")
 
 		end
 
@@ -991,7 +991,7 @@ function update_control_type_in_controller!(state, state0, policy::CCPolicy, dt)
 
 			else
 
-				error("control type not recognized")
+				error("Control type $currentCtrlType not recognized")
 
 			end
 
@@ -1305,7 +1305,7 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 
 	else
 
-		error("policy not recognized")
+		error("Policy $(typeof(policy)) not recognized")
 
 	end
 
@@ -1389,7 +1389,7 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 			state[:Controller].ctrlType = cc_charge1
 
 		else
-			error("initialControl not recognized")
+			error("Initial control $(typeof(policy.initialControl)) not recognized")
 		end
 
 		update_values_in_controller!(state, policy)
@@ -1422,7 +1422,7 @@ function getNextCtrlTypeCCCV(ctrlType::OperationalMode)
 
 	else
 
-		error("ctrlType not recognized.")
+		error("ctrlType $ctrlType not recognized.")
 
 	end
 

@@ -477,7 +477,7 @@ function setup_submodels(inputparams::MatlabInputParamsOld;
 
 	else
 
-		error("controlPolicy not recognized.")
+		error("controlPolicy $controlPolicy not recognized.")
 
 	end
 

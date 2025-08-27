@@ -926,7 +926,7 @@ function setup_submodels(inputparams::InputParamsOld;
 
 	else
 
-		error("controlPolicy not recognized.")
+		error("Control policy $controlPolicy not recognized.")
 
 	end
 
@@ -980,6 +980,37 @@ function setup_submodels(inputparams::InputParamsOld;
 		grids     = grids)
 
 	return output
+
+end
+
+#################################################################
+# Setup grids and coupling for the given geometrical parameters #
+#################################################################
+
+function setup_grids_and_couplings(inputparams::InputParamsOld)
+
+
+	case_type = inputparams["Geometry"]["case"]
+
+	if case_type == "1D"
+
+		grids, couplings = one_dimensional_grid(inputparams)
+
+	elseif case_type == "3D-demo"
+
+		grids, couplings = pouch_grid(inputparams)
+
+	elseif case_type == "jellyRoll"
+
+		grids, couplings = jelly_roll_grid(inputparams)
+
+	else
+		# Add case_type = "jellyRoll"
+		error("Geometry case type $case_type not recognized")
+
+	end
+
+	return grids, couplings
 
 end
 
@@ -1199,7 +1230,7 @@ function setup_battery_parameters(inputparams::InputParamsOld,
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
 	else
-		error("control policy $controlPolicy not recognized")
+		error("Control policy $controlPolicy not recognized")
 	end
 
 	return parameters

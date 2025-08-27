@@ -517,7 +517,7 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple")
 		return fig_678
 
 	else
-		error("Unsupported plot_type. Use \"line\" or \"contour\".")
+		error("Unsupported plot_type $plot_type. Use \"line\" or \"contour\".")
 	end
 end
 

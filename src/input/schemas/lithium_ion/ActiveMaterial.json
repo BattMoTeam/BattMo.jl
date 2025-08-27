@@ -105,11 +105,7 @@
             "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
         },
         "OpenCircuitPotential": {
-            "type": [
-                "string",
-                "number",
-                "object"
-            ],
+            "$ref": "FunctionOpenCircuitPotential.json",
             "description": "The open-circuit potential of the active material under a given intercalant stoichimetry and temperature.",
             "context_type": [
                 "OpenCircuitPotential",

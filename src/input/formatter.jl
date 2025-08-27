@@ -410,7 +410,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 		elseif geom == "P4D Cylindrical"
 			geom_case = "jellyRoll"
 		else
-			error("ModelFramework not recognized. Please use 'P2D', 'P4D Pouch' or 'P4D Cylindrical'.")
+			error("ModelFramework $geom not recognized. Please use 'P2D', 'P4D Pouch' or 'P4D Cylindrical'.")
 		end
 	end
 
@@ -460,7 +460,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 		ne_ocp = ne_ocp_value
 
 	else
-		error("Function type not recognized")
+		error("Negative electrode open circuit potential function type $(typeof(ne_ocp_value)) not recognized")
 	end
 
 	pe_ocp_value = get_key_value(pe_am, "OpenCircuitPotential")
@@ -489,7 +489,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 	elseif isa(pe_ocp_value, Real)
 		pe_ocp = pe_ocp_value
 	else
-		error("Function type not recognized")
+		error("Positive electrode open circuit potential function type $(typeof(pe_ocp_value)) not recognized")
 	end
 
 	diff_value = get_key_value(elyte, "DiffusionCoefficient")
@@ -518,7 +518,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 	elseif isa(diff_value, Real)
 		diff = diff_value
 	else
-		error("Function type not recognized")
+		error("Electrolyte diffusion coefficient function type $(typeof(diff_value)) not recognized")
 	end
 
 	cond_value = get_key_value(elyte, "IonicConductivity")
@@ -547,7 +547,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 	elseif isa(cond_value, Real)
 		cond = cond_value
 	else
-		error("Function type not recognized")
+		error("Electrolyte ionic conductivity function type $(typeof(cond_value)) not recognized")
 	end
 
 	###################
@@ -581,7 +581,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 		control = "Function"
 
 	else
-		error("Cycling policy not recognized.")
+		error("Cycling policy $(cycling_protocol["Protocol"]) not recognized.")
 	end
 
 	battmo_input = Dict(

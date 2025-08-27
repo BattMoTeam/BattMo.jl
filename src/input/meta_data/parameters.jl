@@ -83,6 +83,17 @@ function get_parameter_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_cd2cd0de_e0cc_4ef1_b27e_2e88db027bac",
 			"description" => "Dimension of the longest side of the face of a rectangular electrode.",
 		),
+		"Height" => Dict(
+			"type" => Real,
+			"min_value" => 0.01,
+			"max_value" => 0.5,
+			"unit" => "m",
+			"unit_name" => "emmo:Metre",
+			"unit_iri" => "https://w3id.org/emmo#Metre",
+			"context_type" => "Length",
+			"context_type_iri" => "https://w3id.org/emmo#EMMO_cd2cd0de_e0cc_4ef1_b27e_2e88db027bac",
+			"description" => "The heigh of a cylindrical cell.",
+		),
 		"SurfaceCoefficientOfHeatTransfer" => Dict(
 			"type" => Real,
 			"min_value" => 1.0,
