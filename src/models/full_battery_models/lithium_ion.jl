@@ -19,7 +19,7 @@ Represents a lithium-ion battery model based on the Doyle-Fuller-Newman approach
 Creates an instance of `LithiumIonBattery` with the specified or default model settings.
 The model name is automatically generated based on the model geometry.
 """
-mutable struct LithiumIonBattery <: ModelConfigured
+mutable struct LithiumIonBattery <: Battery
 	name::String
 	settings::ModelSettings
 	is_valid::Bool
@@ -41,6 +41,8 @@ mutable struct LithiumIonBattery <: ModelConfigured
 		)
 	end
 end
+
+model_type(::LithiumIonBattery) = :Battery
 
 function print_required_cell_parameters(::LithiumIonBattery)
 
@@ -92,34 +94,6 @@ function get_default_simulation_settings(st::LithiumIonBattery)
 
 end
 
-
-function setup_model(model::LithiumIonBattery, input, grids, couplings; kwargs...)
-
-	# setup the submodels and also return a coupling structure which is used to setup later the cross-terms
-	submodels = setup_submodels(model, input, grids, couplings; kwargs...)
-
-	# Combine sub models into MultiModel
-	model = setup_multimodel(model, submodels, input)
-
-	# Compute the volume fractions
-	setup_volume_fractions!(model, grids, couplings["Electrolyte"])
-
-	# setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
-	# sensitivities)
-	parameters = set_parameters(model, input)
-
-	# setup the cross terms which couples the submodels.
-	setup_coupling_cross_terms!(model, parameters, couplings)
-
-	setup_initial_control_policy!(model.multimodel[:Control].system.policy, input, parameters)
-	#model.context = DefaultContext()
-
-	output = (model = model,
-		parameters = parameters)
-
-	return output
-
-end
 
 function setup_multimodel(model::LithiumIonBattery, submodels, input)
 

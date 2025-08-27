@@ -387,7 +387,7 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing;
 
 	model = sim.model
 
-	grids, couplings = setup_grids_and_couplings(input)
+	grids, couplings = setup_grids_and_couplings(model, input)
 
 	model, parameters = setup_model(model, input, grids, couplings; T = T)
 	state0 = BattMo.setup_initial_state(input, model)

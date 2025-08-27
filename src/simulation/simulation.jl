@@ -85,7 +85,7 @@ struct Simulation <: AbstractSimulation
 			)
 
 			# Setup grids and couplings
-			grids, couplings = setup_grids_and_couplings(input)
+			grids, couplings = setup_grids_and_couplings(model, input)
 
 			# Setup simulation
 			model, parameters = setup_model(model, input, grids, couplings)
