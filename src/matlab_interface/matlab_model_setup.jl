@@ -655,7 +655,7 @@ function setup_initial_state(inputparams::MatlabInputParamsOld,
 	function initialize_current_collector!(initState, name::Symbol)
 
 		init = Dict()
-		init[:Phi] = state0[stringNames[name]]["Coating"]["phi"][1]
+		init[:Voltage] = state0[stringNames[name]]["Coating"]["phi"][1]
 		initState[name] = init
 
 	end
@@ -669,15 +669,15 @@ function setup_initial_state(inputparams::MatlabInputParamsOld,
 
 		init = Dict()
 
-		init[:Phi] = state0[stringName]["Coating"]["phi"][1]
+		init[:Voltage] = state0[stringName]["Coating"]["phi"][1]
 		c = state0[stringName]["Coating"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
 
 		if discretisation_type(sys) == :P2Ddiscretization
-			init[:Cp] = c
-			init[:Cs] = c
+			init[:ParticleConcentration] = c
+			init[:SurfaceConcentration] = c
 		else
 			@assert discretisation_type(sys) == :NoParticleDiffusion
-			init[:C] = c
+			init[:Concentration] = c
 		end
 
 		initState[name] = init
@@ -688,8 +688,8 @@ function setup_initial_state(inputparams::MatlabInputParamsOld,
 
 		init = Dict()
 
-		init[:Phi] = state0["Electrolyte"]["phi"][1]
-		init[:C]   = state0["Electrolyte"]["c"][1]
+		init[:Voltage] = state0["Electrolyte"]["phi"][1]
+		init[:Concentration] = state0["Electrolyte"]["c"][1]
 
 		initState[:Elyte] = init
 
@@ -697,7 +697,7 @@ function setup_initial_state(inputparams::MatlabInputParamsOld,
 
 	function initialize_control!(initState)
 
-		init = Dict(:Phi => state0["Control"]["E"], :Current => state0["Control"]["I"])
+		init = Dict(:Voltage => state0["Control"]["E"], :Current => state0["Control"]["I"])
 
 		initState[:Control] = init
 

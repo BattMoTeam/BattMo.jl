@@ -19,7 +19,7 @@ Represents a lithium-ion battery model based on the Doyle-Fuller-Newman approach
 Creates an instance of `LithiumIonBattery` with the specified or default model settings.
 The model name is automatically generated based on the model geometry.
 """
-mutable struct LithiumIonBattery <: ModelConfigured
+mutable struct LithiumIonBattery <: Battery
 	name::String
 	settings::ModelSettings
 	is_valid::Bool
@@ -41,6 +41,8 @@ mutable struct LithiumIonBattery <: ModelConfigured
 		)
 	end
 end
+
+model_type(::LithiumIonBattery) = :Battery
 
 function print_required_cell_parameters(::LithiumIonBattery)
 
@@ -92,34 +94,6 @@ function get_default_simulation_settings(st::LithiumIonBattery)
 
 end
 
-
-function setup_model(model::LithiumIonBattery, input, grids, couplings; kwargs...)
-
-	# setup the submodels and also return a coupling structure which is used to setup later the cross-terms
-	submodels = setup_submodels(model, input, grids, couplings; kwargs...)
-
-	# Combine sub models into MultiModel
-	model = setup_multimodel(model, submodels, input)
-
-	# Compute the volume fractions
-	setup_volume_fractions!(model, grids, couplings["Electrolyte"])
-
-	# setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
-	# sensitivities)
-	parameters = set_parameters(model, input)
-
-	# setup the cross terms which couples the submodels.
-	setup_coupling_cross_terms!(model, parameters, couplings)
-
-	setup_initial_control_policy!(model.multimodel[:Control].system.policy, input, parameters)
-	#model.context = DefaultContext()
-
-	output = (model = model,
-		parameters = parameters)
-
-	return output
-
-end
 
 function setup_multimodel(model::LithiumIonBattery, submodels, input)
 
@@ -1025,13 +999,13 @@ function setup_initial_state(input, model::LithiumIonBattery)
 		N        = multimodel[name].system.discretization[:N]
 		refT     = 298.15
 
-		theta     = SOC_init * (theta100 - theta0) + theta0
-		c         = theta * cmax
-		SOC       = SOC_init
-		nc        = count_entities(multimodel[name].data_domain, Cells())
-		init      = Dict()
-		init[:Cs] = fill(c, nc)
-		init[:Cp] = fill(c, N, nc)
+		theta = SOC_init * (theta100 - theta0) + theta0
+		c = theta * cmax
+		SOC = SOC_init
+		nc = count_entities(multimodel[name].data_domain, Cells())
+		init = Dict()
+		init[:SurfaceConcentration] = fill(c, nc)
+		init[:ParticleConcentration] = fill(c, N, nc)
 
 		if multimodel[name] isa SEImodel
 			init[:normalizedSEIlength] = ones(nc)
@@ -1060,7 +1034,7 @@ function setup_initial_state(input, model::LithiumIonBattery)
 		if phi isa Int
 			phi = convert(Float64, phi)
 		end
-		init[:Phi] = fill(phi, nc)
+		init[:Voltage] = fill(phi, nc)
 		return init
 	end
 
@@ -1069,23 +1043,23 @@ function setup_initial_state(input, model::LithiumIonBattery)
 	# Setup initial state in negative active material
 
 	init, nc, negOCP = setup_init_am(:NeAm, multimodel)
-	init[:Phi] = zeros(typeof(negOCP), nc)
+	init[:Voltage] = zeros(typeof(negOCP), nc)
 	initState[:NeAm] = init
 
 	# Setup initial state in electrolyte
 
 	nc = count_entities(multimodel[:Elyte].data_domain, Cells())
 
-	init       = Dict()
-	init[:C]   = input.cell_parameters["Electrolyte"]["Concentration"] * ones(nc)
-	init[:Phi] = fill(-negOCP, nc)
+	init = Dict()
+	init[:Concentration] = input.cell_parameters["Electrolyte"]["Concentration"] * ones(nc)
+	init[:Voltage] = fill(-negOCP, nc)
 
 	initState[:Elyte] = init
 
 	# Setup initial state in positive active material
 
 	init, nc, posOCP = setup_init_am(:PeAm, multimodel)
-	init[:Phi] = fill(posOCP - negOCP, nc)
+	init[:Voltage] = fill(posOCP - negOCP, nc)
 
 	initState[:PeAm] = init
 
@@ -1096,8 +1070,8 @@ function setup_initial_state(input, model::LithiumIonBattery)
 		initState[:PeCc] = setup_current_collector(:PeCc, posOCP - negOCP, multimodel)
 	end
 
-	init           = Dict()
-	init[:Phi]     = posOCP - negOCP
+	init = Dict()
+	init[:Voltage] = posOCP - negOCP
 	init[:Current] = getInitCurrent(multimodel[:Control])
 
 	initState[:Control] = init

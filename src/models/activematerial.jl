@@ -59,16 +59,16 @@ end
 const ActiveMaterialP2D{label, D, T, Di} = ActiveMaterial{label, D, T, Di}
 const ActiveMaterialNoParticleDiffusion{T} = ActiveMaterial{nothing, NoParticleDiffusion, T}
 
-struct Ocp <: ScalarVariable end
+struct OpenCircuitPotential <: ScalarVariable end
 struct DiffusionCoefficient <: ScalarVariable end
-struct ReactionRateConst <: ScalarVariable end
-struct Cp <: VectorVariables end # particle concentrations in p2d model
-struct Cs <: ScalarVariable end # surface variable in p2d model
+struct ReactionRateConstant <: ScalarVariable end
+struct ParticleConcentration <: VectorVariables end # particle concentrations in p2d model
+struct SurfaceConcentration <: ScalarVariable end # surface variable in p2d model
 struct SolidDiffFlux <: VectorVariables end # flux in P2D model
 
 
-Jutul.minimum_value(::Cp) = 0.0
-Jutul.minimum_value(::Cs) = 0.0
+Jutul.minimum_value(::ParticleConcentration) = 0.0
+Jutul.minimum_value(::SurfaceConcentration) = 0.0
 
 struct SolidMassCons <: JutulEquation end
 Jutul.local_discretization(::SolidMassCons, i) = nothing
@@ -176,14 +176,14 @@ function Jutul.select_primary_variables!(S,
 	system::ActiveMaterialP2D,
 	model::SimulationModel,
 )
-	S[:Phi] = Phi()
-	S[:Cp]  = Cp()
-	S[:Cs]  = Cs()
+	S[:Voltage] = Voltage()
+	S[:ParticleConcentration] = ParticleConcentration()
+	S[:SurfaceConcentration] = SurfaceConcentration()
 
 end
 
 function Jutul.degrees_of_freedom_per_entity(model::ActiveMaterialModel,
-	::Cp)
+	::ParticleConcentration)
 	return solid_diffusion_discretization_number(model.system)
 end
 
@@ -201,7 +201,7 @@ function Jutul.select_parameters!(S,
 	S[:VolumeFraction] = VolumeFraction()
 
 	if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
-		S[:BoundaryPhi] = BoundaryPotential(:Phi)
+		S[:BoundaryVoltage] = BoundaryPotential(:Voltage)
 	end
 
 end
@@ -211,8 +211,8 @@ function Jutul.select_secondary_variables!(S,
 	model::SimulationModel,
 )
 	S[:Charge] = Charge()
-	S[:Ocp] = Ocp()
-	S[:ReactionRateConst] = ReactionRateConst()
+	S[:OpenCircuitPotential] = OpenCircuitPotential()
+	S[:ReactionRateConstant] = ReactionRateConstant()
 	S[:SolidDiffFlux] = SolidDiffFlux()
 	S[:DiffusionCoefficient] = DiffusionCoefficient()
 
@@ -246,7 +246,7 @@ function Jutul.select_minimum_output_variables!(out,
 	system::ActiveMaterialP2D,
 	model::SimulationModel)
 	push!(out, :Charge)
-	push!(out, :Ocp)
+	push!(out, :OpenCircuitPotential)
 	push!(out, :Temperature)
 	push!(out, :ReactionRateConst)
 	push!(out, :DiffusionCoefficient)
@@ -259,10 +259,10 @@ end
 ##############################
 
 @jutul_secondary(
-	function update_vocp!(Ocp,
-		tv::Ocp,
+	function update_vocp!(OpenCircuitPotential,
+		tv::OpenCircuitPotential,
 		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
-		Cs,
+		SurfaceConcentration,
 		ix,
 	) where {label, D, T, Di}
 
@@ -281,17 +281,17 @@ end
 
 			if Jutul.haskey(model.system.params, :ocp_funcexp)
 
-				@inbounds Ocp[cell] = ocp_func(Cs[cell], refT, refT, cmax)
+				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], refT, refT, cmax)
 
 			elseif Jutul.haskey(model.system.params, :ocp_funcdata)
 
-				@inbounds Ocp[cell] = ocp_func(Cs[cell] / cmax)
+				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell] / cmax)
 
 			elseif Jutul.haskey(model.system.params, :ocp_funcconstant)
-				@inbounds Ocp[cell] = ocp_func
+				@inbounds OpenCircuitPotential[cell] = ocp_func
 			else
 
-				@inbounds Ocp[cell] = ocp_func(Cs[cell], refT, refT, cmax)
+				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], refT, refT, cmax)
 
 			end
 		end
@@ -339,10 +339,10 @@ end
 )
 
 @jutul_secondary(
-	function update_reaction_rate!(ReactionRateConst,
-		tv::ReactionRateConst,
+	function update_reaction_rate!(ReactionRateConstant,
+		tv::ReactionRateConstant,
 		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
-		Cs,
+		SurfaceConcentration,
 		ix) where {label, D, T, Di}
 		rate_func = model.system.params[:reaction_rate_constant_func]
 		refT = 298.15
@@ -351,11 +351,11 @@ end
 
 			if Jutul.haskey(model.system.params, :ecd_funcconstant)
 
-				@inbounds ReactionRateConst[cell] = rate_func
+				@inbounds ReactionRateConstant[cell] = rate_func
 
 			else
 
-				@inbounds ReactionRateConst[cell] = rate_func(Cs[cell], refT)
+				@inbounds ReactionRateConstant[cell] = rate_func(SurfaceConcentration[cell], refT)
 
 			end
 		end
@@ -366,17 +366,17 @@ end
 	function update_solid_diffusion_flux!(SolidDiffFlux,
 		tv::SolidDiffFlux,
 		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
-		Cp,
+		ParticleConcentration,
 		ix) where {label, D, T, Di}
 		s = model.system
 		for cell in ix
-			@inbounds @views update_solid_flux!(SolidDiffFlux[:, cell], Cp[:, cell], s)
+			@inbounds @views update_solid_flux!(SolidDiffFlux[:, cell], ParticleConcentration[:, cell], s)
 		end
 	end
 )
 
 
-function update_solid_flux!(flux, Cp, system::ActiveMaterialP2D)
+function update_solid_flux!(flux, ParticleConcentration, system::ActiveMaterialP2D)
 	# compute lithium flux in particle, using harmonic averaging. At the moment D has a constant value within particle
 	# but this is going to change.
 
@@ -393,7 +393,7 @@ function update_solid_flux!(flux, Cp, system::ActiveMaterialP2D)
 		T2 = hT[globFace(i)] * D
 		T  = 1 / (1 / T1 + 1 / T2)
 
-		flux[i] = -T * (Cp[i+1] - Cp[i])
+		flux[i] = -T * (ParticleConcentration[i+1] - ParticleConcentration[i])
 
 	end
 
@@ -419,13 +419,13 @@ function Jutul.update_equation_in_entity!(eq_buf,
 	div = disc[:div]
 	D = disc[:D]
 
-	Cp   = @views state.Cp[:, self_cell]
-	Cp0  = @views state0.Cp[:, self_cell]
+	ParticleConcentration = @views state.ParticleConcentration[:, self_cell]
+	Cp0 = @views state0.ParticleConcentration[:, self_cell]
 	flux = @views state.SolidDiffFlux[:, self_cell]
-	Cs   = state.Cs[self_cell]
+	SurfaceConcentration = state.SurfaceConcentration[self_cell]
 
 	for i ∈ 1:N
-		eq_buf[i] = vols[i] * (Cp[i] - Cp0[i]) / dt
+		eq_buf[i] = vols[i] * (ParticleConcentration[i] - Cp0[i]) / dt
 	end
 
 	for k ∈ 1:length(div)
@@ -433,7 +433,7 @@ function Jutul.update_equation_in_entity!(eq_buf,
 		eq_buf[i] += sgn * flux[j]
 	end
 
-	eq_buf[N] += hT[N+1] * D * (Cp[N] - Cs)
+	eq_buf[N] += hT[N+1] * D * (ParticleConcentration[N] - SurfaceConcentration)
 
 end
 
@@ -452,10 +452,10 @@ function Jutul.update_equation_in_entity!(eq_buf,
 	hT = disc[:hT]
 	D = disc[:D]
 
-	Cp = state.Cp[N, self_cell]
-	Cs = state.Cs[self_cell]
+	ParticleConcentration = state.ParticleConcentration[N, self_cell]
+	SurfaceConcentration = state.SurfaceConcentration[self_cell]
 
-	eq_buf[] = hT[N+1] * D * (Cp - Cs)
+	eq_buf[] = hT[N+1] * D * (ParticleConcentration - SurfaceConcentration)
 
 end
 
@@ -469,8 +469,8 @@ function Jutul.select_primary_variables!(S,
 	system::ActiveMaterialNoParticleDiffusion,
 	model::SimulationModel,
 )
-	S[:Phi] = Phi()
-	S[:C]   = C()
+	S[:Voltage] = Voltage()
+	S[:Concentration] = Concentration()
 
 end
 
@@ -479,10 +479,10 @@ function Jutul.select_secondary_variables!(S,
 	model::SimulationModel,
 )
 
-	S[:Charge]            = Charge()
-	S[:Mass]              = Mass()
-	S[:Ocp]               = Ocp()
-	S[:ReactionRateConst] = ReactionRateConst()
+	S[:Charge] = Charge()
+	S[:Mass] = Mass()
+	S[:OpenCircuitPotential] = OpenCircuitPotential()
+	S[:ReactionRateConstant] = ReactionRateConstant()
 
 end
 
@@ -496,7 +496,7 @@ function Jutul.select_parameters!(S,
 	S[:VolumeFraction] = VolumeFraction()
 
 	if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
-		S[:BoundaryPhi] = BoundaryPotential(:Phi)
+		S[:BoundaryVoltage] = BoundaryPotential(:Voltage)
 	end
 
 end
@@ -519,7 +519,7 @@ function Jutul.select_minimum_output_variables!(out,
 )
 	push!(out, :Charge)
 	push!(out, :Mass)
-	push!(out, :Ocp)
+	push!(out, :OpenCircuitPotential)
 	push!(out, :Temperature)
 
 end
@@ -527,10 +527,10 @@ end
 
 
 # @jutul_secondary(
-#     function update_vocp!(Ocp ,
-#                           tv::Ocp ,
+#     function update_vocp!(OpenCircuitPotential ,
+#                           tv::OpenCircuitPotential ,
 #                           model::SimulationModel{<:Any, ActiveMaterialNoParticleDiffusion{T}, <:Any, <:Any},
-#                           C       ,
+#                           Concentration       ,
 #                           ix
 #                           ) where T
 
@@ -541,20 +541,20 @@ end
 #         global ocp_ex = ocp_eq
 #         for cell in ix
 #             ################### Lorena #############
-#             global c = Cs[cell]
-#             @inbounds Ocp[cell] = ocp_func(ocp_eq,Cs[cell], refT, cmax)
-#             #@inbounds Ocp[cell] = @evaluate_ocp_function(ocp_eq , Cs[cell], refT, cmax)
+#             global c = SurfaceConcentration[cell]
+#             @inbounds OpenCircuitPotential[cell] = ocp_func(ocp_eq,SurfaceConcentration[cell], refT, cmax)
+#             #@inbounds OpenCircuitPotential[cell] = @evaluate_ocp_function(ocp_eq , SurfaceConcentration[cell], refT, cmax)
 #             ########################################
-#             #@inbounds Ocp[cell] = ocp_func(C[cell], refT, cmax)
+#             #@inbounds OpenCircuitPotential[cell] = ocp_func(Concentration[cell], refT, cmax)
 #         end
 #     end
 # )
 
 @jutul_secondary(
-	function update_vocp!(Ocp,
-		tv::Ocp,
+	function update_vocp!(OpenCircuitPotential,
+		tv::OpenCircuitPotential,
 		model::SimulationModel{<:Any, ActiveMaterialNoParticleDiffusion{T}, <:Any, <:Any},
-		C,
+		Concentration,
 		ix,
 	) where T
 
@@ -573,15 +573,15 @@ end
 
 			if Jutul.haskey(model.system.params, :ocp_funcexp)
 
-				@inbounds Ocp[cell] = ocp_func(C[cell], refT, refT, cmax)
+				@inbounds OpenCircuitPotential[cell] = ocp_func(Concentration[cell], refT, refT, cmax)
 
 			elseif Jutul.haskey(model.system.params, :ocp_funcdata)
 
-				@inbounds Ocp[cell] = ocp_func(C[cell] / cmax)
+				@inbounds OpenCircuitPotential[cell] = ocp_func(Concentration[cell] / cmax)
 
 			else
 
-				@inbounds Ocp[cell] = ocp_func(C[cell], refT, cmax)
+				@inbounds OpenCircuitPotential[cell] = ocp_func(Concentration[cell], refT, cmax)
 
 			end
 		end
@@ -589,16 +589,16 @@ end
 )
 
 @jutul_secondary(
-	function update_reaction_rate!(ReactionRateConst,
-		tv::ReactionRateConst,
+	function update_reaction_rate!(ReactionRateConstant,
+		tv::ReactionRateConstant,
 		model::SimulationModel{<:Any, ActiveMaterialNoParticleDiffusion{T}, <:Any, <:Any},
-		C,
+		Concentration,
 		ix,
 	) where T
 		rate_func = model.system.params[:reaction_rate_constant_func]
 		refT = 298.15
 		for i in ix
-			@inbounds ReactionRateConst[i] = rate_func(C[i], refT)
+			@inbounds ReactionRateConstant[i] = rate_func(Concentration[i], refT)
 		end
 	end
 )

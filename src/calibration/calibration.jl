@@ -214,7 +214,7 @@ function setup_calibration_objective(vc::VoltageCalibration)
 			dt = max(dt, total_time - t)
 		end
 		V_obs = V_fun(t)
-		V_sim = state[:Control][:Phi][1]
+		V_sim = state[:Control][:Voltage][1]
 		return voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
 	end
 	return objective
@@ -387,7 +387,7 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing;
 
 	model = sim.model
 
-	grids, couplings = setup_grids_and_couplings(input)
+	grids, couplings = setup_grids_and_couplings(model, input)
 
 	model, parameters = setup_model(model, input, grids, couplings; T = T)
 	state0 = BattMo.setup_initial_state(input, model)

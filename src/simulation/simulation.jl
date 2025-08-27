@@ -85,7 +85,7 @@ struct Simulation <: AbstractSimulation
 			)
 
 			# Setup grids and couplings
-			grids, couplings = setup_grids_and_couplings(input)
+			grids, couplings = setup_grids_and_couplings(model, input)
 
 			# Setup simulation
 			model, parameters = setup_model(model, input, grids, couplings)
@@ -403,7 +403,7 @@ function setup_config(sim::JutulSimulator,
 
 					if m[:Control].system.policy.initialControl == "charging"
 
-						if s.state.Control.Phi[1] >= m[:Control].system.policy.upperCutoffVoltage
+						if s.state.Control.Voltage[1] >= m[:Control].system.policy.upperCutoffVoltage
 							report[:stopnow] = true
 						else
 							report[:stopnow] = false
@@ -411,7 +411,7 @@ function setup_config(sim::JutulSimulator,
 
 					elseif m[:Control].system.policy.initialControl == "discharging"
 
-						if s.state.Control.Phi[1] <= m[:Control].system.policy.lowerCutoffVoltage
+						if s.state.Control.Voltage[1] <= m[:Control].system.policy.lowerCutoffVoltage
 							report[:stopnow] = true
 
 						else

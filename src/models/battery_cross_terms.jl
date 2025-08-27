@@ -17,8 +17,8 @@ function Jutul.update_cross_term_in_entity!(out,
 	trans = ct.trans[ind]
 	ind_t = ct.target_cells[ind]
 	ind_s = ct.source_cells[ind]
-	phi_t = state_t.Phi[ind_t]
-	phi_s = state_s.Phi[ind_s]
+	phi_t = state_t.Voltage[ind_t]
+	phi_s = state_s.Voltage[ind_s]
 
 	out[] = trans * (phi_t - phi_s)
 
@@ -38,8 +38,8 @@ function Jutul.update_cross_term_in_entity!(out,
 	ldisc = local_discretization(ct, ind))
 	trans = ct.trans
 	ind_t = ct.target_cell
-	phi_t = state_t.Phi[ind_t]
-	phi_s = state_s.Phi
+	phi_t = state_t.Voltage[ind_t]
+	phi_s = state_s.Voltage
 	v = 0
 	for (i, ind_s) in enumerate(ct.source_cells)
 		v += trans[i] * (phi_t - phi_s[ind_s])
@@ -167,13 +167,13 @@ function Jutul.update_cross_term_in_entity!(out,
 
 	vols = state_t.Volume[ind_t]
 
-	phi_e    = state_t.Phi[ind_t]
-	phi_a    = state_s.Phi[ind_s]
-	ocp      = state_s.Ocp[ind_s]
-	R0       = state_s.ReactionRateConst[ind_s]
-	c_e      = state_t.C[ind_t]
-	c_a_surf = state_s.Cs[ind_s]
-	c_a      = state_s.Cp[ind_s]
+	phi_e    = state_t.Voltage[ind_t]
+	phi_a    = state_s.Voltage[ind_s]
+	ocp      = state_s.OpenCircuitPotential[ind_s]
+	R0       = state_s.ReactionRateConstant[ind_s]
+	c_e      = state_t.Concentration[ind_t]
+	c_a_surf = state_s.SurfaceConcentration[ind_s]
+	c_a      = state_s.ParticleConcentration[ind_s]
 	T        = state_s.Temperature[ind_s]
 
 	c_av = mean(c_a)
@@ -233,13 +233,13 @@ function Jutul.update_cross_term_in_entity!(out,
 
 	vols = state_t.Volume[ind_t]
 
-	phi_e = state_s.Phi[ind_s]
-	phi_a = state_t.Phi[ind_t]
-	ocp = state_t.Ocp[ind_t]
-	R0 = state_t.ReactionRateConst[ind_t]
-	c_e = state_s.C[ind_s]
-	c_a_surf = state_t.Cs[ind_t]
-	c_a = state_t.Cp[ind_s]
+	phi_e = state_s.Voltage[ind_s]
+	phi_a = state_t.Voltage[ind_t]
+	ocp = state_t.OpenCircuitPotential[ind_t]
+	R0 = state_t.ReactionRateConstant[ind_t]
+	c_e = state_s.Concentration[ind_s]
+	c_a_surf = state_t.SurfaceConcentration[ind_t]
+	c_a = state_t.ParticleConcentration[ind_s]
 	T = state_t.Temperature[ind_t]
 
 	c_av = mean(c_a)
@@ -346,12 +346,12 @@ function Jutul.update_cross_term_in_entity!(out,
 	#NB probably wrong use
 	vols = model_s.domain.representation[:volumes][ind_s]
 
-	phi_e = state_t.Phi[ind_t]
-	phi_a = state_s.Phi[ind_s]
-	ocp   = state_s.Ocp[ind_s]
-	R     = state_s.ReactionRateConst[ind_s]
-	c_e   = state_t.C[ind_t]
-	c_a   = state_s.C[ind_s]
+	phi_e = state_t.Voltage[ind_t]
+	phi_a = state_s.Voltage[ind_s]
+	ocp   = state_s.OpenCircuitPotential[ind_s]
+	R     = state_s.ReactionRateConstant[ind_s]
+	c_e   = state_t.Concentration[ind_t]
+	c_a   = state_s.Concentration[ind_s]
 	T     = state_s.Temperature[ind_s]
 
 	eS, eM = source_electric_material(vols,

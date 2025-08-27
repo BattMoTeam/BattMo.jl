@@ -62,7 +62,7 @@ for result in outputs
 
 	states = result.output[:states]
 	t = [state[:Control][:Controller].time for state in states]
-	E = [state[:Control][:Phi][1] for state in states]
+	E = [state[:Control][:Voltage][1] for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
 	label_str = @sprintf("%.1fC", result.d_rate)

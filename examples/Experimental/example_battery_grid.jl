@@ -111,7 +111,7 @@ init.object["Grids"]["faceArea"] = init.object["Geometry"]["faceArea"]
 states, cellSpecifications, reports, extra = run_battery(init; use_p2d = use_p2d, info_level = 0, extra_timing = false);
 ##
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
+E = [state[:Control][:Voltage][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 
@@ -154,7 +154,7 @@ fig
 
 ##
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
+E = [state[:Control][:Voltage][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 ##
 p1 = Plots.plot(t, E;

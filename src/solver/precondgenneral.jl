@@ -1,6 +1,6 @@
 
 function Jutul.update_preconditioner!(prec::BattMo.BatteryGeneralPreconditioner, lsys::Jutul.JutulLinearSystem, context, model, storage, recorder, executor)
-	# Solve all Phi with AMG
+	# Solve all Voltage with AMG
 	# Solve the elyte C with another AMG
 	# Let the rest be (?)
 	A = lsys.jac

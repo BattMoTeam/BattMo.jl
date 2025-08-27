@@ -196,8 +196,8 @@ include("input/schemas/get_json_from_schema.jl")
 include("utils/physical_constants.jl")
 
 include("models/battmo_types.jl")
-include("models/full_battery_model_setups/battery_model.jl")
-include("models/full_battery_model_setups/lithium_ion.jl")
+include("models/full_battery_models/battery.jl")
+include("models/full_battery_models/lithium_ion.jl")
 
 include("input/loader.jl")
 include("input/defaults.jl")
