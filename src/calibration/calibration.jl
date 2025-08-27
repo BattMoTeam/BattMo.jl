@@ -198,24 +198,19 @@ function prior_regularization_term(x,mean,std)
     return (sum((x .- mean).^2 ./ (2 .* std.^2)), (x .- mean) ./ std.^2)
 end
 
-
-
-
 function solve(vc::AbstractCalibration;
-        grad_tol = 1e-6,
-        obj_change_tol = 1e-6,
-        opt_fun = missing,
-        scaling = :linear,
-        backend_arg = (
-            use_sparsity = false,
-            di_sparse = true,
-            single_step_sparsity = false,
-            do_prep = true,
-        ),
-        kwarg...
-        
-        
-    )
+               grad_tol = 1e-6,
+               obj_change_tol = 1e-6,
+               opt_fun = missing,
+               scaling = :linear,
+               backend_arg = (
+                   use_sparsity = false,
+                   di_sparse = true,
+                   single_step_sparsity = false,
+                   do_prep = true,
+               ),
+               kwarg... )
+    
     sim = deepcopy(vc.sim)
     x0, x_setup = vectorize_cell_parameters_for_calibration(vc, sim)
     
@@ -249,12 +244,14 @@ function solve(vc::AbstractCalibration;
   
     setup_battmo_case(X, step_info = missing) = setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
     
-    solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
-            adj_cache = adj_cache,
-            backend_arg
-        )
+    solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x,
+                                                                         setup_battmo_case,
+                                                                         vc,
+                                                                         objective;
+                                                                         adj_cache = adj_cache,
+                                                                         backend_arg
+                                                                         )
         
-
 
     jutul_message("Calibration", "Starting calibration of $(length(x0)) parameters.", color = :green)
 
@@ -579,14 +576,17 @@ function solve_random_init(vc::AbstractCalibration;
 end
 
 function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
-        adj_cache = Dict(),
-        backend_arg = NamedTuple(),
-        gradient = true
-    )
+                                                 adj_cache = Dict(),
+                                                 backend_arg = NamedTuple(),
+                                                 gradient = true
+                                                 )
+    
     case = setup_battmo_case(x)
     states, dt = simulate_battmo_case_for_calibration(case)
+    
     # Evaluate the objective function
     f = evaluate_calibration_objective(vc, objective, case, states, dt)
+    
     # Solve adjoints
     if gradient
         if !haskey(adj_cache, :storage)
@@ -616,21 +616,29 @@ end
 
 
 
-function vectorize_cell_parameters_for_calibration(vc, sim)
-    pt = vc.parameter_targets
+function vectorize_cell_parameters_for_calibration(vc::VoltageCalibration, sim)
+
+    pt    = vc.parameter_targets
     pkeys = collect(keys(pt))
+
+    X0 = [pt[k].v0 for k in pkeys]
+    
     if length(pkeys) == 0
         throw(ArgumentError("No free parameters set, unable to calibrate."))
     end
+    
     # Set up the functions to serialize
     x0, x_setup = Jutul.AdjointsDI.vectorize_nested(sim.cell_parameters.all,
-        active = pkeys,
-        active_type = Real
-    )
+                                                    active = pkeys,
+                                                    active_type = Real
+                                                    )
+
     return (x0, x_setup)
+    
 end
 
 function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing; stepix = missing)
+    
     T = eltype(X)
     Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, X, x_setup)
     inputparams = convert_parameter_sets_to_battmo_input(

@@ -5,39 +5,25 @@ using DataFrames
 using GLMakie
 using Optimisers
 using Distributions
+
 include("equilibrium_calibration.jl")
 include("function_parameters_MJ1.jl")
 
+""" get time and voltage from states
+"""
 function get_tV(x)
     t = [state[:Control][:Controller].time for state in x[:states]]
     V = [state[:Control][:Phi][1] for state in x[:states]]
     return (t, V)
 end
 
+""" get time and voltage from dataframe
+"""
 function get_tV(x::DataFrame)
     return (x[:, 1], x[:, 2])
 end
 
-
-function getExpDataOrig()
-    battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
-    exdata = joinpath(battmo_base, "examples", "example_data")
-    df_05 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_05C.csv"), DataFrame)
-    df_1 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_1C.csv"), DataFrame)
-    df_2 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_2C.csv"), DataFrame)
-
-    dfs = [df_05, df_1, df_2]
-    return dfs
-end
-
-dfs = getExpDataOrig()
-df_05 = dfs[1]
-df_1 = dfs[2]
-df_2 = dfs[3]
-
-
-
-#Fetch experimental data from a .mat file
+# Fetch experimental data from a .mat file
 using MAT
 using Statistics: mean
 
@@ -111,7 +97,7 @@ function getProjectDir()
     return dirname(@__DIR__)  
 end
 
-#Testing the getExpData function
+# Testing the getExpData function
 exp_data = getExpData("all", "discharge")
 println("Number of entries: ", length(exp_data))
 @show exp_data[1]["rawRate"] 
@@ -121,7 +107,8 @@ println("Number of entries: ", length(exp_data))
 
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 
-#Sets up the simulation for the MJ1 cell
+""" setup the simulation for the MJ1 cell
+"""
 function runMJ1()
 
     cell_parameters = load_cell_parameters(; from_file_path = joinpath(@__DIR__,"mj1_tab1.json"))
@@ -146,16 +133,15 @@ function runMJ1()
 
 end
 
-#Calibrates the equilibrium parameters of the model
+""" Calibrates the equilibrium parameters of the model
+"""
 function equilibriumCalibration(sim)
-
 
     t_exp = vec(exp_data[1]["time"])
     V_exp = vec(exp_data[1]["E"])
-    I = exp_data[1]["I"]
+    I     = exp_data[1]["I"]
 
     println("I = ", I  )
-
 
     vc = VoltageCalibration(t_exp, V_exp, sim)
 
@@ -167,23 +153,17 @@ function equilibriumCalibration(sim)
         lower_bound=0.0, upper_bound=1.0)
     free_calibration_parameter!(vc, ["NegativeElectrode","ActiveMaterial","MaximumConcentration"];
         lower_bound=1e4, upper_bound=1e5)
-    
 
     @info typeof(vc.parameter_targets)
     @info keys(vc.parameter_targets)
 
-    x = solve_equilibrium!(vc; I=I)
+    cellparams = solve_equilibrium!(vc; I=I)
 
-    println("calibration parameters: ", x)
-    
-    set_calibration_parameter!(vc,["NegativeElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC100"], x[3])
-    set_calibration_parameter!(vc,["PositiveElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC100"], x[4])
-    set_calibration_parameter!(vc,["NegativeElectrode","ActiveMaterial","MaximumConcentration"], x[1])
-    set_calibration_parameter!(vc,["PositiveElectrode","ActiveMaterial","MaximumConcentration"], x[2])
+    println("calibration parameters: ", cellparams)
 
-    
-
-
+    for (key, value) in cellparams
+        set_calibration_parameter!(vc, key, value)
+    end
     
     output = get_simulation_input(vc.sim)
     model = output[:model]
@@ -203,12 +183,10 @@ function equilibriumCalibration(sim)
     F = 96485.33289 # Faraday constant in C/mol
     C_exp = exp_data[1]["I"]*exp_data[1]["time"][end] # Capacity in Ah
     print("C_exp = ", C_exp, " Ah\n")
-    
    
     Xparam = [
         Vpe, Vne, a_pe, a_ne, eps_pe, eps_ne
     ]
-
     
     mne = vc.sim.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["MaximumConcentration"] * Vne * a_ne * eps_ne
     mpe = vc.sim.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["MaximumConcentration"] * Vpe * a_pe * eps_pe
@@ -225,24 +203,25 @@ function equilibriumCalibration(sim)
    
     @info "calibrated mpe = $mpe, mne = $mne"
     # Compute mpe and mne based on the calibrated parameters
-    Veq = compute_equilibrium_voltage(t_exp, x, Xparam, exp_data[1]["I"], ocp_pe, ocp_ne)
+    X = [val for (key, val) in cellparams]
+    Veq = compute_equilibrium_voltage(vc, X, Xparam, exp_data[1]["I"], ocp_pe, ocp_ne)
 
-
-    return (vc.sim.cell_parameters, Veq, t_exp)
+    return (allparameters = vc.sim.cell_parameters,
+            V             = Veq,
+            t             = t_exp,
+            cellparams    = cellparams)
 
 
 end
 
-#Calibrates the kinetic parameters of the model
+""" Calibrates the kinetic parameters of the model
+"""
 function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrated,model_setup,simulation_settings; scaling = :linear)
-
-   
     
     t_exp_hr = vec(exp_data[end]["time"])
     V_exp_hr = vec(exp_data[end]["E"])
 
     I = exp_data[end]["I"]
-    
 
     cycling_protocol2 = deepcopy(cycling_protocol)
     cycling_protocol2["DRate"] = exp_data[end]["rawRate"]
@@ -263,7 +242,6 @@ function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrat
     free_calibration_parameter!(vc2,
         ["Separator", "BruggemanCoefficient"];
         lower_bound = 1e-3, upper_bound = 1e1)
-   
 
     free_calibration_parameter!(vc2,
         ["NegativeElectrode","ElectrodeCoating", "BruggemanCoefficient"];
@@ -271,8 +249,6 @@ function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrat
     free_calibration_parameter!(vc2,
         ["PositiveElectrode","ElectrodeCoating", "BruggemanCoefficient"];
         lower_bound = 1e-3, upper_bound = 1e1)
-    
-    
     
     free_calibration_parameter!(vc2,
         ["NegativeElectrode","ActiveMaterial", "DiffusionCoefficient"];
@@ -285,9 +261,9 @@ function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrat
 
     cell_parameters_calibrated2, history = solve(vc2;scaling = scaling);
 
-    """
     results = BattMo.solve_random_init(vc2;n_samples = 50, scaling = scaling)
 
+    """
     #Boxplots of the results
     for i in 1:length(results)
         result = results[i]
@@ -307,22 +283,19 @@ function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrat
         println("Saved plot")
     end
     """
-
+    
     print_calibration_overview(vc2)
 
     return cell_parameters_calibrated2,history #,results
 end
 
-#Calibrates the kinetic parameters of the model with priors
+""" Calibrates the kinetic parameters of the model with priors
+"""
 function highRateCalibrationWithPriors(exp_data,cycling_protocol, cell_parameters_calibrated,model_setup,simulation_settings; scaling = :linear)
-
-   
-    
     t_exp_hr = vec(exp_data[end]["time"])
     V_exp_hr = vec(exp_data[end]["E"])
 
     I = exp_data[end]["I"]
-    
 
     cycling_protocol2 = deepcopy(cycling_protocol)
     cycling_protocol2["DRate"] = exp_data[end]["rawRate"]
@@ -343,7 +316,6 @@ function highRateCalibrationWithPriors(exp_data,cycling_protocol, cell_parameter
     free_calibration_parameter!(vc2,
         ["Separator", "BruggemanCoefficient"];
         lower_bound = 1e-3, upper_bound = 1e1, prior_mean = 1, prior_std = 10)
-   
 
     free_calibration_parameter!(vc2,
         ["NegativeElectrode","ElectrodeCoating", "BruggemanCoefficient"];
@@ -351,8 +323,6 @@ function highRateCalibrationWithPriors(exp_data,cycling_protocol, cell_parameter
     free_calibration_parameter!(vc2,
         ["PositiveElectrode","ElectrodeCoating", "BruggemanCoefficient"];
         lower_bound = 1e-3, upper_bound = 1e1, prior_mean = 1, prior_std = 10)
-    
-    
     
     free_calibration_parameter!(vc2,
         ["NegativeElectrode","ActiveMaterial", "DiffusionCoefficient"];
@@ -393,7 +363,7 @@ function highRateCalibrationWithPriors(exp_data,cycling_protocol, cell_parameter
     return cell_parameters_calibrated2,history #,results
 end
 
-cycling_protocol,cell_parameters,model_setup, simulation_settings = runMJ1()
+cycling_protocol, cell_parameters,model_setup, simulation_settings = runMJ1()
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 
@@ -413,14 +383,11 @@ for i in 1:length(exp_data)
     I = exp_data[i]["I"]
 
     println("Running simulation for I = ", I)
-
     
 	simuc = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
     output = get_simulation_input(simuc)
     model = output[:model]
     simuc.cycling_protocol["DRate"] = I * 3600 / computeCellCapacity(model) 
-
-    
 
     # Solve the simulation with the base parameters
     println("Running simulation for I = ", I)
@@ -434,7 +401,6 @@ for i in 1:length(exp_data)
 
     # Store the output for the calibrated case
 	push!(outputs_base, (I = I, output = output))
-
     
     simc = Simulation(model_setup, cell_parameters_calibrated2, cycling_protocol; simulation_settings)
     #println(simc.cell_parameters)
@@ -504,5 +470,6 @@ for (i, CRate) in enumerate(CRates)
     save_path = joinpath(@__DIR__, "discharge_curve_$(round(CRate, digits=2))C.png")
     save(save_path, fig)
     println("Saved plot for $(round(CRate, digits=2))C at $save_path")
+    
 end
 
