@@ -498,7 +498,7 @@ function setup_config(sim::JutulSimulator,
 
 					if m[:Control].system.policy.initialControl == "charging"
 
-						if s.state.Control.Phi[1] >= m[:Control].system.policy.upperCutoffVoltage
+						if s.state.Control.Voltage[1] >= m[:Control].system.policy.upperCutoffVoltage
 							report[:stopnow] = true
 						else
 							report[:stopnow] = false
@@ -506,7 +506,7 @@ function setup_config(sim::JutulSimulator,
 
 					elseif m[:Control].system.policy.initialControl == "discharging"
 
-						if s.state.Control.Phi[1] <= m[:Control].system.policy.lowerCutoffVoltage
+						if s.state.Control.Voltage[1] <= m[:Control].system.policy.lowerCutoffVoltage
 							report[:stopnow] = true
 
 						else
@@ -1257,13 +1257,13 @@ function setup_initial_state(inputparams::InputParamsOld,
 		N        = model[name].system.discretization[:N]
 		refT     = 298.15
 
-		theta     = SOC_init * (theta100 - theta0) + theta0
-		c         = theta * cmax
-		SOC       = SOC_init
-		nc        = count_entities(model[name].data_domain, Cells())
-		init      = Dict()
-		init[:Cs] = fill(c, nc)
-		init[:Cp] = fill(c, N, nc)
+		theta = SOC_init * (theta100 - theta0) + theta0
+		c = theta * cmax
+		SOC = SOC_init
+		nc = count_entities(model[name].data_domain, Cells())
+		init = Dict()
+		init[:SurfaceConcentration] = fill(c, nc)
+		init[:ParticleConcentration] = fill(c, N, nc)
 
 		if model[name] isa SEImodel
 			init[:normalizedSEIlength] = ones(nc)
@@ -1292,7 +1292,7 @@ function setup_initial_state(inputparams::InputParamsOld,
 		if phi isa Int
 			phi = convert(Float64, phi)
 		end
-		init[:Phi] = fill(phi, nc)
+		init[:Voltage] = fill(phi, nc)
 		return init
 	end
 
@@ -1301,23 +1301,23 @@ function setup_initial_state(inputparams::InputParamsOld,
 	# Setup initial state in negative active material
 
 	init, nc, negOCP = setup_init_am(:NeAm, model)
-	init[:Phi] = zeros(typeof(negOCP), nc)
+	init[:Voltage] = zeros(typeof(negOCP), nc)
 	initState[:NeAm] = init
 
 	# Setup initial state in electrolyte
 
 	nc = count_entities(model[:Elyte].data_domain, Cells())
 
-	init       = Dict()
-	init[:C]   = inputparams["Electrolyte"]["initialConcentration"] * ones(nc)
-	init[:Phi] = fill(-negOCP, nc)
+	init = Dict()
+	init[:Concentration] = inputparams["Electrolyte"]["initialConcentration"] * ones(nc)
+	init[:Voltage] = fill(-negOCP, nc)
 
 	initState[:Elyte] = init
 
 	# Setup initial state in positive active material
 
 	init, nc, posOCP = setup_init_am(:PeAm, model)
-	init[:Phi] = fill(posOCP - negOCP, nc)
+	init[:Voltage] = fill(posOCP - negOCP, nc)
 
 	initState[:PeAm] = init
 
@@ -1328,8 +1328,8 @@ function setup_initial_state(inputparams::InputParamsOld,
 		initState[:PeCc] = setup_current_collector(:PeCc, posOCP - negOCP, model)
 	end
 
-	init           = Dict()
-	init[:Phi]     = posOCP - negOCP
+	init = Dict()
+	init[:Voltage] = posOCP - negOCP
 	init[:Current] = getInitCurrent(model[:Control])
 
 	initState[:Control] = init

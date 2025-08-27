@@ -68,7 +68,7 @@ keys(cell_specifications)
 states = output[:states]
 
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
+E = [state[:Control][:Voltage][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 nothing # hide
 
@@ -126,17 +126,17 @@ f # hide
 # ## Retrieving other quantities
 
 # Concentration 
-negative_electrode_surface_concentration = Array([[state[:NeAm][:Cs] for state in states]]);
-positive_electrode_surface_concentration = Array([[state[:PeAm][:Cs] for state in states]]);
-negative_electrode_particle_concentration = Array([[state[:NeAm][:Cp] for state in states]]);
-positive_electrode_particle_concentration = Array([[state[:PeAm][:Cp] for state in states]]);
-electrolyte_concentration = [state[:Elyte][:C] for state in states];
+negative_electrode_surface_concentration = Array([[state[:NeAm][:SurfaceConcentration] for state in states]]);
+positive_electrode_surface_concentration = Array([[state[:PeAm][:SurfaceConcentration] for state in states]]);
+negative_electrode_particle_concentration = Array([[state[:NeAm][:ParticleConcentration] for state in states]]);
+positive_electrode_particle_concentration = Array([[state[:PeAm][:ParticleConcentration] for state in states]]);
+electrolyte_concentration = [state[:Elyte][:Concentration] for state in states];
 
 
 # Potential
-negative_electrode_potential = [state[:NeAm][:Phi] for state in states];
-electrolyte_potential = [state[:Elyte][:Phi] for state in states];
-positive_electrode_potential = [state[:PeAm][:Phi] for state in states];
+negative_electrode_potential = [state[:NeAm][:Voltage] for state in states];
+electrolyte_potential = [state[:Elyte][:Voltage] for state in states];
+positive_electrode_potential = [state[:PeAm][:Voltage] for state in states];
 
 # Grid wrapper:
 # We need Jutul to get the grid wrapper.

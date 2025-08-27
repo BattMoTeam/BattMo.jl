@@ -23,7 +23,7 @@ using Test
 		# Objective: Penalize any voltage less than target value of 4.2 (higher than initial voltage for battery)
 		v_target = 4.2
 		function objective(model, state, dt, step_no, forces)
-			return dt * max(v_target - state[:Control][:Phi][1], 0)^2
+			return dt * max(v_target - state[:Control][:Voltage][1], 0)^2
 		end
 
 		# # Setup the optimization problem

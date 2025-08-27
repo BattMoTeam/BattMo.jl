@@ -161,12 +161,12 @@ function Jutul.post_update_linearized_system!(lsys, executor, storage, model::Mu
 		e_models = [:Elyte]
 		if isnothing(storage[:eq_maps].maps)
 			mass_cons_map = setup_subset_equation_map(model, storage, e_models, :mass_conservation)
-			#phi_map = setup_subset_residual_map(model, storage, e_models, :Phi)
+			#phi_map = setup_subset_residual_map(model, storage, e_models, :Voltage)
 			charge_cons_map = setup_subset_equation_map(model, storage, e_models, :charge_conservation)
 			(mass_ind, charge_ind) = matrix_maps(lsys, mass_cons_map, charge_cons_map, context)
 			storage[:eq_maps].maps = (mass_ind = mass_ind, charge_ind = charge_ind, mass_cons_map = mass_cons_map, charge_cons_map = charge_cons_map)
 		end
-		#C_map = setup_subset_residual_map(model, storage, e_models, :C)
+		#C_map = setup_subset_residual_map(model, storage, e_models, :Concentration)
 		#Main.@infiltrate true
 		tfac = model[:Elyte].system[:transference] / BattMo.FARADAY_CONSTANT
 		modify_equation!(lsys, storage[:eq_maps].maps, tfac, context)
@@ -292,18 +292,18 @@ function battery_linsolve(inputparams)
 		# ILU0. Afte this, we recover the control variables We combine two preconditioners.
 
 		varpreconds = Vector{BattMo.VariablePrecond}()
-		push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Phi, :charge_conservation, nothing))
+		push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Voltage, :charge_conservation, nothing))
 
 		# Experimental options for using extra smoothing of concentration in positive and negative active material.
 		use_extra_options = false
 		if use_extra_options
-			push!(varpreconds, BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :Cp, :mass_conservation, [:PeAm, :NeAm]))
+			push!(varpreconds, BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :ParticleConcentration, :mass_conservation, [:PeAm, :NeAm]))
 		end
 
 		# Experimental options for AMG used on concentration in electrolyte
 		use_extra_options = false
 		if use_extra_options
-			push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :C, :mass_conservation, [:Elyte]))
+			push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Concentration, :mass_conservation, [:Elyte]))
 		end
 
 		# We setup the global preconditioner

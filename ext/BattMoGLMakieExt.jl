@@ -351,9 +351,9 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple")
 		end
 
 		# Concentrations
-		state_plot(Axis(grid[3, 1], title = "NeAm Surface Concentration  /  mol·m⁻³"), NeAm_conc, "NeAm Cs")
+		state_plot(Axis(grid[3, 1], title = "NeAm Surface Concentration  /  mol·m⁻³"), NeAm_conc, "NeAm SurfaceConcentration")
 		state_plot(Axis(grid[3, 2], title = "Electrolyte Concentration  /  mol·m⁻³"), Elyte_conc, "Elyte C")
-		state_plot(Axis(grid[3, 3], title = "PeAm Surface Concentration  /  mol·m⁻³"), PeAm_conc, "PeAm Cs")
+		state_plot(Axis(grid[3, 3], title = "PeAm Surface Concentration  /  mol·m⁻³"), PeAm_conc, "PeAm SurfaceConcentration")
 
 		# Potentials
 		state_plot(Axis(grid[4, 1], title = "NeAm Potential  /  V"), NeAm_pot, "NeAm ϕ")

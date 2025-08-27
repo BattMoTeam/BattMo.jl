@@ -45,8 +45,8 @@ function Jutul.select_primary_variables!(S,
 	system::Electrolyte,
 	model::SimulationModel)
 
-	S[:Phi] = Phi()
-	S[:C]   = C()
+	S[:Voltage] = Voltage()
+	S[:Concentration] = Concentration()
 
 end
 
@@ -174,7 +174,7 @@ end
 	""" Compute the diffusion coefficient as a function of concentration
 	"""
 	# Calculate diffusion coefficients constant for the diffusion coefficient calculation
-	cnst = [                                            -4.43 -54
+	cnst = [                                                                    -4.43 -54
 		-0.22 0.0]
 
 	Tgi = [229 5.0]
@@ -190,15 +190,15 @@ end
 end
 
 @jutul_secondary(
-	function update_dmudc!(dmudc, dmudc_def::DmuDc, model, Temperature, C, ix)
+	function update_dmudc!(dmudc, dmudc_def::DmuDc, model, Temperature, Concentration, ix)
 		R = GAS_CONSTANT
-		@tullio dmudc[i] = R * (Temperature[i] / C[i])
+		@tullio dmudc[i] = R * (Temperature[i] / Concentration[i])
 	end
 )
 
 # ? Does this maybe look better ?
 @jutul_secondary(
-	function update_conductivity!(kappa, kappa_def::Conductivity, model::ElectrolyteModel, Temperature, C, VolumeFraction, BruggemanCoefficient, ix)
+	function update_conductivity!(kappa, kappa_def::Conductivity, model::ElectrolyteModel, Temperature, Concentration, VolumeFraction, BruggemanCoefficient, ix)
 		""" Register conductivity function
 		"""
 
@@ -207,17 +207,17 @@ end
 			b = BruggemanCoefficient[i]
 			if haskey(model.system.params, :conductivity_data)
 
-				@inbounds kappa[i] = model.system[:conductivity_func](C[i]) * VolumeFraction[i]^b
+				@inbounds kappa[i] = model.system[:conductivity_func](Concentration[i]) * VolumeFraction[i]^b
 			elseif haskey(model.system.params, :conductivity_constant)
 				@inbounds kappa[i] = model.system[:conductivity_constant] * VolumeFraction[i]^b
 			else
-				@inbounds kappa[i] = model.system[:conductivity_func](C[i], Temperature[i]) * VolumeFraction[i]^b
+				@inbounds kappa[i] = model.system[:conductivity_func](Concentration[i], Temperature[i]) * VolumeFraction[i]^b
 			end
 		end
 	end
 )
 
-@jutul_secondary function update_diffusivity!(D, D_def::Diffusivity, model::ElectrolyteModel, C, Temperature, VolumeFraction, BruggemanCoefficient, ix)
+@jutul_secondary function update_diffusivity!(D, D_def::Diffusivity, model::ElectrolyteModel, Concentration, Temperature, VolumeFraction, BruggemanCoefficient, ix)
 	""" Register diffusivity function
 	"""
 
@@ -225,14 +225,14 @@ end
 		b = BruggemanCoefficient[i]
 		if haskey(model.system.params, :diffusivity_data)
 
-			@inbounds D[i] = model.system[:diffusivity_func](C[i]) * VolumeFraction[i]^b
+			@inbounds D[i] = model.system[:diffusivity_func](Concentration[i]) * VolumeFraction[i]^b
 
 		elseif haskey(model.system.params, :diffusivity_constant)
 			@inbounds D[i] = model.system[:diffusivity_constant] * VolumeFraction[i]^b
 
 		else
 
-			@inbounds D[i] = model.system[:diffusivity_func](C[i], Temperature[i]) * VolumeFraction[i]^b
+			@inbounds D[i] = model.system[:diffusivity_func](Concentration[i], Temperature[i]) * VolumeFraction[i]^b
 		end
 
 	end
@@ -253,30 +253,30 @@ end
 
 function computeFlux(::Val{:Charge}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
 
-    htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
+	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
 
-    j     = - half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Phi, state.Conductivity)
-    jchem = - half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other,  state.C, state.ChemCoef)
-    
-    j = j - jchem*(1.0)
+	j     = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Voltage, state.Conductivity)
+	jchem = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Concentration, state.ChemCoef)
 
-    return j
-    
+	j = j - jchem * (1.0)
+
+	return j
+
 end
 
 
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
 
-    j = computeFlux(Val(:Charge), model, state, c, other, face, face_sign)
+	j = computeFlux(Val(:Charge), model, state, c, other, face, face_sign)
 
-    return T(j)
-    
+	return T(j)
+
 end
 
 """ 
    computeFlux(::Val{:Diffusion}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
 
-   Uses the (effective) diffusitivty coefficient and return  -D grad(c) , where D is effective diffusivity coefficient and C in the concentration
+   Uses the (effective) diffusitivty coefficient and return  -D grad(c) , where D is effective diffusivity coefficient and Concentration in the concentration
 # Arguments
 
 - `model       ::ElectrolyteModel` : 
@@ -289,39 +289,39 @@ end
 diffFlux
 """
 function computeFlux(::Val{:Diffusion}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
-    
-    htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
-    diffFlux = - half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other,  state.C, state.Diffusivity)
 
-    return diffFlux
-    
+	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
+	diffFlux = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Concentration, state.Diffusivity)
+
+	return diffFlux
+
 end
 
 function computeFlux(::Val{:Mass}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
-    
-    t = transference(model.system)
-    z = 1.0
-    F = FARADAY_CONSTANT
-    
-    htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
 
-    diffFlux = - half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other,  state.C, state.Diffusivity)
-    j        = - half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other,  state.Phi, state.Conductivity)
-    jchem    = - half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other,  state.C, state.ChemCoef)
-    
-    j = j - jchem*(1.0)
+	t = transference(model.system)
+	z = 1.0
+	F = FARADAY_CONSTANT
 
-    massFlux = diffFlux + t/(z*F)*j
-    
-    return massFlux
-    
-end    
+	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
+
+	diffFlux = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Concentration, state.Diffusivity)
+	j        = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Voltage, state.Conductivity)
+	jchem    = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Concentration, state.ChemCoef)
+
+	j = j - jchem * (1.0)
+
+	massFlux = diffFlux + t / (z * F) * j
+
+	return massFlux
+
+end
 
 
 function Jutul.face_flux!(q::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
 
-    massFlux = computeFlux(Val(:Mass), model, state, c, other, face, face_sign)
-    
-    return setindex(q, massFlux, 1)::T
+	massFlux = computeFlux(Val(:Mass), model, state, c, other, face, face_sign)
+
+	return setindex(q, massFlux, 1)::T
 
 end

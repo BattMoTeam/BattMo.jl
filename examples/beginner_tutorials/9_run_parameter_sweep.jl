@@ -36,7 +36,7 @@ ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Disch
 
 for data in outputs_rate
 	local t = [state[:Control][:Controller].time for state in data.output[:states]]
-	local E = [state[:Control][:Phi][1] for state in data.output[:states]]
+	local E = [state[:Control][:Voltage][1] for state in data.output[:states]]
 	lines!(ax, t, E, label = @sprintf("%.1e", 10^data.r))
 end
 
@@ -75,7 +75,7 @@ ax1 = Axis(fig1[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Dis
 for data in outputs_diff
 	if length(data.output[:states]) > 0 #if simulation is successful
 		local t = [state[:Control][:Controller].time for state in data.output[:states]]
-		local E = [state[:Control][:Phi][1] for state in data.output[:states]]
+		local E = [state[:Control][:Voltage][1] for state in data.output[:states]]
 		lines!(ax1, t, E, label = @sprintf("%.1e", 10^data.d))
 	end
 end

@@ -5,7 +5,7 @@ using Printf
 
 
 # Read Experimental voltage curves
-data_path = string(dirname(pathof(BattMo)),  "/../examples/example_data/")
+data_path = string(dirname(pathof(BattMo)), "/../examples/example_data/")
 df_05 = CSV.read(string(data_path, "Xu_2015_voltageCurve_05C.csv"), DataFrame)
 df_1 = CSV.read(string(data_path, "Xu_2015_voltageCurve_1C.csv"), DataFrame)
 df_2 = CSV.read(string(data_path, "Xu_2015_voltageCurve_2C.csv"), DataFrame)
@@ -33,7 +33,7 @@ ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Disch
 
 for data in outputs
 	local t = [state[:Control][:Controller].time for state in data.output[:states]]
-	local E = [state[:Control][:Phi][1] for state in data.output[:states]]
+	local E = [state[:Control][:Voltage][1] for state in data.output[:states]]
 	lines!(ax, t, E, label = @sprintf("%.1f", data.CRate))
 end
 

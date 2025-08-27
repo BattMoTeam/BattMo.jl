@@ -214,7 +214,7 @@ function setup_calibration_objective(vc::VoltageCalibration)
 			dt = max(dt, total_time - t)
 		end
 		V_obs = V_fun(t)
-		V_sim = state[:Control][:Phi][1]
+		V_sim = state[:Control][:Voltage][1]
 		return voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
 	end
 	return objective
