@@ -303,38 +303,20 @@ free_calibration_parameter!(vc,
         lower_bound = 1e-16, upper_bound = 1e-10)
 print_calibration_overview(vc)
 
-
-#Setting up the HMC framework
-    
-sim = deepcopy(vc.sim)
-x0, x_setup = BattMo.vectorize_cell_parameters_for_calibration(vc, sim)
-# Set up the objective function
-objective = BattMo.setup_calibration_objective(vc)
-
-ub = similar(x0)
-lb = similar(x0)
-offsets = x_setup.offsets
-for (i, k) in enumerate(x_setup.names)
-    (; vmin, vmax) = vc.parameter_targets[k]
-    for j in offsets[i]:(offsets[i+1]-1)
-        lb[j] = vmin
-        ub[j] = vmax
-    end
-end
-adj_cache = Dict()
-
-
-# Log-transform bounds
-log_lb = log.(lb)
-log_ub = log.(ub)
-δ_log = log_ub .- log_lb
-
+"""
 # Transformation functions
 function x_to_u(x)
     log_x = log.(x)
     u = log_x
     return u
 end
+
+# Log-transform bounds
+log_lb = log.(lb)
+log_ub = log.(ub)
+δ_log = log_ub .- log_lb
+
+
 
 function u_to_x(u)
     log_x = u 
@@ -353,7 +335,75 @@ function F(u)
     dx_to_du!(g, x)
     return (obj, g)
 end
+"""
 
+
+#Setting up the HMC framework
+    
+sim = deepcopy(vc.sim)
+x0, x_setup = BattMo.vectorize_cell_parameters_for_calibration(vc, sim)
+
+# Set up the objective function
+objective = BattMo.setup_calibration_objective(vc)
+
+ub = similar(x0)
+lb = similar(x0)
+offsets = x_setup.offsets
+for (i, k) in enumerate(x_setup.names)
+    (; vmin, vmax) = vc.parameter_targets[k]
+    for j in offsets[i]:(offsets[i+1]-1)
+        lb[j] = vmin
+        ub[j] = vmax
+    end
+end
+adj_cache = Dict()
+
+
+# bounds
+
+δ= ub .- lb
+
+
+#Linear transformation functions for HMC to bring them to [0, 100] 
+function x_to_u(x)
+    u= (x .- lb) ./ δ  # Scale to [0, 1]
+    u = u .* 100  # Scale to [0, 100]
+    
+    return u
+end
+
+
+function u_to_x(u)
+    u = u ./ 100  # Scale back to [0, 1]
+    x = lb .+ u .* δ  # Reverse the linear transformation
+    return x
+end
+
+function dx_to_du!(g, x)
+    
+    @. g = g #* (δ/100)
+end
+
+
+# Wrapped objective function
+function F(u)
+    x = u_to_x(u)
+    obj, g = f(x)
+    dx_to_du!(g, x)
+    return (obj, g)
+end
+
+
+initial_θ = x_to_u(x0)
+
+function logprior(x;variance = 10)
+    @info "using gaussian prior"
+    # gaussian prior with mean initial_θ
+    log_prior = -0.5 * sum((x .- initial_θ).^2) / variance
+    grad_log_prior = -(x .- initial_θ) / variance
+
+    return (log_prior, grad_log_prior)
+end
 
 setup_battmo_case(X, step_info = missing) = BattMo.setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
 solve_and_differentiate(x) = BattMo.solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
@@ -375,8 +425,7 @@ function evaluate(x)
         # Sanity checks
         if !isfinite(log_llh) || any(!isfinite, grad_log_llh)
             @warn "Invalid result from solver at x = $x"
-            log_llh = -Inf
-            grad_log_llh = zero(x)
+
         end
     catch e
         @error "Error during solve_and_differentiate: $(e)"
@@ -386,49 +435,25 @@ function evaluate(x)
 end
 
 
-using SpecialFunctions  # for loggamma
-
-"""
-    logpdf_gamma_with_grad(x, k, θ; rate=false)
-
-Return both the log-density and derivative w.r.t. x for a Gamma distribution.
-"""
-function logpdf_gamma_with_grad(x, k, θ; rate::Bool=false)
-    if any(x .<= 0)
-        throw(ArgumentError("x must be > 0 for Gamma distribution"))
-    end
-    
-    if rate
-        β = θ
-        logpdf = (k-1) .* log.(x) .- β .* x .+ k*log(β) .- loggamma(k)
-        grad    = (k-1) ./ x .- β
-    else
-        logpdf = (k-1) .* log.(x) .- x ./ θ .- k*log(θ) .- loggamma(k)
-        grad    = (k-1) ./ x .- 1/θ
-    end
-    
-    return logpdf, grad
-end
-
 
     
-σ2 = 1.0  # Variance of the Gaussian noise
+σ2 = 0.1  # Variance of the Gaussian noise
 
 function LogDensityProblems.logdensity_and_gradient(p::LogTargetDensity, θ)
-    #θ is a (log-)normalized vector of parameters (θ∈[0,1]^D)
+    
     @info "Calculating log density and gradient for θ = $θ"
-    x = u_to_x(θ)
+    x = u_to_x(θ) #θ is in log-space, x in original space
     log_llh, grad_log_llh = evaluate(x)
         
-    log_prior = 0
-    grad_log_prior = 0
+    log_prior, grad_log_prior = logprior(θ)
 
 
         
     log_density = log_llh .+ log_prior
-    gradient = grad_log_llh .+ grad_log_prior
+    dx_to_du!(grad_log_llh, x)
+     
 
-    gradient = dx_to_du!(gradient, x) 
+    gradient =  grad_log_llh .+ grad_log_prior
         
     return (log_density, gradient)
 end
@@ -441,7 +466,7 @@ end
 
     # Parameters
 D = length(vc.parameter_targets) 
-initial_θ = x_to_u(x0)
+
     
     # Create target distribution
 target = LogTargetDensity(D)
@@ -450,23 +475,24 @@ target = LogTargetDensity(D)
 n_samples, n_adapts = 1000, 500
     
 # Define Hamiltonian system
-metric = DenseEuclideanMetric(D)
+metric = DiagEuclideanMetric(D)
 hamiltonian = Hamiltonian(metric, target)
     
     # Find initial step size
-initial_ϵ = find_good_stepsize(hamiltonian, initial_θ)
+#initial_ϵ = find_good_stepsize(hamiltonian, initial_θ)
+initial_ϵ = 0.01 
 integrator = Leapfrog(initial_ϵ)
     
     # Define sampler
 #kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
-kernel = HMCKernel(Trajectory{EndPointTS}(integrator, FixedNSteps(1)))
+kernel = HMCKernel(Trajectory{EndPointTS}(integrator, FixedNSteps(10)))
 adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
     
 
 
     # Run sampling
 samples, stats = sample(
-        hamiltonian, kernel, initial_θ, n_samples, adaptor, n_adapts; progress=true
+        hamiltonian, kernel, initial_θ,n_samples; progress=true
     )
 
 
