@@ -918,13 +918,13 @@ function setup_initial_state(input, model::LithiumIonBattery)
 		N        = multimodel[name].system.discretization[:N]
 		refT     = 298.15
 
-		theta     = SOC_init * (theta100 - theta0) + theta0
-		c         = theta * cmax
-		SOC       = SOC_init
-		nc        = count_entities(multimodel[name].data_domain, Cells())
-		init      = Dict()
-		init[:Cs] = fill(c, nc)
-		init[:Cp] = fill(c, N, nc)
+		theta = SOC_init * (theta100 - theta0) + theta0
+		c = theta * cmax
+		SOC = SOC_init
+		nc = count_entities(multimodel[name].data_domain, Cells())
+		init = Dict()
+		init[:SurfaceConcentration] = fill(c, nc)
+		init[:ParticleConcentration] = fill(c, N, nc)
 
 		if multimodel[name] isa SEImodel
 			init[:normalizedSEIlength] = ones(nc)
@@ -953,7 +953,7 @@ function setup_initial_state(input, model::LithiumIonBattery)
 		if phi isa Int
 			phi = convert(Float64, phi)
 		end
-		init[:Phi] = fill(phi, nc)
+		init[:Voltage] = fill(phi, nc)
 		return init
 	end
 
@@ -962,23 +962,23 @@ function setup_initial_state(input, model::LithiumIonBattery)
 	# Setup initial state in negative active material
 
 	init, nc, negOCP = setup_init_am(:NeAm, multimodel)
-	init[:Phi] = zeros(typeof(negOCP), nc)
+	init[:Voltage] = zeros(typeof(negOCP), nc)
 	initState[:NeAm] = init
 
 	# Setup initial state in electrolyte
 
 	nc = count_entities(multimodel[:Elyte].data_domain, Cells())
 
-	init       = Dict()
-	init[:C]   = input.cell_parameters["Electrolyte"]["Concentration"] * ones(nc)
-	init[:Phi] = fill(-negOCP, nc)
+	init = Dict()
+	init[:Concentration] = input.cell_parameters["Electrolyte"]["Concentration"] * ones(nc)
+	init[:Voltage] = fill(-negOCP, nc)
 
 	initState[:Elyte] = init
 
 	# Setup initial state in positive active material
 
 	init, nc, posOCP = setup_init_am(:PeAm, multimodel)
-	init[:Phi] = fill(posOCP - negOCP, nc)
+	init[:Voltage] = fill(posOCP - negOCP, nc)
 
 	initState[:PeAm] = init
 
@@ -989,8 +989,8 @@ function setup_initial_state(input, model::LithiumIonBattery)
 		initState[:PeCc] = setup_current_collector(:PeCc, posOCP - negOCP, multimodel)
 	end
 
-	init           = Dict()
-	init[:Phi]     = posOCP - negOCP
+	init = Dict()
+	init[:Voltage] = posOCP - negOCP
 	init[:Current] = getInitCurrent(multimodel[:Control])
 
 	initState[:Control] = init

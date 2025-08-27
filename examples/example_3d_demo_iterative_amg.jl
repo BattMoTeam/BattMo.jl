@@ -80,9 +80,9 @@ verbose = 10
 # We first setup the block preconditioners. They are given as a list and applied separatly. Preferably, they
 # should be orthogonal
 varpreconds = Vector{BattMo.VariablePrecond}()
-push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Phi, :charge_conservation, nothing))
-#push!(varpreconds,BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(),:Cp,:mass_conservation, [:PeAm,:NeAm]))
-#push!(varpreconds,BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:C,:mass_conservation, [:Elyte]))
+push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Voltage, :charge_conservation, nothing))
+#push!(varpreconds,BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(),:ParticleConcentration,:mass_conservation, [:PeAm,:NeAm]))
+#push!(varpreconds,BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:Concentration,:mass_conservation, [:Elyte]))
 
 # We setup the global preconditioner
 g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global, nothing)
@@ -117,7 +117,7 @@ states, reports = simulate(state0, simulator, timesteps; forces = forces, config
 #model  = output[:extra][:model]
 
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
+E = [state[:Control][:Voltage][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 f = Figure(size = (1000, 400))
@@ -184,21 +184,21 @@ if (do_plot)
 		am = setup[1]
 		cc = setup[2]
 
-		maxPhi = maximum([maximum(state[cc][:Phi]), maximum(state[am][:Phi])])
-		minPhi = minimum([minimum(state[cc][:Phi]), minimum(state[am][:Phi])])
+		maxVoltage = maximum([maximum(state[cc][:Voltage]), maximum(state[am][:Voltage])])
+		minVoltage = minimum([minimum(state[cc][:Voltage]), minimum(state[am][:Voltage])])
 
-		colorrange = [0, maxPhi - minPhi]
+		colorrange = [0, maxVoltage - minVoltage]
 
 		components = [am, cc]
 		for component in components
 			g = model[component].domain.representation
-			phi = state[component][:Phi]
-			Jutul.plot_cell_data!(ax3d, g, phi .- minPhi; colormap = :viridis, colorrange = colorrange)
+			phi = state[component][:Voltage]
+			Jutul.plot_cell_data!(ax3d, g, phi .- minVoltage; colormap = :viridis, colorrange = colorrange)
 		end
 
 		cbar = GLMakie.Colorbar(f3D[1, 2];
 			colormap = :viridis,
-			colorrange = colorrange .+ minPhi,
+			colorrange = colorrange .+ minVoltage,
 			label = "potential")
 		display(GLMakie.Screen(), f3D)
 
@@ -215,7 +215,7 @@ if (do_plot)
 
 		component = setup[1]
 
-		cs = state[component][:Cs]
+		cs = state[component][:SurfaceConcentration]
 		maxcs = maximum(cs)
 		mincs = minimum(cs)
 
@@ -235,8 +235,8 @@ if (do_plot)
 	end
 
 
-	setups = ((:C, "concentration"),
-		(:Phi, "potential"))
+	setups = ((:Concentration, "concentration"),
+		(:Voltage, "potential"))
 
 	for setup in setups
 

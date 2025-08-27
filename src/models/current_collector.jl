@@ -28,13 +28,13 @@ end
 function Jutul.select_primary_variables!(
 	S, system::CurrentCollector, model::SimulationModel,
 )
-	S[:Phi] = Phi()
+	S[:Voltage] = Voltage()
 end
 
 function Jutul.select_secondary_variables!(
 	S, system::CurrentCollector, model::SimulationModel,
 )
-	# S[:TPkGrad_Phi] = TPkGrad{Phi}()
+	# S[:TPkGrad_Voltage] = TPkGrad{Voltage}()
 	S[:Charge] = Charge()
 
 end
@@ -46,7 +46,7 @@ function Jutul.select_parameters!(S,
 	S[:Conductivity] = Conductivity()
 	if hasentity(model.data_domain, BoundaryDirichletFaces())
 		if count_active_entities(model.data_domain, BoundaryDirichletFaces()) > 0
-			S[:BoundaryPhi] = BoundaryPotential(:Phi)
+			S[:BoundaryVoltage] = BoundaryPotential(:Voltage)
 		end
 	end
 

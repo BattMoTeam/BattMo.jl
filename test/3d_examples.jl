@@ -22,13 +22,13 @@ using Test
 		output = solve(sim)
 
 		Cc = map(x -> x[:Control][:Current][1], output.states)
-		Phi = map(x -> x[:Control][:Phi][1], output.states)
+		Voltage = map(x -> x[:Control][:Voltage][1], output.states)
 		@test length(output.states) == 137
 		@test Cc[2] ≈ 0.02321200713128439 atol = 1e-2
 		for i in 3:length(Cc)
 			@test Cc[i] ≈ 0.0514688 atol = 1e-2
 		end
-		@test Phi[1] ≈ 3.3147 atol = 1e-2
+		@test Voltage[1] ≈ 3.3147 atol = 1e-2
 		true
 
 	end

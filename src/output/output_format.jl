@@ -289,18 +289,18 @@ end
 function extract_spatial_data(states::Vector)
 	# Map from quantity names to symbol chains used to extract data
 	var_map = Dict(
-		:NeAmSurfaceConcentration => [:NeAm, :Cs],
-		:PeAmSurfaceConcentration => [:PeAm, :Cs],
-		:NeAmConcentration        => [:NeAm, :Cp],
-		:PeAmConcentration        => [:PeAm, :Cp],
-		:ElectrolyteConcentration => [:Elyte, :C],
-		:NeAmPotential            => [:NeAm, :Phi],
-		:ElectrolytePotential     => [:Elyte, :Phi],
-		:PeAmPotential            => [:PeAm, :Phi],
+		:NeAmSurfaceConcentration => [:NeAm, :SurfaceConcentration],
+		:PeAmSurfaceConcentration => [:PeAm, :SurfaceConcentration],
+		:NeAmConcentration        => [:NeAm, :ParticleConcentration],
+		:PeAmConcentration        => [:PeAm, :ParticleConcentration],
+		:ElectrolyteConcentration => [:Elyte, :Concentration],
+		:NeAmPotential            => [:NeAm, :Voltage],
+		:ElectrolytePotential     => [:Elyte, :Voltage],
+		:PeAmPotential            => [:PeAm, :Voltage],
 		:NeAmTemperature          => [:NeAm, :Temperature],
 		:PeAmTemperature          => [:PeAm, :Temperature],
-		:NeAmOpenCircuitPotential => [:NeAm, :Ocp],
-		:PeAmOpenCircuitPotential => [:PeAm, :Ocp],
+		:NeAmOpenCircuitPotential => [:NeAm, :OpenCircuitPotential],
+		:PeAmOpenCircuitPotential => [:PeAm, :OpenCircuitPotential],
 		:NeAmCharge               => [:NeAm, :Charge],
 		:ElectrolyteCharge        => [:Elyte, :Charge],
 		:PeAmCharge               => [:PeAm, :Charge],
@@ -456,7 +456,7 @@ function extract_time_series_data(output::NamedTuple)
 	states = output[:states]
 
 
-	E = [state[:Control][:Phi][1] for state in states]
+	E = [state[:Control][:Voltage][1] for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
 	#time_series_data = Dict{String, Vector{Float64}}("voltage" => E, "current" => I)

@@ -1,7 +1,7 @@
 export BattMoSystem, CurrentCollector
 export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
 export ChargeFlow, BoundaryPotential, BoundaryCurrent
-export Phi, C, Temperature, Charge, Mass
+export Voltage, Concentration, Temperature, Charge, Mass
 export BCCurrent
 export TPFAInterfaceFluxCT, ButlerVolmerActmatToElyteCT, ButlerVolmerElyteToActmatCT, ButlerVolmerInterfaceFluxCT
 export BoundaryDirichletFaces
@@ -22,17 +22,17 @@ abstract type BattMoGrid <: JutulMesh end
 # Potential variables
 
 abstract type Potential <: ScalarVariable end
-struct Phi <: Potential end
+struct Voltage <: Potential end
 
-# minimum_value(::Phi) = -10
-# maximum_value(::Phi) = 10
-# absolute_increment_limit(::Phi) = 0.
+# minimum_value(::Voltage) = -10
+# maximum_value(::Voltage) = 10
+# absolute_increment_limit(::Voltage) = 0.
 
-struct C <: Potential end
-Jutul.minimum_value(::C) = 0.0
-# maximum_value(::C)   = 10000
-# absolute_increment_limit(::C) = 500
-# relative_increment_limit(::C) = 0.1
+struct Concentration <: Potential end
+Jutul.minimum_value(::Concentration) = 0.0
+# maximum_value(:Concentration)   = 10000
+# absolute_increment_limit(:Concentration) = 500
+# relative_increment_limit(:Concentrationncentration) = 0.1
 
 struct Temperature <: Potential end
 struct BruggemanCoefficient <: ScalarVariable end
@@ -238,7 +238,7 @@ end
 
 function BatteryGeneralPreconditioner()
 	varpreconds = Vector{VariablePrecond}()
-	push!(varpreconds, VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Phi, :charge_conservation, nothing))
+	push!(varpreconds, VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Voltage, :charge_conservation, nothing))
 	g_varprecond = VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global, nothing)
 	params = Dict()
 	params["method"] = "block"

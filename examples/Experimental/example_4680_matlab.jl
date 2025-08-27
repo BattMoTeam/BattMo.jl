@@ -15,7 +15,7 @@ output = run_battery(inputparams; max_step = nothing, hook = myhook)
 states = output[:states]
 
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
+E = [state[:Control][:Voltage][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 f = Figure(size = (1000, 400))

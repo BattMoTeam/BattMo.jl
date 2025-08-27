@@ -51,9 +51,9 @@ function Jutul.select_primary_variables!(S,
 	model::SEImodel,
 )
 
-	S[:Phi]                      = Phi()
-	S[:Cp]                       = Cp()
-	S[:Cs]                       = Cs()
+	S[:Voltage]                  = Voltage()
+	S[:ParticleConcentration]    = ParticleConcentration()
+	S[:SurfaceConcentration]     = SurfaceConcentration()
 	S[:normalizedSEIlength]      = normalizedSEIlength()
 	S[:normalizedSEIvoltageDrop] = normalizedSEIvoltageDrop()
 
@@ -66,12 +66,12 @@ function Jutul.select_secondary_variables!(S,
 	model::SEImodel,
 )
 
-	S[:Charge]            = Charge()
-	S[:Ocp]               = Ocp()
-	S[:ReactionRateConst] = ReactionRateConst()
-	S[:SolidDiffFlux]     = SolidDiffFlux()
-	S[:SEIlength]         = SEIlength()
-	S[:SEIvoltageDrop]    = SEIvoltageDrop()
+	S[:Charge] = Charge()
+	S[:OpenCircuitPotential] = OpenCircuitPotential()
+	S[:ReactionRateConstant] = ReactionRateConstant()
+	S[:SolidDiffFlux] = SolidDiffFlux()
+	S[:SEIlength] = SEIlength()
+	S[:SEIvoltageDrop] = SEIvoltageDrop()
 
 end
 
@@ -198,16 +198,16 @@ function Jutul.update_cross_term_in_entity!(out,
 	ind_t = ct.target_cells[ind]
 	ind_s = ct.source_cells[ind]
 
-	phi_a = state_s.Phi[ind_s]
+	phi_a = state_s.Voltage[ind_s]
 	seiU  = state_s.SEIvoltageDrop[ind_s]
-	ocp   = state_s.Ocp[ind_s]
-	R0    = state_s.ReactionRateConst[ind_s]
-	c_a   = state_s.Cs[ind_s]
+	ocp   = state_s.OpenCircuitPotential[ind_s]
+	R0    = state_s.ReactionRateConstant[ind_s]
+	c_a   = state_s.SurfaceConcentration[ind_s]
 	T     = state_s.Temperature[ind_s]
 
 	vols  = state_t.Volume[ind_t]
-	phi_e = state_t.Phi[ind_t]
-	c_e   = state_t.C[ind_t]
+	phi_e = state_t.Voltage[ind_t]
+	c_e   = state_t.Concentration[ind_t]
 
 	# overpotential include SEI voltage drop
 	eta = phi_a - phi_e - ocp - seiU
@@ -256,15 +256,15 @@ function Jutul.update_cross_term_in_entity!(out,
 	ind_t = ct.target_cells[ind]
 	ind_s = ct.source_cells[ind]
 
-	phi_e = state_s.Phi[ind_s]
-	c_e   = state_s.C[ind_s]
+	phi_e = state_s.Voltage[ind_s]
+	c_e   = state_s.Concentration[ind_s]
 
 	vols  = state_t.Volume[ind_t]
-	c_a   = state_t.Cs[ind_t]
-	phi_a = state_t.Phi[ind_t]
+	c_a   = state_t.SurfaceConcentration[ind_t]
+	phi_a = state_t.Voltage[ind_t]
 	seiU  = state_t.SEIvoltageDrop[ind_t]
-	ocp   = state_t.Ocp[ind_t]
-	R0    = state_t.ReactionRateConst[ind_t]
+	ocp   = state_t.OpenCircuitPotential[ind_t]
+	R0    = state_t.ReactionRateConstant[ind_t]
 	T     = state_t.Temperature[ind_t]
 
 	# overpotential include SEI voltage drop
@@ -336,11 +336,11 @@ function Jutul.update_cross_term_in_entity!(out,
 
 	L     = state_t.SEIlength[ind_t]
 	T     = state_t.Temperature[ind_t]
-	phi_a = state_t.Phi[ind_t]
+	phi_a = state_t.Voltage[ind_t]
 	Usei  = state_t.SEIvoltageDrop[ind_t]
 	L     = state_t.SEIlength[ind_t]
 
-	phi_e = state_s.Phi[ind_s]
+	phi_e = state_s.Voltage[ind_s]
 
 	# compute SEI flux (called N)
 	eta = phi_a - phi_e - Usei
@@ -377,16 +377,16 @@ function Jutul.update_cross_term_in_entity!(out,
 	ind_t = ct.target_cells[ind]
 	ind_s = ct.source_cells[ind]
 
-	phi_a = state_t.Phi[ind_t]
+	phi_a = state_t.Voltage[ind_t]
 	seiU  = state_t.SEIvoltageDrop[ind_t]
-	ocp   = state_t.Ocp[ind_t]
-	R0    = state_t.ReactionRateConst[ind_t]
-	c_a   = state_t.Cs[ind_t]
+	ocp   = state_t.OpenCircuitPotential[ind_t]
+	R0    = state_t.ReactionRateConstant[ind_t]
+	c_a   = state_t.SurfaceConcentration[ind_t]
 	T     = state_t.Temperature[ind_t]
 	L     = state_t.SEIlength[ind_t]
 
-	phi_e = state_s.Phi[ind_s]
-	c_e   = state_s.C[ind_s]
+	phi_e = state_s.Voltage[ind_s]
+	c_e   = state_s.Concentration[ind_s]
 
 	# Overpotential definition  includes SEI voltage drop
 	eta = phi_a - phi_e - ocp - seiU

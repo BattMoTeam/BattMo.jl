@@ -27,7 +27,7 @@ states = output[:states]
 model  = output[:extra][:model]
 
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
+E = [state[:Control][:Voltage][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 f = Figure(size = (1000, 400))
@@ -79,21 +79,21 @@ function plot_potential(am, cc, label)
 	ax3d = Axis3(f3D[1, 1];
 		title = "Potential in $label electrode (coating and active material)")
 
-	maxPhi = maximum([maximum(state[cc][:Phi]), maximum(state[am][:Phi])])
-	minPhi = minimum([minimum(state[cc][:Phi]), minimum(state[am][:Phi])])
+	maxVoltage = maximum([maximum(state[cc][:Voltage]), maximum(state[am][:Voltage])])
+	minVoltage = minimum([minimum(state[cc][:Voltage]), minimum(state[am][:Voltage])])
 
-	colorrange = [0, maxPhi - minPhi]
+	colorrange = [0, maxVoltage - minVoltage]
 
 	components = [am, cc]
 	for component in components
 		g = model[component].domain.representation
-		phi = state[component][:Phi]
-		Jutul.plot_cell_data!(ax3d, g, phi .- minPhi; colormap = :viridis, colorrange = colorrange)
+		phi = state[component][:Voltage]
+		Jutul.plot_cell_data!(ax3d, g, phi .- minVoltage; colormap = :viridis, colorrange = colorrange)
 	end
 
 	cbar = GLMakie.Colorbar(f3D[1, 2];
 		colormap = :viridis,
-		colorrange = colorrange .+ minPhi,
+		colorrange = colorrange .+ minVoltage,
 		label = "potential")
 	display(GLMakie.Screen(), f3D)
 	return f3D
@@ -112,7 +112,7 @@ function plot_surface_concentration(component, label)
 	ax3d = Axis3(f3D[1, 1];
 		title = "Surface concentration in $label electrode")
 
-	cs = state[component][:Cs]
+	cs = state[component][:SurfaceConcentration]
 	maxcs = maximum(cs)
 	mincs = minimum(cs)
 
@@ -163,7 +163,7 @@ end
 nothing # hide
 
 # ## Plot of the concentration in the electrolyte
-plot_elyte(:C, "concentration")
+plot_elyte(Concentration, "concentration")
 
 # ## Plot of the potential in the electrolyte
-plot_elyte(:Phi, "potential")
+plot_elyte(:Voltage, "potential")
