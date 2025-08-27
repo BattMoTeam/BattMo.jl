@@ -2,9 +2,9 @@ using BattMo, Jutul
 using Test
 
 @testset "3d amg" begin
-    
+
 	@test begin
-        
+
 		name = "p2d_40_jl_chen2020"
 
 		fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
@@ -15,14 +15,17 @@ using Test
 
 		inputparams = merge_input_params(inputparams_geometry, inputparams)
 
-		output = get_simulation_input(inputparams)
+		cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_old_input_format_to_parameter_sets(inputparams)
 
-		simulator = output[:simulator]
-		model     = output[:model]
-		state0    = output[:state0]
-		forces    = output[:forces]
-		timesteps = output[:timesteps]
-		cfg       = output[:cfg]
+		model_setup = LithiumIonBattery(; model_settings)
+		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
+
+		simulator = sim.simulator
+		model     = sim.model
+		state0    = sim.initial_state
+		forces    = sim.forces
+		timesteps = sim.time_steps
+		cfg       = sim.cfg
 
 		cfg[:info_level] = -1
 		cfg[:failure_cuts_timestep] = false
@@ -46,25 +49,25 @@ using Test
 		prec = BattMo.BatteryGeneralPreconditioner(varpreconds, g_varprecond, params)
 
 		cfg[:linear_solver] = GenericKrylov(solver;
-                                            verbose            = verbose,
-			                                preconditioner     = prec,
-			                                relative_tolerance = rtol,
-			                                absolute_tolerance = atol,
-			                                max_iterations     = max_it)
+			verbose            = verbose,
+			preconditioner     = prec,
+			relative_tolerance = rtol,
+			absolute_tolerance = atol,
+			max_iterations     = max_it)
 		# cfg[:linear_solver]  = nothing
 		# cfg[:extra_timing] = true
 
 		states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
-        
+
 		Cc = map(x -> x[:Control][:Current][1], states)
 		phi = map(x -> x[:Control][:Phi][1], states)
-		@test length(states) == 84
-		@test Cc[1] ≈ 0.00058 atol = 1e-2
+		@test length(states) == 80
+		@test Cc[1] ≈ 0.008165838495401362 atol = 1e-4
 		for i in 3:length(Cc)
-			@test Cc[i] ≈ 0.008165 atol = 1e-2
+			@test Cc[i] ≈ 0.008165 atol = 1e-4
 		end
-		@test phi[1] ≈ 4.175 atol = 1e-1
-		@test phi[end] ≈ 2.76 atol = 1e-2
+		@test phi[1] ≈ 4.006456739146556 atol = 1e-2
+		@test phi[end] ≈ 2.7485026725636326 atol = 1e-2
 
 		true
 	end

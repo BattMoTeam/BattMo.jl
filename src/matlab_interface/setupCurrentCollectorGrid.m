@@ -28,7 +28,7 @@ T = M*T;
 
 T = T(bcfaces);
 
-paramobj = CurrentCollectorInputParams();
+paramobj = CurrentCollectorInputParamsOld();
 
 paramobj.G = G;
 paramobj.heatCapacity = 0;

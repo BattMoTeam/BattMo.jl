@@ -11,7 +11,7 @@
 using BattMo
 
 model_settings = load_model_settings(; from_default_set = "P4D_pouch")
-model_setup = LithiumIonBattery(; model_settings)
+model = LithiumIonBattery(; model_settings)
 
 
 # ## Step 2: Create an Empty Parameter Set
@@ -19,7 +19,7 @@ model_setup = LithiumIonBattery(; model_settings)
 # Next, create an empty parameter dictionary based on your model setup. This will include all the required keys but without any values filled in.
 
 
-empty_cell_parameter_set = load_cell_parameters(; from_model_template = model_setup)
+empty_cell_parameter_set = load_cell_parameters(; from_model_template = model)
 
 
 # ## Step 3: Save the Empty Parameter Set to a JSON File

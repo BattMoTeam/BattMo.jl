@@ -1,12 +1,12 @@
 export
-    CurrentAndVoltageSystem,
-    CurrentAndVoltageDomain,
-    VoltageVar,
-    CurrentVar,
-    sineup,
-    SimpleCVPolicy,
-    CyclingCVPolicy,
-    OperationalMode
+	CurrentAndVoltageSystem,
+	CurrentAndVoltageDomain,
+	VoltageVar,
+	CurrentVar,
+	sineup,
+	SimpleCVPolicy,
+	CyclingCVPolicy,
+	OperationalMode
 
 ################################
 # Define the operational modes #
@@ -16,17 +16,17 @@ export
 
 function getSymbol(ctrlType::OperationalMode)
 
-    if ctrlType == cc_discharge1
-	symb = :cc_discharge1
-    elseif ctrlType == cc_discharge2
-	symb = :cc_discharge2
-    elseif ctrlType == cc_charge1
-	symb = :cc_charge1
-    elseif ctrlType == cv_charge2
-	symb = :cv_charge2
-    end
+	if ctrlType == cc_discharge1
+		symb = :cc_discharge1
+	elseif ctrlType == cc_discharge2
+		symb = :cc_discharge2
+	elseif ctrlType == cc_charge1
+		symb = :cc_charge1
+	elseif ctrlType == cv_charge2
+		symb = :cv_charge2
+	end
 
-    return symb
+	return symb
 
 end
 
@@ -53,8 +53,8 @@ abstract type AbstractPolicy end
 
 struct CurrentAndVoltageSystem{P <: AbstractPolicy} <: JutulSystem
 
-    # Control policy
-    policy::P
+	# Control policy
+	policy::P
 
 end
 
@@ -73,43 +73,43 @@ Jutul.number_of_cells(::CurrentAndVoltageDomain) = 1
 """ Simple constant current. Stops when lower cut-off value is reached
 """
 mutable struct CCPolicy{R} <: AbstractPolicy
-    numberOfCycles::Int
-    initialControl::String
-    ImaxDischarge::R
-    ImaxCharge::R
-    lowerCutoffVoltage::R
-    upperCutoffVoltage::R
-    use_ramp_up::Bool
-    current_function::Union{Missing, Any}
-    tolerances::Dict{String, Real}
-    function CCPolicy(
-	numberOfCycles::Int,
-	initialControl::String,
-	lowerCutoffVoltage::Real,
-	upperCutoffVoltage::Real,
-	use_ramp_up::Bool;
-	current_function = missing,
-	ImaxDischarge::Real = 0.0,
-	ImaxCharge::Real = 0.0,
-	T = missing,
-	tolerances = Dict("discharging" => 1e-4,
-			  "charging" => 1e-4),
+	numberOfCycles::Int
+	initialControl::String
+	ImaxDischarge::R
+	ImaxCharge::R
+	lowerCutoffVoltage::R
+	upperCutoffVoltage::R
+	use_ramp_up::Bool
+	current_function::Union{Missing, Any}
+	tolerances::Dict{String, Real}
+	function CCPolicy(
+		numberOfCycles::Int,
+		initialControl::String,
+		lowerCutoffVoltage::Real,
+		upperCutoffVoltage::Real,
+		use_ramp_up::Bool;
+		current_function = missing,
+		ImaxDischarge::Real = 0.0,
+		ImaxCharge::Real = 0.0,
+		T = missing,
+		tolerances = Dict("discharging" => 1e-4,
+			"charging" => 1e-4),
 	)
-	T = promote_type(T, typeof(lowerCutoffVoltage), typeof(upperCutoffVoltage), typeof(ImaxDischarge), typeof(ImaxCharge))
-	new{T}(numberOfCycles, initialControl, ImaxDischarge, ImaxCharge, lowerCutoffVoltage, upperCutoffVoltage, use_ramp_up, current_function, tolerances)
-    end
+		T = promote_type(T, typeof(lowerCutoffVoltage), typeof(upperCutoffVoltage), typeof(ImaxDischarge), typeof(ImaxCharge))
+		new{T}(numberOfCycles, initialControl, ImaxDischarge, ImaxCharge, lowerCutoffVoltage, upperCutoffVoltage, use_ramp_up, current_function, tolerances)
+	end
 end
 
 
 """ Simple constant current, constant voltage policy. Stops when lower cut-off value is reached
 """
 mutable struct SimpleCVPolicy{R} <: AbstractPolicy
-    current_function::Any
-    Imax::R
-    voltage::R
-    function SimpleCVPolicy(; current_function = missing, Imax::T = 0.0, voltage = missing) where T <: Real
-	new{Union{Missing, T}}(current_function, Imax, voltage)
-    end
+	current_function::Any
+	Imax::R
+	voltage::R
+	function SimpleCVPolicy(; current_function = missing, Imax::T = 0.0, voltage = missing) where T <: Real
+		new{Union{Missing, T}}(current_function, Imax, voltage)
+	end
 end
 
 """ No policy means that the control is kept fixed throughout the simulation
@@ -121,12 +121,12 @@ struct NoPolicy <: AbstractPolicy end
 Function Policy
 """
 struct FunctionPolicy <: AbstractPolicy
-    current_function::Function
+	current_function::Function
 
-    function FunctionPolicy(function_name::String; file_path::Union{Nothing, String} = nothing)
-	current_function = setup_function_from_function_name(function_name; file_path = file_path)
-	new{}(current_function)
-    end
+	function FunctionPolicy(function_name::String; file_path::Union{Nothing, String} = nothing)
+		current_function = setup_function_from_function_name(function_name; file_path = file_path)
+		new{}(current_function)
+	end
 
 end
 
@@ -134,56 +134,56 @@ end
 """
 mutable struct CyclingCVPolicy{R, I} <: AbstractPolicy
 
-    ImaxDischarge::R
-    ImaxCharge::R
-    lowerCutoffVoltage::R
-    upperCutoffVoltage::R
-    dIdtLimit::R
-    dEdtLimit::R
-    initialControl::OperationalMode
-    numberOfCycles::I
-    tolerances::Any
-    use_ramp_up::Bool
-    current_function::Any
+	ImaxDischarge::R
+	ImaxCharge::R
+	lowerCutoffVoltage::R
+	upperCutoffVoltage::R
+	dIdtLimit::R
+	dEdtLimit::R
+	initialControl::OperationalMode
+	numberOfCycles::I
+	tolerances::Any
+	use_ramp_up::Bool
+	current_function::Any
 
 end
 
 function CyclingCVPolicy(lowerCutoffVoltage,
-	                 upperCutoffVoltage,
-	                 dIdtLimit,
-	                 dEdtLimit,
-	                 initialControl::String,
-	                 numberOfCycles;
-	                 ImaxDischarge = 0 * lowerCutoffVoltage,
-	                 ImaxCharge = 0 * lowerCutoffVoltage,
-	                 use_ramp_up::Bool,
-	                 current_function = missing,
-                         )
+	upperCutoffVoltage,
+	dIdtLimit,
+	dEdtLimit,
+	initialControl::String,
+	numberOfCycles;
+	ImaxDischarge = 0 * lowerCutoffVoltage,
+	ImaxCharge = 0 * lowerCutoffVoltage,
+	use_ramp_up::Bool,
+	current_function = missing,
+)
 
-    if initialControl == "charging"
-	initialControl = charging
-    elseif initialControl == "discharging"
-	initialControl = discharging
-    else
-	error("InitialControl $initialControl not recognized")
-    end
+	if initialControl == "charging"
+		initialControl = charging
+	elseif initialControl == "discharging"
+		initialControl = discharging
+	else
+		error("InitialControl $initialControl not recognized")
+	end
 
-    tolerances = (cc_discharge1 = 1e-4,
-		  cc_discharge2 = 0.9,
-		  cc_charge1 = 1e-4,
-		  cv_charge2 = 0.9)
+	tolerances = (cc_discharge1 = 1e-4,
+		cc_discharge2 = 0.9,
+		cc_charge1 = 1e-4,
+		cv_charge2 = 0.9)
 
-    return CyclingCVPolicy(ImaxDischarge,
-		           ImaxCharge,
-		           lowerCutoffVoltage,
-		           upperCutoffVoltage,
-		           dIdtLimit,
-		           dEdtLimit,
-		           initialControl,
-		           numberOfCycles,
-		           tolerances,
-		           use_ramp_up,
-		           current_function)
+	return CyclingCVPolicy(ImaxDischarge,
+		ImaxCharge,
+		lowerCutoffVoltage,
+		upperCutoffVoltage,
+		dIdtLimit,
+		dEdtLimit,
+		initialControl,
+		numberOfCycles,
+		tolerances,
+		use_ramp_up,
+		current_function)
 end
 
 ################################
@@ -192,8 +192,8 @@ end
 
 function Jutul.select_primary_variables!(S, system::CurrentAndVoltageSystem, model::SimulationModel)
 
-    S[:Phi]     = VoltageVar()
-    S[:Current] = CurrentVar()
+	S[:Phi]     = VoltageVar()
+	S[:Current] = CurrentVar()
 
 end
 
@@ -203,8 +203,8 @@ end
 
 function Jutul.select_equations!(eqs, system::CurrentAndVoltageSystem, model::SimulationModel)
 
-    eqs[:charge_conservation] = CurrentEquation()
-    eqs[:control] = ControlEquation()
+	eqs[:charge_conservation] = CurrentEquation()
+	eqs[:control] = ControlEquation()
 
 end
 
@@ -213,24 +213,24 @@ end
 #########################
 
 function Jutul.select_parameters!(S,
-	                          system::CurrentAndVoltageSystem{CCPolicy{R}},
-	                          model::SimulationModel) where {R}
-    S[:ImaxDischarge] = ImaxDischarge()
-    S[:ImaxCharge] = ImaxCharge()
+	system::CurrentAndVoltageSystem{CCPolicy{R}},
+	model::SimulationModel) where {R}
+	S[:ImaxDischarge] = ImaxDischarge()
+	S[:ImaxCharge] = ImaxCharge()
 end
 
 function Jutul.select_parameters!(S,
-	                          system::CurrentAndVoltageSystem{SimpleCVPolicy{R}},
-	                          model::SimulationModel) where {R}
-    S[:ImaxDischarge] = ImaxDischarge()
+	system::CurrentAndVoltageSystem{SimpleCVPolicy{R}},
+	model::SimulationModel) where {R}
+	S[:ImaxDischarge] = ImaxDischarge()
 
 end
 
 function Jutul.select_parameters!(S,
-	                          system::CurrentAndVoltageSystem{CyclingCVPolicy{R, I}},
-	                          model::SimulationModel) where {R, I}
-    S[:ImaxDischarge] = ImaxDischarge()
-    S[:ImaxCharge]    = ImaxCharge()
+	system::CurrentAndVoltageSystem{CyclingCVPolicy{R, I}},
+	model::SimulationModel) where {R, I}
+	S[:ImaxDischarge] = ImaxDischarge()
+	S[:ImaxCharge]    = ImaxCharge()
 end
 
 
@@ -245,19 +245,19 @@ end
 abstract type Controller end
 
 mutable struct FunctionController{R <: Real} <: Controller
-    target::R
-    time::R
-    target_is_voltage::Bool
+	target::R
+	time::R
+	target_is_voltage::Bool
 end
 
 FunctionController() = FunctionController(0.0, 0.0, false)
 
 mutable struct CCController{I <: Integer, R <: Real} <: Controller
-    numberOfCycles::I
-    target::R
-    time::R
-    target_is_voltage::Bool
-    ctrlType::Union{Missing, String}
+	numberOfCycles::I
+	target::R
+	time::R
+	target_is_voltage::Bool
+	ctrlType::Union{Missing, String}
 
 end
 
@@ -267,10 +267,10 @@ CCController() = CCController(0, 0.0, 0.0, false, missing)
 
 mutable struct SimpleControllerCV{R} <: Controller
 
-    target::R
-    time::R
-    target_is_voltage::Bool
-    ctrlType::OperationalMode
+	target::R
+	time::R
+	target_is_voltage::Bool
+	ctrlType::OperationalMode
 
 end
 
@@ -280,18 +280,18 @@ SimpleControllerCV() = SimpleControllerCV(0.0, 0.0, true, none)
 
 mutable struct CcCvController{R, I <: Integer} <: Controller
 
-    maincontroller::SimpleControllerCV{R}
-    numberOfCycles::I
-    dEdt::Union{R, Missing}
-    dIdt::Union{R, Missing}
+	maincontroller::SimpleControllerCV{R}
+	numberOfCycles::I
+	dEdt::Union{R, Missing}
+	dIdt::Union{R, Missing}
 
 end
 
 function CcCvController()
 
-    maincontroller = SimpleControllerCV()
+	maincontroller = SimpleControllerCV()
 
-    return CcCvController(maincontroller, 0, missing, missing)
+	return CcCvController(maincontroller, 0, missing, missing)
 
 end
 
@@ -299,35 +299,35 @@ end
 ## Helper for CcCvController so that the fields of SimpleControllerCV appears as inherrited.
 
 function Base.getproperty(c::CcCvController, f::Symbol)
-    if f in fieldnames(SimpleControllerCV)
-	return getfield(c.maincontroller, f)
-    else
-	return getfield(c, f)
-    end
+	if f in fieldnames(SimpleControllerCV)
+		return getfield(c.maincontroller, f)
+	else
+		return getfield(c, f)
+	end
 end
 
 function Base.setproperty!(c::CcCvController, f::Symbol, v)
-    if f in fieldnames(SimpleControllerCV)
-	setfield!(c.maincontroller, f, v)
-    else
-	setfield!(c, f, v)
-    end
+	if f in fieldnames(SimpleControllerCV)
+		setfield!(c.maincontroller, f, v)
+	else
+		setfield!(c, f, v)
+	end
 end
 
 @inline function Jutul.numerical_type(x::CCController{R, I}) where {R, I}
-    return R
+	return R
 end
 
 @inline function Jutul.numerical_type(x::FunctionController{R}) where {R}
-    return R
+	return R
 end
 
 @inline function Jutul.numerical_type(x::SimpleControllerCV{R}) where {R}
-    return R
+	return R
 end
 
 @inline function Jutul.numerical_type(x::CcCvController{R, I}) where {R, I}
-    return R
+	return R
 end
 
 
@@ -336,11 +336,11 @@ Function to create (deep) copy of simple controller
 """
 function copyController!(cv_copy::CCController, cv::CCController)
 
-    cv_copy.numberOfCycles = cv.numberOfCycles
-    cv_copy.target = cv.target
-    cv_copy.time = cv.time
-    cv_copy.target_is_voltage = cv.target_is_voltage
-    cv_copy.ctrlType = cv.ctrlType
+	cv_copy.numberOfCycles = cv.numberOfCycles
+	cv_copy.target = cv.target
+	cv_copy.time = cv.time
+	cv_copy.target_is_voltage = cv.target_is_voltage
+	cv_copy.ctrlType = cv.ctrlType
 
 end
 
@@ -350,9 +350,9 @@ Function to create (deep) copy of function controller
 """
 function copyController!(cv_copy::FunctionController, cv::FunctionController)
 
-    cv_copy.target = cv.target
-    cv_copy.time = cv.time
-    cv_copy.target_is_voltage = cv.target_is_voltage
+	cv_copy.target = cv.target
+	cv_copy.time = cv.time
+	cv_copy.target_is_voltage = cv.target_is_voltage
 
 end
 
@@ -361,10 +361,10 @@ Function to create (deep) copy of simple controller
 """
 function copyController!(cv_copy::SimpleControllerCV, cv::SimpleControllerCV)
 
-    cv_copy.target            = cv.target
-    cv_copy.time              = cv.time
-    cv_copy.target_is_voltage = cv.target_is_voltage
-    cv_copy.ctrlType          = cv.ctrlType
+	cv_copy.target            = cv.target
+	cv_copy.time              = cv.time
+	cv_copy.target_is_voltage = cv.target_is_voltage
+	cv_copy.ctrlType          = cv.ctrlType
 
 end
 
@@ -373,8 +373,8 @@ Function to create (deep) copy of CC-CV controller
 """
 function copyController!(cv_copy::CcCvController, cv::CcCvController)
 
-    copyController!(cv_copy.maincontroller, cv.maincontroller)
-    cv_copy.numberOfCycles = cv.numberOfCycles
+	copyController!(cv_copy.maincontroller, cv.maincontroller)
+	cv_copy.numberOfCycles = cv.numberOfCycles
 
 end
 
@@ -383,10 +383,10 @@ Overload function to copy simple controller
 """
 function Base.copy(cv::FunctionController)
 
-    cv_copy = FunctionController()
-    copyController!(cv_copy, cv)
+	cv_copy = FunctionController()
+	copyController!(cv_copy, cv)
 
-    return cv_copy
+	return cv_copy
 
 end
 
@@ -396,10 +396,10 @@ Overload function to copy simple controller
 """
 function Base.copy(cv::CCController)
 
-    cv_copy = CCController()
-    copyController!(cv_copy, cv)
+	cv_copy = CCController()
+	copyController!(cv_copy, cv)
 
-    return cv_copy
+	return cv_copy
 
 end
 
@@ -408,10 +408,10 @@ Overload function to copy simple controller
 """
 function Base.copy(cv::SimpleControllerCV)
 
-    cv_copy = SimpleControllerCV()
-    copyController!(cv_copy, cv)
+	cv_copy = SimpleControllerCV()
+	copyController!(cv_copy, cv)
 
-    return cv_copy
+	return cv_copy
 
 end
 
@@ -420,10 +420,10 @@ Overload function to copy CC-CV controller
 """
 function Base.copy(cv::CcCvController)
 
-    cv_copy = CcCvController()
-    copyController!(cv_copy, cv)
+	cv_copy = CcCvController()
+	copyController!(cv_copy, cv)
 
-    return cv_copy
+	return cv_copy
 
 end
 
@@ -431,11 +431,11 @@ end
 We add the controller in the output
 """
 function Jutul.select_minimum_output_variables!(outputs,
-	                                        system::CurrentAndVoltageSystem{R},
-	                                        model::SimulationModel,
-                                                ) where {R}
+	system::CurrentAndVoltageSystem{R},
+	model::SimulationModel,
+) where {R}
 
-    push!(outputs, :Controller)
+	push!(outputs, :Controller)
 
 end
 
@@ -445,61 +445,61 @@ end
 ###################################################################################################################
 function getInitCurrent(policy::CCPolicy)
 
-    if !ismissing(policy.current_function)
-	val = policy.current_function(0.0)
+	if !ismissing(policy.current_function)
+		val = policy.current_function(0.0)
 
-    else
-	if policy.initialControl == "charging"
-
-	    val = -policy.ImaxCharge
-
-	elseif policy.initialControl == "discharging"
-	    val = policy.ImaxDischarge
 	else
-	    error("Initial control $(policy.initialControl) not recognized")
-	end
-    end
+		if policy.initialControl == "charging"
 
-    return val
+			val = -policy.ImaxCharge
+
+		elseif policy.initialControl == "discharging"
+			val = policy.ImaxDischarge
+		else
+			error("Initial control $(policy.initialControl) not recognized")
+		end
+	end
+
+	return val
 end
 
 function getInitCurrent(policy::FunctionPolicy)
-    return 0.0
+	return 0.0
 end
 
 function getInitCurrent(policy::SimpleCVPolicy)
-    if !ismissing(policy.current_function)
-	val = policy.current_function(0.0)
-    else
+	if !ismissing(policy.current_function)
+		val = policy.current_function(0.0)
+	else
 
-	val = policy.Imax
+		val = policy.Imax
 
-    end
-    return val
+	end
+	return val
 end
 
 
 function getInitCurrent(policy::CyclingCVPolicy)
-    if !ismissing(policy.current_function)
-	val = policy.current_function(0.0)
+	if !ismissing(policy.current_function)
+		val = policy.current_function(0.0)
 
-    else
-	if policy.initialControl == charging
-	    val = -policy.ImaxCharge
-
-	elseif policy.initialControl == discharging
-	    val = policy.ImaxDischarge
 	else
-	    error("Initial control $(policy.initialControl) not recognized")
+		if policy.initialControl == charging
+			val = -policy.ImaxCharge
+
+		elseif policy.initialControl == discharging
+			val = policy.ImaxDischarge
+		else
+			error("Initial control $(policy.initialControl) not recognized")
+		end
 	end
-    end
-    return val
+	return val
 
 end
 
 function getInitCurrent(model::CurrentAndVoltageModel)
 
-    return getInitCurrent(model.system.policy)
+	return getInitCurrent(model.system.policy)
 
 end
 
@@ -509,88 +509,93 @@ end
 # Setup the initial policy from the input parameters #
 ######################################################
 
-function setup_initial_control_policy!(policy::CCPolicy, inputparams::InputParams, parameters)
+function setup_initial_control_policy!(policy::CCPolicy, input, parameters)
 
-    if policy.initialControl == "charging"
+	cycling_protocol = input.cycling_protocol
 
-	Imax = only(parameters[:Control][:ImaxCharge])
+	if policy.initialControl == "charging"
+
+		Imax = only(parameters[:Control][:ImaxCharge])
 
 
-    elseif policy.initialControl == "discharging"
+	elseif policy.initialControl == "discharging"
+		Imax = only(parameters[:Control][:ImaxDischarge])
+
+	else
+		error("Initial control $(policy.initialControl) is not recognized")
+	end
+
+	if policy.use_ramp_up
+
+		tup = Float64(input.simulation_settings["RampUpTime"])
+
+		cFun(time) = currentFun(time, Imax, tup)
+
+		policy.current_function = cFun
+	end
+
+	if haskey(cycling_protocol, "UpperVoltageLimit")
+		policy.upperCutoffVoltage = cycling_protocol["UpperVoltageLimit"]
+	elseif haskey(cycling_protocol, "LowerVoltageLimit")
+		policy.lowerCutoffVoltage = cycling_protocol["LowerVoltageLimit"]
+	end
+	policy.ImaxCharge = only(parameters[:Control][:ImaxCharge])
+	policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
+
+end
+
+
+function setup_initial_control_policy!(policy::FunctionPolicy, input, parameters)
+
+end
+
+function setup_initial_control_policy!(policy::SimpleCVPolicy, input, parameters)
+
+	cycling_protocol = input.cycling_protocol
+
 	Imax = only(parameters[:Control][:ImaxDischarge])
 
-    else
-	error("Initial control $(policy.initialControl) is not recognized")
-    end
-
-    if policy.use_ramp_up
-
-	tup = Float64(inputparams["Control"]["rampupTime"])
+	tup = Float64(input.simulation_settings["RampUpTime"])
 
 	cFun(time) = currentFun(time, Imax, tup)
 
 	policy.current_function = cFun
-    end
-
-    if haskey(inputparams["Control"], "upperCutoffVoltage")
-	policy.upperCutoffVoltage = inputparams["Control"]["upperCutoffVoltage"]
-    elseif haskey(inputparams["Control"], "lowerCutoffVoltage")
-	policy.lowerCutoffVoltage = inputparams["Control"]["lowerCutoffVoltage"]
-    end
-    policy.ImaxCharge = only(parameters[:Control][:ImaxCharge])
-    policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
+	policy.Imax             = Imax
+	policy.voltage          = cycling_protocol["LowerVoltageLimit"]
 
 end
 
 
-function setup_initial_control_policy!(policy::FunctionPolicy, inputparams::InputParams, parameters)
+function setup_initial_control_policy!(policy::CyclingCVPolicy, input, parameters)
 
-end
+	cycling_protocol = input.cycling_protocol
 
-function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::InputParams, parameters)
-
-    Imax = only(parameters[:Control][:ImaxDischarge])
-
-    tup = Float64(inputparams["Control"]["rampupTime"])
-
-    cFun(time) = currentFun(time, Imax, tup)
-
-    policy.current_function = cFun
-    policy.Imax             = Imax
-    policy.voltage          = inputparams["Control"]["lowerCutoffVoltage"]
-
-end
-
-
-function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::InputParams, parameters)
-
-
-    if policy.initialControl == charging
-	Imax = only(parameters[:Control][:ImaxCharge])
+	if policy.initialControl == charging
+		Imax = only(parameters[:Control][:ImaxCharge])
 
 
 
-    elseif policy.initialControl == discharging
-	Imax = only(parameters[:Control][:ImaxDischarge])
+	elseif policy.initialControl == discharging
+		Imax = only(parameters[:Control][:ImaxDischarge])
 
-    else
-	error("Initial control $(policy.initialControl) is not recognized")
-    end
+	else
+		error("Initial control $(policy.initialControl) is not recognized")
+	end
 
-    if policy.use_ramp_up
+	if policy.use_ramp_up
 
-	tup = Float64(inputparams["Control"]["rampupTime"])
+		tup = Float64(input.simulation_settings["RampUpTime"])
 
-	cFun(time) = currentFun(time, Imax, tup)
+		cFun(time) = currentFun(time, Imax, tup)
 
-	policy.current_function = cFun
-    end
+		policy.current_function = cFun
+	end
 
 
-    policy.ImaxCharge = only(parameters[:Control][:ImaxCharge])
-    policy.upperCutoffVoltage = inputparams["Control"]["upperCutoffVoltage"]
-    policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
-    policy.lowerCutoffVoltage = inputparams["Control"]["lowerCutoffVoltage"]
+	policy.ImaxCharge = only(parameters[:Control][:ImaxCharge])
+	policy.upperCutoffVoltage = cycling_protocol["UpperVoltageLimit"]
+	policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
+	policy.lowerCutoffVoltage = cycling_protocol["LowerVoltageLimit"]
 
 
 
@@ -605,25 +610,25 @@ We need a more fine-tuned update of the variables when we use a cycling policies
 """
 function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, model::P, dx, w) where {R, I, Q <: Union{CyclingCVPolicy{R, I}, CCPolicy{R}}, P <: CurrentAndVoltageModel{Q}}
 
-    entity = associated_entity(p)
-    active = active_entities(model.domain, entity, for_variables = true)
-    v = state[state_symbol]
+	entity = associated_entity(p)
+	active = active_entities(model.domain, entity, for_variables = true)
+	v = state[state_symbol]
 
-    nu            = length(active)
-    ImaxDischarge = model.system.policy.ImaxDischarge
-    ImaxCharge    = model.system.policy.ImaxCharge
+	nu            = length(active)
+	ImaxDischarge = model.system.policy.ImaxDischarge
+	ImaxCharge    = model.system.policy.ImaxCharge
 
-    Imax = max(ImaxCharge, ImaxDischarge)
+	Imax = max(ImaxCharge, ImaxDischarge)
 
-    abs_max = 0.2 * Imax
-    rel_max = relative_increment_limit(p)
-    maxval = maximum_value(p)
-    minval = minimum_value(p)
-    scale = variable_scale(p)
-    @inbounds for i in 1:nu
-	a_i = active[i]
-	v[a_i] = update_value(v[a_i], w * dx[i], abs_max, rel_max, minval, maxval, scale)
-    end
+	abs_max = 0.2 * Imax
+	rel_max = relative_increment_limit(p)
+	maxval = maximum_value(p)
+	minval = minimum_value(p)
+	scale = variable_scale(p)
+	@inbounds for i in 1:nu
+		a_i = active[i]
+		v[a_i] = update_value(v[a_i], w * dx[i], abs_max, rel_max, minval, maxval, scale)
+	end
 
 end
 
@@ -638,65 +643,65 @@ The setupRegionSwitchFlags function detects from the current state and control, 
 """
 function setupRegionSwitchFlags(policy::Union{CyclingCVPolicy, CCPolicy}, state, ctrlType)
 
-    Emin = policy.lowerCutoffVoltage
-    Emax = policy.upperCutoffVoltage
-    if policy isa CyclingCVPolicy
-	dIdtMin = policy.dIdtLimit
-	dEdtMin = policy.dEdtLimit
-	tols = policy.tolerances
-	tol = tols[getSymbol(ctrlType)]
-    else
-	tols = policy.tolerances
-	tol = tols[ctrlType]
-
-    end
-
-
-
-    E = only(state.Phi)
-    I = only(state.Current)
-
-
-
-    if ctrlType == cc_discharge1 || ctrlType == "discharging"
-
-	before = E > Emin * (1 + tol)
-	after  = E < Emin * (1 - tol)
-
-    elseif ctrlType == cc_discharge2
-
-	dEdt = state.Controller.dEdt
-	if !ismissing(dEdt)
-	    before = abs(dEdt) > dEdtMin * (1 + tol)
-	    after  = abs(dEdt) < dEdtMin * (1 - tol)
+	Emin = policy.lowerCutoffVoltage
+	Emax = policy.upperCutoffVoltage
+	if policy isa CyclingCVPolicy
+		dIdtMin = policy.dIdtLimit
+		dEdtMin = policy.dEdtLimit
+		tols = policy.tolerances
+		tol = tols[getSymbol(ctrlType)]
 	else
-	    before = false
-	    after  = false
+		tols = policy.tolerances
+		tol = tols[ctrlType]
+
 	end
 
-    elseif ctrlType == cc_charge1 || ctrlType == "charging"
 
-	before = E < Emax * (1 - tol)
-	after  = E > Emax * (1 + tol)
 
-    elseif ctrlType == cv_charge2
+	E = only(state.Phi)
+	I = only(state.Current)
 
-	dIdt = state.Controller.dIdt
-	if !ismissing(dIdt)
-	    before = abs(dIdt) > dIdtMin * (1 + tol)
-	    after  = abs(dIdt) < dIdtMin * (1 - tol)
+
+
+	if ctrlType == cc_discharge1 || ctrlType == "discharging"
+
+		before = E > Emin * (1 + tol)
+		after  = E < Emin * (1 - tol)
+
+	elseif ctrlType == cc_discharge2
+
+		dEdt = state.Controller.dEdt
+		if !ismissing(dEdt)
+			before = abs(dEdt) > dEdtMin * (1 + tol)
+			after  = abs(dEdt) < dEdtMin * (1 - tol)
+		else
+			before = false
+			after  = false
+		end
+
+	elseif ctrlType == cc_charge1 || ctrlType == "charging"
+
+		before = E < Emax * (1 - tol)
+		after  = E > Emax * (1 + tol)
+
+	elseif ctrlType == cv_charge2
+
+		dIdt = state.Controller.dIdt
+		if !ismissing(dIdt)
+			before = abs(dIdt) > dIdtMin * (1 + tol)
+			after  = abs(dIdt) < dIdtMin * (1 - tol)
+		else
+			before = false
+			after  = false
+		end
+
 	else
-	    before = false
-	    after  = false
+
+		error("Control type $ctrlType not recognized")
+
 	end
 
-    else
-
-	error("Control type $ctrlType not recognized")
-
-    end
-
-    return (beforeSwitchRegion = before, afterSwitchRegion = after)
+	return (beforeSwitchRegion = before, afterSwitchRegion = after)
 
 end
 
@@ -705,39 +710,39 @@ When a step has been computed for a given control up to the convergence requirem
 """
 function check_constraints(model, storage)
 
-    policy = model[:Control].system.policy
+	policy = model[:Control].system.policy
 
-    state  = storage.state[:Control]
-    state0 = storage.state0[:Control]
+	state  = storage.state[:Control]
+	state0 = storage.state0[:Control]
 
-    controller = state[:Controller]
-    ctrlType   = state[:Controller].ctrlType
-    ctrlType0  = state0[:Controller].ctrlType
+	controller = state[:Controller]
+	ctrlType   = state[:Controller].ctrlType
+	ctrlType0  = state0[:Controller].ctrlType
 
-    if policy isa CyclingCVPolicy
-	nextCtrlType = getNextCtrlTypeCCCV(ctrlType0)
-    elseif policy isa CCPolicy
-	if ctrlType == "discharging"
-	    nextCtrlType = "charging"
+	if policy isa CyclingCVPolicy
+		nextCtrlType = getNextCtrlTypeCCCV(ctrlType0)
+	elseif policy isa CCPolicy
+		if ctrlType == "discharging"
+			nextCtrlType = "charging"
+		else
+			nextCtrlType = "discharging"
+		end
 	else
-	    nextCtrlType = "discharging"
+		error("Policy $(typeof(policy)) not recognized")
 	end
-    else
-	error("Policy $(typeof(policy)) not recognized")
-    end
 
-    arefulfilled = true
+	arefulfilled = true
 
-    rsw  = setupRegionSwitchFlags(policy, state, ctrlType)
-    rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
+	rsw  = setupRegionSwitchFlags(policy, state, ctrlType)
+	rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
 
-    if (ctrlType == ctrlType0 && rsw.afterSwitchRegion) || (ctrlType == nextCtrlType && !rswN.beforeSwitchRegion)
+	if (ctrlType == ctrlType0 && rsw.afterSwitchRegion) || (ctrlType == nextCtrlType && !rswN.beforeSwitchRegion)
 
-	arefulfilled = false
+		arefulfilled = false
 
-    end
+	end
 
-    return arefulfilled
+	return arefulfilled
 
 end
 
@@ -748,25 +753,25 @@ end
 
 function Jutul.update_values!(old::FunctionController, new::FunctionController)
 
-    copyController!(old, new)
+	copyController!(old, new)
 
 end
 
 function Jutul.update_values!(old::CCController, new::CCController)
 
-    copyController!(old, new)
+	copyController!(old, new)
 
 end
 
 function Jutul.update_values!(old::SimpleControllerCV, new::SimpleControllerCV)
 
-    copyController!(old, new)
+	copyController!(old, new)
 
 end
 
 function Jutul.update_values!(old::CcCvController, new::CcCvController)
 
-    copyController!(old, new)
+	copyController!(old, new)
 
 end
 
@@ -774,11 +779,11 @@ end
 In addition to update the values in all primary variables, we need also to update the values in the controller. We do that by specializing the method perform_step_solve_impl!
 """
 function Jutul.update_extra_state_fields!(storage, model::SimulationModel{CurrentAndVoltageDomain, <:CurrentAndVoltageSystem}, dt, time)
-    state  = storage.state
-    state0 = storage.state0
-    policy = model.system.policy
-    update_controller!(state, state0, policy, dt)
-    return storage
+	state  = storage.state
+	state0 = storage.state0
+	policy = model.system.policy
+	update_controller!(state, state0, policy, dt)
+	return storage
 end
 
 """
@@ -786,29 +791,29 @@ We need to add the specific treatment of the controller variables
 """
 function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{CyclingCVPolicy{T1, T2}}, T3, T4}) where {T1, T2, T3, T4}
 
-    invoke(reset_state_to_previous_state!,
-	   Tuple{typeof(storage),
-		 SimulationModel},
-	   storage,
-	   model)
-    copyController!(storage.state[:Controller], storage.state0[:Controller])
+	invoke(reset_state_to_previous_state!,
+		Tuple{typeof(storage),
+			SimulationModel},
+		storage,
+		model)
+	copyController!(storage.state[:Controller], storage.state0[:Controller])
 end
 
 function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{CCPolicy{T1}}, T3, T4}) where {T1, T3, T4}
 
-    invoke(reset_state_to_previous_state!,
-	   Tuple{typeof(storage),
-		 SimulationModel},
-	   storage,
-	   model)
-    copyController!(storage.state[:Controller], storage.state0[:Controller])
+	invoke(reset_state_to_previous_state!,
+		Tuple{typeof(storage),
+			SimulationModel},
+		storage,
+		model)
+	copyController!(storage.state[:Controller], storage.state0[:Controller])
 end
 
 
 function update_controller!(state, state0, policy::AbstractPolicy, dt)
 
-    update_control_type_in_controller!(state, state0, policy, dt)
-    update_values_in_controller!(state, policy)
+	update_control_type_in_controller!(state, state0, policy, dt)
+	update_values_in_controller!(state, policy)
 
 end
 
@@ -822,9 +827,9 @@ end
 Implementation of the function policy
 """
 function update_control_type_in_controller!(state, state0, policy::FunctionPolicy, dt)
-    controller                   = state.Controller
-    controller.target_is_voltage = false
-    controller.time              = state0.Controller.time + dt
+	controller                   = state.Controller
+	controller.target_is_voltage = false
+	controller.time              = state0.Controller.time + dt
 
 end
 
@@ -833,17 +838,17 @@ Implementation of the simple CV policy
 """
 function update_control_type_in_controller!(state, state0, policy::SimpleCVPolicy, dt)
 
-    phi_p = policy.voltage
+	phi_p = policy.voltage
 
-    controller = state.Controller
+	controller = state.Controller
 
-    phi = only(state.Phi)
+	phi = only(state.Phi)
 
-    target_is_voltage = (phi <= phi_p)
+	target_is_voltage = (phi <= phi_p)
 
-    controller.target_is_voltage = target_is_voltage
-    controller.ctrlType          = discharge # for the moment only discharge in a simple controller
-    controller.time              = state0.Controller.time + dt
+	controller.target_is_voltage = target_is_voltage
+	controller.ctrlType          = discharge # for the moment only discharge in a simple controller
+	controller.time              = state0.Controller.time + dt
 
 end
 
@@ -852,149 +857,149 @@ Implementation of the cycling CC-CV policy
 """
 function update_control_type_in_controller!(state, state0, policy::CyclingCVPolicy, dt)
 
-    E  = only(value(state[:Phi]))
-    I  = only(value(state[:Current]))
-    E0 = only(value(state0[:Phi]))
-    I0 = only(value(state0[:Current]))
+	E  = only(value(state[:Phi]))
+	I  = only(value(state[:Current]))
+	E0 = only(value(state0[:Phi]))
+	I0 = only(value(state0[:Current]))
 
-    controller = state.Controller
+	controller = state.Controller
 
-    controller.time = state0.Controller.time + dt
-    controller.dIdt = (I - I0) / dt
-    controller.dEdt = (E - E0) / dt
+	controller.time = state0.Controller.time + dt
+	controller.dIdt = (I - I0) / dt
+	controller.dEdt = (E - E0) / dt
 
-    ctrlType0 = state0.Controller.ctrlType
+	ctrlType0 = state0.Controller.ctrlType
 
-    nextCtrlType = getNextCtrlTypeCCCV(ctrlType0)
+	nextCtrlType = getNextCtrlTypeCCCV(ctrlType0)
 
-    rsw00 = setupRegionSwitchFlags(policy, state0, ctrlType0)
+	rsw00 = setupRegionSwitchFlags(policy, state0, ctrlType0)
 
 
-    if rsw00.beforeSwitchRegion
+	if rsw00.beforeSwitchRegion
 
-	# We have not entered the switching region in the time step. We are not going to change control
-	# in this step.
-	ctrlType = ctrlType0
-
-    else
-
-	# We entered the switch region in the previous time step. We consider switching control
-
-	currentCtrlType = state.Controller.ctrlType # current control in the the Newton iteration
-	nextCtrlType0   = getNextCtrlTypeCCCV(ctrlType0) # next control that can occur after the previous time step control (if it changes)
-
-	rsw0 = setupRegionSwitchFlags(policy, state, ctrlType0)
-
-	if currentCtrlType == ctrlType0
-
-	    # The control has not changed from previous time step and we want to determine if we should change it. 
-
-	    if rsw0.afterSwitchRegion
-
-		# We switch to a new control because we are no longer in the acceptable region for the current
-		# control
-		ctrlType = nextCtrlType0
-
-	    else
-
+		# We have not entered the switching region in the time step. We are not going to change control
+		# in this step.
 		ctrlType = ctrlType0
-
-	    end
-
-	elseif currentCtrlType == nextCtrlType0
-
-	    # We do not switch back to avoid oscillation. We are anyway within the given tolerance for the
-	    # control so that we keep the control as it is.
-
-	    ctrlType = nextCtrlType0
 
 	else
 
-	    error("Control type $currentCtrlType not recognized")
+		# We entered the switch region in the previous time step. We consider switching control
+
+		currentCtrlType = state.Controller.ctrlType # current control in the the Newton iteration
+		nextCtrlType0   = getNextCtrlTypeCCCV(ctrlType0) # next control that can occur after the previous time step control (if it changes)
+
+		rsw0 = setupRegionSwitchFlags(policy, state, ctrlType0)
+
+		if currentCtrlType == ctrlType0
+
+			# The control has not changed from previous time step and we want to determine if we should change it. 
+
+			if rsw0.afterSwitchRegion
+
+				# We switch to a new control because we are no longer in the acceptable region for the current
+				# control
+				ctrlType = nextCtrlType0
+
+			else
+
+				ctrlType = ctrlType0
+
+			end
+
+		elseif currentCtrlType == nextCtrlType0
+
+			# We do not switch back to avoid oscillation. We are anyway within the given tolerance for the
+			# control so that we keep the control as it is.
+
+			ctrlType = nextCtrlType0
+
+		else
+
+			error("Control type $currentCtrlType not recognized")
+
+		end
 
 	end
 
-    end
-
-    controller.ctrlType = ctrlType
+	controller.ctrlType = ctrlType
 
 end
 
 
 function update_control_type_in_controller!(state, state0, policy::CCPolicy, dt)
 
-    if policy.numberOfCycles == 0
-	controller = state.Controller
-	controller.time = state0.Controller.time + dt
-    else
-
-	controller = state.Controller
-
-	controller.time = state0.Controller.time + dt
-
-	ctrlType0 = state0.Controller.ctrlType
-
-	if ctrlType0 == "discharging"
-	    nextCtrlType = "charging"
-	else
-	    nextCtrlType = "discharging"
-	end
-
-	rsw00 = setupRegionSwitchFlags(policy, state0, ctrlType0)
-
-	if rsw00.beforeSwitchRegion
-
-	    # We have not entered the switching region in the time step. We are not going to change control
-	    # in this step.
-	    ctrlType = ctrlType0
-
+	if policy.numberOfCycles == 0
+		controller = state.Controller
+		controller.time = state0.Controller.time + dt
 	else
 
-	    # We entered the switch region in the previous time step. We consider switching control
+		controller = state.Controller
 
-	    currentCtrlType = state.Controller.ctrlType # current control in the the Newton iteration
-	    if ctrlType0 == "discharging"
-		nextCtrlType0 = "charging"
-	    else
-		nextCtrlType0 = "discharging"
-	    end # next control that can occur after the previous time step control (if it changes)
+		controller.time = state0.Controller.time + dt
 
-	    rsw0 = setupRegionSwitchFlags(policy, state, ctrlType0)
+		ctrlType0 = state0.Controller.ctrlType
 
-	    if currentCtrlType == ctrlType0
+		if ctrlType0 == "discharging"
+			nextCtrlType = "charging"
+		else
+			nextCtrlType = "discharging"
+		end
 
-		# The control has not changed from previous time step and we want to determine if we should change it. 
+		rsw00 = setupRegionSwitchFlags(policy, state0, ctrlType0)
 
-		if rsw0.afterSwitchRegion
+		if rsw00.beforeSwitchRegion
 
-		    # We switch to a new control because we are no longer in the acceptable region for the current
-		    # control
-		    ctrlType = nextCtrlType0
+			# We have not entered the switching region in the time step. We are not going to change control
+			# in this step.
+			ctrlType = ctrlType0
 
 		else
 
-		    ctrlType = ctrlType0
+			# We entered the switch region in the previous time step. We consider switching control
+
+			currentCtrlType = state.Controller.ctrlType # current control in the the Newton iteration
+			if ctrlType0 == "discharging"
+				nextCtrlType0 = "charging"
+			else
+				nextCtrlType0 = "discharging"
+			end # next control that can occur after the previous time step control (if it changes)
+
+			rsw0 = setupRegionSwitchFlags(policy, state, ctrlType0)
+
+			if currentCtrlType == ctrlType0
+
+				# The control has not changed from previous time step and we want to determine if we should change it. 
+
+				if rsw0.afterSwitchRegion
+
+					# We switch to a new control because we are no longer in the acceptable region for the current
+					# control
+					ctrlType = nextCtrlType0
+
+				else
+
+					ctrlType = ctrlType0
+
+				end
+
+			elseif currentCtrlType == nextCtrlType0
+
+				# We do not switch back to avoid oscillation. We are anyway within the given tolerance for the
+				# control so that we keep the control as it is.
+
+				ctrlType = nextCtrlType0
+
+			else
+
+				error("Control type $currentCtrlType not recognized")
+
+			end
 
 		end
 
-	    elseif currentCtrlType == nextCtrlType0
-
-		# We do not switch back to avoid oscillation. We are anyway within the given tolerance for the
-		# control so that we keep the control as it is.
-
-		ctrlType = nextCtrlType0
-
-	    else
-
-		error("Control type $currentCtrlType not recognized")
-
-	    end
+		controller.ctrlType = ctrlType
 
 	end
-
-	controller.ctrlType = ctrlType
-
-    end
 
 end
 
@@ -1008,174 +1013,174 @@ end
 
 function update_values_in_controller!(state, policy::CCPolicy)
 
-    controller = state.Controller
-    ctrlType = controller.ctrlType
+	controller = state.Controller
+	ctrlType = controller.ctrlType
 
-    cf = policy.current_function
+	cf = policy.current_function
 
-    if controller.numberOfCycles == 0 && controller.ctrlType == policy.initialControl && !ismissing(cf)
+	if controller.numberOfCycles == 0 && controller.ctrlType == policy.initialControl && !ismissing(cf)
 
-	if cf isa Real
-	    I_t = cf
-	else
-	    # Function of time at the end of interval
-	    I_t = cf(controller.time)
-	end
+		if cf isa Real
+			I_t = cf
+		else
+			# Function of time at the end of interval
+			I_t = cf(controller.time)
+		end
 
-	if ctrlType == "discharging"
+		if ctrlType == "discharging"
 
-	    I_t = I_t
-
-
-
-	elseif ctrlType == "charging"
-
-	    # minus sign below follows from convention
-	    I_t = -I_t
-
-
-	else
-
-	    error("ctrlType $ctrlType not recognized")
-
-	end
-    else
+			I_t = I_t
 
 
 
-	if ctrlType == "discharging"
+		elseif ctrlType == "charging"
 
-	    I_t = policy.ImaxDischarge
-
-
-
-	elseif ctrlType == "charging"
+			# minus sign below follows from convention
+			I_t = -I_t
 
 
-	    I_t = -policy.ImaxCharge
+		else
 
+			error("ctrlType $ctrlType not recognized")
 
+		end
 	else
 
-	    error("ctrlType $ctrlType not recognized")
 
+
+		if ctrlType == "discharging"
+
+			I_t = policy.ImaxDischarge
+
+
+
+		elseif ctrlType == "charging"
+
+
+			I_t = -policy.ImaxCharge
+
+
+		else
+
+			error("ctrlType $ctrlType not recognized")
+
+		end
 	end
-    end
 
-    target = I_t
+	target = I_t
 
-    controller.target = target
+	controller.target = target
 
 
 end
 
 function update_values_in_controller!(state, policy::FunctionPolicy)
 
-    controller = state.Controller
+	controller = state.Controller
 
-    cf = policy.current_function
+	cf = policy.current_function
 
-    I_p = cf(controller.time, value(only(state.Phi)))
+	I_p = cf(controller.time, value(only(state.Phi)))
 
-    controller.target = I_p
+	controller.target = I_p
 
 
 end
 
 function update_values_in_controller!(state, policy::SimpleCVPolicy)
 
-    controller = state.Controller
+	controller = state.Controller
 
-    if controller.target_is_voltage
+	if controller.target_is_voltage
 
-	phi_p = policy.voltage
+		phi_p = policy.voltage
 
-	controller.target = phi_p
+		controller.target = phi_p
 
-    else
-
-	cf = policy.current_function
-
-	if cf isa Real
-	    I_p = cf
 	else
-	    # Function of time at the end of interval
-	    I_p = cf(controller.time)
+
+		cf = policy.current_function
+
+		if cf isa Real
+			I_p = cf
+		else
+			# Function of time at the end of interval
+			I_p = cf(controller.time)
+		end
+
+		controller.target = I_p
+
 	end
-
-	controller.target = I_p
-
-    end
 
 end
 
 function update_values_in_controller!(state, policy::CyclingCVPolicy)
 
-    controller = state[:Controller]
+	controller = state[:Controller]
 
-    ctrlType = controller.ctrlType
+	ctrlType = controller.ctrlType
 
-    cf = policy.current_function
+	cf = policy.current_function
 
 
-    if ctrlType == cc_discharge1
+	if ctrlType == cc_discharge1
 
-	if controller.numberOfCycles == 0 && controller.ctrlType == policy.initialControl && !ismissing(cf)
+		if controller.numberOfCycles == 0 && controller.ctrlType == policy.initialControl && !ismissing(cf)
 
-	    if cf isa Real
-		I_t = cf
-	    else
-		# Function of time at the end of interval
-		I_t = cf(controller.time)
-	    end
+			if cf isa Real
+				I_t = cf
+			else
+				# Function of time at the end of interval
+				I_t = cf(controller.time)
+			end
+		else
+
+			I_t = policy.ImaxDischarge
+		end
+		target_is_voltage = false
+
+	elseif ctrlType == cc_discharge2
+
+		I_t = 0.0
+		target_is_voltage = false
+
+	elseif ctrlType == cc_charge1
+
+		# minus sign below follows from convention
+		if controller.numberOfCycles == 0 && controller.ctrlType == policy.initialControl && !ismissing(cf)
+
+			if cf isa Real
+				I_t = cf
+			else
+				# Function of time at the end of interval
+				I_t = cf(controller.time)
+			end
+			I_t = -I_t
+		else
+			I_t = -policy.ImaxCharge
+		end
+		target_is_voltage = false
+
+	elseif ctrlType == cv_charge2
+
+		V_t = policy.upperCutoffVoltage
+		target_is_voltage = true
+
 	else
 
-	    I_t = policy.ImaxDischarge
+		error("ctrlType $ctrlType not recognized")
+
 	end
-	target_is_voltage = false
 
-    elseif ctrlType == cc_discharge2
-
-	I_t = 0.0
-	target_is_voltage = false
-
-    elseif ctrlType == cc_charge1
-
-	# minus sign below follows from convention
-	if controller.numberOfCycles == 0 && controller.ctrlType == policy.initialControl && !ismissing(cf)
-
-	    if cf isa Real
-		I_t = cf
-	    else
-		# Function of time at the end of interval
-		I_t = cf(controller.time)
-	    end
-	    I_t = -I_t
+	if target_is_voltage
+		target = V_t
 	else
-	    I_t = -policy.ImaxCharge
+		target = I_t
 	end
-	target_is_voltage = false
-
-    elseif ctrlType == cv_charge2
-
-	V_t = policy.upperCutoffVoltage
-	target_is_voltage = true
-
-    else
-
-	error("ctrlType $ctrlType not recognized")
-
-    end
-
-    if target_is_voltage
-	target = V_t
-    else
-	target = I_t
-    end
 
 
-    controller.target_is_voltage = target_is_voltage
-    controller.target            = target
+	controller.target_is_voltage = target_is_voltage
+	controller.target            = target
 
 end
 
@@ -1191,28 +1196,28 @@ Jutul.local_discretization(::ControlEquation, i) = nothing
 
 function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquation, model, dt, ldisc = local_discretization(eq, i))
 
-    I = only(state.Current)
+	I = only(state.Current)
 
-    phi = only(state.Phi)
+	phi = only(state.Phi)
 
-    ctrl = state[:Controller]
+	ctrl = state[:Controller]
 
-    if ctrl.target_is_voltage
-	v[] = phi - ctrl.target
-    else
+	if ctrl.target_is_voltage
+		v[] = phi - ctrl.target
+	else
 
-	v[] = I - ctrl.target
-    end
+		v[] = I - ctrl.target
+	end
 
 end
 
 function Jutul.update_equation_in_entity!(v, i, state, state0, eq::CurrentEquation, model, dt, ldisc = local_discretization(eq, i))
 
-    # Sign is strange here due to cross term?
-    I   = only(state.Current)
-    phi = only(state.Phi)
+	# Sign is strange here due to cross term?
+	I   = only(state.Current)
+	phi = only(state.Phi)
 
-    v[] = I + phi * 1e-10
+	v[] = I + phi * 1e-10
 
 
 end
@@ -1225,84 +1230,84 @@ end
 """
 function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces; time = NaN)
 
-    ctrl = storage.state[:Controller]
+	ctrl = storage.state[:Controller]
 
-    policy = model.system.policy
+	policy = model.system.policy
 
-    if policy isa CyclingCVPolicy
+	if policy isa CyclingCVPolicy
 
-	initctrl = policy.initialControl
+		initctrl = policy.initialControl
 
-	ctrlType = ctrl.ctrlType
+		ctrlType = ctrl.ctrlType
 
-	ctrlType0 = storage.state0[:Controller].ctrlType
-	ncycles   = storage.state0[:Controller].numberOfCycles
+		ctrlType0 = storage.state0[:Controller].ctrlType
+		ncycles   = storage.state0[:Controller].numberOfCycles
 
-	copyController!(storage.state0[:Controller], ctrl)
+		copyController!(storage.state0[:Controller], ctrl)
 
-	if initctrl == charging
+		if initctrl == charging
 
-	    if (ctrlType0 == cc_discharge1 || ctrlType0 == cc_discharge2) && (ctrlType == cc_charge1 || ctrlType == cv_charge2)
-		ncycles = ncycles + 1
-	    end
+			if (ctrlType0 == cc_discharge1 || ctrlType0 == cc_discharge2) && (ctrlType == cc_charge1 || ctrlType == cv_charge2)
+				ncycles = ncycles + 1
+			end
 
-	elseif initctrl == discharging
+		elseif initctrl == discharging
 
-	    if (ctrlType0 == cc_charge1 || ctrlType0 == cv_charge2) && (ctrlType == cc_discharge1 || ctrlType == cc_discharge2)
-		ncycles = ncycles + 1
-	    end
+			if (ctrlType0 == cc_charge1 || ctrlType0 == cv_charge2) && (ctrlType == cc_discharge1 || ctrlType == cc_discharge2)
+				ncycles = ncycles + 1
+			end
 
-	end
+		end
 
-	ctrl.numberOfCycles = ncycles
+		ctrl.numberOfCycles = ncycles
 
-    elseif policy isa SimpleCVPolicy
+	elseif policy isa SimpleCVPolicy
 
-	copyController!(storage.state0[:Controller], ctrl)
+		copyController!(storage.state0[:Controller], ctrl)
 
-    elseif policy isa FunctionPolicy
+	elseif policy isa FunctionPolicy
 
-	copyController!(storage.state0[:Controller], ctrl)
+		copyController!(storage.state0[:Controller], ctrl)
 
-    elseif policy isa CCPolicy
+	elseif policy isa CCPolicy
 
-	if policy.numberOfCycles == 0
-	    copyController!(storage.state0[:Controller], ctrl)
+		if policy.numberOfCycles == 0
+			copyController!(storage.state0[:Controller], ctrl)
+
+		else
+
+			initctrl = policy.initialControl
+
+			ctrlType = ctrl.ctrlType
+
+			ctrlType0 = storage.state0[:Controller].ctrlType
+			ncycles   = storage.state0[:Controller].numberOfCycles
+
+			copyController!(storage.state0[:Controller], ctrl)
+
+			if initctrl == "charging"
+
+				if ctrlType0 == "discharging" && ctrlType == "charging"
+					ncycles = ncycles + 1
+				end
+
+			elseif initctrl == "discharging"
+
+				if ctrlType0 == "charging" && ctrlType == "discharging"
+					ncycles = ncycles + 1
+				end
+
+			end
+
+			ctrl.numberOfCycles = ncycles
+		end
+
 
 	else
 
-	    initctrl = policy.initialControl
+		error("Policy $(typeof(policy)) not recognized")
 
-	    ctrlType = ctrl.ctrlType
-
-	    ctrlType0 = storage.state0[:Controller].ctrlType
-	    ncycles   = storage.state0[:Controller].numberOfCycles
-
-	    copyController!(storage.state0[:Controller], ctrl)
-
-	    if initctrl == "charging"
-
-		if ctrlType0 == "discharging" && ctrlType == "charging"
-		    ncycles = ncycles + 1
-		end
-
-	    elseif initctrl == "discharging"
-
-		if ctrlType0 == "charging" && ctrlType == "discharging"
-		    ncycles = ncycles + 1
-		end
-
-	    end
-
-	    ctrl.numberOfCycles = ncycles
 	end
-
-
-    else
-
-	error("Policy $(typeof(policy)) not recognized")
-
-    end
 
 
 end
@@ -1316,80 +1321,80 @@ Function called when setting up state initially. We need to add the fields corre
 """
 function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVoltageModel; T = Float64)
 
-    policy = model.system.policy
+	policy = model.system.policy
 
-    if policy isa SimpleCVPolicy
+	if policy isa SimpleCVPolicy
 
-	time = 0.0
-	Imax = policy.Imax
-	if !ismissing(policy.current_function)
-	    target = policy.current_function(time)
-	else
-	    target = Imax
+		time = 0.0
+		Imax = policy.Imax
+		if !ismissing(policy.current_function)
+			target = policy.current_function(time)
+		else
+			target = Imax
+		end
+		target_is_voltage = false
+		ctrlType = discharging
+		state[:Controller] = SimpleControllerCV(target, time, target_is_voltage, ctrlType)
+
+	elseif policy isa FunctionPolicy
+
+		time = 0.0
+		target = 0.0
+
+		target_is_voltage = false
+
+		state[:Controller] = FunctionController(target, time, target_is_voltage)
+
+	elseif policy isa CCPolicy
+
+		time = 0.0
+
+		if policy.initialControl == "discharging"
+			ctrlType = "discharging"
+			Imax = policy.ImaxDischarge
+		elseif policy.initialControl == "charging"
+			ctrlType = "charging"
+			Imax = -policy.ImaxCharge
+
+		end
+
+		if !ismissing(policy.current_function)
+			I = policy.current_function(time)
+			if policy.initialControl == "discharging"
+				target = I
+			elseif policy.initialControl == "charging"
+				target = -I
+
+			end
+
+		else
+			target = Imax
+		end
+		target_is_voltage = false
+
+		number_of_cycles = 0
+		target, time = promote(target, time)
+		state[:Controller] = CCController(number_of_cycles, target, time, target_is_voltage, ctrlType)
+
+	elseif policy isa CyclingCVPolicy
+
+		state[:Controller] = CcCvController()
+
+		if policy.initialControl == discharging
+
+			state[:Controller].ctrlType = cc_discharge1
+
+		elseif policy.initialControl == charging
+
+			state[:Controller].ctrlType = cc_charge1
+
+		else
+			error("Initial control $(typeof(policy.initialControl)) not recognized")
+		end
+
+		update_values_in_controller!(state, policy)
+
 	end
-	target_is_voltage = false
-	ctrlType = discharging
-	state[:Controller] = SimpleControllerCV(target, time, target_is_voltage, ctrlType)
-
-    elseif policy isa FunctionPolicy
-
-	time = 0.0
-	target = 0.0
-
-	target_is_voltage = false
-
-	state[:Controller] = FunctionController(target, time, target_is_voltage)
-
-    elseif policy isa CCPolicy
-
-	time = 0.0
-
-	if policy.initialControl == "discharging"
-	    ctrlType = "discharging"
-	    Imax = policy.ImaxDischarge
-	elseif policy.initialControl == "charging"
-	    ctrlType = "charging"
-	    Imax = -policy.ImaxCharge
-
-	end
-
-	if !ismissing(policy.current_function)
-	    I = policy.current_function(time)
-	    if policy.initialControl == "discharging"
-		target = I
-	    elseif policy.initialControl == "charging"
-		target = -I
-
-	    end
-
-	else
-	    target = Imax
-	end
-	target_is_voltage = false
-
-	number_of_cycles = 0
-	target, time = promote(target, time)
-	state[:Controller] = CCController(number_of_cycles, target, time, target_is_voltage, ctrlType)
-
-    elseif policy isa CyclingCVPolicy
-
-	state[:Controller] = CcCvController()
-
-	if policy.initialControl == discharging
-
-	    state[:Controller].ctrlType = cc_discharge1
-
-	elseif policy.initialControl == charging
-
-	    state[:Controller].ctrlType = cc_charge1
-
-	else
-	    error("Initial control $(typeof(policy.initialControl)) not recognized")
-	end
-
-	update_values_in_controller!(state, policy)
-
-    end
 
 end
 
@@ -1399,29 +1404,29 @@ end
 
 function getNextCtrlTypeCCCV(ctrlType::OperationalMode)
 
-    if ctrlType == cc_discharge1
+	if ctrlType == cc_discharge1
 
-	nextCtrlType = cc_discharge2
+		nextCtrlType = cc_discharge2
 
-    elseif ctrlType == cc_discharge2
+	elseif ctrlType == cc_discharge2
 
-	nextCtrlType = cc_charge1
+		nextCtrlType = cc_charge1
 
-    elseif ctrlType == cc_charge1
+	elseif ctrlType == cc_charge1
 
-	nextCtrlType = cv_charge2
+		nextCtrlType = cv_charge2
 
-    elseif ctrlType == cv_charge2
+	elseif ctrlType == cv_charge2
 
-	nextCtrlType = cc_discharge1
+		nextCtrlType = cc_discharge1
 
-    else
+	else
 
-	error("ctrlType $ctrlType not recognized.")
+		error("ctrlType $ctrlType not recognized.")
 
-    end
+	end
 
-    return nextCtrlType
+	return nextCtrlType
 
 end
 
@@ -1433,31 +1438,31 @@ end
 sineup rampup function
 """
 function sineup(y1, y2, x1, x2, x)
-    #SINEUP Creates a sine ramp function
-    #
-    #   res = sineup(y1, y2, x1, x2, x) creates a sine ramp
-    #   starting at value y1 at point x1 and ramping to value y2 at
-    #   point x2 over the vector x.
-    y1, y2, x1, x2, x = promote(y1, y2, x1, x2, x)
-    T = typeof(x)
+	#SINEUP Creates a sine ramp function
+	#
+	#   res = sineup(y1, y2, x1, x2, x) creates a sine ramp
+	#   starting at value y1 at point x1 and ramping to value y2 at
+	#   point x2 over the vector x.
+	y1, y2, x1, x2, x = promote(y1, y2, x1, x2, x)
+	T = typeof(x)
 
-    dy = y1 - y2
-    dx = abs(x1 - x2)
+	dy = y1 - y2
+	dx = abs(x1 - x2)
 
-    res = zero(T)
+	res = zero(T)
 
-    if (x >= x1) && (x <= x2)
-	res = dy / 2.0 .* cos(pi .* (x - x1) ./ dx) + y1 - (dy / 2)
-    end
+	if (x >= x1) && (x <= x2)
+		res = dy / 2.0 .* cos(pi .* (x - x1) ./ dx) + y1 - (dy / 2)
+	end
 
-    if (x > x2)
-	res .+= y2
-    end
+	if (x > x2)
+		res .+= y2
+	end
 
-    if (x < x1)
-	res .+= y1
-    end
+	if (x < x1)
+		res .+= y1
+	end
 
-    return res
+	return res
 
 end

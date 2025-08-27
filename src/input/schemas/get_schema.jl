@@ -87,6 +87,8 @@ function create_property(parameter_meta, name)
 	return filter(x -> x.second !== nothing, property)
 end
 
+
+
 function get_schema_cell_parameters(model_settings::ModelSettings)
 	# Retrieve meta-data for validation
 	parameter_meta = get_parameter_meta_data()
@@ -574,9 +576,7 @@ function get_schema_simulation_settings(model_settings)
 		push!(required_grid_points, "Angular")
 		if haskey(model_settings, "CurrentCollectors")
 			push!(required_grid_points, "PositiveElectrodeCurrentCollector")
-			push!(required_grid_points, "PositiveElectrodeCurrentCollectorTabWidth")
 			push!(required_grid_points, "NegativeElectrodeCurrentCollector")
-			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabWidth")
 		end
 
 	end

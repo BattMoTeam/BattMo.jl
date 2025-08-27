@@ -16,14 +16,14 @@ interphase_parameters = cell_parameters["NegativeElectrode"]["Interphase"]
 
 # ## We start the simulation and retrieve the result
 
-model_setup = LithiumIonBattery();
+model = LithiumIonBattery();
 
-model_settings = model_setup.model_settings
+model_settings = model.settings
 model_settings["SEIModel"] = "Bolay"
 
 cycling_protocol["TotalNumberOfCycles"] = 10
 
-sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
+sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
 
 output = solve(sim)
 
@@ -36,50 +36,7 @@ nothing # hide
 
 # ## Plot of voltage and current
 
-f = Figure(size = (1000, 400))
-
-ax = Axis(f[1, 1],
-	title = "Voltage",
-	xlabel = "Time / s",
-	ylabel = "Voltage / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
-)
-
-scatterlines!(ax,
-	t,
-	E;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-	label = "Julia",
-)
-
-ax = Axis(f[1, 2],
-	title = "Current",
-	xlabel = "Time / s",
-	ylabel = "Current / A",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
-)
-
-scatterlines!(ax,
-	t,
-	I;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-	label = "Julia",
-)
-
-display(GLMakie.Screen(), f) # hide
-f # hide
+plot_dashboard(output; plot_type = "simple")
 
 # ## Plot of SEI thickness
 
