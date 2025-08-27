@@ -2,6 +2,7 @@ export VoltageCalibration
 export free_calibration_parameter!, freeze_calibration_parameter!, set_calibration_parameter!
 export print_calibration_overview
 
+
 abstract type AbstractCalibration end
 
 mutable struct VoltageCalibration <:AbstractCalibration
@@ -17,6 +18,13 @@ mutable struct VoltageCalibration <:AbstractCalibration
     calibrated_cell_parameters
     "History of the optimization process, containing information about the optimization steps."
     history
+
+    "Prior distribution for the calibration parameters, if any. The parameters are considered to be drawn from independant lognormal distributions"
+    parameter_priors
+
+    "Gaussian noise of the data (used for MAP estimation with priors)"
+    σ2::Float64
+
     """
         VoltageCalibration(t, v, sim)
 
@@ -28,7 +36,7 @@ mutable struct VoltageCalibration <:AbstractCalibration
         for i in 2:length(t)
             @assert t[i] > t[i - 1]
         end
-        return new(t, v, deepcopy(sim), Dict{Vector{String}, Any}(), missing, missing)
+        return new(t, v, deepcopy(sim), Dict{Vector{String}, Any}(), missing, missing, Dict{Vector{String}, Any}(),1)
     end
 end
 
@@ -46,6 +54,8 @@ end
             initial_value = missing,
             lower_bound = missing,
             upper_bound = missing
+            prior_mean = missing,
+            prior_std = missing
         )
 
 Set a calibration parameter to be free for optimization. The parameter is
@@ -55,11 +65,14 @@ nested structure of the parameter in the simulation's cell parameters.
 # Notes
 - The `initial_value` is optional and can be set to `missing` if not provided.
 - The `lower_bound` and `upper_bound` must be provided and cannot be `missing`.
+- Optionally, a prior distribution (gaussian) can be specified via `prior_mean` and `prior_std`.
 """
 function free_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String};
             initial_value = missing,
             lower_bound = missing,
-            upper_bound = missing
+            upper_bound = missing,
+            prior_mean = missing,
+            prior_std = missing
         )
 
     if ismissing(lower_bound) || ismissing(upper_bound)
@@ -76,6 +89,9 @@ function free_calibration_parameter!(vc::AbstractCalibration, parameter_name::Ve
         throw(ArgumentError("Lower bound for $parameter_name $lower_bound must be less than upper bound $upper_bound"))
     end
     vc.parameter_targets[parameter_name] = (v0 = initial_value, vmin = lower_bound, vmax = upper_bound)
+    if !ismissing(prior_mean) && !ismissing(prior_std)
+        vc.parameter_priors[parameter_name] = (prior_mean, prior_std)
+    end
     return vc
 end
 
@@ -160,13 +176,16 @@ function setup_calibration_objective(vc::VoltageCalibration)
         end
         V_obs = V_fun(t)
         V_sim = state[:Control][:Phi][1]
+        
+
         return voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
     end
     return objective
 end
 
+
 function voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
-    return dt * (V_obs - V_sim)^2/total_time
+    return dt * (V_obs - V_sim)^2 #/total_time
 end
 
 function evaluate_calibration_objective(vc::VoltageCalibration, objective, case, states, dt)
@@ -174,10 +193,19 @@ function evaluate_calibration_objective(vc::VoltageCalibration, objective, case,
     return f
 end
 
+function prior_regularization_term(x,mean,std)
+    # Returns the regularization term for the prior distribution and its gradient (assuming gaussian priors)
+    return (sum((x .- mean).^2 ./ (2 .* std.^2)), (x .- mean) ./ std.^2)
+end
+
+
+
+
 function solve(vc::AbstractCalibration;
         grad_tol = 1e-6,
         obj_change_tol = 1e-6,
         opt_fun = missing,
+        scaling = :linear,
         backend_arg = (
             use_sparsity = false,
             di_sparse = true,
@@ -185,32 +213,69 @@ function solve(vc::AbstractCalibration;
             do_prep = true,
         ),
         kwarg...
+        
+        
     )
     sim = deepcopy(vc.sim)
     x0, x_setup = vectorize_cell_parameters_for_calibration(vc, sim)
-    # Set up the objective function
-    objective = setup_calibration_objective(vc)
+    
 
     ub = similar(x0)
     lb = similar(x0)
+    """
+    log_lb = log.(lb)
+    log_ub = log.(ub)
+    δ_log = log_ub .- log_lb
+    """
+
+    
     offsets = x_setup.offsets
     for (i, k) in enumerate(x_setup.names)
         (; vmin, vmax) = vc.parameter_targets[k]
+        
+        
         for j in offsets[i]:(offsets[i+1]-1)
             lb[j] = vmin
             ub[j] = vmax
+            
         end
     end
+  
     adj_cache = Dict()
 
+    # Set up the objective function
+    objective = setup_calibration_objective(vc)
+    
+  
     setup_battmo_case(X, step_info = missing) = setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
+    
     solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
-        adj_cache = adj_cache,
-        backend_arg
-    )
+            adj_cache = adj_cache,
+            backend_arg
+        )
+        
+
+
     jutul_message("Calibration", "Starting calibration of $(length(x0)) parameters.", color = :green)
 
     t_opt = @elapsed if ismissing(opt_fun)
+        if scaling == :log
+            # Use log-scaled BFGS optimization
+            @info "log scaled BFGS optimization started."
+        v, x, history = Jutul.LBFGS.log_box_bfgs(x0, solve_and_differentiate, lb, ub;
+            maximize = false,
+            print = 1,
+            grad_tol = grad_tol,
+            obj_change_tol = obj_change_tol,
+            output_hessian = true,
+            limited_memory = false,
+            kwarg...
+        )
+        
+        else
+            # Use standard BFGS optimization
+            @info "BFGS optimization started."
+            
         v, x, history = Jutul.LBFGS.box_bfgs(x0, solve_and_differentiate, lb, ub;
             maximize = false,
             print = 1,
@@ -218,6 +283,9 @@ function solve(vc::AbstractCalibration;
             obj_change_tol = obj_change_tol,
             kwarg...
         )
+        end   
+        
+        
     else
         self_cache = Dict()
         function f!(x)
@@ -244,6 +312,270 @@ function solve(vc::AbstractCalibration;
     vc.calibrated_cell_parameters = cell_prm_out
     vc.history = history
     return (cell_prm_out, history)
+end
+
+
+function solve_with_priors(vc::AbstractCalibration;
+        grad_tol = 1e-6,
+        obj_change_tol = 1e-6,
+        opt_fun = missing,
+        scaling = :linear,
+        backend_arg = (
+            use_sparsity = false,
+            di_sparse = true,
+            single_step_sparsity = false,
+            do_prep = true,
+        ),
+        
+        kwarg...
+        
+        
+    )
+    sim = deepcopy(vc.sim)
+    x0, x_setup = vectorize_cell_parameters_for_calibration(vc, sim)
+    
+    vc.σ2 = 0.0001* maximum(vc.v)
+
+    ub = similar(x0)
+    lb = similar(x0)
+    """
+    log_lb = log.(lb)
+    log_ub = log.(ub)
+    δ_log = log_ub .- log_lb
+    """
+    #Mean and std of the prior distributions
+    mean = similar(x0)
+    std = similar(x0)
+
+    
+    offsets = x_setup.offsets
+    for (i, k) in enumerate(x_setup.names)
+        (; vmin, vmax) = vc.parameter_targets[k]
+        (mean_k, std_k) = vc.parameter_priors[k]
+        
+        for j in offsets[i]:(offsets[i+1]-1)
+            lb[j] = vmin
+            ub[j] = vmax
+            mean[j] = mean_k
+            std[j] = std_k
+        end
+    end
+    """
+    for j in 1:length(x0)
+        if scaling == :log
+            # Use log scaling for the bounds
+            mean[j] = (mean[j] - log_lb[j])/ δ_log[j]
+            std[j] = std[j] / δ_log[j]
+        end
+    end
+    """
+    adj_cache = Dict()
+
+    # Set up the objective function
+    objective = setup_calibration_objective(vc)
+    
+    function solve_and_differentiate_with_priors(x)
+            f, g = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
+                adj_cache = adj_cache,
+                backend_arg,
+                gradient = true
+            )
+            # Add the prior regularization term
+            f_r, g_r = prior_regularization_term(x, mean, std)
+            f += f_r* vc.σ2
+            g .+= g_r * vc.σ2
+           
+            return (f, g)
+        end
+
+    setup_battmo_case(X, step_info = missing) = setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
+    
+   
+        
+
+
+    jutul_message("Calibration", "Starting calibration of $(length(x0)) parameters.", color = :green)
+
+    t_opt = @elapsed if ismissing(opt_fun)
+        if scaling == :log
+            # Use log-scaled BFGS optimization
+            @info "log scaled BFGS optimization started."
+        v, x, history = Jutul.LBFGS.log_box_bfgs(x0, solve_and_differentiate_with_priors, lb, ub;
+            maximize = false,
+            print = 1,
+            grad_tol = grad_tol,
+            obj_change_tol = obj_change_tol,
+            output_hessian = true,
+            limited_memory = false,
+            kwarg...
+        )
+        
+        else
+            # Use standard BFGS optimization
+            @info "BFGS optimization started."
+            
+        v, x, history = Jutul.LBFGS.box_bfgs(x0, solve_and_differentiate_with_priors, lb, ub;
+            maximize = false,
+            print = 1,
+            grad_tol = grad_tol,
+            obj_change_tol = obj_change_tol,
+            kwarg...
+        )
+        end   
+        
+        
+    else
+        self_cache = Dict()
+        function f!(x)
+            f, g = solve_and_differentiate(x)
+            self_cache[:f] = f
+            self_cache[:g] = g
+            self_cache[:x] = x
+            return f
+        end
+
+        function g!(z, x)
+            if self_cache[:x] !== x
+                f!(x)  # Update the cache if the vector has changed
+            end
+            g = self_cache[:g]
+            return z .= g
+        end
+        x, history = opt_fun(f!, g!, x0, lb, ub)
+    end
+    jutul_message("Calibration", "Calibration finished in $t_opt seconds.", color = :green)
+    # Also remove AD from the internal ones and update them
+    Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, x, x_setup)
+    cell_prm_out = deepcopy(sim.cell_parameters)
+    vc.calibrated_cell_parameters = cell_prm_out
+    vc.history = history
+    return (cell_prm_out, history)
+end
+
+#Solves the calibration problem for multiple random initializations around the initial guess
+function solve_random_init(vc::AbstractCalibration;
+        n_samples = 10,
+        grad_tol = 1e-6,
+        obj_change_tol = 1e-6,
+        opt_fun = missing,
+        scaling = :linear,
+        backend_arg = (
+            use_sparsity = false,
+            di_sparse = true,
+            single_step_sparsity = false,
+            do_prep = true,
+        ),
+
+        kwarg...
+        
+        
+    )
+
+    results = []
+    sim = deepcopy(vc.sim)
+    x0, x_setup = vectorize_cell_parameters_for_calibration(vc, sim)
+    
+   
+
+    ub = similar(x0)
+    lb = similar(x0)
+
+
+    
+    offsets = x_setup.offsets
+    for (i, k) in enumerate(x_setup.names)
+        (; vmin, vmax) = vc.parameter_targets[k]
+        
+        
+        for j in offsets[i]:(offsets[i+1]-1)
+            lb[j] = vmin
+            ub[j] = vmax
+           
+        end
+    end
+    
+    adj_cache = Dict()
+
+    # Set up the objective function
+    objective = setup_calibration_objective(vc)
+    
+
+    setup_battmo_case(X, step_info = missing) = setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
+    
+    solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
+            adj_cache = adj_cache,
+            backend_arg
+        )
+    
+        
+
+
+    jutul_message("Calibration", "Starting calibration of $(length(x0)) parameters.", color = :green)
+
+    for i in 1:n_samples
+        @info "Calibration: Sample $i of $n_samples"
+        x_i = x0 + rand(length(x0)) .* (ub .- lb)/100  # Random initialization within bounds
+        @info x_i
+        @info x_i .- x0
+        try
+            if ismissing(opt_fun)
+            if scaling == :log
+                # Use log-scaled BFGS optimization
+                @info "log scaled BFGS optimization started."
+            v, x, history = Jutul.LBFGS.log_box_bfgs(x_i, solve_and_differentiate, lb, ub;
+                maximize = false,
+                print = 1,
+                grad_tol = grad_tol,
+                obj_change_tol = obj_change_tol,
+                output_hessian = true,
+                limited_memory = false,
+                kwarg...
+            )
+            if v<=10
+                push!(results,(x,v))
+            end
+            else
+                # Use standard BFGS optimization
+                @info "BFGS optimization started."
+            
+            v, x, history = Jutul.LBFGS.box_bfgs(x_i, solve_and_differentiate, lb, ub;
+                maximize = false,
+                print = 1,
+                grad_tol = grad_tol,
+                obj_change_tol = obj_change_tol,
+                kwarg...
+            )
+            end   
+        
+        
+        else
+            self_cache = Dict()
+            function f!(x)
+                f, g = solve_and_differentiate(x)
+                self_cache[:f] = f
+                self_cache[:g] = g
+                self_cache[:x] = x
+                return f
+            end
+
+            function g!(z, x)
+                if self_cache[:x] !== x
+                    f!(x)  # Update the cache if the vector has changed
+                end
+                g = self_cache[:g]
+                return z .= g
+            end
+            x, history = opt_fun(f!, g!, x0, lb, ub)
+        end
+        catch e
+            
+            @error "Calibration failed for sample $i: $(e)"
+            continue  # Skip to the next sample if an error occurs
+        end
+    end
+    jutul_message("Calibration", "Calibration finished", color = :green)
+    
+    return results
 end
 
 function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
@@ -281,6 +613,7 @@ function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objec
     end
     return (f, g)
 end
+
 
 
 function vectorize_cell_parameters_for_calibration(vc, sim)
@@ -349,3 +682,4 @@ function simulate_battmo_case_for_calibration(case;
     states, dt, = Jutul.expand_to_ministeps(result)
     return (states, dt)
 end
+
