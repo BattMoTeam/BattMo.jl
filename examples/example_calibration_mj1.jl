@@ -119,7 +119,6 @@ sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_sett
 
 # Run the high rate calibration
 
-if false
 cell_parameters_calibrated2, history  = highRateCalibration(exp_data,
                                                             cycling_protocol,
                                                             cell_parameters_calibrated,
@@ -192,6 +191,12 @@ end
 
 colors = Makie.wong_colors()
 
+function get_tV(x)
+    t = [state[:Control][:Controller].time for state in x[:states]]
+    V = [state[:Control][:Phi][1] for state in x[:states]]
+    return (t, V)
+end
+
 for (i, CRate) in enumerate(CRates)
     local fig = Figure(size = (800, 500))
     local ax = Axis(fig[1, 1],
@@ -229,4 +234,3 @@ for (i, CRate) in enumerate(CRates)
 end
 
 
-end
