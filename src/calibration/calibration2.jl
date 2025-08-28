@@ -1,20 +1,5 @@
 export highRateCalibration, highRateCalibrationWithPriors
 
-""" get time and voltage from states
-"""
-function get_tV(x)
-    t = [state[:Control][:Controller].time for state in x[:states]]
-    V = [state[:Control][:Phi][1] for state in x[:states]]
-    return (t, V)
-end
-
-# """ get time and voltage from dataframe
-# """
-# function get_tV(x::DataFrame)
-#     return (x[:, 1], x[:, 2])
-# end
-
-
 """ Calibrates the kinetic parameters of the model
 """
 function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrated,model_setup,simulation_settings; scaling = :linear)
@@ -60,9 +45,10 @@ function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrat
     
     print_calibration_overview(vc2)
 
-    cell_parameters_calibrated2, history = solve(vc2;scaling = scaling);
+    cell_parameters_calibrated2, history = solve(vc2;
+                                                 scaling = scaling);
 
-    results = BattMo.solve_random_init(vc2;n_samples = 50, scaling = scaling)
+    # results = BattMo.solve_random_init(vc2;n_samples = 50, scaling = scaling)
 
     """
     #Boxplots of the results

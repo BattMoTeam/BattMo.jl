@@ -216,17 +216,16 @@ function solve(vc::AbstractCalibration;
 
     ub = similar(x0)
     lb = similar(x0)
+    
     """
     log_lb = log.(lb)
     log_ub = log.(ub)
     δ_log = log_ub .- log_lb
     """
 
-    
     offsets = x_setup.offsets
     for (i, k) in enumerate(x_setup.names)
         (; vmin, vmax) = vc.parameter_targets[k]
-        
         
         for j in offsets[i]:(offsets[i+1]-1)
             lb[j] = vmin
