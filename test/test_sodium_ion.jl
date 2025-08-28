@@ -32,7 +32,7 @@ using Test
 		cycling_protocol["LowerVoltageLimit"] = 2.0
 		cycling_protocol["UpperVoltageLimit"] = 4.2
 
-		model_setup = SodiumIonBattery(; model_settings)
+		model = SodiumIonBattery(; model_settings)
 
 		drates = [0.1, 1.4]
 		delta_t = [200, 50]
