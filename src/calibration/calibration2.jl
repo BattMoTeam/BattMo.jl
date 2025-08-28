@@ -1,3 +1,5 @@
+export highRateCalibration, highRateCalibrationWithPriors
+
 """ get time and voltage from states
 """
 function get_tV(x)
@@ -152,7 +154,8 @@ function highRateCalibration(exp_data,cycling_protocol, cell_parameters_calibrat
     return cell_parameters_calibrated2,history #,results
 end
 
-""" Calibrates the kinetic parameters of the model with priors
+
+""" Calibrates the kinetic parameters of the model with priors, not working optimally yet.
 """
 function highRateCalibrationWithPriors(exp_data,cycling_protocol, cell_parameters_calibrated,model_setup,simulation_settings; scaling = :linear)
     t_exp_hr = vec(exp_data[end]["time"])
