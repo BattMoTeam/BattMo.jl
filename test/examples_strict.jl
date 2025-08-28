@@ -161,8 +161,8 @@ end
 		@test I[end] ≈ 5.090421803494574 atol = 1e-1
 		@test V[end] ≈ 2.525881189309425 atol = 1e-1
 
-		@test c_pe[2, 25] ≈ 17991.7558584136 atol = 1e-1
-		@test c_pe[end, 25] ≈ 57138.82996751741 atol = 1e-1
+		@test c_pe[2, 23] ≈ 18084.221948561288 atol = 1e-1
+		@test c_pe[end, 23] ≈ 57329.88050522005 atol = 1e-1
 
 
 		cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
@@ -187,8 +187,8 @@ end
 		@test I[end] ≈ 0.12715831819036466 atol = 1e-1
 		@test V[end] ≈ 2.585957945404128 atol = 1e-1
 
-		@test c_pe[2, 25] ≈ 4126.167301278676 atol = 1e-1
-		@test c_pe[end, 25] ≈ 5365.118930294095 atol = 1e-1
+		@test c_pe[2, 23] ≈ 4347.269900911873 atol = 1e-1
+		@test c_pe[end, 23] ≈ 24344.197252058977 atol = 1e-1
 
 		true
 

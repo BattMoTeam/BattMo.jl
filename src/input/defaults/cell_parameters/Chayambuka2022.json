@@ -13,8 +13,6 @@
         }
     },
     "Cell": {
-        "Name": "",
-        "Case": "Pouch",
         "ElectrodeGeometricSurfaceArea": 2.54e-4,
         "NominalVoltage": 3.71,
         "NominalCapacity": 0.0025

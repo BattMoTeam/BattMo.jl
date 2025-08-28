@@ -473,7 +473,10 @@ function get_scalings(model, parameters)
 		c_e            = 1000.0
 		activematerial = model[elde].system
 
-		j0s[i] = reaction_rate_coefficient(R0, c_e, c_a, activematerial, c_a, c_e)
+		j0s[i] = reaction_rate_coefficient(R0, c_e, c_a, activematerial)
+
+		# j0s[i] = reaction_rate_coefficient(R0, c_e, c_a, activematerial, c_a, c_e)
+
 		Rvols[i] = j0s[i] * vsa / F
 
 	end

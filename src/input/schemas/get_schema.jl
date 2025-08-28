@@ -126,7 +126,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 					"ElectrodeLength" => create_property(parameter_meta, "ElectrodeLength"),
 					"ElectrodeGeometricSurfaceArea" => create_property(parameter_meta, "ElectrodeGeometricSurfaceArea"),
 				),
-				"required" => ["Case"],
+				"required" => [],
 			),
 			"NegativeElectrode" => Dict(
 				"type" => "object",
@@ -353,17 +353,6 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 	elseif model_settings["ModelFramework"] == "P4D Pouch"
 
-		push!(schema["allOf"], Dict(
-			"properties" => Dict(
-				"Cell" => Dict(
-					"properties" => Dict(
-						"Case" => Dict("const" => "Pouch"),
-					),
-					"required" => ["Case"],
-				),
-			),
-		))
-
 		push!(cell_required, "ElectrodeWidth")
 		push!(cell_required, "ElectrodeLength")
 		push!(cell_required, "ElectrodeGeometricSurfaceArea")
@@ -378,17 +367,6 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 		end
 
 	elseif model_settings["ModelFramework"] == "P4D Cylindrical"
-
-		push!(schema["allOf"], Dict(
-			"properties" => Dict(
-				"Cell" => Dict(
-					"properties" => Dict(
-						"Case" => Dict("const" => "Cylindrical"),
-					),
-					"required" => ["Case"],
-				),
-			),
-		))
 
 		push!(cell_required, "InnerRadius")
 		push!(cell_required, "OuterRadius")
@@ -609,6 +587,7 @@ function get_schema_model_settings()
 			"SEIModel" => create_property(parameter_meta, "SEIModel"),
 			"TransportInSolid" => create_property(parameter_meta, "TransportInSolid"),
 			"ReactionRateConstant" => create_property(parameter_meta, "ReactionRateConstant"),
+			"ButlerVolmer" => create_property(parameter_meta, "ButlerVolmer"),
 		),
 		"required" => [
 			"ModelFramework", "TransportInSolid",
