@@ -442,7 +442,7 @@ function get_parameter_meta_data()
 		"NominalCapacity" => Dict(
 			"context_type" => "NominalCapacity",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_8abde9d0_84f6_4b4f_a87e_86028a397100",
-			"max_value" => 10,
+			"max_value" => 50,
 			"min_value" => 0.0001,
 			"description" => "Expected charge capacity of a cell under standard conditions, as defined by the manufacturer.",
 			"is_shown_to_user" => false,

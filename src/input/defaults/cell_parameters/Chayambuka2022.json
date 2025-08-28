@@ -5,7 +5,7 @@
             "https://doi.org/10.1016/j.electacta.2021.139726",
             "https://doi.org/10.1016/j.electacta.2021.139764"
         ],
-        "Description": "Parameter set for a Sodium ion cell.",
+        "Description": "Parameter set for a Sodium ion cell based on Chayambuka et al. The positive electrode open circuit potential has been retrieved from a [COMSOL example](https://www.comsol.com/model/1d-isothermal-sodium-ion-battery-117341).",
         "Models": {
             "ModelFramework": "P2D",
             "TransportInSolid": "FullDiffusion",
@@ -31,7 +31,9 @@
             "Density": 1950.0,
             "VolumetricSurfaceArea": 420689.655,
             "ElectronicConductivity": 256,
-            "DiffusionCoefficient": 3.6e-16,
+            "DiffusionCoefficient": {
+                "FunctionName": "calc_ne_D"
+            },
             "ParticleRadius": 3.48e-6,
             "MaximumConcentration": 14540,
             "StoichiometricCoefficientAtSOC0": 0.14,
@@ -40,7 +42,9 @@
                 "FunctionName": "calc_ne_ocp"
             },
             "NumberOfElectronsTransfered": 1,
-            "ReactionRateConstant": 5.5e-12,
+            "ReactionRateConstant": {
+                "FunctionName": "calc_ne_k"
+            },
             "ChargeTransferCoefficient": 0.5
         },
         "ConductiveAdditive": {
@@ -68,14 +72,20 @@
             "Density": 3200,
             "VolumetricSurfaceArea": 2796610.169,
             "ElectronicConductivity": 50,
-            "DiffusionCoefficient": 5.8e-17,
+            "DiffusionCoefficient": {
+                "FunctionName": "calc_pe_D"
+            },
             "ParticleRadius": 0.59e-6,
             "MaximumConcentration": 15320,
             "StoichiometricCoefficientAtSOC0": 1.0,
             "StoichiometricCoefficientAtSOC100": 0.25,
-            "OpenCircuitPotential": "(116.1647 - 940.2551*(c/cmax)^2 + 3101.9987*(c/cmax)^4 - 5292.6225*(c/cmax)^6 + 4040.4367*(c/cmax)^8)/(27.9167 - 228.18310*(c/cmax)^2 + 769.0709*(c/cmax)^4 - 1353.4191*(c/cmax)^6 + 1063.2453*(c/cmax)^8)",
+            "OpenCircuitPotential": {
+                "FunctionName": "calc_pe_ocp"
+            },
             "NumberOfElectronsTransfered": 1,
-            "ReactionRateConstant": 1.3e-12,
+            "ReactionRateConstant": {
+                "FunctionName": "calc_pe_k"
+            },
             "ChargeTransferCoefficient": 0.5
         },
         "ConductiveAdditive": {

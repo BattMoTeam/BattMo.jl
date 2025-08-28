@@ -4,18 +4,18 @@ battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 exdata = joinpath(battmo_base, "examples", "example_data")
 defaultdata = joinpath(battmo_base, "src", "input", "defaults", "cell_parameters", "data", "sodium_ion")
 
-data_pe_ocp = CSV.read(joinpath(exdata, "Chayambuka_pe_ocv_2.csv"), DataFrame)
-data_ne_ocp = CSV.read(joinpath(exdata, "Chayambuka_ne_ocv_2.csv"), DataFrame)
+
+data_pe_ocp = CSV.read(joinpath(defaultdata, "Chayambuka_pe_ocp.csv"), DataFrame)
+data_ne_ocp = CSV.read(joinpath(defaultdata, "Chayambuka_ne_ocp.csv"), DataFrame)
 data_pe_D = CSV.read(joinpath(defaultdata, "Chayambuka_pe_D.csv"), DataFrame)
 data_ne_D = CSV.read(joinpath(defaultdata, "Chayambuka_ne_D.csv"), DataFrame)
 data_pe_k = CSV.read(joinpath(defaultdata, "Chayambuka_pe_k.csv"), DataFrame)
 data_ne_k = CSV.read(joinpath(defaultdata, "Chayambuka_ne_k.csv"), DataFrame)
 data_elyte_cond = CSV.read(joinpath(defaultdata, "Chayambuka_elyte_conductivity.csv"), DataFrame)
-
 data_elyte_diff = CSV.read(joinpath(defaultdata, "Chayambuka_elyte_D.csv"), DataFrame)
 
 pe_ocp = data_pe_ocp[:, 2]
-pe_transfered_charge = data_pe_ocp[:, 1] # mAh/g
+x_pe = data_pe_ocp[:, 1] # stoich -
 
 ne_ocp = data_ne_ocp[:, 2]
 ne_transfered_charge = data_ne_ocp[:, 1] # mAh/g
@@ -46,12 +46,9 @@ ne_k = data_ne_k[:, 2]
 c_ne_k = data_ne_k[:, 1] # kmol/m^3
 c_ne_k = c_ne_k .* 10^3
 
-max_pe_charge = maximum(pe_transfered_charge)
-min_pe_charge = minimum(pe_transfered_charge)
 max_ne_charge = maximum(ne_transfered_charge)
 min_ne_charge = minimum(ne_transfered_charge)
 
-x_pe = (pe_transfered_charge .- min_pe_charge) ./ (max_pe_charge - min_pe_charge)
 x_ne = (ne_transfered_charge .- min_ne_charge) ./ (max_ne_charge - min_ne_charge)
 
 function calc_ne_ocp(c, T, refT, cmax)

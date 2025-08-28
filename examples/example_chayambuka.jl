@@ -5,7 +5,7 @@ include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_fun
 
 ######### Load Simulation Data #########
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
+cell_parameters = load_cell_parameters(; from_default_set = "Chayambuka2022")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 model_settings = load_model_settings(; from_default_set = "P2D")
 simulation_settings = load_simulation_settings(; from_default_set = "P2D")
@@ -24,49 +24,28 @@ cycling_protocol["UpperVoltageLimit"] = 4.2
 
 ######### Run simulation ##########
 
-model = LithiumIonBattery(; model_settings);
+model = SodiumIonBattery(; model_settings);
 
-
-cycling_protocol["CRate"] = 2.0
-simulation_settings["TimeStepDuration"] = 100
-
-sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
-
-output = solve(sim; info_level = 0)
-time_series = get_output_time_series(output)
-metrics = get_output_metrics(output)
-
-
+drates = [0.1, 0.5, 1.2, 1.4]
+delta_t = [200, 50, 50, 50]
 
 fig = Figure()
 ax = Axis(fig[1, 1], title = "Voltage", xlabel = "Capacity / mAh", ylabel = "Voltage / V")
-lines!(ax, metrics[:Capacity] .* 1000, time_series[:Voltage], label = "Simulation data")
+outputs_crate = []
+for (i, rate) in enumerate(drates)
+
+	cycling_protocol["DRate"] = rate
+	simulation_settings["TimeStepDuration"] = delta_t[i]
+
+	sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
+
+	output = solve(sim; info_level = 0)
+	time_series = get_output_time_series(output)
+	metrics = get_output_metrics(output)
+
+	lines!(ax, metrics[:Capacity] .* 1000, time_series[:Voltage], label = "$rate C")
+
+end
+
 axislegend(position = :lb)
 fig
-
-
-# crates = [0.1, 2.0]
-# delta_t = [200, 50]
-
-# fig = Figure()
-# ax = Axis(fig[1, 1], title = "Voltage", xlabel = "Capacity / mAh", ylabel = "Voltage / V")
-
-# for (i, rate) in enumerate(crates)
-# 	@info rate
-# 	cycling_protocol["CRate"] = rate
-# 	simulation_settings["TimeStepDuration"] = delta_t[i]
-
-# 	sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
-
-# 	output = solve(sim; info_level = 0)
-# 	time_series = get_output_time_series(output)
-# 	metrics = get_output_metrics(output)
-
-# 	lines!(ax, time_series[:Time] .* 1000, time_series[:Voltage], label = "C-rate $rate")
-
-
-# end
-
-
-# axislegend(position = :lb)
-# fig
