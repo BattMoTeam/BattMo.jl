@@ -1,30 +1,35 @@
+# # Load packages
+
 using BattMo
 using Statistics
 using Jutul
 using CSV
 using MAT
-# using DataFrames
 using GLMakie
 
-datadir = joinpath(@__DIR__, "example_data", "calibration_data_mj1")
+battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
+datadir = joinpath(battmo_base, "examples", "example_data", "calibration_data_mj1")
+nothing #hide
 
-# Retrieve experimental data. It is given in matlab format
+# # Experimental data setup
+#
+# We retrieve experimental data. It is given in matlab format
 
 """ Fetches experimental data from a .mat file. Returns a dictionary with time, rawRate, E, rawI, I, cap, and DRate.
 """
 function getExpData(filename, rate = "all")
 
-    # Load data
+    ## Load data
     data = matread(filename)
     dlroutput = data["dlroutput"]  # Dict with 1×4 matrices for each variable
 
     @show keys(dlroutput)  # Show available keys in the data
     @show size(dlroutput["current"][1])  # Show size of the time matrix
     
-    # Get number of experiments (4 in this case)
+    ## Get number of experiments (4 in this case)
     num_experiments = size(dlroutput["time"], 2)
     
-    # Process each experiment
+    ## Process each experiment
     dlrdata = Vector{Dict{String,Any}}(undef, num_experiments)
 
     function trapz(x, y)
@@ -32,14 +37,14 @@ function getExpData(filename, rate = "all")
     end
     
     for k in 1:num_experiments
-        # Extract data for this experiment (column k from each matrix)
+        ## Extract data for this experiment (column k from each matrix)
         time_h = dlroutput["time"][k]
         time_s = time_h * 3600  # hours → seconds
         
         current = dlroutput["current"][k]
         current_segment =  Float64.(current[3:end-1])  # Skip first/last points
 
-        # Create experiment dictionary
+        ## Create experiment dictionary
         dlrdata[k] = Dict{String,Any}(
             "time" => time_s,
             "rawRate" =>dlroutput["CRate"][k],
@@ -51,10 +56,10 @@ function getExpData(filename, rate = "all")
         )
     end
 
-    # Sort by DRate
+    ## Sort by DRate
     sort!(dlrdata, by=x -> x["DRate"])
 
-    # Select data based on rate
+    ## Select data based on rate
     if rate == "low"
         return dlrdata[1]
     elseif rate == "high"
@@ -75,7 +80,10 @@ println("Number of entries: ", length(exp_data))
 @show exp_data[2]["rawRate"]
 @show exp_data[3]["rawRate"]
 @show exp_data[4]["rawRate"] # Show first entry for verification
+nothing #hide
 
+# # Simulation setup
+# The function `runMJ1` sets up the simulation for the MJ1 cell by loading the cell parameters and cycling protocol from JSON files. It also configures the model and simulation settings.
 
 """ setup the simulation for the MJ1 cell
 """
@@ -83,12 +91,12 @@ function runMJ1()
 
     cell_parameters = load_cell_parameters(; from_file_path = joinpath(datadir, "mj1_tab1.json"))
     
-    #cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
+    ## cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
     println("successfully loaded cell parameters and cycling protocol")
     cycling_protocol = load_cycling_protocol(; from_file_path = joinpath(datadir, "custom_discharge2.json"))
 
-    #simulation_settings = load_simulation_settings(; from_file_path = joinpath(datadir,"simple.json"))
-    #simulation_settings = load_simulation_settings(; from_default_set = "P4D_pouch")
+    ## simulation_settings = load_simulation_settings(; from_file_path = joinpath(datadir,"simple.json"))
+    ## simulation_settings = load_simulation_settings(; from_default_set = "P4D_pouch")
     simulation_settings = load_simulation_settings(; from_default_set = "P2D") # Ensure the model framework is set to P4D Pouch
     
     #model_settings = load_model_settings(;from_default_set = "P4D_pouch")
@@ -98,7 +106,7 @@ function runMJ1()
 
     sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
     print(sim.is_valid)
-    #output0 = solve(sim;accept_invalid = true)
+    ## output0 = solve(sim;accept_invalid = true)
     return cycling_protocol, cell_parameters, model_setup, simulation_settings
 
 end
@@ -107,10 +115,11 @@ cycling_protocol, cell_parameters,model_setup, simulation_settings = runMJ1()
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 
-cell_parameters_calibrated, V_eq, t_eq = equilibriumCalibration(sim, exp_data)
+## cell_parameters_calibrated, V_eq, t_eq = equilibriumCalibration(sim, exp_data)
 
 # Run the high rate calibration
 
+if false
 cell_parameters_calibrated2, history  = highRateCalibration(exp_data,
                                                             cycling_protocol,
                                                             cell_parameters_calibrated,
@@ -135,22 +144,22 @@ for i in 1:length(exp_data)
     model = output[:model]
     simuc.cycling_protocol["DRate"] = I * 3600 / computeCellCapacity(model) 
 
-    # Solve the simulation with the base parameters
+    ## Solve the simulation with the base parameters
     println("Running simulation for I = ", I)
 
 	output = solve(simuc, info_level = -1; accept_invalid = true)
 
-    # Store the output for the base case
+    ## Store the output for the base case
     if i == 1
         output0 = output
     end
 
-    # Store the output for the calibrated case
+    ## Store the output for the calibrated case
 	push!(outputs_base, (I = I, output = output))
     
     simc = Simulation(model_setup, cell_parameters_calibrated2, cycling_protocol; simulation_settings)
 
-    #println(simc.cell_parameters)
+    ## println(simc.cell_parameters)
     
     outputc = get_simulation_input(simc)
     modelc = outputc[:model]
@@ -196,23 +205,23 @@ for (i, CRate) in enumerate(CRates)
     
     end
 
-    # Experimental curve
+    ## Experimental curve
     t_exp = vec(exp_data[i]["time"])
     V_exp = vec(exp_data[i]["E"])
     lines!(ax, t_exp, V_exp, linestyle = :dot, label = "Experimental", color = colors[1])
 
-    # Simulated curve (calibrated)
+    ## Simulated curve (calibrated)
     t_sim, V_sim = get_tV(outputs_calibrated[i].output)
     lines!(ax, t_sim, V_sim, linestyle = :dash, label = "Simulated (calibrated)", color = colors[2])
 
-    # Simulated curve (base)
+    ## Simulated curve (base)
     t_b, V_b = get_tV(outputs_base[i].output)
     lines!(ax, t_b, V_b, linestyle = :dash, label = "Simulated (base)", color = colors[3])
 
     axislegend(ax, position = :rb)
     display(fig)
 
-    # Save figure as PNG
+    ## Save figure as PNG
     save_path = joinpath(datadir, "discharge_curve_$(round(CRate, digits=2))C.png")
     save(save_path, fig)
     println("Saved plot for $(round(CRate, digits=2))C at $save_path")
@@ -220,3 +229,4 @@ for (i, CRate) in enumerate(CRates)
 end
 
 
+end
