@@ -2,7 +2,7 @@ export equilibriumCalibration
 
 """ Calibrates the equilibrium parameters of the model
 """
-function equilibriumCalibration(sim)
+function equilibriumCalibration(sim, exp_data)
 
     t_exp = vec(exp_data[1]["time"])
     V_exp = vec(exp_data[1]["E"])

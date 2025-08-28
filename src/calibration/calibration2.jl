@@ -8,75 +8,11 @@ function get_tV(x)
     return (t, V)
 end
 
-""" get time and voltage from dataframe
-"""
-function get_tV(x::DataFrame)
-    return (x[:, 1], x[:, 2])
-end
-
-function getExpData(rate="all", flow="discharge")
-    """Fetches experimental data from a .mat file. Returns a dictionary with time, rawRate, E, rawI, I, cap, and DRate."""
-
-    # Determine file path
-    if lowercase(flow) == "discharge"
-        fn = joinpath(@__DIR__,"MJ1-DLR", "dlroutput.mat")
-    elseif lowercase(flow) == "charge"
-        error("Charge data not available")
-    else
-        error("Unknown flow $flow")
-    end
-
-    # Load data
-    data = matread(fn)
-    dlroutput = data["dlroutput"]  # Dict with 1×4 matrices for each variable
-
-    @show keys(dlroutput)  # Show available keys in the data
-    @show size(dlroutput["current"][1])  # Show size of the time matrix
-    
-    # Get number of experiments (4 in this case)
-    num_experiments = size(dlroutput["time"], 2)
-    
-    # Process each experiment
-    dlrdata = Vector{Dict{String,Any}}(undef, num_experiments)
-
-    function trapz(x, y)
-        sum((x[i+1] - x[i]) * (y[i] + y[i+1]) / 2 for i in 1:length(x)-1)
-    end
-    
-    for k in 1:num_experiments
-        # Extract data for this experiment (column k from each matrix)
-        time_h = dlroutput["time"][k]
-        time_s = time_h * 3600  # hours → seconds
-        
-        current =dlroutput["current"][k]
-        current_segment =  Float64.(current[3:end-1])  # Skip first/last points
-
-        # Create experiment dictionary
-        dlrdata[k] = Dict{String,Any}(
-            "time" => time_s,
-            "rawRate" =>dlroutput["CRate"][k],
-            "E" => dlroutput["voltage"][k],
-            "rawI" => -current,
-            "I" => abs(mean(current_segment)),
-            "cap" => abs(trapz(time_s[3:end-1], current_segment)),
-            "DRate" => 1.0 / time_h[end]
-        )
-    end
-
-    # Sort by DRate
-    sort!(dlrdata, by=x -> x["DRate"])
-
-    # Select data based on rate
-    if rate == "low"
-        return dlrdata[1]
-    elseif rate == "high"
-        return dlrdata[end]
-    elseif rate == "all"
-        return dlrdata
-    else
-        error("Unknown rate $rate")
-    end
-end
+# """ get time and voltage from dataframe
+# """
+# function get_tV(x::DataFrame)
+#     return (x[:, 1], x[:, 2])
+# end
 
 
 """ Calibrates the kinetic parameters of the model
