@@ -45,7 +45,7 @@ using StaticArrays                                # Static-sized arrays
 using Statistics                                  # Basic statistical functions
 using StatsBase: inverse_rle                      # Statistical utility
 using Tullio: @tullio                             # Einstein summation notation
-
+using ForwardDiff
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -206,8 +206,6 @@ include("input/function_input_tools.jl")
 include("input/formatter.jl")
 include("input/validator.jl")
 
-
-
 include("models/thermal.jl")
 include("models/elyte.jl")
 include("models/current_collector.jl")
@@ -242,6 +240,8 @@ include("solver/precondgenneral.jl")
 include("solver/sparse_utils.jl")
 include("calibration/calibration.jl")
 include("calibration/calibration_utils.jl")
+include("calibration/calibration2.jl")
+include("calibration/equilibrium_calibration.jl")
 
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 @compile_workload begin
