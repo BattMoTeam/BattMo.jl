@@ -330,6 +330,14 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	am_params[:theta0]                  = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
 	am_params[:theta100]                = inputparams_active_material["StoichiometricCoefficientAtSOC100"]
 
+	if haskey(model.settings, "ButlerVolmer") && model.settings["ButlerVolmer"] == "Chayambuka"
+		am_params[:setting_butler_volmer] = "Chayambuka"
+
+	else
+		am_params[:setting_butler_volmer] = "Generic"
+
+	end
+
 	if haskey(model.settings, "ReactionRateConstant") && model.settings["ReactionRateConstant"] == "TemperatureDependent"
 		am_params[:setting_exchange_current_density] = "TemperatureDependent"
 

@@ -154,6 +154,7 @@ function build_battmo_docs(build_format              = nothing;
 	],
 		"Battery models" => [
 		"Lithium ion model" => "manuals/user_guide/pxd_model.md"
+		"Sodium ion model" => "manuals/user_guide/sodium_ion_model.md"
 	],
 		"Sub-models" => [
 		"Ramp up model" => "manuals/user_guide/ramp_up.md",

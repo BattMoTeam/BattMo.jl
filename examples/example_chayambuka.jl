@@ -1,7 +1,8 @@
 # # Sodium ion modeling
 
-# This is an example for showing a sodium ion simulation based on [Chayambuka](https://www.sciencedirect.com/science/article/pii/S0013468621020478?via%3Dihub).
-# There is no difference between the sodium ion and lithium ion PXD model.
+# This is an example for showing a sodium ion simulation based on [Chayambuka2022](https://www.sciencedirect.com/science/article/pii/S0013468621020478?via%3Dihub).
+# There is hardly any difference between the sodium ion and lithium ion PXD basis model and equations. The only difference is that for the SodiumIonBattery model 
+# you can chose a slightly adapted butler volmer equation from [Chayambuka2022](https://www.sciencedirect.com/science/article/pii/S0013468621020478?via%3Dihub). See documentation for more information.
 
 using BattMo, GLMakie, CSV, DataFrames
 
@@ -14,6 +15,9 @@ cell_parameters = load_cell_parameters(; from_default_set = "Chayambuka2022")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 model_settings = load_model_settings(; from_default_set = "P2D")
 simulation_settings = load_simulation_settings(; from_default_set = "P2D")
+
+######### Alter model settings #########
+model_settings["ButlerVolmer"] = "Chayambuka"
 
 ######### Alter simulation settings #########
 simulation_settings["GridResolution"]["NegativeElectrodeCoating"] = 8

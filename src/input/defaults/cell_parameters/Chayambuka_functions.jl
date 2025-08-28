@@ -61,7 +61,7 @@ end
 
 function calc_pe_ocp(c, T, refT, cmax)
 
-	ocp = get_1d_interpolator(pe_transfered_charge, pe_ocp)
+	ocp = get_1d_interpolator(x_pe, pe_ocp)
 	return ocp(c / cmax)
 end
 

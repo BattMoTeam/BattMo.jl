@@ -1,7 +1,7 @@
 using BattMo
 using Test
 
-
+include("test_sodium_ion.jl")
 include("examples_strict.jl")
 include("sei_example.jl")
 include("test_loader.jl")

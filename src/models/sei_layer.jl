@@ -199,26 +199,42 @@ function Jutul.update_cross_term_in_entity!(out,
 	ind_s = ct.source_cells[ind]
 
 	phi_a = state_s.Voltage[ind_s]
-	seiU  = state_s.SEIvoltageDrop[ind_s]
-	ocp   = state_s.OpenCircuitPotential[ind_s]
-	R0    = state_s.ReactionRateConstant[ind_s]
-	c_a   = state_s.SurfaceConcentration[ind_s]
-	T     = state_s.Temperature[ind_s]
+	seiU = state_s.SEIvoltageDrop[ind_s]
+	ocp = state_s.OpenCircuitPotential[ind_s]
+	R0 = state_s.ReactionRateConstant[ind_s]
+	c_a_surf = state_s.SurfaceConcentration[ind_s]
+	c_a = state_s.ParticleConcentration[ind_s]
+	T = state_s.Temperature[ind_s]
 
-	vols  = state_t.Volume[ind_t]
+	vols = state_t.Volume[ind_t]
 	phi_e = state_t.Voltage[ind_t]
-	c_e   = state_t.Concentration[ind_t]
+	c_e = state_t.Concentration[ind_t]
+	c_av = mean(c_a)
+	c_av_e = mean(state_t.Concentration)
 
 	# overpotential include SEI voltage drop
 	eta = phi_a - phi_e - ocp - seiU
 
-	R = reaction_rate(eta,
-		c_a,
-		R0,
-		T,
-		c_e,
-		activematerial,
-		electrolyte)
+	if activematerial.params[:setting_butler_volmer] == "Chayambuka"
+		R = reaction_rate_chayambuka(eta,
+			c_a_surf,
+			R0,
+			T,
+			c_e,
+			activematerial,
+			electrolyte,
+			c_a,
+			c_av,
+			c_av_e)
+	else
+		R = reaction_rate(eta,
+			c_a_surf,
+			R0,
+			T,
+			c_e,
+			activematerial,
+			electrolyte)
+	end
 
 	cs = conserved_symbol(eq)
 
@@ -259,24 +275,40 @@ function Jutul.update_cross_term_in_entity!(out,
 	phi_e = state_s.Voltage[ind_s]
 	c_e   = state_s.Concentration[ind_s]
 
-	vols  = state_t.Volume[ind_t]
-	c_a   = state_t.SurfaceConcentration[ind_t]
+	vols = state_t.Volume[ind_t]
+	c_a_surf = state_t.SurfaceConcentration[ind_t]
+	c_a = state_t.ParticleConcentration[ind_t]
 	phi_a = state_t.Voltage[ind_t]
-	seiU  = state_t.SEIvoltageDrop[ind_t]
-	ocp   = state_t.OpenCircuitPotential[ind_t]
-	R0    = state_t.ReactionRateConstant[ind_t]
-	T     = state_t.Temperature[ind_t]
+	seiU = state_t.SEIvoltageDrop[ind_t]
+	ocp = state_t.OpenCircuitPotential[ind_t]
+	R0 = state_t.ReactionRateConstant[ind_t]
+	T = state_t.Temperature[ind_t]
+	c_av = mean(c_a)
+	c_av_e = mean(state_s.Concentration)
 
 	# overpotential include SEI voltage drop
 	eta = phi_a - phi_e - ocp - seiU
 
-	R = reaction_rate(eta,
-		c_a,
-		R0,
-		T,
-		c_e,
-		activematerial,
-		electrolyte)
+	if activematerial.params[:setting_butler_volmer] == "Chayambuka"
+		R = reaction_rate_chayambuka(eta,
+			c_a_surf,
+			R0,
+			T,
+			c_e,
+			activematerial,
+			electrolyte,
+			c_a,
+			c_av,
+			c_av_e)
+	else
+		R = reaction_rate(eta,
+			c_a_surf,
+			R0,
+			T,
+			c_e,
+			activematerial,
+			electrolyte)
+	end
 
 	if eq isa SolidDiffusionBc
 
@@ -378,26 +410,42 @@ function Jutul.update_cross_term_in_entity!(out,
 	ind_s = ct.source_cells[ind]
 
 	phi_a = state_t.Voltage[ind_t]
-	seiU  = state_t.SEIvoltageDrop[ind_t]
-	ocp   = state_t.OpenCircuitPotential[ind_t]
-	R0    = state_t.ReactionRateConstant[ind_t]
-	c_a   = state_t.SurfaceConcentration[ind_t]
-	T     = state_t.Temperature[ind_t]
-	L     = state_t.SEIlength[ind_t]
+	seiU = state_t.SEIvoltageDrop[ind_t]
+	ocp = state_t.OpenCircuitPotential[ind_t]
+	R0 = state_t.ReactionRateConstant[ind_t]
+	c_a_surf = state_t.SurfaceConcentration[ind_t]
+	c_a = state_t.ParticleConcentration[ind_t]
+	T = state_t.Temperature[ind_t]
+	L = state_t.SEIlength[ind_t]
 
 	phi_e = state_s.Voltage[ind_s]
-	c_e   = state_s.Concentration[ind_s]
+	c_e = state_s.Concentration[ind_s]
+	c_av = mean(c_a)
+	c_av_e = mean(state_s.Concentration)
 
 	# Overpotential definition  includes SEI voltage drop
 	eta = phi_a - phi_e - ocp - seiU
 
-	R = reaction_rate(eta,
-		c_a,
-		R0,
-		T,
-		c_e,
-		activematerial,
-		electrolyte)
+	if activematerial.params[:setting_butler_volmer] == "Chayambuka"
+		R = reaction_rate_chayambuka(eta,
+			c_a_surf,
+			R0,
+			T,
+			c_e,
+			activematerial,
+			electrolyte,
+			c_a,
+			c_av,
+			c_av_e)
+	else
+		R = reaction_rate(eta,
+			c_a_surf,
+			R0,
+			T,
+			c_e,
+			activematerial,
+			electrolyte)
+	end
 
 	# Definition of the SEI voltage drop is implicit (because reaction rate R depends on seiU) and is given as follow
 	out[] = seiU - F * R * L / k
