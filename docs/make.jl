@@ -46,6 +46,7 @@ function build_battmo_docs(build_format              = nothing;
 		"3D cylindrical" => "example_3D_cylindrical",
 		"Calibration example" => "example_calibration",
 		"SEI layer growth" => "example_sei",
+		"DFN sodiun ion " => "example_chayambuka",
 	]
 
 	tutorials_markdown = []

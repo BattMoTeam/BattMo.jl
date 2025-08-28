@@ -1,4 +1,9 @@
-using BattMo, GLMakie, CSV, DataFrames, Statistics, Loess
+# # Sodium ion modeling
+
+# This is an example for showing a sodium ion simulation based on [Chayambuka](https://www.sciencedirect.com/science/article/pii/S0013468621020478?via%3Dihub).
+# There is no difference between the sodium ion and lithium ion PXD model.
+
+using BattMo, GLMakie, CSV, DataFrames
 
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_functions.jl"))
