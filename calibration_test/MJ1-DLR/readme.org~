@@ -1,6 +1,0 @@
-* DLR repo with data
-  - adress https://github.com/BattMoTeam/2022-DLR-params/tree/master
-  - contains a ~rawData~ directory for MJ1 and in particular
-    - a pre-processed mat file ~MJ1/rawData/dlroutput.mat~
-    - a excel document ~MJ1/rawData/MJ1_parameters-final.xlsx~
-      
