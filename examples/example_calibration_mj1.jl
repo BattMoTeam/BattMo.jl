@@ -38,15 +38,20 @@ function runMJ1()
 
 end
 
-
 cycling_protocol, cell_parameters,model_setup, simulation_settings = runMJ1()
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 
 cell_parameters_calibrated, V_eq, t_eq = equilibriumCalibration(sim)
 
-cell_parameters_calibrated2,history  = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings; scaling = :log)
-#cell_parameters_calibrated2 = highRateCalibration(exp_data,cycling_protocol,cell_parameters_calibrated,model_setup,simulation_settings)
+# Run the high rate calibration
+
+cell_parameters_calibrated2, history  = highRateCalibration(exp_data,
+                                                            cycling_protocol,
+                                                            cell_parameters_calibrated,
+                                                            model_setup,
+                                                            simulation_settings;
+                                                            scaling = :log)
 
 println("Calibration done:")
 
