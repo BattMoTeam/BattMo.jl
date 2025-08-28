@@ -32,25 +32,6 @@ function get_tV(x::DataFrame)
     return (x[:, 1], x[:, 2])
 end
 
-
-function getExpDataOrig()
-    battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
-    exdata = joinpath(battmo_base, "examples", "example_data")
-    df_05 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_05C.csv"), DataFrame)
-    df_1 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_1C.csv"), DataFrame)
-    df_2 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_2C.csv"), DataFrame)
-
-    dfs = [df_05, df_1, df_2]
-    return dfs
-end
-
-dfs = getExpDataOrig()
-df_05 = dfs[1]
-df_1 = dfs[2]
-df_2 = dfs[3]
-
-
-
 #Fetch experimental data from a .mat file
 using MAT
 using Statistics: mean
