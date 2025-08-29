@@ -115,7 +115,7 @@ cycling_protocol, cell_parameters,model_setup, simulation_settings = runMJ1()
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 
-## cell_parameters_calibrated, V_eq, t_eq = equilibriumCalibration(sim, exp_data)
+cell_parameters_calibrated, V_eq, t_eq = equilibriumCalibration(sim, exp_data)
 
 # Run the high rate calibration
 

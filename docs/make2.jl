@@ -215,5 +215,5 @@ function build_battmo_docs(build_format              = nothing;
 	GLMakie.closeall()
 end
 ##
-build_battmo_docs(build_examples = true, build_validation_examples = false)
-# build_battmo_docs()
+# build_battmo_docs(build_examples = true, build_validation_examples = false)
+build_battmo_docs()
