@@ -52,14 +52,11 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 	# SimulationSettings
 
 	simulation_settings = Dict(
-		"GridResolution" => Dict(
-			"PositiveElectrodeCoating" => params["PositiveElectrode"]["Coating"]["N"],
-			"PositiveElectrodeActiveMaterial" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"],
-			"NegativeElectrodeCoating" => params["NegativeElectrode"]["Coating"]["N"],
-			"NegativeElectrodeActiveMaterial" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"],
-			"Separator" => params["Separator"]["N"],
-		),
-		"TimeStepDuration" => params["TimeStepping"]["timeStepDuration"],
+		"GridPositiveElectrodeCoating" => params["PositiveElectrode"]["Coating"]["N"],
+		"GridPositiveElectrodeParticle" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"],
+		"GridNegativeElectrodeCoating" => params["NegativeElectrode"]["Coating"]["N"],
+		"GridNegativeElectrodeParticle" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"],
+		"GridSeparator" => params["Separator"]["N"], "TimeStepDuration" => params["TimeStepping"]["timeStepDuration"],
 	)
 
 	if haskey(model_settings, "RampUp")
@@ -68,26 +65,26 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 	end
 
 	if model_settings["ModelFramework"] == "P4D Cylindrical"
-		simulation_settings["GridResolution"]["Height"] = params["Geometry"]["numberOfDiscretizationCellsVertical"]
-		simulation_settings["GridResolution"]["Angular"] = params["Geometry"]["numberOfDiscretizationCellsAngular"]
+		simulation_settings["GridHeight"] = params["Geometry"]["numberOfDiscretizationCellsVertical"]
+		simulation_settings["GridAngular"] = params["Geometry"]["numberOfDiscretizationCellsAngular"]
 
 		if haskey(model_settings, "CurrentCollectors")
-			simulation_settings["GridResolution"]["PositiveElectrodeCurrentCollector"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
-			simulation_settings["GridResolution"]["NegativeElectrodeCurrentCollector"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["GridPositiveElectrodeCurrentCollector"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["GridNegativeElectrodeCurrentCollector"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
 		end
 	end
 
 	if model_settings["ModelFramework"] == "P4D Pouch"
-		simulation_settings["GridResolution"]["ElectrodeWidth"] = params["Geometry"]["Nw"]
-		simulation_settings["GridResolution"]["ElectrodeLength"] = params["Geometry"]["Nh"]
+		simulation_settings["GridElectrodeWidth"] = params["Geometry"]["Nw"]
+		simulation_settings["GridElectrodeLength"] = params["Geometry"]["Nh"]
 
 		if haskey(model_settings, "CurrentCollectors")
-			simulation_settings["GridResolution"]["PositiveElectrodeCurrentCollector"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
-			simulation_settings["GridResolution"]["PositiveElectrodeCurrentCollectorTabWidth"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"]
-			simulation_settings["GridResolution"]["PositiveElectrodeCurrentCollectorTabLength"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"]
-			simulation_settings["GridResolution"]["NegativeElectrodeCurrentCollector"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
-			simulation_settings["GridResolution"]["NegativeElectrodeCurrentCollectorTabWidth"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"]
-			simulation_settings["GridResolution"]["NegativeElectrodeCurrentCollectorTabLength"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"]
+			simulation_settings["GridPositiveElectrodeCurrentCollector"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["GridPositiveElectrodeCurrentCollectorTabWidth"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"]
+			simulation_settings["GridPositiveElectrodeCurrentCollectorTabLength"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"]
+			simulation_settings["GridNegativeElectrodeCurrentCollector"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["GridNegativeElectrodeCurrentCollectorTabWidth"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"]
+			simulation_settings["GridNegativeElectrodeCurrentCollectorTabLength"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"]
 		end
 	end
 
@@ -169,7 +166,7 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 	cell_parameters = Dict(
 		"Cell" => Dict(),
 		"NegativeElectrode" => Dict(
-			"ElectrodeCoating" => Dict(
+			"Coating" => Dict(
 				"BruggemanCoefficient" => params["NegativeElectrode"]["Coating"]["bruggemanCoefficient"],
 				"EffectiveDensity" => params["NegativeElectrode"]["Coating"]["effectiveDensity"],
 				"Thickness" => params["NegativeElectrode"]["Coating"]["thickness"],
@@ -202,7 +199,7 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 				"ElectronicConductivity" => params["NegativeElectrode"]["Coating"]["Binder"]["electronicConductivity"],
 			)),
 		"PositiveElectrode" => Dict(
-			"ElectrodeCoating" => Dict(
+			"Coating" => Dict(
 				"BruggemanCoefficient" => params["PositiveElectrode"]["Coating"]["bruggemanCoefficient"],
 				"EffectiveDensity" => params["PositiveElectrode"]["Coating"]["effectiveDensity"],
 				"Thickness" => params["PositiveElectrode"]["Coating"]["thickness"],
@@ -371,7 +368,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 
 	cell = get_key_value(cell_parameters, "Cell")
 	ne = get_key_value(cell_parameters, "NegativeElectrode")
-	ne_coating = get_key_value(ne, "ElectrodeCoating")
+	ne_coating = get_key_value(ne, "Coating")
 	ne_am = get_key_value(ne, "ActiveMaterial")
 	ne_interphase = get_key_value(ne, "Interphase")
 	ne_b = get_key_value(ne, "Binder")
@@ -380,7 +377,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 	ne_ca = get_key_value(ne, "ConductiveAdditive")
 
 	pe = get_key_value(cell_parameters, "PositiveElectrode")
-	pe_coating = get_key_value(pe, "ElectrodeCoating")
+	pe_coating = get_key_value(pe, "Coating")
 	pe_am = get_key_value(pe, "ActiveMaterial")
 	pe_b = get_key_value(pe, "Binder")
 	pe_cc = get_key_value(pe, "CurrentCollector")

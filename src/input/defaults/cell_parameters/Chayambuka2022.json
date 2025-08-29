@@ -18,7 +18,7 @@
         "NominalCapacity": 0.0025
     },
     "NegativeElectrode": {
-        "ElectrodeCoating": {
+        "Coating": {
             "BruggemanCoefficient": 0.5,
             "EffectiveDensity": 954.67,
             "Thickness": 64e-6
@@ -59,7 +59,7 @@
         }
     },
     "PositiveElectrode": {
-        "ElectrodeCoating": {
+        "Coating": {
             "BruggemanCoefficient": 0.5,
             "EffectiveDensity": 2155.69,
             "Thickness": 68e-6

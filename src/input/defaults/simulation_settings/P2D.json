@@ -9,13 +9,11 @@
             "SEIModel": "Bolay"
         }
     },
-    "GridResolution": {
-        "PositiveElectrodeCoating": 10,
-        "PositiveElectrodeActiveMaterial": 10,
-        "NegativeElectrodeCoating": 10,
-        "NegativeElectrodeActiveMaterial": 10,
-        "Separator": 3
-    },
+    "GridPositiveElectrodeCoating": 10,
+    "GridPositiveElectrodeParticle": 10,
+    "GridNegativeElectrodeCoating": 10,
+    "GridNegativeElectrodeParticle": 10,
+    "GridSeparator": 3,
     "TimeStepDuration": 50,
     "RampUpTime": 10,
     "RampUpSteps": 5

@@ -30,9 +30,9 @@ function compute_electrode_coating_mass(params::CellParameters, electrode::Strin
 		error("Electrode must be either PositiveElectrode or NegativeElectrode, not $electrode. Check for typos")
 	end
 
-	effective_density = params[electrode]["ElectrodeCoating"]["EffectiveDensity"]
+	effective_density = params[electrode]["Coating"]["EffectiveDensity"]
 	area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
-	thickness = params[electrode]["ElectrodeCoating"]["Thickness"]
+	thickness = params[electrode]["Coating"]["Thickness"]
 
 	return effective_density * area * thickness
 end
@@ -94,14 +94,14 @@ function compute_electrolyte_mass(params::CellParameters)
 
 	#positive electrode (pe)
 	pe_theoretical_density = compute_electrode_theoretical_density(params, "PositiveElectrode")
-	pe_effective_density = params["PositiveElectrode"]["ElectrodeCoating"]["EffectiveDensity"]
-	pe_volume = cell_area * params["PositiveElectrode"]["ElectrodeCoating"]["Thickness"]
+	pe_effective_density = params["PositiveElectrode"]["Coating"]["EffectiveDensity"]
+	pe_volume = cell_area * params["PositiveElectrode"]["Coating"]["Thickness"]
 	pe_porosity = 1.0 - (pe_effective_density / pe_theoretical_density)
 
 	#negative electrode (ne)
 	ne_theoretical_density = compute_electrode_theoretical_density(params, "NegativeElectrode")
-	ne_effective_density = params["NegativeElectrode"]["ElectrodeCoating"]["EffectiveDensity"]
-	ne_volume = cell_area * params["NegativeElectrode"]["ElectrodeCoating"]["Thickness"]
+	ne_effective_density = params["NegativeElectrode"]["Coating"]["EffectiveDensity"]
+	ne_volume = cell_area * params["NegativeElectrode"]["Coating"]["Thickness"]
 	ne_porosity = 1.0 - (ne_effective_density / ne_theoretical_density)
 
 	component_volumes = [pe_volume, ne_volume, sep_volume]
@@ -161,8 +161,8 @@ function compute_cell_volume(params::CellParameters)
 	case = params["Cell"]["Case"]
 	if case == "Pouch"
 
-		ne_thickness = params["NegativeElectrode"]["ElectrodeCoating"]["Thickness"]
-		pe_thickness = params["PositiveElectrode"]["ElectrodeCoating"]["Thickness"]
+		ne_thickness = params["NegativeElectrode"]["Coating"]["Thickness"]
+		pe_thickness = params["PositiveElectrode"]["Coating"]["Thickness"]
 		sep_thickness = params["Separator"]["Thickness"]
 		thickness = ne_thickness + pe_thickness + sep_thickness
 
@@ -214,7 +214,7 @@ function compute_electrode_volume_fraction(params::CellParameters, electrode::St
 		error("Electrode must be either PositiveElectrode or NegativeElectrode, not $electrode. Check for typos")
 	end
 
-	effective_density = params[electrode]["ElectrodeCoating"]["EffectiveDensity"]
+	effective_density = params[electrode]["Coating"]["EffectiveDensity"]
 	theoretical_density = compute_electrode_theoretical_density(params, electrode)
 	return effective_density / theoretical_density
 end

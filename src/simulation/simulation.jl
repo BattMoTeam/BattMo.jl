@@ -306,7 +306,10 @@ end
 
 function set_default_solver_and_simulation_settings!(simulation_settings)
 	set_default_input_params!(simulation_settings.all, ["NonLinearSolver", "MaxTimestepCuts"], 10)
+	set_default_input_params!(simulation_settings.all, ["NonLinearSolver", "MaxTimestepLength"], Inf)
+	set_default_input_params!(simulation_settings.all, ["NonLinearSolver", "MinTimestepLength"], 0.0)
 	set_default_input_params!(simulation_settings.all, ["NonLinearSolver", "MaxIterations"], 20)
+	set_default_input_params!(simulation_settings.all, ["NonLinearSolver", "MinIterations"], 1)
 	set_default_input_params!(simulation_settings.all, ["NonLinearSolver", "LinearSolver"], Dict())
 
 	set_default_input_params!(simulation_settings.all, ["UseGroups"], false)

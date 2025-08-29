@@ -131,7 +131,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 			"NegativeElectrode" => Dict(
 				"type" => "object",
 				"properties" => Dict(
-					"ElectrodeCoating" => Dict(
+					"Coating" => Dict(
 						"type" => "object",
 						"properties" => Dict(
 							"BruggemanCoefficient" => create_property(parameter_meta, "BruggemanCoefficient"),
@@ -213,12 +213,12 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					)),
-				"required" => ["ElectrodeCoating", "ActiveMaterial", "Binder", "ConductiveAdditive"],
+				"required" => ["Coating", "ActiveMaterial", "Binder", "ConductiveAdditive"],
 			),
 			"PositiveElectrode" => Dict(
 				"type" => "object",
 				"properties" => Dict(
-					"ElectrodeCoating" => Dict(
+					"Coating" => Dict(
 						"type" => "object",
 						"properties" => Dict(
 							"BruggemanCoefficient" => create_property(parameter_meta, "BruggemanCoefficient"),
@@ -287,7 +287,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					)),
-				"required" => ["ElectrodeCoating", "ActiveMaterial", "Binder", "ConductiveAdditive"],
+				"required" => ["Coating", "ActiveMaterial", "Binder", "ConductiveAdditive"],
 			),
 			"Separator" => Dict(
 				"type" => "object",
@@ -324,8 +324,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 	cell_required = schema["properties"]["Cell"]["required"]
 	ne_required = schema["properties"]["NegativeElectrode"]["required"]
 	pe_required = schema["properties"]["PositiveElectrode"]["required"]
-	ne_coating_required = schema["properties"]["NegativeElectrode"]["properties"]["ElectrodeCoating"]["required"]
-	pe_coating_required = schema["properties"]["PositiveElectrode"]["properties"]["ElectrodeCoating"]["required"]
+	ne_coating_required = schema["properties"]["NegativeElectrode"]["properties"]["Coating"]["required"]
+	pe_coating_required = schema["properties"]["PositiveElectrode"]["properties"]["Coating"]["required"]
 
 	ne_am_required = schema["properties"]["NegativeElectrode"]["properties"]["ActiveMaterial"]["required"]
 	pe_am_required = schema["properties"]["PositiveElectrode"]["properties"]["ActiveMaterial"]["required"]
@@ -503,57 +503,49 @@ function get_schema_simulation_settings(model_settings)
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",
 		"properties" => Dict(
-			"GridResolution" => Dict(
-				"type" => "object",
-				"properties" => Dict(
-					"Height" => create_property(parameter_meta, "GridResolutionHeight"),
-					"Angular" => create_property(parameter_meta, "GridResolutionAngular"),
-					"ElectrodeWidth" => create_property(parameter_meta, "GridResolutionElectrodeWidth"),
-					"ElectrodeLength" => create_property(parameter_meta, "GridResolutionElectrodeLength"),
-					"PositiveElectrodeCoating" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCoating"),
-					"PositiveElectrodeActiveMaterial" => create_property(parameter_meta, "GridResolutionPositiveElectrodeActiveMaterial"),
-					"PositiveElectrodeCurrentCollector" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollector"),
-					"PositiveElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabWidth"),
-					"PositiveElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabLength"),
-					"NegativeElectrodeCoating" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCoating"),
-					"NegativeElectrodeActiveMaterial" => create_property(parameter_meta, "GridResolutionNegativeElectrodeActiveMaterial"),
-					"NegativeElectrodeCurrentCollector" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollector"),
-					"NegativeElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabWidth"),
-					"NegativeElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabLength"),
-					"Separator" => create_property(parameter_meta, "GridResolutionSeparator"),
-				),
-				"required" => [
-					"PositiveElectrodeCoating",
-					"PositiveElectrodeActiveMaterial",
-					"NegativeElectrodeCoating",
-					"NegativeElectrodeActiveMaterial",
-					"Separator",
-				],
-			),
-			"Grid" => Dict(
+			"GridHeight" => create_property(parameter_meta, "GridHeight"),
+			"GridAngular" => create_property(parameter_meta, "GridAngular"),
+			"GridElectrodeWidth" => create_property(parameter_meta, "GridElectrodeWidth"),
+			"GridElectrodeLength" => create_property(parameter_meta, "GridElectrodeLength"),
+			"GridPositiveElectrodeCoating" => create_property(parameter_meta, "GridPositiveElectrodeCoating"),
+			"GridPositiveElectrodeParticle" => create_property(parameter_meta, "GridPositiveElectrodeParticle"),
+			"GridPositiveElectrodeCurrentCollector" => create_property(parameter_meta, "GridPositiveElectrodeCurrentCollector"),
+			"GridPositiveElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridPositiveElectrodeCurrentCollectorTabWidth"),
+			"GridPositiveElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabLength"),
+			"GridNegativeElectrodeCoating" => create_property(parameter_meta, "GridNegativeElectrodeCoating"),
+			"GridNegativeElectrodeParticle" => create_property(parameter_meta, "GridNegativeElectrodeParticle"),
+			"GridNegativeElectrodeCurrentCollector" => create_property(parameter_meta, "GridNegativeElectrodeCurrentCollector"),
+			"GridNegativeElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridNegativeElectrodeCurrentCollectorTabWidth"),
+			"GridNegativeElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabLength"),
+			"GridSeparator" => create_property(parameter_meta, "GridSeparator"), "Grid" => Dict(
 				"type" => "array",
 			),
 			"TimeStepDuration" => Dict("type" => "integer"),
 			"RampUpTime" => Dict("type" => "integer"),
 			"RampUpSteps" => Dict("type" => "integer"),
 		),
-		"required" => ["GridResolution", "TimeStepDuration"],
+		"required" => [
+			"GridPositiveElectrodeCoating",
+			"GridPositiveElectrodeParticle",
+			"GridNegativeElectrodeCoating",
+			"GridNegativeElectrodeParticle",
+			"GridSeparator",
+			"TimeStepDuration"],
 	)
 
 	required = schema["required"]
-	required_grid_points = schema["properties"]["GridResolution"]["required"]
 
 	if model_settings["ModelFramework"] == "P4D Pouch"
-		push!(required_grid_points, "ElectrodeWidth")
-		push!(required_grid_points, "ElectrodeLength")
+		push!(required, "GridElectrodeWidth")
+		push!(required, "GridElectrodeLength")
 
 		if haskey(model_settings, "CurrentCollectors")
-			push!(required_grid_points, "PositiveElectrodeCurrentCollector")
-			push!(required_grid_points, "PositiveElectrodeCurrentCollectorTabWidth")
-			push!(required_grid_points, "PositiveElectrodeCurrentCollectorTabLength")
-			push!(required_grid_points, "NegativeElectrodeCurrentCollector")
-			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabWidth")
-			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabLength")
+			push!(required, "GridPositiveElectrodeCurrentCollector")
+			push!(required, "GridPositiveElectrodeCurrentCollectorTabWidth")
+			push!(required, "GridPositiveElectrodeCurrentCollectorTabLength")
+			push!(required, "GridNegativeElectrodeCurrentCollector")
+			push!(required, "GridNegativeElectrodeCurrentCollectorTabWidth")
+			push!(required, "GridNegativeElectrodeCurrentCollectorTabLength")
 		end
 	end
 	if haskey(model_settings, "RampUp") && model_settings["RampUp"] == "Sinusoidal"
@@ -562,11 +554,11 @@ function get_schema_simulation_settings(model_settings)
 	end
 
 	if model_settings["ModelFramework"] == "P4D Cylindrical"
-		push!(required_grid_points, "Height")
-		push!(required_grid_points, "Angular")
+		push!(required, "GridHeight")
+		push!(required, "GridAngular")
 		if haskey(model_settings, "CurrentCollectors")
-			push!(required_grid_points, "PositiveElectrodeCurrentCollector")
-			push!(required_grid_points, "NegativeElectrodeCurrentCollector")
+			push!(required, "GridPositiveElectrodeCurrentCollector")
+			push!(required, "GridNegativeElectrodeCurrentCollector")
 		end
 
 	end

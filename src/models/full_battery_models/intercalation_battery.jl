@@ -295,7 +295,7 @@ function compute_volume_fraction(codict)
 	sumSpecificVolumes = sum(specificVolumes)
 	volumeFractions = [sv / sumSpecificVolumes for sv in specificVolumes]
 
-	effectiveDensity = codict["ElectrodeCoating"]["EffectiveDensity"]
+	effectiveDensity = codict["Coating"]["EffectiveDensity"]
 	volumeFraction = sumSpecificVolumes * effectiveDensity
 
 	return volumeFraction, volumeFractions, effectiveDensity
@@ -422,7 +422,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 
 	if haskey(model.settings, "TransportInSolid") && model.settings["TransportInSolid"] == "FullDiffusion"
 		rp = inputparams_active_material["ParticleRadius"]
-		N  = Int64(input.simulation_settings["GridResolution"][stringName*"ActiveMaterial"])
+		N  = Int64(input.simulation_settings["Grid"*stringName*"Particle"])
 
 		if isa(inputparams_active_material["DiffusionCoefficient"], Real)
 			am_params[:diff_funcconstant] = true
@@ -517,7 +517,7 @@ function compute_effective_conductivity(comodel, coinputparams)
 	end
 
 	vf = comodel.system.params[:volume_fraction]
-	bg = coinputparams["ElectrodeCoating"]["BruggemanCoefficient"]
+	bg = coinputparams["Coating"]["BruggemanCoefficient"]
 
 	kappaeff = (vf^bg) * kappa
 

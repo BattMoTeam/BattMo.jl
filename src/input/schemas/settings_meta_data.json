@@ -33,116 +33,116 @@
       ],
       "description": "Which model describes the current collectors."
     },
-    "GridResolutionHeight": {
+    "GridHeight": {
       "type": "integer",
       "minimum": 1,
       "maximum": 100,
       "description": "Number of grid points along the height of the cell (used in P4D cylindrical)."
     },
-    "GridResolutionAngular": {
+    "GridAngular": {
       "type": "integer",
       "minimum": 1,
       "maximum": 100,
       "description": "Number of discretisation angles for a cylindrical cell (used in P4D cylindrical)."
     },
-    "GridResolutionElectrodeWidth": {
-    "type": "integer",
-    "minimum": 1,
-    "maximum": 1000,
-    "description": "Number of grid points along the width dimension of the electrode.",
-    "context_type": "GridResolutionPositiveElectrode",
-    "context_type_iri": null
-  },
-  "GridResolutionElectrodeLength": {
-    "type": "integer",
-    "minimum": 1,
-    "maximum": 1000,
-    "description": "Number of grid points along the length dimension of the electrode.",
-    "context_type_iri": null
-  },
-  "GridResolutionPositiveElectrodeCoating": {
-    "type": "integer",
-    "minimum": 1,
-    "maximum": 1000,
-    "description": "Number of grid points along the thickness dimension of the positive electrode.",
-    "context_type_iri": null
-  },
-  "GridResolutionPositiveElectrodeActiveMaterial": {
-    "type": "integer",
-    "minimum": 1,
-    "maximum": 1000,
-    "description": "Number of grid points along the radial pseudo dimension of the positive electrode active material particles.",
-    "context_type_iri": null
-  },
-  "GridResolutionNegativeElectrodeCoating": {
-    "type": "integer",
-    "minimum": 1,
-    "maximum": 1000,
-    "description": "Number of grid points along the thickness dimension of the negative electrode.",
-    "context_type_iri": null
-  },
-  "GridResolutionPositiveElectrodeCurrentCollector": {
-    "type": "integer",
-    "minimum": 1,
-    "maximum": 1000,
-    "description": "Number of grid points along the thickness dimension of the positive electrode current collector.",
-    "context_type_iri": null
-  },
-  "GridResolutionPositiveElectrodeCurrentCollectorTabWidth": {
-    "type": "integer",
-    "minimum": 1,
-    "maximum": 1000,
-    "description": "In the current collector tab at the positive electrode, the number of grid points along the width dimension of the tab's face.",
-    "context_type_iri": null
-  },
-  "GridResolutionPositiveElectrodeCurrentCollectorTabLength": {
-    "type": "integer",
-    "minimum": 1,
-    "maximum": 1000,
-    "description": "In the current collector tab at the positive electrode, the number of grid points along the length dimension of the tab's face.",
-    "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
-  },
-  "GridResolutionNegativeElectrodeCurrentCollector": {
-    "type": "integer",
-    "minimum": 1,
-    "maximum": 1000,
-    "description": "Number of grid points along the thickness dimension of the negative electrode current collector.",
-    "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
-  },
-  "GridResolutionNegativeElectrodeCurrentCollectorTabWidth": {
-    "type": "integer",
-    "minimum": 1,
-    "maximum": 1000,
-    "description": "In the current collector tab at the negative electrode, the number of grid points along the width dimension of the tab's face.",
-    "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
-  },
-  "GridResolutionNegativeElectrodeCurrentCollectorTabLength": {
-    "type": "integer",
-    "minimum": 1,
-    "maximum": 1000,
-    "description": "In the current collector tab at the negative electrode, the number of grid points along the length dimension of the tab's face.",
-    "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
-  },
-  "GridResolutionNegativeElectrodeActiveMaterial": {
-    "type": "integer",
-    "minimum": 1,
-    "maximum": 1000,
-    "description": "Number of grid points along the radial pseudo dimension of the negative electrode active material particles.",
-    "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
-  },
-  "GridResolutionSeparator": {
-    "type": "integer",
-    "minimum": 1,
-    "maximum": 1000,
-    "description": "Number of grid points along the thickness dimension of the separator.",
-    "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
-  },
-  "Grid": {
-    "type": "array",
-    "description": "Vector storing the numerical representation of the computational grid discretizing the spatial representation of the cell.",
-    "context_type": "Grid",
-    "context_type_iri": null
-  },
+    "GridElectrodeWidth": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Number of grid points along the width dimension of the electrode.",
+      "context_type": "GridResolutionPositiveElectrode",
+      "context_type_iri": null
+    },
+    "GridElectrodeLength": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Number of grid points along the length dimension of the electrode.",
+      "context_type_iri": null
+    },
+    "GridPositiveElectrodeCoating": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Number of grid points along the thickness dimension of the positive electrode.",
+      "context_type_iri": null
+    },
+    "GridPositiveElectrodeParticle": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Number of grid points along the radial pseudo dimension of the positive electrode active material particles.",
+      "context_type_iri": null
+    },
+    "GridNegativeElectrodeCoating": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Number of grid points along the thickness dimension of the negative electrode.",
+      "context_type_iri": null
+    },
+    "GridPositiveElectrodeCurrentCollector": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Number of grid points along the thickness dimension of the positive electrode current collector.",
+      "context_type_iri": null
+    },
+    "GridPositiveElectrodeCurrentCollectorTabWidth": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "In the current collector tab at the positive electrode, the number of grid points along the width dimension of the tab's face.",
+      "context_type_iri": null
+    },
+    "GridResolutionPositiveElectrodeCurrentCollectorTabLength": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "In the current collector tab at the positive electrode, the number of grid points along the length dimension of the tab's face.",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
+    },
+    "GridNegativeElectrodeCurrentCollector": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Number of grid points along the thickness dimension of the negative electrode current collector.",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
+    },
+    "GridNegativeElectrodeCurrentCollectorTabWidth": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "In the current collector tab at the negative electrode, the number of grid points along the width dimension of the tab's face.",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
+    },
+    "GridResolutionNegativeElectrodeCurrentCollectorTabLength": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "In the current collector tab at the negative electrode, the number of grid points along the length dimension of the tab's face.",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
+    },
+    "GridNegativeElectrodeParticle": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Number of grid points along the radial pseudo dimension of the negative electrode active material particles.",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
+    },
+    "GridSeparator": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Number of grid points along the thickness dimension of the separator.",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
+    },
+    "Grid": {
+      "type": "array",
+      "description": "Vector storing the numerical representation of the computational grid discretizing the spatial representation of the cell.",
+      "context_type": "Grid",
+      "context_type_iri": null
+    },
     "RampUp": {
       "type": "string",
       "enum": [

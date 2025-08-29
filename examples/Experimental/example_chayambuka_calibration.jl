@@ -51,11 +51,11 @@ model_settings = load_model_settings(; from_default_set = "P2D")
 simulation_settings = load_simulation_settings(; from_default_set = "P2D")
 
 ######### Alter simulation settings #########
-simulation_settings["GridResolution"]["NegativeElectrodeCoating"] = 8
-simulation_settings["GridResolution"]["PositiveElectrodeCoating"] = 50
-simulation_settings["GridResolution"]["NegativeElectrodeActiveMaterial"] = 50
-simulation_settings["GridResolution"]["PositiveElectrodeActiveMaterial"] = 50
-simulation_settings["GridResolution"]["Separator"] = 5
+simulation_settings["GridNegativeElectrodeCoating"] = 8
+simulation_settings["GridPositiveElectrodeCoating"] = 50
+simulation_settings["GridNegativeElectrodeParticle"] = 50
+simulation_settings["GridPositiveElectrodeParticle"] = 50
+simulation_settings["GridSeparator"] = 5
 
 simulation_settings["TimeStepDuration"] = 300
 

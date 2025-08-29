@@ -34,7 +34,7 @@ power_rates = []
 for thickness in thicknesses
 
 	capacities = []
-	cell_parameters["NegativeElectrode"]["ElectrodeCoating"]["Thickness"] = thickness
+	cell_parameters["NegativeElectrode"]["Coating"]["Thickness"] = thickness
 
 	for d_rate in d_rates
 
