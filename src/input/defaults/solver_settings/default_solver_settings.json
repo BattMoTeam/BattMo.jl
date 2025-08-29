@@ -1,0 +1,41 @@
+{
+    "NonLinearSolver": {
+        "MaxTimestepCuts": 10,
+        "MaxTimestep": 1e12,
+        "MinTimestep": 0.0,
+        "TimestepMaxIncrease": 10.0,
+        "TimestepMaxDecrease": 0.1,
+        "MaxResidual": 1e20,
+        "MaxIterations": 20,
+        "MinIterations": 1,
+        "FailureCutsTimesteps": false,
+        "CheckBeforeSolve": true,
+        "AlwaysUpdateSecondary": false,
+        "ErrorOnIncomplete": false,
+        "CuttingCriterion": null,
+        "Tolerances": {},
+        "TolFactorFinalIteration": 1.0,
+        "SafeMode": true,
+        "ExtraTiming": false,
+        "LinearSolver": "GenericKrylov",
+        "TimeStepSelectors": "TimestepSelector",
+        "Relaxation": "NoRelaxation"
+    },
+    "Verbose": {
+        "InfoLevel": 0,
+        "DebugLevel": 0,
+        "EndReport": null,
+        "ASCIITerminal": false,
+        "ID": "",
+        "ProgressColor": "green",
+        "progress_glyphs": "default"
+    },
+    "Output": {
+        "OutputStates": true,
+        "OutputReports": true,
+        "OutputPath": null,
+        "InMemoryReports": 10,
+        "ReportLevel": 0,
+        "OutputSubstrates": false
+    }
+}
