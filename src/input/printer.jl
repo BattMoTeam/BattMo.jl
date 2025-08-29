@@ -1,7 +1,7 @@
-export print_cell_information, print_default_input_sets_info, print_submodels_info, print_parameter_info, print_setting_info
+export print_cell_info, print_default_input_sets_info, print_submodels_info, print_parameter_info, print_setting_info
 
 
-function print_cell_information(cell_parameters::CellParameters)
+function print_cell_info(cell_parameters::CellParameters)
 	# --- ANSI Colors ---
 	green(s) = "\033[92m$(s)\033[0m"
 	yellow(s) = "\033[93m$(s)\033[0m"

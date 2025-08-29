@@ -276,7 +276,6 @@ function compute_capacity(output::NamedTuple)
 	t = [state[:Control][:Controller].time for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
-	valid_cycles, cycle_array = get_valid_cycles(states)
 	capacity_array = Float64[]
 	push!(capacity_array, 0.0)
 	for i in 2:lastindex(t)

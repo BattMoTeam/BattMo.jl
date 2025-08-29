@@ -3,15 +3,24 @@ module BattMoGLMakieExt
 using BattMo, GLMakie, RuntimeGeneratedFunctions
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
-function BattMo.plot_cell_curves(cell_parameters::CellParameters)
-	if !isdefined(Main, :GLMakie)
-		error("GLMakie must be explicitly imported (e.g., with `using GLMakie`) before calling `plot_dashboard`.")
-	end
-	return BattMo.plot_cell_curves_(cell_parameters)
+function BattMo.check_plotting_availability_impl()
+	return true
 end
 
-function BattMo.plot_cell_curves_(cell_parameters::CellParameters)
+function BattMo.independent_figure(fig::Figure)
+	display(GLMakie.Screen(), fig)
+end
+
+
+function BattMo.plot_cell_curves_impl(cell_parameters::CellParameters; new_window = true)
 	num_points = 100
+
+	function last_key(path::String)
+		parts = split(path, '/')
+		return parts[end]
+	end
+
+	meta_data = get_parameter_meta_data()
 
 	# --- Define the known functional parameters ---
 	param_map = Dict(
@@ -25,12 +34,30 @@ function BattMo.plot_cell_curves_(cell_parameters::CellParameters)
 		"Electrolyte/DiffusionCoefficient" => (BattMo.setup_diffusivity_evaluation_expression_from_string, [:c, :T]),
 	)
 
-	# --- Plot setup ---
-	fig_234 = Figure(size = (1200, 800))
-	functional_params = collect(keys(param_map))
+	# --- collect only the parameters that exist and are plottable ---
+	functional_params = String[]
+	for (param_path, _) in param_map
+		keys = split(param_path, "/")
+		val = cell_parameters.all
+		for k in keys
+			if isa(val[k], Real)
+				val = nothing
+				break
+			end
+			val = val[k]
+		end
+		if !(val === nothing)
+			push!(functional_params, param_path)
+		end
+	end
+
 	n = length(functional_params)
+	@info n
 	ncols = ceil(Int, sqrt(n))
 	nrows = ceil(Int, n / ncols)
+
+	# --- auto-scale figure size based on rows/cols ---
+	fig = Figure(size = (400 * ncols, 300 * nrows))
 
 	for (i, param_path) in enumerate(functional_params)
 		# Retrieve value from nested Dict
@@ -40,22 +67,23 @@ function BattMo.plot_cell_curves_(cell_parameters::CellParameters)
 			val = val[k]
 		end
 
-		# Determine axis label and c range
+		# Determine axis label and concentration range
 		if occursin("NegativeElectrode", param_path)
 			cmax = cell_parameters.all["NegativeElectrode"]["ActiveMaterial"]["MaximumConcentration"]
 			c_range = range(0, cmax, length = num_points)
-			x_values = c_range ./ cmax  # normalized
-			x_label = "c / cmax"
+			x_values = c_range ./ cmax
+			x_label = "Stoichiometry  /  -"
 		elseif occursin("PositiveElectrode", param_path)
 			cmax = cell_parameters.all["PositiveElectrode"]["ActiveMaterial"]["MaximumConcentration"]
 			c_range = range(0, cmax, length = num_points)
-			x_values = c_range ./ cmax  # normalized
-			x_label = "c / cmax"
+			x_values = c_range ./ cmax
+			x_label = "Stoichiometry  /  -"
 		elseif occursin("Electrolyte", param_path)
 			c0 = cell_parameters.all["Electrolyte"]["Concentration"]
-			c_range = range(0.2c0, 4c0, length = num_points)  # realistic range around initial conc.
+			c_range = range(0.2c0, 4c0, length = num_points)
 			x_values = c_range
-			x_label = "Electrolyte concentration [mol/m^3]"
+			unit = meta_data["Concentration"]["unit"]
+			x_label = "Electrolyte concentration  /  $unit"
 			cmax = missing
 		else
 			c_range = range(0, 1, length = num_points)
@@ -64,22 +92,22 @@ function BattMo.plot_cell_curves_(cell_parameters::CellParameters)
 			cmax = missing
 		end
 
-		row, col = divrem(i - 1, ncols)
-
+		# --- row-wise placement ---
+		row = (i - 1) ÷ ncols
+		col = (i - 1) % ncols
 
 		y = Float64[]
-
 		T_val = 298.15
 		refT_val = 298.15
 
 		if isa(val, AbstractString) && haskey(param_map, param_path)
-
-			ax_234 = Axis(fig_234[row+1, col+1], title = param_path, xlabel = x_label, ylabel = "Value")
+			quantity = last_key(param_path)
+			unit = meta_data[quantity]["unit"]
+			ax = Axis(fig[row, col], title = param_path,
+				xlabel = x_label, ylabel = "$quantity / $unit")
 			setup_func, args_symbols = param_map[param_path]
 			f_expr = setup_func(val)
 			f_generated = @RuntimeGeneratedFunction(f_expr)
-
-
 
 			# Evaluate function with the appropriate arguments
 			if :cmax in args_symbols && :refT in args_symbols
@@ -89,10 +117,14 @@ function BattMo.plot_cell_curves_(cell_parameters::CellParameters)
 			else
 				y = [f_generated(c) for c in c_range]
 			end
-			lines!(ax_234, x_values, y, color = :blue)
-		elseif isa(val, Dict)
+			lines!(ax, x_values, y, color = :blue)
 
-			ax_234 = Axis(fig_234[row+1, col+1], title = param_path, xlabel = x_label, ylabel = "Value")
+		elseif isa(val, Dict)
+			quantity = last_key(param_path)
+			unit = meta_data[quantity]["unit"]
+			ax = Axis(fig[row, col], title = param_path,
+				xlabel = x_label, ylabel = "$quantity / $unit")
+
 			if all(haskey(val, k) for k in ["X", "Y"])
 				x_values, y = val["X"], val["Y"]
 			elseif haskey(val, "FunctionName")
@@ -105,32 +137,26 @@ function BattMo.plot_cell_curves_(cell_parameters::CellParameters)
 					catch
 						y = [f(c, T_val) for c in c_range]
 					end
-
 				end
-
 			end
-			lines!(ax_234, x_values, y, color = :blue)
+			lines!(ax, x_values, y, color = :blue)
 		end
-
-
 	end
 
-	fig_234
+	if new_window
+		BattMo.independent_figure(fig)
+	end
+	return fig
 end
 
 
 
-function BattMo.plot_output(output::NamedTuple, output_variables::Union{Vector{String}, Vector{Vector{String}}, Vector{Any}}; layout::Union{Nothing, Tuple{Int, Int}} = nothing)
-	if !isdefined(Main, :GLMakie)
-		error("GLMakie must be explicitly imported (e.g., with `using GLMakie`) before calling `plot_dashboard`.")
-	end
-	return BattMo.plot_impl(output, output_variables; layout = layout)
-end
 
-function BattMo.plot_impl(
+function BattMo.plot_output_impl(
 	output::NamedTuple,
 	variables::Union{Vector{String}, Vector{Any}, Vector{Any}};
 	layout::Union{Nothing, Tuple{Int, Int}} = nothing,
+	new_window = true,
 )
 	grouped_vars = [isa(g, String) ? [g] : g for g in variables]
 	nplots = length(grouped_vars)
@@ -146,8 +172,8 @@ function BattMo.plot_impl(
 		end
 	end
 
-	fig_432 = Figure(size = (1000, 350 * nrows))
-	grid = fig_432[1, 1] = GridLayout()
+	fig = Figure(size = (1000, 350 * nrows))
+	grid = fig[1, 1] = GridLayout()
 
 	# Get time info
 	time_series_data = get_output_time_series(output)
@@ -375,25 +401,19 @@ function BattMo.plot_impl(
 			axislegend(ax_432)
 			# Clear title if multiple lines to avoid clutter, or you can customize
 			if var_group isa Vector && length(var_group) > 1
-				ax.title = ""
+				ax_432.title = ""
 			end
 		end
 	end
 
-	display(fig_432)
-	return fig_432
-end
-
-
-
-function BattMo.plot_dashboard(output; plot_type = "simple")
-	if !isdefined(Main, :GLMakie)
-		error("GLMakie must be explicitly imported (e.g., with `using GLMakie`) before calling `plot_dashboard`.")
+	if new_window
+		BattMo.independent_figure(fig)
 	end
-	return BattMo.plot_dashboard_impl(output; plot_type = plot_type)
+	return fig
 end
 
-function BattMo.plot_dashboard_impl(output; plot_type = "simple")
+
+function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = true)
 
 	time_series = get_output_time_series(output; quantities = ["Time", "Voltage", "Current"])
 	t = time_series[:Time]
@@ -413,8 +433,8 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple")
 	PeAm_pot = states[:PeAmPotential]
 	Elyte_pot = states[:ElectrolytePotential]
 	if plot_type == "simple"
-		fig_678 = Figure(size = (1200, 1000))
-		grid = fig_678[1, 1] = GridLayout()
+		fig = Figure(size = (1200, 1000))
+		grid = fig[1, 1] = GridLayout()
 
 		Label(grid[0, 1:3], "Simple Dashboard", fontsize = 24, halign = :center)
 
@@ -426,11 +446,15 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple")
 		ax_voltage.xlabel = "Time  /  s"
 		scatterlines!(ax_voltage, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
-		return fig_678
+		if new_window
+			BattMo.independent_figure(fig)
+		end
+
+		return fig
 
 	elseif plot_type == "line"
-		fig_678 = Figure(size = (1200, 1000))
-		grid = fig_678[1, 1] = GridLayout()
+		fig = Figure(size = (1200, 1000))
+		grid = fig[1, 1] = GridLayout()
 
 		Label(grid[0, 1:3], "Line Dashboard", fontsize = 24, halign = :center)
 
@@ -477,11 +501,15 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple")
 		state_plot(Axis(grid[4, 2], title = "Electrolyte Potential  /  V"), Elyte_pot, "Elyte ϕ")
 		state_plot(Axis(grid[4, 3], title = "PeAm Potential  /  V"), PeAm_pot, "PeAm ϕ")
 
-		return fig_678
+		if new_window
+			BattMo.independent_figure(fig)
+		end
+
+		return fig
 
 	elseif plot_type == "contour"
-		fig_678 = Figure(size = (1200, 1000))
-		grid = fig_678[1, 1] = GridLayout()
+		fig = Figure(size = (1200, 1000))
+		grid = fig[1, 1] = GridLayout()
 
 		Label(grid[0, 1:3], "Contour Dashboard", fontsize = 24, halign = :center)
 
@@ -514,7 +542,12 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple")
 		contour_with_labels(grid, 4, 1, NeAm_pot, "NeAm Potential  /  V")
 		contour_with_labels(grid, 4, 2, Elyte_pot, "Electrolyte Potential  /  V")
 		contour_with_labels(grid, 4, 3, PeAm_pot, "PeAm Potential  /  V")
-		return fig_678
+
+		if new_window
+			BattMo.independent_figure(fig)
+		end
+
+		return fig
 
 	else
 		error("Unsupported plot_type $plot_type. Use \"line\" or \"contour\".")

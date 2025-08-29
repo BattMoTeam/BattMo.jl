@@ -542,7 +542,7 @@ function get_parameter_meta_data()
 		"DiffusionCoefficient" => Dict(
 			"context_type" => ["DiffusionCoefficient", "Expression"],
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_931a725b_926d_4f60_8955_61fe17fce98b",
-			"unit" => "m²·t⁻¹",
+			"unit" => "m²·s⁻¹",
 			"unit_name" => "emmo:AreaPerTimeUnit",
 			"unit_iri" => "https://w3id.org/emmo#EMMO_10f703b5_8b2a_4c5a_a734_f0cfb29622ad",
 			"description" => "Proportionality constant between the molar flux of the charge carrier and its negative concentration gradient in a material.",
