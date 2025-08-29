@@ -1,497 +1,234 @@
-using AdvancedHMC, ForwardDiff
-using AbstractMCMC
-using LogDensityProblems
-using LinearAlgebra
-using Plots
-
-using MCMCDiagnosticTools
-
-#BattMo setup
-
-using Revise
-using BattMo, Jutul
-using CSV
-using DataFrames
-using GLMakie
-
-include("equilibrium_calibration.jl")
-include("function_parameters_MJ1.jl")
+# # Hamiltonian Monte-Carlo setup
 
 struct LogTargetDensity
-        dim::Int
+    dim::Int
 end
 
+# Linear transformation functions for HMC to bring them to [0, 100] 
+function x_to_u(x, lb, ub)
 
-function get_tV(x)
-    t = [state[:Control][:Controller].time for state in x[:states]]
-    V = [state[:Control][:Phi][1] for state in x[:states]]
-    return (t, V)
-end
+    δ = ub .- lb
 
-function get_tV(x::DataFrame)
-    return (x[:, 1], x[:, 2])
-end
-
-#Fetch experimental data from a .mat file
-using MAT
-using Statistics: mean
-
-function getExpData(rate="all", flow="discharge")
-    """Fetches experimental data from a .mat file. Returns a dictionary with time, rawRate, E, rawI, I, cap, and DRate."""
-
-    # Determine file path
-    if lowercase(flow) == "discharge"
-        fn = joinpath(@__DIR__,"MJ1-DLR", "dlroutput.mat")
-    elseif lowercase(flow) == "charge"
-        error("Charge data not available")
-    else
-        error("Unknown flow $flow")
-    end
-
-    # Load data
-    data = matread(fn)
-    dlroutput = data["dlroutput"]  # Dict with 1×4 matrices for each variable
-
-    @show keys(dlroutput)  # Show available keys in the data
-    @show size(dlroutput["current"][1])  # Show size of the time matrix
-    
-    # Get number of experiments (4 in this case)
-    num_experiments = size(dlroutput["time"], 2)
-    
-    # Process each experiment
-    dlrdata = Vector{Dict{String,Any}}(undef, num_experiments)
-    
-    for k in 1:num_experiments
-        # Extract data for this experiment (column k from each matrix)
-        time_h = dlroutput["time"][k]
-        time_s = time_h * 3600  # hours → seconds
-        
-        current =dlroutput["current"][k]
-        current_segment =  Float64.(current[3:end-1])  # Skip first/last points
-
-        # Create experiment dictionary
-        dlrdata[k] = Dict{String,Any}(
-            "time" => time_s,
-            "rawRate" =>dlroutput["CRate"][k],
-            "E" => dlroutput["voltage"][k],
-            "rawI" => -current,
-            "I" => abs(mean(current_segment)),
-            "cap" => abs(trapz(time_s[3:end-1], current_segment)),
-            "DRate" => 1.0 / time_h[end]
-        )
-    end
-
-    # Sort by DRate
-    sort!(dlrdata, by=x -> x["DRate"])
-
-    # Select data based on rate
-    if rate == "low"
-        return dlrdata[1]
-    elseif rate == "high"
-        return dlrdata[end]
-    elseif rate == "all"
-        return dlrdata
-    else
-        error("Unknown rate $rate")
-    end
-end
-
-# Efficient trapezoidal integration
-function trapz(x, y)
-    sum((x[i+1] - x[i]) * (y[i] + y[i+1]) / 2 for i in 1:length(x)-1)
-end
-
-# Project directory function 
-function getProjectDir()
-    return dirname(@__DIR__)  
-end
-
-#Testing the getExpData function
-exp_data = getExpData("all", "discharge")
-println("Number of entries: ", length(exp_data))
-@show exp_data[1]["rawRate"] 
-@show exp_data[2]["rawRate"]
-@show exp_data[3]["rawRate"]
-@show exp_data[4]["rawRate"] # Show first entry for verification
-
-battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
-
-function runMJ1()
-
-    cell_parameters = load_cell_parameters(; from_file_path = joinpath(@__DIR__,"mj1_tab1.json"))
-    
-    #cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
-    println("successfully loaded cell parameters and cycling protocol")
-    cycling_protocol = load_cycling_protocol(; from_file_path = joinpath(@__DIR__,"custom_discharge2.json"))
-
-    simulation_settings = load_simulation_settings(; from_file_path = joinpath(@__DIR__,"simple.json"))
-    #simulation_settings = load_simulation_settings(; from_default_set = "P4D_pouch")
-    #simulation_settings = load_simulation_settings(; from_default_set = "P2D") # Ensure the model framework is set to P4D Pouch
-    
-    #model_settings = load_model_settings(;from_default_set = "P4D_pouch")
-    model_settings = load_model_settings(;from_default_set = "P2D") 
-
-    model_setup = LithiumIonBattery(; model_settings)
-
-    sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
-    print(sim.is_valid)
-    #output0 = solve(sim;accept_invalid = true)
-    return cycling_protocol, cell_parameters, model_setup, simulation_settings
-
-end
-
-function equilibriumCalibration(sim)
-
-
-    t_exp = vec(exp_data[1]["time"])
-    V_exp = vec(exp_data[1]["E"])
-    I = exp_data[1]["I"]
-
-    println("I = ", I  )
-
-
-    vc = VoltageCalibration(t_exp, V_exp, sim)
-
-    free_calibration_parameter!(vc, ["PositiveElectrode","ActiveMaterial","MaximumConcentration"];
-        lower_bound=1e4, upper_bound=1e5)
-    free_calibration_parameter!(vc, ["NegativeElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC100"];
-        lower_bound=0.0, upper_bound=1.0)
-    free_calibration_parameter!(vc, ["PositiveElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC100"];
-        lower_bound=0.0, upper_bound=1.0)
-    free_calibration_parameter!(vc, ["NegativeElectrode","ActiveMaterial","MaximumConcentration"];
-        lower_bound=1e4, upper_bound=1e5)
-    
-
-
-    x = solve_equilibrium!(vc; I=I)
-
-    println("calibration parameters: ", x)
-    
-    set_calibration_parameter!(vc,["NegativeElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC100"], x[3])
-    set_calibration_parameter!(vc,["PositiveElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC100"], x[4])
-    set_calibration_parameter!(vc,["NegativeElectrode","ActiveMaterial","MaximumConcentration"], x[1])
-    set_calibration_parameter!(vc,["PositiveElectrode","ActiveMaterial","MaximumConcentration"], x[2])
-
-    
-
-
-    
-    output = get_simulation_input(vc.sim)
-    model = output[:model]
-    ocp_ne = model[:NeAm].system.params[:ocp_func]
-    ocp_pe = model[:PeAm].system.params[:ocp_func]
-
-    Vne = sum(model[:NeAm].domain.representation[:volumes])
-    Vpe = sum(model[:PeAm].domain.representation[:volumes])
-
-    eps_ne = model[:NeAm].system.params[:volume_fraction]
-    eps_pe = model[:PeAm].system.params[:volume_fraction]
-
-    a_ne = model[:NeAm].system.params[:volume_fractions][1]
-    a_pe = model[:PeAm].system.params[:volume_fractions][1]
-
-    
-    F = 96485.33289 # Faraday constant in C/mol
-    C_exp = exp_data[1]["I"]*exp_data[1]["time"][end] # Capacity in Ah
-    print("C_exp = ", C_exp, " Ah\n")
-    
-   
-    Xparam = [
-        Vpe, Vne, a_pe, a_ne, eps_pe, eps_ne
-    ]
-
-    
-    mne = vc.sim.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["MaximumConcentration"] * Vne * a_ne * eps_ne
-    mpe = vc.sim.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["MaximumConcentration"] * Vpe * a_pe * eps_pe
-
-    θ_100_ne = vc.sim.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["StoichiometricCoefficientAtSOC100"]
-    θ_100_pe = vc.sim.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["StoichiometricCoefficientAtSOC100"]
-    θ_0_ne = vc.sim.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["StoichiometricCoefficientAtSOC100"] - C_exp/(F*mne)
-    θ_0_pe = vc.sim.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["StoichiometricCoefficientAtSOC100"] + C_exp/(F*mpe)
-
-    println("θ_100_ne = ", θ_100_ne, " θ_100_pe = ", θ_100_pe)
-    println("θ_0_ne = ", θ_0_ne, " θ_0_pe = ", θ_0_pe)
-    set_calibration_parameter!(vc,["NegativeElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC0"], θ_0_ne)
-    set_calibration_parameter!(vc,["PositiveElectrode","ActiveMaterial","StoichiometricCoefficientAtSOC0"], θ_0_pe)
-   
-    @info "calibrated mpe = $mpe, mne = $mne"
-    # Compute mpe and mne based on the calibrated parameters
-    Veq = compute_equilibrium_voltage(t_exp, x, Xparam, exp_data[1]["I"], ocp_pe, ocp_ne)
-
-
-    return (vc.sim.cell_parameters, Veq, t_exp)
-
-
-end
-
-
-
-
-
-
-
-
-cycling_protocol,cell_parameters,model_setup, simulation_settings = runMJ1()
-
-sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
-
-cell_parameters_calibrated, V_eq, t_eq = equilibriumCalibration(sim)
-
-
-
-###
-
-t_exp_hr = vec(exp_data[end]["time"])
-V_exp_hr = vec(exp_data[end]["E"])
-
-I = exp_data[end]["I"]
-    
-
-cycling_protocol2 = deepcopy(cycling_protocol)
-cycling_protocol2["DRate"] = exp_data[end]["rawRate"]
-sim2 = Simulation(model_setup, cell_parameters_calibrated, cycling_protocol2; simulation_settings)
-output = get_simulation_input(sim2)
-model2 = output[:model]
-sim2.cycling_protocol["DRate"] = I * 3600 / computeCellCapacity(model2)  
-
-vc = VoltageCalibration(t_exp_hr, V_exp_hr, sim2)
-
-free_calibration_parameter!(vc,
-        ["NegativeElectrode","ActiveMaterial", "VolumetricSurfaceArea"];
-        lower_bound = 1e3, upper_bound = 1e6)
-free_calibration_parameter!(vc,
-        ["PositiveElectrode","ActiveMaterial", "VolumetricSurfaceArea"];
-        lower_bound = 1e3, upper_bound = 1e6)
-
-
-free_calibration_parameter!(vc,
-        ["Separator", "BruggemanCoefficient"];
-        lower_bound = 1e-3, upper_bound = 1e2)
-   
-
-free_calibration_parameter!(vc,
-        ["NegativeElectrode","ElectrodeCoating", "BruggemanCoefficient"];
-        lower_bound = 1e-3, upper_bound = 1e2)
-free_calibration_parameter!(vc,
-        ["PositiveElectrode","ElectrodeCoating", "BruggemanCoefficient"];
-        lower_bound = 1e-3, upper_bound = 1e2)
-    
-free_calibration_parameter!(vc,
-        ["NegativeElectrode","ActiveMaterial", "DiffusionCoefficient"];
-        lower_bound = 1e-16, upper_bound = 1e-10)
-free_calibration_parameter!(vc,
-        ["PositiveElectrode","ActiveMaterial", "DiffusionCoefficient"];
-        lower_bound = 1e-16, upper_bound = 1e-10)
-print_calibration_overview(vc)
-
-"""
-# Transformation functions
-function x_to_u(x)
-    log_x = log.(x)
-    u = log_x
-    return u
-end
-
-# Log-transform bounds
-log_lb = log.(lb)
-log_ub = log.(ub)
-δ_log = log_ub .- log_lb
-
-
-
-function u_to_x(u)
-    log_x = u 
-    x = exp.(log_x)
-    return x
-end
-
-function dx_to_du!(g, x)
-    g .= g .* x  # Chain rule: df/du = df/dx * dx/du
-end
-
-# Wrapped objective function
-function F(u)
-    x = u_to_x(u)
-    obj, g = f(x)
-    dx_to_du!(g, x)
-    return (obj, g)
-end
-"""
-
-
-#Setting up the HMC framework
-    
-sim = deepcopy(vc.sim)
-x0, x_setup = BattMo.vectorize_cell_parameters_for_calibration(vc, sim)
-
-# Set up the objective function
-objective = BattMo.setup_calibration_objective(vc)
-
-ub = similar(x0)
-lb = similar(x0)
-offsets = x_setup.offsets
-for (i, k) in enumerate(x_setup.names)
-    (; vmin, vmax) = vc.parameter_targets[k]
-    for j in offsets[i]:(offsets[i+1]-1)
-        lb[j] = vmin
-        ub[j] = vmax
-    end
-end
-adj_cache = Dict()
-
-
-# bounds
-
-δ= ub .- lb
-
-
-#Linear transformation functions for HMC to bring them to [0, 100] 
-function x_to_u(x)
     u= (x .- lb) ./ δ  # Scale to [0, 1]
     u = u .* 100  # Scale to [0, 100]
     
     return u
+    
 end
 
-
-function u_to_x(u)
+function u_to_x(u, lb, ub)
+    
+    δ = ub .- lb
     u = u ./ 100  # Scale back to [0, 1]
     x = lb .+ u .* δ  # Reverse the linear transformation
-    return x
-end
-
-function dx_to_du!(g, x)
     
+    return x
+    
+end
+
+function dx_to_du!(g, x, lb, ub)
+    
+    δ = ub .- lb
     @. g = g #* (δ/100)
+    
 end
 
+function get_bounds(vc::VoltageCalibration)
 
-# Wrapped objective function
-function F(u)
-    x = u_to_x(u)
-    obj, g = f(x)
-    dx_to_du!(g, x)
-    return (obj, g)
-end
-
-
-initial_θ = x_to_u(x0)
-
-function logprior(x;variance = 10)
-    @info "using gaussian prior"
-    # gaussian prior with mean initial_θ
-    log_prior = -0.5 * sum((x .- initial_θ).^2) / variance
-    grad_log_prior = -(x .- initial_θ) / variance
-
-    return (log_prior, grad_log_prior)
-end
-
-setup_battmo_case(X, step_info = missing) = BattMo.setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
-solve_and_differentiate(x) = BattMo.solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
-            adj_cache = adj_cache,
-        )
-        
-function evaluate(x)
-    #@info "Evaluating x = $x"
-
-    # Default fallback values
-    log_llh = -Inf
-    grad_log_llh = zero(x)
-
-    try
-        log_llh, grad_log_llh = solve_and_differentiate(x) #returns the sum squared error and its gradient
-        log_llh = -log_llh/(2*σ2)  # Convert to log-likelihood 
-        grad_log_llh = -grad_log_llh/(2*σ2)  # Convert to gradient of log-likelihood  
-
-        # Sanity checks
-        if !isfinite(log_llh) || any(!isfinite, grad_log_llh)
-            @warn "Invalid result from solver at x = $x"
-
+    sim = deepcopy(vc.sim)
+    
+    x0, x_setup = BattMo.vectorize_cell_parameters_for_calibration(vc, sim)
+    # Recover parameter bounds
+    
+    ub = similar(x0)
+    lb = similar(x0)
+    offsets = x_setup.offsets
+    for (i, k) in enumerate(x_setup.names)
+        (; vmin, vmax) = vc.parameter_targets[k]
+        for j in offsets[i]:(offsets[i+1]-1)
+            lb[j] = vmin
+            ub[j] = vmax
         end
-    catch e
-        @error "Error during solve_and_differentiate: $(e)"
     end
 
-    return (log_llh, grad_log_llh)
-end
-
-
-
+    return lb, ub, x0, x_setup
     
-σ2 = 0.1  # Variance of the Gaussian noise
+end
 
-function LogDensityProblems.logdensity_and_gradient(p::LogTargetDensity, θ)
+""" setup default prior based on initial value and bounds
+"""
+function setup_default_prior(vc::VoltageCalibration)
+
+    lb, ub, x0, x_setup = get_bounds(vc)
     
-    @info "Calculating log density and gradient for θ = $θ"
-    x = u_to_x(θ) #θ is in log-space, x in original space
-    log_llh, grad_log_llh = evaluate(x)
-        
-    log_prior, grad_log_prior = logprior(θ)
+    initial_θ = x_to_u(x0, lb, ub)
 
+    """ Returns the log prior. It is chosen as a Gaussian prior with mean initial_θ and variance with default equal to 10
+    """
+    function logprior(x; variance = 10)
+        @info "using gaussian prior"
+        # gaussian prior with mean initial_θ
+        log_prior      = -0.5 * sum((x .- initial_θ).^2) / variance
+        grad_log_prior = -(x .- initial_θ) / variance
 
-        
-    log_density = log_llh .+ log_prior
-    dx_to_du!(grad_log_llh, x)
-     
+        return (log_prior, grad_log_prior)
+    end
 
-    gradient =  grad_log_llh .+ grad_log_prior
-        
-    return (log_density, gradient)
+    return logprior
+    
 end
 
-#LogDensityProblems.logdensity(p::LogTargetDensity, θ) = first(LogDensityProblems.logdensity_and_gradient(p, θ))
-LogDensityProblems.dimension(p::LogTargetDensity) = p.dim
-function LogDensityProblems.capabilities(::Type{LogTargetDensity})
-    return LogDensityProblems.LogDensityOrder{1}()
-end
+function runHMC(vc::VoltageCalibration, n_samples, n_adapts, logprior)
+
+    # Setting up the HMC framework
+
+    # # Set up the objective function
+    # objective is given by square sum of difference between simulated and experimental voltage values
+    objective = BattMo.setup_calibration_objective(vc)
+
+    # # Recover parameter initial values, and lower and upper bounds in vector forms
+    lb, ub, x0, x_setup = get_bounds(vc)
+
+    initial_θ = x_to_u(x0, lb, ub)
+
+    # # Setup Battmo to return objective and gradient.
+
+    setup_battmo_case(X, step_info = missing) = BattMo.setup_battmo_case_for_calibration(X,
+                                                                                         sim,
+                                                                                         x_setup,
+                                                                                         step_info)
+
+    # The function `solve_and_differentiate` returns the objective function value and its gradient. 
+    adj_cache = Dict()
+    solve_and_differentiate(x) = BattMo.solve_and_differentiate_for_calibration(x,
+                                                                                setup_battmo_case,
+                                                                                vc,
+                                                                                objective;
+                                                                                adj_cache = adj_cache)
+
+    # We wrap `solve_and_differentiate` in `evaluate` to return the log-likelihood and its gradient 
+
+    """ evaluate objective function, returns the log-likelihood, which corresponds to sum of the square weighted by variance
+    """
+    function evaluate(x; σ2 = 0.1)
+        #@info "Evaluating x = $x"
+
+        # Default fallback values
+        log_llh      = -Inf
+        grad_log_llh = zero(x)
+
+        try
+            
+            log_llh, grad_log_llh = solve_and_differentiate(x) #returns the sum squared error and its gradient
+            log_llh               = -log_llh/(2*σ2)  # Convert to log-likelihood 
+            grad_log_llh          = -grad_log_llh/(2*σ2)  # Convert to gradient of log-likelihood  
+
+            # Sanity checks
+            if !isfinite(log_llh) || any(!isfinite, grad_log_llh)
+                @warn "Invalid result from solver at x = $x"
+
+            end
+        catch e
+            @error "Error during solve_and_differentiate: $(e)"
+        end
+
+        return (log_llh, grad_log_llh)
+    end
+
+    """ compute log posterior and gradient from parameters θ
+        """
+    function LogDensityProblems.logdensity_and_gradient(p::LogTargetDensity, θ)
+        
+        @info "Calculating log density and gradient for θ = $θ"
+        
+        x = u_to_x(θ) #θ is in log-space, x in original space
+        log_llh, grad_log_llh = evaluate(x)
+        
+        log_prior, grad_log_prior = logprior(θ)
+        
+        log_density = log_llh .+ log_prior
+        dx_to_du!(grad_log_llh, x)
+
+        gradient =  grad_log_llh .+ grad_log_prior
+        
+        return (log_density, gradient)
+        
+    end
+
+    # # Setup Hamiltionian Monte Carlo 
+    LogDensityProblems.dimension(p::LogTargetDensity) = p.dim
+
+    function LogDensityProblems.capabilities(::Type{LogTargetDensity})
+        return LogDensityProblems.LogDensityOrder{1}()
+    end
 
     # Parameters
-D = length(vc.parameter_targets) 
+    D = length(vc.parameter_targets) 
 
+    # Create target distribution, note that methods
+    #
+    # - LogDensityProblems.logdensity_and_gradient
+    # - LogDensityProblems.capabilities
+    # - LogDensityProblems.dimension
+    #
+    # have been specialized from this type
+
+    target = LogTargetDensity(D)
+
+    # # Define Hamiltonian system
+    #
+    # The parameters in the methods that can be adjusted are
+    # - the metric
+    # - the integration step (see initial_ϵ below)
+    # - the number of steps (can be fix or dynamics, see `HMCKernel` setup)
+    # 
+
+    # The metric corresponds to the mass matrix in the Hamiltonion formulation
+    metric      = DiagEuclideanMetric(D)
+    hamiltonian = Hamiltonian(metric, target)
+
+    # # Find initial step size
+    #
+    # There is the possibility to optimize initial step size by calling `initial_ϵ = find_good_stepsize(hamiltonian, initial_θ)`
+    initial_ϵ = 0.01
+
+    # # Setup integrator
+    #
+    # We choose a standard integrator
+    integrator = Leapfrog(initial_ϵ)
+
+    # # Setup sampler
+    #
+    # the `trajectory` determines the way to integrate the Hamiltonian dynamics. Here, we choose a fixed number of time step.
+    #
+    # We think that : If we choose a very short trajectory (small time step and few steps), we get a result equivalent
+    # to a random walk Metropolis-Hastings. If we choose a long trajectory, we may be able to explore the space better,
+    # but it has a computational cost and sometime it may be inefficient, see paper from Michael Betancourt, https://arxiv.org/abs/1701.02434
+
+    trajectory = Trajectory{EndPointTS}(integrator, FixedNSteps(10))
+
+    kernel  = HMCKernel(trajectory)
+
+    # An adaptor can be used to find better parameters. We do not use it here.
+    adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
+
+    # # Run Hamiltonian sampling
+    #
+    samples, stats = sample(hamiltonian,
+                            kernel,
+                            initial_θ,
+                            n_samples;
+                            progress=true)
+
+    return samples, states
     
-    # Create target distribution
-target = LogTargetDensity(D)
-    
-    # HMC parameters
-n_samples, n_adapts = 1000, 500
-    
-# Define Hamiltonian system
-metric = DiagEuclideanMetric(D)
-hamiltonian = Hamiltonian(metric, target)
-    
-    # Find initial step size
-#initial_ϵ = find_good_stepsize(hamiltonian, initial_θ)
-initial_ϵ = 0.01 
-integrator = Leapfrog(initial_ϵ)
-    
-    # Define sampler
-#kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
-kernel = HMCKernel(Trajectory{EndPointTS}(integrator, FixedNSteps(10)))
-adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
-    
+end
 
-
-    # Run sampling
-samples, stats = sample(
-        hamiltonian, kernel, initial_θ,n_samples; progress=true
-    )
-
-
-
-"""
-model = AdvancedHMC.LogDensityModel(target)
-
-sampler = HMCSampler(kernel,metric,adaptor)
-
-samples = AbstractMCMC.sample(
-    model, sampler, n_adapts + n_samples; n_adapts=n_adapts, initial_params=initial_θ
-)
-"""
-
-using Statistics
-
-# Basic sampling statistics
-function analyze_sampling_results(samples::Vector, stats::Vector, n_adapts::Int)
+# # Diagnostics tools
+# 
+function analyze_sampling_results(samples::Vector,
+                                  stats::Vector,
+                                  n_adapts::Int)
     println("\n" * "="^50)
     println("ESSENTIAL HMC DIAGNOSTICS")
     println("="^50)
@@ -533,14 +270,14 @@ function analyze_sampling_results(samples::Vector, stats::Vector, n_adapts::Int)
         ess = effective_sample_size(param_samples)
         
         println("Param $i: mean=$(round(mean(param_samples), digits=4)), " *
-                "std=$(round(std(param_samples), digits=4)), " *
-                "ESS=$(round(ess, digits=1))")
+            "std=$(round(std(param_samples), digits=4)), " *
+            "ESS=$(round(ess, digits=1))")
     end
     
     return post_adapt_samples, post_adapt_stats
 end
 
-#Effective Sample Size calculation 
+# Effective Sample Size calculation 
 function effective_sample_size(x::Vector{Float64})
     n = length(x)
     if n < 10
@@ -608,3 +345,4 @@ end
 
 
 diag_fig = run_essential_diagnostics(samples, stats, n_adapts)
+
