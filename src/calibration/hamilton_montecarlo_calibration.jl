@@ -1,3 +1,4 @@
+export setup_default_prior, runHMC
 # # Hamiltonian Monte-Carlo setup
 
 struct LogTargetDensity
@@ -9,7 +10,7 @@ function x_to_u(x, lb, ub)
 
     δ = ub .- lb
 
-    u= (x .- lb) ./ δ  # Scale to [0, 1]
+    u = (x .- lb) ./ δ  # Scale to [0, 1]
     u = u .* 100  # Scale to [0, 100]
     
     return u
@@ -62,18 +63,23 @@ function setup_default_prior(vc::VoltageCalibration)
     lb, ub, x0, x_setup = get_bounds(vc)
     
     initial_θ = x_to_u(x0, lb, ub)
+    
+    # Define the log prior at the top level
+    return logprior_factory(initial_θ)
+    
+end
 
-    """ Returns the log prior. It is chosen as a Gaussian prior with mean initial_θ and variance with default equal to 10
-    """
+function logprior_factory(initial_θ)
+    
+    """ Returns the log prior. It is chosen as a Gaussian prior with mean initial_θ and variance with default equal to 10 """
+    
     function logprior(x; variance = 10)
         @info "using gaussian prior"
-        # gaussian prior with mean initial_θ
         log_prior      = -0.5 * sum((x .- initial_θ).^2) / variance
         grad_log_prior = -(x .- initial_θ) / variance
-
         return (log_prior, grad_log_prior)
     end
-
+    
     return logprior
     
 end
@@ -93,6 +99,7 @@ function runHMC(vc::VoltageCalibration, n_samples, n_adapts, logprior)
 
     # # Setup Battmo to return objective and gradient.
 
+    sim = deepcopy(vc.sim)
     setup_battmo_case(X, step_info = missing) = BattMo.setup_battmo_case_for_calibration(X,
                                                                                          sim,
                                                                                          x_setup,
@@ -100,6 +107,7 @@ function runHMC(vc::VoltageCalibration, n_samples, n_adapts, logprior)
 
     # The function `solve_and_differentiate` returns the objective function value and its gradient. 
     adj_cache = Dict()
+    
     solve_and_differentiate(x) = BattMo.solve_and_differentiate_for_calibration(x,
                                                                                 setup_battmo_case,
                                                                                 vc,
@@ -108,72 +116,22 @@ function runHMC(vc::VoltageCalibration, n_samples, n_adapts, logprior)
 
     # We wrap `solve_and_differentiate` in `evaluate` to return the log-likelihood and its gradient 
 
-    """ evaluate objective function, returns the log-likelihood, which corresponds to sum of the square weighted by variance
-    """
-    function evaluate(x; σ2 = 0.1)
-        #@info "Evaluating x = $x"
+    evaluate = evaluate_factory(solve_and_differentiate)
+    
+    logdensity_and_gradient = logdensity_and_gradient_factory(evaluate, logprior, lb, ub)
 
-        # Default fallback values
-        log_llh      = -Inf
-        grad_log_llh = zero(x)
-
-        try
-            
-            log_llh, grad_log_llh = solve_and_differentiate(x) #returns the sum squared error and its gradient
-            log_llh               = -log_llh/(2*σ2)  # Convert to log-likelihood 
-            grad_log_llh          = -grad_log_llh/(2*σ2)  # Convert to gradient of log-likelihood  
-
-            # Sanity checks
-            if !isfinite(log_llh) || any(!isfinite, grad_log_llh)
-                @warn "Invalid result from solver at x = $x"
-
-            end
-        catch e
-            @error "Error during solve_and_differentiate: $(e)"
-        end
-
-        return (log_llh, grad_log_llh)
+    function ℓπ(θ)
+        y, = logdensity_and_gradient(θ)
+        return y
     end
-
-    """ compute log posterior and gradient from parameters θ
-        """
-    function LogDensityProblems.logdensity_and_gradient(p::LogTargetDensity, θ)
-        
-        @info "Calculating log density and gradient for θ = $θ"
-        
-        x = u_to_x(θ) #θ is in log-space, x in original space
-        log_llh, grad_log_llh = evaluate(x)
-        
-        log_prior, grad_log_prior = logprior(θ)
-        
-        log_density = log_llh .+ log_prior
-        dx_to_du!(grad_log_llh, x)
-
-        gradient =  grad_log_llh .+ grad_log_prior
-        
-        return (log_density, gradient)
-        
-    end
-
-    # # Setup Hamiltionian Monte Carlo 
-    LogDensityProblems.dimension(p::LogTargetDensity) = p.dim
-
-    function LogDensityProblems.capabilities(::Type{LogTargetDensity})
-        return LogDensityProblems.LogDensityOrder{1}()
+    
+    function ∂ℓπ∂θ(θ)
+        y, dy = logdensity_and_gradient(θ)
+        return (y, dy)
     end
 
     # Parameters
     D = length(vc.parameter_targets) 
-
-    # Create target distribution, note that methods
-    #
-    # - LogDensityProblems.logdensity_and_gradient
-    # - LogDensityProblems.capabilities
-    # - LogDensityProblems.dimension
-    #
-    # have been specialized from this type
-
-    target = LogTargetDensity(D)
 
     # # Define Hamiltonian system
     #
@@ -185,7 +143,7 @@ function runHMC(vc::VoltageCalibration, n_samples, n_adapts, logprior)
 
     # The metric corresponds to the mass matrix in the Hamiltonion formulation
     metric      = DiagEuclideanMetric(D)
-    hamiltonian = Hamiltonian(metric, target)
+    hamiltonian = Hamiltonian(metric, ℓπ, ∂ℓπ∂θ)
 
     # # Find initial step size
     #
@@ -223,6 +181,66 @@ function runHMC(vc::VoltageCalibration, n_samples, n_adapts, logprior)
     return samples, states
     
 end
+
+
+# Define the evaluate function at the top level
+function evaluate_factory(solve_and_differentiate)
+    
+    """ evaluate objective function, returns the log-likelihood, which corresponds to sum of the square weighted by variance
+    """
+    function evaluate(x; σ2 = 0.1)
+        #@info "Evaluating x = $x"
+
+        # Default fallback values
+        log_llh      = -Inf
+        grad_log_llh = zero(x)
+        
+        try                     
+            
+            log_llh, grad_log_llh = solve_and_differentiate(x) # Returns the sum squared error and its gradient
+            log_llh               = -log_llh / (2 * σ2)        # Convert to log-likelihood 
+            grad_log_llh          = -grad_log_llh / (2 * σ2)   # Convert to gradient of log-likelihood  
+            
+            # Sanity checks
+            if !isfinite(log_llh) || any(!isfinite, grad_log_llh)
+                @warn "Invalid result from solver at x = $x"
+            end
+            
+        catch e
+            @error "Error during solve_and_differentiate: $(e)"
+        end
+        
+        return (log_llh, grad_log_llh)
+        
+    end
+    
+    return evaluate
+end
+
+# Define the logdensity_and_gradient function at the top level
+function logdensity_and_gradient_factory(evaluate, logprior, lb, ub)
+
+    """ compute log posterior and gradient from parameters θ
+        """
+    function logdensity_and_gradient(θ)
+        
+        x = u_to_x(θ, lb, ub) # θ is in log-space, x in original space
+        
+        log_llh, grad_log_llh     = evaluate(x)
+        log_prior, grad_log_prior = logprior(θ)
+        log_density               = log_llh + log_prior
+        
+        dx_to_du!(grad_log_llh, x, lb, ub)
+
+        gradient = grad_log_llh + grad_log_prior
+        
+        return (log_density, gradient)
+    end
+    
+    return logdensity_and_gradient
+    
+end
+
 
 # # Diagnostics tools
 # 
@@ -343,6 +361,4 @@ function run_essential_diagnostics(samples::Vector, stats::Vector, n_adapts::Int
     return diag_fig
 end
 
-
-diag_fig = run_essential_diagnostics(samples, stats, n_adapts)
 

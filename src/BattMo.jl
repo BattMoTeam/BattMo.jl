@@ -46,7 +46,7 @@ using Statistics                                  # Basic statistical functions
 using StatsBase: inverse_rle                      # Statistical utility
 using Tullio: @tullio                             # Einstein summation notation
 using ForwardDiff
-
+using AdvancedHMC
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🏗️ Jutul Core Structures & functions
@@ -242,6 +242,7 @@ include("calibration/calibration.jl")
 include("calibration/calibration_utils.jl")
 include("calibration/calibration2.jl")
 include("calibration/equilibrium_calibration.jl")
+include("calibration/hamilton_montecarlo_calibration.jl")
 
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 @compile_workload begin

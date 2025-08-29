@@ -6,13 +6,6 @@ using CSV
 using MAT
 using GLMakie
 
-# Package for hamiltonian montecarlo
-
-using AdvancedHMC, ForwardDiff
-using AbstractMCMC
-using LogDensityProblems
-using LinearAlgebra
-
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 datadir = joinpath(battmo_base, "examples", "example_data", "calibration_data_mj1")
 nothing #hide
@@ -151,9 +144,9 @@ sim.cycling_protocol["DRate"] = I * 3600 / computeCellCapacity(model2)
 # We prepare the `VoltageCalibration` instance
 #
 
-vc = VoltageCalibration(t_exp_hr,
-                        V_exp_hr,
-                        sim)
+vc = BattMo.VoltageCalibration(t_exp_hr,
+                               V_exp_hr,
+                               sim)
 
 free_calibration_parameter!(vc,
                             ["NegativeElectrode","ActiveMaterial", "VolumetricSurfaceArea"];
@@ -183,10 +176,13 @@ print_calibration_overview(vc)
 
 # Run HMC
 #
-
+# sampling parameters from HMC
 n_samples, n_adapts = 1000, 500
 
-samples, stats = runHMC(vc, n_samples, n_adapts, logprior = setup_default_prior(vc))
+# We use a default prior
+logprior = setup_default_prior(vc)
+
+samples, stats = runHMC(vc, n_samples, n_adapts, logprior)
 
 # Run simple analysis
 # 

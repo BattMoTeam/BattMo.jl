@@ -4,6 +4,7 @@ authors = ["Olav Møyner <olav.moyner@gmail.com>"]
 version = "0.1.14"
 
 [deps]
+AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
@@ -31,6 +32,7 @@ GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 BattMoGLMakieExt = "GLMakie"
 
 [compat]
+AdvancedHMC = "0.8.1"
 ForwardDiff = "0.10.38"
 JLD2 = "0.4.31"
 JSON = "0.21.4"
