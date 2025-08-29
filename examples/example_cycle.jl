@@ -24,7 +24,7 @@ cycling_protocol["InitialStateOfCharge"] = 0.99
 sim = Simulation(model, cell_parameters, cycling_protocol);
 
 
-output = solve(sim; info_level = 1)
+output = solve(sim;)
 
 nothing # hide
 

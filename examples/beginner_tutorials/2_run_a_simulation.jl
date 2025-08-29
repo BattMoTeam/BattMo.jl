@@ -17,19 +17,16 @@ using BattMo, GLMakie
 # We also read an example cycling protocol for a simple Constant Current Discharge.
 
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chayambuka2022")
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
-model_settings = load_model_settings(; from_default_set = "P2D")
-
-cycling_protocol["DRate"] = 0.5
 
 nothing # hide
 
 # Next, we select the Lithium-Ion Battery Model with default model settings. A model can be thought as a mathematical implementation of the electrochemical and 
 # transport phenomena occuring in a real battery cell. The implementation consist of a system of partial differential equations and their corresponding parameters, constants and boundary conditions. 
 # The default Lithium-Ion Battery Model selected below corresponds to a basic P2D model, where neither current collectors nor thermal effects are considered.
-model_settings["ReactionRateConstant"] = "UserDefined"
-model = LithiumIonBattery(; model_settings)
+
+model = LithiumIonBattery()
 
 # Then we setup a Simulation by passing the model, cell parameters and a cycling protocol. A Simulation can be thought as a procedure to predict how the cell responds to the cycling protocol, 
 # by solving the equations in the model using the cell parameters passed.  

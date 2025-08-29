@@ -47,7 +47,7 @@ for d_rate in d_rates
 	protocol["DRate"] = d_rate
 
 	sim = Simulation(model, cell_parameters, protocol)
-	output = solve(sim; config_kwargs = (; end_report = false))
+	output = solve(sim; end_report = false)
 	push!(outputs, (d_rate = d_rate, output = output))
 end
 nothing # hide

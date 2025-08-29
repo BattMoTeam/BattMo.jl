@@ -1,6 +1,8 @@
 using BattMo
 using Test
 
+battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
+include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_functions.jl"))
 
 @testset "sei layer" begin
 
@@ -46,7 +48,7 @@ using Test
 
 			sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
 
-			output = solve(sim; info_level = 0)
+			output = solve(sim;)
 			I = get_output_time_series(output)[:Current]
 			c_pe = get_output_states(output)[:PeAmSurfaceConcentration]
 

@@ -4,7 +4,7 @@
 # There is hardly any difference between the sodium ion and lithium ion PXD basis model and equations. The only difference is that for the SodiumIonBattery model 
 # you can chose a slightly adapted butler volmer equation from [Chayambuka2022](https://www.sciencedirect.com/science/article/pii/S0013468621020478?via%3Dihub). See documentation for more information.
 
-using BattMo, GLMakie, CSV, DataFrames
+using BattMo, GLMakie
 
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_functions.jl"))
@@ -48,11 +48,10 @@ for (i, rate) in enumerate(drates)
 
 	sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
 
-	output = solve(sim; info_level = 0)
+	output = solve(sim;)
 	time_series = get_output_time_series(output)
-	metrics = get_output_metrics(output)
 
-	lines!(ax, metrics[:Capacity] .* 1000, time_series[:Voltage], label = "$rate C")
+	lines!(ax, time_series[:Capacity] .* 1000, time_series[:Voltage], label = "$rate C")
 
 end
 

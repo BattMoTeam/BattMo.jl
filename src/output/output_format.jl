@@ -37,10 +37,11 @@ plot(ts.Time, ts.Voltage)
 function get_output_time_series(output::NamedTuple; quantities::Union{Nothing, Vector{String}} = nothing)
 
 	selected_pairs = []
-	available_quantities = ["Time", "Voltage", "Current"]
+	available_quantities = ["Time", "Voltage", "Current", "Capacity"]
 
 	voltage, current = extract_time_series_data(output)
 	time = extract_output_times(output)
+	capacity = compute_capacity(output)
 
 	push!(selected_pairs, :Time => time)
 
@@ -53,14 +54,18 @@ function get_output_time_series(output::NamedTuple; quantities::Union{Nothing, V
 				push!(selected_pairs, :Current => current)
 			elseif q == "Time"
 				push!(selected_pairs, :Time => time)
+			elseif q == "Capacity"
+				push!(selected_pairs, :Capacity => capacity)
 			else
 				error("Quantitiy $q is not available in this data")
 			end
 		end
 	else
 		push!(selected_pairs, :Time => time)
+		push!(selected_pairs, :Capacity => capacity)
 		push!(selected_pairs, :Current => current)
 		push!(selected_pairs, :Voltage => voltage)
+
 	end
 
 	return (; selected_pairs...)
@@ -138,7 +143,7 @@ function get_output_metrics(
 		push!(discharge_energy, compute_discharge_energy(output))
 		push!(charge_energy, compute_charge_energy(output))
 		push!(round_trip_efficiency, compute_round_trip_efficiency(output))
-		capacity = compute_capacity(output)
+
 	else
 		# Compute per cycle
 		for cycle in cycle_array
@@ -148,7 +153,6 @@ function get_output_metrics(
 			push!(charge_energy, compute_charge_energy(output; cycle_number = cycle))
 			push!(round_trip_efficiency, compute_round_trip_efficiency(output; cycle_number = cycle))
 		end
-		capacity = compute_capacity(output)
 
 	end
 
@@ -160,7 +164,6 @@ function get_output_metrics(
 		"DischargeEnergy"     => discharge_energy,
 		"ChargeEnergy"        => charge_energy,
 		"RoundTripEfficiency" => round_trip_efficiency,
-		"Capacity"            => capacity,
 	)
 
 	# Add only requested quantities

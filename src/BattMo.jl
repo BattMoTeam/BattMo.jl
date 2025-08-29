@@ -141,7 +141,7 @@ using Jutul: SimulationModel, MultiModel
 using Jutul: JutulSimulator, Simulator
 using Jutul: JutulSystem, JutulFormulation, JutulContext, DefaultContext
 
-using Jutul: simulate, simulator_config
+using Jutul: simulate, simulator_config, simulator_config!
 using Jutul: setup_forces, setup_state, setup_state!, setup_parameters
 using Jutul: initialize_primary_variable_ad!, initialize_variable_ad!
 using Jutul: get_neighborship, get_simulator_storage, get_simulator_model

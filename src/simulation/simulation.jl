@@ -56,7 +56,14 @@ struct Simulation <: AbstractSimulation
 	simulator::Any
 
 
-	function Simulation(model::M, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model), logger = nothing) where {M <: ModelConfigured}
+	function Simulation(
+		model::M,
+		cell_parameters::CellParameters,
+		cycling_protocol::CyclingProtocol;
+		simulation_settings::SimulationSettings = get_default_simulation_settings(model),
+		hook = nothing,
+		kwargs...,
+	) where {M <: ModelConfigured}
 
 		if model.is_valid
 			function_to_solve = run_battery
@@ -103,13 +110,23 @@ struct Simulation <: AbstractSimulation
 			time_steps = setup_timesteps(input)
 
 			# setup simulation configuration
+
 			cfg = setup_config(simulator,
 				model.multimodel,
 				parameters,
 				input;
-				logger,
+				kwargs...,
 			)
 
+			# Setup hook if given
+			if !isnothing(hook)
+				hook(simulator,
+					model.multimodel,
+					initial_state,
+					forces,
+					time_steps,
+					cfg)
+			end
 
 			# grids = get_grids(model)
 
@@ -162,26 +179,16 @@ sim = Simulation(model, cell_parameters, cycling_protocol)
 result = solve(sim; info_level = 1)
 ```
 """
-function solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, end_report = info_level > -1, kwargs...)
+function solve(problem::Simulation; accept_invalid = false, info_level = 0, end_report = info_level > -1, logger = nothing)
 
 	config_kwargs = (info_level = info_level, end_report = end_report)
 
-	use_p2d = true
-
 	# Note: Typically function_to_solve is run_battery
 	if accept_invalid == true
-		output = solve_simulation(problem;
-			hook,
-			use_p2d = use_p2d,
-			config_kwargs = config_kwargs,
-			kwargs...)
+		output = solve_simulation(problem; config_kwargs, logger)
 	else
 		if problem.is_valid == true
-			output = solve_simulation(problem;
-				hook,
-				use_p2d = use_p2d,
-				config_kwargs = config_kwargs,
-				kwargs...)
+			output = solve_simulation(problem; config_kwargs, logger)
 
 			return output
 		else
@@ -240,10 +247,7 @@ result = solve_simulation(sim)
 plot(result.states)
 ```
 """
-function solve_simulation(sim::Simulation;
-	hook = nothing,
-	use_p2d = true,
-	kwargs...)
+function solve_simulation(sim::Simulation; config_kwargs, logger)
 
 	simulator = sim.simulator
 	model = sim.model
@@ -258,13 +262,11 @@ function solve_simulation(sim::Simulation;
 	cell_parameters = sim.cell_parameters
 	cycling_protocol = sim.cycling_protocol
 
-	if !isnothing(hook)
-		hook(simulator,
-			model.multimodel,
-			state0,
-			forces,
-			timesteps,
-			cfg)
+	cfg[:info_level] = config_kwargs.info_level
+	cfg[:end_report] = config_kwargs.end_report
+
+	if !isnothing(logger)
+		cfg[:post_iteration_hook] = logger
 	end
 
 	# Perform simulation
@@ -333,7 +335,6 @@ function setup_config(sim::JutulSimulator,
 	model::MultiModel,
 	parameters,
 	input;
-	logger = nothing,
 	extra_timing::Bool = false,
 	use_model_scaling::Bool = true,
 	kwargs...)
@@ -343,6 +344,7 @@ function setup_config(sim::JutulSimulator,
 	simulation_settings = input.simulation_settings
 	lin_solv_dict = simulation_settings["NonLinearSolver"]["LinearSolver"]
 	lin_solv_dict_any = Dict{String, Any}(lin_solv_dict)
+
 
 	cfg[:linear_solver]            = battery_linsolve(lin_solv_dict_any)
 	cfg[:debug_level]              = 0
@@ -355,10 +357,6 @@ function setup_config(sim::JutulSimulator,
 	cfg[:safe_mode]                = true
 	cfg[:error_on_incomplete]      = false
 	cfg[:failure_cuts_timestep]    = true
-
-	if !isnothing(logger)
-		cfg[:post_iteration_hook] = logger
-	end
 
 	if use_model_scaling
 		scalings = get_scalings(model, parameters)

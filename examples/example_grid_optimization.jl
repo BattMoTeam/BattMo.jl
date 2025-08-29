@@ -36,7 +36,7 @@ for (i, x_res) in enumerate(x_res_list)
 
 	# Run simulation
 	sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
-	output = solve(sim; accept_invalid = true, info_level = 0)
+	output = solve(sim; accept_invalid = true)
 
 	# Extract time and voltage
 	time_series = get_output_time_series(output)

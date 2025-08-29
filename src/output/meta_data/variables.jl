@@ -101,7 +101,7 @@ function get_output_variables_meta_data()
 		),
 		"Capacity" => Dict(
 			"type" => Vector{Real},
-			"case" => "metrics",
+			"case" => "time_series",
 			"shape" => "(Time,)",
 			"isdefault" => false,
 			"unit" => "Ah",
