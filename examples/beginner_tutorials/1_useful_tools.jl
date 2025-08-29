@@ -26,17 +26,24 @@ print_default_input_sets_info()
 
 
 # ## Inspecting Individual Parameters
-# If you're unsure how a specific parameter should be defined or what it represents, you can print detailed information about it. For example:
+# If you're unsure how a specific parameter should be defined or what it represents, you can print detailed information about it. For example, for cell parameters and cycling protocol parameters:
 
 parameter_name = "OpenCircuitPotential"
 
 print_parameter_info(parameter_name)
 
-# Another example
+# An example for model or simulation settings:
 
 parameter_name = "ModelFramework"
 
-print_parameter_info(parameter_name)
+print_setting_info(parameter_name)
+
+# An example for output variables:
+
+parameter_name = "Concenctration"
+
+print_output_variable_info(parameter_name)
+
 
 # This is especially useful when building or editing custom parameter sets.
 
@@ -57,4 +64,17 @@ parameter_set = CellParameters(Dict("NegativeElectrode" => Dict("ElectrodeCoatin
 write_to_json_file(file_path, parameter_set)
 nothing # hide
 
+
+# ## Get quick information on a cell parameter set
+
+# Let's load a default cell parameter set.
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
+
+# You can easily print some handy quantities and metrics for debugging:
+
+print_cell_info(cell_parameters)
+
+# If there are functional parameters present within the parameter set, like the OCP or electrolyte diffusion coefficient, you can easily plot those parameters against a realistic x-quantity range:
+
+plot_cell_curves(cell_parameters)
 

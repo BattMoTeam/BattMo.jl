@@ -28,7 +28,7 @@ const coeff2_graphite = Polynomial([
 ]);
 
 
-function computeOCP_Graphite_Torchio(c, T, cmax)
+function computeOCP_Graphite_Torchio(c, T, refT, cmax)
 	"""Compute OCP for GenericGraphite as function of temperature and concentration"""
 	theta  = c ./ cmax
 	refT   = 298.15
@@ -64,7 +64,7 @@ end
 
 ## Define OCP for Graphite-SiOx (Chen2020) using polynomials
 
-function computeOCP_Graphite_SiOx_Chen2020(c, T, cmax)
+function computeOCP_Graphite_SiOx_Chen2020(c, T, refT, cmax)
 	x = c ./ cmax
 
 	ocp = 1.9793 * exp(-39.3631 * x) + 0.2482 - 0.0909 * tanh(29.8538 * (x - 0.1234)) - 0.04478 * tanh(14.9159 * (x - 0.2769)) - 0.0205 * tanh(30.4444 * (x - 0.6103))
@@ -75,7 +75,7 @@ end
 
 ## Define OCP for NMC811 (Chen2020) using polynomials
 
-function computeOCP_NMC811_Chen2020(c, T, cmax)
+function computeOCP_NMC811_Chen2020(c, T, refT, cmax)
 	x = c ./ cmax
 
 	ocp = -0.8090 * x + 4.4875 - 0.0428 * tanh(18.5138 * (x - 0.5542)) - 17.7326 * tanh(15.7890 * (x - 0.3117)) + 17.5842 * tanh(15.9308 * (x - 0.3120))
@@ -130,13 +130,13 @@ const coeff2_dUdT_nmc111 = Polynomial([
 	+3.048755063,
 ])
 
-function computeOCP_Graphite_Xu2015(c, T, cmax)
+function computeOCP_Graphite_Xu2015(c, T, refT, cmax)
 
 	"""Compute OCP for LFP as function of temperature and concentration"""
 	refT  = 298.15
 	theta = c ./ cmax
 
-	data1 = [ 0.00 1.28683
+	data1 = [                                                             0.00 1.28683
 		0.01 0.65272
 		0.02 0.52621
 		0.03 0.44128
@@ -173,7 +173,7 @@ function computeOCP_Graphite_Xu2015(c, T, cmax)
 
 	refOCP = itp_refOCP(theta)
 
-	data2 = [ 0.01049 3.00E-04
+	data2 = [                                                             0.01049 3.00E-04
 		0.03146 2.47E-04
 		0.05244 1.95E-04
 		0.07711 1.33E-04
@@ -205,7 +205,7 @@ function computeOCP_Graphite_Xu2015(c, T, cmax)
 end
 
 
-function computeOCP_LFP_Xu2015(c, T, cmax)
+function computeOCP_LFP_Xu2015(c, T, refT, cmax)
 
 	"""Compute OCP for LFP as function of temperature and concentration"""
 	refT  = 298.15
@@ -292,13 +292,13 @@ function computeOCP_LFP_Xu2015(c, T, cmax)
 
 end
 
-function computeOCP_LFP_Gerver2011(c, T, cmax)
+function computeOCP_LFP_Gerver2011(c, T, refT, cmax)
 
 	ocp = 3.41285712e+00 - 1.49721852e-02 * c / cmax + 3.54866018e+14 * exp(-3.95729493e+02 * c / cmax) - 1.45998465e+00 * exp(-1.10108622e+02 * (1 - c / cmax))
 	return ocp
 end
 
-function computeOCP_NMC111(c, T, cmax)
+function computeOCP_NMC111(c, T, refT, cmax)
 
 	"""Compute OCP for GenericNMC111 as function of temperature and concentration"""
 	refT   = 298.15

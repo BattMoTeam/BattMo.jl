@@ -37,10 +37,11 @@ plot(ts.Time, ts.Voltage)
 function get_output_time_series(output::NamedTuple; quantities::Union{Nothing, Vector{String}} = nothing)
 
 	selected_pairs = []
-	available_quantities = ["Time", "Voltage", "Current"]
+	available_quantities = ["Time", "Voltage", "Current", "Capacity"]
 
 	voltage, current = extract_time_series_data(output)
 	time = extract_output_times(output)
+	capacity = compute_capacity(output)
 
 	push!(selected_pairs, :Time => time)
 
@@ -53,14 +54,18 @@ function get_output_time_series(output::NamedTuple; quantities::Union{Nothing, V
 				push!(selected_pairs, :Current => current)
 			elseif q == "Time"
 				push!(selected_pairs, :Time => time)
+			elseif q == "Capacity"
+				push!(selected_pairs, :Capacity => capacity)
 			else
 				error("Quantitiy $q is not available in this data")
 			end
 		end
 	else
 		push!(selected_pairs, :Time => time)
+		push!(selected_pairs, :Capacity => capacity)
 		push!(selected_pairs, :Current => current)
 		push!(selected_pairs, :Voltage => voltage)
+
 	end
 
 	return (; selected_pairs...)
@@ -126,6 +131,7 @@ function get_output_metrics(
 	charge_energy::Vector{Float64} = Float64[]
 	round_trip_efficiency::Vector{Float64} = Float64[]
 
+
 	# Identify unique non-zero cycles
 	unique_cycles = unique(cycle_array)
 	cycles_above_zero = filter(x -> x > 0, unique_cycles)
@@ -137,6 +143,7 @@ function get_output_metrics(
 		push!(discharge_energy, compute_discharge_energy(output))
 		push!(charge_energy, compute_charge_energy(output))
 		push!(round_trip_efficiency, compute_round_trip_efficiency(output))
+
 	else
 		# Compute per cycle
 		for cycle in cycle_array
@@ -146,6 +153,7 @@ function get_output_metrics(
 			push!(charge_energy, compute_charge_energy(output; cycle_number = cycle))
 			push!(round_trip_efficiency, compute_round_trip_efficiency(output; cycle_number = cycle))
 		end
+
 	end
 
 	# Dictionary of all available quantities
@@ -293,6 +301,10 @@ function extract_spatial_data(states::Vector)
 		:PeAmSurfaceConcentration => [:PeAm, :SurfaceConcentration],
 		:NeAmConcentration        => [:NeAm, :ParticleConcentration],
 		:PeAmConcentration        => [:PeAm, :ParticleConcentration],
+		:NeAmDiffusionCoefficient => [:NeAm, :DiffusionCoefficient],
+		:PeAmDiffusionCoefficient => [:PeAm, :DiffusionCoefficient],
+		:NeAmReactionRateConst    => [:NeAm, :ReactionRateConstant],
+		:PeAmReactionRateConst    => [:PeAm, :ReactionRateConstant],
 		:ElectrolyteConcentration => [:Elyte, :Concentration],
 		:NeAmPotential            => [:NeAm, :Voltage],
 		:ElectrolytePotential     => [:Elyte, :Voltage],
@@ -353,7 +365,7 @@ end
 
 
 
-function get_x_coords(model::MultiModel{:LithiumIonBattery})
+function get_x_coords(model::MultiModel{:IntercalationBattery})
 
 	pp = physical_representation(model.models[:Elyte].data_domain)
 	primitives = Jutul.plot_primitives(pp, :meshscatter)

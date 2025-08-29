@@ -43,35 +43,7 @@ output = solve(sim;)
 nothing # hide
 
 
-# The ouput is a NamedTuple storing the results of the simulation within multiple dictionaries. Let's plot the cell current and cell voltage over time and make a plot with the GLMakie package.
+# Now we can easily plot some results
 
-states = output[:states]
-
-t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Voltage][1] for state in states]
-I = [state[:Control][:Current][1] for state in states]
-nothing # hide
-
-
-f = Figure(size = (1000, 400))
-
-ax = Axis(f[1, 1], title = "Voltage", xlabel = "Time / s", ylabel = "Voltage / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
-)
-scatterlines!(ax, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
-
-f
-
-ax = Axis(f[1, 2], title = "Current", xlabel = "Time / s", ylabel = "Current / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
-)
-scatterlines!(ax, t, I; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
-
-f
+plot_dashboard(output; plot_type = "contour")
 

@@ -1,4 +1,4 @@
-# Doyle-Fuller-Newman model
+# Lithium-ion / Doyle-Fuller-Newman model
 
 On this page, we describe the different models available in BattMo for simulation a lithium ion battery cell. We have models available for simulating 1D and 3D geometries:
  - P2D: Pseudo-two-dimensional model

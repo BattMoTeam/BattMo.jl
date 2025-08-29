@@ -99,6 +99,18 @@ function get_output_variables_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Total amount of charge delivered during the discharge phase.",
 		),
+		"Capacity" => Dict(
+			"type" => Vector{Real},
+			"case" => "time_series",
+			"shape" => "(Time,)",
+			"isdefault" => false,
+			"unit" => "Ah",
+			"unit_name" => "emmo:AmpereHour",
+			"unit_iri" => "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978",
+			"context_type" => "Capacity",
+			"context_type_iri" => nothing,
+			"description" => "The amount of charge delivered.",
+		),
 		"ChargeCapacity" => Dict(
 			"type" => Vector{Real},
 			"isdefault" => false,

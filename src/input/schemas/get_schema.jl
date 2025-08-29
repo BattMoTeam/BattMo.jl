@@ -101,7 +101,15 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 				"type" => "object",
 				"properties" => Dict(
 					"Title" => Dict("type" => "string"),
-					"Source" => Dict("type" => "string", "format" => "uri"),
+					"Source" => Dict(
+						"anyOf" => [
+							Dict("type" => "string", "format" => "uri"),
+							Dict(
+								"type" => "array",
+								"items" => Dict("type" => "string", "format" => "uri"),
+							),
+						],
+					),
 					"Description" => Dict("type" => "string"),
 				),
 			),
@@ -118,7 +126,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 					"ElectrodeLength" => create_property(parameter_meta, "ElectrodeLength"),
 					"ElectrodeGeometricSurfaceArea" => create_property(parameter_meta, "ElectrodeGeometricSurfaceArea"),
 				),
-				"required" => ["Case"],
+				"required" => [],
 			),
 			"NegativeElectrode" => Dict(
 				"type" => "object",
@@ -156,7 +164,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ActivationEnergyOfDiffusion", "ReactionRateConstant", "ChargeTransferCoefficient"],
+							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ReactionRateConstant", "ChargeTransferCoefficient", "ActivationEnergyOfReaction"],
 					),
 					"Interphase" => Dict(
 						"type" => "object",
@@ -243,7 +251,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ActivationEnergyOfReaction", "ActivationEnergyOfDiffusion", "ReactionRateConstant", "ChargeTransferCoefficient"],
+							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ReactionRateConstant", "ChargeTransferCoefficient", "ActivationEnergyOfReaction"],
 					),
 					"ConductiveAdditive" => Dict(
 						"type" => "object",
@@ -334,23 +342,10 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 	sep_required = schema["properties"]["Separator"]["required"]
 	elyte_required = schema["properties"]["Electrolyte"]["required"]
 
-	model_settings_dict = model_settings.all
-
-	if model_settings_dict["ModelFramework"] == "P2D"
+	if model_settings["ModelFramework"] == "P2D"
 		push!(cell_required, "ElectrodeGeometricSurfaceArea")
 
-	elseif model_settings_dict["ModelFramework"] == "P4D Pouch"
-
-		push!(schema["allOf"], Dict(
-			"properties" => Dict(
-				"Cell" => Dict(
-					"properties" => Dict(
-						"Case" => Dict("const" => "Pouch"),
-					),
-					"required" => ["Case"],
-				),
-			),
-		))
+	elseif model_settings["ModelFramework"] == "P4D Pouch"
 
 		push!(cell_required, "ElectrodeWidth")
 		push!(cell_required, "ElectrodeLength")
@@ -365,18 +360,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 			push!(pe_cc_required, "TabLength")
 		end
 
-	elseif model_settings_dict["ModelFramework"] == "P4D Cylindrical"
-
-		push!(schema["allOf"], Dict(
-			"properties" => Dict(
-				"Cell" => Dict(
-					"properties" => Dict(
-						"Case" => Dict("const" => "Cylindrical"),
-					),
-					"required" => ["Case"],
-				),
-			),
-		))
+	elseif model_settings["ModelFramework"] == "P4D Cylindrical"
 
 		push!(cell_required, "InnerRadius")
 		push!(cell_required, "OuterRadius")
@@ -394,7 +378,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 	end
 
-	if haskey(model_settings_dict, "SEIModel") && model_settings_dict["SEIModel"] == "Bolay"
+	if haskey(model_settings, "SEIModel") && model_settings["SEIModel"] == "Bolay"
 		push!(ne_required, "Interphase")
 	end
 
@@ -596,6 +580,7 @@ function get_schema_model_settings()
 			"RampUp" => create_property(parameter_meta, "RampUp"),
 			"SEIModel" => create_property(parameter_meta, "SEIModel"),
 			"TransportInSolid" => create_property(parameter_meta, "TransportInSolid"),
+			"ButlerVolmer" => create_property(parameter_meta, "ButlerVolmer"),
 		),
 		"required" => [
 			"ModelFramework", "TransportInSolid",

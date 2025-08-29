@@ -4,7 +4,7 @@
     "Description": "Parameter set for a constant current constant voltage cyling protocol."
   },
   "Protocol": "CCCV",
-  "InitialStateOfCharge": 0,
+  "InitialStateOfCharge": 0.01,
   "TotalNumberOfCycles": 3,
   "CRate": 1.0,
   "DRate": 1.0,
