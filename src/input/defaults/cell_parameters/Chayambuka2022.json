@@ -28,6 +28,7 @@
             "MassFraction": 0.999,
             "Density": 1950.0,
             "VolumetricSurfaceArea": 420689.655,
+            "ActivationEnergyOfReaction": 35000,
             "ElectronicConductivity": 256,
             "DiffusionCoefficient": {
                 "FunctionName": "calc_ne_D"
@@ -69,6 +70,7 @@
             "MassFraction": 0.8161,
             "Density": 3200,
             "VolumetricSurfaceArea": 2796610.169,
+            "ActivationEnergyOfReaction": 17800.0,
             "ElectronicConductivity": 50,
             "DiffusionCoefficient": {
                 "FunctionName": "calc_pe_D"
