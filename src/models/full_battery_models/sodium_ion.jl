@@ -45,22 +45,27 @@ function get_default_model_settings(::Type{SodiumIonBattery})
 	return settings
 end
 
+function get_default_solver_settings(::Type{SodiumIonBattery})
+	settings = load_solver_settings(; from_default_set = "default_solver_settings")
+	return settings
+end
+
 function get_default_simulation_settings(st::SodiumIonBattery)
 
 	settings = Dict(
-		"GridElectrodeWidth" => 10,
-		"GridElectrodeLength" => 10,
-		"GridPositiveElectrodeCoating" => 20,
-		"GridPositiveElectrodeParticle" => 30,
-		"GridPositiveElectrodeCurrentCollector" => 2,
-		"GridPositiveElectrodeCurrentCollectorTabWidth" => 3,
-		"GridPositiveElectrodeCurrentCollectorTabLength" => 3,
-		"GridNegativeElectrodeCoating" => 10,
-		"GridNegativeElectrodeParticle" => 30,
-		"GridNegativeElectrodeCurrentCollector" => 2,
-		"GridNegativeElectrodeCurrentCollectorTabWidth" => 3,
-		"GridNegativeElectrodeCurrentCollectorTabLength" => 3,
-		"GridSeparator" => 3, "Grid" => [],
+		"GridResolutionElectrodeWidth" => 10,
+		"GridResolutionElectrodeLength" => 10,
+		"GridResolutionPositiveElectrodeCoating" => 20,
+		"GridResolutionPositiveElectrodeParticle" => 30,
+		"GridResolutionPositiveElectrodeCurrentCollector" => 2,
+		"GridResolutionPositiveElectrodeCurrentCollectorTabWidth" => 3,
+		"GridResolutionPositiveElectrodeCurrentCollectorTabLength" => 3,
+		"GridResolutionNegativeElectrodeCoating" => 10,
+		"GridResolutionNegativeElectrodeParticle" => 30,
+		"GridResolutionNegativeElectrodeCurrentCollector" => 2,
+		"GridResolutionNegativeElectrodeCurrentCollectorTabWidth" => 3,
+		"GridResolutionNegativeElectrodeCurrentCollectorTabLength" => 3,
+		"GridResolutionSeparator" => 3, "Grid" => [],
 		"TimeStepDuration" => 50,
 		"RampUpTime" => 10,
 		"RampUpSteps" => 5,

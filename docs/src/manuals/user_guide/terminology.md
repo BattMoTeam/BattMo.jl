@@ -74,11 +74,11 @@ Define numerical assumptions specific to the simulation process, including time-
 ```json
 {
 
-    "GridPositiveElectrodeCoating": 10,
-    "GridPositiveElectrodeParticle": 10,
-    "GridNegativeElectrodeCoating": 10,
-    "GridNegativeElectrodeParticle": 10,
-    "GridSeparator": 10,
+    "GridResolutionPositiveElectrodeCoating": 10,
+    "GridResolutionPositiveElectrodeParticle": 10,
+    "GridResolutionNegativeElectrodeCoating": 10,
+    "GridResolutionNegativeElectrodeParticle": 10,
+    "GridResolutionSeparator": 10,
     "Grid": [],
     "TimeStepDuration": 50,
     "RampUpTime": 10,

@@ -66,6 +66,10 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 
 	elseif meta["type"] == Vector
 		dict["type"] = "array"  # JSON schema type for arrays (Vector in Julia)
+	elseif meta["type"] == Nothing
+		dict["type"] = "null"
+	elseif meta["type"] == Dict
+		dict["type"] = "object"
 	else
 		type = meta["type"]
 		throw(ArgumentError("Unknown Julia type: $type"))
@@ -503,49 +507,49 @@ function get_schema_simulation_settings(model_settings)
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",
 		"properties" => Dict(
-			"GridHeight" => create_property(parameter_meta, "GridHeight"),
-			"GridAngular" => create_property(parameter_meta, "GridAngular"),
-			"GridElectrodeWidth" => create_property(parameter_meta, "GridElectrodeWidth"),
-			"GridElectrodeLength" => create_property(parameter_meta, "GridElectrodeLength"),
-			"GridPositiveElectrodeCoating" => create_property(parameter_meta, "GridPositiveElectrodeCoating"),
-			"GridPositiveElectrodeParticle" => create_property(parameter_meta, "GridPositiveElectrodeParticle"),
-			"GridPositiveElectrodeCurrentCollector" => create_property(parameter_meta, "GridPositiveElectrodeCurrentCollector"),
-			"GridPositiveElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridPositiveElectrodeCurrentCollectorTabWidth"),
-			"GridPositiveElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabLength"),
-			"GridNegativeElectrodeCoating" => create_property(parameter_meta, "GridNegativeElectrodeCoating"),
-			"GridNegativeElectrodeParticle" => create_property(parameter_meta, "GridNegativeElectrodeParticle"),
-			"GridNegativeElectrodeCurrentCollector" => create_property(parameter_meta, "GridNegativeElectrodeCurrentCollector"),
-			"GridNegativeElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridNegativeElectrodeCurrentCollectorTabWidth"),
-			"GridNegativeElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabLength"),
-			"GridSeparator" => create_property(parameter_meta, "GridSeparator"), "Grid" => Dict(
+			"GridResolutionHeight" => create_property(parameter_meta, "GridResolutionHeight"),
+			"GridResolutionAngular" => create_property(parameter_meta, "GridResolutionAngular"),
+			"GridResolutionElectrodeWidth" => create_property(parameter_meta, "GridResolutionElectrodeWidth"),
+			"GridResolutionElectrodeLength" => create_property(parameter_meta, "GridResolutionElectrodeLength"),
+			"GridResolutionPositiveElectrodeCoating" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCoating"),
+			"GridResolutionPositiveElectrodeParticle" => create_property(parameter_meta, "GridResolutionPositiveElectrodeParticle"),
+			"GridResolutionPositiveElectrodeCurrentCollector" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollector"),
+			"GridResolutionPositiveElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabWidth"),
+			"GridResolutionPositiveElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabLength"),
+			"GridResolutionNegativeElectrodeCoating" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCoating"),
+			"GridResolutionNegativeElectrodeParticle" => create_property(parameter_meta, "GridResolutionNegativeElectrodeParticle"),
+			"GridResolutionNegativeElectrodeCurrentCollector" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollector"),
+			"GridResolutionNegativeElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabWidth"),
+			"GridResolutionNegativeElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabLength"),
+			"GridResolutionSeparator" => create_property(parameter_meta, "GridResolutionSeparator"), "Grid" => Dict(
 				"type" => "array",
 			),
-			"TimeStepDuration" => Dict("type" => "integer"),
-			"RampUpTime" => Dict("type" => "integer"),
-			"RampUpSteps" => Dict("type" => "integer"),
+			"TimeStepDuration" => create_property(parameter_meta, "TimeStepDuration"),
+			"RampUpTime" => create_property(parameter_meta, "RampUpTime"),
+			"RampUpSteps" => create_property(parameter_meta, "RampUpSteps"),
 		),
 		"required" => [
-			"GridPositiveElectrodeCoating",
-			"GridPositiveElectrodeParticle",
-			"GridNegativeElectrodeCoating",
-			"GridNegativeElectrodeParticle",
-			"GridSeparator",
+			"GridResolutionPositiveElectrodeCoating",
+			"GridResolutionPositiveElectrodeParticle",
+			"GridResolutionNegativeElectrodeCoating",
+			"GridResolutionNegativeElectrodeParticle",
+			"GridResolutionSeparator",
 			"TimeStepDuration"],
 	)
 
 	required = schema["required"]
 
 	if model_settings["ModelFramework"] == "P4D Pouch"
-		push!(required, "GridElectrodeWidth")
-		push!(required, "GridElectrodeLength")
+		push!(required, "GridResolutionElectrodeWidth")
+		push!(required, "GridResolutionElectrodeLength")
 
 		if haskey(model_settings, "CurrentCollectors")
-			push!(required, "GridPositiveElectrodeCurrentCollector")
-			push!(required, "GridPositiveElectrodeCurrentCollectorTabWidth")
-			push!(required, "GridPositiveElectrodeCurrentCollectorTabLength")
-			push!(required, "GridNegativeElectrodeCurrentCollector")
-			push!(required, "GridNegativeElectrodeCurrentCollectorTabWidth")
-			push!(required, "GridNegativeElectrodeCurrentCollectorTabLength")
+			push!(required, "GridResolutionPositiveElectrodeCurrentCollector")
+			push!(required, "GridResolutionPositiveElectrodeCurrentCollectorTabWidth")
+			push!(required, "GridResolutionPositiveElectrodeCurrentCollectorTabLength")
+			push!(required, "GridResolutionNegativeElectrodeCurrentCollector")
+			push!(required, "GridResolutionNegativeElectrodeCurrentCollectorTabWidth")
+			push!(required, "GridResolutionNegativeElectrodeCurrentCollectorTabLength")
 		end
 	end
 	if haskey(model_settings, "RampUp") && model_settings["RampUp"] == "Sinusoidal"
@@ -554,11 +558,11 @@ function get_schema_simulation_settings(model_settings)
 	end
 
 	if model_settings["ModelFramework"] == "P4D Cylindrical"
-		push!(required, "GridHeight")
-		push!(required, "GridAngular")
+		push!(required, "GridResolutionHeight")
+		push!(required, "GridResolutionAngular")
 		if haskey(model_settings, "CurrentCollectors")
-			push!(required, "GridPositiveElectrodeCurrentCollector")
-			push!(required, "GridNegativeElectrodeCurrentCollector")
+			push!(required, "GridResolutionPositiveElectrodeCurrentCollector")
+			push!(required, "GridResolutionNegativeElectrodeCurrentCollector")
 		end
 
 	end
@@ -566,6 +570,87 @@ function get_schema_simulation_settings(model_settings)
 	return schema
 end
 
+
+function get_schema_solver_settings()
+	parameter_meta = get_setting_meta_data()
+	schema = Dict(
+		"\$schema" => "http://json-schema.org/draft-07/schema#",
+		"type" => "object",
+		"properties" => Dict(
+			"NonLinearSolver" => Dict(
+				"type" => "object",
+				"properties" => Dict(
+					"MaxTimestepCuts" => create_property(parameter_meta, "MaxTimestepCuts"),
+					"MaxTimestep" => create_property(parameter_meta, "MaxTimestep"),
+					"MinTimestep" => create_property(parameter_meta, "MinTimestep"),
+					"TimestepMaxIncrease" => create_property(parameter_meta, "TimestepMaxIncrease"),
+					"TimestepMaxDecrease" => create_property(parameter_meta, "TimestepMaxDecrease"),
+					"MaxNonLinearIterations" => create_property(parameter_meta, "MaxNonLinearIterations"),
+					"MinNonLinearIterations" => create_property(parameter_meta, "MinNonLinearIterations"),
+					"FailureCutsTimesteps" => create_property(parameter_meta, "FailureCutsTimesteps"),
+					"CheckBeforeSolve" => create_property(parameter_meta, "CheckBeforeSolve"),
+					"AlwaysUpdateSecondary" => create_property(parameter_meta, "AlwaysUpdateSecondary"),
+					"ErrorOnIncomplete" => create_property(parameter_meta, "ErrorOnIncomplete"),
+					"CuttingCriterion" => create_property(parameter_meta, "CuttingCriterion"),
+					"Tolerance" => create_property(parameter_meta, "Tolerance"),
+					"TolFactorFinalIteration" => create_property(parameter_meta, "TolFactorFinalIteration"),
+					"SafeMode" => create_property(parameter_meta, "SafeMode"),
+					"ExtraTiming" => create_property(parameter_meta, "ExtraTiming"),
+					"TimeStepSelectors" => create_property(parameter_meta, "TimeStepSelectors"),
+					"Relaxation" => create_property(parameter_meta, "Relaxation"),
+				),
+			),
+			"LinearSolver" => Dict(
+				"type" => "object",
+				"properties" => Dict(
+					"Method" => create_property(parameter_meta, "Method"),
+					"MaxSize" => create_property(parameter_meta, "MaxSize"),
+					"Tolerance" => create_property(parameter_meta, "Tolerance"),
+					"MaxLinearIterations" => create_property(parameter_meta, "MaxLinearIterations"),
+					"Verbosity" => create_property(parameter_meta, "Verbosity"),
+				),
+			),
+			"Verbose" => Dict(
+				"type" => "object",
+				"properties" => Dict(
+					"InfoLevel" => create_property(parameter_meta, "InfoLevel"),
+					"DebugLevel" => create_property(parameter_meta, "DebugLevel"),
+					"EndReport" => create_property(parameter_meta, "EndReport"),
+					"ASCIITerminal" => create_property(parameter_meta, "ASCIITerminal"),
+					"ID" => create_property(parameter_meta, "ID"),
+					"ProgressColor" => create_property(parameter_meta, "ProgressColor"),
+					"progress_glyphs" => create_property(parameter_meta, "progress_glyphs")),
+			),
+			"Output" => Dict(
+				"type" => "object",
+				"properties" => Dict(
+					"OutputStates" => create_property(parameter_meta, "OutputStates"),
+					"OutputReports" => create_property(parameter_meta, "OutputReports"),
+					"OutputPath" => create_property(parameter_meta, "OutputPath"),
+					"InMemoryReports" => create_property(parameter_meta, "InMemoryReports"),
+					"ReportLevel" => create_property(parameter_meta, "ReportLevel"),
+					"OutputSubstrates" => create_property(parameter_meta, "OutputSubstrates")),
+			)),
+		"required" => [],
+		"allOf" => [
+			Dict(
+				"if" => Dict(
+					"properties" => Dict("LinearSolver" => Dict("properties" => Dict("Methods" => Dict("const" => "direct")))),
+				),
+				"then" => Dict("properties" => Dict("LinearSolver" => Dict("required" => ["MaxSize"]))
+				)),
+			Dict(
+				"if" => Dict(
+					"properties" => Dict("LinearSolver" => Dict("properties" => Dict("Method" => Dict("const" => "iterative")))),
+				),
+				"then" => Dict("properties" => Dict("LinearSolver" => Dict("required" => ["Verbosity", "MaxLinearIterations", "Tolerance"]))
+				),
+			),
+		],
+	)
+
+	return schema
+end
 
 function get_schema_model_settings()
 	parameter_meta = get_setting_meta_data()

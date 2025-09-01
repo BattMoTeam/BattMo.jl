@@ -20,6 +20,14 @@ function get_setting_meta_data()
 			"description" => """Which SEI model is used. For instance: "Bolay" """,
 			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/sei_model",
 		),
+		"PotentialFlow" => Dict(
+			"type" => String,
+			"options" => ["......", "TwoPointPotentialFlow"],
+			"is_sub_model" => true,
+			"context_type_iri" => nothing,
+			"description" => """Which PotentialFlow model is used....... """,
+			"documentation" => "",
+		),
 		"ReactionRateConstant" => Dict(
 			"type" => String,
 			"options" => ["UserDefined", "TemperatureDependent"],
@@ -53,7 +61,7 @@ function get_setting_meta_data()
 			"is_sub_model" => true,
 			"description" => "Which model describes the current collectors.",
 		),
-		"GridHeight" => Dict(
+		"GridResolutionHeight" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 100,
@@ -61,7 +69,7 @@ function get_setting_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the height of the cell (used in P4D cylindrical)",
 		),
-		"GridAngular" => Dict(
+		"GridResolutionAngular" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 100,
@@ -69,7 +77,7 @@ function get_setting_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Number of discretisation angles for a cylindrical cell (used in P4D cylindrical)",
 		),
-		"GridElectrodeWidth" => Dict(
+		"GridResolutionElectrodeWidth" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
@@ -77,42 +85,42 @@ function get_setting_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the width dimension of the electrode.",
 		),
-		"GridElectrodeLength" => Dict(
+		"GridResolutionElectrodeLength" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the length dimension of the electrode.",
 		),
-		"GridPositiveElectrodeCoating" => Dict(
+		"GridResolutionPositiveElectrodeCoating" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the thickness dimension of the positive electrode.",
 		),
-		"GridPositiveElectrodeParticle" => Dict(
+		"GridResolutionPositiveElectrodeParticle" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the radial pseudo dimension of the positive electrode active material particles.",
 		),
-		"GridNegativeElectrodeCoating" => Dict(
+		"GridResolutionNegativeElectrodeCoating" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the thickness dimension of the negative electrode.",
 		),
-		"GridPositiveElectrodeCurrentCollector" => Dict(
+		"GridResolutionPositiveElectrodeCurrentCollector" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the thickness dimension of the positive electrode current collector.",
 		),
-		"GridPositiveElectrodeCurrentCollectorTabWidth" => Dict(
+		"GridResolutionPositiveElectrodeCurrentCollectorTabWidth" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
@@ -126,14 +134,14 @@ function get_setting_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a",
 			"description" => "In the current collector tab at the positive electrode, the number of grid points along the length dimension of the tab's face.",
 		),
-		"GridNegativeElectrodeCurrentCollector" => Dict(
+		"GridResolutionNegativeElectrodeCurrentCollector" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a",
 			"description" => "Number of grid points along the thickness dimension of the negative electrode current collector.",
 		),
-		"GridNegativeElectrodeCurrentCollectorTabWidth" => Dict(
+		"GridResolutionNegativeElectrodeCurrentCollectorTabWidth" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
@@ -147,14 +155,14 @@ function get_setting_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a",
 			"description" => "In the current collector tab at the negative electrode, the number of grid points along the length dimension of the tab's face.",
 		),
-		"GridNegativeElectrodeParticle" => Dict(
+		"GridResolutionNegativeElectrodeParticle" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a",
 			"description" => "Number of grid points along the radial pseudo dimension of the negative electrode active material particles.",
 		),
-		"GridSeparator" => Dict(
+		"GridResolutionSeparator" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
@@ -204,7 +212,204 @@ function get_setting_meta_data()
 			"unit" => "s",
 			"unit_name" => "emmo:Second",
 			"unit_iri" => "https://w3id.org/emmo/domain/emmo#Second",
-		))
+		),
+		"MaxTimestepCuts" => Dict(
+			"type" => Int,
+			"min_value" => 0,
+			"max_value" => 10000,
+			"description" => "Maximum time step cuts in a single mini step before termination of simulation.",
+		),
+		"MaxTimestep" => Dict(
+			"type" => Int,
+			"min_value" => 0,
+			"max_value" => 1e100,
+			"description" => "Maximum time step length.",
+		),
+		"MinTimestep" => Dict(
+			"type" => Int,
+			"min_value" => 0,
+			"max_value" => 1000,
+			"description" => "Minimum time step length.",
+		),
+		"TimestepMaxIncrease" => Dict(
+			"type" => Real,
+			"min_value" => 0,
+			"max_value" => 100,
+			"description" => "Max allowable factor to increase time-step by. Overrides step selectors.",
+		),
+		"TimestepMaxDecrease" => Dict(
+			"type" => Real,
+			"min_value" => 0,
+			"max_value" => 100,
+			"description" => "Max allowable factor to decrease time-step by. Overrides step selectors.",
+		),
+		"MaxNonLinearIterations" => Dict(
+			"type" => Int,
+			"min_value" => 0,
+			"max_value" => 10000,
+			"description" => "Max number of nonlinear iterations in a Newton solve before time-step is cut.",
+		),
+		"MaxLinearIterations" => Dict(
+			"type" => Int,
+			"min_value" => 0,
+			"max_value" => 10000,
+			"description" => "Max number of linear iterations in a Newton solve before time-step is cut.",
+		),
+		"MinNonLinearIterations" => Dict(
+			"type" => Int,
+			"min_value" => 0,
+			"max_value" => 100000000,
+			"description" => "Minimum number of nonlinear iterations in Newton solver. This number of Newtion iterations is always performed, even if all equations are converged.",
+		),
+		"MaxSize" => Dict(
+			"type" => Int,
+			"min_value" => 0,
+			"max_value" => 10000000,
+			"description" => "Maximum size for linear solver.",
+		),
+		"Verbosity" => Dict(
+			"type" => Int,
+			"min_value" => 0,
+			"max_value" => 10000,
+			"description" => "Verbosity for linear solver.",
+		),
+		"Method" => Dict(
+			"type" => String,
+			"options" => ["direct", "iterative"],
+			"description" => "Linear solver method.",
+		),
+		"FailureCutsTimesteps" => Dict(
+			"type" => Bool,
+			"options" => [true, false],
+			"description" => "Cut the timestep if exceptions occur during step. If set to false, throw errors and terminate.",
+		),
+		"CheckBeforeSolve" => Dict(
+			"type" => Bool,
+			"options" => [true, false],
+			"description" => "Check convergence before solving linear system. Can skip some linear solves if not using increment tolerances.",
+		),
+		"AlwaysUpdateSecondary" => Dict(
+			"type" => Bool,
+			"options" => [true, false],
+			"description" => "Always update secondary variables (even when they can be reused from end of previous step). Only useful for nested solvers",
+		),
+		"ErrorOnIncomplete" => Dict(
+			"type" => Bool,
+			"options" => [true, false],
+			"description" => "Throw an error if the simulation could not complete. If `false` emit a message and return.",
+		),
+		"CuttingCriterion" => Dict(
+			"type" => Nothing,
+			"description" => "Criterion to use for early cutting of time-steps. Default value of nothing means cutting when max_nonlinear_iterations is reached.",
+		),
+		"Tolerances" => Dict(
+			"type" => Vector,
+			"min_value" => 1e-40,
+			"max_value" => 1,
+			"description" => "Tolerances used for convergence criterions.",
+		),
+		"Tolerance" => Dict(
+			"type" => Vector,
+			"min_value" => 1e-40,
+			"max_value" => 1,
+			"description" => "Tolerance used for convergence criterions.",
+		),
+		"TolFactorFinalIteration" => Dict(
+			"type" => Int,
+			"min_value" => 0,
+			"max_value" => 10,
+			"description" => "Value that multiplies all tolerances for the final convergence check before a time-step is cut.",
+		),
+		"SafeMode" => Dict(
+			"type" => Bool,
+			"options" => [true, false],
+			"description" => "Add extra checks in simulator that have a small extra cost.",
+		),
+		"LinearSolver" => Dict(
+			"type" => Dict,
+			"description" => "The linear solver used to solve linearized systems.",
+		),
+		"ExtraTiming" => Dict(
+			"type" => Bool,
+			"options" => [true, false],
+			"description" => "Output extra, highly detailed performance report at simulation end.",
+		),
+		"TimeStepSelectors" => Dict(
+			"type" => Vector,
+			"description" => "Time-step selectors that pick mini steps.",
+		),
+		"Relaxation" => Dict(
+			"type" => Dict,
+			"description" => "Non-Linear relaxation used. Currently supports `NoRelaxation()` and `SimpleRelaxation()`.",
+		),
+		"InfoLevel" => Dict(
+			"type" => Int,
+			"min_value" => -1,
+			"max_value" => 4,
+			"description" => """Info level determines the amount of runtime output to the terminal during simulation.
+				0 - gives minimal output (just a progress bar by default, and a final report)
+				1 - gives some more details, printing at the start of each step
+				2 - as 1, but also printing the current worst residual at each iteration
+				3 - as 1, but prints a table of all non-converged residuals at each iteration
+				4 - as 3, but all residuals are printed (even converged values)
+				Negative values disable output. The interpretation of this number is subject to change.""",
+		),
+		"DebugLevel" => Dict(
+			"type" => Int,
+			"min_value" => 0,
+			"max_value" => 10,
+			"description" => "Define the amount of debug output in the reports. Higher values means more output.",
+		),
+		"EndReport" => Dict(
+			"type" => Nothing,
+			"description" => "Output a final report that includes timings etc. If nothing, depends on info_level instead.",
+		),
+		"ASCIITerminal" => Dict(
+			"type" => Bool,
+			"description" => "Avoid unicode (if possible) in terminal output.",
+		),
+		"ID" => Dict(
+			"type" => String,
+			"description" => "String identifier for simulator that is prefixed to some verbose output.",
+		),
+		"ProgressColor" => Dict(
+			"type" => String,
+			"description" => "Color for progress meter.",
+		),
+		"progress_glyphs" => Dict(
+			"type" => String,
+			"options" => ["default"],
+			"description" => "Glyphs",
+		),
+		"OutputStates" => Dict(
+			"type" => Bool,
+			"description" => "Return states in-memory as output.",
+		),
+		"OutputReports" => Dict(
+			"type" => Bool,
+			"description" => "Return reports in-memory as output.",
+		),
+		"OutputPath" => Dict(
+			"type" => String,
+			"description" => "Path to write output. If nothing, output is not written to disk.",
+		),
+		"InMemoryReports" => Dict(
+			"type" => Int,
+			"min_value" => 0,
+			"max_value" => 10,
+			"description" => "Limit for number of reports kept in memory if output_path is provided.",
+		),
+		"ReportLevel" => Dict(
+			"type" => Int,
+			"min_value" => 0,
+			"max_value" => 10,
+			"description" => "Level of information stored in reports when written to disk.",
+		),
+		"OutputSubstrates" => Dict(
+			"type" => Bool,
+			"description" => "Store substates (between report steps) as field on each state.",
+		),
+	)
 
 	return meta_data
 end

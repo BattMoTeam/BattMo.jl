@@ -133,6 +133,36 @@ function load_simulation_settings(; from_file_path::Union{String, Nothing} = not
 	end
 end
 
+
+"""
+	load_solver_settings(; from_file_path::String = nothing, from_default_set::String = nothing)
+
+Reads and loads solver settings either from a JSON file or a default set.
+
+# Arguments
+- `from_file_path ::String` : (Optional) Path to the JSON file containing simulation settings.
+- `from_default_set ::String` : (Optional) The name of the default set to load simulation settings from.
+
+# Returns
+An instance of `SolverSettings`.
+
+# Errors
+Throws an `ArgumentError` if none of the arguments are provided.
+"""
+function load_solver_settings(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing)
+	if !isnothing(from_file_path)
+		# Assuming JSON and SimulationSettings are correctly defined
+		solver_settings_instance = JSON.parsefile(from_file_path)
+		return SolverSettings(solver_settings_instance; source_path = from_file_path)
+	elseif !isnothing(from_default_set)
+		# Logic to load from default set (replace this with actual code)
+		file_path = parameter_file_path("solver_settings", from_default_set)
+		return load_solver_settings(; from_file_path = file_path)
+	else
+		throw(ArgumentError("Either 'from_file_path' or 'from_default_set' must be provided."))
+	end
+end
+
 """ 
 	load_matlab_battmo_input(inputFileName::String)
 

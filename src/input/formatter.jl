@@ -52,11 +52,11 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 	# SimulationSettings
 
 	simulation_settings = Dict(
-		"GridPositiveElectrodeCoating" => params["PositiveElectrode"]["Coating"]["N"],
-		"GridPositiveElectrodeParticle" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"],
-		"GridNegativeElectrodeCoating" => params["NegativeElectrode"]["Coating"]["N"],
-		"GridNegativeElectrodeParticle" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"],
-		"GridSeparator" => params["Separator"]["N"], "TimeStepDuration" => params["TimeStepping"]["timeStepDuration"],
+		"GridResolutionPositiveElectrodeCoating" => params["PositiveElectrode"]["Coating"]["N"],
+		"GridResolutionPositiveElectrodeParticle" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"],
+		"GridResolutionNegativeElectrodeCoating" => params["NegativeElectrode"]["Coating"]["N"],
+		"GridResolutionNegativeElectrodeParticle" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"],
+		"GridResolutionSeparator" => params["Separator"]["N"], "TimeStepDuration" => params["TimeStepping"]["timeStepDuration"],
 	)
 
 	if haskey(model_settings, "RampUp")
@@ -65,26 +65,26 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 	end
 
 	if model_settings["ModelFramework"] == "P4D Cylindrical"
-		simulation_settings["GridHeight"] = params["Geometry"]["numberOfDiscretizationCellsVertical"]
-		simulation_settings["GridAngular"] = params["Geometry"]["numberOfDiscretizationCellsAngular"]
+		simulation_settings["GridResolutionHeight"] = params["Geometry"]["numberOfDiscretizationCellsVertical"]
+		simulation_settings["GridResolutionAngular"] = params["Geometry"]["numberOfDiscretizationCellsAngular"]
 
 		if haskey(model_settings, "CurrentCollectors")
-			simulation_settings["GridPositiveElectrodeCurrentCollector"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
-			simulation_settings["GridNegativeElectrodeCurrentCollector"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["GridResolutionPositiveElectrodeCurrentCollector"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["GridResolutionNegativeElectrodeCurrentCollector"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
 		end
 	end
 
 	if model_settings["ModelFramework"] == "P4D Pouch"
-		simulation_settings["GridElectrodeWidth"] = params["Geometry"]["Nw"]
-		simulation_settings["GridElectrodeLength"] = params["Geometry"]["Nh"]
+		simulation_settings["GridResolutionElectrodeWidth"] = params["Geometry"]["Nw"]
+		simulation_settings["GridResolutionElectrodeLength"] = params["Geometry"]["Nh"]
 
 		if haskey(model_settings, "CurrentCollectors")
-			simulation_settings["GridPositiveElectrodeCurrentCollector"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
-			simulation_settings["GridPositiveElectrodeCurrentCollectorTabWidth"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"]
-			simulation_settings["GridPositiveElectrodeCurrentCollectorTabLength"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"]
-			simulation_settings["GridNegativeElectrodeCurrentCollector"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
-			simulation_settings["GridNegativeElectrodeCurrentCollectorTabWidth"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"]
-			simulation_settings["GridNegativeElectrodeCurrentCollectorTabLength"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"]
+			simulation_settings["GridResolutionPositiveElectrodeCurrentCollector"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["GridResolutionPositiveElectrodeCurrentCollectorTabWidth"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"]
+			simulation_settings["GridResolutionPositiveElectrodeCurrentCollectorTabLength"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"]
+			simulation_settings["GridResolutionNegativeElectrodeCurrentCollector"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["GridResolutionNegativeElectrodeCurrentCollectorTabWidth"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"]
+			simulation_settings["GridResolutionNegativeElectrodeCurrentCollectorTabLength"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"]
 		end
 	end
 

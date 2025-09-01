@@ -57,6 +57,30 @@ function validate_parameter_set(parameters::CellParameters, model_settings::Mode
 
 end
 
+function validate_parameter_set(settings::SolverSettings)
+
+	schema = get_schema_solver_settings()
+
+	# Convert schema Dict to JSONSchema object
+	schema_obj = Schema(schema)
+
+	# Validate the JSON data
+	result = validate(schema_obj, settings.all)
+
+	log_schema_issues(result.issues, "SolverSettings")
+
+	if !isempty(result.issues)
+		is_valid = false
+
+	else
+		is_valid = true
+
+	end
+
+	return is_valid
+
+end
+
 function validate_parameter_set(parameters::SimulationSettings, model_settings::ModelSettings)
 
 	schema = get_schema_simulation_settings(model_settings)

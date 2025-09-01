@@ -47,7 +47,7 @@ nothing #hide
 
 # The angular discretization of the cell is determined by the number of angular grid points.
 
-simulation_settings["GridAngular"] = 30
+simulation_settings["GridResolutionAngular"] = 30
 nothing #hide
 
 # ## Create the simulation object
@@ -124,7 +124,7 @@ cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabFractions"] = [0.5]
 cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabFractions"] = [0.5]
 cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
 cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
-simulation_settings["GridAngular"]                                       = 8
+simulation_settings["GridResolutionAngular"]                             = 8
 
 # We setup the simulation and run it
 

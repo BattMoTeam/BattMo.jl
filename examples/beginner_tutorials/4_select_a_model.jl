@@ -85,7 +85,7 @@ seilength = states[:SEIThickness]
 
 # We can plot it using the plot_ouput function
 
-ne_index = sim.settings["GridNegativeElectrodeCoating"]
+ne_index = sim.settings["GridResolutionNegativeElectrodeCoating"]
 
 plot_output(output,
 	["SEIThickness vs Time at Position index $ne_index",

@@ -229,6 +229,15 @@ struct SimulationSettings <: ParameterSet
 	end
 end
 
+"Parameter set type that represents the simulation related settings"
+struct SolverSettings <: ParameterSet
+	all::Dict
+	source_path::Union{String, Nothing}
+	function SolverSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
+		return new{}(all, source_path)
+	end
+end
+
 "Parameter set type that includes all other parameter set types"
 struct FullSimulationInput <: ParameterSet
 	all::Dict

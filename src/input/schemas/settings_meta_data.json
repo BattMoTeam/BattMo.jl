@@ -33,19 +33,19 @@
       ],
       "description": "Which model describes the current collectors."
     },
-    "GridHeight": {
+    "GridResolutionHeight": {
       "type": "integer",
       "minimum": 1,
       "maximum": 100,
       "description": "Number of grid points along the height of the cell (used in P4D cylindrical)."
     },
-    "GridAngular": {
+    "GridResolutionAngular": {
       "type": "integer",
       "minimum": 1,
       "maximum": 100,
       "description": "Number of discretisation angles for a cylindrical cell (used in P4D cylindrical)."
     },
-    "GridElectrodeWidth": {
+    "GridResolutionElectrodeWidth": {
       "type": "integer",
       "minimum": 1,
       "maximum": 1000,
@@ -53,42 +53,42 @@
       "context_type": "GridResolutionPositiveElectrode",
       "context_type_iri": null
     },
-    "GridElectrodeLength": {
+    "GridResolutionElectrodeLength": {
       "type": "integer",
       "minimum": 1,
       "maximum": 1000,
       "description": "Number of grid points along the length dimension of the electrode.",
       "context_type_iri": null
     },
-    "GridPositiveElectrodeCoating": {
+    "GridResolutionPositiveElectrodeCoating": {
       "type": "integer",
       "minimum": 1,
       "maximum": 1000,
       "description": "Number of grid points along the thickness dimension of the positive electrode.",
       "context_type_iri": null
     },
-    "GridPositiveElectrodeParticle": {
+    "GridResolutionPositiveElectrodeParticle": {
       "type": "integer",
       "minimum": 1,
       "maximum": 1000,
       "description": "Number of grid points along the radial pseudo dimension of the positive electrode active material particles.",
       "context_type_iri": null
     },
-    "GridNegativeElectrodeCoating": {
+    "GridResolutionNegativeElectrodeCoating": {
       "type": "integer",
       "minimum": 1,
       "maximum": 1000,
       "description": "Number of grid points along the thickness dimension of the negative electrode.",
       "context_type_iri": null
     },
-    "GridPositiveElectrodeCurrentCollector": {
+    "GridResolutionPositiveElectrodeCurrentCollector": {
       "type": "integer",
       "minimum": 1,
       "maximum": 1000,
       "description": "Number of grid points along the thickness dimension of the positive electrode current collector.",
       "context_type_iri": null
     },
-    "GridPositiveElectrodeCurrentCollectorTabWidth": {
+    "GridResolutionPositiveElectrodeCurrentCollectorTabWidth": {
       "type": "integer",
       "minimum": 1,
       "maximum": 1000,
@@ -102,14 +102,14 @@
       "description": "In the current collector tab at the positive electrode, the number of grid points along the length dimension of the tab's face.",
       "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
     },
-    "GridNegativeElectrodeCurrentCollector": {
+    "GridResolutionNegativeElectrodeCurrentCollector": {
       "type": "integer",
       "minimum": 1,
       "maximum": 1000,
       "description": "Number of grid points along the thickness dimension of the negative electrode current collector.",
       "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
     },
-    "GridNegativeElectrodeCurrentCollectorTabWidth": {
+    "GridResolutionNegativeElectrodeCurrentCollectorTabWidth": {
       "type": "integer",
       "minimum": 1,
       "maximum": 1000,
@@ -123,14 +123,14 @@
       "description": "In the current collector tab at the negative electrode, the number of grid points along the length dimension of the tab's face.",
       "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
     },
-    "GridNegativeElectrodeParticle": {
+    "GridResolutionNegativeElectrodeParticle": {
       "type": "integer",
       "minimum": 1,
       "maximum": 1000,
       "description": "Number of grid points along the radial pseudo dimension of the negative electrode active material particles.",
       "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
     },
-    "GridSeparator": {
+    "GridResolutionSeparator": {
       "type": "integer",
       "minimum": 1,
       "maximum": 1000,
