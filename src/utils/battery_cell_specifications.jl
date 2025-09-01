@@ -8,8 +8,8 @@ export
 	computeDischargeEnergy
 
 
-function computeElectrodeCapacity(model::MultiModel, name::Symbol)
-	ammodel = model[name]
+function computeElectrodeCapacity(multimodel::MultiModel, name::Symbol)
+	ammodel = multimodel[name]
 	return computeElectrodeCapacity(ammodel, name)
 end
 
@@ -30,7 +30,7 @@ function computeElectrodeCapacity(ammodel::SimulationModel, name)
 		thetaMax = sys[:theta0]
 		thetaMin = sys[:theta100]
 	else
-		error("name not recognized")
+		error("Electrode name $name not recognized")
 	end
 
 	vols = ammodel.domain.representation[:volumes]
@@ -52,7 +52,7 @@ end
 function computeCellEnergy(states)
 	# Only take discharge curves
 	time = [state[:Control][:Controller].time for state in states if state[:Control][:Current][1] > 0]
-	E    = [state[:Control][:Phi][1] for state in states if state[:Control][:Current][1] > 0]
+	E    = [state[:Control][:Voltage][1] for state in states if state[:Control][:Current][1] > 0]
 	I    = [state[:Control][:Current][1] for state in states if state[:Control][:Current][1] > 0]
 
 	dt = diff(time)
@@ -164,7 +164,7 @@ function computeCellMass(model::MultiModel)
 end
 
 
-function computeCellSpecifications(inputparams::InputParams)
+function computeCellSpecifications(inputparams::InputParamsOld)
 
 	model = setup_submodels(inputparams)
 	return computeCellSpecifications(model)
@@ -191,7 +191,7 @@ function computeCellSpecifications(model::MultiModel; T = 298.15)
 end
 
 
-function computeEnergyEfficiency(inputparams::InputParams)
+function computeEnergyEfficiency(inputparams::InputParamsOld)
 
 	# setup a schedule with just one cycle and very fine refinement
 
@@ -235,11 +235,11 @@ function computeEnergyEfficiency(inputparams::InputParams)
 
 	else
 
-		error("controlPolicy not recognized.")
+		error("Control policy $controlPolicy not recognized.")
 
 	end
 
-	inputparams2 = InputParams(jsondict)
+	inputparams2 = InputParamsOld(jsondict)
 
 	(; states) = run_battery(inputparams2; info_level = 0)
 
@@ -250,7 +250,7 @@ end
 function computeEnergyEfficiency(states; cycle_number = nothing)
 
 	t = [state[:Control][:Controller].time for state in states]
-	E = [state[:Control][:Phi][1] for state in states]
+	E = [state[:Control][:Voltage][1] for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
 	if !isnothing(cycle_number)
@@ -291,7 +291,7 @@ function computeEnergyEfficiency(states; cycle_number = nothing)
 	return efficiency * 100 # %
 
 end
-function computeDischargeEnergy(inputparams::InputParams)
+function computeDischargeEnergy(inputparams::InputParamsOld)
 	# setup a schedule with just discharge half cycle and very fine refinement
 
 	jsondict = inputparams.data
@@ -319,11 +319,11 @@ function computeDischargeEnergy(inputparams::InputParams)
 
 	else
 
-		error("controlPolicy not recognized.")
+		error("Control policy $controlPolicy not recognized.")
 
 	end
 
-	inputparams2 = InputParams(jsondict)
+	inputparams2 = InputParamsOld(jsondict)
 
 	(; states) = run_battery(inputparams2; info_level = 0)
 

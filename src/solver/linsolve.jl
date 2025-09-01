@@ -154,19 +154,19 @@ function fix_control!(lsys, context::ParallelCSRContext)
 	end
 end
 
-function Jutul.post_update_linearized_system!(lsys, executor, storage, model::MultiModel{:Battery})
+function Jutul.post_update_linearized_system!(lsys, executor, storage, model::MultiModel{:LithiumIonBattery})
 	context = first(model.models).context# NB hack to get context of mulitmodel
 	if (true)
 		# fix linear system 
 		e_models = [:Elyte]
 		if isnothing(storage[:eq_maps].maps)
 			mass_cons_map = setup_subset_equation_map(model, storage, e_models, :mass_conservation)
-			#phi_map = setup_subset_residual_map(model, storage, e_models, :Phi)
+			#phi_map = setup_subset_residual_map(model, storage, e_models, :Voltage)
 			charge_cons_map = setup_subset_equation_map(model, storage, e_models, :charge_conservation)
 			(mass_ind, charge_ind) = matrix_maps(lsys, mass_cons_map, charge_cons_map, context)
 			storage[:eq_maps].maps = (mass_ind = mass_ind, charge_ind = charge_ind, mass_cons_map = mass_cons_map, charge_cons_map = charge_cons_map)
 		end
-		#C_map = setup_subset_residual_map(model, storage, e_models, :C)
+		#C_map = setup_subset_residual_map(model, storage, e_models, :Concentration)
 		#Main.@infiltrate true
 		tfac = model[:Elyte].system[:transference] / BattMo.FARADAY_CONSTANT
 		modify_equation!(lsys, storage[:eq_maps].maps, tfac, context)
@@ -264,76 +264,76 @@ end
 
 function battery_linsolve(inputparams)
 
-    set_default_input_params!(inputparams, ["method"], "direct")
+	set_default_input_params!(inputparams, ["method"], "direct")
 
-    method = inputparams["method"]
-    
+	method = inputparams["method"]
+
 	if method == "direct"
-        
-        set_default_input_params!(inputparams, ["max_size"], 1000000)
-		return LUSolver(;max_size = inputparams["max_size"])
-        
+
+		set_default_input_params!(inputparams, ["max_size"], 1000000)
+		return LUSolver(; max_size = inputparams["max_size"])
+
 	elseif method == "iterative"
 
-        solver  = :fgmres
-        
-        set_default_input_params!(inputparams, ["tolerance"], 1e-7)
-        set_default_input_params!(inputparams, ["max_iterations"], 50)
-        set_default_input_params!(inputparams, ["verbosity"], 0)
-        
-        tolerance      = inputparams["tolerance"]
-        atol           = 1e-28
-        max_iterations = inputparams["max_iterations"]
-        verbosity      = inputparams["verbosity"]
+		solver = :fgmres
 
-        # Battery general preconditioner that combines different preconditioners for different variables as
-        # follows. First we solve for the control variables which are removed from the system, We use AMG for electric
-        # potential variables (phi) and charge convervation equations in combination with a global smoother which is
-        # ILU0. Afte this, we recover the control variables We combine two preconditioners.
-        
-        varpreconds = Vector{BattMo.VariablePrecond}()
-        push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Phi, :charge_conservation, nothing))
+		set_default_input_params!(inputparams, ["tolerance"], 1e-7)
+		set_default_input_params!(inputparams, ["max_iterations"], 50)
+		set_default_input_params!(inputparams, ["verbosity"], 0)
 
-        # Experimental options for using extra smoothing of concentration in positive and negative active material.
-        use_extra_options = false
-        if use_extra_options
-            push!(varpreconds,BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(),:Cp,:mass_conservation, [:PeAm,:NeAm]))
-        end
-        
-        # Experimental options for AMG used on concentration in electrolyte
-        use_extra_options = false
-        if use_extra_options
-            push!(varpreconds,BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:C,:mass_conservation, [:Elyte]))
-        end
+		tolerance      = inputparams["tolerance"]
+		atol           = 1e-28
+		max_iterations = inputparams["max_iterations"]
+		verbosity      = inputparams["verbosity"]
 
-        # We setup the global preconditioner
-        g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global, nothing)
+		# Battery general preconditioner that combines different preconditioners for different variables as
+		# follows. First we solve for the control variables which are removed from the system, We use AMG for electric
+		# potential variables (phi) and charge convervation equations in combination with a global smoother which is
+		# ILU0. Afte this, we recover the control variables We combine two preconditioners.
 
-        params = Dict()
-        
-        # Type of method used for the block preconditioners. Here "block" means separatly (other options can be found
-        # BatteryGeneralPreconditione)
-        params["method"] = "block"
-        # Option for post- and pre-solve of the control system. 
-        params["post_solve_control"] = true
-        params["pre_solve_control"]  = true
+		varpreconds = Vector{BattMo.VariablePrecond}()
+		push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Voltage, :charge_conservation, nothing))
 
-        # We setup the preconditioner, which combines both the block and global preconditioners
-        prec = BattMo.BatteryGeneralPreconditioner(varpreconds, g_varprecond, params)
-        #prec = Jutul.ILUZeroPreconditioner()
+		# Experimental options for using extra smoothing of concentration in positive and negative active material.
+		use_extra_options = false
+		if use_extra_options
+			push!(varpreconds, BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :ParticleConcentration, :mass_conservation, [:PeAm, :NeAm]))
+		end
 
-        lsolve = Jutul.GenericKrylov(solver,
-                               verbose = verbosity,
-	                           preconditioner = prec,
-	                           relative_tolerance = tolerance,
-	                           absolute_tolerance = atol, ## may skip linear iterations all to getter.
-	                           max_iterations = max_iterations)
-        
-	    return lsolve
+		# Experimental options for AMG used on concentration in electrolyte
+		use_extra_options = false
+		if use_extra_options
+			push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Concentration, :mass_conservation, [:Elyte]))
+		end
 
-    else        
+		# We setup the global preconditioner
+		g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global, nothing)
 
-		error("Wrong input for preconditioner")
+		params = Dict()
+
+		# Type of method used for the block preconditioners. Here "block" means separatly (other options can be found
+		# BatteryGeneralPreconditione)
+		params["method"] = "block"
+		# Option for post- and pre-solve of the control system. 
+		params["post_solve_control"] = true
+		params["pre_solve_control"]  = true
+
+		# We setup the preconditioner, which combines both the block and global preconditioners
+		prec = BattMo.BatteryGeneralPreconditioner(varpreconds, g_varprecond, params)
+		#prec = Jutul.ILUZeroPreconditioner()
+
+		lsolve = Jutul.GenericKrylov(solver,
+			verbose = verbosity,
+			preconditioner = prec,
+			relative_tolerance = tolerance,
+			absolute_tolerance = atol, ## may skip linear iterations all to getter.
+			max_iterations = max_iterations)
+
+		return lsolve
+
+	else
+
+		error("Wrong method $method for preconditioner")
 		return nothing
 	end
 

@@ -62,7 +62,7 @@ output = solve(sim;)
 states = output[:states]
 
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
+E = [state[:Control][:Voltage][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")

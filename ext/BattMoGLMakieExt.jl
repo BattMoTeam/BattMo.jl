@@ -3,14 +3,16 @@ module BattMoGLMakieExt
 using BattMo, GLMakie
 
 
-function BattMo.plot_output(output::NamedTuple, variables::Union{Vector{String}, Vector{Any}}; layout::Union{Nothing, Tuple{Int, Int}} = nothing)
-	BattMo.check_plotting_availability()
-	return BattMo.plot_impl(output, variables; layout = layout)
+function BattMo.plot_output(output::NamedTuple, output_variables::Union{Vector{String}, Vector{Vector{String}}, Vector{Any}}; layout::Union{Nothing, Tuple{Int, Int}} = nothing)
+	if !isdefined(Main, :GLMakie)
+		error("GLMakie must be explicitly imported (e.g., with `using GLMakie`) before calling `plot_dashboard`.")
+	end
+	return BattMo.plot_impl(output, output_variables; layout = layout)
 end
 
 function BattMo.plot_impl(
 	output::NamedTuple,
-	variables::Union{Vector{String}, Vector{Any}};
+	variables::Union{Vector{String}, Vector{Any}, Vector{Any}};
 	layout::Union{Nothing, Tuple{Int, Int}} = nothing,
 )
 	grouped_vars = [isa(g, String) ? [g] : g for g in variables]
@@ -267,15 +269,14 @@ end
 
 
 
-
-
-
-function BattMo.plot_dashboard(output::NamedTuple; plot_type = "simple")
-	BattMo.check_plotting_availability()
+function BattMo.plot_dashboard(output; plot_type = "simple")
+	if !isdefined(Main, :GLMakie)
+		error("GLMakie must be explicitly imported (e.g., with `using GLMakie`) before calling `plot_dashboard`.")
+	end
 	return BattMo.plot_dashboard_impl(output; plot_type = plot_type)
 end
 
-function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "simple")
+function BattMo.plot_dashboard_impl(output; plot_type = "simple")
 
 	time_series = get_output_time_series(output; quantities = ["Time", "Voltage", "Current"])
 	t = time_series[:Time]
@@ -350,9 +351,9 @@ function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "simple")
 		end
 
 		# Concentrations
-		state_plot(Axis(grid[3, 1], title = "NeAm Surface Concentration  /  mol·m⁻³"), NeAm_conc, "NeAm Cs")
+		state_plot(Axis(grid[3, 1], title = "NeAm Surface Concentration  /  mol·m⁻³"), NeAm_conc, "NeAm SurfaceConcentration")
 		state_plot(Axis(grid[3, 2], title = "Electrolyte Concentration  /  mol·m⁻³"), Elyte_conc, "Elyte C")
-		state_plot(Axis(grid[3, 3], title = "PeAm Surface Concentration  /  mol·m⁻³"), PeAm_conc, "PeAm Cs")
+		state_plot(Axis(grid[3, 3], title = "PeAm Surface Concentration  /  mol·m⁻³"), PeAm_conc, "PeAm SurfaceConcentration")
 
 		# Potentials
 		state_plot(Axis(grid[4, 1], title = "NeAm Potential  /  V"), NeAm_pot, "NeAm ϕ")
@@ -399,32 +400,10 @@ function BattMo.plot_dashboard_impl(output::NamedTuple; plot_type = "simple")
 		return fig
 
 	else
-		error("Unsupported plot_type. Use \"line\" or \"contour\".")
+		error("Unsupported plot_type $plot_type. Use \"line\" or \"contour\".")
 	end
 end
 
-
-function BattMo.check_plotting_availability(; throw = true)
-	ok = true
-	try
-		ok = BattMo.check_plotting_availability_impl()
-	catch e
-		if throw
-			if e isa MethodError
-				error("Plotting is not available. You need to have a Makie backend available. For 3D plots, GLMakie is recommended. To fix: using Pkg; Pkg.add(\"GLMakie\") and then call using GLMakie to enable plotting.")
-			else
-				rethrow(e)
-			end
-		else
-			ok = false
-		end
-	end
-	return ok
-end
-
-function BattMo.check_plotting_availability_impl()
-	return true
-end
 
 
 

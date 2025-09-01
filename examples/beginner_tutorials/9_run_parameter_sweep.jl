@@ -10,7 +10,7 @@ cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 nothing # hide
 
-model_setup = LithiumIonBattery()
+model = LithiumIonBattery()
 
 # ### Sweeping through reaction rates
 # First lets see the effect that the reaction rate of the negative electrode has on cell performance. To do this, we simply loop through
@@ -22,7 +22,7 @@ log_rate_stop = -13.0
 outputs_rate = []
 for r in range(log_rate_start, log_rate_stop, length = 10)
 	cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 10^r
-	sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+	sim = Simulation(model, cell_parameters, cycling_protocol)
 	result = solve(sim; config_kwargs = (; end_report = false))
 	push!(outputs_rate, (r = r, output = result))  # store r together with output
 end
@@ -36,7 +36,7 @@ ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Disch
 
 for data in outputs_rate
 	local t = [state[:Control][:Controller].time for state in data.output[:states]]
-	local E = [state[:Control][:Phi][1] for state in data.output[:states]]
+	local E = [state[:Control][:Voltage][1] for state in data.output[:states]]
 	lines!(ax, t, E, label = @sprintf("%.1e", 10^data.r))
 end
 
@@ -63,7 +63,7 @@ outputs_diff = []
 
 for d in range(log_D_start, log_D_stop, length = 10)
 	cell_parameters["PositiveElectrode"]["ActiveMaterial"]["DiffusionCoefficient"] = 10^d
-	sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+	sim = Simulation(model, cell_parameters, cycling_protocol)
 	result = solve(sim; config_kwargs = (; end_report = false))
 	push!(outputs_diff, (d = d, output = result))  # store r together with output
 end
@@ -75,7 +75,7 @@ ax1 = Axis(fig1[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Dis
 for data in outputs_diff
 	if length(data.output[:states]) > 0 #if simulation is successful
 		local t = [state[:Control][:Controller].time for state in data.output[:states]]
-		local E = [state[:Control][:Phi][1] for state in data.output[:states]]
+		local E = [state[:Control][:Voltage][1] for state in data.output[:states]]
 		lines!(ax1, t, E, label = @sprintf("%.1e", 10^data.d))
 	end
 end

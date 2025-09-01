@@ -32,7 +32,7 @@ function get_parameter_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_639b844a_e801_436b_985d_28926129ead6",
 			"description" => "Reference voltage of the cell as reported by the manufacturer. Usually calculated from the cell's energy output and capacity under a standard cycling test.",
 		),
-        "TabFractions" => Dict(
+		"TabFractions" => Dict(
 			"type" => Vector,
 			"unit" => "-",
 			"unit_name" => "dimensionless",
@@ -51,7 +51,7 @@ function get_parameter_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_32dcd601_47c7_4028_b7fa_5e972ae57f12",
 			"description" => "Radius of the rolled electrodes within a cylindrical cell, measured from the center of the cell to the inner side of the cell wall.",
 		),
-        "OuterRadius" => Dict(
+		"OuterRadius" => Dict(
 			"type" => Real,
 			"min_value" => 0.001,
 			"max_value" => 0.2,
@@ -82,6 +82,17 @@ function get_parameter_meta_data()
 			"context_type" => "Length",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_cd2cd0de_e0cc_4ef1_b27e_2e88db027bac",
 			"description" => "Dimension of the longest side of the face of a rectangular electrode.",
+		),
+		"Height" => Dict(
+			"type" => Real,
+			"min_value" => 0.01,
+			"max_value" => 0.5,
+			"unit" => "m",
+			"unit_name" => "emmo:Metre",
+			"unit_iri" => "https://w3id.org/emmo#Metre",
+			"context_type" => "Length",
+			"context_type_iri" => "https://w3id.org/emmo#EMMO_cd2cd0de_e0cc_4ef1_b27e_2e88db027bac",
+			"description" => "The heigh of a cylindrical cell.",
 		),
 		"SurfaceCoefficientOfHeatTransfer" => Dict(
 			"type" => Real,

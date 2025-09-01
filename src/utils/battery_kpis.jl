@@ -249,7 +249,7 @@ function compute_electrode_maximum_capacity(params::CellParameters, electrode::S
 
 	stoichiometric_range = abs(stoichiometry_100 - stoichiometry_0)
 	active_material_mass = electrode_mass * mass_fraction
-	faraday_constant_Ah = 96500.0 / 3600.0
+	faraday_constant_Ah = FARADAY_CONSTANT / 3600.0
 
 	return stoichiometric_range * (max_concentration / density) * active_material_mass * faraday_constant_Ah
 end
@@ -434,7 +434,7 @@ end
 function compute_discharge_energy(states; cycle_number = nothing)
 	# Only take discharge curves
 	t = [state[:Control][:Controller].time for state in states]
-	E = [state[:Control][:Phi][1] for state in states]
+	E = [state[:Control][:Voltage][1] for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
 	if !isnothing(cycle_number)
@@ -495,7 +495,7 @@ end
 function compute_charge_energy(states; cycle_number = nothing)
 	# Only take discharge curves
 	t = [state[:Control][:Controller].time for state in states]
-	E = [state[:Control][:Phi][1] for state in states]
+	E = [state[:Control][:Voltage][1] for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
 	if !isnothing(cycle_number)

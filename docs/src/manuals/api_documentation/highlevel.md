@@ -10,10 +10,6 @@ CellParameters
 CyclingProtocol
 ModelSettings
 SimulationSettings
-FullSimulationInput
-BattMoFormattedInput
-BattMo.InputParams
-BattMo.MatlabInputParams
 ```
 
 ## Read input
@@ -23,14 +19,12 @@ load_cell_parameters
 load_cycling_protocol
 load_model_settings
 load_simulation_settings
-load_battmo_formatted_input
-load_matlab_battmo_input
 ```
 
-## Battery model types
+## Model types
 
 ```@docs
-BatteryModelSetup
+ModelConfigured
 LithiumIonBattery
 ```
 
@@ -38,6 +32,44 @@ LithiumIonBattery
 
 ```@docs
 Simulation
-solve
-run_battery
+solve(problem::Simulation; kwargs...)
+BattMo.solve_simulation
+```
+## Retrieve output variables
+```@docs
+get_output_time_series
+get_output_states
+get_output_metrics
+```
+
+## Plotting
+```@docs
+plot_dashboard
+plot_output
+plot_interactive_3d
+```
+
+## Tools that print information
+```@docs
+print_submodels_info
+print_default_input_sets_info
+print_parameter_info
+print_setting_info
+print_output_variable_info
+```
+
+## Tools that write files
+```@docs
+generate_default_parameter_files
+write_to_json_file
+```
+
+## Calibration
+
+```@docs
+AbstractCalibration
+VoltageCalibration
+solve(vc::AbstractCalibration; kwarg...)
+free_calibration_parameter!
+print_calibration_overview
 ```

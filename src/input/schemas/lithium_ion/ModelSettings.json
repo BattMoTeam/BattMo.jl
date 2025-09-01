@@ -1,0 +1,173 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "LithiumIonModelSettings",
+    "type": "object",
+    "properties": {
+        "ModelFramework": {
+            "type": "string",
+            "enum": [
+                "P2D",
+                "P4D Pouch",
+                "P4D Cylindrical"
+            ],
+            "description": "Framework defining the dimensionality of the electrochemical model. Examples: \"P2D\", \"P4D Pouch\"."
+        },
+        "SEIModel": {
+            "type": "string",
+            "enum": [
+                "Bolay"
+            ],
+            "description": "Which SEI model is used. For instance: \"Bolay\"."
+        },
+        "TransportInSolid": {
+            "type": "string",
+            "enum": [
+                "FullDiffusion"
+            ],
+            "description": "Which model is used to describe the intercalant diffusion in the solid particles. Example \"FullDiffusion\"."
+        },
+        "CurrentCollectors": {
+            "type": "string",
+            "enum": [
+                "Generic"
+            ],
+            "description": "Which model describes the current collectors."
+        },
+        "RampUp": {
+            "type": "string",
+            "enum": [
+                "Sinusoidal"
+            ],
+            "description": "Type of signal of electric current used to initialize the cell simulation. Example: \"Sinusoidal\"."
+        }
+    },
+    "required": [
+        "ModelFramework",
+        "TransportInSolid"
+    ],
+    "allOf": [
+        {
+            "if": {
+                "properties": {
+                    "ModelFramework": {
+                        "const": "P2D"
+                    }
+                }
+            },
+            "then": {
+                "not": {
+                    "required": [
+                        "CurrentCollectors"
+                    ]
+                }
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "ModelFramework": {
+                        "const": "P4D Pouch"
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "CurrentCollectors"
+                ]
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "ModelFramework": {
+                        "const": "P4D Cylindrical"
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "CurrentCollectors"
+                ]
+            }
+        }
+    ],
+    "$defs": {
+        "useP2D": {
+            "type": "object",
+            "properties": {
+                "ModelFramework": {
+                    "const": "P2D"
+                }
+            },
+            "required": [
+                "ModelFramework"
+            ]
+        },
+        "useP4DPouch": {
+            "type": "object",
+            "properties": {
+                "ModelFramework": {
+                    "const": "P4D Pouch"
+                }
+            },
+            "required": [
+                "ModelFramework"
+            ]
+        },
+        "useP4DCylindrical": {
+            "type": "object",
+            "properties": {
+                "ModelFramework": {
+                    "const": "P4D Cylindrical"
+                }
+            },
+            "required": [
+                "ModelFramework"
+            ]
+        },
+        "useBolaySEIModel": {
+            "type": "object",
+            "properties": {
+                "SEIModel": {
+                    "const": "Bolay"
+                }
+            },
+            "required": [
+                "SEIModel"
+            ]
+        },
+        "useFullDiffusion": {
+            "type": "object",
+            "properties": {
+                "TransportInSolid": {
+                    "const": "FullDiffusion"
+                }
+            },
+            "required": [
+                "TransportInSolid"
+            ]
+        },
+        "useCurrentCollectors": {
+            "type": "object",
+            "properties": {
+                "CurrentCollectors": {
+                    "const": "Generic"
+                }
+            },
+            "required": [
+                "CurrentCollectors"
+            ]
+        },
+        "useSinusoidalRampUp": {
+            "type": "object",
+            "properties": {
+                "RampUp": {
+                    "const": "Sinusoidal"
+                }
+            },
+            "required": [
+                "RampUp"
+            ]
+        }
+    }
+}

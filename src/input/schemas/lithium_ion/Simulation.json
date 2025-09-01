@@ -1,0 +1,29 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Simulation",
+    "type": "object",
+    "properties": {
+        "Model": {
+            "type": "object",
+            "$ref": "LithiumIonBattery.json"
+        },
+        "CellParameters": {
+            "type": "object",
+            "$ref": "CellParameters.json"
+        },
+        "CyclingProtocol": {
+            "type": "object",
+            "$ref": "CyclingProtocol.json"
+        },
+        "SimulationSettings": {
+            "type": "object",
+            "$ref": "SimulationSettings.json"
+        }
+    },
+    "required": [
+        "Model",
+        "CellParameters",
+        "CyclingProtocol",
+        "SimulationSettings"
+    ]
+}

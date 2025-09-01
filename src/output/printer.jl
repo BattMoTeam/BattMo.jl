@@ -1,21 +1,38 @@
 export print_output_overview, print_output_variable_info
 
+
+"""
+	print_output_overview(output::NamedTuple)
+
+Print a categorized summary of the output variables available in a simulation result.
+
+# Description
+Groups variables by type (`time_series`, `metrics`, `states`) and prints their names and units if present in the output.
+
+# Arguments
+- `output`: A simulation output as a `NamedTuple`, typically from a `Simulation.run()` call.
+
+# Example
+```julia
+print_output_overview(output)
+```
+"""
 function print_output_overview(output::NamedTuple)
 	meta_data = get_output_variables_meta_data()
 
 	var_map = Dict(
-		:NeAmSurfaceConcentration => [:NeAm, :Cs],
-		:PeAmSurfaceConcentration => [:PeAm, :Cs],
-		:NeAmConcentration        => [:NeAm, :Cp],
-		:PeAmConcentration        => [:PeAm, :Cp],
-		:ElectrolyteConcentration => [:Elyte, :C],
-		:NeAmPotential            => [:NeAm, :Phi],
-		:ElectrolytePotential     => [:Elyte, :Phi],
-		:PeAmPotential            => [:PeAm, :Phi],
+		:NeAmSurfaceConcentration => [:NeAm, :SurfaceConcentration],
+		:PeAmSurfaceConcentration => [:PeAm, :SurfaceConcentration],
+		:NeAmConcentration        => [:NeAm, :ParticleConcentration],
+		:PeAmConcentration        => [:PeAm, :ParticleConcentration],
+		:ElectrolyteConcentration => [:Elyte, :Concentration],
+		:NeAmPotential            => [:NeAm, :Voltage],
+		:ElectrolytePotential     => [:Elyte, :Voltage],
+		:PeAmPotential            => [:PeAm, :Voltage],
 		:NeAmTemperature          => [:NeAm, :Temperature],
 		:PeAmTemperature          => [:PeAm, :Temperature],
-		:NeAmOpenCircuitPotential => [:NeAm, :Ocp],
-		:PeAmOpenCircuitPotential => [:PeAm, :Ocp],
+		:NeAmOpenCircuitPotential => [:NeAm, :OpenCircuitPotential],
+		:PeAmOpenCircuitPotential => [:PeAm, :OpenCircuitPotential],
 		:NeAmCharge               => [:NeAm, :Charge],
 		:ElectrolyteCharge        => [:Elyte, :Charge],
 		:PeAmCharge               => [:PeAm, :Charge],
@@ -87,7 +104,22 @@ end
 
 
 
+"""
+	print_output_variable_info(from_name::String)
 
+Print detailed metadata for output variables that match the given name.
+
+# Description
+Performs a case-insensitive search for variable names containing `from_name` and prints information such as description, type, unit, and documentation links.
+
+# Arguments
+- `from_name`: Partial or full name of the variable to search for.
+
+# Example
+```julia
+print_output_variable_info("voltage")
+```
+"""
 function print_output_variable_info(from_name::String)
 	# Get the metadata dictionary
 	meta_data = get_output_variables_meta_data()

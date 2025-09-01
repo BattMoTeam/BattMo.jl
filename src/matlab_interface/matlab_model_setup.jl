@@ -3,7 +3,7 @@
 # control policy setup (Matlab input specific) #
 ################################################
 
-function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::MatlabInputParams, parameters)
+function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::MatlabInputParamsOld, parameters)
 
 	Imax = Float64(inputparams["model"]["Control"]["Imax"])
 	tup = Float64(inputparams["model"]["Control"]["rampupTime"])
@@ -17,7 +17,7 @@ function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::Matl
 end
 
 
-function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::MatlabInputParams, parameters)
+function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::MatlabInputParamsOld, parameters)
 
 	error("not updated, use inputparams to get values")
 	policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
@@ -30,7 +30,7 @@ end
 # Setup timestepping #
 ######################
 
-function setup_timesteps(inputparams::MatlabInputParams;
+function setup_timesteps(inputparams::MatlabInputParamsOld;
 	max_step::Union{Integer, Nothing} = nothing,
 	kwarg...)
 	"""
@@ -75,7 +75,7 @@ end
 # Setup coupling #
 ##################
 
-function setup_coupling_cross_terms!(inputparams::MatlabInputParams,
+function setup_coupling_cross_terms!(inputparams::MatlabInputParamsOld,
 	model::MultiModel,
 	parameters::Dict{Symbol, <:Any},
 	couplings)
@@ -266,7 +266,7 @@ end
 
 
 
-function include_current_collectors(inputparams::MatlabInputParams)
+function include_current_collectors(inputparams::MatlabInputParamsOld)
 
 	model = inputparams["model"]
 
@@ -291,7 +291,7 @@ end
 # Setup battery model #
 #######################
 
-function setup_submodels(inputparams::MatlabInputParams;
+function setup_submodels(inputparams::MatlabInputParamsOld;
 	use_groups::Bool = false,
 	use_p2d::Bool    = true,
 	general_ad::Bool = true,
@@ -477,7 +477,7 @@ function setup_submodels(inputparams::MatlabInputParams;
 
 	else
 
-		error("controlPolicy not recognized.")
+		error("controlPolicy $controlPolicy not recognized.")
 
 	end
 
@@ -532,8 +532,8 @@ end
 ############################
 
 
-function setup_battery_parameters(inputparams::MatlabInputParams,
-	model::MultiModel
+function setup_battery_parameters(inputparams::MatlabInputParamsOld,
+	model::MultiModel,
 )
 
 	parameters = Dict{Symbol, Any}()
@@ -626,7 +626,7 @@ end
 # Setup initial state #
 #######################
 
-function setup_initial_state(inputparams::MatlabInputParams,
+function setup_initial_state(inputparams::MatlabInputParamsOld,
 	model::MultiModel,
 )
 
@@ -655,7 +655,7 @@ function setup_initial_state(inputparams::MatlabInputParams,
 	function initialize_current_collector!(initState, name::Symbol)
 
 		init = Dict()
-		init[:Phi] = state0[stringNames[name]]["Coating"]["phi"][1]
+		init[:Voltage] = state0[stringNames[name]]["Coating"]["phi"][1]
 		initState[name] = init
 
 	end
@@ -669,15 +669,15 @@ function setup_initial_state(inputparams::MatlabInputParams,
 
 		init = Dict()
 
-		init[:Phi] = state0[stringName]["Coating"]["phi"][1]
+		init[:Voltage] = state0[stringName]["Coating"]["phi"][1]
 		c = state0[stringName]["Coating"]["ActiveMaterial"]["Interface"]["cElectrodeSurface"][1]
 
 		if discretisation_type(sys) == :P2Ddiscretization
-			init[:Cp] = c
-			init[:Cs] = c
+			init[:ParticleConcentration] = c
+			init[:SurfaceConcentration] = c
 		else
 			@assert discretisation_type(sys) == :NoParticleDiffusion
-			init[:C] = c
+			init[:Concentration] = c
 		end
 
 		initState[name] = init
@@ -688,8 +688,8 @@ function setup_initial_state(inputparams::MatlabInputParams,
 
 		init = Dict()
 
-		init[:Phi] = state0["Electrolyte"]["phi"][1]
-		init[:C]   = state0["Electrolyte"]["c"][1]
+		init[:Voltage] = state0["Electrolyte"]["phi"][1]
+		init[:Concentration] = state0["Electrolyte"]["c"][1]
 
 		initState[:Elyte] = init
 
@@ -697,7 +697,7 @@ function setup_initial_state(inputparams::MatlabInputParams,
 
 	function initialize_control!(initState)
 
-		init = Dict(:Phi => state0["Control"]["E"], :Current => state0["Control"]["I"])
+		init = Dict(:Voltage => state0["Control"]["E"], :Current => state0["Control"]["I"])
 
 		initState[:Control] = init
 
@@ -789,3 +789,12 @@ function exported_model_to_domain(exported; bcfaces = nothing,
 end
 
 
+function convert_to_int_vector(x::Float64)
+	vec = Int64.(Vector{Float64}([x]))
+	return vec
+end
+
+function convert_to_int_vector(x::Matrix{Float64})
+	vec = Int64.(Vector{Float64}(x[:, 1]))
+	return vec
+end
