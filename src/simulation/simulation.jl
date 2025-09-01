@@ -586,14 +586,15 @@ function get_scalings(model, parameters)
 
 		rate_func = model[elde].system.params[:reaction_rate_constant_func]
 		cmax      = model[elde].system[:maximum_concentration]
+		Eak       = model[elde].system[:activation_energy_of_reaction]
 		vsa       = model[elde].system[:volumetric_surface_area]
 
 		c_a = 0.5 * cmax
 
 		if isa(rate_func, Real)
-			R0 = rate_func
+			R0 = compute_reaction_rate_constant(c_a, refT, rate_func, Eak)
 		else
-			R0 = rate_func(c_a, refT)
+			R0 = compute_reaction_rate_constant(c_a, refT, rate_func(c_a, refT), Eak)
 		end
 		c_e            = 1000.0
 		activematerial = model[elde].system

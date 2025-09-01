@@ -345,17 +345,18 @@ end
 		SurfaceConcentration,
 		ix) where {label, D, T, Di}
 		rate_func = model.system.params[:reaction_rate_constant_func]
+		Eak = model.system.params[:activation_energy_of_reaction]
 		refT = 298.15
 
 		for cell in ix
 
 			if Jutul.haskey(model.system.params, :ecd_funcconstant)
 
-				@inbounds ReactionRateConstant[cell] = rate_func
+				@inbounds ReactionRateConstant[cell] = compute_reaction_rate_constant(SurfaceConcentration[cell], refT, rate_func, Eak)
 
 			else
 
-				@inbounds ReactionRateConstant[cell] = rate_func(SurfaceConcentration[cell], refT)
+				@inbounds ReactionRateConstant[cell] = compute_reaction_rate_constant(SurfaceConcentration[cell], refT, rate_func(SurfaceConcentration[cell], refT), Eak)
 
 			end
 		end

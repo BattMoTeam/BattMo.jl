@@ -319,16 +319,17 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	inputparams_electrode = cell_parameters[stringName]
 	inputparams_active_material = cell_parameters[stringName]["ActiveMaterial"]
 
-	am_params                           = JutulStorage()
-	vf, vfs, eff_dens                   = compute_volume_fraction(inputparams_electrode)
-	am_params[:volume_fraction]         = vf
-	am_params[:volume_fractions]        = vfs
-	am_params[:effective_density]       = eff_dens
-	am_params[:n_charge_carriers]       = inputparams_active_material["NumberOfElectronsTransfered"]
-	am_params[:maximum_concentration]   = inputparams_active_material["MaximumConcentration"]
+	am_params = JutulStorage()
+	vf, vfs, eff_dens = compute_volume_fraction(inputparams_electrode)
+	am_params[:volume_fraction] = vf
+	am_params[:volume_fractions] = vfs
+	am_params[:effective_density] = eff_dens
+	am_params[:n_charge_carriers] = inputparams_active_material["NumberOfElectronsTransfered"]
+	am_params[:maximum_concentration] = inputparams_active_material["MaximumConcentration"]
 	am_params[:volumetric_surface_area] = inputparams_active_material["VolumetricSurfaceArea"]
-	am_params[:theta0]                  = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
-	am_params[:theta100]                = inputparams_active_material["StoichiometricCoefficientAtSOC100"]
+	am_params[:theta0] = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
+	am_params[:theta100] = inputparams_active_material["StoichiometricCoefficientAtSOC100"]
+	am_params[:activation_energy_of_reaction] = inputparams_active_material["ActivationEnergyOfReaction"]
 
 	if haskey(model.settings, "ButlerVolmer") && model.settings["ButlerVolmer"] == "Chayambuka"
 		am_params[:setting_butler_volmer] = "Chayambuka"
@@ -338,47 +339,34 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 
 	end
 
-	if haskey(model.settings, "ReactionRateConstant") && model.settings["ReactionRateConstant"] == "TemperatureDependent"
-		am_params[:setting_exchange_current_density] = "TemperatureDependent"
+	if isa(inputparams_active_material["ReactionRateConstant"], Real)
+		am_params[:ecd_funcconstant] = true
+		am_params[:reaction_rate_constant_func] = inputparams_active_material["ReactionRateConstant"]
 
-		k0 = inputparams_active_material["ReactionRateConstant"]
-		Eak = inputparams_active_material["ActivationEnergyOfReaction"]
-		am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
+	elseif isa(inputparams_active_material["ReactionRateConstant"], String)
+
+		am_params[:ecd_funcexp] = true
+		ocp_exp = inputparams_active_material["ReactionRateConstant"]
+		exp = setup_reaction_rate_constant_evaluation_expression_from_string(ocp_exp)
+		f_generated = @RuntimeGeneratedFunction(exp)
+		am_params[:reaction_rate_constant_func] = f_generated
+
+	elseif haskey(inputparams_active_material["ReactionRateConstant"], "FunctionName")
+
+		funcname = inputparams_active_material["ReactionRateConstant"]["FunctionName"]
+		funcpath =
+			isnothing(get_key_value(inputparams_active_material["ReactionRateConstant"], "FilePath")) ? nothing :
+			normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(inputparams_active_material["ReactionRateConstant"], "FilePath")))
+		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
+		am_params[:reaction_rate_constant_func] = fcn
 
 	else
-		am_params[:setting_exchange_current_density] = "UserDefined"
+		am_params[:ecd_funcdata] = true
+		data_x = inputparams_active_material["ReactionRateConstant"]["x"]
+		data_y = inputparams_active_material["ReactionRateConstant"]["y"]
 
-		if isa(inputparams_active_material["ReactionRateConstant"], Real)
-			am_params[:ecd_funcconstant] = true
-			am_params[:reaction_rate_constant_func] = inputparams_active_material["ReactionRateConstant"]
-
-		elseif isa(inputparams_active_material["ReactionRateConstant"], String)
-
-			am_params[:ecd_funcexp] = true
-			ocp_exp = inputparams_active_material["ReactionRateConstant"]
-			exp = setup_reaction_rate_constant_evaluation_expression_from_string(ocp_exp)
-			f_generated = @RuntimeGeneratedFunction(exp)
-			am_params[:reaction_rate_constant_func] = f_generated
-
-		elseif haskey(inputparams_active_material["ReactionRateConstant"], "FunctionName")
-
-			funcname = inputparams_active_material["ReactionRateConstant"]["FunctionName"]
-			funcpath =
-				isnothing(get_key_value(inputparams_active_material["ReactionRateConstant"], "FilePath")) ? nothing :
-				normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(inputparams_active_material["ReactionRateConstant"], "FilePath")))
-			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-			am_params[:reaction_rate_constant_func] = fcn
-
-		else
-			am_params[:ecd_funcdata] = true
-			data_x = inputparams_active_material["ReactionRateConstant"]["x"]
-			data_y = inputparams_active_material["ReactionRateConstant"]["y"]
-
-			interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-			am_params[:reaction_rate_constant_func] = interpolation_object
-		end
-
-
+		interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
+		am_params[:reaction_rate_constant_func] = interpolation_object
 	end
 
 	if isa(inputparams_active_material["OpenCircuitPotential"], Real)

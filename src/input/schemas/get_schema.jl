@@ -168,7 +168,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ReactionRateConstant", "ChargeTransferCoefficient"],
+							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ReactionRateConstant", "ChargeTransferCoefficient", "ActivationEnergyOfReaction"],
 					),
 					"Interphase" => Dict(
 						"type" => "object",
@@ -255,7 +255,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ReactionRateConstant", "ChargeTransferCoefficient"],
+							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ReactionRateConstant", "ChargeTransferCoefficient", "ActivationEnergyOfReaction"],
 					),
 					"ConductiveAdditive" => Dict(
 						"type" => "object",
@@ -345,12 +345,6 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 	sep_required = schema["properties"]["Separator"]["required"]
 	elyte_required = schema["properties"]["Electrolyte"]["required"]
-
-
-	if haskey(model_settings, "ReactionRateConstant") && model_settings["ReactionRateConstant"] == "TemperatureDependent"
-		push!(ne_am_required, "ActivationEnergyOfReaction")
-		push!(pe_am_required, "ActivationEnergyOfReaction")
-	end
 
 	if model_settings["ModelFramework"] == "P2D"
 		push!(cell_required, "ElectrodeGeometricSurfaceArea")
@@ -663,7 +657,6 @@ function get_schema_model_settings()
 			"RampUp" => create_property(parameter_meta, "RampUp"),
 			"SEIModel" => create_property(parameter_meta, "SEIModel"),
 			"TransportInSolid" => create_property(parameter_meta, "TransportInSolid"),
-			"ReactionRateConstant" => create_property(parameter_meta, "ReactionRateConstant"),
 			"ButlerVolmer" => create_property(parameter_meta, "ButlerVolmer"),
 		),
 		"required" => [
