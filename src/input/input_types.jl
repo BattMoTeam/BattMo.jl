@@ -1,6 +1,6 @@
 #%%
 export ParameterSet
-export CellParameters, CyclingProtocol, ModelSettings, SimulationSettings, FullSimulationInput
+export CellParameters, CyclingProtocol, ModelSettings, SimulationSettings, SolverSettings, FullSimulationInput
 
 export BattMoInputFormatOld
 export InputParamsOld, MatlabInputParamsOld
@@ -203,38 +203,39 @@ end
 
 "Parameter set type that represents the cycling protocol related parameters"
 struct CyclingProtocol <: ParameterSet
-	all::Dict
+	all::Dict{String, Any}
 	source_path::Union{String, Nothing}
 	function CyclingProtocol(all::Dict; source_path::Union{String, Nothing} = nothing)
-		return new{}(all, source_path)
+		new(to_string_any(all), source_path)
 	end
 end
 
 "Parameter set type that represents the model related settings"
 struct ModelSettings <: ParameterSet
-	all::Dict
+	all::Dict{String, Any}
 	source_path::Union{String, Nothing}
 	function ModelSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
-		return new{}(all, source_path)
+		new(to_string_any(all), source_path)
 	end
 end
 
 
 "Parameter set type that represents the simulation related settings"
 struct SimulationSettings <: ParameterSet
-	all::Dict
+	all::Dict{String, Any}
 	source_path::Union{String, Nothing}
 	function SimulationSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
-		return new{}(all, source_path)
+		new(to_string_any(all), source_path)
 	end
 end
 
+
 "Parameter set type that represents the simulation related settings"
 struct SolverSettings <: ParameterSet
-	all::Dict
+	all::Dict{String, Any}
 	source_path::Union{String, Nothing}
 	function SolverSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
-		return new{}(all, source_path)
+		new(to_string_any(all), source_path)
 	end
 end
 
@@ -393,7 +394,7 @@ end
 # Returns
 	The updated input parameters structure with the specified fields set to the given value.
 	"""
-function set_input_params!(inputparams::Union{T, Dict{String, Any}}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: BattMoInputFormatOld}
+function set_input_params!(inputparams::Union{T, Dict{String, K}}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {K, T <: BattMoInputFormatOld}
 
 	@assert(handleMismatch in (:error, :warn, :ignore), "handleMismatch must be one of :error, :warn, or :ignore")
 
@@ -463,4 +464,17 @@ function set_default_input_params!(inputparams::Union{T, Dict}, fieldnamelist::V
 
 	end
 
+end
+
+
+function to_string_any(d::Dict)
+	d_any = Dict{String, Any}()
+	for (k, v) in d
+		if v isa Dict
+			d_any[k] = to_string_any(v)   # recurse
+		else
+			d_any[k] = v
+		end
+	end
+	return d_any
 end

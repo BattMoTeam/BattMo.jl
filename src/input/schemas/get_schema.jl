@@ -658,9 +658,10 @@ function get_schema_model_settings()
 			"SEIModel" => create_property(parameter_meta, "SEIModel"),
 			"TransportInSolid" => create_property(parameter_meta, "TransportInSolid"),
 			"ButlerVolmer" => create_property(parameter_meta, "ButlerVolmer"),
+			"PotentialFlowDiscretization" => create_property(parameter_meta, "PotentialFlowDiscretization"),
 		),
 		"required" => [
-			"ModelFramework", "TransportInSolid",
+			"ModelFramework", "TransportInSolid", "PotentialFlowDiscretization", "ButlerVolmer",
 		],
 		"allOf" => [
 			# 🚫 Disallow CurrentCollectors if ModelFramework is "1D"

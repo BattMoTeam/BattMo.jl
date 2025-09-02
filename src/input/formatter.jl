@@ -31,6 +31,8 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 	model_settings = Dict(
 		"ModelFramework" => geom,
 		"TransportInSolid" => "FullDiffusion",
+		"PotentialFlowDiscretization" => "GeneralAD",
+		"ButlerVolmer" => "Standard",
 	)
 
 	if haskey(params["NegativeElectrode"]["Coating"]["ActiveMaterial"], "SEImodel")
@@ -39,7 +41,7 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 
 	if haskey(params, "include_current_collectors") && params["include_current_collectors"] == true
 		if model_settings["ModelFramework"] != "P2D"
-			model_settings["CurrentCollectors"] = "Generic"
+			model_settings["CurrentCollectors"] = "Standard"
 		end
 	end
 

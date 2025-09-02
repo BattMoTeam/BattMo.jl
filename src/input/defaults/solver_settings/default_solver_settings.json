@@ -7,7 +7,7 @@
         "MaxResidual": 1e20,
         "MaxNonLinearIterations": 20,
         "MinNonLinearIterations": 1,
-        "FailureCutsTimesteps": false,
+        "FailureCutsTimesteps": true,
         "CheckBeforeSolve": true,
         "AlwaysUpdateSecondary": false,
         "ErrorOnIncomplete": false,
@@ -16,8 +16,8 @@
         "TolFactorFinalIteration": 1.0,
         "SafeMode": true,
         "ExtraTiming": false,
-        "TimeStepSelectors": [],
-        "Relaxation": {}
+        "TimeStepSelectors": "TimestepSelector",
+        "Relaxation": "NoRelaxation"
     },
     "LinearSolver": {
         "Method": "direct",

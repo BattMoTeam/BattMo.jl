@@ -262,6 +262,7 @@ end
 	function update_vocp!(OpenCircuitPotential,
 		tv::OpenCircuitPotential,
 		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
+		Temperature,
 		SurfaceConcentration,
 		ix,
 	) where {label, D, T, Di}
@@ -281,7 +282,7 @@ end
 
 			if Jutul.haskey(model.system.params, :ocp_funcexp)
 
-				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], refT, refT, cmax)
+				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax)
 
 			elseif Jutul.haskey(model.system.params, :ocp_funcdata)
 
@@ -291,7 +292,7 @@ end
 				@inbounds OpenCircuitPotential[cell] = ocp_func
 			else
 
-				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], refT, refT, cmax)
+				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax)
 
 			end
 		end
@@ -302,6 +303,7 @@ end
 	function update_diffusion_coefficient!(DiffusionCoefficient,
 		tv::DiffusionCoefficient,
 		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
+		Temperature,
 		SurfaceConcentration,
 		ix,
 	) where {label, D, T, Di}
@@ -321,7 +323,7 @@ end
 
 			if Jutul.haskey(model.system.params, :diff_funcexp)
 
-				@inbounds DiffusionCoefficient[cell] = diff_func(SurfaceConcentration[cell], refT, refT, cmax)
+				@inbounds DiffusionCoefficient[cell] = diff_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax)
 
 			elseif Jutul.haskey(model.system.params, :diff_funcdata)
 
@@ -331,7 +333,7 @@ end
 				@inbounds DiffusionCoefficient[cell] = diff_func
 			else
 
-				@inbounds DiffusionCoefficient[cell] = diff_func(SurfaceConcentration[cell], refT, refT, cmax)
+				@inbounds DiffusionCoefficient[cell] = diff_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax)
 
 			end
 		end
@@ -343,6 +345,7 @@ end
 		tv::ReactionRateConstant,
 		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
 		SurfaceConcentration,
+		Temperature,
 		ix) where {label, D, T, Di}
 		rate_func = model.system.params[:reaction_rate_constant_func]
 		Eak = model.system.params[:activation_energy_of_reaction]
@@ -352,11 +355,11 @@ end
 
 			if Jutul.haskey(model.system.params, :ecd_funcconstant)
 
-				@inbounds ReactionRateConstant[cell] = compute_reaction_rate_constant(SurfaceConcentration[cell], refT, rate_func, Eak)
+				@inbounds ReactionRateConstant[cell] = compute_reaction_rate_constant(SurfaceConcentration[cell], Temperature[cell], rate_func, Eak)
 
 			else
 
-				@inbounds ReactionRateConstant[cell] = compute_reaction_rate_constant(SurfaceConcentration[cell], refT, rate_func(SurfaceConcentration[cell], refT), Eak)
+				@inbounds ReactionRateConstant[cell] = compute_reaction_rate_constant(SurfaceConcentration[cell], Temperature[cell], rate_func(SurfaceConcentration[cell], refT), Eak)
 
 			end
 		end
@@ -555,7 +558,8 @@ end
 	function update_vocp!(OpenCircuitPotential,
 		tv::OpenCircuitPotential,
 		model::SimulationModel{<:Any, ActiveMaterialNoParticleDiffusion{T}, <:Any, <:Any},
-		Concentration,
+		Temperature,
+		SurfaceConcentration,
 		ix,
 	) where T
 
@@ -574,15 +578,15 @@ end
 
 			if Jutul.haskey(model.system.params, :ocp_funcexp)
 
-				@inbounds OpenCircuitPotential[cell] = ocp_func(Concentration[cell], refT, refT, cmax)
+				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax)
 
 			elseif Jutul.haskey(model.system.params, :ocp_funcdata)
 
-				@inbounds OpenCircuitPotential[cell] = ocp_func(Concentration[cell] / cmax)
+				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell] / cmax)
 
 			else
 
-				@inbounds OpenCircuitPotential[cell] = ocp_func(Concentration[cell], refT, cmax)
+				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], Temperature[cell], cmax)
 
 			end
 		end
@@ -593,13 +597,13 @@ end
 	function update_reaction_rate!(ReactionRateConstant,
 		tv::ReactionRateConstant,
 		model::SimulationModel{<:Any, ActiveMaterialNoParticleDiffusion{T}, <:Any, <:Any},
-		Concentration,
+		SurfaceConcentration,
 		ix,
 	) where T
 		rate_func = model.system.params[:reaction_rate_constant_func]
 		refT = 298.15
 		for i in ix
-			@inbounds ReactionRateConstant[i] = rate_func(Concentration[i], refT)
+			@inbounds ReactionRateConstant[i] = rate_func(SurfaceConcentration[i], Temperature[i])
 		end
 	end
 )

@@ -5,5 +5,7 @@
     },
     "ModelFramework": "P2D",
     "TransportInSolid": "FullDiffusion",
+    "PotentialFlowDiscretization": "GeneralAD",
+    "ButlerVolmer": "Standard",
     "RampUp": "Sinusoidal"
 }

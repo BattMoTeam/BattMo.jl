@@ -20,17 +20,20 @@ function get_setting_meta_data()
 			"description" => """Which SEI model is used. For instance: "Bolay" """,
 			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/sei_model",
 		),
-		"PotentialFlow" => Dict(
+		"PotentialFlowDiscretization" => Dict(
 			"type" => String,
-			"options" => ["......", "TwoPointPotentialFlow"],
+			"options" => ["GeneralAD", "TwoPointDiscretization"],
 			"is_sub_model" => true,
 			"context_type_iri" => nothing,
-			"description" => """Which PotentialFlow model is used....... """,
+			"description" => """Specifies the numerical backend used for solving the potential flow equations. 
+								The GenericAD option uses a general automatic differentiation approach that is robust and widely applicable, 
+								while the TwoPointDiscretization option applies a specialized two-point flux discretization of the conservation laws, 
+									which can be faster but is less general. We recommend using GenericAD unless performance considerations dictate otherwise.""",
 			"documentation" => "",
 		),
 		"ButlerVolmer" => Dict(
 			"type" => String,
-			"options" => ["Generic", "Chayambuka"],
+			"options" => ["Standard", "Chayambuka"],
 			"context_type" => "ButlerVolmerEquation",
 			"context_type_iri" => "https://w3id.org/emmo/domain/battery#battery_b1921f7b_afac_465a_a275_26f929f7f936",
 			"is_sub_model" => true,
@@ -46,7 +49,7 @@ function get_setting_meta_data()
 		),
 		"CurrentCollectors" => Dict(
 			"type" => String,
-			"options" => ["Generic"],
+			"options" => ["Standard"],
 			"context_type" => "CurrentCollectors",
 			"context_type_iri" => nothing,
 			"is_sub_model" => true,
@@ -326,11 +329,13 @@ function get_setting_meta_data()
 			"description" => "Output extra, highly detailed performance report at simulation end.",
 		),
 		"TimeStepSelectors" => Dict(
-			"type" => Vector,
+			"type" => String,
+			"options" => ["TimestepSelector"],
 			"description" => "Time-step selectors that pick mini steps.",
 		),
 		"Relaxation" => Dict(
-			"type" => Dict,
+			"type" => String,
+			"options" => ["NoRelaxation", "SimpleRelaxation"],
 			"description" => "Non-Linear relaxation used. Currently supports `NoRelaxation()` and `SimpleRelaxation()`.",
 		),
 		"InfoLevel" => Dict(

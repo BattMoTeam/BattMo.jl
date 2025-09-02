@@ -429,7 +429,7 @@ Sets up the config object used during simulation. In this current version this
 setup is the same for json and mat files. The specific setup values should
 probably be given as inputs in future versions of BattMo.jl
 """
-function setup_config(sim::JutulSimulator,
+function setup_config_(sim::JutulSimulator,
 	model::MultiModel,
 	parameters;
 	inputparams::BattMoInputFormatOld = InputParamsOld(),

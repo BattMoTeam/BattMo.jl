@@ -4,7 +4,7 @@ using Test
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_functions.jl"))
 
-@testset "sei layer" begin
+@testset "sodium" begin
 
 	@test begin
 

@@ -25,10 +25,6 @@ using Test
 		state0    = sim.initial_state
 		forces    = sim.forces
 		timesteps = sim.time_steps
-		cfg       = sim.cfg
-
-		cfg[:info_level] = -1
-		cfg[:failure_cuts_timestep] = false
 
 		solver  = :fgmres
 		fac     = 1e-4       # NEEDED  
@@ -48,16 +44,28 @@ using Test
 
 		prec = BattMo.BatteryGeneralPreconditioner(varpreconds, g_varprecond, params)
 
-		cfg[:linear_solver] = GenericKrylov(solver;
+		linear_solver = GenericKrylov(solver;
 			verbose            = verbose,
 			preconditioner     = prec,
 			relative_tolerance = rtol,
 			absolute_tolerance = atol,
 			max_iterations     = max_it)
-		# cfg[:linear_solver]  = nothing
-		# cfg[:extra_timing] = true
 
-		states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+		# cfg = setup_config(simulator,
+		# 	model.multimodel,
+		# 	parameters;
+		# 	info_level = -1,
+		# 	failure_cuts_timestep = false,
+		# 	linear_solver = linear_solver)
+
+
+		output = solve(sim; accept_invalid = true,
+			info_level = -1,
+			failure_cuts_timestep = false,
+			linear_solver = linear_solver)
+
+		states = output.states
+		# states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
 
 		Cc = map(x -> x[:Control][:Current][1], states)
 		phi = map(x -> x[:Control][:Voltage][1], states)
