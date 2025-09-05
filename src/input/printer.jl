@@ -462,6 +462,12 @@ function print_setting_info(from_name::String)
 			# Name
 			println("🔹 Name:         	", actual_key)
 
+			# Variable name
+			if haskey(param_info, "variable_name")
+				var_name = param_info["variable_name"]
+				println("🔹 Variable name:	", var_name)
+			end
+
 			# Description
 			if haskey(param_info, "description")
 				description = param_info["description"]
