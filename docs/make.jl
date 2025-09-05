@@ -36,7 +36,7 @@ function build_battmo_docs(build_format              = nothing;
 		"Tutorial 7 - Handle cycling protocol" => "7_handle_cycling_protocols",
 		"Tutorial 8 - Compute cell KPIs" => "8_compute_cell_kpis",
 		"Tutorial 9 - Run a parameter sweep" => "9_run_parameter_sweep",
-		"Tutorial 10 - Handle grid and time resolution" => "10_handle_grid_and_time_resolution",
+		"Tutorial 10 - Handle grid and time resolution" => "10_handling_grid_time_resolution",
 		"Tutorial 11 - Handle solver settings" => "11_handle_solver_settings",
 	]
 
