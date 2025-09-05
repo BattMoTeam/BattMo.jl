@@ -26,10 +26,12 @@ mutable struct SodiumIonBattery <: IntercalationBattery
 
 	function SodiumIonBattery(; model_settings = get_default_model_settings(SodiumIonBattery))
 
+		is_valid = validate_parameter_set(model_settings)
+
 		model_geometry = model_settings["ModelFramework"]
 		name = "Setup object for a $model_geometry lithium-ion model"
 
-		is_valid = validate_parameter_set(model_settings)
+
 
 
 		return new{}(
