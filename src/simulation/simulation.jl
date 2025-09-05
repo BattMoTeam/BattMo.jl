@@ -222,7 +222,7 @@ result = solve_simulation(sim)
 plot(result.states)
 ```
 """
-function solve_simulation(sim::Simulation; solver_settings, logger, kwargs...)
+function solve_simulation(sim::Simulation; solver_settings, logger = nothing, kwargs...)
 
 	simulator = sim.simulator
 	model = sim.model
@@ -236,21 +236,14 @@ function solve_simulation(sim::Simulation; solver_settings, logger, kwargs...)
 	cell_parameters = sim.cell_parameters
 	cycling_protocol = sim.cycling_protocol
 
-	# Overwrite solver settings with kwargs
-	overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
-
-	# Set missing solver settings
-	set_default_solver_settings!(solver_settings, model)
-
-	# Validate solver settings
-	solver_settings_is_valid = validate_parameter_set(solver_settings)
 
 	# setup solver configuration
-	cfg = setup_config(simulator,
+	cfg = solver_configuration(simulator,
 		model.multimodel,
 		parameters;
 		solver_settings,
 		logger,
+		kwargs...,
 	)
 
 	# Setup hook if given
@@ -301,10 +294,60 @@ function solve_simulation(sim::Simulation; solver_settings, logger, kwargs...)
 end
 
 function overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
+	settings = kwarg_dict(; kwargs...)  # Convert kwargs to Dict
 
-	settings = Dict(
-		"InfoLevel" => get(kwargs, :info_level, nothing),
-		"OutputPath" => get(kwargs, :output_path, nothing),
+	# Initialize return variables as nothing
+	linear_solver = nothing
+	relaxation = nothing
+	timestep_selectors = nothing
+
+	for (key, value) in settings
+		if !isnothing(value) && !ismissing(value)
+			if key == :LinearSolver
+				if isa(value, Dict)
+					solver_settings.all[key] = value
+				else
+					solver_settings.all[key] = "UserDefined"
+					linear_solver = value
+				end
+
+
+			elseif key == :TimeStepSelectors
+				if isa(value, String)
+					solver_settings.all[key] = value
+				else
+					solver_settings.all[key] = "UserDefined"
+					timestep_selectors = value
+				end
+
+
+			elseif key == :Relaxation
+				if isa(value, String)
+					solver_settings.all[key] = value
+				else
+					solver_settings.all[key] = "UserDefined"
+					relaxation = value
+				end
+
+
+			else
+				# Overwrite for all other keys
+				@info("Overwriting solver setting: $key => $value")
+				solver_settings.all[key] = value
+			end
+		end
+	end
+
+	return (linear_solver = linear_solver,
+		relaxation = relaxation,
+		timestep_selectors = timestep_selectors)
+
+end
+
+
+function kwarg_dict(; kwargs...)
+	kwarg_dict = Dict(
+		"LinearSolver" => get(kwargs, :linear_solver, nothing),
 		"MaxTimestepCuts" => get(kwargs, :max_timestep_cuts, nothing),
 		"MaxTimestep" => get(kwargs, :max_timestep, nothing),
 		"TimestepMaxIncrease" => get(kwargs, :timestep_max_increase, nothing),
@@ -319,94 +362,33 @@ function overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
 		"CuttingCriterion" => get(kwargs, :cutting_criterion, nothing),
 		"Tolerances" => get(kwargs, :tolerances, nothing),
 		"TolFactorFinalIteration" => get(kwargs, :tol_factor_final_iteration, nothing),
-		"Tolerances" => get(kwargs, :tolerances, nothing),
 		"SafeMode" => get(kwargs, :safe_mode, nothing),
 		"ExtraTiming" => get(kwargs, :extra_timing, nothing),
-		"LinearSolver" => get(kwargs, :linear_solver, nothing),
 		"TimeStepSelectors" => get(kwargs, :timestep_selectors, nothing),
 		"Relaxation" => get(kwargs, :relaxation, nothing),
+		"InfoLevel" => get(kwargs, :info_level, nothing),
 		"DebugLevel" => get(kwargs, :debug_level, nothing),
 		"EndReport" => get(kwargs, :end_report, nothing),
 		"ASCIITerminal" => get(kwargs, :ascii_terminal, nothing),
 		"ID" => get(kwargs, :id, nothing),
 		"ProgressColor" => get(kwargs, :progress_color, nothing),
 		"ProgressGlyphs" => get(kwargs, :progress_glyphs, nothing),
+		"OutputPath" => get(kwargs, :output_path, nothing),
 		"OutputStates" => get(kwargs, :output_states, nothing),
 		"OutputReports" => get(kwargs, :output_reports, nothing),
 		"InMemoryReports" => get(kwargs, :in_memory_reports, nothing),
 		"ReportLevel" => get(kwargs, :report_level, nothing),
 		"OutputSubstrates" => get(kwargs, :output_substates, nothing),
 	)
-
-	for (key, value) in settings
-		if !isnothing(value) && !ismissing(value)
-			solver_settings.all[key] = value
-		end
-
-	end
-
+	return kwarg_dict
 end
 
-function set_default_solver_settings!(solver_settings, model)
-	default = get_default_solver_settings(typeof(model))
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "MaxTimestepCuts"], default["NonLinearSolver"]["MaxTimestepCuts"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "MaxTimestep"], default["NonLinearSolver"]["MaxTimestep"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "TimestepMaxIncrease"], default["NonLinearSolver"]["TimestepMaxIncrease"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "TimestepMaxDecrease"], default["NonLinearSolver"]["TimestepMaxDecrease"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "MaxResidual"], default["NonLinearSolver"]["MaxResidual"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "MaxNonLinearIterations"], default["NonLinearSolver"]["MaxNonLinearIterations"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "MinNonLinearIterations"], default["NonLinearSolver"]["MinNonLinearIterations"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "FailureCutsTimesteps"], default["NonLinearSolver"]["FailureCutsTimesteps"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "CheckBeforeSolve"], default["NonLinearSolver"]["CheckBeforeSolve"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "AlwaysUpdateSecondary"], default["NonLinearSolver"]["AlwaysUpdateSecondary"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "ErrorOnIncomplete"], default["NonLinearSolver"]["ErrorOnIncomplete"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "CuttingCriterion"], default["NonLinearSolver"]["CuttingCriterion"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "Tolerances"], default["NonLinearSolver"]["Tolerances"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "TolFactorFinalIteration"], default["NonLinearSolver"]["TolFactorFinalIteration"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "SafeMode"], default["NonLinearSolver"]["SafeMode"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "ExtraTiming"], default["NonLinearSolver"]["ExtraTiming"])
-
-	if haskey(solver_settings.all, "LinearSolver")
-
-		if haskey(solver_settings.all["LinearSolver"], "Method")
-			if solver_settings.all["LinearSolver"]["Method"] == "direct"
-				set_default_input_params!(solver_settings.all, ["LinearSolver", "MaxSize"], default["LinearSolver"]["MaxSize"])
-
-			elseif solver_settings.all["LinearSolver"]["Method"] == "iterative"
-				# set_default_input_params!(solver_settings.all, ["LinearSolver", "Verbosity"], default["LinearSolver"]["Verbosity"])
-				# set_default_input_params!(solver_settings.all, ["LinearSolver", "MaxLinearIterations"], default["LinearSolver"]["MaxLinearIterations"])
-				# set_default_input_params!(solver_settings.all, ["LinearSolver", "Tolerance"], default["LinearSolver"]["Tolerance"])
-
-			end
-
-		else
-
-			set_default_input_params!(solver_settings.all, ["LinearSolver", "Method"], default["LinearSolver"]["Method"])
-			set_default_input_params!(solver_settings.all, ["LinearSolver", "MaxSize"], default["LinearSolver"]["MaxSize"])
-		end
-	else
-
-		set_default_input_params!(solver_settings.all, ["LinearSolver", "Method"], default["LinearSolver"]["Method"])
-		set_default_input_params!(solver_settings.all, ["LinearSolver", "MaxSize"], default["LinearSolver"]["MaxSize"])
+function process_solver_settings_kwargs(solver_settings; kwargs...)
 
 
-	end
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "TimeStepSelectors"], default["NonLinearSolver"]["TimeStepSelectors"])
-	set_default_input_params!(solver_settings.all, ["NonLinearSolver", "Relaxation"], default["NonLinearSolver"]["Relaxation"])
-	set_default_input_params!(solver_settings.all, ["Verbose", "InfoLevel"], default["Verbose"]["InfoLevel"])
-	set_default_input_params!(solver_settings.all, ["Verbose", "DebugLevel"], default["Verbose"]["DebugLevel"])
-	set_default_input_params!(solver_settings.all, ["Verbose", "EndReport"], default["Verbose"]["EndReport"])
-	set_default_input_params!(solver_settings.all, ["Verbose", "ASCIITerminal"], default["Verbose"]["ASCIITerminal"])
-	set_default_input_params!(solver_settings.all, ["Verbose", "ID"], default["Verbose"]["ID"])
-	set_default_input_params!(solver_settings.all, ["Verbose", "ProgressColor"], default["Verbose"]["ProgressColor"])
-	set_default_input_params!(solver_settings.all, ["Verbose", "progress_glyphs"], default["Verbose"]["ProgressGlyphs"])
-	set_default_input_params!(solver_settings.all, ["Output", "OutputStates"], default["Output"]["OutputStates"])
-	set_default_input_params!(solver_settings.all, ["Output", "OutputReports"], default["Output"]["OutputReports"])
-	set_default_input_params!(solver_settings.all, ["Output", "OutputPath"], default["Output"]["OutputPath"])
-	set_default_input_params!(solver_settings.all, ["Output", "InMemoryReports"], default["Output"]["InMemoryReports"])
-	set_default_input_params!(solver_settings.all, ["Output", "ReportLevel"], default["Output"]["ReportLevel"])
-	set_default_input_params!(solver_settings.all, ["Output", "OutputSubstrates"], default["Output"]["OutputSubstrates"])
-
+	# Validate solver settings
+	solver_settings_is_valid = validate_parameter_set(solver_settings)
+	return solver_settings_is_valid
 end
 
 ######################################
@@ -426,12 +408,20 @@ Sets up the config object used during simulation. In this current version this
 setup is the same for json and mat files. The specific setup values should
 probably be given as inputs in future versions of BattMo.jl
 """
-function setup_config(sim::JutulSimulator,
+function solver_configuration(sim::JutulSimulator,
 	model::MultiModel,
 	parameters;
 	use_model_scaling::Bool = true,
 	solver_settings,
-	logger)
+	logger = nothing,
+	kwargs...)
+
+	# Overwrite solver settings with kwargs
+	special_settings = overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
+
+	# Validate solver settings
+	solver_settings_is_valid = validate_parameter_set(solver_settings)
+
 
 	non_linear_solver = solver_settings["NonLinearSolver"]
 	linear_solver = solver_settings["LinearSolver"]
@@ -453,39 +443,42 @@ function setup_config(sim::JutulSimulator,
 
 	cfg = simulator_config(
 		sim;
-		# info_level = verbose["InfoLevel"],
+		info_level = verbose["InfoLevel"],
 		debug_level = verbose["DebugLevel"],
-		# end_report = verbose["EndReport"],
-		# ascii_terminal = verbose["ASCIITerminal"],
-		# id = verbose["ID"],
-		# progress_color = Symbol(verbose["ProgressColor"]),
-		# progress_glyphs = Symbol(verbose["ProgressGlyphs"]),
+		end_report = verbose["EndReport"],
+		ascii_terminal = verbose["ASCIITerminal"],
+		id = verbose["ID"],
+		progress_color = Symbol(verbose["ProgressColor"]),
+		progress_glyphs = Symbol(verbose["ProgressGlyphs"]),
 		max_timestep_cuts = non_linear_solver["MaxTimestepCuts"],
-		# max_timestep = non_linear_solver["MaxTimestep"],
-		# timestep_max_increase = non_linear_solver["TimestepMaxIncrease"],
-		# timestep_max_decrease = non_linear_solver["TimestepMaxDecrease"],
+		max_timestep = non_linear_solver["MaxTimestep"],
+		timestep_max_increase = non_linear_solver["TimestepMaxIncrease"],
+		timestep_max_decrease = non_linear_solver["TimestepMaxDecrease"],
 		max_residual = non_linear_solver["MaxResidual"],
 		max_nonlinear_iterations = non_linear_solver["MaxNonLinearIterations"],
 		min_nonlinear_iterations = non_linear_solver["MinNonLinearIterations"],
 		failure_cuts_timestep = non_linear_solver["FailureCutsTimesteps"],
-		# check_before_solve = non_linear_solver["CheckBeforeSolve"],
-		# always_update_secondary = non_linear_solver["AlwaysUpdateSecondary"],
+		check_before_solve = non_linear_solver["CheckBeforeSolve"],
+		always_update_secondary = non_linear_solver["AlwaysUpdateSecondary"],
 		error_on_incomplete = non_linear_solver["ErrorOnIncomplete"],
-		# cutting_criterion = non_linear_solver["CuttingCriterion"],
-		# # tolerances = non_linear_solver["Tolerances"],
-		# tol_factor_final_iteration = non_linear_solver["TolFactorFinalIteration"],
+		cutting_criterion = non_linear_solver["CuttingCriterion"],
+		tol_factor_final_iteration = non_linear_solver["TolFactorFinalIteration"],
 		safe_mode = non_linear_solver["SafeMode"],
 		extra_timing = non_linear_solver["ExtraTiming"],
-		linear_solver = battery_linsolve(linear_solver),
-		# # relaxation = relax,
-		# # timestep_selectors = timesel,
-		# output_states = output["OutputStates"],
-		# output_reports = output["OutputReports"],
-		# output_path = output["OutputPath"] == "" ? nothing : output["OutputPath"],
-		# in_memory_reports = output["InMemoryReports"],
-		# report_level = output["ReportLevel"],
+		linear_solver = isnothing(special_settings.linear_solver) ? special_settings.linear_solver : battery_linsolve(linear_solver),
+		relaxation = relax,
+		timestep_selectors = timesel,
+		output_states = output["OutputStates"],
+		output_reports = output["OutputReports"],
+		output_path = output["OutputPath"] == "" ? nothing : output["OutputPath"],
+		in_memory_reports = output["InMemoryReports"],
+		report_level = output["ReportLevel"],
 		output_substates = output["OutputSubstrates"],
 	)
+
+	if !isempty(non_linear_solver["Tolerances"])
+		cfg[:tolerances] = non_linear_solver["Tolerances"]
+	end
 
 	if !isnothing(logger)
 		cfg[:post_iteration_hook] = logger

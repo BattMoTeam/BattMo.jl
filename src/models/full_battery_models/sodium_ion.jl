@@ -46,7 +46,7 @@ function get_default_model_settings(::Type{SodiumIonBattery})
 end
 
 function get_default_solver_settings(::Type{SodiumIonBattery})
-	settings = load_solver_settings(; from_default_set = "default_solver_settings")
+	settings = load_solver_settings(; from_default_set = "direct")
 	return settings
 end
 

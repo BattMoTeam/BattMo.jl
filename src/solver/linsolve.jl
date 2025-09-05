@@ -264,27 +264,27 @@ end
 
 function battery_linsolve(inputparams)
 
-	set_default_input_params!(inputparams, ["method"], "direct")
+	set_default_input_params!(inputparams, ["Method"], "direct")
 
-	method = inputparams["method"]
+	method = inputparams["Method"]
 
 	if method == "direct"
 
-		set_default_input_params!(inputparams, ["max_size"], 1000000)
-		return LUSolver(; max_size = inputparams["max_size"])
+		set_default_input_params!(inputparams, ["MaxSize"], 1000000)
+		return LUSolver(; max_size = inputparams["MaxSize"])
 
 	elseif method == "iterative"
 
 		solver = :fgmres
 
-		set_default_input_params!(inputparams, ["tolerance"], 1e-7)
-		set_default_input_params!(inputparams, ["max_iterations"], 50)
-		set_default_input_params!(inputparams, ["verbosity"], 0)
+		set_default_input_params!(inputparams, ["Tolerance"], 1e-7)
+		set_default_input_params!(inputparams, ["MaxLinearIterations"], 50)
+		set_default_input_params!(inputparams, ["Verbosity"], 0)
 
-		tolerance      = inputparams["tolerance"]
+		tolerance      = inputparams["Tolerance"]
 		atol           = 1e-28
-		max_iterations = inputparams["max_iterations"]
-		verbosity      = inputparams["verbosity"]
+		max_iterations = inputparams["MaxLinearIterations"]
+		verbosity      = inputparams["Verbosity"]
 
 		# Battery general preconditioner that combines different preconditioners for different variables as
 		# follows. First we solve for the control variables which are removed from the system, We use AMG for electric

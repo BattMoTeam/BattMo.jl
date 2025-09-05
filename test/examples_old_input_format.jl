@@ -59,18 +59,12 @@ geometries = ["4680-geometry.json",
 
 
 				cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_old_input_format_to_parameter_sets(inputparams)
+				solver_settings = load_solver_settings(; from_default_set = "iterative")
 
-				solver_settings = SolverSettings(Dict(
-					"NonLinearSolver" => Dict(
-						"MaxNonLinearIterations" => 20,
-						"ErrorOnIncomplete" => true,
-						# "Verbose" => true,
-						# "Tolerances" => 1e-5,
-					),
-					"LinearSolver" => Dict(
-						"method" => "iterative",
-					),
-				))
+				solver_settings["NonLinearSolver"]["MaxNonLinearIterations"] = 20
+				solver_settings["NonLinearSolver"]["ErrorOnIncomplete"] = true
+
+
 				# simulation_settings["NonLinearSolver"] = Dict(
 				# 	"maxIterations" => 20,
 				# 	"verbose" => true,
@@ -82,7 +76,10 @@ geometries = ["4680-geometry.json",
 
 				model_setup = LithiumIonBattery(; model_settings)
 				sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
-				output = solve(sim; accept_invalid = true, solver_settings = solver_settings)
+				output = solve(sim;
+					accept_invalid = true,
+					solver_settings = solver_settings,
+				)
 				true
 			end
 		end

@@ -586,23 +586,23 @@ function get_schema_solver_settings()
 					"AlwaysUpdateSecondary" => create_property(parameter_meta, "AlwaysUpdateSecondary"),
 					"ErrorOnIncomplete" => create_property(parameter_meta, "ErrorOnIncomplete"),
 					"CuttingCriterion" => create_property(parameter_meta, "CuttingCriterion"),
-					"Tolerance" => create_property(parameter_meta, "Tolerance"),
+					"Tolerances" => create_property(parameter_meta, "Tolerances"),
 					"TolFactorFinalIteration" => create_property(parameter_meta, "TolFactorFinalIteration"),
 					"SafeMode" => create_property(parameter_meta, "SafeMode"),
 					"ExtraTiming" => create_property(parameter_meta, "ExtraTiming"),
 					"TimeStepSelectors" => create_property(parameter_meta, "TimeStepSelectors"),
 					"Relaxation" => create_property(parameter_meta, "Relaxation"),
-				),
-			),
+				)),
 			"LinearSolver" => Dict(
 				"type" => "object",
 				"properties" => Dict(
 					"Method" => create_property(parameter_meta, "Method"),
 					"MaxSize" => create_property(parameter_meta, "MaxSize"),
-					"Tolerance" => create_property(parameter_meta, "Tolerance"),
+					"LinearTolerance" => create_property(parameter_meta, "LinearTolerance"),
 					"MaxLinearIterations" => create_property(parameter_meta, "MaxLinearIterations"),
 					"Verbosity" => create_property(parameter_meta, "Verbosity"),
 				),
+				"required" => [],
 			),
 			"Verbose" => Dict(
 				"type" => "object",
@@ -625,11 +625,10 @@ function get_schema_solver_settings()
 					"ReportLevel" => create_property(parameter_meta, "ReportLevel"),
 					"OutputSubstrates" => create_property(parameter_meta, "OutputSubstrates")),
 			)),
-		"required" => [],
 		"allOf" => [
 			Dict(
 				"if" => Dict(
-					"properties" => Dict("LinearSolver" => Dict("properties" => Dict("Methods" => Dict("const" => "direct")))),
+					"properties" => Dict("LinearSolver" => Dict("properties" => Dict("Method" => Dict("const" => "direct")))),
 				),
 				"then" => Dict("properties" => Dict("LinearSolver" => Dict("required" => ["MaxSize"]))
 				)),
@@ -637,7 +636,7 @@ function get_schema_solver_settings()
 				"if" => Dict(
 					"properties" => Dict("LinearSolver" => Dict("properties" => Dict("Method" => Dict("const" => "iterative")))),
 				),
-				"then" => Dict("properties" => Dict("LinearSolver" => Dict("required" => ["Verbosity", "MaxLinearIterations", "Tolerance"]))
+				"then" => Dict("properties" => Dict("LinearSolver" => Dict("required" => ["Verbosity", "MaxLinearIterations", "LinearTolerance"]))
 				),
 			),
 		],

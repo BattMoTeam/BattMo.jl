@@ -4,6 +4,7 @@ import BattMo: VoltageCalibration, free_calibration_parameter!, freeze_calibrati
 function test_adjoints()
 	cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
 	cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+	solver_settings = load_solver_settings(; from_default_set = "direct")
 
 	cycling_protocol["InitialStateOfCharge"] = 0.8
 	cycling_protocol["LowerVoltageLimit"] = 2.0
@@ -66,16 +67,16 @@ function test_adjoints()
 	x0_copy = deepcopy(x0)
 	setup_battmo_case(X, step_info = missing) = BattMo.setup_battmo_case_for_calibration(X, vc.sim, x_setup, step_info)
 	numg = similar(x0)
-	f, = BattMo.solve_and_differentiate_for_calibration(x0, setup_battmo_case, vc, obj, gradient = false)
+	f, = BattMo.solve_and_differentiate_for_calibration(x0, setup_battmo_case, vc, obj, solver_settings, gradient = false)
 	for i in eachindex(numg)
 		x = copy(x0)
 		ϵ = max(1e-8 * abs(x[i]), 1e-16)
 		x[i] += ϵ
-		f1, = BattMo.solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, obj, gradient = false)
+		f1, = BattMo.solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, obj, solver_settings, gradient = false)
 		numg[i] = (f1 - f) / ϵ
 	end
 
-	f, g = BattMo.solve_and_differentiate_for_calibration(x0, setup_battmo_case, vc, obj)
+	f, g = BattMo.solve_and_differentiate_for_calibration(x0, setup_battmo_case, vc, obj, solver_settings)
 	mynorm = x -> sum(x -> x^2, x)^(1 / 2)
 	@test mynorm(numg - g) / mynorm(numg) ≈ 0.0 atol = 1e-4
 	for i in eachindex(numg)

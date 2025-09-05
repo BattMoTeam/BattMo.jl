@@ -1,4 +1,4 @@
-export load_model_settings, load_cell_parameters, load_cycling_protocol, load_simulation_settings
+export load_model_settings, load_cell_parameters, load_cycling_protocol, load_simulation_settings, load_solver_settings
 export load_matlab_battmo_input, load_battmo_formatted_input
 
 

@@ -1,8 +1,8 @@
 using BattMo
 using Test
 
-include("examples_old_input_format.jl")
 include("test_sodium_ion.jl")
+include("examples_old_input_format.jl")
 include("examples_strict.jl")
 include("sei_example.jl")
 include("test_loader.jl")

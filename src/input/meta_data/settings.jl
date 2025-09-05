@@ -297,13 +297,13 @@ function get_setting_meta_data()
 			"description" => "Criterion to use for early cutting of time-steps. Default value of nothing means cutting when max_nonlinear_iterations is reached.",
 		),
 		"Tolerances" => Dict(
-			"type" => Vector,
+			"type" => Dict,
 			"min_value" => 1e-40,
 			"max_value" => 1,
 			"description" => "Tolerances used for convergence criterions.",
 		),
-		"Tolerance" => Dict(
-			"type" => Vector,
+		"LinearTolerance" => Dict(
+			"type" => Real,
 			"min_value" => 1e-40,
 			"max_value" => 1,
 			"description" => "Tolerance used for convergence criterions.",
