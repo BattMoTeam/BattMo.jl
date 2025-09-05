@@ -40,6 +40,13 @@ function get_setting_meta_data()
 			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/pxd_model",
 			"description" => """When set to Chayambuka, the slightly adapted butler volmer equation from reference [Chayambuka2020](https://www.sciencedirect.com/science/article/pii/S0013468621020478?via%3Dihub) will be selected within the model.""",
 		),
+		"TemperatureDependence" => Dict(
+			"type" => String,
+			"options" => ["Arrhenius"],
+			"category" => "ModelSettings",
+			"documentation" => "",
+			"description" => """Temperature dependence model for electrode diffusion coefficients and reaction rates. Example: "Arrhenius".""",
+		),
 		"TransportInSolid" => Dict(
 			"type" => String,
 			"options" => ["FullDiffusion"],

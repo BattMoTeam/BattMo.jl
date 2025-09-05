@@ -355,11 +355,11 @@ end
 
 			if Jutul.haskey(model.system.params, :ecd_funcconstant)
 
-				@inbounds ReactionRateConstant[cell] = compute_reaction_rate_constant(SurfaceConcentration[cell], Temperature[cell], rate_func, Eak)
+				@inbounds ReactionRateConstant[cell] = arrhenius(Temperature[cell], rate_func, Eak)
 
 			else
 
-				@inbounds ReactionRateConstant[cell] = compute_reaction_rate_constant(SurfaceConcentration[cell], Temperature[cell], rate_func(SurfaceConcentration[cell], refT), Eak)
+				@inbounds ReactionRateConstant[cell] = arrhenius(Temperature[cell], rate_func(SurfaceConcentration[cell], refT), Eak)
 
 			end
 		end

@@ -136,7 +136,7 @@ function computeOCP_Graphite_Xu2015(c, T, refT, cmax)
 	refT  = 298.15
 	theta = c ./ cmax
 
-	data1 = [                                                             0.00 1.28683
+	data1 = [                                                                  0.00 1.28683
 		0.01 0.65272
 		0.02 0.52621
 		0.03 0.44128
@@ -173,7 +173,7 @@ function computeOCP_Graphite_Xu2015(c, T, refT, cmax)
 
 	refOCP = itp_refOCP(theta)
 
-	data2 = [                                                             0.01049 3.00E-04
+	data2 = [                                                                  0.01049 3.00E-04
 		0.03146 2.47E-04
 		0.05244 1.95E-04
 		0.07711 1.33E-04
@@ -308,18 +308,6 @@ function computeOCP_NMC111(c, T, refT, cmax)
 	ocp    = refOCP + (T - refT) * dUdT
 
 	return ocp
-
-end
-
-## Defines standard exchange current density
-
-function compute_reaction_rate_constant(c, T, k0, Eak)
-
-	F = FARADAY_CONSTANT
-	refT = 298.15
-
-	val = k0 .* exp(-Eak ./ F .* (1.0 ./ T - 1 / refT))
-	return val
 
 end
 

@@ -591,9 +591,9 @@ function get_scalings(model, parameters)
 		c_a = 0.5 * cmax
 
 		if isa(rate_func, Real)
-			R0 = compute_reaction_rate_constant(c_a, refT, rate_func, Eak)
+			R0 = arrhenius(refT, rate_func, Eak)
 		else
-			R0 = compute_reaction_rate_constant(c_a, refT, rate_func(c_a, refT), Eak)
+			R0 = arrhenius(refT, rate_func(c_a, refT), Eak)
 		end
 		c_e            = 1000.0
 		activematerial = model[elde].system
