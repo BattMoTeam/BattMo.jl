@@ -9,3 +9,14 @@ function arrhenius(T, A0, Ea)
 	return val
 
 end
+
+function temperature_dependent(T, A0, Ea, dependent = nothing)
+
+	if dependent == "Arrhenius"
+		val = arrhenius(T, A0, Ea)
+	else
+		val = A0
+	end
+	return val
+
+end

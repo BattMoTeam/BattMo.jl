@@ -69,7 +69,7 @@ struct Simulation <: AbstractSimulation
 			# Here will come a validation function
 			model_settings = model.settings
 			cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
-			cycling_protocol_is_valid = validate_parameter_set(cycling_protocol)
+			cycling_protocol_is_valid = validate_parameter_set(cycling_protocol, model_settings)
 			simulation_settings_is_valid = validate_parameter_set(simulation_settings, model_settings)
 
 			if cell_parameters_is_valid && cycling_protocol_is_valid && simulation_settings_is_valid

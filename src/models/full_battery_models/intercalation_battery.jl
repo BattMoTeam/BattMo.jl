@@ -324,6 +324,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	am_params[:volume_fraction] = vf
 	am_params[:volume_fractions] = vfs
 	am_params[:effective_density] = eff_dens
+
 	am_params[:n_charge_carriers] = inputparams_active_material["NumberOfElectronsTransfered"]
 	am_params[:maximum_concentration] = inputparams_active_material["MaximumConcentration"]
 	am_params[:volumetric_surface_area] = inputparams_active_material["VolumetricSurfaceArea"]
@@ -331,12 +332,11 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	am_params[:theta100] = inputparams_active_material["StoichiometricCoefficientAtSOC100"]
 	am_params[:activation_energy_of_reaction] = inputparams_active_material["ActivationEnergyOfReaction"]
 
-	if haskey(model.settings, "ButlerVolmer") && model.settings["ButlerVolmer"] == "Chayambuka"
-		am_params[:setting_butler_volmer] = "Chayambuka"
+	am_params[:setting_temperature_dependence] = get(model.settings, "TemperatureDependence", nothing)
+	am_params[:setting_butler_volmer] = get(model.settings, "ButlerVolmer", nothing)
 
-	else
-		am_params[:setting_butler_volmer] = "Generic"
-
+	if am_params[:setting_temperature_dependence] == "Arrhenius"
+		am_params[:activation_energy_of_diffusion] = inputparams_active_material["ActivationEnergyOfDiffusion"]
 	end
 
 	if isa(inputparams_active_material["ReactionRateConstant"], Real)

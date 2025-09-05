@@ -390,10 +390,10 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 end
 
 
-function get_schema_cycling_protocol()
+function get_schema_cycling_protocol(model_settings::ModelSettings)
 	# Retrieve meta-data for validation
 	parameter_meta = get_parameter_meta_data()
-	return Dict(
+	schema = Dict(
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",
 		"properties" => Dict(
@@ -427,7 +427,6 @@ function get_schema_cycling_protocol()
 						"UpperVoltageLimit",
 						"CurrentChangeLimit",
 						"VoltageChangeLimit",
-						"InitialTemperature",
 					]),
 			),
 			Dict(
@@ -447,7 +446,6 @@ function get_schema_cycling_protocol()
 						"InitialStateOfCharge",
 						"FunctionName",
 						"TotalTime",
-						"InitialTemperature",
 					],
 				),
 			),
@@ -460,7 +458,6 @@ function get_schema_cycling_protocol()
 						"InitialStateOfCharge",
 						"DRate",
 						"LowerVoltageLimit",
-						"InitialTemperature",
 					]),
 			),
 			Dict(
@@ -474,7 +471,6 @@ function get_schema_cycling_protocol()
 						"TotalNumberOfCycles",
 						"CRate",
 						"UpperVoltageLimit",
-						"InitialTemperature",
 					]),
 			),
 			Dict(
@@ -487,11 +483,18 @@ function get_schema_cycling_protocol()
 						"DRate",
 						"UpperVoltageLimit",
 						"LowerVoltageLimit",
-						"InitialTemperature",
 					]),
 			),
 		],
 	)
+	required = schema["required"]
+	temperature_dependence = get(model_settings, "TemperatureDependence", nothing)
+
+	if temperature_dependence == "Arrhenius"
+		push!(required, "AmbientTemperature")
+	end
+
+	return schema
 end
 
 
@@ -658,6 +661,7 @@ function get_schema_model_settings()
 			"TransportInSolid" => create_property(parameter_meta, "TransportInSolid"),
 			"ButlerVolmer" => create_property(parameter_meta, "ButlerVolmer"),
 			"PotentialFlowDiscretization" => create_property(parameter_meta, "PotentialFlowDiscretization"),
+			"TemperatureDependence" => create_property(parameter_meta, "TemperatureDependence"),
 		),
 		"required" => [
 			"ModelFramework", "TransportInSolid", "PotentialFlowDiscretization", "ButlerVolmer",
