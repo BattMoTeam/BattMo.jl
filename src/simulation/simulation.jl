@@ -51,7 +51,6 @@ struct Simulation <: AbstractSimulation
 	initial_state::Any
 	grids::Any
 	couplings::Any
-	cfg::Any
 	parameters::Any
 	simulator::Any
 
@@ -66,7 +65,6 @@ struct Simulation <: AbstractSimulation
 	) where {M <: ModelConfigured}
 
 		if model.is_valid
-			function_to_solve = run_battery
 
 			# Here will come a validation function
 			model_settings = model.settings
@@ -80,9 +78,6 @@ struct Simulation <: AbstractSimulation
 			else
 				is_valid = false
 			end
-
-			# Set some default simulation settings that aren't required by the user
-			set_default_solver_and_simulation_settings!(simulation_settings)
 
 			# Combine the parameter sets and settings
 			input = (model_settings = model_settings,
@@ -109,25 +104,6 @@ struct Simulation <: AbstractSimulation
 			# setup time steps
 			time_steps = setup_timesteps(input)
 
-			# setup simulation configuration
-
-			cfg = setup_config(simulator,
-				model.multimodel,
-				parameters,
-				input;
-				kwargs...,
-			)
-
-			# Setup hook if given
-			if !isnothing(hook)
-				hook(simulator,
-					model.multimodel,
-					initial_state,
-					forces,
-					time_steps,
-					cfg)
-			end
-
 			# grids = get_grids(model)
 
 
@@ -140,7 +116,7 @@ struct Simulation <: AbstractSimulation
 
 			""")
 		end
-		return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, cfg, parameters, simulator)
+		return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator)
 	end
 end
 
@@ -179,16 +155,15 @@ sim = Simulation(model, cell_parameters, cycling_protocol)
 result = solve(sim; info_level = 1)
 ```
 """
-function solve(problem::Simulation; accept_invalid = false, info_level = 0, end_report = info_level > -1, logger = nothing)
+function solve(problem::Simulation; accept_invalid = false, solver_settings = get_default_solver_settings(typeof(problem.model)), logger = nothing, kwargs...)
 
-	config_kwargs = (info_level = info_level, end_report = end_report)
 
 	# Note: Typically function_to_solve is run_battery
 	if accept_invalid == true
-		output = solve_simulation(problem; config_kwargs, logger)
+		output = solve_simulation(problem; solver_settings, logger, kwargs...)
 	else
 		if problem.is_valid == true
-			output = solve_simulation(problem; config_kwargs, logger)
+			output = solve_simulation(problem; solver_settings, logger, kwargs...)
 
 			return output
 		else
@@ -247,7 +222,7 @@ result = solve_simulation(sim)
 plot(result.states)
 ```
 """
-function solve_simulation(sim::Simulation; config_kwargs, logger)
+function solve_simulation(sim::Simulation; solver_settings, logger = nothing, kwargs...)
 
 	simulator = sim.simulator
 	model = sim.model
@@ -255,19 +230,34 @@ function solve_simulation(sim::Simulation; config_kwargs, logger)
 	forces = sim.forces
 	timesteps = sim.time_steps
 	grids = sim.grids
-	cfg = sim.cfg
 	couplings = sim.couplings
 	parameters = sim.parameters
 	simulation_settings = sim.settings
 	cell_parameters = sim.cell_parameters
 	cycling_protocol = sim.cycling_protocol
 
-	cfg[:info_level] = config_kwargs.info_level
-	cfg[:end_report] = config_kwargs.end_report
 
-	if !isnothing(logger)
-		cfg[:post_iteration_hook] = logger
+	# setup solver configuration
+	cfg = solver_configuration(simulator,
+		model.multimodel,
+		parameters;
+		solver_settings,
+		logger,
+		kwargs...,
+	)
+
+	# Setup hook if given
+	hook = get(kwargs, :hook, nothing)
+	if !isnothing(hook)
+		hook(simulator,
+			model.multimodel,
+			initial_state,
+			forces,
+			time_steps,
+			cfg)
 	end
+
+
 
 	# Perform simulation
 	states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
@@ -303,15 +293,102 @@ function solve_simulation(sim::Simulation; config_kwargs, logger)
 
 end
 
+function overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
+	settings = kwarg_dict(; kwargs...)  # Convert kwargs to Dict
 
-function set_default_solver_and_simulation_settings!(simulation_settings)
-	set_default_input_params!(simulation_settings.all, ["NonLinearSolver", "MaxTimestepCuts"], 10)
-	set_default_input_params!(simulation_settings.all, ["NonLinearSolver", "MaxIterations"], 20)
-	set_default_input_params!(simulation_settings.all, ["NonLinearSolver", "LinearSolver"], Dict())
+	# Initialize return variables as nothing
+	linear_solver = nothing
+	relaxation = nothing
+	timestep_selectors = nothing
 
-	set_default_input_params!(simulation_settings.all, ["UseGroups"], false)
-	set_default_input_params!(simulation_settings.all, ["GeneralAD"], true)
+	for (key, value) in settings
+		if !isnothing(value) && !ismissing(value)
+			if key == :LinearSolver
+				if isa(value, Dict)
+					solver_settings.all[key] = value
+				else
+					solver_settings.all[key] = "UserDefined"
+					linear_solver = value
+				end
 
+
+			elseif key == :TimeStepSelectors
+				if isa(value, String)
+					solver_settings.all[key] = value
+				else
+					solver_settings.all[key] = "UserDefined"
+					timestep_selectors = value
+				end
+
+
+			elseif key == :Relaxation
+				if isa(value, String)
+					solver_settings.all[key] = value
+				else
+					solver_settings.all[key] = "UserDefined"
+					relaxation = value
+				end
+
+
+			else
+				# Overwrite for all other keys
+				@info("Overwriting solver setting: $key => $value")
+				solver_settings.all[key] = value
+			end
+		end
+	end
+
+	return (linear_solver = linear_solver,
+		relaxation = relaxation,
+		timestep_selectors = timestep_selectors)
+
+end
+
+
+function kwarg_dict(; kwargs...)
+	kwarg_dict = Dict(
+		"LinearSolver" => get(kwargs, :linear_solver, nothing),
+		"MaxTimestepCuts" => get(kwargs, :max_timestep_cuts, nothing),
+		"MaxTimestep" => get(kwargs, :max_timestep, nothing),
+		"TimestepMaxIncrease" => get(kwargs, :timestep_max_increase, nothing),
+		"TimestepMaxDecrease" => get(kwargs, :timestep_max_decrease, nothing),
+		"MaxResidual" => get(kwargs, :max_residual, nothing),
+		"MaxNonLinearIterations" => get(kwargs, :max_nonlinear_iterations, nothing),
+		"MinNonLinearIterations" => get(kwargs, :min_nonlinear_iterations, nothing),
+		"FailureCutsTimesteps" => get(kwargs, :failure_cuts_timestep, nothing),
+		"CheckBeforeSolve" => get(kwargs, :check_before_solve, nothing),
+		"AlwaysUpdateSecondary" => get(kwargs, :always_update_secondary, nothing),
+		"ErrorOnIncomplete" => get(kwargs, :error_on_incomplete, nothing),
+		"CuttingCriterion" => get(kwargs, :cutting_criterion, nothing),
+		"Tolerances" => get(kwargs, :tolerances, nothing),
+		"TolFactorFinalIteration" => get(kwargs, :tol_factor_final_iteration, nothing),
+		"SafeMode" => get(kwargs, :safe_mode, nothing),
+		"ExtraTiming" => get(kwargs, :extra_timing, nothing),
+		"TimeStepSelectors" => get(kwargs, :timestep_selectors, nothing),
+		"Relaxation" => get(kwargs, :relaxation, nothing),
+		"InfoLevel" => get(kwargs, :info_level, nothing),
+		"DebugLevel" => get(kwargs, :debug_level, nothing),
+		"EndReport" => get(kwargs, :end_report, nothing),
+		"ASCIITerminal" => get(kwargs, :ascii_terminal, nothing),
+		"ID" => get(kwargs, :id, nothing),
+		"ProgressColor" => get(kwargs, :progress_color, nothing),
+		"ProgressGlyphs" => get(kwargs, :progress_glyphs, nothing),
+		"OutputPath" => get(kwargs, :output_path, nothing),
+		"OutputStates" => get(kwargs, :output_states, nothing),
+		"OutputReports" => get(kwargs, :output_reports, nothing),
+		"InMemoryReports" => get(kwargs, :in_memory_reports, nothing),
+		"ReportLevel" => get(kwargs, :report_level, nothing),
+		"OutputSubstrates" => get(kwargs, :output_substates, nothing),
+	)
+	return kwarg_dict
+end
+
+function process_solver_settings_kwargs(solver_settings; kwargs...)
+
+
+	# Validate solver settings
+	solver_settings_is_valid = validate_parameter_set(solver_settings)
+	return solver_settings_is_valid
 end
 
 ######################################
@@ -331,32 +408,81 @@ Sets up the config object used during simulation. In this current version this
 setup is the same for json and mat files. The specific setup values should
 probably be given as inputs in future versions of BattMo.jl
 """
-function setup_config(sim::JutulSimulator,
+function solver_configuration(sim::JutulSimulator,
 	model::MultiModel,
-	parameters,
-	input;
-	extra_timing::Bool = false,
+	parameters;
 	use_model_scaling::Bool = true,
+	solver_settings,
+	logger = nothing,
 	kwargs...)
 
-	cfg = simulator_config(sim; kwargs...)
+	# Overwrite solver settings with kwargs
+	special_settings = overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
 
-	simulation_settings = input.simulation_settings
-	lin_solv_dict = simulation_settings["NonLinearSolver"]["LinearSolver"]
-	lin_solv_dict_any = Dict{String, Any}(lin_solv_dict)
+	# Validate solver settings
+	solver_settings_is_valid = validate_parameter_set(solver_settings)
 
 
-	cfg[:linear_solver]            = battery_linsolve(lin_solv_dict_any)
-	cfg[:debug_level]              = 0
-	cfg[:max_timestep_cuts]        = simulation_settings["NonLinearSolver"]["MaxTimestepCuts"]
-	cfg[:max_residual]             = 1e20
-	cfg[:output_substates]         = true
-	cfg[:min_nonlinear_iterations] = 1
-	cfg[:extra_timing]             = extra_timing
-	cfg[:max_nonlinear_iterations] = simulation_settings["NonLinearSolver"]["MaxIterations"]
-	cfg[:safe_mode]                = true
-	cfg[:error_on_incomplete]      = false
-	cfg[:failure_cuts_timestep]    = true
+	non_linear_solver = solver_settings["NonLinearSolver"]
+	linear_solver = solver_settings["LinearSolver"]
+	output = solver_settings["Output"]
+	verbose = solver_settings["Verbose"]
+
+	relaxation = non_linear_solver["Relaxation"]
+	timestep_selector = non_linear_solver["TimeStepSelectors"]
+	if relaxation == "NoRelaxation"
+		relax = NoRelaxation()
+	else
+		relax = SimpleRelaxation()
+	end
+
+	if timestep_selector == "TimestepSelector"
+		timesel = [TimestepSelector()]
+	end
+
+
+	cfg = simulator_config(
+		sim;
+		info_level = verbose["InfoLevel"],
+		debug_level = verbose["DebugLevel"],
+		end_report = verbose["EndReport"],
+		ascii_terminal = verbose["ASCIITerminal"],
+		id = verbose["ID"],
+		progress_color = Symbol(verbose["ProgressColor"]),
+		progress_glyphs = Symbol(verbose["ProgressGlyphs"]),
+		max_timestep_cuts = non_linear_solver["MaxTimestepCuts"],
+		max_timestep = non_linear_solver["MaxTimestep"],
+		timestep_max_increase = non_linear_solver["TimestepMaxIncrease"],
+		timestep_max_decrease = non_linear_solver["TimestepMaxDecrease"],
+		max_residual = non_linear_solver["MaxResidual"],
+		max_nonlinear_iterations = non_linear_solver["MaxNonLinearIterations"],
+		min_nonlinear_iterations = non_linear_solver["MinNonLinearIterations"],
+		failure_cuts_timestep = non_linear_solver["FailureCutsTimesteps"],
+		check_before_solve = non_linear_solver["CheckBeforeSolve"],
+		always_update_secondary = non_linear_solver["AlwaysUpdateSecondary"],
+		error_on_incomplete = non_linear_solver["ErrorOnIncomplete"],
+		cutting_criterion = non_linear_solver["CuttingCriterion"],
+		tol_factor_final_iteration = non_linear_solver["TolFactorFinalIteration"],
+		safe_mode = non_linear_solver["SafeMode"],
+		extra_timing = non_linear_solver["ExtraTiming"],
+		linear_solver = isnothing(special_settings.linear_solver) ? special_settings.linear_solver : battery_linsolve(linear_solver),
+		relaxation = relax,
+		timestep_selectors = timesel,
+		output_states = output["OutputStates"],
+		output_reports = output["OutputReports"],
+		output_path = output["OutputPath"] == "" ? nothing : output["OutputPath"],
+		in_memory_reports = output["InMemoryReports"],
+		report_level = output["ReportLevel"],
+		output_substates = output["OutputSubstrates"],
+	)
+
+	if !isempty(non_linear_solver["Tolerances"])
+		cfg[:tolerances] = non_linear_solver["Tolerances"]
+	end
+
+	if !isnothing(logger)
+		cfg[:post_iteration_hook] = logger
+	end
 
 	if use_model_scaling
 		scalings = get_scalings(model, parameters)
@@ -596,7 +722,7 @@ function setup_timesteps(input;
 				nr = 1
 			end
 
-			timesteps = rampupTimesteps(totalTime, dt, nr)
+			timesteps = compute_rampup_timesteps(totalTime, dt, nr)
 
 		else
 
@@ -645,4 +771,43 @@ function setup_timesteps(input;
 	end
 
 	return timesteps
+end
+
+function compute_rampup_timesteps(time::Real, dt::Real, n::Integer = 8)
+
+	ind = collect(range(n, 1, step = -1))
+	dt_init = [dt / 2^k for k in ind]
+	cs_time = cumsum(dt_init)
+	if any(cs_time .> time)
+		dt_init = dt_init[cs_time.<time]
+	end
+	dt_left = time .- sum(dt_init)
+
+	# Even steps
+	dt_rem = dt * ones(floor(Int64, dt_left / dt))
+	# Final ministep if present
+	dt_final = time - sum(dt_init) - sum(dt_rem)
+	# Less than to account for rounding errors leading to a very small
+	# negative time-step.
+	if dt_final <= 0
+		dt_final = []
+	end
+	# Combined timesteps
+	dT = [dt_init; dt_rem; dt_final]
+
+	return dT
+end
+
+####################
+# Current function #
+####################
+
+function currentFun(t::Real, inputI::Real, tup::Real = 0.1)
+	t, inputI, tup, val = promote(t, inputI, tup, 0.0)
+	if t <= tup
+		val = sineup(0.0, inputI, 0.0, tup, t)
+	else
+		val = inputI
+	end
+	return val
 end

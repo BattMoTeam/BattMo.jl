@@ -254,6 +254,7 @@ calibrated_params, history = solve(vc; grad_tol = 1e-7)
 ```
 """
 function solve(vc::AbstractCalibration;
+	solver_settings = get_default_solver_settings(typeof(vc.sim.model)),
 	grad_tol = 1e-6,
 	obj_change_tol = 1e-6,
 	opt_fun = missing,
@@ -283,7 +284,7 @@ function solve(vc::AbstractCalibration;
 	adj_cache = Dict()
 
 	setup_battmo_case(X, step_info = missing) = setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
-	solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
+	solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective, solver_settings;
 		adj_cache = adj_cache,
 		backend_arg,
 	)
@@ -325,13 +326,13 @@ function solve(vc::AbstractCalibration;
 	return (cell_prm_out, history)
 end
 
-function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective;
+function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective, solver_settings;
 	adj_cache = Dict(),
 	backend_arg = NamedTuple(),
 	gradient = true,
 )
 	case = setup_battmo_case(x)
-	states, dt = simulate_battmo_case_for_calibration(case)
+	states, dt = simulate_battmo_case_for_calibration(case, solver_settings)
 	# Evaluate the objective function
 	f = evaluate_calibration_objective(vc, objective, case, states, dt)
 	# Solve adjoints
@@ -400,7 +401,7 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing;
 	return Jutul.JutulCase(model.multimodel, timesteps, forces, parameters = parameters, state0 = state0, input_data = input)
 end
 
-function simulate_battmo_case_for_calibration(case;
+function simulate_battmo_case_for_calibration(case, solver_settings;
 	simulator = missing,
 	config = missing,
 )
@@ -410,10 +411,10 @@ function simulate_battmo_case_for_calibration(case;
 	end
 
 	if ismissing(config)
-		config = setup_config(simulator,
+		config = solver_configuration(simulator,
 			case.model,
-			case.parameters,
-			case.input_data;
+			case.parameters;
+			solver_settings = solver_settings,
 			info_level = -1,
 		)
 	end

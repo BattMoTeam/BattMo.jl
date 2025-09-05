@@ -46,7 +46,7 @@ search_parameter(cell_parameters, "char")
 cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 1e-13
 nothing # hide
 
-cell_parameters["PositiveElectrode"]["ElectrodeCoating"]["Thickness"] = 8.2e-5
+cell_parameters["PositiveElectrode"]["Coating"]["Thickness"] = 8.2e-5
 nothing # hide
 
 

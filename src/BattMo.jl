@@ -154,6 +154,8 @@ using Jutul: get_submodel_offsets, submodels_symbols
 using Jutul: JutulPreconditioner
 using Jutul: LinearizedSystem, LinearOperator
 using Jutul: LUSolver
+using Jutul: NoRelaxation, SimpleRelaxation
+using Jutul: TimestepSelector
 
 using Jutul: check_convergence, convergence_criterion, linear_solve!
 using Jutul: update_preconditioner!, apply!, mul!, operator_nrows
@@ -225,7 +227,7 @@ include("simulation/simulation.jl")
 include("simulation/simulation_utils.jl")
 
 include("matlab_interface/matlab_model_setup.jl")
-include("old_model_setup/model_setup.jl")
+# include("old_model_setup/model_setup.jl")
 
 include("plotting/3d.jl")
 include("plotting/1d.jl")

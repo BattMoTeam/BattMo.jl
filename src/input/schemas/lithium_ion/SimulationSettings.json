@@ -37,7 +37,7 @@
             "description": "Number of grid points along the thickness dimension of the positive electrode.",
             "context_type_iri": null
         },
-        "GridResolutionPositiveElectrodeActiveMaterial": {
+        "GridResolutionPositiveElectrodeParticle": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
@@ -93,7 +93,7 @@
             "description": "In the current collector tab at the negative electrode, the number of grid points along the length dimension of the tab's face.",
             "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
         },
-        "GridResolutionNegativeElectrodeActiveMaterial": {
+        "GridResolutionNegativeElectrodeParticle": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
@@ -150,9 +150,9 @@
     "required": [
         "TimeStepDuration",
         "GridResolutionSeparator",
-        "GridResolutionNegativeElectrodeActiveMaterial",
+        "GridResolutionNegativeElectrodeParticle",
         "GridResolutionNegativeElectrodeCoating",
-        "GridResolutionPositiveElectrodeActiveMaterial",
+        "GridResolutionPositiveElectrodeParticle",
         "GridResolutionPositiveElectrodeCoating",
         "ModelSettings"
     ],

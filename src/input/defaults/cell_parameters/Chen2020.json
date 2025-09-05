@@ -22,7 +22,7 @@
         "NominalCapacity": 4.8
     },
     "NegativeElectrode": {
-        "ElectrodeCoating": {
+        "Coating": {
             "BruggemanCoefficient": 1.5,
             "EffectiveDensity": 1695,
             "Thickness": 8.52e-5
@@ -61,7 +61,9 @@
             "Description": "Copper",
             "Thickness": 1.17e-5,
             "TabWidth": 1e-3,
-            "TabFractions": [0.5],            
+            "TabFractions": [
+                0.5
+            ],
             "Density": 8960,
             "ElectronicConductivity": 3.55e7
         },
@@ -77,7 +79,7 @@
         }
     },
     "PositiveElectrode": {
-        "ElectrodeCoating": {
+        "Coating": {
             "BruggemanCoefficient": 1.5,
             "EffectiveDensity": 3292,
             "Thickness": 7.56e-5
@@ -116,7 +118,9 @@
             "Description": "Aluminum",
             "Thickness": 1.63e-05,
             "TabWidth": 1e-3,
-            "TabFractions": [0.5],
+            "TabFractions": [
+                0.5
+            ],
             "Density": 2700,
             "ElectronicConductivity": 5.96e7
         }

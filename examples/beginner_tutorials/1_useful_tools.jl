@@ -59,7 +59,7 @@ print_submodels_info()
 # You can use the following function to save your ParameterSet object to a JSON file:
 
 file_path = "path_to_json_file/file.json"
-parameter_set = CellParameters(Dict("NegativeElectrode" => Dict("ElectrodeCoating" => Dict("Thickness" => 100e-6))))
+parameter_set = CellParameters(Dict("NegativeElectrode" => Dict("Coating" => Dict("Thickness" => 100e-6))))
 
 write_to_json_file(file_path, parameter_set)
 nothing # hide
@@ -69,6 +69,7 @@ nothing # hide
 
 # Let's load a default cell parameter set.
 cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
+nothing # hide
 
 # You can easily print some handy quantities and metrics for debugging:
 

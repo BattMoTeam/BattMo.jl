@@ -66,6 +66,10 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 
 	elseif meta["type"] == Vector
 		dict["type"] = "array"  # JSON schema type for arrays (Vector in Julia)
+	elseif meta["type"] == Nothing
+		dict["type"] = "null"
+	elseif meta["type"] == Dict
+		dict["type"] = "object"
 	else
 		type = meta["type"]
 		throw(ArgumentError("Unknown Julia type: $type"))
@@ -131,7 +135,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 			"NegativeElectrode" => Dict(
 				"type" => "object",
 				"properties" => Dict(
-					"ElectrodeCoating" => Dict(
+					"Coating" => Dict(
 						"type" => "object",
 						"properties" => Dict(
 							"BruggemanCoefficient" => create_property(parameter_meta, "BruggemanCoefficient"),
@@ -213,12 +217,12 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					)),
-				"required" => ["ElectrodeCoating", "ActiveMaterial", "Binder", "ConductiveAdditive"],
+				"required" => ["Coating", "ActiveMaterial", "Binder", "ConductiveAdditive"],
 			),
 			"PositiveElectrode" => Dict(
 				"type" => "object",
 				"properties" => Dict(
-					"ElectrodeCoating" => Dict(
+					"Coating" => Dict(
 						"type" => "object",
 						"properties" => Dict(
 							"BruggemanCoefficient" => create_property(parameter_meta, "BruggemanCoefficient"),
@@ -287,7 +291,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					)),
-				"required" => ["ElectrodeCoating", "ActiveMaterial", "Binder", "ConductiveAdditive"],
+				"required" => ["Coating", "ActiveMaterial", "Binder", "ConductiveAdditive"],
 			),
 			"Separator" => Dict(
 				"type" => "object",
@@ -324,8 +328,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 	cell_required = schema["properties"]["Cell"]["required"]
 	ne_required = schema["properties"]["NegativeElectrode"]["required"]
 	pe_required = schema["properties"]["PositiveElectrode"]["required"]
-	ne_coating_required = schema["properties"]["NegativeElectrode"]["properties"]["ElectrodeCoating"]["required"]
-	pe_coating_required = schema["properties"]["PositiveElectrode"]["properties"]["ElectrodeCoating"]["required"]
+	ne_coating_required = schema["properties"]["NegativeElectrode"]["properties"]["Coating"]["required"]
+	pe_coating_required = schema["properties"]["PositiveElectrode"]["properties"]["Coating"]["required"]
 
 	ne_am_required = schema["properties"]["NegativeElectrode"]["properties"]["ActiveMaterial"]["required"]
 	pe_am_required = schema["properties"]["PositiveElectrode"]["properties"]["ActiveMaterial"]["required"]
@@ -497,57 +501,49 @@ function get_schema_simulation_settings(model_settings)
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",
 		"properties" => Dict(
-			"GridResolution" => Dict(
-				"type" => "object",
-				"properties" => Dict(
-					"Height" => create_property(parameter_meta, "GridResolutionHeight"),
-					"Angular" => create_property(parameter_meta, "GridResolutionAngular"),
-					"ElectrodeWidth" => create_property(parameter_meta, "GridResolutionElectrodeWidth"),
-					"ElectrodeLength" => create_property(parameter_meta, "GridResolutionElectrodeLength"),
-					"PositiveElectrodeCoating" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCoating"),
-					"PositiveElectrodeActiveMaterial" => create_property(parameter_meta, "GridResolutionPositiveElectrodeActiveMaterial"),
-					"PositiveElectrodeCurrentCollector" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollector"),
-					"PositiveElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabWidth"),
-					"PositiveElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabLength"),
-					"NegativeElectrodeCoating" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCoating"),
-					"NegativeElectrodeActiveMaterial" => create_property(parameter_meta, "GridResolutionNegativeElectrodeActiveMaterial"),
-					"NegativeElectrodeCurrentCollector" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollector"),
-					"NegativeElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabWidth"),
-					"NegativeElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabLength"),
-					"Separator" => create_property(parameter_meta, "GridResolutionSeparator"),
-				),
-				"required" => [
-					"PositiveElectrodeCoating",
-					"PositiveElectrodeActiveMaterial",
-					"NegativeElectrodeCoating",
-					"NegativeElectrodeActiveMaterial",
-					"Separator",
-				],
-			),
-			"Grid" => Dict(
+			"GridResolutionHeight" => create_property(parameter_meta, "GridResolutionHeight"),
+			"GridResolutionAngular" => create_property(parameter_meta, "GridResolutionAngular"),
+			"GridResolutionElectrodeWidth" => create_property(parameter_meta, "GridResolutionElectrodeWidth"),
+			"GridResolutionElectrodeLength" => create_property(parameter_meta, "GridResolutionElectrodeLength"),
+			"GridResolutionPositiveElectrodeCoating" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCoating"),
+			"GridResolutionPositiveElectrodeParticle" => create_property(parameter_meta, "GridResolutionPositiveElectrodeParticle"),
+			"GridResolutionPositiveElectrodeCurrentCollector" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollector"),
+			"GridResolutionPositiveElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabWidth"),
+			"GridResolutionPositiveElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabLength"),
+			"GridResolutionNegativeElectrodeCoating" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCoating"),
+			"GridResolutionNegativeElectrodeParticle" => create_property(parameter_meta, "GridResolutionNegativeElectrodeParticle"),
+			"GridResolutionNegativeElectrodeCurrentCollector" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollector"),
+			"GridResolutionNegativeElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabWidth"),
+			"GridResolutionNegativeElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabLength"),
+			"GridResolutionSeparator" => create_property(parameter_meta, "GridResolutionSeparator"), "Grid" => Dict(
 				"type" => "array",
 			),
-			"TimeStepDuration" => Dict("type" => "integer"),
-			"RampUpTime" => Dict("type" => "integer"),
-			"RampUpSteps" => Dict("type" => "integer"),
+			"TimeStepDuration" => create_property(parameter_meta, "TimeStepDuration"),
+			"RampUpTime" => create_property(parameter_meta, "RampUpTime"),
+			"RampUpSteps" => create_property(parameter_meta, "RampUpSteps"),
 		),
-		"required" => ["GridResolution", "TimeStepDuration"],
+		"required" => [
+			"GridResolutionPositiveElectrodeCoating",
+			"GridResolutionPositiveElectrodeParticle",
+			"GridResolutionNegativeElectrodeCoating",
+			"GridResolutionNegativeElectrodeParticle",
+			"GridResolutionSeparator",
+			"TimeStepDuration"],
 	)
 
 	required = schema["required"]
-	required_grid_points = schema["properties"]["GridResolution"]["required"]
 
 	if model_settings["ModelFramework"] == "P4D Pouch"
-		push!(required_grid_points, "ElectrodeWidth")
-		push!(required_grid_points, "ElectrodeLength")
+		push!(required, "GridResolutionElectrodeWidth")
+		push!(required, "GridResolutionElectrodeLength")
 
 		if haskey(model_settings, "CurrentCollectors")
-			push!(required_grid_points, "PositiveElectrodeCurrentCollector")
-			push!(required_grid_points, "PositiveElectrodeCurrentCollectorTabWidth")
-			push!(required_grid_points, "PositiveElectrodeCurrentCollectorTabLength")
-			push!(required_grid_points, "NegativeElectrodeCurrentCollector")
-			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabWidth")
-			push!(required_grid_points, "NegativeElectrodeCurrentCollectorTabLength")
+			push!(required, "GridResolutionPositiveElectrodeCurrentCollector")
+			push!(required, "GridResolutionPositiveElectrodeCurrentCollectorTabWidth")
+			push!(required, "GridResolutionPositiveElectrodeCurrentCollectorTabLength")
+			push!(required, "GridResolutionNegativeElectrodeCurrentCollector")
+			push!(required, "GridResolutionNegativeElectrodeCurrentCollectorTabWidth")
+			push!(required, "GridResolutionNegativeElectrodeCurrentCollectorTabLength")
 		end
 	end
 	if haskey(model_settings, "RampUp") && model_settings["RampUp"] == "Sinusoidal"
@@ -556,11 +552,11 @@ function get_schema_simulation_settings(model_settings)
 	end
 
 	if model_settings["ModelFramework"] == "P4D Cylindrical"
-		push!(required_grid_points, "Height")
-		push!(required_grid_points, "Angular")
+		push!(required, "GridResolutionHeight")
+		push!(required, "GridResolutionAngular")
 		if haskey(model_settings, "CurrentCollectors")
-			push!(required_grid_points, "PositiveElectrodeCurrentCollector")
-			push!(required_grid_points, "NegativeElectrodeCurrentCollector")
+			push!(required, "GridResolutionPositiveElectrodeCurrentCollector")
+			push!(required, "GridResolutionNegativeElectrodeCurrentCollector")
 		end
 
 	end
@@ -568,6 +564,86 @@ function get_schema_simulation_settings(model_settings)
 	return schema
 end
 
+
+function get_schema_solver_settings()
+	parameter_meta = get_setting_meta_data()
+	schema = Dict(
+		"\$schema" => "http://json-schema.org/draft-07/schema#",
+		"type" => "object",
+		"properties" => Dict(
+			"NonLinearSolver" => Dict(
+				"type" => "object",
+				"properties" => Dict(
+					"MaxTimestepCuts" => create_property(parameter_meta, "MaxTimestepCuts"),
+					"MaxTimestep" => create_property(parameter_meta, "MaxTimestep"),
+					"MinTimestep" => create_property(parameter_meta, "MinTimestep"),
+					"TimestepMaxIncrease" => create_property(parameter_meta, "TimestepMaxIncrease"),
+					"TimestepMaxDecrease" => create_property(parameter_meta, "TimestepMaxDecrease"),
+					"MaxNonLinearIterations" => create_property(parameter_meta, "MaxNonLinearIterations"),
+					"MinNonLinearIterations" => create_property(parameter_meta, "MinNonLinearIterations"),
+					"FailureCutsTimesteps" => create_property(parameter_meta, "FailureCutsTimesteps"),
+					"CheckBeforeSolve" => create_property(parameter_meta, "CheckBeforeSolve"),
+					"AlwaysUpdateSecondary" => create_property(parameter_meta, "AlwaysUpdateSecondary"),
+					"ErrorOnIncomplete" => create_property(parameter_meta, "ErrorOnIncomplete"),
+					"CuttingCriterion" => create_property(parameter_meta, "CuttingCriterion"),
+					"Tolerances" => create_property(parameter_meta, "Tolerances"),
+					"TolFactorFinalIteration" => create_property(parameter_meta, "TolFactorFinalIteration"),
+					"SafeMode" => create_property(parameter_meta, "SafeMode"),
+					"ExtraTiming" => create_property(parameter_meta, "ExtraTiming"),
+					"TimeStepSelectors" => create_property(parameter_meta, "TimeStepSelectors"),
+					"Relaxation" => create_property(parameter_meta, "Relaxation"),
+				)),
+			"LinearSolver" => Dict(
+				"type" => "object",
+				"properties" => Dict(
+					"Method" => create_property(parameter_meta, "Method"),
+					"MaxSize" => create_property(parameter_meta, "MaxSize"),
+					"LinearTolerance" => create_property(parameter_meta, "LinearTolerance"),
+					"MaxLinearIterations" => create_property(parameter_meta, "MaxLinearIterations"),
+					"Verbosity" => create_property(parameter_meta, "Verbosity"),
+				),
+				"required" => [],
+			),
+			"Verbose" => Dict(
+				"type" => "object",
+				"properties" => Dict(
+					"InfoLevel" => create_property(parameter_meta, "InfoLevel"),
+					"DebugLevel" => create_property(parameter_meta, "DebugLevel"),
+					"EndReport" => create_property(parameter_meta, "EndReport"),
+					"ASCIITerminal" => create_property(parameter_meta, "ASCIITerminal"),
+					"ID" => create_property(parameter_meta, "ID"),
+					"ProgressColor" => create_property(parameter_meta, "ProgressColor"),
+					"progress_glyphs" => create_property(parameter_meta, "progress_glyphs")),
+			),
+			"Output" => Dict(
+				"type" => "object",
+				"properties" => Dict(
+					"OutputStates" => create_property(parameter_meta, "OutputStates"),
+					"OutputReports" => create_property(parameter_meta, "OutputReports"),
+					"OutputPath" => create_property(parameter_meta, "OutputPath"),
+					"InMemoryReports" => create_property(parameter_meta, "InMemoryReports"),
+					"ReportLevel" => create_property(parameter_meta, "ReportLevel"),
+					"OutputSubstrates" => create_property(parameter_meta, "OutputSubstrates")),
+			)),
+		"allOf" => [
+			Dict(
+				"if" => Dict(
+					"properties" => Dict("LinearSolver" => Dict("properties" => Dict("Method" => Dict("const" => "direct")))),
+				),
+				"then" => Dict("properties" => Dict("LinearSolver" => Dict("required" => ["MaxSize"]))
+				)),
+			Dict(
+				"if" => Dict(
+					"properties" => Dict("LinearSolver" => Dict("properties" => Dict("Method" => Dict("const" => "iterative")))),
+				),
+				"then" => Dict("properties" => Dict("LinearSolver" => Dict("required" => ["Verbosity", "MaxLinearIterations", "LinearTolerance"]))
+				),
+			),
+		],
+	)
+
+	return schema
+end
 
 function get_schema_model_settings()
 	parameter_meta = get_setting_meta_data()
@@ -581,9 +657,10 @@ function get_schema_model_settings()
 			"SEIModel" => create_property(parameter_meta, "SEIModel"),
 			"TransportInSolid" => create_property(parameter_meta, "TransportInSolid"),
 			"ButlerVolmer" => create_property(parameter_meta, "ButlerVolmer"),
+			"PotentialFlowDiscretization" => create_property(parameter_meta, "PotentialFlowDiscretization"),
 		),
 		"required" => [
-			"ModelFramework", "TransportInSolid",
+			"ModelFramework", "TransportInSolid", "PotentialFlowDiscretization", "ButlerVolmer",
 		],
 		"allOf" => [
 			# 🚫 Disallow CurrentCollectors if ModelFramework is "1D"

@@ -2,7 +2,7 @@
 abstract type IntercalationBattery <: Battery end
 
 
-function setup_multimodel(model::IntercalationBattery, submodels, input)
+function setup_multimodel(model::IntercalationBattery, submodels, input; use_groups = false)
 
 	if !haskey(model.settings, "CurrentCollectors")
 		groups = nothing
@@ -25,7 +25,7 @@ function setup_multimodel(model::IntercalationBattery, submodels, input)
 			PeCc    = submodels.model_pecc,
 			Control = submodels.model_control,
 		)
-		if input.simulation_settings["UseGroups"]
+		if use_groups
 			groups = ones(Int64, length(models))
 			# Should be Control
 			groups[end] = 2
@@ -261,7 +261,7 @@ function setup_ne_current_collector(input, grids, couplings)
 	model_necc = setup_component(grid,
 		sys_necc,
 		dirichletBoundary = boundary,
-		general_ad = input.simulation_settings["GeneralAD"])
+		flow_discretization = input.model_settings["PotentialFlowDiscretization"])
 
 	return model_necc
 end
@@ -274,7 +274,7 @@ function setup_pe_current_collector(input, grids, couplings)
 	sys_pecc = CurrentCollector(pecc_params)
 
 	model_pecc = setup_component(grid, sys_pecc,
-		general_ad = input.simulation_settings["GeneralAD"])
+		flow_discretization = input.model_settings["PotentialFlowDiscretization"])
 
 	return model_pecc
 end
@@ -295,7 +295,7 @@ function compute_volume_fraction(codict)
 	sumSpecificVolumes = sum(specificVolumes)
 	volumeFractions = [sv / sumSpecificVolumes for sv in specificVolumes]
 
-	effectiveDensity = codict["ElectrodeCoating"]["EffectiveDensity"]
+	effectiveDensity = codict["Coating"]["EffectiveDensity"]
 	volumeFraction = sumSpecificVolumes * effectiveDensity
 
 	return volumeFraction, volumeFractions, effectiveDensity
@@ -410,7 +410,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 
 	if haskey(model.settings, "TransportInSolid") && model.settings["TransportInSolid"] == "FullDiffusion"
 		rp = inputparams_active_material["ParticleRadius"]
-		N  = Int64(input.simulation_settings["GridResolution"][stringName*"ActiveMaterial"])
+		N  = Int64(input.simulation_settings["GridResolution"*stringName*"Particle"])
 
 		if isa(inputparams_active_material["DiffusionCoefficient"], Real)
 			am_params[:diff_funcconstant] = true
@@ -505,7 +505,7 @@ function compute_effective_conductivity(comodel, coinputparams)
 	end
 
 	vf = comodel.system.params[:volume_fraction]
-	bg = coinputparams["ElectrodeCoating"]["BruggemanCoefficient"]
+	bg = coinputparams["Coating"]["BruggemanCoefficient"]
 
 	kappaeff = (vf^bg) * kappa
 

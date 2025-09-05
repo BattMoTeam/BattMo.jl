@@ -10,16 +10,16 @@ function one_dimensional_grid(input)
 	global_maps = Dict()
 
 	cell_parameters = input.cell_parameters
-	grid_settings = input.simulation_settings["GridResolution"]
+	simulation_settings = input.simulation_settings
 
 	include_current_collectors = haskey(input.model_settings, "CurrentCollectors")
 
 	faceArea = cell_parameters["Cell"]["ElectrodeGeometricSurfaceArea"]
 
 	function get_cell_parameter_vals(var)
-		neval = cell_parameters["NegativeElectrode"]["ElectrodeCoating"][var]
+		neval = cell_parameters["NegativeElectrode"]["Coating"][var]
 		sepval = cell_parameters["Separator"][var]
-		peval = cell_parameters["PositiveElectrode"]["ElectrodeCoating"][var]
+		peval = cell_parameters["PositiveElectrode"]["Coating"][var]
 		if include_current_collectors
 			ne_ccval = cell_parameters["NegativeElectrode"]["CurrentCollector"][var]
 			pe_ccval = cell_parameters["PositiveElectrode"]["CurrentCollector"][var]
@@ -31,12 +31,12 @@ function one_dimensional_grid(input)
 	end
 
 	function get_grid_settings_vals()
-		neval = grid_settings["NegativeElectrodeCoating"]
-		sepval = grid_settings["Separator"]
-		peval = grid_settings["PositiveElectrodeCoating"]
+		neval = simulation_settings["GridResolutionNegativeElectrodeCoating"]
+		sepval = simulation_settings["GridResolutionSeparator"]
+		peval = simulation_settings["GridResolutionPositiveElectrodeCoating"]
 		if include_current_collectors
-			ne_ccval = grid_settings["NegativeElectrodeCurrentCollector"]
-			pe_ccval = grid_settings["PositiveElectrodeCurrentCollector"]
+			ne_ccval = simulation_settings["GridResolutionNegativeElectrodeCurrentCollector"]
+			pe_ccval = simulation_settings["GridResolutionPositiveElectrodeCurrentCollector"]
 			out = [ne_ccval, neval, sepval, peval, pe_ccval]
 		else
 			out = [neval, sepval, peval]

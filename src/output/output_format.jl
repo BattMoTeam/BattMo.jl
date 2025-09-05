@@ -283,9 +283,9 @@ end
 function get_r_coords(output)
 
 	particle_radius_ne = output[:extra][:cell_parameters]["NegativeElectrode"]["ActiveMaterial"]["ParticleRadius"]
-	number_of_cells_ne = output[:extra][:simulation_settings]["GridResolution"]["NegativeElectrodeActiveMaterial"]
+	number_of_cells_ne = output[:extra][:simulation_settings]["GridResolutionNegativeElectrodeParticle"]
 	particle_radius_pe = output[:extra][:cell_parameters]["PositiveElectrode"]["ActiveMaterial"]["ParticleRadius"]
-	number_of_cells_pe = output[:extra][:simulation_settings]["GridResolution"]["PositiveElectrodeActiveMaterial"]
+	number_of_cells_pe = output[:extra][:simulation_settings]["GridResolutionPositiveElectrodeParticle"]
 
 	ne_radii = range(0; stop = particle_radius_ne, length = number_of_cells_ne)
 	pe_radii = range(0; stop = particle_radius_pe, length = number_of_cells_pe)

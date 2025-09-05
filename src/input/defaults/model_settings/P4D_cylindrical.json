@@ -5,6 +5,8 @@
     },
     "ModelFramework": "P4D Cylindrical",
     "TransportInSolid": "FullDiffusion",
-    "CurrentCollectors": "Generic",
+    "PotentialFlowDiscretization": "GeneralAD",
+    "ButlerVolmer": "Standard",
+    "CurrentCollectors": "Standard",
     "RampUp": "Sinusoidal"
 }

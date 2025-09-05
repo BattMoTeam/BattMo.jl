@@ -8,7 +8,7 @@ cell_parameters = read_cell_parameters(cell_path)
 cc_discharge_protocol = read_cycling_protocol(cycling_path)
 
 cc_discharge_protocol["DRate"] = 2.0
-cell_parameters["NegativeElectrode"]["ElectrodeCoating"]["Thickness"] = 0.00011
+cell_parameters["NegativeElectrode"]["Coating"]["Thickness"] = 0.00011
 
 model = LithiumIonBattery()
 

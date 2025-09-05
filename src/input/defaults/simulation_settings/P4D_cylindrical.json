@@ -1,17 +1,15 @@
 {
-    "GridResolution": {
-        "Height": 2,
-        "Angular": 8,
-        "PositiveElectrodeCoating": 3,
-        "PositiveElectrodeActiveMaterial": 5,
-        "PositiveElectrodeCurrentCollector": 3,
-        "PositiveElectrodeCurrentCollectorTabWidth": 2,
-        "NegativeElectrodeCoating": 3,
-        "NegativeElectrodeActiveMaterial": 5,
-        "NegativeElectrodeCurrentCollector": 3,
-        "NegativeElectrodeCurrentCollectorTabWidth": 2,
-        "Separator": 3
-    },
+    "GridResolutionHeight": 2,
+    "GridResolutionAngular": 8,
+    "GridResolutionPositiveElectrodeCoating": 3,
+    "GridResolutionPositiveElectrodeParticle": 5,
+    "GridResolutionPositiveElectrodeCurrentCollector": 3,
+    "GridResolutionPositiveElectrodeCurrentCollectorTabWidth": 2,
+    "GridResolutionNegativeElectrodeCoating": 3,
+    "GridResolutionNegativeElectrodeParticle": 5,
+    "GridResolutionNegativeElectrodeCurrentCollector": 3,
+    "GridResolutionNegativeElectrodeCurrentCollectorTabWidth": 2,
+    "GridResolutionSeparator": 3,
     "TimeStepDuration": 50,
     "RampUpTime": 10,
     "RampUpSteps": 5

@@ -7,45 +7,45 @@ export jelly_roll_grid
 function jelly_roll_grid(input)
 
 	cell_parameters = input.cell_parameters
-	grid_settings = input.simulation_settings["GridResolution"]
+	simulation_settings = input.simulation_settings
 
 	cell = cell_parameters["Cell"]
 
-	nangles = grid_settings["Angular"]
-	nz      = grid_settings["Height"]
+	nangles = simulation_settings["GridResolutionAngular"]
+	nz      = simulation_settings["GridResolutionHeight"]
 	rinner  = cell["InnerRadius"]
 	router  = cell["OuterRadius"]
 	height  = cell["Height"]
 
 	function get_vector(geomparams, fdname)
 		# double coated electrode
-		v = [geomparams["PositiveElectrode"]["ElectrodeCoating"][fdname],
+		v = [geomparams["PositiveElectrode"]["Coating"][fdname],
 			geomparams["PositiveElectrode"]["CurrentCollector"][fdname],
-			geomparams["PositiveElectrode"]["ElectrodeCoating"][fdname],
+			geomparams["PositiveElectrode"]["Coating"][fdname],
 			geomparams["Separator"][fdname],
-			geomparams["NegativeElectrode"]["ElectrodeCoating"][fdname],
+			geomparams["NegativeElectrode"]["Coating"][fdname],
 			geomparams["NegativeElectrode"]["CurrentCollector"][fdname],
-			geomparams["NegativeElectrode"]["ElectrodeCoating"][fdname],
+			geomparams["NegativeElectrode"]["Coating"][fdname],
 			geomparams["Separator"][fdname]]
 
 		return v
 	end
 
-	function get_grid_settings(grid_settings)
+	function get_simulation_settings(simulation_settings)
 		# double coated electrode
-		v = [grid_settings["PositiveElectrodeCoating"],
-			grid_settings["PositiveElectrodeCurrentCollector"],
-			grid_settings["PositiveElectrodeCoating"],
-			grid_settings["Separator"],
-			grid_settings["NegativeElectrodeCoating"],
-			grid_settings["NegativeElectrodeCurrentCollector"],
-			grid_settings["NegativeElectrodeCoating"],
-			grid_settings["Separator"]]
+		v = [simulation_settings["GridResolutionPositiveElectrodeCoating"],
+			simulation_settings["GridResolutionPositiveElectrodeCurrentCollector"],
+			simulation_settings["GridResolutionPositiveElectrodeCoating"],
+			simulation_settings["GridResolutionSeparator"],
+			simulation_settings["GridResolutionNegativeElectrodeCoating"],
+			simulation_settings["GridResolutionNegativeElectrodeCurrentCollector"],
+			simulation_settings["GridResolutionNegativeElectrodeCoating"],
+			simulation_settings["GridResolutionSeparator"]]
 
 		return v
 	end
 
-	Ns  = get_grid_settings(grid_settings)
+	Ns  = get_simulation_settings(simulation_settings)
 	dxs = get_vector(cell_parameters, "Thickness")
 
 	dx = mapreduce((dx, N) -> repeat([dx], N), vcat, dxs ./ Ns, Ns)
@@ -133,7 +133,7 @@ end
 function setup_tab_couplings(grids, input, component)
 
 	cell_parameters = input.cell_parameters
-	grid_settings = input.simulation_settings["GridResolution"]
+	simulation_settings = input.simulation_settings
 
 	if component == "NegativeCurrentCollector"
 		ip_component = "NegativeElectrode"
@@ -156,7 +156,7 @@ function setup_tab_couplings(grids, input, component)
 
 		zc = geo.boundary_centroids[3, vectbcface]
 
-		nz = grid_settings["Height"]
+		nz = simulation_settings["GridResolutionHeight"]
 
 		if component == "NegativeCurrentCollector"
 			vectbcface = vectbcface[abs.(zc .- maximum(zc)).<=0.01/nz*(maximum(zc)-minimum(zc))]
@@ -245,7 +245,7 @@ function setup_tab_couplings(grids, input, component)
 			radius = norm(c)
 			tabhorzfaces = []
 			for (i, (angle_topface, radius_topface)) in enumerate(zip(angle_horzfaces, radius_horzfaces))
-				if (abs(angle_topface - angle) < (0.1 * 2 * pi / grid_settings["Angular"])) && (radius_topface >= radius) &&
+				if (abs(angle_topface - angle) < (0.1 * 2 * pi / simulation_settings["GridResolutionAngular"])) && (radius_topface >= radius) &&
 				   (radius_topface <= (radius + cell_parameters["NegativeElectrode"]["CurrentCollector"]["Thickness"]))
 					push!(tabhorzfaces, i)
 				end
