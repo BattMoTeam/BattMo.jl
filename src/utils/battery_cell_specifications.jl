@@ -101,7 +101,7 @@ function computeCellMaximumEnergy(model::MultiModel; T = 298.15, capacities = mi
 			elseif haskey(model[elde].system.params, :ocp_funcdata)
 				f[i] = ocpfunc(c[i] / cmax)
 			else
-				f[i] = ocpfunc(c[i], T, cmax)
+				f[i] = ocpfunc(c[i], T, refT, cmax)
 			end
 
 

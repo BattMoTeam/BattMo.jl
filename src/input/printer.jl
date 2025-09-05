@@ -1,4 +1,93 @@
-export print_default_input_sets_info, print_submodels_info, print_parameter_info, print_setting_info
+export print_cell_info, print_default_input_sets_info, print_submodels_info, print_parameter_info, print_setting_info
+
+
+function print_cell_info(cell_parameters::CellParameters)
+	# --- ANSI Colors ---
+	green(s) = "\033[92m$(s)\033[0m"
+	yellow(s) = "\033[93m$(s)\033[0m"
+	blue(s) = "\033[94m$(s)\033[0m"
+	red(s) = "\033[91m$(s)\033[0m"
+	bold(s) = "\033[1m$(s)\033[0m"
+
+	# --- Helper: detect if value is CONST, FUNC, or DICT ---
+	function param_status(val)
+		if isa(val, Number)
+			return green("CONST ✓")
+		elseif isa(val, AbstractString)
+			return yellow("FUNC")
+		elseif isa(val, Dict)
+			return yellow("FUNC")
+		else
+			return red("UNKNOWN ❓")
+		end
+	end
+
+	# --- KPI dictionary inside ---
+	cell_kpis_from_set = Dict(
+		"Positive Electrode Coating Mass" =>
+			compute_electrode_coating_mass(cell_parameters, "PositiveElectrode"),
+		"Negative Electrode Coating Mass" =>
+			compute_electrode_coating_mass(cell_parameters, "NegativeElectrode"),
+		"Separator Mass" =>
+			compute_separator_mass(cell_parameters),
+		"Electrolyte Mass" =>
+			compute_electrolyte_mass(cell_parameters),
+		"Cell Mass" =>
+			compute_cell_mass(cell_parameters),
+		"Cell Volume" =>
+			compute_cell_volume(cell_parameters),
+		"Positive Electrode Mass Loading" =>
+			compute_electrode_mass_loading(cell_parameters, "PositiveElectrode"),
+		"Negative Electrode Mass Loading" =>
+			compute_electrode_mass_loading(cell_parameters, "NegativeElectrode"),
+		"Cell Theoretical Capacity" =>
+			compute_cell_theoretical_capacity(cell_parameters),
+		"Cell N:P Ratio" =>
+			compute_np_ratio(cell_parameters),
+	)
+
+	# --- Safe KPI accessor ---
+	function safe_kpi(name)
+		try
+			val = cell_kpis_from_set[name]
+			return round(val, sigdigits = 4)
+		catch
+			return red("ERR")
+		end
+	end
+
+	# --- Header ---
+	println(bold("\n─────────────────────────────"))
+	println(bold("\n🔋 Quick Cell Check"))
+	println(bold("─────────────────────────────"))
+	println("Title: ", get(cell_parameters["Metadata"], "Title", "Unknown"))
+
+	# --- Minimal KPIs ---
+	println("\n" * bold("📏 Core quantities"))
+	println("  Nominal Voltage:        ", haskey(cell_parameters["Cell"], "NominalVoltage") ? cell_parameters["Cell"]["NominalVoltage"] : nothing, " V")
+	println("  Nominal Capacity:       ", haskey(cell_parameters["Cell"], "NominalCapacity") ? cell_parameters["Cell"]["NominalCapacity"] : nothing, " Ah")
+	println("  Theoretical Capacity:   ", safe_kpi("Cell Theoretical Capacity"), " Ah")
+	println("  N:P Ratio:               ", safe_kpi("Cell N:P Ratio"))
+	println("  Cell Mass:               ", safe_kpi("Cell Mass"), " g")
+	println("  Pos. Mass Loading:       ", safe_kpi("Positive Electrode Mass Loading"), " mg/cm²")
+	println("  Neg. Mass Loading:       ", safe_kpi("Negative Electrode Mass Loading"), " mg/cm²")
+
+	# --- Functional Status ---
+	println("\n" * bold("🧠 Functional Status"))
+	neg = cell_parameters["NegativeElectrode"]["ActiveMaterial"]
+	pos = cell_parameters["PositiveElectrode"]["ActiveMaterial"]
+	elec = cell_parameters["Electrolyte"]
+
+	println("  Neg. Diffusion Coeff:     ", param_status(neg["DiffusionCoefficient"]))
+	println("  Neg. OCP:                 ", param_status(neg["OpenCircuitPotential"]))
+	println("  Neg. Reaction Rate:       ", param_status(neg["ReactionRateConstant"]))
+	println("  Pos. Diffusion Coeff:     ", param_status(pos["DiffusionCoefficient"]))
+	println("  Pos. OCP:                 ", param_status(pos["OpenCircuitPotential"]))
+	println("  Pos. Reaction Rate:       ", param_status(pos["ReactionRateConstant"]))
+	println("  Electrolyte Conductivity: ", param_status(elec["IonicConductivity"]))
+	println("  Electrolyte Diffusion:    ", param_status(elec["DiffusionCoefficient"]))
+
+end
 
 
 # Format link depending on output format

@@ -141,7 +141,7 @@ using Jutul: SimulationModel, MultiModel
 using Jutul: JutulSimulator, Simulator
 using Jutul: JutulSystem, JutulFormulation, JutulContext, DefaultContext
 
-using Jutul: simulate, simulator_config
+using Jutul: simulate, simulator_config, simulator_config!
 using Jutul: setup_forces, setup_state, setup_state!, setup_parameters
 using Jutul: initialize_primary_variable_ad!, initialize_variable_ad!
 using Jutul: get_neighborship, get_simulator_storage, get_simulator_model
@@ -197,7 +197,9 @@ include("utils/physical_constants.jl")
 
 include("models/battmo_types.jl")
 include("models/full_battery_models/battery.jl")
+include("models/full_battery_models/intercalation_battery.jl")
 include("models/full_battery_models/lithium_ion.jl")
+include("models/full_battery_models/sodium_ion.jl")
 
 include("input/loader.jl")
 include("input/defaults.jl")

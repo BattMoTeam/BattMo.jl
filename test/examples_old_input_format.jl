@@ -28,8 +28,8 @@ names = [
 				end
 
 				model_setup = LithiumIonBattery(; model_settings)
-				sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
-				output = solve(sim; hook, accept_invalid = true)
+				sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings, hook)
+				output = solve(sim; accept_invalid = true)
 				true
 			end
 		end
@@ -78,8 +78,8 @@ geometries = ["4680-geometry.json",
 					cfg[:error_on_incomplete] = true
 				end
 				model_setup = LithiumIonBattery(; model_settings)
-				sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
-				output = solve(sim; hook, accept_invalid = true)
+				sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings, hook)
+				output = solve(sim; accept_invalid = true)
 				true
 			end
 		end

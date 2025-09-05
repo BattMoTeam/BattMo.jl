@@ -20,6 +20,15 @@ function get_setting_meta_data()
 			"description" => """Which SEI model is used. For instance: "Bolay" """,
 			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/sei_model",
 		),
+		"ButlerVolmer" => Dict(
+			"type" => String,
+			"options" => ["Generic", "Chayambuka"],
+			"context_type" => "ButlerVolmerEquation",
+			"context_type_iri" => "https://w3id.org/emmo/domain/battery#battery_b1921f7b_afac_465a_a275_26f929f7f936",
+			"is_sub_model" => true,
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/pxd_model",
+			"description" => """When set to Chayambuka, the slightly adapted butler volmer equation from reference [Chayambuka2020](https://www.sciencedirect.com/science/article/pii/S0013468621020478?via%3Dihub) will be selected within the model.""",
+		),
 		"TransportInSolid" => Dict(
 			"type" => String,
 			"options" => ["FullDiffusion"],
@@ -35,7 +44,7 @@ function get_setting_meta_data()
 			"is_sub_model" => true,
 			"description" => "Which model describes the current collectors.",
 		),
-        "GridResolutionHeight" => Dict(
+		"GridResolutionHeight" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 100,
@@ -43,7 +52,7 @@ function get_setting_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the height of the cell (used in P4D cylindrical)",
 		),
-        "GridResolutionAngular" => Dict(
+		"GridResolutionAngular" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 100,

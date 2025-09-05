@@ -346,7 +346,7 @@ function get_parameter_meta_data()
 			"max_value" => 1e-2,
 			"min_value" => 1.0e-14,
 			"description" => "Proportionality constant quantifying the rate and direction of a chemical reaction by relating it with the concentration of reactants.",
-			"type" => Real,
+			"type" => [String, Dict{String, Vector}, Real],
 			"unit" => "mol·m⁻²·s⁻¹",
 			"unit_name" => "emmo:MolePerSquareMetrePerSecond",
 			"unit_iri" => "https://w3id.org/emmo#MolePerSquareMetrePerSecond",
@@ -442,8 +442,8 @@ function get_parameter_meta_data()
 		"NominalCapacity" => Dict(
 			"context_type" => "NominalCapacity",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_8abde9d0_84f6_4b4f_a87e_86028a397100",
-			"max_value" => 100,
-			"min_value" => 0.01,
+			"max_value" => 50,
+			"min_value" => 0.0001,
 			"description" => "Expected charge capacity of a cell under standard conditions, as defined by the manufacturer.",
 			"is_shown_to_user" => false,
 			"type" => Real,
@@ -542,7 +542,7 @@ function get_parameter_meta_data()
 		"DiffusionCoefficient" => Dict(
 			"context_type" => ["DiffusionCoefficient", "Expression"],
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_931a725b_926d_4f60_8955_61fe17fce98b",
-			"unit" => "m²·t⁻¹",
+			"unit" => "m²·s⁻¹",
 			"unit_name" => "emmo:AreaPerTimeUnit",
 			"unit_iri" => "https://w3id.org/emmo#EMMO_10f703b5_8b2a_4c5a_a734_f0cfb29622ad",
 			"description" => "Proportionality constant between the molar flux of the charge carrier and its negative concentration gradient in a material.",

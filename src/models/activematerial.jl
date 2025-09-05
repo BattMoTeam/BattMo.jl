@@ -214,6 +214,7 @@ function Jutul.select_secondary_variables!(S,
 	S[:OpenCircuitPotential] = OpenCircuitPotential()
 	S[:ReactionRateConstant] = ReactionRateConstant()
 	S[:SolidDiffFlux] = SolidDiffFlux()
+	S[:DiffusionCoefficient] = DiffusionCoefficient()
 
 end
 
@@ -247,6 +248,8 @@ function Jutul.select_minimum_output_variables!(out,
 	push!(out, :Charge)
 	push!(out, :OpenCircuitPotential)
 	push!(out, :Temperature)
+	push!(out, :ReactionRateConstant)
+	push!(out, :DiffusionCoefficient)
 
 end
 
@@ -284,9 +287,51 @@ end
 
 				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell] / cmax)
 
+			elseif Jutul.haskey(model.system.params, :ocp_funcconstant)
+				@inbounds OpenCircuitPotential[cell] = ocp_func
 			else
 
-				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], refT, cmax)
+				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], refT, refT, cmax)
+
+			end
+		end
+	end
+)
+
+@jutul_secondary(
+	function update_diffusion_coefficient!(DiffusionCoefficient,
+		tv::DiffusionCoefficient,
+		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
+		SurfaceConcentration,
+		ix,
+	) where {label, D, T, Di}
+
+		diff_func = model.system.params[:diff_func]
+
+		cmax = model.system.params[:maximum_concentration]
+		refT = 298.15
+
+		if Jutul.haskey(model.system.params, :diff_funcexp)
+			theta0   = model.system.params[:theta0]
+			theta100 = model.system.params[:theta100]
+		end
+
+
+		for cell in ix
+
+			if Jutul.haskey(model.system.params, :diff_funcexp)
+
+				@inbounds DiffusionCoefficient[cell] = diff_func(SurfaceConcentration[cell], refT, refT, cmax)
+
+			elseif Jutul.haskey(model.system.params, :diff_funcdata)
+
+				@inbounds DiffusionCoefficient[cell] = diff_func(SurfaceConcentration[cell] / cmax)
+
+			elseif Jutul.haskey(model.system.params, :diff_funcconstant)
+				@inbounds DiffusionCoefficient[cell] = diff_func
+			else
+
+				@inbounds DiffusionCoefficient[cell] = diff_func(SurfaceConcentration[cell], refT, refT, cmax)
 
 			end
 		end
@@ -300,9 +345,20 @@ end
 		SurfaceConcentration,
 		ix) where {label, D, T, Di}
 		rate_func = model.system.params[:reaction_rate_constant_func]
+		Eak = model.system.params[:activation_energy_of_reaction]
 		refT = 298.15
+
 		for cell in ix
-			@inbounds ReactionRateConstant[cell] = rate_func(SurfaceConcentration[cell], refT)
+
+			if Jutul.haskey(model.system.params, :ecd_funcconstant)
+
+				@inbounds ReactionRateConstant[cell] = compute_reaction_rate_constant(SurfaceConcentration[cell], refT, rate_func, Eak)
+
+			else
+
+				@inbounds ReactionRateConstant[cell] = compute_reaction_rate_constant(SurfaceConcentration[cell], refT, rate_func(SurfaceConcentration[cell], refT), Eak)
+
+			end
 		end
 	end
 )

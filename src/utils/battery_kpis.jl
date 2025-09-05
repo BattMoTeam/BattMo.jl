@@ -271,6 +271,26 @@ end
 # Cell XXXX from the output structure
 #########################################
 
+function compute_capacity(output::NamedTuple)
+	states = output[:states]
+	t = [state[:Control][:Controller].time for state in states]
+	I = [state[:Control][:Current][1] for state in states]
+
+	capacity_array = Float64[]
+	push!(capacity_array, 0.0)
+	for i in 2:lastindex(t)
+
+		dt = t[i] - t[i-1]           # Time step
+		avg_I = (I[i] + I[i-1]) / 2  # Average current over the interval
+		dQ = avg_I * dt / 3600       # Capacity in Ah
+		push!(capacity_array, capacity_array[end] + dQ)
+
+	end
+
+	return capacity_array
+
+end
+
 function compute_discharge_capacity(output::NamedTuple; cycle_number = nothing)
 	states = output[:states]
 
