@@ -1,10 +1,10 @@
 # # How to change solver related settings in BattMo
 #
 # Until now we have seen four different input types that can be used to define a simulation in BattMo:
-# - CellParameters : defines the physical and chemical properties of the battery cell
-# - CyclingProtocol : defines the current/voltage profile that the cell is subjected to during the simulation
-# - ModelSettings :   defines various settings for the battery model, such as which submodels to use
-# - SimulationSettings : defines the time step and grid resolution for your simulations
+# - *CellParameters* : defines the physical and chemical properties of the battery cell
+# - *CyclingProtocol* : defines the current/voltage profile that the cell is subjected to during the simulation
+# - *ModelSettings* :   defines various settings for the battery model, such as which submodels to use
+# - *SimulationSettings* : defines the time step and grid resolution for your simulations
 #
 # In addition to these, there is a fifth input type called SolverSettings.
 # These settings allow you to control various aspects of the numerical solver used in BattMo.
@@ -20,6 +20,7 @@ using BattMo, GLMakie
 # Just like we can load the default cell parameters, cycling protocol, model settings, and simulation settings,
 # we can also load the default solver settings.
 solver_settings = load_solver_settings(; from_default_set = "default")
+nothing # hide
 
 # Lets setup a simple simulation to demonstrate the solver settings.
 
@@ -28,9 +29,11 @@ cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
 model = LithiumIonBattery()
 sim = Simulation(model, cell_parameters, cycling_protocol)
+nothing # hide
 
 # As the solver settings tell the solver how to solve the simulation object, we need to pass the solver settings to the solve function.
 output = solve(sim; solver_settings)
+nothing # hide
 # The simulation should run just like before, but now we have the option to modify the solver settings.
 # One useful setting is that we can set an output path that will save the simulation output to an HDF5 file.
 # This can be useful if you are running long simulations and want to save the output for later analysis.
@@ -39,6 +42,7 @@ output = solve(sim; solver_settings)
 solver_settings["OutputPath"] = "example_path/"
 try # hide
 	output = solve(sim; solver_settings)
+	nothing # hide
 catch e # hide
 	@warn "Expected to fail because the path does not exist" exception = e # hide
 end # hide
@@ -62,5 +66,6 @@ print_setting_info(""; category = "SolverSettings")
 # correct name by printing the setting info as shown above.
 
 output = solve(sim; info_level = 2)
+nothing # hide
 
 # These keywork arguments will override the settings in the SolverSettings object, if both are provided.
