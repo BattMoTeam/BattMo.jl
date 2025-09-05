@@ -163,6 +163,16 @@ function log_schema_issues(issues::Vector{SingleIssue}, set_name::String)
 		println("─"^50)
 
 		for (i, issue) in enumerate(issues)
+
+			@info issue
+
+			if issue.reason == "required"
+				required_fields = issue.val
+				present_fields = collect(keys(issue.x))
+				missing_fields = setdiff(required_fields, present_fields)
+				msg = "Missing required field(s): $(join(missing_fields, ", "))"
+			end
+
 			println("─"^50)
 			println("Issue $i:")
 
@@ -174,7 +184,7 @@ function log_schema_issues(issues::Vector{SingleIssue}, set_name::String)
 
 			# Custom messages for common schema keys
 			msg =
-				issue.reason == "required" ? "Missing required field(s): $(join(issue.val, ", "))" :
+				issue.reason == "required" ? msg :
 				issue.reason == "maximum"  ? "Value exceeds maximum allowed ($(issue.val))" :
 				issue.reason == "minimum"  ? "Value is below the minimum allowed ($(issue.val))" :
 				issue.reason == "type"     ? "Expected type: $(issue.val)" :

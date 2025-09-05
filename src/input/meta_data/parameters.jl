@@ -246,7 +246,7 @@ function get_parameter_meta_data()
 		),
 		"TabLength" => Dict(
 			"type" => Real,
-			"min_value" => 0.01,
+			"min_value" => 0.0001,
 			"max_value" => 0.5,
 			"unit" => "m",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_cd2cd0de_e0cc_4ef1_b27e_2e88db027bac",
