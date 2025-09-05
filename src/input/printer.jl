@@ -371,7 +371,7 @@ function print_submodels_info()
 	# Filter parameters with "is_sub_model" == true
 	submodel_params = []
 	for (param, info) in meta_data
-		if get(info, "is_sub_model", false)
+		if get(info, "category", nothing) == "ModelSettings"
 			options = get(info, "options", "N/A")
 			doc_url = get(info, "documentation", nothing)
 			options_str = isa(options, AbstractArray) ? join(options, ", ") : string(options)
@@ -386,9 +386,9 @@ function print_submodels_info()
 	end
 
 	# Print the submodels information with the same design as your example
-	println("="^80)
+	println("="^100)
 	println("ℹ️  Submodels Information")
-	println("="^80)
+	println("="^100)
 
 	# Table header
 	header1 = "Parameter"
@@ -397,8 +397,8 @@ function print_submodels_info()
 
 	output_fmt = detect_output_format()
 
-	println(rpad(header1, 30), rpad(header2, 30), header3)
-	println("-"^80)
+	println(rpad(header1, 30), rpad(header2, 50), header3)
+	println("-"^100)
 
 	# Print each parameter and its options
 	for (param, options, doc_url) in submodel_params
@@ -407,7 +407,7 @@ function print_submodels_info()
 		else
 			url = doc_url == "-" ? "-" : format_link("visit", doc_url, 50, output_fmt)
 		end
-		println(rpad(param, 30), rpad(options, 30), url)
+		println(rpad(param, 30), rpad(options, 50), url)
 	end
 
 	println()  # Extra line after the table
@@ -441,10 +441,15 @@ Displays detailed metadata for any model or simulation setting whose name matche
 - If no matches are found: prints a ❌ message indicating no results.
 - If matches are found: prints a block of detailed metadata for each, separated by horizontal lines.
 """
-function print_setting_info(from_name::String)
+function print_setting_info(from_name::String; category::Union{Nothing, String} = nothing)
 	# Get the metadata dictionary
 	meta_data = get_setting_meta_data()
 	output_fmt = detect_output_format()
+
+	if !isnothing(category)
+		# Filter meta_data by category if provided
+		meta_data = Dict(k => v for (k, v) in meta_data if get(v, "category", nothing) == category)
+	end
 
 	# Soft match: find keys containing `from_name` (case-insensitive)
 	matches = collect(filter(key -> occursin(lowercase(from_name), lowercase(key)), keys(meta_data)))
@@ -462,16 +467,16 @@ function print_setting_info(from_name::String)
 			# Name
 			println("🔹 Name:         	", actual_key)
 
+			# category
+			if haskey(param_info, "category")
+				category = param_info["category"]
+				println("🔹 Category:		", category)
+			end
+
 			# Variable name
 			if haskey(param_info, "variable_name")
 				var_name = param_info["variable_name"]
-				println("🔹 Variable name:	", var_name)
-			end
-
-			# Description
-			if haskey(param_info, "description")
-				description = param_info["description"]
-				println("🔹 Description:		", description)
+				println("🔹 Keyword argument:	", var_name)
 			end
 
 			# Type
@@ -523,6 +528,12 @@ function print_setting_info(from_name::String)
 			end
 			if @isdefined iri
 				println("🔹 Ontology link:	", iri)
+			end
+
+			# Description
+			if haskey(param_info, "description")
+				description = param_info["description"]
+				println("🔹 Description:		", description)
 			end
 
 			println()  # Extra spacing between entries
@@ -580,12 +591,6 @@ function print_parameter_info(from_name::String)
 			# Name
 			println("🔹 Name:         	", actual_key)
 
-			# Description
-			if haskey(param_info, "description")
-				description = param_info["description"]
-				println("🔹 Description:		", description)
-			end
-
 			# Type
 			if haskey(param_info, "type")
 				types = param_info["type"]
@@ -635,6 +640,12 @@ function print_parameter_info(from_name::String)
 			end
 			if @isdefined iri
 				println("🔹 Ontology link:	", iri)
+			end
+
+			# Description
+			if haskey(param_info, "description")
+				description = param_info["description"]
+				println("🔹 Description:		", description)
 			end
 
 			println()  # Extra spacing between entries
