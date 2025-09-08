@@ -160,8 +160,8 @@ function build_battmo_docs(build_format              = nothing;
 	],
 		"Sub-models" => [
 		"Overview" => "manuals/user_guide/sub_models.md",
-		"Ramp up model" => "manuals/user_guide/ramp_up.md",
-		"SEI model" => "manuals/user_guide/sei_model.md",
+		"Ramp up" => "manuals/user_guide/ramp_up.md",
+		"SEI" => "manuals/user_guide/sei_model.md",
 		"Temperature dependence" => "manuals/user_guide/arrhenius.md"
 	],
 		"Public API" => [
