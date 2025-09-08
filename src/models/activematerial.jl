@@ -311,9 +311,14 @@ end
 		diff_func = model.system.params[:diff_func]
 
 		cmax = model.system.params[:maximum_concentration]
-		Ea = model.system.params[:activation_energy_of_diffusion]
-		setting_temperature_dependence = get(model.system.params, :setting_temperature_dependence, nothing)
+		setting_temperature_dependence = model.system.params[:setting_temperature_dependence]
 		refT = 298.15
+
+		if haskey(model.system.params, :activation_energy_of_diffusion)
+			Ea = model.system.params[:activation_energy_of_diffusion]
+		else
+			Ea = nothing
+		end
 
 		if Jutul.haskey(model.system.params, :diff_funcexp)
 			theta0   = model.system.params[:theta0]
@@ -325,17 +330,17 @@ end
 
 			if Jutul.haskey(model.system.params, :diff_funcexp)
 
-				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Ea, setting_temperature_dependence)
+				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax); Ea, dependent = setting_temperature_dependence)
 
 			elseif Jutul.haskey(model.system.params, :diff_funcdata)
 
-				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func(SurfaceConcentration[cell] / cmax), Ea, setting_temperature_dependence)
+				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func(SurfaceConcentration[cell] / cmax); Ea, dependent = setting_temperature_dependence)
 
 			elseif Jutul.haskey(model.system.params, :diff_funcconstant)
-				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func, Ea, setting_temperature_dependence)
+				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func; Ea, dependent = setting_temperature_dependence)
 			else
 
-				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Ea, setting_temperature_dependence)
+				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax); Ea, dependent = setting_temperature_dependence)
 
 			end
 		end
@@ -350,7 +355,7 @@ end
 		Temperature,
 		ix) where {label, D, T, Di}
 		rate_func = model.system.params[:reaction_rate_constant_func]
-		Eak = model.system.params[:activation_energy_of_reaction]
+		Ea = model.system.params[:activation_energy_of_reaction]
 		setting_temperature_dependence = model.system.params[:setting_temperature_dependence]
 
 		refT = 298.15
@@ -359,17 +364,17 @@ end
 
 			if Jutul.haskey(model.system.params, :ecd_funcexp)
 
-				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Eak, setting_temperature_dependence)
+				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func(SurfaceConcentration[cell], Temperature[cell]); Ea, dependent = setting_temperature_dependence)
 
 			elseif Jutul.haskey(model.system.params, :ecd_funcdata)
 
-				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func(SurfaceConcentration[cell] / cmax), Eak, setting_temperature_dependence)
+				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func(SurfaceConcentration[cell] / cmax); Ea, dependent = setting_temperature_dependence)
 
 			elseif Jutul.haskey(model.system.params, :ecd_funcconstant)
-				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func, Eak, setting_temperature_dependence)
+				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func; Ea, dependent = setting_temperature_dependence)
 			else
 
-				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Eak, setting_temperature_dependence)
+				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func(SurfaceConcentration[cell], Temperature[cell]); Ea, dependent = setting_temperature_dependence)
 
 			end
 		end

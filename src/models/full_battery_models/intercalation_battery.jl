@@ -397,13 +397,14 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		am_params[:ocp_func] = interpolation_object
 	end
 
-	T        = input.cycling_protocol["InitialTemperature"]
+	refT     = 298.15
+	T        = get(input.cycling_protocol, "AmbientTemperature", refT)
 	SOC_init = input.cycling_protocol["InitialStateOfCharge"]
 
 	theta0   = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
 	theta100 = inputparams_active_material["StoichiometricCoefficientAtSOC100"]
 	cmax     = inputparams_active_material["MaximumConcentration"]
-	refT     = 298.15
+
 
 	theta = SOC_init * (theta100 - theta0) + theta0
 	c     = theta * cmax
@@ -521,7 +522,8 @@ function set_parameters(model::IntercalationBattery, input
 
 	parameters = Dict{Symbol, Any}()
 
-	T0 = cycling_protocol["InitialTemperature"]
+	refT = 298.15
+	T = get(cycling_protocol, "AmbientTemperature", refT)
 
 	if haskey(model.settings, "CurrentCollectors")
 
@@ -544,7 +546,7 @@ function set_parameters(model::IntercalationBattery, input
 	inputparams_neam = cell_parameters["NegativeElectrode"]["ActiveMaterial"]
 
 	prm_neam[:Conductivity] = compute_effective_conductivity(multimodel[:NeAm], cell_parameters["NegativeElectrode"])
-	prm_neam[:Temperature] = T0
+	prm_neam[:Temperature] = T
 
 	if discretisation_type(multimodel[:NeAm]) == :P2Ddiscretization
 		# nothing to do
@@ -560,7 +562,7 @@ function set_parameters(model::IntercalationBattery, input
 	###############
 
 	prm_elyte = Dict{Symbol, Any}()
-	prm_elyte[:Temperature] = T0
+	prm_elyte[:Temperature] = T
 	prm_elyte[:BruggemanCoefficient] = cell_parameters["Separator"]["BruggemanCoefficient"]
 
 
@@ -574,7 +576,7 @@ function set_parameters(model::IntercalationBattery, input
 	inputparams_peam = cell_parameters["PositiveElectrode"]["ActiveMaterial"]
 
 	prm_peam[:Conductivity] = compute_effective_conductivity(multimodel[:PeAm], cell_parameters["PositiveElectrode"])
-	prm_peam[:Temperature] = T0
+	prm_peam[:Temperature] = T
 
 
 	if discretisation_type(multimodel[:PeAm]) == :P2Ddiscretization
@@ -891,7 +893,8 @@ function setup_initial_state(input, model::IntercalationBattery)
 
 	include_cc = haskey(model.settings, "CurrentCollectors")
 
-	T        = input.cycling_protocol["InitialTemperature"]
+	refT     = 298.15
+	T        = get(input.cycling_protocol, "AmbientTemperature", refT)
 	SOC_init = input.cycling_protocol["InitialStateOfCharge"]
 
 	function setup_init_am(name, multimodel)

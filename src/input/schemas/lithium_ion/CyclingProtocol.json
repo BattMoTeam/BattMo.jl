@@ -27,7 +27,7 @@
             ],
             "description": "Whether a cycling protocol starts with 'charging' or 'discharging'."
         },
-        "InitialTemperature": {
+        "AmbientTemperature": {
             "type": "number",
             "minimum": 238.15,
             "maximum": 373.15,
@@ -126,7 +126,7 @@
     "required": [
         "Protocol",
         "InitialStateOfCharge",
-        "InitialTemperature"
+        "AmbientTemperature"
     ],
     "allOf": [
         {

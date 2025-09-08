@@ -353,7 +353,6 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 		push!(cell_required, "ElectrodeWidth")
 		push!(cell_required, "ElectrodeLength")
-		push!(cell_required, "ElectrodeGeometricSurfaceArea")
 		if haskey(model_settings, "CurrentCollectors")
 			push!(ne_required, "CurrentCollector")
 			push!(pe_required, "CurrentCollector")

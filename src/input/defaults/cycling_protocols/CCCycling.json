@@ -10,6 +10,5 @@
     "DRate": 0.5,
     "LowerVoltageLimit": 2.5,
     "UpperVoltageLimit": 4.1,
-    "InitialControl": "charging",
-    "InitialTemperature": 298.15
+    "InitialControl": "charging"
 }

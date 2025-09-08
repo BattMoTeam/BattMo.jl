@@ -349,7 +349,7 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 		"DRate" => params["Control"]["DRate"],
 		"LowerVoltageLimit" => params["Control"]["lowerCutoffVoltage"],
 		"UpperVoltageLimit" => params["Control"]["upperCutoffVoltage"],
-		"InitialTemperature" => params["initT"],
+		"AmbientTemperature" => params["initT"],
 		"InitialControl" => init_prot,
 	)
 

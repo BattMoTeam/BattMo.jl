@@ -12,6 +12,5 @@
   "UpperVoltageLimit": 4.0,
   "InitialControl": "charging",
   "CurrentChangeLimit": 1e-4,
-  "VoltageChangeLimit": 1e-4,
-  "InitialTemperature": 298.15
+  "VoltageChangeLimit": 1e-4
 }

@@ -10,7 +10,7 @@ function arrhenius(T, A0, Ea)
 
 end
 
-function temperature_dependent(T, A0, Ea, dependent = nothing)
+function temperature_dependent(T, A0; Ea = nothing, dependent = nothing)
 
 	if dependent == "Arrhenius"
 		val = arrhenius(T, A0, Ea)
