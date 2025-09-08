@@ -5,6 +5,7 @@ The sodium ion model is the same as the lithium ion PXD model, but you have the 
 Select this option in your model settings:
 
 ```
+model_settings = load_model_settings(;from_file_path = "file_path.json")
 model_settings["ButlerVolmer"] = "Chayambuka"
 
 ```
