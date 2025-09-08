@@ -342,7 +342,7 @@ function setup_submodels(inputparams::MatlabInputParamsOld;
 
 		k0 = inputparams_itf["reactionRateConstant"]
 		Eak = inputparams_itf["activationEnergyOfReaction"]
-		am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
+		am_params[:reaction_rate_constant_func] = (T) -> arrhenius(T, k0, Eak)
 
 		funcname = inputparams_itf["openCircuitPotential"]["functionname"] # This matlab parameter must have been converted from function handle to string before call
 		func = getfield(BattMo, Symbol(funcname))

@@ -654,7 +654,7 @@ function setup_submodels(inputparams::InputParamsOld;
 		k0  = inputparams_am["Interface"]["reactionRateConstant"]
 		Eak = inputparams_am["Interface"]["activationEnergyOfReaction"]
 
-		am_params[:reaction_rate_constant_func] = (c, T) -> compute_reaction_rate_constant(c, T, k0, Eak)
+		am_params[:reaction_rate_constant_func] = (T) -> arrhenius(T, k0, Eak)
 
 		if isa(inputparams_am["Interface"]["openCircuitPotential"], Real)
 			am_params[:ocp_funcconstant] = true

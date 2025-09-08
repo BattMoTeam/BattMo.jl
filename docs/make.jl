@@ -159,8 +159,10 @@ function build_battmo_docs(build_format              = nothing;
 		"Sodium ion model" => "manuals/user_guide/sodium_ion_model.md"
 	],
 		"Sub-models" => [
-		"Ramp up model" => "manuals/user_guide/ramp_up.md",
-		"SEI model" => "manuals/user_guide/sei_model.md"
+		"Overview" => "manuals/user_guide/sub_models.md",
+		"Ramp up" => "manuals/user_guide/ramp_up.md",
+		"SEI" => "manuals/user_guide/sei_model.md",
+		"Temperature dependence" => "manuals/user_guide/arrhenius.md"
 	],
 		"Public API" => [
 		"Input terminology" => "manuals/user_guide/terminology.md",

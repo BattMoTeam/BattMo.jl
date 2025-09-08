@@ -129,9 +129,9 @@ function validate_parameter_set(parameters::ModelSettings)
 
 end
 
-function validate_parameter_set(parameters::CyclingProtocol)
+function validate_parameter_set(parameters::CyclingProtocol, model_settings::ModelSettings)
 
-	schema = get_schema_cycling_protocol()
+	schema = get_schema_cycling_protocol(model_settings)
 
 	# Convert schema Dict to JSONSchema object
 	schema_obj = Schema(schema)

@@ -214,6 +214,7 @@ include("input/validator.jl")
 
 
 include("models/thermal.jl")
+include("models/temperature_dependence.jl")
 include("models/elyte.jl")
 include("models/current_collector.jl")
 include("models/ocp.jl")

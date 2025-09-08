@@ -69,7 +69,7 @@ struct Simulation <: AbstractSimulation
 			# Here will come a validation function
 			model_settings = model.settings
 			cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
-			cycling_protocol_is_valid = validate_parameter_set(cycling_protocol)
+			cycling_protocol_is_valid = validate_parameter_set(cycling_protocol, model_settings)
 			simulation_settings_is_valid = validate_parameter_set(simulation_settings, model_settings)
 
 			if cell_parameters_is_valid && cycling_protocol_is_valid && simulation_settings_is_valid
@@ -591,9 +591,9 @@ function get_scalings(model, parameters)
 		c_a = 0.5 * cmax
 
 		if isa(rate_func, Real)
-			R0 = compute_reaction_rate_constant(c_a, refT, rate_func, Eak)
+			R0 = arrhenius(refT, rate_func, Eak)
 		else
-			R0 = compute_reaction_rate_constant(c_a, refT, rate_func(c_a, refT), Eak)
+			R0 = arrhenius(refT, rate_func(c_a, refT), Eak)
 		end
 		c_e            = 1000.0
 		activematerial = model[elde].system

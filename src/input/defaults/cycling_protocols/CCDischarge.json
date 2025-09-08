@@ -9,6 +9,5 @@
   "InitialControl": "discharging",
   "DRate": 0.5,
   "LowerVoltageLimit": 2.4,
-  "UpperVoltageLimit": 4.1,
-  "InitialTemperature": 298.15
+  "UpperVoltageLimit": 4.1
 }

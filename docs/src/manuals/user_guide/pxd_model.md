@@ -146,7 +146,7 @@ where ``\eta_\text{s}`` and ``j_0`` denote the overpotential and the reaction ex
 ```
 where ``U_\text{ocp}`` denotes the open circuit potential, given as a function of the Lithium concentration in the electrode and the temperature.  The exchange current density is given by
 ```math
-  j_0 = k_{\text{s},0} e^{-\frac{E_a}{R}(1/T - 1/T_{\text{ref}})}\left(c_\text{e}(c_{\text{s},\max} - c_\text{s})c_\text{s}\right)^{\frac12}.
+  j_0 = k_{\text{s},0} \left(c_\text{e}(c_{\text{s},\max} - c_\text{s})c_\text{s}\right)^{\frac12} n F.
 ```
 
 ### DFN Model Parameters (BattMo)
