@@ -1,4 +1,4 @@
-name: CI
+name: BattMo.jl CI
 on:
   push:
     branches:

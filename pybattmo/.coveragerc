@@ -1,0 +1,8 @@
+[run]
+branch = True
+source = battmo
+
+[report]
+show_missing = True
+skip_covered = True
+fail_under = 60
