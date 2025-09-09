@@ -119,8 +119,10 @@ dependencies = [
     "juliapkg>=0.1"
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+
 [tool.setuptools]
-packages = ["battmo"]
 include-package-data = false
 package-data = {battmo = ["juliapkg.json"]}
 license-files = ["LICENSE"]
