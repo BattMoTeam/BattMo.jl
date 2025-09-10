@@ -12,9 +12,18 @@ def test_loading():
 
 
 def test_simulation():
-    cell_parameters = load_cell_parameters(from_default_set="Chen2020")
+    cell_parameters = load_cell_parameters(from_default_set="chayambuka")
     cycling_protocol = load_cycling_protocol(from_default_set="CCDischarge")
+
     model_setup = LithiumIonBattery()
+    sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+    output = solve(sim)
+
+    cell_parameters = load_cell_parameters(from_default_set="chayambuka")
+    model_settings = load_model_settings(from_default_set="P2D")
+    model_settings["ButlerVolmer"] = "Chayambuka"
+
+    model_setup = SodiumIonBattery(model_settings)
     sim = Simulation(model_setup, cell_parameters, cycling_protocol)
     output = solve(sim)
 
@@ -32,13 +41,13 @@ def test_output_handling():
     print_output_overview(output)
 
 
-# def test_plotting():
+def test_plotting():
 
-#     install_plotting()
-#     activate_plotting()
-#     make_interactive()
+    install_plotting()
+    activate_plotting()
+    make_interactive()
 
-#     uninstall_plotting()
+    uninstall_plotting()
 
 
 def test_utils():
@@ -47,6 +56,11 @@ def test_utils():
     print_parameter_info("Electrode")
     print_setting_info("Grid")
     print_output_variable_info("Concentration")
+
+    cell_parameters = load_cell_parameters(from_default_set="Chen2020")
+    print_cell_info(cell_parameters)
+
+    plot_cell_curves(cell_parameters)
 
 
 # def test_calibration():

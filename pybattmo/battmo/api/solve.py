@@ -1,4 +1,4 @@
-from .julia_import import jl
+from ..julia_import import jl
 
 
 def Simulation(*arg, **kwargs):

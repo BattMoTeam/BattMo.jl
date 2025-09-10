@@ -42,7 +42,7 @@ except Exception:
     jl.seval(
         """
     import Pkg
-    Pkg.add(url="https://github.com/BattMoTeam/BattMo.jl")
+    Pkg.add("url="https://github.com/BattMoTeam/BattMo.jl"")
     using BattMo
     """
     )

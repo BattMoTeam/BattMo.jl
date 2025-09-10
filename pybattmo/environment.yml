@@ -7,3 +7,5 @@ dependencies:
   - pyjuliacall>=0.9.24
   - pytest>=8.4.2
   - pytest-cov
+  - pandas
+  - plotly

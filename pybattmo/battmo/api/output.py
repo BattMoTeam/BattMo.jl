@@ -1,6 +1,7 @@
-from .julia_import import jl
+from ..julia_import import jl
 import numpy as np
 import pandas as pd
+
 
 def get_output_time_series(*arg, **kwargs):
     return jl.get_output_time_series(*arg, **kwargs)
