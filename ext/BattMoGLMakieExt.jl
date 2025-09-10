@@ -1,6 +1,6 @@
 module BattMoGLMakieExt
 
-using BattMo, GLMakie, RuntimeGeneratedFunctions
+using BattMo, WGLMakie, RuntimeGeneratedFunctions
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
 function BattMo.check_plotting_availability_impl()
@@ -8,7 +8,7 @@ function BattMo.check_plotting_availability_impl()
 end
 
 function BattMo.independent_figure(fig::Figure)
-	display(GLMakie.Screen(), fig)
+	display(WGLMakie.Screen(), fig)
 end
 
 

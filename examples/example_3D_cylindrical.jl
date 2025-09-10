@@ -2,7 +2,7 @@
 # This example demonstrates how to set up, run and visualize a 3D cylindrical battery model
 
 # ## Load the packages
-using BattMo, GLMakie, Jutul
+using BattMo, Jutul, WGLMakie
 
 # ## Load the cell parameters
 cell_parameters     = load_cell_parameters(; from_default_set = "Chen2020")
@@ -71,17 +71,17 @@ nothing #hide
 
 # We plot the components
 
-for (i, component) in enumerate(components)
-	if i == 1
-		global fig, ax = plot_mesh(grids[component],
-			color = colors[i])
-	else
-		plot_mesh!(ax,
-			grids[component],
-			color = colors[i])
-	end
-end
-fig #hide
+# for (i, component) in enumerate(components)
+# 	if i == 1
+# 		global fig, ax = plot_mesh(grids[component],
+# 			color = colors[i])
+# 	else
+# 		plot_mesh!(ax,
+# 			grids[component],
+# 			color = colors[i])
+# 	end
+# end
+# fig #hide
 
 # ## Plot the current collectors tabs
 
@@ -95,11 +95,11 @@ components = [
 	"PositiveCurrentCollector",
 ]
 
-for component in components
-	plot_mesh!(ax, grids[component];
-		boundaryfaces = couplings[component]["External"]["boundaryfaces"],
-		color = :red)
-end
+# for component in components
+# 	plot_mesh!(ax, grids[component];
+# 		boundaryfaces = couplings[component]["External"]["boundaryfaces"],
+# 		color = :red)
+# end
 
 fig #hide
 
@@ -135,7 +135,7 @@ nothing #hide
 # ## Visualization of the simulation output
 
 # We plot the discharge curve
-
+ENV["BROWSER"] = "true"
 plot_dashboard(output; plot_type = "simple")
 
 # We open the interactive visualization tool with the simulation output.

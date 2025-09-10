@@ -5,6 +5,7 @@ version = "0.1.15"
 
 [deps]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 JSONSchema = "7d188eb4-7ad8-530c-ae41-71a32a6d4692"
@@ -22,16 +23,15 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
+WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 x264_jll = "1270edf5-f2f9-52d2-97e9-ab00b5d0237a"
 
-[weakdeps]
-GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
-
 [extensions]
-BattMoGLMakieExt = "GLMakie"
+BattMoGLMakieExt = ["GLMakie", "WGLMakie"]
 
 [compat]
 ForwardDiff = "0.10.38"
+GLMakie = "0.11.11"
 JLD2 = "0.4.31"
 JSON = "0.21.4"
 JSONSchema = "1.4.1"
@@ -45,11 +45,13 @@ RuntimeGeneratedFunctions = "0.5"
 StaticArrays = "1.5.17"
 StatsBase = "0.34"
 Tullio = "0.3.5"
+WGLMakie = "0.11.10"
 julia = "1.8"
 
 [extras]
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 
 [targets]
-docs = ["GLMakie"]
-test = ["GLMakie"]
+docs = ["GLMakie", "WGLMakie"]
+test = ["GLMakie", "WGLMakie"]
