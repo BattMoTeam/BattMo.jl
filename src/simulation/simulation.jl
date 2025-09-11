@@ -439,7 +439,7 @@ function solver_configuration(sim::JutulSimulator,
 	if timestep_selector == "TimestepSelector"
 		timesel = [TimestepSelector()]
 	end
-
+	@info verbose["InfoLevel"]
 
 	cfg = simulator_config(
 		sim;

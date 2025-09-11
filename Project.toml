@@ -13,6 +13,7 @@ Jutul = "2b460a1a-8a2b-45b2-b125-b5c536396eb9"
 LBFGSB = "5be7bae1-8223-5378-bac3-9e7378a2f6e6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MAT = "23992714-dd62-5051-b70f-ba57cb901cac"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
@@ -27,7 +28,7 @@ WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 x264_jll = "1270edf5-f2f9-52d2-97e9-ab00b5d0237a"
 
 [extensions]
-BattMoGLMakieExt = ["GLMakie", "WGLMakie"]
+BattMoGLMakieExt = ["GLMakie", "WGLMakie", "Makie"]
 
 [compat]
 ForwardDiff = "0.10.38"
@@ -38,6 +39,7 @@ JSONSchema = "1.4.1"
 Jutul = "0.4.0"
 LBFGSB = "0.4.1"
 MAT = "0.10.4"
+Makie = "0.22.10"
 Markdown = "1.11.0"
 Polynomials = "3.2.11 - 4"
 PrecompileTools = "1.1.1"
@@ -51,7 +53,8 @@ julia = "1.8"
 [extras]
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 
 [targets]
-docs = ["GLMakie", "WGLMakie"]
-test = ["GLMakie", "WGLMakie"]
+docs = ["GLMakie", "WGLMakie", "Makie"]
+test = ["GLMakie", "WGLMakie", "Makie"]

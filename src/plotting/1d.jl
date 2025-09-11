@@ -1,8 +1,17 @@
 export plot_dashboard, plot_output, plot_cell_curves
+export activate_browser, deactivate_browser
 
 #####################################################################################################
 # The actual functions within this script can be found within "../ext/BattMoGLMakieExt.jl"
 #####################################################################################################
+
+function activate_browser()
+	ENV["Browser"] = "true"
+end
+
+function deactivate_browser()
+	ENV["Browser"] = "false"
+end
 
 function plot_cell_curves(arg...; kwarg...)
 	check_plotting_availability()
@@ -82,7 +91,15 @@ function check_plotting_availability(; throw = true, interactive = false)
 	catch e
 		if throw
 			if e isa MethodError
-				error("Plotting is not available. You need to have a GLMakie backend available. To fix: using Pkg; Pkg.add(\"GLMakie\") and then call using GLMakie to enable plotting.")
+				error("""Plotting is not available. You need to have either a GLMakie or WGLMakie backend available. 
+					GLMakie opens the plots in a separate window and is recommended for interactive plots.
+					WGLMakie renders the plots in your browser. 
+
+					To fix: using Pkg; Pkg.add(\"GLMakie\") and then call using GLMakie to enable plotting.
+					
+					or: using Pkg; Pkg.add(\"WGLMakie\") and then call using WGLMakie, activate_browser(), and using BattMoGLMakieExt to enable plotting.
+					
+					""")
 			else
 				rethrow(e)
 			end

@@ -1,14 +1,26 @@
 module BattMoGLMakieExt
 
-using BattMo, WGLMakie, RuntimeGeneratedFunctions
+using BattMo, RuntimeGeneratedFunctions
+using Makie: Slider, Label, Axis, Colorbar, Figure, Observable, GridLayout
+
+if get(ENV, "Browser", "false") == "true"
+	using WGLMakie
+	WGLMakie.activate!()
+else
+	using GLMakie
+	GLMakie.activate!()
+end
+
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
 function BattMo.check_plotting_availability_impl()
+	@info "Backend: " * string(Makie.current_backend())
 	return true
 end
 
 function BattMo.independent_figure(fig::Figure)
-	display(WGLMakie.Screen(), fig)
+	display(fig)
+
 end
 
 

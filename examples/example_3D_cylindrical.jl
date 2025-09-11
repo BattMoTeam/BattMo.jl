@@ -127,15 +127,14 @@ cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
 simulation_settings["GridResolutionAngular"]                             = 8
 
 # We setup the simulation and run it
-
+model = LithiumIonBattery(; model_settings)
 sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
-output = solve(sim; info_level = -1)
+output = solve(sim; info_level = -1);
 nothing #hide
 
 # ## Visualization of the simulation output
 
 # We plot the discharge curve
-ENV["BROWSER"] = "true"
 plot_dashboard(output; plot_type = "simple")
 
 # We open the interactive visualization tool with the simulation output.
