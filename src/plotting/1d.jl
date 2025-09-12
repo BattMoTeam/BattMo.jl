@@ -1,7 +1,8 @@
 export plot_dashboard, plot_output, plot_cell_curves
 
+
 #####################################################################################################
-# The actual functions within this script can be found within "../ext/BattMoGLMakieExt.jl"
+# The actual functions within this script can be found within "../ext/BattMoMakieExt.jl"
 #####################################################################################################
 
 function plot_cell_curves(arg...; kwarg...)
@@ -70,33 +71,4 @@ function plot_dashboard(arg...; kwarg...)
 end
 
 function plot_dashboard_impl end
-
-function independent_figure(fig)
-	display(fig)
-end
-
-function check_plotting_availability(; throw = true, interactive = false)
-	ok = true
-	try
-		ok = check_plotting_availability_impl()
-	catch e
-		if throw
-			if e isa MethodError
-				error("Plotting is not available. You need to have a GLMakie backend available. To fix: using Pkg; Pkg.add(\"GLMakie\") and then call using GLMakie to enable plotting.")
-			else
-				rethrow(e)
-			end
-		else
-			ok = false
-		end
-	end
-	if interactive
-		plotting_check_interactive()
-	end
-	return ok
-end
-
-function check_plotting_availability_impl
-
-end
 
