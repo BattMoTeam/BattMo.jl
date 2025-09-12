@@ -5,7 +5,6 @@ version = "0.1.15"
 
 [deps]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 JSONSchema = "7d188eb4-7ad8-530c-ae41-71a32a6d4692"
@@ -13,7 +12,6 @@ Jutul = "2b460a1a-8a2b-45b2-b125-b5c536396eb9"
 LBFGSB = "5be7bae1-8223-5378-bac3-9e7378a2f6e6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MAT = "23992714-dd62-5051-b70f-ba57cb901cac"
-Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
@@ -24,11 +22,15 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
-WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 x264_jll = "1270edf5-f2f9-52d2-97e9-ab00b5d0237a"
 
+[weakdeps]
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+
 [extensions]
-BattMoGLMakieExt = ["GLMakie", "WGLMakie", "Makie"]
+BattMoMakieExt = ["Makie"]
 
 [compat]
 ForwardDiff = "0.10.38"
@@ -56,5 +58,5 @@ WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 
 [targets]
-docs = ["GLMakie", "WGLMakie", "Makie"]
-test = ["GLMakie", "WGLMakie", "Makie"]
+docs = ["GLMakie"]
+test = ["GLMakie"]

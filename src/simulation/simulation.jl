@@ -305,27 +305,27 @@ function overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
 		if !isnothing(value) && !ismissing(value)
 			if key == :LinearSolver
 				if isa(value, Dict)
-					solver_settings.all[key] = value
+					solver_settings[key] = value
 				else
-					solver_settings.all[key] = "UserDefined"
+					solver_settings[key] = "UserDefined"
 					linear_solver = value
 				end
 
 
 			elseif key == :TimeStepSelectors
 				if isa(value, String)
-					solver_settings.all[key] = value
+					solver_settings[key] = value
 				else
-					solver_settings.all[key] = "UserDefined"
+					solver_settings[key] = "UserDefined"
 					timestep_selectors = value
 				end
 
 
 			elseif key == :Relaxation
 				if isa(value, String)
-					solver_settings.all[key] = value
+					solver_settings[key] = value
 				else
-					solver_settings.all[key] = "UserDefined"
+					solver_settings[key] = "UserDefined"
 					relaxation = value
 				end
 
@@ -333,12 +333,14 @@ function overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
 			else
 				# Overwrite for all other keys
 				@info("Overwriting solver setting: $key => $value")
-				solver_settings.all[key] = value
+				solver_settings[key] = value
+
 			end
 		end
 	end
-
-	return (linear_solver = linear_solver,
+	@info solver_settings
+	return (solver_settings = solver_settings,
+		linear_solver = linear_solver,
 		relaxation = relaxation,
 		timestep_selectors = timestep_selectors)
 
@@ -417,7 +419,8 @@ function solver_configuration(sim::JutulSimulator,
 	kwargs...)
 
 	# Overwrite solver settings with kwargs
-	special_settings = overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
+	overwritten_settings = overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
+	solver_settings = overwritten_settings.solver_settings
 
 	# Validate solver settings
 	solver_settings_is_valid = validate_parameter_set(solver_settings)
@@ -465,7 +468,7 @@ function solver_configuration(sim::JutulSimulator,
 		tol_factor_final_iteration = non_linear_solver["TolFactorFinalIteration"],
 		safe_mode = non_linear_solver["SafeMode"],
 		extra_timing = non_linear_solver["ExtraTiming"],
-		linear_solver = isnothing(special_settings.linear_solver) ? special_settings.linear_solver : battery_linsolve(linear_solver),
+		linear_solver = isnothing(overwritten_settings.linear_solver) ? overwritten_settings.linear_solver : battery_linsolve(linear_solver),
 		relaxation = relax,
 		timestep_selectors = timesel,
 		output_states = output["OutputStates"],

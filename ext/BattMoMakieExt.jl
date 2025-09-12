@@ -1,15 +1,18 @@
-module BattMoGLMakieExt
+module BattMoMakieExt
 
 using BattMo, RuntimeGeneratedFunctions
+using Makie: Makie
 using Makie: Slider, Label, Axis, Colorbar, Figure, Observable, GridLayout
+using Makie: scatterlines!, contourf!, vlines!, lines!, autolimits!
+using Makie: on
 
-if get(ENV, "Browser", "false") == "true"
-	using WGLMakie
-	WGLMakie.activate!()
-else
-	using GLMakie
-	GLMakie.activate!()
-end
+# if get(ENV, "Browser", "false") == "true"
+# 	using WGLMakie
+# 	WGLMakie.activate!()
+# else
+# 	using GLMakie
+# 	GLMakie.activate!()
+# end
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
@@ -22,7 +25,6 @@ function BattMo.independent_figure(fig::Figure)
 	display(fig)
 
 end
-
 
 function BattMo.plot_cell_curves_impl(cell_parameters::CellParameters; new_window = true)
 	num_points = 100
