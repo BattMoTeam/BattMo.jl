@@ -1,4 +1,4 @@
-export load_model_settings, load_cell_parameters, load_cycling_protocol, load_simulation_settings, load_solver_settings
+export load_model_settings, load_cell_parameters, load_cycling_protocol, load_simulation_settings, load_solver_settings, load_full_simulation_input
 export load_matlab_battmo_input, load_battmo_formatted_input
 
 
@@ -161,6 +161,22 @@ function load_solver_settings(; from_file_path::Union{String, Nothing} = nothing
 	else
 		throw(ArgumentError("Either 'from_file_path' or 'from_default_set' must be provided."))
 	end
+end
+
+
+function load_full_simulation_input(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing)
+	if !isnothing(from_file_path)
+		# Assuming JSON and CyclingProtocol are correctly defined
+		full_simulation_instance = JSON.parsefile(from_file_path)
+		return FullSimulationInput(full_simulation_instance; source_path = from_file_path)
+	elseif !isnothing(from_default_set)
+		# Logic to load from default set (replace this with actual code)
+		file_path = parameter_file_path("full_simulation_input", from_default_set)
+		return load_full_simulation_input(; from_file_path = file_path)
+	else
+		throw(ArgumentError("Either 'from_file_path' or 'from_default_set' must be provided."))
+	end
+
 end
 
 """ 
