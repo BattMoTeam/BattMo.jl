@@ -1,19 +1,8 @@
-export activate_browser, deactivate_browser
+function independent_figure end
+function independent_figure_GLMakie end
+function independent_figure_WGLMakie end
 
-function activate_browser()
-	ENV["Browser"] = "true"
-end
-
-function deactivate_browser()
-	ENV["Browser"] = "false"
-end
-
-function independent_figure(fig)
-	display(fig)
-end
-
-
-function check_plotting_availability(; throw = true, interactive = false)
+function check_plotting_availability(; throw = true)
 	ok = true
 	try
 		ok = check_plotting_availability_impl()
@@ -35,9 +24,6 @@ function check_plotting_availability(; throw = true, interactive = false)
 		else
 			ok = false
 		end
-	end
-	if interactive
-		plotting_check_interactive()
 	end
 	return ok
 end

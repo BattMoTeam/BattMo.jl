@@ -6,24 +6,18 @@ using Makie: Slider, Label, Axis, Colorbar, Figure, Observable, GridLayout
 using Makie: scatterlines!, contourf!, vlines!, lines!, autolimits!
 using Makie: on
 
-# if get(ENV, "Browser", "false") == "true"
-# 	using WGLMakie
-# 	WGLMakie.activate!()
-# else
-# 	using GLMakie
-# 	GLMakie.activate!()
-# end
-
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
 function BattMo.check_plotting_availability_impl()
-	@info "Backend: " * string(Makie.current_backend())
 	return true
 end
 
-function BattMo.independent_figure(fig::Figure)
-	display(fig)
-
+function BattMo.independent_figure(fig)
+	if Makie.current_backend() == "GLMakie"
+		BattMo.independent_figure_GLMakie(fig)
+	elseif Makie.current_backend() == "WGLMakie"
+		BattMo.independent_figure_WGLMakie(fig)
+	end
 end
 
 function BattMo.plot_cell_curves_impl(cell_parameters::CellParameters; new_window = true)
