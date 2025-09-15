@@ -834,7 +834,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 
 	if battmo_input["Geometry"]["case"] == "jellyRoll"
 
-		set_input_params!(battmo_input, ["NonLinearSolver", "LinearSolver", "method"], "iterative")
+		set_input_params!(battmo_input, ["NonLinearSolver", "LinearSolver", "method"], "Iterative")
 
 	end
 

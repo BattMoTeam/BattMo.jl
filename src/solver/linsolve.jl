@@ -264,16 +264,16 @@ end
 
 function battery_linsolve(inputparams)
 
-	set_default_input_params!(inputparams, ["Method"], "direct")
+	set_default_input_params!(inputparams, ["Method"], "Direct")
 
 	method = inputparams["Method"]
 
-	if method == "direct"
+	if method == "Direct"
 
 		set_default_input_params!(inputparams, ["MaxSize"], 1000000)
 		return LUSolver(; max_size = inputparams["MaxSize"])
 
-	elseif method == "iterative"
+	elseif method == "Iterative"
 
 		solver = :fgmres
 

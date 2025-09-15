@@ -20,7 +20,7 @@
         "Relaxation": "NoRelaxation"
     },
     "LinearSolver": {
-        "Method": "iterative",
+        "Method": "Iterative",
         "LinearTolerance": 1e-7,
         "MaxLinearIterations": 50,
         "Verbosity": 0

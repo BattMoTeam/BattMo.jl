@@ -28,14 +28,14 @@
                     "type": "string",
                     "description": "Different linear solvers are available to solver the system of equations for the battery model. The default method is \"direct\"",
                     "enum": [
-                        "direct",
-                        "iterative"
+                        "Direct",
+                        "Iterative"
                     ],
                     "oneOf": [
                         {
                             "properties": {
                                 "method": {
-                                    "const": "direct"
+                                    "const": "Direct"
                                 },
                                 "description": "direct solver using LUsolver",
                                 "options": {
@@ -52,7 +52,7 @@
                         {
                             "properties": {
                                 "method": {
-                                    "const": "iterative"
+                                    "const": "Iterative"
                                 },
                                 "description": "This is an iterative solver using amg preconitioner for phi type variable in combintation with global smoothing with ilu",
                                 "options": {
