@@ -48,7 +48,7 @@ function get_default_model_settings(::Type{LithiumIonBattery})
 end
 
 function get_default_solver_settings(::Type{LithiumIonBattery})
-	settings = load_solver_settings(; from_default_set = "Direct")
+	settings = load_solver_settings(; from_default_set = "direct")
 	return settings
 end
 
