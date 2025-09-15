@@ -10,7 +10,7 @@
 
 # To start, we load BattMo (battery models and simulations) and GLMakie (plotting). 
 
-using BattMo, WGLMakie
+using BattMo, GLMakie
 
 # BattMo stores cell parameters, cycling protocols and settings in a user-friendly JSON format to facilitate reuse. For our example, we read 
 # the cell parameter set from a NMC811 vs Graphite-SiOx cell whose parameters were determined in the [Chen 2020 paper](https://doi.org/10.1149/1945-7111/ab9050). 
