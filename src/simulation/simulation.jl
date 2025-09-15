@@ -213,7 +213,7 @@ output = run_simulation(simulation_input)
 plot_dashboard(output)
 ```
 """
-function run_simulation(simulation_input::FullSimulationInput; kwargs...)
+function run_simulation(simulation_input::FullSimulationInput; logger = nothing, kwargs...)
 
 	input = extract_input_sets(simulation_input)
 
@@ -228,7 +228,7 @@ function run_simulation(simulation_input::FullSimulationInput; kwargs...)
 
 	sim = Simulation(model, input.cell_parameters, input.cycling_protocol; simulation_settings = input.simulation_settings)
 
-	output = solve(sim; solver_settings = input.solver_settings, kwargs...)
+	output = solve(sim; solver_settings = input.solver_settings, logger = logger, kwargs...)
 	return output
 
 end
