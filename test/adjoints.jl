@@ -4,7 +4,7 @@ import BattMo: VoltageCalibration, free_calibration_parameter!, freeze_calibrati
 function test_adjoints()
 	cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
 	cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
-	solver_settings = load_solver_settings(; from_default_set = "Direct")
+	solver_settings = load_solver_settings(; from_default_set = "direct")
 
 	cycling_protocol["InitialStateOfCharge"] = 0.8
 	cycling_protocol["LowerVoltageLimit"] = 2.0
