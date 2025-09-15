@@ -2,7 +2,7 @@
 # This example demonstrates how to set up, run and visualize a 3D cylindrical battery model
 
 # ## Load the packages
-using BattMo, GLMakie, Jutul
+using BattMo, Jutul, GLMakie
 
 # ## Load the cell parameters
 cell_parameters     = load_cell_parameters(; from_default_set = "Chen2020")
@@ -101,7 +101,7 @@ for component in components
 		color = :red)
 end
 
-fig #hide
+# fig #hide
 
 ax.azimuth[] = 4.0
 ax.elevation[] = 1.56
@@ -127,17 +127,16 @@ cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
 simulation_settings["GridResolutionAngular"]                             = 8
 
 # We setup the simulation and run it
-
+model = LithiumIonBattery(; model_settings)
 sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
-output = solve(sim; info_level = -1)
+output = solve(sim; info_level = -1);
 nothing #hide
 
 # ## Visualization of the simulation output
 
 # We plot the discharge curve
-
 plot_dashboard(output; plot_type = "simple")
 
 # We open the interactive visualization tool with the simulation output.
 
-plot_interactive_3d(output; colormap = :curl)
+plot_interactive_3d(output)

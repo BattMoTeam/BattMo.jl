@@ -301,44 +301,55 @@ function overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
 	relaxation = nothing
 	timestep_selectors = nothing
 
-	for (key, value) in settings
-		if !isnothing(value) && !ismissing(value)
-			if key == :LinearSolver
-				if isa(value, Dict)
-					solver_settings.all[key] = value
+	for (dict_key, dict) in settings
+		if !isnothing(dict) && !ismissing(dict)
+			if dict_key == "LinearSolver"
+				if isa(dict, Dict)
+					solver_settings[dict_key] = dict
 				else
-					solver_settings.all[key] = "UserDefined"
-					linear_solver = value
+					solver_settings[dict_key] = Dict("Method" => "UserDefined")
+					linear_solver = dict
 				end
-
-
-			elseif key == :TimeStepSelectors
-				if isa(value, String)
-					solver_settings.all[key] = value
-				else
-					solver_settings.all[key] = "UserDefined"
-					timestep_selectors = value
-				end
-
-
-			elseif key == :Relaxation
-				if isa(value, String)
-					solver_settings.all[key] = value
-				else
-					solver_settings.all[key] = "UserDefined"
-					relaxation = value
-				end
-
 
 			else
-				# Overwrite for all other keys
-				@info("Overwriting solver setting: $key => $value")
-				solver_settings.all[key] = value
+
+				for (key, value) in dict
+
+					if !isnothing(value) && !ismissing(value)
+
+						if key == :TimeStepSelectors
+							if isa(value, String)
+								solver_settings[dict_key][key] = value
+							else
+								solver_settings[dict_key][key] = "UserDefined"
+								timestep_selectors = value
+							end
+
+
+						elseif key == :Relaxation
+							if isa(value, String)
+								solver_settings[dict_key][key] = value
+							else
+								solver_settings[dict_key][key] = "UserDefined"
+								relaxation = value
+							end
+
+
+						else
+							# Overwrite for all other keys
+							solver_settings[dict_key][key] = value
+
+						end
+					end
+				end
+
 			end
 		end
+
 	end
 
-	return (linear_solver = linear_solver,
+	return (solver_settings = solver_settings,
+		linear_solver = linear_solver,
 		relaxation = relaxation,
 		timestep_selectors = timestep_selectors)
 
@@ -347,39 +358,45 @@ end
 
 function kwarg_dict(; kwargs...)
 	kwarg_dict = Dict(
+		"NonLinearSolver" => Dict(
+			"MaxTimestepCuts" => get(kwargs, :max_timestep_cuts, nothing),
+			"MaxTimestep" => get(kwargs, :max_timestep, nothing),
+			"TimestepMaxIncrease" => get(kwargs, :timestep_max_increase, nothing),
+			"TimestepMaxDecrease" => get(kwargs, :timestep_max_decrease, nothing),
+			"MaxResidual" => get(kwargs, :max_residual, nothing),
+			"MaxNonLinearIterations" => get(kwargs, :max_nonlinear_iterations, nothing),
+			"MinNonLinearIterations" => get(kwargs, :min_nonlinear_iterations, nothing),
+			"FailureCutsTimesteps" => get(kwargs, :failure_cuts_timestep, nothing),
+			"CheckBeforeSolve" => get(kwargs, :check_before_solve, nothing),
+			"AlwaysUpdateSecondary" => get(kwargs, :always_update_secondary, nothing),
+			"ErrorOnIncomplete" => get(kwargs, :error_on_incomplete, nothing),
+			"CuttingCriterion" => get(kwargs, :cutting_criterion, nothing),
+			"Tolerances" => get(kwargs, :tolerances, nothing),
+			"TolFactorFinalIteration" => get(kwargs, :tol_factor_final_iteration, nothing),
+			"SafeMode" => get(kwargs, :safe_mode, nothing),
+			"ExtraTiming" => get(kwargs, :extra_timing, nothing),
+			"TimeStepSelectors" => get(kwargs, :timestep_selectors, nothing),
+			"Relaxation" => get(kwargs, :relaxation, nothing),
+		),
 		"LinearSolver" => get(kwargs, :linear_solver, nothing),
-		"MaxTimestepCuts" => get(kwargs, :max_timestep_cuts, nothing),
-		"MaxTimestep" => get(kwargs, :max_timestep, nothing),
-		"TimestepMaxIncrease" => get(kwargs, :timestep_max_increase, nothing),
-		"TimestepMaxDecrease" => get(kwargs, :timestep_max_decrease, nothing),
-		"MaxResidual" => get(kwargs, :max_residual, nothing),
-		"MaxNonLinearIterations" => get(kwargs, :max_nonlinear_iterations, nothing),
-		"MinNonLinearIterations" => get(kwargs, :min_nonlinear_iterations, nothing),
-		"FailureCutsTimesteps" => get(kwargs, :failure_cuts_timestep, nothing),
-		"CheckBeforeSolve" => get(kwargs, :check_before_solve, nothing),
-		"AlwaysUpdateSecondary" => get(kwargs, :always_update_secondary, nothing),
-		"ErrorOnIncomplete" => get(kwargs, :error_on_incomplete, nothing),
-		"CuttingCriterion" => get(kwargs, :cutting_criterion, nothing),
-		"Tolerances" => get(kwargs, :tolerances, nothing),
-		"TolFactorFinalIteration" => get(kwargs, :tol_factor_final_iteration, nothing),
-		"SafeMode" => get(kwargs, :safe_mode, nothing),
-		"ExtraTiming" => get(kwargs, :extra_timing, nothing),
-		"TimeStepSelectors" => get(kwargs, :timestep_selectors, nothing),
-		"Relaxation" => get(kwargs, :relaxation, nothing),
-		"InfoLevel" => get(kwargs, :info_level, nothing),
-		"DebugLevel" => get(kwargs, :debug_level, nothing),
-		"EndReport" => get(kwargs, :end_report, nothing),
-		"ASCIITerminal" => get(kwargs, :ascii_terminal, nothing),
-		"ID" => get(kwargs, :id, nothing),
-		"ProgressColor" => get(kwargs, :progress_color, nothing),
-		"ProgressGlyphs" => get(kwargs, :progress_glyphs, nothing),
-		"OutputPath" => get(kwargs, :output_path, nothing),
-		"OutputStates" => get(kwargs, :output_states, nothing),
-		"OutputReports" => get(kwargs, :output_reports, nothing),
-		"InMemoryReports" => get(kwargs, :in_memory_reports, nothing),
-		"ReportLevel" => get(kwargs, :report_level, nothing),
-		"OutputSubstrates" => get(kwargs, :output_substates, nothing),
-	)
+		"Verbose" => Dict(
+			"InfoLevel" => get(kwargs, :info_level, nothing),
+			"DebugLevel" => get(kwargs, :debug_level, nothing),
+			"EndReport" => get(kwargs, :end_report, nothing),
+			"ASCIITerminal" => get(kwargs, :ascii_terminal, nothing),
+			"ID" => get(kwargs, :id, nothing),
+			"ProgressColor" => get(kwargs, :progress_color, nothing),
+			"ProgressGlyphs" => get(kwargs, :progress_glyphs, nothing),
+		),
+		"Output" => Dict(
+			"OutputPath" => get(kwargs, :output_path, nothing),
+			"OutputStates" => get(kwargs, :output_states, nothing),
+			"OutputReports" => get(kwargs, :output_reports, nothing),
+			"InMemoryReports" => get(kwargs, :in_memory_reports, nothing),
+			"ReportLevel" => get(kwargs, :report_level, nothing),
+			"OutputSubstrates" => get(kwargs, :output_substates, nothing),
+		))
+
 	return kwarg_dict
 end
 
@@ -417,14 +434,15 @@ function solver_configuration(sim::JutulSimulator,
 	kwargs...)
 
 	# Overwrite solver settings with kwargs
-	special_settings = overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
+	overwritten_settings = overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
+	solver_settings = overwritten_settings.solver_settings
 
 	# Validate solver settings
 	solver_settings_is_valid = validate_parameter_set(solver_settings)
 
 
 	non_linear_solver = solver_settings["NonLinearSolver"]
-	linear_solver = solver_settings["LinearSolver"]
+	linear_solver_dict = solver_settings["LinearSolver"]
 	output = solver_settings["Output"]
 	verbose = solver_settings["Verbose"]
 
@@ -440,6 +458,12 @@ function solver_configuration(sim::JutulSimulator,
 		timesel = [TimestepSelector()]
 	end
 
+	if linear_solver_dict["Method"] == "UserDefined"
+		linear_solver = overwritten_settings.linear_solver
+	else
+		linear_solver = battery_linsolve(linear_solver_dict)
+
+	end
 
 	cfg = simulator_config(
 		sim;
@@ -465,7 +489,7 @@ function solver_configuration(sim::JutulSimulator,
 		tol_factor_final_iteration = non_linear_solver["TolFactorFinalIteration"],
 		safe_mode = non_linear_solver["SafeMode"],
 		extra_timing = non_linear_solver["ExtraTiming"],
-		linear_solver = isnothing(special_settings.linear_solver) ? special_settings.linear_solver : battery_linsolve(linear_solver),
+		linear_solver = linear_solver,
 		relaxation = relax,
 		timestep_selectors = timesel,
 		output_states = output["OutputStates"],

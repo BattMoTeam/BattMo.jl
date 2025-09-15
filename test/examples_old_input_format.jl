@@ -70,7 +70,7 @@ geometries = ["4680-geometry.json",
 				# 	"verbose" => true,
 				# 	"nonlinearTolerance" => 1e-5,
 				# 	"LinearSolver" => Dict(
-				# 		"method" => "iterative"),
+				# 		"method" => "Iterative"),
 				# )
 
 
