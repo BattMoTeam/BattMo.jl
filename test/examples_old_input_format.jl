@@ -59,7 +59,7 @@ geometries = ["4680-geometry.json",
 
 
 				cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_old_input_format_to_parameter_sets(inputparams)
-				solver_settings = load_solver_settings(; from_default_set = "Iterative")
+				solver_settings = load_solver_settings(; from_default_set = "iterative")
 
 				solver_settings["NonLinearSolver"]["MaxNonLinearIterations"] = 20
 				solver_settings["NonLinearSolver"]["ErrorOnIncomplete"] = true
