@@ -41,8 +41,8 @@ plot_dashboard(output; plot_type = "simple")
 # ## Plot of SEI thickness
 
 # We recover the SEI thickness from the `state` output
-seilength_x1 = [state[:NeAm][:SEIlength][1] for state in states]
-seilength_xend = [state[:NeAm][:SEIlength][end] for state in states]
+seilength_x1 = [state[:NegativeElectrodeActiveMaterial][:SEIlength][1] for state in states]
+seilength_xend = [state[:NegativeElectrodeActiveMaterial][:SEIlength][end] for state in states]
 
 f = Figure(size = (1000, 400))
 
@@ -96,8 +96,8 @@ f # hide
 
 # ## Plot of voltage drop 
 
-u_x1 = [state[:NeAm][:SEIvoltageDrop][1] for state in states]
-u_xend = [state[:NeAm][:SEIvoltageDrop][end] for state in states]
+u_x1 = [state[:NegativeElectrodeActiveMaterial][:SEIvoltageDrop][1] for state in states]
+u_xend = [state[:NegativeElectrodeActiveMaterial][:SEIvoltageDrop][end] for state in states]
 
 f = Figure(size = (1000, 400))
 
@@ -132,8 +132,8 @@ scatterlines!(ax,
 
 # ## Plot of the lithium content
 
-u_x1 = [state[:NeAm][:SEIvoltageDrop][1] for state in states]
-u_xend = [state[:NeAm][:SEIvoltageDrop][end] for state in states]
+u_x1 = [state[:NegativeElectrodeActiveMaterial][:SEIvoltageDrop][1] for state in states]
+u_xend = [state[:NegativeElectrodeActiveMaterial][:SEIvoltageDrop][end] for state in states]
 
 f = Figure(size = (1000, 400))
 

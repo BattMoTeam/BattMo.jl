@@ -49,11 +49,11 @@ keys(initial_state)
 # Lets print the stored quantities for each group.
 
 # Electrolyte keys:
-keys(initial_state[:Elyte])
+keys(initial_state[:Electrolyte])
 # Negative electrode active material keys:
-keys(initial_state[:NeAm])
+keys(initial_state[:NegativeElectrodeActiveMaterial])
 # Positive electrode active material keys:
-keys(initial_state[:PeAm])
+keys(initial_state[:PositiveElectrodeActiveMaterial])
 # Control keys:
 keys(initial_state[:Control])
 
@@ -126,17 +126,17 @@ f # hide
 # ## Retrieving other quantities
 
 # Concentration 
-negative_electrode_surface_concentration = Array([[state[:NeAm][:SurfaceConcentration] for state in states]]);
-positive_electrode_surface_concentration = Array([[state[:PeAm][:SurfaceConcentration] for state in states]]);
-negative_electrode_particle_concentration = Array([[state[:NeAm][:ParticleConcentration] for state in states]]);
-positive_electrode_particle_concentration = Array([[state[:PeAm][:ParticleConcentration] for state in states]]);
-electrolyte_concentration = [state[:Elyte][:Concentration] for state in states];
+negative_electrode_surface_concentration = Array([[state[:NegativeElectrodeActiveMaterial][:SurfaceConcentration] for state in states]]);
+positive_electrode_surface_concentration = Array([[state[:PositiveElectrodeActiveMaterial][:SurfaceConcentration] for state in states]]);
+negative_electrode_particle_concentration = Array([[state[:NegativeElectrodeActiveMaterial][:ParticleConcentration] for state in states]]);
+positive_electrode_particle_concentration = Array([[state[:PositiveElectrodeActiveMaterial][:ParticleConcentration] for state in states]]);
+electrolyte_concentration = [state[:Electrolyte][:Concentration] for state in states];
 
 
 # Potential
-negative_electrode_potential = [state[:NeAm][:Voltage] for state in states];
-electrolyte_potential = [state[:Elyte][:Voltage] for state in states];
-positive_electrode_potential = [state[:PeAm][:Voltage] for state in states];
+negative_electrode_potential = [state[:NegativeElectrodeActiveMaterial][:Voltage] for state in states];
+electrolyte_potential = [state[:Electrolyte][:Voltage] for state in states];
+positive_electrode_potential = [state[:PositiveElectrodeActiveMaterial][:Voltage] for state in states];
 
 # Grid wrapper:
 # We need Jutul to get the grid wrapper.
@@ -144,9 +144,9 @@ using Jutul
 
 extra = output[:extra]
 model = extra[:model].multimodel
-negative_electrode_grid_wrap = physical_representation(model[:NeAm]);
-electrolyte_grid_wrap = physical_representation(model[:Elyte]);
-positive_electrode_grid_wrap = physical_representation(model[:PeAm]);
+negative_electrode_grid_wrap = physical_representation(model[:NegativeElectrodeActiveMaterial]);
+electrolyte_grid_wrap = physical_representation(model[:Electrolyte]);
+positive_electrode_grid_wrap = physical_representation(model[:PositiveElectrodeActiveMaterial]);
 
 # Mesh cell centroids coordinates
 centroids_NeAm = negative_electrode_grid_wrap[:cell_centroids, Cells()];

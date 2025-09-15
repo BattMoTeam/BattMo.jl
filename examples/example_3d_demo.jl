@@ -101,10 +101,10 @@ end
 nothing # hide
 
 # ## Plot the potential in the positive electrode
-plot_potential(:PeAm, :PeCc, "positive")
+plot_potential(:PositiveElectrodeActiveMaterial, :PositiveElectrodeCurrentCollector, "positive")
 
 # ## Plot the potential in the negative electrode
-plot_potential(:NeAm, :NeCc, "negative")
+plot_potential(:NegativeElectrodeActiveMaterial, :NegativeElectrodeCurrentCollector, "negative")
 
 # ## Plot surface concentration on grid at last time step
 function plot_surface_concentration(component, label)
@@ -132,23 +132,23 @@ end
 nothing # hide
 
 # ## Plot the surface concentration in the positive electrode
-plot_surface_concentration(:PeAm, "positive")
+plot_surface_concentration(:PositiveElectrodeActiveMaterial, "positive")
 
 # ## Plot the surface concentration in the negative electrode
-plot_surface_concentration(:NeAm, "negative")
+plot_surface_concentration(:NegativeElectrodeActiveMaterial, "negative")
 
 # ## Plot electrolyte concentration and potential on grid at last time step
 function plot_elyte(var, label)
 	f3D = Figure(size = (600, 650))
 	ax3d = Axis3(f3D[1, 1]; title = "$label in electrolyte")
 
-	val = state[:Elyte][var]
+	val = state[:Electrolyte][var]
 	maxval = maximum(val)
 	minval = minimum(val)
 
 	colorrange = [0, maxval - minval]
 
-	g = model[:Elyte].domain.representation
+	g = model[:Electrolyte].domain.representation
 	Jutul.plot_cell_data!(ax3d, g, val .- minval;
 		colormap = :viridis,
 		colorrange = colorrange)

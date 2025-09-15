@@ -91,28 +91,28 @@ function setup_coupling_cross_terms!(inputparams::MatlabInputParamsOld,
 	srange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 1]) # negative electrode
 	trange = Int64.(exported_all["model"]["couplingTerms"][1]["couplingcells"][:, 2]) # electrolyte (negative side)
 
-	if discretisation_type(model[:NeAm]) == :P2Ddiscretization
+	if discretisation_type(model[:NegativeElectrodeActiveMaterial]) == :P2Ddiscretization
 
 		ct = ButlerVolmerActmatToElyteCT(trange, srange)
-		ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
+		ct_pair = setup_cross_term(ct, target = :Electrolyte, source = :NegativeElectrodeActiveMaterial, equation = :charge_conservation)
 		add_cross_term!(model, ct_pair)
-		ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
+		ct_pair = setup_cross_term(ct, target = :Electrolyte, source = :NegativeElectrodeActiveMaterial, equation = :mass_conservation)
 		add_cross_term!(model, ct_pair)
 
 		ct = ButlerVolmerElyteToActmatCT(srange, trange)
-		ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :charge_conservation)
+		ct_pair = setup_cross_term(ct, target = :NegativeElectrodeActiveMaterial, source = :Electrolyte, equation = :charge_conservation)
 		add_cross_term!(model, ct_pair)
-		ct_pair = setup_cross_term(ct, target = :NeAm, source = :Elyte, equation = :solid_diffusion_bc)
+		ct_pair = setup_cross_term(ct, target = :NegativeElectrodeActiveMaterial, source = :Electrolyte, equation = :solid_diffusion_bc)
 		add_cross_term!(model, ct_pair)
 
 	else
 
-		@assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
+		@assert discretisation_type(model[:NegativeElectrodeActiveMaterial]) == :NoParticleDiffusion
 
 		ct = ButlerVolmerInterfaceFluxCT(trange, srange)
-		ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :charge_conservation)
+		ct_pair = setup_cross_term(ct, target = :Electrolyte, source = :NegativeElectrodeActiveMaterial, equation = :charge_conservation)
 		add_cross_term!(model, ct_pair)
-		ct_pair = setup_cross_term(ct, target = :Elyte, source = :NeAm, equation = :mass_conservation)
+		ct_pair = setup_cross_term(ct, target = :Electrolyte, source = :NegativeElectrodeActiveMaterial, equation = :mass_conservation)
 		add_cross_term!(model, ct_pair)
 
 	end
@@ -124,28 +124,28 @@ function setup_coupling_cross_terms!(inputparams::MatlabInputParamsOld,
 	srange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:, 1]) # postive electrode
 	trange = Int64.(exported_all["model"]["couplingTerms"][2]["couplingcells"][:, 2]) # electrolyte (positive side)
 
-	if discretisation_type(model[:PeAm]) == :P2Ddiscretization
+	if discretisation_type(model[:PositiveElectrodeActiveMaterial]) == :P2Ddiscretization
 
 		ct = ButlerVolmerActmatToElyteCT(trange, srange)
-		ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
+		ct_pair = setup_cross_term(ct, target = :Electrolyte, source = :PositiveElectrodeActiveMaterial, equation = :charge_conservation)
 		add_cross_term!(model, ct_pair)
-		ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
+		ct_pair = setup_cross_term(ct, target = :Electrolyte, source = :PositiveElectrodeActiveMaterial, equation = :mass_conservation)
 		add_cross_term!(model, ct_pair)
 
 		ct = ButlerVolmerElyteToActmatCT(srange, trange)
-		ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :charge_conservation)
+		ct_pair = setup_cross_term(ct, target = :PositiveElectrodeActiveMaterial, source = :Electrolyte, equation = :charge_conservation)
 		add_cross_term!(model, ct_pair)
-		ct_pair = setup_cross_term(ct, target = :PeAm, source = :Elyte, equation = :solid_diffusion_bc)
+		ct_pair = setup_cross_term(ct, target = :PositiveElectrodeActiveMaterial, source = :Electrolyte, equation = :solid_diffusion_bc)
 		add_cross_term!(model, ct_pair)
 
 	else
 
-		@assert discretisation_type(model[:PeAm]) == :NoParticleDiffusion
+		@assert discretisation_type(model[:PositiveElectrodeActiveMaterial]) == :NoParticleDiffusion
 
 		ct = ButlerVolmerInterfaceFluxCT(trange, srange)
-		ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :charge_conservation)
+		ct_pair = setup_cross_term(ct, target = :Electrolyte, source = :PositiveElectrodeActiveMaterial, equation = :charge_conservation)
 		add_cross_term!(model, ct_pair)
-		ct_pair = setup_cross_term(ct, target = :Elyte, source = :PeAm, equation = :mass_conservation)
+		ct_pair = setup_cross_term(ct, target = :Electrolyte, source = :PositiveElectrodeActiveMaterial, equation = :mass_conservation)
 		add_cross_term!(model, ct_pair)
 
 	end
@@ -170,11 +170,11 @@ function setup_coupling_cross_terms!(inputparams::MatlabInputParamsOld,
 		trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectronicConductivity")
 
 		ct = TPFAInterfaceFluxCT(trange, srange, trans)
-		ct_pair = setup_cross_term(ct, target = :NeAm, source = :NeCc, equation = :charge_conservation)
+		ct_pair = setup_cross_term(ct, target = :NegativeElectrodeActiveMaterial, source = :NegativeElectrodeCurrentCollector, equation = :charge_conservation)
 		add_cross_term!(model, ct_pair)
 
 		ct = TPFAInterfaceFluxCT(srange, trange, trans)
-		ct_pair = setup_cross_term(ct, target = :NeCc, source = :NeAm, equation = :charge_conservation)
+		ct_pair = setup_cross_term(ct, target = :NegativeElectrodeCurrentCollector, source = :NegativeElectrodeActiveMaterial, equation = :charge_conservation)
 		add_cross_term!(model, ct_pair)
 
 		#######################################
@@ -182,11 +182,11 @@ function setup_coupling_cross_terms!(inputparams::MatlabInputParamsOld,
 		#######################################
 
 		target = Dict(
-			:model => :PeAm,
+			:model => :PositiveElectrodeActiveMaterial,
 			:equation => :charge_conservation,
 		)
 		source = Dict(
-			:model => :PeCc,
+			:model => :PositiveElectrodeCurrentCollector,
 			:equation => :charge_conservation,
 		)
 		srange = Int64.(
@@ -202,11 +202,11 @@ function setup_coupling_cross_terms!(inputparams::MatlabInputParamsOld,
 		trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectronicConductivity")
 
 		ct = TPFAInterfaceFluxCT(trange, srange, trans)
-		ct_pair = setup_cross_term(ct, target = :PeAm, source = :PeCc, equation = :charge_conservation)
+		ct_pair = setup_cross_term(ct, target = :PositiveElectro:PositiveElectrodeCurrentCollectoriveMaterial, source = :PositiveElectrodeCurrentCollector, equation = :charge_conservation)
 		add_cross_term!(model, ct_pair)
 
 		ct = TPFAInterfaceFluxCT(srange, trange, trans)
-		ct_pair = setup_cross_term(ct, target = :PeCc, source = :PeAm, equation = :charge_conservation)
+		ct_pair = setup_cross_term(ct, target = :PositiveElectrodeCurrentCollector, source = :PositiveElectrodeActiveMaterial, equation = :charge_conservation)
 		add_cross_term!(model, ct_pair)
 
 	end
@@ -225,7 +225,7 @@ function setup_coupling_cross_terms!(inputparams::MatlabInputParamsOld,
 		couplingfaces = Int64.(msource["externalCouplingTerm"]["couplingfaces"])
 		couplingcells = Int64.(msource["externalCouplingTerm"]["couplingcells"])
 
-		component = :PeCc
+		component = :PositiveElectrodeCurrentCollector
 
 	else
 
@@ -241,7 +241,7 @@ function setup_coupling_cross_terms!(inputparams::MatlabInputParamsOld,
 		couplingfaces = Int64.(msource["externalCouplingTerm"]["couplingfaces"])
 		couplingcells = Int64.(msource["externalCouplingTerm"]["couplingcells"])
 
-		component = :PeAm
+		component = :PositiveElectrodeActiveMaterial
 
 	end
 
@@ -317,8 +317,8 @@ function setup_submodels(inputparams::MatlabInputParamsOld;
 	end
 
 	stringNames = Dict(
-		:NeAm => "NegativeElectrode",
-		:PeAm => "PositiveElectrode",
+		:NegativeElectrodeActiveMaterial => "NegativeElectrode",
+		:PositiveElectrodeActiveMaterial => "PositiveElectrode",
 	)
 
 	inputparams = inputparams["model"]
@@ -360,7 +360,7 @@ function setup_submodels(inputparams::MatlabInputParamsOld;
 			sys_am = ActiveMaterialNoParticleDiffusion(am_params)
 		end
 
-		if !include_cc && name == :NeAm
+		if !include_cc && name == :NegativeElectrodeActiveMaterial
 			bcfaces  = convert_to_int_vector(inputparams_co["externalCouplingTerm"]["couplingfaces"])
 			model_am = setup_component(inputparams_co, sys_am, general_ad, bcfaces)
 		else
@@ -396,7 +396,7 @@ function setup_submodels(inputparams::MatlabInputParamsOld;
 	# Setup NeAm #
 	##############
 
-	model_neam = setup_active_material(:NeAm, general_ad)
+	model_neam = setup_active_material(:NegativeElectrodeActiveMaterial, general_ad)
 
 	###############
 	# Setup Elyte #
@@ -429,7 +429,7 @@ function setup_submodels(inputparams::MatlabInputParamsOld;
 	##############
 
 
-	model_peam = setup_active_material(:PeAm, general_ad)
+	model_peam = setup_active_material(:PositiveElectrodeActiveMaterial, general_ad)
 
 	if include_cc
 
@@ -489,20 +489,20 @@ function setup_submodels(inputparams::MatlabInputParamsOld;
 		groups = nothing
 		model = MultiModel(
 			(
-				NeAm    = model_neam,
-				Elyte   = model_elyte,
-				PeAm    = model_peam,
+				NeAm = model_neam,
+				Electrolyte = model_elyte,
+				PeAm = model_peam,
 				Control = model_control,
 			),
 			Val(:Battery);
 			groups = groups)
 	else
 		models = (
-			NeCc    = model_necc,
-			NeAm    = model_neam,
-			Elyte   = model_elyte,
-			PeAm    = model_peam,
-			PeCc    = model_pecc,
+			NeCc = model_necc,
+			NeAm = model_neam,
+			Electrolyte = model_elyte,
+			PeAm = model_peam,
+			PeCc = model_pecc,
 			Control = model_control,
 		)
 		if use_groups
@@ -553,7 +553,7 @@ function setup_battery_parameters(inputparams::MatlabInputParamsOld,
 		prm_necc = Dict{Symbol, Any}()
 		exported_necc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
 		prm_necc[:Conductivity] = exported_necc["effectiveElectronicConductivity"][1]
-		parameters[:NeCc] = setup_parameters(model[:NeCc], prm_necc)
+		parameters[:NegativeElectrodeCurrentCollector] = setup_parameters(model[:NegativeElectrodeCurrentCollector], prm_necc)
 	end
 
 	############################
@@ -565,14 +565,14 @@ function setup_battery_parameters(inputparams::MatlabInputParamsOld,
 	prm_neam[:Conductivity] = exported_neam["effectiveElectronicConductivity"][1]
 	prm_neam[:Temperature] = T0
 
-	if discretisation_type(model[:NeAm]) == :P2Ddiscretization
+	if discretisation_type(model[:NegativeElectrodeActiveMaterial]) == :P2Ddiscretization
 		# nothing to do
 	else
-		@assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
+		@assert discretisation_type(model[:NegativeElectrodeActiveMaterial]) == :NoParticleDiffusion
 		prm_neam[:Diffusivity] = exported_neam["InterDiffusionCoefficient"]
 	end
 
-	parameters[:NeAm] = setup_parameters(model[:NeAm], prm_neam)
+	parameters[:NegativeElectrodeActiveMaterial] = setup_parameters(model[:NegativeElectrodeActiveMaterial], prm_neam)
 
 	###############
 	# Electrolyte #
@@ -582,7 +582,7 @@ function setup_battery_parameters(inputparams::MatlabInputParamsOld,
 	prm_elyte = Dict{Symbol, Any}()
 	prm_elyte[:Temperature] = T0
 
-	parameters[:Elyte] = setup_parameters(model[:Elyte], prm_elyte)
+	parameters[:Electrolyte] = setup_parameters(model[:Electrolyte], prm_elyte)
 
 	############################
 	# Positive active material #
@@ -593,14 +593,14 @@ function setup_battery_parameters(inputparams::MatlabInputParamsOld,
 	prm_peam[:Conductivity] = exported_peam["effectiveElectronicConductivity"][1]
 	prm_peam[:Temperature] = T0
 
-	if discretisation_type(model[:PeAm]) == :P2Ddiscretization
+	if discretisation_type(model[:PositiveElectrodeActiveMaterial]) == :P2Ddiscretization
 		# nothing to do
 	else
-		@assert discretisation_type(model[:NeAm]) == :NoParticleDiffusion
+		@assert discretisation_type(model[:NegativeElectrodeActiveMaterial]) == :NoParticleDiffusion
 		prm_peam[:Diffusivity] = exported_neam["InterDiffusionCoefficient"]
 	end
 
-	parameters[:PeAm] = setup_parameters(model[:PeAm], prm_peam)
+	parameters[:PositiveElectrodeActiveMaterial] = setup_parameters(model[:PositiveElectrodeActiveMaterial], prm_peam)
 
 	if include_cc
 
@@ -612,7 +612,7 @@ function setup_battery_parameters(inputparams::MatlabInputParamsOld,
 		exported_pecc = exported["model"]["PositiveElectrode"]["CurrentCollector"]
 		prm_pecc[:Conductivity] = exported_pecc["effectiveElectronicConductivity"][1]
 
-		parameters[:PeCc] = setup_parameters(model[:PeCc], prm_pecc)
+		parameters[:PositiveElectrodeCurrentCollector] = setup_parameters(model[:PositiveElectrodeCurrentCollector], prm_pecc)
 	end
 
 	parameters[:Control] = setup_parameters(model[:Control])
@@ -638,15 +638,15 @@ function setup_initial_state(inputparams::MatlabInputParamsOld,
 
 	if include_cc
 		stringNames = Dict(
-			:NeCc => "NegativeElectrode",
-			:NeAm => "NegativeElectrode",
-			:PeAm => "PositiveElectrode",
-			:PeCc => "PositiveElectrode",
+			:NegativeElectrodeCurrentCollector => "NegativeElectrode",
+			:NegativeElectrodeActiveMaterial => "NegativeElectrode",
+			:PositiveElectrodeActiveMaterial => "PositiveElectrode",
+			:PositiveElectrodeCurrentCollector => "PositiveElectrode",
 		)
 	else
 		stringNames = Dict(
-			:NeAm => "NegativeElectrode",
-			:PeAm => "PositiveElectrode",
+			:NegativeElectrodeActiveMaterial => "NegativeElectrode",
+			:PositiveElectrodeActiveMaterial => "PositiveElectrode",
 		)
 	end
 
@@ -691,7 +691,7 @@ function setup_initial_state(inputparams::MatlabInputParamsOld,
 		init[:Voltage] = state0["Electrolyte"]["phi"][1]
 		init[:Concentration] = state0["Electrolyte"]["c"][1]
 
-		initState[:Elyte] = init
+		initState[:Electrolyte] = init
 
 	end
 
@@ -705,13 +705,13 @@ function setup_initial_state(inputparams::MatlabInputParamsOld,
 
 	initState = Dict()
 
-	initialize_active_material!(initState, :NeAm)
+	initialize_active_material!(initState, :NegativeElectrodeActiveMaterial)
 	initialize_electrolyte!(initState)
-	initialize_active_material!(initState, :PeAm)
+	initialize_active_material!(initState, :PositiveElectrodeActiveMaterial)
 
 	if include_cc
-		initialize_current_collector!(initState, :NeCc)
-		initialize_current_collector!(initState, :PeCc)
+		initialize_current_collector!(initState, :NegativeElectrodeCurrentCollector)
+		initialize_current_collector!(initState, :PositiveElectrodeCurrentCollector)
 	end
 
 	initialize_control!(initState)

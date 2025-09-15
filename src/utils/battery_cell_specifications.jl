@@ -23,10 +23,10 @@ function computeElectrodeCapacity(ammodel::SimulationModel, name)
 	vf = sys[:volume_fraction]
 	avf = sys[:volume_fractions][1]
 
-	if name == :NeAm
+	if name == :NegativeElectrodeActiveMaterial
 		thetaMax = sys[:theta100]
 		thetaMin = sys[:theta0]
-	elseif name == :PeAm
+	elseif name == :PositiveElectrodeActiveMaterial
 		thetaMax = sys[:theta0]
 		thetaMin = sys[:theta100]
 	else
@@ -43,7 +43,7 @@ end
 
 function computeCellCapacity(model::MultiModel)
 
-	caps = [computeElectrodeCapacity(model, name) for name in (:NeAm, :PeAm)]
+	caps = [computeElectrodeCapacity(model, name) for name in (:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial)]
 
 	return minimum(caps)
 
@@ -68,13 +68,12 @@ end
 
 function computeCellMaximumEnergy(model::MultiModel; T = 298.15, capacities = missing)
 
-	eldes = (:NeAm, :PeAm)
+	eldes = (:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial)
 
 	if ismissing(capacities)
 		capacities = NamedTuple([(name, computeElectrodeCapacity(model, name)) for name in eldes])
 	end
-
-	capacity = min(capacities.NeAm, capacities.PeAm)
+	capacity = min(capacities.NegativeElectrodeActiveMaterial, capacities.PositiveElectrodeActiveMaterial)
 
 	N = 1000
 
@@ -111,7 +110,7 @@ function computeCellMaximumEnergy(model::MultiModel; T = 298.15, capacities = mi
 
 	end
 
-	energy = energies[:PeAm] - energies[:NeAm]
+	energy = energies[:PositiveElectrodeActiveMaterial] - energies[:NegativeElectrodeActiveMaterial]
 
 	return energy
 
@@ -119,7 +118,7 @@ end
 
 function computeCellMass(model::MultiModel)
 
-	eldes = (:NeAm, :PeAm)
+	eldes = (:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial)
 
 	mass = 0.0
 
@@ -133,23 +132,23 @@ function computeCellMass(model::MultiModel)
 
 	# Electrolyte mass
 
-	rho  = model[:Elyte].system[:electrolyte_density]
-	vf   = model[:Elyte].domain.representation[:volumeFraction]
-	vols = model[:Elyte].domain.representation[:volumes]
+	rho  = model[:Electrolyte].system[:electrolyte_density]
+	vf   = model[:Electrolyte].domain.representation[:volumeFraction]
+	vols = model[:Electrolyte].domain.representation[:volumes]
 
 	mass = mass + sum(vf .* rho .* vols)
 
 	# Separator mass
 
-	rho  = model[:Elyte].system[:separator_density]
-	vf   = model[:Elyte].domain.representation[:separator_volume_fraction]
-	vols = model[:Elyte].domain.representation[:volumes]
+	rho  = model[:Electrolyte].system[:separator_density]
+	vf   = model[:Electrolyte].domain.representation[:separator_volume_fraction]
+	vols = model[:Electrolyte].domain.representation[:volumes]
 
 	mass = mass + sum(vf .* rho .* vols)
 
 	# Current Collector masses
 
-	ccs = (:NeCc, :PeCc)
+	ccs = (:NegativeElectrodeCurrentCollector, :PositiveElectrodeCurrentCollector)
 
 	for cc in ccs
 		if haskey(model.models, cc)
@@ -173,7 +172,7 @@ end
 
 function computeCellSpecifications(model::MultiModel; T = 298.15)
 
-	capacities = (NeAm = computeElectrodeCapacity(model, :NeAm), PeAm = computeElectrodeCapacity(model, :PeAm))
+	capacities = (NegativeElectrodeActiveMaterial = computeElectrodeCapacity(model, :NegativeElectrodeActiveMaterial), PositiveElectrodeActiveMaterial = computeElectrodeCapacity(model, :PositiveElectrodeActiveMaterial))
 
 	energy = computeCellMaximumEnergy(model; T = T, capacities = capacities)
 
@@ -181,8 +180,8 @@ function computeCellSpecifications(model::MultiModel; T = 298.15)
 
 	specs = Dict()
 
-	specs["NegativeElectrodeCapacity"] = capacities.NeAm
-	specs["PositiveElectrodeCapacity"] = capacities.PeAm
+	specs["NegativeElectrodeCapacity"] = capacities.NegativeElectrodeActiveMaterial
+	specs["PositiveElectrodeCapacity"] = capacities.PositiveElectrodeActiveMaterial
 	specs["MaximumEnergy"]             = energy
 	specs["Mass"]                      = mass
 

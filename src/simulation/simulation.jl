@@ -642,9 +642,9 @@ function get_scalings(model, parameters)
 
 	refT = 298.15
 
-	electrolyte = model[:Elyte].system
+	electrolyte = model[:Electrolyte].system
 
-	eldes = (:NeAm, :PeAm)
+	eldes = (:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial)
 
 	j0s   = Array{Float64}(undef, 2)
 	Rvols = Array{Float64}(undef, 2)
@@ -680,10 +680,10 @@ function get_scalings(model, parameters)
 	RvolRef = mean(Rvols)
 
 	if include_current_collectors(model)
-		component_names = (:NeCc, :NeAm, :Elyte, :PeAm, :PeCc)
-		cc_mapping      = Dict(:NeAm => :NeCc, :PeAm => :PeCc)
+		component_names = (:NegativeElectrodeCurrentCollector, :NegativeElectrodeActiveMaterial, :Electrolyte, :PositiveElectrodeActiveMaterial, :PositiveElectrodeCurrentCollector)
+		cc_mapping      = Dict(:NegativeElectrodeActiveMaterial => :NegativeElectrodeCurrentCollector, :PositiveElectrodeActiveMaterial => :PositiveElectrodeCurrentCollector)
 	else
-		component_names = (:NeAm, :Elyte, :PeAm)
+		component_names = (:NegativeElectrodeActiveMaterial, :Electrolyte, :PositiveElectrodeActiveMaterial)
 	end
 
 	volRefs = Dict()
@@ -701,10 +701,10 @@ function get_scalings(model, parameters)
 
 	scalings = []
 
-	scaling = (model_label = :Elyte, equation_label = :charge_conservation, value = F * volRefs[:Elyte] * RvolRef)
+	scaling = (model_label = :Electrolyte, equation_label = :charge_conservation, value = F * volRefs[:Electrolyte] * RvolRef)
 	push!(scalings, scaling)
 
-	scaling = (model_label = :Elyte, equation_label = :mass_conservation, value = volRefs[:Elyte] * RvolRef)
+	scaling = (model_label = :Electrolyte, equation_label = :mass_conservation, value = volRefs[:Electrolyte] * RvolRef)
 	push!(scalings, scaling)
 
 	for elde in eldes

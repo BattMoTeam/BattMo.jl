@@ -27,10 +27,10 @@ function get_output_variables_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Spatial position across the thickness of the battery cell, representing the depth into different components such as negative electrode, separator, and positive electrode.",
 		),
-		"PeAmRadius" => Dict(
+		"PositiveElectrodeActiveMaterialRadius" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
-			"shape" => "(nPeAmRadius,)",
+			"shape" => "(nPositiveElectrodeActiveMaterialRadius,)",
 			"isdefault" => true,
 			"unit" => "m",
 			"unit_name" => "emmo:Metre",
@@ -39,10 +39,10 @@ function get_output_variables_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Radial coordinate inside the positive electrode active material particles, used for modeling intra-particle diffusion.",
 		),
-		"NeAmRadius" => Dict(
+		"NegativeElectrodeActiveMaterialRadius" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
-			"shape" => "(nNeAmRadius,)",
+			"shape" => "(nNegativeElectrodeActiveMaterialRadius,)",
 			"isdefault" => true,
 			"unit" => "m",
 			"unit_name" => "emmo:Metre",
@@ -171,7 +171,7 @@ function get_output_variables_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Electric potential within the electrolyte phase.",
 		),
-		"PeAmPotential" => Dict(
+		"PositiveElectrodeActiveMaterialPotential" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
 			"shape" => "(nTime, nPosition)",
@@ -183,7 +183,7 @@ function get_output_variables_meta_data()
 			"context_type" => "Potential",
 			"context_type_iri" => nothing,
 		),
-		"NeAmPotential" => Dict(
+		"NegativeElectrodeActiveMaterialPotential" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
 			"shape" => "(nTime, nPosition)",
@@ -207,7 +207,7 @@ function get_output_variables_meta_data()
 			"context_type" => "Concentration",
 			"context_type_iri" => nothing,
 		),
-		"PeAmSurfaceConcentration" => Dict(
+		"PositiveElectrodeActiveMaterialSurfaceConcentration" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
 			"shape" => "(nTime, nPosition)",
@@ -219,7 +219,7 @@ function get_output_variables_meta_data()
 			"context_type" => "SurfaceConcentration",
 			"context_type_iri" => nothing,
 		),
-		"NeAmSurfaceConcentration" => Dict(
+		"NegativeElectrodeActiveMaterialSurfaceConcentration" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
 			"shape" => "(nTime, nPosition)",
@@ -231,10 +231,10 @@ function get_output_variables_meta_data()
 			"context_type" => "SurfaceConcentration",
 			"context_type_iri" => nothing,
 		),
-		"PeAmConcentration" => Dict(
+		"PositiveElectrodeActiveMaterialParticleConcentration" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
-			"shape" => "(nTime, nPosition, nPeAmRadius)",
+			"shape" => "(nTime, nPosition, nPositiveElectrodeActiveMaterialRadius)",
 			"description" => "Radial distribution of lithium concentration in positive electrode particles.",
 			"isdefault" => false,
 			"unit" => "mol·L⁻¹",
@@ -243,10 +243,10 @@ function get_output_variables_meta_data()
 			"context_type" => "ParticleConcentration",
 			"context_type_iri" => nothing,
 		),
-		"NeAmConcentration" => Dict(
+		"NegativeElectrodeActiveMaterialParticleConcentration" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
-			"shape" => "(nTime, nPosition, nNeAmRadius)",
+			"shape" => "(nTime, nPosition, nNegativeElectrodeActiveMaterialRadius)",
 			"description" => "Radial distribution of lithium concentration in negative electrode particles.",
 			"isdefault" => false,
 			"unit" => "mol·L⁻¹",
@@ -255,7 +255,7 @@ function get_output_variables_meta_data()
 			"context_type" => "ParticleConcentration",
 			"context_type_iri" => nothing,
 		),
-		"NeAmTemperature" => Dict(
+		"NegativeElectrodeActiveMaterialTemperature" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
 			"shape" => "(nTime, nPosition)",
@@ -267,7 +267,7 @@ function get_output_variables_meta_data()
 			"context_type" => "Temperature",
 			"context_type_iri" => nothing,
 		),
-		"PeAmTemperature" => Dict(
+		"PositiveElectrodeActiveMaterialTemperature" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
 			"shape" => "(nTime, nPosition)",
@@ -279,7 +279,7 @@ function get_output_variables_meta_data()
 			"context_type" => "Temperature",
 			"context_type_iri" => nothing,
 		),
-		"NeAmOpenCircuitPotential" => Dict(
+		"NegativeElectrodeActiveMaterialOpenCircuitPotential" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
 			"shape" => "(nTime, nPosition)",
@@ -291,7 +291,7 @@ function get_output_variables_meta_data()
 			"context_type" => "OpenCircuitPotential",
 			"context_type_iri" => nothing,
 		),
-		"PeAmOpenCircuitPotential" => Dict(
+		"PositiveElectrodeActiveMaterialOpenCircuitPotential" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
 			"shape" => "(nTime, nPosition)",
@@ -303,7 +303,7 @@ function get_output_variables_meta_data()
 			"context_type" => "OpenCircuitPotential",
 			"context_type_iri" => nothing,
 		),
-		"NeAmCharge" => Dict(
+		"NegativeElectrodeActiveMaterialCharge" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
 			"shape" => "(nTime, nPosition)",
@@ -327,7 +327,7 @@ function get_output_variables_meta_data()
 			"context_type" => "Charge",
 			"context_type_iri" => nothing,
 		),
-		"PeAmCharge" => Dict(
+		"PositiveElectrodeActiveMaterialCharge" => Dict(
 			"type" => Vector{Real},
 			"case" => "states",
 			"shape" => "(nTime, nPosition)",

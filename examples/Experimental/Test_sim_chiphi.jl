@@ -205,11 +205,11 @@ else
 	#cfg = BattMo.setup_config(sim, model, :direct, false)
 	# Perform simulation
 	cfg[:info_level] = 10
-	cfg[:tolerances][:Elyte][:mass_conservation] = 1e-3
-	cfg[:tolerances][:PeAm][:mass_conservation] = 1e-3
-	cfg[:tolerances][:NeAm][:mass_conservation] = 1e-3
+	cfg[:tolerances][:Electrolyte][:mass_conservation] = 1e-3
+	cfg[:tolerances][:PositiveElectrodeActiveMaterial][:mass_conservation] = 1e-3
+	cfg[:tolerances][:NegativeElectrodeActiveMaterial][:mass_conservation] = 1e-3
 	cfg[:tolerances][:Control][:default] = 1e-5
-	#cfg[:tolerances][:PeAm][:solid_diffusion_bc] = 1e-20
+	#cfg[:tolerances][:PositiveElectrodeActiveMaterial][:solid_diffusion_bc] = 1e-20
 	if true
 		solver = :fgmres
 		fac = 1e-4
@@ -426,10 +426,10 @@ mystep = Int64(floor(size(states, 1) / 2))
 state = states[mystep]
 if (include_cc)
 	names = ["Electrolyte", "NegativeElectrode", "PositiveElectrode", "NegativeCurrentCollector", "PositiveCurrentCollector"]
-	syms = [:Elyte, :NeAm, :PeAm, :NeCc, :PeCc]
+	syms = [:Electrolyte, :NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial, :NegativeElectrodeCurrentCollector, :PositiveElectrodeCurrentCollector]
 else
 	names = ["Electrolyte", "NegativeElectrode", "PositiveElectrode"]
-	syms = [:Elyte, :NeAm, :PeAm]
+	syms = [:Electrolyte, :NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial]
 end
 V = state[:Control][:Voltage]
 println("Current ", state[:Control][:Voltage])
@@ -466,7 +466,7 @@ for ind in 1:3
 	end
 	if (ind == 2 || ind == 3)
 		valc = []
-		if BattMo.discretisation_type(model[:NeAm]) == :NoParticleDiffusion
+		if BattMo.discretisation_type(model[:NegativeElectrodeActiveMaterial]) == :NoParticleDiffusion
 			valc = state[sym][:Concentration]
 		else
 			valc = state[sym][:SurfaceConcentration]

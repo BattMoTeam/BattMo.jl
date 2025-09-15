@@ -234,7 +234,7 @@ function BattMo.plot_output_impl(
 
 			# Determine unit string for dimension
 			unit_str = ""
-			if d == :Position || d == :NeAmRadius || d == :PeAmRadius
+			if d == :Position || d == :NegativeElectrodeActiveMaterialRadius || d == :PositiveElectrodeActiveMaterialRadius
 				unit_str = " μm"
 			elseif d == :Time
 				if haskey(meta_data, "Time") && haskey(meta_data["Time"], "unit")
@@ -296,14 +296,14 @@ function BattMo.plot_output_impl(
 
 				var_data = data[Symbol(clean_var)]
 
-				rad_pe = data[:PeAmRadius] * 1e6
-				rad_ne = data[:NeAmRadius] * 1e6
+				rad_pe = data[:PositiveElectrodeActiveMaterialRadius] * 1e6
+				rad_ne = data[:NegativeElectrodeActiveMaterialRadius] * 1e6
 				pos = data[:Position] * 1e6
 				nt = length(full_time)
 				cycles = metric_data[:CycleNumber]
 
-				known_dims = Dict(pairs(data))#Dict(:Time => full_time, :Position => pos, :NeAmRadius => rad_ne, :PeAmRadius => rad_pe, :CycleNumber)
-				dim_lengths = Dict(:Time => nt, :Position => length(pos), :NeAmRadius => length(rad_ne), :PeAmRadius => length(rad_pe), :CycleNumber => length(cycles))
+				known_dims = Dict(pairs(data))#Dict(:Time => full_time, :Position => pos, :NegativeElectrodeActiveMaterialRadius => rad_ne, :PositiveElectrodeActiveMaterialRadius => rad_pe, :CycleNumber)
+				dim_lengths = Dict(:Time => nt, :Position => length(pos), :NegativeElectrodeActiveMaterialRadius => length(rad_ne), :PositiveElectrodeActiveMaterialRadius => length(rad_pe), :CycleNumber => length(cycles))
 				sz = size(var_data)
 
 				# Infer dimension assignments
@@ -432,12 +432,12 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 	n_steps = length(t)
 	x = states[:Position] * 10^6
 
-	NeAm_conc = states[:NeAmSurfaceConcentration]
-	PeAm_conc = states[:PeAmSurfaceConcentration]
+	NeAm_conc = states[:NegativeElectrodeActiveMaterialSurfaceConcentration]
+	PeAm_conc = states[:PositiveElectrodeActiveMaterialSurfaceConcentration]
 	Elyte_conc = states[:ElectrolyteConcentration]
 
-	NeAm_pot = states[:NeAmPotential]
-	PeAm_pot = states[:PeAmPotential]
+	NeAm_pot = states[:NegativeElectrodeActiveMaterialPotential]
+	PeAm_pot = states[:PositiveElectrodeActiveMaterialPotential]
 	Elyte_pot = states[:ElectrolytePotential]
 	if plot_type == "simple"
 		fig = Figure(size = (1200, 1000))
