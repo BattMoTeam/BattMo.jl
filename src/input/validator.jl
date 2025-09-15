@@ -164,8 +164,6 @@ function log_schema_issues(issues::Vector{SingleIssue}, set_name::String)
 
 		for (i, issue) in enumerate(issues)
 
-			@info issue
-
 			if issue.reason == "required"
 				required_fields = issue.val
 				present_fields = collect(keys(issue.x))

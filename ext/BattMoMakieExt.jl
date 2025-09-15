@@ -60,7 +60,6 @@ function BattMo.plot_cell_curves_impl(cell_parameters::CellParameters; new_windo
 	end
 
 	n = length(functional_params)
-	@info n
 	ncols = ceil(Int, sqrt(n))
 	nrows = ceil(Int, n / ncols)
 

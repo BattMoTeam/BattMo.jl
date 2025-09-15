@@ -20,7 +20,7 @@
         "Relaxation": "NoRelaxation"
     },
     "LinearSolver": {
-        "Method": "direct",
+        "Method": "Direct",
         "MaxSize": 1000000
     },
     "Verbose": {

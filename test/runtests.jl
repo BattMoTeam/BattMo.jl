@@ -1,6 +1,7 @@
 using BattMo
 using Test
 
+include("3d_example_amg.jl")
 include("test_sodium_ion.jl")
 include("examples_old_input_format.jl")
 include("examples_strict.jl")
@@ -12,6 +13,6 @@ include("test_documentation_prints.jl")
 # include("matlab_input.jl")
 include("3d_examples.jl")
 include("app_battmo_jl_test.jl")
-include("3d_example_amg.jl")
+
 include("adjoints.jl")
 

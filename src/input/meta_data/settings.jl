@@ -314,7 +314,7 @@ function get_setting_meta_data()
 		),
 		"Method" => Dict(
 			"type" => String,
-			"options" => ["direct", "iterative"],
+			"options" => ["Direct", "Iterative", "UserDefined"],
 			"category" => "SolverSettings",
 			"description" => "Linear solver method.",
 		),

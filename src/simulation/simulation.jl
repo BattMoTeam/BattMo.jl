@@ -303,11 +303,11 @@ function overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
 
 	for (dict_key, dict) in settings
 		if !isnothing(dict) && !ismissing(dict)
-			if dict_key == :LinearSolver
-				if isa(value, Dict)
+			if dict_key == "LinearSolver"
+				if isa(dict, Dict)
 					solver_settings[dict_key] = dict
 				else
-					solver_settings[dict_key] = "UserDefined"
+					solver_settings[dict_key] = Dict("Method" => "UserDefined")
 					linear_solver = dict
 				end
 
@@ -442,7 +442,7 @@ function solver_configuration(sim::JutulSimulator,
 
 
 	non_linear_solver = solver_settings["NonLinearSolver"]
-	linear_solver = solver_settings["LinearSolver"]
+	linear_solver_dict = solver_settings["LinearSolver"]
 	output = solver_settings["Output"]
 	verbose = solver_settings["Verbose"]
 
@@ -456,6 +456,13 @@ function solver_configuration(sim::JutulSimulator,
 
 	if timestep_selector == "TimestepSelector"
 		timesel = [TimestepSelector()]
+	end
+
+	if linear_solver_dict["Method"] == "UserDefined"
+		linear_solver = overwritten_settings.linear_solver
+	else
+		linear_solver = battery_linsolve(linear_solver_dict)
+
 	end
 
 	cfg = simulator_config(
@@ -482,7 +489,7 @@ function solver_configuration(sim::JutulSimulator,
 		tol_factor_final_iteration = non_linear_solver["TolFactorFinalIteration"],
 		safe_mode = non_linear_solver["SafeMode"],
 		extra_timing = non_linear_solver["ExtraTiming"],
-		linear_solver = isnothing(overwritten_settings.linear_solver) ? overwritten_settings.linear_solver : battery_linsolve(linear_solver),
+		linear_solver = linear_solver,
 		relaxation = relax,
 		timestep_selectors = timesel,
 		output_states = output["OutputStates"],
