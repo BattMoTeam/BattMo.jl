@@ -4,7 +4,7 @@ using BattMo, RuntimeGeneratedFunctions
 using Makie: Makie
 using Makie: Slider, Label, Axis, Colorbar, Figure, Observable, GridLayout
 using Makie: scatterlines!, contourf!, vlines!, lines!, autolimits!
-using Makie: on
+using Makie: on, axislegend
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
