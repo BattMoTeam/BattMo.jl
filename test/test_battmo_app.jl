@@ -7,7 +7,7 @@ function runP2DBatt(json_file)
 	i            = 0
 
 	# read input parameters from json file
-	inputparams = load_battmo_formatted_input(json_file)
+	inputparams = load_advanced_dict_input(json_file)
 	cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_old_input_format_to_parameter_sets(inputparams)
 
 	# # setup simulation from the input parameters

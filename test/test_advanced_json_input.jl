@@ -15,7 +15,7 @@ names = [
 		@testset "$name" begin
 			@test begin
 				fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
-				inputparams = load_battmo_formatted_input(fn)
+				inputparams = load_advanced_dict_input(fn)
 				cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_old_input_format_to_parameter_sets(inputparams)
 
 				function hook(simulator,
@@ -37,7 +37,7 @@ names = [
 end
 
 function getinput(name)
-	return load_battmo_formatted_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
+	return load_advanced_dict_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
 end
 
 geometries = ["4680-geometry.json",

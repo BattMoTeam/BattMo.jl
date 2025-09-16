@@ -46,7 +46,7 @@ function extract_input_sets(simulation_input::FullSimulationInput)
 
 end
 
-function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld)
+function convert_to_parameter_sets(input::AdvancedDictInput)
 
 	##################################
 	# ModelSettings
@@ -401,6 +401,19 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 		SimulationSettings(simulation_settings))
 end
 
+function convert_to_full_simulation_input(input::AdvancedDictInput, base_model = "LithiumIonBattery")
+	sets = convert_to_parameter_sets(input)
+	full_simulation_input = Dict(
+		"BaseModel" => base_model,
+		"ModelSettings" => sets.model_settings,
+		"CellParameters" => sets.cell_parameters,
+		"CyclingProtocol" => sets.cycling_protocol,
+		"SimulationSettings" => sets.simulation_settings,
+		"SolverSettings" => sets.solver_settings,
+	)
+
+
+end
 
 function convert_parameter_sets_to_old_input_format(model_settings::ModelSettings, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings)
 

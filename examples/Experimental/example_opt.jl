@@ -4,7 +4,7 @@ using BattMo, Jutul
 name = "p2d_40"
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
 # init = JSONFile(fn)
-init = load_battmo_formatted_input(fn)
+init = load_advanced_dict_input(fn)
 
 states, cell_, reports, _, extra = run_battery(init, use_p2d = true, config_kwargs = (info_level = 1,), max_step = nothing, general_ad = true);
 

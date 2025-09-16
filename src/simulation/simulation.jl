@@ -462,7 +462,7 @@ end
 	setup_config(sim::JutulSimulator,
 					  model::MultiModel,
 					  parameters;
-					  inputparams::BattMoInputFormatOld,
+					  inputparams::AdvancedDictInput,
 					  extra_timing::Bool,
 					  use_model_scaling,
 					  kwargs...)

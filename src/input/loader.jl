@@ -1,5 +1,5 @@
 export load_model_settings, load_cell_parameters, load_cycling_protocol, load_simulation_settings, load_solver_settings, load_full_simulation_input
-export load_matlab_battmo_input, load_battmo_formatted_input
+export load_matlab_battmo_input, load_advanced_dict_input
 
 
 """
@@ -197,7 +197,7 @@ function load_matlab_battmo_input(filepath::String)
 end
 
 """
-	load_battmo_formatted_input(filepath::String)
+	load_advanced_dict_input(filepath::String)
 
 Reads and parses a JSON file into an `InputParamsOld` instance.
 
@@ -207,7 +207,7 @@ Reads and parses a JSON file into an `InputParamsOld` instance.
 # Returns
 An instance of `InputParamsOld`.
 """
-function load_battmo_formatted_input(filepath::String)
+function load_advanced_dict_input(filepath::String)
 	inputparams = filepath |> JSON.parsefile |> InputParamsOld
 	return inputparams
 end
