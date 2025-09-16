@@ -135,6 +135,7 @@ function build_battmo_docs(build_format              = nothing;
 			repo = "github.com/BattMoTeam/BattMo.jl",
 			devbranch = "main",
 			devurl = "dev",
+			assets=String["assets/citations.css"],
 		)
 	end
 
@@ -146,9 +147,6 @@ function build_battmo_docs(build_format              = nothing;
 		warnonly = [:missing_docs],
 		plugins  = [bib],
 		format   = build_format,
-		draft    = false,
-		source   = "src",
-		build    = "build",
 		pages    = [
 		"User Guide" => [
 		"Getting started" => [
