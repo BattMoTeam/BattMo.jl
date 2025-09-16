@@ -1,18 +1,20 @@
 using BattMo
 using Test
 
-include("3d_example_amg.jl")
+
+include("test_headless_ui.jl")
+include("test_3d_pouch_amg.jl")
 include("test_sodium_ion.jl")
-include("examples_old_input_format.jl")
-include("examples_strict.jl")
-include("sei_example.jl")
+include("test_advanced_json_input.jl")
+include("test_cycling_protocols.jl")
+include("test_sei.jl")
 include("test_loader.jl")
 include("test_function_input.jl")
 include("test_documentation_prints.jl")
+include("test_3d_pouch.jl")
+include("test_battmo_app.jl")
+include("test_adjoints.jl")
 
-# include("matlab_input.jl")
-include("3d_examples.jl")
-include("app_battmo_jl_test.jl")
+# include("test_matlab_input.jl")
 
-include("adjoints.jl")
 

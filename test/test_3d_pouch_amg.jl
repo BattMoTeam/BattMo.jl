@@ -51,13 +51,6 @@ using Test
 			absolute_tolerance = atol,
 			max_iterations     = max_it)
 
-		# cfg = setup_config(simulator,
-		# 	model.multimodel,
-		# 	parameters;
-		# 	info_level = -1,
-		# 	failure_cuts_timestep = false,
-		# 	linear_solver = linear_solver)
-
 
 		output = solve(sim; accept_invalid = true,
 			info_level = -1,
@@ -65,7 +58,7 @@ using Test
 			linear_solver = linear_solver)
 
 		states = output.states
-		# states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+
 
 		Cc = map(x -> x[:Control][:Current][1], states)
 		phi = map(x -> x[:Control][:Voltage][1], states)
