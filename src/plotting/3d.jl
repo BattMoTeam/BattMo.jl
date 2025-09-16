@@ -23,7 +23,7 @@ function plot_interactive_3d(results::NamedTuple; shift = nothing, colormap = :c
 			shift_copy[:CC] = shift["CurrentCollector"]
 		end
 		if haskey(shift, "Electrolyte")
-			shift_copy[:Elyte] = shift["Electrolyte"]
+			shift_copy[:Electrolyte] = shift["Electrolyte"]
 		end
 		shift_copy[:PP] = shift["NegativeActiveMaterial"]
 

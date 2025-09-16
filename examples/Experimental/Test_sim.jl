@@ -283,10 +283,10 @@ mystep = Int64(floor(size(states, 1) / 2))
 state = states[mystep]
 if (include_cc)
 	names = ["Electrolyte", "NegativeElectrode", "PositiveElectrode", "NegativeCurrentCollector", "PositiveCurrentCollector"]
-	syms = [:Elyte, :NeAm, :PeAm, :NeCc, :PeCc]
+	syms = [:Electrolyte, :NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial, :NegativeElectrodeCurrentCollector, :PositiveElectrodeCurrentCollector]
 else
 	names = ["Electrolyte", "NegativeElectrode", "PositiveElectrode"]
-	syms = [:Elyte, :NeAm, :PeAm]
+	syms = [:Electrolyte, :NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial]
 end
 V = state[:Control][:Voltage]
 println("Current ", state[:Control][:Voltage])

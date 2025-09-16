@@ -27,13 +27,13 @@ function hook(simulator,
 	timesteps,
 	cfg)
 
-	names = [:Elyte,
-		:NeAm,
+	names = [:Electrolyte,
+		:NegativeElectrodeActiveMaterial,
 		:Control,
-		:PeAm]
+		:PositiveElectrodeActiveMaterial]
 
 	if inputparams["model"]["include_current_collectors"]
-		names = append!(names, [:PeCc, :NeCc])
+		names = append!(names, [:PositiveElectrodeCurrentCollector, :NegativeElectrodeCurrentCollector])
 	end
 
 	for name in names

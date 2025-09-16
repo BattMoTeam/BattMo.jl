@@ -203,8 +203,8 @@ Extracts spatially resolved state variables and associated coordinates from a ba
 - Retrieves simulation time points and spatial coordinates:
   - `:Time`: Simulation time vector
   - `:Position`: 1D spatial grid along the cell (x-direction)
-  - `:NeAmRadius`: Radial coordinate for the negative electrode active material
-  - `:PeAmRadius`: Radial coordinate for the positive electrode active material
+  - `:NegativeElectrodeActiveMaterialRadius`: Radial coordinate for the negative electrode active material
+  - `:PositiveElectrodeActiveMaterialRadius`: Radial coordinate for the positive electrode active material
 - Extracts spatially resolved state data (e.g., concentration, potential) using `extract_spatial_data`.
 - Filters and returns only requested quantities if `quantities` is specified.
 - Ensures returned data is not `nothing`; raises an error if a requested quantity is missing or unavailable.
@@ -213,8 +213,8 @@ Extracts spatially resolved state variables and associated coordinates from a ba
 A `NamedTuple` containing the selected spatial quantities and coordinates. Possible keys include:
 - `:Time`
 - `:Position`
-- `:NeAmRadius`
-- `:PeAmRadius`
+- `:NegativeElectrodeActiveMaterialRadius`
+- `:PositiveElectrodeActiveMaterialRadius`
 - Additional quantities from `extract_spatial_data`, such as:
   - Concentration profiles
   - Potential distributions
@@ -246,8 +246,8 @@ function get_output_states(output::NamedTuple; quantities::Union{Nothing, Vector
 	available_quantities = Dict{Symbol, Any}(
 		:Time => time,
 		:Position => x,
-		:NeAmRadius => r_ne,
-		:PeAmRadius => r_pe,
+		:NegativeElectrodeActiveMaterialRadius => r_ne,
+		:PositiveElectrodeActiveMaterialRadius => r_pe,
 	)
 
 	# Insert only available output_data
@@ -297,32 +297,32 @@ end
 function extract_spatial_data(states::Vector)
 	# Map from quantity names to symbol chains used to extract data
 	var_map = Dict(
-		:NeAmSurfaceConcentration => [:NeAm, :SurfaceConcentration],
-		:PeAmSurfaceConcentration => [:PeAm, :SurfaceConcentration],
-		:NeAmConcentration        => [:NeAm, :ParticleConcentration],
-		:PeAmConcentration        => [:PeAm, :ParticleConcentration],
-		:NeAmDiffusionCoefficient => [:NeAm, :DiffusionCoefficient],
-		:PeAmDiffusionCoefficient => [:PeAm, :DiffusionCoefficient],
-		:NeAmReactionRateConst    => [:NeAm, :ReactionRateConstant],
-		:PeAmReactionRateConst    => [:PeAm, :ReactionRateConstant],
-		:ElectrolyteConcentration => [:Elyte, :Concentration],
-		:NeAmPotential            => [:NeAm, :Voltage],
-		:ElectrolytePotential     => [:Elyte, :Voltage],
-		:PeAmPotential            => [:PeAm, :Voltage],
-		:NeAmTemperature          => [:NeAm, :Temperature],
-		:PeAmTemperature          => [:PeAm, :Temperature],
-		:NeAmOpenCircuitPotential => [:NeAm, :OpenCircuitPotential],
-		:PeAmOpenCircuitPotential => [:PeAm, :OpenCircuitPotential],
-		:NeAmCharge               => [:NeAm, :Charge],
-		:ElectrolyteCharge        => [:Elyte, :Charge],
-		:PeAmCharge               => [:PeAm, :Charge],
-		:ElectrolyteMass          => [:Elyte, :Mass],
-		:ElectrolyteDiffusivity   => [:Elyte, :Diffusivity],
-		:ElectrolyteConductivity  => [:Elyte, :Conductivity],
-		:SEIThickness             => [:NeAm, :SEIlength],
-		:NormalizedSEIThickness   => [:NeAm, :normalizedSEIlength],
-		:SEIVoltageDrop           => [:NeAm, :SEIvoltageDrop],
-		:NormalizedSEIVoltageDrop => [:NeAm, :normalizedSEIvoltageDrop])
+		:NegativeElectrodeActiveMaterialSurfaceConcentration  => [:NegativeElectrodeActiveMaterial, :SurfaceConcentration],
+		:PositiveElectrodeActiveMaterialSurfaceConcentration  => [:PositiveElectrodeActiveMaterial, :SurfaceConcentration],
+		:NegativeElectrodeActiveMaterialParticleConcentration => [:NegativeElectrodeActiveMaterial, :ParticleConcentration],
+		:PositiveElectrodeActiveMaterialParticleConcentration => [:PositiveElectrodeActiveMaterial, :ParticleConcentration],
+		:NegativeElectrodeActiveMaterialDiffusionCoefficient  => [:NegativeElectrodeActiveMaterial, :DiffusionCoefficient],
+		:PositiveElectrodeActiveMaterialDiffusionCoefficient  => [:PositiveElectrodeActiveMaterial, :DiffusionCoefficient],
+		:NegativeElectrodeActiveMaterialReactionRateConstant  => [:NegativeElectrodeActiveMaterial, :ReactionRateConstant],
+		:PositiveElectrodeActiveMaterialReactionRateConstant  => [:PositiveElectrodeActiveMaterial, :ReactionRateConstant],
+		:ElectrolyteConcentration                             => [:Electrolyte, :Concentration],
+		:NegativeElectrodeActiveMaterialPotential             => [:NegativeElectrodeActiveMaterial, :Voltage],
+		:ElectrolytePotential                                 => [:Electrolyte, :Voltage],
+		:PositiveElectrodeActiveMaterialPotential             => [:PositiveElectrodeActiveMaterial, :Voltage],
+		:NegativeElectrodeActiveMaterialTemperature           => [:NegativeElectrodeActiveMaterial, :Temperature],
+		:PositiveElectrodeActiveMaterialTemperature           => [:PositiveElectrodeActiveMaterial, :Temperature],
+		:NegativeElectrodeActiveMaterialOpenCircuitPotential  => [:NegativeElectrodeActiveMaterial, :OpenCircuitPotential],
+		:PositiveElectrodeActiveMaterialOpenCircuitPotential  => [:PositiveElectrodeActiveMaterial, :OpenCircuitPotential],
+		:NegativeElectrodeActiveMaterialCharge                => [:NegativeElectrodeActiveMaterial, :Charge],
+		:ElectrolyteCharge                                    => [:Electrolyte, :Charge],
+		:PositiveElectrodeActiveMaterialCharge                => [:PositiveElectrodeActiveMaterial, :Charge],
+		:ElectrolyteMass                                      => [:Electrolyte, :Mass],
+		:ElectrolyteDiffusivity                               => [:Electrolyte, :Diffusivity],
+		:ElectrolyteConductivity                              => [:Electrolyte, :Conductivity],
+		:SEIThickness                                         => [:NegativeElectrodeActiveMaterial, :SEIlength],
+		:NormalizedSEIThickness                               => [:NegativeElectrodeActiveMaterial, :normalizedSEIlength],
+		:SEIVoltageDrop                                       => [:NegativeElectrodeActiveMaterial, :SEIvoltageDrop],
+		:NormalizedSEIVoltageDrop                             => [:NegativeElectrodeActiveMaterial, :normalizedSEIvoltageDrop])
 
 	output_data = Dict{Symbol, Any}()
 
@@ -367,7 +367,7 @@ end
 
 function get_x_coords(model::MultiModel{:IntercalationBattery})
 
-	pp = physical_representation(model.models[:Elyte].data_domain)
+	pp = physical_representation(model.models[:Electrolyte].data_domain)
 	primitives = Jutul.plot_primitives(pp, :meshscatter)
 
 	return primitives.points[:, 1]
@@ -408,19 +408,19 @@ function get_padded_states(output::NamedTuple)
 	end
 
 	# Get start indices
-	# mykeys = [:NeCc, :NeAm, :Elyte, :PeAm, :PeCc]
-	if :NeCc in model_keys
-		start_idx[:NeCc] = 1
-		start_idx[:NeAm] = ncells[:NeCc] + 1
+	# mykeys = [:NegativeElectrodeCurrentCollector, :NegativeElectrodeActiveMaterial, :Electrolyte, :PositiveElectrodeActiveMaterial, :PositiveElectrodeCurrentCollector]
+	if :NegativeElectrodeCurrentCollector in model_keys
+		start_idx[:NegativeElectrodeCurrentCollector] = 1
+		start_idx[:NegativeElectrodeActiveMaterial] = ncells[:NegativeElectrodeCurrentCollector] + 1
 	else
-		start_idx[:NeAm] = 1
+		start_idx[:NegativeElectrodeActiveMaterial] = 1
 	end
 
-	start_idx[:Elyte] = start_idx[:NeAm]
-	start_idx[:PeAm] = ncells[:Elyte] - ncells[:PeAm] + 1
+	start_idx[:Electrolyte] = start_idx[:NegativeElectrodeActiveMaterial]
+	start_idx[:PositiveElectrodeActiveMaterial] = ncells[:Electrolyte] - ncells[:PositiveElectrodeActiveMaterial] + 1
 
-	if :PeCc in model_keys
-		start_idx[:PeCc] = ncells[:Elyte] + 1
+	if :PositiveElectrodeCurrentCollector in model_keys
+		start_idx[:PositiveElectrodeCurrentCollector] = ncells[:Electrolyte] + 1
 	end
 
 	for k in model_keys

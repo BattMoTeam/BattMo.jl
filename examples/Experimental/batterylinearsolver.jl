@@ -48,7 +48,7 @@ function batterylinearsolver(nosplit = true, p2d = true)
 				absolute_tolerance = atol * fac_s * 1e-22,
 				max_iterations = max_it,
 				min_iterations = 4)
-			cmodels = [[:NeAm], [:PeAm], [:Elyte]]
+			cmodels = [[:NegativeElectrodeActiveMaterial], [:PositiveElectrodeActiveMaterial], [:Electrolyte]]
 			for mm in cmodels
 				println(mm)
 				s_prec = SolverAsPreconditionerSystem(solver_s)
@@ -82,7 +82,7 @@ function batterylinearsolver(nosplit = true, p2d = true)
 				absolute_tolerance = atol * fac_s * 1e-22,
 				max_iterations = max_it,
 				min_iterations = 4)
-			cmodels = [[:NeAm], [:PeAm]]
+			cmodels = [[:NegativeElectrodeActiveMaterial], [:PositiveElectrodeActiveMaterial]]
 			for mm in cmodels
 				println(mm)
 				s_prec = SolverAsPreconditionerSystem(solver_s)
@@ -90,7 +90,7 @@ function batterylinearsolver(nosplit = true, p2d = true)
 				push!(varpreconds, deepcopy(s_preccond))
 			end
 
-			# cmodels = [[:NeAm], [:PeAm]]
+			# cmodels = [[:NegativeElectrodeActiveMaterial], [:PositiveElectrodeActiveMaterial]]
 			# for mm in cmodels
 			#     println(mm)
 			#     s_prec = SolverAsPreconditionerSystem(solver_s)
@@ -98,7 +98,7 @@ function batterylinearsolver(nosplit = true, p2d = true)
 			#     push!(varpreconds, deepcopy(s_preccond))
 			# end
 
-			cmodels = [[:Elyte]]
+			cmodels = [[:Electrolyte]]
 			for mm in cmodels
 				println(mm)
 				s_prec = SolverAsPreconditionerSystem(solver_s)

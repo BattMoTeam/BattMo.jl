@@ -50,7 +50,7 @@ include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_fun
 
 			output = solve(sim;)
 			I = get_output_time_series(output)[:Current]
-			c_pe = get_output_states(output)[:PeAmSurfaceConcentration]
+			c_pe = get_output_states(output)[:PositiveElectrodeActiveMaterialSurfaceConcentration]
 
 			@test I[end] ≈ I_test[i] atol = 1e-1
 

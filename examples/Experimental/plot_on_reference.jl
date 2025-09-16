@@ -63,12 +63,12 @@ for i in 5
 	##
 
 
-	# mykeys = [:NeCc, :NeAm, :Elyte, :PeAm, :PeCc]
-	# mykeys = [:PeCc, :PeAm]
-	# mykeys = [:NeAm]
-	# mykeys = [:Elyte]
-	mykeys = [:PeAm]
-	# mykeys = [:NeCc]
+	# mykeys = [:NegativeElectrodeCurrentCollector, :NegativeElectrodeActiveMaterial, :Electrolyte, :PositiveElectrodeActiveMaterial, :PositiveElectrodeCurrentCollector]
+	# mykeys = [:PositiveElectrodeCurrentCollector, :PositiveElectrodeActiveMaterial]
+	# mykeys = [:NegativeElectrodeActiveMaterial]
+	# mykeys = [:Electrolyte]
+	mykeys = [:PositiveElectrodeActiveMaterial]
+	# mykeys = [:NegativeElectrodeCurrentCollector]
 	#mykeys =  keys(grids)
 	for key in mykeys
 		G = grids[key]

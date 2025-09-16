@@ -3,16 +3,16 @@
 ## Available sub-models
 
 
-| ModelSetting                      | Sub-model(s)                              | Description                           |      
-|-----------------------------------|-------------------------------------------|---------------------------------------|
-| `"ModelFrameWork"`                | "P2D", "P4D Pouch", "P4D Cylindrical"     | manuals/user_guide/pxd_model          |
-| `"TransportInSolid"`              | "FullDiffusion"                           | -                                     |
-| `"RampUp"`                        | "Sinusoidal"                              | manuals/user_guide/ramp_up            |
-| `"ButlerVolmer"`                  | "Standard", "Chayambuka"                  | manuals/user_guide/sodium_ion_model   |
-| `"CurrentCollectors"`             | "Standard"                                | -                                     |
-| `"SEIModel"`                      | "Bolay"                                   | manuals/user_guide/sei_model          |
-| `"TemperatureDependence"`         | "Arrhenius"                               | manuals/user_guide/arrhenius          |
-| `"PotentialFlowDiscretization"`   | "GeneralAD", "TwoPointDiscretization"     | -                                     |
+| ModelSetting                      | Sub-model(s)                              | Description                                                           |      
+|-----------------------------------|-------------------------------------------|-----------------------------------------------------------------------|
+| `"ModelFrameWork"`                | "P2D", "P4D Pouch", "P4D Cylindrical"     | [See the PXD section](../user_guide/pxd_model.md)                     |
+| `"TransportInSolid"`              | "FullDiffusion"                           | -                                                                     |
+| `"RampUp"`                        | "Sinusoidal"                              | [See the Ramp Up section](../user_guide/ramp_up.md)                   |
+| `"ButlerVolmer"`                  | "Standard", "Chayambuka"                  | [See the Sodium ion section](../user_guide/sodium_ion_model.md)       |   
+| `"CurrentCollectors"`             | "Standard"                                | -                                                                     |
+| `"SEIModel"`                      | "Bolay"                                   | [See the SEI section](../user_guide/sei_model.md)                     |
+| `"TemperatureDependence"`         | "Arrhenius"                               | [See the temperature dependence section](../user_guide/arrhenius.md)  |
+| `"PotentialFlowDiscretization"`   | "GeneralAD", "TwoPointDiscretization"     | -                                                                     |
 
 ## How to select sub-models
 
