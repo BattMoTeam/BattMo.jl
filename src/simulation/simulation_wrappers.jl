@@ -60,16 +60,60 @@ end
 
 function run_simulation(simulation_input::MatlabInput; solver_settings::Union{SolverSettings, Missing} = missing, logger = nothing, kwargs...)
 
-	model = LithiumIonBattery()
+	model, couplings = setup_submodels(simulation_input)
 
-	sim_cfg = simulation_configuration(model, simulation_input)
+	parameters = setup_battery_parameters(simulation_input, model)
+
+	# setup the cross terms which couples the submodels.
+	setup_coupling_cross_terms!(simulation_input, model, parameters, couplings)
+
+	setup_initial_control_policy!(model[:Control].system.policy, simulation_input, parameters)
+
+	state0 = setup_initial_state(simulation_input, model)
+
+	forces = setup_forces(model)
+
+	simulator = Simulator(model; state0 = state0, parameters = parameters, copy_state = true)
+
+	timesteps = setup_timesteps(simulation_input; max_step = max_step)
+
+	grids = get_grids(model)
+
+	sim_cfg = (
+		simulator = simulator,
+		model = model,
+		state0 = initial_state,
+		forces = forces,
+		timesteps = time_steps,
+		grids = grids,
+		couplings = couplings,
+		parameters = parameters,
+		simulation_settings = settings,
+		cell_parameters = cell_parameters,
+		cycling_protocol = cycling_protocol,
+	)
 
 	if ismissing(solver_settings)
-		solver_settings = get_default_solver_settings(typeof(model))
+		solver_settings = load_solver_settings(from_default_set = "direct")
 	end
 
-	output = solve_simulation(sim_cfg, kwargs...)
+	states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
 
-	return output
+	extra = Dict(:simulator => simulator,
+		:forces => forces,
+		:state0 => state0,
+		:parameters => parameters,
+		:model => model,
+		:couplings => couplings,
+		:grids => grids,
+		:timesteps => timesteps,
+		:cfg => cfg)
+	extra[:timesteps] = timesteps
+
+	return (states             = states,
+		cellSpecifications = cellSpecifications,
+		reports            = reports,
+		input              = input,
+		extra              = extra)
 
 end
