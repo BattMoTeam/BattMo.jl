@@ -1,4 +1,8 @@
+export run_simulation
 
+
+#####################################
+# Headless UI
 
 """
 	run_simulation(simulation_input::FullSimulationInput; kwargs...)
@@ -25,30 +29,47 @@ output = run_simulation(simulation_input)
 plot_dashboard(output)
 ```
 """
-function run_simulation(simulation_input::FullSimulationInput; logger = nothing, kwargs...)
+function run_simulation(simulation_input::FullSimulationInput; accept_invalid = false, logger = nothing, kwargs...)
 
 	input = extract_input_sets(simulation_input)
 
 	base_model = input.base_model
-	if base_model == "LithiumIonBattery"
-		model = LithiumIonBattery(; model_settings = input.model_settings)
-	elseif base_model == "SodiumIonBattery"
-		model = SodiumIonBattery(; model_settings = input.model_settings)
-	else
-		error("BaseModel $base_model is not valid. The following models are available: LithiumIonBattery, SodiumIonBattery")
-	end
+	model = get_model(base_model, input.model_settings)
 
 	sim = Simulation(model, input.cell_parameters, input.cycling_protocol; simulation_settings = input.simulation_settings)
 
-	output = solve(sim; solver_settings = input.solver_settings, logger = logger, kwargs...)
+	output = solve(sim; accept_invalid, solver_settings = input.solver_settings, logger = logger, kwargs...)
 	return output
 
 end
 
 
-function run_simulation(simulation_input::AdvancedDictInput; base_model = "LithiumIonBattery", logger = nothing, kwargs...)
+#################################
+# Advanced dict UI
 
-	full_simulation_input = convert_to_full_simulation_input(simulation_input, base_model)
-	return run_simulation(full_simulation_input)
+
+function run_simulation(simulation_input::AdvancedDictInput; base_model = "LithiumIonBattery", accept_invalid = false, solver_settings = missing, logger = nothing, kwargs...)
+
+	full_simulation_input = convert_to_full_simulation_input(simulation_input, base_model; solver_settings)
+	return run_simulation(full_simulation_input; accept_invalid)
+
+end
+
+###################################
+# Matlab UI
+
+function run_simulation(simulation_input::MatlabInput; solver_settings::Union{SolverSettings, Missing} = missing, logger = nothing, kwargs...)
+
+	model = LithiumIonBattery()
+
+	sim_cfg = simulation_configuration(model, simulation_input)
+
+	if ismissing(solver_settings)
+		solver_settings = get_default_solver_settings(typeof(model))
+	end
+
+	output = solve_simulation(sim_cfg, kwargs...)
+
+	return output
 
 end

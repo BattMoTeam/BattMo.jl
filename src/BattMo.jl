@@ -226,9 +226,9 @@ include("models/battery_utils.jl")
 
 include("simulation/simulation.jl")
 include("simulation/simulation_utils.jl")
+include("simulation/simulation_wrappers.jl")
 
 include("matlab_interface/matlab_model_setup.jl")
-# include("old_model_setup/model_setup.jl")
 
 include("plotting/makie_ext.jl")
 include("plotting/3d.jl")

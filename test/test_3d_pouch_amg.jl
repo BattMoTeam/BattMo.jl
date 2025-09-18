@@ -15,7 +15,7 @@ using Test
 
 		inputparams = merge_input_params(inputparams_geometry, inputparams)
 
-		cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_old_input_format_to_parameter_sets(inputparams)
+		cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_to_parameter_sets(inputparams)
 
 		model_setup = LithiumIonBattery(; model_settings)
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)

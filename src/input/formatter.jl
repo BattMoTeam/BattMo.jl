@@ -1,4 +1,4 @@
-export convert_parameter_sets_to_old_input_format, convert_old_input_format_to_parameter_sets
+export convert_parameter_sets_to_old_input_format, convert_to_parameter_sets
 
 
 function get_key_value(dict::Union{AbstractInput, Dict, Nothing}, key)
@@ -46,7 +46,7 @@ function extract_input_sets(simulation_input::FullSimulationInput)
 
 end
 
-function convert_to_parameter_sets(input::AdvancedDictInput)
+function convert_to_parameter_sets(params::AdvancedDictInput)
 
 	##################################
 	# ModelSettings
@@ -401,17 +401,23 @@ function convert_to_parameter_sets(input::AdvancedDictInput)
 		SimulationSettings(simulation_settings))
 end
 
-function convert_to_full_simulation_input(input::AdvancedDictInput, base_model = "LithiumIonBattery")
-	sets = convert_to_parameter_sets(input)
+function convert_to_full_simulation_input(input::AdvancedDictInput, base_model = "LithiumIonBattery"; solver_settings = missing)
+
+	cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_to_parameter_sets(input)
+
+	if ismissing(solver_settings)
+		solver_settings = get_default_solver_settings(typeof(get_model(base_model, model_settings)))
+	end
+
 	full_simulation_input = Dict(
 		"BaseModel" => base_model,
-		"ModelSettings" => sets.model_settings,
-		"CellParameters" => sets.cell_parameters,
-		"CyclingProtocol" => sets.cycling_protocol,
-		"SimulationSettings" => sets.simulation_settings,
-		"SolverSettings" => sets.solver_settings,
+		"ModelSettings" => model_settings.all,
+		"CellParameters" => cell_parameters.all,
+		"CyclingProtocol" => cycling_protocol.all,
+		"SimulationSettings" => simulation_settings.all,
+		"SolverSettings" => solver_settings.all,
 	)
-
+	return FullSimulationInput(full_simulation_input)
 
 end
 
@@ -843,7 +849,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 		),
 	)
 
-	battmo_input = InputParamsOld(battmo_input)
+	battmo_input = AdvancedDictInput(battmo_input)
 
 	if battmo_input["Geometry"]["case"] == "jellyRoll"
 

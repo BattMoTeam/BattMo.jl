@@ -1,4 +1,4 @@
-module BattMoMakieExt
+module BattMoGLMakieExt
 
 using BattMo, GLMakie
 

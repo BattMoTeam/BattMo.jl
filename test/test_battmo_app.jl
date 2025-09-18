@@ -8,7 +8,7 @@ function runP2DBatt(json_file)
 
 	# read input parameters from json file
 	inputparams = load_advanced_dict_input(json_file)
-	cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_old_input_format_to_parameter_sets(inputparams)
+	cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_to_parameter_sets(inputparams)
 
 	# # setup simulation from the input parameters
 	# output = get_simulation_input(inputparams)

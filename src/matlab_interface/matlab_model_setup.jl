@@ -3,7 +3,7 @@
 # control policy setup (Matlab input specific) #
 ################################################
 
-function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::MatlabInputParamsOld, parameters)
+function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::MatlabInput, parameters)
 
 	Imax = Float64(inputparams["model"]["Control"]["Imax"])
 	tup = Float64(inputparams["model"]["Control"]["rampupTime"])
@@ -17,7 +17,7 @@ function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::Matl
 end
 
 
-function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::MatlabInputParamsOld, parameters)
+function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::MatlabInput, parameters)
 
 	error("not updated, use inputparams to get values")
 	policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
@@ -30,7 +30,7 @@ end
 # Setup timestepping #
 ######################
 
-function setup_timesteps(inputparams::MatlabInputParamsOld;
+function setup_timesteps(inputparams::MatlabInput;
 	max_step::Union{Integer, Nothing} = nothing,
 	kwarg...)
 	"""
@@ -75,7 +75,7 @@ end
 # Setup coupling #
 ##################
 
-function setup_coupling_cross_terms!(inputparams::MatlabInputParamsOld,
+function setup_coupling_cross_terms!(inputparams::MatlabInput,
 	model::MultiModel,
 	parameters::Dict{Symbol, <:Any},
 	couplings)
@@ -266,7 +266,7 @@ end
 
 
 
-function include_current_collectors(inputparams::MatlabInputParamsOld)
+function include_current_collectors(inputparams::MatlabInput)
 
 	model = inputparams["model"]
 
@@ -291,12 +291,11 @@ end
 # Setup battery model #
 #######################
 
-function setup_submodels(inputparams::MatlabInputParamsOld;
-	use_groups::Bool = false,
-	use_p2d::Bool    = true,
-	general_ad::Bool = true,
-	kwarg...)
+function setup_submodels(model, inputparams::MatlabInput, grids, couplings)
 
+	use_groups::Bool = false
+	use_p2d::Bool = true
+	general_ad::Bool = true
 	include_cc = include_current_collectors(inputparams)
 
 	function setup_component(obj::Dict,
@@ -532,7 +531,7 @@ end
 ############################
 
 
-function setup_battery_parameters(inputparams::MatlabInputParamsOld,
+function setup_battery_parameters(inputparams::MatlabInput,
 	model::MultiModel,
 )
 
@@ -626,7 +625,7 @@ end
 # Setup initial state #
 #######################
 
-function setup_initial_state(inputparams::MatlabInputParamsOld,
+function setup_initial_state(inputparams::MatlabInput,
 	model::MultiModel,
 )
 

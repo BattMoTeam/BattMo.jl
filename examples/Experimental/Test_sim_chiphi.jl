@@ -178,7 +178,7 @@ if false
 else
 	##
 	#sim, forces, state0, parameters, init, model = BattMo.setup_sim(init; use_p2d=use_p2d, use_groups=false, general_ad=false, max_step = nothing)
-	#model, state0, parameters = BattMo.setup_model(init, use_groups = false, use_p2d    = use_p2d)
+	#model, state0, parameters = BattMo.setup_model!(init, use_groups = false, use_p2d    = use_p2d)
 	#context = Jutul.ParallelCSRContext(1)
 	context = Jutul.DefaultContext()
 	model = BattMo.setup_battery_model(init, use_groups = false, use_p2d = use_p2d, context = context)

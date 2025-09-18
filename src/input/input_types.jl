@@ -3,7 +3,7 @@ export ParameterSet
 export CellParameters, CyclingProtocol, ModelSettings, SimulationSettings, SolverSettings, FullSimulationInput
 
 export AdvancedDictInput
-export InputParamsOld, MatlabInputParamsOld
+export AdvancedDictInput, MatlabInput
 
 export merge_input_params, search_parameter, set_input_params!, get_input_params, set_default_input_params!
 
@@ -253,45 +253,46 @@ end
 ################################################################
 # BattMo formatted input types (the validated and to the backend formatted input prameters)
 """
-	abstract type AdvancedDictInput <: AbstractInput
+	abstract type AdditionaInputFormats <: AbstractInput
 
 Abstract type representing input parameters formatted for BattMo.
 This type is used exclusively in the backend as an input to the simulation.
-Subtypes of `AdvancedDictInput` contain parameter dictionaries structured for BattMo compatibility.
+Subtypes of `AdditionaInputFormats` contain parameter dictionaries structured for BattMo compatibility.
 """
-abstract type AdvancedDictInput <: AbstractInput end
+abstract type AdditionaInputFormats <: AbstractInput end
 
 
 """
-	struct InputParamsOld <: AdvancedDictInput
+	struct AdvancedDictInput <: AdditionaInputFormats
 
 Represents a validated and backend-formatted set of input parameters for a BattMo simulation.
 
 # Fields
 - `data ::Dict{String, Any}` : A dictionary storing the input parameters for BattMo.
 """
-struct InputParamsOld <: AdvancedDictInput
+struct AdvancedDictInput <: AdditionaInputFormats
 	all::Dict{String, Any}
+	source_path::Union{String, Nothing}
+	function AdvancedDictInput(all::Dict; source_path::Union{String, Nothing} = nothing)
+		new(to_string_any(all), source_path)
+	end
 end
 
-function InputParamsOld()
-	return InputParamsOld(Dict{String, Any}())
-end
 
 """
-	struct MatlabInputParamsOld <: AdvancedDictInput
+	struct MatlabInput <: AdditionaInputFormats
 
 Represents input parameters derived from MATLAB-generated files, formatted for BattMo compatibility.
 
 # Fields
 - `data ::Dict{String, Any}` : A dictionary storing MATLAB-extracted input parameters.
 """
-struct MatlabInputParamsOld <: AdvancedDictInput
+struct MatlabInput <: AdditionaInputFormats
 	all::Dict{String, Any}
 end
 
 
-const InputGeometryParams = InputParamsOld
+const InputGeometryParams = AdvancedDictInput
 
 function recursive_merge_dict(d1, d2; warn = false)
 
@@ -312,7 +313,7 @@ function recursive_merge_dict(d1, d2; warn = false)
 end
 
 """ 
-   merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: AdvancedDictInput}
+   merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: AdditionaInputFormats}
 
 # Arguments
 
@@ -321,9 +322,9 @@ end
 - `warn = false` : If option `warn` is true, then give a warning when two distinct values are given for the same field. The first value has other precedence.
 
 # Returns
-A `AdvancedDictInput` structure whose field are the composition of the two input parameter structures.
+A `AdditionaInputFormats` structure whose field are the composition of the two input parameter structures.
 """
-function merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: AdvancedDictInput}
+function merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: AdditionaInputFormats}
 
 	dict1 = inputparams1.all
 	dict2 = inputparams2.all
@@ -335,7 +336,7 @@ function merge_input_params(inputparams1::T, inputparams2::T; warn = false) wher
 
 end
 
-function merge_input_params(inputparams_list::Vector{T}; warn = false) where {T <: AdvancedDictInput}
+function merge_input_params(inputparams_list::Vector{T}; warn = false) where {T <: AdditionaInputFormats}
 
 	if length(inputparams_list) == 0
 		return nothing
@@ -353,17 +354,17 @@ end
 
 
 """
-	get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}) where {T <: AdvancedDictInput}
+	get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}) where {T <: AdditionaInputFormats}
 
 Recursively retrieves the value of a field in the input parameters.
 """
-function get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}) where {T <: AdvancedDictInput}
+function get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}) where {T <: AdditionaInputFormats}
 
 	fieldname = fieldnamelist[1]
 
 	if length(fieldnamelist) == 1
 
-		if isa(inputparams, Union{T, Dict} where {T <: AdvancedDictInput}) && haskey(inputparams, fieldname)
+		if isa(inputparams, Union{T, Dict} where {T <: AdditionaInputFormats}) && haskey(inputparams, fieldname)
 			return inputparams[fieldname]
 		else
 			return missing
@@ -371,7 +372,7 @@ function get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{Str
 
 	else
 
-		if isa(inputparams, Union{T, Dict} where {T <: AdvancedDictInput}) && haskey(inputparams, fieldname) && isa(inputparams[fieldname], Union{T, Dict} where {T <: AdvancedDictInput})
+		if isa(inputparams, Union{T, Dict} where {T <: AdditionaInputFormats}) && haskey(inputparams, fieldname) && isa(inputparams[fieldname], Union{T, Dict} where {T <: AdditionaInputFormats})
 
 			return get_input_params(inputparams[fieldname], fieldnamelist[2:end])
 
@@ -390,7 +391,7 @@ end
 	Set the value of a field in the input parameters.
 
 # Arguments
-	- `inputparams ::AdvancedDictInput` : The input parameters structure.
+	- `inputparams ::AdditionaInputFormats` : The input parameters structure.
 	- `fieldnamelist ::Vector{String}` : A vector of field names to set.
 	- `value` : The value to assign to the specified fields.
 	- `handleMismatch = :error` : How to handle mismatches in field types. Options are `:error`, `:warn`, or `:ignore`.
@@ -398,7 +399,7 @@ end
 # Returns
 	The updated input parameters structure with the specified fields set to the given value.
 	"""
-function set_input_params!(inputparams::Union{T, Dict{String, K}}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {K, T <: AdvancedDictInput}
+function set_input_params!(inputparams::Union{T, Dict{String, K}}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {K, T <: AdditionaInputFormats}
 
 	@assert(handleMismatch in (:error, :warn, :ignore), "handleMismatch must be one of :error, :warn, or :ignore")
 
@@ -458,7 +459,7 @@ function set_input_params!(inputparams::Union{T, Dict{String, K}}, fieldnamelist
 
 end
 
-function set_default_input_params!(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: AdvancedDictInput}
+function set_default_input_params!(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: AdditionaInputFormats}
 
 	current_value = get_input_params(inputparams, fieldnamelist)
 
