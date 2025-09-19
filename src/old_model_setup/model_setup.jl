@@ -103,10 +103,10 @@ end
 
 function get_simulation_input(problem::Simulation; kwargs...)
 
-	inputparams = convert_parameter_sets_to_old_input_format(problem.model_setup.model_settings,
+	inputparams = convert_parameter_sets_to_old_input_format(problem.model.settings,
 		problem.cell_parameters,
 		problem.cycling_protocol,
-		problem.simulation_settings)
+		problem.settings)
 
 	output = get_simulation_input(inputparams; kwargs...)
 
