@@ -14,9 +14,9 @@ function check_plotting_availability(; throw = true)
 					WGLMakie renders the plots in your browser. 
 
 					To fix: using Pkg; Pkg.add(\"GLMakie\") and then call using GLMakie to enable plotting.
-					
-					or: using Pkg; Pkg.add(\"WGLMakie\") and then call using WGLMakie, activate_browser(), and using BattMoGLMakieExt to enable plotting.
-					
+
+					or: using Pkg; Pkg.add(\"WGLMakie\") and then call using WGLMakie to enable plotting.
+
 					""")
 			else
 				rethrow(e)

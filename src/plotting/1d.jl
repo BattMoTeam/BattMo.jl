@@ -33,7 +33,7 @@ Plot specified variables from simulation output using GLMakie.
 using GLMakie
 fig = BattMo.plot_output(output, 
 				["Voltage vs Time", 
-				["NeAmSurfaceConcentration vs Time at Position index 1", "NeAmSurfaceConcentration vs Time at Position index 10"],
+				["NegativeElectrodeActiveMaterialSurfaceConcentration vs Time at Position index 1", "NegativeElectrodeActiveMaterialSurfaceConcentration vs Time at Position index 10"],
 				"ElectrolytePotential vs time and Position",
 				]; layout=(3,1))
 ```
