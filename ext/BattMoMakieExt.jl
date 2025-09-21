@@ -193,7 +193,7 @@ function BattMo.plot_output_impl(
 
 	# Helper: Parse variable string
 	function parse_variable(varstr::String)
-		base = match(r"^[^v]+", varstr) |> x -> strip(x.match)
+		base = match(r"(.+)vs", varstr) |> x -> strip(x[1])
 
 		dims = occursin(r"vs", varstr) ? match(r"vs (.+?)(?: at|$)", varstr) |> x -> split(strip(x[1]), r" and ") : []
 
@@ -281,6 +281,7 @@ function BattMo.plot_output_impl(
 		for varstr in var_group
 			try
 				parsed = parse_variable(varstr)
+
 				clean_var = parsed.base
 				dims = parsed.dims
 				sel = parsed.selectors
