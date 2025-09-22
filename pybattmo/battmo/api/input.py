@@ -17,6 +17,10 @@ def load_simulation_settings(*arg, **kwargs):
     return jl.load_simulation_settings(*arg, **kwargs)
 
 
+def load_full_simulation_input(*arg, **kwargs):
+    return jl.load_full_simulation_input(*arg, **kwargs)
+
+
 def CellParameters(*arg, **kwargs):
     return jl.CellParameters(*arg, **kwargs)
 

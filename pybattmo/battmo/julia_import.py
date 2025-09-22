@@ -37,12 +37,27 @@ import numpy as np
 
 # Load the main packages
 try:
-    jl.seval("using BattMo")
+    jl.seval(
+        """
+        using BattMo
+        """
+    )
 except Exception:
     jl.seval(
         """
     import Pkg
-    Pkg.add("url="https://github.com/BattMoTeam/BattMo.jl"")
+    Pkg.add("BattMo")
     using BattMo
     """
+    )
+
+
+def update_battmo():
+
+    return jl.seval(
+        """
+        import Pkg
+        Pkg.update("BattMo")
+        using BattMo
+        """
     )

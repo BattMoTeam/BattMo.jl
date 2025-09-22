@@ -28,7 +28,7 @@ function get_tV(x::DataFrame)
 end
 
 # ## Load the experimental data and set up a base case
-battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
+battmo_base = jl.seval("normpath(joinpath(pathof(BattMo) |> splitdir |> first, '..'))")
 exdata = joinpath(battmo_base, "examples", "example_data")
 df_05 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_05C.csv"), DataFrame)
 df_1 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_1C.csv"), DataFrame)
