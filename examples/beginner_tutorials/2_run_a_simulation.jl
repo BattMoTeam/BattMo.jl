@@ -42,8 +42,6 @@ sim.is_valid
 output = solve(sim;)
 nothing # hide
 
-
 # Now we can easily plot some results
-
 plot_dashboard(output; plot_type = "contour")
 

@@ -314,7 +314,7 @@ function get_setting_meta_data()
 		),
 		"Method" => Dict(
 			"type" => String,
-			"options" => ["direct", "iterative"],
+			"options" => ["Direct", "Iterative", "UserDefined"],
 			"category" => "SolverSettings",
 			"description" => "Linear solver method.",
 		),
@@ -479,7 +479,7 @@ function get_setting_meta_data()
 			"type" => String,
 			"variable_name" => "output_path",
 			"category" => "SolverSettings",
-			"description" => "Path to write output. If nothing, output is not written to disk.",
+			"description" => "Path to folder in which the output should be written. The output will be givin in JLD2 files which adhere to the HDF5 format. If nothing, output is not written to disk.",
 		),
 		"InMemoryReports" => Dict(
 			"type" => Int,

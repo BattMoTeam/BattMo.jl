@@ -182,7 +182,7 @@ function get_grids(model::MultiModel{:IntercalationBattery})
 
 	has_cc = include_current_collectors(model)
 
-	components = [:NeCc, :NeAm, :Elyte, :PeAm, :PeCc]
+	components = [:NegativeElectrodeCurrentCollector, :NegativeElectrodeActiveMaterial, :Electrolyte, :PositiveElectrodeActiveMaterial, :PositiveElectrodeCurrentCollector]
 	names = ["NegativeCurrentCollector",
 		"NegativeElectrode",
 		"Electrolyte",

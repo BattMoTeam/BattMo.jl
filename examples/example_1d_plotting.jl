@@ -43,11 +43,11 @@ plot_output(output,
 
 plot_output(output,
 	[
-		["NeAmSurfaceConcentration vs Time at Position index 10", "NeAmSurfaceConcentration vs Time at Position index 1"],
-		"NeAmConcentration vs Time at Position index 10 and NeAmRadius index 5",
-		"NeAmSurfaceConcentration vs Position and Time",
-		"PeAmConcentration vs Time and Position at PeAmRadius index end",
-		"NeAmPotential vs Time at Position index 10",
+		["NegativeElectrodeActiveMaterialSurfaceConcentration vs Time at Position index 10", "NegativeElectrodeActiveMaterialSurfaceConcentration vs Time at Position index 1"],
+		"NegativeElectrodeActiveMaterialParticleConcentration vs Time at Position index 10 and NegativeElectrodeActiveMaterialRadius index 5",
+		"NegativeElectrodeActiveMaterialSurfaceConcentration vs Position and Time",
+		"PositiveElectrodeActiveMaterialParticleConcentration vs Time and Position at PositiveElectrodeActiveMaterialRadius index end",
+		"NegativeElectrodeActiveMaterialPotential vs Time at Position index 10",
 	];
 	layout = (4, 2),
 )
@@ -68,18 +68,12 @@ plot_output(output,
 
 # Access state data and plot for a specific time step
 
-
-quantities = ["Time", "Position", "NeAmRadius", "NeAmConcentration",
-	"NeAmSurfaceConcentration", "PeAmRadius", "PeAmConcentration",
-	"PeAmSurfaceConcentration", "ElectrolyteConcentration"]
-
-
-output_data = get_output_states(output, quantities = quantities);
+output_data = get_output_states(output);
 
 t = 100 # time step to plot
 
-d1 = output_data[:NeAmSurfaceConcentration][t, :]
-d2 = output_data[:PeAmSurfaceConcentration][t, :]
+d1 = output_data[:NegativeElectrodeActiveMaterialSurfaceConcentration][t, :]
+d2 = output_data[:PositiveElectrodeActiveMaterialSurfaceConcentration][t, :]
 d3 = output_data[:ElectrolyteConcentration][t, :]
 
 f = Figure()
@@ -92,8 +86,8 @@ display(GLMakie.Screen(), f)
 
 g = Figure()
 ax2 = Axis(g[1, 1], title = "Active Material Concentration at t = $(output_data[:Time][t]) s", xlabel = "Position", ylabel = "Depth")
-hm1 = contourf!(ax2, output_data[:Position], output_data[:NeAmRadius], output_data[:NeAmConcentration][t, :, :])
-hm2 = contourf!(ax2, output_data[:Position], output_data[:PeAmRadius], output_data[:PeAmConcentration][t, :, :])
+hm1 = contourf!(ax2, output_data[:Position], output_data[:NegativeElectrodeActiveMaterialRadius], output_data[:NegativeElectrodeActiveMaterialParticleConcentration][t, :, :])
+hm2 = contourf!(ax2, output_data[:Position], output_data[:PositiveElectrodeActiveMaterialRadius], output_data[:PositiveElectrodeActiveMaterialParticleConcentration][t, :, :])
 Colorbar(g[1, 2], hm1)
 display(GLMakie.Screen(), g)
 

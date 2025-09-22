@@ -10,6 +10,42 @@ function get_key_value(dict::Union{AbstractInput, Dict, Nothing}, key)
 	return value
 end
 
+function extract_input_sets(simulation_input::FullSimulationInput)
+
+	base_model = get(simulation_input, "BaseModel", nothing)
+	model_settings = get(simulation_input, "ModelSettings", nothing)
+	cell_parameters = get(simulation_input, "CellParameters", nothing)
+	cycling_protocol = get(simulation_input, "CyclingProtocol", nothing)
+	simulation_settings = get(simulation_input, "SimulationSettings", nothing)
+	solver_settings = get(simulation_input, "SolverSettings", nothing)
+
+	if !isnothing(model_settings)
+		model_settings = ModelSettings(model_settings)
+	end
+
+	if !isnothing(cell_parameters)
+		cell_parameters = CellParameters(cell_parameters)
+	end
+
+	if !isnothing(cycling_protocol)
+		cycling_protocol = CyclingProtocol(cycling_protocol)
+	end
+	if !isnothing(simulation_settings)
+		simulation_settings = SimulationSettings(simulation_settings)
+	end
+	if !isnothing(solver_settings)
+		solver_settings = SolverSettings(solver_settings)
+	end
+
+	return (base_model = base_model,
+		model_settings = model_settings,
+		cell_parameters = cell_parameters,
+		cycling_protocol = cycling_protocol,
+		simulation_settings = simulation_settings,
+		solver_settings = solver_settings)
+
+end
+
 function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld)
 
 	##################################
@@ -798,7 +834,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 
 	if battmo_input["Geometry"]["case"] == "jellyRoll"
 
-		set_input_params!(battmo_input, ["NonLinearSolver", "LinearSolver", "method"], "iterative")
+		set_input_params!(battmo_input, ["NonLinearSolver", "LinearSolver", "method"], "Iterative")
 
 	end
 
