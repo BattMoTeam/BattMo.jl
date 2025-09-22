@@ -41,7 +41,7 @@ apps/demo_app_with_plotting/battmo_compiled/*
 
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
+__pycache__
 *.py[cod]
 *$py.class
 

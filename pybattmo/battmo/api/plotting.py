@@ -5,23 +5,23 @@ import juliacall
 
 def activate_plotting():
     try:
-        jl.seval("using GLMakie; GLMakie.activate!()")
+        jl.seval("using WGLMakie; WGLMakie.activate!()")
     except:
-        print("Unable to load GLMakie. Have you called install_plotting()?")
+        print("Unable to load WGLMakie. Have you called install_plotting()?")
 
         return False
     return True
 
 
 def install_plotting():
-    juliapkg.add("GLMakie", "e9467ef8-e4e7-5192-8a1a-b1aee30e663a")
+    juliapkg.add("WGLMakie", "276b4fcb-3e11-5398-bf8b-a0c2d153d008")
     juliapkg.resolve()
     activate_plotting()
     return True
 
 
 def uninstall_plotting():
-    juliapkg.rm("GLMakie", "e9467ef8-e4e7-5192-8a1a-b1aee30e663a")
+    juliapkg.rm("WGLMakie", "276b4fcb-3e11-5398-bf8b-a0c2d153d008")
     juliapkg.resolve()
     return True
 
