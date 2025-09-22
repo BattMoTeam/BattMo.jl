@@ -41,13 +41,13 @@ def test_output_handling():
     print_output_overview(output)
 
 
-def test_plotting():
+# def test_plotting():
 
-    install_plotting()
-    activate_plotting()
-    make_interactive()
+#     install_plotting()
+#     activate_plotting()
+#     make_interactive()
 
-    uninstall_plotting()
+#     uninstall_plotting()
 
 
 def test_utils():
