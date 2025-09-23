@@ -48,7 +48,7 @@ end
 # Advanced dict UI
 
 
-function run_simulation(simulation_input::AdvancedDictInput; base_model = "LithiumIonBattery", accept_invalid = false, solver_settings = missing, logger = nothing, kwargs...)
+function run_simulation(simulation_input::AdvancedDictInput; base_model = "LithiumIonBattery", accept_invalid = false, solver_settings::Union{SolverSettings, Missing} = missing, logger = nothing, kwargs...)
 
 	full_simulation_input = convert_to_full_simulation_input(simulation_input, base_model; solver_settings)
 	return run_simulation(full_simulation_input; accept_invalid)
