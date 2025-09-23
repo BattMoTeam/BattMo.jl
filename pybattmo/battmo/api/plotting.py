@@ -59,10 +59,13 @@ def plot_output(*arg, **kwargs):
     return fig
 
 
-def plot_interactive_3d(*arg, **kwargs):
+def plot_interactive_3d(output, **kwargs):
     if activate_plotting():
         make_interactive()
-        fig = jl.plot_interactive_3d(*arg, **kwargs)
+        extra = getattr(output, "extra")
+        model = extra["model"]
+        states = getattr(output, "states")
+        fig = jl.plot_multimodel_interactive_impl(model.multimodel, states, **kwargs)
         jl.seval(
             """
                 display(current_figure())

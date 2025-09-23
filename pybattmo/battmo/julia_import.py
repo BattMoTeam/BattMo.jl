@@ -40,6 +40,7 @@ try:
     jl.seval(
         """
         using BattMo
+        using Jutul:Jutul,plot_multimodel_interactive_impl 
         """
     )
 except Exception:
@@ -47,7 +48,8 @@ except Exception:
         """
     import Pkg
     Pkg.add("BattMo")
-    using BattMo
+    Pkg.add("Jutul")
+    using BattMo, Jutul
     """
     )
 
@@ -59,5 +61,6 @@ def update_battmo():
         import Pkg
         Pkg.update("BattMo")
         using BattMo
+        using Jutul:Jutul,plot_multimodel_interactive_impl 
         """
     )

@@ -168,7 +168,8 @@ function build_battmo_docs(build_format              = nothing;
 		"Public API" => [
 		"Input terminology" => "manuals/user_guide/terminology.md",
 		"Simulation dependent input parameters" => "manuals/user_guide/simulation_dependent_input.md",
-		"Functions and types" => "manuals/user_guide/public_api.md"
+		"Functions and types" => "manuals/user_guide/public_api.md",
+		"PyBattMo" => "manuals/user_guide/pybattmo.md"
 	],
 		"Tutorials" => tutorials_markdown
 	],
