@@ -1,4 +1,6 @@
 import pytest
+import os
+import numpy as np
 
 from battmo import *
 
@@ -12,7 +14,7 @@ def test_loading():
 
 
 def test_simulation():
-    cell_parameters = load_cell_parameters(from_default_set="chayambuka")
+    cell_parameters = load_cell_parameters(from_default_set="Chayambuka2022")
     cycling_protocol = load_cycling_protocol(from_default_set="CCDischarge")
 
     model_setup = LithiumIonBattery()
@@ -59,8 +61,6 @@ def test_utils():
 
     cell_parameters = load_cell_parameters(from_default_set="Chen2020")
     print_cell_info(cell_parameters)
-
-    plot_cell_curves(cell_parameters)
 
 
 def test_calibration():
