@@ -15,7 +15,7 @@ cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabFractions"] = [0.5]
 cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabFractions"] = [0.5]
 cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
 cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
-simulation_settings["GridResolutionAngular"]                             = 15
+simulation_settings["GridResolutionAngular"]                             = 30
 
 # Setup the model
 model = LithiumIonBattery(; model_settings)
@@ -28,3 +28,15 @@ output = solve(sim, info_level = -1)
 
 # Cool interactive plotting of the results in the 3D geometry
 plot_interactive_3d(output)
+
+
+fig = Figure()
+
+# Create a colorbar with the colormap `:curl`
+Colorbar(fig[1, 1],
+	colormap = :curl,
+	limits = (minimum(zdata_clean), maximum(zdata_clean)),
+	label = "Electrolyte concentration  /  mol·m⁻³",
+)
+
+fig

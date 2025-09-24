@@ -114,7 +114,7 @@ output = solve(sim)
 plot_interactive_3d(output)
 ```
 ---
-![P4D cylindrical cell simulation results. \label{fig:cylindrical}](./assets/calibration.png "P4D results")
+![P4D cylindrical cell simulation results. \label{fig:cylindrical}](./assets/elyte_conc.png "P4D results")
 
 Figure \ref{fig:cylindrical} shows zoomed in 3D results of the surface lithium concentration at the center of the cylindrical cell. At the edge of the un-paired coating we can see an imbalance in lithium concentration
 
