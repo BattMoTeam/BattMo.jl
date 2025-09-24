@@ -40,7 +40,7 @@ bibliography: paper.bib
 ---
 <!-- To compile this file, after installing docker, from this directory, run : docker run --rm --volume $PWD:/data --user $(id -u):$(id -g) --env JOURNAL=joss openjournals/inara  -->
 # Summary
-This paper introduces BattMo.jl, the Battery Modelling Toolbox, an open-source Julia framework for continuum-scale simulation of electrochemical cells. Using a finite-volume approach, BattMo.jl supports both reduced-order pseudo-2-dimensional (P2D) models and fully three-dimensional (3D) simulations of realistic geometries such as cylindrical and pouch cells. The toolbox combines high-performance solvers, built-in libraries of battery designs and cycling protocols, and an intuitive programmatic and graphical interface. It further includes an adjoint-based optimization framework for parameter estimation and model calibration, enabling close integration of modelling with experimental workflows. The [BattMoTeam](https://github.com/BattMoTeam) collaborates closely with the [SINTEF Battery Lab](https://www.sintef.no/en/all-laboratories/sintef-battery-lab/), gaining valuable input from experienced battery researchers and helping to bridge the gap between academic modelling and industrial innovation.
+This paper introduces BattMo.jl, the Battery Modelling Toolbox, an open-source Julia framework for continuum-scale simulation of electrochemical cells. Using a finite-volume approach, BattMo.jl supports both pseudo-2-dimensional (P2D) models and fully three-dimensional (3D) simulations of realistic geometries such as cylindrical cells and pouch cells. The toolbox combines high-performance solvers, built-in libraries of battery designs and cycling protocols, and an intuitive programmatic and graphical interface. It further includes an adjoint-based optimization framework for parameter estimation and model calibration, enabling close integration of modelling with experimental workflows. The [BattMoTeam](https://github.com/BattMoTeam) collaborates closely with the [SINTEF Battery Lab](https://www.sintef.no/en/all-laboratories/sintef-battery-lab/), gaining valuable input from experienced battery researchers and helping to bridge the gap between academic modelling and industrial innovation.
 
 
 # Statement of need
@@ -54,6 +54,11 @@ BattMo.jl responds to this need by putting effort into creating a flexible model
 
 # Architecture
 
+Figure \ref{fig:backend} shows a diagram of the high-level architecture of BattMo.jl.
+
+![High-level architecture. The gray input settings are optional for the user to provide. \label{fig:backend}](./assets/battmo_backend.png)
+
+
 The Doyle-Fuller-Newman (DFN) [@Doyle1993ModelingCell] approach is used as a base model. On top of that the user has the option to include degradation mechanisms such as SEI layer growth,
 
 
@@ -65,9 +70,11 @@ predicted results.
 
 The simulation input parameters, including the cell parameters cycling protocol parameters, and simulation related settings, are specified through json schemas. In this respect, we follow the guidelines of the Battery Interface Ontology (BattINFO) to support semantic interoperability in accordance with the FAIR principles. 
 
-# Convenient Functionalities
+# Functionalities Overview
 
-- BattINFO- and EMMO-compliant input formats for semantic interoperability
+- BattINFO- and EMMO-compliant input formats for semantic interoperability.
+- P2D and P4D modelling with additional sub models like SEI growth, and temperature dependence.
+- Parameter calibration and design optimization.
 - Automatic validation of model instances, parameters, and settings to prevent unclear errors.
 - Guidance for parameter set development, including clear definitions of parameters and settings.
 - Convenient tools for inspecting, printing, and plotting cell information and simulation results.
@@ -130,7 +137,7 @@ Soon to be expected functionalities are:
 - Fully flexible cycling protocol creation (already available in MATLAB version, see BattMo Family).
 - Fully thermal coupling (already available in MATLAB version, see BattMo Family).
 - Composite active materials (already available in MATLAB version, see BattMo Family).
-- A user-friendly API for model development and adaptation.
+- A user-friendly API for model development and model adaptation.
 - Additional tools for paramatrization of open circuit potentials, diffusion coefficients, etc.
 
 # Software dependencies
