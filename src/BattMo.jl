@@ -266,7 +266,7 @@ include("calibration/calibration_utils.jl")
 		simulation_settings = load_simulation_settings(; from_default_set = "P2D")
 		model_setup = LithiumIonBattery(; model_settings)
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol)
-		output = solve(sim)
+		output = solve(sim, info_level = -1)
 	end
 	try
 		redirect_stdout(workload_fn, devnull)
