@@ -1,5 +1,6 @@
 export Simulation
 export solve
+export run_simulation
 export setup_config
 
 """
@@ -188,6 +189,52 @@ end
 
 
 """
+	run_simulation(simulation_input::FullSimulationInput; kwargs...)
+
+Provides a headless UI for running a simulation.
+
+# Arguments
+- `simulation_input::FullSimulationInput`: A FullSimulationInput instance containing all the parameters and settings needed to run and solve a simulation.
+- `kwargs...`: Additional keyword arguments passed to the lower-level solver configuration.
+
+# Behavior
+- Extracts all relevant parameter sets and settings from the FullSimulationInput instance.
+- Instantiates a ModelConfigured using the provided model settings.
+- Instantiates a Simulation using the ModelConfigured, and the cell parameters, cycling protocol parameters, and simulation settings from the FullSimulationInput.
+- Solves the simulation by passing the Simulation instance and the solver settings from the FullSimulationInput to `BattMo.solve`.
+
+# Returns
+A NamedTuple containing the simulation results.
+
+# Example
+```julia
+simulation_input = load_full_simulation_input(;from_default_set="Chen2020")
+output = run_simulation(simulation_input)
+plot_dashboard(output)
+```
+"""
+function run_simulation(simulation_input::FullSimulationInput; logger = nothing, kwargs...)
+
+	input = extract_input_sets(simulation_input)
+
+	base_model = input.base_model
+	if base_model == "LithiumIonBattery"
+		model = LithiumIonBattery(; model_settings = input.model_settings)
+	elseif base_model == "SodiumIonBattery"
+		model = SodiumIonBattery(; model_settings = input.model_settings)
+	else
+		error("BaseModel $base_model is not valid. The following models are available: LithiumIonBattery, SodiumIonBattery")
+	end
+
+	sim = Simulation(model, input.cell_parameters, input.cycling_protocol; simulation_settings = input.simulation_settings)
+
+	output = solve(sim; solver_settings = input.solver_settings, logger = logger, kwargs...)
+	return output
+
+end
+
+
+"""
 	solve_simulation(sim::Simulation; hook = nothing, use_p2d = true, kwargs...)
 
 Executes the simulation workflow for a battery `Simulation` object by advancing the system state over the defined time steps using the configured solver and model.
@@ -196,7 +243,7 @@ Executes the simulation workflow for a battery `Simulation` object by advancing 
 - `sim::Simulation`: A `Simulation` instance containing all preconfigured simulation components including model, state, solver, time steps, and settings.
 - `hook` (optional): A user-supplied callback function to be invoked *before* the simulation begins. Useful for modifying or logging internal simulation structures (e.g., for debugging, monitoring, or visualization).
 - `use_p2d::Bool` (optional): Currently unused placeholder; included for compatibility or future extensions. Default is `true`.
-- `kwargs...`: Additional keyword arguments passed to the lower-level `simulate` function.
+- `kwargs...`: Additional keyword arguments passed to the lower-level solver configuration.
 
 # Behavior
 - Extracts all relevant simulation components from the `Simulation` object.
@@ -219,7 +266,6 @@ A named tuple with the following fields:
 # Example
 ```julia
 result = solve_simulation(sim)
-plot(result.states)
 ```
 """
 function solve_simulation(sim::Simulation; solver_settings, logger = nothing, kwargs...)
@@ -301,44 +347,55 @@ function overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
 	relaxation = nothing
 	timestep_selectors = nothing
 
-	for (key, value) in settings
-		if !isnothing(value) && !ismissing(value)
-			if key == :LinearSolver
-				if isa(value, Dict)
-					solver_settings.all[key] = value
+	for (dict_key, dict) in settings
+		if !isnothing(dict) && !ismissing(dict)
+			if dict_key == "LinearSolver"
+				if isa(dict, Dict)
+					solver_settings[dict_key] = dict
 				else
-					solver_settings.all[key] = "UserDefined"
-					linear_solver = value
+					solver_settings[dict_key] = Dict("Method" => "UserDefined")
+					linear_solver = dict
 				end
-
-
-			elseif key == :TimeStepSelectors
-				if isa(value, String)
-					solver_settings.all[key] = value
-				else
-					solver_settings.all[key] = "UserDefined"
-					timestep_selectors = value
-				end
-
-
-			elseif key == :Relaxation
-				if isa(value, String)
-					solver_settings.all[key] = value
-				else
-					solver_settings.all[key] = "UserDefined"
-					relaxation = value
-				end
-
 
 			else
-				# Overwrite for all other keys
-				@info("Overwriting solver setting: $key => $value")
-				solver_settings.all[key] = value
+
+				for (key, value) in dict
+
+					if !isnothing(value) && !ismissing(value)
+
+						if key == :TimeStepSelectors
+							if isa(value, String)
+								solver_settings[dict_key][key] = value
+							else
+								solver_settings[dict_key][key] = "UserDefined"
+								timestep_selectors = value
+							end
+
+
+						elseif key == :Relaxation
+							if isa(value, String)
+								solver_settings[dict_key][key] = value
+							else
+								solver_settings[dict_key][key] = "UserDefined"
+								relaxation = value
+							end
+
+
+						else
+							# Overwrite for all other keys
+							solver_settings[dict_key][key] = value
+
+						end
+					end
+				end
+
 			end
 		end
+
 	end
 
-	return (linear_solver = linear_solver,
+	return (solver_settings = solver_settings,
+		linear_solver = linear_solver,
 		relaxation = relaxation,
 		timestep_selectors = timestep_selectors)
 
@@ -347,39 +404,45 @@ end
 
 function kwarg_dict(; kwargs...)
 	kwarg_dict = Dict(
+		"NonLinearSolver" => Dict(
+			"MaxTimestepCuts" => get(kwargs, :max_timestep_cuts, nothing),
+			"MaxTimestep" => get(kwargs, :max_timestep, nothing),
+			"TimestepMaxIncrease" => get(kwargs, :timestep_max_increase, nothing),
+			"TimestepMaxDecrease" => get(kwargs, :timestep_max_decrease, nothing),
+			"MaxResidual" => get(kwargs, :max_residual, nothing),
+			"MaxNonLinearIterations" => get(kwargs, :max_nonlinear_iterations, nothing),
+			"MinNonLinearIterations" => get(kwargs, :min_nonlinear_iterations, nothing),
+			"FailureCutsTimesteps" => get(kwargs, :failure_cuts_timestep, nothing),
+			"CheckBeforeSolve" => get(kwargs, :check_before_solve, nothing),
+			"AlwaysUpdateSecondary" => get(kwargs, :always_update_secondary, nothing),
+			"ErrorOnIncomplete" => get(kwargs, :error_on_incomplete, nothing),
+			"CuttingCriterion" => get(kwargs, :cutting_criterion, nothing),
+			"Tolerances" => get(kwargs, :tolerances, nothing),
+			"TolFactorFinalIteration" => get(kwargs, :tol_factor_final_iteration, nothing),
+			"SafeMode" => get(kwargs, :safe_mode, nothing),
+			"ExtraTiming" => get(kwargs, :extra_timing, nothing),
+			"TimeStepSelectors" => get(kwargs, :timestep_selectors, nothing),
+			"Relaxation" => get(kwargs, :relaxation, nothing),
+		),
 		"LinearSolver" => get(kwargs, :linear_solver, nothing),
-		"MaxTimestepCuts" => get(kwargs, :max_timestep_cuts, nothing),
-		"MaxTimestep" => get(kwargs, :max_timestep, nothing),
-		"TimestepMaxIncrease" => get(kwargs, :timestep_max_increase, nothing),
-		"TimestepMaxDecrease" => get(kwargs, :timestep_max_decrease, nothing),
-		"MaxResidual" => get(kwargs, :max_residual, nothing),
-		"MaxNonLinearIterations" => get(kwargs, :max_nonlinear_iterations, nothing),
-		"MinNonLinearIterations" => get(kwargs, :min_nonlinear_iterations, nothing),
-		"FailureCutsTimesteps" => get(kwargs, :failure_cuts_timestep, nothing),
-		"CheckBeforeSolve" => get(kwargs, :check_before_solve, nothing),
-		"AlwaysUpdateSecondary" => get(kwargs, :always_update_secondary, nothing),
-		"ErrorOnIncomplete" => get(kwargs, :error_on_incomplete, nothing),
-		"CuttingCriterion" => get(kwargs, :cutting_criterion, nothing),
-		"Tolerances" => get(kwargs, :tolerances, nothing),
-		"TolFactorFinalIteration" => get(kwargs, :tol_factor_final_iteration, nothing),
-		"SafeMode" => get(kwargs, :safe_mode, nothing),
-		"ExtraTiming" => get(kwargs, :extra_timing, nothing),
-		"TimeStepSelectors" => get(kwargs, :timestep_selectors, nothing),
-		"Relaxation" => get(kwargs, :relaxation, nothing),
-		"InfoLevel" => get(kwargs, :info_level, nothing),
-		"DebugLevel" => get(kwargs, :debug_level, nothing),
-		"EndReport" => get(kwargs, :end_report, nothing),
-		"ASCIITerminal" => get(kwargs, :ascii_terminal, nothing),
-		"ID" => get(kwargs, :id, nothing),
-		"ProgressColor" => get(kwargs, :progress_color, nothing),
-		"ProgressGlyphs" => get(kwargs, :progress_glyphs, nothing),
-		"OutputPath" => get(kwargs, :output_path, nothing),
-		"OutputStates" => get(kwargs, :output_states, nothing),
-		"OutputReports" => get(kwargs, :output_reports, nothing),
-		"InMemoryReports" => get(kwargs, :in_memory_reports, nothing),
-		"ReportLevel" => get(kwargs, :report_level, nothing),
-		"OutputSubstrates" => get(kwargs, :output_substates, nothing),
-	)
+		"Verbose" => Dict(
+			"InfoLevel" => get(kwargs, :info_level, nothing),
+			"DebugLevel" => get(kwargs, :debug_level, nothing),
+			"EndReport" => get(kwargs, :end_report, nothing),
+			"ASCIITerminal" => get(kwargs, :ascii_terminal, nothing),
+			"ID" => get(kwargs, :id, nothing),
+			"ProgressColor" => get(kwargs, :progress_color, nothing),
+			"ProgressGlyphs" => get(kwargs, :progress_glyphs, nothing),
+		),
+		"Output" => Dict(
+			"OutputPath" => get(kwargs, :output_path, nothing),
+			"OutputStates" => get(kwargs, :output_states, nothing),
+			"OutputReports" => get(kwargs, :output_reports, nothing),
+			"InMemoryReports" => get(kwargs, :in_memory_reports, nothing),
+			"ReportLevel" => get(kwargs, :report_level, nothing),
+			"OutputSubstrates" => get(kwargs, :output_substates, nothing),
+		))
+
 	return kwarg_dict
 end
 
@@ -417,14 +480,15 @@ function solver_configuration(sim::JutulSimulator,
 	kwargs...)
 
 	# Overwrite solver settings with kwargs
-	special_settings = overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
+	overwritten_settings = overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
+	solver_settings = overwritten_settings.solver_settings
 
 	# Validate solver settings
 	solver_settings_is_valid = validate_parameter_set(solver_settings)
 
 
 	non_linear_solver = solver_settings["NonLinearSolver"]
-	linear_solver = solver_settings["LinearSolver"]
+	linear_solver_dict = solver_settings["LinearSolver"]
 	output = solver_settings["Output"]
 	verbose = solver_settings["Verbose"]
 
@@ -440,6 +504,12 @@ function solver_configuration(sim::JutulSimulator,
 		timesel = [TimestepSelector()]
 	end
 
+	if linear_solver_dict["Method"] == "UserDefined"
+		linear_solver = overwritten_settings.linear_solver
+	else
+		linear_solver = battery_linsolve(linear_solver_dict)
+
+	end
 
 	cfg = simulator_config(
 		sim;
@@ -465,7 +535,7 @@ function solver_configuration(sim::JutulSimulator,
 		tol_factor_final_iteration = non_linear_solver["TolFactorFinalIteration"],
 		safe_mode = non_linear_solver["SafeMode"],
 		extra_timing = non_linear_solver["ExtraTiming"],
-		linear_solver = isnothing(special_settings.linear_solver) ? special_settings.linear_solver : battery_linsolve(linear_solver),
+		linear_solver = linear_solver,
 		relaxation = relax,
 		timestep_selectors = timesel,
 		output_states = output["OutputStates"],
@@ -572,9 +642,9 @@ function get_scalings(model, parameters)
 
 	refT = 298.15
 
-	electrolyte = model[:Elyte].system
+	electrolyte = model[:Electrolyte].system
 
-	eldes = (:NeAm, :PeAm)
+	eldes = (:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial)
 
 	j0s   = Array{Float64}(undef, 2)
 	Rvols = Array{Float64}(undef, 2)
@@ -610,10 +680,10 @@ function get_scalings(model, parameters)
 	RvolRef = mean(Rvols)
 
 	if include_current_collectors(model)
-		component_names = (:NeCc, :NeAm, :Elyte, :PeAm, :PeCc)
-		cc_mapping      = Dict(:NeAm => :NeCc, :PeAm => :PeCc)
+		component_names = (:NegativeElectrodeCurrentCollector, :NegativeElectrodeActiveMaterial, :Electrolyte, :PositiveElectrodeActiveMaterial, :PositiveElectrodeCurrentCollector)
+		cc_mapping      = Dict(:NegativeElectrodeActiveMaterial => :NegativeElectrodeCurrentCollector, :PositiveElectrodeActiveMaterial => :PositiveElectrodeCurrentCollector)
 	else
-		component_names = (:NeAm, :Elyte, :PeAm)
+		component_names = (:NegativeElectrodeActiveMaterial, :Electrolyte, :PositiveElectrodeActiveMaterial)
 	end
 
 	volRefs = Dict()
@@ -631,10 +701,10 @@ function get_scalings(model, parameters)
 
 	scalings = []
 
-	scaling = (model_label = :Elyte, equation_label = :charge_conservation, value = F * volRefs[:Elyte] * RvolRef)
+	scaling = (model_label = :Electrolyte, equation_label = :charge_conservation, value = F * volRefs[:Electrolyte] * RvolRef)
 	push!(scalings, scaling)
 
-	scaling = (model_label = :Elyte, equation_label = :mass_conservation, value = volRefs[:Elyte] * RvolRef)
+	scaling = (model_label = :Electrolyte, equation_label = :mass_conservation, value = volRefs[:Electrolyte] * RvolRef)
 	push!(scalings, scaling)
 
 	for elde in eldes

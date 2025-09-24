@@ -158,7 +158,7 @@ function Jutul.post_update_linearized_system!(lsys, executor, storage, model::Mu
 	context = first(model.models).context# NB hack to get context of mulitmodel
 	if (true)
 		# fix linear system 
-		e_models = [:Elyte]
+		e_models = [:Electrolyte]
 		if isnothing(storage[:eq_maps].maps)
 			mass_cons_map = setup_subset_equation_map(model, storage, e_models, :mass_conservation)
 			#phi_map = setup_subset_residual_map(model, storage, e_models, :Voltage)
@@ -168,7 +168,7 @@ function Jutul.post_update_linearized_system!(lsys, executor, storage, model::Mu
 		end
 		#C_map = setup_subset_residual_map(model, storage, e_models, :Concentration)
 		#Main.@infiltrate true
-		tfac = model[:Elyte].system[:transference] / BattMo.FARADAY_CONSTANT
+		tfac = model[:Electrolyte].system[:transference] / BattMo.FARADAY_CONSTANT
 		modify_equation!(lsys, storage[:eq_maps].maps, tfac, context)
 		## to control reduction ?
 		#Main.@infiltrate true
@@ -264,16 +264,16 @@ end
 
 function battery_linsolve(inputparams)
 
-	set_default_input_params!(inputparams, ["Method"], "direct")
+	set_default_input_params!(inputparams, ["Method"], "Direct")
 
 	method = inputparams["Method"]
 
-	if method == "direct"
+	if method == "Direct"
 
 		set_default_input_params!(inputparams, ["MaxSize"], 1000000)
 		return LUSolver(; max_size = inputparams["MaxSize"])
 
-	elseif method == "iterative"
+	elseif method == "Iterative"
 
 		solver = :fgmres
 
@@ -297,13 +297,13 @@ function battery_linsolve(inputparams)
 		# Experimental options for using extra smoothing of concentration in positive and negative active material.
 		use_extra_options = false
 		if use_extra_options
-			push!(varpreconds, BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :ParticleConcentration, :mass_conservation, [:PeAm, :NeAm]))
+			push!(varpreconds, BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :ParticleConcentration, :mass_conservation, [:PositiveElectrodeActiveMaterial, :NegativeElectrodeActiveMaterial]))
 		end
 
 		# Experimental options for AMG used on concentration in electrolyte
 		use_extra_options = false
 		if use_extra_options
-			push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Concentration, :mass_conservation, [:Elyte]))
+			push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Concentration, :mass_conservation, [:Electrolyte]))
 		end
 
 		# We setup the global preconditioner

@@ -81,8 +81,8 @@ verbose = 10
 # should be orthogonal
 varpreconds = Vector{BattMo.VariablePrecond}()
 push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Voltage, :charge_conservation, nothing))
-#push!(varpreconds,BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(),:ParticleConcentration,:mass_conservation, [:PeAm,:NeAm]))
-#push!(varpreconds,BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:Concentration,:mass_conservation, [:Elyte]))
+#push!(varpreconds,BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(),:ParticleConcentration,:mass_conservation, [:PositiveElectrodeActiveMaterial,:NegativeElectrodeActiveMaterial]))
+#push!(varpreconds,BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:Concentration,:mass_conservation, [:Electrolyte]))
 
 # We setup the global preconditioner
 g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global, nothing)
@@ -171,8 +171,8 @@ if (do_plot)
 
 	state = states[10]
 
-	setups = ((:PeCc, :PeAm, "positive"),
-		(:NeCc, :NeAm, "negative"))
+	setups = ((:PositiveElectrodeCurrentCollector, :PositiveElectrodeActiveMaterial, "positive"),
+		(:NegativeElectrodeCurrentCollector, :NegativeElectrodeActiveMaterial, "negative"))
 
 
 	for setup in setups
@@ -204,8 +204,8 @@ if (do_plot)
 
 	end
 
-	setups = ((:PeAm, "positive"),
-		(:NeAm, "negative"))
+	setups = ((:PositiveElectrodeActiveMaterial, "positive"),
+		(:NegativeElectrodeActiveMaterial, "negative"))
 
 	for setup in setups
 
@@ -246,13 +246,13 @@ if (do_plot)
 
 		var = setup[1]
 
-		val = state[:Elyte][var]
+		val = state[:Electrolyte][var]
 		maxval = maximum(val)
 		minval = minimum(val)
 
 		colorrange = [0, maxval - minval]
 
-		g = model[:Elyte].domain.representation
+		g = model[:Electrolyte].domain.representation
 		Jutul.plot_cell_data!(ax3d, g, val .- minval;
 			colormap = :viridis,
 			colorrange = colorrange)

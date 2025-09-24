@@ -231,12 +231,12 @@ end
 
 function include_current_collectors(model)
 
-	if haskey(model.models, :NeCc)
+	if haskey(model.models, :NegativeElectrodeCurrentCollector)
 		include_cc = true
-		@assert haskey(model.models, :PeCc)
+		@assert haskey(model.models, :PositiveElectrodeCurrentCollector)
 	else
 		include_cc = false
-		@assert !haskey(model.models, :PeCc)
+		@assert !haskey(model.models, :PositiveElectrodeCurrentCollector)
 	end
 
 	return include_cc

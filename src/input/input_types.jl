@@ -241,7 +241,11 @@ end
 
 "Parameter set type that includes all other parameter set types"
 struct FullSimulationInput <: ParameterSet
-	all::Dict
+	all::Dict{String, Any}
+	source_path::Union{String, Nothing}
+	function FullSimulationInput(all::Dict; source_path::Union{String, Nothing} = nothing)
+		new(to_string_any(all), source_path)
+	end
 end
 
 

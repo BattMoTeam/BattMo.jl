@@ -630,15 +630,23 @@ function get_schema_solver_settings()
 		"allOf" => [
 			Dict(
 				"if" => Dict(
-					"properties" => Dict("LinearSolver" => Dict("properties" => Dict("Method" => Dict("const" => "direct")))),
+					"properties" => Dict("LinearSolver" => Dict("properties" => Dict("Method" => Dict("const" => "Direct")))),
 				),
 				"then" => Dict("properties" => Dict("LinearSolver" => Dict("required" => ["MaxSize"]))
 				)),
 			Dict(
 				"if" => Dict(
-					"properties" => Dict("LinearSolver" => Dict("properties" => Dict("Method" => Dict("const" => "iterative")))),
+					"properties" => Dict("LinearSolver" => Dict("properties" => Dict("Method" => Dict("const" => "Iterative")))),
 				),
 				"then" => Dict("properties" => Dict("LinearSolver" => Dict("required" => ["Verbosity", "MaxLinearIterations", "LinearTolerance"]))
+				),
+			),
+			Dict(
+				"if" => Dict(
+					"properties" => Dict("LinearSolver" => Dict("properties" => Dict("Method" => Dict("const" => "UserDefined")))),
+				),
+				"then" => Dict(
+					"required" => Dict("LinearSolver" => Dict("required" => String[])),
 				),
 			),
 		],

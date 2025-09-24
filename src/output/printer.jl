@@ -21,32 +21,32 @@ function print_output_overview(output::NamedTuple)
 	meta_data = get_output_variables_meta_data()
 
 	var_map = Dict(
-		:NeAmSurfaceConcentration => [:NeAm, :SurfaceConcentration],
-		:PeAmSurfaceConcentration => [:PeAm, :SurfaceConcentration],
-		:NeAmConcentration        => [:NeAm, :ParticleConcentration],
-		:PeAmConcentration        => [:PeAm, :ParticleConcentration],
-		:NeAmDiffusionCoefficient => [:NeAm, :DiffusionCoefficient],
-		:PeAmDiffusionCoefficient => [:PeAm, :DiffusionCoefficient],
-		:NeAmReactionRateConst    => [:NeAm, :ReactionRateConstant],
-		:PeAmReactionRateConst    => [:PeAm, :ReactionRateConstant],
-		:ElectrolyteConcentration => [:Elyte, :Concentration],
-		:NeAmPotential            => [:NeAm, :Voltage],
-		:ElectrolytePotential     => [:Elyte, :Voltage],
-		:PeAmPotential            => [:PeAm, :Voltage],
-		:NeAmTemperature          => [:NeAm, :Temperature],
-		:PeAmTemperature          => [:PeAm, :Temperature],
-		:NeAmOpenCircuitPotential => [:NeAm, :OpenCircuitPotential],
-		:PeAmOpenCircuitPotential => [:PeAm, :OpenCircuitPotential],
-		:NeAmCharge               => [:NeAm, :Charge],
-		:ElectrolyteCharge        => [:Elyte, :Charge],
-		:PeAmCharge               => [:PeAm, :Charge],
-		:ElectrolyteMass          => [:Elyte, :Mass],
-		:ElectrolyteDiffusivity   => [:Elyte, :Diffusivity],
-		:ElectrolyteConductivity  => [:Elyte, :Conductivity],
-		:SEIThickness             => [:NeAm, :SEIlength],
-		:NormalizedSEIThickness   => [:NeAm, :normalizedSEIlength],
-		:SEIVoltageDrop           => [:NeAm, :SEIvoltageDrop],
-		:NormalizedSEIVoltageDrop => [:NeAm, :normalizedSEIvoltageDrop],
+		:NegativeElectrodeActiveMaterialSurfaceConcentration => [:NegativeElectrodeActiveMaterial, :SurfaceConcentration],
+		:PositiveElectrodeActiveMaterialSurfaceConcentration => [:PositiveElectrodeActiveMaterial, :SurfaceConcentration],
+		:NegativeElectrodeActiveMaterialConcentration        => [:NegativeElectrodeActiveMaterial, :ParticleConcentration],
+		:PositiveElectrodeActiveMaterialConcentration        => [:PositiveElectrodeActiveMaterial, :ParticleConcentration],
+		:NegativeElectrodeActiveMaterialDiffusionCoefficient => [:NegativeElectrodeActiveMaterial, :DiffusionCoefficient],
+		:PositiveElectrodeActiveMaterialDiffusionCoefficient => [:PositiveElectrodeActiveMaterial, :DiffusionCoefficient],
+		:NegativeElectrodeActiveMaterialReactionRateConstant => [:NegativeElectrodeActiveMaterial, :ReactionRateConstant],
+		:PositiveElectrodeActiveMaterialReactionRateConstant => [:PositiveElectrodeActiveMaterial, :ReactionRateConstant],
+		:ElectrolyteConcentration                            => [:Electrolyte, :Concentration],
+		:NegativeElectrodeActiveMaterialPotential            => [:NegativeElectrodeActiveMaterial, :Voltage],
+		:ElectrolytePotential                                => [:Electrolyte, :Voltage],
+		:PositiveElectrodeActiveMaterialPotential            => [:PositiveElectrodeActiveMaterial, :Voltage],
+		:NegativeElectrodeActiveMaterialTemperature          => [:NegativeElectrodeActiveMaterial, :Temperature],
+		:PositiveElectrodeActiveMaterialTemperature          => [:PositiveElectrodeActiveMaterial, :Temperature],
+		:NegativeElectrodeActiveMaterialOpenCircuitPotential => [:NegativeElectrodeActiveMaterial, :OpenCircuitPotential],
+		:PositiveElectrodeActiveMaterialOpenCircuitPotential => [:PositiveElectrodeActiveMaterial, :OpenCircuitPotential],
+		:NegativeElectrodeActiveMaterialCharge               => [:NegativeElectrodeActiveMaterial, :Charge],
+		:ElectrolyteCharge                                   => [:Electrolyte, :Charge],
+		:PositiveElectrodeActiveMaterialCharge               => [:PositiveElectrodeActiveMaterial, :Charge],
+		:ElectrolyteMass                                     => [:Electrolyte, :Mass],
+		:ElectrolyteDiffusivity                              => [:Electrolyte, :Diffusivity],
+		:ElectrolyteConductivity                             => [:Electrolyte, :Conductivity],
+		:SEIThickness                                        => [:NegativeElectrodeActiveMaterial, :SEIlength],
+		:NormalizedSEIThickness                              => [:NegativeElectrodeActiveMaterial, :normalizedSEIlength],
+		:SEIVoltageDrop                                      => [:NegativeElectrodeActiveMaterial, :SEIvoltageDrop],
+		:NormalizedSEIVoltageDrop                            => [:NegativeElectrodeActiveMaterial, :normalizedSEIvoltageDrop],
 	)
 
 	# Group variables by case
@@ -90,13 +90,13 @@ function print_output_overview(output::NamedTuple)
 
 	function print_table(case_name::String, vars::Vector{NamedTuple})
 		println("\nCase: $(uppercase(case_name))")
-		println("="^50)
-		println(rpad("Variable", 35), "Unit")
-		println("-"^50)
+		println("="^80)
+		println(rpad("Variable", 65), "Unit")
+		println("-"^80)
 		for v in sort(vars, by = x -> x.name)
-			println(rpad(string(v.name), 35), v.unit)
+			println(rpad(string(v.name), 65), v.unit)
 		end
-		println("="^50)
+		println("="^80)
 	end
 
 	for case in ["time_series", "metrics", "states"]

@@ -151,7 +151,7 @@ end
 		I = time_series.Current
 		V = time_series.Voltage
 
-		c_pe = states.PeAmSurfaceConcentration
+		c_pe = states.PositiveElectrodeActiveMaterialSurfaceConcentration
 
 		@test length(I) ≈ 73 atol = 0
 		@test I[2] ≈ 2.2957366076223953 atol = 1e-1
@@ -177,7 +177,7 @@ end
 		I = time_series.Current
 		V = time_series.Voltage
 
-		c_pe = states.PeAmSurfaceConcentration
+		c_pe = states.PositiveElectrodeActiveMaterialSurfaceConcentration
 
 		@test length(I) ≈ 66 atol = 0
 		@test I[2] ≈ 0.057347311736114376 atol = 1e-1
