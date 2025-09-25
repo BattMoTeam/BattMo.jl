@@ -1,5 +1,5 @@
 ---
-title: "BattMo.jl: A Julia package for battery cell modeling"
+title: "BattMo.jl: A Julia package for battery cell modelling"
 tags:
   - Julia
   - battery modeling
