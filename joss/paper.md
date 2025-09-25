@@ -86,7 +86,7 @@ As illustrated in Figure \ref{fig:backend}, one example optimization application
 - Convenient tools for inspecting, printing, and plotting cell information and simulation results.
 - Headless user interface designed for digital twin integration and web API applications.
 
-# Examples
+# P4D Example
 
 A P4D constant current discharge simulation of a cylindrical cell using cell parameters from Chen at al. [@chen2020]:
 
@@ -117,6 +117,9 @@ plot_interactive_3d(output)
 ![P4D cylindrical cell simulation results. \label{fig:cylindrical}](./assets/elyte_conc.png "P4D results")
 
 Figure \ref{fig:cylindrical} shows zoomed in 3D results of the electrolyte lithium concentration at the end of the discharge. At the beginning and ending of the roll we can we can see an imbalance in lithium concentration. These electrolyte depletions and oversaturations may influence the performance of the cell and would have been overlooked in simplified models, underlining the importance of 3D modelling.
+
+
+# Calibration Example
 
 A simple example of a P2D discharge voltage calibration using initial cell parameters and experimental data from Xu at al. [@Xu2015]:
 
@@ -202,16 +205,15 @@ fig
 
 ![Voltage calibration results. \label{fig:calibration}](./assets/calibration.png "Calibration results")
 
-From the results in figure \ref{fig:calibration} we can see that the calibrated results are closer to the experimental data compared to the initial simulation results. In this case we only did a low rate calibration including parameters like the stoichiometric coefficients and maximum concentrations which have the biggest influence on low rate simulations. In order to retrieve a better fit we need to calibrate additional parameters. Visit our [documentation](https://battmoteam.github.io/BattMo.jl/dev/examples/example_calibration) for a more complete calibration example.
+From the results in Figure \ref{fig:calibration}, it is evident that the calibrated simulations align more closely with the experimental data than the initial, uncalibrated results. In this case, we performed only a low-rate calibration, adjusting parameters such as the stoichiometric coefficients and maximum concentrations, which have the strongest influence on low-rate behavior. To achieve an even better fit, additional parameters must be calibrated. Visit our [documentation](https://battmoteam.github.io/BattMo.jl/dev/) for a more complete calibration example.
 
 
 # Future development
 Soon to be expected functionalities are:
-- Fully flexible cycling protocol creation (already available in MATLAB version, see BattMo Family).
-- Fully thermal coupling (already available in MATLAB version, see BattMo Family).
+- Fully flexible cycling protocol API (already available in MATLAB version, see BattMo Family).
+- Thermal coupling (already available in MATLAB version, see BattMo Family).
 - Composite active materials (already available in MATLAB version, see BattMo Family).
 - A user-friendly API for model development and model adaptation.
-- Additional tools for parameterization of open circuit potentials, diffusion coefficients, etc.
 
 # Software dependencies
 
