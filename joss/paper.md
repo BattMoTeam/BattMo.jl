@@ -90,7 +90,7 @@ As illustrated in Figure \ref{fig:backend}, one example optimization application
 
 A P4D constant current discharge simulation of a cylindrical cell using cell parameters from Chen at al. [@chen2020]:
 
----
+
 ```Julia
 using BattMo, GLMakie
 
@@ -113,14 +113,14 @@ output = solve(sim)
 # Cool interactive plotting of the results in the 3D geometry
 plot_interactive_3d(output)
 ```
----
+
 ![P4D cylindrical cell simulation results. \label{fig:cylindrical}](./assets/elyte_conc.png "P4D results")
 
 Figure \ref{fig:cylindrical} shows zoomed in 3D results of the electrolyte lithium concentration at the end of the discharge. At the beginning and ending of the roll we can we can see an imbalance in lithium concentration. These electrolyte depletions and oversaturations may influence the performance of the cell and would have been overlooked in simplified models, underlining the importance of 3D modelling.
 
 A simple example of a P2D discharge voltage calibration using initial cell parameters and experimental data from Xu at al. [@Xu2015]:
 
----
+
 ```Julia
 using BattMo, Jutul
 using CSV
@@ -199,7 +199,7 @@ lines!(ax, time_series_opt.Time, time_series_opt.Voltage, label = "BattMo calibr
 axislegend(position = :lb)
 fig
 ```
----
+
 ![Voltage calibration results. \label{fig:calibration}](./assets/calibration.png "Calibration results")
 
 From the results in figure \ref{fig:calibration} we can see that the calibrated results are closer to the experimental data compared to the initial simulation results. In this case we only did a low rate calibration including parameters like the stoichiometric coefficients and maximum concentrations which have the biggest influence on low rate simulations. In order to retrieve a better fit we need to calibrate additional parameters. Visit our [documentation](https://battmoteam.github.io/BattMo.jl/dev/examples/example_calibration) for a more complete calibration example.
@@ -230,6 +230,6 @@ The following software include the BattMo Family:
 
 # Acknowledgements
 
-We acknowledge contributions from the EU, Grant agreements 101069765, 875527, 101104013, 101103997
+We acknowledge contributions from the EU, Grant agreements 101069765, 875527, 101104013, 101103997.
 
 # References
