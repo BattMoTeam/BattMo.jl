@@ -232,6 +232,6 @@ The following software include the BattMo family:
 
 # Acknowledgements
 
-We acknowledge contributions from the EU, Grant agreements 101069765, 875527, 101104013, 101103997.
+We acknowledge contributions from the EU, Grant agreements 101069765 (IntelLiGent), 875527 (HYDRA), 101104013 (BATMAX) and 101103997 (DigiBatt).
 
 # References
