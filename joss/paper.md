@@ -226,7 +226,7 @@ intricate geometries, efficiently solving large systems of equations, and visual
 The following software include the BattMo family:
 - [BattMo.jl](https://github.com/BattMoTeam/BattMo.jl) (described in this publication)
 - [BattMo](https://github.com/BattMoTeam/BattMo) (MATLAB version)
-- [PyBattMo](https://github.com/BattMoTeam/BattMo.jl) (Python wrapper around BattMo.jl)
+- [PyBattMo](https://github.com/BattMoTeam/PyBattMo) (Python wrapper around BattMo.jl)
 - [BattMoApp](https://app.batterymodel.com/) (Online web-application built on top of BattMo.jl)
 
 
