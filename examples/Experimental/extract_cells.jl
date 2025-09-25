@@ -5,7 +5,7 @@ dosetup = true
 if dosetup
 
 	function getinput(name)
-		return load_battmo_formatted_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
+		return load_advanced_dict_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
 	end
 
 	# load geometry parameters

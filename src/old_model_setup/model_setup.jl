@@ -122,7 +122,7 @@ function get_simulation_input(inputparams::BattMoInputFormatOld;
 	model_kwargs::NamedTuple          = NamedTuple(),
 	config_kwargs::NamedTuple         = NamedTuple())
 
-	model, parameters, couplings = setup_model(inputparams;
+	model, parameters, couplings = setup_model!(inputparams;
 		use_groups = use_groups,
 		general_ad = general_ad,
 		use_p2d = use_p2d,
@@ -558,7 +558,7 @@ end
 # Setup model #
 ###############
 
-function setup_model(inputparams::BattMoInputFormatOld;
+function setup_model!(inputparams::BattMoInputFormatOld;
 	use_p2d::Bool    = true,
 	use_groups::Bool = false,
 	general_ad       = true,

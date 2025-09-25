@@ -1,7 +1,7 @@
 export LithiumIonBattery
 export print_required_cell_parameters, get_lithium_ion_default_model_settings
 export run_battery
-export setup_model
+export setup_model!
 
 
 """

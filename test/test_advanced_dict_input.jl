@@ -15,21 +15,9 @@ names = [
 		@testset "$name" begin
 			@test begin
 				fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
-				inputparams = load_battmo_formatted_input(fn)
-				cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_old_input_format_to_parameter_sets(inputparams)
+				inputparams = load_advanced_dict_input(fn)
 
-				function hook(simulator,
-					model,
-					state0,
-					forces,
-					timesteps,
-					cfg)
-					cfg[:error_on_incomplete] = true
-				end
-
-				model_setup = LithiumIonBattery(; model_settings)
-				sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings, hook)
-				output = solve(sim; accept_invalid = true)
+				output = run_simulation(inputparams; accept_invalid = true, error_on_incomplete = true)
 				true
 			end
 		end
@@ -37,7 +25,7 @@ names = [
 end
 
 function getinput(name)
-	return load_battmo_formatted_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
+	return load_advanced_dict_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
 end
 
 geometries = ["4680-geometry.json",
@@ -58,21 +46,11 @@ geometries = ["4680-geometry.json",
 					inputparams_control])
 
 
-				cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_old_input_format_to_parameter_sets(inputparams)
+				cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_to_parameter_sets(inputparams)
 				solver_settings = load_solver_settings(; from_default_set = "iterative")
 
 				solver_settings["NonLinearSolver"]["MaxNonLinearIterations"] = 20
 				solver_settings["NonLinearSolver"]["ErrorOnIncomplete"] = true
-
-
-				# simulation_settings["NonLinearSolver"] = Dict(
-				# 	"maxIterations" => 20,
-				# 	"verbose" => true,
-				# 	"nonlinearTolerance" => 1e-5,
-				# 	"LinearSolver" => Dict(
-				# 		"method" => "Iterative"),
-				# )
-
 
 				model_setup = LithiumIonBattery(; model_settings)
 				sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)

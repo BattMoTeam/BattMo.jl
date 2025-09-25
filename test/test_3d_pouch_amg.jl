@@ -8,14 +8,14 @@ using Test
 		name = "p2d_40_jl_chen2020"
 
 		fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
-		inputparams = load_battmo_formatted_input(fn)
+		inputparams = load_advanced_dict_input(fn)
 
 		fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
-		inputparams_geometry = load_battmo_formatted_input(fn)
+		inputparams_geometry = load_advanced_dict_input(fn)
 
 		inputparams = merge_input_params(inputparams_geometry, inputparams)
 
-		cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_old_input_format_to_parameter_sets(inputparams)
+		cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_to_parameter_sets(inputparams)
 
 		model_setup = LithiumIonBattery(; model_settings)
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)

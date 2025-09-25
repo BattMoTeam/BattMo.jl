@@ -1,5 +1,5 @@
 export load_model_settings, load_cell_parameters, load_cycling_protocol, load_simulation_settings, load_solver_settings, load_full_simulation_input
-export load_matlab_battmo_input, load_battmo_formatted_input
+export load_matlab_input, load_advanced_dict_input
 
 
 """
@@ -182,34 +182,36 @@ end
 """ 
 	load_matlab_battmo_input(inputFileName::String)
 
-Reads the input from a MATLAB output file which contains a description of the model and returns an `MatlabInputParamsOld`
+Reads the input from a MATLAB output file which contains a description of the model and returns an `MatlabInput`
 that can be sent to the simulator.
 
 # Arguments
 - `inputFileName ::String` : Path to the MATLAB file.
 
 # Returns
-An instance of `MatlabInputParamsOld` that can be sent to the simulator via `run_battery`.
+An instance of `MatlabInput` that can be sent to the simulator via `run_battery`.
 """
-function load_matlab_battmo_input(filepath::String)
-	inputparams = filepath |> matread |> MatlabInputParamsOld
+function load_matlab_input(filepath::String)
+	inputparams = filepath |> matread |> MatlabInput
 	return inputparams
 end
 
 """
-	load_battmo_formatted_input(filepath::String)
+	load_advanced_dict_input(filepath::String)
 
-Reads and parses a JSON file into an `InputParamsOld` instance.
+Reads and parses a JSON file into an `AdvancedDictInput` instance.
 
 # Arguments
 - `filepath ::String` : Path to the JSON file.
 
 # Returns
-An instance of `InputParamsOld`.
+An instance of `AdvancedDictInput`.
 """
-function load_battmo_formatted_input(filepath::String)
-	inputparams = filepath |> JSON.parsefile |> InputParamsOld
-	return inputparams
+function load_advanced_dict_input(file_path::Union{String, Nothing} = nothing)
+	# Assuming JSON and SimulationSettings are correctly defined
+	advanced_dict_instance = JSON.parsefile(file_path)
+	return AdvancedDictInput(advanced_dict_instance; source_path = file_path)
+
 end
 
 

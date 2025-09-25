@@ -12,7 +12,7 @@ abstract type ModelConfigured end
 abstract type Battery <: ModelConfigured end
 
 
-function setup_model(model::M, input, grids, couplings; kwargs...) where {M <: Battery}
+function setup_model!(model::M, input, grids, couplings; kwargs...) where {M <: Battery}
 
 	# setup the submodels and also return a coupling structure which is used to setup later the cross-terms
 	submodels = setup_submodels(model, input, grids, couplings; kwargs...)
