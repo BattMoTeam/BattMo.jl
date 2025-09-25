@@ -52,7 +52,7 @@ validity and the reproducibility of findings. Yet there remains a clear need for
 
 BattMo.jl responds to this need by putting effort into creating a flexible model architecture, providing a framework for 3D simulations together with a library of standard battery geometries, offering very short runtimes (e.g., ~500 ms for a standard P2D discharge), and by laying an emphasis on usability and accessibility through its intuitive API and [graphical interface](https://app.batterymodel.com/). In addition, BattMo features an in-house API for adjoint-based optimization, making parameter calibration and design optimization both robust and convenient through a familiar interface.
 
-# High-level Architecture
+# High-level architecture
 The high-level architecture of BattMo.jl is designed to be both modular and extensible, enabling users to combine standard battery models with customized physics and workflows. At its core, the framework separates the physical model definition (what equations to solve) from the simulation configuration (what parameters and settings to apply). This design allows researchers to start with standard models, extend them with for example degradation, and scale simulations from simple pseudo-2D cases to realistic 3D geometries, all without restructuring the workflow.
 
 Figure \ref{fig:backend} shows the high-level architecture of some core workflows in BattMo.jl. The BattMo framework is configured through five different input sets, all of which can be provided in JSON format:
@@ -74,7 +74,7 @@ This simulation instance can be passed to the `solve` function together with the
 As illustrated in Figure \ref{fig:backend}, one example optimization application is voltage calibration. Here, a simulation instance with initial parameter guesses is combined with experimental data and a calibration configuration (defining which parameters to vary, their bounds, and initial values). The calibration problem is then solved iteratively using the adjoint-enabled solver until the simulated voltage matches the experimental measurements within tolerance.
 
 
-# Functionalities Overview
+# Functionalities overview
 
 - BattINFO-compliant input formats for semantic interoperability.
 - P2D and P4D modelling with additional sub models like SEI growth, and temperature dependence.
@@ -86,7 +86,7 @@ As illustrated in Figure \ref{fig:backend}, one example optimization application
 - Convenient tools for inspecting, printing, and plotting cell information and simulation results.
 - Headless user interface designed for digital twin integration and web API applications.
 
-# P4D Example
+# P4D example
 
 A P4D constant current discharge simulation of a cylindrical cell using cell parameters from Chen at al. [@chen2020]:
 
@@ -119,7 +119,7 @@ plot_interactive_3d(output)
 Figure \ref{fig:cylindrical} shows zoomed in 3D results of the electrolyte lithium concentration at the end of the discharge. At the beginning and ending of the roll we can we can see an imbalance in lithium concentration. These electrolyte depletions and oversaturations may influence the performance of the cell and would have been overlooked in simplified models, underlining the importance of 3D modelling.
 
 
-# Calibration Example
+# Calibration example
 
 A simple example of a P2D discharge voltage calibration using initial cell parameters and experimental data from Xu at al. [@Xu2015]:
 
@@ -221,10 +221,10 @@ BattMo.jl is built on top of Jutul.jl [@Jutul] which provides a reliable foundat
 intricate geometries, efficiently solving large systems of equations, and visualizing the results. For plotting, BattMo.jl and Jutul.jl rely on Makie.jl [@Makie].
 
 
-# BattMo Family
+# BattMo family
 
-The following software include the BattMo Family:
-- [BattMo.jl](https://github.com/BattMoTeam/BattMo.jl) (described in this paper)
+The following software include the BattMo family:
+- [BattMo.jl](https://github.com/BattMoTeam/BattMo.jl) (described in this publication)
 - [BattMo](https://github.com/BattMoTeam/BattMo) (MATLAB version)
 - [PyBattMo](https://github.com/BattMoTeam/BattMo.jl) (Python wrapper around BattMo.jl)
 - [BattMoApp](https://app.batterymodel.com/) (Online web-application built on top of BattMo.jl)
