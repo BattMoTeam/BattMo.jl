@@ -40,7 +40,7 @@ bibliography: paper.bib
 ---
 <!-- To compile this file, after installing docker, from this directory, run : docker run --rm --volume $PWD:/data --user $(id -u):$(id -g) --env JOURNAL=joss openjournals/inara  -->
 # Summary
-This paper introduces BattMo.jl, the Battery Modelling Toolbox, an open-source Julia framework for continuum-scale simulation of electrochemical cells. Using a finite-volume approach, BattMo.jl supports both pseudo-2-dimensional (P2D) models and fully three-dimensional (3D) simulations of realistic geometries such as cylindrical cells and pouch cells. The toolbox combines high-performance solvers, built-in libraries of battery designs and cycling protocols, and an intuitive programmatic and graphical interface. It further includes an adjoint-based optimization framework for parameter estimation and model calibration, enabling close integration of modelling with experimental workflows. The [BattMoTeam](https://github.com/BattMoTeam) collaborates closely with the [SINTEF Battery Lab](https://www.sintef.no/en/all-laboratories/sintef-battery-lab/), gaining valuable input from experienced battery researchers and helping to bridge the gap between academic modelling and industrial innovation.
+This paper introduces BattMo.jl, the Battery Modelling Toolbox, an open-source Julia framework for continuum-scale simulation of electrochemical cells. Using a finite-volume approach, BattMo.jl supports both pseudo-2-dimensional (P2D) models and fully three-dimensional (3D) simulations of realistic geometries such as cylindrical cells and pouch cells. The toolbox combines high-performance solvers, built-in libraries of battery designs and cycling protocols, and an intuitive programmatic and graphical interface. It further includes an adjoint-based optimization framework for parameter estimation and model calibration, enabling close integration of modelling with experimental workflows. The [BattMoTeam](https://batterymodel.com/our-team/) collaborates closely with the [SINTEF Battery Lab](https://www.sintef.no/en/all-laboratories/sintef-battery-lab/), gaining valuable input from experienced battery researchers and helping to bridge the gap between academic modelling and industrial innovation.
 
 
 # Statement of need
@@ -50,12 +50,12 @@ Recently, a variety of
 open-source battery modelling codes have been released including PyBaMM [@sulzer2021python], cideMOD [@CiriaAylagas2022], LIONSIMBA [@torchio2016lionsimba], PETLion [@Berliner_2021], and MPET, among others. These open-source modelling frameworks help the battery community reduce the cost of model development and help ensure the
 validity and the reproducibility of findings. Yet there remains a clear need for tools that (i) address both Li-ion and post-Li-ion chemistries, (ii) support full 3D cell simulations, and (iii) combine computational efficiency with broad accessibility.
 
-BattMo.jl responds to this need by putting effort into creating a flexible model architecture, providing a framework for 3D simulations together with a library of standard battery geometries, offering very short runtimes (e.g., ~400 ms for a standard P2D discharge), and by laying an emphasis on usability and accesibility through its intuitive API and [graphical interface](https://app.batterymodel.com/). Furthermore, BattMo has an in-house API for adjoint-based optimization, allowing robust parameter calibration and design optimization.
+BattMo.jl responds to this need by putting effort into creating a flexible model architecture, providing a framework for 3D simulations together with a library of standard battery geometries, offering very short runtimes (e.g., ~500 ms for a standard P2D discharge), and by laying an emphasis on usability and accessibility through its intuitive API and [graphical interface](https://app.batterymodel.com/). In addition, BattMo features an in-house API for adjoint-based optimization, making parameter calibration and design optimization both robust and convenient through a familiar interface.
 
-# Architecture
-The architecture of BattMo.jl is designed to be both modular and extensible, enabling users to combine standard battery models with customized physics and workflows. At its core, the framework separates the physical model definition (what equations to solve) from the simulation configuration (what parameters and settings to apply). This design allows researchers to start with standard models, extend them with degradation, and scale simulations from simple pseudo-2D cases to realistic 3D geometries, all without restructuring the workflow.
+# High-level Architecture
+The high-level architecture of BattMo.jl is designed to be both modular and extensible, enabling users to combine standard battery models with customized physics and workflows. At its core, the framework separates the physical model definition (what equations to solve) from the simulation configuration (what parameters and settings to apply). This design allows researchers to start with standard models, extend them with for example degradation, and scale simulations from simple pseudo-2D cases to realistic 3D geometries, all without restructuring the workflow.
 
-Figure \ref{fig:backend} shows the high-level architecture of BattMo.jl. The framework is configured through five different input sets, all of which can be provided in JSON format:
+Figure \ref{fig:backend} shows the high-level architecture of some of the core workflows in BattMo.jl. The BattMo framework is configured through five different input sets, all of which can be provided in JSON format:
 
 - Cell parameters: descriptions of the cell geometry, electrodes, and electrolyte materials.
 - Cycling protocol: specification of operating conditions, such as current profiles or voltage limits.
@@ -63,13 +63,13 @@ Figure \ref{fig:backend} shows the high-level architecture of BattMo.jl. The fra
 - Simulation settings: numerical resolution settings, such as timesteps and spatial discretization.
 - Solver settings: options controlling solver behavior and verbosity.
 
-The model settings are first passed to the selected base model (e.g., LithiumIonBattery, SodiumIonBattery), which instantiates a configured model. This model defines the set of governing equations and constitutive laws used in the simulation. For lithium-ion cells, the default representation is based on the Doyle–Fuller–Newman (DFN) model [@Doyle1993ModelingCell], which can be extended with additional physics modules (e.g., SEI growth, temperature dependence) depending on the configuration.
+The model settings are first passed to the selected base model (e.g., LithiumIonBattery, SodiumIonBattery), which instantiates a configured model. This model defines the set of governing equations and constitutive laws used in the simulation. For both the lithium-ion and sodium-ion battery models, the default representation is based on the Doyle–Fuller–Newman (DFN) model [@Doyle1993ModelingCell], which can be extended with additional physics modules (e.g., SEI growth, temperature dependence) depending on the configuration of the model settings.
 
-![High-level architecture of BattMo.jl. Gray input settings are optional for the user. \label{fig:backend}](./assets/battmo_backend.png "Architecture")
+![High-level architecture of some of the core workflows in BattMo.jl. Gray input settings are optional for the user. \label{fig:backend}](./assets/battmo_backend.png "High-level Architecture")
 
 The configured model is then combined with the cell parameters, cycling protocol, and simulation settings to form a simulation instance. At this stage, the input data are mapped onto the model equations—for example, by setting up active material models, electrolyte properties, cell geometry and grids, load conditions, initial states, and timestepping. The result is a fully defined simulation object.
 
-This simulation instance can be passed to the solve function together with the solver settings, which configure the numerical solver and execute the simulation. BattMo’s solver leverages automatic differentiation and supports adjoint computations, enabling efficient calculation of parameter sensitivities and gradients of arbitrary objective functions. This allows for powerful gradient-based optimization workflows.
+This simulation instance can be passed to the `solve` function together with the solver settings, which configure the numerical solver, and execute the simulation. BattMo’s solver leverages automatic differentiation and supports adjoint computations, enabling efficient calculation of parameter sensitivities and gradients of arbitrary objective functions. This allows for powerful gradient-based optimization workflows.
 
 As illustrated in Figure \ref{fig:backend}, one example optimization application is voltage calibration. Here, a simulation instance with initial parameter guesses is combined with experimental data and a calibration configuration (defining which parameters to vary, their bounds, and initial values). The calibration problem is then solved iteratively using the adjoint-enabled solver until the simulated voltage matches the experimental measurements within tolerance.
 
@@ -80,8 +80,9 @@ As illustrated in Figure \ref{fig:backend}, one example optimization application
 - P2D and P4D modelling with additional sub models like SEI growth, and temperature dependence.
 - Parameter calibration and design optimization.
 - Battery cell KPI calculations.
-- Automatic validation of model instances, parameters, and settings to prevent unclear errors.
-- Guidance for parameter set development, including clear definitions of parameters and settings.
+- Automatic validation of model instances, parameters, and settings to prevent unclear errors and unrealistic input values.
+- User-friendly API providing guidance for parameter set development
+- Tools for debugging simulation failures.
 - Convenient tools for inspecting, printing, and plotting cell information and simulation results.
 - Headless user interface designed for digital twin integration and web API applications.
 
@@ -97,9 +98,8 @@ using BattMo, GLMakie
 cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
-# We want to setup the model and simulation for P4D simulations
+# We can use the default model settings configuration for a P4D cylindrical simulation
 model_settings = load_model_settings(; from_default_set = "P4D_cylindrical")
-simulation_settings = load_simulation_settings(; from_default_set = "P4D_cylindrical")
 
 # Setup the model
 model = LithiumIonBattery(; model_settings)
@@ -116,7 +116,7 @@ plot_interactive_3d(output)
 ---
 ![P4D cylindrical cell simulation results. \label{fig:cylindrical}](./assets/elyte_conc.png "P4D results")
 
-Figure \ref{fig:cylindrical} shows zoomed in 3D results of the surface lithium concentration at the center of the cylindrical cell. At the edge of the un-paired coating we can see an imbalance in lithium concentration
+Figure \ref{fig:cylindrical} shows zoomed in 3D results of the electrolyte lithium concentration at the end of the discharge. At the beginning and ending of the roll we can we can see an imbalance in lithium concentration. These electrolyte depletions and oversaturations may influence the performance of the cell and would have been overlooked in simplified models, underlining the importance of 3D modelling.
 
 A simple example of a P2D discharge voltage calibration using initial cell parameters and experimental data from Xu at al. [@Xu2015]:
 
@@ -211,21 +211,21 @@ Soon to be expected functionalities are:
 - Fully thermal coupling (already available in MATLAB version, see BattMo Family).
 - Composite active materials (already available in MATLAB version, see BattMo Family).
 - A user-friendly API for model development and model adaptation.
-- Additional tools for paramatrization of open circuit potentials, diffusion coefficients, etc.
+- Additional tools for parameterization of open circuit potentials, diffusion coefficients, etc.
 
 # Software dependencies
 
-BattMo.jl is a Julia-based software building on Jutul.jl [@Jutul:2025] which provides a reliable foundation for meshing
+BattMo.jl is built on top of Jutul.jl [@Jutul] which provides a reliable foundation for meshing
 intricate geometries, efficiently solving large systems of equations, and visualizing the results. For plotting, BattMo.jl and Jutul.jl rely on Makie.jl [@Makie].
 
 
 # BattMo Family
 
-The following softwares include the BattMo Family:
+The following software include the BattMo Family:
 - [BattMo.jl](https://github.com/BattMoTeam/BattMo.jl) (described in this paper)
 - [BattMo](https://github.com/BattMoTeam/BattMo) (MATLAB version)
 - [PyBattMo](https://github.com/BattMoTeam/BattMo.jl) (Python wrapper around BattMo.jl)
-- [BattMoApp](https://app.batterymodel.com/) (Online web-application build on top of BattMo.jl)
+- [BattMoApp](https://app.batterymodel.com/) (Online web-application built on top of BattMo.jl)
 
 
 # Acknowledgements
