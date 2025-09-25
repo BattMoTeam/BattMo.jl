@@ -55,7 +55,7 @@ BattMo.jl responds to this need by putting effort into creating a flexible model
 # High-level Architecture
 The high-level architecture of BattMo.jl is designed to be both modular and extensible, enabling users to combine standard battery models with customized physics and workflows. At its core, the framework separates the physical model definition (what equations to solve) from the simulation configuration (what parameters and settings to apply). This design allows researchers to start with standard models, extend them with for example degradation, and scale simulations from simple pseudo-2D cases to realistic 3D geometries, all without restructuring the workflow.
 
-Figure \ref{fig:backend} shows the high-level architecture of some of the core workflows in BattMo.jl. The BattMo framework is configured through five different input sets, all of which can be provided in JSON format:
+Figure \ref{fig:backend} shows the high-level architecture of some core workflows in BattMo.jl. The BattMo framework is configured through five different input sets, all of which can be provided in JSON format:
 
 - Cell parameters: descriptions of the cell geometry, electrodes, and electrolyte materials.
 - Cycling protocol: specification of operating conditions, such as current profiles or voltage limits.
@@ -65,7 +65,7 @@ Figure \ref{fig:backend} shows the high-level architecture of some of the core w
 
 The model settings are first passed to the selected base model (e.g., LithiumIonBattery, SodiumIonBattery), which instantiates a configured model. This model defines the set of governing equations and constitutive laws used in the simulation. For both the lithium-ion and sodium-ion battery models, the default representation is based on the Doyle–Fuller–Newman (DFN) model [@Doyle1993ModelingCell], which can be extended with additional physics modules (e.g., SEI growth, temperature dependence) depending on the configuration of the model settings.
 
-![High-level architecture of some of the core workflows in BattMo.jl. Gray input settings are optional for the user. \label{fig:backend}](./assets/battmo_backend.png "High-level Architecture")
+![High-level architecture of some core workflows in BattMo.jl. Gray input settings are optional for the user. \label{fig:backend}](./assets/battmo_backend.png "High-level Architecture")
 
 The configured model is then combined with the cell parameters, cycling protocol, and simulation settings to form a simulation instance. At this stage, the input data are mapped onto the model equations—for example, by setting up active material models, electrolyte properties, cell geometry and grids, load conditions, initial states, and timestepping. The result is a fully defined simulation object.
 
@@ -105,7 +105,7 @@ model_settings = load_model_settings(; from_default_set = "P4D_cylindrical")
 model = LithiumIonBattery(; model_settings)
 
 # Setup the simulation
-sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
+sim = Simulation(model, cell_parameters, cycling_protocol);
 
 # Solve the simulation
 output = solve(sim)
