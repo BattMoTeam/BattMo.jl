@@ -94,7 +94,8 @@ struct Simulation <: AbstractSimulation
 			parameters = sim_cfg.parameters
 			initial_state = sim_cfg.initial_state
 			forces = sim_cfg.forces
-			simulator = sim_cfg.simulator
+			# simulator = sim_cfg.simulator
+			simulator = nothing
 			time_steps = sim_cfg.time_steps
 
 		else
@@ -122,11 +123,11 @@ function simulation_configuration(model, input)
 	# setup initial state
 	initial_state = setup_initial_state(input, model)
 
+	# setup jutul simulator
+	# simulator = Simulator(model.multimodel; state0 = initial_state, parameters = parameters, copy_state = true)
+
 	# setup forces
 	forces = setup_forces(model.multimodel)
-
-	# setup jutul simulator
-	simulator = Simulator(model.multimodel; state0 = initial_state, parameters = parameters, copy_state = true)
 
 	# setup time steps
 	time_steps = setup_timesteps(input)
@@ -137,7 +138,7 @@ function simulation_configuration(model, input)
 		parameters = parameters,
 		initial_state = initial_state,
 		forces = forces,
-		simulator = simulator,
+		# simulator = simulator,
 		time_steps = time_steps,
 	)
 
@@ -279,10 +280,13 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 			cfg)
 	end
 
-
+	# setup jutul simulator
+	# simulator = Simulator(model.multimodel; state0 = initial_state, parameters = parameters, copy_state = true)
 
 	# Perform simulation
-	states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+	# states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+
+	states, reports = simulate(state0, model.multimodel, timesteps, parameters; forces = forces, config = cfg, copy_state = true)
 
 	extra = Dict(:simulator => simulator,
 		:forces => forces,
@@ -451,7 +455,7 @@ Sets up the config object used during simulation. In this current version this
 setup is the same for json and mat files. The specific setup values should
 probably be given as inputs in future versions of BattMo.jl
 """
-function solver_configuration(sim::JutulSimulator,
+function solver_configuration(sim::Union{JutulSimulator, Nothing},
 	model::MultiModel,
 	parameters;
 	use_model_scaling::Bool = true,
@@ -492,7 +496,7 @@ function solver_configuration(sim::JutulSimulator,
 	end
 
 	cfg = simulator_config(
-		sim;
+		model;
 		info_level = verbose["InfoLevel"],
 		debug_level = verbose["DebugLevel"],
 		end_report = verbose["EndReport"],
