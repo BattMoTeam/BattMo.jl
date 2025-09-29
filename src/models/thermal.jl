@@ -33,7 +33,7 @@ end
 function Jutul.select_secondary_variables!(
 	S, system::Thermal, model::SimulationModel,
 )
-	# S[:TPkGrad_Voltage] = TPkGrad{Voltage}()
+	# S[:TPkGrad_Voltage] = TPkGrad{ElectricPotential}()
 	S[:Energy] = Energy()
 
 end

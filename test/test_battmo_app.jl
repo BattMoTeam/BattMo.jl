@@ -48,17 +48,17 @@ function runP2DBatt(json_file)
 	# Get some result values
 	number_of_states                 = size(states)
 	time_values                      = time_series[:Time]
-	cell_voltage                     = [state[:Control][:Voltage][1] for state in states]
+	cell_voltage                     = [state[:Control][:ElectricPotential][1] for state in states]
 	cell_current                     = [state[:Control][:Current][1] for state in states]
 	negative_electrode_grid_wrap     = physical_representation(multimodel[:NegativeElectrodeActiveMaterial])
 	electrolyte_grid_wrap            = physical_representation(multimodel[:Electrolyte])
 	positive_electrode_grid_wrap     = physical_representation(multimodel[:PositiveElectrodeActiveMaterial])
 	negative_electrode_concentration = Array([[state[:NegativeElectrodeActiveMaterial][:SurfaceConcentration] for state in states] / 1000])
-	electrolyte_concentration        = [state[:Electrolyte][:Concentration] for state in states] / 1000
+	electrolyte_concentration        = [state[:Electrolyte][:ElectrolyteConcentration] for state in states] / 1000
 	positive_electrode_concentration = Array([[state[:PositiveElectrodeActiveMaterial][:SurfaceConcentration] for state in states]] / 1000)
-	negative_electrode_potential     = [state[:NegativeElectrodeActiveMaterial][:Voltage] for state in states]
-	electrolyte_potential            = [state[:Electrolyte][:Voltage] for state in states]
-	positive_electrode_potential     = [state[:PositiveElectrodeActiveMaterial][:Voltage] for state in states]
+	negative_electrode_potential     = [state[:NegativeElectrodeActiveMaterial][:ElectricPotential] for state in states]
+	electrolyte_potential            = [state[:Electrolyte][:ElectricPotential] for state in states]
+	positive_electrode_potential     = [state[:PositiveElectrodeActiveMaterial][:ElectricPotential] for state in states]
 
 	nsteps = length(cell_voltage)
 	time_values = time_values[1:nsteps]

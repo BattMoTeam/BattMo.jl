@@ -454,7 +454,7 @@ end
 function compute_discharge_energy(states; cycle_number = nothing)
 	# Only take discharge curves
 	t = [state[:Control][:Controller].time for state in states]
-	E = [state[:Control][:Voltage][1] for state in states]
+	E = [state[:Control][:ElectricPotential][1] for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
 	if !isnothing(cycle_number)
@@ -515,7 +515,7 @@ end
 function compute_charge_energy(states; cycle_number = nothing)
 	# Only take discharge curves
 	t = [state[:Control][:Controller].time for state in states]
-	E = [state[:Control][:Voltage][1] for state in states]
+	E = [state[:Control][:ElectricPotential][1] for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
 	if !isnothing(cycle_number)

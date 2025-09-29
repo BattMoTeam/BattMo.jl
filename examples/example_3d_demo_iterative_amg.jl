@@ -80,7 +80,7 @@ verbose = 10
 # We first setup the block preconditioners. They are given as a list and applied separatly. Preferably, they
 # should be orthogonal
 varpreconds = Vector{BattMo.VariablePrecond}()
-push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Voltage, :charge_conservation, nothing))
+push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :ElectricPotential, :charge_conservation, nothing))
 #push!(varpreconds,BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(),:ParticleConcentration,:mass_conservation, [:PositiveElectrodeActiveMaterial,:NegativeElectrodeActiveMaterial]))
 #push!(varpreconds,BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:Concentration,:mass_conservation, [:Electrolyte]))
 
@@ -117,7 +117,7 @@ states, reports = simulate(state0, simulator, timesteps; forces = forces, config
 #model  = output[:extra][:model]
 
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Voltage][1] for state in states]
+E = [state[:Control][:ElectricPotential][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 f = Figure(size = (1000, 400))
@@ -184,15 +184,15 @@ if (do_plot)
 		am = setup[1]
 		cc = setup[2]
 
-		maxVoltage = maximum([maximum(state[cc][:Voltage]), maximum(state[am][:Voltage])])
-		minVoltage = minimum([minimum(state[cc][:Voltage]), minimum(state[am][:Voltage])])
+		maxVoltage = maximum([maximum(state[cc][:ElectricPotential]), maximum(state[am][:ElectricPotential])])
+		minVoltage = minimum([minimum(state[cc][:ElectricPotential]), minimum(state[am][:ElectricPotential])])
 
 		colorrange = [0, maxVoltage - minVoltage]
 
 		components = [am, cc]
 		for component in components
 			g = model[component].domain.representation
-			phi = state[component][:Voltage]
+			phi = state[component][:ElectricPotential]
 			Jutul.plot_cell_data!(ax3d, g, phi .- minVoltage; colormap = :viridis, colorrange = colorrange)
 		end
 
@@ -236,7 +236,7 @@ if (do_plot)
 
 
 	setups = ((:Concentration, "concentration"),
-		(:Voltage, "potential"))
+		(:ElectricPotential, "potential"))
 
 	for setup in setups
 

@@ -188,7 +188,7 @@ else
 	BattMo.setup_policy!(model[:Control].system.policy, init, parameters)
 
 	minE = init.object["Control"]["lowerCutoffVoltage"]
-	@. state0[:Control][:Voltage] = minE * 1.5
+	@. state0[:Control][:ElectricPotential] = minE * 1.5
 
 
 	forces = setup_forces(model)
@@ -302,9 +302,9 @@ else
 
 		if false
 			varpreconds = Vector{BattMo.VariablePrecond}()
-			#push!(varpreconds,BattMo.VariablePrecond(p_prec,:Voltage,:charge_conservation, nothing))
+			#push!(varpreconds,BattMo.VariablePrecond(p_prec,:ElectricPotential,:charge_conservation, nothing))
 			#push!(varpreconds,BattMo.VariablePrecond(s_prec,:Concentration,:mass_conservation, nothing))
-			push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Voltage, :charge_conservation, nothing))
+			push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :ElectricPotential, :charge_conservation, nothing))
 			g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global, nothing)
 		else
 			prec_org_s = Jutul.AMGPreconditioner(:ruge_stuben)
@@ -328,8 +328,8 @@ else
 			#p_prec = Jutul.TrivialPreconditioner()
 			#p_prec = Jutul.ILUZeroPreconditioner()
 			#s_prec = Jutul.ILUZeroPreconditioner()
-			s_preccond = BattMo.VariablePrecond(s_prec, :Concentration, :mass_conservation, nothing)
-			p_preccond = BattMo.VariablePrecond(p_prec, :Voltage, :charge_conservation, nothing)
+			s_preccond = BattMo.VariablePrecond(s_prec, :ElectrolyteConcentration, :mass_conservation, nothing)
+			p_preccond = BattMo.VariablePrecond(p_prec, :ElectricPotential, :charge_conservation, nothing)
 			varpreconds = Vector{BattMo.VariablePrecond}()
 			#push!(varpreconds, p_preccond)
 			#push!(varpreconds, s_preccond)
@@ -373,7 +373,7 @@ else
 		cfg[:extra_timing] = false
 	end
 
-	state0[:Control][:Voltage][1] = 4.2
+	state0[:Control][:ElectricPotential][1] = 4.2
 	state0[:Control][:Current][1] = 0
 	discharging = BattMo.cc_discharge1
 	state0[:Control][:Controller] = BattMo.SimpleControllerCV{Float64}(0.0, 0.0, false, discharging)
@@ -384,7 +384,7 @@ end
 
 ##
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Voltage][1] for state in states]
+E = [state[:Control][:ElectricPotential][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 if (false)
@@ -414,7 +414,7 @@ if (false)
 		xtickfont = font(pointsize = 15),
 		ytickfont = font(pointsize = 15))
 
-	println("Volatage ", state[:Control][:Voltage])
+	println("Volatage ", state[:Control][:ElectricPotential])
 
 	Plots.plot(p1, p2, layout = (2, 1))
 end
@@ -431,8 +431,8 @@ else
 	names = ["Electrolyte", "NegativeElectrode", "PositiveElectrode"]
 	syms = [:Electrolyte, :NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial]
 end
-V = state[:Control][:Voltage]
-println("Current ", state[:Control][:Voltage])
+V = state[:Control][:ElectricPotential]
+println("Current ", state[:Control][:ElectricPotential])
 println("Current ", state[:Control][:Current])
 global myfirst = true
 
@@ -457,7 +457,7 @@ for ind in 1:3
 	z = zeros(nc)
 	go = tpfv_geometry(g)
 	z = go.cell_centroids[end, :]##
-	val = state[sym][:Voltage]
+	val = state[sym][:ElectricPotential]
 	#if(myfirst)
 	GLMakie.lines!(axlinesall, z, val)
 	if (ind < 2)
@@ -542,7 +542,7 @@ if do_plot && true
 			name = names[ind]
 			sym = syms[ind]
 			g = init.object["Grids"][name]
-			phi = state[sym][:Voltage]
+			phi = state[sym][:ElectricPotential]
 			#Jutul.plot_cell_data(g,phi)
 			Jutul.plot_cell_data!(ax3d, g, phi .- mean(phi))
 			#Jutul.plot_cell_data!(ax3d,g,phi)

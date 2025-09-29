@@ -176,7 +176,7 @@ function Jutul.select_primary_variables!(S,
 	system::ActiveMaterialP2D,
 	model::SimulationModel,
 )
-	S[:Voltage] = Voltage()
+	S[:ElectricPotential] = ElectricPotential()
 	S[:ParticleConcentration] = ParticleConcentration()
 	S[:SurfaceConcentration] = SurfaceConcentration()
 
@@ -201,7 +201,7 @@ function Jutul.select_parameters!(S,
 	S[:VolumeFraction] = VolumeFraction()
 
 	if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
-		S[:BoundaryVoltage] = BoundaryPotential(:Voltage)
+		S[:BoundaryVoltage] = BoundaryPotential(:ElectricPotential)
 	end
 
 end
@@ -488,7 +488,7 @@ function Jutul.select_primary_variables!(S,
 	system::ActiveMaterialNoParticleDiffusion,
 	model::SimulationModel,
 )
-	S[:Voltage] = Voltage()
+	S[:ElectricPotential] = ElectricPotential()
 	S[:Concentration] = Concentration()
 
 end
@@ -515,7 +515,7 @@ function Jutul.select_parameters!(S,
 	S[:VolumeFraction] = VolumeFraction()
 
 	if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
-		S[:BoundaryVoltage] = BoundaryPotential(:Voltage)
+		S[:BoundaryVoltage] = BoundaryPotential(:ElectricPotential)
 	end
 
 end

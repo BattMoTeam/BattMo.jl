@@ -52,7 +52,7 @@ end
 function computeCellEnergy(states)
 	# Only take discharge curves
 	time = [state[:Control][:Controller].time for state in states if state[:Control][:Current][1] > 0]
-	E    = [state[:Control][:Voltage][1] for state in states if state[:Control][:Current][1] > 0]
+	E    = [state[:Control][:ElectricPotential][1] for state in states if state[:Control][:Current][1] > 0]
 	I    = [state[:Control][:Current][1] for state in states if state[:Control][:Current][1] > 0]
 
 	dt = diff(time)
@@ -249,7 +249,7 @@ end
 function computeEnergyEfficiency(states; cycle_number = nothing)
 
 	t = [state[:Control][:Controller].time for state in states]
-	E = [state[:Control][:Voltage][1] for state in states]
+	E = [state[:Control][:ElectricPotential][1] for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
 	if !isnothing(cycle_number)

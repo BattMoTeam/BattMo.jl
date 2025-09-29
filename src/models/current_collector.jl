@@ -28,13 +28,13 @@ end
 function Jutul.select_primary_variables!(
 	S, system::CurrentCollector, model::SimulationModel,
 )
-	S[:Voltage] = Voltage()
+	S[:ElectricPotential] = ElectricPotential()
 end
 
 function Jutul.select_secondary_variables!(
 	S, system::CurrentCollector, model::SimulationModel,
 )
-	# S[:TPkGrad_Voltage] = TPkGrad{Voltage}()
+	# S[:TPkGrad_Voltage] = TPkGrad{ElectricPotential}()
 	S[:Charge] = Charge()
 
 end
@@ -46,7 +46,7 @@ function Jutul.select_parameters!(S,
 	S[:Conductivity] = Conductivity()
 	if hasentity(model.data_domain, BoundaryDirichletFaces())
 		if count_active_entities(model.data_domain, BoundaryDirichletFaces()) > 0
-			S[:BoundaryVoltage] = BoundaryPotential(:Voltage)
+			S[:BoundaryVoltage] = BoundaryPotential(:ElectricPotential)
 		end
 	end
 

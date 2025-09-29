@@ -1,7 +1,7 @@
 export BattMoSystem, CurrentCollector
 export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
 export ChargeFlow, BoundaryPotential, BoundaryCurrent
-export Voltage, Concentration, Temperature, Charge, Mass
+export ElectricPotential, ElectrolyteConcentration, Temperature, Charge, Mass
 export BCCurrent
 export TPFAInterfaceFluxCT, ButlerVolmerActmatToElyteCT, ButlerVolmerElyteToActmatCT, ButlerVolmerInterfaceFluxCT
 export BoundaryDirichletFaces
@@ -22,17 +22,17 @@ abstract type BattMoGrid <: JutulMesh end
 # Potential variables
 
 abstract type Potential <: ScalarVariable end
-struct Voltage <: Potential end
+struct ElectricPotential <: Potential end
 
-# minimum_value(::Voltage) = -10
-# maximum_value(::Voltage) = 10
-# absolute_increment_limit(::Voltage) = 0.
+# minimum_value(::ElectricPotential) = -10
+# maximum_value(::ElectricPotential) = 10
+# absolute_increment_limit(::ElectricPotential) = 0.
 
-struct Concentration <: Potential end
-Jutul.minimum_value(::Concentration) = 0.0
-# maximum_value(:Concentration)   = 10000
-# absolute_increment_limit(:Concentration) = 500
-# relative_increment_limit(:Concentrationncentration) = 0.1
+struct ElectrolyteConcentration <: Potential end
+Jutul.minimum_value(::ElectrolyteConcentration) = 0.0
+# maximum_value(:ElectrolyteConcentration)   = 10000
+# absolute_increment_limit(:ElectrolyteConcentration) = 500
+# relative_increment_limit(:ElectrolyteConcentration) = 0.1
 
 struct Temperature <: Potential end
 struct BruggemanCoefficient <: ScalarVariable end
@@ -238,7 +238,7 @@ end
 
 function BatteryGeneralPreconditioner()
 	varpreconds = Vector{VariablePrecond}()
-	push!(varpreconds, VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Voltage, :charge_conservation, nothing))
+	push!(varpreconds, VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :ElectricPotential, :charge_conservation, nothing))
 	g_varprecond = VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global, nothing)
 	params = Dict()
 	params["method"] = "block"

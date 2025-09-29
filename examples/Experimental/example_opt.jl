@@ -21,7 +21,7 @@ timesteps = extra[:timesteps]
 # initial voltage for battery)
 v_target = 4.2
 function voltage_objective(model, state, dt, step_no, forces)
-	return dt * max(v_target - state[:Control][:Voltage][1], 0)^2
+	return dt * max(v_target - state[:Control][:ElectricPotential][1], 0)^2
 end
 
 G = voltage_objective
@@ -95,7 +95,7 @@ end
 
 ## Plot difference in the main objective input
 
-F = s -> map(x -> only(x[:Control][:Voltage]), s)
+F = s -> map(x -> only(x[:Control][:ElectricPotential]), s)
 fig = Figure()
 ax1 = Axis(fig[1, 1], title = name, ylabel = "Voltage")
 lines!(ax1, F(states), label = "Base case (G = $F0)")
