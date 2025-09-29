@@ -1,5 +1,6 @@
 import pytest
 import os
+import numpy as np
 
 from battmo import *
 
