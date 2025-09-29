@@ -1,4 +1,5 @@
 import pytest
+import os
 
 from battmo import *
 
@@ -12,18 +13,18 @@ def test_loading():
 
 
 def test_simulation():
-    cell_parameters = load_cell_parameters(from_default_set="chayambuka")
+    cell_parameters = load_cell_parameters(from_default_set="Chen2020")
     cycling_protocol = load_cycling_protocol(from_default_set="CCDischarge")
 
     model_setup = LithiumIonBattery()
     sim = Simulation(model_setup, cell_parameters, cycling_protocol)
     output = solve(sim)
 
-    cell_parameters = load_cell_parameters(from_default_set="chayambuka")
+    cell_parameters = load_cell_parameters(from_default_set="Chayambuka2022")
     model_settings = load_model_settings(from_default_set="P2D")
     model_settings["ButlerVolmer"] = "Chayambuka"
 
-    model_setup = SodiumIonBattery(model_settings)
+    model_setup = SodiumIonBattery(model_settings=model_settings)
     sim = Simulation(model_setup, cell_parameters, cycling_protocol)
     output = solve(sim)
 
@@ -60,7 +61,7 @@ def test_utils():
     cell_parameters = load_cell_parameters(from_default_set="Chen2020")
     print_cell_info(cell_parameters)
 
-    plot_cell_curves(cell_parameters)
+    # plot_cell_curves(cell_parameters)
 
 
 def test_calibration():

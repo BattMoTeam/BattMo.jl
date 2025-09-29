@@ -193,3 +193,16 @@ output = run_simulation(simulation_input)
 
 plot_dashboard(output, plot_type="contour")
 ```
+
+## User defined input function
+This short example shows how a user defined python function, describing an input parameter, can be exposed to BattMo.
+```python
+from battmo import *
+
+def negative_electrode_ocp(c, T, refT, cmax):
+    ocp = get_1d_interpolator(x, ocp)
+    return ocp(c / cmax)
+
+# Expose function to battmo
+expose_to_battmo(negative_electrode_ocp)
+```

@@ -26,4 +26,7 @@ df = to_pandas(time_series)
 fig = px.line(df, x="Time", y="Voltage", title="Voltage curve")
 fig.show()
 
+install_plotting()
 plot_dashboard(output, plot_type="contour")
+
+plot_interactive_3d(output)
