@@ -17,7 +17,34 @@ export
 	compute_charge_capacity,
 	compute_charge_energy,
 	compute_discharge_energy,
-	compute_cell_volume
+	compute_cell_volume,
+	get_equilibrium_kpis
+
+
+#########################################
+# Get all equilibrium KPIs
+#########################################
+
+function get_equilibrium_kpis(cell_parameters::CellParameters)
+	cell_kpis_from_set = Dict(
+		"Positive Electrode Coating Mass" => compute_electrode_coating_mass(cell_parameters, "PositiveElectrode"),
+		"Negative Electrode Coating Mass" => compute_electrode_coating_mass(cell_parameters, "NegativeElectrode"),
+		"Separator Mass" => compute_separator_mass(cell_parameters),
+		"Positive Electrode Current Collector Mass" => compute_current_collector_mass(cell_parameters, "PositiveElectrode"),
+		"Negative Electrode Current Collector Mass" => compute_current_collector_mass(cell_parameters, "NegativeElectrode"),
+		"Electrolyte Mass" => compute_electrolyte_mass(cell_parameters),
+		"Cell Mass" => compute_cell_mass(cell_parameters),
+		"Cell Volume" => compute_cell_volume(cell_parameters),
+		"Positive Electrode Mass Loading" => compute_electrode_mass_loading(cell_parameters, "PositiveElectrode"),
+		"Negative Electrode Mass Loading" => compute_electrode_mass_loading(cell_parameters, "NegativeElectrode"),
+		"Cell Theoretical Capacity" => compute_cell_theoretical_capacity(cell_parameters),
+		"Cell N:P Ratio" => compute_np_ratio(cell_parameters),
+		"Cell Mass Composition" => compute_cell_mass_composition(cell_parameters),
+	)
+
+	return cell_kpis_from_set
+
+end
 
 
 #########################################
@@ -111,50 +138,72 @@ function compute_electrolyte_mass(params::CellParameters)
 end
 
 function compute_cell_mass(params::CellParameters; print_breakdown::Bool = false)
-	m_positive_e = compute_electrode_coating_mass(params, "PositiveElectrode")
-	m_negative_e = compute_electrode_coating_mass(params, "NegativeElectrode")
-	m_separator = compute_separator_mass(params)
-	m_electrolyte = compute_electrolyte_mass(params)
-	total_cell_mass = m_positive_e + m_negative_e + m_separator + m_electrolyte
 
+	masses = Dict(
+		"mass_positive_electrode" => compute_electrode_coating_mass(params, "PositiveElectrode"),
+		"mass_negative_electrode" => compute_electrode_coating_mass(params, "NegativeElectrode"),
+		"mass_separator" => compute_separator_mass(params),
+		"mass_electrolyte" => compute_electrolyte_mass(params),
+	)
+	total_cell_mass = masses["mass_positive_electrode"] + masses["mass_negative_electrode"] + masses["mass_separator"] + masses["mass_electrolyte"]
 	if haskey(params["NegativeElectrode"], "CurrentCollector")
-		m_positive_e_cc = compute_current_collector_mass(params, "PositiveElectrode")
-		m_negative_e_cc = compute_current_collector_mass(params, "NegativeElectrode")
-		total_cell_mass = total_cell_mass + m_positive_e_cc + m_negative_e_cc
-
-		if print_breakdown
-			print("""
-					Component                 | Mass/kg |  Percentage
-			-------------------------------------------------------------
-			Cell                                 | $(round(total_cell_mass, digits=5)) |    100
-			Positive Electrode                   | $(round(m_positive_e, digits=5)) |    $(round(100*m_positive_e/total_cell_mass, digits=1))
-			Negative Electrode                   | $(round(m_negative_e, digits=5)) |    $(round(100*m_negative_e/total_cell_mass, digits=1))
-			Positive Electrode Current Collector | $(round(m_positive_e_cc, digits=5)) |    $(round(100*m_positive_e_cc/total_cell_mass, digits=1))
-			Negative Electrode Current Collector | $(round(m_negative_e_cc, digits=5)) |    $(round(100*m_negative_e_cc/total_cell_mass, digits=1))
-			Electrolyte                          | $(round(m_electrolyte, digits=5)) |    $(round(100*m_electrolyte/total_cell_mass, digits=1))
-			Separator                            | $(round(m_separator, digits=5)) |    $(round(100*m_separator/total_cell_mass, digits=1))
-			""")
-
-		end
+		masses["mass_positive_electrode_current_collector"] = compute_current_collector_mass(params, "PositiveElectrode")
+		masses["mass_negative_electrode_current_collector"] = compute_current_collector_mass(params, "NegativeElectrode")
+		masses["total_cell_mass"] = total_cell_mass + masses["mass_positive_electrode_current_collector"] + masses["mass_negative_electrode_current_collector"]
 	else
+		masses["mass_positive_electrode_current_collector"] = 0
+		masses["mass_negative_electrode_current_collector"] = 0
+		masses["total_cell_mass"] = total_cell_mass
+	end
 
-		print("Mass calculated without taking into account current collectors.")
+	composition = compute_cell_mass_composition(params)
 
-		if print_breakdown
-			print("""
-					Component                 | Mass/kg |  Percentage
-			-------------------------------------------------------------
-			Cell                                 | $(round(total_cell_mass, digits=5)) |    100
-			Positive Electrode                   | $(round(m_positive_e, digits=5)) |    $(round(100*m_positive_e/total_cell_mass, digits=1))
-			Negative Electrode                   | $(round(m_negative_e, digits=5)) |    $(round(100*m_negative_e/total_cell_mass, digits=1))
-			Electrolyte                          | $(round(m_electrolyte, digits=5)) |    $(round(100*m_electrolyte/total_cell_mass, digits=1))
-			Separator                            | $(round(m_separator, digits=5)) |    $(round(100*m_separator/total_cell_mass, digits=1))
-			""")
-
-		end
+	if print_breakdown
+		print("""
+				Component                 | Mass/kg |  Percentage
+		-------------------------------------------------------------
+		Cell                                 | $(round(masses["total_cell_mass"], digits=5)) |    100
+		Positive Electrode                   | $(round(masses["mass_positive_electrode"], digits=5)) |    $(round(composition["positive_electrode"], digits=1))
+		Negative Electrode                   | $(round(masses["mass_negative_electrode"], digits=5)) |    $(round(composition["negative_electrode"], digits=1))
+		Positive Electrode Current Collector | $(round(masses["mass_positive_electrode_current_collector"], digits=5)) |    $(round(composition["positive_electrode_current_collector"], digits=1))
+		Negative Electrode Current Collector | $(round(masses["mass_negative_electrode_current_collector"], digits=5)) |    $(round(composition["negative_electrode_current_collector"], digits=1))
+		Electrolyte                          | $(round(masses["mass_electrolyte"], digits=5)) |    $(round(composition["electrolyte"], digits=1))
+		Separator                            | $(round(masses["mass_separator"], digits=5)) |    $(round(composition["separator"], digits=1))
+		""")
 
 	end
+
 	return total_cell_mass
+end
+
+function compute_cell_mass_composition(params::CellParameters)
+
+	masses = Dict(
+		"mass_positive_electrode" => compute_electrode_coating_mass(params, "PositiveElectrode"),
+		"mass_negative_electrode" => compute_electrode_coating_mass(params, "NegativeElectrode"),
+		"mass_separator" => compute_separator_mass(params),
+		"mass_electrolyte" => compute_electrolyte_mass(params),
+	)
+	total_cell_mass = masses["mass_positive_electrode"] + masses["mass_negative_electrode"] + masses["mass_separator"] + masses["mass_electrolyte"]
+	if haskey(params["NegativeElectrode"], "CurrentCollector")
+		masses["mass_positive_electrode_current_collector"] = compute_current_collector_mass(params, "PositiveElectrode")
+		masses["mass_negative_electrode_current_collector"] = compute_current_collector_mass(params, "NegativeElectrode")
+		masses["total_cell_mass"] = total_cell_mass + masses["mass_positive_electrode_current_collector"] + masses["mass_negative_electrode_current_collector"]
+	else
+		masses["mass_positive_electrode_current_collector"] = 0
+		masses["mass_negative_electrode_current_collector"] = 0
+		masses["total_cell_mass"] = total_cell_mass
+	end
+	composition = Dict(
+		"cell" => 100,
+		"positive_electrode" => 100 * masses["mass_positive_electrode"] / masses["total_cell_mass"],
+		"negative_electrode" => 100 * masses["mass_negative_electrode"] / masses["total_cell_mass"],
+		"positive_electrode_current_collector" => 100 * get(masses, "mass_positive_electrode_current_collector", 0) / masses["total_cell_mass"],
+		"negative_electrode_current_collector" => 100 * get(masses, "mass_negative_electrode_current_collector", 0) / masses["total_cell_mass"],
+		"electrolyte" => 100 * masses["mass_electrolyte"] / masses["total_cell_mass"],
+		"separator" => 100 * masses["mass_separator"] / masses["total_cell_mass"],
+	)
+	return composition
 end
 
 function compute_cell_volume(params::CellParameters)
