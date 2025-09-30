@@ -3,7 +3,7 @@ function batterylinearsolver(nosplit = true, p2d = true)
 	if !p2d
 		if method == "simple"
 			varpreconds = Vector{BattMo.VariablePrecond}()
-			push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Voltage, :charge_conservation, nothing))
+			push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :ElectricPotential, :charge_conservation, nothing))
 			g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global, nothing)
 		elseif method == "split"
 			prec_org_s = Jutul.AMGPreconditioner(:ruge_stuben)
@@ -22,8 +22,8 @@ function batterylinearsolver(nosplit = true, p2d = true)
 				min_iterations = 4)
 			s_prec = SolverAsPreconditionerSystem(ksolver_s)
 			p_prec = SolverAsPreconditionerSystem(ksolver_p)
-			s_preccond = BattMo.VariablePrecond(s_prec, :Concentration, :mass_conservation, nothing)
-			p_preccond = BattMo.VariablePrecond(p_prec, :Voltage, :charge_conservation, nothing)
+			s_preccond = BattMo.VariablePrecond(s_prec, :ElectrolyteConcentration, :mass_conservation, nothing)
+			p_preccond = BattMo.VariablePrecond(p_prec, :ElectricPotential, :charge_conservation, nothing)
 			varpreconds = Vector{BattMo.VariablePrecond}()
 			push!(varpreconds, deepcopy(p_preccond))
 			push!(varpreconds, deepcopy(s_preccond))
@@ -39,7 +39,7 @@ function batterylinearsolver(nosplit = true, p2d = true)
 				min_iterations = 4)
 			varpreconds = Vector{BattMo.VariablePrecond}()
 			p_prec = SolverAsPreconditionerSystem(solver_p)
-			p_preccond = BattMo.VariablePrecond(p_prec, :Voltage, :charge_conservation, nothing)
+			p_preccond = BattMo.VariablePrecond(p_prec, :ElectricPotential, :charge_conservation, nothing)
 			push!(varpreconds, deepcopy(p_preccond))
 
 			solver_s = GenericKrylov(solver, verbose = 0,
@@ -52,7 +52,7 @@ function batterylinearsolver(nosplit = true, p2d = true)
 			for mm in cmodels
 				println(mm)
 				s_prec = SolverAsPreconditionerSystem(solver_s)
-				s_preccond = BattMo.VariablePrecond(s_prec, :Concentration, :mass_conservation, mm)
+				s_preccond = BattMo.VariablePrecond(s_prec, :ElectrolyteConcentration, :mass_conservation, mm)
 				push!(varpreconds, deepcopy(s_preccond))
 			end
 
@@ -73,7 +73,7 @@ function batterylinearsolver(nosplit = true, p2d = true)
 				min_iterations = 4)
 			varpreconds = Vector{BattMo.VariablePrecond}()
 			p_prec = SolverAsPreconditionerSystem(solver_p)
-			p_preccond = BattMo.VariablePrecond(p_prec, :Voltage, :charge_conservation, nothing)
+			p_preccond = BattMo.VariablePrecond(p_prec, :ElectricPotential, :charge_conservation, nothing)
 			push!(varpreconds, deepcopy(p_preccond))
 
 			solver_s = GenericKrylov(solver, verbose = 0,
@@ -102,7 +102,7 @@ function batterylinearsolver(nosplit = true, p2d = true)
 			for mm in cmodels
 				println(mm)
 				s_prec = SolverAsPreconditionerSystem(solver_s)
-				s_preccond = BattMo.VariablePrecond(s_prec, :Concentration, :mass_conservation, mm)
+				s_preccond = BattMo.VariablePrecond(s_prec, :ElectrolyteConcentration, :mass_conservation, mm)
 				push!(varpreconds, deepcopy(s_preccond))
 			end
 

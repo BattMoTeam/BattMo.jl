@@ -19,19 +19,19 @@ end
 @jutul_secondary function update_ion_mass!(acc,
 	tv::Mass,
 	model,
-	Concentration,
+	ElectrolyteConcentration,
 	Volume,
 	VolumeFraction,
 	ix)
 	for i in ix
-		@inbounds acc[i] = Concentration[i] * Volume[i] * VolumeFraction[i]
+		@inbounds acc[i] = ElectrolyteConcentration[i] * Volume[i] * VolumeFraction[i]
 	end
 end
 
 @jutul_secondary function update_as_secondary!(acc,
 	tv::Charge,
 	model,
-	Voltage,
+	ElectricPotential,
 	ix)
 	for i in ix
 		@inbounds acc[i] = 0.0
@@ -114,7 +114,7 @@ end
 function computeFlux(::Val{:Mass}, model, state, cell, other_cell, face, face_sign)
 
 	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
-	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Concentration, state.Diffusivity)
+	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectrolyteConcentration, state.Diffusivity)
 
 	return q
 end
@@ -129,7 +129,7 @@ end
 function computeFlux(::Val{:Charge}, model, state, cell, other_cell, face, face_sign)
 
 	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
-	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Voltage, state.Conductivity)
+	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.Conductivity)
 
 	return q
 
@@ -252,18 +252,18 @@ function apply_boundary_potential!(acc, state, parameters, model::BattMoModel, e
 
 	if dobc
 
-		Voltage         = state[:Voltage]
+		ElectricPotential = state[:ElectricPotential]
 		BoundaryVoltage = state[:BoundaryVoltage]
-		conductivity    = state[:Conductivity]
+		conductivity = state[:Conductivity]
 
 		if dolegacy
 			T_hf = model.domain.representation.boundary_hfT
 			for (i, c) in enumerate(bc)
-				@inbounds acc[c] += conductivity[c] * T_hf[i] * (Voltage[c] - value(BoundaryVoltage[i]))
+				@inbounds acc[c] += conductivity[c] * T_hf[i] * (ElectricPotential[c] - value(BoundaryVoltage[i]))
 			end
 		else
 			for (ht, c, i) in zip(bcdirhalftrans, bcdircells, bcdirinds)
-				@inbounds acc[c] += conductivity[c] * ht * (Voltage[c] - value(BoundaryVoltage[i]))
+				@inbounds acc[c] += conductivity[c] * ht * (ElectricPotential[c] - value(BoundaryVoltage[i]))
 			end
 		end
 	end

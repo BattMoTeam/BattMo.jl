@@ -305,10 +305,10 @@ function extract_spatial_data(states::Vector)
 		:PositiveElectrodeActiveMaterialDiffusionCoefficient  => [:PositiveElectrodeActiveMaterial, :DiffusionCoefficient],
 		:NegativeElectrodeActiveMaterialReactionRateConstant  => [:NegativeElectrodeActiveMaterial, :ReactionRateConstant],
 		:PositiveElectrodeActiveMaterialReactionRateConstant  => [:PositiveElectrodeActiveMaterial, :ReactionRateConstant],
-		:ElectrolyteConcentration                             => [:Electrolyte, :Concentration],
-		:NegativeElectrodeActiveMaterialPotential             => [:NegativeElectrodeActiveMaterial, :Voltage],
-		:ElectrolytePotential                                 => [:Electrolyte, :Voltage],
-		:PositiveElectrodeActiveMaterialPotential             => [:PositiveElectrodeActiveMaterial, :Voltage],
+		:ElectrolyteConcentration                             => [:Electrolyte, :ElectrolyteConcentration],
+		:NegativeElectrodeActiveMaterialPotential             => [:NegativeElectrodeActiveMaterial, :ElectricPotential],
+		:ElectrolytePotential                                 => [:Electrolyte, :ElectricPotential],
+		:PositiveElectrodeActiveMaterialPotential             => [:PositiveElectrodeActiveMaterial, :ElectricPotential],
 		:NegativeElectrodeActiveMaterialTemperature           => [:NegativeElectrodeActiveMaterial, :Temperature],
 		:PositiveElectrodeActiveMaterialTemperature           => [:PositiveElectrodeActiveMaterial, :Temperature],
 		:NegativeElectrodeActiveMaterialOpenCircuitPotential  => [:NegativeElectrodeActiveMaterial, :OpenCircuitPotential],
@@ -468,7 +468,7 @@ function extract_time_series_data(output::NamedTuple)
 	states = output[:states]
 
 
-	E = [state[:Control][:Voltage][1] for state in states]
+	E = [state[:Control][:ElectricPotential][1] for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
 	#time_series_data = Dict{String, Vector{Float64}}("voltage" => E, "current" => I)

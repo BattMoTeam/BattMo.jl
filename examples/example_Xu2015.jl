@@ -33,7 +33,7 @@ ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Disch
 
 for data in outputs
 	local t = [state[:Control][:Controller].time for state in data.output[:states]]
-	local E = [state[:Control][:Voltage][1] for state in data.output[:states]]
+	local E = [state[:Control][:ElectricPotential][1] for state in data.output[:states]]
 	lines!(ax, t, E, label = @sprintf("%.1f", data.CRate))
 end
 

@@ -19,7 +19,7 @@ using GLMakie
 
 function get_tV(x)
 	t = [state[:Control][:Controller].time for state in x[:states]]
-	V = [state[:Control][:Voltage][1] for state in x[:states]]
+	V = [state[:Control][:ElectricPotential][1] for state in x[:states]]
 	return (t, V)
 end
 
@@ -169,7 +169,7 @@ sim_c2 = Simulation(model, cell_parameters_calibrated2, cycling_protocol2)
 output2_c = solve(sim_c2, accept_invalid = false);
 
 t2_c = [state[:Control][:Controller].time for state in output2_c[:states]]
-V2_c = [state[:Control][:Voltage][1] for state in output2_c[:states]]
+V2_c = [state[:Control][:ElectricPotential][1] for state in output2_c[:states]]
 
 fig = Figure()
 ax = Axis(fig[1, 1], title = "CRate = 2.0")

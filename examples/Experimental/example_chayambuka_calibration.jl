@@ -111,7 +111,7 @@ output = solve(sim; info_level = 0);
 ######### Plot results ##########
 
 t0 = get_output_time_series(output)[:Time]
-V0 = get_output_time_series(output)[:Voltage]
+V0 = get_output_time_series(output)[:ElectricPotential]
 metrics = get_output_metrics(output)
 
 
@@ -167,7 +167,7 @@ output_opt = solve(sim_opt);
 
 time_series = get_output_time_series(output_opt)
 t_opt = time_series[:Time]
-V_opt = time_series[:Voltage]
+V_opt = time_series[:ElectricPotential]
 
 fig = Figure()
 ax = Axis(fig[1, 1], title = "CRate = 0.1")

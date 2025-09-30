@@ -22,7 +22,7 @@ using Test
 		output = solve(sim)
 
 		Cc = map(x -> x[:Control][:Current][1], output.states)
-		Voltage = map(x -> x[:Control][:Voltage][1], output.states)
+		Voltage = map(x -> x[:Control][:ElectricPotential][1], output.states)
 		@test length(output.states) == 137
 		@test Cc[2] ≈ 0.02321200713128439 atol = 1e-2
 		for i in 3:length(Cc)

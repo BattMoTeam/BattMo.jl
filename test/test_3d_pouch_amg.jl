@@ -34,7 +34,7 @@ using Test
 		verbose = 0
 
 		varpreconds = Vector{BattMo.VariablePrecond}()
-		push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Voltage, :charge_conservation, nothing))
+		push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :ElectricPotential, :charge_conservation, nothing))
 		g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global, nothing)
 
 		params                       = Dict()
@@ -61,7 +61,7 @@ using Test
 
 
 		Cc = map(x -> x[:Control][:Current][1], states)
-		phi = map(x -> x[:Control][:Voltage][1], states)
+		phi = map(x -> x[:Control][:ElectricPotential][1], states)
 		@test length(states) == 80
 		@test Cc[1] ≈ 0.008165838495401362 atol = 1e-4
 		for i in 3:length(Cc)

@@ -940,7 +940,7 @@ function setup_initial_state(input, model::IntercalationBattery)
 		if phi isa Int
 			phi = convert(Float64, phi)
 		end
-		init[:Voltage] = fill(phi, nc)
+		init[:ElectricPotential] = fill(phi, nc)
 		return init
 	end
 
@@ -949,7 +949,7 @@ function setup_initial_state(input, model::IntercalationBattery)
 	# Setup initial state in negative active material
 
 	init, nc, negOCP = setup_init_am(:NegativeElectrodeActiveMaterial, multimodel)
-	init[:Voltage] = zeros(typeof(negOCP), nc)
+	init[:ElectricPotential] = zeros(typeof(negOCP), nc)
 	initState[:NegativeElectrodeActiveMaterial] = init
 
 	# Setup initial state in electrolyte
@@ -957,15 +957,15 @@ function setup_initial_state(input, model::IntercalationBattery)
 	nc = count_entities(multimodel[:Electrolyte].data_domain, Cells())
 
 	init = Dict()
-	init[:Concentration] = input.cell_parameters["Electrolyte"]["Concentration"] * ones(nc)
-	init[:Voltage] = fill(-negOCP, nc)
+	init[:ElectrolyteConcentration] = input.cell_parameters["Electrolyte"]["Concentration"] * ones(nc)
+	init[:ElectricPotential] = fill(-negOCP, nc)
 
 	initState[:Electrolyte] = init
 
 	# Setup initial state in positive active material
 
 	init, nc, posOCP = setup_init_am(:PositiveElectrodeActiveMaterial, multimodel)
-	init[:Voltage] = fill(posOCP - negOCP, nc)
+	init[:ElectricPotential] = fill(posOCP - negOCP, nc)
 
 	initState[:PositiveElectrodeActiveMaterial] = init
 
@@ -977,7 +977,7 @@ function setup_initial_state(input, model::IntercalationBattery)
 	end
 
 	init = Dict()
-	init[:Voltage] = posOCP - negOCP
+	init[:ElectricPotential] = posOCP - negOCP
 	init[:Current] = getInitCurrent(multimodel[:Control])
 
 	initState[:Control] = init

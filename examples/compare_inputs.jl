@@ -21,7 +21,7 @@ output1 = solve(sim; accept_invalid = true)
 
 
 t1 = [state[:Control][:Controller].time for state in output1[:states]]
-E1 = [state[:Control][:Voltage][1] for state in output1[:states]]
+E1 = [state[:Control][:ElectricPotential][1] for state in output1[:states]]
 I1 = [state[:Control][:Current][1] for state in output1[:states]]
 
 

@@ -16,7 +16,7 @@ function test_adjoints()
 
 	output0 = solve(sim, info_level = -1)
 	t0 = [state[:Control][:Controller].time for state in output0[:states]]
-	V0 = [state[:Control][:Voltage][1] for state in output0[:states]]
+	V0 = [state[:Control][:ElectricPotential][1] for state in output0[:states]]
 
 	vc0 = VoltageCalibration(t0, V0, sim)
 	obj0 = BattMo.setup_calibration_objective(vc0)
