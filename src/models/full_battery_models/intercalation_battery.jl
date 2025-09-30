@@ -460,7 +460,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		else
 			label = nothing
 		end
-		sys_am = ActiveMaterialP2D(am_params, rp, N, D; label = label)
+		sys_am = ActiveMaterialP2D(am_params, rp, N, Float64(D); label = label)
 	else
 		sys_am = ActiveMaterialNoParticleDiffusion(am_params)
 	end
