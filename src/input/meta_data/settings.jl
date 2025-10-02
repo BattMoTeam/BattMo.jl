@@ -62,7 +62,7 @@ function get_setting_meta_data()
 			"category" => "ModelSettings",
 			"description" => "Which model describes the current collectors.",
 		),
-		"GridResolutionHeight" => Dict(
+		"HeightGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 100,
@@ -71,7 +71,7 @@ function get_setting_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the height of the cell (used in P4D cylindrical)",
 		),
-		"GridResolutionAngular" => Dict(
+		"AngularGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 100,
@@ -80,16 +80,16 @@ function get_setting_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Number of discretisation angles for a cylindrical cell (used in P4D cylindrical)",
 		),
-		"GridResolutionElectrodeWidth" => Dict(
+		"ElectrodeWidthGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
 			"category" => "SimulationSettings",
-			"context_type" => "GridResolutionPositiveElectrode",
+			"context_type" => "GridPointsPositiveElectrode",
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the width dimension of the electrode.",
 		),
-		"GridResolutionElectrodeLength" => Dict(
+		"ElectrodeLengthGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
@@ -97,7 +97,7 @@ function get_setting_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the length dimension of the electrode.",
 		),
-		"GridResolutionPositiveElectrodeCoating" => Dict(
+		"PositiveElectrodeCoatingGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
@@ -105,7 +105,7 @@ function get_setting_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the thickness dimension of the positive electrode.",
 		),
-		"GridResolutionPositiveElectrodeParticle" => Dict(
+		"PositiveElectrodeParticleGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
@@ -113,7 +113,7 @@ function get_setting_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the radial pseudo dimension of the positive electrode active material particles.",
 		),
-		"GridResolutionNegativeElectrodeCoating" => Dict(
+		"NegativeElectrodeCoatingGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
@@ -121,7 +121,7 @@ function get_setting_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the thickness dimension of the negative electrode.",
 		),
-		"GridResolutionPositiveElectrodeCurrentCollector" => Dict(
+		"PositiveElectrodeCurrentCollectorGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
@@ -129,7 +129,7 @@ function get_setting_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the thickness dimension of the positive electrode current collector.",
 		),
-		"GridResolutionPositiveElectrodeCurrentCollectorTabWidth" => Dict(
+		"PositiveElectrodeCurrentCollectorTabWidthGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
@@ -137,7 +137,7 @@ function get_setting_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "In the current collector tab at the positive electrode, the number of grid points along the width dimension of the tab's face.",
 		),
-		"GridResolutionPositiveElectrodeCurrentCollectorTabLength" => Dict(
+		"PositiveElectrodeCurrentCollectorTabLengthGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
@@ -145,7 +145,7 @@ function get_setting_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a",
 			"description" => "In the current collector tab at the positive electrode, the number of grid points along the length dimension of the tab's face.",
 		),
-		"GridResolutionNegativeElectrodeCurrentCollector" => Dict(
+		"NegativeElectrodeCurrentCollectorGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
@@ -153,7 +153,7 @@ function get_setting_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a",
 			"description" => "Number of grid points along the thickness dimension of the negative electrode current collector.",
 		),
-		"GridResolutionNegativeElectrodeCurrentCollectorTabWidth" => Dict(
+		"NegativeElectrodeCurrentCollectorTabWidthGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
@@ -161,7 +161,7 @@ function get_setting_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a",
 			"description" => "In the current collector tab at the negative electrode, the number of grid points along the width dimension of the tab's face.",
 		),
-		"GridResolutionNegativeElectrodeCurrentCollectorTabLength" => Dict(
+		"NegativeElectrodeCurrentCollectorTabLengthGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
@@ -169,7 +169,7 @@ function get_setting_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a",
 			"description" => "In the current collector tab at the negative electrode, the number of grid points along the length dimension of the tab's face.",
 		),
-		"GridResolutionNegativeElectrodeParticle" => Dict(
+		"NegativeElectrodeParticleGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,
@@ -177,7 +177,7 @@ function get_setting_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a",
 			"description" => "Number of grid points along the radial pseudo dimension of the negative electrode active material particles.",
 		),
-		"GridResolutionSeparator" => Dict(
+		"SeparatorGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,
 			"max_value" => 1000,

@@ -34,16 +34,15 @@ function runP2DBatt(json_file)
 	sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 	output = solve(sim; accept_invalid = true)
 
-	states = output[:states]
-	model = output[:extra][:model]
-	multimodel = model.multimodel
+	states = output.jutul_output.states
+	multimodel = sim.model.multimodel
 
-	energy_efficiency = computeEnergyEfficiency(states)
-	discharge_energy  = computeCellEnergy(states)
+	energy_efficiency = output.metrics["RoundTripEfficiency"]
+	discharge_energy  = output.metrics["DischargeEnergy"]
 
 	con = BattMo.Constants()
 
-	time_series = get_output_time_series(output)
+	time_series = output.time_series
 
 	# Get some result values
 	number_of_states                 = size(states)

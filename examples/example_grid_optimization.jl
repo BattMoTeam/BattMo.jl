@@ -25,9 +25,9 @@ for (i, x_res) in enumerate(x_res_list)
 	simulation_settings = deepcopy(base_simulation_settings)
 
 	# Modify grid resolution
-	simulation_settings["GridResolutionNegativeElectrodeCoating"] = x_res
-	simulation_settings["GridResolutionPositiveElectrodeCoating"] = x_res
-	simulation_settings["GridResolutionSeparator"] = Int(x_res ÷ 2)
+	simulation_settings["NegativeElectrodeCoatingGridPoints"] = x_res
+	simulation_settings["PositiveElectrodeCoatingGridPoints"] = x_res
+	simulation_settings["SeparatorGridPoints"] = Int(x_res ÷ 2)
 
 	# Load model settings
 	model_settings = load_model_settings(; from_default_set = "P2D")

@@ -29,10 +29,10 @@ using Test
 
 		output = solve(sim)
 
-		states = get_output_states(output)
+		states = output.states
 
-		sei_thickness = states.SEIThickness
-		voltage_drop = states.SEIVoltageDrop
+		sei_thickness = states["SEIThickness"]
+		voltage_drop = states["SEIVoltageDrop"]
 
 
 		@test length(sei_thickness[:, 2]) ≈ 2629 atol = 0

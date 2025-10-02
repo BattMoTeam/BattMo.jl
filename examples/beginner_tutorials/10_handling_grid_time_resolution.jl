@@ -92,7 +92,7 @@ plot_dashboard(output; plot_type = "line")
 # Now scrol the bar at the bottom of the window the change the time step to see how the concentrations and potentials change over time.
 # For most time steps, we can see that the electrolyte concentration and positive electrode surface concentration over position are not smooth.
 # This is because the grid resolution of the negative and positive electrode are too low to capture the concentration gradient.
-# We can change the grid resolution by modifying the simulation settings. Let's see which simulation setting is available that changes the negative and positive electrode coating thickness grid resolution.
+# We can change the grid resolution by modifying the number of grid points in the simulation settings. Let's see which simulation setting is available that changes the negative and positive electrode coating thickness number of grid points.
 
 print_setting_info("PositiveElectrode"; category = "SimulationSettings")
 
@@ -100,16 +100,16 @@ print_setting_info("PositiveElectrode"; category = "SimulationSettings")
 
 print_setting_info("NegativeElectrode"; category = "SimulationSettings")
 
-# We can see that the grid resolutions can be controlled by GridResolutionPositiveElectrodeCoating and GridResolutionNegativeElectrodeCoating.
+# We can see that the grid resolutions can be controlled by PositiveElectrodeCoatingGridPoints and NegativeElectrodeCoatingGridPoints.
 
-# Lets have a look at the current grid resolutions and increase them.
+# Lets have a look at the current number of grid points and increase them.
 println("Current grid resolution in positive electrode coating and separator: ",
-	simulation_settings["GridResolutionPositiveElectrodeCoating"],
+	simulation_settings["PositiveElectrodeCoatingGridPoints"],
 	" and ",
-	simulation_settings["GridResolutionNegativeElectrodeCoating"])
+	simulation_settings["NegativeElectrodeCoatingGridPoints"])
 
-simulation_settings["GridResolutionPositiveElectrodeCoating"] = 20 # Increase the grid resolution in the positive electrode coating to 20
-simulation_settings["GridResolutionNegativeElectrodeCoating"] = 20 # Increase the grid resolution in the separator to 10
+simulation_settings["PositiveElectrodeCoatingGridPoints"] = 20 # Increase the number of grid points in the positive electrode coating to 20
+simulation_settings["NegativeElectrodeCoatingGridPoints"] = 20 # Increase the number of grid points in the separator to 10
 
 #Let's rerun the simulation with the new grid resolution and plot the results.
 sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)

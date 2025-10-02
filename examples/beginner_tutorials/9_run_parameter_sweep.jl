@@ -35,8 +35,8 @@ fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 
 for data in outputs_rate
-	local t = [state[:Control][:Controller].time for state in data.output[:states]]
-	local E = [state[:Control][:ElectricPotential][1] for state in data.output[:states]]
+	local t = data.output.time_series["Time"]
+	local E = data.output.time_series["Voltage"]
 	lines!(ax, t, E, label = @sprintf("%.1e", 10^data.r))
 end
 
@@ -73,9 +73,9 @@ fig1 = Figure()
 ax1 = Axis(fig1[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 
 for data in outputs_diff
-	if length(data.output[:states]) > 0 #if simulation is successful
-		local t = [state[:Control][:Controller].time for state in data.output[:states]]
-		local E = [state[:Control][:ElectricPotential][1] for state in data.output[:states]]
+	if length(data.output.time_series["Time"]) > 0 #if simulation is successful
+		local t = data.output.time_series["Time"]
+		local E = data.output.time_series["Voltage"]
 		lines!(ax1, t, E, label = @sprintf("%.1e", 10^data.d))
 	end
 end

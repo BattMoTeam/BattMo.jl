@@ -128,7 +128,7 @@ function load_simulation_settings(; from_file_path::Union{String, Nothing} = not
 		if empty == true
 			simulation_settings_instance = get_empty_simulation_settings(from_model_template)
 		else
-			simulation_settings_instance = get_default_simulation_settings(from_model_template)
+			simulation_settings_instance = get_default_simulation_settings(from_model_template).all
 		end
 		return SimulationSettings(simulation_settings_instance; source_path = nothing)
 	else
@@ -152,7 +152,7 @@ An instance of `SolverSettings`.
 # Errors
 Throws an `ArgumentError` if none of the arguments are provided.
 """
-function load_solver_settings(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing, from_model_template::Union{ModelConfigured, Nothing} = nothing, empty = false)
+function load_solver_settings(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing, from_model_template::Union{ModelConfigured, Nothing} = nothing)
 	if !isnothing(from_file_path)
 		# Assuming JSON and SimulationSettings are correctly defined
 		solver_settings_instance = JSON.parsefile(from_file_path)
@@ -162,11 +162,9 @@ function load_solver_settings(; from_file_path::Union{String, Nothing} = nothing
 		file_path = parameter_file_path("solver_settings", from_default_set)
 		return load_solver_settings(; from_file_path = file_path)
 	elseif !isnothing(from_model_template)
-		if empty == true
-			solver_settings_instance = get_empty_solver_settings(from_model_template)
-		else
-			solver_settings_instance = get_default_solver_settings(from_model_template)
-		end
+
+		solver_settings_instance = get_default_solver_settings(from_model_template).all
+
 		return SolverSettings(solver_settings_instance; source_path = nothing)
 	else
 		throw(ArgumentError("Either 'from_file_path' or 'from_default_set' must be provided."))

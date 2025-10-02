@@ -183,8 +183,8 @@ function BattMo.plot_output_impl(
 	grid = fig[1, 1] = GridLayout()
 
 	# Get time info
-	time_series_data = get_output_time_series(output)
-	full_time = time_series_data[:Time]
+	time_series_data = output.time_series
+	full_time = time_series_data["Time"]
 	nt = length(full_time)
 	available_time_vars = keys(time_series_data)
 
@@ -289,9 +289,9 @@ function BattMo.plot_output_impl(
 				main_unit_str = get_main_unit_str(clean_var)
 
 				# State variables and metrics
-				states_data = get_output_states(output)
-				metric_data = get_output_metrics(output)
-				time_series = get_output_time_series(output)
+				states_data = output.states
+				metric_data = output.metrics
+				time_series = output.time_series
 
 				data = merge(states_data, metric_data, time_series)
 
@@ -423,23 +423,23 @@ end
 
 function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = true)
 
-	time_series = get_output_time_series(output; quantities = ["Time", "Voltage", "Current"])
-	t = time_series[:Time]
-	I = time_series[:Current]
-	E = time_series[:Voltage]
+	time_series = output.time_series
+	t = time_series["Time"]
+	I = time_series["Current"]
+	E = time_series["Voltage"]
 
-	states = get_output_states(output)
+	states = output.states
 
 	n_steps = length(t)
-	x = states[:Position] * 10^6
+	x = states["Position"] * 10^6
 
-	NeAm_conc = states[:NegativeElectrodeActiveMaterialSurfaceConcentration]
-	PeAm_conc = states[:PositiveElectrodeActiveMaterialSurfaceConcentration]
-	Elyte_conc = states[:ElectrolyteConcentration]
+	NeAm_conc = states["NegativeElectrodeActiveMaterialSurfaceConcentration"]
+	PeAm_conc = states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
+	Elyte_conc = states["ElectrolyteConcentration"]
 
-	NeAm_pot = states[:NegativeElectrodeActiveMaterialPotential]
-	PeAm_pot = states[:PositiveElectrodeActiveMaterialPotential]
-	Elyte_pot = states[:ElectrolytePotential]
+	NeAm_pot = states["NegativeElectrodeActiveMaterialPotential"]
+	PeAm_pot = states["PositiveElectrodeActiveMaterialPotential"]
+	Elyte_pot = states["ElectrolytePotential"]
 	if plot_type == "simple"
 		fig = Figure(size = (1200, 1000))
 		grid = fig[1, 1] = GridLayout()

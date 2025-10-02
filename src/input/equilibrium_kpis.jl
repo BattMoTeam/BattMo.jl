@@ -320,8 +320,8 @@ end
 # Cell XXXX from the output structure
 #########################################
 
-function compute_capacity(output::NamedTuple)
-	states = output[:states]
+function compute_capacity(jutul_output::NamedTuple)
+	states = jutul_output[:states]
 	t = [state[:Control][:Controller].time for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
@@ -340,8 +340,8 @@ function compute_capacity(output::NamedTuple)
 
 end
 
-function compute_discharge_capacity(output::NamedTuple; cycle_number = nothing)
-	states = output[:states]
+function compute_discharge_capacity(jutul_output::NamedTuple; cycle_number = nothing)
+	states = jutul_output[:states]
 
 	if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
 		if isnothing(cycle_number)
@@ -411,8 +411,8 @@ end
 
 
 
-function compute_charge_capacity(output::NamedTuple; cycle_number = nothing)
-	states = output[:states]
+function compute_charge_capacity(jutul_output::NamedTuple; cycle_number = nothing)
+	states = jutul_output[:states]
 
 	if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
 		if isnothing(cycle_number)
@@ -465,8 +465,8 @@ function compute_charge_capacity(states; cycle_number = nothing)
 end
 
 
-function compute_round_trip_efficiency(output::NamedTuple; cycle_number = nothing)
-	states = output[:states]
+function compute_round_trip_efficiency(jutul_output::NamedTuple; cycle_number = nothing)
+	states = jutul_output[:states]
 	if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
 		if isnothing(cycle_number)
 
@@ -482,8 +482,8 @@ function compute_round_trip_efficiency(output::NamedTuple; cycle_number = nothin
 	return computeEnergyEfficiency(states; cycle_number = cycle_number)
 end
 
-function compute_discharge_energy(output::NamedTuple; cycle_number = nothing)
-	states = output[:states]
+function compute_discharge_energy(jutul_output::NamedTuple; cycle_number = nothing)
+	states = jutul_output[:states]
 
 	if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
 		if isnothing(cycle_number)
@@ -543,8 +543,8 @@ function compute_discharge_energy(states; cycle_number = nothing)
 
 end
 
-function compute_charge_energy(output::NamedTuple; cycle_number = nothing)
-	states = output[:states]
+function compute_charge_energy(jutul_output::NamedTuple; cycle_number = nothing)
+	states = jutul_output[:states]
 
 	if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
 		if isnothing(cycle_number)

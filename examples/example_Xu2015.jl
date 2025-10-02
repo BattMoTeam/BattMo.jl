@@ -32,8 +32,8 @@ fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 
 for data in outputs
-	local t = [state[:Control][:Controller].time for state in data.output[:states]]
-	local E = [state[:Control][:ElectricPotential][1] for state in data.output[:states]]
+	local t = data.output.time_series["Time"]
+	local E = data.output.time_series["Voltage"]
 	lines!(ax, t, E, label = @sprintf("%.1f", data.CRate))
 end
 

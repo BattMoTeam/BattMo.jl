@@ -28,6 +28,9 @@ using Test
 
 		cell_parameter_set = load_cell_parameters(; from_model_template = model_setup)
 		simulation_settings = load_simulation_settings(; from_model_template = model_setup)
+		simulation_settings = load_simulation_settings(; from_model_template = model_setup, empty = true)
+		@test simulation_settings["TimeStepDuration"] == 0
+		simulation_settings = load_solver_settings(; from_model_template = model_setup)
 
 		true
 
