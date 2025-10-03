@@ -102,8 +102,8 @@ print_calibration_overview(vc05)
 # experimental data for the 0.5C discharge curve.
 sim_opt = Simulation(model, cell_parameters_calibrated, cycling_protocol)
 output_opt = solve(sim_opt);
-t_opt = output_opt.time["Time"]
-V_opt = output_opt.time["Voltage"]
+t_opt = output_opt.time_series["Time"]
+V_opt = output_opt.time_series["Voltage"]
 
 fig = Figure()
 ax = Axis(fig[1, 1], title = "CRate = 0.5")
@@ -220,8 +220,8 @@ for (i, data) in enumerate(outputs_calibrated)
 end
 
 for (i, df) in enumerate(dfs)
-	t_i = data.output.time_series["Time"]
-	V_i = data.output.time_series["Voltage"]
+	t_i = df[:, 1]
+	V_i = df[:, 2]
 	label = "Experimental $(round(CRates[i], digits = 2))"
 	lines!(ax, t_i, V_i, linestyle = :dot, label = label, color = colors[i])
 end
