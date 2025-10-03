@@ -36,10 +36,13 @@ plot(ts.Time, ts.Voltage)
 """
 function get_output_time_series(jutul_output::NamedTuple; quantities::Union{Nothing, Vector{String}} = nothing)
 
+	states = jutul_output[:states]
+
 	# Extract data
 	voltage, current = extract_time_series_data(jutul_output)
 	time = extract_output_times(jutul_output)
 	capacity = compute_capacity(jutul_output)
+	cycle_number = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : nothing
 
 	# Available data mapping
 	data_map = Dict(
@@ -48,6 +51,10 @@ function get_output_time_series(jutul_output::NamedTuple; quantities::Union{Noth
 		"Current" => current,
 		"Capacity" => capacity,
 	)
+
+	if !isnothing(cycle_number)
+		data_map["CycleNumber"] = cycle_number
+	end
 
 	if isnothing(quantities)
 		# Default: include all
@@ -81,7 +88,7 @@ Computes key performance metrics from a battery simulation output, either global
 
 # Returns
 A `NamedTuple` where each field is a vector containing the computed metric values (one value per cycle, or globally if no cycles are detected). Possible fields include:
-- `:CycleNumber`
+- `:CycleIndex`
 - `:DischargeCapacity`
 - `:ChargeCapacity`
 - `:DischargeEnergy`
@@ -141,7 +148,7 @@ function get_output_metrics(
 
 		# Dictionary of all available quantities
 		available_quantities = Dict(
-			"CycleNumber"         => cycle_array,
+			"CycleIndex"          => cycles_above_zero,
 			"DischargeCapacity"   => discharge_cap,
 			"ChargeCapacity"      => charge_cap,
 			"DischargeEnergy"     => discharge_energy,

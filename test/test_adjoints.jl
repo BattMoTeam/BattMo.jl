@@ -20,14 +20,14 @@ function test_adjoints()
 
 	vc0 = VoltageCalibration(t0, V0, sim)
 	obj0 = BattMo.setup_calibration_objective(vc0)
-	dt = report_timesteps(output0[:reports])[1:end-1]
-	mutlimodel = sim.model.multimodel
+	dt = report_timesteps(output0.jutul_output.reports)[1:end-1]
+	multimodel = sim.model.multimodel
 	jutul_states = output0.jutul_output.states
 	forces = sim.forces
 	prm = sim.parameters
 	state0 = sim.initial_state
 	# Check that the objective is zero when the voltage data matches the model output
-	@test Jutul.evaluate_objective(obj0, mutlimodel, jutul_states, dt, forces) ≈ 0.0
+	@test Jutul.evaluate_objective(obj0, multimodel, jutul_states, dt, forces) ≈ 0.0
 	# Perturb the voltage data to make the objective non-zero
 	vc = VoltageCalibration(t0, V0 .+ 1.0, sim)
 
@@ -59,7 +59,7 @@ function test_adjoints()
 		["PositiveElectrode", "ActiveMaterial", "ReactionRateConstant"];
 		lower_bound = 1e-16, upper_bound = 1e-10)
 	obj = BattMo.setup_calibration_objective(vc)
-	val = Jutul.evaluate_objective(obj, model, states, dt, forces)
+	val = Jutul.evaluate_objective(obj, multimodel, jutul_states, dt, forces)
 	@test val ≈ 1.0
 
 

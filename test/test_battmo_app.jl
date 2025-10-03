@@ -46,7 +46,7 @@ function runP2DBatt(json_file)
 
 	# Get some result values
 	number_of_states                 = size(states)
-	time_values                      = time_series[:Time]
+	time_values                      = time_series["Time"]
 	cell_voltage                     = [state[:Control][:ElectricPotential][1] for state in states]
 	cell_current                     = [state[:Control][:Current][1] for state in states]
 	negative_electrode_grid_wrap     = physical_representation(multimodel[:NegativeElectrodeActiveMaterial])

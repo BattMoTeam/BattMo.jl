@@ -55,9 +55,9 @@ plot_output(output,
 # Some simple examples plotting metrics using the `plot_output` function
 plot_output(output,
 	[
-		"DischargeCapacity vs CycleNumber",
+		"DischargeCapacity vs CycleIndex",
 		"CycleNumber vs Time",
-		"RoundTripEfficiency vs Time",
+		"RoundTripEfficiency vs CycleIndex",
 		"RoundTripEfficiency vs DischargeCapacity",
 	];
 	layout = (4, 2),
@@ -77,7 +77,7 @@ d2 = output_data["PositiveElectrodeActiveMaterialSurfaceConcentration"][t, :]
 d3 = output_data["ElectrolyteConcentration"][t, :]
 
 f = Figure()
-ax = Axis(f[1, 1], title = "Concentration at t = $(output_data[:Time][t]) s", xlabel = "Position [m]", ylabel = "Concentration")
+ax = Axis(f[1, 1], title = "Concentration at t = $(output_data["Time"][t]) s", xlabel = "Position [m]", ylabel = "Concentration")
 l1 = lines!(ax, output_data["Position"], d1, color = :red, linewidth = 2, label = "NeAmSurfaceConcentration")
 l2 = lines!(ax, output_data["Position"], d2, color = :blue, linewidth = 2, label = "PeAmSurfaceConcentration")
 l3 = lines!(ax, output_data["Position"], d3, color = :green, linewidth = 2, label = "ElectrolyteConcentration")
@@ -85,7 +85,7 @@ axislegend(ax)
 display(GLMakie.Screen(), f)
 
 g = Figure()
-ax2 = Axis(g[1, 1], title = "Active Material Concentration at t = $(output_data[:Time][t]) s", xlabel = "Position", ylabel = "Depth")
+ax2 = Axis(g[1, 1], title = "Active Material Concentration at t = $(output_data["Time"][t]) s", xlabel = "Position", ylabel = "Depth")
 hm1 = contourf!(ax2, output_data["Position"], output_data["NegativeElectrodeActiveMaterialRadius"], output_data["NegativeElectrodeActiveMaterialParticleConcentration"][t, :, :])
 hm2 = contourf!(ax2, output_data["Position"], output_data["PositiveElectrodeActiveMaterialRadius"], output_data["PositiveElectrodeActiveMaterialParticleConcentration"][t, :, :])
 Colorbar(g[1, 2], hm1)
