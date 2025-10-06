@@ -164,7 +164,7 @@ end
 
 
 function BattMo.plot_output_impl(
-	output::NamedTuple,
+	output::SimulationOutput,
 	variables::Union{Vector{String}, Vector{Any}, Vector{Any}};
 	layout::Union{Nothing, Tuple{Int, Int}} = nothing,
 	new_window = true,
