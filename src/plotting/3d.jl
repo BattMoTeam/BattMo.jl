@@ -5,7 +5,7 @@ plot_interactive_3d
 
 Launch an interactive plot for visualizing simulation results of 3D geometries.
 """
-function plot_interactive_3d(output::NamedTuple; shift = nothing, colormap = :curl)
+function plot_interactive_3d(output::SimulationOutput; shift = nothing, colormap = :curl)
 
 	if isnothing(shift)
 		shift_copy = Dict()
