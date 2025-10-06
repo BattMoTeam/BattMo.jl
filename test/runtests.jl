@@ -1,7 +1,7 @@
 using BattMo
 using Test
 
-
+include("test_pythoncall.jl")
 include("test_headless_ui.jl")
 include("test_3d_pouch_amg.jl")
 include("test_sodium_ion.jl")

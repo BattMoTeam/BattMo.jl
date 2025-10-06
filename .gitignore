@@ -35,3 +35,5 @@ apps/demo_app_with_plotting/battmo_compiled/*
 *.7z
 *.ico
 *.dat
+
+__pycache__/
