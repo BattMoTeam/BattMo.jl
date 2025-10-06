@@ -337,6 +337,7 @@ function setup_submodels(inputparams::MatlabInput)
 		am_params[:volumetric_surface_area] = inputparams_itf["volumetricSurfaceArea"]
 		am_params[:volume_fraction]         = inputparams_co["volumeFraction"]
 		am_params[:volume_fractions]        = inputparams_co["volumeFractions"]
+		am_params[:setting_butler_volmer]   = "Standard"
 
 		k0 = inputparams_itf["reactionRateConstant"]
 		Eak = inputparams_itf["activationEnergyOfReaction"]
