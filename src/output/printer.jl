@@ -90,13 +90,13 @@ function print_output_overview(output::NamedTuple)
 
 	function print_table(case_name::String, vars::Vector{NamedTuple})
 		println("\nCase: $(uppercase(case_name))")
-		println("="^50)
-		println(rpad("Variable", 35), "Unit")
-		println("-"^50)
+		println("="^80)
+		println(rpad("Variable", 65), "Unit")
+		println("-"^80)
 		for v in sort(vars, by = x -> x.name)
-			println(rpad(string(v.name), 35), v.unit)
+			println(rpad(string(v.name), 65), v.unit)
 		end
-		println("="^50)
+		println("="^80)
 	end
 
 	for case in ["time_series", "metrics", "states"]
