@@ -432,7 +432,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 			funcpath = haskey(inputparams_active_material["DiffusionCoefficient"], "FilePath") ? inputparams_active_material["DiffusionCoefficient"]["FilePath"] : nothing
 			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 
-			am_params[:diff_func] = fcn_jl
+			am_params[:diff_func] = fcn
 			D = am_params[:diff_func](c, T, refT, cmax)
 
 		else
