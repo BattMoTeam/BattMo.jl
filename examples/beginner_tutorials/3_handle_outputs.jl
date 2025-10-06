@@ -23,12 +23,12 @@ output = solve(sim);
 nothing # hide
 
 
-# Now we'll have a look into what the output entail. The ouput is of type NamedTuple and contains multiple output quantity dicts, the full input dict and some other structures. Lets print the
+# Now we'll have a look into what the output entail. The ouput is of type SimulationOutput and contains multiple output quantity dicts, the full input dict and some other structures. Lets print the
 # keys. 
 
 keys(output)
 
-# In terms of simulation resultys, we can see that the output structure includes time series data, states data and metrics data. Furthermore, it includes the full input dict, some output structure from Jutul, the model instance, and the simulation instance.
+# In terms of simulation results, we can see that the output structure includes time series data, states data and metrics data. Furthermore, it includes the full input dict, some output structure from Jutul, the model instance, and the simulation instance.
 # Let's for now have a look into the simulation results and see how we can access certain output quantities. 
 
 # In BattMo, we make a distinction between three types of results:

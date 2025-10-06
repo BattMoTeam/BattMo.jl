@@ -23,7 +23,7 @@ outputs_rate = []
 for r in range(log_rate_start, log_rate_stop, length = 10)
 	cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 10^r
 	sim = Simulation(model, cell_parameters, cycling_protocol)
-	result = solve(sim; end_report = false)
+	result = solve(sim; info_level = -1)
 	push!(outputs_rate, (r = r, output = result))  # store r together with output
 end
 nothing # hide
@@ -64,7 +64,7 @@ outputs_diff = []
 for d in range(log_D_start, log_D_stop, length = 10)
 	cell_parameters["PositiveElectrode"]["ActiveMaterial"]["DiffusionCoefficient"] = 10^d
 	sim = Simulation(model, cell_parameters, cycling_protocol)
-	result = solve(sim; end_report = false)
+	result = solve(sim; info_level = -1)
 	push!(outputs_diff, (d = d, output = result))  # store r together with output
 end
 nothing # hide

@@ -236,6 +236,8 @@ include("plotting/3d.jl")
 include("plotting/1d.jl")
 
 include("utils/battery_cell_specifications.jl")
+include("output/output_types.jl")
+include("output/metrics.jl")
 include("output/output_format.jl")
 include("output/meta_data/variables.jl")
 include("output/printer.jl")
