@@ -57,12 +57,12 @@ using Test
 			failure_cuts_timestep = false,
 			linear_solver = linear_solver)
 
-		states = output.states
+		jutul_states = output.jutul_output.states
 
 
-		Cc = map(x -> x[:Control][:Current][1], states)
-		phi = map(x -> x[:Control][:ElectricPotential][1], states)
-		@test length(states) == 80
+		Cc = map(x -> x[:Control][:Current][1], jutul_states)
+		phi = map(x -> x[:Control][:ElectricPotential][1], jutul_states)
+		@test length(jutul_states) == 80
 		@test Cc[1] ≈ 0.008165838495401362 atol = 1e-4
 		for i in 3:length(Cc)
 			@test Cc[i] ≈ 0.008165 atol = 1e-4

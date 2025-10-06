@@ -47,32 +47,25 @@ function get_default_model_settings(::Type{LithiumIonBattery})
 	return settings
 end
 
-function get_default_solver_settings(::Type{LithiumIonBattery})
+function get_default_solver_settings(model::LithiumIonBattery)
 	settings = load_solver_settings(; from_default_set = "direct")
 	return settings
 end
 
-function get_default_simulation_settings(st::LithiumIonBattery)
+function get_default_simulation_settings(model::LithiumIonBattery)
 
-	settings = Dict(
-		"GridResolutionElectrodeWidth" => 10,
-		"GridResolutionElectrodeLength" => 10,
-		"GridResolutionPositiveElectrodeCoating" => 10,
-		"GridResolutionPositiveElectrodeParticle" => 10,
-		"GridResolutionPositiveElectrodeCurrentCollector" => 2,
-		"GridResolutionPositiveElectrodeCurrentCollectorTabWidth" => 3,
-		"GridResolutionPositiveElectrodeCurrentCollectorTabLength" => 3,
-		"GridResolutionNegativeElectrodeCoating" => 10,
-		"GridResolutionNegativeElectrodeParticle" => 10,
-		"GridResolutionNegativeElectrodeCurrentCollector" => 2,
-		"GridResolutionNegativeElectrodeCurrentCollectorTabWidth" => 3,
-		"GridResolutionNegativeElectrodeCurrentCollectorTabLength" => 3,
-		"GridResolutionSeparator" => 3, "Grid" => [],
-		"TimeStepDuration" => 50,
-		"RampUpTime" => 10,
-		"RampUpSteps" => 5,
-	)
-	return SimulationSettings(settings; source_path = nothing)
+	model_framework = model.settings["ModelFramework"]
+	if model_framework == "P2D"
+		settings = load_simulation_settings(; from_default_set = "P2D")
+	elseif model_framework == "P4D Pouch"
+		settings = load_simulation_settings(; from_default_set = "P4D_pouch")
+	elseif model_framework == "P4D Cylindrical"
+		settings = load_simulation_settings(; from_default_set = "P4D_cylindrical")
+	else
+		error("ModelFramework $model_famework not recognized")
+	end
+
+	return settings
 
 end
 

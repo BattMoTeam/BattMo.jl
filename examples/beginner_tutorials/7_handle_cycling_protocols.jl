@@ -47,7 +47,7 @@ for d_rate in d_rates
 	protocol["DRate"] = d_rate
 
 	sim = Simulation(model, cell_parameters, protocol)
-	output = solve(sim; end_report = false)
+	output = solve(sim; info_level = -1)
 	push!(outputs, (d_rate = d_rate, output = output))
 end
 nothing # hide
@@ -60,10 +60,9 @@ ax1 = Axis(fig[1, 1], title = "Voltage vs Time", xlabel = "Time / s", ylabel = "
 
 for result in outputs
 
-	states = result.output[:states]
-	t = [state[:Control][:Controller].time for state in states]
-	E = [state[:Control][:ElectricPotential][1] for state in states]
-	I = [state[:Control][:Current][1] for state in states]
+	t = result.output.time_series["Time"]
+	E = result.output.time_series["Voltage"]
+	I = result.output.time_series["Current"]
 
 	label_str = @sprintf("%.1fC", result.d_rate)
 	lines!(ax1, t, E, label = label_str)

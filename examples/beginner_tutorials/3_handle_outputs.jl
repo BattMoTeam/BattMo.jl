@@ -19,157 +19,53 @@ model = LithiumIonBattery()
 
 sim = Simulation(model, cell_parameters, cycling_protocol);
 
-output = solve(sim)
+output = solve(sim);
 nothing # hide
 
 
-# Now we'll have a look into what the output entail. The ouput is of type NamedTuple and contains multiple dicts. Lets print the
-# keys of each dict. 
+# Now we'll have a look into what the output entail. The ouput is of type SimulationOutput and contains multiple output quantity dicts, the full input dict and some other structures. Lets print the
+# properties of the SimulationOutput. 
 
-keys(output)
+propertynames(output)
 
-# So we can see the the output contains state data, cell specifications, reports on the simulation, the input parameters of the simulation, and some extra data.
-# The most important dicts, that we'll dive a bit deeper into, are the states and cell specifications. First let's see how the states output is structured.
+# In terms of simulation results, we can see that the output structure includes time series data, states data and metrics data. Furthermore, it includes the full input dict, some output structure from Jutul, the model instance, and the simulation instance.
+# Let's for now have a look into the simulation results and see how we can access certain output quantities. 
 
-# ### States
-states = output[:states]
-typeof(states)
+# In BattMo, we make a distinction between three types of results:
+# - time series: includes all quantities that only depend on time. For example, time itself, cell voltage, current, capacity, etc.
+# - states: includes all the state quantities like for example, concentration, potential, charge, etc. These quantities can depend on time, position, and radius.
+# - metrics: includes all the from output quantities calculated cell metrics like discharge capacity, charge energy, round trip efficiency, etc. These metrics depend on the cycle number.
 
-# As we can see, the states output is a Vector that contains dicts.
+# The have an overview of all the quantities that are available you can run:
+print_output_overview(output)
 
-keys(states)
+# To get more information on particular output variables, for example all that have concentration in their name:
+print_output_variable_info("concentration")
 
-# In this case it consists of 77 dicts. Each dict represents 
-# a time step in the simulation and each time step stores quantities divided into battery component related group. This structure agrees with the overal model structure of BattMo.
+# As the time series, states, and metrics structures are dicts we can retrieve quantities by accessing their key. Let's for example create a simple voltage vs capacity plot.
 
-initial_state = states[1]
-keys(initial_state)
+voltage = output.time_series["Voltage"]
+capacity = output.time_series["Capacity"]
 
-# So each time step contains quantities related to the electrolyte, the negative electrode active material, the cycling control, and the positive electrode active material.
-# Lets print the stored quantities for each group.
+fig = Figure()
+ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Capacity / Ah", title = "Discharge curve")
+lines!(ax, capacity, voltage)
+display(fig)
 
-# Electrolyte keys:
-keys(initial_state[:Electrolyte])
-# Negative electrode active material keys:
-keys(initial_state[:NegativeElectrodeActiveMaterial])
-# Positive electrode active material keys:
-keys(initial_state[:PositiveElectrodeActiveMaterial])
-# Control keys:
-keys(initial_state[:Control])
+# Or lets plot the lithium concentration versus the active material particle radius of the positive electrode close to the separator at the and of the discharge:
+radius = output.states["PositiveElectrodeActiveMaterialRadius"]
+positive_electrode_concentration = output.states["PositiveElectrodeActiveMaterialParticleConcentration"]
 
-# ### Cell specifications
-# Now lets see what quantities are stored within the cellSpecifications dict in the simulation output.
+simulation_settings = output.input["SimulationSettings"] # Retrieve the default simulation settings to get the grid point number that we need.
 
-cell_specifications = output[:cellSpecifications];
-keys(cell_specifications)
+grid_point = simulation_settings["NegativeElectrodeCoatingGridPoints"] + simulation_settings["SeparatorGridPoints"] + 1 # First grid point of the positive electrode
 
-# Let's say we want to plot the cell current and cell voltage over time. First we'll retrieve these three quantities from the output.
+concentration_at_grid_point = positive_electrode_concentration[end, grid_point, :]
 
-states = output[:states]
-
-t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:ElectricPotential][1] for state in states]
-I = [state[:Control][:Current][1] for state in states]
-nothing # hide
-
-# Now we can use GLMakie to create a plot. Lets first plot the cell voltage.
-
-f = Figure(size = (1000, 400))
-
-ax = Axis(f[1, 1],
-	title = "Voltage",
-	xlabel = "Time / s",
-	ylabel = "Voltage / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
-)
-
-
-scatterlines!(ax,
-	t,
-	E;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-)
-
-f # hide
-
-# And the cell current.
-
-ax = Axis(f[1, 2],
-	title = "Current",
-	xlabel = "Time / s",
-	ylabel = "Current / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
-)
-
-
-scatterlines!(ax,
-	t,
-	I;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-)
-
-
-f # hide
-
-# ## Retrieving other quantities
-
-# Concentration 
-negative_electrode_surface_concentration = Array([[state[:NegativeElectrodeActiveMaterial][:SurfaceConcentration] for state in states]]);
-positive_electrode_surface_concentration = Array([[state[:PositiveElectrodeActiveMaterial][:SurfaceConcentration] for state in states]]);
-negative_electrode_particle_concentration = Array([[state[:NegativeElectrodeActiveMaterial][:ParticleConcentration] for state in states]]);
-positive_electrode_particle_concentration = Array([[state[:PositiveElectrodeActiveMaterial][:ParticleConcentration] for state in states]]);
-electrolyte_concentration = [state[:Electrolyte][:ElectrolyteConcentration] for state in states];
-
-
-# Potential
-negative_electrode_potential = [state[:NegativeElectrodeActiveMaterial][:ElectricPotential] for state in states];
-electrolyte_potential = [state[:Electrolyte][:ElectricPotential] for state in states];
-positive_electrode_potential = [state[:PositiveElectrodeActiveMaterial][:ElectricPotential] for state in states];
-
-# Grid wrapper:
-# We need Jutul to get the grid wrapper.
-using Jutul
-
-extra = output[:extra]
-model = extra[:model].multimodel
-negative_electrode_grid_wrap = physical_representation(model[:NegativeElectrodeActiveMaterial]);
-electrolyte_grid_wrap = physical_representation(model[:Electrolyte]);
-positive_electrode_grid_wrap = physical_representation(model[:PositiveElectrodeActiveMaterial]);
-
-# Mesh cell centroids coordinates
-centroids_NeAm = negative_electrode_grid_wrap[:cell_centroids, Cells()];
-centroids_Elyte = electrolyte_grid_wrap[:cell_centroids, Cells()];
-print(centroids_Elyte)
-centroids_PeAm = positive_electrode_grid_wrap[:cell_centroids, Cells()];
-
-# Boundary faces coordinates
-boundaries_NeAm = negative_electrode_grid_wrap[:boundary_centroids, BoundaryFaces()];
-boundaries_Elyte = electrolyte_grid_wrap[:boundary_centroids, BoundaryFaces()];
-boundaries_PeAm = positive_electrode_grid_wrap[:boundary_centroids, BoundaryFaces()];
-
-# UPDATE WITH NEW OUTPUT API
-
-# ### The simulation output
-
-# ### Access overpotentials
-
-# ### Plot cell states
-
-# ### Save and load outputs
-
-
+fig = Figure()
+ax = Axis(fig[1, 1], ylabel = "Lithium concentration / mol·L⁻¹", xlabel = "Particle radius / m", title = "Positive electrode concentration")
+lines!(ax, radius, concentration_at_grid_point)
+display(fig)
 
 
 

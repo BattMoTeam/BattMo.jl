@@ -80,12 +80,12 @@ plot_dashboard(output; plot_type = "simple")
 # ## Plot of SEI length
 
 # We recover the SEI length from the `state` output
-states = get_output_states(output)
-seilength = states[:SEIThickness]
+
+seilength = output.states["SEIThickness"]
 
 # We can plot it using the plot_ouput function
 
-ne_index = sim.settings["GridResolutionNegativeElectrodeCoating"]
+ne_index = sim.settings["NegativeElectrodeCoatingGridPoints"]
 
 plot_output(output,
 	["SEIThickness vs Time at Position index $ne_index",

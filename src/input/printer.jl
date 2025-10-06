@@ -72,21 +72,6 @@ function print_cell_info(cell_parameters::CellParameters)
 	println("  Pos. Mass Loading:       ", safe_kpi("Positive Electrode Mass Loading"), " mg/cm²")
 	println("  Neg. Mass Loading:       ", safe_kpi("Negative Electrode Mass Loading"), " mg/cm²")
 
-	# --- Functional Status ---
-	println("\n" * bold("🧠 Functional Status"))
-	neg = cell_parameters["NegativeElectrode"]["ActiveMaterial"]
-	pos = cell_parameters["PositiveElectrode"]["ActiveMaterial"]
-	elec = cell_parameters["Electrolyte"]
-
-	println("  Neg. Diffusion Coeff:     ", param_status(neg["DiffusionCoefficient"]))
-	println("  Neg. OCP:                 ", param_status(neg["OpenCircuitPotential"]))
-	println("  Neg. Reaction Rate:       ", param_status(neg["ReactionRateConstant"]))
-	println("  Pos. Diffusion Coeff:     ", param_status(pos["DiffusionCoefficient"]))
-	println("  Pos. OCP:                 ", param_status(pos["OpenCircuitPotential"]))
-	println("  Pos. Reaction Rate:       ", param_status(pos["ReactionRateConstant"]))
-	println("  Electrolyte Conductivity: ", param_status(elec["IonicConductivity"]))
-	println("  Electrolyte Diffusion:    ", param_status(elec["DiffusionCoefficient"]))
-
 end
 
 

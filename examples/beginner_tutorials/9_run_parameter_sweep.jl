@@ -23,7 +23,7 @@ outputs_rate = []
 for r in range(log_rate_start, log_rate_stop, length = 10)
 	cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 10^r
 	sim = Simulation(model, cell_parameters, cycling_protocol)
-	result = solve(sim; end_report = false)
+	result = solve(sim; info_level = -1)
 	push!(outputs_rate, (r = r, output = result))  # store r together with output
 end
 nothing # hide
@@ -35,8 +35,8 @@ fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 
 for data in outputs_rate
-	local t = [state[:Control][:Controller].time for state in data.output[:states]]
-	local E = [state[:Control][:ElectricPotential][1] for state in data.output[:states]]
+	local t = data.output.time_series["Time"]
+	local E = data.output.time_series["Voltage"]
 	lines!(ax, t, E, label = @sprintf("%.1e", 10^data.r))
 end
 
@@ -64,7 +64,7 @@ outputs_diff = []
 for d in range(log_D_start, log_D_stop, length = 10)
 	cell_parameters["PositiveElectrode"]["ActiveMaterial"]["DiffusionCoefficient"] = 10^d
 	sim = Simulation(model, cell_parameters, cycling_protocol)
-	result = solve(sim; end_report = false)
+	result = solve(sim; info_level = -1)
 	push!(outputs_diff, (d = d, output = result))  # store r together with output
 end
 nothing # hide
@@ -73,9 +73,9 @@ fig1 = Figure()
 ax1 = Axis(fig1[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 
 for data in outputs_diff
-	if length(data.output[:states]) > 0 #if simulation is successful
-		local t = [state[:Control][:Controller].time for state in data.output[:states]]
-		local E = [state[:Control][:ElectricPotential][1] for state in data.output[:states]]
+	if length(data.output.time_series["Time"]) > 0 #if simulation is successful
+		local t = data.output.time_series["Time"]
+		local E = data.output.time_series["Voltage"]
 		lines!(ax1, t, E, label = @sprintf("%.1e", 10^data.d))
 	end
 end

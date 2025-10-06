@@ -254,7 +254,7 @@ calibrated_params, history = solve(vc; grad_tol = 1e-7)
 ```
 """
 function solve(vc::AbstractCalibration;
-	solver_settings = get_default_solver_settings(typeof(vc.sim.model)),
+	solver_settings = get_default_solver_settings(vc.sim.model),
 	grad_tol = 1e-6,
 	obj_change_tol = 1e-6,
 	opt_fun = missing,

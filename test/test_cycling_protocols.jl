@@ -20,9 +20,9 @@ using Test
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 		output = solve(sim)
 
-		time_series = get_output_time_series(output)
+		time_series = output.time_series
 
-		I_1 = time_series.Current
+		I_1 = time_series["Current"]
 
 		@test I_1[2] ≈ 2.2957366076223953 atol = 1e-1
 
@@ -31,9 +31,9 @@ using Test
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 		output = solve(sim)
 
-		time_series = get_output_time_series(output)
+		time_series = output.time_series
 
-		I_2 = time_series.Current
+		I_2 = time_series["Current"]
 
 		@test I_2[2] ≈ I_1[2] * 2 atol = 1e-2
 
@@ -45,18 +45,18 @@ using Test
 		cycling_protocol["CRate"] = 1
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 		output = solve(sim)
-		time_series = get_output_time_series(output)
+		time_series = output.time_series
 
-		I_1 = time_series.Current
+		I_1 = time_series["Current"]
 
 		@test I_1[2] ≈ -2.2957366076223953 atol = 1e-1
 
 		cycling_protocol["CRate"] = 2
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 		output = solve(sim)
-		time_series = get_output_time_series(output)
+		time_series = output.time_series
 
-		I_2 = time_series.Current
+		I_2 = time_series["Current"]
 
 		@test I_2[2] ≈ I_1[2] * 2 atol = 1e-2
 
@@ -69,9 +69,9 @@ using Test
 		cycling_protocol["InitialControl"] = "charging"
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 		output = solve(sim)
-		time_series = get_output_time_series(output)
+		time_series = output.time_series
 
-		I_1 = time_series.Current
+		I_1 = time_series["Current"]
 
 		@test I_1[2] ≈ -5.090421803494574 atol = 1e-1
 		@test I_1[50] ≈ 5.090421803494574 atol = 1e-1
@@ -80,9 +80,9 @@ using Test
 		cycling_protocol["DRate"] = 2
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 		output = solve(sim)
-		time_series = get_output_time_series(output)
+		time_series = output.time_series
 
-		I_2 = time_series.Current
+		I_2 = time_series["Current"]
 
 		@test I_2[2] ≈ I_1[2] * 2 atol = 1e-2
 		@test I_2[50] ≈ I_1[50] * 2 atol = 1e-2
@@ -97,11 +97,11 @@ using Test
 		cycling_protocol["InitialControl"] = "charging"
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 		output = solve(sim)
-		time_series = get_output_time_series(output)
+		time_series = output.time_series
 
 
 
-		I_1 = time_series.Current
+		I_1 = time_series["Current"]
 
 
 
@@ -112,9 +112,9 @@ using Test
 		cycling_protocol["DRate"] = 2
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 		output = solve(sim)
-		time_series = get_output_time_series(output)
+		time_series = output.time_series
 
-		I_2 = time_series.Current
+		I_2 = time_series["Current"]
 
 		@test I_2[2] ≈ I_1[2] * 2 atol = 1e-2
 		@test I_2[200] ≈ I_1[765] * 2 atol = 1e-2
@@ -145,13 +145,13 @@ end
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 		output = solve(sim)
 
-		time_series = get_output_time_series(output)
-		states = get_output_states(output)
+		time_series = output.time_series
+		states = output.states
 
-		I = time_series.Current
-		V = time_series.Voltage
+		I = time_series["Current"]
+		V = time_series["Voltage"]
 
-		c_pe = states.PositiveElectrodeActiveMaterialSurfaceConcentration
+		c_pe = states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
 
 		@test length(I) ≈ 73 atol = 0
 		@test I[2] ≈ 2.2957366076223953 atol = 1e-1
@@ -171,13 +171,13 @@ end
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 		output = solve(sim)
 
-		time_series = get_output_time_series(output)
-		states = get_output_states(output)
+		time_series = output.time_series
+		states = output.states
 
-		I = time_series.Current
-		V = time_series.Voltage
+		I = time_series["Current"]
+		V = time_series["Voltage"]
 
-		c_pe = states.PositiveElectrodeActiveMaterialSurfaceConcentration
+		c_pe = states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
 
 		@test length(I) ≈ 66 atol = 0
 		@test I[2] ≈ 0.057347311736114376 atol = 1e-1

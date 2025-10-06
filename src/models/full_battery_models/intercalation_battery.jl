@@ -411,7 +411,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 
 	if haskey(model.settings, "TransportInSolid") && model.settings["TransportInSolid"] == "FullDiffusion"
 		rp = inputparams_active_material["ParticleRadius"]
-		N  = Int64(input.simulation_settings["GridResolution"*stringName*"Particle"])
+		N  = Int64(input.simulation_settings[stringName*"ParticleGridPoints"])
 
 		if isa(inputparams_active_material["DiffusionCoefficient"], Real)
 			am_params[:diff_funcconstant] = true
@@ -460,6 +460,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		else
 			label = nothing
 		end
+
 		sys_am = ActiveMaterialP2D(am_params, rp, N, D; label = label)
 	else
 		sys_am = ActiveMaterialNoParticleDiffusion(am_params)

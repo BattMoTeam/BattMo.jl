@@ -2,7 +2,7 @@ export print_output_overview, print_output_variable_info
 
 
 """
-	print_output_overview(output::NamedTuple)
+	print_output_overview(output::SimulationOutput)
 
 Print a categorized summary of the output variables available in a simulation result.
 
@@ -17,7 +17,7 @@ Groups variables by type (`time_series`, `metrics`, `states`) and prints their n
 print_output_overview(output)
 ```
 """
-function print_output_overview(output::NamedTuple)
+function print_output_overview(output::SimulationOutput)
 	meta_data = get_output_variables_meta_data()
 
 	var_map = Dict(
@@ -51,7 +51,7 @@ function print_output_overview(output::NamedTuple)
 
 	# Group variables by case
 	case_groups = Dict{String, Vector{NamedTuple}}()
-	state = output[:states][3]
+	state = output.jutul_output[:states][3]
 
 	for (name, info) in meta_data
 		case = get(info, "case", "uncategorized")

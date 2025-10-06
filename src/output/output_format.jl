@@ -34,41 +34,35 @@ ts = get_output_time_series(output; quantities=["Time", "Voltage"])
 plot(ts.Time, ts.Voltage)
 ```
 """
-function get_output_time_series(output::NamedTuple; quantities::Union{Nothing, Vector{String}} = nothing)
+function get_output_time_series(jutul_output::NamedTuple; quantities::Union{Nothing, Vector{String}} = nothing)
 
-	selected_pairs = []
-	available_quantities = ["Time", "Voltage", "Current", "Capacity"]
+	states = jutul_output[:states]
 
-	voltage, current = extract_time_series_data(output)
-	time = extract_output_times(output)
-	capacity = compute_capacity(output)
+	# Extract data
+	voltage, current = extract_time_series_data(jutul_output)
+	time = extract_output_times(jutul_output)
+	capacity = compute_capacity(jutul_output)
+	cycle_number = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : nothing
 
-	push!(selected_pairs, :Time => time)
+	# Available data mapping
+	data_map = Dict(
+		"Time" => time,
+		"Voltage" => voltage,
+		"Current" => current,
+		"Capacity" => capacity,
+	)
 
-	if !isnothing(quantities)
-
-		for q in quantities
-			if q == "Voltage"
-				push!(selected_pairs, :Voltage => voltage)
-			elseif q == "Current"
-				push!(selected_pairs, :Current => current)
-			elseif q == "Time"
-				push!(selected_pairs, :Time => time)
-			elseif q == "Capacity"
-				push!(selected_pairs, :Capacity => capacity)
-			else
-				error("Quantitiy $q is not available in this data")
-			end
-		end
-	else
-		push!(selected_pairs, :Time => time)
-		push!(selected_pairs, :Capacity => capacity)
-		push!(selected_pairs, :Current => current)
-		push!(selected_pairs, :Voltage => voltage)
-
+	if !isnothing(cycle_number)
+		data_map["CycleNumber"] = cycle_number
 	end
 
-	return (; selected_pairs...)
+	if isnothing(quantities)
+		# Default: include all
+		return data_map
+	else
+		# Select only requested quantities
+		return Dict(q => get(data_map, q, error("Quantity $q is not available")) for q in quantities)
+	end
 end
 
 
@@ -94,7 +88,7 @@ Computes key performance metrics from a battery simulation output, either global
 
 # Returns
 A `NamedTuple` where each field is a vector containing the computed metric values (one value per cycle, or globally if no cycles are detected). Possible fields include:
-- `:CycleNumber`
+- `:CycleIndex`
 - `:DischargeCapacity`
 - `:ChargeCapacity`
 - `:DischargeEnergy`
@@ -113,80 +107,64 @@ plot(metrics.CycleNumber, metrics.DischargeCapacity)
 ```
 """
 function get_output_metrics(
-	output::NamedTuple;
+	jutul_output::NamedTuple;
 	metrics::Union{Nothing, Vector{String}} = nothing,
 )
-	model = output[:extra][:model]
-	states = output[:states]
+	states = jutul_output[:states]
 
-	cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
+	controller = states[1][:Control][:Controller]
 
-	# Prepare selected output fields
-	selected = Dict{Symbol, Any}()
+	if !isa(controller, FunctionController)
+		cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
 
-	# Metric storage
-	discharge_cap::Vector{Float64} = Float64[]
-	charge_cap::Vector{Float64} = Float64[]
-	discharge_energy::Vector{Float64} = Float64[]
-	charge_energy::Vector{Float64} = Float64[]
-	round_trip_efficiency::Vector{Float64} = Float64[]
+		# Metric storage
+		discharge_cap = Float64[]
+		charge_cap = Float64[]
+		discharge_energy = Float64[]
+		charge_energy = Float64[]
+		round_trip_efficiency = Float64[]
 
+		# Identify unique non-zero cycles
+		unique_cycles = unique(cycle_array)
+		cycles_above_zero = filter(x -> x > 0, unique_cycles)
 
-	# Identify unique non-zero cycles
-	unique_cycles = unique(cycle_array)
-	cycles_above_zero = filter(x -> x > 0, unique_cycles)
-
-	if isempty(cycles_above_zero)
-		# Compute globally
-		push!(discharge_cap, compute_discharge_capacity(output))
-		push!(charge_cap, compute_charge_capacity(output))
-		push!(discharge_energy, compute_discharge_energy(output))
-		push!(charge_energy, compute_charge_energy(output))
-		push!(round_trip_efficiency, compute_round_trip_efficiency(output))
-
-	else
-		# Compute per cycle
-		for cycle in cycle_array
-			push!(discharge_cap, compute_discharge_capacity(output; cycle_number = cycle))
-			push!(charge_cap, compute_charge_capacity(output; cycle_number = cycle))
-			push!(discharge_energy, compute_discharge_energy(output; cycle_number = cycle))
-			push!(charge_energy, compute_charge_energy(output; cycle_number = cycle))
-			push!(round_trip_efficiency, compute_round_trip_efficiency(output; cycle_number = cycle))
-		end
-
-	end
-
-	# Dictionary of all available quantities
-	available_quantities = Dict(
-		"CycleNumber"         => cycle_array,
-		"DischargeCapacity"   => discharge_cap,
-		"ChargeCapacity"      => charge_cap,
-		"DischargeEnergy"     => discharge_energy,
-		"ChargeEnergy"        => charge_energy,
-		"RoundTripEfficiency" => round_trip_efficiency,
-	)
-
-	# Add only requested quantities
-
-	if !isnothing(metrics)
-		for q in metrics
-			if haskey(available_quantities, q)
-				selected[Symbol(q)] = available_quantities[q]
-			else
-				error("Metric \"$q\" is not available. Available metrics are: $(join(keys(available_quantities), ", "))")
+		if isempty(cycles_above_zero)
+			# Compute globally
+			push!(discharge_cap, compute_discharge_capacity(jutul_output))
+			push!(charge_cap, compute_charge_capacity(jutul_output))
+			push!(discharge_energy, compute_discharge_energy(jutul_output))
+			push!(charge_energy, compute_charge_energy(jutul_output))
+			push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output))
+		else
+			# Compute per unique cycle (avoids duplicate pushes)
+			for cycle in cycles_above_zero
+				push!(discharge_cap, compute_discharge_capacity(jutul_output; cycle_number = cycle))
+				push!(charge_cap, compute_charge_capacity(jutul_output; cycle_number = cycle))
+				push!(discharge_energy, compute_discharge_energy(jutul_output; cycle_number = cycle))
+				push!(charge_energy, compute_charge_energy(jutul_output; cycle_number = cycle))
+				push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output; cycle_number = cycle))
 			end
 		end
+
+		# Dictionary of all available quantities
+		available_quantities = Dict(
+			"CycleIndex"          => cycles_above_zero,
+			"DischargeCapacity"   => discharge_cap,
+			"ChargeCapacity"      => charge_cap,
+			"DischargeEnergy"     => discharge_energy,
+			"ChargeEnergy"        => charge_energy,
+			"RoundTripEfficiency" => round_trip_efficiency,
+		)
 	else
-		for q in keys(available_quantities)
-			if haskey(available_quantities, q)
-				selected[Symbol(q)] = available_quantities[q]
-			else
-				error("Metric \"$q\" is not available. Available metrics are: $(join(keys(available_quantities), ", "))")
-			end
-		end
+		available_quantities = Dict()
 	end
 
-	return (; selected...)
+	# Return only requested metrics or all
+	if isnothing(metrics)
+		return available_quantities
+	else
+		return Dict(q => get(available_quantities, q, error("Metric \"$q\" is not available. Available metrics are: $(join(keys(available_quantities), ", "))")))
+	end
 end
 
 
@@ -230,62 +208,51 @@ states = get_output_states(output; quantities=["Time", "Position", "ElectrolyteC
 heatmap(states.Position, states.Time, states.ElectrolyteConcentration)
 ```
 """
-function get_output_states(output::NamedTuple; quantities::Union{Nothing, Vector{String}} = nothing)
+function get_output_states(
+	jutul_output::NamedTuple,
+	input::FullSimulationInput;
+	quantities::Union{Nothing, Vector{String}} = nothing,
+)
 	# Get time and coordinates
-	time = extract_output_times(output)
-	padded_states = get_padded_states(output)
-	x = get_x_coords(output[:extra][:model].multimodel)
-	r_coords = get_r_coords(output)
+	time = extract_output_times(jutul_output)
+	padded_states = get_padded_states(jutul_output)
+	x = get_x_coords(jutul_output.multimodel)
+	r_coords = get_r_coords(input)
 	r_ne = r_coords.ne_radii
 	r_pe = r_coords.pe_radii
 
 	# Extract data
 	output_data = extract_spatial_data(padded_states)
 
-	# Initialize available quantities
-	available_quantities = Dict{Symbol, Any}(
-		:Time => time,
-		:Position => x,
-		:NegativeElectrodeActiveMaterialRadius => r_ne,
-		:PositiveElectrodeActiveMaterialRadius => r_pe,
+	# Initialize available quantities (consistent key type = String)
+	available_quantities = Dict{String, Any}(
+		"Time" => time,
+		"Position" => x,
+		"NegativeElectrodeActiveMaterialRadius" => r_ne,
+		"PositiveElectrodeActiveMaterialRadius" => r_pe,
 	)
 
-	# Insert only available output_data
 	for (k, v) in output_data
 		available_quantities[k] = v
 	end
 
-	# Create selected output dict
-	selected = Dict{Symbol, Any}()
-
+	# Select quantities
 	if isnothing(quantities)
-		# Return all available quantities
-		for (k, v) in available_quantities
-			if !isnothing(v)
-				selected[k] = v
-			end
-		end
+		# Return all available non-nothing quantities
+		return Dict(k => v for (k, v) in available_quantities if !isnothing(v))
 	else
-		# Return only requested and available quantities
-		for q in quantities
-			symq = Symbol(q)
-			if !haskey(available_quantities, symq) || isnothing(available_quantities[symq])
-				error("Quantity \"$q\" is not available. Available quantities are: $(join(Symbol.(keys(available_quantities)), ", "))")
-			end
-			selected[symq] = available_quantities[symq]
-		end
+		# Validate requested quantities
+		return Dict(q => get(available_quantities, q, error("Metric \"$q\" is not available. Available metrics are: $(join(keys(available_quantities), ", "))")))
 	end
-
-	return (; selected...)
 end
 
 
-function get_r_coords(output)
+function get_r_coords(input::FullSimulationInput)
 
-	particle_radius_ne = output[:extra][:cell_parameters]["NegativeElectrode"]["ActiveMaterial"]["ParticleRadius"]
-	number_of_cells_ne = output[:extra][:simulation_settings]["GridResolutionNegativeElectrodeParticle"]
-	particle_radius_pe = output[:extra][:cell_parameters]["PositiveElectrode"]["ActiveMaterial"]["ParticleRadius"]
-	number_of_cells_pe = output[:extra][:simulation_settings]["GridResolutionPositiveElectrodeParticle"]
+	particle_radius_ne = input["CellParameters"]["NegativeElectrode"]["ActiveMaterial"]["ParticleRadius"]
+	number_of_cells_ne = input["SimulationSettings"]["NegativeElectrodeParticleGridPoints"]
+	particle_radius_pe = input["CellParameters"]["PositiveElectrode"]["ActiveMaterial"]["ParticleRadius"]
+	number_of_cells_pe = input["SimulationSettings"]["PositiveElectrodeParticleGridPoints"]
 
 	ne_radii = range(0; stop = particle_radius_ne, length = number_of_cells_ne)
 	pe_radii = range(0; stop = particle_radius_pe, length = number_of_cells_pe)
@@ -297,43 +264,42 @@ end
 function extract_spatial_data(states::Vector)
 	# Map from quantity names to symbol chains used to extract data
 	var_map = Dict(
-		:NegativeElectrodeActiveMaterialSurfaceConcentration  => [:NegativeElectrodeActiveMaterial, :SurfaceConcentration],
-		:PositiveElectrodeActiveMaterialSurfaceConcentration  => [:PositiveElectrodeActiveMaterial, :SurfaceConcentration],
-		:NegativeElectrodeActiveMaterialParticleConcentration => [:NegativeElectrodeActiveMaterial, :ParticleConcentration],
-		:PositiveElectrodeActiveMaterialParticleConcentration => [:PositiveElectrodeActiveMaterial, :ParticleConcentration],
-		:NegativeElectrodeActiveMaterialDiffusionCoefficient  => [:NegativeElectrodeActiveMaterial, :DiffusionCoefficient],
-		:PositiveElectrodeActiveMaterialDiffusionCoefficient  => [:PositiveElectrodeActiveMaterial, :DiffusionCoefficient],
-		:NegativeElectrodeActiveMaterialReactionRateConstant  => [:NegativeElectrodeActiveMaterial, :ReactionRateConstant],
-		:PositiveElectrodeActiveMaterialReactionRateConstant  => [:PositiveElectrodeActiveMaterial, :ReactionRateConstant],
-		:ElectrolyteConcentration                             => [:Electrolyte, :ElectrolyteConcentration],
-		:NegativeElectrodeActiveMaterialPotential             => [:NegativeElectrodeActiveMaterial, :ElectricPotential],
-		:ElectrolytePotential                                 => [:Electrolyte, :ElectricPotential],
-		:PositiveElectrodeActiveMaterialPotential             => [:PositiveElectrodeActiveMaterial, :ElectricPotential],
-		:NegativeElectrodeActiveMaterialTemperature           => [:NegativeElectrodeActiveMaterial, :Temperature],
-		:PositiveElectrodeActiveMaterialTemperature           => [:PositiveElectrodeActiveMaterial, :Temperature],
-		:NegativeElectrodeActiveMaterialOpenCircuitPotential  => [:NegativeElectrodeActiveMaterial, :OpenCircuitPotential],
-		:PositiveElectrodeActiveMaterialOpenCircuitPotential  => [:PositiveElectrodeActiveMaterial, :OpenCircuitPotential],
-		:NegativeElectrodeActiveMaterialCharge                => [:NegativeElectrodeActiveMaterial, :Charge],
-		:ElectrolyteCharge                                    => [:Electrolyte, :Charge],
-		:PositiveElectrodeActiveMaterialCharge                => [:PositiveElectrodeActiveMaterial, :Charge],
-		:ElectrolyteMass                                      => [:Electrolyte, :Mass],
-		:ElectrolyteDiffusivity                               => [:Electrolyte, :Diffusivity],
-		:ElectrolyteConductivity                              => [:Electrolyte, :Conductivity],
-		:SEIThickness                                         => [:NegativeElectrodeActiveMaterial, :SEIlength],
-		:NormalizedSEIThickness                               => [:NegativeElectrodeActiveMaterial, :normalizedSEIlength],
-		:SEIVoltageDrop                                       => [:NegativeElectrodeActiveMaterial, :SEIvoltageDrop],
-		:NormalizedSEIVoltageDrop                             => [:NegativeElectrodeActiveMaterial, :normalizedSEIvoltageDrop])
+		"NegativeElectrodeActiveMaterialSurfaceConcentration"  => [:NegativeElectrodeActiveMaterial, :SurfaceConcentration],
+		"PositiveElectrodeActiveMaterialSurfaceConcentration"  => [:PositiveElectrodeActiveMaterial, :SurfaceConcentration],
+		"NegativeElectrodeActiveMaterialParticleConcentration" => [:NegativeElectrodeActiveMaterial, :ParticleConcentration],
+		"PositiveElectrodeActiveMaterialParticleConcentration" => [:PositiveElectrodeActiveMaterial, :ParticleConcentration],
+		"NegativeElectrodeActiveMaterialDiffusionCoefficient"  => [:NegativeElectrodeActiveMaterial, :DiffusionCoefficient],
+		"PositiveElectrodeActiveMaterialDiffusionCoefficient"  => [:PositiveElectrodeActiveMaterial, :DiffusionCoefficient],
+		"NegativeElectrodeActiveMaterialReactionRateConstant"  => [:NegativeElectrodeActiveMaterial, :ReactionRateConstant],
+		"PositiveElectrodeActiveMaterialReactionRateConstant"  => [:PositiveElectrodeActiveMaterial, :ReactionRateConstant],
+		"ElectrolyteConcentration"                             => [:Electrolyte, :ElectrolyteConcentration],
+		"NegativeElectrodeActiveMaterialPotential"             => [:NegativeElectrodeActiveMaterial, :ElectricPotential],
+		"ElectrolytePotential"                                 => [:Electrolyte, :ElectricPotential],
+		"PositiveElectrodeActiveMaterialPotential"             => [:PositiveElectrodeActiveMaterial, :ElectricPotential],
+		"NegativeElectrodeActiveMaterialTemperature"           => [:NegativeElectrodeActiveMaterial, :Temperature],
+		"PositiveElectrodeActiveMaterialTemperature"           => [:PositiveElectrodeActiveMaterial, :Temperature],
+		"NegativeElectrodeActiveMaterialOpenCircuitPotential"  => [:NegativeElectrodeActiveMaterial, :OpenCircuitPotential],
+		"PositiveElectrodeActiveMaterialOpenCircuitPotential"  => [:PositiveElectrodeActiveMaterial, :OpenCircuitPotential],
+		"NegativeElectrodeActiveMaterialCharge"                => [:NegativeElectrodeActiveMaterial, :Charge],
+		"ElectrolyteCharge"                                    => [:Electrolyte, :Charge],
+		"PositiveElectrodeActiveMaterialCharge"                => [:PositiveElectrodeActiveMaterial, :Charge],
+		"ElectrolyteMass"                                      => [:Electrolyte, :Mass],
+		"ElectrolyteDiffusivity"                               => [:Electrolyte, :Diffusivity],
+		"ElectrolyteConductivity"                              => [:Electrolyte, :Conductivity],
+		"SEIThickness"                                         => [:NegativeElectrodeActiveMaterial, :SEIlength],
+		"NormalizedSEIThickness"                               => [:NegativeElectrodeActiveMaterial, :normalizedSEIlength],
+		"SEIVoltageDrop"                                       => [:NegativeElectrodeActiveMaterial, :SEIvoltageDrop],
+		"NormalizedSEIVoltageDrop"                             => [:NegativeElectrodeActiveMaterial, :normalizedSEIvoltageDrop])
 
-	output_data = Dict{Symbol, Any}()
+	output_data = Dict{String, Any}()
 
 	for q in keys(var_map)
-		qsym = Symbol(q)
 
 		# Validate if the quantity exists in the known map
-		@assert haskey(var_map, qsym) "Quantity \"$q\" is not a valid or supported variable."
+		@assert haskey(var_map, q) "Quantity \"$q\" is not a valid or supported variable."
 
 		# Check if the variable actually exists in the first state
-		chain = var_map[qsym]
+		chain = var_map[q]
 		try
 			_ = foldl(getindex, chain; init = states[1])
 		catch
@@ -353,9 +319,9 @@ function extract_spatial_data(states::Vector)
 		data = permutedims(data, (3, 2, 1))
 
 		if size(data, 2) == 1
-			output_data[qsym] = dropdims(data; dims = 2)
+			output_data[q] = dropdims(data; dims = 2)
 		else
-			output_data[qsym] = data
+			output_data[q] = data
 		end
 	end
 
@@ -373,9 +339,9 @@ function get_x_coords(model::MultiModel{:IntercalationBattery})
 	return primitives.points[:, 1]
 end
 
-function get_padded_states(output::NamedTuple)
-	multimodel = output[:extra][:model].multimodel
-	states = output[:states]
+function get_padded_states(jutul_output::NamedTuple)
+	multimodel = jutul_output.multimodel
+	states = jutul_output[:states]
 	model_keys = keys(multimodel.models)
 
 	n = length(model_keys)
@@ -463,9 +429,9 @@ function get_padded_states(output::NamedTuple)
 
 end
 
-function extract_time_series_data(output::NamedTuple)
+function extract_time_series_data(jutul_output::NamedTuple)
 
-	states = output[:states]
+	states = jutul_output[:states]
 
 
 	E = [state[:Control][:ElectricPotential][1] for state in states]
@@ -478,9 +444,9 @@ function extract_time_series_data(output::NamedTuple)
 end
 
 
-function extract_output_times(output::NamedTuple)
+function extract_output_times(jutul_output::NamedTuple)
 
-	states = output[:states]
+	states = jutul_output[:states]
 	t = [state[:Control][:Controller].time for state in states]
 
 	return (time = t)

@@ -17,12 +17,6 @@ using CSV
 using DataFrames
 using GLMakie
 
-function get_tV(x)
-	t = [state[:Control][:Controller].time for state in x[:states]]
-	V = [state[:Control][:ElectricPotential][1] for state in x[:states]]
-	return (t, V)
-end
-
 function get_tV(x::DataFrame)
 	return (x[:, 1], x[:, 2])
 end
@@ -46,7 +40,8 @@ cycling_protocol["DRate"] = 0.5
 sim = Simulation(model, cell_parameters, cycling_protocol)
 output0 = solve(sim)
 
-t0, V0 = get_tV(output0)
+t0 = output0.time_series["Time"]
+V0 = output0.time_series["Voltage"]
 t_exp_05, V_exp_05 = get_tV(df_05)
 t_exp_1, V_exp_1 = get_tV(df_1)
 
@@ -107,7 +102,8 @@ print_calibration_overview(vc05)
 # experimental data for the 0.5C discharge curve.
 sim_opt = Simulation(model, cell_parameters_calibrated, cycling_protocol)
 output_opt = solve(sim_opt);
-t_opt, V_opt = get_tV(output_opt)
+t_opt = output_opt.time_series["Time"]
+V_opt = output_opt.time_series["Voltage"]
 
 fig = Figure()
 ax = Axis(fig[1, 1], title = "CRate = 0.5")
@@ -133,11 +129,13 @@ cycling_protocol2 = deepcopy(cycling_protocol)
 cycling_protocol2["DRate"] = 2.0
 sim2 = Simulation(model, cell_parameters_calibrated, cycling_protocol2)
 output2 = solve(sim2);
-t2, V2 = get_tV(output2)
+t2 = output2.time_series["Time"]
+V2 = output2.time_series["Voltage"]
 
 sim2_0 = Simulation(model, cell_parameters, cycling_protocol2)
 output2_0 = solve(sim2_0);
-t2_0, V2_0 = get_tV(output2_0)
+t2_0 = output2_0.time_series["Time"]
+V2_0 = output2_0.time_series["Voltage"]
 
 vc2 = VoltageCalibration(t_exp_2, V_exp_2, sim2)
 
@@ -168,8 +166,8 @@ print_calibration_overview(vc2)
 sim_c2 = Simulation(model, cell_parameters_calibrated2, cycling_protocol2)
 output2_c = solve(sim_c2, accept_invalid = false);
 
-t2_c = [state[:Control][:Controller].time for state in output2_c[:states]]
-V2_c = [state[:Control][:ElectricPotential][1] for state in output2_c[:states]]
+t2_c = output2_c.time_series["Time"]
+V2_c = output2_c.time_series["Voltage"]
 
 fig = Figure()
 ax = Axis(fig[1, 1], title = "CRate = 2.0")
@@ -210,17 +208,20 @@ fig = Figure(size = (1200, 600))
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 
 for (i, data) in enumerate(outputs_base)
-	t_i, V_i = get_tV(data.output)
+	t_i = data.output.time_series["Time"]
+	V_i = data.output.time_series["Voltage"]
 	lines!(ax, t_i, V_i, label = "Simulation (initial) $(round(data.CRate, digits = 2))", color = colors[i])
 end
 
 for (i, data) in enumerate(outputs_calibrated)
-	t_i, V_i = get_tV(data.output)
+	t_i = data.output.time_series["Time"]
+	V_i = data.output.time_series["Voltage"]
 	lines!(ax, t_i, V_i, label = "Simulation (calibrated) $(round(data.CRate, digits = 2))", color = colors[i], linestyle = :dash)
 end
 
 for (i, df) in enumerate(dfs)
-	t_i, V_i = get_tV(df)
+	t_i = df[:, 1]
+	V_i = df[:, 2]
 	label = "Experimental $(round(CRates[i], digits = 2))"
 	lines!(ax, t_i, V_i, linestyle = :dot, label = label, color = colors[i])
 end

@@ -210,6 +210,7 @@ include("input/writer.jl")
 include("input/function_input_tools.jl")
 include("input/formatter.jl")
 include("input/validator.jl")
+include("input/equilibrium_kpis.jl")
 
 
 
@@ -230,15 +231,16 @@ include("simulation/simulation_wrappers.jl")
 
 include("matlab_interface/matlab_model_setup.jl")
 
-include("plotting/makie_ext.jl")
-include("plotting/3d.jl")
-include("plotting/1d.jl")
-
 include("utils/battery_cell_specifications.jl")
-include("utils/battery_kpis.jl")
+include("output/output_types.jl")
+include("output/metrics.jl")
 include("output/output_format.jl")
 include("output/meta_data/variables.jl")
 include("output/printer.jl")
+
+include("plotting/makie_ext.jl")
+include("plotting/3d.jl")
+include("plotting/1d.jl")
 
 
 include("solver/linsolve.jl")

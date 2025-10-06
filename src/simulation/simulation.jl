@@ -178,7 +178,7 @@ sim = Simulation(model, cell_parameters, cycling_protocol)
 result = solve(sim; info_level = 1)
 ```
 """
-function solve(problem::Simulation; accept_invalid = false, solver_settings = get_default_solver_settings(typeof(problem.model)), logger = nothing, kwargs...)
+function solve(problem::Simulation; accept_invalid = false, solver_settings = get_default_solver_settings(problem.model), logger = nothing, kwargs...)
 
 
 	# Note: Typically function_to_solve is run_battery
@@ -282,40 +282,37 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 
 
 	# Perform simulation
-	states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+	jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
 
-	extra = Dict(:simulator => simulator,
-		:forces => forces,
-		:state0 => state0,
-		:parameters => parameters,
-		:simulation_settings => simulation_settings,
-		:cell_parameters => cell_parameters,
-		:cycling_protocol => cycling_protocol,
-		:model => model,
-		:couplings => couplings,
-		:grids => grids,
-		:timesteps => timesteps,
-		:cfg => cfg)
-	extra[:timesteps] = timesteps
-
-	input = Dict(
-		:model_settings => model.settings,
-		:simulation_settings => simulation_settings,
-		:cell_parameters => cell_parameters,
-		:cycling_protocol => cycling_protocol,
+	jutul_output = (
+		states = jutul_states,
+		reports = jutul_reports,
+		solver_configuration = cfg,
+		multimodel = model.multimodel,
 	)
 
-	if isa(sim, Simulation)
-		cellSpecifications = computeCellSpecifications(model.multimodel)
-	else
-		cellSpecifications = nothing
-	end
+	input = FullSimulationInput(
+		Dict(
+			"BaseModel" => string(nameof(typeof(model))),
+			"ModelSettings" => model.settings.all,
+			"CellParameters" => cell_parameters.all,
+			"CyclingProtocol" => cycling_protocol.all,
+			"SimulationSettings" => simulation_settings.all,
+			"SolverSettings" => solver_settings.all),
+	)
 
-	return (states             = states,
-		cellSpecifications = cellSpecifications,
-		reports            = reports,
-		input              = input,
-		extra              = extra)
+	time_series = get_output_time_series(jutul_output)
+	states = get_output_states(jutul_output, input)
+	metrics = get_output_metrics(jutul_output)
+
+	return SimulationOutput(
+		time_series,
+		states,
+		metrics,
+		input,
+		jutul_output,
+		model,
+		sim)
 
 end
 
