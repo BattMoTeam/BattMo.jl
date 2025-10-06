@@ -82,7 +82,7 @@ function setup_coupling_cross_terms!(inputparams::MatlabInput,
 
 	exported_all = inputparams.all
 
-	include_cc = include_current_collectors(model)
+	include_cc = include_current_collectors(inputparams)
 
 	#################################
 	# setup coupling NeAm <-> Elyte #
@@ -202,7 +202,7 @@ function setup_coupling_cross_terms!(inputparams::MatlabInput,
 		trans = getTrans(msource, mtarget, couplingfaces, couplingcells, "effectiveElectronicConductivity")
 
 		ct = TPFAInterfaceFluxCT(trange, srange, trans)
-		ct_pair = setup_cross_term(ct, target = :PositiveElectro:PeCciveMaterial, source = :PeCc, equation = :charge_conservation)
+		ct_pair = setup_cross_term(ct, target = :PeAm, source = :PeCc, equation = :charge_conservation)
 		add_cross_term!(model, ct_pair)
 
 		ct = TPFAInterfaceFluxCT(srange, trange, trans)
@@ -540,7 +540,7 @@ function setup_battery_parameters(inputparams::MatlabInput,
 
 	T0 = exported["model"]["initT"]
 
-	include_cc = include_current_collectors(model)
+	include_cc = include_current_collectors(inputparams)
 
 	if include_cc
 
@@ -632,7 +632,7 @@ function setup_initial_state(inputparams::MatlabInput,
 
 	state0 = exported["initstate"]
 
-	include_cc = include_current_collectors(model)
+	include_cc = include_current_collectors(inputparams)
 
 	if include_cc
 		stringNames = Dict(
