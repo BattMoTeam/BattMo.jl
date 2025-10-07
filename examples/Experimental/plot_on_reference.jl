@@ -76,7 +76,7 @@ for i in 5
 		xf = G["faces"]["centroids"][end]
 		xfi = G["faces"]["centroids"][2:end-1]
 		p = plot(p1, p2, layout = (1, 2), legend = false)
-		phi = states[sim_step][key][:Voltage]
+		phi = states[sim_step][key][:ElectricPotential]
 		Plots.plot!(
 			p1, x, phi; markershape = :circle, linestyle = :dot, seriestype = :scatter,
 		)

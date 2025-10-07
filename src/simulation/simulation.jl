@@ -1,6 +1,5 @@
 export Simulation
 export solve
-export run_simulation
 export setup_config
 
 """
@@ -87,26 +86,16 @@ struct Simulation <: AbstractSimulation
 				simulation_settings = simulation_settings,
 			)
 
-			# Setup grids and couplings
-			grids, couplings = setup_grids_and_couplings(model, input)
+			sim_cfg = simulation_configuration(model, input)
 
-			# Setup simulation
-			model, parameters = setup_model(model, input, grids, couplings)
-
-			# setup initial state
-			initial_state = setup_initial_state(input, model)
-
-			# setup forces
-			forces = setup_forces(model.multimodel)
-
-			# setup jutul simulator
-			simulator = Simulator(model.multimodel; state0 = initial_state, parameters = parameters, copy_state = true)
-
-			# setup time steps
-			time_steps = setup_timesteps(input)
-
-			# grids = get_grids(model)
-
+			model = sim_cfg.model
+			grids = sim_cfg.grids
+			couplings = sim_cfg.couplings
+			parameters = sim_cfg.parameters
+			initial_state = sim_cfg.initial_state
+			forces = sim_cfg.forces
+			simulator = sim_cfg.simulator
+			time_steps = sim_cfg.time_steps
 
 		else
 			error("""
@@ -119,6 +108,39 @@ struct Simulation <: AbstractSimulation
 		end
 		return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator)
 	end
+end
+
+
+function simulation_configuration(model, input)
+
+	# Setup grids and couplings
+	grids, couplings = setup_grids_and_couplings(model, input)
+
+	# Setup simulation
+	model, parameters = setup_model!(model, input, grids, couplings)
+
+	# setup initial state
+	initial_state = setup_initial_state(input, model)
+
+	# setup forces
+	forces = setup_forces(model.multimodel)
+
+	# setup jutul simulator
+	simulator = Simulator(model.multimodel; state0 = initial_state, parameters = parameters, copy_state = true)
+
+	# setup time steps
+	time_steps = setup_timesteps(input)
+	return (
+		model = model,
+		grids = grids,
+		couplings = couplings,
+		parameters = parameters,
+		initial_state = initial_state,
+		forces = forces,
+		simulator = simulator,
+		time_steps = time_steps,
+	)
+
 end
 
 
@@ -156,7 +178,7 @@ sim = Simulation(model, cell_parameters, cycling_protocol)
 result = solve(sim; info_level = 1)
 ```
 """
-function solve(problem::Simulation; accept_invalid = false, solver_settings = get_default_solver_settings(typeof(problem.model)), logger = nothing, kwargs...)
+function solve(problem::Simulation; accept_invalid = false, solver_settings = get_default_solver_settings(problem.model), logger = nothing, kwargs...)
 
 
 	# Note: Typically function_to_solve is run_battery
@@ -184,52 +206,6 @@ function solve(problem::Simulation; accept_invalid = false, solver_settings = ge
 			""")
 		end
 	end
-
-end
-
-
-"""
-	run_simulation(simulation_input::FullSimulationInput; kwargs...)
-
-Provides a headless UI for running a simulation.
-
-# Arguments
-- `simulation_input::FullSimulationInput`: A FullSimulationInput instance containing all the parameters and settings needed to run and solve a simulation.
-- `kwargs...`: Additional keyword arguments passed to the lower-level solver configuration.
-
-# Behavior
-- Extracts all relevant parameter sets and settings from the FullSimulationInput instance.
-- Instantiates a ModelConfigured using the provided model settings.
-- Instantiates a Simulation using the ModelConfigured, and the cell parameters, cycling protocol parameters, and simulation settings from the FullSimulationInput.
-- Solves the simulation by passing the Simulation instance and the solver settings from the FullSimulationInput to `BattMo.solve`.
-
-# Returns
-A NamedTuple containing the simulation results.
-
-# Example
-```julia
-simulation_input = load_full_simulation_input(;from_default_set="Chen2020")
-output = run_simulation(simulation_input)
-plot_dashboard(output)
-```
-"""
-function run_simulation(simulation_input::FullSimulationInput; logger = nothing, kwargs...)
-
-	input = extract_input_sets(simulation_input)
-
-	base_model = input.base_model
-	if base_model == "LithiumIonBattery"
-		model = LithiumIonBattery(; model_settings = input.model_settings)
-	elseif base_model == "SodiumIonBattery"
-		model = SodiumIonBattery(; model_settings = input.model_settings)
-	else
-		error("BaseModel $base_model is not valid. The following models are available: LithiumIonBattery, SodiumIonBattery")
-	end
-
-	sim = Simulation(model, input.cell_parameters, input.cycling_protocol; simulation_settings = input.simulation_settings)
-
-	output = solve(sim; solver_settings = input.solver_settings, logger = logger, kwargs...)
-	return output
 
 end
 
@@ -268,7 +244,7 @@ A named tuple with the following fields:
 result = solve_simulation(sim)
 ```
 """
-function solve_simulation(sim::Simulation; solver_settings, logger = nothing, kwargs...)
+function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, logger = nothing, kwargs...)
 
 	simulator = sim.simulator
 	model = sim.model
@@ -306,36 +282,37 @@ function solve_simulation(sim::Simulation; solver_settings, logger = nothing, kw
 
 
 	# Perform simulation
-	states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+	jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
 
-	extra = Dict(:simulator => simulator,
-		:forces => forces,
-		:state0 => state0,
-		:parameters => parameters,
-		:simulation_settings => simulation_settings,
-		:cell_parameters => cell_parameters,
-		:cycling_protocol => cycling_protocol,
-		:model => model,
-		:couplings => couplings,
-		:grids => grids,
-		:timesteps => timesteps,
-		:cfg => cfg)
-	extra[:timesteps] = timesteps
-
-	input = Dict(
-		:model_settings => model.settings,
-		:simulation_settings => simulation_settings,
-		:cell_parameters => cell_parameters,
-		:cycling_protocol => cycling_protocol,
+	jutul_output = (
+		states = jutul_states,
+		reports = jutul_reports,
+		solver_configuration = cfg,
+		multimodel = model.multimodel,
 	)
 
-	cellSpecifications = computeCellSpecifications(model.multimodel)
+	input = FullSimulationInput(
+		Dict(
+			"BaseModel" => string(nameof(typeof(model))),
+			"ModelSettings" => model.settings.all,
+			"CellParameters" => cell_parameters.all,
+			"CyclingProtocol" => cycling_protocol.all,
+			"SimulationSettings" => simulation_settings.all,
+			"SolverSettings" => solver_settings.all),
+	)
 
-	return (states             = states,
-		cellSpecifications = cellSpecifications,
-		reports            = reports,
-		input              = input,
-		extra              = extra)
+	time_series = get_output_time_series(jutul_output)
+	states = get_output_states(jutul_output, input)
+	metrics = get_output_metrics(jutul_output)
+
+	return SimulationOutput(
+		time_series,
+		states,
+		metrics,
+		input,
+		jutul_output,
+		model,
+		sim)
 
 end
 
@@ -462,7 +439,7 @@ end
 	setup_config(sim::JutulSimulator,
 					  model::MultiModel,
 					  parameters;
-					  inputparams::BattMoInputFormatOld,
+					  inputparams::AdvancedDictInput,
 					  extra_timing::Bool,
 					  use_model_scaling,
 					  kwargs...)
@@ -597,7 +574,7 @@ function solver_configuration(sim::JutulSimulator,
 
 					if m[:Control].system.policy.initialControl == "charging"
 
-						if s.state.Control.Voltage[1] >= m[:Control].system.policy.upperCutoffVoltage
+						if s.state.Control.ElectricPotential[1] >= m[:Control].system.policy.upperCutoffVoltage
 							report[:stopnow] = true
 						else
 							report[:stopnow] = false
@@ -605,7 +582,7 @@ function solver_configuration(sim::JutulSimulator,
 
 					elseif m[:Control].system.policy.initialControl == "discharging"
 
-						if s.state.Control.Voltage[1] <= m[:Control].system.policy.lowerCutoffVoltage
+						if s.state.Control.ElectricPotential[1] <= m[:Control].system.policy.lowerCutoffVoltage
 							report[:stopnow] = true
 
 						else

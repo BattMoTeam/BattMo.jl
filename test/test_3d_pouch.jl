@@ -21,9 +21,11 @@ using Test
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 		output = solve(sim)
 
-		Cc = map(x -> x[:Control][:Current][1], output.states)
-		Voltage = map(x -> x[:Control][:Voltage][1], output.states)
-		@test length(output.states) == 137
+		jutul_states = output.jutul_output.states
+
+		Cc = map(x -> x[:Control][:Current][1], jutul_states)
+		Voltage = map(x -> x[:Control][:ElectricPotential][1], jutul_states)
+		@test length(jutul_states) == 137
 		@test Cc[2] ≈ 0.02321200713128439 atol = 1e-2
 		for i in 3:length(Cc)
 			@test Cc[i] ≈ 0.0514688 atol = 1e-2

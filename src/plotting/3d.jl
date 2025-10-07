@@ -5,7 +5,7 @@ plot_interactive_3d
 
 Launch an interactive plot for visualizing simulation results of 3D geometries.
 """
-function plot_interactive_3d(results::NamedTuple; shift = nothing, colormap = :curl)
+function plot_interactive_3d(output::SimulationOutput; shift = nothing, colormap = :curl)
 
 	if isnothing(shift)
 		shift_copy = Dict()
@@ -29,9 +29,9 @@ function plot_interactive_3d(results::NamedTuple; shift = nothing, colormap = :c
 
 	end
 
-	states = results[:states]
-	solved_model = results[:extra][:model].multimodel
+	jutul_states = output.jutul_output.states
+	solved_model = output.jutul_output.multimodel
 
 
-	plot_multimodel_interactive(solved_model, states; shift = shift_copy, colormap = colormap)
+	plot_multimodel_interactive(solved_model, jutul_states; shift = shift_copy, colormap = colormap)
 end

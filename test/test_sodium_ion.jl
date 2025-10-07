@@ -39,7 +39,7 @@ include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_fun
 		drates = [0.1, 1.4]
 		delta_t = [200, 50]
 		I_test = [0.0002664523159462069, 0.003730332423246896]
-		c_test = [3974.731704738329, 4041.6330669116232]
+		c_test = [3986.653950670727, 4146.8033577258875]
 
 		for (i, rate) in enumerate(drates)
 
@@ -49,8 +49,8 @@ include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_fun
 			sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
 
 			output = solve(sim;)
-			I = get_output_time_series(output)[:Current]
-			c_pe = get_output_states(output)[:PositiveElectrodeActiveMaterialSurfaceConcentration]
+			I = output.time_series["Current"]
+			c_pe = output.states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
 
 			@test I[end] ≈ I_test[i] atol = 1e-1
 

@@ -1,4 +1,4 @@
-export convert_parameter_sets_to_old_input_format, convert_old_input_format_to_parameter_sets
+export convert_parameter_sets_to_old_input_format, convert_to_parameter_sets
 
 
 function get_key_value(dict::Union{AbstractInput, Dict, Nothing}, key)
@@ -46,7 +46,7 @@ function extract_input_sets(simulation_input::FullSimulationInput)
 
 end
 
-function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld)
+function convert_to_parameter_sets(params::AdvancedDictInput)
 
 	##################################
 	# ModelSettings
@@ -90,11 +90,11 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 	# SimulationSettings
 
 	simulation_settings = Dict(
-		"GridResolutionPositiveElectrodeCoating" => params["PositiveElectrode"]["Coating"]["N"],
-		"GridResolutionPositiveElectrodeParticle" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"],
-		"GridResolutionNegativeElectrodeCoating" => params["NegativeElectrode"]["Coating"]["N"],
-		"GridResolutionNegativeElectrodeParticle" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"],
-		"GridResolutionSeparator" => params["Separator"]["N"], "TimeStepDuration" => params["TimeStepping"]["timeStepDuration"],
+		"PositiveElectrodeCoatingGridPoints" => params["PositiveElectrode"]["Coating"]["N"],
+		"PositiveElectrodeParticleGridPoints" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"],
+		"NegativeElectrodeCoatingGridPoints" => params["NegativeElectrode"]["Coating"]["N"],
+		"NegativeElectrodeParticleGridPoints" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"],
+		"SeparatorGridPoints" => params["Separator"]["N"], "TimeStepDuration" => params["TimeStepping"]["timeStepDuration"],
 	)
 
 	if haskey(model_settings, "RampUp")
@@ -103,26 +103,26 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 	end
 
 	if model_settings["ModelFramework"] == "P4D Cylindrical"
-		simulation_settings["GridResolutionHeight"] = params["Geometry"]["numberOfDiscretizationCellsVertical"]
-		simulation_settings["GridResolutionAngular"] = params["Geometry"]["numberOfDiscretizationCellsAngular"]
+		simulation_settings["HeightGridPoints"] = params["Geometry"]["numberOfDiscretizationCellsVertical"]
+		simulation_settings["AngularGridPoints"] = params["Geometry"]["numberOfDiscretizationCellsAngular"]
 
 		if haskey(model_settings, "CurrentCollectors")
-			simulation_settings["GridResolutionPositiveElectrodeCurrentCollector"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
-			simulation_settings["GridResolutionNegativeElectrodeCurrentCollector"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["PositiveElectrodeCurrentCollectorGridPoints"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["NegativeElectrodeCurrentCollectorGridPoints"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
 		end
 	end
 
 	if model_settings["ModelFramework"] == "P4D Pouch"
-		simulation_settings["GridResolutionElectrodeWidth"] = params["Geometry"]["Nw"]
-		simulation_settings["GridResolutionElectrodeLength"] = params["Geometry"]["Nh"]
+		simulation_settings["ElectrodeWidthGridPoints"] = params["Geometry"]["Nw"]
+		simulation_settings["ElectrodeLengthGridPoints"] = params["Geometry"]["Nh"]
 
 		if haskey(model_settings, "CurrentCollectors")
-			simulation_settings["GridResolutionPositiveElectrodeCurrentCollector"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
-			simulation_settings["GridResolutionPositiveElectrodeCurrentCollectorTabWidth"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"]
-			simulation_settings["GridResolutionPositiveElectrodeCurrentCollectorTabLength"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"]
-			simulation_settings["GridResolutionNegativeElectrodeCurrentCollector"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
-			simulation_settings["GridResolutionNegativeElectrodeCurrentCollectorTabWidth"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"]
-			simulation_settings["GridResolutionNegativeElectrodeCurrentCollectorTabLength"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"]
+			simulation_settings["PositiveElectrodeCurrentCollectorGridPoints"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["PositiveElectrodeCurrentCollectorTabWidthGridPoints"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"]
+			simulation_settings["PositiveElectrodeCurrentCollectorTabLengthGridPoints"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"]
+			simulation_settings["NegativeElectrodeCurrentCollectorGridPoints"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
+			simulation_settings["NegativeElectrodeCurrentCollectorTabWidthGridPoints"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"]
+			simulation_settings["NegativeElectrodeCurrentCollectorTabLengthGridPoints"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"]
 		end
 	end
 
@@ -385,7 +385,7 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 		"DRate" => params["Control"]["DRate"],
 		"LowerVoltageLimit" => params["Control"]["lowerCutoffVoltage"],
 		"UpperVoltageLimit" => params["Control"]["upperCutoffVoltage"],
-		"AmbientTemperature" => params["initT"],
+		"InitialTemperature" => params["initT"],
 		"InitialControl" => init_prot,
 	)
 
@@ -401,6 +401,25 @@ function convert_old_input_format_to_parameter_sets(params::BattMoInputFormatOld
 		SimulationSettings(simulation_settings))
 end
 
+function convert_to_full_simulation_input(input::AdvancedDictInput, base_model = "LithiumIonBattery"; solver_settings = missing)
+
+	cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_to_parameter_sets(input)
+
+	if ismissing(solver_settings)
+		solver_settings = get_default_solver_settings(get_model(base_model, model_settings))
+	end
+
+	full_simulation_input = Dict(
+		"BaseModel" => base_model,
+		"ModelSettings" => model_settings.all,
+		"CellParameters" => cell_parameters.all,
+		"CyclingProtocol" => cycling_protocol.all,
+		"SimulationSettings" => simulation_settings.all,
+		"SolverSettings" => solver_settings.all,
+	)
+	return FullSimulationInput(full_simulation_input)
+
+end
 
 function convert_parameter_sets_to_old_input_format(model_settings::ModelSettings, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol, simulation_settings::SimulationSettings)
 
@@ -830,7 +849,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 		),
 	)
 
-	battmo_input = InputParamsOld(battmo_input)
+	battmo_input = AdvancedDictInput(battmo_input)
 
 	if battmo_input["Geometry"]["case"] == "jellyRoll"
 

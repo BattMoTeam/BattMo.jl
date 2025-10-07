@@ -16,7 +16,7 @@ using Test
 
 		output_0 = solve(sim)
 
-		states = output_0[:states]
+		states = output_0.jutul_output.states
 
 		# # Specify an objective
 

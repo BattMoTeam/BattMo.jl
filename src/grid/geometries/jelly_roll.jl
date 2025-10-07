@@ -11,8 +11,8 @@ function jelly_roll_grid(input)
 
 	cell = cell_parameters["Cell"]
 
-	nangles = simulation_settings["GridResolutionAngular"]
-	nz      = simulation_settings["GridResolutionHeight"]
+	nangles = simulation_settings["AngularGridPoints"]
+	nz      = simulation_settings["HeightGridPoints"]
 	rinner  = cell["InnerRadius"]
 	router  = cell["OuterRadius"]
 	height  = cell["Height"]
@@ -33,14 +33,14 @@ function jelly_roll_grid(input)
 
 	function get_simulation_settings(simulation_settings)
 		# double coated electrode
-		v = [simulation_settings["GridResolutionPositiveElectrodeCoating"],
-			simulation_settings["GridResolutionPositiveElectrodeCurrentCollector"],
-			simulation_settings["GridResolutionPositiveElectrodeCoating"],
-			simulation_settings["GridResolutionSeparator"],
-			simulation_settings["GridResolutionNegativeElectrodeCoating"],
-			simulation_settings["GridResolutionNegativeElectrodeCurrentCollector"],
-			simulation_settings["GridResolutionNegativeElectrodeCoating"],
-			simulation_settings["GridResolutionSeparator"]]
+		v = [simulation_settings["PositiveElectrodeCoatingGridPoints"],
+			simulation_settings["PositiveElectrodeCurrentCollectorGridPoints"],
+			simulation_settings["PositiveElectrodeCoatingGridPoints"],
+			simulation_settings["SeparatorGridPoints"],
+			simulation_settings["NegativeElectrodeCoatingGridPoints"],
+			simulation_settings["NegativeElectrodeCurrentCollectorGridPoints"],
+			simulation_settings["NegativeElectrodeCoatingGridPoints"],
+			simulation_settings["SeparatorGridPoints"]]
 
 		return v
 	end
@@ -156,7 +156,7 @@ function setup_tab_couplings(grids, input, component)
 
 		zc = geo.boundary_centroids[3, vectbcface]
 
-		nz = simulation_settings["GridResolutionHeight"]
+		nz = simulation_settings["HeightGridPoints"]
 
 		if component == "NegativeCurrentCollector"
 			vectbcface = vectbcface[abs.(zc .- maximum(zc)).<=0.01/nz*(maximum(zc)-minimum(zc))]
@@ -245,7 +245,7 @@ function setup_tab_couplings(grids, input, component)
 			radius = norm(c)
 			tabhorzfaces = []
 			for (i, (angle_topface, radius_topface)) in enumerate(zip(angle_horzfaces, radius_horzfaces))
-				if (abs(angle_topface - angle) < (0.1 * 2 * pi / simulation_settings["GridResolutionAngular"])) && (radius_topface >= radius) &&
+				if (abs(angle_topface - angle) < (0.1 * 2 * pi / simulation_settings["AngularGridPoints"])) && (radius_topface >= radius) &&
 				   (radius_topface <= (radius + cell_parameters["NegativeElectrode"]["CurrentCollector"]["Thickness"]))
 					push!(tabhorzfaces, i)
 				end

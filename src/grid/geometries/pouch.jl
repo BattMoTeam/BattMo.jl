@@ -23,32 +23,32 @@ function pouch_grid(input)
 	simulation_settings = input.simulation_settings
 
 	ne_cc_z  = cell_parameters["NegativeElectrode"]["CurrentCollector"]["Thickness"]
-	ne_cc_nz = simulation_settings["GridResolutionNegativeElectrodeCurrentCollector"]
+	ne_cc_nz = simulation_settings["NegativeElectrodeCurrentCollectorGridPoints"]
 
 	ne_co_z  = cell_parameters["NegativeElectrode"]["Coating"]["Thickness"]
-	ne_co_nz = simulation_settings["GridResolutionNegativeElectrodeCoating"]
+	ne_co_nz = simulation_settings["NegativeElectrodeCoatingGridPoints"]
 
 	pe_cc_z  = cell_parameters["PositiveElectrode"]["CurrentCollector"]["Thickness"]
-	pe_cc_nz = simulation_settings["GridResolutionPositiveElectrodeCurrentCollector"]
+	pe_cc_nz = simulation_settings["PositiveElectrodeCurrentCollectorGridPoints"]
 
 	pe_co_z  = cell_parameters["PositiveElectrode"]["Coating"]["Thickness"]
-	pe_co_nz = simulation_settings["GridResolutionPositiveElectrodeCoating"]
+	pe_co_nz = simulation_settings["PositiveElectrodeCoatingGridPoints"]
 
 	sep_z  = cell_parameters["Separator"]["Thickness"]
-	sep_nz = simulation_settings["GridResolutionSeparator"]
+	sep_nz = simulation_settings["SeparatorGridPoints"]
 
 	x  = cell_parameters["Cell"]["ElectrodeWidth"]
 	y  = cell_parameters["Cell"]["ElectrodeLength"]
-	nx = simulation_settings["GridResolutionElectrodeWidth"]
-	ny = simulation_settings["GridResolutionElectrodeLength"]
+	nx = simulation_settings["ElectrodeWidthGridPoints"]
+	ny = simulation_settings["ElectrodeLengthGridPoints"]
 
-	ne_tab_nx = simulation_settings["GridResolutionNegativeElectrodeCurrentCollectorTabWidth"]
-	ne_tab_ny = simulation_settings["GridResolutionNegativeElectrodeCurrentCollectorTabLength"]
+	ne_tab_nx = simulation_settings["NegativeElectrodeCurrentCollectorTabWidthGridPoints"]
+	ne_tab_ny = simulation_settings["NegativeElectrodeCurrentCollectorTabLengthGridPoints"]
 	ne_tab_x  = cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"]
 	ne_tab_y  = cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabLength"]
 
-	pe_tab_nx = simulation_settings["GridResolutionPositiveElectrodeCurrentCollectorTabWidth"]
-	pe_tab_ny = simulation_settings["GridResolutionPositiveElectrodeCurrentCollectorTabLength"]
+	pe_tab_nx = simulation_settings["PositiveElectrodeCurrentCollectorTabWidthGridPoints"]
+	pe_tab_ny = simulation_settings["PositiveElectrodeCurrentCollectorTabLengthGridPoints"]
 	pe_tab_x  = cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"]
 	pe_tab_y  = cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabLength"]
 

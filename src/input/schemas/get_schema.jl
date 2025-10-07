@@ -168,7 +168,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ReactionRateConstant", "ChargeTransferCoefficient", "ActivationEnergyOfReaction"],
+							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ReactionRateConstant", "ChargeTransferCoefficient"],
 					),
 					"Interphase" => Dict(
 						"type" => "object",
@@ -255,7 +255,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 						),
 						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ReactionRateConstant", "ChargeTransferCoefficient", "ActivationEnergyOfReaction"],
+							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ReactionRateConstant", "ChargeTransferCoefficient"],
 					),
 					"ConductiveAdditive" => Dict(
 						"type" => "object",
@@ -385,6 +385,15 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 		push!(ne_required, "Interphase")
 	end
 
+	temperature_dependence = get(model_settings, "TemperatureDependence", nothing)
+
+	if temperature_dependence == "Arrhenius"
+		push!(ne_am_required, "ActivationEnergyOfReaction")
+		push!(pe_am_required, "ActivationEnergyOfReaction")
+		push!(ne_am_required, "ActivationEnergyOfDiffusion")
+		push!(pe_am_required, "ActivationEnergyOfDiffusion")
+	end
+
 	return schema
 end
 
@@ -490,7 +499,7 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
 	temperature_dependence = get(model_settings, "TemperatureDependence", nothing)
 
 	if temperature_dependence == "Arrhenius"
-		push!(required, "AmbientTemperature")
+		push!(required, "InitialTemperature")
 	end
 
 	return schema
@@ -503,21 +512,21 @@ function get_schema_simulation_settings(model_settings)
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",
 		"properties" => Dict(
-			"GridResolutionHeight" => create_property(parameter_meta, "GridResolutionHeight"),
-			"GridResolutionAngular" => create_property(parameter_meta, "GridResolutionAngular"),
-			"GridResolutionElectrodeWidth" => create_property(parameter_meta, "GridResolutionElectrodeWidth"),
-			"GridResolutionElectrodeLength" => create_property(parameter_meta, "GridResolutionElectrodeLength"),
-			"GridResolutionPositiveElectrodeCoating" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCoating"),
-			"GridResolutionPositiveElectrodeParticle" => create_property(parameter_meta, "GridResolutionPositiveElectrodeParticle"),
-			"GridResolutionPositiveElectrodeCurrentCollector" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollector"),
-			"GridResolutionPositiveElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabWidth"),
-			"GridResolutionPositiveElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionPositiveElectrodeCurrentCollectorTabLength"),
-			"GridResolutionNegativeElectrodeCoating" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCoating"),
-			"GridResolutionNegativeElectrodeParticle" => create_property(parameter_meta, "GridResolutionNegativeElectrodeParticle"),
-			"GridResolutionNegativeElectrodeCurrentCollector" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollector"),
-			"GridResolutionNegativeElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabWidth"),
-			"GridResolutionNegativeElectrodeCurrentCollectorTabLength" => create_property(parameter_meta, "GridResolutionNegativeElectrodeCurrentCollectorTabLength"),
-			"GridResolutionSeparator" => create_property(parameter_meta, "GridResolutionSeparator"), "Grid" => Dict(
+			"HeightGridPoints" => create_property(parameter_meta, "HeightGridPoints"),
+			"AngularGridPoints" => create_property(parameter_meta, "AngularGridPoints"),
+			"ElectrodeWidthGridPoints" => create_property(parameter_meta, "ElectrodeWidthGridPoints"),
+			"ElectrodeLengthGridPoints" => create_property(parameter_meta, "ElectrodeLengthGridPoints"),
+			"PositiveElectrodeCoatingGridPoints" => create_property(parameter_meta, "PositiveElectrodeCoatingGridPoints"),
+			"PositiveElectrodeParticleGridPoints" => create_property(parameter_meta, "PositiveElectrodeParticleGridPoints"),
+			"PositiveElectrodeCurrentCollectorGridPoints" => create_property(parameter_meta, "PositiveElectrodeCurrentCollectorGridPoints"),
+			"PositiveElectrodeCurrentCollectorTabWidthGridPoints" => create_property(parameter_meta, "PositiveElectrodeCurrentCollectorTabWidthGridPoints"),
+			"PositiveElectrodeCurrentCollectorTabLengthGridPoints" => create_property(parameter_meta, "PositiveElectrodeCurrentCollectorTabLengthGridPoints"),
+			"NegativeElectrodeCoatingGridPoints" => create_property(parameter_meta, "NegativeElectrodeCoatingGridPoints"),
+			"NegativeElectrodeParticleGridPoints" => create_property(parameter_meta, "NegativeElectrodeParticleGridPoints"),
+			"NegativeElectrodeCurrentCollectorGridPoints" => create_property(parameter_meta, "NegativeElectrodeCurrentCollectorGridPoints"),
+			"NegativeElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "NegativeElectrodeCurrentCollectorTabWidthGridPoints"),
+			"NegativeElectrodeCurrentCollectorTabLengthGridPoints" => create_property(parameter_meta, "NegativeElectrodeCurrentCollectorTabLengthGridPoints"),
+			"SeparatorGridPoints" => create_property(parameter_meta, "SeparatorGridPoints"), "Grid" => Dict(
 				"type" => "array",
 			),
 			"TimeStepDuration" => create_property(parameter_meta, "TimeStepDuration"),
@@ -525,27 +534,27 @@ function get_schema_simulation_settings(model_settings)
 			"RampUpSteps" => create_property(parameter_meta, "RampUpSteps"),
 		),
 		"required" => [
-			"GridResolutionPositiveElectrodeCoating",
-			"GridResolutionPositiveElectrodeParticle",
-			"GridResolutionNegativeElectrodeCoating",
-			"GridResolutionNegativeElectrodeParticle",
-			"GridResolutionSeparator",
+			"PositiveElectrodeCoatingGridPoints",
+			"PositiveElectrodeParticleGridPoints",
+			"NegativeElectrodeCoatingGridPoints",
+			"NegativeElectrodeParticleGridPoints",
+			"SeparatorGridPoints",
 			"TimeStepDuration"],
 	)
 
 	required = schema["required"]
 
 	if model_settings["ModelFramework"] == "P4D Pouch"
-		push!(required, "GridResolutionElectrodeWidth")
-		push!(required, "GridResolutionElectrodeLength")
+		push!(required, "ElectrodeWidthGridPoints")
+		push!(required, "ElectrodeLengthGridPoints")
 
 		if haskey(model_settings, "CurrentCollectors")
-			push!(required, "GridResolutionPositiveElectrodeCurrentCollector")
-			push!(required, "GridResolutionPositiveElectrodeCurrentCollectorTabWidth")
-			push!(required, "GridResolutionPositiveElectrodeCurrentCollectorTabLength")
-			push!(required, "GridResolutionNegativeElectrodeCurrentCollector")
-			push!(required, "GridResolutionNegativeElectrodeCurrentCollectorTabWidth")
-			push!(required, "GridResolutionNegativeElectrodeCurrentCollectorTabLength")
+			push!(required, "PositiveElectrodeCurrentCollectorGridPoints")
+			push!(required, "PositiveElectrodeCurrentCollectorTabWidthGridPoints")
+			push!(required, "PositiveElectrodeCurrentCollectorTabLengthGridPoints")
+			push!(required, "NegativeElectrodeCurrentCollectorGridPoints")
+			push!(required, "NegativeElectrodeCurrentCollectorTabWidthGridPoints")
+			push!(required, "NegativeElectrodeCurrentCollectorTabLengthGridPoints")
 		end
 	end
 	if haskey(model_settings, "RampUp") && model_settings["RampUp"] == "Sinusoidal"
@@ -554,11 +563,11 @@ function get_schema_simulation_settings(model_settings)
 	end
 
 	if model_settings["ModelFramework"] == "P4D Cylindrical"
-		push!(required, "GridResolutionHeight")
-		push!(required, "GridResolutionAngular")
+		push!(required, "HeightGridPoints")
+		push!(required, "AngularGridPoints")
 		if haskey(model_settings, "CurrentCollectors")
-			push!(required, "GridResolutionPositiveElectrodeCurrentCollector")
-			push!(required, "GridResolutionNegativeElectrodeCurrentCollector")
+			push!(required, "PositiveElectrodeCurrentCollectorGridPoints")
+			push!(required, "NegativeElectrodeCurrentCollectorGridPoints")
 		end
 
 	end

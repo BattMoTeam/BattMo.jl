@@ -1,4 +1,4 @@
-{   
+{
     "Metadata": {
         "Title": "Chen2020",
         "Source": "https://doi.org/10.1149/1945-7111/ab9050",
@@ -143,28 +143,25 @@
             "IonicConductivity": "0.1297*(c/1000)^3 - 2.51*(c/1000)^(1.5) + 3.329*(c/1000)",
             "DiffusionCoefficient": "8.794*10^(-11)*(c/1000)^2 - 3.972*10^(-10)*(c/1000) + 4.862*10^(-10)"
         }
-
     },
     "CyclingProtocol": {
         "Protocol": "CC",
-            "TotalNumberOfCycles": 0,
-            "InitialStateOfCharge": 0.99,
-            "InitialControl": "discharging",
-            "DRate": 0.5,
-            "LowerVoltageLimit": 2.4,
-            "UpperVoltageLimit": 4.1
-
+        "TotalNumberOfCycles": 0,
+        "InitialStateOfCharge": 0.99,
+        "InitialControl": "discharging",
+        "DRate": 0.5,
+        "LowerVoltageLimit": 2.4,
+        "UpperVoltageLimit": 4.1
     },
     "SimulationSettings": {
-        "GridResolutionPositiveElectrodeCoating": 10,
-        "GridResolutionPositiveElectrodeParticle": 10,
-        "GridResolutionNegativeElectrodeCoating": 10,
-        "GridResolutionNegativeElectrodeParticle": 10,
-        "GridResolutionSeparator": 3,
+        "PositiveElectrodeCoatingGridPoints": 10,
+        "PositiveElectrodeParticleGridPoints": 10,
+        "NegativeElectrodeCoatingGridPoints": 10,
+        "NegativeElectrodeParticleGridPoints": 10,
+        "SeparatorGridPoints": 3,
         "TimeStepDuration": 50,
         "RampUpTime": 10,
         "RampUpSteps": 5
-
     },
     "SolverSettings": {
         "NonLinearSolver": {
@@ -208,6 +205,5 @@
             "ReportLevel": 0,
             "OutputSubstrates": false
         }
-
     }
 }

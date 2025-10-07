@@ -27,7 +27,7 @@ states = output[:states]
 model  = output[:extra][:model]
 
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Voltage][1] for state in states]
+E = [state[:Control][:ElectricPotential][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 f = Figure(size = (1000, 400))
@@ -79,15 +79,15 @@ function plot_potential(am, cc, label)
 	ax3d = Axis3(f3D[1, 1];
 		title = "Potential in $label electrode (coating and active material)")
 
-	maxVoltage = maximum([maximum(state[cc][:Voltage]), maximum(state[am][:Voltage])])
-	minVoltage = minimum([minimum(state[cc][:Voltage]), minimum(state[am][:Voltage])])
+	maxVoltage = maximum([maximum(state[cc][:ElectricPotential]), maximum(state[am][:ElectricPotential])])
+	minVoltage = minimum([minimum(state[cc][:ElectricPotential]), minimum(state[am][:ElectricPotential])])
 
 	colorrange = [0, maxVoltage - minVoltage]
 
 	components = [am, cc]
 	for component in components
 		g = model[component].domain.representation
-		phi = state[component][:Voltage]
+		phi = state[component][:ElectricPotential]
 		Jutul.plot_cell_data!(ax3d, g, phi .- minVoltage; colormap = :viridis, colorrange = colorrange)
 	end
 
@@ -166,4 +166,4 @@ nothing # hide
 plot_elyte(Concentration, "concentration")
 
 # ## Plot of the potential in the electrolyte
-plot_elyte(:Voltage, "potential")
+plot_elyte(:ElectricPotential, "potential")

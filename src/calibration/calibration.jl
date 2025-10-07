@@ -214,7 +214,7 @@ function setup_calibration_objective(vc::VoltageCalibration)
 			dt = max(dt, total_time - t)
 		end
 		V_obs = V_fun(t)
-		V_sim = state[:Control][:Voltage][1]
+		V_sim = state[:Control][:ElectricPotential][1]
 		return voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
 	end
 	return objective
@@ -254,7 +254,7 @@ calibrated_params, history = solve(vc; grad_tol = 1e-7)
 ```
 """
 function solve(vc::AbstractCalibration;
-	solver_settings = get_default_solver_settings(typeof(vc.sim.model)),
+	solver_settings = get_default_solver_settings(vc.sim.model),
 	grad_tol = 1e-6,
 	obj_change_tol = 1e-6,
 	opt_fun = missing,
@@ -390,7 +390,7 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing;
 
 	grids, couplings = setup_grids_and_couplings(model, input)
 
-	model, parameters = setup_model(model, input, grids, couplings; T = T)
+	model, parameters = setup_model!(model, input, grids, couplings; T = T)
 	state0 = BattMo.setup_initial_state(input, model)
 	forces = setup_forces(model.multimodel)
 	timesteps = BattMo.setup_timesteps(input)

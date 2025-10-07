@@ -57,13 +57,12 @@ sim = Simulation(model_setup, cell_parameters, cycling_protocol);
 # Now we can run the simulation
 output = solve(sim;)
 
-# The output is a NamedTuple storing the results of the simulation within multiple dictionaries. Let's plot the cell current and cell voltage over time and make a plot with the GLMakie package.
+# The output is a SimulationOutput type storing the results of the simulation within multiple dictionaries. Let's plot the cell current and cell voltage over time and make a plot with the GLMakie package.
 
-states = output[:states]
+t = output.time_series["Time"]
+E = output.time_series["Voltage"]
+I = output.time_series["Current"]
 
-t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Voltage][1] for state in states]
-I = [state[:Control][:Current][1] for state in states]
 fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 lines!(ax, t, E)

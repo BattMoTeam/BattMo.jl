@@ -27,11 +27,9 @@ sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
 
 output = solve(sim)
 
-states = output[:states]
-
-t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Voltage][1] for state in states]
-I = [state[:Control][:Current][1] for state in states]
+t = output.time_series["Time"]
+E = output.time_series["Voltage"]
+I = output.time_series["Current"]
 nothing # hide
 
 # ## Plot of voltage and current
@@ -41,8 +39,8 @@ plot_dashboard(output; plot_type = "simple")
 # ## Plot of SEI thickness
 
 # We recover the SEI thickness from the `state` output
-seilength_x1 = [state[:NegativeElectrodeActiveMaterial][:SEIlength][1] for state in states]
-seilength_xend = [state[:NegativeElectrodeActiveMaterial][:SEIlength][end] for state in states]
+seilength_x1 = output.states["SEIThickness"][:, 1]
+seilength_xend = output.states["SEIThickness"][:, end]
 
 f = Figure(size = (1000, 400))
 
@@ -96,8 +94,8 @@ f # hide
 
 # ## Plot of voltage drop 
 
-u_x1 = [state[:NegativeElectrodeActiveMaterial][:SEIvoltageDrop][1] for state in states]
-u_xend = [state[:NegativeElectrodeActiveMaterial][:SEIvoltageDrop][end] for state in states]
+u_x1 = output.states["SEIVoltageDrop"][:, 1]
+u_xend = output.states["SEIVoltageDrop"][:, end]
 
 f = Figure(size = (1000, 400))
 
@@ -130,37 +128,3 @@ scatterlines!(ax,
 	label = "xmax")
 
 
-# ## Plot of the lithium content
-
-u_x1 = [state[:NegativeElectrodeActiveMaterial][:SEIvoltageDrop][1] for state in states]
-u_xend = [state[:NegativeElectrodeActiveMaterial][:SEIvoltageDrop][end] for state in states]
-
-f = Figure(size = (1000, 400))
-
-ax = Axis(f[1, 1],
-	title = "SEI voltage drop",
-	xlabel = "Time / s",
-	ylabel = "Voltage / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
-)
-
-scatterlines!(ax,
-	t,
-	u_x1;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :blue,
-	label = "xmin")
-
-scatterlines!(ax,
-	t,
-	u_xend;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-	label = "xmax")

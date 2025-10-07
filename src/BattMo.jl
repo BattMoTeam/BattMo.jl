@@ -180,6 +180,7 @@ using Jutul: tpfv_geometry, apply!, is_cell_major
 using Jutul: StaticCSR, ParallelCSRContext
 using Jutul: jutul_message
 using Jutul: get_1d_interpolator
+using PythonCall: pyconvert, Py
 
 
 timeit_debug_enabled() = Jutul.timeit_debug_enabled()
@@ -205,11 +206,11 @@ include("models/full_battery_models/sodium_ion.jl")
 
 include("input/loader.jl")
 include("input/defaults.jl")
-include("input/defaults/cell_parameters/function_parameters_Xu2015.jl")
 include("input/writer.jl")
 include("input/function_input_tools.jl")
 include("input/formatter.jl")
 include("input/validator.jl")
+include("input/equilibrium_kpis.jl")
 
 
 
@@ -226,19 +227,20 @@ include("models/battery_utils.jl")
 
 include("simulation/simulation.jl")
 include("simulation/simulation_utils.jl")
+include("simulation/simulation_wrappers.jl")
 
 include("matlab_interface/matlab_model_setup.jl")
-# include("old_model_setup/model_setup.jl")
+
+include("utils/battery_cell_specifications.jl")
+include("output/output_types.jl")
+include("output/metrics.jl")
+include("output/output_format.jl")
+include("output/meta_data/variables.jl")
+include("output/printer.jl")
 
 include("plotting/makie_ext.jl")
 include("plotting/3d.jl")
 include("plotting/1d.jl")
-
-include("utils/battery_cell_specifications.jl")
-include("utils/battery_kpis.jl")
-include("output/output_format.jl")
-include("output/meta_data/variables.jl")
-include("output/printer.jl")
 
 
 include("solver/linsolve.jl")
@@ -266,7 +268,7 @@ include("calibration/calibration_utils.jl")
 		simulation_settings = load_simulation_settings(; from_default_set = "P2D")
 		model_setup = LithiumIonBattery(; model_settings)
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol)
-		output = solve(sim)
+		output = solve(sim, info_level = -1)
 	end
 	try
 		redirect_stdout(workload_fn, devnull)

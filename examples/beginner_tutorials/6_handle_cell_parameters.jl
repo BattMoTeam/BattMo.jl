@@ -68,10 +68,10 @@ sim = Simulation(model, cell_parameters, cycling_protocol)
 
 output = solve(sim);
 
-states = output[:states]
-t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Voltage][1] for state in states]
-I = [state[:Control][:Current][1] for state in states]
+t = output.time_series["Time"]
+E = output.time_series["Voltage"]
+I = output.time_series["Current"]
+
 using GLMakie # hide
 fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
@@ -89,9 +89,9 @@ nothing # hide
 
 # Now, we plot the original and modified results:
 
-t2 = [state[:Control][:Controller].time for state in output2[:states]]
-E2 = [state[:Control][:Voltage][1] for state in output2[:states]]
-I2 = [state[:Control][:Current][1] for state in output2[:states]]
+t2 = output2.time_series["Time"]
+E2 = output2.time_series["Voltage"]
+I2 = output2.time_series["Current"]
 
 fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")

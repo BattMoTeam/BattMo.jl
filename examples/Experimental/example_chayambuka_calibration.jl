@@ -51,11 +51,11 @@ model_settings = load_model_settings(; from_default_set = "P2D")
 simulation_settings = load_simulation_settings(; from_default_set = "P2D")
 
 ######### Alter simulation settings #########
-simulation_settings["GridResolutionNegativeElectrodeCoating"] = 8
-simulation_settings["GridResolutionPositiveElectrodeCoating"] = 50
-simulation_settings["GridResolutionNegativeElectrodeParticle"] = 50
-simulation_settings["GridResolutionPositiveElectrodeParticle"] = 50
-simulation_settings["GridResolutionSeparator"] = 5
+simulation_settings["NegativeElectrodeCoatingGridPoints"] = 8
+simulation_settings["PositiveElectrodeCoatingGridPoints"] = 50
+simulation_settings["NegativeElectrodeParticleGridPoints"] = 50
+simulation_settings["PositiveElectrodeParticleGridPoints"] = 50
+simulation_settings["SeparatorGridPoints"] = 5
 
 simulation_settings["TimeStepDuration"] = 300
 
@@ -111,7 +111,7 @@ output = solve(sim; info_level = 0);
 ######### Plot results ##########
 
 t0 = get_output_time_series(output)[:Time]
-V0 = get_output_time_series(output)[:Voltage]
+V0 = get_output_time_series(output)[:ElectricPotential]
 metrics = get_output_metrics(output)
 
 
@@ -167,7 +167,7 @@ output_opt = solve(sim_opt);
 
 time_series = get_output_time_series(output_opt)
 t_opt = time_series[:Time]
-V_opt = time_series[:Voltage]
+V_opt = time_series[:ElectricPotential]
 
 fig = Figure()
 ax = Axis(fig[1, 1], title = "CRate = 0.1")

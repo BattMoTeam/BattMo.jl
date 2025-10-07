@@ -52,7 +52,7 @@ end
 function computeCellEnergy(states)
 	# Only take discharge curves
 	time = [state[:Control][:Controller].time for state in states if state[:Control][:Current][1] > 0]
-	E    = [state[:Control][:Voltage][1] for state in states if state[:Control][:Current][1] > 0]
+	E    = [state[:Control][:ElectricPotential][1] for state in states if state[:Control][:Current][1] > 0]
 	I    = [state[:Control][:Current][1] for state in states if state[:Control][:Current][1] > 0]
 
 	dt = diff(time)
@@ -163,7 +163,7 @@ function computeCellMass(model::MultiModel)
 end
 
 
-function computeCellSpecifications(inputparams::InputParamsOld)
+function computeCellSpecifications(inputparams::AdvancedDictInput)
 
 	model = setup_submodels(inputparams)
 	return computeCellSpecifications(model)
@@ -190,7 +190,7 @@ function computeCellSpecifications(model::MultiModel; T = 298.15)
 end
 
 
-function computeEnergyEfficiency(inputparams::InputParamsOld)
+function computeEnergyEfficiency(inputparams::AdvancedDictInput)
 
 	# setup a schedule with just one cycle and very fine refinement
 
@@ -238,7 +238,7 @@ function computeEnergyEfficiency(inputparams::InputParamsOld)
 
 	end
 
-	inputparams2 = InputParamsOld(jsondict)
+	inputparams2 = AdvancedDictInput(jsondict)
 
 	(; states) = run_battery(inputparams2; info_level = 0)
 
@@ -249,7 +249,7 @@ end
 function computeEnergyEfficiency(states; cycle_number = nothing)
 
 	t = [state[:Control][:Controller].time for state in states]
-	E = [state[:Control][:Voltage][1] for state in states]
+	E = [state[:Control][:ElectricPotential][1] for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
 	if !isnothing(cycle_number)
@@ -290,7 +290,7 @@ function computeEnergyEfficiency(states; cycle_number = nothing)
 	return efficiency * 100 # %
 
 end
-function computeDischargeEnergy(inputparams::InputParamsOld)
+function computeDischargeEnergy(inputparams::AdvancedDictInput)
 	# setup a schedule with just discharge half cycle and very fine refinement
 
 	jsondict = inputparams.data
@@ -322,7 +322,7 @@ function computeDischargeEnergy(inputparams::InputParamsOld)
 
 	end
 
-	inputparams2 = InputParamsOld(jsondict)
+	inputparams2 = AdvancedDictInput(jsondict)
 
 	(; states) = run_battery(inputparams2; info_level = 0)
 
