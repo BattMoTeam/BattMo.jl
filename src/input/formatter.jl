@@ -385,7 +385,7 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 		"DRate" => params["Control"]["DRate"],
 		"LowerVoltageLimit" => params["Control"]["lowerCutoffVoltage"],
 		"UpperVoltageLimit" => params["Control"]["upperCutoffVoltage"],
-		"AmbientTemperature" => params["initT"],
+		"InitialTemperature" => params["initT"],
 		"InitialControl" => init_prot,
 	)
 

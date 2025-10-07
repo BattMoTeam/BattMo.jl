@@ -19,8 +19,6 @@ include("./data/julia_files/function_parameters_Xu2015.jl")
 		@eval Main electrolyte_conductivity_Xu_2015 = $func.electrolyte_conductivity_Xu_2015
 		@eval Main electrolyte_diffusivity_Xu_2015 = $func.electrolyte_diffusivity_Xu_2015
 
-		@info typeof(Main.electrolyte_conductivity_Xu_2015(1000.0, 298.15))
-
 		cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
 		cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 

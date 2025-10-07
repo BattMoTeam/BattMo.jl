@@ -182,6 +182,7 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 
 	cell_parameters = input.cell_parameters
 	inputparams_elyte = cell_parameters["Electrolyte"]
+	base_path = isnothing(cell_parameters.source_path) ? "" : dirname(cell_parameters.source_path)
 
 	params[:transference]        = inputparams_elyte["TransferenceNumber"]
 	params[:charge]              = inputparams_elyte["ChargeNumber"]
@@ -202,7 +203,8 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 	elseif haskey(inputparams_elyte["DiffusionCoefficient"], "FunctionName")
 
 		funcname = inputparams_elyte["DiffusionCoefficient"]["FunctionName"]
-		funcpath = haskey(inputparams_elyte["DiffusionCoefficient"], "FilePath") ? inputparams_elyte["DiffusionCoefficient"]["FilePath"] : nothing
+		funcpath = haskey(inputparams_elyte["DiffusionCoefficient"], "FilePath") ? joinpath(base_path, nputparams_elyte["DiffusionCoefficient"]["FilePath"]) : nothing
+
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:diffusivity_func] = fcn
 
@@ -228,7 +230,7 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 	elseif haskey(inputparams_elyte["IonicConductivity"], "FunctionName")
 
 		funcname = inputparams_elyte["IonicConductivity"]["FunctionName"]
-		funcpath = haskey(inputparams_elyte["IonicConductivity"], "FilePath") ? inputparams_elyte["IonicConductivity"]["FilePath"] : nothing
+		funcpath = haskey(inputparams_elyte["IonicConductivity"], "FilePath") ? joinpath(base_path, inputparams_elyte["IonicConductivity"]["FilePath"]) : nothing
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:conductivity_func] = fcn
 
@@ -316,6 +318,8 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 
 	cell_parameters = input.cell_parameters
 
+	base_path = isnothing(cell_parameters.source_path) ? "" : dirname(cell_parameters.source_path)
+
 	inputparams_electrode = cell_parameters[stringName]
 	inputparams_active_material = cell_parameters[stringName]["ActiveMaterial"]
 
@@ -354,9 +358,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	elseif haskey(inputparams_active_material["ReactionRateConstant"], "FunctionName")
 
 		funcname = inputparams_active_material["ReactionRateConstant"]["FunctionName"]
-		funcpath =
-			isnothing(get_key_value(inputparams_active_material["ReactionRateConstant"], "FilePath")) ? nothing :
-			normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(inputparams_active_material["ReactionRateConstant"], "FilePath")))
+		funcpath = haskey(inputparams_active_material["ReactionRateConstant"], "FilePath") ? joinpath(base_path, inputparams_active_material["ReactionRateConstant"]["FilePath"]) : nothing
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		am_params[:reaction_rate_constant_func] = fcn
 
@@ -384,7 +386,8 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	elseif haskey(inputparams_active_material["OpenCircuitPotential"], "FunctionName")
 
 		funcname = inputparams_active_material["OpenCircuitPotential"]["FunctionName"]
-		funcpath = haskey(inputparams_active_material["OpenCircuitPotential"], "FilePath") ? inputparams_active_material["OpenCircuitPotential"]["FilePath"] : nothing
+		funcpath = haskey(inputparams_active_material["OpenCircuitPotential"], "FilePath") ? joinpath(base_path, inputparams_active_material["OpenCircuitPotential"]["FilePath"]) : nothing
+
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		am_params[:ocp_func] = fcn
 
@@ -398,7 +401,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	end
 
 	refT     = 298.15
-	T        = get(input.cycling_protocol, "AmbientTemperature", refT)
+	T        = get(input.cycling_protocol, "InitialTemperature", refT)
 	SOC_init = input.cycling_protocol["InitialStateOfCharge"]
 
 	theta0   = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
@@ -429,7 +432,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		elseif haskey(inputparams_active_material["DiffusionCoefficient"], "FunctionName")
 
 			funcname = inputparams_active_material["DiffusionCoefficient"]["FunctionName"]
-			funcpath = haskey(inputparams_active_material["DiffusionCoefficient"], "FilePath") ? inputparams_active_material["DiffusionCoefficient"]["FilePath"] : nothing
+			funcpath = haskey(inputparams_active_material["DiffusionCoefficient"], "FilePath") ? joinpath(base_path, inputparams_active_material["DiffusionCoefficient"]["FilePath"]) : nothing
 			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 
 			am_params[:diff_func] = fcn
@@ -524,7 +527,7 @@ function set_parameters(model::IntercalationBattery, input
 	parameters = Dict{Symbol, Any}()
 
 	refT = 298.15
-	T = get(cycling_protocol, "AmbientTemperature", refT)
+	T = get(cycling_protocol, "InitialTemperature", refT)
 
 	if haskey(model.settings, "CurrentCollectors")
 
@@ -895,7 +898,7 @@ function setup_initial_state(input, model::IntercalationBattery)
 	include_cc = haskey(model.settings, "CurrentCollectors")
 
 	refT     = 298.15
-	T        = get(input.cycling_protocol, "AmbientTemperature", refT)
+	T        = get(input.cycling_protocol, "InitialTemperature", refT)
 	SOC_init = input.cycling_protocol["InitialStateOfCharge"]
 
 	function setup_init_am(name, multimodel)

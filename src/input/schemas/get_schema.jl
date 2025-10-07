@@ -490,7 +490,7 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
 	temperature_dependence = get(model_settings, "TemperatureDependence", nothing)
 
 	if temperature_dependence == "Arrhenius"
-		push!(required, "AmbientTemperature")
+		push!(required, "InitialTemperature")
 	end
 
 	return schema
