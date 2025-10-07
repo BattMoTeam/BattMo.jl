@@ -57,7 +57,6 @@ function calc_ne_ocp(c, T, refT, cmax)
 	return ocp(c / cmax)
 end
 
-@eval Main calc_ne_ocp = $calc_ne_ocp
 
 function calc_pe_ocp(c, T, refT, cmax)
 
@@ -65,7 +64,6 @@ function calc_pe_ocp(c, T, refT, cmax)
 	return ocp(c / cmax)
 end
 
-@eval Main calc_pe_ocp = $calc_pe_ocp
 
 function calc_elyte_cond(c, T)
 
@@ -73,7 +71,6 @@ function calc_elyte_cond(c, T)
 	return cond(c)
 end
 
-@eval Main calc_elyte_cond = $calc_elyte_cond
 
 function calc_elyte_diff(c, T)
 
@@ -81,7 +78,6 @@ function calc_elyte_diff(c, T)
 	return diff(c)
 end
 
-@eval Main calc_elyte_diff = $calc_elyte_diff
 
 function calc_pe_D(c, T, refT, cmax)
 
@@ -89,15 +85,12 @@ function calc_pe_D(c, T, refT, cmax)
 	return diff(c)
 end
 
-@eval Main calc_pe_D = $calc_pe_D
-
 function calc_ne_D(c, T, refT, cmax)
 
 	diff = get_1d_interpolator(c_ne_D, ne_D)
 	return diff(c)
 end
 
-@eval Main calc_ne_D = $calc_ne_D
 
 function calc_ne_k(c, T)
 
@@ -105,12 +98,9 @@ function calc_ne_k(c, T)
 	return diff(c)
 end
 
-@eval Main calc_ne_k = $calc_ne_k
 
 function calc_pe_k(c, T)
 
 	diff = get_1d_interpolator(c_pe_k, pe_k)
 	return diff(c)
 end
-
-@eval Main calc_pe_k = $calc_pe_k
