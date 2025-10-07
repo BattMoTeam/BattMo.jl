@@ -214,7 +214,8 @@ include("input/formatter.jl")
 include("input/validator.jl")
 include("input/equilibrium_kpis.jl")
 
-
+include("input/defaults/cell_parameters/Chayambuka_functions.jl")
+include("input/defaults/cell_parameters/function_parameters_Xu2015.jl")
 
 include("models/thermal.jl")
 include("models/temperature_dependence.jl")

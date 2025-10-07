@@ -6,9 +6,6 @@
 
 using BattMo, GLMakie
 
-battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
-include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_functions.jl"))
-
 ######### Load Simulation Data #########
 
 cell_parameters = load_cell_parameters(; from_default_set = "Chayambuka2022")
