@@ -180,6 +180,7 @@ using Jutul: tpfv_geometry, apply!, is_cell_major
 using Jutul: StaticCSR, ParallelCSRContext
 using Jutul: jutul_message
 using Jutul: get_1d_interpolator
+using PythonCall: pyconvert, Py
 
 
 timeit_debug_enabled() = Jutul.timeit_debug_enabled()
@@ -205,7 +206,6 @@ include("models/full_battery_models/sodium_ion.jl")
 
 include("input/loader.jl")
 include("input/defaults.jl")
-include("input/defaults/cell_parameters/function_parameters_Xu2015.jl")
 include("input/writer.jl")
 include("input/function_input_tools.jl")
 include("input/formatter.jl")

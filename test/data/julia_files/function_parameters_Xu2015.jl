@@ -1,12 +1,10 @@
-
-
 function open_circuit_potential_graphite_Xu_2015(c, T, refT, cmax)
 
 	"""Compute OCP for LFP as function of temperature and concentration"""
 	refT  = 298.15
 	theta = c ./ cmax
 
-	data1 = [                                                                                                          0.00 1.28683
+	data1 = [                                                                                                               0.00 1.28683
 		0.01 0.65272
 		0.02 0.52621
 		0.03 0.44128
@@ -43,7 +41,7 @@ function open_circuit_potential_graphite_Xu_2015(c, T, refT, cmax)
 
 	refOCP = itp_refOCP(theta)
 
-	data2 = [                                                                                                          0.01049 3.00E-04
+	data2 = [                                                                                                               0.01049 3.00E-04
 		0.03146 2.47E-04
 		0.05244 1.95E-04
 		0.07711 1.33E-04
@@ -163,32 +161,5 @@ function open_circuit_potential_lfp_Xu_2015(c, T, refT, cmax)
 end
 
 
-function electrolyte_conductivity_Xu_2015(c::Real, T::Real)
-	""" Compute the electrolyte conductivity as a function of concentration
-	"""
-	conductivityFactor = 1e-4
-
-	conductivity = c * 1e-4 * 1.2544 * (-8.2488 + 0.053248 * T - 2.987e-5 * (T^2) + 0.26235e-3 * c - 9.3063e-6 * c * T + 8.069e-9 * c * T^2 + 2.2002e-7 * c^2 - 1.765e-10 * T * c^2)
-	return conductivity
-end
-
-function electrolyte_diffusivity_Xu_2015(c::Real, T::Real)
-	""" Compute the diffusion coefficient as a function of concentration
-	"""
-	# Calculate diffusion coefficients constant for the diffusion coefficient calculation
-	cnst = [                                -4.43  -54.0;
-		-0.22   0.0]
-
-	Tgi = [229 5.0]
-
-	# Diffusion coefficient, [m^2 s^-1]
-	#Removed 10⁻⁴ otherwise the same
-	D = 10^((cnst[1, 1] + cnst[1, 2] / (T - Tgi[1] - Tgi[2] * c * 1e-3) + cnst[2, 1] * c * 1e-3))
-	return D
-end
-
-
 @eval Main open_circuit_potential_graphite_Xu_2015 = $open_circuit_potential_graphite_Xu_2015
 @eval Main open_circuit_potential_lfp_Xu_2015 = $open_circuit_potential_lfp_Xu_2015
-@eval Main electrolyte_conductivity_Xu_2015 = $electrolyte_conductivity_Xu_2015
-@eval Main electrolyte_diffusivity_Xu_2015 = $electrolyte_diffusivity_Xu_2015

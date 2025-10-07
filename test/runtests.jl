@@ -1,7 +1,7 @@
 using BattMo
 using Test
 
-
+include("test_pythoncall.jl")
 include("test_headless_ui.jl")
 include("test_printer.jl")
 include("test_3d_pouch_amg.jl")
