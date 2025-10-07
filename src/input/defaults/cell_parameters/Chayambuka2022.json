@@ -31,18 +31,21 @@
             "ActivationEnergyOfReaction": 35000,
             "ElectronicConductivity": 256,
             "DiffusionCoefficient": {
-                "FunctionName": "calc_ne_D"
+                "FunctionName": "calc_ne_D",
+                "FilePath": "Chayambuka_functions.jl"
             },
             "ParticleRadius": 3.48e-6,
             "MaximumConcentration": 14540,
             "StoichiometricCoefficientAtSOC0": 0.14,
             "StoichiometricCoefficientAtSOC100": 1.0,
             "OpenCircuitPotential": {
-                "FunctionName": "calc_ne_ocp"
+                "FunctionName": "calc_ne_ocp",
+                "FilePath": "Chayambuka_functions.jl"
             },
             "NumberOfElectronsTransfered": 1,
             "ReactionRateConstant": {
-                "FunctionName": "calc_ne_k"
+                "FunctionName": "calc_ne_k",
+                "FilePath": "Chayambuka_functions.jl"
             },
             "ChargeTransferCoefficient": 0.5
         },
@@ -73,18 +76,21 @@
             "ActivationEnergyOfReaction": 17800.0,
             "ElectronicConductivity": 50,
             "DiffusionCoefficient": {
-                "FunctionName": "calc_pe_D"
+                "FunctionName": "calc_pe_D",
+                "FilePath": "Chayambuka_functions.jl"
             },
             "ParticleRadius": 0.59e-6,
             "MaximumConcentration": 15320,
             "StoichiometricCoefficientAtSOC0": 1.0,
             "StoichiometricCoefficientAtSOC100": 0.25,
             "OpenCircuitPotential": {
-                "FunctionName": "calc_pe_ocp"
+                "FunctionName": "calc_pe_ocp",
+                "FilePath": "Chayambuka_functions.jl"
             },
             "NumberOfElectronsTransfered": 1,
             "ReactionRateConstant": {
-                "FunctionName": "calc_pe_k"
+                "FunctionName": "calc_pe_k",
+                "FilePath": "Chayambuka_functions.jl"
             },
             "ChargeTransferCoefficient": 0.5
         },
