@@ -29,7 +29,7 @@ sim = Simulation(model, cell_parameters, cycling_protocol)
 output0 = solve(sim)
 
 # Extract t-V data
-time_series = get_output_time_series(output0)
+time_series = output0.time_series
 
 df_sim = to_pandas(time_series)
 
@@ -98,7 +98,7 @@ sim_calibrated = Simulation(model, cell_parameters_calibrated, cycling_protocol)
 output_calibrated = solve(sim_calibrated)
 
 # ## Extract t-V data
-time_series_cal = get_output_time_series(output_calibrated)
+time_series_cal = output_calibrated.time_series
 
 df_sim_cal = to_pandas(time_series_cal)
 

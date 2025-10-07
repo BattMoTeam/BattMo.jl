@@ -20,13 +20,11 @@ output = solve(sim)
 print_output_overview(output)
 
 # Plot voltage curve
-time_series = get_output_time_series(output)
+time_series = output.time_series
 
 df = to_pandas(time_series)
 fig = px.line(df, x="Time", y="Voltage", title="Voltage curve")
 fig.show()
 
-install_plotting()
+# Plot a dashboard
 plot_dashboard(output, plot_type="contour")
-
-plot_interactive_3d(output)

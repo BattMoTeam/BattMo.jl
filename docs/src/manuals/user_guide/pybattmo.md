@@ -34,11 +34,8 @@ output = solve(sim)
 # Have a look into which output quantities are available
 print_output_overview(output)
 
-# Plot voltage curve
-time_series = get_output_time_series(output)
-
 # Plotting using Plotly
-df = to_pandas(time_series)
+df = to_pandas(output.time_series)
 fig = px.line(df, x="Time", y="Voltage", title="Voltage curve")
 fig.show()
 
@@ -100,9 +97,7 @@ sim = Simulation(model, cell_parameters, cycling_protocol)
 output0 = solve(sim)
 
 # Extract t-V data
-time_series = get_output_time_series(output0)
-
-df_sim = to_pandas(time_series)
+df_sim = to_pandas(output.time_series)
 
 # Plot
 fig = px.line(df_sim, x="Time", y="Voltage", title="Voltage curve")

@@ -3,12 +3,16 @@
     "packages": {
         "BattMo": {
             "uuid": "6f0c0536-3c2c-4762-a987-c605a8a6f898",
-            "version": "0.1.16"
+            "ref": "0.2.1"
         },
         
         "Jutul": {
             "uuid": "2b460a1a-8a2b-45b2-b125-b5c536396eb9",
             "version": "0.4.6"
+        },
+        "WGLMakie": {
+            "uuid": "276b4fcb-3e11-5398-bf8b-a0c2d153d008",
+            "version": "0.11.10"
         }
 
     }
