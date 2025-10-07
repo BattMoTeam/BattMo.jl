@@ -1,0 +1,145 @@
+{
+    "Metadata": {
+        "Title": "Ank2023",
+        "Source": "https://doi.org/10.1149/1945-7111/ad14d0",
+        "Description": "Parameter set of a Tesla 4680 cylindrical cell, for an electrochemical pseudo-two-dimensional (P4D) model.",
+        "Models": {
+            "ModelFramework": "P4D Cylindrical",
+            "TransportInSolid": "FullDiffusion",
+            "CurrentCollectors": "Generic",
+            "ButlerVolmer": "Standard",
+            "RampUp": "Sinusoidal",
+            "SEIModel": "Bolay"
+        }
+    },
+    "Cell": {
+        "Name": "Tesla 4680",
+        "Case": "Cylindrical",
+        "Height": 71e-3,
+        "OuterRadius": 22.25e-3,
+        "InnerRadius": 2.5e-3,
+        "ElectrodeGeometricSurfaceArea": 0.496217,
+        "NominalVoltage": 0,
+        "NominalCapacity": 0
+    },
+    "NegativeElectrode": {
+        "Coating": {
+            "BruggemanCoefficient": 1.5,
+            "EffectiveDensity": 1550,
+            "Thickness": 126e-6
+        },
+        "ActiveMaterial": {
+            "Description": "",
+            "MassFraction": 0.94,
+            "Density": 2240,
+            "VolumetricSurfaceArea": 0,
+            "ElectronicConductivity": 0,
+            "DiffusionCoefficient": 0,
+            "ActivationEnergyOfDiffusion": 0,
+            "ParticleRadius": 0,
+            "MaximumConcentration": 0,
+            "StoichiometricCoefficientAtSOC0": 0,
+            "StoichiometricCoefficientAtSOC100": 0,
+            "OpenCircuitPotential": 0,
+            "NumberOfElectronsTransfered": 0,
+            "ActivationEnergyOfReaction": 0,
+            "ReactionRateConstant": 0,
+            "ChargeTransferCoefficient": 0.5
+        },
+        "ConductiveAdditive": {
+            "Description": "Unknown",
+            "Density": 1950,
+            "MassFraction": 0.03,
+            "ElectronicConductivity": 0
+        },
+        "Binder": {
+            "Description": "CMC",
+            "Density": 1600,
+            "MassFraction": 0.03,
+            "ElectronicConductivity": 0
+        },
+        "CurrentCollector": {
+            "Description": "Copper",
+            "Thickness": 10e-6,
+            "TabWidth": 3.5e-3,
+            "TabFractions": [
+                0.01,
+                0.1,
+                0.366,
+                0.544,
+                0.722,
+                0.9
+            ],
+            "Density": 8933,
+            "ElectronicConductivity": 0
+        }
+    },
+    "PositiveElectrode": {
+        "Coating": {
+            "BruggemanCoefficient": 1.5,
+            "EffectiveDensity": 3320,
+            "Thickness": 82.0e-6
+        },
+        "ActiveMaterial": {
+            "Description": "",
+            "MassFraction": 0.95,
+            "Density": 4950,
+            "VolumetricSurfaceArea": 0,
+            "ElectronicConductivity": 0,
+            "DiffusionCoefficient": 0,
+            "ParticleRadius": 0,
+            "MaximumConcentration": 0,
+            "StoichiometricCoefficientAtSOC0": 0,
+            "StoichiometricCoefficientAtSOC100": 0,
+            "OpenCircuitPotential": 0,
+            "NumberOfElectronsTransfered": 1,
+            "ActivationEnergyOfReaction": 0,
+            "ActivationEnergyOfDiffusion": 0,
+            "ReactionRateConstant": 0,
+            "ChargeTransferCoefficient": 0.5
+        },
+        "ConductiveAdditive": {
+            "Description": "Unknown",
+            "Density": 1730,
+            "MassFraction": 0.025,
+            "ElectronicConductivity": 0
+        },
+        "Binder": {
+            "Description": "PVDF",
+            "Density": 1780,
+            "MassFraction": 0.025,
+            "ElectronicConductivity": 0
+        },
+        "CurrentCollector": {
+            "Description": "Aluminum",
+            "Thickness": 10e-6,
+            "TabWidth": 3.5e-3,
+            "TabFractions": [
+                0.01,
+                0.1,
+                0.366,
+                0.544,
+                0.722,
+                0.9
+            ],
+            "Density": 2770,
+            "ElectronicConductivity": 0
+        }
+    },
+    "Separator": {
+        "Description": "0",
+        "Porosity": 0,
+        "Density": 0,
+        "BruggemanCoefficient": 1.5,
+        "Thickness": 10e-6
+    },
+    "Electrolyte": {
+        "Description": "",
+        "Density": 1129.95,
+        "Concentration": 1000,
+        "ChargeNumber": 1,
+        "TransferenceNumber": 0,
+        "IonicConductivity": 0,
+        "DiffusionCoefficient": 0
+    }
+}
