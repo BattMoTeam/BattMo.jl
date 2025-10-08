@@ -162,7 +162,7 @@ function getTrans(model1::SimulationModel,
 	parameters1,
 	parameters2,
 	quantity)
-	""" setup transmissibility for coupling between models at boundaries. Intermediate 1d version"""
+	""" setup transmissibility for coupling between models at boundaries."""
 
 	d1 = physical_representation(model1)
 	d2 = physical_representation(model2)
@@ -186,7 +186,7 @@ function getHalfTrans(model::SimulationModel,
 	bccells,
 	parameters,
 	quantity)
-	""" recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the corresponding given cells. Intermediate 1d version. Note the indexing in BoundaryFaces is used"""
+	""" recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the corresponding given cells. Note the indexing in BoundaryFaces is used"""
 
 	d       = physical_representation(model)
 	bcTrans = d[:bcTrans][bcfaces]
