@@ -37,3 +37,6 @@ apps/demo_app_with_plotting/battmo_compiled/*
 *.dat
 
 __pycache__/
+.CondaPkg
+.ipynb_checkpoints
+*.egg-info/
