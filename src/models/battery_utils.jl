@@ -176,14 +176,6 @@ end
 # Setup Parameters #
 ####################
 
-""" We set the transmissibilities as parameters. They are used to compute fluxes, most of time using harmonic average
-for the coefficient, see FaceFlux function above """
-function Jutul.select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::BattMoModel)
-
-	prm[:ECTransmissibilities] = ECTransmissibilities()
-
-end
-
 function Jutul.select_parameters!(prm, D::MinimalECTPFAGrid, model::BattMoModel)
 
 	prm[:Volume]         = Volume()
