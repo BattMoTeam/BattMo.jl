@@ -761,7 +761,7 @@ function exported_model_to_domain(exported; bcfaces = nothing,
 	P = []
 	S = []
 	T = exported["G"]["operators"]["T"] .* 1.0
-    @infiltrate
+    # @infiltrate
 	G = MinimalECTPFAGrid(volumes,
                           N,
                           vec(T);

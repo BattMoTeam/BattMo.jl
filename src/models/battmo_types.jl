@@ -88,8 +88,8 @@ struct MinimalECTPFAGrid{V, N, B, BT, M} <: BattMoGrid
 	S::M              # Tensor map cell vector to cell scalar
 	vol_frac::V
 	trans::V
-    half_trans::W     # half transmissibilities for the internal faces
-    face_sign::Z      # direction for the internal faces
+    # half_trans::W     # half transmissibilities for the internal faces
+    # face_sign::Z      # direction for the internal faces
 
 	function MinimalECTPFAGrid(pv, N, T; bc_cells = [], bc_hfT = [], P = [], S = [], vf = [])
 		nc = length(pv)
