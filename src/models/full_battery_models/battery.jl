@@ -197,38 +197,6 @@ function getHalfTrans(model::SimulationModel,
 	return T
 end
 
-function getHalfTrans(model::Dict{String, Any},
-	faces,
-	cells,
-	quantity::String)
-	""" recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the given cells.
-	Here, the faces should belong the corresponding cells at the same index"""
-
-	T_all = model["G"]["operators"]["T_all"]
-	s = model[quantity]
-	if length(s) == 1
-		s = s * ones(length(cells))
-	else
-		s = s[cells]
-	end
-
-	T = T_all[faces] .* s
-
-	return T
-
-end
-
-function getHalfTrans(model::Dict{String, <:Any},
-	faces)
-	""" recover the half transmissibilities for boundary faces"""
-
-	T_all = model["G"]["operators"]["T_all"]
-	T = T_all[faces]
-
-	return T
-
-end
-
 function include_current_collectors(model)
 
 	if haskey(model.models, :NegativeElectrodeCurrentCollector)

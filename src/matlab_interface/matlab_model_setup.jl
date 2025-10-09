@@ -308,7 +308,6 @@ function setup_submodels(inputparams::MatlabInput)
 		for (k, v) in domain.entities
 			data_domain.entities[k] = v
 		end
-
 		model = SimulationModel(domain, sys, context = DefaultContext(), data_domain = data_domain)
 		return model
 
@@ -749,12 +748,7 @@ function exported_model_to_domain(exported; bcfaces = nothing,
 		end
 	end
 
-	internal_faces = (N[:, 2] .> 0) .& (N[:, 1] .> 0)
-	N = copy(N[internal_faces, :]')
 
-	face_areas   = vec(exported["G"]["faces"]["areas"][internal_faces])
-	face_normals = exported["G"]["faces"]["normals"][internal_faces, :] ./ face_areas
-	face_normals = copy(face_normals')
 	if length(exported["G"]["cells"]["volumes"]) == 1
 		volumes    = exported["G"]["cells"]["volumes"]
 		volumes    = Vector{Float64}(undef, 1)
@@ -767,13 +761,16 @@ function exported_model_to_domain(exported; bcfaces = nothing,
 	P = []
 	S = []
 	T = exported["G"]["operators"]["T"] .* 1.0
-	G = MinimalECTPFAGrid(volumes, N, vec(T);
-		bc_cells = bc_cells,
-		bc_hfT   = bc_hfT,
-		P        = P,
-		S        = S,
-		vf       = vf)
-
+    @infiltrate
+	G = MinimalECTPFAGrid(volumes,
+                          N,
+                          vec(T);
+		                  bc_cells = bc_cells,
+		                  bc_hfT   = bc_hfT,
+		                  P        = P,
+		                  S        = S,
+		                  vf       = vf)
+    
 	nc = length(volumes)
 	if general_ad
 		flow = PotentialFlow(G)
@@ -787,7 +784,6 @@ function exported_model_to_domain(exported; bcfaces = nothing,
 
 end
 
-
 function convert_to_int_vector(x::Float64)
 	vec = Int64.(Vector{Float64}([x]))
 	return vec
@@ -797,3 +793,36 @@ function convert_to_int_vector(x::Matrix{Float64})
 	vec = Int64.(Vector{Float64}(x[:, 1]))
 	return vec
 end
+
+function getHalfTrans(model::Dict{String, Any},
+	faces,
+	cells,
+	quantity::String)
+	""" recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the given cells.
+	Here, the faces should belong the corresponding cells at the same index"""
+
+	T_all = model["G"]["operators"]["T_all"]
+	s = model[quantity]
+	if length(s) == 1
+		s = s * ones(length(cells))
+	else
+		s = s[cells]
+	end
+
+	T = T_all[faces] .* s
+
+	return T
+
+end
+
+function getHalfTrans(model::Dict{String, <:Any},
+	faces)
+	""" recover the half transmissibilities for boundary faces"""
+
+	T_all = model["G"]["operators"]["T_all"]
+	T = T_all[faces]
+
+	return T
+
+end
+

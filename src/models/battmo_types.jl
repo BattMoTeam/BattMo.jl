@@ -79,14 +79,18 @@ struct MinimalECTPFAGrid{V, N, B, BT, M} <: BattMoGrid
 	"""
 	Simple grid for a electro chemical component
 	"""
-	volumes::V
+
+    volumes::V
 	neighborship::N
 	boundary_cells::B # indices of the boundary cells (some can can be repeated if a cell has two boundary faces). Same length as boundary_hfT.
-	boundary_hfT::BT # Boundary half face transmissibilities
-	P::M # Tensor to map from cells to faces
-	S::M # Tensor map cell vector to cell scalar
+	boundary_hfT::BT  # Boundary half face transmissibilities
+	P::M              # Tensor to map from cells to faces
+	S::M              # Tensor map cell vector to cell scalar
 	vol_frac::V
 	trans::V
+    half_trans::W     # half transmissibilities for the internal faces
+    face_sign::Z      # direction for the internal faces
+
 	function MinimalECTPFAGrid(pv, N, T; bc_cells = [], bc_hfT = [], P = [], S = [], vf = [])
 		nc = length(pv)
 		pv::AbstractVector
@@ -105,6 +109,7 @@ struct MinimalECTPFAGrid{V, N, B, BT, M} <: BattMoGrid
 		end
 		return new{typeof(pv), typeof(N), typeof(bc_cells), typeof(bc_hfT), typeof(P)}(pv, N, bc_cells, bc_hfT, P, S, vf, T)
 	end
+    
 end
 
 function Jutul.number_of_cells(G::MinimalECTPFAGrid)
