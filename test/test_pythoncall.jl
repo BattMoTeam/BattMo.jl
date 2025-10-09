@@ -3,8 +3,6 @@ using PythonCall
 using Test
 using Jutul
 
-include("./data/julia_files/function_parameters_Xu2015.jl")
-
 @testset "pythoncall" begin
 
 	@test begin
