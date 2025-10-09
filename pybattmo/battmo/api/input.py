@@ -18,6 +18,10 @@ def load_simulation_settings(*arg, **kwargs):
     return jl.load_simulation_settings(*arg, **kwargs)
 
 
+def load_solver_settings(*arg, **kwargs):
+    return jl.load_solver_settings(*arg, **kwargs)
+
+
 def load_full_simulation_input(*arg, **kwargs):
     return jl.load_full_simulation_input(*arg, **kwargs)
 

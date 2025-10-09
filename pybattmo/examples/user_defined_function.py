@@ -2,7 +2,6 @@ from battmo import *
 
 # Import chayambuka input functions
 from input.chayambuka_functions import *
-from juliacall import Main as jl_main
 
 cell_parameters = load_cell_parameters(from_default_set="Chayambuka2022")
 cycling_protocol = load_cycling_protocol(from_default_set="CCDischarge")
