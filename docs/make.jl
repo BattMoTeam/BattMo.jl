@@ -184,6 +184,10 @@ function build_battmo_docs(build_format              = nothing;
 	],
 		"References" => [
 		"Bibliography" => "extras/refs.md"
+	],
+		"PyBattMo" => [
+		"Installation" => "manuals/pybattmo/installation.md",
+		"Examples" => "manuals/pybattmo/examples.md"
 	]],
 	)
 	if build_notebooks
