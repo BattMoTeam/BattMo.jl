@@ -30,6 +30,8 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v1
+      - name: Clean Julia depot
+        run: rm -rf ~/.julia/compiled ~/.julia/packages ~/.julia/artifacts
       - name: Instantiate Julia environment
         run: julia --color=yes --project=. -e '
             using Pkg;
