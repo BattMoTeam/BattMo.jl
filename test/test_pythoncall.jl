@@ -8,14 +8,10 @@ using Jutul
 	@test begin
 
 		# Add folder to Python path
-		pyimport("sys").path.append(joinpath(pwd(), "data", "python_files"))
+		pyimport("sys").path.append(joinpath(dirname(@__FILE__), "data", "python_files"))
 
 		# Import module with python input functions
-		func = pyimport("function_parameters_Xu2015")
-
-		# Import the python functions to Main space
-		@eval Main electrolyte_conductivity_Xu_2015 = $func.electrolyte_conductivity_Xu_2015
-		@eval Main electrolyte_diffusivity_Xu_2015 = $func.electrolyte_diffusivity_Xu_2015
+		pyimport("function_parameters_Xu2015")
 
 		cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
 		cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")

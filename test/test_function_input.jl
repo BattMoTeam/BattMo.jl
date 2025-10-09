@@ -3,7 +3,6 @@ using BattMo
 @testset "function_input" begin
 
 	@test begin
-
 		include("../examples/example_functions/current_function.jl")
 		model_setup = LithiumIonBattery()
 		cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
