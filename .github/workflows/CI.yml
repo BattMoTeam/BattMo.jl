@@ -30,8 +30,13 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v1
-      - name: Clean Julia depot
-        run: rm -rf ~/.julia/compiled ~/.julia/packages ~/.julia/artifacts
+      - name: Workaround OpenSSL_jll issue
+        run: |
+          julia --color=yes -e '
+            using Pkg
+            Pkg.Registry.update()
+            Pkg.add(PackageSpec(name="OpenSSL_jll", version="3.0.14+0"))
+          '
       - name: Instantiate Julia environment
         run: julia --color=yes --project=. -e '
             using Pkg;
