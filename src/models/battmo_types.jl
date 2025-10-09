@@ -1,5 +1,5 @@
 export BattMoSystem, CurrentCollector
-export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
+export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalTpfaGrid
 export ChargeFlow, BoundaryPotential, BoundaryCurrent
 export ElectricPotential, ElectrolyteConcentration, Temperature, Charge, Mass
 export BCCurrent
@@ -75,7 +75,7 @@ end
 
 Jutul.associated_entity(::BoundaryCurrent) = BoundaryDirichletFaces()
 
-struct MinimalECTPFAGrid{V, N, NT, B, BT, M} <: BattMoGrid
+struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
 	"""
 	Simple grid for a electro chemical component
 	"""
@@ -91,7 +91,7 @@ struct MinimalECTPFAGrid{V, N, NT, B, BT, M} <: BattMoGrid
 	S::M              # Tensor map cell vector to cell scalar
 	vol_frac::V
 
-	function MinimalECTPFAGrid(volumes, N, hT; bc_cells = [], bc_hfT = [], P = [], S = [], vf = [])
+	function MinimalTpfaGrid(volumes, N, hT; bc_cells = [], bc_hfT = [], P = [], S = [], vf = [])
 
         nc = length(volumes)
 
@@ -122,11 +122,11 @@ struct MinimalECTPFAGrid{V, N, NT, B, BT, M} <: BattMoGrid
     
 end
 
-function Jutul.number_of_cells(G::MinimalECTPFAGrid)
+function Jutul.number_of_cells(G::MinimalTpfaGrid)
 	return length(G.volumes)
 end
 
-Base.show(io::IO, g::MinimalECTPFAGrid) = print(io, "MinimalECTPFAGrid ($(number_of_cells(g)) cells, $(number_of_faces(g)) faces)")
+Base.show(io::IO, g::MinimalTpfaGrid) = print(io, "MinimalTpfaGrid ($(number_of_cells(g)) cells, $(number_of_faces(g)) faces)")
 ################
 # Constructors #
 ################
@@ -179,7 +179,7 @@ end
 struct Volume <: ScalarVariable end
 Jutul.associated_entity(::Volume) = Cells()
 
-function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O, S, F, C}, ::Volume, symb) where {G <: MinimalECTPFAGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
+function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O, S, F, C}, ::Volume, symb) where {G <: MinimalTpfaGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
 
 	repG = physical_representation(model)
 	return repG.volumes
@@ -196,7 +196,7 @@ Jutul.minimum_value(::Volume) = eps()
 struct VolumeFraction <: ScalarVariable end
 Jutul.associated_entity(::VolumeFraction) = Cells()
 
-function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O, S, F, C}, ::VolumeFraction, symb) where {G <: MinimalECTPFAGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
+function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O, S, F, C}, ::VolumeFraction, symb) where {G <: MinimalTpfaGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
 
 	repG = physical_representation(model)
 	return repG.vol_frac

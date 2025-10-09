@@ -21,7 +21,7 @@ function load_model_settings(; from_file_path::Union{String, Nothing} = nothing,
 	if !isnothing(from_file_path)
 
 		model_settings_instance = JSON.parsefile(from_file_path)
-		return ModelSettings(model_settings_instance; source_path = from_file_path)
+		return ModelkSettings(model_settings_instance; source_path = from_file_path)
 	elseif !isnothing(from_default_set)
 
 		file_path = parameter_file_path("model_settings", from_default_set)

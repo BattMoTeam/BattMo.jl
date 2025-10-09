@@ -668,7 +668,7 @@ function get_scalings(model, parameters)
 	for name in component_names
 
 		rep = model[name].domain.representation
-		if rep isa MinimalECTPFAGrid
+		if rep isa MinimalTpfaGrid
 			volRefs[name] = mean(rep.volumes)
 		else
 			volRefs[name] = mean(rep[:volumes])

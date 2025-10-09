@@ -1,7 +1,7 @@
 export
 	half_face_two_point_kgrad
 
-function Jutul.declare_entities(G::MinimalECTPFAGrid)
+function Jutul.declare_entities(G::MinimalTpfaGrid)
 	# cells
 	c = (entity = Cells(), count = length(G.volumes))
 	# faces
@@ -176,7 +176,7 @@ end
 # Setup Parameters #
 ####################
 
-function Jutul.select_parameters!(prm, D::MinimalECTPFAGrid, model::BattMoModel)
+function Jutul.select_parameters!(prm, D::MinimalTpfaGrid, model::BattMoModel)
 
 	prm[:Volume]         = Volume()
 	prm[:VolumeFraction] = VolumeFraction()
@@ -217,7 +217,7 @@ function apply_boundary_potential!(acc, state, parameters, model::BattMoModel, e
 
 	dolegacy = false
 
-	if model.domain.representation isa MinimalECTPFAGrid
+	if model.domain.representation isa MinimalTpfaGrid
 		bc = model.domain.representation.boundary_cells
 		if length(bc) > 0
 			dobc = true

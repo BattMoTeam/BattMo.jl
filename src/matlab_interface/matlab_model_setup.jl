@@ -762,7 +762,7 @@ function exported_model_to_domain(exported; bcfaces = nothing,
 	S = []
 	T = exported["G"]["operators"]["T"] .* 1.0
     # @infiltrate
-	G = MinimalECTPFAGrid(volumes,
+	G = MinimalTpfaGrid(volumes,
                           N,
                           vec(T);
 		                  bc_cells = bc_cells,
