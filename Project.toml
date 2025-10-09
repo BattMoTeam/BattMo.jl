@@ -1,7 +1,7 @@
 name = "BattMo"
 uuid = "6f0c0536-3c2c-4762-a987-c605a8a6f898"
-authors = ["Olav Møyner <olav.moyner@gmail.com>"]
 version = "0.2.1"
+authors = ["Olav Møyner <olav.moyner@gmail.com>"]
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
@@ -42,7 +42,7 @@ CSV = "0.10.15"
 DataFrames = "1.8.0"
 ForwardDiff = "0.10.38"
 GLMakie = "0.11.11"
-JLD2 = "0.4.31"
+JLD2 = "0.6.2"
 JSON = "0.21.4"
 JSONSchema = "1.4.1"
 Jutul = "0.4.0"

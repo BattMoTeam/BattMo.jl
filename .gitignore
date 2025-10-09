@@ -28,6 +28,7 @@ docs/node_modules/
 # environment.
 Manifest.toml
 examples/Manifest.toml
+test/Manifest.toml
 *.mat
 
 apps/demo_app_with_plotting/battmo_compiled/*
