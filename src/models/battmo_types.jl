@@ -75,31 +75,39 @@ end
 
 Jutul.associated_entity(::BoundaryCurrent) = BoundaryDirichletFaces()
 
-struct MinimalECTPFAGrid{V, N, B, BT, M} <: BattMoGrid
+struct MinimalECTPFAGrid{V, N, NT, B, BT, M} <: BattMoGrid
 	"""
 	Simple grid for a electro chemical component
 	"""
-
     volumes::V
-	neighborship::N
+
+	neighborship::N   # Internal faces only
+    half_trans::NT    # half transmissibilities for the internal faces
+    
 	boundary_cells::B # indices of the boundary cells (some can can be repeated if a cell has two boundary faces). Same length as boundary_hfT.
 	boundary_hfT::BT  # Boundary half face transmissibilities
-	P::M              # Tensor to map from cells to faces
+
+    P::M              # Tensor to map from cells to faces
 	S::M              # Tensor map cell vector to cell scalar
 	vol_frac::V
-	trans::V
-    # half_trans::W     # half transmissibilities for the internal faces
-    # face_sign::Z      # direction for the internal faces
 
-	function MinimalECTPFAGrid(pv, N, T; bc_cells = [], bc_hfT = [], P = [], S = [], vf = [])
-		nc = length(pv)
-		pv::AbstractVector
+	function MinimalECTPFAGrid(volumes, N, hT; bc_cells = [], bc_hfT = [], P = [], S = [], vf = [])
+
+        nc = length(volumes)
+
+        volumes::AbstractVector
+		@assert all(volumes .> 0)
+
 		@assert size(N, 1) == 2
 		if length(N) > 0
 			@assert minimum(N) > 0
 			@assert maximum(N) <= nc
 		end
-		@assert all(pv .> 0)
+        
+        nf = size(N, 2)
+        @assert size(hT, 1) == 2
+        @assert size(hT, 2) == nf
+        
 		@assert size(bc_cells) == size(bc_hfT)
 		if isempty(vf)
 			vf = 1
@@ -107,7 +115,9 @@ struct MinimalECTPFAGrid{V, N, B, BT, M} <: BattMoGrid
 		if length(vf) != nc
 			vf = vf * ones(nc)
 		end
-		return new{typeof(pv), typeof(N), typeof(bc_cells), typeof(bc_hfT), typeof(P)}(pv, N, bc_cells, bc_hfT, P, S, vf, T)
+        
+		return new{typeof(volumes), typeof(N), typeof(hT), typeof(bc_cells), typeof(bc_hfT), typeof(P)}(volumes, N, hT, bc_cells, bc_hfT, P, S, vf)
+        
 	end
     
 end
