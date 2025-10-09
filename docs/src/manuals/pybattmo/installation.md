@@ -7,7 +7,7 @@ In addition to Python, Julia needs to be installed. Visit the [Julia website](ht
 Easily install PyBattMo via pip:
 
 ```
-pip install pybattmo
+pip install battmo
 ```
 
 The APIs of BattMo.jl and PyBattMo are very similar, and even BattMo’s plotting functions are supported. The main difference lies in performance: since Python is an interpreted language, you won’t benefit from Julia’s usual performance optimizations. However, if performance becomes critical, switching from PyBattMo to BattMo.jl is straightforward.
