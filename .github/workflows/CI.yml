@@ -35,7 +35,7 @@ jobs:
           julia --color=yes -e '
             using Pkg
             Pkg.Registry.update()
-            Pkg.add(PackageSpec(name="OpenSSL_jll", version="3.0.14+0"))
+            Pkg.add(PackageSpec(name="OpenSSL_jll", version="3.0.14"))
           '
       - name: Instantiate Julia environment
         run: julia --color=yes --project=. -e '
