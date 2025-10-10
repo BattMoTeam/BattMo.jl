@@ -31,11 +31,11 @@ end
 ######################
 
 function setup_timesteps(inputparams::MatlabInput;
-	max_step::Union{Integer, Nothing} = nothing,
-	kwarg...)
+	                     max_step::Union{Integer, Nothing} = nothing,
+	                     kwarg...)
 	"""
-		Method setting up the timesteps from a mat file object. If use_state_ref is true
-		the simulation will use the same timesteps as the pre-run matlab simulation.
+    Method setting up the timesteps from a mat file object. If use_state_ref is true
+    the simulation will use the same timesteps as the pre-run matlab simulation.
 	"""
 
 	if inputparams["use_state_ref"]
@@ -68,17 +68,14 @@ function setup_timesteps(inputparams::MatlabInput;
 	return timesteps
 end
 
-
-
-
 ##################
 # Setup coupling #
 ##################
 
 function setup_coupling_cross_terms!(inputparams::MatlabInput,
-	model::MultiModel,
-	parameters::Dict{Symbol, <:Any},
-	couplings)
+	                                 model::MultiModel,
+	                                 parameters::Dict{Symbol, <:Any},
+	                                 couplings)
 
 	exported_all = inputparams.all
 
@@ -342,7 +339,7 @@ function setup_submodels(inputparams::MatlabInput)
 		Eak = inputparams_itf["activationEnergyOfReaction"]
 		am_params[:reaction_rate_constant_func] = (T) -> arrhenius(T, k0, Eak)
 
-		funcname = inputparams_itf["openCircuitPotential"]["functionname"] # This matlab parameter must have been converted from function handle to string before call
+		funcname = inputparams_itf["openCircuitPotential"]["functionName"] # This matlab parameter must have been converted from function handle to string before call
 		func = getfield(BattMo, Symbol(funcname))
 		am_params[:ocp_func] = func
 
@@ -725,20 +722,19 @@ function exported_model_to_domain(exported; bcfaces = nothing,
 
 	""" Returns domain"""
 
-	N = exported["G"]["faces"]["neighbors"]
+	volumes = vec(exported["G"]["volumes"])
+
+	N = exported["G"]["neighborship"]
 	N = Int64.(N)
 
-	if !isnothing(bcfaces)
-		isboundary = (N[bcfaces, 1] .== 0) .| (N[bcfaces, 2] .== 0)
-		@assert all(isboundary)
+    N_hT = exported["G"]["half_trans"]
 
-		bc_cells = N[bcfaces, 1] + N[bcfaces, 2]
-		bc_hfT = getHalfTrans(exported, bcfaces)
-	else
-		bc_hfT = []
-		bc_cells = []
-	end
-
+    cf    = Int64.(exported["G"]["cell_face_tbl"])
+    cf_hT = vec(exported["G"]["cell_face_hT"])
+    
+    bc_cells = vec(Int64.(exported["G"]["boundary_cells"]))
+    bc_hT    = vec(exported["G"]["boundary_hT"])
+    
 	vf = []
 	if haskey(exported, "volumeFraction")
 		if length(exported["volumeFraction"]) == 1
@@ -748,28 +744,19 @@ function exported_model_to_domain(exported; bcfaces = nothing,
 		end
 	end
 
-
-	if length(exported["G"]["cells"]["volumes"]) == 1
-		volumes    = exported["G"]["cells"]["volumes"]
-		volumes    = Vector{Float64}(undef, 1)
-		volumes[1] = exported["G"]["cells"]["volumes"]
-	else
-		volumes = vec(exported["G"]["cells"]["volumes"])
-	end
 	# P = exported["G"]["operators"]["cellFluxOp"]["P"]
 	# S = exported["G"]["operators"]["cellFluxOp"]["S"]
 	P = []
 	S = []
-	T = exported["G"]["operators"]["T"] .* 1.0
-    # @infiltrate
+    
 	G = MinimalTpfaGrid(volumes,
-                          N,
-                          vec(T);
-		                  bc_cells = bc_cells,
-		                  bc_hfT   = bc_hfT,
-		                  P        = P,
-		                  S        = S,
-		                  vf       = vf)
+                        N,
+                        N_hT,
+                        cf,
+                        cf_hT,
+                        bc_cells,
+                        bc_hT,
+                        vf)
     
 	nc = length(volumes)
 	if general_ad
@@ -795,13 +782,12 @@ function convert_to_int_vector(x::Matrix{Float64})
 end
 
 function getHalfTrans(model::Dict{String, Any},
-	faces,
-	cells,
-	quantity::String)
+	                  faces,
+	                  cells,
+	                  quantity::String)
 	""" recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the given cells.
 	Here, the faces should belong the corresponding cells at the same index"""
 
-	T_all = model["G"]["operators"]["T_all"]
 	s = model[quantity]
 	if length(s) == 1
 		s = s * ones(length(cells))
@@ -809,20 +795,34 @@ function getHalfTrans(model::Dict{String, Any},
 		s = s[cells]
 	end
 
-	T = T_all[faces] .* s
+    hT = getHalfTrans(model, faces)
+    
+	hT = hT .* s
 
-	return T
+	return hT
 
 end
 
 function getHalfTrans(model::Dict{String, <:Any},
-	faces)
+	                  faces)
 	""" recover the half transmissibilities for boundary faces"""
 
-	T_all = model["G"]["operators"]["T_all"]
-	T = T_all[faces]
+    hT = Vector{Float64}(undef, size(faces))
 
-	return T
+    hT_all        = model["G"]["cell_face_hT"]
+    cell_face_tbl = model["G"]["cell_face_tbl"]
+    
+    faces_all = cell_face_tbl[2, :]
+    
+    for (i, f) in enumerate(faces)
+        for (ii, ff) in enumerate(faces_all)
+            if f == ff
+                hT[i] = hT_all[ii]
+            end
+        end
+    end
+
+	return hT
 
 end
 

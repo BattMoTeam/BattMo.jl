@@ -83,15 +83,26 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
 
 	neighborship::N   # Internal faces only
     half_trans::NT    # half transmissibilities for the internal faces
+
+    cell_face_tbl::N  # cell-face pairs
+    cell_face_hT::BT  # value of the half-transmissibility for the corresponding cell-face pair
     
 	boundary_cells::B # indices of the boundary cells (some can can be repeated if a cell has two boundary faces). Same length as boundary_hfT.
-	boundary_hfT::BT  # Boundary half face transmissibilities
+	boundary_hfT::BT  # Boundary half face transmissibilities, one value per element in boundary_cells
 
-    P::M              # Tensor to map from cells to faces
-	S::M              # Tensor map cell vector to cell scalar
+    P::M              # Tensor to map from cells to faces, not used for the moment
+	S::M              # Tensor map cell vector to cell scalar, not used for the moment
+    
 	vol_frac::V
 
-	function MinimalTpfaGrid(volumes, N, hT; bc_cells = [], bc_hfT = [], P = [], S = [], vf = [])
+	function MinimalTpfaGrid(volumes,
+                             N,
+                             N_hT,
+                             cf,  # cell-face pairs
+                             cf_hT,  # value of the half-transmissibility for the corresponding cell-face pair
+	                         bc_cells, # indices of the boundary cells (some can can be repeated if a cell has two boundary faces). Same length as boundary_hfT.
+	                         bc_hfT,
+                             vf)
 
         nc = length(volumes)
 
@@ -105,18 +116,38 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
 		end
         
         nf = size(N, 2)
-        @assert size(hT, 1) == 2
-        @assert size(hT, 2) == nf
-        
+        @assert size(N_hT, 1) == 2
+        @assert size(N_hT, 2) == nf
+
 		@assert size(bc_cells) == size(bc_hfT)
+        
 		if isempty(vf)
 			vf = 1
 		end
 		if length(vf) != nc
 			vf = vf * ones(nc)
 		end
+
+        P = []
+        S = []
         
-		return new{typeof(volumes), typeof(N), typeof(hT), typeof(bc_cells), typeof(bc_hfT), typeof(P)}(volumes, N, hT, bc_cells, bc_hfT, P, S, vf)
+		return new{typeof(volumes),
+                   typeof(N),
+                   typeof(N_hT),
+                   typeof(bc_cells),
+                   typeof(bc_hfT),
+                   typeof(P)}(volumes,
+                               N,
+                               N_hT,
+                               cf,
+                               cf_hT,
+                               bc_cells,
+                               bc_hfT,
+                               P,
+                               S,
+                               vf)
+
+        @infiltrate
         
 	end
     
