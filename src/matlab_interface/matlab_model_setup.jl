@@ -864,7 +864,6 @@ function exported_model_to_domain(exported; dirichlet_boundary = false,
                         bc_hT,
                         vf)
     
-	nc = length(volumes)
 	if general_ad
 		flow = PotentialFlow(G)
 	else
