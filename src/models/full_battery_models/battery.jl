@@ -125,43 +125,28 @@ end
 ######################
 
 function getTrans(model1::Dict{String, <:Any},
-	model2::Dict{String, Any},
-	faces,
-	cells,
-	quantity::String)
+	              model2::Dict{String, Any},
+	              faces,
+	              cells,
+	              quantity::String)
 	""" setup transmissibility for coupling between models at boundaries"""
 
-	T_all1 = model1["G"]["operators"]["T_all"][faces[:, 1]]
-	T_all2 = model2["G"]["operators"]["T_all"][faces[:, 2]]
+	hT1 = getHalfTrans(model1, faces[:, 1], cells[:, 1], quantity)
+	hT2 = getHalfTrans(model2, faces[:, 2], cells[:, 2], quantity)
 
-
-	function getcellvalues(values, cellinds)
-
-		if length(values) == 1
-			values = values * ones(length(cellinds))
-		else
-			values = values[cellinds]
-		end
-		return values
-
-	end
-
-	s1 = getcellvalues(model1[quantity], cells[:, 1])
-	s2 = getcellvalues(model2[quantity], cells[:, 2])
-
-	T = 1.0 ./ ((1.0 ./ (T_all1 .* s1)) + (1.0 ./ (T_all2 .* s2)))
+	T = 1.0 ./ (1.0./hT1 + 1.0./hT2)
 
 	return T
 
 end
 
 function getTrans(model1::SimulationModel,
-	model2::SimulationModel,
-	bcfaces,
-	bccells,
-	parameters1,
-	parameters2,
-	quantity)
+	              model2::SimulationModel,
+	              bcfaces,
+	              bccells,
+	              parameters1,
+	              parameters2,
+	              quantity)
 	""" setup transmissibility for coupling between models at boundaries."""
 
 	d1 = physical_representation(model1)

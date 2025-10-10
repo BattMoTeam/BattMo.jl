@@ -1,16 +1,6 @@
 export
 	half_face_two_point_kgrad
 
-function Jutul.declare_entities(G::MinimalTpfaGrid)
-	# cells
-	c = (entity = Cells(), count = length(G.volumes))
-	# faces
-	f = (entity = Faces(), count = size(G.neighborship, 2))
-	# boundary faces
-	bf = (entity = BoundaryDirichletFaces(), count = length(G.boundary_cells))
-	return [c, f, bf]
-end
-
 @jutul_secondary function update_ion_mass!(acc,
 	tv::Mass,
 	model,
@@ -218,14 +208,22 @@ function apply_boundary_potential!(acc, state, parameters, model::BattMoModel, e
 	dolegacy = false
 
 	if model.domain.representation isa MinimalTpfaGrid
-		bc = model.domain.representation.boundary_cells
-		if length(bc) > 0
-			dobc = true
-		else
-			dobc = false
-		end
+
+        if Jutul.hasentity(model.domain, BoundaryDirichletFaces())
+		    bc = model.domain.representation.boundary_cells
+		    if length(bc) > 0
+			    dobc = true
+		    else
+			    dobc = false
+		    end
+        else
+            dobc = false
+        end
+        
 		dolegacy = true
+            
 	elseif Jutul.hasentity(model.domain, BoundaryDirichletFaces())
+        
 		nc = count_active_entities(model.domain, BoundaryDirichletFaces())
 		dobc = nc > 0
 		if dobc
@@ -233,15 +231,18 @@ function apply_boundary_potential!(acc, state, parameters, model::BattMoModel, e
 			bcdircells     = model.domain.representation[:bcDirCells]
 			bcdirinds      = model.domain.representation[:bcDirInds]
 		end
+        
 	else
+        
 		dobc = false
+        
 	end
 
 	if dobc
 
 		ElectricPotential = state[:ElectricPotential]
-		BoundaryVoltage = state[:BoundaryVoltage]
-		conductivity = state[:Conductivity]
+		BoundaryVoltage   = state[:BoundaryVoltage]
+		conductivity      = state[:Conductivity]
 
 		if dolegacy
 			T_hf = model.domain.representation.boundary_hfT

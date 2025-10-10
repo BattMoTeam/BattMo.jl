@@ -75,6 +75,14 @@ end
 
 Jutul.associated_entity(::BoundaryCurrent) = BoundaryDirichletFaces()
 
+function Jutul.declare_entities(G::MinimalTpfaGrid)
+	# cells
+	c = (entity = Cells(), count = length(G.volumes))
+	# faces
+	f = (entity = Faces(), count = size(G.neighborship, 2))
+	return [c, f]
+end
+
 struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
 	"""
 	Simple grid for a electro chemical component
@@ -82,7 +90,7 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
     volumes::V
 
 	neighborship::N   # Internal faces only
-    half_trans::NT    # half transmissibilities for the internal faces
+    halftransfaces::NT    # half transmissibilities for the internal faces
 
     cell_face_tbl::N  # cell-face pairs
     cell_face_hT::BT  # value of the half-transmissibility for the corresponding cell-face pair
@@ -147,11 +155,14 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
                                S,
                                vf)
 
-        @infiltrate
-        
 	end
     
 end
+
+function Base.getindex(grid::MinimalTpfaGrid, key::Symbol)
+    return getfield(grid, key)
+end
+
 
 function Jutul.number_of_cells(G::MinimalTpfaGrid)
 	return length(G.volumes)
@@ -170,7 +181,6 @@ struct TPFAInterfaceFluxCT{T, F} <: AdditiveCrossTerm
 		new{T, F}(target, source, trans)
 	end
 end
-
 
 export AccumulatorInterfaceFluxCT
 struct AccumulatorInterfaceFluxCT{T, F} <: AdditiveCrossTerm

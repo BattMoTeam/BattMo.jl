@@ -201,7 +201,7 @@ An instance of `MatlabInput` that can be sent to the simulator via `run_battery`
 """
 function load_matlab_input(filepath::String)
 	inputparams = filepath |> matread
-    inputparams =  MatlabInput(inputparams["data"])
+    inputparams =  MatlabInput(inputparams["simsetup"])
 	return inputparams
 end
 
