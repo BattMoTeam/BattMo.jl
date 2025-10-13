@@ -81,14 +81,11 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
 	"""
     volumes::V
 
-	neighborship::N   # Internal faces only
-    halftransfaces::NT    # half transmissibilities for the internal faces
+	neighborship::N    # Internal faces only
+    halftransfaces::NT # half transmissibilities for the internal faces
 
     cell_face_tbl::N  # cell-face pairs
     cell_face_hT::BT  # value of the half-transmissibility for the corresponding cell-face pair
-    
-	boundary_cells::B # indices of the boundary cells (some can can be repeated if a cell has two boundary faces). Same length as boundary_hfT.
-	boundary_hfT::BT  # Boundary half face transmissibilities, one value per element in boundary_cells
 
     P::M              # Tensor to map from cells to faces, not used for the moment
 	S::M              # Tensor map cell vector to cell scalar, not used for the moment
@@ -100,8 +97,6 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
                              N_hT,
                              cf,  # cell-face pairs
                              cf_hT,  # value of the half-transmissibility for the corresponding cell-face pair
-	                         bc_cells, # indices of the boundary cells (some can can be repeated if a cell has two boundary faces). Same length as boundary_hfT.
-	                         bc_hfT,
                              vf)
 
         nc = length(volumes)
@@ -119,8 +114,6 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
         @assert size(N_hT, 1) == 2
         @assert size(N_hT, 2) == nf
 
-		@assert size(bc_cells) == size(bc_hfT)
-        
 		if isempty(vf)
 			vf = 1
 		end
@@ -134,18 +127,16 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
 		return new{typeof(volumes),
                    typeof(N),
                    typeof(N_hT),
-                   typeof(bc_cells),
-                   typeof(bc_hfT),
+                   typeof(cf),
+                   typeof(cf_hT),
                    typeof(P)}(volumes,
-                               N,
-                               N_hT,
-                               cf,
-                               cf_hT,
-                               bc_cells,
-                               bc_hfT,
-                               P,
-                               S,
-                               vf)
+                              N,
+                              N_hT,
+                              cf,
+                              cf_hT,
+                              P,
+                              S,
+                              vf)
 
 	end
     
