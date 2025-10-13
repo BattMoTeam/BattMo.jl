@@ -177,14 +177,6 @@ function setup_coupling_cross_terms!(inputparams::MatlabInput,
         # setup coupling PeCc <-> PeAm charge equation #
         ################################################
 
-		target = Dict(
-			:model => :PeAm,
-			:equation => :charge_conservation,
-		)
-		source = Dict(
-			:model => :PeCc,
-			:equation => :charge_conservation,
-		)
 		srange = Int64.(
 			exported_all["model"]["PositiveElectrode"]["couplingTerm"]["couplingcells"][:, 1]
 		)
@@ -327,7 +319,6 @@ function setup_model!(inputparams::MatlabInput)
 	setup_coupling_cross_terms!(inputparams, model, parameters, couplings)
 
 	setup_initial_control_policy!(model[:Control].system.policy, inputparams, parameters)
-	#model.context = DefaultContext()
 
 	output = (model = model,
 		      parameters = parameters,
@@ -395,14 +386,10 @@ function setup_submodels(inputparams::MatlabInput)
 	function setup_component(obj::Dict,
 		                     sys,
 		                     general_ad::Bool,
-                             dirichlet_boundary = false)
+                             dirichletBoundary = nothing)
         
-		domain = exported_model_to_domain(obj; dirichlet_boundary = dirichlet_boundary, general_ad = general_ad)
-		# G = MRSTWrapMesh(obj["G"])
-		data_domain = DataDomain(domain)
-		for (k, v) in domain.entities
-			data_domain.entities[k] = v
-		end
+		domain, data_domain = exported_model_to_domain(obj; dirichletBoundary = dirichletBoundary, general_ad = general_ad)
+
 		model = SimulationModel(domain, sys, context = DefaultContext(), data_domain = data_domain)
 		return model
 
@@ -466,7 +453,10 @@ function setup_submodels(inputparams::MatlabInput)
 		end
 
 		if !include_cc && name == :NeAm
-			model_am = setup_component(inputparams_co, sys_am, general_ad, true)
+            dirichletBoundary = Dict();
+            dirichletBoundary["faces"] = Int64.(inputparams_co["externalCouplingTerm"]["couplingfaces"])
+            dirichletBoundary["cells"] = Int64.(inputparams_co["externalCouplingTerm"]["couplingcells"])
+			model_am = setup_component(inputparams_co, sys_am, general_ad, dirichletBoundary)
 		else
 			model_am = setup_component(inputparams_co, sys_am, general_ad)
 		end
@@ -488,7 +478,10 @@ function setup_submodels(inputparams::MatlabInput)
 
 		sys_necc = CurrentCollector(necc_params)
 
-		model_necc = setup_component(inputparams_necc, sys_necc, general_ad, true)
+        dirichletBoundary = Dict();
+        dirichletBoundary["faces"] = Int64.(inputparams_necc["externalCouplingTerm"]["couplingfaces"])
+        dirichletBoundary["cells"] = Int64.(inputparams_necc["externalCouplingTerm"]["couplingcells"])
+		model_necc = setup_component(inputparams_necc, sys_necc, general_ad, dirichletBoundary)
 
 	end
 
@@ -811,7 +804,126 @@ function setup_initial_state(inputparams::MatlabInput,
 
 end
 
-function exported_model_to_domain(exported; dirichlet_boundary = false,
+#################
+# scaling setup #
+#################
+
+function get_matlab_scalings(model, parameters)
+
+	refT = 298.15
+
+	eldes = (:NeAm, :PeAm)
+
+	j0s   = Array{Float64}(undef, 2)
+	Rvols = Array{Float64}(undef, 2)
+
+	F = FARADAY_CONSTANT
+
+	for (i, elde) in enumerate(eldes)
+
+		rate_func = model[elde].system.params[:reaction_rate_constant_func]
+		cmax      = model[elde].system[:maximum_concentration]
+		Eak       = model[elde].system[:activation_energy_of_reaction]
+		vsa       = model[elde].system[:volumetric_surface_area]
+
+		c_a = 0.5 * cmax
+
+		if isa(rate_func, Real)
+			R0 = arrhenius(refT, rate_func, Eak)
+		else
+			R0 = arrhenius(refT, rate_func(c_a, refT), Eak)
+		end
+		c_e            = 1000.0
+		activematerial = model[elde].system
+
+		j0s[i] = reaction_rate_coefficient(R0, c_e, c_a, activematerial)
+
+		# j0s[i] = reaction_rate_coefficient(R0, c_e, c_a, activematerial, c_a, c_e)
+
+		Rvols[i] = j0s[i] * vsa / F
+
+	end
+
+	j0Ref   = mean(j0s)
+	RvolRef = mean(Rvols)
+
+	if include_current_collectors(model)
+		component_names = (:NeCc, :NeAm, :Electrolyte, :PeAm, :PeCc)
+		cc_mapping      = Dict(:NeAm => :NeCc, :PeAm => :PeCc)
+	else
+		component_names = (:NeAm, :Electrolyte, :PeAm)
+	end
+
+	volRefs = Dict()
+
+	for name in component_names
+        volRefs[name] = mean(model[name].domain.representation.volumes)
+	end
+
+	scalings = []
+
+	scaling = (model_label = :Electrolyte, equation_label = :charge_conservation, value = F * volRefs[:Electrolyte] * RvolRef)
+	push!(scalings, scaling)
+
+	scaling = (model_label = :Electrolyte, equation_label = :mass_conservation, value = volRefs[:Electrolyte] * RvolRef)
+	push!(scalings, scaling)
+
+	for elde in eldes
+
+		scaling = (model_label = elde, equation_label = :charge_conservation, value = F * volRefs[elde] * RvolRef)
+		push!(scalings, scaling)
+
+		if include_current_collectors(model)
+
+			# We use the same scaling as for the coating multiplied by the conductivity ration
+			cc = cc_mapping[elde]
+			coef = parameters[cc][:Conductivity] / parameters[elde][:Conductivity]
+
+			scaling = (model_label = cc, equation_label = :charge_conservation, value = F * coef[1] * volRefs[elde] * RvolRef)
+			push!(scalings, scaling)
+
+		end
+
+		rp   = model[elde].system.discretization[:rp]
+		volp = 4 / 3 * pi * rp^3
+
+		coef = RvolRef * volp
+
+		scaling = (model_label = elde, equation_label = :mass_conservation, value = coef)
+		push!(scalings, scaling)
+		scaling = (model_label = elde, equation_label = :solid_diffusion_bc, value = coef)
+		push!(scalings, scaling)
+
+		if model[elde] isa SEImodel
+
+			vsa = model[elde].system[:volumetric_surface_area]
+			L   = model[elde].system[:InitialThickness]
+			k   = model[elde].system[:IonicConductivity]
+
+			SEIvoltageDropRef = F * RvolRef / vsa * L / k
+
+			scaling = (model_label = elde, equation_label = :sei_voltage_drop, value = SEIvoltageDropRef)
+			push!(scalings, scaling)
+
+			De = model[elde].system[:ElectronicDiffusionCoefficient]
+			ce = model[elde].system[:InterstitialConcentration]
+
+			scaling = (model_label = elde, equation_label = :sei_mass_cons, value = De * ce / L)
+			push!(scalings, scaling)
+
+		end
+
+	end
+
+	return scalings
+
+end
+
+#################################
+# setup model from matlab input #
+#################################
+
+function exported_model_to_domain(exported; dirichletBoundary = nothing,
 	                              general_ad = true)
 
 	""" Returns domain"""
@@ -825,9 +937,6 @@ function exported_model_to_domain(exported; dirichlet_boundary = false,
 
     cf    = Int64.(exported["G"]["cell_face_tbl"])
     cf_hT = vec(exported["G"]["cell_face_hT"])
-    
-    bc_cells = vec(Int64.(exported["G"]["boundary_cells"]))
-    bc_hT    = vec(exported["G"]["boundary_hT"])
     
 	vf = []
 	if haskey(exported, "volumeFraction")
@@ -848,8 +957,6 @@ function exported_model_to_domain(exported; dirichlet_boundary = false,
                         N_hT,
                         cf,
                         cf_hT,
-                        bc_cells,
-                        bc_hT,
                         vf)
     
 	if general_ad
@@ -860,13 +967,38 @@ function exported_model_to_domain(exported; dirichlet_boundary = false,
 	disc = (flow = flow,)
 	domain = DiscretizedDomain(G, disc)
 
-    if dirichlet_boundary
-        domain.entities[BoundaryDirichletFaces()] = length(bc_cells)
-    end
+    data_domain = DataDomain(domain)
+    for (k, v) in domain.entities
+		data_domain.entities[k] = v
+	end
     
-	return domain
+    if !isnothing(dirichletBoundary)
+
+		bcfaces = dirichletBoundary["faces"]
+		nb = size(bcfaces, 1)
+
+		data_domain.entities[BoundaryDirichletFaces()] = nb
+		domain.entities[BoundaryDirichletFaces()] = nb
+        
+		bccells = dirichletBoundary["cells"]
+
+        trans = getHalfTrans(exported, bcfaces)
+
+		ind = Vector{Int64}(1:nb)
+        
+		data_domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = trans
+		data_domain[:bcDirCells, BoundaryDirichletFaces()]     = bccells # index for all faces
+		data_domain[:bcDirInds, BoundaryDirichletFaces()]      = ind
+        
+    end
+
+	return domain, data_domain
 
 end
+
+#####################
+# Utility functions #
+#####################
 
 function convert_to_int_vector(x::Float64)
 	vec = Int64.(Vector{Float64}([x]))
