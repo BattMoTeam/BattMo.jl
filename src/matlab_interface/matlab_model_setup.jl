@@ -251,7 +251,6 @@ function setup_coupling_cross_terms!(inputparams::MatlabInput,
 	ct_pair = setup_cross_term(ct, target = :Control, source = component, equation = :charge_conservation)
 	add_cross_term!(model, ct_pair)
 
-
 end
 
 
