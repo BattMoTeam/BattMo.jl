@@ -148,9 +148,9 @@ function setup_coupling_cross_terms!(inputparams::MatlabInput,
 
 	if include_cc
 
-		################################
-		# setup coupling NeCc <-> NeAm #
-		################################
+        ################################################
+        # setup coupling NeCc <-> NeAm charge equation #
+        ################################################
 
 		srange = Int64.(
 			exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:, 1]
@@ -173,9 +173,9 @@ function setup_coupling_cross_terms!(inputparams::MatlabInput,
 		ct_pair = setup_cross_term(ct, target = :NeCc, source = :NeAm, equation = :charge_conservation)
 		add_cross_term!(model, ct_pair)
 
-		#######################################
-		# setup coupling PeCc <-> PeAm charge #
-		#######################################
+        ################################################
+        # setup coupling PeCc <-> PeAm charge equation #
+        ################################################
 
 		target = Dict(
 			:model => :PeAm,
@@ -587,36 +587,25 @@ function setup_submodels(inputparams::MatlabInput)
 
 	if !include_cc
 		groups = nothing
-		model = MultiModel(
-			(
-				NeAm = model_neam,
-				Electrolyte = model_elyte,
-				PeAm = model_peam,
-				Control = model_control,
-			),
-			Val(:Battery);
-			groups = groups)
-	else
-		models = (
-			NeCc = model_necc,
-			NeAm = model_neam,
-			Electrolyte = model_elyte,
-			PeAm = model_peam,
-			PeCc = model_pecc,
-			Control = model_control,
-		)
-		if use_groups
-			groups = ones(Int64, length(models))
-			# Should be Control
-			groups[end] = 2
-			reduction = :schur_apply
-		else
-			groups    = nothing
-			reduction = :reduction
-		end
+        models = (NeAm        = model_neam ,
+				  Electrolyte = model_elyte,
+				  PeAm        = model_peam ,
+				  Control     = model_control)
 		model = MultiModel(models,
-			Val(:Battery);
-			groups = groups, reduction = reduction)
+			               Val(:Battery);
+			               groups = groups)
+	else
+		groups = nothing
+		models = (NeCc        = model_necc,
+			      NeAm        = model_neam,
+			      Electrolyte = model_elyte,
+			      PeAm        = model_peam,
+			      PeCc        = model_pecc,
+			      Control     = model_control,
+		          )
+		model = MultiModel(models,
+			               Val(:Battery);
+			               groups = groups)
 
 	end
 
