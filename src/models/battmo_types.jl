@@ -75,14 +75,6 @@ end
 
 Jutul.associated_entity(::BoundaryCurrent) = BoundaryDirichletFaces()
 
-function Jutul.declare_entities(G::MinimalTpfaGrid)
-	# cells
-	c = (entity = Cells(), count = length(G.volumes))
-	# faces
-	f = (entity = Faces(), count = size(G.neighborship, 2))
-	return [c, f]
-end
-
 struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
 	"""
 	Simple grid for a electro chemical component
@@ -157,6 +149,14 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
 
 	end
     
+end
+
+function Jutul.declare_entities(G::MinimalTpfaGrid)
+	# cells
+	c = (entity = Cells(), count = length(G.volumes))
+	# faces
+	f = (entity = Faces(), count = size(G.neighborship, 2))
+	return [c, f]
 end
 
 function Base.getindex(grid::MinimalTpfaGrid, key::Symbol)
