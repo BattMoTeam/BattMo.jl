@@ -1,4 +1,3 @@
-<<<<<<< HEAD:src/setup/model_setup.jl
 
 export
 	run_battery,
@@ -240,9 +239,6 @@ function run_optimization(opt_setup, initial_results; hook = nothing, info_level
 	return (states = states_t, report = rep_t, final_x = final_x)
 end
 
-=======
-export run_battery
->>>>>>> main:src/old_model_setup/model_setup.jl
 
 ###############
 # Run battery #
@@ -407,7 +403,6 @@ function get_simulation_input(inputparams::BattMoInputFormatOld;
 end
 
 
-<<<<<<< HEAD:src/setup/model_setup.jl
 ###############
 # Setup model #
 ###############
@@ -1556,8 +1551,6 @@ function get_scalings(model, parameters)
 
 end
 
-=======
->>>>>>> main:src/old_model_setup/model_setup.jl
 ######################
 # Setup timestepping #
 ######################
@@ -1677,7 +1670,6 @@ function setup_timesteps(inputparams::InputParamsOld;
 	return timesteps
 end
 
-<<<<<<< HEAD:src/setup/model_setup.jl
 ######################################
 # Setup solver configuration options #
 ######################################
@@ -1863,8 +1855,6 @@ function setup_volume_fractions!(model::MultiModel, grids, coupling)
 	model[:Elyte].domain.representation[:separator_volume_fraction] = vfseparator
 
 end
-=======
->>>>>>> main:src/old_model_setup/model_setup.jl
 
 ######################
 # Transmissibilities #
