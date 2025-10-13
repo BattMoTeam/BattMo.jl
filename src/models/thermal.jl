@@ -2,7 +2,7 @@ export Thermal
 
 const ThermalParameters = JutulStorage
 
-struct Thermal{T} <: ElectroChemicalComponent where {T <: ThermalParameters}
+struct Thermal{T} <: BattMoSystem where {T <: ThermalParameters}
 	params::T
 	# At the moment the following keys are include
 	# - density::Real
@@ -33,7 +33,7 @@ end
 function Jutul.select_secondary_variables!(
 	S, system::Thermal, model::SimulationModel,
 )
-	# S[:TPkGrad_Phi] = TPkGrad{Phi}()
+	# S[:TPkGrad_Voltage] = TPkGrad{ElectricPotential}()
 	S[:Energy] = Energy()
 
 end

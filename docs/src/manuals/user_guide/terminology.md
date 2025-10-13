@@ -17,7 +17,7 @@ These parameters characterize the intrinsic properties of a battery cell, such a
 
 ```json
 {"NegativeElectrode": {
-    "ElectrodeCoating": {
+    "Coating": {
       "BruggemanCoefficient": 1.5,
       "EffectiveDensity": 1900.0,
       "Thickness": 1.0e-4,
@@ -40,8 +40,8 @@ These parameters define the operational conditions of the battery during a simul
   "LowerVoltageLimit": 2.5,
   "UpperVoltageLimit": 4.1,
   "InitialControl": "discharging",
-  "AmbientKelvinTemperature": 298.15,
-  "InitialKelvinTemperature": 298.15
+  "AmbientTemperature": 298.15,
+  "InitialTemperature": 298.15
 }
 ```
 
@@ -73,13 +73,12 @@ Define numerical assumptions specific to the simulation process, including time-
 
 ```json
 {
-    "GridPoints": {
-        "PositiveElectrodeCoating": 10,
-        "PositiveElectrodeActiveMaterial": 10,
-        "NegativeElectrodeCoating": 10,
-        "NegativeElectrodeActiveMaterial": 10,
-        "Separator": 10
-    },
+
+    "PositiveElectrodeCoatingGridPoints": 10,
+    "PositiveElectrodeParticleGridPoints": 10,
+    "NegativeElectrodeCoatingGridPoints": 10,
+    "NegativeElectrodeParticleGridPoints": 10,
+    "SeparatorGridPoints": 10,
     "Grid": [],
     "TimeStepDuration": 50,
     "RampUpTime": 10,

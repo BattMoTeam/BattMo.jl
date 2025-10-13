@@ -1,6 +1,10 @@
 {
+  "Metadata": {
+    "Title": "CCCV",
+    "Description": "Parameter set for a constant current constant voltage cyling protocol."
+  },
   "Protocol": "CCCV",
-  "InitialStateOfCharge": 0,
+  "InitialStateOfCharge": 0.01,
   "TotalNumberOfCycles": 3,
   "CRate": 1.0,
   "DRate": 1.0,
@@ -8,6 +12,5 @@
   "UpperVoltageLimit": 4.0,
   "InitialControl": "charging",
   "CurrentChangeLimit": 1e-4,
-  "VoltageChangeLimit": 1e-4,
-  "InitialKelvinTemperature": 298.15
+  "VoltageChangeLimit": 1e-4
 }

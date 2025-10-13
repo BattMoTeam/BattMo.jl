@@ -27,13 +27,13 @@ function hook(simulator,
 	timesteps,
 	cfg)
 
-	names = [:Elyte,
-		:NeAm,
+	names = [:Electrolyte,
+		:NegativeElectrodeActiveMaterial,
 		:Control,
-		:PeAm]
+		:PositiveElectrodeActiveMaterial]
 
 	if inputparams["model"]["include_current_collectors"]
-		names = append!(names, [:PeCc, :NeCc])
+		names = append!(names, [:PositiveElectrodeCurrentCollector, :NegativeElectrodeCurrentCollector])
 	end
 
 	for name in names
@@ -50,7 +50,7 @@ output = run_battery(inputparams;
 states = output[:states]
 
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
+E = [state[:Control][:ElectricPotential][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 nsteps = size(states, 1)

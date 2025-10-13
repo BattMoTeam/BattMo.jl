@@ -6,7 +6,7 @@ using Test
 
 	@test begin
 
-		name = "Chen2020_calibrated"
+		name = "Chen2020"
 		cell_parameters = load_cell_parameters(; from_default_set = name)
 		cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
@@ -16,14 +16,14 @@ using Test
 
 		output_0 = solve(sim)
 
-		states = output_0[:states]
+		states = output_0.jutul_output.states
 
 		# # Specify an objective
 
 		# Objective: Penalize any voltage less than target value of 4.2 (higher than initial voltage for battery)
 		v_target = 4.2
 		function objective(model, state, dt, step_no, forces)
-			return dt * max(v_target - state[:Control][:Phi][1], 0)^2
+			return dt * max(v_target - state[:Control][:Voltage][1], 0)^2
 		end
 
 		# # Setup the optimization problem

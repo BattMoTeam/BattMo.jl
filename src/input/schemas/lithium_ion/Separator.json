@@ -1,0 +1,51 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Separator",
+    "type": "object",
+    "properties": {
+        "Density": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 100000.0,
+            "description": "Density of the material.",
+            "context_type": "Density",
+            "context_type_iri": "https://w3id.org/emmo#EMMO_06448f64_8db6_4304_8b2c_e785dba82044",
+            "unit": "kg·m⁻³",
+            "unit_name": "emmo:GramPerCubicMetre",
+            "unit_iri": "https://w3id.org/emmo#GramPerCubicMetre"
+        },
+        "BruggemanCoefficient": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 5.0,
+            "description": "Exponent relating the tortuosity and porosity of porous media.",
+            "context_type": "BruggemanCoefficient",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_5c34b3b5_c9c4_477d_809a_3f682f995aa9",
+            "unit": "1",
+            "unit_name": "emmo:UnitOne",
+            "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+        },
+        "Thickness": {
+            "type": "number",
+            "minimum": 1e-6,
+            "maximum": 1.0e-1,
+            "description": "The dimension of a battery component measured along the direction of ionic transport, perpendicular to the major surfaces.",
+            "context_type": "Thickness",
+            "context_type_iri": "https://w3id.org/emmo#EMMO_43003c86_9d15_433b_9789_ee2940920656",
+            "unit": "m",
+            "unit_name": "emmo:Metre",
+            "unit_iri": "https://w3id.org/emmo#Metre"
+        },
+        "Porosity": {
+            "type": "number",
+            "minimum": 0.05,
+            "maximum": 0.95,
+            "description": "Ratio of the pore volume to the total volume of a porous material.",
+            "context_type": "Porosity",
+            "context_type_iri": "https://w3id.org/emmo#EMMO_3a6578ac_aee0_43b9_9bc6_1eb208c8c9a9",
+            "unit": "1",
+            "unit_name": "emmo:UnitOne",
+            "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+        }
+    }
+}

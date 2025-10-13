@@ -12,6 +12,9 @@ using RuntimeGeneratedFunctions                   # Code generation
 # ─────────────────────────────────────────────────────────────────────────────
 using JSON: JSON                                  # JSON parsing
 using MAT: matread
+using Markdown: parse
+using CSV                                   # CSV reading & writing
+using DataFrames
 
 # Internally exported JSONSchema functions and types
 using JSONSchema: Schema, SingleIssue
@@ -44,6 +47,7 @@ using StaticArrays                                # Static-sized arrays
 using Statistics                                  # Basic statistical functions
 using StatsBase: inverse_rle                      # Statistical utility
 using Tullio: @tullio                             # Einstein summation notation
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -139,7 +143,7 @@ using Jutul: SimulationModel, MultiModel
 using Jutul: JutulSimulator, Simulator
 using Jutul: JutulSystem, JutulFormulation, JutulContext, DefaultContext
 
-using Jutul: simulate, simulator_config
+using Jutul: simulate, simulator_config, simulator_config!
 using Jutul: setup_forces, setup_state, setup_state!, setup_parameters
 using Jutul: initialize_primary_variable_ad!, initialize_variable_ad!
 using Jutul: get_neighborship, get_simulator_storage, get_simulator_model
@@ -152,11 +156,14 @@ using Jutul: get_submodel_offsets, submodels_symbols
 using Jutul: JutulPreconditioner
 using Jutul: LinearizedSystem, LinearOperator
 using Jutul: LUSolver
+using Jutul: NoRelaxation, SimpleRelaxation
+using Jutul: TimestepSelector
 
 using Jutul: check_convergence, convergence_criterion, linear_solve!
 using Jutul: update_preconditioner!, apply!, mul!, operator_nrows
 using Jutul: perform_step_solve_impl!, reset_state_to_previous_state!, partial_update_preconditioner!
 using Jutul: is_left_preconditioner, is_right_preconditioner, opEye
+using Jutul: add_option!
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -174,6 +181,9 @@ using Jutul: get_dependencies, get_entry, convert_to_immutable_storage
 using Jutul: tpfv_geometry, apply!, is_cell_major
 using Jutul: StaticCSR, ParallelCSRContext
 using ForwardDiff: ForwardDiff
+using Jutul: jutul_message
+using Jutul: get_1d_interpolator
+using PythonCall: pyconvert, Py
 
 
 timeit_debug_enabled() = Jutul.timeit_debug_enabled()
@@ -184,17 +194,18 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 
 include("input/input_types.jl")
 include("input/meta_data/parameters.jl")
+include("input/meta_data/settings.jl")
 include("input/printer.jl")
 include("input/schemas/get_schema.jl")
 include("input/schemas/get_json_from_schema.jl")
 
 include("utils/physical_constants.jl")
 
-
-
 include("models/battmo_types.jl")
-include("models/full_battery_model_setups/battery_model.jl")
-include("models/full_battery_model_setups/lithium_ion.jl")
+include("models/full_battery_models/battery.jl")
+include("models/full_battery_models/intercalation_battery.jl")
+include("models/full_battery_models/lithium_ion.jl")
+include("models/full_battery_models/sodium_ion.jl")
 
 include("input/loader.jl")
 include("input/defaults.jl")
@@ -203,10 +214,13 @@ include("input/experiment.jl")
 include("input/function_input_tools.jl")
 include("input/formatter.jl")
 include("input/validator.jl")
+include("input/equilibrium_kpis.jl")
 
-
+include("input/defaults/cell_parameters/Chayambuka_functions.jl")
+include("input/defaults/cell_parameters/function_parameters_Xu2015.jl")
 
 include("models/thermal.jl")
+include("models/temperature_dependence.jl")
 include("models/elyte.jl")
 include("models/current_collector.jl")
 include("models/ocp.jl")
@@ -217,13 +231,23 @@ include("models/generic_control.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")
 
-include("setup/model_setup.jl")
-include("setup/matlab_model_setup.jl")
+include("simulation/simulation.jl")
+include("simulation/simulation_utils.jl")
+include("simulation/simulation_wrappers.jl")
 
-include("plotting/3D.jl")
+include("matlab_interface/matlab_model_setup.jl")
 
 include("utils/battery_cell_specifications.jl")
-include("utils/battery_kpis.jl")
+include("output/output_types.jl")
+include("output/metrics.jl")
+include("output/output_format.jl")
+include("output/meta_data/variables.jl")
+include("output/printer.jl")
+
+include("plotting/makie_ext.jl")
+include("plotting/3d.jl")
+include("plotting/1d.jl")
+
 
 include("solver/linsolve.jl")
 
@@ -231,15 +255,32 @@ include("grid/tensor_tools.jl")
 include("grid/remove_cells.jl") #Trenger StatsBase
 include("grid/grid_conversion.jl")
 include("grid/grid_utils.jl")
+include("grid/geometries/1d.jl")
+include("grid/geometries/pouch.jl")
+include("grid/geometries/jelly_roll.jl")
+
 include("solver/solver_as_preconditioner_system.jl")
 include("solver/precondgenneral.jl")
 include("solver/sparse_utils.jl")
+include("calibration/calibration.jl")
+include("calibration/calibration_utils.jl")
+
 # Precompilation of solver. Run a small battery simulation to precompile everything.
-# @compile_workload begin
-#    for use_general_ad in [false, true]
-#         init = "p2d_40"
-#         run_battery(init; general_ad = use_general_ad,info_level = -1);
-#    end
-# end
+@compile_workload begin
+	function workload_fn()
+		model_settings = load_model_settings(; from_default_set = "P2D")
+		cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
+		cycling_protocol = load_cycling_protocol(; from_default_set = "CCCV")
+		simulation_settings = load_simulation_settings(; from_default_set = "P2D")
+		model_setup = LithiumIonBattery(; model_settings)
+		sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+		output = solve(sim, info_level = -1)
+	end
+	try
+		redirect_stdout(workload_fn, devnull)
+	catch e
+		@warn "Precompilation failed with exception" e
+	end
+end
 
 end # module

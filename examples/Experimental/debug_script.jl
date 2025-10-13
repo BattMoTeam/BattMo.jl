@@ -10,7 +10,7 @@ init.object["Control"]["numberOfCycles"] = 50
 states, reports, extra = run_battery(init; info_level = 0, max_timestep_cuts = 10)
 
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
+E = [state[:Control][:ElectricPotential][1] for state in states]
 plt = plot(t, E;
 	title     = "Discharge Voltage",
 	size      = (1000, 800),

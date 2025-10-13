@@ -8,11 +8,14 @@ export
 	computeDischargeEnergy
 
 
-function computeElectrodeCapacity(model::MultiModel, name::Symbol)
+function computeElectrodeCapacity(multimodel::MultiModel, name::Symbol)
+	ammodel = multimodel[name]
+	return computeElectrodeCapacity(ammodel, name)
+end
 
+function computeElectrodeCapacity(ammodel::SimulationModel, name)
 	con = Constants()
 
-	ammodel = model[name]
 	sys = ammodel.system
 	F = con.F
 	n = sys[:n_charge_carriers]
@@ -20,14 +23,14 @@ function computeElectrodeCapacity(model::MultiModel, name::Symbol)
 	vf = sys[:volume_fraction]
 	avf = sys[:volume_fractions][1]
 
-	if name == :NeAm
+	if name == :NegativeElectrodeActiveMaterial
 		thetaMax = sys[:theta100]
 		thetaMin = sys[:theta0]
-	elseif name == :PeAm
+	elseif name == :PositiveElectrodeActiveMaterial
 		thetaMax = sys[:theta0]
 		thetaMin = sys[:theta100]
 	else
-		error("name not recognized")
+		error("Electrode name $name not recognized")
 	end
 
 	vols = ammodel.domain.representation[:volumes]
@@ -40,7 +43,7 @@ end
 
 function computeCellCapacity(model::MultiModel)
 
-	caps = [computeElectrodeCapacity(model, name) for name in (:NeAm, :PeAm)]
+	caps = [computeElectrodeCapacity(model, name) for name in (:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial)]
 
 	return minimum(caps)
 
@@ -49,7 +52,7 @@ end
 function computeCellEnergy(states)
 	# Only take discharge curves
 	time = [state[:Control][:Controller].time for state in states if state[:Control][:Current][1] > 0]
-	E    = [state[:Control][:Phi][1] for state in states if state[:Control][:Current][1] > 0]
+	E    = [state[:Control][:ElectricPotential][1] for state in states if state[:Control][:Current][1] > 0]
 	I    = [state[:Control][:Current][1] for state in states if state[:Control][:Current][1] > 0]
 
 	dt = diff(time)
@@ -65,13 +68,12 @@ end
 
 function computeCellMaximumEnergy(model::MultiModel; T = 298.15, capacities = missing)
 
-	eldes = (:NeAm, :PeAm)
+	eldes = (:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial)
 
 	if ismissing(capacities)
 		capacities = NamedTuple([(name, computeElectrodeCapacity(model, name)) for name in eldes])
 	end
-
-	capacity = min(capacities.NeAm, capacities.PeAm)
+	capacity = min(capacities.NegativeElectrodeActiveMaterial, capacities.PositiveElectrodeActiveMaterial)
 
 	N = 1000
 
@@ -98,7 +100,7 @@ function computeCellMaximumEnergy(model::MultiModel; T = 298.15, capacities = mi
 			elseif haskey(model[elde].system.params, :ocp_funcdata)
 				f[i] = ocpfunc(c[i] / cmax)
 			else
-				f[i] = ocpfunc(c[i], T, cmax)
+				f[i] = ocpfunc(c[i], T, refT, cmax)
 			end
 
 
@@ -108,7 +110,7 @@ function computeCellMaximumEnergy(model::MultiModel; T = 298.15, capacities = mi
 
 	end
 
-	energy = energies[:PeAm] - energies[:NeAm]
+	energy = energies[:PositiveElectrodeActiveMaterial] - energies[:NegativeElectrodeActiveMaterial]
 
 	return energy
 
@@ -116,7 +118,7 @@ end
 
 function computeCellMass(model::MultiModel)
 
-	eldes = (:NeAm, :PeAm)
+	eldes = (:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial)
 
 	mass = 0.0
 
@@ -130,23 +132,23 @@ function computeCellMass(model::MultiModel)
 
 	# Electrolyte mass
 
-	rho  = model[:Elyte].system[:electrolyte_density]
-	vf   = model[:Elyte].domain.representation[:volumeFraction]
-	vols = model[:Elyte].domain.representation[:volumes]
+	rho  = model[:Electrolyte].system[:electrolyte_density]
+	vf   = model[:Electrolyte].domain.representation[:volumeFraction]
+	vols = model[:Electrolyte].domain.representation[:volumes]
 
 	mass = mass + sum(vf .* rho .* vols)
 
 	# Separator mass
 
-	rho  = model[:Elyte].system[:separator_density]
-	vf   = model[:Elyte].domain.representation[:separator_volume_fraction]
-	vols = model[:Elyte].domain.representation[:volumes]
+	rho  = model[:Electrolyte].system[:separator_density]
+	vf   = model[:Electrolyte].domain.representation[:separator_volume_fraction]
+	vols = model[:Electrolyte].domain.representation[:volumes]
 
 	mass = mass + sum(vf .* rho .* vols)
 
 	# Current Collector masses
 
-	ccs = (:NeCc, :PeCc)
+	ccs = (:NegativeElectrodeCurrentCollector, :PositiveElectrodeCurrentCollector)
 
 	for cc in ccs
 		if haskey(model.models, cc)
@@ -161,7 +163,7 @@ function computeCellMass(model::MultiModel)
 end
 
 
-function computeCellSpecifications(inputparams::InputParams)
+function computeCellSpecifications(inputparams::AdvancedDictInput)
 
 	model = setup_submodels(inputparams)
 	return computeCellSpecifications(model)
@@ -170,7 +172,7 @@ end
 
 function computeCellSpecifications(model::MultiModel; T = 298.15)
 
-	capacities = (NeAm = computeElectrodeCapacity(model, :NeAm), PeAm = computeElectrodeCapacity(model, :PeAm))
+	capacities = (NegativeElectrodeActiveMaterial = computeElectrodeCapacity(model, :NegativeElectrodeActiveMaterial), PositiveElectrodeActiveMaterial = computeElectrodeCapacity(model, :PositiveElectrodeActiveMaterial))
 
 	energy = computeCellMaximumEnergy(model; T = T, capacities = capacities)
 
@@ -178,8 +180,8 @@ function computeCellSpecifications(model::MultiModel; T = 298.15)
 
 	specs = Dict()
 
-	specs["NegativeElectrodeCapacity"] = capacities.NeAm
-	specs["PositiveElectrodeCapacity"] = capacities.PeAm
+	specs["NegativeElectrodeCapacity"] = capacities.NegativeElectrodeActiveMaterial
+	specs["PositiveElectrodeCapacity"] = capacities.PositiveElectrodeActiveMaterial
 	specs["MaximumEnergy"]             = energy
 	specs["Mass"]                      = mass
 
@@ -188,7 +190,7 @@ function computeCellSpecifications(model::MultiModel; T = 298.15)
 end
 
 
-function computeEnergyEfficiency(inputparams::InputParams)
+function computeEnergyEfficiency(inputparams::AdvancedDictInput)
 
 	# setup a schedule with just one cycle and very fine refinement
 
@@ -232,11 +234,11 @@ function computeEnergyEfficiency(inputparams::InputParams)
 
 	else
 
-		error("controlPolicy not recognized.")
+		error("Control policy $controlPolicy not recognized.")
 
 	end
 
-	inputparams2 = InputParams(jsondict)
+	inputparams2 = AdvancedDictInput(jsondict)
 
 	(; states) = run_battery(inputparams2; info_level = 0)
 
@@ -247,7 +249,7 @@ end
 function computeEnergyEfficiency(states; cycle_number = nothing)
 
 	t = [state[:Control][:Controller].time for state in states]
-	E = [state[:Control][:Phi][1] for state in states]
+	E = [state[:Control][:ElectricPotential][1] for state in states]
 	I = [state[:Control][:Current][1] for state in states]
 
 	if !isnothing(cycle_number)
@@ -285,10 +287,10 @@ function computeEnergyEfficiency(states; cycle_number = nothing)
 
 	efficiency = energy_discharge / energy_charge
 
-	return efficiency
+	return efficiency * 100 # %
 
 end
-function computeDischargeEnergy(inputparams::InputParams)
+function computeDischargeEnergy(inputparams::AdvancedDictInput)
 	# setup a schedule with just discharge half cycle and very fine refinement
 
 	jsondict = inputparams.data
@@ -316,11 +318,11 @@ function computeDischargeEnergy(inputparams::InputParams)
 
 	else
 
-		error("controlPolicy not recognized.")
+		error("Control policy $controlPolicy not recognized.")
 
 	end
 
-	inputparams2 = InputParams(jsondict)
+	inputparams2 = AdvancedDictInput(jsondict)
 
 	(; states) = run_battery(inputparams2; info_level = 0)
 

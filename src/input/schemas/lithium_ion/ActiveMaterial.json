@@ -1,0 +1,161 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "ActiveMaterial",
+    "type": "object",
+    "properties": {
+        "MassFraction": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Mass of an electrode constituent divided by the total mass of all constituents in the solid mixture.",
+            "context_type": "MassFraction",
+            "context_type_iri": "https://w3id.org/emmo#EMMO_7c055d65_2929_40e1_af4f_4bf10995ad50",
+            "unit": "1",
+            "unit_name": "emmo:UnitOne",
+            "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+        },
+        "Density": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 100000.0,
+            "description": "Density of the material.",
+            "context_type": "Density",
+            "context_type_iri": "https://w3id.org/emmo#EMMO_06448f64_8db6_4304_8b2c_e785dba82044",
+            "unit": "kg·m⁻³",
+            "unit_name": "emmo:GramPerCubicMetre",
+            "unit_iri": "https://w3id.org/emmo#GramPerCubicMetre"
+        },
+        "VolumetricSurfaceArea": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 1e9,
+            "description": "Ratio of the electrochemically-active surface area of the electrode per volume of electrode",
+            "context_type": "VolumetricSurfaceArea",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_a5571263_f153_448f_84a3_cd18092cf8fa",
+            "unit": "m²m⁻³",
+            "unit_name": "emmo:Metre",
+            "unit_iri": "https://w3id.org/emmo#Metre"
+        },
+        "ElectronicConductivity": {
+            "type": "number",
+            "minimum": 1e-20,
+            "maximum": 1e9,
+            "description": "Measure of a material's ability to conduct an electric current.",
+            "context_type": "ElectricConductivity",
+            "context_type_iri": "https://w3id.org/emmo#EMMO_cde4368c_1d4d_4c94_8548_604749523c6d",
+            "unit": "S·m⁻¹",
+            "unit_name": "emmo:SiemensPerMetre",
+            "unit_iri": "https://w3id.org/emmo#SiemensPerMetre"
+        },
+        "DiffusionCoefficient": {
+            "type": [
+                "string",
+                "object",
+                "number"
+            ],
+            "description": "Proportionality constant between the molar flux of the charge carrier and its negative concentration gradient in a material.",
+            "context_type": [
+                "DiffusionCoefficient",
+                "Expression"
+            ],
+            "context_type_iri": "https://w3id.org/emmo#EMMO_931a725b_926d_4f60_8955_61fe17fce98b",
+            "unit": "m²·t⁻¹",
+            "unit_name": "emmo:AreaPerTimeUnit",
+            "unit_iri": "https://w3id.org/emmo#EMMO_10f703b5_8b2a_4c5a_a734_f0cfb29622ad",
+            "documentation": "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input"
+        },
+        "ParticleRadius": {
+            "type": "number",
+            "minimum": 1e-8,
+            "maximum": 0.001,
+            "description": "Radius of an spherical particle.",
+            "context_type": "ParticleRadius",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_b92e382f_5109_4f60_ab5e_c89d340419a9",
+            "unit": "m",
+            "unit_name": "emmo:Metre",
+            "unit_iri": "https://w3id.org/emmo#Metre"
+        },
+        "MaximumConcentration": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0e6,
+            "description": "The saturation concentration of the guest molecule in the host material",
+            "unit": "mol·m⁻³"
+        },
+        "StoichiometricCoefficientAtSOC0": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Stoichiometry of the intercalant within the host material, at the lower cell voltage limit.",
+            "context_type": "StoichiometricNumberOfSubstance",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_f22bd1ec_faca_4335_92a5_a1687154c622",
+            "unit": "1",
+            "unit_name": "emmo:UnitOne",
+            "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+        },
+        "StoichiometricCoefficientAtSOC100": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Stoichiometry of the intercalant within the host material, at the upper cell voltage limit.",
+            "context_type": "StoichiometricNumberOfSubstance",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_38ab058e_3912_48c2_a7eb_76d25d000820",
+            "unit": "1",
+            "unit_name": "emmo:UnitOne",
+            "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+        },
+        "OpenCircuitPotential": {
+            "$ref": "FunctionOpenCircuitPotential.json",
+            "description": "The open-circuit potential of the active material under a given intercalant stoichimetry and temperature.",
+            "context_type": [
+                "OpenCircuitPotential",
+                "Expression"
+            ],
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_9c657fdc_b9d3_4964_907c_f9a6e8c5f52b",
+            "unit": "V",
+            "unit_name": "emmo:Volt",
+            "unit_iri": "https://w3id.org/emmo#Volt",
+            "documentation": "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input"
+        },
+        "NumberOfElectronsTransfered": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4,
+            "description": "Number of electrons transferred between an electrode and an entity (ion, molecule) during an electrochemical reaction.",
+            "context_type": "ElectronsTransferred",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_abfadc99_6e43_4d37_9b04_7fc5b0f327ae",
+            "unit": "1",
+            "unit_name": "emmo:UnitOne",
+            "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+        },
+        "ActivationEnergyOfReaction": {
+            "type": "number",
+            "minimum": 1000.0,
+            "maximum": 1000000.0,
+            "description": "Parameter of the empirical Arrhenius formulation, characterizing the exponential temperature dependence of the reaction rate of the material.",
+            "context_type": "Energy",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_d7f8cab9_b035_4ecd_be63_292672572526",
+            "unit": "J·mol⁻¹",
+            "unit_name": "emmo:JoulePerMole",
+            "unit_iri": "https://w3id.org/emmo#JoulePerMole"
+        },
+        "ReactionRateConstant": {
+            "type": "number",
+            "minimum": 1e-14,
+            "maximum": 1e-2,
+            "description": "Proportionality constant quantifying the rate and direction of a chemical reaction by relating it with the concentration of reactants.",
+            "context_type": "ReactionRateConstant",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_0335e3f6_d1d8_4daa_8376_a9285f1bc9f1",
+            "unit": "mol·m⁻²·s⁻¹",
+            "unit_name": "emmo:MolePerSquareMetrePerSecond",
+            "unit_iri": "https://w3id.org/emmo#MolePerSquareMetrePerSecond"
+        },
+        "ChargeTransferCoefficient": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 0.9,
+            "description": "Constant alpha in the Butler-Volmer equation. It represents the fraction of the electrostatic potential energy affecting the reduction rate in an electrode reaction, with the remaining fraction affecting the corresponding oxidation rate.",
+            "unit": "-"
+        }
+    }
+}

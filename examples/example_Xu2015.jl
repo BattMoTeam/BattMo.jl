@@ -1,15 +1,14 @@
-
 using BattMo, GLMakie
-
 using CSV
 using DataFrames
 using Printf
 
 
 # Read Experimental voltage curves
-df_05 = CSV.read("./examples/voltage_curves/Xu_2015_voltageCurve_05C.csv", DataFrame)
-df_1 = CSV.read("./examples/voltage_curves/Xu_2015_voltageCurve_1C.csv", DataFrame)
-df_2 = CSV.read("./examples/voltage_curves/Xu_2015_voltageCurve_2C.csv", DataFrame)
+data_path = string(dirname(pathof(BattMo)), "/../examples/example_data/")
+df_05 = CSV.read(string(data_path, "Xu_2015_voltageCurve_05C.csv"), DataFrame)
+df_1 = CSV.read(string(data_path, "Xu_2015_voltageCurve_1C.csv"), DataFrame)
+df_2 = CSV.read(string(data_path, "Xu_2015_voltageCurve_2C.csv"), DataFrame)
 
 dfs = [df_05, df_1, df_2]
 
@@ -29,13 +28,12 @@ for CRate in CRates
 	push!(outputs, (CRate = CRate, output = output))
 end
 
-
 fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 
 for data in outputs
-	local t = [state[:Control][:Controller].time for state in data.output[:states]]
-	local E = [state[:Control][:Phi][1] for state in data.output[:states]]
+	local t = data.output.time_series["Time"]
+	local E = data.output.time_series["Voltage"]
 	lines!(ax, t, E, label = @sprintf("%.1f", data.CRate))
 end
 

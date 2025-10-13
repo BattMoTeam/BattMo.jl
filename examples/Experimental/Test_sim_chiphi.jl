@@ -178,7 +178,7 @@ if false
 else
 	##
 	#sim, forces, state0, parameters, init, model = BattMo.setup_sim(init; use_p2d=use_p2d, use_groups=false, general_ad=false, max_step = nothing)
-	#model, state0, parameters = BattMo.setup_model(init, use_groups = false, use_p2d    = use_p2d)
+	#model, state0, parameters = BattMo.setup_model!(init, use_groups = false, use_p2d    = use_p2d)
 	#context = Jutul.ParallelCSRContext(1)
 	context = Jutul.DefaultContext()
 	model = BattMo.setup_battery_model(init, use_groups = false, use_p2d = use_p2d, context = context)
@@ -188,7 +188,7 @@ else
 	BattMo.setup_policy!(model[:Control].system.policy, init, parameters)
 
 	minE = init.object["Control"]["lowerCutoffVoltage"]
-	@. state0[:Control][:Phi] = minE * 1.5
+	@. state0[:Control][:ElectricPotential] = minE * 1.5
 
 
 	forces = setup_forces(model)
@@ -205,11 +205,11 @@ else
 	#cfg = BattMo.setup_config(sim, model, :direct, false)
 	# Perform simulation
 	cfg[:info_level] = 10
-	cfg[:tolerances][:Elyte][:mass_conservation] = 1e-3
-	cfg[:tolerances][:PeAm][:mass_conservation] = 1e-3
-	cfg[:tolerances][:NeAm][:mass_conservation] = 1e-3
+	cfg[:tolerances][:Electrolyte][:mass_conservation] = 1e-3
+	cfg[:tolerances][:PositiveElectrodeActiveMaterial][:mass_conservation] = 1e-3
+	cfg[:tolerances][:NegativeElectrodeActiveMaterial][:mass_conservation] = 1e-3
 	cfg[:tolerances][:Control][:default] = 1e-5
-	#cfg[:tolerances][:PeAm][:solid_diffusion_bc] = 1e-20
+	#cfg[:tolerances][:PositiveElectrodeActiveMaterial][:solid_diffusion_bc] = 1e-20
 	if true
 		solver = :fgmres
 		fac = 1e-4
@@ -298,13 +298,13 @@ else
 		#g_prec = Jutul.ILUZeroPreconditioner()
 		#s_prec = LUPreconditioner()
 		#p_prec = LUPreconditioner()
-		prec = BattMo.BatteryCPhiPreconditioner(s_prec, p_prec, g_prec)
+		prec = BattMo.BatteryCVoltagePreconditioner(s_prec, p_prec, g_prec)
 
 		if false
 			varpreconds = Vector{BattMo.VariablePrecond}()
-			#push!(varpreconds,BattMo.VariablePrecond(p_prec,:Phi,:charge_conservation, nothing))
-			#push!(varpreconds,BattMo.VariablePrecond(s_prec,:C,:mass_conservation, nothing))
-			push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Phi, :charge_conservation, nothing))
+			#push!(varpreconds,BattMo.VariablePrecond(p_prec,:ElectricPotential,:charge_conservation, nothing))
+			#push!(varpreconds,BattMo.VariablePrecond(s_prec,:Concentration,:mass_conservation, nothing))
+			push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :ElectricPotential, :charge_conservation, nothing))
 			g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global, nothing)
 		else
 			prec_org_s = Jutul.AMGPreconditioner(:ruge_stuben)
@@ -328,14 +328,14 @@ else
 			#p_prec = Jutul.TrivialPreconditioner()
 			#p_prec = Jutul.ILUZeroPreconditioner()
 			#s_prec = Jutul.ILUZeroPreconditioner()
-			s_preccond = BattMo.VariablePrecond(s_prec, :C, :mass_conservation, nothing)
-			p_preccond = BattMo.VariablePrecond(p_prec, :Phi, :charge_conservation, nothing)
+			s_preccond = BattMo.VariablePrecond(s_prec, :ElectrolyteConcentration, :mass_conservation, nothing)
+			p_preccond = BattMo.VariablePrecond(p_prec, :ElectricPotential, :charge_conservation, nothing)
 			varpreconds = Vector{BattMo.VariablePrecond}()
 			#push!(varpreconds, p_preccond)
 			#push!(varpreconds, s_preccond)
 			push!(varpreconds, deepcopy(p_preccond))
 			push!(varpreconds, deepcopy(s_preccond))
-			#push!(varpreconds,BattMo.VariablePrecond(s_prec,:C,:mass_conservation, nothing))
+			#push!(varpreconds,BattMo.VariablePrecond(s_prec,:Concentration,:mass_conservation, nothing))
 			g_varprecond = BattMo.VariablePrecond(Jutul.TrivialPreconditioner(), :Global, :Global, nothing)
 			#g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(),:Global,:Global,nothing)
 		end
@@ -373,7 +373,7 @@ else
 		cfg[:extra_timing] = false
 	end
 
-	state0[:Control][:Phi][1] = 4.2
+	state0[:Control][:ElectricPotential][1] = 4.2
 	state0[:Control][:Current][1] = 0
 	discharging = BattMo.cc_discharge1
 	state0[:Control][:Controller] = BattMo.SimpleControllerCV{Float64}(0.0, 0.0, false, discharging)
@@ -384,7 +384,7 @@ end
 
 ##
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
+E = [state[:Control][:ElectricPotential][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 if (false)
@@ -414,7 +414,7 @@ if (false)
 		xtickfont = font(pointsize = 15),
 		ytickfont = font(pointsize = 15))
 
-	println("Volatage ", state[:Control][:Phi])
+	println("Volatage ", state[:Control][:ElectricPotential])
 
 	Plots.plot(p1, p2, layout = (2, 1))
 end
@@ -426,13 +426,13 @@ mystep = Int64(floor(size(states, 1) / 2))
 state = states[mystep]
 if (include_cc)
 	names = ["Electrolyte", "NegativeElectrode", "PositiveElectrode", "NegativeCurrentCollector", "PositiveCurrentCollector"]
-	syms = [:Elyte, :NeAm, :PeAm, :NeCc, :PeCc]
+	syms = [:Electrolyte, :NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial, :NegativeElectrodeCurrentCollector, :PositiveElectrodeCurrentCollector]
 else
 	names = ["Electrolyte", "NegativeElectrode", "PositiveElectrode"]
-	syms = [:Elyte, :NeAm, :PeAm]
+	syms = [:Electrolyte, :NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial]
 end
-V = state[:Control][:Phi]
-println("Current ", state[:Control][:Phi])
+V = state[:Control][:ElectricPotential]
+println("Current ", state[:Control][:ElectricPotential])
 println("Current ", state[:Control][:Current])
 global myfirst = true
 
@@ -457,19 +457,19 @@ for ind in 1:3
 	z = zeros(nc)
 	go = tpfv_geometry(g)
 	z = go.cell_centroids[end, :]##
-	val = state[sym][:Phi]
+	val = state[sym][:ElectricPotential]
 	#if(myfirst)
 	GLMakie.lines!(axlinesall, z, val)
 	if (ind < 2)
-		valc = state[sym][:C]
+		valc = state[sym][:Concentration]
 		GLMakie.lines!(axlinesall_c, z, valc)
 	end
 	if (ind == 2 || ind == 3)
 		valc = []
-		if BattMo.discretisation_type(model[:NeAm]) == :NoParticleDiffusion
-			valc = state[sym][:C]
+		if BattMo.discretisation_type(model[:NegativeElectrodeActiveMaterial]) == :NoParticleDiffusion
+			valc = state[sym][:Concentration]
 		else
-			valc = state[sym][:Cs]
+			valc = state[sym][:SurfaceConcentration]
 		end
 		GLMakie.lines!(axlinesall_c, z, valc)
 	end
@@ -542,7 +542,7 @@ if do_plot && true
 			name = names[ind]
 			sym = syms[ind]
 			g = init.object["Grids"][name]
-			phi = state[sym][:Phi]
+			phi = state[sym][:ElectricPotential]
 			#Jutul.plot_cell_data(g,phi)
 			Jutul.plot_cell_data!(ax3d, g, phi .- mean(phi))
 			#Jutul.plot_cell_data!(ax3d,g,phi)

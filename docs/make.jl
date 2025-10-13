@@ -36,22 +36,29 @@ function build_battmo_docs(build_format              = nothing;
 		"Tutorial 7 - Handle cycling protocol" => "7_handle_cycling_protocols",
 		"Tutorial 8 - Compute cell KPIs" => "8_compute_cell_kpis",
 		"Tutorial 9 - Run a parameter sweep" => "9_run_parameter_sweep",
+		"Tutorial 10 - Handle grid and time resolution" => "10_handling_grid_time_resolution",
+		"Tutorial 11 - Handle solver settings" => "11_handling_solver_settings",
 	]
 
 	examples = [
 		"Cycle example" => "example_cycle",
+		"1D plotting" => "example_1d_plotting",
+		"Drive cycle example" => "example_run_current_function",
 		"3D Pouch example" => "example_3D_pouch",
+		"3D cylindrical" => "example_3D_cylindrical",
+		"Calibration example" => "example_calibration",
 		"SEI layer growth" => "example_sei",
-		"Matlab example" => "example_battery",
+		"DFN sodiun ion " => "example_chayambuka",
+		"Headless UI " => "example_headless",
 	]
 
 	tutorials_markdown = []
 	examples_markdown = []
-	function update_footer(content, pth)
+	function update_footer(content, pth, dir)
 		return content * "\n\n # ## Example on GitHub\n " *
 			   "# If you would like to run this example yourself, it can be downloaded from " *
-			   "the BattMo.jl GitHub repository [as a script](https://github.com/BattMoTeam/BattMo.jl/blob/main/examples/$pth.jl), " *
-			   "or as a [Jupyter Notebook](https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/$pth.ipynb)"
+			   "the BattMo.jl GitHub repository [as a script](https://github.com/BattMoTeam/BattMo.jl/blob/main/$dir/$pth.jl)."#, " *
+		#"or as a [Jupyter Notebook](https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/$pth.ipynb)"
 	end
 	if clean
 		for (ex, pth) in tutorials
@@ -96,7 +103,7 @@ function build_battmo_docs(build_format              = nothing;
 		end
 		if do_build
 			push!(ex_dest, ex => joinpath("tutorials", "$pth.md"))
-			upd(content) = update_footer(content, pth)
+			upd(content) = update_footer(content, pth, "examples/beginner_tutorials")
 			Literate.markdown(in_pth, tutorials_out_dir, preprocess = upd)
 		end
 	end
@@ -118,7 +125,7 @@ function build_battmo_docs(build_format              = nothing;
 		end
 		if do_build
 			push!(ex_dest, ex => joinpath("examples", "$pth.md"))
-			upd(content) = update_footer(content, pth)
+			upd(content) = update_footer(content, pth, "examples")
 			Literate.markdown(in_pth, examples_out_dir, preprocess = upd)
 		end
 	end
@@ -148,10 +155,15 @@ function build_battmo_docs(build_format              = nothing;
 		"Installation" => "manuals/user_guide/installation.md",
 		"Getting started" => "manuals/user_guide/getting_started.md"
 	],
-		"Models and architecture" => [
-		"PXD model" => "manuals/user_guide/pxd_model.md",
-		"Ramp up model" => "manuals/user_guide/ramp_up.md",
-		"SEI model" => "manuals/user_guide/sei_model.md"
+		"Battery models" => [
+		"Lithium ion model" => "manuals/user_guide/pxd_model.md"
+		"Sodium ion model" => "manuals/user_guide/sodium_ion_model.md"
+	],
+		"Sub-models" => [
+		"Overview" => "manuals/user_guide/sub_models.md",
+		"Ramp up" => "manuals/user_guide/ramp_up.md",
+		"SEI" => "manuals/user_guide/sei_model.md",
+		"Temperature dependence" => "manuals/user_guide/arrhenius.md"
 	],
 		"Public API" => [
 		"Input terminology" => "manuals/user_guide/terminology.md",
@@ -172,11 +184,15 @@ function build_battmo_docs(build_format              = nothing;
 	],
 		"References" => [
 		"Bibliography" => "extras/refs.md"
+	],
+		"PyBattMo" => [
+		"Installation" => "manuals/pybattmo/installation.md",
+		"Examples" => "manuals/pybattmo/examples.md"
 	]],
 	)
 	if build_notebooks
 		# Subfolder of final site build folder
-		notebook_dir = joinpath(@__DIR__, "build", "final_site", "notebooks")
+		notebook_dir = joinpath(@__DIR__, "src", "public", "notebooks")
 		mkpath(notebook_dir)
 		for (ex, pth) in examples
 			in_pth = example_path(pth)
@@ -191,7 +207,7 @@ function build_battmo_docs(build_format              = nothing;
 		end
 	end
 	if deploy
-		deploydocs(;
+		DocumenterVitepress.deploydocs(;
 			repo = "github.com/BattMoTeam/BattMo.jl",
 			devbranch = "main",
 			target = "build", # this is where Vitepress stores its output

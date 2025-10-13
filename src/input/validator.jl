@@ -57,6 +57,30 @@ function validate_parameter_set(parameters::CellParameters, model_settings::Mode
 
 end
 
+function validate_parameter_set(settings::SolverSettings)
+
+	schema = get_schema_solver_settings()
+
+	# Convert schema Dict to JSONSchema object
+	schema_obj = Schema(schema)
+
+	# Validate the JSON data
+	result = validate(schema_obj, settings.all)
+
+	log_schema_issues(result.issues, "SolverSettings")
+
+	if !isempty(result.issues)
+		is_valid = false
+
+	else
+		is_valid = true
+
+	end
+
+	return is_valid
+
+end
+
 function validate_parameter_set(parameters::SimulationSettings, model_settings::ModelSettings)
 
 	schema = get_schema_simulation_settings(model_settings)
@@ -105,9 +129,9 @@ function validate_parameter_set(parameters::ModelSettings)
 
 end
 
-function validate_parameter_set(parameters::CyclingProtocol)
+function validate_parameter_set(parameters::CyclingProtocol, model_settings::ModelSettings)
 
-	schema = get_schema_cycling_protocol()
+	schema = get_schema_cycling_protocol(model_settings)
 
 	# Convert schema Dict to JSONSchema object
 	schema_obj = Schema(schema)
@@ -139,6 +163,14 @@ function log_schema_issues(issues::Vector{SingleIssue}, set_name::String)
 		println("─"^50)
 
 		for (i, issue) in enumerate(issues)
+
+			if issue.reason == "required"
+				required_fields = issue.val
+				present_fields = collect(keys(issue.x))
+				missing_fields = setdiff(required_fields, present_fields)
+				msg = "Missing required field(s): $(join(missing_fields, ", "))"
+			end
+
 			println("─"^50)
 			println("Issue $i:")
 
@@ -150,11 +182,12 @@ function log_schema_issues(issues::Vector{SingleIssue}, set_name::String)
 
 			# Custom messages for common schema keys
 			msg =
-				issue.reason == "required" ? "Missing required field(s): $(join(issue.val, ", "))" :
+				issue.reason == "required" ? msg :
 				issue.reason == "maximum"  ? "Value exceeds maximum allowed ($(issue.val))" :
 				issue.reason == "minimum"  ? "Value is below the minimum allowed ($(issue.val))" :
 				issue.reason == "type"     ? "Expected type: $(issue.val)" :
 				issue.reason == "enum"     ? "Value must be one of: $(join(issue.val, ", "))" :
+				issue.reason == "const"    ? "Value must be exactly: $(issue.val)" :
 				"Schema violation: $(issue.reason)"
 
 			println(rpad("🛠  Issue:", label_width), msg, "\n")

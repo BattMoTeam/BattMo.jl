@@ -1,5 +1,6 @@
 [![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://battmoteam.github.io/BattMo.jl/dev/)
 [![Build Status](https://github.com/battmoteam/BattMo.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/battmoteam/BattMo.jl/actions/workflows/CI.yml?query=branch%3Amain)
+<a href="https://doi.org/10.5281/zenodo.17313586"><img src="https://zenodo.org/badge/478088752.svg" alt="DOI"></a>
 
 # BattMo.jl is a framework for continuum modelling of lithium-ion batteries written in Julia
 > [!TIP]
@@ -38,7 +39,7 @@ using BattMo, GLMakie
 # the cell parameter set from a NMC811 vs Graphite-SiOx cell whose parameters were determined in the [Chen 2020 paper](https://doi.org/10.1149/1945-7111/ab9050). 
 # We also load an example cycling protocol for a simple Constant Current Discharge.
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 
 # Next, we select the Lithium-Ion Battery Model setup with default model settings. 
@@ -57,13 +58,12 @@ sim = Simulation(model_setup, cell_parameters, cycling_protocol);
 # Now we can run the simulation
 output = solve(sim;)
 
-# The output is a NamedTuple storing the results of the simulation within multiple dictionaries. Let's plot the cell current and cell voltage over time and make a plot with the GLMakie package.
+# The output is a SimulationOutput type storing the results of the simulation within multiple dictionaries. Let's plot the cell current and cell voltage over time and make a plot with the GLMakie package.
 
-states = output[:states]
+t = output.time_series["Time"]
+E = output.time_series["Voltage"]
+I = output.time_series["Current"]
 
-t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
-I = [state[:Control][:Current][1] for state in states]
 fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 lines!(ax, t, E)

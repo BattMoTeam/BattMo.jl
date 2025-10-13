@@ -1,4 +1,8 @@
 {
+    "Metadata": {
+        "Title": "CCCycling",
+        "Description": "Parameter set for a constant current cycling protocol."
+    },
     "Protocol": "CC",
     "TotalNumberOfCycles": 3,
     "InitialStateOfCharge": 0.01,
@@ -6,6 +10,5 @@
     "DRate": 0.5,
     "LowerVoltageLimit": 2.5,
     "UpperVoltageLimit": 4.1,
-    "InitialControl": "charging",
-    "InitialKelvinTemperature": 298.15
+    "InitialControl": "charging"
 }

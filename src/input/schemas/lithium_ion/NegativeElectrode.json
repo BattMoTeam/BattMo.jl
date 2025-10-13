@@ -1,0 +1,59 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "NegativeElectrode",
+    "type": "object",
+    "properties": {
+        "Coating": {
+            "type": "object",
+            "$ref": "Coating.json"
+        },
+        "ActiveMaterial": {
+            "type": "object",
+            "$ref": "ActiveMaterial.json"
+        },
+        "Binder": {
+            "type": "object",
+            "$ref": "Binder.json"
+        },
+        "ConductiveAdditive": {
+            "type": "object",
+            "$ref": "ConductiveAdditive.json"
+        },
+        "CurrentCollector": {
+            "type": "object",
+            "$ref": "CurrentCollector.json"
+        },
+        "Interphase": {
+            "type": "object",
+            "$ref": "Interphase.json"
+        }
+    },
+    "required": [
+        "Coating",
+        "ActiveMaterial",
+        "Binder",
+        "ConductiveAdditive"
+    ],
+    "allof": [
+        {
+            "if": {
+                "$ref": "https://example.com/ModelSettings.json#/$defs/useCurrentCollectors"
+            },
+            "then": {
+                "required": [
+                    "CurrentCollector"
+                ]
+            }
+        },
+        {
+            "if": {
+                "$ref": "https://example.com/ModelSettings.json#/$defs/useBolaySEIModel"
+            },
+            "then": {
+                "required": [
+                    "Interphase"
+                ]
+            }
+        }
+    ]
+}

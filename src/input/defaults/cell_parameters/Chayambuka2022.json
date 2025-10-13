@@ -1,0 +1,130 @@
+{
+    "Metadata": {
+        "Title": "Chayambuka2022",
+        "Source": [
+            "https://doi.org/10.1016/j.electacta.2021.139726",
+            "https://doi.org/10.1016/j.electacta.2021.139764"
+        ],
+        "Description": "Parameter set for a Sodium ion cell based on Chayambuka et al. The positive electrode open circuit potential has been retrieved from a [COMSOL example](https://www.comsol.com/model/1d-isothermal-sodium-ion-battery-117341).",
+        "Models": {
+            "ModelFramework": "P2D",
+            "TransportInSolid": "FullDiffusion",
+            "RampUp": "Sinusoidal"
+        }
+    },
+    "Cell": {
+        "ElectrodeGeometricSurfaceArea": 2.54e-4,
+        "NominalVoltage": 3.71,
+        "NominalCapacity": 0.0025
+    },
+    "NegativeElectrode": {
+        "Coating": {
+            "BruggemanCoefficient": 0.5,
+            "EffectiveDensity": 954.67,
+            "Thickness": 64e-6
+        },
+        "ActiveMaterial": {
+            "Description": "Hard Carbon",
+            "MassFraction": 0.999,
+            "Density": 1950.0,
+            "VolumetricSurfaceArea": 420689.655,
+            "ActivationEnergyOfReaction": 35000,
+            "ElectronicConductivity": 256,
+            "DiffusionCoefficient": {
+                "FunctionName": "calc_ne_D",
+                "FilePath": "Chayambuka_functions.jl"
+            },
+            "ParticleRadius": 3.48e-6,
+            "MaximumConcentration": 14540,
+            "StoichiometricCoefficientAtSOC0": 0.14,
+            "StoichiometricCoefficientAtSOC100": 1.0,
+            "OpenCircuitPotential": {
+                "FunctionName": "calc_ne_ocp",
+                "FilePath": "Chayambuka_functions.jl"
+            },
+            "NumberOfElectronsTransfered": 1,
+            "ReactionRateConstant": {
+                "FunctionName": "calc_ne_k",
+                "FilePath": "Chayambuka_functions.jl"
+            },
+            "ChargeTransferCoefficient": 0.5
+        },
+        "ConductiveAdditive": {
+            "Description": "Unknown",
+            "Density": 1950.0,
+            "MassFraction": 0.001,
+            "ElectronicConductivity": 100.0
+        },
+        "Binder": {
+            "Description": "Unknown",
+            "Density": 1100.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100.0
+        }
+    },
+    "PositiveElectrode": {
+        "Coating": {
+            "BruggemanCoefficient": 0.5,
+            "EffectiveDensity": 2155.69,
+            "Thickness": 68e-6
+        },
+        "ActiveMaterial": {
+            "Description": "NVPF",
+            "MassFraction": 0.8161,
+            "Density": 3200,
+            "VolumetricSurfaceArea": 2796610.169,
+            "ActivationEnergyOfReaction": 17800.0,
+            "ElectronicConductivity": 50,
+            "DiffusionCoefficient": {
+                "FunctionName": "calc_pe_D",
+                "FilePath": "Chayambuka_functions.jl"
+            },
+            "ParticleRadius": 0.59e-6,
+            "MaximumConcentration": 15320,
+            "StoichiometricCoefficientAtSOC0": 1.0,
+            "StoichiometricCoefficientAtSOC100": 0.25,
+            "OpenCircuitPotential": {
+                "FunctionName": "calc_pe_ocp",
+                "FilePath": "Chayambuka_functions.jl"
+            },
+            "NumberOfElectronsTransfered": 1,
+            "ReactionRateConstant": {
+                "FunctionName": "calc_pe_k",
+                "FilePath": "Chayambuka_functions.jl"
+            },
+            "ChargeTransferCoefficient": 0.5
+        },
+        "ConductiveAdditive": {
+            "Description": "Unknown",
+            "Density": 1800.0,
+            "MassFraction": 0.1839,
+            "ElectronicConductivity": 100
+        },
+        "Binder": {
+            "Description": "Unknown",
+            "Density": 1780.0,
+            "MassFraction": 0.0,
+            "ElectronicConductivity": 100
+        }
+    },
+    "Separator": {
+        "Description": "",
+        "Porosity": 0.55,
+        "Density": 1400,
+        "BruggemanCoefficient": 0.5,
+        "Thickness": 25e-6
+    },
+    "Electrolyte": {
+        "Description": "1 kmol m^-3 NaPF6 salt dissolved in equal weight mixtures of ethylene carbonate (EC) and propylene carbonate (PC) EC0.5:PC0.5, (w/w) solvent",
+        "Density": 1260,
+        "Concentration": 1000,
+        "ChargeNumber": 1,
+        "TransferenceNumber": 0.45,
+        "IonicConductivity": {
+            "FunctionName": "calc_elyte_cond"
+        },
+        "DiffusionCoefficient": {
+            "FunctionName": "calc_elyte_diff"
+        }
+    }
+}

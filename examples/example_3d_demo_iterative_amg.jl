@@ -1,6 +1,5 @@
 using Jutul, BattMo, GLMakie
 using StatsBase
-using Plots
 using AlgebraicMultigrid
 using Preconditioners
 using Preferences
@@ -16,10 +15,10 @@ set_preferences!(Jutul, "precompile_workload" => false; force = true)
 name = "p2d_40_jl_chen2020"
 
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
-inputparams = load_battmo_formatted_input(fn)
-
+inputparams = load_advanced_dict_input(fn)
 
 simple = false
+
 if (!simple)
 
 	facx  = 2
@@ -28,7 +27,7 @@ if (!simple)
 	fac2p = 1
 
 	fn                                                                         = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
-	inputparams_geometry                                                       = load_battmo_formatted_input(fn)
+	inputparams_geometry                                                       = load_advanced_dict_input(fn)
 	inputparams_geometry["Geometry"]["Nh"]                                     *= facy
 	inputparams_geometry["Geometry"]["Nw"]                                     *= facx
 	inputparams_geometry["Separator"]["N"]                                     *= facz
@@ -44,18 +43,19 @@ if (!simple)
 else
 	#fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
 	fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/1D_geometry.json")
-	inputparams_geometry_org = load_battmo_formatted_input(fn)
+	inputparams_geometry_org = load_advanced_dict_input(fn)
 	inputparams_geometry = deepcopy(inputparams_geometry_org)
 	inputparams_geometry["include_current_collectors"] = false
 end
 
 inputparams = merge_input_params(deepcopy(inputparams_geometry), inputparams)
+
 ############################
 # setup and run simulation #
 ############################
 
 model_kwargs = (context = Jutul.DefaultContext(),)
-output = setup_simulation(inputparams; model_kwargs)
+output = get_simulation_input(inputparams; model_kwargs)
 
 simulator = output[:simulator]
 model     = output[:model]
@@ -80,9 +80,9 @@ verbose = 10
 # We first setup the block preconditioners. They are given as a list and applied separatly. Preferably, they
 # should be orthogonal
 varpreconds = Vector{BattMo.VariablePrecond}()
-push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Phi, :charge_conservation, nothing))
-#push!(varpreconds,BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(),:Cp,:mass_conservation, [:PeAm,:NeAm]))
-#push!(varpreconds,BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:C,:mass_conservation, [:Elyte]))
+push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :ElectricPotential, :charge_conservation, nothing))
+#push!(varpreconds,BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(),:ParticleConcentration,:mass_conservation, [:PositiveElectrodeActiveMaterial,:NegativeElectrodeActiveMaterial]))
+#push!(varpreconds,BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben),:Concentration,:mass_conservation, [:Electrolyte]))
 
 # We setup the global preconditioner
 g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global, nothing)
@@ -117,7 +117,7 @@ states, reports = simulate(state0, simulator, timesteps; forces = forces, config
 #model  = output[:extra][:model]
 
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
+E = [state[:Control][:ElectricPotential][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 f = Figure(size = (1000, 400))
@@ -171,8 +171,8 @@ if (do_plot)
 
 	state = states[10]
 
-	setups = ((:PeCc, :PeAm, "positive"),
-		(:NeCc, :NeAm, "negative"))
+	setups = ((:PositiveElectrodeCurrentCollector, :PositiveElectrodeActiveMaterial, "positive"),
+		(:NegativeElectrodeCurrentCollector, :NegativeElectrodeActiveMaterial, "negative"))
 
 
 	for setup in setups
@@ -184,28 +184,28 @@ if (do_plot)
 		am = setup[1]
 		cc = setup[2]
 
-		maxPhi = maximum([maximum(state[cc][:Phi]), maximum(state[am][:Phi])])
-		minPhi = minimum([minimum(state[cc][:Phi]), minimum(state[am][:Phi])])
+		maxVoltage = maximum([maximum(state[cc][:ElectricPotential]), maximum(state[am][:ElectricPotential])])
+		minVoltage = minimum([minimum(state[cc][:ElectricPotential]), minimum(state[am][:ElectricPotential])])
 
-		colorrange = [0, maxPhi - minPhi]
+		colorrange = [0, maxVoltage - minVoltage]
 
 		components = [am, cc]
 		for component in components
 			g = model[component].domain.representation
-			phi = state[component][:Phi]
-			Jutul.plot_cell_data!(ax3d, g, phi .- minPhi; colormap = :viridis, colorrange = colorrange)
+			phi = state[component][:ElectricPotential]
+			Jutul.plot_cell_data!(ax3d, g, phi .- minVoltage; colormap = :viridis, colorrange = colorrange)
 		end
 
 		cbar = GLMakie.Colorbar(f3D[1, 2];
 			colormap = :viridis,
-			colorrange = colorrange .+ minPhi,
+			colorrange = colorrange .+ minVoltage,
 			label = "potential")
 		display(GLMakie.Screen(), f3D)
 
 	end
 
-	setups = ((:PeAm, "positive"),
-		(:NeAm, "negative"))
+	setups = ((:PositiveElectrodeActiveMaterial, "positive"),
+		(:NegativeElectrodeActiveMaterial, "negative"))
 
 	for setup in setups
 
@@ -215,7 +215,7 @@ if (do_plot)
 
 		component = setup[1]
 
-		cs = state[component][:Cs]
+		cs = state[component][:SurfaceConcentration]
 		maxcs = maximum(cs)
 		mincs = minimum(cs)
 
@@ -235,8 +235,8 @@ if (do_plot)
 	end
 
 
-	setups = ((:C, "concentration"),
-		(:Phi, "potential"))
+	setups = ((:Concentration, "concentration"),
+		(:ElectricPotential, "potential"))
 
 	for setup in setups
 
@@ -246,13 +246,13 @@ if (do_plot)
 
 		var = setup[1]
 
-		val = state[:Elyte][var]
+		val = state[:Electrolyte][var]
 		maxval = maximum(val)
 		minval = minimum(val)
 
 		colorrange = [0, maxval - minval]
 
-		g = model[:Elyte].domain.representation
+		g = model[:Electrolyte].domain.representation
 		Jutul.plot_cell_data!(ax3d, g, val .- minval;
 			colormap = :viridis,
 			colorrange = colorrange)

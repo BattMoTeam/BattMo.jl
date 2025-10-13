@@ -15,9 +15,9 @@ nothing # hide
 
 # ## Setup and run simulation
 
-model_setup = LithiumIonBattery(; model_settings)
+model = LithiumIonBattery(; model_settings)
 
-sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings);
+sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
 output = solve(sim)
 nothing # hide
 
@@ -27,7 +27,7 @@ states = output[:states]
 model  = output[:extra][:model]
 
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
+E = [state[:Control][:ElectricPotential][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 f = Figure(size = (1000, 400))
@@ -79,21 +79,21 @@ function plot_potential(am, cc, label)
 	ax3d = Axis3(f3D[1, 1];
 		title = "Potential in $label electrode (coating and active material)")
 
-	maxPhi = maximum([maximum(state[cc][:Phi]), maximum(state[am][:Phi])])
-	minPhi = minimum([minimum(state[cc][:Phi]), minimum(state[am][:Phi])])
+	maxVoltage = maximum([maximum(state[cc][:ElectricPotential]), maximum(state[am][:ElectricPotential])])
+	minVoltage = minimum([minimum(state[cc][:ElectricPotential]), minimum(state[am][:ElectricPotential])])
 
-	colorrange = [0, maxPhi - minPhi]
+	colorrange = [0, maxVoltage - minVoltage]
 
 	components = [am, cc]
 	for component in components
 		g = model[component].domain.representation
-		phi = state[component][:Phi]
-		Jutul.plot_cell_data!(ax3d, g, phi .- minPhi; colormap = :viridis, colorrange = colorrange)
+		phi = state[component][:ElectricPotential]
+		Jutul.plot_cell_data!(ax3d, g, phi .- minVoltage; colormap = :viridis, colorrange = colorrange)
 	end
 
 	cbar = GLMakie.Colorbar(f3D[1, 2];
 		colormap = :viridis,
-		colorrange = colorrange .+ minPhi,
+		colorrange = colorrange .+ minVoltage,
 		label = "potential")
 	display(GLMakie.Screen(), f3D)
 	return f3D
@@ -101,10 +101,10 @@ end
 nothing # hide
 
 # ## Plot the potential in the positive electrode
-plot_potential(:PeAm, :PeCc, "positive")
+plot_potential(:PositiveElectrodeActiveMaterial, :PositiveElectrodeCurrentCollector, "positive")
 
 # ## Plot the potential in the negative electrode
-plot_potential(:NeAm, :NeCc, "negative")
+plot_potential(:NegativeElectrodeActiveMaterial, :NegativeElectrodeCurrentCollector, "negative")
 
 # ## Plot surface concentration on grid at last time step
 function plot_surface_concentration(component, label)
@@ -112,7 +112,7 @@ function plot_surface_concentration(component, label)
 	ax3d = Axis3(f3D[1, 1];
 		title = "Surface concentration in $label electrode")
 
-	cs = state[component][:Cs]
+	cs = state[component][:SurfaceConcentration]
 	maxcs = maximum(cs)
 	mincs = minimum(cs)
 
@@ -132,23 +132,23 @@ end
 nothing # hide
 
 # ## Plot the surface concentration in the positive electrode
-plot_surface_concentration(:PeAm, "positive")
+plot_surface_concentration(:PositiveElectrodeActiveMaterial, "positive")
 
 # ## Plot the surface concentration in the negative electrode
-plot_surface_concentration(:NeAm, "negative")
+plot_surface_concentration(:NegativeElectrodeActiveMaterial, "negative")
 
 # ## Plot electrolyte concentration and potential on grid at last time step
 function plot_elyte(var, label)
 	f3D = Figure(size = (600, 650))
 	ax3d = Axis3(f3D[1, 1]; title = "$label in electrolyte")
 
-	val = state[:Elyte][var]
+	val = state[:Electrolyte][var]
 	maxval = maximum(val)
 	minval = minimum(val)
 
 	colorrange = [0, maxval - minval]
 
-	g = model[:Elyte].domain.representation
+	g = model[:Electrolyte].domain.representation
 	Jutul.plot_cell_data!(ax3d, g, val .- minval;
 		colormap = :viridis,
 		colorrange = colorrange)
@@ -163,7 +163,7 @@ end
 nothing # hide
 
 # ## Plot of the concentration in the electrolyte
-plot_elyte(:C, "concentration")
+plot_elyte(Concentration, "concentration")
 
 # ## Plot of the potential in the electrolyte
-plot_elyte(:Phi, "potential")
+plot_elyte(:ElectricPotential, "potential")

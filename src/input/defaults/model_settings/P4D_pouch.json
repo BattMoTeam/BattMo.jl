@@ -1,6 +1,12 @@
 {
+    "Metadata": {
+        "Title": "P4D_pouch",
+        "Description": "Default model settings for a P4D pouch simulation including a current ramp up, current collectors."
+    },
     "ModelFramework": "P4D Pouch",
     "TransportInSolid": "FullDiffusion",
-    "CurrentCollectors": "Generic",
+    "PotentialFlowDiscretization": "GeneralAD",
+    "ButlerVolmer": "Standard",
+    "CurrentCollectors": "Standard",
     "RampUp": "Sinusoidal"
 }

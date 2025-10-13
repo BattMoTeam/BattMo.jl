@@ -19,19 +19,19 @@ end
 @jutul_secondary function update_ion_mass!(acc,
 	tv::Mass,
 	model,
-	C,
+	ElectrolyteConcentration,
 	Volume,
 	VolumeFraction,
 	ix)
 	for i in ix
-		@inbounds acc[i] = C[i] * Volume[i] * VolumeFraction[i]
+		@inbounds acc[i] = ElectrolyteConcentration[i] * Volume[i] * VolumeFraction[i]
 	end
 end
 
 @jutul_secondary function update_as_secondary!(acc,
 	tv::Charge,
 	model,
-	Phi,
+	ElectricPotential,
 	ix)
 	for i in ix
 		@inbounds acc[i] = 0.0
@@ -41,65 +41,111 @@ end
 #####################
 # Gradient operator #
 #####################
-@inline function harmonic_average(c1, c2, k)
 
-	@inbounds l = k[c1]
-	@inbounds r = k[c2]
 
-	return 2.0 / (1.0 / l + 1.0 / r)
+""" 
+   harmonic_average(c1, c2, k)
+
+Computes the harmonic average weighted with half-transmissibilities
+
+# Arguments
+
+- `c1` : first cell input, tuple with keys :cell (cell index) and :htrans (value of half-transmissibility)
+- `c2` : second cell input, same format as `c1`
+- `k`  : vector containing the value to be average
+
+"""
+@inline function harmonic_average(c1, c2, ht1, ht2, k)
+
+
+	@inbounds l   = k[c1]
+	@inbounds r   = k[c2]
+	@inbounds htl = ht1
+	@inbounds htr = ht2
+
+	return 1.0 / (1.0 / (htl * l) + 1.0 / (htr * r))
+
 end
 
 @inline grad(c_self, c_other, p::AbstractArray) = @inbounds (p[c_other] - p[c_self])
 
-@inline function half_face_two_point_kgrad(c_self::I,
-	c_other::I,
-	T::R,
+
+@inline function half_face_two_point_kgrad(c_self,
+	c_other,
+	ht_self,
+	ht_other,
 	phi::AbstractArray,
 	k::AbstractArray,
-) where {R <: Real, I <: Integer}
+)
 
-	k_av = harmonic_average(c_self, c_other, k)
+	k_av = harmonic_average(c_self, c_other, ht_self, ht_other, k)
 	grad_phi = grad(c_self, c_other, phi)
 
-	return T * k_av * grad_phi
+	return k_av * grad_phi
 
 end
 
-@inline function Jutul.face_flux!(q_i, face, eq::ConservationLaw, state, model::ElectroChemicalComponentModel, dt, flow_disc::PotentialFlow, ldisc)
+function setupHalfTrans(model, face, cell, other_cell, face_sign)
+
+	htrans = model.domain.representation[:halftransfaces][:, face]
+	if face_sign > 0
+		htrans_cell  = htrans[1]
+		htrans_other = htrans[2]
+	else
+		htrans_cell  = htrans[2]
+		htrans_other = htrans[1]
+	end
+
+	return (htrans_cell, htrans_other)
+
+end
+
+
+@inline function Jutul.face_flux!(q_i, face, eq::ConservationLaw, state, model::BattMoModel, dt, flow_disc::PotentialFlow, ldisc)
 
 	# Inner version, for generic flux
 	kgrad, upw = ldisc.face_disc(face)
 	(; left, right, face_sign) = kgrad
 
-	return face_flux!(q_i, left, right, face, face_sign, eq, state, model, dt, flow_disc)
+	return Jutul.face_flux!(q_i, left, right, face, face_sign, eq, state, model, dt, flow_disc)
 
 end
 
+function computeFlux(::Val{:Mass}, model, state, cell, other_cell, face, face_sign)
+
+	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
+	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectrolyteConcentration, state.Diffusivity)
+
+	return q
+end
 
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model, dt, flow_disc) where T
 
-	@inbounds trans = state.ECTransmissibilities[face]
-
-	q = -half_face_two_point_kgrad(c, other, trans, state.C, state.Diffusivity)
+	q = computeFlux(Val(:Mass), model, state, c, other, face, face_sign)
 
 	return T(q)
+end
+
+function computeFlux(::Val{:Charge}, model, state, cell, other_cell, face, face_sign)
+
+	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
+	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.Conductivity)
+
+	return q
+
 end
 
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model, dt, flow_disc) where T
 
-	@inbounds trans = state.ECTransmissibilities[face]
-
-	q = -half_face_two_point_kgrad(c, other, trans, state.Phi, state.Conductivity)
-
+	q = computeFlux(Val(:Charge), model, state, c, other, face, face_sign)
 	return T(q)
 
 end
 
-function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Energy, <:Any}, state, model, dt, flow_disc) where T
+function Jutul.face_flux!(::T, cell, other_cell, face, face_sign, eq::ConservationLaw{:Energy, <:Any}, state, model, dt, flow_disc) where T
 
-	@inbounds trans = state.ECTransmissibilities[face]
-
-	q = -half_face_two_point_kgrad(c, other, trans, state.Temperature, state.Conductivity)
+	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
+	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Temperature, state.Conductivity)
 
 	return T(q)
 
@@ -113,7 +159,7 @@ function output_flux(model, state, parameters, eqname = :mass_conservation)
 	n   = number_of_faces(model)
 	N   = model.domain.representation.neighborship
 	out = zeros(n)
-	fd  = model.domain.discretizations.charge_flow
+	fd  = model.domain.discretizations.flow
 	dt  = NaN
 
 	state_t = convert_to_immutable_storage(merge(state, parameters))
@@ -123,7 +169,7 @@ function output_flux(model, state, parameters, eqname = :mass_conservation)
 		for i in eachindex(out)
 			l = N[1, i]
 			r = N[2, i]
-			out[i] = face_flux!(1.0, l, r, i, 1, eq, state_t, model, dt, fd)
+			out[i] = Jutul.face_flux!(1.0, l, r, i, 1, eq, state_t, model, dt, fd)
 		end
 	else
 		@. out = NaN
@@ -131,12 +177,36 @@ function output_flux(model, state, parameters, eqname = :mass_conservation)
 	return out
 end
 
+####################
+# Setup Parameters #
+####################
+
+""" We set the transmissibilities as parameters. They are used to compute fluxes, most of time using harmonic average
+for the coefficient, see FaceFlux function above """
+function Jutul.select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::BattMoModel)
+
+	prm[:ECTransmissibilities] = ECTransmissibilities()
+
+end
+
+function Jutul.select_parameters!(prm, D::MinimalECTPFAGrid, model::BattMoModel)
+
+	prm[:Volume]         = Volume()
+	prm[:VolumeFraction] = VolumeFraction()
+
+end
+
+function Jutul.select_parameters!(prm, d::DataDomain, model::BattMoModel)
+	prm[:Volume] = Volume()
+end
+
+
 #######################
 # Boundary conditions #
 #######################
 
 
-function Jutul.apply_boundary_conditions!(storage, parameters, model::ElectroChemicalComponentModel)
+function Jutul.apply_boundary_conditions!(storage, parameters, model::BattMoModel)
 	equations_storage = storage.equations
 	equations = model.equations
 	for (eq, eq_s) in zip(values(equations), equations_storage)
@@ -144,7 +214,19 @@ function Jutul.apply_boundary_conditions!(storage, parameters, model::ElectroChe
 	end
 end
 
-function apply_boundary_potential!(acc, state, parameters, model, eq::ConservationLaw{:Charge})
+
+function apply_bc_to_equation!(storage, parameters, model::BattMoModel, eq::ConservationLaw{:Charge}, eq_s)
+
+	acc   = get_diagonal_entries(eq, eq_s)
+	state = storage.state
+
+	apply_boundary_potential!(acc, state, parameters, model, eq)
+
+end
+
+apply_bc_to_equation!(storage, parameters, model::BattMoModel, eq, eq_s) = nothing
+
+function apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw{:Charge})
 
 	dolegacy = false
 
@@ -156,7 +238,7 @@ function apply_boundary_potential!(acc, state, parameters, model, eq::Conservati
 			dobc = false
 		end
 		dolegacy = true
-	elseif hasentity(model.domain, BoundaryDirichletFaces())
+	elseif Jutul.hasentity(model.domain, BoundaryDirichletFaces())
 		nc = count_active_entities(model.domain, BoundaryDirichletFaces())
 		dobc = nc > 0
 		if dobc
@@ -170,80 +252,54 @@ function apply_boundary_potential!(acc, state, parameters, model, eq::Conservati
 
 	if dobc
 
-		Phi          = state[:Phi]
-		BoundaryPhi  = state[:BoundaryPhi]
+		ElectricPotential = state[:ElectricPotential]
+		BoundaryVoltage = state[:BoundaryVoltage]
 		conductivity = state[:Conductivity]
 
 		if dolegacy
 			T_hf = model.domain.representation.boundary_hfT
 			for (i, c) in enumerate(bc)
-				@inbounds acc[c] += conductivity[c] * T_hf[i] * (Phi[c] - value(BoundaryPhi[i]))
+				@inbounds acc[c] += conductivity[c] * T_hf[i] * (ElectricPotential[c] - value(BoundaryVoltage[i]))
 			end
 		else
 			for (ht, c, i) in zip(bcdirhalftrans, bcdircells, bcdirinds)
-				@inbounds acc[c] += conductivity[c] * ht * (Phi[c] - value(BoundaryPhi[i]))
+				@inbounds acc[c] += conductivity[c] * ht * (ElectricPotential[c] - value(BoundaryVoltage[i]))
 			end
 		end
 	end
 
 end
 
-function apply_boundary_potential!(acc, state, parameters, model, eq::ConservationLaw{:Mass})
-	# do nothing
-	# We do not have in our models for the moment boundaries with given concentration
-end
+apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw) = nothing
 
-function apply_boundary_potential!(acc, state, parameters, model, eq::ConservationLaw{:Energy})
-	# do nothing
-	# We do not have in our models for the moment boundaries with given concentration
-end
-function apply_bc_to_equation!(storage, parameters, model, eq::ConservationLaw, eq_s)
+function setupHalfTransFaces(domain)
 
-	acc   = get_diagonal_entries(eq, eq_s)
-	state = storage.state
+	g = domain.representation
+	neighbors = get_neighborship(g)
 
-	apply_boundary_potential!(acc, state, parameters, model, eq)
+	d = domain
 
-	jkey = BCCurrent[conserved_symbol(eq)]
-	if haskey(state, jkey)
-		apply_boundary_current!(acc, state, jkey, model, eq)
+	cells = d[:half_face_cells]
+	faces = d[:half_face_faces]
+
+	pos = []
+	for (cell, face) in zip(cells, faces)
+		if neighbors[1, face] == cell
+			push!(pos, 1)
+		else
+			push!(pos, 2)
+		end
 	end
-end
 
-function apply_bc_to_equation!(storage, parameters, model, eq::SolidMassCons, eq_s)
-	# do nothing
-end
+	A = hcat(faces, pos, cells)
 
-function apply_bc_to_equation!(storage, parameters, model, eq::SolidDiffusionBc, eq_s)
-	# do nothing    
-end
+	ind = sortperm(eachrow(A))
 
-# function apply_boundary_current!(acc, state, jkey, model, eq::ConservationLaw)
+	hT = d[:halfTrans]
+	hT = hT[ind]
+	hT = reshape(hT, (2, :))
 
-#     # The current here is by convention considered as an outer flux
+	return hT
 
-#     J = state[jkey]
-
-#     jb = get_variable(model, jkey)
-#     for (i, c) in enumerate(jb.cells)
-#         @inbounds acc[c] += J[i]
-#     end
-
-# end
-
-function Jutul.select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::ElectroChemicalComponentModel)
-
-	prm[:ECTransmissibilities] = ECTransmissibilities()
-
-end
-
-function Jutul.select_parameters!(prm, D::MinimalECTPFAGrid, model::ElectroChemicalComponentModel)
-	prm[:Volume]         = Volume()
-	prm[:VolumeFraction] = VolumeFraction()
-
-end
-
-function Jutul.select_parameters!(prm, d::DataDomain, model::ElectroChemicalComponentModel)
-	prm[:Volume] = Volume()
 end
 

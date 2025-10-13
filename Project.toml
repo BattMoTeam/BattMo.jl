@@ -1,9 +1,11 @@
 name = "BattMo"
 uuid = "6f0c0536-3c2c-4762-a987-c605a8a6f898"
+version = "0.2.2"
 authors = ["Olav Møyner <olav.moyner@gmail.com>"]
-version = "0.1.9"
 
 [deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
@@ -12,8 +14,10 @@ Jutul = "2b460a1a-8a2b-45b2-b125-b5c536396eb9"
 LBFGSB = "5be7bae1-8223-5378-bac3-9e7378a2f6e6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MAT = "23992714-dd62-5051-b70f-ba57cb901cac"
+Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 RuntimeGeneratedFunctions = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
@@ -23,18 +27,44 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 x264_jll = "1270edf5-f2f9-52d2-97e9-ab00b5d0237a"
 
+[weakdeps]
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
+
+[extensions]
+BattMoGLMakieExt = ["GLMakie"]
+BattMoMakieExt = ["Makie"]
+BattMoWGLMakieExt = ["WGLMakie"]
+
 [compat]
+CSV = "0.10.15"
+DataFrames = "1.8.0"
 ForwardDiff = "0.10.38"
-JLD2 = "0.4.31"
+GLMakie = "0.11.11"
+JLD2 = "0.6.2"
 JSON = "0.21.4"
 JSONSchema = "1.4.1"
-Jutul = "0.3.0"
+Jutul = "0.4.0"
 LBFGSB = "0.4.1"
 MAT = "0.10.4"
+Makie = "0.22.10"
+Markdown = "1.11.0"
 Polynomials = "3.2.11 - 4"
 PrecompileTools = "1.1.1"
+PythonCall = "0.9.27"
 RuntimeGeneratedFunctions = "0.5"
 StaticArrays = "1.5.17"
 StatsBase = "0.34"
 Tullio = "0.3.5"
+WGLMakie = "0.11.10"
 julia = "1.8"
+
+[extras]
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
+
+[targets]
+docs = ["GLMakie"]
+test = ["GLMakie"]

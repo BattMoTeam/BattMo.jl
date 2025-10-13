@@ -1,0 +1,40 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Binder",
+    "type": "object",
+    "properties": {
+        "Density": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 100000.0,
+            "description": "Density of the material.",
+            "context_type": "Density",
+            "context_type_iri": "https://w3id.org/emmo#EMMO_06448f64_8db6_4304_8b2c_e785dba82044",
+            "unit": "kg·m⁻³",
+            "unit_name": "emmo:GramPerCubicMetre",
+            "unit_iri": "https://w3id.org/emmo#GramPerCubicMetre"
+        },
+        "MassFraction": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Mass of an electrode constituent divided by the total mass of all constituents in the solid mixture.",
+            "context_type": "MassFraction",
+            "context_type_iri": "https://w3id.org/emmo#EMMO_7c055d65_2929_40e1_af4f_4bf10995ad50",
+            "unit": "1",
+            "unit_name": "emmo:UnitOne",
+            "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
+        },
+        "ElectronicConductivity": {
+            "type": "number",
+            "minimum": 1e-20,
+            "maximum": 1e9,
+            "description": "Measure of a material's ability to conduct an electric current.",
+            "context_type": "ElectricConductivity",
+            "context_type_iri": "https://w3id.org/emmo#EMMO_cde4368c_1d4d_4c94_8548_604749523c6d",
+            "unit": "S·m⁻¹",
+            "unit_name": "emmo:SiemensPerMetre",
+            "unit_iri": "https://w3id.org/emmo#SiemensPerMetre"
+        }
+    }
+}

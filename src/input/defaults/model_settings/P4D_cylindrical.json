@@ -1,0 +1,12 @@
+{
+    "Metadata": {
+        "Title": "P4D Cylindrical",
+        "Description": "Default model settings for a P4D cylindrical cell with a current ramp up."
+    },
+    "ModelFramework": "P4D Cylindrical",
+    "TransportInSolid": "FullDiffusion",
+    "PotentialFlowDiscretization": "GeneralAD",
+    "ButlerVolmer": "Standard",
+    "CurrentCollectors": "Standard",
+    "RampUp": "Sinusoidal"
+}

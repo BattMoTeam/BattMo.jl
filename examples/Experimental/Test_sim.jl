@@ -235,13 +235,13 @@ cfg = BattMo.setup_config(sim, model, :direct, false)
 
 # Perform simulation
 cfg[:info_level] = 3
-state0[:Control][:Phi][1] = 4.2
+state0[:Control][:ElectricPotential][1] = 4.2
 state0[:Control][:Current][1] = 0
 states, reports = Jutul.simulate(state0, sim, timesteps, forces = forces, config = cfg)
 
 ##
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
+E = [state[:Control][:ElectricPotential][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 if (false)
@@ -271,7 +271,7 @@ if (false)
 		xtickfont = font(pointsize = 15),
 		ytickfont = font(pointsize = 15))
 
-	println("Volatage ", state[:Control][:Phi])
+	println("Volatage ", state[:Control][:ElectricPotential])
 
 	Plots.plot(p1, p2, layout = (2, 1))
 end
@@ -283,13 +283,13 @@ mystep = Int64(floor(size(states, 1) / 2))
 state = states[mystep]
 if (include_cc)
 	names = ["Electrolyte", "NegativeElectrode", "PositiveElectrode", "NegativeCurrentCollector", "PositiveCurrentCollector"]
-	syms = [:Elyte, :NeAm, :PeAm, :NeCc, :PeCc]
+	syms = [:Electrolyte, :NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial, :NegativeElectrodeCurrentCollector, :PositiveElectrodeCurrentCollector]
 else
 	names = ["Electrolyte", "NegativeElectrode", "PositiveElectrode"]
-	syms = [:Elyte, :NeAm, :PeAm]
+	syms = [:Electrolyte, :NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial]
 end
-V = state[:Control][:Phi]
-println("Current ", state[:Control][:Phi])
+V = state[:Control][:ElectricPotential]
+println("Current ", state[:Control][:ElectricPotential])
 println("Current ", state[:Control][:Current])
 global myfirst = true
 flines = Figure(size = (600, 650))
@@ -305,7 +305,7 @@ for ind in 1:5
 	z = zeros(nc)
 	go = tpfv_geometry(g)
 	z = go.cell_centroids[end, :]##
-	val = state[sym][:Phi]
+	val = state[sym][:ElectricPotential]
 	#if(myfirst)
 	GLMakie.lines!(axlines, z, val)
 	add_left = false
@@ -372,7 +372,7 @@ if do_plot
 		name = names[ind]
 		sym = syms[ind]
 		g = init.object["Grids"][name]
-		phi = state[sym][:Phi]
+		phi = state[sym][:ElectricPotential]
 		#Jutul.plot_cell_data(g, phi)
 		Jutul.plot_cell_data!(ax3d, g, phi .- mean(phi))
 	end

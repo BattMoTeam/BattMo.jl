@@ -9,13 +9,13 @@
 using BattMo, GLMakie
 
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
 nothing # hide
 
-model_setup = LithiumIonBattery()
+model = LithiumIonBattery()
 
-sim = Simulation(model_setup, cell_parameters, cycling_protocol);
+sim = Simulation(model, cell_parameters, cycling_protocol);
 
 output = solve(sim)
 nothing # hide
@@ -64,7 +64,7 @@ cycling_protocol = load_cycling_protocol(; from_default_set = "CCCV")
 
 # This protocol will run 3 cycles
 
-sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+sim = Simulation(model, cell_parameters, cycling_protocol)
 
 output = solve(sim)
 nothing # hide 

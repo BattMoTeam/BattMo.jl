@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Cell",
+  "type": "object",
+  "properties": {
+    "Case": {
+      "type": "string",
+      "enum": [
+        "Cylindrical",
+        "Pouch"
+      ],
+      "context_type": "hasCase",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_3dcfe33d_6825_43c0_a798_68e871a68d39",
+      "description": "Type of physical container encapsulating the electrochemical cell. Examples: Cylindrical, Pouch."
+    },
+    "InnerRadius": {
+      "type": "number",
+      "minimum": 0.001,
+      "maximum": 0.1,
+      "description": "Radius of the rolled electrodes within a cylindrical cell, measured from the center of the cell to the inner side of the cell wall.",
+      "unit": "m"
+    },
+    "OuterRadius": {
+      "type": "number",
+      "minimum": 0.001,
+      "maximum": 0.2,
+      "description": "Radius of the rolled electrodes within a cylindrical cell, measured from the center of the cell to the outer side of the cell wall.",
+      "unit": "m"
+    },
+    "NominalVoltage": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 6.0,
+      "description": "Reference voltage of the cell as reported by the manufacturer. Usually calculated from the cell's energy output and capacity under a standard cycling test.",
+      "unit": "V"
+    },
+    "NominalCapacity": {
+      "type": "number",
+      "minimum": 0.01,
+      "maximum": 100.0,
+      "description": "Expected charge capacity of a cell under standard conditions, as defined by the manufacturer.",
+      "context_type": "NominalCapacity",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_8abde9d0_84f6_4b4f_a87e_86028a397100",
+      "unit": "Ah",
+      "unit_name": "emmo:AmpereHour",
+      "unit_iri": "https://w3id.org/emmo#AmpereHour",
+      "is_shown_to_user": false
+    },
+    "ElectrodeWidth": {
+      "type": "number",
+      "minimum": 0.01,
+      "maximum": 0.5,
+      "description": "Dimension of the shortest side of the face of a rectangular electrode.",
+      "unit": "m"
+    },
+    "ElectrodeLength": {
+      "type": "number",
+      "minimum": 0.01,
+      "maximum": 0.5,
+      "description": "Dimension of the longest side of the face of a rectangular electrode.",
+      "unit": "m"
+    },
+    "Height": {
+      "type": "number",
+      "min_value": 0.01,
+      "max_value": 0.5,
+      "unit": "m",
+      "unit_name": "emmo:Metre",
+      "unit_iri": "https://w3id.org/emmo#Metre",
+      "context_type": "Length",
+      "context_type_iri": "https://w3id.org/emmo#EMMO_cd2cd0de_e0cc_4ef1_b27e_2e88db027bac",
+      "description": "The heigh of a cylindrical cell."
+    },
+    "ElectrodeGeometricSurfaceArea": {
+      "type": "number",
+      "minimum": 0.0001,
+      "maximum": 0.2,
+      "description": "Face (or plate) area of an electrode. Electrode cross-sectional area.",
+      "context_type": "ElectrodeGeometricSurfaceArea",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_fa7790d6_07bb_4b0f_9965_55966828f5f3",
+      "unit": "m²",
+      "unit_name": "emmo:Metre",
+      "unit_iri": "https://w3id.org/emmo#Metre"
+    }
+  },
+  "required": [
+    "Case"
+  ],
+  "allof": [
+    {
+      "if": {
+        "$ref": "https://example.com/ModelSettings.json#/properties/useP2D"
+      },
+      "then": {
+        "required": [
+          "ElectrodeGeometricSurfaceArea"
+        ]
+      }
+    },
+    {
+      "if": {
+        "$ref": "https://example.com/ModelSettings.json#/$defs/useP2DPouch"
+      },
+      "then": {
+        "required": [
+          "ElectrodeLength",
+          "ElectrodeWidth"
+        ]
+      }
+    },
+    {
+      "if": {
+        "$ref": "https://example.com/ModelSettings.json#/$defs/useP2DCylindrical"
+      },
+      "then": {
+        "required": [
+          "Heigh",
+          "InnerRadius",
+          "OuterRadius",
+          "ElectrodeGeometricSurfaceArea"
+        ]
+      }
+    }
+  ]
+}
