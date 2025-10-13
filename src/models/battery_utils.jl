@@ -205,57 +205,27 @@ apply_bc_to_equation!(storage, parameters, model::BattMoModel, eq, eq_s) = nothi
 
 function apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw{:Charge})
 
-	dolegacy = false
-
-	if model.domain.representation isa MinimalTpfaGrid
-
-        if Jutul.hasentity(model.domain, BoundaryDirichletFaces())
-		    bc = model.domain.representation.boundary_cells
-		    if length(bc) > 0
-			    dobc = true
-		    else
-			    dobc = false
-		    end
-        else
-            dobc = false
-        end
-        
-		dolegacy = true
-            
-	elseif Jutul.hasentity(model.domain, BoundaryDirichletFaces())
+    if Jutul.hasentity(model.domain, BoundaryDirichletFaces())
         
 		nc = count_active_entities(model.domain, BoundaryDirichletFaces())
-		dobc = nc > 0
-		if dobc
-			bcdirhalftrans = model.domain.representation[:bcDirHalfTrans]
-			bcdircells     = model.domain.representation[:bcDirCells]
-			bcdirinds      = model.domain.representation[:bcDirInds]
-		end
-        
-	else
-        
-		dobc = false
-        
-	end
 
-	if dobc
+	    if nc > 0
 
-		ElectricPotential = state[:ElectricPotential]
-		BoundaryVoltage   = state[:BoundaryVoltage]
-		conductivity      = state[:Conductivity]
+			bcdirhalftrans = model.data_domain[:bcDirHalfTrans]
+			bcdircells     = model.data_domain[:bcDirCells]
+			bcdirinds      = model.data_domain[:bcDirInds]
 
-		if dolegacy
-			T_hf = model.domain.representation.boundary_hfT
-			for (i, c) in enumerate(bc)
-				@inbounds acc[c] += conductivity[c] * T_hf[i] * (ElectricPotential[c] - value(BoundaryVoltage[i]))
-			end
-		else
+		    ElectricPotential = state[:ElectricPotential]
+		    BoundaryVoltage   = state[:BoundaryVoltage]
+		    conductivity      = state[:Conductivity]
+
 			for (ht, c, i) in zip(bcdirhalftrans, bcdircells, bcdirinds)
 				@inbounds acc[c] += conductivity[c] * ht * (ElectricPotential[c] - value(BoundaryVoltage[i]))
 			end
-		end
-	end
+            
+	    end
 
+    end
 end
 
 apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw) = nothing
