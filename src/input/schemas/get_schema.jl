@@ -64,7 +64,7 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 
 		# Functions aren't directly representable in JSON, treating as string (function name or identifier)
 
-	elseif meta["type"] == Vector{String}
+	elseif meta["type"] == Vector || meta["type"] == Vector{String}
 		dict["type"] = "array"  # JSON schema type for arrays (Vector in Julia)
 	elseif meta["type"] == Nothing
 		dict["type"] = "null"

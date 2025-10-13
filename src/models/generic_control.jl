@@ -124,7 +124,7 @@ function getInitCurrent(policy::GenericPolicy)
 end
 
 
-function setup_initial_control_policy!(policy::GenericPolicy, inputparams::InputParams, parameters)
+function setup_initial_control_policy!(policy::GenericPolicy, inputparams::AbstractInput, parameters)
 	control = policy.initial_control
 	if isa(control, VoltageStep)
 		error("Voltage control cannot be the first control step")
@@ -481,7 +481,7 @@ function update_values_in_controller!(state, policy::GenericPolicy)
 	else
 		if step isa CurrentStep
 
-			tup = state.Controller.time + 100 #Float64(inputparams["Control"]["rampupTime"])
+			tup = state.Controller.time + 100 #Float64(AbstractInput["Control"]["rampupTime"])
 			cFun(time) = currentFun(time, step.value, tup)
 
 			state.Controller.current_step.current_function = cFun

@@ -732,32 +732,27 @@ function check_constraints(model, storage)
 		error("Policy $(typeof(policy)) not recognized")
 	end
 
-		arefulfilled = true
+	arefulfilled = true
 
-		rsw  = setupRegionSwitchFlags(policy, state, ctrlType)
-		rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
+	rsw  = setupRegionSwitchFlags(policy, state, ctrlType)
+	rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
 
+
+	ctrlType  = state[:Controller].current_step
+	ctrlType0 = state0[:Controller].current_step
+
+	stepidx = controller.current_step_number + 1
+
+	if stepidx >= length(policy.control_steps)
+		nextCtrlType = ctrlType
 	else
-		ctrlType  = state[:Controller].current_step
-		ctrlType0 = state0[:Controller].current_step
-
-		stepidx = controller.current_step_number + 1
-
-		if stepidx >= length(policy.control_steps)
-			nextCtrlType = ctrlType
-		else
-			nextCtrlType = policy.control_steps[stepidx+1]
-
-		end
-		arefulfilled = true
-
-		rsw  = setupRegionSwitchFlags(ctrlType, state, controller)
-		rswN = setupRegionSwitchFlags(nextCtrlType, state, controller)
+		nextCtrlType = policy.control_steps[stepidx+1]
 
 	end
+	arefulfilled = true
 
-
-
+	rsw  = setupRegionSwitchFlags(ctrlType, state, controller)
+	rswN = setupRegionSwitchFlags(nextCtrlType, state, controller)
 
 	if (ctrlType == ctrlType0 && rsw.afterSwitchRegion) || (ctrlType == nextCtrlType && !rswN.beforeSwitchRegion)
 
