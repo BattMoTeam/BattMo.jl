@@ -26,17 +26,20 @@
         "Coating": {
             "BruggemanCoefficient": 1.5,
             "EffectiveDensity": 1550,
-            "Thickness": 126e-6
+            "Thickness": 262e-6
         },
         "ActiveMaterial": {
             "Description": "",
+            "Assumptions": {
+                "ParticleRadius": "In paper: up to 17.5 microns -> average 8,75 microns"
+            },
             "MassFraction": 0.94,
             "Density": 2240,
             "VolumetricSurfaceArea": 0,
             "ElectronicConductivity": 0,
             "DiffusionCoefficient": 0,
             "ActivationEnergyOfDiffusion": 0,
-            "ParticleRadius": 0,
+            "ParticleRadius": 8.75,
             "MaximumConcentration": 0,
             "StoichiometricCoefficientAtSOC0": 0,
             "StoichiometricCoefficientAtSOC100": 0,
@@ -78,16 +81,19 @@
         "Coating": {
             "BruggemanCoefficient": 1.5,
             "EffectiveDensity": 3320,
-            "Thickness": 82.0e-6
+            "Thickness": 175.0e-6
         },
         "ActiveMaterial": {
             "Description": "",
+            "Assumptions": {
+                "ParticleRadius": "In paper: between 1.5 and 8 microns -> average 4,75 microns"
+            },
             "MassFraction": 0.95,
             "Density": 4950,
             "VolumetricSurfaceArea": 0,
             "ElectronicConductivity": 0,
             "DiffusionCoefficient": 0,
-            "ParticleRadius": 0,
+            "ParticleRadius": 4.75e-6,
             "MaximumConcentration": 0,
             "StoichiometricCoefficientAtSOC0": 0,
             "StoichiometricCoefficientAtSOC100": 0,
