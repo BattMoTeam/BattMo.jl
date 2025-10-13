@@ -305,6 +305,7 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 	states = get_output_states(jutul_output, input)
 	metrics = get_output_metrics(jutul_output)
 
+
 	return SimulationOutput(
 		time_series,
 		states,
@@ -546,8 +547,8 @@ function solver_configuration(sim::JutulSimulator,
 		end
 	end
 
-	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy
-		if model[:Control].system.policy isa CyclingCVPolicy
+	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy || model[:Control].system.policy isa GenericPolicy
+		if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa GenericPolicy
 
 			cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
 
@@ -559,6 +560,9 @@ function solver_configuration(sim::JutulSimulator,
 
 			s = get_simulator_storage(sim)
 			m = get_simulator_model(sim)
+
+
+			@info model[:Control].system.policy
 
 			if model[:Control].system.policy isa CyclingCVPolicy
 
@@ -597,7 +601,19 @@ function solver_configuration(sim::JutulSimulator,
 						report[:stopnow] = false
 					end
 				end
+			elseif model[:Control].system.policy isa GenericPolicy
+				number_of_steps = model[:Control].system.policy.number_of_control_steps
+				@info "Current step: $(s.state.Control.Controller.current_step_number), total steps: $number_of_steps"
+				if s.state.Control.Controller.current_step_number > number_of_steps
+					report[:stopnow] = true
+				else
+					report[:stopnow] = false
+				end
+				# Do nothing
+			else
+				error("Unknown control policy")
 			end
+
 
 			return (done, report)
 
@@ -811,9 +827,15 @@ function setup_timesteps(input;
 		n = totalTime / dt
 		timesteps = repeat([dt], Int64(floor(n)))
 
+	elseif protocol == "Experiment"
+		totalTime = cycling_protocol["TotalTime"]
+		dt = simulation_settings["TimeStepDuration"]
+		n = totalTime / dt
+		timesteps = repeat([dt], Int64(floor(n)))
+
 	else
 
-		error("Control policy $controlPolicy not recognized")
+		error("Control policy $protocol not recognized")
 
 	end
 

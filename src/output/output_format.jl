@@ -114,7 +114,7 @@ function get_output_metrics(
 
 	controller = states[1][:Control][:Controller]
 
-	if !isa(controller, FunctionController)
+	if !isa(controller, FunctionController) && !isa(controller, GenericController)
 		cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
 
 		# Metric storage

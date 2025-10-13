@@ -717,42 +717,57 @@ function check_constraints(model, storage)
 	state0 = storage.state0[:Control]
 
 	controller = state[:Controller]
-	ctrlType   = state[:Controller].ctrlType
-	ctrlType0  = state0[:Controller].ctrlType
+
 
 	if policy isa CyclingCVPolicy
+		ctrlType = state[:Controller].ctrlType
+		ctrlType0 = state0[:Controller].ctrlType
 		nextCtrlType = getNextCtrlTypeCCCV(ctrlType0)
+
+		rsw = setupRegionSwitchFlags(policy, state, ctrlType)
+		rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
 	elseif policy isa CCPolicy
+		ctrlType = state[:Controller].ctrlType
+		ctrlType0 = state0[:Controller].ctrlType
+
 		if ctrlType == "discharging"
 			nextCtrlType = "charging"
 		else
 			nextCtrlType = "discharging"
 		end
+
+		rsw = setupRegionSwitchFlags(policy, state, ctrlType)
+		rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
+
+	elseif policy isa GenericPolicy
+
+		ctrlType = state[:Controller].current_step
+		ctrlType0 = state0[:Controller].current_step
+
+		stepidx = controller.current_step_number + 1
+
+		if stepidx >= length(policy.control_steps)
+			nextCtrlType = ctrlType
+		else
+			nextCtrlType = policy.control_steps[stepidx+1]
+
+		end
+		arefulfilled = true
+
+		rsw  = setupRegionSwitchFlags(ctrlType, state, controller)
+		rswN = setupRegionSwitchFlags(nextCtrlType, state, controller)
+
 	else
 		error("Policy $(typeof(policy)) not recognized")
 	end
 
 	arefulfilled = true
 
-	rsw  = setupRegionSwitchFlags(policy, state, ctrlType)
-	rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
 
 
-	ctrlType  = state[:Controller].current_step
-	ctrlType0 = state0[:Controller].current_step
 
-	stepidx = controller.current_step_number + 1
 
-	if stepidx >= length(policy.control_steps)
-		nextCtrlType = ctrlType
-	else
-		nextCtrlType = policy.control_steps[stepidx+1]
 
-	end
-	arefulfilled = true
-
-	rsw  = setupRegionSwitchFlags(ctrlType, state, controller)
-	rswN = setupRegionSwitchFlags(nextCtrlType, state, controller)
 
 	if (ctrlType == ctrlType0 && rsw.afterSwitchRegion) || (ctrlType == nextCtrlType && !rswN.beforeSwitchRegion)
 
@@ -1439,7 +1454,7 @@ end
 # Utility functions for CC-CV control #
 #######################################
 
-function getNextCtrlType(ctrlType::OperationalMode)
+function getNextCtrlTypeCCCV(ctrlType::OperationalMode)
 
 	if ctrlType == cc_discharge1
 

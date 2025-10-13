@@ -1,25 +1,25 @@
 using BattMo, GLMakie
 
 cycling_protocol = load_cycling_protocol(; from_default_set = "experiment")
-cycling_protocol["Experiment"] = [
-	"Rest for 4000 s",
-	"Discharge at 500 mA until 3.0 V"]
+# cycling_protocol["Experiment"] = [
+# 	"Rest for 4000 s",
+# 	"Discharge at 500 mA until 3.0 V"]
 
 cycling_protocol["TotalTime"] = 18000000
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020_calibrated")
+# cycling_protocol = load_cycling_protocol(; from_default_set = "CCCV")
+
+cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
 
 model_setup = LithiumIonBattery()
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol)
 
-output = solve(sim; info_level = 1)
+output = solve(sim; info_level = 0)
 
-states = output[:states]
-
-t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Phi][1] for state in states]
-I = [state[:Control][:Current][1] for state in states]
+t = output.time_series["Time"]
+I = output.time_series["Current"]
+E = output.time_series["Voltage"]
 
 
 # Now we can use GLMakie to create a plot. Lets first plot the cell voltage.

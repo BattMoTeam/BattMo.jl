@@ -124,7 +124,7 @@ function getInitCurrent(policy::GenericPolicy)
 end
 
 
-function setup_initial_control_policy!(policy::GenericPolicy, inputparams::AbstractInput, parameters)
+function setup_initial_control_policy!(policy::GenericPolicy, inputparams, parameters)
 	control = policy.initial_control
 	if isa(control, VoltageStep)
 		error("Voltage control cannot be the first control step")
@@ -138,7 +138,7 @@ function setup_initial_control_policy!(policy::GenericPolicy, inputparams::Abstr
 		return I
 
 	elseif isa(control, RestStep)
-		print("Rest step")
+
 	else
 		error("initial control not recognized")
 	end
@@ -232,11 +232,11 @@ function setupRegionSwitchFlags(policy::P, state, controller::GenericController)
 	step = policy
 	termination = step.termination
 
-	if haskey(state, :Phi)
-		E = only(state.Phi)
+	if haskey(state, :ElectricPotential)
+		E = only(state.ElectricPotential)
 		I = only(state.Current)
 	else
-		E = ForwardDiff.value(only(state.Control.Phi))
+		E = ForwardDiff.value(only(state.Control.ElectricPotential))
 		I = ForwardDiff.value(only(state.Control.Current))
 	end
 
@@ -318,123 +318,129 @@ end
 Implementation of the generic control policy
 """
 function update_control_type_in_controller!(state, state0, policy::GenericPolicy, dt)
+	# --- Helpers: mapping between controller.step_number (zero-based) and control_steps (1-based) ---
+	control_steps = policy.control_steps
+	nsteps = length(control_steps)
 
-	E  = only(value(state[:Phi]))
-	I  = only(value(state[:Current]))
-	E0 = only(value(state0[:Phi]))
-	I0 = only(value(state0[:Current]))
+	# Map controller.step_number (which in your logs is 0 for the first step)
+	# to 1-based index used for control_steps array
+	stepnum_to_index(stepnum::Integer) = clamp(stepnum + 1, 1, nsteps)   # stepnum 0 -> index 1
+	index_to_stepnum(idx::Integer) = clamp(idx - 1, 0, nsteps - 1)      # index 1 -> stepnum 0
+
+	# --- Extract scalars safely ---
+	E_vals  = value(state[:ElectricPotential])
+	I_vals  = value(state[:Current])
+	E0_vals = value(state0[:ElectricPotential])
+	I0_vals = value(state0[:Current])
+
+	@assert length(E_vals) == 1 "Expected scalar ElectricPotential"
+	@assert length(I_vals) == 1 "Expected scalar Current"
+	@assert length(E0_vals) == 1 "Expected scalar ElectricPotential (state0)"
+	@assert length(I0_vals) == 1 "Expected scalar Current (state0)"
+
+	E  = first(E_vals)
+	I  = first(I_vals)
+	E0 = first(E0_vals)
+	I0 = first(I0_vals)
 
 	controller = state[:Controller]
 
-	# Update time and rates of change
+	# --- Time and derivatives ---
 	controller.time = state0.Controller.time + dt
-	controller.dIdt = (I - I0) / dt
-	controller.dEdt = (E - E0) / dt
+	controller.dIdt = dt > 0 ? (I - I0) / dt : 0.0
+	controller.dEdt = dt > 0 ? (E - E0) / dt : 0.0
 
-	# Get control step info
-	step_idx_0 = state0.Controller.current_step_number + 1
-	control_steps = policy.control_steps
+	@info "⏱️  Time updated" time = controller.time dt = dt dIdt = controller.dIdt dEdt = controller.dEdt
 
-	ctrlType0 = state0.Controller.current_step
+	# --- Determine previous/ current indices and types (clearly mapped) ---
+	prev_stepnum = state0.Controller.current_step_number                # e.g. 0 for first step
+	prev_idx = stepnum_to_index(prev_stepnum)                           # 1-based index into control_steps
+	ctrlType_prev = state0.Controller.current_step
 
-	# Check if we should switch to next step based on region switch flags
-	rsw00 = setupRegionSwitchFlags(ctrlType0, state0, controller)
+	@info "Current control step (mapped)" stepnum = prev_stepnum idx = prev_idx ctrlType = ctrlType_prev
 
-	# Stay within bounds of control steps
-	if step_idx_0 > length(control_steps)
-		error("Step index $step_idx exceeds number of control steps $(length(control_steps))")
-	end
+	# Setup default outputs
+	next_stepnum = prev_stepnum
+	next_ctrlType = ctrlType_prev
+	stop_simulation = false
 
-	if rsw00.beforeSwitchRegion
+	# Compute region switch flags for previous and current states
+	rsw_prev = setupRegionSwitchFlags(ctrlType_prev, state0, controller)
+	@info "Region switch flags (prev)" beforeSwitch = rsw_prev.beforeSwitchRegion afterSwitch = rsw_prev.afterSwitchRegion
 
-		# Stay in current control step
-		next_step_idx   = step_idx_0
-		ctrlType        = ctrlType0
-		stop_simulation = false
+	if rsw_prev.beforeSwitchRegion
+		@info "🟡 Staying in current region (beforeSwitchRegion = true)"
 
 	else
+		# Recompute with updated state
+		rsw_curr = setupRegionSwitchFlags(ctrlType_prev, state, controller)
+		@info "Region switch flags (curr)" beforeSwitch = rsw_curr.beforeSwitchRegion afterSwitch = rsw_curr.afterSwitchRegion
 
-		currentCtrlType = state.Controller.current_step # current control in the the Newton iteration
-
-		rsw0 = setupRegionSwitchFlags(ctrlType0, state, controller)
-
+		# If controller hasn't already changed this Newton iteration, decide
 		if controller.current_step_number == state0.Controller.current_step_number
+			@info "🔍 Checking if control step should change"
 
-			# The control has not changed from previous time step and we want to determine if we should change it. 
+			if rsw_curr.afterSwitchRegion
+				# Attempt to move forward one stepnum
+				proposed_stepnum = prev_stepnum + 1   # still zero-based
+				proposed_idx = stepnum_to_index(proposed_stepnum)
 
-			if rsw0.afterSwitchRegion
+				if proposed_idx <= nsteps && proposed_stepnum <= (nsteps - 1)
+					@info "➡️  Switching to next control step" proposed_stepnum = proposed_stepnum proposed_idx = proposed_idx
+					# Copy the policy step so we can mutate termination without altering original policy
+					next_ctrlType = deepcopy(control_steps[proposed_idx])
+					next_stepnum = index_to_stepnum(proposed_idx)
 
-				# We switch to a new control because we are no longer in the acceptable region for the current
-				# control
-				if step_idx_0 == length(policy.control_steps)
+					# Adjust time-based termination (if needed)
+					if hasfield(typeof(next_ctrlType), :termination) &&
+					   next_ctrlType.termination.quantity == "time" &&
+					   (next_ctrlType.termination.value !== nothing) &&
+					   next_ctrlType.termination.value < controller.time
 
-					ctrlType        = currentCtrlType
-					stop_simulation = true
+						next_ctrlType.termination.value = controller.time + next_ctrlType.termination.value
+					end
 
 				else
-					ctrlType = control_steps[step_idx_0+1]
-					stop_simulation = false
-					if ctrlType.termination.quantity == "time"
-						if policy.control_steps[step_idx_0+1].termination.value < controller.time
-							termination_value = controller.time + policy.control_steps[step_idx_0+1].termination.value
-							policy.control_steps[step_idx_0+1].termination.value = termination_value
-
-						end
-					end
-
-				end
-				# next control that can occur after the previous time step control (if it changes)
-
-				next_step_idx = step_idx_0 + 1
-
-			elseif rsw0.beforeSwitchRegion == false && step_idx_0 == length(policy.control_steps)
-
-				ctrlType = currentCtrlType
-				stop_simulation = true
-				next_step_idx = step_idx_0 + 1
-
-			else
-
-				next_step_idx = step_idx_0
-				ctrlType = ctrlType0
-				stop_simulation = false
-
-			end
-
-		elseif controller.current_step_number + 1 == step_idx_0 + 1
-			# Avoid switching back if we already moved forward in this Newton iteration
-
-			if step_idx_0 == length(policy.control_steps)
-				stop_simulation = true
-				ctrlType = currentCtrlType
-
-			else
-				ctrlType = control_steps[step_idx_0+1]
-				stop_simulation = false
-				if ctrlType.termination.quantity == "time"
-					if policy.control_steps[step_idx_0+1].termination.value < controller.time
-						termination_value = controller.time + policy.control_steps[step_idx_0+1].termination.value
-						policy.control_steps[step_idx_0+1].termination.value = termination_value
-					end
-
+					@info "🛑 Last control step reached or out-of-bounds — stopping simulation"
+					stop_simulation = true
+					next_stepnum = prev_stepnum
+					next_ctrlType = state.Controller.current_step
 				end
 
+			else
+				@info "⏸️  Remaining in current control step"
+				next_stepnum = prev_stepnum
+				next_ctrlType = state.Controller.current_step
 			end
-			# next control that can occur after the previous time step control (if it changes)
-
-			next_step_idx = step_idx_0 + 1
 
 		else
-			error("Unexpected control state transition at step $step_idx_0")
+			# controller already advanced this iteration: keep what controller has
+			@info "⚙️  Controller already changed within this iteration — honoring controller.current_step"
+			# Map controller.current_step_number (which may already be advanced) to index to fetch its definition if needed
+			current_stepnum_now = controller.current_step_number
+			current_idx_now = stepnum_to_index(current_stepnum_now)
+			@info "Controller reports" current_stepnum_now = current_stepnum_now current_idx_now = current_idx_now
+			# Use controller.current_step (it should already be set)
+			next_stepnum = current_stepnum_now
+			next_ctrlType = controller.current_step
 		end
 	end
 
-	# Update controller with the selected step index
-	controller.current_step_number = min(next_step_idx - 1, length(control_steps))  # Stay within bounds
-	controller.current_step = ctrlType
+	# --- Finalize: clamp stepnum and set controller fields ---
+	# Ensure we stay within valid [0, nsteps-1] for stepnum convention
+	next_stepnum = clamp(next_stepnum, 0, max(0, nsteps - 1))
+	controller.current_step_number = next_stepnum
+	controller.current_step = next_ctrlType
 	controller.stop_simulation = stop_simulation
 
+	# Safety log: show the concrete type assigned so you can quickly spot mismatches
+	@info "✅ Controller update complete"
+	@info "Assigned stepnum/idx/type" stepnum = controller.current_step_number idx = stepnum_to_index(controller.current_step_number) typeof = typeof(controller.current_step) stop = controller.stop_simulation
+
+	return nothing
 end
+
+
 
 
 """

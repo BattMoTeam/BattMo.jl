@@ -63,7 +63,7 @@ end
 function extract_numeric_values(str::AbstractString)
 	pattern = r"([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)\s*([a-zA-Z]*)"
 	matches = collect(eachmatch(pattern, str))
-	values = [parse(Float64, m.captures[1]) for m in matches]
+	values = [Base.parse(Float64, m.captures[1]) for m in matches]
 	units = [m.captures[2] for m in matches]
 	return values, units
 end

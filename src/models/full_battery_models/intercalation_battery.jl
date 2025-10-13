@@ -127,6 +127,12 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 
 		policy = FunctionPolicy(function_name; file_path)
 
+	elseif protocol == "Experiment"
+
+		experiment = convert_experiment_to_battmo_control_input(Experiment(cycling_protocol["Experiment"]))
+
+		policy = GenericPolicy(experiment["Control"])
+
 	else
 
 		error("controlPolicy not recognized.")
@@ -705,8 +711,12 @@ function set_parameters(model::IntercalationBattery, input
 
 		parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
 
+	elseif protocol == "Experiment"
+		prm_control[:TotalTime] = cycling_protocol["TotalTime"]
+		parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
+
 	else
-		error("control policy $controlPolicy not recognized")
+		error("control policy $protocol not recognized")
 	end
 
 	return parameters
