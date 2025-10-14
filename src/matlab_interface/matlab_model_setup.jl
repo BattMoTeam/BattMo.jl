@@ -29,9 +29,7 @@ end
 # Setup timestepping #
 ######################
 
-function setup_timesteps(inputparams::MatlabInput;
-	                     max_step::Union{Integer, Nothing} = nothing,
-	                     kwarg...)
+function setup_timesteps(inputparams::MatlabInput)
 	"""
     Method setting up the timesteps from a mat file object. If use_state_ref is true
     the simulation will use the same timesteps as the pre-run matlab simulation.
@@ -65,6 +63,7 @@ function setup_timesteps(inputparams::MatlabInput;
 	end
 
 	return timesteps
+    
 end
 
 ##################
@@ -277,11 +276,7 @@ end
 # Setup battery model #
 #######################
 
-function get_simulation_input(inputparams::MatlabInput;
-	                          use_model_scaling::Bool           = true,
-	                          extra_timing::Bool                = false,
-	                          max_step::Union{Integer, Nothing} = nothing,
-	                          config_kwargs::NamedTuple         = NamedTuple())
+function get_simulation_input(inputparams::MatlabInput)
 
 	model, parameters, couplings = setup_model!(inputparams)
 
@@ -291,7 +286,7 @@ function get_simulation_input(inputparams::MatlabInput;
 
 	simulator = Simulator(model; state0 = state0, parameters = parameters, copy_state = true)
 
-	timesteps = setup_timesteps(inputparams; max_step = max_step)
+	timesteps = setup_timesteps(inputparams)
 
 	output = Dict(:simulator   => simulator,
 		          :forces      => forces,
@@ -328,56 +323,8 @@ function setup_model!(inputparams::MatlabInput)
 
 end
 
-
-function run_battery(inputparams::MatlabInput;
-	                 hook = nothing,
-	                 use_p2d = true,
-	                 kwargs...)
-    
-	#Setup simulation
-	output = get_simulation_input(deepcopy(inputparams); use_p2d = use_p2d, kwargs...)
-
-	simulator = output[:simulator]
-	model     = output[:model]
-	state0    = output[:state0]
-	forces    = output[:forces]
-	timesteps = output[:timesteps]
-	cfg       = output[:cfg]
-
-
-	if !isnothing(hook)
-		hook(simulator,
-			model,
-			state0,
-			forces,
-			timesteps,
-			cfg)
-	end
-
-	# Perform simulation
-	states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
-
-	extra = output
-	extra[:timesteps] = timesteps
-
-	if isa(inputparams, MatlabInputParamsOld)
-		cellSpecifications = nothing
-	else
-		cellSpecifications = computeCellSpecifications(model)
-	end
-
-	return (states             = states,
-		cellSpecifications = cellSpecifications,
-		reports            = reports,
-		inputparams        = inputparams,
-		extra              = extra)
-
-end
-
-
 function setup_submodels(inputparams::MatlabInput)
 
-	use_groups::Bool = false
 	use_p2d::Bool    = true
 	general_ad::Bool = true
     
