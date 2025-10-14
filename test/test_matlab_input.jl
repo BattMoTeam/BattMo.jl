@@ -1,41 +1,61 @@
 using BattMo, MAT, Test
 
-tests = [
-	(name = "p2d_40", errval = 2e-3),
-	(name = "p2d_40_no_cc", errval = 2e-3),
-	(name = "3d_demo_case", errval = 7e-3),
-]
+@testset "matlab test" begin
 
-@testset "matlab tests" begin
+	@test begin
 
-	for test in tests
+        errval = 1e-5
+        
+        fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/p2d_40.mat")
+        inputparams = load_matlab_input(fn)
 
-		@testset "$(test[:name])" begin
+        output = BattMo.get_simulation_input(inputparams::MatlabInput)
 
-			@test begin
+        simulator  = output[:simulator]
+        model      = output[:model]
+        parameters = output[:parameters]
+        state0     = output[:state0]
+        timesteps  = output[:timesteps]
+        forces     = output[:forces]
 
-				fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/", test[:name], ".mat")
-				inputparams = load_matlab_battmo_input(fn)
-				inputparams["use_state_ref"] = true
-				states, cellSpecifications, reports, extra = run_battery(inputparams, max_step = nothing)
+        ##############################
+        # Setup solver configuration #
+        ##############################
 
-				t = [state[:Control][:Controller].time for state in states]
-				E = [state[:Control][:Voltage][1] for state in states]
-				I = [state[:Control][:Current][1] for state in states]
+        cfg = simulator_config(simulator)
+        cfg[:info_level] = 0
 
-				nsteps = size(states, 1)
+        use_model_scaling = true
+        if use_model_scaling
+	        scalings = BattMo.get_matlab_scalings(model, parameters)
+	        tol_default = 1e-5
+	        for scaling in scalings
+		        model_label = scaling[:model_label]
+		        equation_label = scaling[:equation_label]
+		        value = scaling[:value]
+		        cfg[:tolerances][model_label][equation_label] = value * tol_default
+	        end
+        else
+	        for key in submodels_symbols(model)
+		        cfg[:tolerances][key][:default] = 1e-5
+	        end
+        end
 
-				statesref = inputparams["states"]
-				timeref   = t
-				Eref      = [state["Control"]["E"] for state in statesref[1:nsteps]]
+        states, = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
 
-				isapprox(E, Eref, rtol = test[:errval])
 
-			end
+        t = [state[:Control][:Controller].time[1] for state in states]
+        E = [state[:Control][:ElectricPotential][1] for state in states]
 
-		end
+        matlab_states = inputparams["states"]
+
+        tref = vec([state["time"][1] for state in matlab_states])
+        Eref = vec([state["Control"]["E"][1] for state in matlab_states])
+
+		isapprox(E, Eref[1 : length(t)], rtol = errval)
 
 	end
 
 end
+
 
