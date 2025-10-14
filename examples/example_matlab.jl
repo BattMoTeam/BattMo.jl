@@ -35,7 +35,7 @@ end
 
 states, = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
 
-t = [state[:Control][:Controller].time for state in states]
+t = [state[:Control][:Controller].time[1] for state in states]
 E = [state[:Control][:ElectricPotential][1] for state in states]
 
 f = Figure(size = (1000, 400))
