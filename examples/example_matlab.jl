@@ -1,5 +1,9 @@
 using BattMo, Jutul, GLMakie
 
+#####################
+# Load Matlab input #
+#####################
+
 fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/p2d_40.mat")
 inputparams = load_matlab_input(fn)
 
@@ -12,10 +16,12 @@ state0     = output[:state0]
 timesteps  = output[:timesteps]
 forces     = output[:forces]
 
-# Setup solver configuration
+##############################
+# Setup solver configuration #
+##############################
 
 cfg = simulator_config(simulator)
-cfg[:info_level] = 10
+cfg[:info_level] = 0
 
 use_model_scaling = true
 if use_model_scaling
@@ -33,7 +39,15 @@ else
 	end
 end
 
+##################
+# Run simulation #
+##################
+
 states, = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+
+#################
+# Plot solution #
+#################
 
 t = [state[:Control][:Controller].time[1] for state in states]
 E = [state[:Control][:ElectricPotential][1] for state in states]
@@ -62,7 +76,7 @@ ax = Axis(f[1, 1],
 	yticklabelsize = 25,
 )
 
-scatterlines!(ax,
+sim_scatter = scatterlines!(ax,
 	t,
 	E;
 	linewidth = 4,
@@ -71,5 +85,20 @@ scatterlines!(ax,
 	markercolor = :black,
 )
 
-f
+#######################################
+# Add the matlab solution in the plot #
+#######################################
 
+matlab_states = inputparams["states"]
+
+t = vec([state["time"][1] for state in matlab_states])
+E = vec([state["Control"]["E"][1] for state in matlab_states])
+
+matlab_scatter = scatterlines!(ax,
+	t,
+	E;
+	linewidth = 2)
+
+axislegend(ax, [sim_scatter, matlab_scatter], ["Simulation", "Matlab"], position = :rt)
+
+f

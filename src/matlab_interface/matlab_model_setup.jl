@@ -53,9 +53,6 @@ function setup_timesteps(inputparams::MatlabInput)
 				end_step = i
 			end
 		end
-		if !isnothing(max_step)
-			end_step = min(max_step, end_step)
-		end
 		timesteps = alltimesteps[1:end_step]
 	else
 		timesteps = inputparams["schedule"]["step"]["val"][:]
