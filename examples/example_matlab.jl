@@ -91,14 +91,14 @@ sim_scatter = scatterlines!(ax,
 
 matlab_states = inputparams["states"]
 
-t = vec([state["time"][1] for state in matlab_states])
-E = vec([state["Control"]["E"][1] for state in matlab_states])
+tref = vec([state["time"][1] for state in matlab_states])
+Eref = vec([state["Control"]["E"][1] for state in matlab_states])
 
 matlab_scatter = scatterlines!(ax,
-	t,
-	E;
-	linewidth = 2)
+	                           tref,
+	                           Eref;
+	                           linewidth = 2)
 
-axislegend(ax, [sim_scatter, matlab_scatter], ["Simulation", "Matlab"], position = :rt)
+axislegend(ax, [sim_scatter, matlab_scatter], ["Julia", "Matlab"], position = :rt)
 
 f
