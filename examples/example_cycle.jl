@@ -13,7 +13,7 @@ cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
 
 model = LithiumIonBattery();
 
-cycling_protocol["TotalNumberOfCycles"] = 40
+cycling_protocol["TotalNumberOfCycles"] = 10
 
 sim = Simulation(model, cell_parameters, cycling_protocol);
 
@@ -23,5 +23,13 @@ output = solve(sim;)
 nothing # hide
 
 # ## Plot the results
+# We can plot a simple voltage current dashboard
 plot_dashboard(output, plot_type = "simple")
+
+# Or plot specific variables
+plot_output(output, ["DischargeCapacity vs CycleIndex"])
+plot_output(output, ["Capacity vs Time"])
+
+# We can check in the overview which variables are available and can be plotted against each other
+print_output_overview(output)
 
