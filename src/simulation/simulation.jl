@@ -619,8 +619,6 @@ function get_scalings(model, parameters)
 
 	refT = 298.15
 
-	electrolyte = model[:Electrolyte].system
-
 	eldes = (:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial)
 
 	j0s   = Array{Float64}(undef, 2)
@@ -668,7 +666,7 @@ function get_scalings(model, parameters)
 	for name in component_names
 
 		rep = model[name].domain.representation
-		if rep isa MinimalECTPFAGrid
+		if rep isa MinimalTpfaGrid
 			volRefs[name] = mean(rep.volumes)
 		else
 			volRefs[name] = mean(rep[:volumes])

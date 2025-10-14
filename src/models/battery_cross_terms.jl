@@ -240,7 +240,7 @@ function Jutul.update_cross_term_in_entity!(out,
 			c_a,
 			c_av,
 			c_av_e)
-	else
+	elseif activematerial.params[:setting_butler_volmer] == "Standard"
 		R = reaction_rate(eta,
 			c_a_surf,
 			R0,
@@ -248,6 +248,8 @@ function Jutul.update_cross_term_in_entity!(out,
 			c_e,
 			activematerial,
 			electrolyte)
+	else
+		error("Unknown setting_butler_volmer: $(activematerial.params[:setting_butler_volmer])")
 	end
 
 	cs = conserved_symbol(eq)
