@@ -24,7 +24,7 @@ sim = Simulation(model, cell_parameters, cycling_protocol)
 output = solve(sim)
 
 # Have a look into which output quantities are available
-print_output_overview(output)
+print_overview(output)
 
 # Plotting using Plotly
 df = to_pandas(output.time_series)

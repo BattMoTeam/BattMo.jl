@@ -1,8 +1,7 @@
-export print_output_overview, print_output_variable_info
-
+export print_overview, print_output_variable_info
 
 """
-	print_output_overview(output::SimulationOutput)
+	print_overview(output::SimulationOutput)
 
 Print a categorized summary of the output variables available in a simulation result.
 
@@ -14,10 +13,10 @@ Groups variables by type (`time_series`, `metrics`, `states`) and prints their n
 
 # Example
 ```julia
-print_output_overview(output)
+print_overview(output)
 ```
 """
-function print_output_overview(output::SimulationOutput)
+function print_overview(output::SimulationOutput)
 	meta_data = get_output_variables_meta_data()
 
 	var_map = Dict(
@@ -84,19 +83,20 @@ function print_output_overview(output::SimulationOutput)
 				name = name,
 				isdefault = get(info, "isdefault", false),
 				unit = get(info, "unit", "N/A"),
+				shape = get(info, "shape", "N/A"),
 			))
 		end
 	end
 
 	function print_table(case_name::String, vars::Vector{NamedTuple})
 		println("\nCase: $(uppercase(case_name))")
-		println("="^80)
-		println(rpad("Variable", 65), "Unit")
-		println("-"^80)
+		println("="^160)
+		println(rpad("Variable", 65), rpad("Unit", 30), "Shape")
+		println("-"^160)
 		for v in sort(vars, by = x -> x.name)
-			println(rpad(string(v.name), 65), v.unit)
+			println(rpad(string(v.name), 65), rpad(v.unit, 30), v.shape)
 		end
-		println("="^80)
+		println("="^160)
 	end
 
 	for case in ["time_series", "metrics", "states"]
@@ -105,7 +105,6 @@ function print_output_overview(output::SimulationOutput)
 		end
 	end
 end
-
 
 
 """

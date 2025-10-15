@@ -211,6 +211,7 @@ include("input/defaults.jl")
 include("input/writer.jl")
 include("input/function_input_tools.jl")
 include("input/formatter.jl")
+include("input/merger.jl")
 include("input/validator.jl")
 include("input/equilibrium_kpis.jl")
 

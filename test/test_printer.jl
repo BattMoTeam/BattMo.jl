@@ -21,7 +21,7 @@ using Test
 		print_submodels_info()
 		print_setting_info("GridPoints")
 		print_parameter_info("Concentration")
-		print_output_overview(output)
+		print_overview(output)
 		print_output_variable_info("Potential")
 
 		true

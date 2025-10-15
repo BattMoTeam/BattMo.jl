@@ -1,5 +1,23 @@
-export convert_parameter_sets_to_old_input_format, convert_to_parameter_sets
+export convert_parameter_sets_to_old_input_format, convert_to_parameter_sets, flatten_input
 
+
+function flatten_input(input::P) where {P <: ParameterSet}
+	input_dict = input.all
+	return flatten_dict(input_dict)
+end
+
+function flatten_dict(dict; parent_key::String = "")
+	flat = Dict{String, Any}()
+	for (k, v) in dict
+		new_key = isempty(parent_key) ? k : string(parent_key, k)
+		if v isa Dict
+			merge!(flat, flatten_dict(v; parent_key = new_key))
+		else
+			flat[new_key] = v
+		end
+	end
+	return flat
+end
 
 function get_key_value(dict::Union{AbstractInput, Dict, Nothing}, key)
 	if isnothing(dict)

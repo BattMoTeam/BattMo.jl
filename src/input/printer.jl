@@ -1,5 +1,72 @@
-export print_cell_info, print_default_input_sets_info, print_submodels_info, print_parameter_info, print_setting_info
+export print_cell_info, print_default_input_sets_info, print_submodels_info, print_parameter_info, print_setting_info, print_overview
 
+
+function print_overview(input::S) where {S <: ParameterSet}
+	input_dict = deepcopy(input.all)
+
+	# Remove "Metadata" if present
+	if haskey(input_dict, "Metadata")
+		pop!(input_dict, "Metadata")
+	end
+
+	# Create a complete metadata dict
+	meta_data_par = get_parameter_meta_data()
+	meta_data_set = get_setting_meta_data()
+	meta_data = merge_dict(meta_data_par, meta_data_set)
+
+
+	# Shared accumulator
+	params = NamedTuple[]
+
+	# Recursive traversal that populates `params`
+	function collect_parameters!(d::Dict, prefix::Vector{String} = String[])
+		for (k, v) in sort(collect(d); by = first)
+			path = vcat(prefix, string(k))
+
+			if isa(v, Dict)
+				if haskey(v, "Description")
+					pop!(v, "Description")
+				end
+				collect_parameters!(v, path)
+			else
+				push!(params, (path = path, key = string(k), value = v, type = typeof(v)))
+			end
+		end
+	end
+
+	collect_parameters!(input_dict)
+
+	# Print header
+	println("\nPARAMETER OVERVIEW")
+	println("="^125)
+
+	if isa(input, FullSimulationInput)
+		par_space = 90
+	else
+		par_space = 80
+	end
+	println(rpad("Parameter", par_space), rpad("Unit", 25), "Type")
+	println("-"^125)
+
+	# Print each parameter row
+	for p in params
+		full_path = join(p.path, " / ")
+
+		# Get metadata for the *last key* only
+		info = get(meta_data, p.path[end], Dict())
+		unit = get(info, "unit", "N/A")
+		isdefault = get(info, "isdefault", false)
+
+		# Mark defaults visually
+		name_str = isdefault ? "$(full_path) (default)" : full_path
+		type_str = string(p.type)
+
+		println(rpad(name_str, par_space), rpad(unit, 25), type_str)
+	end
+
+	println("="^125)
+	println("Total parameters: $(length(params))")
+end
 
 function print_cell_info(cell_parameters::CellParameters)
 	# --- ANSI Colors ---
