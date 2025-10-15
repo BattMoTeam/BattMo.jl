@@ -25,7 +25,7 @@ function compute_capacity(jutul_output::NamedTuple)
 		dt = t[i] - t[i-1]           # Time step
 		avg_I = (I[i] + I[i-1]) / 2  # Average current over the interval
 		dQ = avg_I * dt / 3600       # Capacity in Ah
-		push!(capacity_array, capacity_array[end] + dQ)
+		push!(capacity_array, capacity_array[end] - dQ)
 
 	end
 

@@ -1,5 +1,6 @@
 [![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://battmoteam.github.io/BattMo.jl/dev/)
 [![Build Status](https://github.com/battmoteam/BattMo.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/battmoteam/BattMo.jl/actions/workflows/CI.yml?query=branch%3Amain)
+<a href="https://doi.org/10.5281/zenodo.17313586"><img src="https://zenodo.org/badge/478088752.svg" alt="DOI"></a>
 
 # BattMo.jl is a framework for continuum modelling of lithium-ion batteries written in Julia
 > [!TIP]
