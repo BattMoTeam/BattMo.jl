@@ -126,9 +126,10 @@ function get_output_metrics(
 
 		# Identify unique non-zero cycles
 		unique_cycles = unique(cycle_array)
-		cycles_above_zero = filter(x -> x > 0, unique_cycles)
+		cycles_reduced = unique_cycles[1:end-1] # Exclude last cycle index because it is incomplete
 
-		if isempty(cycles_above_zero)
+
+		if isempty(cycles_reduced)
 			# Compute globally
 			push!(discharge_cap, compute_discharge_capacity(jutul_output))
 			push!(charge_cap, compute_charge_capacity(jutul_output))
@@ -137,7 +138,7 @@ function get_output_metrics(
 			push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output))
 		else
 			# Compute per unique cycle (avoids duplicate pushes)
-			for cycle in cycles_above_zero
+			for cycle in cycles_reduced
 				push!(discharge_cap, compute_discharge_capacity(jutul_output; cycle_number = cycle))
 				push!(charge_cap, compute_charge_capacity(jutul_output; cycle_number = cycle))
 				push!(discharge_energy, compute_discharge_energy(jutul_output; cycle_number = cycle))
@@ -148,7 +149,7 @@ function get_output_metrics(
 
 		# Dictionary of all available quantities
 		available_quantities = Dict(
-			"CycleIndex"          => cycles_above_zero,
+			"CycleIndex"          => cycles_reduced,
 			"DischargeCapacity"   => discharge_cap,
 			"ChargeCapacity"      => charge_cap,
 			"DischargeEnergy"     => discharge_energy,
