@@ -42,7 +42,7 @@ features:
     link: manuals/user_guide/public_api
 
   - icon:
-      src: https://raw.githubusercontent.com/BattMoTeam/visual-identity/blob/1bc87b07605d77fb3faa788c82f06ec2735ed31f/logos/battmo_logo_thumb.png
+      src: https://raw.githubusercontent.com/BattMoTeam/visual-identity/1bc87b07605d77fb3faa788c82f06ec2735ed31f/logos/battmo_logo_thumb.png
       height: 10pt
     title: BattMo Web App
     details: A BattMo web application is available to run the simulation online without any further installation steps.
