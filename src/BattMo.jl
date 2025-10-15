@@ -192,8 +192,11 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 
 
 include("input/input_types.jl")
-include("input/meta_data/parameters.jl")
-include("input/meta_data/settings.jl")
+include("input/meta_data/cell_parameters.jl")
+include("input/meta_data/cycling_protocol.jl")
+include("input/meta_data/model_settings.jl")
+include("input/meta_data/simulation_settings.jl")
+include("input/meta_data/solver_settings.jl")
 include("input/printer.jl")
 include("input/schemas/get_schema.jl")
 include("input/schemas/get_json_from_schema.jl")
