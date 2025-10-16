@@ -37,10 +37,10 @@ propertynames(output)
 # - metrics: includes all the from output quantities calculated cell metrics like discharge capacity, charge energy, round trip efficiency, etc. These metrics depend on the cycle number.
 
 # The have an overview of all the quantities that are available you can run:
-print_output_overview(output)
+print_info(output)
 
 # To get more information on particular output variables, for example all that have concentration in their name:
-print_output_variable_info("concentration")
+print_info("concentration", category = "OutputVariable")
 
 # As the time series, states, and metrics structures are dicts we can retrieve quantities by accessing their key. Let's for example create a simple voltage vs capacity plot.
 

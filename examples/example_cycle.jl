@@ -31,5 +31,5 @@ plot_output(output, ["DischargeCapacity vs CycleIndex"])
 plot_output(output, ["Capacity vs Time"])
 
 # We can check in the overview which variables are available and can be plotted against each other
-print_output_overview(output)
+print_info(output)
 

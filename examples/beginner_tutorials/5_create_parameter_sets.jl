@@ -34,7 +34,7 @@ write_to_json_file(file_path, empty_cell_parameter_set)
 
 # If you're unsure about what a specific parameter means or how it should be formatted, BattMo provides a helpful function to inspect any parameter.
 
-print_parameter_info("OpenCircuitPotential")
+print_info("OpenCircuitPotential")
 
 
 # ## Step 5: Now you can load you own parameter set to run simulations with it.
