@@ -183,6 +183,7 @@ using Jutul: StaticCSR, ParallelCSRContext
 using Jutul: jutul_message
 using Jutul: get_1d_interpolator
 using PythonCall: pyconvert, Py
+using Logging: Logging
 
 
 timeit_debug_enabled() = Jutul.timeit_debug_enabled()
