@@ -53,9 +53,6 @@ plot_interactive_3d
 ```@docs
 print_submodels
 print_default_input_sets
-print_parameter_info
-print_setting_info
-print_output_variable_info
 ```
 
 ## Tools that write files
