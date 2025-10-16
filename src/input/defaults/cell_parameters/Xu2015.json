@@ -55,7 +55,7 @@
         },
         "Coating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 1080,
+            "EffectiveDensity": 2471,
             "Thickness": 92.0e-6
         },
         "ConductiveAdditive": {
