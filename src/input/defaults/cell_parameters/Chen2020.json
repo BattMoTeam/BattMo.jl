@@ -24,12 +24,12 @@
     "NegativeElectrode": {
         "Coating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 1695,
-            "Thickness": 8.52e-5
+            "EffectiveDensity": 1900,
+            "Thickness": 8.50e-5
         },
         "ActiveMaterial": {
             "Description": "Graphite-SiOx",
-            "MassFraction": 1.0,
+            "MassFraction": 0.9,
             "Density": 2260.0,
             "VolumetricSurfaceArea": 383959.0,
             "ElectronicConductivity": 215,
@@ -47,14 +47,14 @@
         },
         "ConductiveAdditive": {
             "Description": "Unknown",
-            "Density": 1950.0,
-            "MassFraction": 0.0,
+            "Density": 1800.0,
+            "MassFraction": 0.05,
             "ElectronicConductivity": 100.0
         },
         "Binder": {
             "Description": "Unknown",
             "Density": 1100.0,
-            "MassFraction": 0.0,
+            "MassFraction": 0.05,
             "ElectronicConductivity": 100.0
         },
         "CurrentCollector": {
@@ -81,12 +81,12 @@
     "PositiveElectrode": {
         "Coating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 3292,
+            "EffectiveDensity": 3500,
             "Thickness": 7.56e-5
         },
         "ActiveMaterial": {
             "Description": "NMC811",
-            "MassFraction": 1.0,
+            "MassFraction": 0.9,
             "Density": 4950,
             "VolumetricSurfaceArea": 383959.0,
             "ElectronicConductivity": 0.18,
@@ -105,13 +105,13 @@
         "ConductiveAdditive": {
             "Description": "Unknown",
             "Density": 1800.0,
-            "MassFraction": 0.0,
+            "MassFraction": 0.05,
             "ElectronicConductivity": 100
         },
         "Binder": {
             "Description": "Unknown",
             "Density": 1780.0,
-            "MassFraction": 0.0,
+            "MassFraction": 0.05,
             "ElectronicConductivity": 100
         },
         "CurrentCollector": {

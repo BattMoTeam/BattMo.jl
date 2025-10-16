@@ -35,6 +35,7 @@ using Jutul: plot_multimodel_interactive
 using LBFGSB: lbfgsb
 using Jutul: solve_adjoint_sensitivities, optimization_config, setup_parameter_optimization
 using Jutul: devectorize_variables!
+using Optim
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🧮 Mathematical & Computational Tools

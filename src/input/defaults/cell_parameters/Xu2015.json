@@ -55,7 +55,7 @@
         },
         "Coating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 2471,
+            "EffectiveDensity": 1949,
             "Thickness": 92.0e-6
         },
         "ConductiveAdditive": {
@@ -103,13 +103,13 @@
             "VolumetricSurfaceArea": 142373,
             "DiffusionCoefficient": 3.9e-14,
             "ParticleRadius": 14.75e-6,
-            "Density": 2660,
+            "Density": 1852,
             "ElectronicConductivity": 215.0,
             "ChargeTransferCoefficient": 0.5
         },
         "Coating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 1862,
+            "EffectiveDensity": 814,
             "Thickness": 59e-6
         },
         "ConductiveAdditive": {
