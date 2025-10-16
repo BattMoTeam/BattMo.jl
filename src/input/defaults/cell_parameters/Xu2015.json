@@ -49,7 +49,7 @@
             "VolumetricSurfaceArea": 1878260.0,
             "DiffusionCoefficient": 1.25e-15,
             "ParticleRadius": 1.15e-6,
-            "Density": 1500,
+            "Density": 3450,
             "ElectronicConductivity": 0.01,
             "ChargeTransferCoefficient": 0.5
         },
