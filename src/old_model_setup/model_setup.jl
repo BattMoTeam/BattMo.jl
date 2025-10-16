@@ -175,9 +175,9 @@ function setup_timesteps(inputparams::InputParamsOld;
 
 	controlPolicy = inputparams["Control"]["controlPolicy"]
 
-	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge"
+	if controlPolicy == "cc_discharge" || controlPolicy == "cc_charge"
 
-		if controlPolicy == "CCDischarge"
+		if controlPolicy == "cc_discharge"
 			CRate = inputparams["Control"]["DRate"]
 		else
 			CRate = inputparams["Control"]["CRate"]
@@ -207,7 +207,7 @@ function setup_timesteps(inputparams::InputParamsOld;
 
 		timesteps = rampupTimesteps(totalTime, dt, nr)
 
-	elseif controlPolicy == "CCCycling"
+	elseif controlPolicy == "cc_cycling"
 
 		ncycles = inputparams["Control"]["numberOfCycles"]
 		DRate = inputparams["Control"]["DRate"]
@@ -234,7 +234,7 @@ function setup_timesteps(inputparams::InputParamsOld;
 		end
 		timesteps = repeat([dt], n)
 
-	elseif controlPolicy == "CCCV"
+	elseif controlPolicy == "cccv"
 
 		ncycles = inputparams["Control"]["numberOfCycles"]
 		DRate = inputparams["Control"]["DRate"]
@@ -855,10 +855,10 @@ function setup_submodels(inputparams::InputParamsOld;
 	controlPolicy = jsondict["Control"]["controlPolicy"]
 	use_ramp_up = jsondict["TimeStepping"]["useRampup"]
 
-	if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge" || controlPolicy == "CCCycling"
+	if controlPolicy == "cc_discharge" || controlPolicy == "constant_currentcc_cycling|| controlPolicy == "cc_cycling"
 		ctrl = jsondict["Control"]
 		if jsondict["Control"]["useCVswitch"]
-			if controlPolicy == "CCDischarge"
+			if controlPolicy == "cc_discharge"
 
 				policy = SimpleCVPolicy()
 			else
@@ -868,7 +868,7 @@ function setup_submodels(inputparams::InputParamsOld;
 			if haskey(ctrl, "initialControl")
 				initial_control = ctrl["initialControl"]
 			else
-				if controlPolicy == "CCDischarge"
+				if controlPolicy == "cc_discharge"
 					initial_control = "discharging"
 				else
 					initial_control = "charging"
@@ -877,10 +877,10 @@ function setup_submodels(inputparams::InputParamsOld;
 			if haskey(ctrl, "numberOfCycles")
 				number_of_cycles = ctrl["numberOfCycles"]
 			else
-				if controlPolicy == "CCDischarge" || controlPolicy == "CCCharge"
+				if controlPolicy == "cc_discharge" || controlPolicy == "cc_charge"
 					number_of_cycles = 0
 				else
-					error("CCCycling parameters miss numberOfcycles")
+					error("cc_cycling parameters miss numberOfcycles")
 				end
 			end
 			DRate = get(inputparams["Control"], "DRate", 0.0)
@@ -904,7 +904,7 @@ function setup_submodels(inputparams::InputParamsOld;
 			)
 		end
 
-	elseif controlPolicy == "CCCV"
+	elseif controlPolicy == "cccv"
 
 		ctrl = jsondict["Control"]
 
@@ -1190,7 +1190,7 @@ function setup_battery_parameters(inputparams::InputParamsOld,
 
 	controlPolicy = inputparams["Control"]["controlPolicy"]
 
-	if controlPolicy == "CCDischarge"
+	if controlPolicy == "cc_discharge"
 
 		cap = computeCellCapacity(model)
 		con = Constants()
@@ -1202,7 +1202,7 @@ function setup_battery_parameters(inputparams::InputParamsOld,
 
 		parameters[:Control] = setup_parameters(model[:Control], prm_control)
 
-	elseif controlPolicy == "CCCharge"
+	elseif controlPolicy == "cc_charge"
 		cap = computeCellCapacity(model)
 		con = Constants()
 
@@ -1217,7 +1217,7 @@ function setup_battery_parameters(inputparams::InputParamsOld,
 		con = Constants()
 		parameters[:Control] = setup_parameters(model[:Control])
 
-	elseif controlPolicy == "CCCV" || controlPolicy == "CCCycling"
+	elseif controlPolicy == "cccv" || controlPolicy == "cc_cycling"
 
 		cap = computeCellCapacity(model)
 		con = Constants()

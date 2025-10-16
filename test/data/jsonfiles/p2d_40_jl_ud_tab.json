@@ -1160,7 +1160,7 @@
    "use_thermal": true,
    "include_current_collectors": false,
    "Control": {
-      "controlPolicy": "CCCV",
+      "controlPolicy": "cccv",
       "initialControl": "discharging",
       "numberOfCycles": 1,
       "CRate": 1.0,

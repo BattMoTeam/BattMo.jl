@@ -423,7 +423,7 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
 		"required" => ["Protocol"],
 		"allOf" => [
 			Dict(
-				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CCCV"))),
+				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "cccv"))),
 				"then" => Dict(
 					"required" => [
 						"InitialStateOfCharge",

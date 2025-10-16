@@ -6,10 +6,10 @@ using Test
 
 	@test begin
 
-		file_path_cell = parameter_file_path("cell_parameters", "Xu2015.json")
-		file_path_model = parameter_file_path("model_settings", "P4D_pouch.json")
-		file_path_cycling = parameter_file_path("cycling_protocols", "CCDischarge.json")
-		file_path_simulation = parameter_file_path("simulation_settings", "P4D_pouch.json")
+		file_path_cell = parameter_file_path("cell_parameters", "xu_2015.json")
+		file_path_model = parameter_file_path("model_settings", "p4d_pouch.json")
+		file_path_cycling = parameter_file_path("cycling_protocols", "cc_discharge.json")
+		file_path_simulation = parameter_file_path("simulation_settings", "p4d_pouch.json")
 
 		cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
 		cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)

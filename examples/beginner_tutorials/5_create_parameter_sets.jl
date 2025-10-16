@@ -10,7 +10,7 @@
 
 using BattMo
 
-model_settings = load_model_settings(; from_default_set = "P4D_pouch")
+model_settings = load_model_settings(; from_default_set = "p4d_pouch")
 model = LithiumIonBattery(; model_settings)
 
 

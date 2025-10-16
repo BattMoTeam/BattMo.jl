@@ -9,8 +9,8 @@
 using BattMo, GLMakie
 
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 nothing # hide
 
 model = LithiumIonBattery()
@@ -58,9 +58,9 @@ cell_kpis_from_output = Dict(
 
 # ## Example full cycle
 
-# When we run a protocol with a full or multiple cycles we can retrieve some extra KPIs from the output. Let's run a CCCV protocol.
+# When we run a protocol with a full or multiple cycles we can retrieve some extra KPIs from the output. Let's run a cccv protocol.
 
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCCV")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cccv")
 
 # This protocol will run 3 cycles
 

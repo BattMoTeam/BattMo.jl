@@ -34,7 +34,7 @@ These parameters define the operational conditions of the battery during a simul
 
 ```json
     {
-  "Protocol": "CCDischarge",
+  "Protocol": "cc_discharge",
   "InitialStateOfCharge": 0.99,
   "DRate": 1.0,
   "LowerVoltageLimit": 2.5,

@@ -123,10 +123,10 @@
       "type": "string",
       "enum": [
         "CC",
-        "CCCV",
+        "cccv",
         "Function"
       ],
-      "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('CCCV')."
+      "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('cccv')."
     },
     "FunctionName": {
       "type": "string",

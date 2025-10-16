@@ -14,7 +14,7 @@
 using BattMo, GLMakie
 
 # Load cell parameters as before
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
 nothing # hide
 
 # To demonstrate changing time resolution we will use a drive cycle to setup a current function.
@@ -55,8 +55,8 @@ ax = Axis(fig[1, 1], title = "Drive cycle", xlabel = "Time / s", ylabel = "Power
 lines!(ax, t, P)
 fig
 
-# Load default simulation settings for the P2D model
-simulation_settings = load_simulation_settings(; from_default_set = "P2D")
+# Load default simulation settings for the p2d model
+simulation_settings = load_simulation_settings(; from_default_set = "p2d")
 nothing # hide
 
 # run the simulation

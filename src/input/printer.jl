@@ -283,7 +283,7 @@ Prints a structured overview of all available default input sets for battery sim
 - Prints directly to the console using `println`, formatted for clarity with Unicode symbols and horizontal dividers.
 - Output includes:
   - Folder/category names (e.g., `CellParameters"`)
-  - Available JSON set names (e.g., `"Chen2020"`)
+  - Available JSON set names (e.g., `"chen_2020"`)
   - Descriptions and intended use cases for each set
 
 # Use Case

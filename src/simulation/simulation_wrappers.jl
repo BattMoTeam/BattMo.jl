@@ -24,7 +24,7 @@ A NamedTuple containing the simulation results.
 
 # Example
 ```julia
-simulation_input = load_full_simulation_input(;from_default_set="Chen2020")
+simulation_input = load_full_simulation_input(;from_default_set="chen_2020")
 output = run_simulation(simulation_input)
 plot_dashboard(output)
 ```

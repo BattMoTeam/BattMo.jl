@@ -130,7 +130,7 @@
   "use_thermal": false,
   "include_current_collectors": false,
   "Control": {
-    "controlPolicy": "CCDischarge",
+    "controlPolicy": "cc_discharge",
     "useCVswitch": false,
     "DRate": 1,
     "lowerCutoffVoltage": 2.4,
