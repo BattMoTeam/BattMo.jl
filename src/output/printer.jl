@@ -1,8 +1,6 @@
-export print_output_overview, print_output_variable_info
-
 
 """
-	print_output_overview(output::SimulationOutput)
+	print_overview(output::SimulationOutput)
 
 Print a categorized summary of the output variables available in a simulation result.
 
@@ -14,10 +12,10 @@ Groups variables by type (`time_series`, `metrics`, `states`) and prints their n
 
 # Example
 ```julia
-print_output_overview(output)
+print_overview(output)
 ```
 """
-function print_output_overview(output::SimulationOutput)
+function print_overview(output::SimulationOutput)
 	meta_data = get_output_variables_meta_data()
 
 	var_map = Dict(
@@ -84,19 +82,20 @@ function print_output_overview(output::SimulationOutput)
 				name = name,
 				isdefault = get(info, "isdefault", false),
 				unit = get(info, "unit", "N/A"),
+				shape = get(info, "shape", "N/A"),
 			))
 		end
 	end
 
 	function print_table(case_name::String, vars::Vector{NamedTuple})
 		println("\nCase: $(uppercase(case_name))")
-		println("="^80)
-		println(rpad("Variable", 65), "Unit")
-		println("-"^80)
+		println("="^160)
+		println(rpad("Variable", 65), rpad("Unit", 30), "Shape")
+		println("-"^160)
 		for v in sort(vars, by = x -> x.name)
-			println(rpad(string(v.name), 65), v.unit)
+			println(rpad(string(v.name), 65), rpad(v.unit, 30), v.shape)
 		end
-		println("="^80)
+		println("="^160)
 	end
 
 	for case in ["time_series", "metrics", "states"]
@@ -106,112 +105,3 @@ function print_output_overview(output::SimulationOutput)
 	end
 end
 
-
-
-"""
-	print_output_variable_info(from_name::String)
-
-Print detailed metadata for output variables that match the given name.
-
-# Description
-Performs a case-insensitive search for variable names containing `from_name` and prints information such as description, type, unit, and documentation links.
-
-# Arguments
-- `from_name`: Partial or full name of the variable to search for.
-
-# Example
-```julia
-print_output_variable_info("voltage")
-```
-"""
-function print_output_variable_info(from_name::String)
-	# Get the metadata dictionary
-	meta_data = get_output_variables_meta_data()
-	output_fmt = detect_output_format()
-
-	# Soft match: find keys containing `from_name` (case-insensitive)
-	matches = collect(filter(key -> occursin(lowercase(from_name), lowercase(key)), keys(meta_data)))
-
-	if isempty(matches)
-		println("❌ No variables found matching: ", from_name)
-	else
-		for actual_key in matches
-			param_info = meta_data[actual_key]
-
-			println("="^80)
-			println("ℹ️  Variable Information")
-			println("="^80)
-
-			# Name
-			println("🔹 Name:         	", actual_key)
-
-			# Description
-			if haskey(param_info, "description")
-				description = param_info["description"]
-				println("🔹 Description:		", description)
-			end
-
-			# Type
-			if haskey(param_info, "type")
-				types = param_info["type"]
-				types_str = isa(types, AbstractArray) ? join(types, ", ") : string(types)
-				println("🔹 Type:         	", types_str)
-			end
-
-			# Shape
-			if haskey(param_info, "shape")
-				types = param_info["shape"]
-				types_str = isa(types, AbstractArray) ? join(types, ", ") : string(types)
-				println("🔹 Shape:         	", types_str)
-			end
-
-			# Unit
-			if haskey(param_info, "unit")
-				println("🔹 Unit:         	", param_info["unit"])
-			end
-
-			# Options
-			if haskey(param_info, "options")
-				options = param_info["options"]
-				options_str = isa(options, AbstractArray) ? join(options, ", ") : string(options)
-				println("🔹 Options:      	", options_str)
-			end
-
-			# Validation bounds
-			if haskey(param_info, "min_value")
-				min_value = param_info["min_value"]
-				println("🔹 Minimum value:      	", min_value)
-			end
-			if haskey(param_info, "max_value")
-				max_value = param_info["max_value"]
-				println("🔹 Maximum value:      	", max_value)
-			end
-
-			# Documentation
-			doc_url = get(param_info, "documentation", nothing)
-			if isnothing(doc_url) || doc_url == "-"
-				link = "-"
-			elseif doc_url isa String
-				link = format_link("visit", doc_url, 50, output_fmt)
-				println("🔹 Documentation:	", link)
-			end
-
-
-
-
-			# Ontology
-			context_type_iri = get(param_info, "context_type_iri", nothing)
-			if isnothing(context_type_iri) || context_type_iri == "-"
-				iri = "-"
-			elseif context_type_iri isa String
-				iri = format_link("visit", context_type_iri, 50, output_fmt)
-				println("🔹 Ontology link:	", iri)
-			end
-
-
-
-
-			println()  # Extra spacing between entries
-		end
-	end
-end

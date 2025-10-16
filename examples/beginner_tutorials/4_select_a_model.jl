@@ -21,7 +21,7 @@ model_settings.all
 # By default, the "SEIModel" parameter is set to false. Since we want to observe SEI-driven degradation effects, we’ll specify which SEI model we'd like to use, and with that enable the use of 
 # the SEI model during the simulation. Let's have a look at which models are available to include in the settings:
 
-print_submodels_info()
+print_submodels()
 
 # For the SEI model, we can see there's one model to enable which is the "Bolay" model. We enable it in the model settings:
 
