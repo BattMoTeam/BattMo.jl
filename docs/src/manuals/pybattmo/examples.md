@@ -16,7 +16,7 @@ cell_parameters = load_cell_parameters(from_default_set="Chen2020")
 cycling_protocol = load_cycling_protocol(from_default_set="CCDischarge")
 
 # Have a quick look into what kind of cell we're dealing with
-print_cell_info(cell_parameters)
+quick_cell_check(cell_parameters)
 
 # Setup model and simulation
 model = LithiumIonBattery()

@@ -14,7 +14,7 @@ sim = Simulation(model, cell_parameters, cycling_protocol);
 
 output = solve(sim;)
 
-print_overview(output)
+print_info(output)
 
 
 time_series = output.time_series

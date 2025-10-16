@@ -249,6 +249,7 @@ include("plotting/makie_ext.jl")
 include("plotting/3d.jl")
 include("plotting/1d.jl")
 
+include("tools/print_info.jl")
 
 include("solver/linsolve.jl")
 

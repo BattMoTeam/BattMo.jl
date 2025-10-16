@@ -28,9 +28,7 @@ function get_model_settings_meta_data()
 			"description" => """Specifies the numerical backend used for solving the potential flow equations. 
 								The GenericAD option uses a general automatic differentiation approach that is robust and widely applicable, 
 								while the TwoPointDiscretization option applies a specialized two-point flux discretization of the conservation laws, 
-									which can be faster but is less general. We recommend using GenericAD unless performance considerations dictate otherwise.""",
-			"documentation" => "",
-		),
+									which can be faster but is less general. We recommend using GenericAD unless performance considerations dictate otherwise."""),
 		"ButlerVolmer" => Dict(
 			"type" => String,
 			"options" => ["Standard", "Chayambuka"],
@@ -44,7 +42,7 @@ function get_model_settings_meta_data()
 			"type" => String,
 			"options" => ["Arrhenius"],
 			"category" => "ModelSettings",
-			"documentation" => "",
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/arrhenius",
 			"description" => """Temperature dependence model for electrode diffusion coefficients and reaction rates. Example: "Arrhenius".""",
 		),
 		"TransportInSolid" => Dict(
@@ -61,6 +59,16 @@ function get_model_settings_meta_data()
 			"context_type_iri" => nothing,
 			"category" => "ModelSettings",
 			"description" => "Which model describes the current collectors.",
+		),
+		"RampUp" => Dict(
+			"type" => String,
+			"options" => ["Sinusoidal"],
+			"category" => "SimulationSettings",
+			"context_type" => "RampUp",
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_rampup",
+			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/ramp_up",
+			"category" => "ModelSettings",
+			"description" => """Type of signal of electric current used to initialize the cell simulation. Example: "Sinusoidal".""",
 		),
 	)
 

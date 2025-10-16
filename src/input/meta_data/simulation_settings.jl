@@ -133,16 +133,6 @@ function get_simulation_settings_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Vector storing the numerical representation of the computational grid discretizing the spatial representation of the cell.",
 		),
-		"RampUp" => Dict(
-			"type" => String,
-			"options" => ["Sinusoidal"],
-			"category" => "SimulationSettings",
-			"context_type" => "RampUp",
-			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_rampup",
-			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/ramp_up",
-			"category" => "ModelSettings",
-			"description" => """Type of signal of electric current used to initialize the cell simulation. Example: "Sinusoidal".""",
-		),
 		"RampUpSteps" => Dict(
 			"type" => Int,
 			"min_value" => 1,

@@ -95,7 +95,7 @@ end
 
 function get_schema_cell_parameters(model_settings::ModelSettings)
 	# Retrieve meta-data for validation
-	parameter_meta = get_parameter_meta_data()
+	parameter_meta = get_cell_parameters_meta_data()
 
 	schema = Dict(
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
@@ -400,7 +400,7 @@ end
 
 function get_schema_cycling_protocol(model_settings::ModelSettings)
 	# Retrieve meta-data for validation
-	parameter_meta = get_parameter_meta_data()
+	parameter_meta = get_cycling_protocol_meta_data()
 	schema = Dict(
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",

@@ -1,4 +1,4 @@
-export quick_cell_check, print_default_input_sets_info, print_submodels_info, print_info, print_overview
+export quick_cell_check, print_default_input_sets, print_submodels
 
 
 function print_overview(input::S) where {S <: ParameterSet}
@@ -59,19 +59,19 @@ function print_overview(input::S) where {S <: ParameterSet}
 		elseif isa(v, AbstractDict)
 			return "{Dict}"
 		elseif isa(v, AbstractString)
-			return length(v) > val_space ? v[1:(val_space-4)]*"..." : v
+			return length(v) > val_space ? v[1:(val_space-4)] * "..." : v
 		elseif isa(v, Bool)
 			return string(v)
 		elseif isa(v, Integer)
 			s = string(v)
-			return length(s) > val_space ? s[1:(val_space-4)]*"..." : s
+			return length(s) > val_space ? s[1:(val_space-4)] * "..." : s
 		elseif isa(v, AbstractFloat)
 			# Compact numeric representation
 			abs(v) ≥ 1e4 || abs(v) ≤ 1e-3 ? string(round(v, sigdigits = 5)) :
 			string(round(v, digits = 5))
 		else
 			s = string(v)
-			return length(s) > val_space ? s[1:(val_space-4)]*"..." : s
+			return length(s) > val_space ? s[1:(val_space-4)] * "..." : s
 		end
 	end
 
@@ -97,111 +97,6 @@ function print_overview(input::S) where {S <: ParameterSet}
 end
 
 
-function print_info(from_name::String; category::Union{Nothing, String} = nothing)
-	"""
-	Print detailed information about parameters, settings, or output variables,
-	optionally filtered by category. All values are aligned.
-	"""
-
-	# --- Map category → (metadata function, title, emoji) ---
-	category_map = Dict(
-		"CellParameters"     => (get_cell_parameters_meta_data, "Cell Parameter Information", "🔋"),
-		"CyclingProtocol"    => (get_cycling_protocol_meta_data, "Cycling Protocol Information", "🚴"),
-		"ModelSettings"      => (get_model_settings_meta_data, "Model Setting Information", "🕸️"),
-		"SimulationSettings" => (get_simulation_settings_meta_data, "Simulation Setting Information", "◻️"),
-		"SolverSettings"     => (get_solver_settings_meta_data, "Solver Setting Information", "🧮"),
-		"OutputVariable"     => (get_output_variables_meta_data, "Output Variable Information", "📈"),
-	)
-
-	# Validate category
-	if !isnothing(category) && !haskey(category_map, category)
-		error("❌ Invalid category '$category'. Must be one of: " * join(keys(category_map), ", "))
-	end
-
-	output_fmt = detect_output_format()
-	categories_to_search = isnothing(category) ? collect(keys(category_map)) : [category]
-
-	# Accumulate matches
-	all_matches = Dict{String, Vector{String}}()
-	for cat in categories_to_search
-		get_meta_data, _, _ = category_map[cat]
-		meta_data = get_meta_data()
-		matches = collect(filter(k -> occursin(lowercase(from_name), lowercase(k)), keys(meta_data)))
-		if !isempty(matches)
-			all_matches[cat] = matches
-		end
-	end
-
-	if isempty(all_matches)
-		println("❌ No entries found matching: ", from_name)
-		return
-	end
-
-	# --- Print results ---
-	label_width = 22  # fixed width for all labels
-	indent = "    "
-
-	for cat in sort(collect(keys(all_matches)))
-		get_meta_data, title, emoji = category_map[cat]
-		meta_data = get_meta_data()
-		matches = all_matches[cat]
-
-		for actual_key in matches
-			param_info = meta_data[actual_key]
-
-			println("\n" * "-"^100)
-			println("$emoji  $title")
-			println("-"^100)
-
-			function print_field(label, value)
-				println(indent, rpad("🔹 $label", label_width), value)
-			end
-
-			print_field("Name", actual_key)
-			print_field("Category", cat)
-
-			if haskey(param_info, "variable_name")
-				print_field("Keyword argument", param_info["variable_name"])
-			end
-			if haskey(param_info, "description")
-				print_field("Description", param_info["description"])
-			end
-			if haskey(param_info, "type")
-				t = param_info["type"]
-				print_field("Type", isa(t, AbstractArray) ? join(t, ", ") : string(t))
-			end
-			if haskey(param_info, "shape")
-				s = param_info["shape"]
-				print_field("Shape", isa(s, AbstractArray) ? join(s, ", ") : string(s))
-			end
-			if haskey(param_info, "unit")
-				print_field("Unit", param_info["unit"])
-			end
-			if haskey(param_info, "options")
-				opts = param_info["options"]
-				print_field("Options", isa(opts, AbstractArray) ? join(opts, ", ") : string(opts))
-			end
-			if haskey(param_info, "min_value")
-				print_field("Minimum value", param_info["min_value"])
-			end
-			if haskey(param_info, "max_value")
-				print_field("Maximum value", param_info["max_value"])
-			end
-			doc_url = get(param_info, "documentation", nothing)
-			if doc_url isa String && doc_url != "-"
-				print_field("Documentation", format_link("visit", doc_url, 50, output_fmt))
-			end
-			iri = get(param_info, "context_type_iri", nothing)
-			if iri isa String && iri != "-"
-				print_field("Ontology link", format_link("visit", iri, 50, output_fmt))
-			end
-		end
-	end
-
-	println("\n" * "="^120)
-end
-
-
 function quick_cell_check(cell::CellParameters; cell_2::Union{Nothing, CellParameters} = nothing)
 	# --- ANSI Colors ---
 	green(s) = "\033[92m$(s)\033[0m"   # calculated
@@ -209,6 +104,16 @@ function quick_cell_check(cell::CellParameters; cell_2::Union{Nothing, CellParam
 	bold(s) = "\033[1m$(s)\033[0m"
 	red(s) = "\033[91m$(s)\033[0m"
 	yellow(s) = "\033[93m$(s)\033[0m"
+
+	# --- Helper for visible string padding ---
+	function visible_length(s::AbstractString)
+		length(replace(s, r"\033\[[0-9;]*m" => ""))  # strip ANSI escape sequences
+	end
+
+	function rpad_visible(s::AbstractString, n::Int)
+		padlen = n - visible_length(s)
+		padlen > 0 ? s * repeat(" ", padlen) : s
+	end
 
 	# --- KPI dictionary ---
 	function get_kpis(cell::CellParameters)
@@ -238,68 +143,64 @@ function quick_cell_check(cell::CellParameters; cell_2::Union{Nothing, CellParam
 		end
 
 	# --- Header ---
-	println(bold("\n════════════════════════════════════════════════════════════════════════════"))
-	println(bold("🔋 Quick Cell Check"))
-	println(bold("════════════════════════════════════════════════════════════════════════════"))
-
-	name_cell_1 = get(cell["Metadata"], "Title", "Cell 1")
-	name_cell_2 = isnothing(cell_2) ? "" : get(cell_2["Metadata"], "Title", "Cell 2")
-
-	# --- Column headers ---
-	label_width = 35
+	label_width = 40
 	val_width = 14
 	delta_width = 12
 	unit_width = 12
 	source_width = 12
 
+	total_width = label_width + val_width + (isnothing(cell_2) ? 30 : val_width + delta_width + 30) + unit_width + source_width
+
+	println(bold("═"^total_width))
+	println(bold("🔋 Quick Cell Check"))
+	println(bold("═"^total_width))
+
+	name_cell_1 = get(cell["Metadata"], "Title", "Cell 1")
+	name_cell_2 = isnothing(cell_2) ? "" : get(cell_2["Metadata"], "Title", "Cell 2")
+
+	# --- Column headers ---
+
 	println()
 	println(
-		rpad("Quantity", label_width),
-		rpad(name_cell_1, val_width),
-		isnothing(cell_2) ? "" : " | " * rpad(name_cell_2, val_width),
-		isnothing(cell_2) ? "" : " | " * rpad("Δ", delta_width),
-		rpad("Unit", unit_width),
-		"Source",
+		rpad_visible("Quantity", label_width),
+		rpad_visible(name_cell_1, val_width),
+		isnothing(cell_2) ? "" : " | " * rpad_visible(name_cell_2, val_width),
+		isnothing(cell_2) ? "" : " | " * rpad_visible("Δ", delta_width),
+		" | " * rpad_visible("Unit", unit_width),
+		" | " * "Source",
 	)
-	println("─"^(label_width + val_width + (isnothing(cell_2) ? 0 : val_width + delta_width + 3) + unit_width + source_width))
+
+	println("─"^total_width)
 
 	# --- Helper for printing quantities ---
 	function print_quantity(name, val1, val2 = nothing, unit = "", source = "[INPUT]")
-		label_width = 35
-		val_width = 12
-		delta_width = 12
-		unit_width = 8
-		source_width = 12
 
 		if isnothing(val2)
-			# Single input
 			println(
-				rpad(name, label_width),
-				rpad(string(val1), val_width),
-				rpad(unit, unit_width),
-				rpad(source == "[INPUT]" ? blue(source) : green(source), source_width),
+				rpad_visible(name, label_width),
+				rpad_visible(string(val1), val_width),
+				" | " * rpad_visible(unit, unit_width),
+				" | " * rpad_visible(source == "[INPUT]" ? blue(source) : green(source), source_width),
 			)
 		else
-			# Compute delta if numeric
 			delta = (isa(val1, Number) && isa(val2, Number)) ? round(val2 - val1, sigdigits = 4) : ""
 			delta_colored = (delta != "" && delta != 0) ? yellow(delta) : delta
 
 			println(
-				rpad(name, label_width),
-				rpad(string(val1), val_width), " | ",
-				rpad(string(val2), val_width), " | ",
-				rpad(delta_colored, delta_width), " | ",
-				rpad(unit, unit_width), " | ",
-				rpad(source == "[INPUT]" ? blue(source) : green(source), source_width),
+				rpad_visible(name, label_width),
+				rpad_visible(string(val1), val_width), " | ",
+				rpad_visible(string(val2), val_width), " | ",
+				rpad_visible(string(delta_colored), delta_width), " | ",
+				rpad_visible(unit, unit_width), " | ",
+				rpad_visible(source == "[INPUT]" ? blue(source) : green(source), source_width),
 			)
 		end
 	end
 
-
-
 	# --- Input quantities ---
 	print_quantity("Nominal Voltage", get(cell["Cell"], "NominalVoltage", "N/A"),
 		isnothing(cell_2) ? nothing : get(cell_2["Cell"], "NominalVoltage", "N/A"), "V", "[INPUT]")
+
 	print_quantity("Nominal Capacity", get(cell["Cell"], "NominalCapacity", "N/A"),
 		isnothing(cell_2) ? nothing : get(cell_2["Cell"], "NominalCapacity", "N/A"), "Ah", "[INPUT]")
 
@@ -310,20 +211,21 @@ function quick_cell_check(cell::CellParameters; cell_2::Union{Nothing, CellParam
 	units_map = Dict(
 		"Cell Theoretical Capacity" => "Ah",
 		"Cell N:P Ratio" => "-",
-		"Cell Mass" => "g",
-		"Positive Electrode Mass Loading" => "g/m²",
-		"Negative Electrode Mass Loading" => "g/m²",
+		"Cell Mass" => "kg",
+		"Positive Electrode Mass Loading" => "mg/cm²",
+		"Negative Electrode Mass Loading" => "mg/cm²",
 	)
 
 	for key in calc_keys
 		val1 = safe_val(kpis1, key)
 		val2 = isnothing(kpis2) ? nothing : safe_val(kpis2, key)
 		unit = get(units_map, key, "")
-		print_quantity(key, val1, val2, unit, "[CALCULATED]")
+		print_quantity(key, val1, val2, unit, "[EQUILIBRIUM CALCULATION]")
 	end
 
-	println(bold("\n════════════════════════════════════════════════════════════════════════════"))
+	println(bold("═"^total_width))
 end
+
 
 
 
@@ -361,7 +263,7 @@ function detect_output_format()
 end
 
 """
-	print_default_input_sets_info()
+	print_default_input_sets()
 
 Prints a structured overview of all available default input sets for battery simulations, including high-level summaries and detailed metadata for each set.
 
@@ -392,7 +294,7 @@ Prints a structured overview of all available default input sets for battery sim
 - Only `.json` files are considered valid input sets.
 - Requires that the `defaults/` directory structure and expected metadata fields are present and correctly formatted.
 """
-function print_default_input_sets_info()
+function print_default_input_sets()
 	output_fmt = detect_output_format()
 	script_dir = @__DIR__
 	defaults_dir = joinpath(script_dir, "defaults")
@@ -577,12 +479,12 @@ end
 
 
 """
-	print_submodels_info()
+	print_submodels()
 
 Prints an overview of configurable submodels available within the simulation framework, including valid options and documentation links.
 
 # Behavior
-- Retrieves model configuration metadata using `get_setting_meta_data()`.
+- Retrieves model configuration metadata using `get_model_settings_meta_data()`.
 - Filters the metadata to include only entries marked with `"is_sub_model" => true`.
 - Extracts:
   - The submodel parameter name
@@ -602,11 +504,10 @@ Prints an overview of configurable submodels available within the simulation fra
 - Helps users understand which submodels are configurable and how to select between them.
 - Useful for exploring model flexibility and guiding configuration in notebooks, scripts, or GUIs.
 """
-function print_submodels_info()
+function print_submodels()
 	# Get the metadata dictionary
 	meta_data = get_model_settings_meta_data()
 
-	# Filter parameters with "is_sub_model" == true
 	submodel_params = []
 	for (param, info) in meta_data
 		if get(info, "category", nothing) == "ModelSettings"
@@ -649,248 +550,4 @@ function print_submodels_info()
 	end
 
 	println()  # Extra line after the table
-end
-
-
-"""
-	print_setting_info(from_name::String)
-
-Displays detailed metadata for any model or simulation setting whose name matches (fully or partially) the provided `from_name` string.
-
-# Arguments
-- `from_name::String`: A (partial or full) string used to search for matching parameter names in the settings metadata.
-
-# Behavior
-- Performs a case-insensitive fuzzy match across all available setting keys.
-- For each matching setting, prints detailed metadata including:
-  - Name
-  - Description
-  - Allowed types
-  - Units (if specified)
-  - Valid options
-  - Validation bounds (min/max values)
-  - Documentation links
-  - Ontology (context IRI) links
-
-- Uses Unicode symbols and structured formatting to produce readable output.
-- Uses helper functions like `get_setting_meta_data()` and `format_link()` to retrieve metadata and produce clickable/documented links depending on output format.
-
-# Output
-- If no matches are found: prints a ❌ message indicating no results.
-- If matches are found: prints a block of detailed metadata for each, separated by horizontal lines.
-"""
-function print_setting_info(from_name::String; category::Union{Nothing, String} = nothing)
-	# Get the metadata dictionary
-	meta_data_mod = get_model_settings_meta_data()
-	meta_data_sim = get_simulation_settings_meta_data()
-	meta_data_solv = get_solver_settings_meta_data()
-	meta_data_1 = merge_dict(meta_data_mod, meta_data_sim)
-	meta_data = merge_dict(meta_data_1, meta_data_solv)
-	output_fmt = detect_output_format()
-
-	if !isnothing(category)
-		# Filter meta_data by category if provided
-		meta_data = Dict(k => v for (k, v) in meta_data if get(v, "category", nothing) == category)
-	end
-
-	# Soft match: find keys containing `from_name` (case-insensitive)
-	matches = collect(filter(key -> occursin(lowercase(from_name), lowercase(key)), keys(meta_data)))
-
-	if isempty(matches)
-		println("❌ No settings found matching: ", from_name)
-	else
-		for actual_key in matches
-			param_info = meta_data[actual_key]
-
-			println("="^80)
-			println("ℹ️  Setting Information")
-			println("="^80)
-
-			# Name
-			println("🔹 Name:         	", actual_key)
-
-			# category
-			if haskey(param_info, "category")
-				category = param_info["category"]
-				println("🔹 Category:		", category)
-			end
-
-			# Variable name
-			if haskey(param_info, "variable_name")
-				var_name = param_info["variable_name"]
-				println("🔹 Keyword argument:	", var_name)
-			end
-
-			# Type
-			if haskey(param_info, "type")
-				types = param_info["type"]
-				types_str = isa(types, AbstractArray) ? join(types, ", ") : string(types)
-				println("🔹 Type:         	", types_str)
-			end
-
-			# Unit
-			if haskey(param_info, "unit")
-				println("🔹 Unit:         	", param_info["unit"])
-			end
-
-			# Options
-			if haskey(param_info, "options")
-				options = param_info["options"]
-				options_str = isa(options, AbstractArray) ? join(options, ", ") : string(options)
-				println("🔹 Options:      	", options_str)
-			end
-
-			# Validation bounds
-			if haskey(param_info, "min_value")
-				min_value = param_info["min_value"]
-				println("🔹 Minimum value:      	", min_value)
-			end
-			if haskey(param_info, "max_value")
-				max_value = param_info["max_value"]
-				println("🔹 Maximum value:      	", max_value)
-			end
-
-			# Documentation
-			doc_url = get(param_info, "documentation", nothing)
-			if isnothing(doc_url) || doc_url == "-"
-				link = "-"
-			elseif doc_url isa String
-				link = format_link("visit", doc_url, 50, output_fmt)
-			end
-			if @isdefined link
-				println("🔹 Documentation:	", link)
-			end
-
-			# Ontology
-			context_type_iri = get(param_info, "context_type_iri", nothing)
-			if isnothing(context_type_iri) || context_type_iri == "-"
-				iri = "-"
-			elseif context_type_iri isa String
-				iri = format_link("visit", context_type_iri, 50, output_fmt)
-			end
-			if @isdefined iri
-				println("🔹 Ontology link:	", iri)
-			end
-
-			# Description
-			if haskey(param_info, "description")
-				description = param_info["description"]
-				println("🔹 Description:		", description)
-			end
-
-			println()  # Extra spacing between entries
-		end
-	end
-end
-
-
-"""
-	print_parameter_info(from_name::String)
-
-Prints detailed metadata for physical or model parameters whose names match (fully or partially) the provided `from_name` string.
-
-# Arguments
-- `from_name::String`: A case-insensitive search term used to match parameter names from the metadata registry.
-
-# Behavior
-- Loads parameter metadata using `get_parameter_meta_data()`.
-- Performs a fuzzy search for parameter names containing the given `from_name` string.
-- For each matched parameter, prints:
-  - Parameter name
-  - Description (if available)
-  - Accepted types
-  - Units
-  - List of allowed options (if any)
-  - Minimum and maximum bounds (if defined)
-  - Documentation URL (formatted using `format_link`)
-  - Ontology/context type IRI link (if provided)
-
-# Output
-- Prints the information directly to the console in a structured, readable format with aligned labels and Unicode icons.
-- If no parameters match the search, a ❌ warning message is printed.
-
-# Returns
-- Nothing (side-effect only: prints to console).
-"""
-function print_parameter_info(from_name::String)
-	# Get the metadata dictionary
-	meta_data = get_parameter_meta_data()
-	output_fmt = detect_output_format()
-
-	# Soft match: find keys containing `from_name` (case-insensitive)
-	matches = collect(filter(key -> occursin(lowercase(from_name), lowercase(key)), keys(meta_data)))
-
-	if isempty(matches)
-		println("❌ No parameters found matching: ", from_name)
-	else
-		for actual_key in matches
-			param_info = meta_data[actual_key]
-
-			println("="^80)
-			println("ℹ️  Parameter Information")
-			println("="^80)
-
-			# Name
-			println("🔹 Name:         	", actual_key)
-
-			# Type
-			if haskey(param_info, "type")
-				types = param_info["type"]
-				types_str = isa(types, AbstractArray) ? join(types, ", ") : string(types)
-				println("🔹 Type:         	", types_str)
-			end
-
-			# Unit
-			if haskey(param_info, "unit")
-				println("🔹 Unit:         	", param_info["unit"])
-			end
-
-			# Options
-			if haskey(param_info, "options")
-				options = param_info["options"]
-				options_str = isa(options, AbstractArray) ? join(options, ", ") : string(options)
-				println("🔹 Options:      	", options_str)
-			end
-
-			# Validation bounds
-			if haskey(param_info, "min_value")
-				min_value = param_info["min_value"]
-				println("🔹 Minimum value:      	", min_value)
-			end
-			if haskey(param_info, "max_value")
-				max_value = param_info["max_value"]
-				println("🔹 Maximum value:      	", max_value)
-			end
-
-			# Documentation
-			doc_url = get(param_info, "documentation", nothing)
-			if isnothing(doc_url) || doc_url == "-"
-				link = "-"
-			elseif doc_url isa String
-				link = format_link("visit", doc_url, 50, output_fmt)
-			end
-			if @isdefined link
-				println("🔹 Documentation:	", link)
-			end
-
-			# Ontology
-			context_type_iri = get(param_info, "context_type_iri", nothing)
-			if isnothing(context_type_iri) || context_type_iri == "-"
-				iri = "-"
-			elseif context_type_iri isa String
-				iri = format_link("visit", context_type_iri, 50, output_fmt)
-			end
-			if @isdefined iri
-				println("🔹 Ontology link:	", iri)
-			end
-
-			# Description
-			if haskey(param_info, "description")
-				description = param_info["description"]
-				println("🔹 Description:		", description)
-			end
-
-			println()  # Extra spacing between entries
-		end
-	end
 end
