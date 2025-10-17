@@ -40,7 +40,7 @@ propertynames(output)
 print_info(output)
 
 # To get more information on particular output variables, for example all that have concentration in their name:
-print_info("concentration", category = "OutputVariable")
+print_info("concentration", view = "OutputVariable")
 
 # As the time series, states, and metrics structures are dicts we can retrieve quantities by accessing their key. Let's for example create a simple voltage vs capacity plot.
 

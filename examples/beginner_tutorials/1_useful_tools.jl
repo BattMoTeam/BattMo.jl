@@ -30,19 +30,19 @@ print_default_input_sets()
 
 parameter_name = "OpenCircuitPotential"
 
-print_info(parameter_name; category = "CellParameters")
+print_info(parameter_name; view = "CellParameters")
 
 # An example for model or simulation settings:
 
 parameter_name = "ModelFramework"
 
-print_info(parameter_name; category = "ModelSettings")
+print_info(parameter_name; view = "ModelSettings")
 
 # An example for output variables:
 
 parameter_name = "Concentration"
 
-print_info(parameter_name; category = "OutputVariable")
+print_info(parameter_name; view = "OutputVariable")
 
 # And a general example, find variables with charge in the name.
 

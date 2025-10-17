@@ -251,8 +251,6 @@ include("plotting/makie_ext.jl")
 include("plotting/3d.jl")
 include("plotting/1d.jl")
 
-include("tools/print_info.jl")
-
 include("solver/linsolve.jl")
 
 include("grid/tensor_tools.jl")
@@ -268,6 +266,8 @@ include("solver/precondgenneral.jl")
 include("solver/sparse_utils.jl")
 include("calibration/calibration.jl")
 include("calibration/calibration_utils.jl")
+
+include("tools/print_info.jl")
 
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 @compile_workload begin

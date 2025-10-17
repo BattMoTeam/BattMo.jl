@@ -168,13 +168,11 @@ function search_parameter(ps::ParameterSet, query::String)
 	dicts_to_search = [(ps.all, [])]
 
 	while !isempty(dicts_to_search)
-
 		dict, key_path = pop!(dicts_to_search)
 
 		for (key, value) in dict
-
 			if occursin(lowercase(query), lowercase(key))
-				formatted_key_path = "[" * join(vcat(key_path, key), "][") * "]"
+				formatted_key_path = join(["[ \"$(s)\" ]" for s in vcat(key_path, key)], "")
 				if !(value isa Dict)
 					push!(search_matches, formatted_key_path * " => " * string(value))
 				end
@@ -185,8 +183,20 @@ function search_parameter(ps::ParameterSet, query::String)
 		end
 	end
 
-	return isempty(search_matches) ? nothing : search_matches
+	if isempty(search_matches)
+		println("No matches found.")
+
+	else
+		println("")
+		println("Parameters")
+		println("------------------")
+
+		foreach(println, search_matches)
+
+	end
 end
+
+
 
 ###########################################
 # Define concrete types from ParameterSet.

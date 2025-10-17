@@ -71,7 +71,7 @@ plot_dashboard(output)
 # We can see from the plot that the time resolution is way too low to capture the dynamics of the drive cycle.
 # We can change the time resolution by modifying the simulation settings. Let's see which simulation setting is available that has to do with time.
 
-print_info("time"; category = "SimulationSettings")
+print_info("time"; view = "SimulationSettings")
 
 # We can see that the time step can be controlled by TimeStepDuration.
 
@@ -94,11 +94,11 @@ plot_dashboard(output; plot_type = "line")
 # This is because the grid resolution of the negative and positive electrode are too low to capture the concentration gradient.
 # We can change the grid resolution by modifying the number of grid points in the simulation settings. Let's see which simulation setting is available that changes the negative and positive electrode coating thickness number of grid points.
 
-print_info("PositiveElectrode"; category = "SimulationSettings")
+print_info("PositiveElectrode"; view = "SimulationSettings")
 
 # And the negative electrode grid resolution.
 
-print_info("NegativeElectrode"; category = "SimulationSettings")
+print_info("NegativeElectrode"; view = "SimulationSettings")
 
 # We can see that the grid resolutions can be controlled by PositiveElectrodeCoatingGridPoints and NegativeElectrodeCoatingGridPoints.
 

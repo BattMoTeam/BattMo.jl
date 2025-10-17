@@ -8,14 +8,18 @@ function print_info(output::SimulationOutput)
 	return print_overview(output)
 end
 
-function print_info(from_name::String; category::Union{Nothing, String} = nothing)
+function print_info(calibration::AbstractCalibration)
+	return print_calibration_overview(calibration)
+end
+
+function print_info(from_name::String; view::Union{Nothing, String} = nothing)
 	"""
 	Print detailed information about parameters, settings, or output variables,
-	optionally filtered by category. All values are aligned.
+	optionally filtered by view. All values are aligned.
 	"""
 
-	# --- Map category → (metadata function, title, emoji) ---
-	category_map = Dict(
+	# --- Map view → (metadata function, title, emoji) ---
+	view_map = Dict(
 		"CellParameters"     => (get_cell_parameters_meta_data, "Cell Parameter: ", "🔋"),
 		"CyclingProtocol"    => (get_cycling_protocol_meta_data, "Cycling Protocol: ", "🚴"),
 		"ModelSettings"      => (get_model_settings_meta_data, "Model Setting: ", "🕸️"),
@@ -24,18 +28,18 @@ function print_info(from_name::String; category::Union{Nothing, String} = nothin
 		"OutputVariable"     => (get_output_variables_meta_data, "Output Variable: ", "📈"),
 	)
 
-	# Validate category
-	if !isnothing(category) && !haskey(category_map, category)
-		error("❌ Invalid category '$category'. Must be one of: " * join(keys(category_map), ", "))
+	# Validate view
+	if !isnothing(view) && !haskey(view_map, view)
+		error("❌ Invalid view '$view'. Must be one of: " * join(keys(view_map), ", "))
 	end
 
 	output_fmt = detect_output_format()
-	categories_to_search = isnothing(category) ? collect(keys(category_map)) : [category]
+	categories_to_search = isnothing(view) ? collect(keys(view_map)) : [view]
 
 	# Accumulate matches
 	all_matches = Dict{String, Vector{String}}()
 	for cat in categories_to_search
-		get_meta_data, _, _ = category_map[cat]
+		get_meta_data, _, _ = view_map[cat]
 		meta_data = get_meta_data()
 		matches = collect(filter(k -> occursin(lowercase(from_name), lowercase(k)), keys(meta_data)))
 		if !isempty(matches)
@@ -53,7 +57,7 @@ function print_info(from_name::String; category::Union{Nothing, String} = nothin
 	indent = "    "
 
 	for cat in sort(collect(keys(all_matches)))
-		get_meta_data, title, emoji = category_map[cat]
+		get_meta_data, title, emoji = view_map[cat]
 		meta_data = get_meta_data()
 		matches = all_matches[cat]
 
