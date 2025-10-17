@@ -5,9 +5,9 @@ using Jutul, BattMo, GLMakie
 
 # We use the SEI model presented in [bolay2022](@cite). We use the json data given in [bolay.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/bolay.json#L157) which contains the parameters for the SEI layer. 
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCCV")
-simulation_settings = load_simulation_settings(; from_default_set = "P2D")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cccv")
+simulation_settings = load_simulation_settings(; from_default_set = "p2d")
 
 nothing # hide
 

@@ -118,14 +118,14 @@ const p3 = Polynomial(poly_param[1:end, 3])
 	return fact * c * (p1(c) + p2(c) * T + p3(c) * T^2)^2
 end
 
-@inline function computeElectrolyteConductivity_Chen2020(c::Real, T::Real)
+@inline function computeElectrolyteConductivity_chen_2020(c::Real, T::Real)
 	""" Compute the electrolyte conductivity as a function of concentration
 	"""
 	c = c / 1000
 	return 0.1297 * c^3 - 2.51 * c^(1.5) + 3.329 * c
 end
 
-@inline function computeElectrolyteConductivity_Xu2015(c::Real, T::Real)
+@inline function computeElectrolyteConductivity_xu_2015(c::Real, T::Real)
 	""" Compute the electrolyte conductivity as a function of concentration
 	"""
 	conductivityFactor = 1e-4
@@ -162,7 +162,7 @@ const Tgi = [229 5.0]
 	)
 end
 
-@inline function computeDiffusionCoefficient_Chen2020(c::Real, T::Real)
+@inline function computeDiffusionCoefficient_chen_2020(c::Real, T::Real)
 	""" Compute the diffusion coefficient as a function of concentration
 	"""
 	c = c / 1000
@@ -170,11 +170,11 @@ end
 end
 
 
-@inline function computeDiffusionCoefficient_Xu2015(c::Real, T::Real)
+@inline function computeDiffusionCoefficient_xu_2015(c::Real, T::Real)
 	""" Compute the diffusion coefficient as a function of concentration
 	"""
 	# Calculate diffusion coefficients constant for the diffusion coefficient calculation
-	cnst = [                                                                                                                                                -4.43 -54
+	cnst = [                                                                                                                                                        -4.43 -54
 		-0.22 0.0]
 
 	Tgi = [229 5.0]

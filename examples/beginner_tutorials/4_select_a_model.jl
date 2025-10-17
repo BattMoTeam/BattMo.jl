@@ -3,16 +3,16 @@
 # As mentioned in the first tutorial, a model can be thought as a mathematical implementation of the electrochemical and transport phenomena occuring in a real battery cell. 
 # The implementation consist of a system of partial differential equations and their corresponding parameters, constants, boundary conditions and assumptions. 
 
-# The default Lithium-Ion Battery Model corresponds to a basic P2D model, where neither current collectors, degradation nor thermal effects are considered. 
+# The default Lithium-Ion Battery Model corresponds to a basic p2d model, where neither current collectors, degradation nor thermal effects are considered. 
 # BattMo has implemented several variants of the Lithium-Ion Battery Model, which can be accessed by *configuring the model object*. In this tutorial, we’ll configure a
-# P2D model with degradation driven by SEI (Solid Electrolyte Interphase) growth.
+# p2d model with degradation driven by SEI (Solid Electrolyte Interphase) growth.
 
 # ### Load BattMo and Model Settings
 using BattMo, GLMakie
 
-# Let’s begin by loading the default model settings for a P2D simulation. This will return a ModelSettings object:
+# Let’s begin by loading the default model settings for a p2d simulation. This will return a ModelSettings object:
 
-model_settings = load_model_settings(; from_default_set = "P2D")
+model_settings = load_model_settings(; from_default_set = "p2d")
 nothing #hide 
 
 # We can inspect all current settings with:
@@ -45,8 +45,8 @@ model = LithiumIonBattery(; model_settings);
 
 # We get a warning that a validation issue has been encountered. For now we ignore it:
 
-cell_parameters_sei = load_cell_parameters(; from_default_set = "Chen2020")
-cccv_protocol = load_cycling_protocol(; from_default_set = "CCCV")
+cell_parameters_sei = load_cell_parameters(; from_default_set = "chen_2020")
+cccv_protocol = load_cycling_protocol(; from_default_set = "cccv")
 
 try  # hide
 	sim = Simulation(model, cell_parameters_sei, cccv_protocol)

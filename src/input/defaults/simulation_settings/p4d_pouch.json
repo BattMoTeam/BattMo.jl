@@ -1,6 +1,6 @@
 {
     "Metadata": {
-        "Title": "P4D_pouch",
+        "Title": "p4d_pouch",
         "Description": "Default simulation settings for a P4D pouch simulation including a current ramp up, current collectors.",
         "Models": {
             "ModelFramework": [

@@ -6,9 +6,9 @@ using Test
 
 	@test begin
 
-		name = "Chen2020"
+		name = "chen_2020"
 		cell_parameters = load_cell_parameters(; from_default_set = name)
-		cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+		cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 		model_setup = LithiumIonBattery()
 

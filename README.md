@@ -39,8 +39,8 @@ using BattMo, GLMakie
 # the cell parameter set from a NMC811 vs Graphite-SiOx cell whose parameters were determined in the [Chen 2020 paper](https://doi.org/10.1149/1945-7111/ab9050). 
 # We also load an example cycling protocol for a simple Constant Current Discharge.
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 # Next, we select the Lithium-Ion Battery Model setup with default model settings. 
 # The default Lithium-Ion Battery Model Setup selected below corresponds to a basic P2D model setup, where neither current collectors nor thermal effects are considered.
@@ -86,10 +86,10 @@ using BattMo
 # the cell parameter set from of a commercial Type LP2770120 prismatic LiFePO4/graphite cell whose parameters were determined in the [xU 2015 paper](https://doi.org/10.1016/j.energy.2014.11.073). 
 # We also load an example cycling protocol for a simple Constant Current Discharge.
 
-cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
-model_settings = load_model_settings(; from_default_set = "P4D_pouch")
-simulation_settings = load_simulation_settings(; from_default_set = "P4D_pouch")
+cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+model_settings = load_model_settings(; from_default_set = "p4d_pouch")
+simulation_settings = load_simulation_settings(; from_default_set = "p4d_pouch")
 
 model_setup = LithiumIonBattery(; model_settings)
 

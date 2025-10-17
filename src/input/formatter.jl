@@ -385,7 +385,7 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 	#########################################
 	# CyclingProtocol
 
-	if params["Control"]["controlPolicy"] == "CCDischarge"
+	if params["Control"]["controlPolicy"] == "cc_discharge"
 		protocol = "CC"
 		init_prot = "discharging"
 		n = 0
@@ -407,7 +407,7 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 		"InitialControl" => init_prot,
 	)
 
-	if cycling_protocol["Protocol"] == "CCCV"
+	if cycling_protocol["Protocol"] == "cccv"
 		cycling_protocol["CRate"] = params["Control"]["CRate"]
 		cycling_protocol["CurrentChangeLimit"] = params["Control"]["dIdtLimit"]
 		cycling_protocol["VoltageChangeLimit"] = params["Control"]["dEdtLimit"]
@@ -635,18 +635,18 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 		end
 		if cycling_protocol["TotalNumberOfCycles"] == 0
 			if cycling_protocol["InitialControl"] == "discharging"
-				control = "CCDischarge"
+				control = "cc_discharge"
 			else
-				control = "CCCharge"
+				control = "cc_charge"
 
 			end
 		else
-			control = "CCCycling"
+			control = "cc_cycling"
 
 		end
-	elseif cycling_protocol["Protocol"] == "CCCV"
+	elseif cycling_protocol["Protocol"] == "cccv"
 		use_cv_switch = true
-		control = "CCCV"
+		control = "cccv"
 
 	elseif cycling_protocol["Protocol"] == "Function"
 		use_cv_switch = nothing

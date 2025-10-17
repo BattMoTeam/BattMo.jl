@@ -7,10 +7,10 @@
             "type": "string",
             "enum": [
                 "CC",
-                "CCCV",
+                "cccv",
                 "Function"
             ],
-            "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('CCCV'), or a custom Function."
+            "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('cccv'), or a custom Function."
         },
         "TotalTime": {
             "type": "number",
@@ -212,7 +212,7 @@
             "if": {
                 "properties": {
                     "Protocol": {
-                        "const": "CCCV"
+                        "const": "cccv"
                     }
                 }
             },

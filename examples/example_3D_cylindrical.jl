@@ -5,10 +5,10 @@
 using BattMo, Jutul, GLMakie
 
 # ## Load the cell parameters
-cell_parameters     = load_cell_parameters(; from_default_set = "Chen2020")
-cycling_protocol    = load_cycling_protocol(; from_default_set = "CCDischarge")
-model_settings      = load_model_settings(; from_default_set = "P4D_cylindrical")
-simulation_settings = load_simulation_settings(; from_default_set = "P4D_cylindrical")
+cell_parameters     = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol    = load_cycling_protocol(; from_default_set = "cc_discharge")
+model_settings      = load_model_settings(; from_default_set = "p4d_cylindrical")
+simulation_settings = load_simulation_settings(; from_default_set = "p4d_cylindrical")
 nothing #hide
 
 # ## Set up the model
@@ -112,10 +112,10 @@ fig #hide
 
 # We reload the original parameters
 
-cell_parameters     = load_cell_parameters(; from_default_set = "Chen2020")
-cycling_protocol    = load_cycling_protocol(; from_default_set = "CCDischarge")
-model_settings      = load_model_settings(; from_default_set = "P4D_cylindrical")
-simulation_settings = load_simulation_settings(; from_default_set = "P4D_cylindrical")
+cell_parameters     = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol    = load_cycling_protocol(; from_default_set = "cc_discharge")
+model_settings      = load_model_settings(; from_default_set = "p4d_cylindrical")
+simulation_settings = load_simulation_settings(; from_default_set = "p4d_cylindrical")
 
 # We adjust the parameters so that the simulation in this example is not too long (around a couple of minutes)
 

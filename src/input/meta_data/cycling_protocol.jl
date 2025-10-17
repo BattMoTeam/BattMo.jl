@@ -5,10 +5,10 @@ function get_cycling_protocol_meta_data()
 	meta_data = Dict(
 		"Protocol" => Dict(
 			"type" => String,
-			"options" => ["CC", "CCCV", "Function"],
+			"options" => ["CC", "cccv", "Function"],
 			"context_type" => "Protocol",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_d3e2d213_d078_4b9a_8beb_62f063e57d69",
-			"description" => """Type of cycling procedure used to cycle a cell. For instance: Constant Current ("CC"), Constant Current - Constant Voltage ("CCCV").""",
+			"description" => """Type of cycling procedure used to cycle a cell. For instance: Constant Current ("CC"), Constant Current - Constant Voltage ("cccv").""",
 		),
 		"FunctionName" => Dict(
 			"type" => String,

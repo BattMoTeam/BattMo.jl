@@ -110,7 +110,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 		)
 
 
-	elseif protocol == "CCCV"
+	elseif protocol == "cccv"
 
 		policy = CyclingCVPolicy(cycling_protocol["LowerVoltageLimit"],
 			cycling_protocol["UpperVoltageLimit"],
@@ -693,7 +693,7 @@ function set_parameters(model::IntercalationBattery, input
 		con = Constants()
 		parameters[:Control] = setup_parameters(multimodel[:Control])
 
-	elseif protocol == "CCCV"
+	elseif protocol == "cccv"
 
 		cap = computeCellCapacity(multimodel)
 		con = Constants()

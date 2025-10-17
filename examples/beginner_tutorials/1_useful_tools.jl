@@ -72,7 +72,7 @@ nothing # hide
 # ## Get quick information on a cell parameter set
 
 # Let's load a default cell parameter set.
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
 nothing # hide
 
 # You can easily print some handy quantities and metrics for debugging:
