@@ -1,6 +1,6 @@
 {
     "Metadata": {
-        "Title": "xu_2015",
+        "Title": "Xu2015",
         "Source": "https://doi.org/10.1016/j.energy.2014.11.073",
         "Description": "Parameter set of a commercial Type LP2770120 prismatic LiFePO4/graphite cell, for an electrochemical pseudo-two-dimensional (P2D) model.",
         "Models": {
@@ -43,19 +43,19 @@
             "ActivationEnergyOfDiffusion": 20000,
             "OpenCircuitPotential": {
                 "FunctionName": "open_circuit_potential_lfp_Xu_2015",
-                "FilePath": "function_parameters_xu_2015.jl"
+                "FilePath": "function_parameters_Xu2015.jl"
             },
             "MaximumConcentration": 26390,
             "VolumetricSurfaceArea": 1878260.0,
             "DiffusionCoefficient": 1.25e-15,
             "ParticleRadius": 1.15e-6,
-            "Density": 3450,
+            "Density": 1500,
             "ElectronicConductivity": 0.01,
             "ChargeTransferCoefficient": 0.5
         },
         "Coating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 1949,
+            "EffectiveDensity": 1080,
             "Thickness": 92.0e-6
         },
         "ConductiveAdditive": {
@@ -97,19 +97,19 @@
             "ActivationEnergyOfDiffusion": 4000,
             "OpenCircuitPotential": {
                 "FunctionName": "open_circuit_potential_graphite_Xu_2015",
-                "FilePath": "function_parameters_xu_2015.jl"
+                "FilePath": "function_parameters_Xu2015.jl"
             },
             "MaximumConcentration": 31540,
             "VolumetricSurfaceArea": 142373,
             "DiffusionCoefficient": 3.9e-14,
             "ParticleRadius": 14.75e-6,
-            "Density": 1852,
+            "Density": 2660,
             "ElectronicConductivity": 215.0,
             "ChargeTransferCoefficient": 0.5
         },
         "Coating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 814,
+            "EffectiveDensity": 1862,
             "Thickness": 59e-6
         },
         "ConductiveAdditive": {
