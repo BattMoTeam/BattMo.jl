@@ -1,17 +1,33 @@
-[![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://battmoteam.github.io/BattMo.jl/dev/)
-[![Build Status](https://github.com/battmoteam/BattMo.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/battmoteam/BattMo.jl/actions/workflows/CI.yml?query=branch%3Amain)
-<a href="https://doi.org/10.5281/zenodo.17313586"><img src="https://zenodo.org/badge/478088752.svg" alt="DOI"></a>
+[![Logo](https://github.com/BattMoTeam/visual-identity/blob/1bc87b07605d77fb3faa788c82f06ec2735ed31f/logos/battmo_logo_side.png)](https://github.com/BattMoTeam/BattMo.jl)
 
-# BattMo.jl is a framework for continuum modelling of lithium-ion batteries written in Julia
+---
+
+<p align="center">
+  <a href="https://battmoteam.github.io/BattMo.jl/dev/">
+    <img src="https://img.shields.io/badge/docs-dev-blue.svg" alt="Documentation">
+  </a>
+  <a href="https://github.com/battmoteam/BattMo.jl/actions/workflows/CI.yml?query=branch%3Amain">
+    <img src="https://github.com/battmoteam/BattMo.jl/actions/workflows/CI.yml/badge.svg?branch=main" alt="Build Status">
+  </a>
+  <a href="https://doi.org/10.5281/zenodo.17313586">
+    <img src="https://zenodo.org/badge/478088752.svg" alt="DOI">
+  </a>
+</p>
+
+# BattMo.jl
+
+The Battery Modelling Toolbox (**BattMo**) is a resource for continuum modelling of electrochemical devices in MATLAB. The initial development features a pseudo X-dimensional (PXD) framework for the Doyle-Fuller-Newman model of lithium-ion battery cells. This is currently an early release that implements a subset of features from the [MATLAB version of BattMo](https://github.com/BattMoTeam/BattMo) with improved numerical performance. **BattMo.jl** is based on [Jutul.jl](https://github.com/sintefmath/Jutul.jl) and uses finite-volume discretizations and automatic differentiation to simulate models in 1D, 2D and 3D.
+
 > [!TIP]
 > Please see the docs for more details, tutorials and examples: https://battmoteam.github.io/BattMo.jl/dev/
 
+## BattMo Family
+BattMo can be used through several interfaces:
 
-
-The Battery Modelling Toolbox (**BattMo**) is a resource for continuum modelling of electrochemical devices in MATLAB. The initial development features a pseudo X-dimensional (PXD) framework for the Doyle-Fuller-Newman model of lithium-ion battery cells. This is currently a early release that implements a subset of features from the [MATLAB version of BattMo](https://github.com/BattMoTeam/BattMo) with improved numerical performance. **BattMo.jl** is based on [Jutul.jl](https://github.com/sintefmath/Jutul.jl) and uses finite-volume discretizations and automatic differentiation to simulate models in 1D, 2D and 3D.
-
-
-<img src="docs/src/assets/battmologo_text.png" style="margin-left: 5cm" width="300px">
+- [MATLAB](https://github.com/BattMoTeam/BattMo)
+- [Julia](https://github.com/BattMoTeam/BattMo.jl)
+- [Python](https://github.com/BattMoTeam/PyBattMo)
+- [Web app](https://app.batterymodel.com/)
 
 ## Installation
 
@@ -21,7 +37,7 @@ This package is registered in the General Julia registry. To add it to your Juli
 using Pkg; Pkg.add("BattMo")
 ```
 
-### Getting started
+## Getting started
 
 For an example of usage, you can add the GLMakie plotting package:
 
@@ -80,7 +96,7 @@ This should produce the following plot:
 Run a 3D model and plot the results in an interactive viewer.
 
 ```julia
-using BattMo
+using BattMo, GLMakie
 
 # For our example, we load 
 # the cell parameter set from of a commercial Type LP2770120 prismatic LiFePO4/graphite cell whose parameters were determined in the [xU 2015 paper](https://doi.org/10.1016/j.energy.2014.11.073). 
