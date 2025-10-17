@@ -7,8 +7,8 @@
 
 using BattMo, GLMakie, Printf
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
-cc_discharge_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cc_discharge_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 model = LithiumIonBattery()
 #%%

@@ -817,7 +817,7 @@ function setup_timesteps(input;
 			timesteps = repeat([dt], n)
 		end
 
-	elseif protocol == "CCCV"
+	elseif protocol == "cccv"
 
 		ncycles = cycling_protocol["TotalNumberOfCycles"]
 		DRate = cycling_protocol["DRate"]

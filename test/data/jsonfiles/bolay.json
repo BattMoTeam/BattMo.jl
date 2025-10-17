@@ -1,6 +1,6 @@
 {
   "Control": {
-    "controlPolicy": "CCCV",
+    "controlPolicy": "cccv",
     "initialControl": "discharging",
     "numberOfCycles": 4,
     "CRate": 1.0,

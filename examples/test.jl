@@ -1,7 +1,7 @@
 using BattMo, GLMakie
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chayambuka2022")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+cell_parameters = load_cell_parameters(; from_default_set = "chayambuka_2022")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 model = SodiumIonBattery()
 

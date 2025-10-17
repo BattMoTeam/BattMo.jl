@@ -6,8 +6,8 @@
 
 using BattMo, GLMakie
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 nothing # hide
 
 model = LithiumIonBattery()

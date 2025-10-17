@@ -1,6 +1,6 @@
 {
     "Metadata": {
-        "Title": "P2D",
+        "Title": "p2d",
         "Description": "Default simulation settings for a P2D simulation including a current ramp up, excluding current collectors and SEI effects.",
         "Models": {
             "ModelFramework": "P2D",
