@@ -125,8 +125,8 @@ function quick_cell_check(cell::CellParameters; cell_2::Union{Nothing, CellParam
 			"Electrolyte Mass" => compute_electrolyte_mass(cell),
 			"Cell Mass" => compute_cell_mass(cell),
 			"Cell Volume" => compute_cell_volume(cell),
-			"Positive Electrode Mass Loading" => compute_electrode_mass_loading(cell, "PositiveElectrode"),
-			"Negative Electrode Mass Loading" => compute_electrode_mass_loading(cell, "NegativeElectrode"),
+			"Positive Electrode Mass Loading" => compute_electrode_mass_loading(cell, "PositiveElectrode") * 100, # kg/m^2 to mg/cm^2
+			"Negative Electrode Mass Loading" => compute_electrode_mass_loading(cell, "NegativeElectrode") * 100, # kg/m^2 to mg/cm^2
 			"Cell Theoretical Capacity" => compute_cell_theoretical_capacity(cell),
 			"Cell N:P Ratio" => compute_np_ratio(cell),
 		)
