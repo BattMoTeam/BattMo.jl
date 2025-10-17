@@ -212,7 +212,7 @@
             "if": {
                 "properties": {
                     "Protocol": {
-                        "const": "cccv"
+                        "const": "CCCV"
                     }
                 }
             },
