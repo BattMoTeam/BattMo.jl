@@ -22,7 +22,7 @@ using Test
 		print_submodels()
 		print_info("GridPoints")
 		print_info("Concentration")
-		print_info("Potential"; category = "OutputVariable")
+		print_info("Potential"; view = "OutputVariable")
 		print_info(full_input)
 		print_info(cell_parameters)
 		print_info(output)
