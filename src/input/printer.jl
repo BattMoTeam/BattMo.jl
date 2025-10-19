@@ -42,7 +42,7 @@ function print_overview(input::S) where {S <: ParameterSet}
 	collect_parameters!(input_dict)
 
 	# Layout widths
-	par_space = isa(input, FullSimulationInput) ? 95 : 80
+	par_space = isa(input, FullSimulationInput) ? 105 : 90
 	val_space = 30
 	unit_space = 20
 	type_space = 20
@@ -76,7 +76,8 @@ function print_overview(input::S) where {S <: ParameterSet}
 	end
 
 	for p in params
-		full_path = join(p.path, " / ")
+		# full_path = join(p.path, " / ")
+		full_path = join(["[ \"$(s)\" ]" for s in p.path], "")
 		value_str = format_value(p.value)
 		info = get(meta_data, p.path[end], Dict())
 		unit = get(info, "unit", "N/A")

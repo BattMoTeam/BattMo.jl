@@ -1,6 +1,6 @@
 {
   "Control": {
-    "controlPolicy": "cccv",
+    "controlPolicy": "CCCV",
     "initialControl": "discharging",
     "numberOfCycles": 4,
     "CRate": 1.0,
@@ -53,7 +53,7 @@
       "nominalConcentration": 1000
     },
     "bruggemanCoefficient": 1.5,
-    "density" : 1200
+    "density": 1200
   },
   "PositiveElectrode": {
     "Coating": {

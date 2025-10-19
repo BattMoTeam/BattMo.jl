@@ -1,6 +1,6 @@
 
 
-# Simulation-Dependent Input Parameters
+# Functional Input Parameters
 
 ## Overview
 
@@ -42,17 +42,56 @@ The string is parsed into a function during initialization and can be evaluated 
 
 **Supported variables:**
 
-| Parameter                 | Supported variables  | Battery component |
-|---------------------------|----------------------|-------------------|
-| `OpenCircuitPotential`    | `c,cmax,T,refT`      | `ActiveMaterial`  |
-| `IonicConductivity`       | `c,T`                | `Electrolyte`     |
-| `DiffusionCoefficient`    | `c,T`                | `Electrolyte`     |
+| Parameter                 | Supported variable order  | Battery component |
+|---------------------------|---------------------------|-------------------|
+| `OpenCircuitPotential`    | `c,T,refT,cmax`           | `ActiveMaterial`  |
+| `DiffusionCoefficient`    | `c,T,refT,cmax`           | `ActiveMaterial`  |
+| `ReactionRateCoefficient` | `c,T,refT,cmax`           | `ActiveMaterial`  |
+| `IonicConductivity`       | `c,T`                     | `Electrolyte`     |
+| `DiffusionCoefficient`    | `c,T`                     | `Electrolyte`     |
 
 
 
+### 3. `Dict` — Julia Function 
+
+The parameter can aslo be provided as a function. The function can be passed to BattMo by either importing the function into the main script and writing down the function name within the input dict:
+
+**Example:**
+
+```Julia
+function calculate_diffusion_coefficient(c,T,refT,cmax)
+    return diff_coeff_interpolation(c,T,refT,cmax)
+end
+```
+
+```JSON
+"DiffusionCoefficient": {
+    "FunctionName": "calculate_diffusion_coefficient"
+}
+```
+
+or write the julia function in a separate Julia script and pass both the function name and the file path relative to the json input file within the input file:
+
+```JSON
+"DiffusionCoefficient": {
+    "FunctionName": "calculate_diffusion_coefficient",
+    "FilePath": "diffusion_coefficient_function.jl"
+}
+```
+
+**Supported variables:**
+
+| Parameter                 | Supported variable order  | Battery component |
+|---------------------------|---------------------------|-------------------|
+| `OpenCircuitPotential`    | `c,T,refT,cmax`           | `ActiveMaterial`  |
+| `DiffusionCoefficient`    | `c,T,refT,cmax`           | `ActiveMaterial`  |
+| `ReactionRateCoefficient` | `c,T,refT,cmax`           | `ActiveMaterial`  |
+| `IonicConductivity`       | `c,T`                     | `Electrolyte`     |
+| `DiffusionCoefficient`    | `c,T`                     | `Electrolyte`     |
 
 
-### 3. `Dict` — Tabular data
+
+### 4. `Dict` — Tabular Data
 
 For parameters like OCV curves, a dictionary with pre-tabulated data can be used. The dictionary must contain two keys:
 
@@ -76,5 +115,7 @@ The simulation uses interpolation to evaluate the y-quantity at any given x duri
 | Parameter                 | Supported x data                  | Battery component |
 |---------------------------|-----------------------------------|-------------------|
 | `OpenCircuitPotential`    | `StoichiometricCoefficient`       | `ActiveMaterial`  |
+| `DiffusionCoefficient`    | `StoichiometricCoefficient`       | `ActiveMaterial`  |
+| `ReactionRateCoefficient` | `StoichiometricCoefficient`       | `ActiveMaterial`  |
 | `IonicConductivity`       | `Concentration`                   | `Electrolyte`     |
 | `DiffusionCoefficient`    | `Concentration`                   | `Electrolyte`     |
