@@ -72,7 +72,7 @@ free_calibration_parameter!(vc05,
 	lower_bound = 0.0, upper_bound = 1.0)
 free_calibration_parameter!(vc05,
 	["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
-	lower_bound = 0.0, upper_bound = 1.0)
+	lower_bound = 0.0, upper_bound = 1.0);
 
 # "StoichiometricCoefficientAtSOC0" at both electrodes
 free_calibration_parameter!(vc05,
@@ -80,7 +80,7 @@ free_calibration_parameter!(vc05,
 	lower_bound = 0.0, upper_bound = 1.0)
 free_calibration_parameter!(vc05,
 	["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
-	lower_bound = 0.0, upper_bound = 1.0)
+	lower_bound = 0.0, upper_bound = 1.0);
 
 #  "MaximumConcentration" of both electrodes
 free_calibration_parameter!(vc05,
@@ -152,7 +152,7 @@ free_calibration_parameter!(vc2,
 free_calibration_parameter!(vc2,
 	["PositiveElectrode", "ActiveMaterial", "DiffusionCoefficient"];
 	lower_bound = 1e-16, upper_bound = 1e-12)
-print_calibration_overview(vc2)
+print_calibration_overview(vc2);
 
 # ### Solve the second calibration problem
 cell_parameters_calibrated2, = solve(vc2);

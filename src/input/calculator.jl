@@ -1,14 +1,36 @@
 
-using Optim
+export calculate_mass_fractions_and_effective_density_from_volume_fractions!, infer_binder_additive_by_np_ratio!, calculate_effective_density
 
+function calculate_effective_density(input::CellParameters, ne_vf, pe_vf)
+
+	ne_am_density = input["NegativeElectrode"]["ActiveMaterial"]["Density"]
+	pe_am_density = input["PositiveElectrode"]["ActiveMaterial"]["Density"]
+	ne_b_density = input["NegativeElectrode"]["Binder"]["Density"]
+	pe_b_density = input["PositiveElectrode"]["Binder"]["Density"]
+	ne_add_density = input["NegativeElectrode"]["ConductiveAdditive"]["Density"]
+	pe_add_density = input["PositiveElectrode"]["ConductiveAdditive"]["Density"]
+
+	ne_am_mf = input["NegativeElectrode"]["ActiveMaterial"]["MassFraction"]
+	pe_am_mf = input["PositiveElectrode"]["ActiveMaterial"]["MassFraction"]
+	ne_b_mf = input["NegativeElectrode"]["Binder"]["MassFraction"]
+	pe_b_mf = input["PositiveElectrode"]["Binder"]["MassFraction"]
+	ne_add_mf = input["NegativeElectrode"]["ConductiveAdditive"]["MassFraction"]
+	pe_add_mf = input["PositiveElectrode"]["ConductiveAdditive"]["MassFraction"]
+
+	ne_effective_density = ne_vf * (ne_am_mf * ne_am_density + ne_b_mf * ne_b_density + ne_add_mf * ne_add_density)
+	pe_effective_density = pe_vf * (pe_am_mf * pe_am_density + pe_b_mf * ne_b_density + pe_add_mf * pe_add_density)
+
+	return ne_effective_density, pe_effective_density
+
+end
 function calculate_mass_fractions_and_effective_density_from_volume_fractions!(input::CellParameters, pe_vf, ne_vf, ne_am_vf, pe_am_vf; ne_b_vf = nothing, pe_b_vf = nothing, ne_add_vf = nothing, pe_add_vf = nothing)
 
-	ne_am_density = input["NegativeElectrode"]["ActiveMaterial"]["density"]
-	pe_am_density = input["PositiveElectrode"]["ActiveMaterial"]["density"]
-	ne_b_density = input["NegativeElectrode"]["Binder"]["density"]
-	pe_b_density = input["PositiveElectrode"]["Binder"]["density"]
-	ne_add_density = input["NegativeElectrode"]["ConductiveAdditive"]["density"]
-	pe_add_density = input["PositiveElectrode"]["ConductiveAdditive"]["density"]
+	ne_am_density = input["NegativeElectrode"]["ActiveMaterial"]["Density"]
+	pe_am_density = input["PositiveElectrode"]["ActiveMaterial"]["Density"]
+	ne_b_density = input["NegativeElectrode"]["Binder"]["Density"]
+	pe_b_density = input["PositiveElectrode"]["Binder"]["Density"]
+	ne_add_density = input["NegativeElectrode"]["ConductiveAdditive"]["Density"]
+	pe_add_density = input["PositiveElectrode"]["ConductiveAdditive"]["Density"]
 
 
 	# --- Negative electrode mass fractions ---
@@ -32,8 +54,8 @@ function calculate_mass_fractions_and_effective_density_from_volume_fractions!(i
 	pe_add_mf = pe_mass_Add / pe_mass_sum
 
 	# --- Effective densities ---
-	ne_effective_density = 1.0 / (ne_am_vf / ne_am_density + ne_b_vf / ne_b_density + ne_add_vf / ne_add_density)
-	pe_effective_density = 1.0 / (pe_am_vf / pe_am_density + pe_b_vf / pe_b_density + pe_add_vf / pe_add_density)
+	ne_effective_density = ne_vf * (ne_am_mf * ne_am_density + ne_b_mf * ne_b_density + ne_add_mf * ne_add_density)
+	pe_effective_density = pe_vf * (pe_am_mf * pe_am_density + pe_b_mf * ne_b_density + pe_add_mf * pe_add_density)
 
 	# Store results back into the input dictionary
 	input["NegativeElectrode"]["ActiveMaterial"]["MassFraction"] = ne_am_mf
@@ -43,8 +65,8 @@ function calculate_mass_fractions_and_effective_density_from_volume_fractions!(i
 	input["NegativeElectrode"]["ConductiveAdditive"]["MassFraction"] = ne_add_mf
 	input["PositiveElectrode"]["ConductiveAdditive"]["MassFraction"] = pe_add_mf
 
-	input["NegativeElectrode"]["effective_density"] = ne_effective_density
-	input["PositiveElectrode"]["effective_density"] = pe_effective_density
+	input["NegativeElectrode"]["Coating"]["EffectiveDensity"] = ne_effective_density
+	input["PositiveElectrode"]["Coating"]["EffectiveDensity"] = pe_effective_density
 
 	return input
 
@@ -87,7 +109,7 @@ function infer_binder_additive_by_np_ratio!(
 	end
 
 	# Two-variable bounded optimization
-	res = optimize(objective, [0.0, 0.0], [1.0, 1.0], [0.5, 0.5], Fminbox(BFGS()))
+	res = Optim.optimize(objective, [0.0, 0.0], [1.0, 1.0], [0.5, 0.5], Fminbox(BFGS()))
 	x_opt = Optim.minimizer(res)
 	x_ne_opt, x_pe_opt = x_opt
 
@@ -106,7 +128,7 @@ function infer_binder_additive_by_np_ratio!(
 		ne_add_vf = ne_add_vf, pe_add_vf = pe_add_vf,
 	)
 
-	np_ratio_final = n_p_ratio(input)
+	np_ratio_final = compute_np_ratio(input)
 
 	return input, Dict(
 		"x_ne" => x_ne_opt,
