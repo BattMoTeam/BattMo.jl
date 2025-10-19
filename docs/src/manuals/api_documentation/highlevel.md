@@ -10,6 +10,7 @@ CellParameters
 CyclingProtocol
 ModelSettings
 SimulationSettings
+SolverSettings
 ```
 
 ## Read input

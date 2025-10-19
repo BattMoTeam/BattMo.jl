@@ -817,7 +817,7 @@ function setup_timesteps(input;
 			timesteps = repeat([dt], n)
 		end
 
-	elseif protocol == "cccv"
+	elseif protocol == "CCCV"
 
 		ncycles = cycling_protocol["TotalNumberOfCycles"]
 		DRate = cycling_protocol["DRate"]
@@ -854,7 +854,7 @@ function compute_rampup_timesteps(time::Real, dt::Real, n::Integer = 8)
 	dt_init = [dt / 2^k for k in ind]
 	cs_time = cumsum(dt_init)
 	if any(cs_time .> time)
-		dt_init = dt_init[cs_time .< time]
+		dt_init = dt_init[cs_time.<time]
 	end
 	dt_left = time .- sum(dt_init)
 

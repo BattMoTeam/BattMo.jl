@@ -27,7 +27,7 @@ These parameters characterize the intrinsic properties of a battery cell, such a
       "SurfaceCoefficientOfHeatTransfer": 1000
     }}}
 ```
-All parameter values should be given in **SI units**. Examples of cell parameter sets can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/cell_parameters).
+All parameter values should be given in **SI units**. An examples of a cell parameter set can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/6b3316286e4345f0468d465296c49d68292eb1f7/src/input/defaults/cell_parameters/chen_2020.json).
 
 ### Cycling Parameters
 These parameters define the operational conditions of the battery during a simulation, such as:
@@ -45,7 +45,7 @@ These parameters define the operational conditions of the battery during a simul
 }
 ```
 
-Examples of cycling protocol sets can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/cycling_protocol).
+An examples of a cycling protocol set can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/6b3316286e4345f0468d465296c49d68292eb1f7/src/input/defaults/cycling_protocols/cc_discharge.json).
 
 ## Settings
 Settings are used to configure numerical assumptions for solving equations and finding numerical solutions.
@@ -53,6 +53,7 @@ Settings are used to configure numerical assumptions for solving equations and f
 They can be categorized based on their purpose:
 - *Model settings*: instantiated with type [`ModelSettings`](@ref).
 - *Simulation settings*: instantiated with type [`SimulationSettings`](@ref).
+- *Solver settings*: instantiated with type [`SolverSettings`](@ref).
 
 ### Model Settings
 Define numerical assumptions related to the battery model, such as diffusion methods or simplifications used in the simulation:
@@ -66,7 +67,7 @@ Define numerical assumptions related to the battery model, such as diffusion met
     "SEIModel": "Bolay"
 }
 ```
-Examples of model settings can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/model_settings).
+An examples of model settings can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/6b3316286e4345f0468d465296c49d68292eb1f7/src/input/defaults/model_settings/p2d.json).
 
 ### Simulation Settings
 Define numerical assumptions specific to the simulation process, including time-stepping schemes and discretization precision:
@@ -85,6 +86,22 @@ Define numerical assumptions specific to the simulation process, including time-
     "RampUpSteps": 5
 }
 ```
-Examples of simulation settings can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/simulation_settings).
+An examples of simulation settings can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/6b3316286e4345f0468d465296c49d68292eb1f7/src/input/defaults/simulation_settings/p2d.json).
 
+### Solver Settings
+Define the solver behavior and verbosity:
+
+```json
+{
+
+    "LinearSolver": {
+        "Method": "Direct",
+        "MaxSize": 1000000
+    },
+    "Verbose": {
+        "InfoLevel": 0,
+    }
+}
+```
+An examples of simulation settings can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/6b3316286e4345f0468d465296c49d68292eb1f7/src/input/defaults/solver_settings/direct.json).
 

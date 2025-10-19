@@ -204,7 +204,7 @@ function computeEnergyEfficiency(inputparams::AdvancedDictInput)
 
 	if controlPolicy == "cc_discharge"
 
-		ctrldict["controlPolicy"] = "cccv"
+		ctrldict["controlPolicy"] = "CCCV"
 		ctrldict["CRate"] = 1.0
 		ctrldict["DRate"] = 1.0
 		ctrldict["dEdtLimit"] = 1e-2
@@ -216,7 +216,7 @@ function computeEnergyEfficiency(inputparams::AdvancedDictInput)
 
 		jsondict["SOC"] = 0.0
 
-	elseif controlPolicy == "cccv"
+	elseif controlPolicy == "CCCV"
 
 		ctrldict["initialControl"] = "charging"
 		ctrldict["dIdtLimit"]      = 1e-5
@@ -271,7 +271,7 @@ function computeEnergyEfficiency(states; cycle_number = nothing)
 
 	# discharge energy
 
-	I[I .< 0] .= 0
+	I[I.<0] .= 0
 	Imid = (I[2:end] .+ I[1:(end-1)]) ./ 2
 
 	energy_discharge = sum(Emid .* Imid .* dt)
@@ -280,7 +280,7 @@ function computeEnergyEfficiency(states; cycle_number = nothing)
 
 	I = copy(Iref)
 
-	I[I .> 0] .= 0
+	I[I.>0] .= 0
 	Imid = (I[2:end] .+ I[1:(end-1)]) / 2
 
 	energy_charge = -sum(Emid .* Imid .* dt)
@@ -301,7 +301,7 @@ function computeDischargeEnergy(inputparams::AdvancedDictInput)
 
 	timedict = jsondict["TimeStepping"]
 
-	if controlPolicy == "cccv"
+	if controlPolicy == "CCCV"
 		ctrldict["controlPolicy"] = "cc_discharge"
 
 		ctrldict["initialControl"] = "discharging"

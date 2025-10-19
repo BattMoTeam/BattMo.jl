@@ -56,7 +56,7 @@ print_info("InfoLevel")
 # As you can see, the default value is 0, which gives minimal output (just a progress bar by default, and a final report).
 
 # To have a look at the other available settings, you can print them all like this:
-print_info(""; category = "SolverSettings")
+print_info(""; view = "SolverSettings")
 
 # As most of the time we'll only change one or two settings, and we use some of the settings often temporary, BattMo also has the option to
 # pass the solver settings directly to the solve function, without having to create a SolverSettings object first.
