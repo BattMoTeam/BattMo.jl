@@ -219,7 +219,7 @@ function get_cell_parameters_meta_data()
 		"ElectrodeGeometricSurfaceArea" => Dict(
 			"context_type" => "ElectrodeGeometricSurfaceArea",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_fa7790d6_07bb_4b0f_9965_55966828f5f3",
-			"max_value" => 2.0e-1,
+			"max_value" => 2.0,
 			"min_value" => 1.0e-4,
 			"description" => "Face (or plate) area of an electrode. Electrode cross-sectional area.",
 			"type" => Real,
