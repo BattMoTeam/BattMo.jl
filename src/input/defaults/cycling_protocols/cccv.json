@@ -1,6 +1,6 @@
 {
   "Metadata": {
-    "Title": "CCCV",
+    "Title": "cccv",
     "Description": "Parameter set for a constant current constant voltage cyling protocol."
   },
   "Protocol": "CCCV",

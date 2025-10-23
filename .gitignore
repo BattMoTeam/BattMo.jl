@@ -41,3 +41,6 @@ __pycache__/
 .CondaPkg
 .ipynb_checkpoints
 *.egg-info/
+
+# generated doc notebooks
+docs/src/public/notebooks

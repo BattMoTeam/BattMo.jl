@@ -13,7 +13,8 @@ export
 	compute_np_ratio,
 	compute_cell_theoretical_capacity,
 	compute_cell_volume,
-	get_equilibrium_kpis
+	get_equilibrium_kpis,
+	compute_equilibrium_energy
 
 
 #########################################
@@ -202,7 +203,17 @@ function compute_cell_mass_composition(params::CellParameters)
 end
 
 function compute_cell_volume(params::CellParameters)
-	case = params["Cell"]["Case"]
+	if haskey(params["Cell"], "Case")
+		case = params["Cell"]["Case"]
+	else
+		error("""We need to know the type of cell case in order to calculated the cell volume. 
+					A case can be for example cylindrical or pouch.
+						
+						Add the following parameter to your cell parameter input:
+						
+						["Cell"]["Case"]""")
+	end
+
 	if case == "Pouch"
 
 		ne_thickness = params["NegativeElectrode"]["Coating"]["Thickness"]
@@ -216,7 +227,7 @@ function compute_cell_volume(params::CellParameters)
 			thickness = thickness + ne_cc_thickness + pe_cc_thickness
 		else
 
-			print("Volume calculated without taking into account current collectors.")
+			println("Volume calculated without taking into account current collectors.")
 		end
 		if haskey(params["Cell"], "ElectrodeGeometricSurfaceArea")
 			area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
@@ -236,7 +247,7 @@ function compute_cell_volume(params::CellParameters)
 			volume = pi * radius^2 * height
 		else
 			volume = nothing
-			print("Parameter set doesn't contain the required parameters to calculate the volume: ['Cell']['Height'] and ['Cell']['OuterRadius']")
+			println("Parameter set doesn't contain the required parameters to calculate the volume: ['Cell']['Height'] and ['Cell']['OuterRadius']")
 		end
 
 
@@ -308,4 +319,94 @@ function compute_cell_theoretical_capacity(params::CellParameters)
 	pe_maximum_capacity = compute_electrode_maximum_capacity(params, "PositiveElectrode")
 	ne_maximum_capacity = compute_electrode_maximum_capacity(params, "NegativeElectrode")
 	return min(pe_maximum_capacity, ne_maximum_capacity)
+end
+
+"""
+	compute_equilibrium_energy(params::Dict; Npts=1000)
+
+Compute the average open-circuit voltage and equilibrium energy [Wh]
+for a Li-ion cell parameter set (e.g., Chen2020) using trapezoidal integration.
+
+Arguments:
+- params : Dict containing 'PositiveElectrode', 'NegativeElectrode', and 'Cell' fields
+- Npts   : number of SOC points (default 1000)
+
+Returns: (Vavg, E_Wh)
+"""
+function compute_equilibrium_energy(params::CellParameters; Npts::Int = 1000)
+	# === Retrieve cell info ===
+	C = compute_cell_theoretical_capacity(params)
+
+	# === Negative electrode ===
+	neg = params["NegativeElectrode"]["ActiveMaterial"]
+	θn_SOC0 = neg["StoichiometricCoefficientAtSOC0"]
+	θn_SOC100 = neg["StoichiometricCoefficientAtSOC100"]
+	Un_expr = neg["OpenCircuitPotential"]
+	c_n_max = neg["MaximumConcentration"]
+
+	# === Positive electrode ===
+	pos = params["PositiveElectrode"]["ActiveMaterial"]
+	θp_SOC0 = pos["StoichiometricCoefficientAtSOC0"]
+	θp_SOC100 = pos["StoichiometricCoefficientAtSOC100"]
+	Up_expr = pos["OpenCircuitPotential"]
+	c_p_max = pos["MaximumConcentration"]
+
+
+	# === Build OCP functions from the stored expressions ===
+	Un = build_function(Un_expr)
+	Up = build_function(Up_expr)
+
+	# === Stoichiometry mappings ===
+	θn(soc) = θn_SOC0 + (θn_SOC100 - θn_SOC0) * soc
+	θp(soc) = θp_SOC0 + (θp_SOC100 - θp_SOC0) * soc
+
+	# === Cell OCV function ===
+	Tref = 298.15
+
+	Vcell(soc) = Up(θp(soc) * c_p_max, Tref, c_p_max, Tref) - Un(θn(soc) * c_n_max, Tref, c_n_max, Tref)
+
+	# === Numerical integration (trapezoidal rule) ===
+	socs = range(0.0, 1.0, length = Npts)
+	Vvals = [Vcell(s) for s in socs]
+
+	dSOC = step(socs)
+	integral = sum((Vvals[i] + Vvals[i+1]) / 2 * dSOC for i in 1:(Npts-1))
+
+	E_Wh = integral * C
+
+	return E_Wh
+end
+
+function build_function(ocp)
+
+	if isa(ocp, Real)
+		error("Open circuit potential should not be constant.")
+
+	elseif isa(ocp, String)
+		ocp_exp = ocp
+		exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
+		ocp_fun = @RuntimeGeneratedFunction(exp)
+
+
+	elseif haskey(ocp, "FunctionName")
+
+		funcname = ocp["FunctionName"]
+
+		if haskey(ocp, "FilePath")
+			rawpath = ocp["FilePath"]
+			funcpath = joinpath(base_path, normalize_path(rawpath))
+		else
+			funcpath = nothing
+		end
+
+		ocp_fun = setup_function_from_function_name(funcname; file_path = funcpath)
+
+
+	else
+		data_x = ocp["x"]
+		data_y = ocp["y"]
+		ocp_fun = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
+
+	end
+	return ocp_fun
 end

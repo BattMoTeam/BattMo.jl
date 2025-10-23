@@ -30,8 +30,8 @@ df_2 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_2C.csv"), DataFrame)
 
 dfs = [df_05, df_1, df_2]
 
-cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 cycling_protocol["LowerVoltageLimit"] = 2.25
 model = LithiumIonBattery()
@@ -72,7 +72,7 @@ free_calibration_parameter!(vc05,
 	lower_bound = 0.0, upper_bound = 1.0)
 free_calibration_parameter!(vc05,
 	["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
-	lower_bound = 0.0, upper_bound = 1.0)
+	lower_bound = 0.0, upper_bound = 1.0);
 
 # "StoichiometricCoefficientAtSOC0" at both electrodes
 free_calibration_parameter!(vc05,
@@ -80,7 +80,7 @@ free_calibration_parameter!(vc05,
 	lower_bound = 0.0, upper_bound = 1.0)
 free_calibration_parameter!(vc05,
 	["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
-	lower_bound = 0.0, upper_bound = 1.0)
+	lower_bound = 0.0, upper_bound = 1.0);
 
 #  "MaximumConcentration" of both electrodes
 free_calibration_parameter!(vc05,
@@ -90,13 +90,13 @@ free_calibration_parameter!(vc05,
 	["PositiveElectrode", "ActiveMaterial", "MaximumConcentration"];
 	lower_bound = 10000.0, upper_bound = 1e5)
 
-print_calibration_overview(vc05)
+print_info(vc05)
 # ### Solve the first calibration problem
 # The calibration is performed by solving the optimization problem. This makes
 # use of the adjoint method implemented in Jutul.jl and the LBFGS algorithm.
 solve(vc05);
 cell_parameters_calibrated = vc05.calibrated_cell_parameters;
-print_calibration_overview(vc05)
+print_info(vc05)
 # ## Compare the results of the calibration against the experimental data
 # We can now compare the results of the calibrated model against the
 # experimental data for the 0.5C discharge curve.
@@ -152,11 +152,11 @@ free_calibration_parameter!(vc2,
 free_calibration_parameter!(vc2,
 	["PositiveElectrode", "ActiveMaterial", "DiffusionCoefficient"];
 	lower_bound = 1e-16, upper_bound = 1e-12)
-print_calibration_overview(vc2)
+print_info(vc2)
 
 # ### Solve the second calibration problem
 cell_parameters_calibrated2, = solve(vc2);
-print_calibration_overview(vc2)
+print_info(vc2)
 # ## Compare the results of the second calibration against the experimental data
 # We can now compare the results of the calibrated model against the
 # experimental data for the 2.0C discharge curve. We compare three simulations against the experimental data:

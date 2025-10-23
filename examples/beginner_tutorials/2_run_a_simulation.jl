@@ -17,14 +17,14 @@ using BattMo, GLMakie
 # We also read an example cycling protocol for a simple Constant Current Discharge.
 
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 nothing # hide
 
 # Next, we select the Lithium-Ion Battery Model with default model settings. A model can be thought as a mathematical implementation of the electrochemical and 
 # transport phenomena occuring in a real battery cell. The implementation consist of a system of partial differential equations and their corresponding parameters, constants and boundary conditions. 
-# The default Lithium-Ion Battery Model selected below corresponds to a basic P2D model, where neither current collectors nor thermal effects are considered.
+# The default Lithium-Ion Battery Model selected below corresponds to a basic p2d model, where neither current collectors nor thermal effects are considered.
 
 model = LithiumIonBattery()
 

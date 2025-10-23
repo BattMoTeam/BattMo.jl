@@ -1,12 +1,12 @@
 {
     "Metadata": {
-        "Title": "Chen2020",
+        "Title": "chen_2020",
         "Source": "https://doi.org/10.1149/1945-7111/ab9050",
         "Description": "Parameter set of a cylindrical 21700 commercial cell (LGM50), for an electrochemical pseudo-two-dimensional (P2D) model, after calibration. SEI parameters are from Bolay2022: https://doi.org/10.1016/j.powera.2022.100083 ."
     },
     "BaseModel": "LithiumIonBattery",
     "ModelSettings": {
-        "ModelFramework": "P2D",
+        "ModelFramework": "P4D Cylindrical",
         "TransportInSolid": "FullDiffusion",
         "PotentialFlowDiscretization": "GeneralAD",
         "ButlerVolmer": "Standard",
@@ -154,10 +154,16 @@
         "UpperVoltageLimit": 4.1
     },
     "SimulationSettings": {
-        "PositiveElectrodeCoatingGridPoints": 10,
-        "PositiveElectrodeParticleGridPoints": 10,
-        "NegativeElectrodeCoatingGridPoints": 10,
-        "NegativeElectrodeParticleGridPoints": 10,
+        "HeightGridPoints": 2,
+        "AngularGridPoints": 8,
+        "PositiveElectrodeCoatingGridPoints": 3,
+        "PositiveElectrodeParticleGridPoints": 5,
+        "PositiveElectrodeCurrentCollectorGridPoints": 3,
+        "PositiveElectrodeCurrentCollectorTabWidthGridPoints": 2,
+        "NegativeElectrodeCoatingGridPoints": 3,
+        "NegativeElectrodeParticleGridPoints": 5,
+        "NegativeElectrodeCurrentCollectorGridPoints": 3,
+        "NegativeElectrodeCurrentCollectorTabWidthGridPoints": 2,
         "SeparatorGridPoints": 3,
         "TimeStepDuration": 50,
         "RampUpTime": 10,

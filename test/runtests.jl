@@ -1,6 +1,10 @@
 using BattMo
 using Test
 
+include("test_documentation_prints.jl")
+include("test_3d_pouch.jl")
+include("test_battmo_app.jl")
+include("test_adjoints.jl")
 include("test_function_input.jl")
 include("test_pythoncall.jl")
 include("test_headless_ui.jl")

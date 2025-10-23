@@ -95,7 +95,7 @@ end
 
 function get_schema_cell_parameters(model_settings::ModelSettings)
 	# Retrieve meta-data for validation
-	parameter_meta = get_parameter_meta_data()
+	parameter_meta = get_cell_parameters_meta_data()
 
 	schema = Dict(
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
@@ -400,7 +400,7 @@ end
 
 function get_schema_cycling_protocol(model_settings::ModelSettings)
 	# Retrieve meta-data for validation
-	parameter_meta = get_parameter_meta_data()
+	parameter_meta = get_cycling_protocol_meta_data()
 	schema = Dict(
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",
@@ -507,7 +507,11 @@ end
 
 
 function get_schema_simulation_settings(model_settings)
-	parameter_meta = get_setting_meta_data()
+	meta_data_mod = get_model_settings_meta_data()
+	meta_data_sim = get_simulation_settings_meta_data()
+	meta_data_solv = get_solver_settings_meta_data()
+	meta_data_1 = merge_dict(meta_data_mod, meta_data_sim)
+	parameter_meta = merge_dict(meta_data_1, meta_data_solv)
 	schema = Dict(
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",
@@ -577,7 +581,7 @@ end
 
 
 function get_schema_solver_settings()
-	parameter_meta = get_setting_meta_data()
+	parameter_meta = get_solver_settings_meta_data()
 	schema = Dict(
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",
@@ -665,7 +669,7 @@ function get_schema_solver_settings()
 end
 
 function get_schema_model_settings()
-	parameter_meta = get_setting_meta_data()
+	parameter_meta = get_model_settings_meta_data()
 	return Dict(
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",

@@ -720,7 +720,7 @@ function check_constraints(model, storage)
 	ctrlType0  = state0[:Controller].ctrlType
 
 	if policy isa CyclingCVPolicy
-		nextCtrlType = getNextCtrlTypeCCCV(ctrlType0)
+		nextCtrlType = getNextCtrlTypecccv(ctrlType0)
 	elseif policy isa CCPolicy
 		if ctrlType == "discharging"
 			nextCtrlType = "charging"
@@ -870,7 +870,7 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
 
 	ctrlType0 = state0.Controller.ctrlType
 
-	nextCtrlType = getNextCtrlTypeCCCV(ctrlType0)
+	nextCtrlType = getNextCtrlTypecccv(ctrlType0)
 
 	rsw00 = setupRegionSwitchFlags(policy, state0, ctrlType0)
 
@@ -886,7 +886,7 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
 		# We entered the switch region in the previous time step. We consider switching control
 
 		currentCtrlType = state.Controller.ctrlType # current control in the the Newton iteration
-		nextCtrlType0   = getNextCtrlTypeCCCV(ctrlType0) # next control that can occur after the previous time step control (if it changes)
+		nextCtrlType0   = getNextCtrlTypecccv(ctrlType0) # next control that can occur after the previous time step control (if it changes)
 
 		rsw0 = setupRegionSwitchFlags(policy, state, ctrlType0)
 
@@ -1402,7 +1402,7 @@ end
 # Utility functions for CC-CV control #
 #######################################
 
-function getNextCtrlTypeCCCV(ctrlType::OperationalMode)
+function getNextCtrlTypecccv(ctrlType::OperationalMode)
 
 	if ctrlType == cc_discharge1
 

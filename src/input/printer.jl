@@ -1,78 +1,257 @@
-export print_cell_info, print_default_input_sets_info, print_submodels_info, print_parameter_info, print_setting_info
+export quick_cell_check, print_default_input_sets, print_submodels
 
 
-function print_cell_info(cell_parameters::CellParameters)
-	# --- ANSI Colors ---
-	green(s) = "\033[92m$(s)\033[0m"
-	yellow(s) = "\033[93m$(s)\033[0m"
-	blue(s) = "\033[94m$(s)\033[0m"
-	red(s) = "\033[91m$(s)\033[0m"
-	bold(s) = "\033[1m$(s)\033[0m"
+function print_overview(input::S) where {S <: ParameterSet}
+	input_dict = deepcopy(input.all)
 
-	# --- Helper: detect if value is CONST, FUNC, or DICT ---
-	function param_status(val)
-		if isa(val, Number)
-			return green("CONST ✓")
-		elseif isa(val, AbstractString)
-			return yellow("FUNC")
-		elseif isa(val, Dict)
-			return yellow("FUNC")
+	# Remove "Metadata" if present
+	if haskey(input_dict, "Metadata")
+		pop!(input_dict, "Metadata")
+	end
+
+	# Create a complete metadata dict
+	meta_data_cell_par = get_cell_parameters_meta_data()
+	meta_data_cycl_par = get_cycling_protocol_meta_data()
+	meta_data_model_set = get_model_settings_meta_data()
+	meta_data_sim_set = get_simulation_settings_meta_data()
+	meta_data_solv_set = get_solver_settings_meta_data()
+	meta_data_1 = merge_dict(meta_data_cell_par, meta_data_cycl_par)
+	meta_data_2 = merge_dict(meta_data_1, meta_data_model_set)
+	meta_data_3 = merge_dict(meta_data_2, meta_data_sim_set)
+	meta_data = merge_dict(meta_data_3, meta_data_solv_set)
+
+
+	# Shared accumulator
+	params = NamedTuple[]
+
+	# Recursive traversal that populates `params`
+	function collect_parameters!(d::Dict, prefix::Vector{String} = String[])
+		for (k, v) in sort(collect(d); by = first)
+			path = vcat(prefix, string(k))
+			if isa(v, Dict)
+				if haskey(v, "Description")
+					pop!(v, "Description")
+				end
+				collect_parameters!(v, path)
+			else
+				push!(params, (path = path, key = string(k), value = v, type = typeof(v)))
+			end
+		end
+	end
+
+	collect_parameters!(input_dict)
+
+	# Layout widths
+	par_space = isa(input, FullSimulationInput) ? 105 : 90
+	val_space = 30
+	unit_space = 20
+	type_space = 20
+
+	println("\nPARAMETER OVERVIEW")
+	println("="^(par_space + unit_space + type_space + val_space))
+	println(rpad("Parameter", par_space), rpad("Unit", unit_space), rpad("Type", type_space), rpad("Value", val_space))
+	println("-"^(par_space + unit_space + type_space + val_space))
+
+	# Helper to format value compactly (without Printf)
+	function format_value(v)
+		if isa(v, AbstractVector)
+			return "[" * string(length(v)) * " el.]"
+		elseif isa(v, AbstractDict)
+			return "{Dict}"
+		elseif isa(v, AbstractString)
+			return length(v) > val_space ? v[1:(val_space-4)] * "..." : v
+		elseif isa(v, Bool)
+			return string(v)
+		elseif isa(v, Integer)
+			s = string(v)
+			return length(s) > val_space ? s[1:(val_space-4)] * "..." : s
+		elseif isa(v, AbstractFloat)
+			# Compact numeric representation
+			abs(v) ≥ 1e4 || abs(v) ≤ 1e-3 ? string(round(v, sigdigits = 5)) :
+			string(round(v, digits = 5))
 		else
-			return red("UNKNOWN ❓")
+			s = string(v)
+			return length(s) > val_space ? s[1:(val_space-4)] * "..." : s
 		end
 	end
 
-	# --- KPI dictionary inside ---
-	cell_kpis_from_set = Dict(
-		"Positive Electrode Coating Mass" =>
-			compute_electrode_coating_mass(cell_parameters, "PositiveElectrode"),
-		"Negative Electrode Coating Mass" =>
-			compute_electrode_coating_mass(cell_parameters, "NegativeElectrode"),
-		"Separator Mass" =>
-			compute_separator_mass(cell_parameters),
-		"Electrolyte Mass" =>
-			compute_electrolyte_mass(cell_parameters),
-		"Cell Mass" =>
-			compute_cell_mass(cell_parameters),
-		"Cell Volume" =>
-			compute_cell_volume(cell_parameters),
-		"Positive Electrode Mass Loading" =>
-			compute_electrode_mass_loading(cell_parameters, "PositiveElectrode"),
-		"Negative Electrode Mass Loading" =>
-			compute_electrode_mass_loading(cell_parameters, "NegativeElectrode"),
-		"Cell Theoretical Capacity" =>
-			compute_cell_theoretical_capacity(cell_parameters),
-		"Cell N:P Ratio" =>
-			compute_np_ratio(cell_parameters),
-	)
+	for p in params
+		# full_path = join(p.path, " / ")
+		full_path = join(["[ \"$(s)\" ]" for s in p.path], "")
+		value_str = format_value(p.value)
+		info = get(meta_data, p.path[end], Dict())
+		unit = get(info, "unit", "N/A")
+		isdefault = get(info, "isdefault", false)
+		name_str = isdefault ? "$(full_path) (default)" : full_path
+		type_str = string(p.type)
 
-	# --- Safe KPI accessor ---
-	function safe_kpi(name)
+		println(
+			rpad(name_str, par_space),
+			rpad(unit, unit_space),
+			rpad(type_str, type_space),
+			rpad(value_str, val_space),
+		)
+	end
+
+	println("="^(par_space + val_space + unit_space + type_space))
+	println("Total parameters: $(length(params))")
+end
+
+
+function quick_cell_check(cell::CellParameters; cell_2::Union{Nothing, CellParameters} = nothing)
+	# --- ANSI Colors ---
+	green(s) = "\033[92m$(s)\033[0m"   # calculated
+	blue(s) = "\033[94m$(s)\033[0m"    # input
+	bold(s) = "\033[1m$(s)\033[0m"
+	red(s) = "\033[91m$(s)\033[0m"
+	yellow(s) = "\033[93m$(s)\033[0m"
+
+	# --- Helper for visible string padding ---
+	function visible_length(s::AbstractString)
+		length(replace(s, r"\033\[[0-9;]*m" => ""))  # strip ANSI escape sequences
+	end
+
+	function rpad_visible(s::AbstractString, n::Int)
+		padlen = n - visible_length(s)
+		padlen > 0 ? s * repeat(" ", padlen) : s
+	end
+
+	# --- KPI dictionary ---
+	function get_kpis(cell::CellParameters)
+		Dict(
+			"Positive Electrode Coating Mass" => compute_electrode_coating_mass(cell, "PositiveElectrode"),
+			"Negative Electrode Coating Mass" => compute_electrode_coating_mass(cell, "NegativeElectrode"),
+			"Separator Mass" => compute_separator_mass(cell),
+			"Electrolyte Mass" => compute_electrolyte_mass(cell),
+			"Cell Mass" => compute_cell_mass(cell),
+			"Cell Volume" => compute_cell_volume(cell),
+			"Positive Electrode Mass Loading" => compute_electrode_mass_loading(cell, "PositiveElectrode") * 100, # kg/m^2 to mg/cm^2
+			"Negative Electrode Mass Loading" => compute_electrode_mass_loading(cell, "NegativeElectrode") * 100, # kg/m^2 to mg/cm^2
+			"Cell Theoretical Capacity" => compute_cell_theoretical_capacity(cell),
+			"Cell N:P Ratio" => compute_np_ratio(cell),
+		)
+	end
+
+	kpis1 = get_kpis(cell)
+	kpis2 = isnothing(cell_2) ? nothing : get_kpis(cell_2)
+
+	# --- Safe accessor ---
+	safe_val(kpis, key) =
 		try
-			val = cell_kpis_from_set[name]
-			return round(val, sigdigits = 4)
-		catch
-			return red("ERR")
+			round(kpis[key], sigdigits = 4)
+		catch _
+			red("ERR")
 		end
-	end
 
 	# --- Header ---
-	println(bold("\n─────────────────────────────"))
-	println(bold("\n🔋 Quick Cell Check"))
-	println(bold("─────────────────────────────"))
-	println("Title: ", get(cell_parameters["Metadata"], "Title", "Unknown"))
+	label_width = 40
+	val_width = 14
+	delta_width = 12
+	unit_width = 12
+	source_width = 12
 
-	# --- Minimal KPIs ---
-	println("\n" * bold("📏 Core quantities"))
-	println("  Nominal Voltage:        ", haskey(cell_parameters["Cell"], "NominalVoltage") ? cell_parameters["Cell"]["NominalVoltage"] : nothing, " V")
-	println("  Nominal Capacity:       ", haskey(cell_parameters["Cell"], "NominalCapacity") ? cell_parameters["Cell"]["NominalCapacity"] : nothing, " Ah")
-	println("  Theoretical Capacity:   ", safe_kpi("Cell Theoretical Capacity"), " Ah")
-	println("  N:P Ratio:               ", safe_kpi("Cell N:P Ratio"))
-	println("  Cell Mass:               ", safe_kpi("Cell Mass"), " g")
-	println("  Pos. Mass Loading:       ", safe_kpi("Positive Electrode Mass Loading"), " mg/cm²")
-	println("  Neg. Mass Loading:       ", safe_kpi("Negative Electrode Mass Loading"), " mg/cm²")
+	total_width = label_width + val_width + (isnothing(cell_2) ? 30 : val_width + delta_width + 30) + unit_width + source_width
 
+	println(bold("═"^total_width))
+	println(bold("🔋 Quick Cell Check"))
+	println(bold("═"^total_width))
+
+	if haskey(cell, "Metadata")
+		name_cell_1 = get(cell["Metadata"], "Title", nothing)
+	else
+		name_cell_1 = nothing
+
+	end
+
+	if !isnothing(cell_2)
+		if haskey(cell_2, "Metadata")
+
+			name_cell_2 = get(cell_2["Metadata"], "Title", nothing)
+		else
+			name_cell_2 = nothing
+		end
+	else
+		name_cell_2 = nothing
+	end
+
+	# --- Column headers ---
+
+	if !isnothing(name_cell_1)
+		println("Cell 1: ", name_cell_1)
+	end
+	if !isnothing(name_cell_2)
+		println("Cell 2: ", name_cell_2)
+	end
+
+	println()
+
+	println(
+		rpad_visible("Quantity", label_width),
+		rpad_visible("Cell 1", val_width),
+		isnothing(cell_2) ? "" : " | " * rpad_visible("Cell 2", val_width),
+		isnothing(cell_2) ? "" : " | " * rpad_visible("Δ", delta_width),
+		" | " * rpad_visible("Unit", unit_width),
+		" | " * "Source",
+	)
+
+	println("─"^total_width)
+
+	# --- Helper for printing quantities ---
+	function print_quantity(name, val1, val2 = nothing, unit = "", source = "[INPUT]")
+
+		if isnothing(val2)
+			println(
+				rpad_visible(name, label_width),
+				rpad_visible(string(val1), val_width),
+				" | " * rpad_visible(unit, unit_width),
+				" | " * rpad_visible(source == "[INPUT]" ? blue(source) : green(source), source_width),
+			)
+		else
+			delta = (isa(val1, Number) && isa(val2, Number)) ? round(val2 - val1, sigdigits = 4) : ""
+			delta_colored = (delta != "" && delta != 0) ? yellow(delta) : delta
+
+			println(
+				rpad_visible(name, label_width),
+				rpad_visible(string(val1), val_width), " | ",
+				rpad_visible(string(val2), val_width), " | ",
+				rpad_visible(string(delta_colored), delta_width), " | ",
+				rpad_visible(unit, unit_width), " | ",
+				rpad_visible(source == "[INPUT]" ? blue(source) : green(source), source_width),
+			)
+		end
+	end
+
+	# --- Input quantities ---
+	print_quantity("Nominal Voltage", get(cell["Cell"], "NominalVoltage", "N/A"),
+		isnothing(cell_2) ? nothing : get(cell_2["Cell"], "NominalVoltage", "N/A"), "V", "[INPUT]")
+
+	print_quantity("Nominal Capacity", get(cell["Cell"], "NominalCapacity", "N/A"),
+		isnothing(cell_2) ? nothing : get(cell_2["Cell"], "NominalCapacity", "N/A"), "Ah", "[INPUT]")
+
+	# --- Calculated quantities ---
+	calc_keys = ["Cell Theoretical Capacity", "Cell N:P Ratio", "Cell Mass",
+		"Positive Electrode Mass Loading", "Negative Electrode Mass Loading"]
+
+	units_map = Dict(
+		"Cell Theoretical Capacity" => "Ah",
+		"Cell N:P Ratio" => "-",
+		"Cell Mass" => "kg",
+		"Positive Electrode Mass Loading" => "mg/cm²",
+		"Negative Electrode Mass Loading" => "mg/cm²",
+	)
+
+	for key in calc_keys
+		val1 = safe_val(kpis1, key)
+		val2 = isnothing(kpis2) ? nothing : safe_val(kpis2, key)
+		unit = get(units_map, key, "")
+		print_quantity(key, val1, val2, unit, "[EQUILIBRIUM CALCULATION]")
+	end
+
+	println(bold("═"^total_width))
 end
+
+
+
 
 
 # Format link depending on output format
@@ -108,7 +287,7 @@ function detect_output_format()
 end
 
 """
-	print_default_input_sets_info()
+	print_default_input_sets()
 
 Prints a structured overview of all available default input sets for battery simulations, including high-level summaries and detailed metadata for each set.
 
@@ -128,7 +307,7 @@ Prints a structured overview of all available default input sets for battery sim
 - Prints directly to the console using `println`, formatted for clarity with Unicode symbols and horizontal dividers.
 - Output includes:
   - Folder/category names (e.g., `CellParameters"`)
-  - Available JSON set names (e.g., `"Chen2020"`)
+  - Available JSON set names (e.g., `"chen_2020"`)
   - Descriptions and intended use cases for each set
 
 # Use Case
@@ -139,7 +318,7 @@ Prints a structured overview of all available default input sets for battery sim
 - Only `.json` files are considered valid input sets.
 - Requires that the `defaults/` directory structure and expected metadata fields are present and correctly formatted.
 """
-function print_default_input_sets_info()
+function print_default_input_sets()
 	output_fmt = detect_output_format()
 	script_dir = @__DIR__
 	defaults_dir = joinpath(script_dir, "defaults")
@@ -324,12 +503,12 @@ end
 
 
 """
-	print_submodels_info()
+	print_submodels()
 
 Prints an overview of configurable submodels available within the simulation framework, including valid options and documentation links.
 
 # Behavior
-- Retrieves model configuration metadata using `get_setting_meta_data()`.
+- Retrieves model configuration metadata using `get_model_settings_meta_data()`.
 - Filters the metadata to include only entries marked with `"is_sub_model" => true`.
 - Extracts:
   - The submodel parameter name
@@ -349,11 +528,10 @@ Prints an overview of configurable submodels available within the simulation fra
 - Helps users understand which submodels are configurable and how to select between them.
 - Useful for exploring model flexibility and guiding configuration in notebooks, scripts, or GUIs.
 """
-function print_submodels_info()
+function print_submodels()
 	# Get the metadata dictionary
-	meta_data = get_setting_meta_data()
+	meta_data = get_model_settings_meta_data()
 
-	# Filter parameters with "is_sub_model" == true
 	submodel_params = []
 	for (param, info) in meta_data
 		if get(info, "category", nothing) == "ModelSettings"
@@ -396,244 +574,4 @@ function print_submodels_info()
 	end
 
 	println()  # Extra line after the table
-end
-
-
-"""
-	print_setting_info(from_name::String)
-
-Displays detailed metadata for any model or simulation setting whose name matches (fully or partially) the provided `from_name` string.
-
-# Arguments
-- `from_name::String`: A (partial or full) string used to search for matching parameter names in the settings metadata.
-
-# Behavior
-- Performs a case-insensitive fuzzy match across all available setting keys.
-- For each matching setting, prints detailed metadata including:
-  - Name
-  - Description
-  - Allowed types
-  - Units (if specified)
-  - Valid options
-  - Validation bounds (min/max values)
-  - Documentation links
-  - Ontology (context IRI) links
-
-- Uses Unicode symbols and structured formatting to produce readable output.
-- Uses helper functions like `get_setting_meta_data()` and `format_link()` to retrieve metadata and produce clickable/documented links depending on output format.
-
-# Output
-- If no matches are found: prints a ❌ message indicating no results.
-- If matches are found: prints a block of detailed metadata for each, separated by horizontal lines.
-"""
-function print_setting_info(from_name::String; category::Union{Nothing, String} = nothing)
-	# Get the metadata dictionary
-	meta_data = get_setting_meta_data()
-	output_fmt = detect_output_format()
-
-	if !isnothing(category)
-		# Filter meta_data by category if provided
-		meta_data = Dict(k => v for (k, v) in meta_data if get(v, "category", nothing) == category)
-	end
-
-	# Soft match: find keys containing `from_name` (case-insensitive)
-	matches = collect(filter(key -> occursin(lowercase(from_name), lowercase(key)), keys(meta_data)))
-
-	if isempty(matches)
-		println("❌ No settings found matching: ", from_name)
-	else
-		for actual_key in matches
-			param_info = meta_data[actual_key]
-
-			println("="^80)
-			println("ℹ️  Setting Information")
-			println("="^80)
-
-			# Name
-			println("🔹 Name:         	", actual_key)
-
-			# category
-			if haskey(param_info, "category")
-				category = param_info["category"]
-				println("🔹 Category:		", category)
-			end
-
-			# Variable name
-			if haskey(param_info, "variable_name")
-				var_name = param_info["variable_name"]
-				println("🔹 Keyword argument:	", var_name)
-			end
-
-			# Type
-			if haskey(param_info, "type")
-				types = param_info["type"]
-				types_str = isa(types, AbstractArray) ? join(types, ", ") : string(types)
-				println("🔹 Type:         	", types_str)
-			end
-
-			# Unit
-			if haskey(param_info, "unit")
-				println("🔹 Unit:         	", param_info["unit"])
-			end
-
-			# Options
-			if haskey(param_info, "options")
-				options = param_info["options"]
-				options_str = isa(options, AbstractArray) ? join(options, ", ") : string(options)
-				println("🔹 Options:      	", options_str)
-			end
-
-			# Validation bounds
-			if haskey(param_info, "min_value")
-				min_value = param_info["min_value"]
-				println("🔹 Minimum value:      	", min_value)
-			end
-			if haskey(param_info, "max_value")
-				max_value = param_info["max_value"]
-				println("🔹 Maximum value:      	", max_value)
-			end
-
-			# Documentation
-			doc_url = get(param_info, "documentation", nothing)
-			if isnothing(doc_url) || doc_url == "-"
-				link = "-"
-			elseif doc_url isa String
-				link = format_link("visit", doc_url, 50, output_fmt)
-			end
-			if @isdefined link
-				println("🔹 Documentation:	", link)
-			end
-
-			# Ontology
-			context_type_iri = get(param_info, "context_type_iri", nothing)
-			if isnothing(context_type_iri) || context_type_iri == "-"
-				iri = "-"
-			elseif context_type_iri isa String
-				iri = format_link("visit", context_type_iri, 50, output_fmt)
-			end
-			if @isdefined iri
-				println("🔹 Ontology link:	", iri)
-			end
-
-			# Description
-			if haskey(param_info, "description")
-				description = param_info["description"]
-				println("🔹 Description:		", description)
-			end
-
-			println()  # Extra spacing between entries
-		end
-	end
-end
-
-
-"""
-	print_parameter_info(from_name::String)
-
-Prints detailed metadata for physical or model parameters whose names match (fully or partially) the provided `from_name` string.
-
-# Arguments
-- `from_name::String`: A case-insensitive search term used to match parameter names from the metadata registry.
-
-# Behavior
-- Loads parameter metadata using `get_parameter_meta_data()`.
-- Performs a fuzzy search for parameter names containing the given `from_name` string.
-- For each matched parameter, prints:
-  - Parameter name
-  - Description (if available)
-  - Accepted types
-  - Units
-  - List of allowed options (if any)
-  - Minimum and maximum bounds (if defined)
-  - Documentation URL (formatted using `format_link`)
-  - Ontology/context type IRI link (if provided)
-
-# Output
-- Prints the information directly to the console in a structured, readable format with aligned labels and Unicode icons.
-- If no parameters match the search, a ❌ warning message is printed.
-
-# Returns
-- Nothing (side-effect only: prints to console).
-"""
-function print_parameter_info(from_name::String)
-	# Get the metadata dictionary
-	meta_data = get_parameter_meta_data()
-	output_fmt = detect_output_format()
-
-	# Soft match: find keys containing `from_name` (case-insensitive)
-	matches = collect(filter(key -> occursin(lowercase(from_name), lowercase(key)), keys(meta_data)))
-
-	if isempty(matches)
-		println("❌ No parameters found matching: ", from_name)
-	else
-		for actual_key in matches
-			param_info = meta_data[actual_key]
-
-			println("="^80)
-			println("ℹ️  Parameter Information")
-			println("="^80)
-
-			# Name
-			println("🔹 Name:         	", actual_key)
-
-			# Type
-			if haskey(param_info, "type")
-				types = param_info["type"]
-				types_str = isa(types, AbstractArray) ? join(types, ", ") : string(types)
-				println("🔹 Type:         	", types_str)
-			end
-
-			# Unit
-			if haskey(param_info, "unit")
-				println("🔹 Unit:         	", param_info["unit"])
-			end
-
-			# Options
-			if haskey(param_info, "options")
-				options = param_info["options"]
-				options_str = isa(options, AbstractArray) ? join(options, ", ") : string(options)
-				println("🔹 Options:      	", options_str)
-			end
-
-			# Validation bounds
-			if haskey(param_info, "min_value")
-				min_value = param_info["min_value"]
-				println("🔹 Minimum value:      	", min_value)
-			end
-			if haskey(param_info, "max_value")
-				max_value = param_info["max_value"]
-				println("🔹 Maximum value:      	", max_value)
-			end
-
-			# Documentation
-			doc_url = get(param_info, "documentation", nothing)
-			if isnothing(doc_url) || doc_url == "-"
-				link = "-"
-			elseif doc_url isa String
-				link = format_link("visit", doc_url, 50, output_fmt)
-			end
-			if @isdefined link
-				println("🔹 Documentation:	", link)
-			end
-
-			# Ontology
-			context_type_iri = get(param_info, "context_type_iri", nothing)
-			if isnothing(context_type_iri) || context_type_iri == "-"
-				iri = "-"
-			elseif context_type_iri isa String
-				iri = format_link("visit", context_type_iri, 50, output_fmt)
-			end
-			if @isdefined iri
-				println("🔹 Ontology link:	", iri)
-			end
-
-			# Description
-			if haskey(param_info, "description")
-				description = param_info["description"]
-				println("🔹 Description:		", description)
-			end
-
-			println()  # Extra spacing between entries
-		end
-	end
 end

@@ -1,6 +1,6 @@
 {
   "Metadata": {
-    "Title": "CCDischarge",
+    "Title": "cc_discharge",
     "Description": "Parameter set for a constant current discharging protocol."
   },
   "Protocol": "CC",

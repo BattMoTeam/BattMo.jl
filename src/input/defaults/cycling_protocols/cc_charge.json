@@ -1,6 +1,6 @@
 {
   "Metadata": {
-    "Title": "CCCharge",
+    "Title": "cc_charge",
     "Description": "Parameter set for a constant current charging protocol."
   },
   "Protocol": "CC",

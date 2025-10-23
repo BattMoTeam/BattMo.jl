@@ -22,7 +22,7 @@ nothing # hide
 
 # To quickly inspect which default parameter sets are included with BattMo and what each contains, you can use:
 
-print_default_input_sets_info()
+print_default_input_sets()
 
 
 # ## Inspecting Individual Parameters
@@ -30,19 +30,23 @@ print_default_input_sets_info()
 
 parameter_name = "OpenCircuitPotential"
 
-print_parameter_info(parameter_name)
+print_info(parameter_name; view = "CellParameters")
 
 # An example for model or simulation settings:
 
 parameter_name = "ModelFramework"
 
-print_setting_info(parameter_name)
+print_info(parameter_name; view = "ModelSettings")
 
 # An example for output variables:
 
-parameter_name = "Concenctration"
+parameter_name = "Concentration"
 
-print_output_variable_info(parameter_name)
+print_info(parameter_name; view = "OutputVariable")
+
+# And a general example, find variables with charge in the name.
+
+print_info("charge")
 
 
 # This is especially useful when building or editing custom parameter sets.
@@ -51,7 +55,7 @@ print_output_variable_info(parameter_name)
 
 # BattMo supports a modular submodel architecture. To view all available submodels you can integrate into your simulation, run:
 
-print_submodels_info()
+print_submodels()
 
 
 # ## Write a parameter set object to a JSON file
@@ -68,12 +72,12 @@ nothing # hide
 # ## Get quick information on a cell parameter set
 
 # Let's load a default cell parameter set.
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
 nothing # hide
 
 # You can easily print some handy quantities and metrics for debugging:
 
-print_cell_info(cell_parameters)
+quick_cell_check(cell_parameters)
 
 # If there are functional parameters present within the parameter set, like the OCP or electrolyte diffusion coefficient, you can easily plot those parameters against a realistic x-quantity range:
 

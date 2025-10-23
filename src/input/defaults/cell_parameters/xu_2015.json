@@ -20,7 +20,7 @@
         "NominalCapacity": 16.5,
         "ElectrodeWidth": 67e-3,
         "ElectrodeLength": 105e-3,
-        "ElectrodeGeometricSurfaceArea": 0.007035
+        "ElectrodeGeometricSurfaceArea": 0.6683250000000001
     },
     "Electrolyte": {
         "Description": "1.5 mol/l LiPF6 dissolved in a mixture of ethylene carbonate (EC):  dimethyl carbonate (DMC) (1:1)",
@@ -37,7 +37,7 @@
             "NumberOfElectronsTransfered": 1,
             "StoichiometricCoefficientAtSOC0": 0.999,
             "ReactionRateConstant": 3.626e-11,
-            "MassFraction": 1.0,
+            "MassFraction": 0.7352598708584736,
             "StoichiometricCoefficientAtSOC100": 0.14778,
             "ActivationEnergyOfReaction": 4000,
             "ActivationEnergyOfDiffusion": 20000,
@@ -49,25 +49,25 @@
             "VolumetricSurfaceArea": 1878260.0,
             "DiffusionCoefficient": 1.25e-15,
             "ParticleRadius": 1.15e-6,
-            "Density": 1500,
+            "Density": 3450,
             "ElectronicConductivity": 0.01,
             "ChargeTransferCoefficient": 0.5
         },
         "Coating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 1080,
+            "EffectiveDensity": 2188.066052715147,
             "Thickness": 92.0e-6
         },
         "ConductiveAdditive": {
             "Description": "Unknown",
             "Density": 1950.0,
-            "MassFraction": 0.0,
+            "MassFraction": 0.17201227903038002,
             "ElectronicConductivity": 100.0
         },
         "Binder": {
             "Description": "Unknown",
-            "Density": 1100.0,
-            "MassFraction": 0.0,
+            "Density": 1800.0,
+            "MassFraction": 0.0927278501111464,
             "ElectronicConductivity": 100.0
         },
         "CurrentCollector": {
@@ -89,10 +89,10 @@
         "ActiveMaterial": {
             "Description": "Graphite",
             "NumberOfElectronsTransfered": 1,
-            "StoichiometricCoefficientAtSOC0": 0.001,
+            "StoichiometricCoefficientAtSOC0": 0.0279,
             "ReactionRateConstant": 1.764e-11,
-            "MassFraction": 1.0,
-            "StoichiometricCoefficientAtSOC100": 0.51873811,
+            "MassFraction": 0.8476399123680541,
+            "StoichiometricCoefficientAtSOC100": 0.9014,
             "ActivationEnergyOfReaction": 4000,
             "ActivationEnergyOfDiffusion": 4000,
             "OpenCircuitPotential": {
@@ -109,19 +109,19 @@
         },
         "Coating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 1862,
-            "Thickness": 59e-6
+            "EffectiveDensity": 1782.512846046604,
+            "Thickness": 65e-6
         },
         "ConductiveAdditive": {
             "Description": "Unknown",
             "Density": 1950.0,
-            "MassFraction": 0.0,
+            "MassFraction": 0.11651065524795857,
             "ElectronicConductivity": 100.0
         },
         "Binder": {
             "Description": "Unknown",
-            "Density": 1100.0,
-            "MassFraction": 0.0,
+            "Density": 1800.0,
+            "MassFraction": 0.03584943238398725,
             "ElectronicConductivity": 100.0
         },
         "CurrentCollector": {

@@ -86,16 +86,36 @@ struct Simulation <: AbstractSimulation
 				simulation_settings = simulation_settings,
 			)
 
-			sim_cfg = simulation_configuration(model, input)
+			try
+				# Run configuration with all warnings and errors silenced
+				sim_cfg = Logging.with_logger(Logging.NullLogger()) do
+					simulation_configuration(model, input)
+				end
 
-			model = sim_cfg.model
-			grids = sim_cfg.grids
-			couplings = sim_cfg.couplings
-			parameters = sim_cfg.parameters
-			initial_state = sim_cfg.initial_state
-			forces = sim_cfg.forces
-			simulator = sim_cfg.simulator
-			time_steps = sim_cfg.time_steps
+				model = sim_cfg.model
+				grids = sim_cfg.grids
+				couplings = sim_cfg.couplings
+				parameters = sim_cfg.parameters
+				initial_state = sim_cfg.initial_state
+				forces = sim_cfg.forces
+				simulator = sim_cfg.simulator
+				time_steps = sim_cfg.time_steps
+
+				return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator)
+			catch e
+				if is_valid == false
+					error(
+						"""
+						  Oops! Your Simulation object cannot be configured because some of you input is not valid. 🛑
+
+						  Check the warnings to see where things went wrong. 🔍
+
+						  """,
+					)
+				else
+					rethrow(e)
+				end
+			end
 
 		else
 			error("""
@@ -106,7 +126,7 @@ struct Simulation <: AbstractSimulation
 
 			""")
 		end
-		return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator)
+
 	end
 end
 
@@ -630,15 +650,23 @@ function get_scalings(model, parameters)
 
 		rate_func = model[elde].system.params[:reaction_rate_constant_func]
 		cmax      = model[elde].system[:maximum_concentration]
-		Eak       = model[elde].system[:activation_energy_of_reaction]
-		vsa       = model[elde].system[:volumetric_surface_area]
+		# Eak       = model[elde].system[:activation_energy_of_reaction]
+		vsa = model[elde].system[:volumetric_surface_area]
+
+		if hasproperty(model[elde].system, :activation_energy_of_reaction)
+			Ea = model[elde].system[:activation_energy_of_reaction]
+		else
+			Ea = nothing
+		end
+		setting_temperature_dependence = model[elde].system[:setting_temperature_dependence]
 
 		c_a = 0.5 * cmax
 
 		if isa(rate_func, Real)
-			R0 = arrhenius(refT, rate_func, Eak)
+			R0 = temperature_dependent(refT, rate_func; Ea, dependent = setting_temperature_dependence)
+			# R0 = arrhenius(refT, rate_func, Eak)
 		else
-			R0 = arrhenius(refT, rate_func(c_a, refT), Eak)
+			R0 = temperature_dependent(refT, rate_func(c_a, refT); Ea, dependent = setting_temperature_dependence)
 		end
 		c_e            = 1000.0
 		activematerial = model[elde].system

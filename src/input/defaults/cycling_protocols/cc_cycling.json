@@ -1,6 +1,6 @@
 {
     "Metadata": {
-        "Title": "CCCycling",
+        "Title": "cc_cycling",
         "Description": "Parameter set for a constant current cycling protocol."
     },
     "Protocol": "CC",
