@@ -1,12 +1,47 @@
 export print_info
 
+"""
+    print_info(input::ParameterSet)
+
+Print a formatted overview of all parameters in a `ParameterSet`.
+
+Lists parameter names, units, types, and values in a structured table,
+using available metadata for labeling and formatting.
+
+# Arguments
+- `input::ParameterSet`: Parameter set (e.g., cell, cycling, solver, or simulation settings).
+
+# Notes
+- Recursively traverses nested dictionaries within the parameter set.
+- Default parameters are marked as `(default)`.
+- Used for quick inspection of model inputs in BattMo.
+"""
 function print_info(input::S) where {S <: ParameterSet}
 	return print_overview(input)
 end
 
+
+
+"""
+    print_info(output::SimulationOutput)
+
+Print a structured overview of all available output variables in a simulation result.
+
+Displays variable names, units, and shapes grouped by category (time series, metrics, and states),
+based on BattMo output metadata.
+
+# Arguments
+- `output::SimulationOutput`: Simulation results object to inspect.
+
+# Notes
+- Only variables present in the simulation output are listed.
+- Groups variables by case for easier browsing.
+- Intended for quick post-simulation inspection within BattMo.
+"""
 function print_info(output::SimulationOutput)
 	return print_overview(output)
 end
+
 
 """
 	print_info(calibration::AbstractCalibration) -> Nothing

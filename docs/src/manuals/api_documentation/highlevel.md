@@ -51,10 +51,13 @@ plot_cell_curves
 
 ## Tools that print extra information
 ```@docs
-print_info
-quick_cell_check
-print_submodels
-print_default_input_sets
+print_info(input::S) where {S <: ParameterSet}
+print_info(output::SimulationOutput)
+print_info(from_name::String; view::Union{Nothing, String} = nothing)
+print_info(calibration::AbstractCalibration)
+quick_cell_check(cell::CellParameters; cell_2::Union{Nothing, CellParameters} = nothing)
+print_submodels()
+print_default_input_sets()
 ```
 
 ## Tools that write files
