@@ -203,7 +203,17 @@ function compute_cell_mass_composition(params::CellParameters)
 end
 
 function compute_cell_volume(params::CellParameters)
-	case = params["Cell"]["Case"]
+	if haskey(params["Cell"], "Case")
+		case = params["Cell"]["Case"]
+	else
+		error("""We need to know the type of cell case in order to calculated the cell volume. 
+					A case can be for example cylindrical or pouch.
+						
+						Add the following parameter to your cell parameter input:
+						
+						["Cell"]["Case"]""")
+	end
+
 	if case == "Pouch"
 
 		ne_thickness = params["NegativeElectrode"]["Coating"]["Thickness"]
@@ -217,7 +227,7 @@ function compute_cell_volume(params::CellParameters)
 			thickness = thickness + ne_cc_thickness + pe_cc_thickness
 		else
 
-			print("Volume calculated without taking into account current collectors.")
+			println("Volume calculated without taking into account current collectors.")
 		end
 		if haskey(params["Cell"], "ElectrodeGeometricSurfaceArea")
 			area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
@@ -237,7 +247,7 @@ function compute_cell_volume(params::CellParameters)
 			volume = pi * radius^2 * height
 		else
 			volume = nothing
-			print("Parameter set doesn't contain the required parameters to calculate the volume: ['Cell']['Height'] and ['Cell']['OuterRadius']")
+			println("Parameter set doesn't contain the required parameters to calculate the volume: ['Cell']['Height'] and ['Cell']['OuterRadius']")
 		end
 
 
@@ -353,7 +363,7 @@ function compute_equilibrium_energy(params::CellParameters; Npts::Int = 1000)
 	# === Cell OCV function ===
 	Tref = 298.15
 
-	Vcell(soc) = Up(θp(soc)*c_p_max, Tref, c_p_max, Tref) - Un(θn(soc)*c_n_max, Tref, c_n_max, Tref)
+	Vcell(soc) = Up(θp(soc) * c_p_max, Tref, c_p_max, Tref) - Un(θn(soc) * c_n_max, Tref, c_n_max, Tref)
 
 	# === Numerical integration (trapezoidal rule) ===
 	socs = range(0.0, 1.0, length = Npts)

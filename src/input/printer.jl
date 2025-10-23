@@ -156,16 +156,39 @@ function quick_cell_check(cell::CellParameters; cell_2::Union{Nothing, CellParam
 	println(bold("🔋 Quick Cell Check"))
 	println(bold("═"^total_width))
 
-	name_cell_1 = get(cell["Metadata"], "Title", "Cell 1")
-	name_cell_2 = isnothing(cell_2) ? "" : get(cell_2["Metadata"], "Title", "Cell 2")
+	if haskey(cell, "Metadata")
+		name_cell_1 = get(cell["Metadata"], "Title", nothing)
+	else
+		name_cell_1 = nothing
+
+	end
+
+	if !isnothing(cell_2)
+		if haskey(cell_2, "Metadata")
+
+			name_cell_2 = get(cell_2["Metadata"], "Title", nothing)
+		else
+			name_cell_2 = nothing
+		end
+	else
+		name_cell_2 = nothing
+	end
 
 	# --- Column headers ---
 
+	if !isnothing(name_cell_1)
+		println("Cell 1: ", name_cell_1)
+	end
+	if !isnothing(name_cell_2)
+		println("Cell 2: ", name_cell_2)
+	end
+
 	println()
+
 	println(
 		rpad_visible("Quantity", label_width),
-		rpad_visible(name_cell_1, val_width),
-		isnothing(cell_2) ? "" : " | " * rpad_visible(name_cell_2, val_width),
+		rpad_visible("Cell 1", val_width),
+		isnothing(cell_2) ? "" : " | " * rpad_visible("Cell 2", val_width),
 		isnothing(cell_2) ? "" : " | " * rpad_visible("Δ", delta_width),
 		" | " * rpad_visible("Unit", unit_width),
 		" | " * "Source",
