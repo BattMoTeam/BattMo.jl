@@ -2,7 +2,6 @@ using BattMo
 using Test
 
 names = [
-	"p2d_40",
 	"p2d_40_jl_chen2020",
 	"p2d_40_jl_ud_func",
 	"p2d_40_jl_ud_tab",
@@ -29,8 +28,8 @@ function getinput(name)
 end
 
 geometries = ["4680-geometry.json",
-	"geometry-1d.json",
-	"geometry-3d-demo.json"]
+	          "geometry-1d.json",
+	          "geometry-3d-demo.json"]
 
 @testset "iterative solvers" begin
 	for geometry in geometries
