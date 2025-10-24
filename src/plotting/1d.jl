@@ -5,6 +5,25 @@ export plot_dashboard, plot_output, plot_cell_curves
 # The actual functions within this script can be found within "../ext/BattMoMakieExt.jl"
 #####################################################################################################
 
+"""
+    BattMo.plot_cell_curves_impl(cell_parameters::CellParameters; new_window = true)
+
+Plot functional parameter curves from a cell parameter set.
+
+Scans `cell_parameters` for known functional properties (e.g., open-circuit potential, diffusion coefficient,
+reaction rate constant, conductivity) and plots their dependence on concentration and temperature.
+
+# Arguments
+- `cell_parameters::CellParameters`: Cell parameter object containing model data.
+- `new_window::Bool = true`: If `true`, display the figure in a new window.
+
+# Returns
+- `fig::Figure`: A Makie figure with subplots of all detected functional parameter curves.
+
+# Notes
+- Only functional (non-constant) parameters are plotted.
+- The layout and axes are auto-scaled based on the number and type of parameters.
+"""
 function plot_cell_curves(arg...; kwarg...)
 	check_plotting_availability()
 	plot_cell_curves_impl(arg...; kwarg...)
