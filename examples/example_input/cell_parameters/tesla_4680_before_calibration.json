@@ -20,7 +20,7 @@
         "InnerRadius": 2.5e-3,
         "ElectrodeGeometricSurfaceArea": 0.496217,
         "NominalVoltage": 0,
-        "NominalCapacity": 22.1
+        "NominalCapacity": 22.65
     },
     "NegativeElectrode": {
         "Coating": {
@@ -38,7 +38,6 @@
             "VolumetricSurfaceArea": 1.42e5,
             "ElectronicConductivity": 250,
             "DiffusionCoefficient": 3.9e-14,
-            "ActivationEnergyOfDiffusion": 0,
             "ParticleRadius": 5.86e-6,
             "MaximumConcentration": 3150,
             "StoichiometricCoefficientAtSOC0": 0.0189,
@@ -48,7 +47,6 @@
                 "FilePath": "tesla_4680_functions.jl"
             },
             "NumberOfElectronsTransfered": 1,
-            "ActivationEnergyOfReaction": 4000,
             "ReactionRateConstant": 1.76e-11,
             "ChargeTransferCoefficient": 0.5
         },
@@ -98,15 +96,13 @@
             "DiffusionCoefficient": 4.0e-14,
             "ParticleRadius": 5.22e-6,
             "MaximumConcentration": 51.8,
-            "StoichiometricCoefficientAtSOC0": 0.854,
-            "StoichiometricCoefficientAtSOC100": 0.263,
+            "StoichiometricCoefficientAtSOC0": 0.263,
+            "StoichiometricCoefficientAtSOC100": 0.854,
             "OpenCircuitPotential": {
                 "FunctionName": "positive_electrode_ocp",
                 "FilePath": "tesla_4680_functions.jl"
             },
             "NumberOfElectronsTransfered": 1,
-            "ActivationEnergyOfReaction": 17800,
-            "ActivationEnergyOfDiffusion": 0,
             "ReactionRateConstant": 3.54e-11,
             "ChargeTransferCoefficient": 0.5
         },

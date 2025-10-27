@@ -6,10 +6,10 @@ using Jutul
 
 
 # Read the electrode properties into a DataFrame
-df_electrodes = CSV.read(joinpath(@__DIR__, "raw_data", "ank_2023_electrode_properties.txt"), DataFrame)
+df_electrodes = CSV.read(joinpath(@__DIR__,"./data/ank_2023_electrode_properties.txt"), DataFrame)
 
 # Read the psuedo ocv curves into a DataFrame
-df_ocv = CSV.read(joinpath(@__DIR__, "raw_data", "ank_2023_cell_pOCV_data.txt"), DataFrame)
+df_ocv = CSV.read(joinpath(@__DIR__,"./data/ank_2023_cell_pOCV_data.txt"), DataFrame)
 # Fix comma decimals in numeric columns
 for col in ["time/s", "Ewe/V", "I/mA", "Ece/V", "Ewe-Ece/V", "Capacity/mA.h"]
 	df_ocv[!, col] = parse.(Float64, replace.(df_ocv[!, col], ',' => '.'))
@@ -32,8 +32,8 @@ df_discharge = filter(row -> row["I/mA"] .< 0, df_ocv)
 # calculate stoichiometric coefficient from Capacity
 Q_charge = df_charge[!, "Capacity/mA.h"]
 Q_discharge = df_discharge[!, "Capacity/mA.h"]
-stoich_charge = (Q_charge .- minimum(Q_charge)) ./ (maximum(Q_charge) .- minimum(Q_charge))
-stoich_discharge = (Q_discharge .- maximum(Q_discharge)) ./ (minimum(Q_discharge) .- maximum(Q_discharge))
+stoich_charge = (Q_charge ) ./ (maximum(Q_charge) .- minimum(Q_charge))
+stoich_discharge = (Q_discharge ) ./ (minimum(Q_discharge) .- maximum(Q_discharge))
 stoich = stoich_charge
 
 # calculate OCP vs stoichiometric coefficient
