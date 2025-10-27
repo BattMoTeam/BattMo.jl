@@ -24,16 +24,12 @@ sim = Simulation(model, cell_parameters, cycling_protocol)
 output = solve(sim)
 
 # Have a look into which output quantities are available
-print_overview(output)
+print_info(output)
 
 # Plotting using Plotly
 df = to_pandas(output.time_series)
 fig = px.line(df, x="Time", y="Voltage", title="Voltage curve")
 fig.show()
-
-# Use BattMo internal plotting functions
-install_plotting()
-plot_dashboard(output, plot_type="contour")
 ```
 
 ## Run a 3D simulation
@@ -51,9 +47,6 @@ simulation_settings = load_simulation_settings(from_default_set="p4d_cylindrical
 model = LithiumIonBattery(model_settings=model_settings)
 sim = Simulation(model, cell_parameters, cycling_protocol, simulation_settings=simulation_settings)
 output = solve(sim)
-
-# Plot voltage curve
-plot_dashboard(output)
 
 # Plot interative 3D results
 plot_interactive_3d(output)
@@ -141,7 +134,7 @@ free_calibration_parameter(
 )
 
 # print an overview of the calibration object
-print_calibration_overview(cal)
+print_info(cal)
 
 # Solve the calibration problem
 solve(cal)

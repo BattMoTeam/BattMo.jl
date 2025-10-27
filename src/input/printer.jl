@@ -97,7 +97,23 @@ function print_overview(input::S) where {S <: ParameterSet}
 	println("Total parameters: $(length(params))")
 end
 
+"""
+    quick_cell_check(cell::CellParameters; cell_2::Union{Nothing, CellParameters} = nothing)
 
+Print key performance indicators (KPIs) and basic properties for one or two battery cells.
+
+Compares input and derived quantities (mass, capacity, N:P ratio, loadings, etc.) between cells
+and displays results in a formatted, color-coded table.
+
+# Arguments
+- `cell::CellParameters`: Primary cell to inspect.
+- `cell_2::Union{Nothing, CellParameters} = nothing`: Optional second cell for comparison.
+
+# Notes
+- Blue values indicate input parameters, green indicate calculated values.
+- Displays deltas when comparing two cells.
+- Intended for quick text-based validation and comparison within BattMo.
+"""
 function quick_cell_check(cell::CellParameters; cell_2::Union{Nothing, CellParameters} = nothing)
 	# --- ANSI Colors ---
 	green(s) = "\033[92m$(s)\033[0m"   # calculated
