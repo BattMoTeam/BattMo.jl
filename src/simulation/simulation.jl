@@ -603,7 +603,7 @@ function solver_configuration(sim::JutulSimulator,
 				end
 			elseif model[:Control].system.policy isa GenericPolicy
 				number_of_steps = model[:Control].system.policy.number_of_control_steps
-				@info "Current step: $(s.state.Control.Controller.current_step_number), total steps: $number_of_steps"
+				@info "Current step number: $(s.state.Control.Controller.current_step_number), total steps: $number_of_steps"
 				if s.state.Control.Controller.current_step_number > number_of_steps
 					report[:stopnow] = true
 				else

@@ -350,14 +350,14 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 	controller.dIdt = dt > 0 ? (I - I0) / dt : 0.0
 	controller.dEdt = dt > 0 ? (E - E0) / dt : 0.0
 
-	@info "⏱️  Time updated" time = controller.time dt = dt dIdt = controller.dIdt dEdt = controller.dEdt
+	# @info "⏱️  Time updated" time = controller.time dt = dt dIdt = controller.dIdt dEdt = controller.dEdt
 
 	# --- Determine previous/ current indices and types (clearly mapped) ---
 	prev_stepnum = state0.Controller.current_step_number                # e.g. 0 for first step
 	prev_idx = stepnum_to_index(prev_stepnum)                           # 1-based index into control_steps
 	ctrlType_prev = state0.Controller.current_step
 
-	@info "Current control step (mapped)" stepnum = prev_stepnum idx = prev_idx ctrlType = ctrlType_prev
+	# @info "Current control step (mapped)" stepnum = prev_stepnum idx = prev_idx ctrlType = ctrlType_prev
 
 	# Setup default outputs
 	next_stepnum = prev_stepnum
@@ -366,19 +366,19 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 
 	# Compute region switch flags for previous and current states
 	rsw_prev = setupRegionSwitchFlags(ctrlType_prev, state0, controller)
-	@info "Region switch flags (prev)" beforeSwitch = rsw_prev.beforeSwitchRegion afterSwitch = rsw_prev.afterSwitchRegion
+	# @info "Region switch flags (prev)" beforeSwitch = rsw_prev.beforeSwitchRegion afterSwitch = rsw_prev.afterSwitchRegion
 
 	if rsw_prev.beforeSwitchRegion
-		@info "🟡 Staying in current region (beforeSwitchRegion = true)"
+		# @info "🟡 Staying in current region (beforeSwitchRegion = true)"
 
 	else
 		# Recompute with updated state
 		rsw_curr = setupRegionSwitchFlags(ctrlType_prev, state, controller)
-		@info "Region switch flags (curr)" beforeSwitch = rsw_curr.beforeSwitchRegion afterSwitch = rsw_curr.afterSwitchRegion
+		# @info "Region switch flags (curr)" beforeSwitch = rsw_curr.beforeSwitchRegion afterSwitch = rsw_curr.afterSwitchRegion
 
 		# If controller hasn't already changed this Newton iteration, decide
 		if controller.current_step_number == state0.Controller.current_step_number
-			@info "🔍 Checking if control step should change"
+			# @info "🔍 Checking if control step should change"
 
 			if rsw_curr.afterSwitchRegion
 				# Attempt to move forward one stepnum
@@ -386,7 +386,7 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 				proposed_idx = stepnum_to_index(proposed_stepnum)
 
 				if proposed_idx <= nsteps && proposed_stepnum <= (nsteps - 1)
-					@info "➡️  Switching to next control step" proposed_stepnum = proposed_stepnum proposed_idx = proposed_idx
+					# @info "➡️  Switching to next control step" proposed_stepnum = proposed_stepnum proposed_idx = proposed_idx
 					# Copy the policy step so we can mutate termination without altering original policy
 					next_ctrlType = deepcopy(control_steps[proposed_idx])
 					next_stepnum = index_to_stepnum(proposed_idx)
@@ -401,25 +401,25 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 					end
 
 				else
-					@info "🛑 Last control step reached or out-of-bounds — stopping simulation"
+					# @info "🛑 Last control step reached or out-of-bounds — stopping simulation"
 					stop_simulation = true
 					next_stepnum = prev_stepnum
 					next_ctrlType = state.Controller.current_step
 				end
 
 			else
-				@info "⏸️  Remaining in current control step"
+				# @info "⏸️  Remaining in current control step"
 				next_stepnum = prev_stepnum
 				next_ctrlType = state.Controller.current_step
 			end
 
 		else
 			# controller already advanced this iteration: keep what controller has
-			@info "⚙️  Controller already changed within this iteration — honoring controller.current_step"
+			# @info "⚙️  Controller already changed within this iteration — honoring controller.current_step"
 			# Map controller.current_step_number (which may already be advanced) to index to fetch its definition if needed
 			current_stepnum_now = controller.current_step_number
 			current_idx_now = stepnum_to_index(current_stepnum_now)
-			@info "Controller reports" current_stepnum_now = current_stepnum_now current_idx_now = current_idx_now
+			# @info "Controller reports" current_stepnum_now = current_stepnum_now current_idx_now = current_idx_now
 			# Use controller.current_step (it should already be set)
 			next_stepnum = current_stepnum_now
 			next_ctrlType = controller.current_step
@@ -434,8 +434,8 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 	controller.stop_simulation = stop_simulation
 
 	# Safety log: show the concrete type assigned so you can quickly spot mismatches
-	@info "✅ Controller update complete"
-	@info "Assigned stepnum/idx/type" stepnum = controller.current_step_number idx = stepnum_to_index(controller.current_step_number) typeof = typeof(controller.current_step) stop = controller.stop_simulation
+	# @info "✅ Controller update complete"
+	# @info "Assigned stepnum/idx/type" stepnum = controller.current_step_number idx = stepnum_to_index(controller.current_step_number) typeof = typeof(controller.current_step) stop = controller.stop_simulation
 
 	return nothing
 end

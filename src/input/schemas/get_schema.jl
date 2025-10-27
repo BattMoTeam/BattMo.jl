@@ -506,7 +506,6 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
 					"required" => [
 						"InitialStateOfCharge",
 						"Experiment",
-						"InitialKelvinTemperature",
 						"TotalTime",
 					],
 				),
