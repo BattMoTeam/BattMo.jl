@@ -1,22 +1,115 @@
 export print_info
 
+"""
+    print_info(input::ParameterSet)
+
+Print a formatted overview of all parameters in a `ParameterSet`.
+
+Lists parameter names, units, types, and values in a structured table,
+using available metadata for labeling and formatting.
+
+# Arguments
+- `input::ParameterSet`: Parameter set (e.g., cell, cycling, solver, or simulation settings).
+
+# Notes
+- Recursively traverses nested dictionaries within the parameter set.
+- Default parameters are marked as `(default)`.
+- Used for quick inspection of model inputs in BattMo.
+"""
 function print_info(input::S) where {S <: ParameterSet}
 	return print_overview(input)
 end
 
+
+
+"""
+    print_info(output::SimulationOutput)
+
+Print a structured overview of all available output variables in a simulation result.
+
+Displays variable names, units, and shapes grouped by category (time series, metrics, and states),
+based on BattMo output metadata.
+
+# Arguments
+- `output::SimulationOutput`: Simulation results object to inspect.
+
+# Notes
+- Only variables present in the simulation output are listed.
+- Groups variables by case for easier browsing.
+- Intended for quick post-simulation inspection within BattMo.
+"""
 function print_info(output::SimulationOutput)
 	return print_overview(output)
 end
 
+
+"""
+	print_info(calibration::AbstractCalibration) -> Nothing
+
+Prints an overview of the calibration parameters and their current values for a
+given `calibration` object. This is a convenience wrapper around
+[`print_calibration_overview`](@ref), which performs the actual display.
+
+# Arguments
+- `calibration::AbstractCalibration`: the calibration object containing parameter
+  targets and (optionally) optimized values.
+
+# Returns
+- `Nothing`: this function only prints formatted output to the console.
+
+# Notes
+- Delegates to [`print_calibration_overview`](@ref) to display:
+  - Parameter names
+  - Initial values
+  - Bounds
+  - Optimized values (if available)
+  - Percentage change from initial values
+- If the calibration has not been performed, only initial values and bounds are shown.
+
+# Example
+```julia
+print_info(my_calibration)
+"""
 function print_info(calibration::AbstractCalibration)
 	return print_calibration_overview(calibration)
 end
 
+"""
+	print_info(from_name::String; view::Union{Nothing, String}=nothing) -> Nothing
+
+Prints information on specific parameters, settings, and output variables. 
+Searches available metadata categories for entries matching `from_name` and prints
+detailed information about each match. The output is formatted with emojis, section
+headers, and aligned labels for readability.
+
+# Arguments
+- `from_name::String`: the (partial or full) name to search for in the metadata.
+
+# Keywords
+- `view::Union{Nothing, String}=nothing`: restricts the search to a specific category.
+  Must be one of:
+  `"CellParameters"`, `"CyclingProtocol"`, `"ModelSettings"`, `"SimulationSettings"`,
+  `"SolverSettings"`, or `"OutputVariable"`.  
+  If `nothing` (default), all categories are searched.
+
+# Returns
+- `Nothing`: this function only prints formatted results to the console.
+
+# Throws
+- `ErrorException`: if `view` is provided but not one of the allowed categories.
+
+# Notes
+- Each matching entry prints metadata fields such as:
+  - `Name`, `Category`, `Keyword argument`, `Description`, `Type`, `Shape`, `Unit`
+  - `Options`, `Minimum value`, `Maximum value`, `Documentation`, `Ontology link`
+- Output formatting adjusts automatically depending on the detected output format.
+
+# Example
+```julia
+print_info("concentration")
+print_info("thickness"; view="CellParameters")
+"""
 function print_info(from_name::String; view::Union{Nothing, String} = nothing)
-	"""
-	Print detailed information about parameters, settings, or output variables,
-	optionally filtered by view. All values are aligned.
-	"""
 
 	# --- Map view → (metadata function, title, emoji) ---
 	view_map = Dict(
