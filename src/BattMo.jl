@@ -13,6 +13,8 @@ using RuntimeGeneratedFunctions                   # Code generation
 using JSON: JSON                                  # JSON parsing
 using MAT: matread
 using Markdown: parse
+using CSV                                   # CSV reading & writing
+using DataFrames
 
 # Internally exported JSONSchema functions and types
 using JSONSchema: Schema, SingleIssue
@@ -33,6 +35,7 @@ using Jutul: plot_multimodel_interactive
 using LBFGSB: lbfgsb
 using Jutul: solve_adjoint_sensitivities, optimization_config, setup_parameter_optimization
 using Jutul: devectorize_variables!
+using Optim: Optim
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🧮 Mathematical & Computational Tools
@@ -181,6 +184,7 @@ using Jutul: StaticCSR, ParallelCSRContext
 using Jutul: jutul_message
 using Jutul: get_1d_interpolator
 using PythonCall: pyconvert, Py
+using Logging: Logging
 
 
 timeit_debug_enabled() = Jutul.timeit_debug_enabled()
@@ -190,8 +194,11 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 
 
 include("input/input_types.jl")
-include("input/meta_data/parameters.jl")
-include("input/meta_data/settings.jl")
+include("input/meta_data/cell_parameters.jl")
+include("input/meta_data/cycling_protocol.jl")
+include("input/meta_data/model_settings.jl")
+include("input/meta_data/simulation_settings.jl")
+include("input/meta_data/solver_settings.jl")
 include("input/printer.jl")
 include("input/schemas/get_schema.jl")
 include("input/schemas/get_json_from_schema.jl")
@@ -209,10 +216,13 @@ include("input/defaults.jl")
 include("input/writer.jl")
 include("input/function_input_tools.jl")
 include("input/formatter.jl")
+include("input/merger.jl")
 include("input/validator.jl")
 include("input/equilibrium_kpis.jl")
+include("input/calculator.jl")
 
-
+include("input/defaults/cell_parameters/function_parameters_chayambuka_2022.jl")
+include("input/defaults/cell_parameters/function_parameters_xu_2015.jl")
 
 include("models/thermal.jl")
 include("models/temperature_dependence.jl")
@@ -242,7 +252,6 @@ include("plotting/makie_ext.jl")
 include("plotting/3d.jl")
 include("plotting/1d.jl")
 
-
 include("solver/linsolve.jl")
 
 include("grid/tensor_tools.jl")
@@ -259,13 +268,15 @@ include("solver/sparse_utils.jl")
 include("calibration/calibration.jl")
 include("calibration/calibration_utils.jl")
 
+include("tools/print_info.jl")
+
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 @compile_workload begin
 	function workload_fn()
-		model_settings = load_model_settings(; from_default_set = "P2D")
-		cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
-		cycling_protocol = load_cycling_protocol(; from_default_set = "CCCV")
-		simulation_settings = load_simulation_settings(; from_default_set = "P2D")
+		model_settings = load_model_settings(; from_default_set = "p2d")
+		cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+		cycling_protocol = load_cycling_protocol(; from_default_set = "cccv")
+		simulation_settings = load_simulation_settings(; from_default_set = "p2d")
 		model_setup = LithiumIonBattery(; model_settings)
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol)
 		output = solve(sim, info_level = -1)

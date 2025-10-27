@@ -1,0 +1,11 @@
+{
+    "Metadata": {
+        "Title": "p2d",
+        "Description": "Default model settings for a P2D simulation including a current ramp up, excluding current collectors and SEI effects."
+    },
+    "ModelFramework": "P2D",
+    "TransportInSolid": "FullDiffusion",
+    "PotentialFlowDiscretization": "GeneralAD",
+    "ButlerVolmer": "Standard",
+    "RampUp": "Sinusoidal"
+}

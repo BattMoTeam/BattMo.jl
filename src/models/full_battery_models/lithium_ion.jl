@@ -43,7 +43,7 @@ mutable struct LithiumIonBattery <: IntercalationBattery
 end
 
 function get_default_model_settings(::Type{LithiumIonBattery})
-	settings = load_model_settings(; from_default_set = "P2D")
+	settings = load_model_settings(; from_default_set = "p2d")
 	return settings
 end
 
@@ -56,11 +56,11 @@ function get_default_simulation_settings(model::LithiumIonBattery)
 
 	model_framework = model.settings["ModelFramework"]
 	if model_framework == "P2D"
-		settings = load_simulation_settings(; from_default_set = "P2D")
+		settings = load_simulation_settings(; from_default_set = "p2d")
 	elseif model_framework == "P4D Pouch"
-		settings = load_simulation_settings(; from_default_set = "P4D_pouch")
+		settings = load_simulation_settings(; from_default_set = "p4d_pouch")
 	elseif model_framework == "P4D Cylindrical"
-		settings = load_simulation_settings(; from_default_set = "P4D_cylindrical")
+		settings = load_simulation_settings(; from_default_set = "p4d_cylindrical")
 	else
 		error("ModelFramework $model_famework not recognized")
 	end

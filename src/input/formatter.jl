@@ -1,5 +1,23 @@
-export convert_parameter_sets_to_old_input_format, convert_to_parameter_sets
+export convert_parameter_sets_to_old_input_format, convert_to_parameter_sets, flatten_input
 
+
+function flatten_input(input::P) where {P <: ParameterSet}
+	input_dict = input.all
+	return flatten_dict(input_dict)
+end
+
+function flatten_dict(dict; parent_key::String = "")
+	flat = Dict{String, Any}()
+	for (k, v) in dict
+		new_key = isempty(parent_key) ? k : string(parent_key, k)
+		if v isa Dict
+			merge!(flat, flatten_dict(v; parent_key = new_key))
+		else
+			flat[new_key] = v
+		end
+	end
+	return flat
+end
 
 function get_key_value(dict::Union{AbstractInput, Dict, Nothing}, key)
 	if isnothing(dict)
@@ -367,7 +385,7 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 	#########################################
 	# CyclingProtocol
 
-	if params["Control"]["controlPolicy"] == "CCDischarge"
+	if params["Control"]["controlPolicy"] == "cc_discharge"
 		protocol = "CC"
 		init_prot = "discharging"
 		n = 0
@@ -617,13 +635,13 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 		end
 		if cycling_protocol["TotalNumberOfCycles"] == 0
 			if cycling_protocol["InitialControl"] == "discharging"
-				control = "CCDischarge"
+				control = "cc_discharge"
 			else
-				control = "CCCharge"
+				control = "cc_charge"
 
 			end
 		else
-			control = "CCCycling"
+			control = "cc_cycling"
 
 		end
 	elseif cycling_protocol["Protocol"] == "CCCV"

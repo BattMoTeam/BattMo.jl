@@ -177,6 +177,10 @@ function setup_volume_fractions!(model::IntercalationBattery, grids, coupling)
 
 end
 
+function normalize_path(path::AbstractString)
+	normpath(replace(path, '\\' => '/'))
+end
+
 function setup_electrolyte(model::IntercalationBattery, input, grids)
 	params = JutulStorage()
 
@@ -203,7 +207,12 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 	elseif haskey(inputparams_elyte["DiffusionCoefficient"], "FunctionName")
 
 		funcname = inputparams_elyte["DiffusionCoefficient"]["FunctionName"]
-		funcpath = haskey(inputparams_elyte["DiffusionCoefficient"], "FilePath") ? joinpath(base_path, nputparams_elyte["DiffusionCoefficient"]["FilePath"]) : nothing
+		if haskey(inputparams_elyte["DiffusionCoefficient"], "FilePath")
+			rawpath = inputparams_elyte["DiffusionCoefficient"]["FilePath"]
+			funcpath = joinpath(base_path, normalize_path(rawpath))
+		else
+			funcpath = nothing
+		end
 
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:diffusivity_func] = fcn
@@ -230,7 +239,14 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 	elseif haskey(inputparams_elyte["IonicConductivity"], "FunctionName")
 
 		funcname = inputparams_elyte["IonicConductivity"]["FunctionName"]
-		funcpath = haskey(inputparams_elyte["IonicConductivity"], "FilePath") ? joinpath(base_path, inputparams_elyte["IonicConductivity"]["FilePath"]) : nothing
+
+		if haskey(inputparams_elyte["IonicConductivity"], "FilePath")
+			rawpath = inputparams_elyte["IonicConductivity"]["FilePath"]
+			funcpath = joinpath(base_path, normalize_path(rawpath))
+		else
+			funcpath = nothing
+		end
+
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:conductivity_func] = fcn
 
@@ -334,13 +350,13 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	am_params[:volumetric_surface_area] = inputparams_active_material["VolumetricSurfaceArea"]
 	am_params[:theta0] = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
 	am_params[:theta100] = inputparams_active_material["StoichiometricCoefficientAtSOC100"]
-	am_params[:activation_energy_of_reaction] = inputparams_active_material["ActivationEnergyOfReaction"]
 
 	am_params[:setting_temperature_dependence] = get(model.settings, "TemperatureDependence", nothing)
 	am_params[:setting_butler_volmer] = get(model.settings, "ButlerVolmer", nothing)
 
 	if am_params[:setting_temperature_dependence] == "Arrhenius"
 		am_params[:activation_energy_of_diffusion] = inputparams_active_material["ActivationEnergyOfDiffusion"]
+		am_params[:activation_energy_of_reaction] = inputparams_active_material["ActivationEnergyOfReaction"]
 	end
 
 	if isa(inputparams_active_material["ReactionRateConstant"], Real)
@@ -358,7 +374,14 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	elseif haskey(inputparams_active_material["ReactionRateConstant"], "FunctionName")
 
 		funcname = inputparams_active_material["ReactionRateConstant"]["FunctionName"]
-		funcpath = haskey(inputparams_active_material["ReactionRateConstant"], "FilePath") ? joinpath(base_path, inputparams_active_material["ReactionRateConstant"]["FilePath"]) : nothing
+
+		if haskey(inputparams_active_material["ReactionRateConstant"], "FilePath")
+			rawpath = inputparams_active_material["ReactionRateConstant"]["FilePath"]
+			funcpath = joinpath(base_path, normalize_path(rawpath))
+		else
+			funcpath = nothing
+		end
+
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		am_params[:reaction_rate_constant_func] = fcn
 
@@ -386,7 +409,13 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	elseif haskey(inputparams_active_material["OpenCircuitPotential"], "FunctionName")
 
 		funcname = inputparams_active_material["OpenCircuitPotential"]["FunctionName"]
-		funcpath = haskey(inputparams_active_material["OpenCircuitPotential"], "FilePath") ? joinpath(base_path, inputparams_active_material["OpenCircuitPotential"]["FilePath"]) : nothing
+
+		if haskey(inputparams_active_material["OpenCircuitPotential"], "FilePath")
+			rawpath = inputparams_active_material["OpenCircuitPotential"]["FilePath"]
+			funcpath = joinpath(base_path, normalize_path(rawpath))
+		else
+			funcpath = nothing
+		end
 
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		am_params[:ocp_func] = fcn
@@ -432,7 +461,14 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		elseif haskey(inputparams_active_material["DiffusionCoefficient"], "FunctionName")
 
 			funcname = inputparams_active_material["DiffusionCoefficient"]["FunctionName"]
-			funcpath = haskey(inputparams_active_material["DiffusionCoefficient"], "FilePath") ? joinpath(base_path, inputparams_active_material["DiffusionCoefficient"]["FilePath"]) : nothing
+
+			if haskey(inputparams_active_material["DiffusionCoefficient"], "FilePath")
+				rawpath = inputparams_active_material["DiffusionCoefficient"]["FilePath"]
+				funcpath = joinpath(base_path, normalize_path(rawpath))
+			else
+				funcpath = nothing
+			end
+
 			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 
 			am_params[:diff_func] = fcn

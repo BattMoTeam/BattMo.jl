@@ -6,12 +6,12 @@ using Test
 	@test begin
 
 		############################
-		# CCDischarge
+		# cc_discharge
 
-		cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
-		cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
-		model_settings = load_model_settings(; from_default_set = "P2D")
-		simulation_settings = load_simulation_settings(; from_default_set = "P2D")
+		cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+		cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+		model_settings = load_model_settings(; from_default_set = "p2d")
+		simulation_settings = load_simulation_settings(; from_default_set = "p2d")
 
 		model_setup = LithiumIonBattery(; model_settings)
 
@@ -39,9 +39,9 @@ using Test
 
 
 		############################
-		# CCCharge
+		# cc_charge
 
-		cycling_protocol = load_cycling_protocol(; from_default_set = "CCCharge")
+		cycling_protocol = load_cycling_protocol(; from_default_set = "cc_charge")
 		cycling_protocol["CRate"] = 1
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 		output = solve(sim)
@@ -61,9 +61,9 @@ using Test
 		@test I_2[2] ≈ I_1[2] * 2 atol = 1e-2
 
 		############################
-		# CCCycling
+		# constant_current_cycling
 
-		cycling_protocol = load_cycling_protocol(; from_default_set = "CCCycling")
+		cycling_protocol = load_cycling_protocol(; from_default_set = "cc_cycling")
 		cycling_protocol["CRate"] = 1
 		cycling_protocol["DRate"] = 1
 		cycling_protocol["InitialControl"] = "charging"
@@ -89,9 +89,9 @@ using Test
 
 
 		############################
-		# CCCV
+		# cccv
 
-		cycling_protocol = load_cycling_protocol(; from_default_set = "CCCV")
+		cycling_protocol = load_cycling_protocol(; from_default_set = "cccv")
 		cycling_protocol["CRate"] = 1
 		cycling_protocol["DRate"] = 1
 		cycling_protocol["InitialControl"] = "charging"
@@ -131,12 +131,12 @@ end
 	@test begin
 
 		############################
-		# CCDischarge
+		# cc_discharge
 
-		cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
-		cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
-		model_settings = load_model_settings(; from_default_set = "P2D")
-		simulation_settings = load_simulation_settings(; from_default_set = "P2D")
+		cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+		cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+		model_settings = load_model_settings(; from_default_set = "p2d")
+		simulation_settings = load_simulation_settings(; from_default_set = "p2d")
 
 		model_setup = LithiumIonBattery(; model_settings)
 
@@ -165,7 +165,7 @@ end
 		@test c_pe[end, 23] ≈ 57329.88050522005 atol = 1e-1
 
 
-		cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
+		cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
 
 
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
@@ -179,16 +179,16 @@ end
 
 		c_pe = states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
 
-		@test length(I) ≈ 66 atol = 0
-		@test I[2] ≈ 0.057347311736114376 atol = 1e-1
+		@test length(I) ≈ 71 atol = 0
+		@test I[2] ≈ 7.785132857514498 atol = 1e-1
 		@test V[2] ≈ 3.274161650306443 atol = 1e-1
-		@test I[50] ≈ 0.12715831819036466 atol = 1e-1
-		@test V[50] ≈ 3.0611901672358672 atol = 1e-1
-		@test I[end] ≈ 0.12715831819036466 atol = 1e-1
+		@test I[50] ≈ 17.262263410102893 atol = 1e-1
+		@test V[50] ≈ 3.1714628485061276 atol = 1e-1
+		@test I[end] ≈ 17.262263410102893 atol = 1e-1
 		@test V[end] ≈ 2.585957945404128 atol = 1e-1
 
-		@test c_pe[2, 23] ≈ 4347.269900911873 atol = 1e-1
-		@test c_pe[end, 23] ≈ 24344.197252058977 atol = 1e-1
+		@test c_pe[2, 23] ≈ 4153.423114811395 atol = 1e-1
+		@test c_pe[end, 23] ≈ 25408.889624542124 atol = 1e-1
 
 		true
 
