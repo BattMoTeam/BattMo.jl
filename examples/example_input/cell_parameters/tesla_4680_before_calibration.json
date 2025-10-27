@@ -20,13 +20,13 @@
         "InnerRadius": 2.5e-3,
         "ElectrodeGeometricSurfaceArea": 0.496217,
         "NominalVoltage": 0,
-        "NominalCapacity": 0
+        "NominalCapacity": 22.1
     },
     "NegativeElectrode": {
         "Coating": {
             "BruggemanCoefficient": 1.5,
             "EffectiveDensity": 1550,
-            "Thickness": 262e-6
+            "Thickness": 131e-6
         },
         "ActiveMaterial": {
             "Description": "",
@@ -35,31 +35,34 @@
             },
             "MassFraction": 0.94,
             "Density": 2240,
-            "VolumetricSurfaceArea": 0,
-            "ElectronicConductivity": 0,
-            "DiffusionCoefficient": 0,
+            "VolumetricSurfaceArea": 1.42e5,
+            "ElectronicConductivity": 250,
+            "DiffusionCoefficient": 3.9e-14,
             "ActivationEnergyOfDiffusion": 0,
-            "ParticleRadius": 8.75,
-            "MaximumConcentration": 0,
-            "StoichiometricCoefficientAtSOC0": 0,
-            "StoichiometricCoefficientAtSOC100": 0,
-            "OpenCircuitPotential": 0,
-            "NumberOfElectronsTransfered": 0,
-            "ActivationEnergyOfReaction": 0,
-            "ReactionRateConstant": 0,
+            "ParticleRadius": 5.86e-6,
+            "MaximumConcentration": 3150,
+            "StoichiometricCoefficientAtSOC0": 0.0189,
+            "StoichiometricCoefficientAtSOC100": 0.678,
+            "OpenCircuitPotential": {
+                "FunctionName": "negative_electrode_ocp",
+                "FilePath": "tesla_4680_functions.jl"
+            },
+            "NumberOfElectronsTransfered": 1,
+            "ActivationEnergyOfReaction": 4000,
+            "ReactionRateConstant": 1.76e-11,
             "ChargeTransferCoefficient": 0.5
         },
         "ConductiveAdditive": {
             "Description": "Unknown",
-            "Density": 1950,
+            "Density": 1050,
             "MassFraction": 0.03,
-            "ElectronicConductivity": 0
+            "ElectronicConductivity": 100
         },
         "Binder": {
             "Description": "CMC",
             "Density": 1600,
             "MassFraction": 0.03,
-            "ElectronicConductivity": 0
+            "ElectronicConductivity": 100
         },
         "CurrentCollector": {
             "Description": "Copper",
@@ -74,14 +77,14 @@
                 0.9
             ],
             "Density": 8933,
-            "ElectronicConductivity": 0
+            "ElectronicConductivity": 5.96e7
         }
     },
     "PositiveElectrode": {
         "Coating": {
             "BruggemanCoefficient": 1.5,
             "EffectiveDensity": 3320,
-            "Thickness": 175.0e-6
+            "Thickness": 87.5e-6
         },
         "ActiveMaterial": {
             "Description": "",
@@ -89,32 +92,35 @@
                 "ParticleRadius": "In paper: between 1.5 and 8 microns -> average 4,75 microns"
             },
             "MassFraction": 0.95,
-            "Density": 4950,
-            "VolumetricSurfaceArea": 0,
-            "ElectronicConductivity": 0,
-            "DiffusionCoefficient": 0,
-            "ParticleRadius": 4.75e-6,
-            "MaximumConcentration": 0,
-            "StoichiometricCoefficientAtSOC0": 0,
-            "StoichiometricCoefficientAtSOC100": 0,
-            "OpenCircuitPotential": 0,
+            "Density": 4650,
+            "VolumetricSurfaceArea": 3.82e5,
+            "ElectronicConductivity": 0.18,
+            "DiffusionCoefficient": 4.0e-14,
+            "ParticleRadius": 5.22e-6,
+            "MaximumConcentration": 51.8,
+            "StoichiometricCoefficientAtSOC0": 0.854,
+            "StoichiometricCoefficientAtSOC100": 0.263,
+            "OpenCircuitPotential": {
+                "FunctionName": "positive_electrode_ocp",
+                "FilePath": "tesla_4680_functions.jl"
+            },
             "NumberOfElectronsTransfered": 1,
-            "ActivationEnergyOfReaction": 0,
+            "ActivationEnergyOfReaction": 17800,
             "ActivationEnergyOfDiffusion": 0,
-            "ReactionRateConstant": 0,
+            "ReactionRateConstant": 3.54e-11,
             "ChargeTransferCoefficient": 0.5
         },
         "ConductiveAdditive": {
             "Description": "Unknown",
-            "Density": 1730,
+            "Density": 1050,
             "MassFraction": 0.025,
-            "ElectronicConductivity": 0
+            "ElectronicConductivity": 100
         },
         "Binder": {
             "Description": "PVDF",
-            "Density": 1780,
+            "Density": 1730,
             "MassFraction": 0.025,
-            "ElectronicConductivity": 0
+            "ElectronicConductivity": 100
         },
         "CurrentCollector": {
             "Description": "Aluminum",
@@ -129,13 +135,13 @@
                 0.9
             ],
             "Density": 2770,
-            "ElectronicConductivity": 0
+            "ElectronicConductivity": 3.55e7
         }
     },
     "Separator": {
         "Description": "0",
-        "Porosity": 0,
-        "Density": 0,
+        "Porosity": 0.47,
+        "Density": 1.01e3,
         "BruggemanCoefficient": 1.5,
         "Thickness": 10e-6
     },
@@ -144,8 +150,14 @@
         "Density": 1129.95,
         "Concentration": 1000,
         "ChargeNumber": 1,
-        "TransferenceNumber": 0,
-        "IonicConductivity": 0,
-        "DiffusionCoefficient": 0
+        "TransferenceNumber": 0.259,
+        "IonicConductivity": {
+            "FunctionName": "electrolyte_conductivity",
+            "FilePath": "tesla_4680_functions.jl"
+        },
+        "DiffusionCoefficient": {
+            "FunctionName": "electrolyte_diffusion_coefficient",
+            "FilePath": "tesla_4680_functions.jl"
+        }
     }
 }
