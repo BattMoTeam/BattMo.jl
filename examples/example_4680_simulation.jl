@@ -7,10 +7,6 @@ cycling_protocol = load_cycling_protocol(from_default_set = "cc_discharge")
 model_settings = load_model_settings(from_default_set = "p2d")
 solver_settings = load_solver_settings(from_default_set = "direct")
 
-# fill up missing parameters in ankit's file with chen's file
-# cell_parameters = merge_input(cell_parameters_ank, cell_parameters_chen; type = "fill")
-
-
 ################################
 # Add Temperature dependence
 # model_settings["TemperatureDependence"] = "Arrhenius"

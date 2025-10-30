@@ -96,8 +96,8 @@
             "DiffusionCoefficient": 4.0e-14,
             "ParticleRadius": 5.22e-6,
             "MaximumConcentration": 51.8,
-            "StoichiometricCoefficientAtSOC0": 0.263,
-            "StoichiometricCoefficientAtSOC100": 0.854,
+            "StoichiometricCoefficientAtSOC0": 0.854,
+            "StoichiometricCoefficientAtSOC100": 0.263,
             "OpenCircuitPotential": {
                 "FunctionName": "positive_electrode_ocp",
                 "FilePath": "tesla_4680_functions.jl"
