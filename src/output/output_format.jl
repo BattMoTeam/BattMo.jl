@@ -126,7 +126,7 @@ function get_output_metrics(
 
 		# Identify unique non-zero cycles
 		unique_cycles = unique(cycle_array)
-		cycles_reduced = unique_cycles[1:end-1] # Exclude last cycle index because it is incomplete
+		cycles_reduced = unique_cycles[1:(end-1)] # Exclude last cycle index because it is incomplete
 
 
 		if isempty(cycles_reduced)
@@ -308,16 +308,37 @@ function extract_spatial_data(states::Vector)
 			continue
 		end
 
-		# Extract data across all time steps
-		raw = [foldl(getindex, chain; init = state) for state in states]  # List of arrays
 
-		# Combine into [nx, nr, nt]
-		data = [foldl(getindex, chain; init = state) for state in states]
+		# Extract one sample to determine shape
 
-		data = cat(raw...; dims = 3)
+		sample = foldl(getindex, chain; init = states[1])
+		nt = length(states)
+		sample_dims = size(sample)
+		nd = ndims(sample)
 
-		# Permute to [nt, nx, nr]
-		data = permutedims(data, (3, 2, 1))
+		# Preallocate array with shape (nt, ...)
+		data = Array{eltype(sample)}(undef, (nt, sample_dims...))
+
+		# Fill the array using appropriate slicing
+		for (i, state) in enumerate(states)
+			value = foldl(getindex, chain; init = state)
+
+			if nd == 0
+				data[i] = value
+			elseif nd == 1
+				data[i, :] = value
+			elseif nd == 2
+				data[i, :, :] = value
+			else
+				error("Unsupported number of dimensions: $nd")
+			end
+		end
+
+
+		if nd == 2
+			perm = (1, reverse(2:(nd+1))...)  # Keep time as first dim, reverse the rest
+			data = permutedims(data, perm)
+		end
 
 		if size(data, 2) == 1
 			output_data[q] = dropdims(data; dims = 2)
@@ -325,6 +346,7 @@ function extract_spatial_data(states::Vector)
 			output_data[q] = data
 		end
 	end
+
 
 	return output_data
 end
