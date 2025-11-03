@@ -360,7 +360,7 @@ function get_cell_parameters_meta_data()
 			"unit" => "V",
 			"unit_name" => "emmo:Volt",
 			"unit_iri" => "https://w3id.org/emmo#Volt",
-			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
+			"documentation" => "https://battmo.org/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
 		),
 		"HeatTransferCoefficient" => Dict("context_type" => "CoefficientOfHeatTransfer",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_43b349fc_c7ed_480d_b0ca_9db84b700813",
@@ -470,7 +470,7 @@ function get_cell_parameters_meta_data()
 			"max_value" => 1.0e3,
 			"unit_name" => "emmo:SiemensPerMetre",
 			"unit_iri" => "https://w3id.org/emmo#SiemensPerMetre",
-			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
+			"documentation" => "https://battmo.org/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
 		),
 		"DiffusionCoefficient" => Dict(
 			"context_type" => ["DiffusionCoefficient", "Expression"],
@@ -480,7 +480,7 @@ function get_cell_parameters_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#EMMO_10f703b5_8b2a_4c5a_a734_f0cfb29622ad",
 			"description" => "Proportionality constant between the molar flux of the charge carrier and its negative concentration gradient in a material.",
 			"type" => [String, Dict{String, Vector}, Real],
-			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
+			"documentation" => "https://battmo.org/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
 		),
 		"Thickness" => Dict(
 			"context_type" => "Thickness",
