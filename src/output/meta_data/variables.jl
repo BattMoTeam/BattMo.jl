@@ -501,9 +501,9 @@ function get_output_variables_meta_data()
 			"min_value" => 1.0e-6,
 			"description" => "The mass of an object.",
 			"type" => Real,
-			"unit" => "g",
-			"unit_name" => "emmo:Gram",
-			"unit_iri" => "https://w3id.org/emmo#Gram",
+			"unit" => "kg",
+			"unit_name" => "emmo:KiloGram",
+			"unit_iri" => "https://w3id.org/emmo#KiloGram",
 		),
 		"EnergyDensity" => Dict(
 			"context_type" => "EnergyDensity",
