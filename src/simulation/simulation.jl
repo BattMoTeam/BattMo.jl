@@ -53,6 +53,8 @@ struct Simulation <: AbstractSimulation
 	couplings::Any
 	parameters::Any
 	simulator::Any
+	termination_criterion::AbstractTerminationCriterion
+	jutul_case::Any
 
 
 	function Simulation(
@@ -100,8 +102,10 @@ struct Simulation <: AbstractSimulation
 				forces = sim_cfg.forces
 				simulator = sim_cfg.simulator
 				time_steps = sim_cfg.time_steps
+				termination_criterion = sim_cfg.termination_criterion
+				jutul_case = sim_cfg.jutul_case
 
-				return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator)
+				return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator, termination_criterion, jutul_case)
 			catch e
 				if is_valid == false
 					error(
@@ -149,7 +153,15 @@ function simulation_configuration(model, input)
 	simulator = Simulator(model.multimodel; state0 = initial_state, parameters = parameters, copy_state = true)
 
 	# setup time steps
-	time_steps = setup_timesteps(input)
+	time_steps = Float64.(setup_timesteps(input))
+
+	# setup termination criterion
+	termination_criterion = setup_termination_criterion(model.multimodel)
+
+	# setup jutul case
+	dt = [Inf]
+	jutul_case = JutulCase(model.multimodel, time_steps, forces; parameters = parameters, state0 = initial_state, termination_criterion = termination_criterion)
+
 	return (
 		model = model,
 		grids = grids,
@@ -159,10 +171,44 @@ function simulation_configuration(model, input)
 		forces = forces,
 		simulator = simulator,
 		time_steps = time_steps,
+		termination_criterion = termination_criterion,
+		jutul_case = jutul_case,
 	)
 
 end
 
+
+function setup_termination_criterion(multimodel)
+
+	if multimodel[:Control].system.policy isa CyclingCVPolicy
+
+		termination_criterion = EndCycleIndexTerminationCriterion(multimodel[:Control].system.policy.numberOfCycles)
+
+	elseif multimodel[:Control].system.policy isa CCPolicy
+
+		if multimodel[:Control].system.policy.numberOfCycles == 0
+
+			if multimodel[:Control].system.policy.initialControl == "charging"
+
+				termination_criterion = EndVoltageTerminationCriterion(multimodel[:Control].system.policy.upperCutoffVoltage)
+
+			elseif multimodel[:Control].system.policy.initialControl == "discharging"
+
+				termination_criterion = EndVoltageTerminationCriterion(multimodel[:Control].system.policy.lowerCutoffVoltage)
+
+			end
+		else
+			termination_criterion = EndCycleIndexTerminationCriterion(multimodel[:Control].system.policy.numberOfCycles)
+
+		end
+	elseif multimodel[:Control].system.policy isa GenericPolicy
+		termination_criterion = EndControlStepTerminationCriterion(multimodel[:Control].system.policy.number_of_control_steps)
+
+	else
+		error("Unknown control policy")
+	end
+	return termination_criterion
+end
 
 #########
 # Solve #
@@ -271,12 +317,14 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 	state0 = sim.initial_state
 	forces = sim.forces
 	timesteps = sim.time_steps
+	termination_criterion = sim.termination_criterion
 	grids = sim.grids
 	couplings = sim.couplings
 	parameters = sim.parameters
 	simulation_settings = sim.settings
 	cell_parameters = sim.cell_parameters
 	cycling_protocol = sim.cycling_protocol
+	jutul_case = sim.jutul_case
 
 
 	# setup solver configuration
@@ -302,7 +350,8 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 
 
 	# Perform simulation
-	jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+	jutul_states, jutul_reports = simulate(jutul_case; config = cfg)
+	# jutul_states, jutul_reports = simulate(state0, simulator, termination_criterion; forces = forces, config = cfg)
 
 	jutul_output = (
 		states = jutul_states,
@@ -576,70 +625,66 @@ function solver_configuration(sim::JutulSimulator,
 			cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
 		end
 
-		function post_hook(done, report, sim, dt, forces, max_iter, cfg)
+		# function post_hook(done, report, sim, dt, forces, max_iter, cfg)
 
-			s = get_simulator_storage(sim)
-			m = get_simulator_model(sim)
+		# 	s = get_simulator_storage(sim)
+		# 	m = get_simulator_model(sim)
 
+		# 	if model[:Control].system.policy isa CyclingCVPolicy
 
-			@info model[:Control].system.policy
+		# 		if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+		# 			report[:stopnow] = true
+		# 		else
+		# 			report[:stopnow] = false
+		# 		end
 
-			if model[:Control].system.policy isa CyclingCVPolicy
+		# 	elseif model[:Control].system.policy isa CCPolicy
 
-				if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-					report[:stopnow] = true
-				else
-					report[:stopnow] = false
-				end
+		# 		if m[:Control].system.policy.numberOfCycles == 0
 
-			elseif model[:Control].system.policy isa CCPolicy
+		# 			if m[:Control].system.policy.initialControl == "charging"
 
-				if m[:Control].system.policy.numberOfCycles == 0
+		# 				if s.state.Control.ElectricPotential[1] >= m[:Control].system.policy.upperCutoffVoltage
+		# 					report[:stopnow] = true
+		# 				else
+		# 					report[:stopnow] = false
+		# 				end
 
-					if m[:Control].system.policy.initialControl == "charging"
+		# 			elseif m[:Control].system.policy.initialControl == "discharging"
 
-						if s.state.Control.ElectricPotential[1] >= m[:Control].system.policy.upperCutoffVoltage
-							report[:stopnow] = true
-						else
-							report[:stopnow] = false
-						end
+		# 				if s.state.Control.ElectricPotential[1] <= m[:Control].system.policy.lowerCutoffVoltage
+		# 					report[:stopnow] = true
 
-					elseif m[:Control].system.policy.initialControl == "discharging"
+		# 				else
 
-						if s.state.Control.ElectricPotential[1] <= m[:Control].system.policy.lowerCutoffVoltage
-							report[:stopnow] = true
-
-						else
-
-							report[:stopnow] = false
-						end
-					end
-				else
-					if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-						report[:stopnow] = true
-					else
-						report[:stopnow] = false
-					end
-				end
-			elseif model[:Control].system.policy isa GenericPolicy
-				number_of_steps = model[:Control].system.policy.number_of_control_steps
-				@info "Current step number: $(s.state.Control.Controller.current_step_number), total steps: $number_of_steps"
-				if s.state.Control.Controller.current_step_number > number_of_steps
-					report[:stopnow] = true
-				else
-					report[:stopnow] = false
-				end
-				# Do nothing
-			else
-				error("Unknown control policy")
-			end
+		# 					report[:stopnow] = false
+		# 				end
+		# 			end
+		# 		else
+		# 			if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+		# 				report[:stopnow] = true
+		# 			else
+		# 				report[:stopnow] = false
+		# 			end
+		# 		end
+		# 	elseif model[:Control].system.policy isa GenericPolicy
+		# 		number_of_steps = model[:Control].system.policy.number_of_control_steps
+		# 		if s.state.Control.Controller.current_step_number > number_of_steps
+		# 			report[:stopnow] = true
+		# 		else
+		# 			report[:stopnow] = false
+		# 		end
+		# 		# Do nothing
+		# 	else
+		# 		error("Unknown control policy")
+		# 	end
 
 
-			return (done, report)
+		# 	return (done, report)
 
-		end
+		# end
 
-		cfg[:post_ministep_hook] = post_hook
+		# cfg[:post_ministep_hook] = post_hook
 
 
 	end
@@ -874,7 +919,7 @@ function compute_rampup_timesteps(time::Real, dt::Real, n::Integer = 8)
 	dt_init = [dt / 2^k for k in ind]
 	cs_time = cumsum(dt_init)
 	if any(cs_time .> time)
-		dt_init = dt_init[cs_time.<time]
+		dt_init = dt_init[cs_time .< time]
 	end
 	dt_left = time .- sum(dt_init)
 

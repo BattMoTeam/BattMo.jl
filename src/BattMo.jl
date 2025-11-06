@@ -143,12 +143,14 @@ using Jutul: update_half_face_flux!
 using Jutul: SimulationModel, MultiModel
 using Jutul: JutulSimulator, Simulator
 using Jutul: JutulSystem, JutulFormulation, JutulContext, DefaultContext
+using Jutul: AbstractTerminationCriterion
 
 using Jutul: simulate, simulator_config, simulator_config!
 using Jutul: setup_forces, setup_state, setup_state!, setup_parameters
 using Jutul: initialize_primary_variable_ad!, initialize_variable_ad!
 using Jutul: get_neighborship, get_simulator_storage, get_simulator_model
 using Jutul: get_submodel_offsets, submodels_symbols
+using Jutul: timestepping_is_done
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -238,6 +240,7 @@ include("models/generic_control.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")
 
+include("simulation/termination_criterion.jl")
 include("simulation/simulation.jl")
 include("simulation/simulation_utils.jl")
 include("simulation/simulation_wrappers.jl")

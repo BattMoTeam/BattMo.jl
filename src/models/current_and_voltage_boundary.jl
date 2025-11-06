@@ -722,10 +722,10 @@ function check_constraints(model, storage)
 	if policy isa CyclingCVPolicy
 		ctrlType = state[:Controller].ctrlType
 		ctrlType0 = state0[:Controller].ctrlType
-
+		nextCtrlType = getNextCtrlTypecccv(ctrlType0)
 		rsw = setupRegionSwitchFlags(policy, state, ctrlType)
 		rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
-		nextCtrlType = getNextCtrlTypecccv(ctrlType0)
+
 	elseif policy isa CCPolicy
 		ctrlType = state[:Controller].ctrlType
 		ctrlType0 = state0[:Controller].ctrlType
@@ -774,6 +774,10 @@ function check_constraints(model, storage)
 		arefulfilled = false
 
 	end
+	@info "ctrlType0 = ", ctrlType0
+	@info "ctrlType = ", ctrlType
+	@info "nextCtrlType = ", nextCtrlType
+	@info "arefulfilled = ", arefulfilled
 
 	return arefulfilled
 
