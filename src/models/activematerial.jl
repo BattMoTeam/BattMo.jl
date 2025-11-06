@@ -140,14 +140,14 @@ function setupSolidDiffusionDiscretization(rp, N, D)
 		vols[i] = 4 * pi / 3 * (rf[i+1]^3 - rf[i]^3)
 	end
 
-	for i ∈ 1:N+1
+	for i ∈ 1:(N+1)
 		hT[i] = (4 * pi * rf[i]^2 / (dr / 2))
 	end
 
 	div = Vector{Tuple{Int64, Int64, Int64}}(undef, 2 * (N - 1))
 
 	k = 1
-	for j ∈ 1:N-1
+	for j ∈ 1:(N-1)
 		div[k] = (j, j, 1)
 		k += 1
 		div[k] = (j + 1, j, -1)
@@ -355,7 +355,11 @@ end
 		Temperature,
 		ix) where {label, D, T, Di}
 		rate_func = model.system.params[:reaction_rate_constant_func]
-		Ea = model.system.params[:activation_energy_of_reaction]
+		if haskey(model.system.params, :activation_energy_of_diffusion)
+			Ea = model.system.params[:activation_energy_of_diffusion]
+		else
+			Ea = nothing
+		end
 		setting_temperature_dependence = model.system.params[:setting_temperature_dependence]
 
 		refT = 298.15

@@ -356,13 +356,13 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	am_params[:volumetric_surface_area] = inputparams_active_material["VolumetricSurfaceArea"]
 	am_params[:theta0] = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
 	am_params[:theta100] = inputparams_active_material["StoichiometricCoefficientAtSOC100"]
-	am_params[:activation_energy_of_reaction] = inputparams_active_material["ActivationEnergyOfReaction"]
 
 	am_params[:setting_temperature_dependence] = get(model.settings, "TemperatureDependence", nothing)
 	am_params[:setting_butler_volmer] = get(model.settings, "ButlerVolmer", nothing)
 
 	if am_params[:setting_temperature_dependence] == "Arrhenius"
 		am_params[:activation_energy_of_diffusion] = inputparams_active_material["ActivationEnergyOfDiffusion"]
+		am_params[:activation_energy_of_reaction] = inputparams_active_material["ActivationEnergyOfReaction"]
 	end
 
 	if isa(inputparams_active_material["ReactionRateConstant"], Real)

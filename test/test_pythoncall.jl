@@ -11,10 +11,10 @@ using Jutul
 		pyimport("sys").path.append(joinpath(dirname(@__FILE__), "data", "python_files"))
 
 		# Import module with python input functions
-		pyimport("function_parameters_Xu2015")
+		pyimport("function_parameters_xu_2015")
 
-		cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
-		cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+		cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
+		cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 		cell_parameters["Electrolyte"]["IonicConductivity"] = Dict("FunctionName" => "electrolyte_conductivity_Xu_2015")
 		cell_parameters["Electrolyte"]["DiffusionCoefficient"] = Dict("FunctionName" => "electrolyte_diffusivity_Xu_2015")

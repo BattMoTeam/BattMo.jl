@@ -143,8 +143,8 @@ end
 Reads and loads solver settings either from a JSON file or a default set.
 
 # Arguments
-- `from_file_path ::String` : (Optional) Path to the JSON file containing simulation settings.
-- `from_default_set ::String` : (Optional) The name of the default set to load simulation settings from.
+- `from_file_path ::String` : (Optional) Path to the JSON file containing solver settings.
+- `from_default_set ::String` : (Optional) The name of the default set to load solver settings from.
 
 # Returns
 An instance of `SolverSettings`.
@@ -171,7 +171,22 @@ function load_solver_settings(; from_file_path::Union{String, Nothing} = nothing
 	end
 end
 
+"""
+	load_full_simulation_input(; from_file_path::String = nothing, from_default_set::String = nothing)
 
+Reads and loads a full simulation input either from a JSON file or a default set. A full simulation input should contain
+cell parameters, cycling protocol, model settings, the base model, simulation settings, and optionally solver settings.
+
+# Arguments
+- `from_file_path ::String` : (Optional) Path to the JSON file containing the full simulation input.
+- `from_default_set ::String` : (Optional) The name of the default set to load the full simulation input from.
+
+# Returns
+An instance of `FullSimulationInput`.
+
+# Errors
+Throws an `ArgumentError` if none of the arguments are provided.
+"""
 function load_full_simulation_input(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing)
 	if !isnothing(from_file_path)
 		# Assuming JSON and CyclingProtocol are correctly defined
@@ -200,7 +215,8 @@ that can be sent to the simulator.
 An instance of `MatlabInput` that can be sent to the simulator via `run_battery`.
 """
 function load_matlab_input(filepath::String)
-	inputparams = filepath |> matread |> MatlabInput
+	inputparams = filepath |> matread
+    inputparams =  MatlabInput(inputparams["simsetup"])
 	return inputparams
 end
 

@@ -24,8 +24,8 @@ nothing # hide
 
 # Lets setup a simple simulation to demonstrate the solver settings.
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 model = LithiumIonBattery()
 sim = Simulation(model, cell_parameters, cycling_protocol)
@@ -51,12 +51,12 @@ nothing # hide
 # Another convenient setting is the option to change the amount of information printed to the console during the simulation. For this we use the setting "InfoLevel".
 # This can be useful for monitoring the progress of the simulation, and debugging purposes. Or on the contrary, if you want to run a simulation without any output to the console, you can set the value to -1.
 # Let's have a look at the description of the setting to see the available options.
-print_setting_info("InfoLevel")
+print_info("InfoLevel")
 
 # As you can see, the default value is 0, which gives minimal output (just a progress bar by default, and a final report).
 
 # To have a look at the other available settings, you can print them all like this:
-print_setting_info(""; category = "SolverSettings")
+print_info(""; view = "SolverSettings")
 
 # As most of the time we'll only change one or two settings, and we use some of the settings often temporary, BattMo also has the option to
 # pass the solver settings directly to the solve function, without having to create a SolverSettings object first.

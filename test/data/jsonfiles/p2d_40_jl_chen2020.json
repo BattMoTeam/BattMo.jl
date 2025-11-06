@@ -27,7 +27,7 @@
                "chargeTransferCoefficient": 0.5,
                "openCircuitPotential": {
                   "type": "function",
-                  "functionname": "computeOCP_Graphite_SiOx_Chen2020",
+                  "functionname": "computeOCP_Graphite_SiOx_chen_2020",
                   "argumentlist": [
                      "c",
                      "cmax"
@@ -88,7 +88,7 @@
                "chargeTransferCoefficient": 0.5,
                "openCircuitPotential": {
                   "type": "function",
-                  "functionname": "computeOCP_NMC811_Chen2020",
+                  "functionname": "computeOCP_NMC811_chen_2020",
                   "argumentlist": [
                      "c",
                      "cmax"
@@ -141,14 +141,14 @@
       "density": 1200,
       "ionicConductivity": {
          "type": "function",
-         "functionname": "computeElectrolyteConductivity_Chen2020",
+         "functionname": "computeElectrolyteConductivity_chen_2020",
          "argumentlist": [
             "c"
          ]
       },
       "diffusionCoefficient": {
          "type": "function",
-         "functionname": "computeDiffusionCoefficient_Chen2020",
+         "functionname": "computeDiffusionCoefficient_chen_2020",
          "argumentlist": [
             "c"
          ]
@@ -170,7 +170,7 @@
    "use_thermal": false,
    "include_current_collectors": false,
    "Control": {
-      "controlPolicy": "CCDischarge",
+      "controlPolicy": "cc_discharge",
       "useCVswitch": false,
       "initialControl": "discharging",
       "numberOfCycles": 10,

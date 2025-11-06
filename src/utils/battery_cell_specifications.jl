@@ -57,8 +57,8 @@ function computeCellEnergy(states)
 
 	dt = diff(time)
 
-	Emid = (E[2:end] + E[1:end-1]) ./ 2
-	Imid = (I[2:end] + I[1:end-1]) ./ 2
+	Emid = (E[2:end] + E[1:(end-1)]) ./ 2
+	Imid = (I[2:end] + I[1:(end-1)]) ./ 2
 
 	energy = sum(Emid .* Imid .* dt)
 
@@ -94,7 +94,7 @@ function computeCellMaximumEnergy(model::MultiModel; T = 298.15, capacities = mi
 
 		f = Vector{Float64}(undef, N + 1)
 
-		for i ∈ 1:N+1
+		for i ∈ 1:(N+1)
 			if haskey(model[elde].system.params, :ocp_funcexp)
 				f[i] = ocpfunc(c[i], T, refT, cmax)
 			elseif haskey(model[elde].system.params, :ocp_funcdata)
@@ -202,7 +202,7 @@ function computeEnergyEfficiency(inputparams::AdvancedDictInput)
 
 	timedict = jsondict["TimeStepping"]
 
-	if controlPolicy == "CCDischarge"
+	if controlPolicy == "cc_discharge"
 
 		ctrldict["controlPolicy"] = "CCCV"
 		ctrldict["CRate"] = 1.0
@@ -267,12 +267,12 @@ function computeEnergyEfficiency(states; cycle_number = nothing)
 
 	dt = diff(t)
 
-	Emid = (E[2:end] + E[1:end-1]) ./ 2
+	Emid = (E[2:end] + E[1:(end-1)]) ./ 2
 
 	# discharge energy
 
 	I[I.<0] .= 0
-	Imid = (I[2:end] .+ I[1:end-1]) ./ 2
+	Imid = (I[2:end] .+ I[1:(end-1)]) ./ 2
 
 	energy_discharge = sum(Emid .* Imid .* dt)
 
@@ -281,7 +281,7 @@ function computeEnergyEfficiency(states; cycle_number = nothing)
 	I = copy(Iref)
 
 	I[I.>0] .= 0
-	Imid = (I[2:end] .+ I[1:end-1]) / 2
+	Imid = (I[2:end] .+ I[1:(end-1)]) / 2
 
 	energy_charge = -sum(Emid .* Imid .* dt)
 
@@ -302,7 +302,7 @@ function computeDischargeEnergy(inputparams::AdvancedDictInput)
 	timedict = jsondict["TimeStepping"]
 
 	if controlPolicy == "CCCV"
-		ctrldict["controlPolicy"] = "CCDischarge"
+		ctrldict["controlPolicy"] = "cc_discharge"
 
 		ctrldict["initialControl"] = "discharging"
 		jsondict["SOC"] = 1.0
@@ -310,7 +310,7 @@ function computeDischargeEnergy(inputparams::AdvancedDictInput)
 		rate = ctrldict["DRate"]
 		timedict["timeStepDuration"] = 20 / rate
 
-	elseif controlPolicy == "CCDischarge"
+	elseif controlPolicy == "cc_discharge"
 		ctrldict["initialControl"] = "discharging"
 		jsondict["SOC"] = 1.0
 		rate = ctrldict["DRate"]

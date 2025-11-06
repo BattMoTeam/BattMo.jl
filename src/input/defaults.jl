@@ -1,8 +1,8 @@
 export parameter_file_path, generate_default_parameter_files
 
 """
-	parameter_file_path("cell_parameters", "Chen2020")
-	parameter_file_path("cell_parameters", "Chen2020.json")
+	parameter_file_path("cell_parameters", "chen_2020")
+	parameter_file_path("cell_parameters", "chen_2020.json")
 
 Get the path to the default parameter file for a given type and filename. The
 .json extension is added if not provided. If `check` is true, an error is thrown

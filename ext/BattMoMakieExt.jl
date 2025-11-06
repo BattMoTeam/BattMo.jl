@@ -32,7 +32,7 @@ function BattMo.plot_cell_curves_impl(cell_parameters::CellParameters; new_windo
 		return parts[end]
 	end
 
-	meta_data = get_parameter_meta_data()
+	meta_data = get_cell_parameters_meta_data()
 
 	# --- Define the known functional parameters ---
 	param_map = Dict(

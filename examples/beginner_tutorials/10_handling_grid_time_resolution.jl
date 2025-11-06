@@ -14,7 +14,7 @@
 using BattMo, GLMakie
 
 # Load cell parameters as before
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
 nothing # hide
 
 # To demonstrate changing time resolution we will use a drive cycle to setup a current function.
@@ -55,8 +55,8 @@ ax = Axis(fig[1, 1], title = "Drive cycle", xlabel = "Time / s", ylabel = "Power
 lines!(ax, t, P)
 fig
 
-# Load default simulation settings for the P2D model
-simulation_settings = load_simulation_settings(; from_default_set = "P2D")
+# Load default simulation settings for the p2d model
+simulation_settings = load_simulation_settings(; from_default_set = "p2d")
 nothing # hide
 
 # run the simulation
@@ -71,7 +71,7 @@ plot_dashboard(output)
 # We can see from the plot that the time resolution is way too low to capture the dynamics of the drive cycle.
 # We can change the time resolution by modifying the simulation settings. Let's see which simulation setting is available that has to do with time.
 
-print_setting_info("time"; category = "SimulationSettings")
+print_info("time"; view = "SimulationSettings")
 
 # We can see that the time step can be controlled by TimeStepDuration.
 
@@ -94,11 +94,11 @@ plot_dashboard(output; plot_type = "line")
 # This is because the grid resolution of the negative and positive electrode are too low to capture the concentration gradient.
 # We can change the grid resolution by modifying the number of grid points in the simulation settings. Let's see which simulation setting is available that changes the negative and positive electrode coating thickness number of grid points.
 
-print_setting_info("PositiveElectrode"; category = "SimulationSettings")
+print_info("PositiveElectrode"; view = "SimulationSettings")
 
 # And the negative electrode grid resolution.
 
-print_setting_info("NegativeElectrode"; category = "SimulationSettings")
+print_info("NegativeElectrode"; view = "SimulationSettings")
 
 # We can see that the grid resolutions can be controlled by PositiveElectrodeCoatingGridPoints and NegativeElectrodeCoatingGridPoints.
 
