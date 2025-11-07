@@ -83,29 +83,29 @@ function pouch_grid(input)
 	#################################################################
 
 	# Iterators in the z-direction over horizontal layers at the end where the positive current collector is located
-	pe_endbox_list_of_iterators = [Nx*(i*Ny-pe_tab_ny)+1:Nx*Ny*i for i in 1:Nz]
+	pe_endbox_list_of_iterators = [(Nx*(i*Ny-pe_tab_ny)+1):(Nx*Ny*i) for i in 1:Nz]
 
 	# collect from previous iterator. The result is the set of cells that makes up the box-shape end of the domain (in
 	# the y-direction), which includes the pe_cc tab
 	pe_extra_cells = cat(pe_endbox_list_of_iterators..., dims = 1)
 
 	# (x-y) Carthesian indices of the cells of the positive current collector tab (not expanded in the z direction)
-	pe_tab_horz_index = cat([Nx*i-pe_tab_nx+1:Nx*i for i in 1:pe_tab_ny]..., dims = 1)
+	pe_tab_horz_index = cat([(Nx*i-pe_tab_nx+1):(Nx*i) for i in 1:pe_tab_ny]..., dims = 1)
 
 	# Index of the positive current collector tab.
 	# 1) From the pc_cc_list_of_iterators, we take only the horizontal layer that contains tab : pe_endbox_list_of_iterators[end - pe_cc_nz + 1 : end]
 	# 2) From each of these layers, we take only the cells that we have a (x, y) cartesian index in the tab region
-	pe_tab_cells = cat(getindex.(pe_endbox_list_of_iterators[end-pe_cc_nz+1:end], [pe_tab_horz_index])..., dims = 1)
+	pe_tab_cells = cat(getindex.(pe_endbox_list_of_iterators[(end-pe_cc_nz+1):end], [pe_tab_horz_index])..., dims = 1)
 
 	# From the end of the domain (in y-direction), we remove the cells that constitutes the tab
 	setdiff!(pe_extra_cells, pe_tab_cells)
 
 	# We proceed in the same way for the negative current collector
 
-	ne_endbox_list_of_operators = [Nx*Ny*(i-1)+1:Nx*(Ny*(i-1)+ne_tab_ny) for i in 1:Nz]
+	ne_endbox_list_of_operators = [(Nx*Ny*(i-1)+1):(Nx*(Ny*(i-1)+ne_tab_ny)) for i in 1:Nz]
 	ne_extra_cells = cat(ne_endbox_list_of_operators..., dims = 1)
 
-	ne_tab_horz_index = cat([Nx*(i-1)+1:Nx*(i-1)+pe_tab_nx for i in 1:ne_tab_ny]..., dims = 1)
+	ne_tab_horz_index = cat([(Nx*(i-1)+1):(Nx*(i-1)+pe_tab_nx) for i in 1:ne_tab_ny]..., dims = 1)
 
 	if same_side
 		ne_tab_cells = cat(getindex.(pe_endbox_list_of_iterators[1:ne_cc_nz], [ne_tab_horz_index])..., dims = 1)
@@ -238,3 +238,8 @@ function setup_pouch_cell_geometry(H_mother, paramsz)
 	return grids, couplings
 
 end
+
+
+#################################
+# multi layer pouch cell setup #
+#################################
