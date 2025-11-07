@@ -653,7 +653,7 @@ function get_scalings(model, parameters)
 		# Eak       = model[elde].system[:activation_energy_of_reaction]
 		vsa = model[elde].system[:volumetric_surface_area]
 
-		if hasproperty(model[elde].system, :activation_energy_of_reaction)
+		if hasproperty(model[elde].system.params, :activation_energy_of_reaction)
 			Ea = model[elde].system[:activation_energy_of_reaction]
 		else
 			Ea = nothing
@@ -852,7 +852,7 @@ function compute_rampup_timesteps(time::Real, dt::Real, n::Integer = 8)
 	dt_init = [dt / 2^k for k in ind]
 	cs_time = cumsum(dt_init)
 	if any(cs_time .> time)
-		dt_init = dt_init[cs_time.<time]
+		dt_init = dt_init[cs_time .< time]
 	end
 	dt_left = time .- sum(dt_init)
 
