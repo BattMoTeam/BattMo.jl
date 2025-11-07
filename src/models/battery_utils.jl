@@ -1,37 +1,22 @@
 export
-	fluid_volume,
 	half_face_two_point_kgrad
-
-function fluid_volume(grid::MinimalECTPFAGrid)
-	grid.volumes
-end
-
-function Jutul.declare_entities(G::MinimalECTPFAGrid)
-	# cells
-	c = (entity = Cells(), count = length(G.volumes))
-	# faces
-	f = (entity = Faces(), count = size(G.neighborship, 2))
-	# boundary faces
-	bf = (entity = BoundaryDirichletFaces(), count = length(G.boundary_cells))
-	return [c, f, bf]
-end
 
 @jutul_secondary function update_ion_mass!(acc,
 	tv::Mass,
 	model,
-	Concentration,
+	ElectrolyteConcentration,
 	Volume,
 	VolumeFraction,
 	ix)
 	for i in ix
-		@inbounds acc[i] = Concentration[i] * Volume[i] * VolumeFraction[i]
+		@inbounds acc[i] = ElectrolyteConcentration[i] * Volume[i] * VolumeFraction[i]
 	end
 end
 
 @jutul_secondary function update_as_secondary!(acc,
 	tv::Charge,
 	model,
-	Voltage,
+	ElectricPotential,
 	ix)
 	for i in ix
 		@inbounds acc[i] = 0.0
@@ -114,7 +99,7 @@ end
 function computeFlux(::Val{:Mass}, model, state, cell, other_cell, face, face_sign)
 
 	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
-	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Concentration, state.Diffusivity)
+	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectrolyteConcentration, state.Diffusivity)
 
 	return q
 end
@@ -129,7 +114,7 @@ end
 function computeFlux(::Val{:Charge}, model, state, cell, other_cell, face, face_sign)
 
 	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
-	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Voltage, state.Conductivity)
+	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.Conductivity)
 
 	return q
 
@@ -181,15 +166,7 @@ end
 # Setup Parameters #
 ####################
 
-""" We set the transmissibilities as parameters. They are used to compute fluxes, most of time using harmonic average
-for the coefficient, see FaceFlux function above """
-function Jutul.select_parameters!(prm, D::Union{TwoPointPotentialFlowHardCoded, PotentialFlow}, model::BattMoModel)
-
-	prm[:ECTransmissibilities] = ECTransmissibilities()
-
-end
-
-function Jutul.select_parameters!(prm, D::MinimalECTPFAGrid, model::BattMoModel)
+function Jutul.select_parameters!(prm, D::MinimalTpfaGrid, model::BattMoModel)
 
 	prm[:Volume]         = Volume()
 	prm[:VolumeFraction] = VolumeFraction()
@@ -228,46 +205,27 @@ apply_bc_to_equation!(storage, parameters, model::BattMoModel, eq, eq_s) = nothi
 
 function apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw{:Charge})
 
-	dolegacy = false
-
-	if model.domain.representation isa MinimalECTPFAGrid
-		bc = model.domain.representation.boundary_cells
-		if length(bc) > 0
-			dobc = true
-		else
-			dobc = false
-		end
-		dolegacy = true
-	elseif Jutul.hasentity(model.domain, BoundaryDirichletFaces())
+    if Jutul.hasentity(model.domain, BoundaryDirichletFaces())
+        
 		nc = count_active_entities(model.domain, BoundaryDirichletFaces())
-		dobc = nc > 0
-		if dobc
-			bcdirhalftrans = model.domain.representation[:bcDirHalfTrans]
-			bcdircells     = model.domain.representation[:bcDirCells]
-			bcdirinds      = model.domain.representation[:bcDirInds]
-		end
-	else
-		dobc = false
-	end
 
-	if dobc
+	    if nc > 0
 
-		Voltage         = state[:Voltage]
-		BoundaryVoltage = state[:BoundaryVoltage]
-		conductivity    = state[:Conductivity]
+			bcdirhalftrans = model.data_domain[:bcDirHalfTrans]
+			bcdircells     = model.data_domain[:bcDirCells]
+			bcdirinds      = model.data_domain[:bcDirInds]
 
-		if dolegacy
-			T_hf = model.domain.representation.boundary_hfT
-			for (i, c) in enumerate(bc)
-				@inbounds acc[c] += conductivity[c] * T_hf[i] * (Voltage[c] - value(BoundaryVoltage[i]))
-			end
-		else
+		    ElectricPotential = state[:ElectricPotential]
+		    BoundaryVoltage   = state[:BoundaryVoltage]
+		    conductivity      = state[:Conductivity]
+
 			for (ht, c, i) in zip(bcdirhalftrans, bcdircells, bcdirinds)
-				@inbounds acc[c] += conductivity[c] * ht * (Voltage[c] - value(BoundaryVoltage[i]))
+				@inbounds acc[c] += conductivity[c] * ht * (ElectricPotential[c] - value(BoundaryVoltage[i]))
 			end
-		end
-	end
+            
+	    end
 
+    end
 end
 
 apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw) = nothing

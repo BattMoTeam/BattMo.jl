@@ -13,10 +13,14 @@ function BattMo.check_plotting_availability_impl()
 end
 
 function BattMo.independent_figure(fig)
-	if Makie.current_backend() == "GLMakie"
+	backend_str = string(nameof(Makie.current_backend()))
+	if backend_str == "GLMakie"
 		BattMo.independent_figure_GLMakie(fig)
-	elseif Makie.current_backend() == "WGLMakie"
+	elseif backend_str == "WGLMakie"
 		BattMo.independent_figure_WGLMakie(fig)
+
+	else
+		@warn "Independent figure creation not implemented for backend $(Makie.current_backend())."
 	end
 end
 
@@ -28,7 +32,7 @@ function BattMo.plot_cell_curves_impl(cell_parameters::CellParameters; new_windo
 		return parts[end]
 	end
 
-	meta_data = get_parameter_meta_data()
+	meta_data = get_cell_parameters_meta_data()
 
 	# --- Define the known functional parameters ---
 	param_map = Dict(
@@ -160,7 +164,7 @@ end
 
 
 function BattMo.plot_output_impl(
-	output::NamedTuple,
+	output::SimulationOutput,
 	variables::Union{Vector{String}, Vector{Any}, Vector{Any}};
 	layout::Union{Nothing, Tuple{Int, Int}} = nothing,
 	new_window = true,
@@ -183,8 +187,8 @@ function BattMo.plot_output_impl(
 	grid = fig[1, 1] = GridLayout()
 
 	# Get time info
-	time_series_data = get_output_time_series(output)
-	full_time = time_series_data[:Time]
+	time_series_data = output.time_series
+	full_time = time_series_data["Time"]
 	nt = length(full_time)
 	available_time_vars = keys(time_series_data)
 
@@ -197,9 +201,9 @@ function BattMo.plot_output_impl(
 
 		dims = occursin(r"vs", varstr) ? match(r"vs (.+?)(?: at|$)", varstr) |> x -> split(strip(x[1]), r" and ") : []
 
-		selectors = Dict{Symbol, Union{Nothing, Int, Symbol}}()
+		selectors = Dict{String, Union{Nothing, Int, Symbol}}()
 		for cap in eachmatch(r"(\w+) index (\w+)", varstr)
-			dim = Symbol(cap[1])
+			dim = String(cap[1])
 			idx = if cap[2] == "end"
 				:end
 			else
@@ -234,7 +238,8 @@ function BattMo.plot_output_impl(
 
 			# Determine unit string for dimension
 			unit_str = ""
-			if d == :Position || d == :NegativeElectrodeActiveMaterialRadius || d == :PositiveElectrodeActiveMaterialRadius
+			if d == "Position" || d == "NegativeElectrodeActiveMaterialRadius" || d == "PositiveElectrodeActiveMaterialRadius"
+				val = val * 1e6   # convert from meters to μm
 				unit_str = " μm"
 			elseif d == :Time
 				if haskey(meta_data, "Time") && haskey(meta_data["Time"], "unit")
@@ -255,6 +260,7 @@ function BattMo.plot_output_impl(
 			val_str = isa(val, Number) ? string(round(val, digits = 3)) : string(val)
 			push!(parts, "$(d)=$val_str$unit_str")
 		end
+
 		isempty(parts) ? "" : " at " * join(parts, ", ")
 	end
 
@@ -284,46 +290,65 @@ function BattMo.plot_output_impl(
 
 				clean_var = parsed.base
 				dims = parsed.dims
+				dims = String.(dims)
 				sel = parsed.selectors
 
 				main_unit_str = get_main_unit_str(clean_var)
 
 				# State variables and metrics
-				states_data = get_output_states(output)
-				metric_data = get_output_metrics(output)
-				time_series = get_output_time_series(output)
+				states_data = output.states
+				metric_data = output.metrics
+				time_series = output.time_series
 
 				data = merge(states_data, metric_data, time_series)
 
-				var_data = data[Symbol(clean_var)]
+				var_data = data[clean_var]
 
-				rad_pe = data[:PositiveElectrodeActiveMaterialRadius] * 1e6
-				rad_ne = data[:NegativeElectrodeActiveMaterialRadius] * 1e6
-				pos = data[:Position] * 1e6
+				rad_pe = data["PositiveElectrodeActiveMaterialRadius"] * 1e6
+				rad_ne = data["NegativeElectrodeActiveMaterialRadius"] * 1e6
+				pos = data["Position"] * 1e6
 				nt = length(full_time)
-				cycles = metric_data[:CycleNumber]
+				cycles = metric_data["CycleIndex"]
 
-				known_dims = Dict(pairs(data))#Dict(:Time => full_time, :Position => pos, :NegativeElectrodeActiveMaterialRadius => rad_ne, :PositiveElectrodeActiveMaterialRadius => rad_pe, :CycleNumber)
-				dim_lengths = Dict(:Time => nt, :Position => length(pos), :NegativeElectrodeActiveMaterialRadius => length(rad_ne), :PositiveElectrodeActiveMaterialRadius => length(rad_pe), :CycleNumber => length(cycles))
+				known_dims = Dict(pairs(data))
+				dim_lengths = Dict("Time" => nt, "Position" => length(pos), "NegativeElectrodeActiveMaterialRadius" => length(rad_ne), "PositiveElectrodeActiveMaterialRadius" => length(rad_pe), "CycleNumber" => length(cycles))
 				sz = size(var_data)
 
-				# Infer dimension assignments
-				dim_assignments = Dict{Int, Symbol}()
+				# Ensure dims are plain strings
+				dims = String.(dims)
+
+				# Build dimension assignments
+				dim_assignments = Dict{Int, String}()
 				for (i, s) in enumerate(sz)
-					for k in keys(data)
-						v = data[k]
-						if s == length(v) && !(k in values(dim_assignments)) && (k in Symbol.(dims) || haskey(sel, k))
-							dim_assignments[i] = k
+					assigned = false
+
+					# Only look at dims specified in the "vs"
+					for d in dims
+						if haskey(data, d) && length(data[d]) == s
+							dim_assignments[i] = d
+							assigned = true
 							break
 						end
 					end
+
+					# Also check selectors
+					if !assigned
+						for d in keys(sel)
+							if haskey(data, d) && length(data[d]) == s
+								dim_assignments[i] = d
+								assigned = true
+								break
+							end
+						end
+					end
+
+					if !assigned
+						error("Could not assign dimension $i for variable $clean_var with size $sz (length: $s)")
+					end
 				end
 
-				if length(dim_assignments) != ndims(var_data)
-					error("Could not assign all dimensions for variable $clean_var with size $(sz)")
-				end
-
-				plot_dims_syms = Symbol.(dims)
+				# Now plot_dims_syms is exactly the dims from "vs"
+				plot_dims_syms = dims
 				non_plot_dims = setdiff(collect(values(dim_assignments)), plot_dims_syms)
 
 				# Build slicing tuple
@@ -343,6 +368,7 @@ function BattMo.plot_output_impl(
 						end
 					end
 				end
+
 
 				# Extract data slice
 				data_slice = var_data[slices...]
@@ -415,6 +441,7 @@ function BattMo.plot_output_impl(
 	end
 
 	if new_window
+
 		BattMo.independent_figure(fig)
 	end
 	return fig
@@ -423,23 +450,23 @@ end
 
 function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = true)
 
-	time_series = get_output_time_series(output; quantities = ["Time", "Voltage", "Current"])
-	t = time_series[:Time]
-	I = time_series[:Current]
-	E = time_series[:Voltage]
+	time_series = output.time_series
+	t = time_series["Time"]
+	I = time_series["Current"]
+	E = time_series["Voltage"]
 
-	states = get_output_states(output)
+	states = output.states
 
 	n_steps = length(t)
-	x = states[:Position] * 10^6
+	x = states["Position"] * 10^6
 
-	NeAm_conc = states[:NegativeElectrodeActiveMaterialSurfaceConcentration]
-	PeAm_conc = states[:PositiveElectrodeActiveMaterialSurfaceConcentration]
-	Elyte_conc = states[:ElectrolyteConcentration]
+	NeAm_conc = states["NegativeElectrodeActiveMaterialSurfaceConcentration"]
+	PeAm_conc = states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
+	Elyte_conc = states["ElectrolyteConcentration"]
 
-	NeAm_pot = states[:NegativeElectrodeActiveMaterialPotential]
-	PeAm_pot = states[:PositiveElectrodeActiveMaterialPotential]
-	Elyte_pot = states[:ElectrolytePotential]
+	NeAm_pot = states["NegativeElectrodeActiveMaterialPotential"]
+	PeAm_pot = states["PositiveElectrodeActiveMaterialPotential"]
+	Elyte_pot = states["ElectrolytePotential"]
 	if plot_type == "simple"
 		fig = Figure(size = (1200, 1000))
 		grid = fig[1, 1] = GridLayout()

@@ -177,11 +177,16 @@ function setup_volume_fractions!(model::IntercalationBattery, grids, coupling)
 
 end
 
+function normalize_path(path::AbstractString)
+	normpath(replace(path, '\\' => '/'))
+end
+
 function setup_electrolyte(model::IntercalationBattery, input, grids)
 	params = JutulStorage()
 
 	cell_parameters = input.cell_parameters
 	inputparams_elyte = cell_parameters["Electrolyte"]
+	base_path = isnothing(cell_parameters.source_path) ? "" : dirname(cell_parameters.source_path)
 
 	params[:transference]        = inputparams_elyte["TransferenceNumber"]
 	params[:charge]              = inputparams_elyte["ChargeNumber"]
@@ -202,7 +207,13 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 	elseif haskey(inputparams_elyte["DiffusionCoefficient"], "FunctionName")
 
 		funcname = inputparams_elyte["DiffusionCoefficient"]["FunctionName"]
-		funcpath = haskey(inputparams_elyte["DiffusionCoefficient"], "FilePath") ? inputparams_elyte["DiffusionCoefficient"]["FilePath"] : nothing
+		if haskey(inputparams_elyte["DiffusionCoefficient"], "FilePath")
+			rawpath = inputparams_elyte["DiffusionCoefficient"]["FilePath"]
+			funcpath = joinpath(base_path, normalize_path(rawpath))
+		else
+			funcpath = nothing
+		end
+
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:diffusivity_func] = fcn
 
@@ -228,7 +239,14 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 	elseif haskey(inputparams_elyte["IonicConductivity"], "FunctionName")
 
 		funcname = inputparams_elyte["IonicConductivity"]["FunctionName"]
-		funcpath = haskey(inputparams_elyte["IonicConductivity"], "FilePath") ? inputparams_elyte["IonicConductivity"]["FilePath"] : nothing
+
+		if haskey(inputparams_elyte["IonicConductivity"], "FilePath")
+			rawpath = inputparams_elyte["IonicConductivity"]["FilePath"]
+			funcpath = joinpath(base_path, normalize_path(rawpath))
+		else
+			funcpath = nothing
+		end
+
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:conductivity_func] = fcn
 
@@ -316,6 +334,8 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 
 	cell_parameters = input.cell_parameters
 
+	base_path = isnothing(cell_parameters.source_path) ? "" : dirname(cell_parameters.source_path)
+
 	inputparams_electrode = cell_parameters[stringName]
 	inputparams_active_material = cell_parameters[stringName]["ActiveMaterial"]
 
@@ -330,13 +350,13 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	am_params[:volumetric_surface_area] = inputparams_active_material["VolumetricSurfaceArea"]
 	am_params[:theta0] = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
 	am_params[:theta100] = inputparams_active_material["StoichiometricCoefficientAtSOC100"]
-	am_params[:activation_energy_of_reaction] = inputparams_active_material["ActivationEnergyOfReaction"]
 
 	am_params[:setting_temperature_dependence] = get(model.settings, "TemperatureDependence", nothing)
 	am_params[:setting_butler_volmer] = get(model.settings, "ButlerVolmer", nothing)
 
 	if am_params[:setting_temperature_dependence] == "Arrhenius"
 		am_params[:activation_energy_of_diffusion] = inputparams_active_material["ActivationEnergyOfDiffusion"]
+		am_params[:activation_energy_of_reaction] = inputparams_active_material["ActivationEnergyOfReaction"]
 	end
 
 	if isa(inputparams_active_material["ReactionRateConstant"], Real)
@@ -354,9 +374,14 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	elseif haskey(inputparams_active_material["ReactionRateConstant"], "FunctionName")
 
 		funcname = inputparams_active_material["ReactionRateConstant"]["FunctionName"]
-		funcpath =
-			isnothing(get_key_value(inputparams_active_material["ReactionRateConstant"], "FilePath")) ? nothing :
-			normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(inputparams_active_material["ReactionRateConstant"], "FilePath")))
+
+		if haskey(inputparams_active_material["ReactionRateConstant"], "FilePath")
+			rawpath = inputparams_active_material["ReactionRateConstant"]["FilePath"]
+			funcpath = joinpath(base_path, normalize_path(rawpath))
+		else
+			funcpath = nothing
+		end
+
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		am_params[:reaction_rate_constant_func] = fcn
 
@@ -384,7 +409,14 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	elseif haskey(inputparams_active_material["OpenCircuitPotential"], "FunctionName")
 
 		funcname = inputparams_active_material["OpenCircuitPotential"]["FunctionName"]
-		funcpath = haskey(inputparams_active_material["OpenCircuitPotential"], "FilePath") ? inputparams_active_material["OpenCircuitPotential"]["FilePath"] : nothing
+
+		if haskey(inputparams_active_material["OpenCircuitPotential"], "FilePath")
+			rawpath = inputparams_active_material["OpenCircuitPotential"]["FilePath"]
+			funcpath = joinpath(base_path, normalize_path(rawpath))
+		else
+			funcpath = nothing
+		end
+
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		am_params[:ocp_func] = fcn
 
@@ -398,7 +430,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	end
 
 	refT     = 298.15
-	T        = get(input.cycling_protocol, "AmbientTemperature", refT)
+	T        = get(input.cycling_protocol, "InitialTemperature", refT)
 	SOC_init = input.cycling_protocol["InitialStateOfCharge"]
 
 	theta0   = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
@@ -411,7 +443,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 
 	if haskey(model.settings, "TransportInSolid") && model.settings["TransportInSolid"] == "FullDiffusion"
 		rp = inputparams_active_material["ParticleRadius"]
-		N  = Int64(input.simulation_settings["GridResolution"*stringName*"Particle"])
+		N  = Int64(input.simulation_settings[stringName*"ParticleGridPoints"])
 
 		if isa(inputparams_active_material["DiffusionCoefficient"], Real)
 			am_params[:diff_funcconstant] = true
@@ -429,8 +461,16 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		elseif haskey(inputparams_active_material["DiffusionCoefficient"], "FunctionName")
 
 			funcname = inputparams_active_material["DiffusionCoefficient"]["FunctionName"]
-			funcpath = haskey(inputparams_active_material["DiffusionCoefficient"], "FilePath") ? inputparams_active_material["DiffusionCoefficient"]["FilePath"] : nothing
+
+			if haskey(inputparams_active_material["DiffusionCoefficient"], "FilePath")
+				rawpath = inputparams_active_material["DiffusionCoefficient"]["FilePath"]
+				funcpath = joinpath(base_path, normalize_path(rawpath))
+			else
+				funcpath = nothing
+			end
+
 			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
+
 			am_params[:diff_func] = fcn
 			D = am_params[:diff_func](c, T, refT, cmax)
 
@@ -460,6 +500,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		else
 			label = nothing
 		end
+
 		sys_am = ActiveMaterialP2D(am_params, rp, N, D; label = label)
 	else
 		sys_am = ActiveMaterialNoParticleDiffusion(am_params)
@@ -523,7 +564,7 @@ function set_parameters(model::IntercalationBattery, input
 	parameters = Dict{Symbol, Any}()
 
 	refT = 298.15
-	T = get(cycling_protocol, "AmbientTemperature", refT)
+	T = get(cycling_protocol, "InitialTemperature", refT)
 
 	if haskey(model.settings, "CurrentCollectors")
 
@@ -894,7 +935,7 @@ function setup_initial_state(input, model::IntercalationBattery)
 	include_cc = haskey(model.settings, "CurrentCollectors")
 
 	refT     = 298.15
-	T        = get(input.cycling_protocol, "AmbientTemperature", refT)
+	T        = get(input.cycling_protocol, "InitialTemperature", refT)
 	SOC_init = input.cycling_protocol["InitialStateOfCharge"]
 
 	function setup_init_am(name, multimodel)
@@ -940,7 +981,7 @@ function setup_initial_state(input, model::IntercalationBattery)
 		if phi isa Int
 			phi = convert(Float64, phi)
 		end
-		init[:Voltage] = fill(phi, nc)
+		init[:ElectricPotential] = fill(phi, nc)
 		return init
 	end
 
@@ -949,7 +990,7 @@ function setup_initial_state(input, model::IntercalationBattery)
 	# Setup initial state in negative active material
 
 	init, nc, negOCP = setup_init_am(:NegativeElectrodeActiveMaterial, multimodel)
-	init[:Voltage] = zeros(typeof(negOCP), nc)
+	init[:ElectricPotential] = zeros(typeof(negOCP), nc)
 	initState[:NegativeElectrodeActiveMaterial] = init
 
 	# Setup initial state in electrolyte
@@ -957,15 +998,15 @@ function setup_initial_state(input, model::IntercalationBattery)
 	nc = count_entities(multimodel[:Electrolyte].data_domain, Cells())
 
 	init = Dict()
-	init[:Concentration] = input.cell_parameters["Electrolyte"]["Concentration"] * ones(nc)
-	init[:Voltage] = fill(-negOCP, nc)
+	init[:ElectrolyteConcentration] = input.cell_parameters["Electrolyte"]["Concentration"] * ones(nc)
+	init[:ElectricPotential] = fill(-negOCP, nc)
 
 	initState[:Electrolyte] = init
 
 	# Setup initial state in positive active material
 
 	init, nc, posOCP = setup_init_am(:PositiveElectrodeActiveMaterial, multimodel)
-	init[:Voltage] = fill(posOCP - negOCP, nc)
+	init[:ElectricPotential] = fill(posOCP - negOCP, nc)
 
 	initState[:PositiveElectrodeActiveMaterial] = init
 
@@ -977,7 +1018,7 @@ function setup_initial_state(input, model::IntercalationBattery)
 	end
 
 	init = Dict()
-	init[:Voltage] = posOCP - negOCP
+	init[:ElectricPotential] = posOCP - negOCP
 	init[:Current] = getInitCurrent(multimodel[:Control])
 
 	initState[:Control] = init

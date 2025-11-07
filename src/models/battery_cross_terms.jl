@@ -17,8 +17,8 @@ function Jutul.update_cross_term_in_entity!(out,
 	trans = ct.trans[ind]
 	ind_t = ct.target_cells[ind]
 	ind_s = ct.source_cells[ind]
-	phi_t = state_t.Voltage[ind_t]
-	phi_s = state_s.Voltage[ind_s]
+	phi_t = state_t[:ElectricPotential][ind_t]
+	phi_s = state_s[:ElectricPotential][ind_s]
 
 	out[] = trans * (phi_t - phi_s)
 
@@ -38,8 +38,8 @@ function Jutul.update_cross_term_in_entity!(out,
 	ldisc = local_discretization(ct, ind))
 	trans = ct.trans
 	ind_t = ct.target_cell
-	phi_t = state_t.Voltage[ind_t]
-	phi_s = state_s.Voltage
+	phi_t = state_t[:ElectricPotential][ind_t]
+	phi_s = state_s[:ElectricPotential]
 	v = 0
 	for (i, ind_s) in enumerate(ct.source_cells)
 		v += trans[i] * (phi_t - phi_s[ind_s])
@@ -215,16 +215,16 @@ function Jutul.update_cross_term_in_entity!(out,
 
 	vols = state_t.Volume[ind_t]
 
-	phi_e = state_t.Voltage[ind_t]
-	phi_a = state_s.Voltage[ind_s]
+	phi_e = state_t.ElectricPotential[ind_t]
+	phi_a = state_s.ElectricPotential[ind_s]
 	ocp = state_s.OpenCircuitPotential[ind_s]
 	R0 = state_s.ReactionRateConstant[ind_s]
-	c_e = state_t.Concentration[ind_t]
+	c_e = state_t.ElectrolyteConcentration[ind_t]
 	c_a_surf = state_s.SurfaceConcentration[ind_s]
 	c_a = state_s.ParticleConcentration[ind_s]
 	T = state_s.Temperature[ind_s]
 	c_av = mean(c_a)
-	c_av_e = mean(state_t.Concentration)
+	c_av_e = mean(state_t.ElectrolyteConcentration)
 
 	# overpotential
 	eta = phi_a - phi_e - ocp
@@ -240,7 +240,7 @@ function Jutul.update_cross_term_in_entity!(out,
 			c_a,
 			c_av,
 			c_av_e)
-	else
+	elseif activematerial.params[:setting_butler_volmer] == "Standard"
 		R = reaction_rate(eta,
 			c_a_surf,
 			R0,
@@ -248,6 +248,8 @@ function Jutul.update_cross_term_in_entity!(out,
 			c_e,
 			activematerial,
 			electrolyte)
+	else
+		error("Unknown setting_butler_volmer: $(activematerial.params[:setting_butler_volmer])")
 	end
 
 	cs = conserved_symbol(eq)
@@ -290,16 +292,16 @@ function Jutul.update_cross_term_in_entity!(out,
 
 	vols = state_t.Volume[ind_t]
 
-	phi_e = state_s.Voltage[ind_s]
-	phi_a = state_t.Voltage[ind_t]
+	phi_e = state_s.ElectricPotential[ind_s]
+	phi_a = state_t.ElectricPotential[ind_t]
 	ocp = state_t.OpenCircuitPotential[ind_t]
 	R0 = state_t.ReactionRateConstant[ind_t]
-	c_e = state_s.Concentration[ind_s]
+	c_e = state_s.ElectrolyteConcentration[ind_s]
 	c_a_surf = state_t.SurfaceConcentration[ind_t]
 	c_a = state_t.ParticleConcentration[ind_t]
 	T = state_t.Temperature[ind_t]
 	c_av = mean(c_a)
-	c_av_e = mean(state_s.Concentration)
+	c_av_e = mean(state_s.ElectrolyteConcentration)
 
 	# overpotential
 	eta = phi_a - phi_e - ocp
@@ -424,16 +426,16 @@ function Jutul.update_cross_term_in_entity!(out,
 	#NB probably wrong use
 	vols = model_s.domain.representation[:volumes][ind_s]
 
-	phi_e = state_t.Voltage[ind_t]
-	phi_a = state_s.Voltage[ind_s]
+	phi_e = state_t.ElectricPotential[ind_t]
+	phi_a = state_s.ElectricPotential[ind_s]
 	ocp = state_s.OpenCircuitPotential[ind_s]
 	R = state_s.ReactionRateConstant[ind_s]
-	c_e = state_t.Concentration[ind_t]
+	c_e = state_t.ElectrolyteConcentration[ind_t]
 	c_a_surf = state_s.SurfaceConcentration[ind_s]
 	c_a = state_s.ParticleConcentration[ind_s]
 	T = state_s.Temperature[ind_s]
 	c_av = mean(c_a)
-	c_av_e = mean(state_t.Concentration)
+	c_av_e = mean(state_t.ElectrolyteConcentration)
 
 	eS, eM = source_electric_material(vols,
 		T,

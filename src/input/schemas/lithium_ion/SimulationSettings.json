@@ -3,104 +3,104 @@
     "title": "SimulationSettings",
     "type": "object",
     "properties": {
-        "GridResolutionHeight": {
+        "HeightGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 100,
             "description": "Number of grid points along the height of the cell (used in P4D cylindrical)."
         },
-        "GridResolutionAngular": {
+        "AngularGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 100,
             "description": "Number of discretisation angles for a cylindrical cell (used in P4D cylindrical)."
         },
-        "GridResolutionElectrodeWidth": {
+        "ElectrodeWidthGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
             "description": "Number of grid points along the width dimension of the electrode.",
-            "context_type": "GridResolutionPositiveElectrode",
+            "context_type": "PositiveElectrode",
             "context_type_iri": null
         },
-        "GridResolutionElectrodeLength": {
+        "ElectrodeLengthGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
             "description": "Number of grid points along the length dimension of the electrode.",
             "context_type_iri": null
         },
-        "GridResolutionPositiveElectrodeCoating": {
+        "PositiveElectrodeCoatingGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
             "description": "Number of grid points along the thickness dimension of the positive electrode.",
             "context_type_iri": null
         },
-        "GridResolutionPositiveElectrodeParticle": {
+        "PositiveElectrodeParticleGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
             "description": "Number of grid points along the radial pseudo dimension of the positive electrode active material particles.",
             "context_type_iri": null
         },
-        "GridResolutionNegativeElectrodeCoating": {
+        "NegativeElectrodeCoatingGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
             "description": "Number of grid points along the thickness dimension of the negative electrode.",
             "context_type_iri": null
         },
-        "GridResolutionPositiveElectrodeCurrentCollector": {
+        "PositiveElectrodeCurrentCollectorGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
             "description": "Number of grid points along the thickness dimension of the positive electrode current collector.",
             "context_type_iri": null
         },
-        "GridResolutionPositiveElectrodeCurrentCollectorTabWidth": {
+        "PositiveElectrodeCurrentCollectorTabWidthGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
             "description": "In the current collector tab at the positive electrode, the number of grid points along the width dimension of the tab's face.",
             "context_type_iri": null
         },
-        "GridResolutionPositiveElectrodeCurrentCollectorTabLength": {
+        "PositiveElectrodeCurrentCollectorTabLengthGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
             "description": "In the current collector tab at the positive electrode, the number of grid points along the length dimension of the tab's face.",
             "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
         },
-        "GridResolutionNegativeElectrodeCurrentCollector": {
+        "NegativeElectrodeCurrentCollectorGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
             "description": "Number of grid points along the thickness dimension of the negative electrode current collector.",
             "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
         },
-        "GridResolutionNegativeElectrodeCurrentCollectorTabWidth": {
+        "NegativeElectrodeCurrentCollectorTabWidthGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
             "description": "In the current collector tab at the negative electrode, the number of grid points along the width dimension of the tab's face.",
             "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
         },
-        "GridResolutionNegativeElectrodeCurrentCollectorTabLength": {
+        "NegativeElectrodeCurrentCollectorTabLengthGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
             "description": "In the current collector tab at the negative electrode, the number of grid points along the length dimension of the tab's face.",
             "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
         },
-        "GridResolutionNegativeElectrodeParticle": {
+        "NegativeElectrodeParticleGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
             "description": "Number of grid points along the radial pseudo dimension of the negative electrode active material particles.",
             "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
         },
-        "GridResolutionSeparator": {
+        "SeparatorGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
@@ -148,13 +148,13 @@
         }
     },
     "required": [
-        "TimeStepDuration",
-        "GridResolutionSeparator",
-        "GridResolutionNegativeElectrodeParticle",
-        "GridResolutionNegativeElectrodeCoating",
-        "GridResolutionPositiveElectrodeParticle",
-        "GridResolutionPositiveElectrodeCoating",
-        "ModelSettings"
+        "TimeStepDurationGridPoints",
+        "SeparatorGridPoints",
+        "NegativeElectrodeParticleGridPoints",
+        "NegativeElectrodeCoatingGridPoints",
+        "PositiveElectrodeParticleGridPoints",
+        "PositiveElectrodeCoatingGridPoints",
+        "ModelSettingsGridPoints"
     ],
     "allOf": [
         {
@@ -170,14 +170,14 @@
             },
             "then": {
                 "required": [
-                    "GridResolutionPositiveElectrodeCurrentCollector",
-                    "GridResolutionPositiveElectrodeCurrentCollectorTabLength",
-                    "GridResolutionPositiveElectrodeCurrentCollectorTabWidth",
-                    "GridResolutionNegativeElectrodeCurrentCollector",
-                    "GridResolutionNegativeElectrodeCurrentCollectorTabWidth",
-                    "GridResolutionNegativeElectrodeCurrentCollectorTabLength",
-                    "GridResolutionElectrodeWidth",
-                    "GridResolutionElectrodeLength"
+                    "PositiveElectrodeCurrentCollectorGridPoints",
+                    "PositiveElectrodeCurrentCollectorTabLengthGridPoints",
+                    "PositiveElectrodeCurrentCollectorTabWidthGridPoints",
+                    "NegativeElectrodeCurrentCollectorGridPoints",
+                    "NegativeElectrodeCurrentCollectorTabWidthGridPoints",
+                    "NegativeElectrodeCurrentCollectorTabLengthGridPoints",
+                    "ElectrodeWidthGridPoints",
+                    "ElectrodeLengthGridPoints"
                 ]
             }
         },
@@ -194,13 +194,13 @@
             },
             "then": {
                 "required": [
-                    "GridResolutionHeight",
-                    "GridResolutionAngular",
-                    "GridResolutionPositiveElectrodeCurrentCollector",
-                    "GridResolutionPositiveElectrodeCurrentCollectorTabWidth",
-                    "GridResolutionNegativeElectrodeCurrentCollector",
-                    "GridResolutionNegativeElectrodeCurrentCollectorTabWidth",
-                    "GridResolutionSeparator"
+                    "HeightGridPoints",
+                    "AngularGridPoints",
+                    "PositiveElectrodeCurrentCollectorGridPoints",
+                    "PositiveElectrodeCurrentCollectorTabWidthGridPoints",
+                    "NegativeElectrodeCurrentCollectorGridPoints",
+                    "NegativeElectrodeCurrentCollectorTabWidthGridPoints",
+                    "SeparatorGridPoints"
                 ]
             }
         },

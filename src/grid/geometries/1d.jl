@@ -31,12 +31,12 @@ function one_dimensional_grid(input)
 	end
 
 	function get_grid_settings_vals()
-		neval = simulation_settings["GridResolutionNegativeElectrodeCoating"]
-		sepval = simulation_settings["GridResolutionSeparator"]
-		peval = simulation_settings["GridResolutionPositiveElectrodeCoating"]
+		neval = simulation_settings["NegativeElectrodeCoatingGridPoints"]
+		sepval = simulation_settings["SeparatorGridPoints"]
+		peval = simulation_settings["PositiveElectrodeCoatingGridPoints"]
 		if include_current_collectors
-			ne_ccval = simulation_settings["GridResolutionNegativeElectrodeCurrentCollector"]
-			pe_ccval = simulation_settings["GridResolutionPositiveElectrodeCurrentCollector"]
+			ne_ccval = simulation_settings["NegativeElectrodeCurrentCollectorGridPoints"]
+			pe_ccval = simulation_settings["PositiveElectrodeCurrentCollectorGridPoints"]
 			out = [ne_ccval, neval, sepval, peval, pe_ccval]
 		else
 			out = [neval, sepval, peval]

@@ -6,10 +6,10 @@ using Test
 
 	@test begin
 
-		file_path_cell = parameter_file_path("cell_parameters", "Chen2020.json")
-		file_path_model = parameter_file_path("model_settings", "P2D.json")
-		file_path_cycling = parameter_file_path("cycling_protocols", "CCCV.json")
-		file_path_simulation = parameter_file_path("simulation_settings", "P2D.json")
+		file_path_cell = parameter_file_path("cell_parameters", "chen_2020.json")
+		file_path_model = parameter_file_path("model_settings", "p2d.json")
+		file_path_cycling = parameter_file_path("cycling_protocols", "cccv.json")
+		file_path_simulation = parameter_file_path("simulation_settings", "p2d.json")
 
 		cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
 		cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
@@ -29,10 +29,10 @@ using Test
 
 		output = solve(sim)
 
-		states = get_output_states(output)
+		states = output.states
 
-		sei_thickness = states.SEIThickness
-		voltage_drop = states.SEIVoltageDrop
+		sei_thickness = states["SEIThickness"]
+		voltage_drop = states["SEIVoltageDrop"]
 
 
 		@test length(sei_thickness[:, 2]) ≈ 2629 atol = 0

@@ -122,7 +122,7 @@ function get_simulation_input(inputparams::BattMoInputFormatOld;
 	model_kwargs::NamedTuple          = NamedTuple(),
 	config_kwargs::NamedTuple         = NamedTuple())
 
-	model, parameters, couplings = setup_model(inputparams;
+	model, parameters, couplings = setup_model!(inputparams;
 		use_groups = use_groups,
 		general_ad = general_ad,
 		use_p2d = use_p2d,
@@ -319,7 +319,7 @@ function getTrans(model1::SimulationModel,
 	parameters1,
 	parameters2,
 	quantity)
-	""" setup transmissibility for coupling between models at boundaries. Intermediate 1d version"""
+	""" setup transmissibility for coupling between models at boundaries."""
 
 	d1 = physical_representation(model1)
 	d2 = physical_representation(model2)
@@ -343,7 +343,7 @@ function getHalfTrans(model::SimulationModel,
 	bccells,
 	parameters,
 	quantity)
-	""" recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the corresponding given cells. Intermediate 1d version. Note the indexing in BoundaryFaces is used"""
+	""" recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the corresponding given cells. Note the indexing in BoundaryFaces is used"""
 
 	d       = physical_representation(model)
 	bcTrans = d[:bcTrans][bcfaces]
@@ -558,7 +558,7 @@ end
 # Setup model #
 ###############
 
-function setup_model(inputparams::BattMoInputFormatOld;
+function setup_model!(inputparams::BattMoInputFormatOld;
 	use_p2d::Bool    = true,
 	use_groups::Bool = false,
 	general_ad       = true,
@@ -1292,7 +1292,7 @@ function setup_initial_state(inputparams::InputParamsOld,
 		if phi isa Int
 			phi = convert(Float64, phi)
 		end
-		init[:Voltage] = fill(phi, nc)
+		init[:ElectricPotential] = fill(phi, nc)
 		return init
 	end
 
@@ -1301,7 +1301,7 @@ function setup_initial_state(inputparams::InputParamsOld,
 	# Setup initial state in negative active material
 
 	init, nc, negOCP = setup_init_am(:NegativeElectrodeActiveMaterial, model)
-	init[:Voltage] = zeros(typeof(negOCP), nc)
+	init[:ElectricPotential] = zeros(typeof(negOCP), nc)
 	initState[:NegativeElectrodeActiveMaterial] = init
 
 	# Setup initial state in electrolyte
@@ -1309,15 +1309,15 @@ function setup_initial_state(inputparams::InputParamsOld,
 	nc = count_entities(model[:Electrolyte].data_domain, Cells())
 
 	init = Dict()
-	init[:Concentration] = inputparams["Electrolyte"]["initialConcentration"] * ones(nc)
-	init[:Voltage] = fill(-negOCP, nc)
+	init[:ElectrolyteConcentration] = inputparams["Electrolyte"]["initialConcentration"] * ones(nc)
+	init[:ElectricPotential] = fill(-negOCP, nc)
 
 	initState[:Electrolyte] = init
 
 	# Setup initial state in positive active material
 
 	init, nc, posOCP = setup_init_am(:PositiveElectrodeActiveMaterial, model)
-	init[:Voltage] = fill(posOCP - negOCP, nc)
+	init[:ElectricPotential] = fill(posOCP - negOCP, nc)
 
 	initState[:PositiveElectrodeActiveMaterial] = init
 

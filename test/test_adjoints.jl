@@ -2,8 +2,8 @@ using BattMo, Test, Jutul
 import BattMo: VoltageCalibration, free_calibration_parameter!, freeze_calibration_parameter!, print_calibration_overview
 
 function test_adjoints()
-	cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
-	cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+	cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
+	cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 	solver_settings = load_solver_settings(; from_default_set = "direct")
 
 	cycling_protocol["InitialStateOfCharge"] = 0.8
@@ -15,19 +15,19 @@ function test_adjoints()
 	sim = Simulation(model_setup, cell_parameters, cycling_protocol)
 
 	output0 = solve(sim, info_level = -1)
-	t0 = [state[:Control][:Controller].time for state in output0[:states]]
-	V0 = [state[:Control][:Voltage][1] for state in output0[:states]]
+	t0 = output0.time_series["Time"]
+	V0 = output0.time_series["Voltage"]
 
 	vc0 = VoltageCalibration(t0, V0, sim)
 	obj0 = BattMo.setup_calibration_objective(vc0)
-	dt = report_timesteps(output0[:reports])[1:end-1]
-	model = output0[:extra][:model]
-	states = output0.states
-	forces = output0[:extra][:forces]
-	prm = output0[:extra][:parameters]
-	state0 = output0[:extra][:state0]
+	dt = report_timesteps(output0.jutul_output.reports)[1:(end-1)]
+	multimodel = sim.model.multimodel
+	jutul_states = output0.jutul_output.states
+	forces = sim.forces
+	prm = sim.parameters
+	state0 = sim.initial_state
 	# Check that the objective is zero when the voltage data matches the model output
-	@test Jutul.evaluate_objective(obj0, model, states, dt, forces) ≈ 0.0
+	@test Jutul.evaluate_objective(obj0, multimodel, jutul_states, dt, forces) ≈ 0.0
 	# Perturb the voltage data to make the objective non-zero
 	vc = VoltageCalibration(t0, V0 .+ 1.0, sim)
 
@@ -59,7 +59,7 @@ function test_adjoints()
 		["PositiveElectrode", "ActiveMaterial", "ReactionRateConstant"];
 		lower_bound = 1e-16, upper_bound = 1e-10)
 	obj = BattMo.setup_calibration_objective(vc)
-	val = Jutul.evaluate_objective(obj, model, states, dt, forces)
+	val = Jutul.evaluate_objective(obj, multimodel, jutul_states, dt, forces)
 	@test val ≈ 1.0
 
 

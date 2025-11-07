@@ -9,8 +9,8 @@
 
 using BattMo
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 nothing # hide
 
 # ### Access parameters
@@ -68,10 +68,10 @@ sim = Simulation(model, cell_parameters, cycling_protocol)
 
 output = solve(sim);
 
-states = output[:states]
-t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Voltage][1] for state in states]
-I = [state[:Control][:Current][1] for state in states]
+t = output.time_series["Time"]
+E = output.time_series["Voltage"]
+I = output.time_series["Current"]
+
 using GLMakie # hide
 fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
@@ -82,16 +82,16 @@ fig
 
 # Let’s reload the original parameters and simulate again to compare:
 
-cell_parameters_2 = load_cell_parameters(; from_default_set = "Chen2020")
+cell_parameters_2 = load_cell_parameters(; from_default_set = "chen_2020")
 sim2 = Simulation(model, cell_parameters_2, cycling_protocol);
 output2 = solve(sim2)
 nothing # hide
 
 # Now, we plot the original and modified results:
 
-t2 = [state[:Control][:Controller].time for state in output2[:states]]
-E2 = [state[:Control][:Voltage][1] for state in output2[:states]]
-I2 = [state[:Control][:Current][1] for state in output2[:states]]
+t2 = output2.time_series["Time"]
+E2 = output2.time_series["Voltage"]
+I2 = output2.time_series["Current"]
 
 fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")

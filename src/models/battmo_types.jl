@@ -1,7 +1,7 @@
 export BattMoSystem, CurrentCollector
-export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalECTPFAGrid
+export vonNeumannBC, DirichletBC, BoundaryCondition, MinimalTpfaGrid
 export ChargeFlow, BoundaryPotential, BoundaryCurrent
-export Voltage, Concentration, Temperature, Charge, Mass
+export ElectricPotential, ElectrolyteConcentration, Temperature, Charge, Mass
 export BCCurrent
 export TPFAInterfaceFluxCT, ButlerVolmerActmatToElyteCT, ButlerVolmerElyteToActmatCT, ButlerVolmerInterfaceFluxCT
 export BoundaryDirichletFaces
@@ -22,17 +22,17 @@ abstract type BattMoGrid <: JutulMesh end
 # Potential variables
 
 abstract type Potential <: ScalarVariable end
-struct Voltage <: Potential end
+struct ElectricPotential <: Potential end
 
-# minimum_value(::Voltage) = -10
-# maximum_value(::Voltage) = 10
-# absolute_increment_limit(::Voltage) = 0.
+# minimum_value(::ElectricPotential) = -10
+# maximum_value(::ElectricPotential) = 10
+# absolute_increment_limit(::ElectricPotential) = 0.
 
-struct Concentration <: Potential end
-Jutul.minimum_value(::Concentration) = 0.0
-# maximum_value(:Concentration)   = 10000
-# absolute_increment_limit(:Concentration) = 500
-# relative_increment_limit(:Concentrationncentration) = 0.1
+struct ElectrolyteConcentration <: Potential end
+Jutul.minimum_value(::ElectrolyteConcentration) = 0.0
+# maximum_value(:ElectrolyteConcentration)   = 10000
+# absolute_increment_limit(:ElectrolyteConcentration) = 500
+# relative_increment_limit(:ElectrolyteConcentration) = 0.1
 
 struct Temperature <: Potential end
 struct BruggemanCoefficient <: ScalarVariable end
@@ -75,43 +75,91 @@ end
 
 Jutul.associated_entity(::BoundaryCurrent) = BoundaryDirichletFaces()
 
-struct MinimalECTPFAGrid{V, N, B, BT, M} <: BattMoGrid
+struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
 	"""
 	Simple grid for a electro chemical component
 	"""
-	volumes::V
-	neighborship::N
-	boundary_cells::B # indices of the boundary cells (some can can be repeated if a cell has two boundary faces). Same length as boundary_hfT.
-	boundary_hfT::BT # Boundary half face transmissibilities
-	P::M # Tensor to map from cells to faces
-	S::M # Tensor map cell vector to cell scalar
+    volumes::V
+
+	neighborship::N    # Internal faces only
+    halftransfaces::NT # half transmissibilities for the internal faces
+
+    cell_face_tbl::N  # cell-face pairs
+    cell_face_hT::BT  # value of the half-transmissibility for the corresponding cell-face pair
+
+    P::M              # Tensor to map from cells to faces, not used for the moment
+	S::M              # Tensor map cell vector to cell scalar, not used for the moment
+    
 	vol_frac::V
-	trans::V
-	function MinimalECTPFAGrid(pv, N, T; bc_cells = [], bc_hfT = [], P = [], S = [], vf = [])
-		nc = length(pv)
-		pv::AbstractVector
+
+	function MinimalTpfaGrid(volumes,
+                             N,
+                             N_hT,
+                             cf,  # cell-face pairs
+                             cf_hT,  # value of the half-transmissibility for the corresponding cell-face pair
+                             vf)
+
+        nc = length(volumes)
+
+        volumes::AbstractVector
+		@assert all(volumes .> 0)
+
 		@assert size(N, 1) == 2
 		if length(N) > 0
 			@assert minimum(N) > 0
 			@assert maximum(N) <= nc
 		end
-		@assert all(pv .> 0)
-		@assert size(bc_cells) == size(bc_hfT)
+        
+        nf = size(N, 2)
+        @assert size(N_hT, 1) == 2
+        @assert size(N_hT, 2) == nf
+
 		if isempty(vf)
 			vf = 1
 		end
 		if length(vf) != nc
 			vf = vf * ones(nc)
 		end
-		return new{typeof(pv), typeof(N), typeof(bc_cells), typeof(bc_hfT), typeof(P)}(pv, N, bc_cells, bc_hfT, P, S, vf, T)
+
+        P = []
+        S = []
+        
+		return new{typeof(volumes),
+                   typeof(N),
+                   typeof(N_hT),
+                   typeof(cf),
+                   typeof(cf_hT),
+                   typeof(P)}(volumes,
+                              N,
+                              N_hT,
+                              cf,
+                              cf_hT,
+                              P,
+                              S,
+                              vf)
+
 	end
+    
 end
 
-function Jutul.number_of_cells(G::MinimalECTPFAGrid)
+function Jutul.declare_entities(G::MinimalTpfaGrid)
+	# cells
+	c = (entity = Cells(), count = length(G.volumes))
+	# faces
+	f = (entity = Faces(), count = size(G.neighborship, 2))
+	return [c, f]
+end
+
+function Base.getindex(grid::MinimalTpfaGrid, key::Symbol)
+    return getfield(grid, key)
+end
+
+
+function Jutul.number_of_cells(G::MinimalTpfaGrid)
 	return length(G.volumes)
 end
 
-Base.show(io::IO, g::MinimalECTPFAGrid) = print(io, "MinimalECTPFAGrid ($(number_of_cells(g)) cells, $(number_of_faces(g)) faces)")
+Base.show(io::IO, g::MinimalTpfaGrid) = print(io, "MinimalTpfaGrid ($(number_of_cells(g)) cells, $(number_of_faces(g)) faces)")
 ################
 # Constructors #
 ################
@@ -124,7 +172,6 @@ struct TPFAInterfaceFluxCT{T, F} <: AdditiveCrossTerm
 		new{T, F}(target, source, trans)
 	end
 end
-
 
 export AccumulatorInterfaceFluxCT
 struct AccumulatorInterfaceFluxCT{T, F} <: AdditiveCrossTerm
@@ -152,7 +199,6 @@ struct ButlerVolmerInterfaceFluxCT{T} <: AdditiveCrossTerm
 	source_cells::T
 end
 
-## Transmissibilities
 function data_domain_helper(d::DataDomain, k::Symbol)
 	r = physical_representation(d)
 	if r isa DataDomain
@@ -161,28 +207,11 @@ function data_domain_helper(d::DataDomain, k::Symbol)
 	return d[k]
 end
 
-struct ECTransmissibilities <: ScalarVariable end
-Jutul.variable_scale(::ECTransmissibilities) = 1e-10
-Jutul.associated_entity(::ECTransmissibilities) = Faces()
-
-function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O, S, F, C}, ::ECTransmissibilities, symb) where {G <: MinimalECTPFAGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
-
-	repG = physical_representation(model)
-	return repG.trans
-
-end
-
-function Jutul.default_parameter_values(d::DataDomain, model, ::ECTransmissibilities, symb)
-
-	return data_domain_helper(d, :trans)
-
-end
-
 ## Volume
 struct Volume <: ScalarVariable end
 Jutul.associated_entity(::Volume) = Cells()
 
-function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O, S, F, C}, ::Volume, symb) where {G <: MinimalECTPFAGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
+function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O, S, F, C}, ::Volume, symb) where {G <: MinimalTpfaGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
 
 	repG = physical_representation(model)
 	return repG.volumes
@@ -199,7 +228,7 @@ Jutul.minimum_value(::Volume) = eps()
 struct VolumeFraction <: ScalarVariable end
 Jutul.associated_entity(::VolumeFraction) = Cells()
 
-function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O, S, F, C}, ::VolumeFraction, symb) where {G <: MinimalECTPFAGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
+function Jutul.default_parameter_values(d::DataDomain, model::SimulationModel{O, S, F, C}, ::VolumeFraction, symb) where {G <: MinimalTpfaGrid, D, E, M, O <: DiscretizedDomain{G, D, E, M}, S, F, C}
 
 	repG = physical_representation(model)
 	return repG.vol_frac
@@ -238,7 +267,7 @@ end
 
 function BatteryGeneralPreconditioner()
 	varpreconds = Vector{VariablePrecond}()
-	push!(varpreconds, VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :Voltage, :charge_conservation, nothing))
+	push!(varpreconds, VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :ElectricPotential, :charge_conservation, nothing))
 	g_varprecond = VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global, nothing)
 	params = Dict()
 	params["method"] = "block"

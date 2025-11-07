@@ -192,7 +192,7 @@ end
 
 function Jutul.select_primary_variables!(S, system::CurrentAndVoltageSystem, model::SimulationModel)
 
-	S[:Voltage] = VoltageVar()
+	S[:ElectricPotential] = VoltageVar()
 	S[:Current] = CurrentVar()
 
 end
@@ -658,7 +658,7 @@ function setupRegionSwitchFlags(policy::Union{CyclingCVPolicy, CCPolicy}, state,
 
 
 
-	E = only(state.Voltage)
+	E = only(state.ElectricPotential)
 	I = only(state.Current)
 
 
@@ -720,7 +720,7 @@ function check_constraints(model, storage)
 	ctrlType0  = state0[:Controller].ctrlType
 
 	if policy isa CyclingCVPolicy
-		nextCtrlType = getNextCtrlTypeCCCV(ctrlType0)
+		nextCtrlType = getNextCtrlTypecccv(ctrlType0)
 	elseif policy isa CCPolicy
 		if ctrlType == "discharging"
 			nextCtrlType = "charging"
@@ -842,7 +842,7 @@ function update_control_type_in_controller!(state, state0, policy::SimpleCVPolic
 
 	controller = state.Controller
 
-	phi = only(state.Voltage)
+	phi = only(state.ElectricPotential)
 
 	target_is_voltage = (phi <= phi_p)
 
@@ -857,9 +857,9 @@ Implementation of the cycling CC-CV policy
 """
 function update_control_type_in_controller!(state, state0, policy::CyclingCVPolicy, dt)
 
-	E  = only(value(state[:Voltage]))
+	E  = only(value(state[:ElectricPotential]))
 	I  = only(value(state[:Current]))
-	E0 = only(value(state0[:Voltage]))
+	E0 = only(value(state0[:ElectricPotential]))
 	I0 = only(value(state0[:Current]))
 
 	controller = state.Controller
@@ -870,7 +870,7 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
 
 	ctrlType0 = state0.Controller.ctrlType
 
-	nextCtrlType = getNextCtrlTypeCCCV(ctrlType0)
+	nextCtrlType = getNextCtrlTypecccv(ctrlType0)
 
 	rsw00 = setupRegionSwitchFlags(policy, state0, ctrlType0)
 
@@ -886,7 +886,7 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
 		# We entered the switch region in the previous time step. We consider switching control
 
 		currentCtrlType = state.Controller.ctrlType # current control in the the Newton iteration
-		nextCtrlType0   = getNextCtrlTypeCCCV(ctrlType0) # next control that can occur after the previous time step control (if it changes)
+		nextCtrlType0   = getNextCtrlTypecccv(ctrlType0) # next control that can occur after the previous time step control (if it changes)
 
 		rsw0 = setupRegionSwitchFlags(policy, state, ctrlType0)
 
@@ -1080,7 +1080,7 @@ function update_values_in_controller!(state, policy::FunctionPolicy)
 
 	cf = policy.current_function
 
-	I_p = cf(controller.time, value(only(state.Voltage)))
+	I_p = cf(controller.time, value(only(state.ElectricPotential)))
 
 	controller.target = I_p
 
@@ -1198,7 +1198,7 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquati
 
 	I = only(state.Current)
 
-	phi = only(state.Voltage)
+	phi = only(state.ElectricPotential)
 
 	ctrl = state[:Controller]
 
@@ -1215,7 +1215,7 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::CurrentEquati
 
 	# Sign is strange here due to cross term?
 	I   = only(state.Current)
-	phi = only(state.Voltage)
+	phi = only(state.ElectricPotential)
 
 	v[] = I + phi * 1e-10
 
@@ -1402,7 +1402,7 @@ end
 # Utility functions for CC-CV control #
 #######################################
 
-function getNextCtrlTypeCCCV(ctrlType::OperationalMode)
+function getNextCtrlTypecccv(ctrlType::OperationalMode)
 
 	if ctrlType == cc_discharge1
 

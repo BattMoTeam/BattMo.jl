@@ -1,0 +1,16 @@
+{
+    "HeightGridPoints": 2,
+    "AngularGridPoints": 8,
+    "PositiveElectrodeCoatingGridPoints": 3,
+    "PositiveElectrodeParticleGridPoints": 5,
+    "PositiveElectrodeCurrentCollectorGridPoints": 3,
+    "PositiveElectrodeCurrentCollectorTabWidthGridPoints": 2,
+    "NegativeElectrodeCoatingGridPoints": 3,
+    "NegativeElectrodeParticleGridPoints": 5,
+    "NegativeElectrodeCurrentCollectorGridPoints": 3,
+    "NegativeElectrodeCurrentCollectorTabWidthGridPoints": 2,
+    "SeparatorGridPoints": 3,
+    "TimeStepDuration": 50,
+    "RampUpTime": 10,
+    "RampUpSteps": 5
+}

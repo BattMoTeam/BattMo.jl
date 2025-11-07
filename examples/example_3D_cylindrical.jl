@@ -5,10 +5,10 @@
 using BattMo, Jutul, GLMakie
 
 # ## Load the cell parameters
-cell_parameters     = load_cell_parameters(; from_default_set = "Chen2020")
-cycling_protocol    = load_cycling_protocol(; from_default_set = "CCDischarge")
-model_settings      = load_model_settings(; from_default_set = "P4D_cylindrical")
-simulation_settings = load_simulation_settings(; from_default_set = "P4D_cylindrical")
+cell_parameters     = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol    = load_cycling_protocol(; from_default_set = "cc_discharge")
+model_settings      = load_model_settings(; from_default_set = "p4d_cylindrical")
+simulation_settings = load_simulation_settings(; from_default_set = "p4d_cylindrical")
 nothing #hide
 
 # ## Set up the model
@@ -47,7 +47,7 @@ nothing #hide
 
 # The angular discretization of the cell is determined by the number of angular grid points.
 
-simulation_settings["GridResolutionAngular"] = 30
+simulation_settings["AngularGridPoints"] = 30
 nothing #hide
 
 # ## Create the simulation object
@@ -112,10 +112,10 @@ fig #hide
 
 # We reload the original parameters
 
-cell_parameters     = load_cell_parameters(; from_default_set = "Chen2020")
-cycling_protocol    = load_cycling_protocol(; from_default_set = "CCDischarge")
-model_settings      = load_model_settings(; from_default_set = "P4D_cylindrical")
-simulation_settings = load_simulation_settings(; from_default_set = "P4D_cylindrical")
+cell_parameters     = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol    = load_cycling_protocol(; from_default_set = "cc_discharge")
+model_settings      = load_model_settings(; from_default_set = "p4d_cylindrical")
+simulation_settings = load_simulation_settings(; from_default_set = "p4d_cylindrical")
 
 # We adjust the parameters so that the simulation in this example is not too long (around a couple of minutes)
 
@@ -124,7 +124,7 @@ cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabFractions"] = [0.5]
 cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabFractions"] = [0.5]
 cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
 cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
-simulation_settings["GridResolutionAngular"]                             = 8
+simulation_settings["AngularGridPoints"]                                 = 8
 
 # We setup the simulation and run it
 model = LithiumIonBattery(; model_settings)

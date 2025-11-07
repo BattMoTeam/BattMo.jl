@@ -7,7 +7,7 @@ using GLMakie, StatsBase, Loess
 
 
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
-include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_functions.jl"))
+include(joinpath(battmo_base, "src/input/defaults/cell_parameters/function_parameters_chayambuka_2022.jl"))
 
 ######### Load Experimental Data #########
 
@@ -18,7 +18,7 @@ df_14 = CSV.read(joinpath(exdata, "Chayambuka_V_14C.csv"), DataFrame)
 
 # --- Smoothing functions ---
 function moving_average(data::AbstractVector, window::Int = 5)
-	[mean(data[max(1, i - window + 1):i]) for i in 1:length(data)]
+	[mean(data[max(1, i-window+1):i]) for i in 1:length(data)]
 end
 
 function loess_smooth(x, y; span = 0.3)
@@ -45,17 +45,17 @@ df_14 = smooth_df(df_14)
 
 ######### Load Simulation Data #########
 
-cell_parameters = load_cell_parameters(; from_default_set = "Chayambuka2022")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
-model_settings = load_model_settings(; from_default_set = "P2D")
-simulation_settings = load_simulation_settings(; from_default_set = "P2D")
+cell_parameters = load_cell_parameters(; from_default_set = "chayambuka_2022")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+model_settings = load_model_settings(; from_default_set = "p2d")
+simulation_settings = load_simulation_settings(; from_default_set = "p2d")
 
 ######### Alter simulation settings #########
-simulation_settings["GridResolutionNegativeElectrodeCoating"] = 8
-simulation_settings["GridResolutionPositiveElectrodeCoating"] = 50
-simulation_settings["GridResolutionNegativeElectrodeParticle"] = 50
-simulation_settings["GridResolutionPositiveElectrodeParticle"] = 50
-simulation_settings["GridResolutionSeparator"] = 5
+simulation_settings["NegativeElectrodeCoatingGridPoints"] = 8
+simulation_settings["PositiveElectrodeCoatingGridPoints"] = 50
+simulation_settings["NegativeElectrodeParticleGridPoints"] = 50
+simulation_settings["PositiveElectrodeParticleGridPoints"] = 50
+simulation_settings["SeparatorGridPoints"] = 5
 
 simulation_settings["TimeStepDuration"] = 300
 
@@ -111,7 +111,7 @@ output = solve(sim; info_level = 0);
 ######### Plot results ##########
 
 t0 = get_output_time_series(output)[:Time]
-V0 = get_output_time_series(output)[:Voltage]
+V0 = get_output_time_series(output)[:ElectricPotential]
 metrics = get_output_metrics(output)
 
 
@@ -167,7 +167,7 @@ output_opt = solve(sim_opt);
 
 time_series = get_output_time_series(output_opt)
 t_opt = time_series[:Time]
-V_opt = time_series[:Voltage]
+V_opt = time_series[:ElectricPotential]
 
 fig = Figure()
 ax = Axis(fig[1, 1], title = "CRate = 0.1")
