@@ -28,7 +28,7 @@ T = M*T;
 
 T = T(bcfaces);
 
-paramobj = CurrentCollectorInputParamsOld();
+paramobj = CurrentCollectorAdvancedDictInput();
 
 paramobj.G = G;
 paramobj.heatCapacity = 0;

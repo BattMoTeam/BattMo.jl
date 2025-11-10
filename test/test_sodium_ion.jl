@@ -2,16 +2,16 @@ using BattMo
 using Test
 
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
-include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_functions.jl"))
+include(joinpath(battmo_base, "src/input/defaults/cell_parameters/function_parameters_chayambuka_2022.jl"))
 
 @testset "sodium" begin
 
 	@test begin
 
-		file_path_cell = parameter_file_path("cell_parameters", "Chayambuka2022.json")
-		file_path_model = parameter_file_path("model_settings", "P2D.json")
-		file_path_cycling = parameter_file_path("cycling_protocols", "CCDischarge.json")
-		file_path_simulation = parameter_file_path("simulation_settings", "P2D.json")
+		file_path_cell = parameter_file_path("cell_parameters", "chayambuka_2022.json")
+		file_path_model = parameter_file_path("model_settings", "p2d.json")
+		file_path_cycling = parameter_file_path("cycling_protocols", "cc_discharge.json")
+		file_path_simulation = parameter_file_path("simulation_settings", "p2d.json")
 
 		cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
 		cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
@@ -39,7 +39,7 @@ include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_fun
 		drates = [0.1, 1.4]
 		delta_t = [200, 50]
 		I_test = [0.0002664523159462069, 0.003730332423246896]
-		c_test = [3974.731704738329, 4041.6330669116232]
+		c_test = [3986.653950670727, 4146.8033577258875]
 
 		for (i, rate) in enumerate(drates)
 
@@ -49,8 +49,8 @@ include(joinpath(battmo_base, "src/input/defaults/cell_parameters/Chayambuka_fun
 			sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
 
 			output = solve(sim;)
-			I = get_output_time_series(output)[:Current]
-			c_pe = get_output_states(output)[:PositiveElectrodeActiveMaterialSurfaceConcentration]
+			I = output.time_series["Current"]
+			c_pe = output.states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
 
 			@test I[end] ≈ I_test[i] atol = 1e-1
 

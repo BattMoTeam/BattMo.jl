@@ -12,8 +12,8 @@ df_2 = CSV.read(string(data_path, "Xu_2015_voltageCurve_2C.csv"), DataFrame)
 
 dfs = [df_05, df_1, df_2]
 
-cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 model_setup = LithiumIonBattery()
 
@@ -32,8 +32,8 @@ fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 
 for data in outputs
-	local t = [state[:Control][:Controller].time for state in data.output[:states]]
-	local E = [state[:Control][:Voltage][1] for state in data.output[:states]]
+	local t = data.output.time_series["Time"]
+	local E = data.output.time_series["Voltage"]
 	lines!(ax, t, E, label = @sprintf("%.1f", data.CRate))
 end
 

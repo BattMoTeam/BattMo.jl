@@ -14,9 +14,9 @@ time_profiles = Dict{Int, Vector{Float64}}()
 rel_errors = Dict{Int, Float64}()
 
 # Load base inputs
-cell_parameters = load_cell_parameters(; from_default_set = "Chayambuka2022")
-base_simulation_settings = load_simulation_settings(; from_default_set = "P2D")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+cell_parameters = load_cell_parameters(; from_default_set = "chayambuka_2022")
+base_simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 for (i, x_res) in enumerate(x_res_list)
 	println("🔧 Running simulation with x resolution = $x_res")
@@ -25,12 +25,12 @@ for (i, x_res) in enumerate(x_res_list)
 	simulation_settings = deepcopy(base_simulation_settings)
 
 	# Modify grid resolution
-	simulation_settings["GridResolutionNegativeElectrodeCoating"] = x_res
-	simulation_settings["GridResolutionPositiveElectrodeCoating"] = x_res
-	simulation_settings["GridResolutionSeparator"] = Int(x_res ÷ 2)
+	simulation_settings["NegativeElectrodeCoatingGridPoints"] = x_res
+	simulation_settings["PositiveElectrodeCoatingGridPoints"] = x_res
+	simulation_settings["SeparatorGridPoints"] = Int(x_res ÷ 2)
 
 	# Load model settings
-	model_settings = load_model_settings(; from_default_set = "P2D")
+	model_settings = load_model_settings(; from_default_set = "p2d")
 	model_settings["ReactionRateConstant"] = "UserDefined"
 	model = LithiumIonBattery(; model_settings)
 

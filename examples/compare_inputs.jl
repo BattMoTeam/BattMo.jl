@@ -3,8 +3,8 @@ using BattMo, GLMakie
 # New API and parameter sets
 model_settings = load_model_settings(; from_default_set = "P4D_demo")
 # model_settings["UseThermalModel"] = "Sequential"
-cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 # cycling_protocol["LowerCutoffVoltage"] = 2.4
 # cycling_protocol["HigherCutoffVoltage"] = 4.1
 # cycling_protocol["NumberOfCycles"] = 3
@@ -21,7 +21,7 @@ output1 = solve(sim; accept_invalid = true)
 
 
 t1 = [state[:Control][:Controller].time for state in output1[:states]]
-E1 = [state[:Control][:Voltage][1] for state in output1[:states]]
+E1 = [state[:Control][:ElectricPotential][1] for state in output1[:states]]
 I1 = [state[:Control][:Current][1] for state in output1[:states]]
 
 

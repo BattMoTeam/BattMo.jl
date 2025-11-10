@@ -28,6 +28,7 @@ docs/node_modules/
 # environment.
 Manifest.toml
 examples/Manifest.toml
+test/Manifest.toml
 *.mat
 
 apps/demo_app_with_plotting/battmo_compiled/*
@@ -35,3 +36,11 @@ apps/demo_app_with_plotting/battmo_compiled/*
 *.7z
 *.ico
 *.dat
+
+__pycache__/
+.CondaPkg
+.ipynb_checkpoints
+*.egg-info/
+
+# generated doc notebooks
+docs/src/public/notebooks

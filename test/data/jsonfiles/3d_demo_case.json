@@ -5,7 +5,7 @@
   "use_thermal": false,
   "include_current_collectors": true,
   "Control": {
-    "controlPolicy": "CCDischarge",
+    "controlPolicy": "cc_discharge",
     "useCVswitch": false,
     "rampupTime": 0.1,
     "DRate": 1,

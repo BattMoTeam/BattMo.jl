@@ -2,7 +2,7 @@
 using BattMo
 
 cell_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_chen2020_calibrated.json")
-cycling_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "CCDischarge.json")
+cycling_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cycling_protocols/", "cc_discharge.json")
 
 cell_parameters = read_cell_parameters(cell_path)
 cc_discharge_protocol = read_cycling_protocol(cycling_path)

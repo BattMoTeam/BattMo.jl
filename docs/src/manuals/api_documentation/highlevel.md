@@ -10,6 +10,8 @@ CellParameters
 CyclingProtocol
 ModelSettings
 SimulationSettings
+SolverSettings
+FullSimulationInput
 ```
 
 ## Read input
@@ -19,6 +21,8 @@ load_cell_parameters
 load_cycling_protocol
 load_model_settings
 load_simulation_settings
+load_solver_settings
+load_full_simulation_input
 ```
 
 ## Model types
@@ -26,6 +30,7 @@ load_simulation_settings
 ```@docs
 ModelConfigured
 LithiumIonBattery
+SodiumIonBattery
 ```
 
 ## Forward simulation
@@ -33,13 +38,7 @@ LithiumIonBattery
 ```@docs
 Simulation
 solve(problem::Simulation; kwargs...)
-BattMo.solve_simulation
-```
-## Retrieve output variables
-```@docs
-get_output_time_series
-get_output_states
-get_output_metrics
+run_simulation
 ```
 
 ## Plotting
@@ -47,15 +46,18 @@ get_output_metrics
 plot_dashboard
 plot_output
 plot_interactive_3d
+plot_cell_curves
 ```
 
-## Tools that print information
+## Tools that print extra information
 ```@docs
-print_submodels_info
-print_default_input_sets_info
-print_parameter_info
-print_setting_info
-print_output_variable_info
+print_info(input::S) where {S <: ParameterSet}
+print_info(output::SimulationOutput)
+print_info(from_name::String; view::Union{Nothing, String} = nothing)
+print_info(calibration::AbstractCalibration)
+quick_cell_check(cell::CellParameters; cell_2::Union{Nothing, CellParameters} = nothing)
+print_submodels()
+print_default_input_sets()
 ```
 
 ## Tools that write files
@@ -64,7 +66,7 @@ generate_default_parameter_files
 write_to_json_file
 ```
 
-## Calibration
+## Voltage Calibration
 
 ```@docs
 AbstractCalibration

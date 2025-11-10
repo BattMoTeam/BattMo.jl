@@ -2,10 +2,10 @@
 using Jutul, BattMo, GLMakie
 
 # ## Setup input parameters
-file_path_cell = parameter_file_path("cell_parameters", "Xu2015.json")
-file_path_model = parameter_file_path("model_settings", "P4D_pouch.json")
-file_path_cycling = parameter_file_path("cycling_protocols", "CCDischarge.json")
-file_path_simulation = parameter_file_path("simulation_settings", "P4D_pouch.json")
+file_path_cell = parameter_file_path("cell_parameters", "xu_2015.json")
+file_path_model = parameter_file_path("model_settings", "p4d_pouch.json")
+file_path_cycling = parameter_file_path("cycling_protocols", "cc_discharge.json")
+file_path_simulation = parameter_file_path("simulation_settings", "p4d_pouch.json")
 
 cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
 cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
@@ -27,7 +27,7 @@ states = output[:states]
 model  = output[:extra][:model]
 
 t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:Voltage][1] for state in states]
+E = [state[:Control][:ElectricPotential][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 f = Figure(size = (1000, 400))
@@ -79,15 +79,15 @@ function plot_potential(am, cc, label)
 	ax3d = Axis3(f3D[1, 1];
 		title = "Potential in $label electrode (coating and active material)")
 
-	maxVoltage = maximum([maximum(state[cc][:Voltage]), maximum(state[am][:Voltage])])
-	minVoltage = minimum([minimum(state[cc][:Voltage]), minimum(state[am][:Voltage])])
+	maxVoltage = maximum([maximum(state[cc][:ElectricPotential]), maximum(state[am][:ElectricPotential])])
+	minVoltage = minimum([minimum(state[cc][:ElectricPotential]), minimum(state[am][:ElectricPotential])])
 
 	colorrange = [0, maxVoltage - minVoltage]
 
 	components = [am, cc]
 	for component in components
 		g = model[component].domain.representation
-		phi = state[component][:Voltage]
+		phi = state[component][:ElectricPotential]
 		Jutul.plot_cell_data!(ax3d, g, phi .- minVoltage; colormap = :viridis, colorrange = colorrange)
 	end
 
@@ -166,4 +166,4 @@ nothing # hide
 plot_elyte(Concentration, "concentration")
 
 # ## Plot of the potential in the electrolyte
-plot_elyte(:Voltage, "potential")
+plot_elyte(:ElectricPotential, "potential")

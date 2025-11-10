@@ -43,35 +43,28 @@ mutable struct SodiumIonBattery <: IntercalationBattery
 end
 
 function get_default_model_settings(::Type{SodiumIonBattery})
-	settings = load_model_settings(; from_default_set = "P2D")
+	settings = load_model_settings(; from_default_set = "p2d")
 	return settings
 end
 
-function get_default_solver_settings(::Type{SodiumIonBattery})
+function get_default_solver_settings(model::SodiumIonBattery)
 	settings = load_solver_settings(; from_default_set = "direct")
 	return settings
 end
 
-function get_default_simulation_settings(st::SodiumIonBattery)
+function get_default_simulation_settings(model::SodiumIonBattery)
 
-	settings = Dict(
-		"GridResolutionElectrodeWidth" => 10,
-		"GridResolutionElectrodeLength" => 10,
-		"GridResolutionPositiveElectrodeCoating" => 20,
-		"GridResolutionPositiveElectrodeParticle" => 30,
-		"GridResolutionPositiveElectrodeCurrentCollector" => 2,
-		"GridResolutionPositiveElectrodeCurrentCollectorTabWidth" => 3,
-		"GridResolutionPositiveElectrodeCurrentCollectorTabLength" => 3,
-		"GridResolutionNegativeElectrodeCoating" => 10,
-		"GridResolutionNegativeElectrodeParticle" => 30,
-		"GridResolutionNegativeElectrodeCurrentCollector" => 2,
-		"GridResolutionNegativeElectrodeCurrentCollectorTabWidth" => 3,
-		"GridResolutionNegativeElectrodeCurrentCollectorTabLength" => 3,
-		"GridResolutionSeparator" => 3, "Grid" => [],
-		"TimeStepDuration" => 50,
-		"RampUpTime" => 10,
-		"RampUpSteps" => 5,
-	)
-	return SimulationSettings(settings; source_path = nothing)
+	model_framework = model.settings["ModelFramework"]
+	if model_framework == "P2D"
+		settings = load_simulation_settings(; from_default_set = "p2d_fine_resolution")
+	elseif model_framework == "P4D Pouch"
+		settings = load_simulation_settings(; from_default_set = "p4d_pouch")
+	elseif model_framework == "P4D Cylindrical"
+		settings = load_simulation_settings(; from_default_set = "p4d_cylindrical")
+	else
+		error("ModelFramework $model_famework not recognized")
+	end
+
+	return settings
 
 end

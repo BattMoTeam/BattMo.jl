@@ -77,8 +77,20 @@ function get_output_variables_meta_data()
 		),
 		"CycleNumber" => Dict(
 			"type" => Vector{Int},
-			"case" => "metrics",
+			"case" => "time_series",
 			"shape" => "(nTime,)",
+			"isdefault" => true,
+			"unit" => "1",
+			"unit_name" => "emmo:UnitOne",
+			"unit_iri" => "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978",
+			"context_type" => "CycleNumber",
+			"context_type_iri" => nothing,
+			"description" => "Index indicating the number of completed charge-discharge cycles.",
+		),
+		"CycleIndex" => Dict(
+			"type" => Vector{Int},
+			"case" => "metrics",
+			"shape" => "(nCycleIndex,)",
 			"isdefault" => true,
 			"unit" => "1",
 			"unit_name" => "emmo:UnitOne",
@@ -90,7 +102,7 @@ function get_output_variables_meta_data()
 		"DischargeCapacity" => Dict(
 			"type" => Vector{Real},
 			"case" => "metrics",
-			"shape" => "(nCycleNumber,)",
+			"shape" => "(nCycleIndex,)",
 			"isdefault" => false,
 			"unit" => "Ah",
 			"unit_name" => "emmo:AmpereHour",
@@ -102,7 +114,7 @@ function get_output_variables_meta_data()
 		"Capacity" => Dict(
 			"type" => Vector{Real},
 			"case" => "time_series",
-			"shape" => "(Time,)",
+			"shape" => "(nTime,)",
 			"isdefault" => false,
 			"unit" => "Ah",
 			"unit_name" => "emmo:AmpereHour",
@@ -114,7 +126,7 @@ function get_output_variables_meta_data()
 		"ChargeCapacity" => Dict(
 			"type" => Vector{Real},
 			"isdefault" => false,
-			"shape" => "(nCycleNumber,)",
+			"shape" => "(nCycleIndex,)",
 			"case" => "metrics",
 			"unit" => "Ah",
 			"unit_name" => "emmo:AmpereHour",
@@ -126,7 +138,7 @@ function get_output_variables_meta_data()
 		"DischargeEnergy" => Dict(
 			"type" => Vector{Real},
 			"case" => "metrics",
-			"shape" => "(nCycleNumber,)",
+			"shape" => "(nCycleIndex,)",
 			"isdefault" => false,
 			"unit" => "J",
 			"unit_name" => "emmo:Joule",
@@ -138,7 +150,7 @@ function get_output_variables_meta_data()
 		"ChargeEnergy" => Dict(
 			"type" => Vector{Real},
 			"case" => "metrics",
-			"shape" => "(nCycleNumber,)",
+			"shape" => "(nCycleIndex,)",
 			"isdefault" => false,
 			"unit" => "J",
 			"unit_name" => "emmo:Joule",
@@ -150,7 +162,7 @@ function get_output_variables_meta_data()
 		"RoundTripEfficiency" => Dict(
 			"type" => Vector{Real},
 			"case" => "metrics",
-			"shape" => "(nCycleNumber,)",
+			"shape" => "(nCycleIndex,)",
 			"isdefault" => false,
 			"unit" => "%",
 			"unit_name" => "emmo:Percentage",

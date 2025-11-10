@@ -7,10 +7,10 @@
             "type": "string",
             "enum": [
                 "CC",
-                "CCCV",
+                "cccv",
                 "Function"
             ],
-            "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('CCCV'), or a custom Function."
+            "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('cccv'), or a custom Function."
         },
         "TotalTime": {
             "type": "number",
@@ -27,7 +27,7 @@
             ],
             "description": "Whether a cycling protocol starts with 'charging' or 'discharging'."
         },
-        "AmbientTemperature": {
+        "InitialTemperature": {
             "type": "number",
             "minimum": 238.15,
             "maximum": 373.15,
@@ -126,7 +126,7 @@
     "required": [
         "Protocol",
         "InitialStateOfCharge",
-        "AmbientTemperature"
+        "InitialTemperature"
     ],
     "allOf": [
         {

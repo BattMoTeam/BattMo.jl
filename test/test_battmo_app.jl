@@ -7,8 +7,8 @@ function runP2DBatt(json_file)
 	i            = 0
 
 	# read input parameters from json file
-	inputparams = load_battmo_formatted_input(json_file)
-	cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_old_input_format_to_parameter_sets(inputparams)
+	inputparams = load_advanced_dict_input(json_file)
+	cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_to_parameter_sets(inputparams)
 
 	# # setup simulation from the input parameters
 	# output = get_simulation_input(inputparams)
@@ -34,31 +34,30 @@ function runP2DBatt(json_file)
 	sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 	output = solve(sim; accept_invalid = true)
 
-	states = output[:states]
-	model = output[:extra][:model]
-	multimodel = model.multimodel
+	states = output.jutul_output.states
+	multimodel = sim.model.multimodel
 
-	energy_efficiency = computeEnergyEfficiency(states)
-	discharge_energy  = computeCellEnergy(states)
+	energy_efficiency = output.metrics["RoundTripEfficiency"]
+	discharge_energy  = output.metrics["DischargeEnergy"]
 
 	con = BattMo.Constants()
 
-	time_series = get_output_time_series(output)
+	time_series = output.time_series
 
 	# Get some result values
 	number_of_states                 = size(states)
-	time_values                      = time_series[:Time]
-	cell_voltage                     = [state[:Control][:Voltage][1] for state in states]
+	time_values                      = time_series["Time"]
+	cell_voltage                     = [state[:Control][:ElectricPotential][1] for state in states]
 	cell_current                     = [state[:Control][:Current][1] for state in states]
 	negative_electrode_grid_wrap     = physical_representation(multimodel[:NegativeElectrodeActiveMaterial])
 	electrolyte_grid_wrap            = physical_representation(multimodel[:Electrolyte])
 	positive_electrode_grid_wrap     = physical_representation(multimodel[:PositiveElectrodeActiveMaterial])
 	negative_electrode_concentration = Array([[state[:NegativeElectrodeActiveMaterial][:SurfaceConcentration] for state in states] / 1000])
-	electrolyte_concentration        = [state[:Electrolyte][:Concentration] for state in states] / 1000
+	electrolyte_concentration        = [state[:Electrolyte][:ElectrolyteConcentration] for state in states] / 1000
 	positive_electrode_concentration = Array([[state[:PositiveElectrodeActiveMaterial][:SurfaceConcentration] for state in states]] / 1000)
-	negative_electrode_potential     = [state[:NegativeElectrodeActiveMaterial][:Voltage] for state in states]
-	electrolyte_potential            = [state[:Electrolyte][:Voltage] for state in states]
-	positive_electrode_potential     = [state[:PositiveElectrodeActiveMaterial][:Voltage] for state in states]
+	negative_electrode_potential     = [state[:NegativeElectrodeActiveMaterial][:ElectricPotential] for state in states]
+	electrolyte_potential            = [state[:Electrolyte][:ElectricPotential] for state in states]
+	positive_electrode_potential     = [state[:PositiveElectrodeActiveMaterial][:ElectricPotential] for state in states]
 
 	nsteps = length(cell_voltage)
 	time_values = time_values[1:nsteps]

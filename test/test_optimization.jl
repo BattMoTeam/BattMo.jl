@@ -6,9 +6,9 @@ using Test
 
 	@test begin
 
-		name = "Chen2020"
+		name = "chen_2020"
 		cell_parameters = load_cell_parameters(; from_default_set = name)
-		cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+		cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 		model_setup = LithiumIonBattery()
 
@@ -16,7 +16,7 @@ using Test
 
 		output_0 = solve(sim)
 
-		states = output_0[:states]
+		states = output_0.jutul_output.states
 
 		# # Specify an objective
 
