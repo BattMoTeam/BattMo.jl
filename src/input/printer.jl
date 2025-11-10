@@ -1,7 +1,7 @@
 export quick_cell_check, print_default_input_sets, print_submodels
 
 
-function print_overview(input::S) where {S <: ParameterSet}
+function print_overview(input::S; view = nothing) where {S <: ParameterSet}
 	input_dict = deepcopy(input.all)
 
 	# Remove "Metadata" if present
@@ -19,7 +19,6 @@ function print_overview(input::S) where {S <: ParameterSet}
 	meta_data_2 = merge_dict(meta_data_1, meta_data_model_set)
 	meta_data_3 = merge_dict(meta_data_2, meta_data_sim_set)
 	meta_data = merge_dict(meta_data_3, meta_data_solv_set)
-
 
 	# Shared accumulator
 	params = NamedTuple[]
@@ -52,7 +51,7 @@ function print_overview(input::S) where {S <: ParameterSet}
 	println(rpad("Parameter", par_space), rpad("Unit", unit_space), rpad("Type", type_space), rpad("Value", val_space))
 	println("-"^(par_space + unit_space + type_space + val_space))
 
-	# Helper to format value compactly (without Printf)
+	# Helper to format value compactly
 	function format_value(v)
 		if isa(v, AbstractVector)
 			return "[" * string(length(v)) * " el.]"
@@ -66,7 +65,6 @@ function print_overview(input::S) where {S <: ParameterSet}
 			s = string(v)
 			return length(s) > val_space ? s[1:(val_space-4)] * "..." : s
 		elseif isa(v, AbstractFloat)
-			# Compact numeric representation
 			abs(v) ≥ 1e4 || abs(v) ≤ 1e-3 ? string(round(v, sigdigits = 5)) :
 			string(round(v, digits = 5))
 		else
@@ -75,8 +73,15 @@ function print_overview(input::S) where {S <: ParameterSet}
 		end
 	end
 
+	printed_count = 0
 	for p in params
-		# full_path = join(p.path, " / ")
+		# Filter by view if provided
+		if view !== nothing
+			if !any(s -> occursin(view, s), p.path)
+				continue
+			end
+		end
+
 		full_path = join(["[ \"$(s)\" ]" for s in p.path], "")
 		value_str = format_value(p.value)
 		info = get(meta_data, p.path[end], Dict())
@@ -91,14 +96,15 @@ function print_overview(input::S) where {S <: ParameterSet}
 			rpad(type_str, type_space),
 			rpad(value_str, val_space),
 		)
+		printed_count += 1
 	end
 
 	println("="^(par_space + val_space + unit_space + type_space))
-	println("Total parameters: $(length(params))")
+	println("Total parameters: $(printed_count)")
 end
 
 """
-    quick_cell_check(cell::CellParameters; cell_2::Union{Nothing, CellParameters} = nothing)
+	quick_cell_check(cell::CellParameters; cell_2::Union{Nothing, CellParameters} = nothing)
 
 Print key performance indicators (KPIs) and basic properties for one or two battery cells.
 
