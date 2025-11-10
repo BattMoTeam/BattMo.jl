@@ -53,7 +53,7 @@ struct Simulation <: AbstractSimulation
 	couplings::Any
 	parameters::Any
 	simulator::Any
-	termination_criterion::AbstractTerminationCriterion
+	termination_criterion::Union{AbstractTerminationCriterion, Nothing}
 	jutul_case::Any
 
 
@@ -159,8 +159,11 @@ function simulation_configuration(model, input)
 	termination_criterion = setup_termination_criterion(model.multimodel)
 
 	# setup jutul case
-	dt = [Inf]
-	jutul_case = JutulCase(model.multimodel, time_steps, forces; parameters = parameters, state0 = initial_state, termination_criterion = termination_criterion)
+	if isnothing(termination_criterion)
+		jutul_case = JutulCase(model.multimodel, time_steps, forces; parameters = parameters, state0 = initial_state)
+	else
+		jutul_case = JutulCase(model.multimodel, time_steps, forces; parameters = parameters, state0 = initial_state, termination_criterion = termination_criterion)
+	end
 
 	return (
 		model = model,
@@ -203,6 +206,9 @@ function setup_termination_criterion(multimodel)
 		end
 	elseif multimodel[:Control].system.policy isa GenericPolicy
 		termination_criterion = EndControlStepTerminationCriterion(multimodel[:Control].system.policy.number_of_control_steps)
+
+	elseif multimodel[:Control].system.policy isa FunctionPolicy
+		termination_criterion = nothing
 
 	else
 		error("Unknown control policy")

@@ -106,8 +106,8 @@ function getInitCurrent(policy::GenericPolicy)
 	if isa(control, VoltageStep)
 		error("Voltage control cannot be the first control step")
 	elseif isa(control, CurrentStep)
-		if !ismissing(policy.current_function)
-			val = policy.current_function(0.0)
+		if !ismissing(control.current_function)
+			I = control.current_function(0.0)
 		else
 			if control.direction == "discharging"
 				I = control.value
@@ -128,18 +128,20 @@ function getInitCurrent(policy::GenericPolicy)
 end
 
 
-function setup_initial_control_policy!(policy::GenericPolicy, inputparams, parameters)
+function setup_initial_control_policy!(policy::GenericPolicy, input, parameters)
 	control = policy.initial_control
+
 	if isa(control, VoltageStep)
 		error("Voltage control cannot be the first control step")
 	elseif isa(control, CurrentStep)
 		if ismissing(control.current_function)
-			tup = Float64(inputparams["Control"]["rampupTime"])
+			tup = Float64(input.simulation_settings["RampUpTime"])
+			Imax = control.value
 			cFun(time) = currentFun(time, Imax, tup)
 
 			control.current_function = cFun
 		end
-		return I
+
 
 	elseif isa(control, RestStep)
 

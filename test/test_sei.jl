@@ -35,7 +35,7 @@ using Test
 		voltage_drop = states["SEIVoltageDrop"]
 
 
-		@test length(sei_thickness[:, 2]) ≈ 2629 atol = 0
+		@test length(sei_thickness[:, 2]) ≈ 2628 atol = 0
 		@test sei_thickness[2, 2] ≈ 1.0000000339846753e-8 atol = 1e-1
 		@test voltage_drop[2, 2] ≈ -0.001401323958482127 atol = 1e-1
 
