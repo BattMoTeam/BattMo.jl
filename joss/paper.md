@@ -4,32 +4,30 @@ tags:
   - Julia
   - battery modeling
 authors:
-  - name: Simon Clark
-    orcid: 0000-0002-8758-6109
+  - name: Lorena Hendrix
+    orcid: 0009-0006-9621-6122
     affiliation: 1
   - name: Xavier Raynaud
     orcid: 0000-0002-4100-3035
     affiliation: 2
-  - name: Halvor Møll Nilsen
-    orcid: 0000-0002-2153-0962
-    affiliation: 2
-  - name: August Johansson
-    orcid: 0000-0001-6950-6016
-    affiliation: 2
-  - name: Eibar Flores
-    orcid: 0000-0003-2954-1233
-  - name: Lorena Hendrix
-    orcid: 0009-0006-9621-6122
-    affiliation: 1
-  - name: Francesca Watson
-    orcid: 0000-0002-4391-4166
-    affiliation: 2
-  - name: Sridevi Krishnamurthi
-    orcid: 0009-0006-0805-6713
-    affiliation: 1
   - name: Olav Møyner
     orcid: 0000-0001-9993-3879
     affiliation: 2
+  - name: Eibar Flores
+    orcid: 0000-0003-2954-1233
+    affiliation: 1
+  - name: August Johansson
+    orcid: 0000-0001-6950-6016
+    affiliation: 2
+  - name: Halvor Møll Nilsen
+    orcid: 0000-0002-2153-0962
+    affiliation: 2
+  - name: Francesca Watson
+    orcid: 0000-0002-4391-4166
+    affiliation: 2
+  - name: Simon Clark^[corresponding author]
+    orcid: 0000-0002-8758-6109
+    affiliation: 1
 affiliations:
  - name: SINTEF Industry, Dept. of Sustainable Energy Technology, Norway
    index: 1
@@ -64,21 +62,35 @@ The model settings are passed to the selected base model (e.g., LithiumIonBatter
 
 ![High-level architecture of some core workflows in BattMo.jl. Gray input settings are optional for the user. \label{fig:backend}](./assets/battmo_backend.png "High-level Architecture")
 
-The configured model is combined with the cell parameters, cycling protocol, and simulation settings to form a simulation instance. At this stage, the input parameters are mapped onto the model equations, for example, by setting up active material models, electrolyte properties, cell geometry and grids, load conditions, initial states, and timestepping. The result is a simulation insntance, which can be validated against a set of internal requirements.
+The configured model is combined with the cell parameters, cycling protocol, and simulation settings to form a simulation instance. At this stage, the input parameters are mapped onto the model equations, for example, by setting up active material models, electrolyte properties, cell geometry and grids, load conditions, initial states, and timestepping. The result is a simulation instance, which can be validated against a set of internal requirements.
 
 This simulation instance is passed to the `solve` function together with the solver settings, which configures the numerical solver, and executes the simulation. BattMo.jl’s solver leverages automatic differentiation and supports adjoint computations, enabling efficient calculation of parameter sensitivities and gradients of arbitrary objective functions. This enables gradient-based optimization workflows.
 
-As illustrated in Figure \ref{fig:backend}, one example optimization application is parameter calibration from a voltage curve. Here, a simulation instance with initial parameter guesses is combined with experimental data and a calibration configuration (defining which parameters to vary, their bounds, and initial values). The calibration problem is then solved iteratively using the adjoint-enabled solver until the simulated voltage matches the experimental measurements within tolerance.
+As illustrated in Figure \ref{fig:backend}, one example optimization application is parameter calibration from a voltage curve (VoltageCalibration). Here, a simulation instance with initial parameter guesses is combined with experimental data and a calibration configuration (defining which parameters to vary, their bounds, and initial values). The calibration problem is then solved iteratively using the adjoint-enabled solver until the simulated voltage matches the experimental measurements within tolerance.
 
 # Examples
 
 ## P2D example
 
-P2D simulations offer users a way to quickly simulate the performance of electrochemical devices and understand the main mechanisms.
+P2D simulations offer users a way to quickly simulate the performance of electrochemical devices and understand the main mechanisms. This examples shows a simple 1-dimensional constant current discharge simulation using cell parameters from Chen at al. [@chen2020].
 
-... A Chen 2020 simulation and contour dashboard ...
+```Julia
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
-The order reduction in P2D models can miss important effects from the cell geometry. P4D models can resolve these effects.  
+model_setup = LithiumIonBattery()
+
+sim = Simulation(model_setup, cell_parameters, cycling_protocol);
+
+output = solve(sim);
+
+plot_dashboard(output, plot_type = "contour")
+
+```
+
+![P2D simulation results. \label{fig:cylindrical}](./assets/contour.png "P2D results")
+
+The contour plot provides an idea of the kinetic and transport processes within the cell, but the order reduction in P2D models can miss important effects from the cell geometry. P4D models can resolve these effects.  
 
 ## P4D example
 
@@ -88,11 +100,11 @@ A P4D constant current discharge simulation of a cylindrical cell using cell par
 using BattMo, GLMakie
 
 # Load cell parameters and cycling protocol
-cell_parameters = load_cell_parameters(; from_default_set = "Chen2020")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 # We can use the default model settings configuration for a P4D cylindrical simulation
-model_settings = load_model_settings(; from_default_set = "P4D_cylindrical")
+model_settings = load_model_settings(; from_default_set = "p4d_cylindrical")
 
 # Setup the model
 model = LithiumIonBattery(; model_settings)
@@ -109,35 +121,29 @@ plot_interactive_3d(output)
 
 ![P4D cylindrical cell simulation results. \label{fig:cylindrical}](./assets/elyte_conc.png "P4D results")
 
-Figure \ref{fig:cylindrical} shows zoomed in 3D results of the electrolyte lithium concentration at the end of the discharge. At the beginning and ending of the roll we can we can see an imbalance in lithium concentration. These electrolyte depletions and oversaturations may influence the performance of the cell and would have been overlooked in simplified models, underlining the importance of 3D modelling.
+Figure \ref{fig:cylindrical} shows zoomed in 3-dimensional results of the electrolyte lithium concentration at the end of the discharge. At the beginning and ending of the roll we can we can see an imbalance in lithium concentration. These electrolyte depletions and oversaturations may influence the performance of the cell and would have been overlooked in simplified models, underlining the importance of 3-dimensional modelling.
 
 # Calibration example
 
-A simple example of a P2D discharge voltage calibration using initial cell parameters and experimental data from Xu at al. [@Xu2015]:
+A simple example of a P2D discharge voltage calibration using initial cell parameters and experimental data from Xu at al. [@Xu2015]. In this example we perform only a high-rate calibration, adjusting parameters such as the reaction rate coefficient and diffusion coefficient of the electrode active materials to account for the over-potentials within the experimental data.
 
 
 ```Julia
-using BattMo, Jutul
-using CSV
-using DataFrames
-using GLMakie
+using BattMo, Jutul, CSV. DataFrames, GLMakie
 
-# ## Load the experimental data and set up a base case
-battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
-exdata = joinpath(battmo_base, "examples", "example_data")
+# Load the experimental data and set up a base case
 
-# Voltage curve C-rate 0.5
-df_05 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_05C.csv"), DataFrame)
+df = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_2C.csv"), DataFrame)
 
-t_exp_05 = df_05[:, 1]
-V_exp_05 = df_05[:, 2]
+t_exp = df[:, 1]
+V_exp = df[:, 2]
 
 # Load parameter sets
-cell_parameters = load_cell_parameters(; from_default_set = "Xu2015")
-cycling_protocol = load_cycling_protocol(; from_default_set = "CCDischarge")
+cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 cycling_protocol["LowerVoltageLimit"] = 2.25
-cycling_protocol["DRate"] = 0.5
+cycling_protocol["DRate"] = 2.0
 
 # Setup model and simulation
 model = LithiumIonBattery()
@@ -145,35 +151,25 @@ sim = Simulation(model, cell_parameters, cycling_protocol)
 
 # Solve initial simulation and retrieve the time series results
 output0 = solve(sim)
-time_series_0 = get_output_time_series(output0)
+time_series_0 = output0.time_series
 
 # Setup the voltage calibration
-cal = VoltageCalibration(t_exp_05, V_exp_05, sim)
+cal = VoltageCalibration(t_exp, V_exp, sim)
 
 # Free the parameters that should be calibrated
-free_calibration_parameter!(cal,
-	["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
-	lower_bound = 0.0, upper_bound = 1.0)
-free_calibration_parameter!(cal,
-	["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
-	lower_bound = 0.0, upper_bound = 1.0)
+free_calibration_parameter!(calibration_high_rate,
+    ["NegativeElectrode","ActiveMaterial", "ReactionRateConstant"];
+    lower_bound = 1e-16, upper_bound = 1e-10)
+free_calibration_parameter!(calibration_high_rate,
+    ["PositiveElectrode","ActiveMaterial", "ReactionRateConstant"];
+    lower_bound = 1e-16, upper_bound = 1e-10)
 
-# "StoichiometricCoefficientAtSOC0" at both electrodes
-free_calibration_parameter!(cal,
-	["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
-	lower_bound = 0.0, upper_bound = 1.0)
-free_calibration_parameter!(cal,
-	["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
-	lower_bound = 0.0, upper_bound = 1.0)
-
-#  "MaximumConcentration" of both electrodes
-free_calibration_parameter!(cal,
-	["NegativeElectrode", "ActiveMaterial", "MaximumConcentration"];
-	lower_bound = 10000.0, upper_bound = 1e5)
-free_calibration_parameter!(cal,
-	["PositiveElectrode", "ActiveMaterial", "MaximumConcentration"];
-	lower_bound = 10000.0, upper_bound = 1e5)
-
+free_calibration_parameter!(calibration_high_rate,
+    ["NegativeElectrode","ActiveMaterial", "DiffusionCoefficient"];
+    lower_bound = 1e-16, upper_bound = 1e-12)
+free_calibration_parameter!(calibration_high_rate,
+    ["PositiveElectrode","ActiveMaterial", "DiffusionCoefficient"];
+    lower_bound = 1e-16, upper_bound = 1e-12)
 
 # Solve the calibration problem
 solve(cal);
@@ -181,31 +177,25 @@ solve(cal);
 # Retrieve the calibrated parameters
 cell_parameters_calibrated = cal.calibrated_cell_parameters;
 
-# ## Compare the results of the calibration against the experimental data
+# Compare the results of the calibration against the experimental data
 sim_opt = Simulation(model, cell_parameters_calibrated, cycling_protocol)
 output_opt = solve(sim_opt);
-time_series_opt = get_output_time_series(output_opt)
+time_series_opt = output_opt.time_series
 
+# Plot 2C calibrated model vs 2C experimental data
 fig = Figure()
-ax = Axis(fig[1, 1], title = "CRate = 0.5", xlabel = "Time [s]", ylabel = "Voltage [V]")
-lines!(ax, time_series_0.Time, time_series_0.Voltage, label = "BattMo initial")
-lines!(ax, t_exp_05, V_exp_05, label = "Experimental data", linestyle = :dash)
-lines!(ax, time_series_opt.Time, time_series_opt.Voltage, label = "BattMo calibrated")
+ax = Axis(fig[1, 1], title = "CRate = 2.0", xlabel = "Time  /  s", ylabel = "Cell Voltage  /  V")
+lines!(ax, time_series_0["Time"], time_series_0["Voltage"], label = "Simulation 2C: Original parameters")
+lines!(ax, time_series_opt["Time"], time_series_opt["Voltage"], label = "Simulation 2C: after high-rate calibration")
+scatter!(ax, t_exp, V_exp, label = "Experimental data 2C", markersize = 20)
 axislegend(position = :lb)
 fig
 ```
 
-![Voltage calibration results. \label{fig:calibration}](./assets/calibration.png "Calibration results")
+![Voltage calibration results. \label{fig:calibration}](./assets/high_rate_cal.png "Calibration results")
 
-From the results in Figure \ref{fig:calibration}, it is evident that the calibrated simulations align more closely with the experimental data than the initial, uncalibrated results. In this case, we performed only a low-rate calibration, adjusting parameters such as the stoichiometric coefficients and maximum concentrations, which have the strongest influence on low-rate behavior. To achieve an even better fit, additional parameters must be calibrated. Visit our [documentation](https://battmoteam.github.io/BattMo.jl/dev/) for a more complete calibration example.
+From the results in Figure \ref{fig:calibration}, it is evident that the calibrated simulations align more closely with the experimental data than the original, uncalibrated results. We can see that the model now represents a more realistic voltage drop and use of capacity.
 
-
-# Future development
-Soon to be expected functionalities are:
-- Fully flexible cycling protocol API (already available in MATLAB version, see BattMo Family).
-- Thermal coupling (already available in MATLAB version, see BattMo Family).
-- Composite active materials (already available in MATLAB version, see BattMo Family).
-- A user-friendly API for model development and model adaptation.
 
 # Software dependencies
 
@@ -218,7 +208,7 @@ The following software include the BattMo family:
 - [BattMo.jl](https://github.com/BattMoTeam/BattMo.jl) (described in this publication)
 - [BattMo](https://github.com/BattMoTeam/BattMo) (MATLAB version)
 - [PyBattMo](https://github.com/BattMoTeam/PyBattMo) (Python wrapper around BattMo.jl)
-- [BattMoApp](https://app.batterymodel.com/) (Online web-application built on top of BattMo.jl)
+- [BattMoApp](https://app.battmo.org/) (Online web-application built on top of BattMo.jl)
 
 # Acknowledgements
 
