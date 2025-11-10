@@ -2,7 +2,7 @@ export print_info
 
 
 """
-	print_info(input::ParameterSet; view = nothing)
+	print_info(input::S; view = nothing) where {S <: ParameterSet}
 
 Print a formatted overview of parameters in a `ParameterSet`.
 
