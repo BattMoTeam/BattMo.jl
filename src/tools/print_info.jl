@@ -19,7 +19,6 @@ using available metadata for labeling and formatting.
 - Used for quick inspection of model inputs in BattMo.
 - If `view` is specified, only matching parameters are shown.
 """
-
 function print_info(input::S; view = nothing) where {S <: ParameterSet}
 	return print_overview(input; view)
 end
