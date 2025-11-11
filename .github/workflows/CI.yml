@@ -31,11 +31,39 @@ jobs:
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v1
       - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
-      - uses: julia-actions/julia-processcoverage@v1
-      - uses: codecov/codecov-action@v2
+      - name: Run tests with coverage
+        run: julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test()'
+
+      - name: Generate coverage reports and enforce threshold
+        run: |
+          julia --project=. -e '
+            using Coverage
+            cov = process_folder("src")
+            percent = coverage_summary(cov)
+            println("Overall coverage: $(round(percent, digits=2))%")
+            min_cov = 80.0
+            if percent < min_cov
+                println("❌ Coverage below minimum (expected ≥ $min_cov%)")
+                exit(1)
+            else
+                println("✅ Coverage OK (≥ $min_cov%)")
+            end
+            Coverage.LCOV.writefile("lcov.info", cov)
+            Coverage.HTML.coverage("coverage", cov)
+          '
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
         with:
-          files: lcov.info
+          name: coverage-report
+          path: |
+            coverage/
+            lcov.info
+      # - uses: julia-actions/julia-runtest@v1
+      # - uses: julia-actions/julia-processcoverage@v1
+      # - uses: codecov/codecov-action@v2
+      #   with:
+      #     files: lcov.info
       # - uses: julia-actions/julia-uploadcoveralls@v1
       #  env:
       #    COVERALLS_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
