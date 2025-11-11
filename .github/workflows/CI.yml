@@ -39,8 +39,9 @@ jobs:
         run: |
           julia --project=. -e '
             using Coverage
-            cov = process_folder(".")
-            percent = coverage_summary(cov)
+            cov = process_folder("src")
+            covered_lines, total_lines = get_summary(cov)
+            percent = covered_lines/total_lines*100
             println("Overall coverage: $(round(percent, digits=2))%")
             min_cov = 80.0
             if percent < min_cov
