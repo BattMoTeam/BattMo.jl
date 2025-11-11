@@ -25,6 +25,8 @@ using Test
 		print_info("Potential"; view = "OutputVariable")
 		print_info(full_input)
 		print_info(cell_parameters)
+		print_info(cell_parameters; view = "Electrolyte")
+		print_info(cell_parameters; view = "Electrode")
 		print_info(output)
 		true
 	end

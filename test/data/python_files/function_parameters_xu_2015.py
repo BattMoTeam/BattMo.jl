@@ -1,4 +1,4 @@
-def electrolyte_conductivity_Xu_2015(c, T):
+def electrolyte_conductivity_Xu_2015_py(c, T):
     """Compute the electrolyte conductivity as a function of concentration"""
     conductivity = (
         c
@@ -18,7 +18,7 @@ def electrolyte_conductivity_Xu_2015(c, T):
     return conductivity
 
 
-def electrolyte_diffusivity_Xu_2015(c, T):
+def electrolyte_diffusivity_Xu_2015_py(c, T):
     """Compute diffusion coefficient as a function of concentration and temperature"""
     cnst = [[-4.43, -54.0], [-0.22, 0.0]]
     Tgi = [229, 5.0]
