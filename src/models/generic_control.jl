@@ -276,8 +276,9 @@ function setupRegionSwitchFlags(policy::P, state, controller::GenericController)
 
 	elseif termination.quantity == "time"
 		t = controller.time
+		@info "t = ", t
 		target = termination.value
-		tol = 0.001
+		tol = 0.1
 
 		before = t < target - tol
 		after  = t > target + tol
@@ -400,7 +401,7 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 				else
 					stop_simulation = true
 					next_stepnum = proposed_stepnum
-					next_ctrlType = TerminationStep()
+					next_ctrlType = control_steps[1]
 				end
 
 			else

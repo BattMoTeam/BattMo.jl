@@ -777,6 +777,8 @@ function check_constraints(model, storage)
 	@info "ctrlType0 = ", ctrlType0
 	@info "ctrlType = ", ctrlType
 	@info "nextCtrlType = ", nextCtrlType
+	@info "rsw.afterSwitchRegion = ", rsw.afterSwitchRegion
+	@info "!rswN.beforeSwitchRegion = ", !rswN.beforeSwitchRegion
 	@info "arefulfilled = ", arefulfilled
 
 	return arefulfilled

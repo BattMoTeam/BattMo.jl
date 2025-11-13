@@ -7,7 +7,7 @@ cycling_protocol = CyclingProtocol(
 		"InitialStateOfCharge" => 0.99,
 		"Experiment" => [
 			"Rest for 4000 s",
-			"Discharge at 1 A until 3.0 V",
+			# "Discharge at 1 A until 3.0 V",
 			# "Hold at 3.0 V until 1e-4 A",
 			# "Charge at 1 A until 4.0 V",
 		]),
