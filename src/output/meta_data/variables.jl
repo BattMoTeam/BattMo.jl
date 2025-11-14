@@ -111,7 +111,7 @@ function get_output_variables_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Total amount of charge delivered during the discharge phase.",
 		),
-		"Capacity" => Dict(
+		"CumulativeCapacity" => Dict(
 			"type" => Vector{Real},
 			"case" => "time_series",
 			"shape" => "(nTime,)",
@@ -121,7 +121,19 @@ function get_output_variables_meta_data()
 			"unit_iri" => "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978",
 			"context_type" => "Capacity",
 			"context_type_iri" => nothing,
-			"description" => "The amount of charge delivered.",
+			"description" => "the total amount of electric charge that has cumulatively passed through an electrochemical device within a defined time interval, increasing monotonically over time.",
+		),
+		"NetCapacity" => Dict(
+			"type" => Vector{Real},
+			"case" => "time_series",
+			"shape" => "(nTime,)",
+			"isdefault" => false,
+			"unit" => "Ah",
+			"unit_name" => "emmo:AmpereHour",
+			"unit_iri" => "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978",
+			"context_type" => "Capacity",
+			"context_type_iri" => nothing,
+			"description" => " the net electric charge accumulated in an electrochemical device over time, starting from zero and calculated as the time integral of current with sign preserved, such that charging increases the value and discharging decreases it.",
 		),
 		"ChargeCapacity" => Dict(
 			"type" => Vector{Real},

@@ -2,7 +2,7 @@ using BattMo
 using Test
 
 
-@testset "sei layer" begin
+@testset "temperature dependence" begin
 
 	@test begin
 

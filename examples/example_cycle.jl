@@ -28,7 +28,7 @@ plot_dashboard(output, plot_type = "simple")
 
 # Or plot specific variables
 plot_output(output, ["DischargeCapacity vs CycleIndex"])
-plot_output(output, ["Capacity vs Time"])
+plot_output(output, ["CumulativeCapacity vs Time"])
 
 # We can check in the overview which variables are available and can be plotted against each other
 print_info(output)
