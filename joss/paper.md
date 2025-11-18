@@ -25,6 +25,9 @@ authors:
   - name: Francesca Watson
     orcid: 0000-0002-4391-4166
     affiliation: 2
+  - name: Sridevi Krishnamurthi
+    orcid: 0009-0006-0805-6713
+    affiliation: 1
   - name: Simon Clark^[corresponding author]
     orcid: 0000-0002-8758-6109
     affiliation: 1
