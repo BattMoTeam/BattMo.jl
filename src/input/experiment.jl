@@ -1,15 +1,8 @@
-export Experiment
+
 export convert_experiment_to_battmo_control_input
 
-abstract type AbstractExperiment end
-
-struct Experiment <: AbstractExperiment
-	data::Vector{String}
-end
-
-
-function convert_experiment_to_battmo_control_input(experiment::Experiment)
-	experiment_list = experiment.data
+function convert_experiment_to_battmo_control_input(experiment)
+	experiment_list = experiment
 	if isa(experiment_list, String)
 		experiment_list = [experiment_list]
 	end
@@ -17,7 +10,10 @@ function convert_experiment_to_battmo_control_input(experiment::Experiment)
 	controlsteps = []
 
 	for step in experiment_list
+
 		step_dict = Dict{String, Any}()
+
+
 
 		if containsi(step, "Rest")
 			values, units = extract_numeric_values(step)
@@ -55,6 +51,7 @@ function convert_experiment_to_battmo_control_input(experiment::Experiment)
 		end
 
 		push!(controlsteps, step_dict)
+
 	end
 
 	return Dict("Control" => Dict("controlPolicy" => "Generic", "controlsteps" => controlsteps))

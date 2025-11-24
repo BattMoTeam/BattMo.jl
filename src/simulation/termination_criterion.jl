@@ -30,9 +30,6 @@ end
 function Jutul.timestepping_is_done(C::EndControlStepTerminationCriterion, simulator, states, substates, reports, solve_recorder)
 
 	s = get_simulator_storage(simulator)
-	@info "time = ", s.state.Control.Controller.time
-	@info "current_step_number = ", s.state.Control.Controller.current_step_number
-	@info "end_control_step_index = ", C.end_control_step_index
 	return s.state.Control.Controller.current_step_number + 1 > C.end_control_step_index
 end
 

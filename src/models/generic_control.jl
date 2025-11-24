@@ -1,37 +1,5 @@
-export GenericPolicy
+export GenericProtocol
 
-abstract type AbstractControlStep end
-
-mutable struct Termination
-	quantity::String
-	comparison::Union{String, Nothing}
-	value::Float64
-	function Termination(quantity, value; comparison = nothing)
-		return new{}(quantity, comparison, value)
-	end
-end
-
-mutable struct CurrentStep <: AbstractControlStep
-	value::Float64
-	direction::Union{String, Nothing}
-	termination::Termination
-	time_step_size::Union{Nothing, Float64}
-	current_function::Union{Missing, Any}
-end
-
-struct VoltageStep <: AbstractControlStep
-	value::Float64
-	direction::Union{String, Nothing}
-	termination::Termination
-	time_step_size::Union{Nothing, Float64}
-end
-
-mutable struct RestStep <: AbstractControlStep
-	value::Union{Nothing, Float64}
-	direction::Union{Nothing, String}
-	termination::Termination
-	time_step_size::Union{Nothing, Float64}
-end
 
 struct CycleStep <: AbstractControlStep
 	number_of_cycles::Int
@@ -39,35 +7,32 @@ struct CycleStep <: AbstractControlStep
 	cycle_control_steps::Vector{AbstractControlStep}
 end
 
-mutable struct TerminationStep <: AbstractControlStep
 
-end
+# mutable struct GenericProtocol <: AbstractProtocol
+# 	control_policy::String
+# 	control_steps::Vector{AbstractControlStep}
+# 	initial_control::AbstractControlStep
+# 	number_of_control_steps::Int
+# 	function GenericProtocol(json::Dict)
+# 		steps = []
+# 		for step in json["controlsteps"]
+# 			parsed_step = parse_control_step(step)
 
-mutable struct GenericPolicy <: AbstractPolicy
-	control_policy::String
-	control_steps::Vector{AbstractControlStep}
-	initial_control::AbstractControlStep
-	number_of_control_steps::Int
-	function GenericPolicy(json::Dict)
-		steps = []
-		for step in json["controlsteps"]
-			parsed_step = parse_control_step(step)
+# 			if isa(parsed_step, CycleStep)
+# 				# If the parsed step is a compound cycle, expand it
+# 				for cycle_step in parsed_step.cycle_control_steps
+# 					push!(steps, cycle_step)
+# 				end
+# 			else
+# 				# Otherwise, it's a single step — push directly
+# 				push!(steps, parsed_step)
+# 			end
+# 		end
 
-			if isa(parsed_step, CycleStep)
-				# If the parsed step is a compound cycle, expand it
-				for cycle_step in parsed_step.cycle_control_steps
-					push!(steps, cycle_step)
-				end
-			else
-				# Otherwise, it's a single step — push directly
-				push!(steps, parsed_step)
-			end
-		end
-
-		number_of_steps = length(steps)
-		return new(json["controlPolicy"], steps, steps[1], number_of_steps)
-	end
-end
+# 		number_of_steps = length(steps)
+# 		return new(json["controlPolicy"], steps, steps[1], number_of_steps)
+# 	end
+# end
 
 
 function parse_control_step(json::Dict)
@@ -101,8 +66,8 @@ function parse_control_step(json::Dict)
 	end
 end
 
-function getInitCurrent(policy::GenericPolicy)
-	control = policy.initial_control
+function getInitCurrent(policy::GenericProtocol)
+	control = policy.steps[1]
 	if isa(control, VoltageStep)
 		error("Voltage control cannot be the first control step")
 	elseif isa(control, CurrentStep)
@@ -128,8 +93,8 @@ function getInitCurrent(policy::GenericPolicy)
 end
 
 
-function setup_initial_control_policy!(policy::GenericPolicy, input, parameters)
-	control = policy.initial_control
+function setup_initial_control_policy!(policy::GenericProtocol, input, parameters)
+	control = policy.steps[1]
 
 	if isa(control, VoltageStep)
 		error("Voltage control cannot be the first control step")
@@ -153,7 +118,7 @@ function setup_initial_control_policy!(policy::GenericPolicy, input, parameters)
 end
 
 mutable struct GenericController <: Controller
-	policy::GenericPolicy
+	policy::GenericProtocol
 	stop_simulation::Bool
 	current_step::AbstractControlStep
 	current_step_number::Int
@@ -163,7 +128,7 @@ mutable struct GenericController <: Controller
 	dIdt::Real
 	dEdt::Real
 
-	function GenericController(policy::GenericPolicy, stop_simulation::Bool, current_step::Union{Nothing, AbstractControlStep}, current_step_number::Int, time::Real, number_of_steps::Int; target::Real = 0.0, dEdt::Real = 0.0, dIdt::Real = 0.0)
+	function GenericController(policy::GenericProtocol, stop_simulation::Bool, current_step::Union{Nothing, AbstractControlStep}, current_step_number::Int, time::Real, number_of_steps::Int; target::Real = 0.0, dEdt::Real = 0.0, dIdt::Real = 0.0)
 		new(policy, stop_simulation, current_step, current_step_number, time, number_of_steps, target, dIdt, dEdt)
 	end
 end
@@ -208,11 +173,11 @@ function Jutul.update_values!(old::GenericController, new::GenericController)
 end
 
 """
-We need to add the specific treatment of the controller variables for GenericPolicy
+We need to add the specific treatment of the controller variables for GenericProtocol
 """
 function Jutul.reset_state_to_previous_state!(
 	storage,
-	model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{GenericPolicy}, T3, T4},
+	model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{GenericProtocol}, T3, T4},
 ) where {T3, T4}
 
 	invoke(reset_state_to_previous_state!,
@@ -276,7 +241,7 @@ function setupRegionSwitchFlags(policy::P, state, controller::GenericController)
 
 	elseif termination.quantity == "time"
 		t = controller.time
-		@info "t = ", t
+
 		target = termination.value
 		tol = 0.1
 
@@ -296,7 +261,7 @@ end
 """
 We need a more fine-tuned update of the variables when we use a cycling policies, to avoid convergence problem.
 """
-function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, model::P, dx, w) where {Q <: GenericPolicy, P <: CurrentAndVoltageModel{Q}}
+function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, model::P, dx, w) where {Q <: GenericProtocol, P <: CurrentAndVoltageModel{Q}}
 
 	entity = associated_entity(p)
 	active = active_entities(model.domain, entity, for_variables = true)
@@ -324,9 +289,9 @@ end
 """
 Implementation of the generic control policy
 """
-function update_control_type_in_controller!(state, state0, policy::GenericPolicy, dt)
-	control_steps = policy.control_steps
-	number_of_control_steps = policy.number_of_control_steps
+function update_control_type_in_controller!(state, state0, policy::GenericProtocol, dt)
+	control_steps = policy.steps
+	number_of_control_steps = length(policy.steps)
 
 	# --- Helpers: mapping between controller.step_number (zero-based) and control_steps (1-based) ---
 
@@ -452,12 +417,12 @@ end
 """
 Update controller target value (current or voltage) based on the active control step
 """
-function update_values_in_controller!(state, policy::GenericPolicy)
+function update_values_in_controller!(state, policy::GenericProtocol)
 
 	controller = state[:Controller]
 	step_idx = controller.current_step_number + 1
 
-	control_steps = policy.control_steps
+	control_steps = policy.steps
 
 	if step_idx > length(control_steps)
 		step_idx = length(control_steps)

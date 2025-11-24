@@ -1,6 +1,7 @@
 using BattMo
 using Test
 
+include("test_experiment.jl")
 include("test_documentation_prints.jl")
 include("test_3d_pouch.jl")
 include("test_battmo_app.jl")

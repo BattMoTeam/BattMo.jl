@@ -50,9 +50,7 @@ struct ImaxCharge <: ScalarVariable end
 
 ## In Jutul, a system is part of a model and contains data
 
-abstract type AbstractPolicy end
-
-struct CurrentAndVoltageSystem{P <: AbstractPolicy} <: JutulSystem
+struct CurrentAndVoltageSystem{P <: AbstractProtocol} <: JutulSystem
 
 	# Control policy
 	policy::P
@@ -73,7 +71,7 @@ Jutul.number_of_cells(::CurrentAndVoltageDomain) = 1
 
 """ Simple constant current. Stops when lower cut-off value is reached
 """
-mutable struct CCPolicy{R} <: AbstractPolicy
+mutable struct CCPolicy{R} <: AbstractProtocol
 	numberOfCycles::Int
 	initialControl::String
 	ImaxDischarge::R
@@ -104,7 +102,7 @@ end
 
 """ Simple constant current, constant voltage policy. Stops when lower cut-off value is reached
 """
-mutable struct SimpleCVPolicy{R} <: AbstractPolicy
+mutable struct SimpleCVPolicy{R} <: AbstractProtocol
 	current_function::Any
 	Imax::R
 	voltage::R
@@ -115,13 +113,13 @@ end
 
 """ No policy means that the control is kept fixed throughout the simulation
 """
-struct NoPolicy <: AbstractPolicy end
+struct NoPolicy <: AbstractProtocol end
 
 
 """
 Function Policy
 """
-struct FunctionPolicy <: AbstractPolicy
+struct FunctionPolicy <: AbstractProtocol
 	current_function::Function
 
 	function FunctionPolicy(function_name::String; file_path::Union{Nothing, String} = nothing)
@@ -133,7 +131,7 @@ end
 
 """ Standard CC-CV policy
 """
-mutable struct CyclingCVPolicy{R, I} <: AbstractPolicy
+mutable struct CyclingCVPolicy{R, I} <: AbstractProtocol
 
 	ImaxDischarge::R
 	ImaxCharge::R
@@ -752,9 +750,9 @@ function check_constraints(model, storage)
 
 		end
 
-	elseif policy isa GenericPolicy
+	elseif policy isa GenericProtocol
 
-		control_steps = policy.control_steps
+		control_steps = policy.steps
 
 		control_step = state[:Controller].current_step
 		control_step_previous = state0[:Controller].current_step
@@ -764,7 +762,7 @@ function check_constraints(model, storage)
 		step_number = state[:Controller].current_step_number
 		step_index = step_number + 1
 
-		if step_index >= policy.number_of_control_steps
+		if step_index >= length(policy.steps)
 			step_index_next = 1
 			control_step_next = control_steps[step_index_next]
 		else
@@ -858,7 +856,7 @@ function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{Cu
 end
 
 
-function update_controller!(state, state0, policy::AbstractPolicy, dt)
+function update_controller!(state, state0, policy::AbstractProtocol, dt)
 
 	update_control_type_in_controller!(state, state0, policy, dt)
 	update_values_in_controller!(state, policy)
@@ -1355,7 +1353,7 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 			ctrl.numberOfCycles = ncycles
 		end
 
-	elseif policy isa GenericPolicy
+	elseif policy isa GenericProtocol
 
 		copyController!(storage.state0[:Controller], ctrl)
 
@@ -1452,10 +1450,10 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 
 		update_values_in_controller!(state, policy)
 
-	elseif policy isa GenericPolicy
-		number_of_steps = policy.number_of_control_steps
+	elseif policy isa GenericProtocol
+		number_of_steps = length(policy.steps)
 		current_step_number = 0
-		current_step = policy.initial_control
+		current_step = policy.steps[1]
 		time_in_step = 0.0
 		state[:Controller] = GenericController(policy, false, current_step, current_step_number, time_in_step, number_of_steps)
 

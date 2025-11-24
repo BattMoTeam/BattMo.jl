@@ -99,7 +99,7 @@ struct Optimization <: SolvingProblem
 		config = extra[:cfg]
 		time_steps = extra[:timesteps]
 
-		reports = reports[1:end-1]
+		reports = reports[1:(end-1)]
 
 		dG = solve_adjoint_sensitivities(model, states, reports, objective,
 			forces = forces, state0 = state0, parameters = parameters)
@@ -736,7 +736,7 @@ function setup_submodels(inputparams::InputParams;
 	elseif controlPolicy == "Generic"
 		ctrl = jsondict["Control"]
 
-		policy = GenericPolicy(ctrl)
+		policy = GenericProtocol(ctrl)
 	elseif controlPolicy == "Function"
 
 		ctrl = jsondict["Control"]
@@ -1722,8 +1722,8 @@ function setup_config(sim::JutulSimulator,
 		end
 	end
 
-	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy || model[:Control].system.policy isa GenericPolicy
-		if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa GenericPolicy
+	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy || model[:Control].system.policy isa GenericProtocol
+		if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa GenericProtocol
 
 			cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
 
@@ -1736,7 +1736,7 @@ function setup_config(sim::JutulSimulator,
 			s = get_simulator_storage(sim)
 			m = get_simulator_model(sim)
 
-			if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa GenericPolicy
+			if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa GenericProtocol
 				if model[:Control].system.policy isa CyclingCVPolicy
 
 					if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
@@ -1745,7 +1745,7 @@ function setup_config(sim::JutulSimulator,
 						report[:stopnow] = false
 					end
 
-				elseif model[:Control].system.policy isa GenericPolicy
+				elseif model[:Control].system.policy isa GenericProtocol
 
 					if s.state.Control.Controller.current_step_number + 1 >= length(m[:Control].system.policy.control_steps) && s.state.Control.Controller.stop_simulation
 
@@ -1971,7 +1971,7 @@ function rampupTimesteps(time::Real, dt::Real, n::Integer = 8)
 	dt_init = [dt / 2^k for k in ind]
 	cs_time = cumsum(dt_init)
 	if any(cs_time .> time)
-		dt_init = dt_init[cs_time.<time]
+		dt_init = dt_init[cs_time .< time]
 	end
 	dt_left = time .- sum(dt_init)
 
