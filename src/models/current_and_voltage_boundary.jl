@@ -718,6 +718,7 @@ function check_constraints(model, storage)
 
 	controller = state[:Controller]
 
+	arefulfilled = true
 
 	if policy isa CyclingCVPolicy
 		ctrlType = state[:Controller].ctrlType
@@ -725,6 +726,12 @@ function check_constraints(model, storage)
 		nextCtrlType = getNextCtrlTypecccv(ctrlType0)
 		rsw = setupRegionSwitchFlags(policy, state, ctrlType)
 		rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
+
+		if (ctrlType == ctrlType0 && rsw.afterSwitchRegion) || (ctrlType == nextCtrlType && !rswN.beforeSwitchRegion)
+
+			arefulfilled = false
+
+		end
 
 	elseif policy isa CCPolicy
 		ctrlType = state[:Controller].ctrlType
@@ -739,47 +746,49 @@ function check_constraints(model, storage)
 		rsw = setupRegionSwitchFlags(policy, state, ctrlType)
 		rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
 
-	elseif policy isa GenericPolicy
+		if (ctrlType == ctrlType0 && rsw.afterSwitchRegion) || (ctrlType == nextCtrlType && !rswN.beforeSwitchRegion)
 
-		ctrlType = state[:Controller].current_step
-		ctrlType0 = state0[:Controller].current_step
-
-		stepidx = controller.current_step_number + 1
-
-		if stepidx >= length(policy.control_steps)
-			nextCtrlType = ctrlType
-		else
-			nextCtrlType = policy.control_steps[stepidx+1]
+			arefulfilled = false
 
 		end
-		arefulfilled = true
 
-		rsw  = setupRegionSwitchFlags(ctrlType, state, controller)
-		rswN = setupRegionSwitchFlags(nextCtrlType, state, controller)
+	elseif policy isa GenericPolicy
+
+		control_steps = policy.control_steps
+
+		control_step = state[:Controller].current_step
+		control_step_previous = state0[:Controller].current_step
+
+		step_number_previous = state0[:Controller].current_step_number
+		step_index_previous = step_number_previous + 1
+		step_number = state[:Controller].current_step_number
+		step_index = step_number + 1
+
+		if step_index >= policy.number_of_control_steps
+			step_index_next = 1
+			control_step_next = control_steps[step_index_next]
+		else
+			step_index_next = step_index + 1
+			control_step_next = control_steps[step_index_next]
+		end
+
+		rsw  = setupRegionSwitchFlags(control_step, state, controller)
+		rswN = setupRegionSwitchFlags(control_step_next, state, controller)
+
+		if (step_index == step_index_previous && rsw.afterSwitchRegion) || (step_index == step_index_next && !rswN.beforeSwitchRegion)
+
+			arefulfilled = false
+
+		end
 
 	else
 		error("Policy $(typeof(policy)) not recognized")
 	end
 
-	arefulfilled = true
 
 
 
 
-
-
-
-	if (ctrlType == ctrlType0 && rsw.afterSwitchRegion) || (ctrlType == nextCtrlType && !rswN.beforeSwitchRegion)
-
-		arefulfilled = false
-
-	end
-	@info "ctrlType0 = ", ctrlType0
-	@info "ctrlType = ", ctrlType
-	@info "nextCtrlType = ", nextCtrlType
-	@info "rsw.afterSwitchRegion = ", rsw.afterSwitchRegion
-	@info "!rswN.beforeSwitchRegion = ", !rswN.beforeSwitchRegion
-	@info "arefulfilled = ", arefulfilled
 
 	return arefulfilled
 
