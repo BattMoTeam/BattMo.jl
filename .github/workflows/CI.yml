@@ -32,28 +32,14 @@ jobs:
       - uses: julia-actions/cache@v1
       - uses: julia-actions/julia-buildpkg@v1
 
-      # - name: Run tests with coverage
-      #   run: julia --project=. -e 'using Pkg; Pkg.test("BattMo"; coverage=true)'
+      - name: Run tests with coverage
+        run: julia --project=. -e 'using Pkg; Pkg.test("BattMo"; coverage=true)'
 
-      # - name: Analyze coverage
-      #   run: |
-      #     julia --project=. -e '
-      #       include("test/coverage/analyze_coverage.jl")
-      #     '
-      # - name: Report coverage
-      #   run: |
-      #     julia --project=. -e '
-      #       include("test/coverage/report_coverage.jl")
-      #     '
-
-      # - name: Upload coverage artifacts
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: coverage-report
-      #     path: |
-      #       lcov.info
-
-      - uses: julia-actions/julia-runtest@v1
+      - name: Coverage threshold
+        run: |
+          julia --project=. -e '
+            include("test/coverage/report_coverage.jl")
+           '
       - uses: julia-actions/julia-processcoverage@v1
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
