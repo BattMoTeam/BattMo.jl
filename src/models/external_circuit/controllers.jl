@@ -23,3 +23,40 @@ mutable struct GenericController <: Controller
 end
 
 GenericController() = GenericController(nothing, nothing, 0, 0.0)
+
+
+@inline function Jutul.numerical_type(x::GenericController)
+	return typeof(x.current_step)
+end
+
+
+"""
+Function to create (deep) copy of generic controller
+"""
+function copyController!(cv_copy::GenericController, cv::GenericController)
+
+	cv_copy.protocol = cv.protocol
+	cv_copy.current_step = cv.current_step
+	cv_copy.current_step_number = cv.current_step_number
+	cv_copy.time = cv.time
+	cv_copy.target = cv.target
+	cv_copy.dEdt = cv.dEdt
+	cv_copy.dIdt = cv.dIdt
+
+end
+
+"""
+Overload function to copy GenericController
+"""
+function Base.copy(cv::GenericController)
+	# Construct using the known type parameter S
+	cv_copy = GenericController(cv.protocol, cv.current_step, cv.current_step_number, cv.time; target = cv.target, dIdt = cv.dIdt, dEdt = cv.dEdt)
+
+	return cv_copy
+end
+
+function Jutul.update_values!(old::GenericController, new::GenericController)
+
+	copyController!(old, new)
+
+end

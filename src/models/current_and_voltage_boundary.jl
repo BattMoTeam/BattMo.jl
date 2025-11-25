@@ -525,7 +525,7 @@ function setup_initial_control_policy!(policy::CCPolicy, input, parameters)
 
 		tup = Float64(input.simulation_settings["RampUpTime"])
 
-		cFun(time) = currentFun(time, Imax, tup)
+		cFun(time) = get_current_value(time, Imax, tup)
 
 		policy.current_function = cFun
 	end
@@ -553,7 +553,7 @@ function setup_initial_control_policy!(policy::SimpleCVPolicy, input, parameters
 
 	tup = Float64(input.simulation_settings["RampUpTime"])
 
-	cFun(time) = currentFun(time, Imax, tup)
+	cFun(time) = get_current_value(time, Imax, tup)
 
 	policy.current_function = cFun
 	policy.Imax             = Imax
@@ -582,7 +582,7 @@ function setup_initial_control_policy!(policy::CyclingCVPolicy, input, parameter
 
 		tup = Float64(input.simulation_settings["RampUpTime"])
 
-		cFun(time) = currentFun(time, Imax, tup)
+		cFun(time) = get_current_value(time, Imax, tup)
 
 		policy.current_function = cFun
 	end
@@ -1452,7 +1452,7 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 		current_step_number = 0
 		current_step = policy.steps[1]
 		time_in_step = 0.0
-		state[:Controller] = GenericController(policy, false, current_step, current_step_number, time_in_step, number_of_steps)
+		state[:Controller] = GenericController(policy, current_step, current_step_number, time_in_step)
 
 	end
 

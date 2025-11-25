@@ -83,6 +83,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 
 	cycling_protocol = input.cycling_protocol
 	model_settings = input.model_settings
+	simulation_settings = input.simulation_settings
 
 	use_ramp_up = haskey(model_settings, "RampUp")
 
@@ -130,8 +131,12 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 	elseif protocol == "Experiment"
 
 		# experiment = convert_experiment_to_battmo_control_input(cycling_protocol["Experiment"])
-
-		policy = GenericProtocol(cycling_protocol)
+		if use_ramp_up
+			ramp_up_time = simulation_settings["RampUpTime"]
+			policy = GenericProtocol(cycling_protocol, use_ramp_up; ramp_up_time)
+		else
+			policy = GenericProtocol(cycling_protocol, use_ramp_up)
+		end
 
 	else
 

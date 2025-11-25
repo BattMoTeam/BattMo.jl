@@ -948,12 +948,28 @@ end
 # Current function #
 ####################
 
-function currentFun(t::Real, inputI::Real, tup::Real = 0.1)
+function get_current_value(t::Real, inputI::Real, tup::Real = 0.1; use_ramp_up = true, direction = "discharge")
 	t, inputI, tup, val = promote(t, inputI, tup, 0.0)
-	if t <= tup
-		val = sineup(0.0, inputI, 0.0, tup, t)
-	else
+	if use_ramp_up == false
 		val = inputI
+	else
+		if t <= tup
+			val = sineup(0.0, inputI, 0.0, tup, t)
+		else
+			val = inputI
+		end
 	end
+	return adjust_current_sign(val, direction)
+end
+
+function adjust_current_sign(I, direction)
+	if direction == "discharge"
+		val = I
+	elseif direction == "charge"
+		val = -I
+	else
+		error("The direction $direction is not recognized.")
+	end
+
 	return val
 end

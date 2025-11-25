@@ -1811,7 +1811,7 @@ end
 # Current function #
 ####################
 
-function currentFun(t::T, inputI::T, tup::T = 0.1) where T
+function get_current_value(t::T, inputI::T, tup::T = 0.1) where T
 	val::T = 0.0
 	if t <= tup
 		val = sineup(0.0, inputI, 0.0, tup, t)
@@ -2121,7 +2121,7 @@ end
 # Current function #
 ####################
 
-function currentFun(t::Real, inputI::Real, tup::Real = 0.1)
+function get_current_value(t::Real, inputI::Real, tup::Real = 0.1)
 	t, inputI, tup, val = promote(t, inputI, tup, 0.0)
 	if t <= tup
 		val = sineup(0.0, inputI, 0.0, tup, t)
