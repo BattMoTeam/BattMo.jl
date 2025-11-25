@@ -102,7 +102,7 @@ plot_dashboard(output, plot_type = "contour")
 
 ![P2D simulation results. \label{fig:cylindrical}](./assets/contour.png "P2D results")
 
-The contour plots illustrate lithium concentrations and potentials, offering insights into the cell’s kinetic and transport processes. For example, the lithium concentration in the electrolyte shows expected values between 800 mol/m^3 and 1400 mol/m^3. However, the order reduction in P2D models can overlook important geometric effects. P4D models address this limitation by accurately capturing these geometry-dependent phenomena. We can see this in the following example. 
+The contour plots illustrate lithium concentrations and potentials, offering insights into the cell’s kinetic and transport processes. For example, the lithium concentration in the electrolyte shows expected values between 800 $\frac{mol}{m^3}$ and 1400 $\frac{mol}{m^3}$. However, the order reduction in P2D models can overlook important geometric effects. P4D models address this limitation by accurately capturing these geometry-dependent phenomena. We can see this in the following example. 
 
 ## P4D example
 
