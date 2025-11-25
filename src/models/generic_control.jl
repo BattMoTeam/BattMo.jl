@@ -1,37 +1,5 @@
-export GenericPolicy
+export GenericProtocol
 
-abstract type AbstractControlStep end
-
-mutable struct Termination
-	quantity::String
-	comparison::Union{String, Nothing}
-	value::Float64
-	function Termination(quantity, value; comparison = nothing)
-		return new{}(quantity, comparison, value)
-	end
-end
-
-mutable struct CurrentStep <: AbstractControlStep
-	value::Float64
-	direction::Union{String, Nothing}
-	termination::Termination
-	time_step_size::Union{Nothing, Float64}
-	current_function::Union{Missing, Any}
-end
-
-struct VoltageStep <: AbstractControlStep
-	value::Float64
-	direction::Union{String, Nothing}
-	termination::Termination
-	time_step_size::Union{Nothing, Float64}
-end
-
-mutable struct RestStep <: AbstractControlStep
-	value::Union{Nothing, Float64}
-	direction::Union{Nothing, String}
-	termination::Termination
-	time_step_size::Union{Nothing, Float64}
-end
 
 struct CycleStep <: AbstractControlStep
 	number_of_cycles::Int
@@ -39,35 +7,32 @@ struct CycleStep <: AbstractControlStep
 	cycle_control_steps::Vector{AbstractControlStep}
 end
 
-mutable struct TerminationStep <: AbstractControlStep
 
-end
+# mutable struct GenericProtocol <: AbstractProtocol
+# 	control_policy::String
+# 	control_steps::Vector{AbstractControlStep}
+# 	initial_control::AbstractControlStep
+# 	number_of_control_steps::Int
+# 	function GenericProtocol(json::Dict)
+# 		steps = []
+# 		for step in json["controlsteps"]
+# 			parsed_step = parse_control_step(step)
 
-mutable struct GenericPolicy <: AbstractPolicy
-	control_policy::String
-	control_steps::Vector{AbstractControlStep}
-	initial_control::AbstractControlStep
-	number_of_control_steps::Int
-	function GenericPolicy(json::Dict)
-		steps = []
-		for step in json["controlsteps"]
-			parsed_step = parse_control_step(step)
+# 			if isa(parsed_step, CycleStep)
+# 				# If the parsed step is a compound cycle, expand it
+# 				for cycle_step in parsed_step.cycle_control_steps
+# 					push!(steps, cycle_step)
+# 				end
+# 			else
+# 				# Otherwise, it's a single step — push directly
+# 				push!(steps, parsed_step)
+# 			end
+# 		end
 
-			if isa(parsed_step, CycleStep)
-				# If the parsed step is a compound cycle, expand it
-				for cycle_step in parsed_step.cycle_control_steps
-					push!(steps, cycle_step)
-				end
-			else
-				# Otherwise, it's a single step — push directly
-				push!(steps, parsed_step)
-			end
-		end
-
-		number_of_steps = length(steps)
-		return new(json["controlPolicy"], steps, steps[1], number_of_steps)
-	end
-end
+# 		number_of_steps = length(steps)
+# 		return new(json["controlPolicy"], steps, steps[1], number_of_steps)
+# 	end
+# end
 
 
 function parse_control_step(json::Dict)
@@ -101,8 +66,8 @@ function parse_control_step(json::Dict)
 	end
 end
 
-function getInitCurrent(policy::GenericPolicy)
-	control = policy.initial_control
+function getInitCurrent(policy::GenericProtocol)
+	control = policy.steps[1]
 	if isa(control, VoltageStep)
 		error("Voltage control cannot be the first control step")
 	elseif isa(control, CurrentStep)
@@ -128,8 +93,8 @@ function getInitCurrent(policy::GenericPolicy)
 end
 
 
-function setup_initial_control_policy!(policy::GenericPolicy, input, parameters)
-	control = policy.initial_control
+function setup_initial_control_policy!(policy::GenericProtocol, input, parameters)
+	control = policy.steps[1]
 
 	if isa(control, VoltageStep)
 		error("Voltage control cannot be the first control step")
@@ -153,7 +118,7 @@ function setup_initial_control_policy!(policy::GenericPolicy, input, parameters)
 end
 
 mutable struct GenericController <: Controller
-	policy::GenericPolicy
+	policy::GenericProtocol
 	stop_simulation::Bool
 	current_step::AbstractControlStep
 	current_step_number::Int
@@ -163,7 +128,7 @@ mutable struct GenericController <: Controller
 	dIdt::Real
 	dEdt::Real
 
-	function GenericController(policy::GenericPolicy, stop_simulation::Bool, current_step::Union{Nothing, AbstractControlStep}, current_step_number::Int, time::Real, number_of_steps::Int; target::Real = 0.0, dEdt::Real = 0.0, dIdt::Real = 0.0)
+	function GenericController(policy::GenericProtocol, stop_simulation::Bool, current_step::Union{Nothing, AbstractControlStep}, current_step_number::Int, time::Real, number_of_steps::Int; target::Real = 0.0, dEdt::Real = 0.0, dIdt::Real = 0.0)
 		new(policy, stop_simulation, current_step, current_step_number, time, number_of_steps, target, dIdt, dEdt)
 	end
 end
@@ -208,11 +173,11 @@ function Jutul.update_values!(old::GenericController, new::GenericController)
 end
 
 """
-We need to add the specific treatment of the controller variables for GenericPolicy
+We need to add the specific treatment of the controller variables for GenericProtocol
 """
 function Jutul.reset_state_to_previous_state!(
 	storage,
-	model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{GenericPolicy}, T3, T4},
+	model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{GenericProtocol}, T3, T4},
 ) where {T3, T4}
 
 	invoke(reset_state_to_previous_state!,
@@ -276,7 +241,7 @@ function setupRegionSwitchFlags(policy::P, state, controller::GenericController)
 
 	elseif termination.quantity == "time"
 		t = controller.time
-		@info "t = ", t
+
 		target = termination.value
 		tol = 0.1
 
@@ -296,7 +261,7 @@ end
 """
 We need a more fine-tuned update of the variables when we use a cycling policies, to avoid convergence problem.
 """
-function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, model::P, dx, w) where {Q <: GenericPolicy, P <: CurrentAndVoltageModel{Q}}
+function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, model::P, dx, w) where {Q <: GenericProtocol, P <: CurrentAndVoltageModel{Q}}
 
 	entity = associated_entity(p)
 	active = active_entities(model.domain, entity, for_variables = true)
@@ -324,15 +289,16 @@ end
 """
 Implementation of the generic control policy
 """
-function update_control_type_in_controller!(state, state0, policy::GenericPolicy, dt)
+function update_control_type_in_controller!(state, state0, policy::GenericProtocol, dt)
+	control_steps = policy.steps
+	number_of_control_steps = length(policy.steps)
+
 	# --- Helpers: mapping between controller.step_number (zero-based) and control_steps (1-based) ---
-	control_steps = policy.control_steps
-	nsteps = length(control_steps)
 
 	# Map controller.step_number (which in your logs is 0 for the first step)
 	# to 1-based index used for control_steps array
-	stepnum_to_index(stepnum::Integer) = clamp(stepnum + 1, 1, nsteps)   # stepnum 0 -> index 1
-	index_to_stepnum(idx::Integer) = clamp(idx - 1, 0, nsteps - 1)      # index 1 -> stepnum 0
+	stepnum_to_index(step_number::Integer) = clamp(step_number + 1, 1, number_of_control_steps)   # stepnum 0 -> index 1
+	index_to_stepnum(index::Integer) = clamp(index - 1, 0, number_of_control_steps - 1)      # index 1 -> stepnum 0
 
 	# --- Extract scalars safely ---
 	E_vals  = value(state[:ElectricPotential])
@@ -350,83 +316,97 @@ function update_control_type_in_controller!(state, state0, policy::GenericPolicy
 	E0 = first(E0_vals)
 	I0 = first(I0_vals)
 
+	# --- Time and derivatives ---
 	controller = state[:Controller]
 
-	# --- Time and derivatives ---
 	controller.time = state0.Controller.time + dt
 	controller.dIdt = dt > 0 ? (I - I0) / dt : 0.0
 	controller.dEdt = dt > 0 ? (E - E0) / dt : 0.0
 
 	# --- Determine previous/ current indices and types (clearly mapped) ---
-	prev_stepnum = state0.Controller.current_step_number                # e.g. 0 for first step
-	prev_idx = stepnum_to_index(prev_stepnum)                           # 1-based index into control_steps
-	ctrlType_prev = state0.Controller.current_step
+	previous_step_number = state0.Controller.current_step_number                # e.g. 0 for first step
+	previous_index = stepnum_to_index(previous_step_number)                     # 1-based index into control_steps
+	previous_control_step = state0.Controller.current_step
 
-	# Setup default outputs
-	next_stepnum = prev_stepnum
-	next_ctrlType = ctrlType_prev
-	stop_simulation = false
 
-	# Compute region switch flags for previous and current states
-	rsw_prev = setupRegionSwitchFlags(ctrlType_prev, state0, controller)
 
-	if rsw_prev.beforeSwitchRegion
+
+	# Compute region switch flags for previous states
+	status_previous = setupRegionSwitchFlags(previous_control_step, state0, controller)
+
+	if status_previous.beforeSwitchRegion
+		# We have not entered the switching region in the time step. We are not going to change control.
+		step_number = previous_step_number
+		control_step = previous_control_step
 
 	else
-		# Recompute with updated state
-		rsw_curr = setupRegionSwitchFlags(ctrlType_prev, state, controller)
+		# We entered the switch region in the previous time step. We consider switching control
 
 		# If controller hasn't already changed this Newton iteration, decide
 		if controller.current_step_number == state0.Controller.current_step_number
+			# The control has not changed from previous time step and we want to determine if we should change it.
+			status_current = setupRegionSwitchFlags(previous_control_step, state, controller)
 
-			if rsw_curr.afterSwitchRegion
+			if status_current.afterSwitchRegion
 				# Attempt to move forward one stepnum
-				proposed_stepnum = prev_stepnum + 1   # still zero-based
-				proposed_idx = stepnum_to_index(proposed_stepnum)
+				step_number = previous_step_number + 1   # still zero-based
+				index = previous_index + 1
 
-				if proposed_idx <= nsteps && proposed_stepnum <= (nsteps - 1)
-					# Copy the policy step so we can mutate termination without altering original policy
-					next_ctrlType = deepcopy(control_steps[proposed_idx])
-					next_stepnum = index_to_stepnum(proposed_idx)
+				if index <= number_of_control_steps && step_number <= (number_of_control_steps - 1)
+					# 	# Copy the policy step so we can mutate termination without altering original policy
+					control_step = deepcopy(control_steps[index])
 
 					# Adjust time-based termination (if needed)
-					if hasfield(typeof(next_ctrlType), :termination) &&
-					   next_ctrlType.termination.quantity == "time" &&
-					   (next_ctrlType.termination.value !== nothing) &&
-					   next_ctrlType.termination.value < controller.time
+					if hasfield(typeof(control_step), :termination) &&
+					   control_step.termination.quantity == "time" &&
+					   (control_step.termination.value !== nothing) &&
+					   control_step.termination.value < controller.time
 
-						next_ctrlType.termination.value = controller.time + next_ctrlType.termination.value
+						control_step.termination.value = controller.time + control_step.termination.value
 					end
 
 				else
-					stop_simulation = true
-					next_stepnum = proposed_stepnum
-					next_ctrlType = control_steps[1]
+					step_number = step_number
+					control_step = control_steps[1]
 				end
 
 			else
-				next_stepnum = prev_stepnum
-				next_ctrlType = state.Controller.current_step
+				step_number = previous_step_number
+				control_step = previous_control_step
 			end
 
 		else
-			# controller already advanced this iteration: keep what controller has
-			# Map controller.current_step_number (which may already be advanced) to index to fetch its definition if needed
-			current_stepnum_now = controller.current_step_number
-			current_idx_now = stepnum_to_index(current_stepnum_now)
+			# controller already advanced this iteration: We do not switch back to avoid oscillation. We are anyway within the given tolerance for the
+			# control so that we keep the control as it is.
 
-			# Use controller.current_step (it should already be set)
-			next_stepnum = current_stepnum_now
-			next_ctrlType = controller.current_step
+			step_number = previous_step_number + 1   # still zero-based
+			index = previous_index + 1
+			if index <= number_of_control_steps && step_number <= (number_of_control_steps - 1)
+				# 	# Copy the policy step so we can mutate termination without altering original policy
+				control_step = deepcopy(control_steps[index])
+
+				# Adjust time-based termination (if needed)
+				if hasfield(typeof(control_step), :termination) &&
+				   control_step.termination.quantity == "time" &&
+				   (control_step.termination.value !== nothing) &&
+				   control_step.termination.value < controller.time
+
+					control_step.termination.value = controller.time + control_step.termination.value
+				end
+
+			else
+				step_number = step_number
+				control_step = control_steps[1]
+			end
 		end
 	end
 
 	# --- Finalize: clamp stepnum and set controller fields ---
 	# Ensure we stay within valid [0, nsteps-1] for stepnum convention
-	next_stepnum = clamp(next_stepnum, 0, max(0, nsteps - 1))
-	controller.current_step_number = next_stepnum
-	controller.current_step = next_ctrlType
-	controller.stop_simulation = stop_simulation
+	# step_number = clamp(step_number, 0, max(0, nsteps - 1))
+
+	controller.current_step_number = step_number
+	controller.current_step = control_step
 
 	return nothing
 end
@@ -437,18 +417,18 @@ end
 """
 Update controller target value (current or voltage) based on the active control step
 """
-function update_values_in_controller!(state, policy::GenericPolicy)
+function update_values_in_controller!(state, policy::GenericProtocol)
 
 	controller = state[:Controller]
 	step_idx = controller.current_step_number + 1
 
-	control_steps = policy.control_steps
+	control_steps = policy.steps
 
 	if step_idx > length(control_steps)
 		step_idx = length(control_steps)
 	end
 
-	step = control_steps[step_idx]
+	step = state.Controller.current_step
 
 	ctrlType = state.Controller.current_step.direction
 

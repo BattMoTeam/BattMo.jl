@@ -1,13 +1,12 @@
 {
     "Protocol": "Experiment",
-    "InitialStateOfCharge": 1,
+    "InitialStateOfCharge": 0.01,
     "InitialKelvinTemperature": 298.15,
     "Experiment": [
-        "Rest for 4000 s",
-        "Discharge at 1 A until 3.0 V",
-        "Hold at 3.0 V until 1e-4 A",
         "Charge at 1 A until 4.0 V",
-        "Rest for 1 hour"
+        "Hold at 4.0 V until 1e-4 A",
+        "Discharge at 1 A until 3.0 V",
+        "Rest for 4000 s"
     ],
     "TotalTime": 100000
 }

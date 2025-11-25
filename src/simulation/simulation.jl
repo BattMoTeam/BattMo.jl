@@ -204,8 +204,8 @@ function setup_termination_criterion(multimodel)
 			termination_criterion = EndCycleIndexTerminationCriterion(multimodel[:Control].system.policy.numberOfCycles)
 
 		end
-	elseif multimodel[:Control].system.policy isa GenericPolicy
-		termination_criterion = EndControlStepTerminationCriterion(multimodel[:Control].system.policy.number_of_control_steps)
+	elseif multimodel[:Control].system.policy isa GenericProtocol
+		termination_criterion = EndControlStepTerminationCriterion(length(multimodel[:Control].system.policy.steps))
 
 	elseif multimodel[:Control].system.policy isa FunctionPolicy
 		termination_criterion = nothing
@@ -622,8 +622,8 @@ function solver_configuration(sim::JutulSimulator,
 		end
 	end
 
-	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy || model[:Control].system.policy isa GenericPolicy
-		if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa GenericPolicy
+	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy || model[:Control].system.policy isa GenericProtocol
+		if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa GenericProtocol
 
 			cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
 
@@ -673,7 +673,7 @@ function solver_configuration(sim::JutulSimulator,
 		# 				report[:stopnow] = false
 		# 			end
 		# 		end
-		# 	elseif model[:Control].system.policy isa GenericPolicy
+		# 	elseif model[:Control].system.policy isa GenericProtocol
 		# 		number_of_steps = model[:Control].system.policy.number_of_control_steps
 		# 		if s.state.Control.Controller.current_step_number > number_of_steps
 		# 			report[:stopnow] = true

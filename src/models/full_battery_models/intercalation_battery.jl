@@ -129,9 +129,9 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 
 	elseif protocol == "Experiment"
 
-		experiment = convert_experiment_to_battmo_control_input(Experiment(cycling_protocol["Experiment"]))
+		# experiment = convert_experiment_to_battmo_control_input(cycling_protocol["Experiment"])
 
-		policy = GenericPolicy(experiment["Control"])
+		policy = GenericProtocol(cycling_protocol)
 
 	else
 
