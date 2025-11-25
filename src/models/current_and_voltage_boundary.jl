@@ -233,15 +233,7 @@ function Jutul.select_parameters!(S,
 end
 
 
-###########################################################################################################
-# Definition of the controller and some basic utility functions. The controller will be part of the state #
-###########################################################################################################
 
-## A controller provides the information to exert the current control
-
-## The controller are implemented as mutable structures and will be attached to the state
-
-abstract type Controller end
 
 mutable struct FunctionController{R <: Real} <: Controller
 	target::R
@@ -442,7 +434,7 @@ end
 ###################################################################################################################
 # Functions to compute initial current given the policy, it used at initialization of the state in the simulation #
 ###################################################################################################################
-function getInitCurrent(policy::CCPolicy)
+function get_initial_current(policy::CCPolicy)
 
 	if !ismissing(policy.current_function)
 		val = policy.current_function(0.0)
@@ -462,11 +454,11 @@ function getInitCurrent(policy::CCPolicy)
 	return val
 end
 
-function getInitCurrent(policy::FunctionPolicy)
+function get_initial_current(policy::FunctionPolicy)
 	return 0.0
 end
 
-function getInitCurrent(policy::SimpleCVPolicy)
+function get_initial_current(policy::SimpleCVPolicy)
 	if !ismissing(policy.current_function)
 		val = policy.current_function(0.0)
 	else
@@ -478,7 +470,7 @@ function getInitCurrent(policy::SimpleCVPolicy)
 end
 
 
-function getInitCurrent(policy::CyclingCVPolicy)
+function get_initial_current(policy::CyclingCVPolicy)
 	if !ismissing(policy.current_function)
 		val = policy.current_function(0.0)
 
@@ -496,9 +488,14 @@ function getInitCurrent(policy::CyclingCVPolicy)
 
 end
 
-function getInitCurrent(model::CurrentAndVoltageModel)
+function get_initial_current(model::CurrentAndVoltageModel)
 
-	return getInitCurrent(model.system.policy)
+	if model.system.policy isa GenericProtocol
+
+		return get_initial_current(model.system.policy.steps[1])
+	else
+		return get_initial_current(model.system.policy)
+	end
 
 end
 

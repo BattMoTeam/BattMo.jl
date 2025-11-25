@@ -1029,7 +1029,7 @@ function setup_initial_state(input, model::IntercalationBattery)
 
 	init = Dict()
 	init[:ElectricPotential] = posOCP - negOCP
-	init[:Current] = getInitCurrent(multimodel[:Control])
+	init[:Current] = get_initial_current(multimodel[:Control])
 
 	initState[:Control] = init
 

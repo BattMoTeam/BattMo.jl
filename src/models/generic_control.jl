@@ -1,5 +1,3 @@
-export GenericProtocol
-
 
 struct CycleStep <: AbstractControlStep
 	number_of_cycles::Int
@@ -35,54 +33,43 @@ end
 # end
 
 
-function parse_control_step(json::Dict)
-	ctype = json["controltype"]
-	if ctype == "current"
-		return CurrentStep(
-			json["value"],
-			get(json, "direction", nothing),
-			Termination(json["termination"]["quantity"], json["termination"]["value"]; comparison = json["termination"]["comparison"]),
-			get(json, "timeStepSize", nothing),
-			missing)
-	elseif ctype == "voltage"
-		return VoltageStep(
-			json["value"],
-			get(json, "direction", nothing),
-			Termination(json["termination"]["quantity"], json["termination"]["value"]; comparison = json["termination"]["comparison"]),
-			get(json, "timeStepSize", nothing),
-		)
-	elseif ctype == "rest"
-		return RestStep(
-			get(json, "value", nothing),
-			get(json, "direction", nothing),
-			Termination(json["termination"]["quantity"], json["termination"]["value"]),
-			get(json, "timeStepSize", nothing),
-		)
-	elseif ctype == "cycle"
-		nested = [parse_control_step(step) for step in json["cycleControlSteps"]]
-		return CycleStep(json["numberOfCycles"], get(json, "termination", nothing), nested)
-	else
-		error("Unsupported controltype: $ctype")
-	end
-end
+# function parse_control_step(json::Dict)
+# 	ctype = json["controltype"]
+# 	if ctype == "current"
+# 		return CurrentStep(
+# 			json["value"],
+# 			get(json, "direction", nothing),
+# 			Termination(json["termination"]["quantity"], json["termination"]["value"]; comparison = json["termination"]["comparison"]),
+# 			get(json, "timeStepSize", nothing),
+# 			missing)
+# 	elseif ctype == "voltage"
+# 		return VoltageStep(
+# 			json["value"],
+# 			get(json, "direction", nothing),
+# 			Termination(json["termination"]["quantity"], json["termination"]["value"]; comparison = json["termination"]["comparison"]),
+# 			get(json, "timeStepSize", nothing),
+# 		)
+# 	elseif ctype == "rest"
+# 		return RestStep(
+# 			get(json, "value", nothing),
+# 			get(json, "direction", nothing),
+# 			Termination(json["termination"]["quantity"], json["termination"]["value"]),
+# 			get(json, "timeStepSize", nothing),
+# 		)
+# 	elseif ctype == "cycle"
+# 		nested = [parse_control_step(step) for step in json["cycleControlSteps"]]
+# 		return CycleStep(json["numberOfCycles"], get(json, "termination", nothing), nested)
+# 	else
+# 		error("Unsupported controltype: $ctype")
+# 	end
+# end
 
-function getInitCurrent(policy::GenericProtocol)
+function get_initial_current(policy::GenericProtocol)
 	control = policy.steps[1]
 	if isa(control, VoltageStep)
 		error("Voltage control cannot be the first control step")
 	elseif isa(control, CurrentStep)
-		if !ismissing(control.current_function)
-			I = control.current_function(0.0)
-		else
-			if control.direction == "discharging"
-				I = control.value
-			elseif control.direction == "charging"
-				I = -control.value
-			else
-				error("Initial control direction not recognized")
-			end
-		end
-		return I
+
 
 	elseif isa(control, RestStep)
 		return 0.0
@@ -117,23 +104,7 @@ function setup_initial_control_policy!(policy::GenericProtocol, input, parameter
 
 end
 
-mutable struct GenericController <: Controller
-	policy::GenericProtocol
-	stop_simulation::Bool
-	current_step::AbstractControlStep
-	current_step_number::Int
-	time::Real
-	number_of_steps::Int
-	target::Real
-	dIdt::Real
-	dEdt::Real
 
-	function GenericController(policy::GenericProtocol, stop_simulation::Bool, current_step::Union{Nothing, AbstractControlStep}, current_step_number::Int, time::Real, number_of_steps::Int; target::Real = 0.0, dEdt::Real = 0.0, dIdt::Real = 0.0)
-		new(policy, stop_simulation, current_step, current_step_number, time, number_of_steps, target, dIdt, dEdt)
-	end
-end
-
-GenericController() = GenericController(nothing, false, nothing, 0, 0.0, 0)
 
 @inline function Jutul.numerical_type(x::GenericController)
 	return typeof(x.current_step)
@@ -420,79 +391,79 @@ Update controller target value (current or voltage) based on the active control 
 function update_values_in_controller!(state, policy::GenericProtocol)
 
 	controller = state[:Controller]
-	step_idx = controller.current_step_number + 1
+	step_index = controller.current_step_number + 1
 
 	control_steps = policy.steps
 
-	if step_idx > length(control_steps)
-		step_idx = length(control_steps)
-	end
+	# if step_index > length(control_steps)
+	# 	step_index = length(control_steps)
+	# end
 
 	step = state.Controller.current_step
 
-	ctrlType = state.Controller.current_step.direction
+	if step isa CurrentStep
 
-	cf = hasproperty(step, :current_function) ? getproperty(step, :current_function) : missing
 
-	if !ismissing(cf)
+		control_direction = step.direction
 
-		if cf isa Real
-			I_t = cf
+		current_function = step.current_function
+
+
+		if !ismissing(current_function)
+
+			if current_function isa Real
+				I_t = current_function
+			else
+				# Function of time at the end of interval
+				I_t = current_function(controller.time)
+			end
+
+			if control_direction == "discharging"
+
+				target = I_t
+
+			elseif control_direction == "charging"
+
+				# minus sign below follows from convention
+				target = -I_t
+			else
+				error("Control type $control_direction not recognized")
+			end
 		else
-			# Function of time at the end of interval
-			I_t = cf(controller.time)
-		end
-		if ctrlType == "discharging"
-
-			target = I_t
-
-
-
-		elseif ctrlType == "charging"
-
-			# minus sign below follows from convention
-			target = -I_t
-		else
-			error("Control type $ctrlType not recognized")
-		end
-	else
-		if step isa CurrentStep
 
 			tup = state.Controller.time + 100 #Float64(AbstractInput["Control"]["rampupTime"])
 			cFun(time) = currentFun(time, step.value, tup)
 
-			state.Controller.current_step.current_function = cFun
-			cf = state.Controller.current_step.current_function
-			if cf isa Real
-				I_t = cf
+			step.current_function = cFun
+			current_function = step.current_function
+			if current_function isa Real
+				I_t = current_function
 			else
 				# Function of time at the end of interval
-				I_t = cf(controller.time)
+				I_t = current_function(controller.time)
 			end
-			if ctrlType == "discharging"
+			if control_direction == "discharging"
 
 				target = I_t
 
-
-
-			elseif ctrlType == "charging"
+			elseif control_direction == "charging"
 
 				# minus sign below follows from convention
 				target = -I_t
 			else
 				error("Control type $ctrlType not recognized")
 			end
-
-		elseif step isa VoltageStep
-			target = step.value
-
-		elseif step isa RestStep
-			# Assume voltage hold during rest
-			target = 0.0
-
-		else
-			error("Unsupported step type: $(typeof(step))")
 		end
+
+	elseif step isa VoltageStep
+		target = step.value
+
+	elseif step isa RestStep
+		# Assume voltage hold during rest
+		target = 0.0
+
+	else
+		error("Unsupported step type: $(typeof(step))")
 	end
 
 	controller.target = target

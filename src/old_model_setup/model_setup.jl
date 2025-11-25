@@ -1212,7 +1212,7 @@ function setup_initial_state(inputparams::InputParams,
 
 	init           = Dict()
 	init[:Phi]     = posOCP - negOCP
-	init[:Current] = getInitCurrent(model[:Control])
+	init[:Current] = get_initial_current(model[:Control])
 
 	initState[:Control] = init
 
@@ -2909,7 +2909,7 @@ function setup_initial_state(inputparams::InputParamsOld,
 
 	init = Dict()
 	init[:Voltage] = posOCP - negOCP
-	init[:Current] = getInitCurrent(model[:Control])
+	init[:Current] = get_initial_current(model[:Control])
 
 	initState[:Control] = init
 

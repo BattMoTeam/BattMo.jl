@@ -65,7 +65,7 @@ struct GenericProtocol <: AbstractProtocol
 
 		end
 
-		return return new(steps, step_indices, cycle_numbers)
+		return new(steps, step_indices, cycle_numbers)
 	end
 
 
