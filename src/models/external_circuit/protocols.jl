@@ -1,6 +1,6 @@
 export GenericProtocol
 
-abstract type AbstractProtocol end
+
 
 struct GenericProtocol <: AbstractProtocol
 	steps::Vector{AbstractControlStep}
@@ -18,6 +18,7 @@ struct GenericProtocol <: AbstractProtocol
 		cycle_numbers = []
 
 		index = 0
+
 		for step in experiment_list
 
 			index += 1
@@ -27,16 +28,19 @@ struct GenericProtocol <: AbstractProtocol
 
 			if containsi(step, "Rest")
 				values, units = extract_numeric_values(step)
-				value = convert_to_seconds(values[1], units[1])
 
-				time_termination = Termination("time", value)
-				rest_step = RestStep(value, time_termination)
+				value1, quantity1 = type_to_unit(values[1], string(units[1]))
+
+				termination = get_termination_instance(quantity1, value1)
+
+				rest_step = RestStep(0.0, termination)
 
 				push!(steps, rest_step)
 
 			elseif containsi(step, "Discharge") || containsi(step, "Charge")
 				direction = containsi(step, "Discharge") ? "discharging" : "charging"
-				comparison = containsi(step, "Discharge") ? "below" : "above"
+
+				println("dire = ", direction)
 
 				values, units = extract_numeric_values(step)
 				value1, quantity1 = type_to_unit(values[1], units[1])
@@ -44,7 +48,7 @@ struct GenericProtocol <: AbstractProtocol
 
 				value2, quantity2 = type_to_unit(values[2], units[2])
 
-				termination = Termination(quantity2, value2; comparison = comparison)
+				termination = get_termination_instance(quantity2, value2; direction = direction)
 
 				current_step = CurrentStep(value1, direction, termination, use_ramp_up; ramp_up_time)
 
@@ -53,10 +57,12 @@ struct GenericProtocol <: AbstractProtocol
 
 			elseif containsi(step, "Hold")
 				values, units = extract_numeric_values(step)
-				value1 = convert_to_V(values[1], units[1])
+				value1, quantity1 = type_to_unit(values[1], units[1])
 				value2, quantity2 = type_to_unit(values[2], units[2])
 
-				termination = Termination(quantity2, value2; comparison = "absolute value below")
+				termination = get_termination_instance(quantity2, value2)
+
+				println("value1", value1)
 				voltage_step = VoltageStep(value1, termination)
 
 				push!(steps, voltage_step)
@@ -73,6 +79,23 @@ struct GenericProtocol <: AbstractProtocol
 
 end
 
+function get_termination_instance(quantity, target; direction = "discharge")
+
+	if quantity == "Voltage"
+		return VoltageTermination(target, direction, 1e-4)
+	elseif quantity == "VoltageChange"
+		return VoltageChangeTermination(target, 1e-10)
+	elseif quantity == "Current"
+		return CurrentTermination(target, direction, 1e-4)
+	elseif quantity == "CurrentChange"
+		return CurrentChangeTermination(target, 1e-10)
+	elseif quantity == "Time"
+		return TimeTermination(target, 1e-2)
+	else
+		error("Unknown quantity: $quantity")
+	end
+
+end
 
 """
 We need to add the specific treatment of the controller variables for GenericProtocol
@@ -95,69 +118,6 @@ end
 # Helper functions for control switch #
 #######################################
 
-"""
-The setupRegionSwitchFlags function detects from the current state and control, if we are in the switch region. The functions return two flags :
-- beforeSwitchRegion : the state is before the switch region for the current control
-- afterSwitchRegion : the state is after the switch region for the current control
-"""
-function setupRegionSwitchFlags(policy::P, state, controller::GenericController) where P <: AbstractControlStep
-
-	step = policy
-	termination = step.termination
-
-	if haskey(state, :ElectricPotential)
-		E = only(state.ElectricPotential)
-		I = only(state.Current)
-	else
-		E = ForwardDiff.value(only(state.Control.ElectricPotential))
-		I = ForwardDiff.value(only(state.Control.Current))
-	end
-
-	before = false
-	after = false
-
-	if termination.quantity == "voltage"
-
-		target = termination.value
-		tol = 1e-4
-
-		if isnothing(termination.comparison) || termination.comparison == "below"
-			before = E > target * (1 + tol)
-			after  = E < target * (1 - tol)
-		elseif termination.comparison == "above"
-			before = E < target * (1 - tol)
-			after  = E > target * (1 + tol)
-		end
-
-	elseif termination.quantity == "current"
-		target = termination.value
-		tol = 1e-4
-
-		if isnothing(termination.comparison) || termination.comparison == "absolute value below"
-			before = abs(I) > target * (1 + tol)
-			after  = abs(I) < target * (1 - tol)
-		elseif termination.comparison == "absolute value above"
-			before = abs(I) < target * (1 - tol)
-			after  = abs(I) > target * (1 + tol)
-		end
-
-	elseif termination.quantity == "time"
-		t = controller.time
-
-		target = termination.value
-		tol = 0.1
-
-		before = t < target - tol
-		after  = t > target + tol
-
-
-	else
-		error("Unsupported termination quantity: $(termination.quantity)")
-	end
-
-	return (beforeSwitchRegion = before, afterSwitchRegion = after)
-
-end
 
 
 """
@@ -191,8 +151,9 @@ end
 """
 Implementation of the generic control policy
 """
-function update_control_type_in_controller!(state, state0, policy::GenericProtocol, dt)
+function update_control_step_in_controller!(state, state0, policy::GenericProtocol, dt)
 	control_steps = policy.steps
+
 	number_of_control_steps = length(policy.steps)
 
 	# --- Helpers: mapping between controller.step_number (zero-based) and control_steps (1-based) ---
@@ -224,6 +185,8 @@ function update_control_type_in_controller!(state, state0, policy::GenericProtoc
 	controller.time = state0.Controller.time + dt
 	controller.dIdt = dt > 0 ? (I - I0) / dt : 0.0
 	controller.dEdt = dt > 0 ? (E - E0) / dt : 0.0
+	controller.current = I
+	controller.voltage = E
 
 	# --- Determine previous/ current indices and types (clearly mapped) ---
 	previous_step_number = state0.Controller.current_step_number                # e.g. 0 for first step
@@ -234,12 +197,16 @@ function update_control_type_in_controller!(state, state0, policy::GenericProtoc
 
 
 	# Compute region switch flags for previous states
-	status_previous = setupRegionSwitchFlags(previous_control_step, state0, controller)
+	# status_previous = setupRegionSwitchFlags(previous_control_step, state0, controller)
+	status_previous = get_status_on_termination_region(previous_control_step.termination, state0)
 
-	if status_previous.beforeSwitchRegion
+
+
+	if status_previous.before_termination_region
 		# We have not entered the switching region in the time step. We are not going to change control.
 		step_number = previous_step_number
 		control_step = previous_control_step
+
 
 	else
 		# We entered the switch region in the previous time step. We consider switching control
@@ -247,9 +214,10 @@ function update_control_type_in_controller!(state, state0, policy::GenericProtoc
 		# If controller hasn't already changed this Newton iteration, decide
 		if controller.current_step_number == state0.Controller.current_step_number
 			# The control has not changed from previous time step and we want to determine if we should change it.
-			status_current = setupRegionSwitchFlags(previous_control_step, state, controller)
+			# status_current = setupRegionSwitchFlags(previous_control_step, state, controller)
+			status_current = get_status_on_termination_region(previous_control_step.termination, state)
 
-			if status_current.afterSwitchRegion
+			if status_current.after_termination_region
 				# Attempt to move forward one stepnum
 				step_number = previous_step_number + 1   # still zero-based
 				index = previous_index + 1
@@ -259,12 +227,10 @@ function update_control_type_in_controller!(state, state0, policy::GenericProtoc
 					control_step = deepcopy(control_steps[index])
 
 					# Adjust time-based termination (if needed)
-					if hasfield(typeof(control_step), :termination) &&
-					   control_step.termination.quantity == "time" &&
-					   (control_step.termination.value !== nothing) &&
-					   control_step.termination.value < controller.time
+					if control_step.termination isa TimeTermination &&
+					   control_step.termination.end_time < controller.time
 
-						control_step.termination.value = controller.time + control_step.termination.value
+						control_step.termination.end_time = controller.time + control_step.termination.end_time
 					end
 
 				else
@@ -288,12 +254,10 @@ function update_control_type_in_controller!(state, state0, policy::GenericProtoc
 				control_step = deepcopy(control_steps[index])
 
 				# Adjust time-based termination (if needed)
-				if hasfield(typeof(control_step), :termination) &&
-				   control_step.termination.quantity == "time" &&
-				   (control_step.termination.value !== nothing) &&
-				   control_step.termination.value < controller.time
+				if control_step.termination isa TimeTermination &&
+				   control_step.termination.end_time < controller.time
 
-					control_step.termination.value = controller.time + control_step.termination.value
+					control_step.termination.end_time = controller.time + control_step.termination.end_time
 				end
 
 			else
@@ -314,6 +278,26 @@ function update_control_type_in_controller!(state, state0, policy::GenericProtoc
 end
 
 
+function update_values_in_controller!(state, step::CurrentStep)
+
+
+	current_function = step.current_function
+
+	I_t = current_function(state.Controller.time)
+
+	state.Controller.target = I_t
+
+end
+
+function update_values_in_controller!(state, step::VoltageStep)
+	state.Controller.target = step.value
+
+end
+
+function update_values_in_controller!(state, step::RestStep)
+	state.Controller.target = step.value
+
+end
 
 
 """

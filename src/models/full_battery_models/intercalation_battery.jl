@@ -64,6 +64,8 @@ function setup_submodels(model::IntercalationBattery, input, grids, couplings; k
 
 	model_elyte = setup_electrolyte(model, input, grids)
 
+
+
 	model_control = setup_control_model(input, model_neam, model_peam; kwargs...)
 
 
@@ -88,6 +90,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 	use_ramp_up = haskey(model_settings, "RampUp")
 
 	protocol = cycling_protocol["Protocol"]
+
 
 	if protocol == "CC"
 
@@ -131,8 +134,11 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 	elseif protocol == "Experiment"
 
 		# experiment = convert_experiment_to_battmo_control_input(cycling_protocol["Experiment"])
+		println("ramp1", use_ramp_up)
 		if use_ramp_up
 			ramp_up_time = simulation_settings["RampUpTime"]
+			println("ramp_up_time", ramp_up_time)
+
 			policy = GenericProtocol(cycling_protocol, use_ramp_up; ramp_up_time)
 		else
 			policy = GenericProtocol(cycling_protocol, use_ramp_up)

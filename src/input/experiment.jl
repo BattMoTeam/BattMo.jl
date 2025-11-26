@@ -57,23 +57,42 @@ function convert_experiment_to_battmo_control_input(experiment)
 	return Dict("Control" => Dict("controlPolicy" => "Generic", "controlsteps" => controlsteps))
 end
 
+
+
 function extract_numeric_values(str::AbstractString)
-	pattern = r"([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)\s*([a-zA-Z]*)"
+	# Pattern: number + unit + optional extra words
+	pattern = r"([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)\s*([a-zA-Z]+(?:\s+[a-zA-Z]+)*)"
 	matches = collect(eachmatch(pattern, str))
-	values = [Base.parse(Float64, m.captures[1]) for m in matches]
-	units = [m.captures[2] for m in matches]
+
+	# Convert SubString to String before parsing
+	values = [Base.parse(Float64, String(m.captures[1])) for m in matches]
+
+	# First unit: only first word; others: full unit string
+	units = [
+		i == 1 ? split(String(m.captures[2]))[1] : String(m.captures[2])
+		for (i, m) in enumerate(matches)
+	]
+
 	return values, units
 end
 
+
+
 function type_to_unit(value::Float64, unit::AbstractString)
 	if containsi(unit, "V")
-		return convert_to_V(value, unit), "voltage"
+		quantity = containsi(unit, "change") ? "VoltageChange" : "Voltage"
+		return convert_to_V(value, unit), quantity
 	elseif containsi(unit, "A")
-		return convert_to_A(value, unit), "current"
-	elseif containsi(unit, time_units()...)
-		return convert_to_seconds(value, unit), "time"
+		quantity = containsi(unit, "change") ? "CurrentChange" : "Current"
+		println("unit =", unit)
+		println("val =", value)
+		println("quant =", quantity)
+		return convert_to_A(value, unit), quantity
+	elseif any(tu -> containsi(unit, tu), time_units())
+		return convert_to_seconds(value, unit), "Time"
+
 	elseif containsi(unit, "W")
-		return convert_to_W(value, unit), "power"
+		return convert_to_W(value, unit), "Power"
 	else
 		error("Unknown unit: $unit")
 	end
@@ -99,9 +118,11 @@ end
 
 function convert_to_V(value::Float64, unit::AbstractString)
 	@assert isa(value, Number)
-	if unit == "V"
+	unit_part = containsi(unit, "change") ? split(unit)[1] : unit
+
+	if unit_part == "V"
 		return value
-	elseif unit == "mV"
+	elseif unit_part == "mV"
 		return value * 1e-3
 	else
 		error("Unknown unit: $unit")
@@ -110,9 +131,10 @@ end
 
 function convert_to_A(value::Float64, unit::AbstractString)
 	@assert isa(value, Number)
-	if unit == "A"
+	unit_part = containsi(unit, "change") ? split(unit)[1] : unit
+	if unit_part == "A"
 		return value
-	elseif unit == "mA"
+	elseif unit_part == "mA"
 		return value * 1e-3
 	else
 		error("Unknown unit: $unit")

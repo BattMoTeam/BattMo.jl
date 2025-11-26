@@ -44,6 +44,9 @@ struct CurrentVar <: ScalarVariable end
 struct ImaxDischarge <: ScalarVariable end
 struct ImaxCharge <: ScalarVariable end
 
+abstract type AbstractProtocol end
+abstract type Controller end
+
 ##################################################
 # Define the Current and voltage control systems #
 ##################################################
@@ -767,10 +770,12 @@ function check_constraints(model, storage)
 			control_step_next = control_steps[step_index_next]
 		end
 
-		rsw  = setupRegionSwitchFlags(control_step, state, controller)
-		rswN = setupRegionSwitchFlags(control_step_next, state, controller)
+		# rsw  = setupRegionSwitchFlags(control_step, state, controller)
+		rsw = get_status_on_termination_region(control_step.termination, state)
+		# rswN = setupRegionSwitchFlags(control_step_next, state, controller)
+		rswN = get_status_on_termination_region(control_step_next.termination, state)
 
-		if (step_index == step_index_previous && rsw.afterSwitchRegion) || (step_index == step_index_next && !rswN.beforeSwitchRegion)
+		if (step_index == step_index_previous && rsw.after_termination_region) || (step_index == step_index_next && !rswN.before_termination_region)
 
 			arefulfilled = false
 
@@ -855,8 +860,18 @@ end
 
 function update_controller!(state, state0, policy::AbstractProtocol, dt)
 
-	update_control_type_in_controller!(state, state0, policy, dt)
-	update_values_in_controller!(state, policy)
+
+	if policy isa GenericProtocol
+
+		update_control_step_in_controller!(state, state0, policy, dt)
+
+		step = state.Controller.current_step
+		update_values_in_controller!(state, step)
+	else
+		update_control_type_in_controller!(state, state0, policy, dt)
+
+		update_values_in_controller!(state, policy)
+	end
 
 end
 
@@ -1452,7 +1467,9 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 		current_step_number = 0
 		current_step = policy.steps[1]
 		time_in_step = 0.0
-		state[:Controller] = GenericController(policy, current_step, current_step_number, time_in_step)
+		current = 0.0
+		voltage = 0.0
+		state[:Controller] = GenericController(policy, current_step, current_step_number, time_in_step, current, voltage)
 
 	end
 

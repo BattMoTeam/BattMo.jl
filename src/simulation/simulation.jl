@@ -185,7 +185,7 @@ function setup_termination_criterion(multimodel)
 
 	if multimodel[:Control].system.policy isa CyclingCVPolicy
 
-		termination_criterion = EndCycleIndexTerminationCriterion(multimodel[:Control].system.policy.numberOfCycles)
+		termination_criterion = CycleIndexTermination(multimodel[:Control].system.policy.numberOfCycles)
 
 	elseif multimodel[:Control].system.policy isa CCPolicy
 
@@ -193,19 +193,19 @@ function setup_termination_criterion(multimodel)
 
 			if multimodel[:Control].system.policy.initialControl == "charging"
 
-				termination_criterion = EndVoltageTerminationCriterion(multimodel[:Control].system.policy.upperCutoffVoltage)
+				termination_criterion = VoltageTermination(multimodel[:Control].system.policy.upperCutoffVoltage)
 
 			elseif multimodel[:Control].system.policy.initialControl == "discharging"
 
-				termination_criterion = EndVoltageTerminationCriterion(multimodel[:Control].system.policy.lowerCutoffVoltage)
+				termination_criterion = VoltageTermination(multimodel[:Control].system.policy.lowerCutoffVoltage)
 
 			end
 		else
-			termination_criterion = EndCycleIndexTerminationCriterion(multimodel[:Control].system.policy.numberOfCycles)
+			termination_criterion = CycleIndexTermination(multimodel[:Control].system.policy.numberOfCycles)
 
 		end
 	elseif multimodel[:Control].system.policy isa GenericProtocol
-		termination_criterion = EndControlStepTerminationCriterion(length(multimodel[:Control].system.policy.steps))
+		termination_criterion = ControlStepIndexTermination(length(multimodel[:Control].system.policy.steps))
 
 	elseif multimodel[:Control].system.policy isa FunctionPolicy
 		termination_criterion = nothing
@@ -948,7 +948,7 @@ end
 # Current function #
 ####################
 
-function get_current_value(t::Real, inputI::Real, tup::Real = 0.1; use_ramp_up = true, direction = "discharge")
+function get_current_value(t::Real, inputI::Real, tup::Real = 0.1; use_ramp_up = true, direction = "discharging")
 	t, inputI, tup, val = promote(t, inputI, tup, 0.0)
 	if use_ramp_up == false
 		val = inputI
@@ -959,13 +959,16 @@ function get_current_value(t::Real, inputI::Real, tup::Real = 0.1; use_ramp_up =
 			val = inputI
 		end
 	end
-	return adjust_current_sign(val, direction)
+	val_signed = adjust_current_sign(val, direction)
+	println("val_signed = ", val_signed)
+	println("direction = ", direction)
+	return val_signed
 end
 
 function adjust_current_sign(I, direction)
-	if direction == "discharge"
+	if direction == "discharging"
 		val = I
-	elseif direction == "charge"
+	elseif direction == "charging"
 		val = -I
 	else
 		error("The direction $direction is not recognized.")

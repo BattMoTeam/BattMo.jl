@@ -3,34 +3,34 @@ abstract type AbstractControlStep end
 struct CurrentStep <: AbstractControlStep
 	value::Real
 	direction::Union{String}
-	termination::Termination
+	termination::AbstractTerminationCriterion
 	current_function::Function
 
-	function CurrentStep(value, direction, termination, use_ramp_up; ramp_up_time = nothing, current_function = setup_current_function(value, ramp_up_time, use_ramp_up))
+	function CurrentStep(value, direction, termination, use_ramp_up; ramp_up_time = nothing, current_function = setup_current_function(value, ramp_up_time, use_ramp_up; direction))
 		return new(value, direction, termination, current_function)
 	end
 end
 
 struct VoltageStep <: AbstractControlStep
 	value::Real
-	termination::Termination
+	termination::AbstractTerminationCriterion
 end
 
 mutable struct RestStep <: AbstractControlStep
-	value::Union{Nothing, Real}
-	termination::Termination
+	value::Real
+	termination::AbstractTerminationCriterion
 end
 
-mutable struct PowerStep <: AbstractControlStep
+struct PowerStep <: AbstractControlStep
 	value::Union{Nothing, Real}
 	direction::Union{Nothing, String}
-	termination::Termination
+	termination::AbstractTerminationCriterion
 end
 
 
-function setup_current_function(I, ramp_up_time, use_ramp_up)
+function setup_current_function(I, ramp_up_time, use_ramp_up; direction = "discharging")
 
-	current_function(time) = get_current_value(time, I, ramp_up_time; use_ramp_up = use_ramp_up)
+	current_function(time) = get_current_value(time, I, ramp_up_time; use_ramp_up = use_ramp_up, direction)
 
 	return current_function
 
