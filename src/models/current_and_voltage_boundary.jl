@@ -770,9 +770,7 @@ function check_constraints(model, storage)
 			control_step_next = control_steps[step_index_next]
 		end
 
-		# rsw  = setupRegionSwitchFlags(control_step, state, controller)
 		rsw = get_status_on_termination_region(control_step.termination, state)
-		# rswN = setupRegionSwitchFlags(control_step_next, state, controller)
 		rswN = get_status_on_termination_region(control_step_next.termination, state)
 
 		if (step_index == step_index_previous && rsw.after_termination_region) || (step_index == step_index_next && !rswN.before_termination_region)

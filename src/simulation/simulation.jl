@@ -52,7 +52,6 @@ struct Simulation <: AbstractSimulation
 	grids::Any
 	couplings::Any
 	parameters::Any
-	simulator::Any
 	termination_criterion::Union{AbstractTerminationCriterion, Nothing}
 	jutul_case::Any
 
@@ -100,12 +99,11 @@ struct Simulation <: AbstractSimulation
 				parameters = sim_cfg.parameters
 				initial_state = sim_cfg.initial_state
 				forces = sim_cfg.forces
-				simulator = sim_cfg.simulator
 				time_steps = sim_cfg.time_steps
 				termination_criterion = sim_cfg.termination_criterion
 				jutul_case = sim_cfg.jutul_case
 
-				return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator, termination_criterion, jutul_case)
+				return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, termination_criterion, jutul_case)
 			catch e
 				if is_valid == false
 					error(
@@ -149,20 +147,18 @@ function simulation_configuration(model, input)
 	# setup forces
 	forces = setup_forces(model.multimodel)
 
-	# setup jutul simulator
-	simulator = Simulator(model.multimodel; state0 = initial_state, parameters = parameters, copy_state = true)
-
 	# setup time steps
 	time_steps = Float64.(setup_timesteps(input))
+	# time_steps = [Inf]
 
 	# setup termination criterion
 	termination_criterion = setup_termination_criterion(model.multimodel)
 
 	# setup jutul case
 	if isnothing(termination_criterion)
-		jutul_case = JutulCase(model.multimodel, time_steps, forces; parameters = parameters, state0 = initial_state)
+		jutul_case = JutulCase(model.multimodel, time_steps, forces; parameters = parameters, state0 = initial_state, copy_state = true)
 	else
-		jutul_case = JutulCase(model.multimodel, time_steps, forces; parameters = parameters, state0 = initial_state, termination_criterion = termination_criterion)
+		jutul_case = JutulCase(model.multimodel, time_steps, forces; parameters = parameters, state0 = initial_state, termination_criterion = termination_criterion, copy_state = true)
 	end
 
 	return (
@@ -172,7 +168,6 @@ function simulation_configuration(model, input)
 		parameters = parameters,
 		initial_state = initial_state,
 		forces = forces,
-		simulator = simulator,
 		time_steps = time_steps,
 		termination_criterion = termination_criterion,
 		jutul_case = jutul_case,
@@ -320,7 +315,6 @@ result = solve_simulation(sim)
 """
 function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, logger = nothing, kwargs...)
 
-	simulator = sim.simulator
 	model = sim.model
 	state0 = sim.initial_state
 	forces = sim.forces
@@ -336,7 +330,7 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 
 
 	# setup solver configuration
-	cfg = solver_configuration(simulator,
+	cfg = solver_configuration(jutul_case,
 		model.multimodel,
 		parameters;
 		solver_settings,
@@ -347,7 +341,7 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 	# Setup hook if given
 	hook = get(kwargs, :hook, nothing)
 	if !isnothing(hook)
-		hook(simulator,
+		hook(jutul_case,
 			model.multimodel,
 			initial_state,
 			forces,
@@ -359,7 +353,6 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 
 	# Perform simulation
 	jutul_states, jutul_reports = simulate(jutul_case; config = cfg)
-	# jutul_states, jutul_reports = simulate(state0, simulator, termination_criterion; forces = forces, config = cfg)
 
 	jutul_output = (
 		states = jutul_states,
@@ -526,7 +519,7 @@ Sets up the config object used during simulation. In this current version this
 setup is the same for json and mat files. The specific setup values should
 probably be given as inputs in future versions of BattMo.jl
 """
-function solver_configuration(sim::JutulSimulator,
+function solver_configuration(case::JutulCase,
 	model::MultiModel,
 	parameters;
 	use_model_scaling::Bool = true,
@@ -557,6 +550,8 @@ function solver_configuration(sim::JutulSimulator,
 
 	if timestep_selector == "TimestepSelector"
 		timesel = [TimestepSelector()]
+	else
+		timesel = timestep_selector
 	end
 
 	if linear_solver_dict["Method"] == "UserDefined"
@@ -565,7 +560,7 @@ function solver_configuration(sim::JutulSimulator,
 		linear_solver = battery_linsolve(linear_solver_dict)
 
 	end
-
+	sim = Simulator(case)
 	cfg = simulator_config(
 		sim;
 		info_level = verbose["InfoLevel"],
@@ -598,11 +593,10 @@ function solver_configuration(sim::JutulSimulator,
 		output_path = output["OutputPath"] == "" ? nothing : output["OutputPath"],
 		in_memory_reports = output["InMemoryReports"],
 		report_level = output["ReportLevel"],
-		output_substates = output["OutputSubstrates"],
-	)
+		output_substates = output["OutputSubstrates"])
 
 	if !isempty(non_linear_solver["Tolerances"])
-		cfg[:tolerances] = non_linear_solver["Tolerances"]
+		cfg[:tolerance] = non_linear_solver["Tolerances"]
 	end
 
 	if !isnothing(logger)
@@ -616,10 +610,12 @@ function solver_configuration(sim::JutulSimulator,
 			model_label = scaling[:model_label]
 			equation_label = scaling[:equation_label]
 			value = scaling[:value]
+
 			cfg[:tolerances][model_label][equation_label] = value * tol_default
 		end
 	else
 		for key in submodels_symbols(model)
+
 			cfg[:tolerances][key][:default] = 1e-5
 		end
 	end
@@ -633,75 +629,17 @@ function solver_configuration(sim::JutulSimulator,
 			cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
 		end
 
-		# function post_hook(done, report, sim, dt, forces, max_iter, cfg)
-
-		# 	s = get_simulator_storage(sim)
-		# 	m = get_simulator_model(sim)
-
-		# 	if model[:Control].system.policy isa CyclingCVPolicy
-
-		# 		if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-		# 			report[:stopnow] = true
-		# 		else
-		# 			report[:stopnow] = false
-		# 		end
-
-		# 	elseif model[:Control].system.policy isa CCPolicy
-
-		# 		if m[:Control].system.policy.numberOfCycles == 0
-
-		# 			if m[:Control].system.policy.initialControl == "charging"
-
-		# 				if s.state.Control.ElectricPotential[1] >= m[:Control].system.policy.upperCutoffVoltage
-		# 					report[:stopnow] = true
-		# 				else
-		# 					report[:stopnow] = false
-		# 				end
-
-		# 			elseif m[:Control].system.policy.initialControl == "discharging"
-
-		# 				if s.state.Control.ElectricPotential[1] <= m[:Control].system.policy.lowerCutoffVoltage
-		# 					report[:stopnow] = true
-
-		# 				else
-
-		# 					report[:stopnow] = false
-		# 				end
-		# 			end
-		# 		else
-		# 			if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-		# 				report[:stopnow] = true
-		# 			else
-		# 				report[:stopnow] = false
-		# 			end
-		# 		end
-		# 	elseif model[:Control].system.policy isa GenericProtocol
-		# 		number_of_steps = model[:Control].system.policy.number_of_control_steps
-		# 		if s.state.Control.Controller.current_step_number > number_of_steps
-		# 			report[:stopnow] = true
-		# 		else
-		# 			report[:stopnow] = false
-		# 		end
-		# 		# Do nothing
-		# 	else
-		# 		error("Unknown control policy")
-		# 	end
-
-
-		# 	return (done, report)
-
-		# end
-
-		# cfg[:post_ministep_hook] = post_hook
-
-
 	end
-
 
 	return cfg
 
 end
 
+
+# Convert Dicts to NamedTuples recursively
+function dict_to_namedtuple(d::Dict)
+	return NamedTuple{Tuple(Symbol.(keys(d)))}(map(v -> v isa Dict ? dict_to_namedtuple(v) : v, values(d)))
+end
 
 
 function get_scalings(model, parameters)
