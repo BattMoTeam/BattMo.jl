@@ -44,6 +44,9 @@ struct CurrentVar <: ScalarVariable end
 struct ImaxDischarge <: ScalarVariable end
 struct ImaxCharge <: ScalarVariable end
 
+abstract type AbstractProtocol end
+abstract type Controller end
+
 ##################################################
 # Define the Current and voltage control systems #
 ##################################################
@@ -233,15 +236,7 @@ function Jutul.select_parameters!(S,
 end
 
 
-###########################################################################################################
-# Definition of the controller and some basic utility functions. The controller will be part of the state #
-###########################################################################################################
 
-## A controller provides the information to exert the current control
-
-## The controller are implemented as mutable structures and will be attached to the state
-
-abstract type Controller end
 
 mutable struct FunctionController{R <: Real} <: Controller
 	target::R
@@ -442,7 +437,7 @@ end
 ###################################################################################################################
 # Functions to compute initial current given the policy, it used at initialization of the state in the simulation #
 ###################################################################################################################
-function getInitCurrent(policy::CCPolicy)
+function get_initial_current(policy::CCPolicy)
 
 	if !ismissing(policy.current_function)
 		val = policy.current_function(0.0)
@@ -462,11 +457,11 @@ function getInitCurrent(policy::CCPolicy)
 	return val
 end
 
-function getInitCurrent(policy::FunctionPolicy)
+function get_initial_current(policy::FunctionPolicy)
 	return 0.0
 end
 
-function getInitCurrent(policy::SimpleCVPolicy)
+function get_initial_current(policy::SimpleCVPolicy)
 	if !ismissing(policy.current_function)
 		val = policy.current_function(0.0)
 	else
@@ -478,7 +473,7 @@ function getInitCurrent(policy::SimpleCVPolicy)
 end
 
 
-function getInitCurrent(policy::CyclingCVPolicy)
+function get_initial_current(policy::CyclingCVPolicy)
 	if !ismissing(policy.current_function)
 		val = policy.current_function(0.0)
 
@@ -496,9 +491,14 @@ function getInitCurrent(policy::CyclingCVPolicy)
 
 end
 
-function getInitCurrent(model::CurrentAndVoltageModel)
+function get_initial_current(model::CurrentAndVoltageModel)
 
-	return getInitCurrent(model.system.policy)
+	if model.system.policy isa GenericProtocol
+
+		return get_initial_current(model.system.policy.steps[1])
+	else
+		return get_initial_current(model.system.policy)
+	end
 
 end
 
@@ -528,7 +528,7 @@ function setup_initial_control_policy!(policy::CCPolicy, input, parameters)
 
 		tup = Float64(input.simulation_settings["RampUpTime"])
 
-		cFun(time) = currentFun(time, Imax, tup)
+		cFun(time) = get_current_value(time, Imax, tup)
 
 		policy.current_function = cFun
 	end
@@ -556,7 +556,7 @@ function setup_initial_control_policy!(policy::SimpleCVPolicy, input, parameters
 
 	tup = Float64(input.simulation_settings["RampUpTime"])
 
-	cFun(time) = currentFun(time, Imax, tup)
+	cFun(time) = get_current_value(time, Imax, tup)
 
 	policy.current_function = cFun
 	policy.Imax             = Imax
@@ -585,7 +585,7 @@ function setup_initial_control_policy!(policy::CyclingCVPolicy, input, parameter
 
 		tup = Float64(input.simulation_settings["RampUpTime"])
 
-		cFun(time) = currentFun(time, Imax, tup)
+		cFun(time) = get_current_value(time, Imax, tup)
 
 		policy.current_function = cFun
 	end
@@ -770,10 +770,12 @@ function check_constraints(model, storage)
 			control_step_next = control_steps[step_index_next]
 		end
 
-		rsw  = setupRegionSwitchFlags(control_step, state, controller)
-		rswN = setupRegionSwitchFlags(control_step_next, state, controller)
+		# rsw  = setupRegionSwitchFlags(control_step, state, controller)
+		rsw = get_status_on_termination_region(control_step.termination, state)
+		# rswN = setupRegionSwitchFlags(control_step_next, state, controller)
+		rswN = get_status_on_termination_region(control_step_next.termination, state)
 
-		if (step_index == step_index_previous && rsw.afterSwitchRegion) || (step_index == step_index_next && !rswN.beforeSwitchRegion)
+		if (step_index == step_index_previous && rsw.after_termination_region) || (step_index == step_index_next && !rswN.before_termination_region)
 
 			arefulfilled = false
 
@@ -858,8 +860,18 @@ end
 
 function update_controller!(state, state0, policy::AbstractProtocol, dt)
 
-	update_control_type_in_controller!(state, state0, policy, dt)
-	update_values_in_controller!(state, policy)
+
+	if policy isa GenericProtocol
+
+		update_control_step_in_controller!(state, state0, policy, dt)
+
+		step = state.Controller.current_step
+		update_values_in_controller!(state, step)
+	else
+		update_control_type_in_controller!(state, state0, policy, dt)
+
+		update_values_in_controller!(state, policy)
+	end
 
 end
 
@@ -1455,7 +1467,9 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 		current_step_number = 0
 		current_step = policy.steps[1]
 		time_in_step = 0.0
-		state[:Controller] = GenericController(policy, false, current_step, current_step_number, time_in_step, number_of_steps)
+		current = 0.0
+		voltage = 0.0
+		state[:Controller] = GenericController(policy, current_step, current_step_number, time_in_step, current, voltage)
 
 	end
 

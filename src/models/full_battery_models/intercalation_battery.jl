@@ -64,6 +64,8 @@ function setup_submodels(model::IntercalationBattery, input, grids, couplings; k
 
 	model_elyte = setup_electrolyte(model, input, grids)
 
+
+
 	model_control = setup_control_model(input, model_neam, model_peam; kwargs...)
 
 
@@ -83,10 +85,12 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 
 	cycling_protocol = input.cycling_protocol
 	model_settings = input.model_settings
+	simulation_settings = input.simulation_settings
 
 	use_ramp_up = haskey(model_settings, "RampUp")
 
 	protocol = cycling_protocol["Protocol"]
+
 
 	if protocol == "CC"
 
@@ -131,7 +135,11 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 
 		# experiment = convert_experiment_to_battmo_control_input(cycling_protocol["Experiment"])
 
-		policy = GenericProtocol(cycling_protocol)
+		experiment = Experiment(cycling_protocol["Experiment"])
+
+
+		policy = GenericProtocol(experiment, input)
+
 
 	else
 
@@ -1029,7 +1037,7 @@ function setup_initial_state(input, model::IntercalationBattery)
 
 	init = Dict()
 	init[:ElectricPotential] = posOCP - negOCP
-	init[:Current] = getInitCurrent(multimodel[:Control])
+	init[:Current] = get_initial_current(multimodel[:Control])
 
 	initState[:Control] = init
 

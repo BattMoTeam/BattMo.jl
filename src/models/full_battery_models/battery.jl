@@ -125,28 +125,28 @@ end
 ######################
 
 function getTrans(model1::Dict{String, <:Any},
-	              model2::Dict{String, Any},
-	              faces,
-	              cells,
-	              quantity::String)
+	model2::Dict{String, Any},
+	faces,
+	cells,
+	quantity::String)
 	""" setup transmissibility for coupling between models at boundaries"""
 
 	hT1 = getHalfTrans(model1, faces[:, 1], cells[:, 1], quantity)
 	hT2 = getHalfTrans(model2, faces[:, 2], cells[:, 2], quantity)
 
-	T = 1.0 ./ (1.0./hT1 + 1.0./hT2)
+	T = 1.0 ./ (1.0 ./ hT1 + 1.0 ./ hT2)
 
 	return T
 
 end
 
 function getTrans(model1::SimulationModel,
-	              model2::SimulationModel,
-	              bcfaces,
-	              bccells,
-	              parameters1,
-	              parameters2,
-	              quantity)
+	model2::SimulationModel,
+	bcfaces,
+	bccells,
+	parameters1,
+	parameters2,
+	quantity)
 	""" setup transmissibility for coupling between models at boundaries."""
 
 	d1 = physical_representation(model1)

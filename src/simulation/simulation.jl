@@ -185,27 +185,29 @@ function setup_termination_criterion(multimodel)
 
 	if multimodel[:Control].system.policy isa CyclingCVPolicy
 
-		termination_criterion = EndCycleIndexTerminationCriterion(multimodel[:Control].system.policy.numberOfCycles)
+		termination_criterion = CycleIndexTermination(multimodel[:Control].system.policy.numberOfCycles)
 
 	elseif multimodel[:Control].system.policy isa CCPolicy
 
 		if multimodel[:Control].system.policy.numberOfCycles == 0
+			direction = multimodel[:Control].system.policy.initialControl
+			tol = 1e-4
 
 			if multimodel[:Control].system.policy.initialControl == "charging"
 
-				termination_criterion = EndVoltageTerminationCriterion(multimodel[:Control].system.policy.upperCutoffVoltage)
+				termination_criterion = VoltageTermination(multimodel[:Control].system.policy.upperCutoffVoltage, direction, tol)
 
 			elseif multimodel[:Control].system.policy.initialControl == "discharging"
 
-				termination_criterion = EndVoltageTerminationCriterion(multimodel[:Control].system.policy.lowerCutoffVoltage)
+				termination_criterion = VoltageTermination(multimodel[:Control].system.policy.lowerCutoffVoltage, direction, tol)
 
 			end
 		else
-			termination_criterion = EndCycleIndexTerminationCriterion(multimodel[:Control].system.policy.numberOfCycles)
+			termination_criterion = CycleIndexTermination(multimodel[:Control].system.policy.numberOfCycles)
 
 		end
 	elseif multimodel[:Control].system.policy isa GenericProtocol
-		termination_criterion = EndControlStepTerminationCriterion(length(multimodel[:Control].system.policy.steps))
+		termination_criterion = ControlStepIndexTermination(length(multimodel[:Control].system.policy.steps))
 
 	elseif multimodel[:Control].system.policy isa FunctionPolicy
 		termination_criterion = nothing
@@ -948,12 +950,30 @@ end
 # Current function #
 ####################
 
-function currentFun(t::Real, inputI::Real, tup::Real = 0.1)
+function get_current_value(t::Real, inputI::Real, tup::Real = 0.1; use_ramp_up = true, direction = "discharging")
 	t, inputI, tup, val = promote(t, inputI, tup, 0.0)
-	if t <= tup
-		val = sineup(0.0, inputI, 0.0, tup, t)
-	else
+	if use_ramp_up == false
 		val = inputI
+	else
+		if t <= tup
+			val = sineup(0.0, inputI, 0.0, tup, t)
+		else
+			val = inputI
+		end
 	end
+	val_signed = adjust_current_sign(val, direction)
+
+	return val_signed
+end
+
+function adjust_current_sign(I, direction)
+	if direction == "discharging"
+		val = I
+	elseif direction == "charging"
+		val = -I
+	else
+		error("The direction $direction is not recognized.")
+	end
+
 	return val
 end
