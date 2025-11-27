@@ -7,95 +7,74 @@ struct GenericProtocol <: AbstractProtocol
 	step_indices::Vector{Int}
 	cycle_numbers::Vector{Int}
 
-	function GenericProtocol(cycling_protocol::CyclingProtocol, use_ramp_up::Bool; ramp_up_time = 0.1)
-		experiment_list = cycling_protocol["Experiment"]
-		if isa(experiment_list, String)
-			experiment_list = [experiment_list]
-		end
+	function GenericProtocol(protocol::C, input) where C <: AbstractProtocol
 
-		steps = []
-		step_indices = []
-		cycle_numbers = []
-
-		index = 0
-
-		for step in experiment_list
-
-			index += 1
-
-			push!(step_indices, index)
-			push!(cycle_numbers, index)
-
-			if containsi(step, "Rest")
-				values, units = extract_numeric_values(step)
-
-				value1, quantity1 = type_to_unit(values[1], string(units[1]))
-
-				termination = get_termination_instance(quantity1, value1)
-
-				rest_step = RestStep(0.0, termination)
-
-				push!(steps, rest_step)
-
-			elseif containsi(step, "Discharge") || containsi(step, "Charge")
-				direction = containsi(step, "Discharge") ? "discharging" : "charging"
-
-				println("dire = ", direction)
-
-				values, units = extract_numeric_values(step)
-				value1, quantity1 = type_to_unit(values[1], units[1])
-				@assert lowercase(quantity1) == "current" "Cannot $direction with $quantity1, can only use current"
-
-				value2, quantity2 = type_to_unit(values[2], units[2])
-
-				termination = get_termination_instance(quantity2, value2; direction = direction)
-
-				current_step = CurrentStep(value1, direction, termination, use_ramp_up; ramp_up_time)
-
-
-				push!(steps, current_step)
-
-			elseif containsi(step, "Hold")
-				values, units = extract_numeric_values(step)
-				value1, quantity1 = type_to_unit(values[1], units[1])
-				value2, quantity2 = type_to_unit(values[2], units[2])
-
-				termination = get_termination_instance(quantity2, value2)
-
-				println("value1", value1)
-				voltage_step = VoltageStep(value1, termination)
-
-				push!(steps, voltage_step)
-
-			else
-				error("Unknown control step: $step")
-			end
-
-		end
-
+		steps, step_indices, cycle_numbers = setup_generic_protocol(protocol, input)
 		return new(steps, step_indices, cycle_numbers)
 	end
 
 
 end
 
-function get_termination_instance(quantity, target; direction = "discharge")
+function setup_generic_protocol(control_steps::Experiment, input)
 
-	if quantity == "Voltage"
-		return VoltageTermination(target, direction, 1e-4)
-	elseif quantity == "VoltageChange"
-		return VoltageChangeTermination(target, 1e-10)
-	elseif quantity == "Current"
-		return CurrentTermination(target, direction, 1e-4)
-	elseif quantity == "CurrentChange"
-		return CurrentChangeTermination(target, 1e-10)
-	elseif quantity == "Time"
-		return TimeTermination(target, 1e-2)
-	else
-		error("Unknown quantity: $quantity")
+	use_ramp_up = haskey(input.model_settings, "RampUp")
+	ramp_up_time = haskey(input.simulation_settings, "RampUpTime") ? input.simulation_settings["RampUpTime"] : 0.1
+
+	capacity = compute_cell_theoretical_capacity(input.cell_parameters)
+
+	experiment_list = control_steps.all
+	if isa(experiment_list, String)
+		experiment_list = [experiment_list]
 	end
 
+	steps = []
+	step_indices = []
+	cycle_indices = []
+
+	step_index = 1
+	cycle_index = 1
+
+	for step in experiment_list
+
+		if step isa String
+
+			step_instance = parse_experiment_step(step, capacity, use_ramp_up; ramp_up_time)
+
+			push!(steps, step_instance)
+			push!(step_indices, step_index)
+			push!(cycle_indices, cycle_index)
+
+			step_index += 1
+			cycle_index += 1
+
+		elseif step isa Dict
+			number_of_cycles = step["NumberOfCycles"]
+			for cycle_index in range(cycle_index, cycle_index + number_of_cycles)
+
+				for sub_step in step["Steps"]
+
+					step_instance = parse_experiment_step(sub_step, capacity, use_ramp_up; ramp_up_time)
+
+					push!(steps, step_instance)
+					push!(step_indices, step_index)
+					push!(cycle_indices, cycle_index)
+
+					step_index += 1
+					cycle_index = cycle_index
+
+				end
+			end
+		else
+			error("Experiment step must be a string of dict.")
+
+		end
+	end
+
+	return steps, step_indices, cycle_indices
+
 end
+
 
 """
 We need to add the specific treatment of the controller variables for GenericProtocol
@@ -200,13 +179,10 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 	# status_previous = setupRegionSwitchFlags(previous_control_step, state0, controller)
 	status_previous = get_status_on_termination_region(previous_control_step.termination, state0)
 
-
-
 	if status_previous.before_termination_region
 		# We have not entered the switching region in the time step. We are not going to change control.
 		step_number = previous_step_number
 		control_step = previous_control_step
-
 
 	else
 		# We entered the switch region in the previous time step. We consider switching control
@@ -277,6 +253,18 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 	return nothing
 end
 
+
+function update_values_in_controller!(state, step::PowerStep)
+
+
+	P = step.value
+	E = state.Controller.voltage
+
+	I = P/E
+
+	state.Controller.target = I
+
+end
 
 function update_values_in_controller!(state, step::CurrentStep)
 

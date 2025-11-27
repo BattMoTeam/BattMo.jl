@@ -1,98 +1,94 @@
 
 export convert_experiment_to_battmo_control_input
 
-function convert_experiment_to_battmo_control_input(experiment)
-	experiment_list = experiment
-	if isa(experiment_list, String)
-		experiment_list = [experiment_list]
-	end
+struct Experiment <: AbstractProtocol
+	all::Vector{Any}
 
-	controlsteps = []
+end
 
-	for step in experiment_list
+function parse_experiment_step(step::String, capacity::Real, use_ramp_up::Bool; ramp_up_time = 0.1)
 
-		step_dict = Dict{String, Any}()
+	if containsi(step, "Rest")
+		values, units = extract_numeric_values(step)
 
+		value1, quantity1 = type_to_unit(values[1], string(units[1]))
 
+		termination = get_termination_instance(quantity1, value1)
 
-		if containsi(step, "Rest")
-			values, units = extract_numeric_values(step)
-			value = convert_to_seconds(values[1], units[1])
-			step_dict["controltype"] = "rest"
-			step_dict["termination"] = Dict("quantity" => "time", "value" => value)
-			step_dict["timeStepSize"] = 600
+		step_instance = RestStep(0.0, termination)
 
-		elseif containsi(step, "Discharge") || containsi(step, "Charge")
-			direction = containsi(step, "Discharge") ? "discharging" : "charging"
-			comparison = containsi(step, "Discharge") ? "below" : "above"
+	elseif containsi(step, "Discharge") || containsi(step, "Charge")
+		direction = containsi(step, "Discharge") ? "discharging" : "charging"
 
-			values, units = extract_numeric_values(step)
-			value1, quantity1 = type_to_unit(values[1], units[1])
-			@assert lowercase(quantity1) == "current" "Cannot $direction with $quantity1, can only use current"
+		values, units = extract_numeric_values(step)
+		value1, quantity1 = type_to_unit(values[1], units[1]; capacity)
+		value2, quantity2 = type_to_unit(values[2], units[2])
 
-			value2, quantity2 = type_to_unit(values[2], units[2])
-			step_dict["controltype"] = quantity1
-			step_dict["value"] = value1
-			step_dict["direction"] = direction
-			step_dict["termination"] = Dict("quantity" => quantity2, "value" => value2, "comparison" => comparison)
-			step_dict["timeStepSize"] = 600
+		termination = get_termination_instance(quantity2, value2; direction = direction)
 
-		elseif containsi(step, "Hold")
-			values, units = extract_numeric_values(step)
-			value1 = convert_to_V(values[1], units[1])
-			value2, quantity2 = type_to_unit(values[2], units[2])
-			step_dict["controltype"] = "voltage"
-			step_dict["value"] = value1
-			step_dict["termination"] = Dict("quantity" => quantity2, "value" => value2, "comparison" => "absolute value below")
-			step_dict["timeStepSize"] = 600
-
+		if quantity1 == "Current"
+			step_instance = CurrentStep(value1, direction, termination, use_ramp_up; ramp_up_time)
+		elseif quantity1 == "Power"
+			step_instance = PowerStep(value1, direction, termination)
 		else
-			error("Unknown control step: $step")
+			error("Quantity $quantity1 is not recognized as control step for a charge or discharge.")
 		end
 
-		push!(controlsteps, step_dict)
+	elseif containsi(step, "Hold")
+		values, units = extract_numeric_values(step)
+		value1, quantity1 = type_to_unit(values[1], units[1])
+		value2, quantity2 = type_to_unit(values[2], units[2])
 
+		termination = get_termination_instance(quantity2, value2)
+
+		step_instance = VoltageStep(value1, termination)
+
+	else
+		error("Unknown control step: $step")
 	end
 
-	return Dict("Control" => Dict("controlPolicy" => "Generic", "controlsteps" => controlsteps))
+	return step_instance
+
 end
 
 
 
 function extract_numeric_values(str::AbstractString)
-	# Pattern: number + unit + optional extra words
-	pattern = r"([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)\s*([a-zA-Z]+(?:\s+[a-zA-Z]+)*)"
+	# Pattern: number (decimal, scientific, or fraction) + unit + optional extra words
+	pattern = r"((?:[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?|[0-9]+/[0-9]+))\s*([a-zA-Z]+(?:\s+[a-zA-Z]+)*)"
 	matches = collect(eachmatch(pattern, str))
 
-	# Convert SubString to String before parsing
-	values = [Base.parse(Float64, String(m.captures[1])) for m in matches]
+	# Parse numbers: handle fractions separately
+	values = [occursin("/", m.captures[1]) ?
+			  Base.parse(Float64, split(m.captures[1], "/")[1]) / Base.parse(Float64, split(m.captures[1], "/")[2]) :
+			  Base.parse(Float64, m.captures[1]) for m in matches]
 
-	# First unit: only first word; others: full unit string
-	units = [
-		i == 1 ? split(String(m.captures[2]))[1] : String(m.captures[2])
-		for (i, m) in enumerate(matches)
-	]
+	# Units: keep first word for first match, full unit for others
+	units = if length(matches) > 1
+		[i == 1 ? split(m.captures[2])[1] : m.captures[2] for (i, m) in enumerate(matches)]
+	else
+		[m.captures[2] for m in matches]
+	end
 
 	return values, units
 end
 
 
 
-function type_to_unit(value::Float64, unit::AbstractString)
+
+function type_to_unit(value::Float64, unit::AbstractString; capacity = nothing)
 	if containsi(unit, "V")
 		quantity = containsi(unit, "change") ? "VoltageChange" : "Voltage"
 		return convert_to_V(value, unit), quantity
 	elseif containsi(unit, "A")
 		quantity = containsi(unit, "change") ? "CurrentChange" : "Current"
-		println("unit =", unit)
-		println("val =", value)
-		println("quant =", quantity)
 		return convert_to_A(value, unit), quantity
 	elseif any(tu -> containsi(unit, tu), time_units())
 		return convert_to_seconds(value, unit), "Time"
-
 	elseif containsi(unit, "W")
 		return convert_to_W(value, unit), "Power"
+	elseif containsi(unit, "C")
+		return convert_to_A(value, unit; capacity), "Current"
 	else
 		error("Unknown unit: $unit")
 	end
@@ -129,13 +125,19 @@ function convert_to_V(value::Float64, unit::AbstractString)
 	end
 end
 
-function convert_to_A(value::Float64, unit::AbstractString)
+function convert_to_A(value::Float64, unit::AbstractString; capacity = nothing)
 	@assert isa(value, Number)
 	unit_part = containsi(unit, "change") ? split(unit)[1] : unit
 	if unit_part == "A"
 		return value
 	elseif unit_part == "mA"
 		return value * 1e-3
+	elseif unit_part == "C"
+		con = Constants()
+
+		value = capacity * value
+
+		return value
 	else
 		error("Unknown unit: $unit")
 	end

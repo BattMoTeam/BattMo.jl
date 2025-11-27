@@ -190,14 +190,16 @@ function setup_termination_criterion(multimodel)
 	elseif multimodel[:Control].system.policy isa CCPolicy
 
 		if multimodel[:Control].system.policy.numberOfCycles == 0
+			direction = multimodel[:Control].system.policy.initialControl
+			tol = 1e-4
 
 			if multimodel[:Control].system.policy.initialControl == "charging"
 
-				termination_criterion = VoltageTermination(multimodel[:Control].system.policy.upperCutoffVoltage)
+				termination_criterion = VoltageTermination(multimodel[:Control].system.policy.upperCutoffVoltage, direction, tol)
 
 			elseif multimodel[:Control].system.policy.initialControl == "discharging"
 
-				termination_criterion = VoltageTermination(multimodel[:Control].system.policy.lowerCutoffVoltage)
+				termination_criterion = VoltageTermination(multimodel[:Control].system.policy.lowerCutoffVoltage, direction, tol)
 
 			end
 		else
@@ -960,8 +962,7 @@ function get_current_value(t::Real, inputI::Real, tup::Real = 0.1; use_ramp_up =
 		end
 	end
 	val_signed = adjust_current_sign(val, direction)
-	println("val_signed = ", val_signed)
-	println("direction = ", direction)
+
 	return val_signed
 end
 

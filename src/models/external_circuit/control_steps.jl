@@ -53,6 +53,11 @@ function get_initial_current(step::CurrentStep)
 	return I
 end
 
+function get_initial_current(step::PowerStep)
+
+	error("Power control cannot be the first control step")
+end
+
 
 function get_initial_current(step::VoltageStep)
 	error("Voltage control cannot be the first control step")

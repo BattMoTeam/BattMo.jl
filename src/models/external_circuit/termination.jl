@@ -41,7 +41,6 @@ A termination criterion that stops a control step or time-stepping when the volt
 """
 mutable struct VoltageChangeTermination <: AbstractTerminationCriterion
 	end_voltage_change::Real
-	direction::String
 	tolerance::Real
 end
 
@@ -95,6 +94,30 @@ end
 # Termination criterion for the end of a control step
 ###########################################################
 
+function get_termination_instance(quantity, target; direction = "discharge")
+
+	if quantity == "Voltage"
+		return VoltageTermination(target, direction, 1e-4)
+	elseif quantity == "VoltageChange"
+		return VoltageChangeTermination(target, 1e-3)
+	elseif quantity == "Current"
+		return CurrentTermination(target, direction, 1e-4)
+	elseif quantity == "CurrentChange"
+		return CurrentChangeTermination(target, 1e-4)
+	elseif quantity == "Time"
+		return TimeTermination(target, 1e-2)
+	else
+		error("Unknown quantity: $quantity")
+	end
+
+end
+
+
+"""
+The get_status_on_termination_region function detects from the current state and control, if we are in the termination region. The functions return two flags :
+- before_termination_region : the state is before the termination region for the current control
+- after_termination_region : the state is after the termination region for the current control
+"""
 function get_status_on_termination_region(T::VoltageTermination, state)
 	target = T.end_voltage
 	tol = T.tolerance #1e-4
@@ -157,8 +180,6 @@ function get_status_on_termination_region(T::CurrentChangeTermination, state)
 	tol = T.tolerance #1e-4
 
 	dIdt = state.Controller.dIdt
-
-
 
 	before = false
 	after = false

@@ -4,7 +4,7 @@
     "InitialKelvinTemperature": 298.15,
     "Experiment": [
         "Charge at 1 A until 4.0 V",
-        "Hold at 4.0 V until 1e-4 A",
+        "Hold at 4.0 V until 1e-4 A change",
         "Discharge at 1 A until 3.0 V",
         "Rest for 4000 s"
     ],
