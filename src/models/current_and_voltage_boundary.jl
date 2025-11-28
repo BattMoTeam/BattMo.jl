@@ -614,6 +614,8 @@ function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, mode
 	active = active_entities(model.domain, entity, for_variables = true)
 	v = state[state_symbol]
 
+	@info "state_symbol", state_symbol
+
 	nu            = length(active)
 	ImaxDischarge = model.system.policy.ImaxDischarge
 	ImaxCharge    = model.system.policy.ImaxCharge

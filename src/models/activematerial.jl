@@ -65,6 +65,7 @@ struct ReactionRateConstant <: ScalarVariable end
 struct ParticleConcentration <: VectorVariables end # particle concentrations in p2d model
 struct SurfaceConcentration <: ScalarVariable end # surface variable in p2d model
 struct SolidDiffFlux <: VectorVariables end # flux in P2D model
+struct OhmicOverPotential <: ScalarVariable end # ohmic over potential
 
 
 Jutul.minimum_value(::ParticleConcentration) = 0.0
@@ -215,6 +216,8 @@ function Jutul.select_secondary_variables!(S,
 	S[:ReactionRateConstant] = ReactionRateConstant()
 	S[:SolidDiffFlux] = SolidDiffFlux()
 	S[:DiffusionCoefficient] = DiffusionCoefficient()
+	S[:OhmicOverPotential] = OhmicOverPotential()
+	S[:Current] = CurrentVar()
 
 end
 
@@ -250,6 +253,7 @@ function Jutul.select_minimum_output_variables!(out,
 	push!(out, :Temperature)
 	push!(out, :ReactionRateConstant)
 	push!(out, :DiffusionCoefficient)
+	push!(out, :OhmicOverPotential)
 
 end
 
@@ -397,6 +401,29 @@ end
 		end
 	end
 )
+
+
+# @jutul_secondary(
+# 	function update_ohmic_overpotential!(OhmicOverPotential,
+# 		tv::OhmicOverPotential,
+# 		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
+# 		Current,
+# 		CurrentDensity,
+# 		ix,
+# 	) where {label, D, T, Di}
+
+# 		effective_electronic_conductivity = model.system.params[:effective_electronic_conductivity]
+
+# 		@info typeof(cell)
+# 		@info cell
+# 		for cell in ix
+
+# 			@inbounds OhmicOverPotential = compute_ohmic_electrode_overpotential(CurrentDensity[cell], effective_electronic_conductivity, Current)
+
+# 		end
+# 	end
+# )
+
 
 
 function update_solid_flux!(flux, ParticleConcentration, system::ActiveMaterialP2D)
