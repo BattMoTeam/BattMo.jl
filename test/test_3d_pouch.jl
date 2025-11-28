@@ -2,7 +2,7 @@ using BattMo
 using Test
 
 
-@testset "3d" begin
+@testset "3d singel layer pouch" begin
 
 	@test begin
 

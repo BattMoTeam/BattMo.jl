@@ -86,7 +86,7 @@ function one_dimensional_grid(input)
 	## setup the grid for each component
 	for (icomponent, component) in enumerate(components)
 		allinds = collect((1:sum(ns)))
-		inds = cinds[icomponent]:cinds[icomponent+1]-1
+		inds = cinds[icomponent]:(cinds[icomponent+1]-1)
 		G, maps... = remove_cells(parentGrid, setdiff!(allinds, inds))
 		grids[component] = G
 		global_maps[component] = maps
