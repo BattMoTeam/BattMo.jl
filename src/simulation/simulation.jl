@@ -557,6 +557,8 @@ function solver_configuration(sim::JutulSimulator,
 
 	if timestep_selector == "TimestepSelector"
 		timesel = [TimestepSelector()]
+	else
+		timesel = timestep_selector
 	end
 
 	if linear_solver_dict["Method"] == "UserDefined"

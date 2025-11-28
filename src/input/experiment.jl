@@ -7,6 +7,9 @@ struct Experiment <: AbstractProtocol
 end
 
 function parse_experiment_step(step::String, capacity::Real, use_ramp_up::Bool; ramp_up_time = 0.1)
+	increase_cycle_count = false
+	number_of_repeats = nothing
+	step_instance = nothing
 
 	if containsi(step, "Rest")
 		values, units = extract_numeric_values(step)
@@ -43,11 +46,16 @@ function parse_experiment_step(step::String, capacity::Real, use_ramp_up::Bool; 
 
 		step_instance = VoltageStep(value1, termination)
 
+	elseif containsi(step, "Increase cycle count")
+		increase_cycle_count = true
+
+	elseif containsi(step, "Repeat")
+		number_of_repeats = Base.parse(Int, match(r"\d+", step).match)
 	else
 		error("Unknown control step: $step")
 	end
 
-	return step_instance
+	return step_instance, increase_cycle_count, number_of_repeats
 
 end
 

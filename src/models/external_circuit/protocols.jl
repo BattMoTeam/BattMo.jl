@@ -35,35 +35,85 @@ function setup_generic_protocol(control_steps::Experiment, input)
 	step_index = 1
 	cycle_index = 1
 
-	for step in experiment_list
 
+	for (idx, step) in enumerate(experiment_list)
 		if step isa String
+			step_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(step, capacity, use_ramp_up; ramp_up_time)
 
-			step_instance = parse_experiment_step(step, capacity, use_ramp_up; ramp_up_time)
+			if !isnothing(step_instance)
+				push!(steps, step_instance)
+				push!(step_indices, step_index)
+				push!(cycle_indices, cycle_index)
+				step_index += 1
+			end
 
-			push!(steps, step_instance)
-			push!(step_indices, step_index)
-			push!(cycle_indices, cycle_index)
+			if increase_cycle_count
+				cycle_index += 1
+			end
 
-			step_index += 1
-			cycle_index += 1
+			# If repeats are requested, re-run all previous strings by index
+			if !isnothing(number_of_repeats)
+				previous_strings = experiment_list[1:idx]  # everything up to current index
+				for _ in 1:number_of_repeats
+					for prev_step in previous_strings
+						if prev_step isa String
+							prev_instance, prev_increase_cycle, _ = parse_experiment_step(prev_step, capacity, use_ramp_up; ramp_up_time)
 
-		elseif step isa Dict
-			number_of_cycles = step["NumberOfCycles"]
-			for cycle_index in range(cycle_index, cycle_index + number_of_cycles)
+							if !isnothing(prev_instance)
+								push!(steps, prev_instance)
+								push!(step_indices, step_index)
+								push!(cycle_indices, cycle_index)
+								step_index += 1
+							end
 
-				for sub_step in step["Steps"]
+							if prev_increase_cycle
+								cycle_index += 1
+							end
+						end
+					end
+				end
+			end
+		elseif step isa Vector
 
-					step_instance = parse_experiment_step(sub_step, capacity, use_ramp_up; ramp_up_time)
+			for (idx_sub, sub_step) in enumerate(step)
 
+				step_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(sub_step, capacity, use_ramp_up; ramp_up_time)
+
+				if !isnothing(step_instance)
 					push!(steps, step_instance)
 					push!(step_indices, step_index)
 					push!(cycle_indices, cycle_index)
+				end
 
-					step_index += 1
+				step_index += 1
+				if increase_cycle_count
 					cycle_index = cycle_index
 
 				end
+
+				# If repeats are requested, re-run the previous strings only within this vector
+				if !isnothing(number_of_repeats)
+					previous_strings = step[1:idx_sub]  # everything up to current index
+					for _ in 1:number_of_repeats
+						for prev_step in previous_strings
+							if prev_step isa String
+								prev_instance, prev_increase_cycle, _ = parse_experiment_step(prev_step, capacity, use_ramp_up; ramp_up_time)
+
+								if !isnothing(prev_instance)
+									push!(steps, prev_instance)
+									push!(step_indices, step_index)
+									push!(cycle_indices, cycle_index)
+									step_index += 1
+								end
+
+								if prev_increase_cycle
+									cycle_index += 1
+								end
+							end
+						end
+					end
+				end
+
 			end
 		else
 			error("Experiment step must be a string of dict.")
