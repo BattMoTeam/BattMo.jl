@@ -126,8 +126,10 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 					"OuterRadius" => create_property(parameter_meta, "OuterRadius"),
 					"NominalVoltage" => create_property(parameter_meta, "NominalVoltage"),
 					"NominalCapacity" => create_property(parameter_meta, "NominalCapacity"),
-					"HeatTransferCoefficient" => create_property(parameter_meta, "HeatTransferCoefficient"), "ElectrodeWidth" => create_property(parameter_meta, "ElectrodeWidth"),
+					"HeatTransferCoefficient" => create_property(parameter_meta, "HeatTransferCoefficient"),
+					"ElectrodeWidth" => create_property(parameter_meta, "ElectrodeWidth"),
 					"ElectrodeLength" => create_property(parameter_meta, "ElectrodeLength"),
+					"Height" => create_property(parameter_meta, "Height"),
 					"ElectrodeGeometricSurfaceArea" => create_property(parameter_meta, "ElectrodeGeometricSurfaceArea"),
 				),
 				"required" => [],
@@ -367,6 +369,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 		push!(cell_required, "InnerRadius")
 		push!(cell_required, "OuterRadius")
+		push!(cell_required, "Height")
 
 		if haskey(model_settings, "CurrentCollectors")
 			push!(ne_required, "CurrentCollector")

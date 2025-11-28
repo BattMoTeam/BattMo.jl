@@ -1,29 +1,32 @@
 export print_info
 
-"""
-    print_info(input::ParameterSet)
 
-Print a formatted overview of all parameters in a `ParameterSet`.
+"""
+	print_info(input::S; view = nothing) where {S <: ParameterSet}
+
+Print a formatted overview of parameters in a `ParameterSet`.
 
 Lists parameter names, units, types, and values in a structured table,
 using available metadata for labeling and formatting.
 
 # Arguments
 - `input::ParameterSet`: Parameter set (e.g., cell, cycling, solver, or simulation settings).
+- `view::Union{Nothing, String}` (optional): If provided, filters and displays only parameters whose path contains the given string.
 
 # Notes
 - Recursively traverses nested dictionaries within the parameter set.
 - Default parameters are marked as `(default)`.
 - Used for quick inspection of model inputs in BattMo.
+- If `view` is specified, only matching parameters are shown.
 """
-function print_info(input::S) where {S <: ParameterSet}
-	return print_overview(input)
+function print_info(input::S; view = nothing) where {S <: ParameterSet}
+	return print_overview(input; view)
 end
 
 
 
 """
-    print_info(output::SimulationOutput)
+	print_info(output::SimulationOutput)
 
 Print a structured overview of all available output variables in a simulation result.
 

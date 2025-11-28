@@ -41,7 +41,8 @@ function get_output_time_series(jutul_output::NamedTuple; quantities::Union{Noth
 	# Extract data
 	voltage, current = extract_time_series_data(jutul_output)
 	time = extract_output_times(jutul_output)
-	capacity = compute_capacity(jutul_output)
+	cumulative_capacity = compute_capacity(jutul_output, "Cumulative")
+	net_capacity = compute_capacity(jutul_output, "Net")
 	cycle_number = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : nothing
 
 	# Available data mapping
@@ -49,7 +50,8 @@ function get_output_time_series(jutul_output::NamedTuple; quantities::Union{Noth
 		"Time" => time,
 		"Voltage" => voltage,
 		"Current" => current,
-		"Capacity" => capacity,
+		"CumulativeCapacity" => cumulative_capacity,
+		"NetCapacity" => net_capacity,
 	)
 
 	if !isnothing(cycle_number)
@@ -115,7 +117,7 @@ function get_output_metrics(
 	controller = states[1][:Control][:Controller]
 
 	if !isa(controller, FunctionController) && !isa(controller, GenericController)
-		cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
+		cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : nothing
 
 		# Metric storage
 		discharge_cap = Float64[]
@@ -126,7 +128,7 @@ function get_output_metrics(
 
 		# Identify unique non-zero cycles
 		unique_cycles = unique(cycle_array)
-		cycles_reduced = unique_cycles[1:(end-1)] # Exclude last cycle index because it is incomplete
+		cycles_reduced = Int.(unique_cycles[1:(end-1)]) # Exclude last cycle index because it is incomplete
 
 
 		if isempty(cycles_reduced)

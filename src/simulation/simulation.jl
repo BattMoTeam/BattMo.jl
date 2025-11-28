@@ -722,7 +722,7 @@ function get_scalings(model, parameters)
 		# Eak       = model[elde].system[:activation_energy_of_reaction]
 		vsa = model[elde].system[:volumetric_surface_area]
 
-		if hasproperty(model[elde].system, :activation_energy_of_reaction)
+		if hasproperty(model[elde].system.params, :activation_energy_of_reaction)
 			Ea = model[elde].system[:activation_energy_of_reaction]
 		else
 			Ea = nothing

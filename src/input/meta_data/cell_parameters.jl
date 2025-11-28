@@ -389,17 +389,6 @@ function get_cell_parameters_meta_data()
 			"unit_name" => "emmo:SquareMetre",
 			"unit_iri" => "https://w3id.org/emmo#SquareMetre",
 		),
-		"Volume" => Dict(
-			"context_type" => "Volume",
-			"context_type_iri" => "https://w3id.org/emmo#EMMO_f1a51559_aa3d_43a0_9327_918039f0dfed",
-			"max_value" => 1.0e-1,
-			"min_value" => 1.0e-6,
-			"description" => "Three dimensional space occupied by a material or device.",
-			"type" => Real,
-			"unit" => "m³",
-			"unit_name" => "emmo:CubicMetre",
-			"unit_iri" => "https://w3id.org/emmo#CubicMetre",
-		),
 		"BruggemanCoefficient" => Dict(
 			"context_type" => "BruggemanCoefficient",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_5c34b3b5_c9c4_477d_809a_3f682f995aa9",

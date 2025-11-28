@@ -48,7 +48,7 @@ for (i, rate) in enumerate(drates)
 	output = solve(sim;)
 	time_series = output.time_series
 
-	lines!(ax, time_series["Capacity"] .* 1000, time_series["Voltage"], label = "$rate C")
+	lines!(ax, time_series["CumulativeCapacity"] .* 1000, time_series["Voltage"], label = "$rate C")
 
 end
 

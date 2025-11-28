@@ -51,7 +51,7 @@ plot_cell_curves
 
 ## Tools that print extra information
 ```@docs
-print_info(input::S) where {S <: ParameterSet}
+print_info(input::S; view = nothing) where {S <: ParameterSet}
 print_info(output::SimulationOutput)
 print_info(from_name::String; view::Union{Nothing, String} = nothing)
 print_info(calibration::AbstractCalibration)

@@ -9,14 +9,21 @@ export
 
 
 
-function compute_capacity(output::SimulationOutput)
-	return compute_capacity(output.jutul_output)
+function compute_capacity(output::SimulationOutput, type)
+	return compute_capacity(output.jutul_output, type)
 end
 
-function compute_capacity(jutul_output::NamedTuple)
+function compute_capacity(jutul_output::NamedTuple, type)
 	states = jutul_output[:states]
 	t = [state[:Control][:Controller].time for state in states]
-	I = [state[:Control][:Current][1] for state in states]
+
+	if type == "Cumulative"
+		I = abs.([state[:Control][:Current][1] for state in states])
+	elseif type == "Net"
+		I = .-[state[:Control][:Current][1] for state in states]
+	else
+		error("The type $type is not recognized. The following types are accepted: Cumulative, Net")
+	end
 
 	capacity_array = Float64[]
 	push!(capacity_array, 0.0)
@@ -25,7 +32,8 @@ function compute_capacity(jutul_output::NamedTuple)
 		dt = t[i] - t[i-1]           # Time step
 		avg_I = (I[i] + I[i-1]) / 2  # Average current over the interval
 		dQ = avg_I * dt / 3600       # Capacity in Ah
-		push!(capacity_array, capacity_array[end] - dQ)
+
+		push!(capacity_array, capacity_array[end] + dQ)
 
 	end
 
@@ -95,12 +103,12 @@ function compute_discharge_capacity(states; cycle_number = nothing)
 		t_discharge = t_cycle[discharge_index]
 
 		diff_t = diff(t_discharge)
-		I_mid = I_discharge[2:end]  # Align with Δt
+		I_mid = abs.(I_discharge[2:end])  # Align with Δt
 
 		capacity = sum(diff_t .* I_mid) / 3600  # Convert to Ah
 	else
 		diff_t = diff(t)
-		I_mid = I[2:end]
+		I_mid = abs.(I[2:end])
 		capacity = sum(diff_t .* I_mid) / 3600
 	end
 
@@ -154,12 +162,12 @@ function compute_charge_capacity(states; cycle_number = nothing)
 		t_charge = t_cycle[charge_index]
 
 		diff_t = diff(t_charge)
-		I_mid = I_charge[2:end]  # Align with Δt
+		I_mid = abs.(I_charge[2:end])  # Align with Δt
 
 		capacity = sum(diff_t .* I_mid) / 3600  # Convert to Ah
 	else
 		diff_t = diff(t)
-		I_mid = I[2:end]
+		I_mid = abs.(I[2:end])
 		capacity = sum(diff_t .* I_mid) / 3600
 	end
 	return capacity
@@ -232,16 +240,16 @@ function compute_discharge_energy(states; cycle_number = nothing)
 
 		dt = diff(t_discharge)
 
-		Emid = (E_discharge[2:end] + E_discharge[1:end-1]) ./ 2
-		Imid = (I_discharge[2:end] + I_discharge[1:end-1]) ./ 2
+		Emid = (E_discharge[2:end] + E_discharge[1:(end-1)]) ./ 2
+		Imid = (I_discharge[2:end] + I_discharge[1:(end-1)]) ./ 2
 
 		energy = sum(Emid .* Imid .* dt)
 
 	else
 		dt = diff(t)
 
-		Emid = (E[2:end] + E[1:end-1]) ./ 2
-		Imid = (I[2:end] + I[1:end-1]) ./ 2
+		Emid = (E[2:end] + E[1:(end-1)]) ./ 2
+		Imid = (I[2:end] + I[1:(end-1)]) ./ 2
 
 		energy = sum(Emid .* Imid .* dt)
 
@@ -298,16 +306,16 @@ function compute_charge_energy(states; cycle_number = nothing)
 
 		dt = diff(t_charge)
 
-		Emid = (E_charge[2:end] + E_charge[1:end-1]) ./ 2
-		Imid = (I_charge[2:end] + I_charge[1:end-1]) ./ 2
+		Emid = (E_charge[2:end] + E_charge[1:(end-1)]) ./ 2
+		Imid = (I_charge[2:end] + I_charge[1:(end-1)]) ./ 2
 
 		energy = sum(Emid .* abs.(Imid) .* dt)
 
 	else
 		dt = diff(t)
 
-		Emid = (E[2:end] + E[1:end-1]) ./ 2
-		Imid = (I[2:end] + I[1:end-1]) ./ 2
+		Emid = (E[2:end] + E[1:(end-1)]) ./ 2
+		Imid = (I[2:end] + I[1:(end-1)]) ./ 2
 
 		energy = sum(Emid .* abs.(Imid) .* dt)
 
