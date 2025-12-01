@@ -6,11 +6,12 @@ struct GenericProtocol <: AbstractProtocol
 	steps::Vector{AbstractControlStep}
 	step_indices::Vector{Int}
 	cycle_numbers::Vector{Int}
+	maximum_current::Real
 
 	function GenericProtocol(protocol::C, input) where C <: AbstractProtocol
 
-		steps, step_indices, cycle_numbers = setup_generic_protocol(protocol, input)
-		return new(steps, step_indices, cycle_numbers)
+		steps, step_indices, cycle_numbers, maximum_current = setup_generic_protocol(protocol, input)
+		return new(steps, step_indices, cycle_numbers, maximum_current)
 	end
 
 
@@ -21,7 +22,11 @@ function setup_generic_protocol(control_steps::Experiment, input)
 	use_ramp_up = haskey(input.model_settings, "RampUp")
 	ramp_up_time = haskey(input.simulation_settings, "RampUpTime") ? input.simulation_settings["RampUpTime"] : 0.1
 
-	capacity = compute_cell_theoretical_capacity(input.cell_parameters)
+	if haskey(input.cycling_protocol, "Capacity")
+		capacity = input.cycling_protocol["Capacity"]
+	else
+		capacity = compute_cell_theoretical_capacity(input.cell_parameters)
+	end
 
 	experiment_list = control_steps.all
 	if isa(experiment_list, String)
@@ -36,94 +41,93 @@ function setup_generic_protocol(control_steps::Experiment, input)
 	cycle_index = 1
 
 
+
 	for (idx, step) in enumerate(experiment_list)
-		if step isa String
-			step_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(step, capacity, use_ramp_up; ramp_up_time)
+		step_index, cycle_index = process_step(step, idx, experiment_list, steps, step_indices, cycle_indices, step_index, cycle_index, capacity, use_ramp_up, ramp_up_time)
+	end
 
-			if !isnothing(step_instance)
-				push!(steps, step_instance)
-				push!(step_indices, step_index)
-				push!(cycle_indices, cycle_index)
-				step_index += 1
-			end
+	# Get maximum current value in complete policy
 
+	current = []
+	for step in steps
+
+		if step isa CurrentStep
+			push!(current, step.value)
+		end
+
+	end
+	current_max = maximum(current)
+
+	return steps, step_indices, cycle_indices, current_max
+
+end
+
+
+"""
+Add a parsed step to the lists and update indices.
+"""
+function add_step!(step_instance, steps, step_indices, cycle_indices, step_index, cycle_index)
+	if !isnothing(step_instance)
+		push!(steps, step_instance)
+		push!(step_indices, step_index)
+		push!(cycle_indices, cycle_index)
+		step_index += 1
+	end
+	return step_index, cycle_index
+end
+
+"""
+Handle repeats for a given list of previous steps.
+"""
+function handle_repeats!(previous_steps, number_of_repeats, experiment_list, steps, step_indices, cycle_indices, step_index, cycle_index, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10)
+	if depth > max_depth
+		error("Exceeded maximum repeat depth to prevent infinite recursion.")
+	end
+
+	for _ in 1:number_of_repeats
+		for (idx, prev_step) in enumerate(previous_steps)
+			step_index, cycle_index = process_step(prev_step, idx, experiment_list, steps, step_indices, cycle_indices, step_index, cycle_index, capacity, use_ramp_up, ramp_up_time; depth = depth+1, max_depth = max_depth)
+		end
+	end
+	return step_index, cycle_index
+end
+
+
+"""
+Process a single step (String or Vector).
+"""
+
+function process_step(step, idx, experiment_list, steps, step_indices, cycle_indices, step_index, cycle_index, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10)
+	if step isa String
+		step_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(step, capacity, use_ramp_up; ramp_up_time)
+		step_index, cycle_index = add_step!(step_instance, steps, step_indices, cycle_indices, step_index, cycle_index)
+		if increase_cycle_count
+			cycle_index += 1
+		end
+		if !isnothing(number_of_repeats)
+			previous_strings = experiment_list[1:(idx-1)]
+			step_index, cycle_index = handle_repeats!(previous_strings, number_of_repeats, experiment_list, steps, step_indices, cycle_indices, step_index, cycle_index, capacity, use_ramp_up, ramp_up_time; depth = depth, max_depth = max_depth)
+		end
+
+	elseif step isa Vector
+		for (idx_sub, sub_step) in enumerate(step)
+			sub_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(sub_step, capacity, use_ramp_up; ramp_up_time)
+			step_index, cycle_index = add_step!(sub_instance, steps, step_indices, cycle_indices, step_index, cycle_index)
 			if increase_cycle_count
 				cycle_index += 1
 			end
-
-			# If repeats are requested, re-run all previous strings by index
 			if !isnothing(number_of_repeats)
-				previous_strings = experiment_list[1:idx]  # everything up to current index
-				for _ in 1:number_of_repeats
-					for prev_step in previous_strings
-						if prev_step isa String
-							prev_instance, prev_increase_cycle, _ = parse_experiment_step(prev_step, capacity, use_ramp_up; ramp_up_time)
-
-							if !isnothing(prev_instance)
-								push!(steps, prev_instance)
-								push!(step_indices, step_index)
-								push!(cycle_indices, cycle_index)
-								step_index += 1
-							end
-
-							if prev_increase_cycle
-								cycle_index += 1
-							end
-						end
-					end
-				end
+				previous_strings = step[1:(idx_sub-1)]
+				step_index, cycle_index = handle_repeats!(previous_strings, number_of_repeats, step, steps, step_indices, cycle_indices, step_index, cycle_index, capacity, use_ramp_up, ramp_up_time; depth = depth, max_depth = max_depth)
 			end
-		elseif step isa Vector
-
-			for (idx_sub, sub_step) in enumerate(step)
-
-				step_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(sub_step, capacity, use_ramp_up; ramp_up_time)
-
-				if !isnothing(step_instance)
-					push!(steps, step_instance)
-					push!(step_indices, step_index)
-					push!(cycle_indices, cycle_index)
-				end
-
-				step_index += 1
-				if increase_cycle_count
-					cycle_index = cycle_index
-
-				end
-
-				# If repeats are requested, re-run the previous strings only within this vector
-				if !isnothing(number_of_repeats)
-					previous_strings = step[1:idx_sub]  # everything up to current index
-					for _ in 1:number_of_repeats
-						for prev_step in previous_strings
-							if prev_step isa String
-								prev_instance, prev_increase_cycle, _ = parse_experiment_step(prev_step, capacity, use_ramp_up; ramp_up_time)
-
-								if !isnothing(prev_instance)
-									push!(steps, prev_instance)
-									push!(step_indices, step_index)
-									push!(cycle_indices, cycle_index)
-									step_index += 1
-								end
-
-								if prev_increase_cycle
-									cycle_index += 1
-								end
-							end
-						end
-					end
-				end
-
-			end
-		else
-			error("Experiment step must be a string of dict.")
-
 		end
+	else
+		error("Experiment step must be a String or Vector.")
 	end
 
-	return steps, step_indices, cycle_indices
-
+	return step_index, cycle_index
 end
+
 
 
 """
@@ -159,12 +163,11 @@ function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, mode
 	v = state[state_symbol]
 
 	nu = length(active)
-	# ImaxDischarge = model.system.policy.ImaxDischarge
-	# ImaxCharge    = model.system.policy.ImaxCharge
 
-	# Imax = max(ImaxCharge, ImaxDischarge)
+	time = state.Controller.time
+	maximum_current = model.system.policy.maximum_current
 
-	# abs_max = 0.2 * Imax
+	abs_max = 0.2 * maximum_current
 	abs_max = nothing
 	rel_max = relative_increment_limit(p)
 	maxval = maximum_value(p)
@@ -182,6 +185,7 @@ Implementation of the generic control policy
 """
 function update_control_step_in_controller!(state, state0, policy::GenericProtocol, dt)
 	control_steps = policy.steps
+	cycle_numbers = policy.cycle_numbers
 
 	number_of_control_steps = length(policy.steps)
 
@@ -218,9 +222,10 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 	controller.voltage = E
 
 	# --- Determine previous/ current indices and types (clearly mapped) ---
-	previous_step_number = state0.Controller.current_step_number                # e.g. 0 for first step
+	previous_step_number = state0.Controller.step_number                # e.g. 0 for first step
+	previous_cycle_number = state0.Controller.cycle_number                # e.g. 0 for first step
 	previous_index = stepnum_to_index(previous_step_number)                     # 1-based index into control_steps
-	previous_control_step = state0.Controller.current_step
+	previous_control_step = state0.Controller.step
 
 
 
@@ -229,16 +234,19 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 	# status_previous = setupRegionSwitchFlags(previous_control_step, state0, controller)
 	status_previous = get_status_on_termination_region(previous_control_step.termination, state0)
 
+
 	if status_previous.before_termination_region
 		# We have not entered the switching region in the time step. We are not going to change control.
+
 		step_number = previous_step_number
+		cycle_number = previous_cycle_number
 		control_step = previous_control_step
 
 	else
 		# We entered the switch region in the previous time step. We consider switching control
 
 		# If controller hasn't already changed this Newton iteration, decide
-		if controller.current_step_number == state0.Controller.current_step_number
+		if controller.step_number == state0.Controller.step_number
 			# The control has not changed from previous time step and we want to determine if we should change it.
 			# status_current = setupRegionSwitchFlags(previous_control_step, state, controller)
 			status_current = get_status_on_termination_region(previous_control_step.termination, state)
@@ -248,8 +256,11 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 				step_number = previous_step_number + 1   # still zero-based
 				index = previous_index + 1
 
+
 				if index <= number_of_control_steps && step_number <= (number_of_control_steps - 1)
 					# 	# Copy the policy step so we can mutate termination without altering original policy
+					cycle_number = cycle_numbers[index]
+					@info "change cycle number" cycle_number
 					control_step = deepcopy(control_steps[index])
 
 					# Adjust time-based termination (if needed)
@@ -261,12 +272,16 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 
 				else
 					step_number = step_number
+					cycle_number = cycle_numbers[step_number]
+
 					control_step = control_steps[1]
 				end
 
 			else
 				step_number = previous_step_number
+				cycle_number = previous_cycle_number
 				control_step = previous_control_step
+				@info "change2 cycle number" cycle_number
 			end
 
 		else
@@ -275,8 +290,10 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 
 			step_number = previous_step_number + 1   # still zero-based
 			index = previous_index + 1
+
 			if index <= number_of_control_steps && step_number <= (number_of_control_steps - 1)
 				# 	# Copy the policy step so we can mutate termination without altering original policy
+				cycle_number = cycle_numbers[index]
 				control_step = deepcopy(control_steps[index])
 
 				# Adjust time-based termination (if needed)
@@ -288,6 +305,8 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 
 			else
 				step_number = step_number
+				cycle_number = cycle_numbers[step_number]
+
 				control_step = control_steps[1]
 			end
 		end
@@ -297,8 +316,12 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 	# Ensure we stay within valid [0, nsteps-1] for stepnum convention
 	# step_number = clamp(step_number, 0, max(0, nsteps - 1))
 
-	controller.current_step_number = step_number
-	controller.current_step = control_step
+	@info step_number
+
+
+	controller.step_number = step_number
+	controller.cycle_number = cycle_number
+	controller.step = control_step
 
 	return nothing
 end
@@ -344,7 +367,7 @@ Update controller target value (current or voltage) based on the active control 
 function update_values_in_controller!(state, policy::GenericProtocol)
 
 	controller = state[:Controller]
-	step_index = controller.current_step_number + 1
+	step_index = controller.step_number + 1
 
 	control_steps = policy.steps
 
@@ -352,7 +375,7 @@ function update_values_in_controller!(state, policy::GenericProtocol)
 	# 	step_index = length(control_steps)
 	# end
 
-	step = state.Controller.current_step
+	step = state.Controller.step
 
 	if step isa CurrentStep
 

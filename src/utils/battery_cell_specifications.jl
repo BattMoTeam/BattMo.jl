@@ -253,8 +253,7 @@ function computeEnergyEfficiency(states; cycle_number = nothing)
 	I = [state[:Control][:Current][1] for state in states]
 
 	if !isnothing(cycle_number)
-		cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
-		total_number_of_cycles = states[end][:Control][:Controller].numberOfCycles
+		cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : [state[:Control][:Controller].cycle_number for state in states]
 
 		cycle_index = findall(x -> x == cycle_number, cycle_array)
 
@@ -271,7 +270,7 @@ function computeEnergyEfficiency(states; cycle_number = nothing)
 
 	# discharge energy
 
-	I[I.<0] .= 0
+	I[I .< 0] .= 0
 	Imid = (I[2:end] .+ I[1:(end-1)]) ./ 2
 
 	energy_discharge = sum(Emid .* Imid .* dt)
@@ -280,7 +279,7 @@ function computeEnergyEfficiency(states; cycle_number = nothing)
 
 	I = copy(Iref)
 
-	I[I.>0] .= 0
+	I[I .> 0] .= 0
 	Imid = (I[2:end] .+ I[1:(end-1)]) / 2
 
 	energy_charge = -sum(Emid .* Imid .* dt)

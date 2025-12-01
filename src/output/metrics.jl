@@ -65,7 +65,8 @@ end
 
 # Helper function to get valid (non-singleton) cycle numbers
 function get_valid_cycles(states)
-	cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
+
+	cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : [state[:Control][:Controller].cycle_number for state in states]
 	cycle_counts = Dict{Int, Int}()
 
 	for cycle in cycle_array
@@ -144,9 +145,7 @@ function compute_charge_capacity(states; cycle_number = nothing)
 	I = [state[:Control][:Current][1] for state in states]
 
 	if !isnothing(cycle_number)
-		cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
-
-		total_number_of_cycles = states[end][:Control][:Controller].numberOfCycles
+		cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : [state[:Control][:Controller].cycle_number for state in states]
 
 		cycle_index = findall(x -> x == cycle_number, cycle_array)
 
@@ -223,9 +222,7 @@ function compute_discharge_energy(states; cycle_number = nothing)
 	I = [state[:Control][:Current][1] for state in states]
 
 	if !isnothing(cycle_number)
-		cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
-
-		total_number_of_cycles = states[end][:Control][:Controller].numberOfCycles
+		cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : [state[:Control][:Controller].cycle_number for state in states]
 
 		cycle_index = findall(x -> x == cycle_number, cycle_array)
 
@@ -289,9 +286,7 @@ function compute_charge_energy(states; cycle_number = nothing)
 	I = [state[:Control][:Current][1] for state in states]
 
 	if !isnothing(cycle_number)
-		cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
-
-		total_number_of_cycles = states[end][:Control][:Controller].numberOfCycles
+		cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : [state[:Control][:Controller].cycle_number for state in states]
 
 		cycle_index = findall(x -> x == cycle_number, cycle_array)
 

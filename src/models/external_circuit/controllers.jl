@@ -10,8 +10,9 @@
 
 mutable struct GenericController <: Controller
 	protocol::GenericProtocol
-	current_step::AbstractControlStep
-	current_step_number::Int
+	step::AbstractControlStep
+	step_number::Int
+	cycle_number::Int
 	time::Real
 	current::Real
 	voltage::Real
@@ -19,14 +20,14 @@ mutable struct GenericController <: Controller
 	dIdt::Real
 	dEdt::Real
 
-	function GenericController(protocol::GenericProtocol, current_step::Union{Nothing, AbstractControlStep}, current_step_number::Int, time::Real, current::Real, voltage::Real; target::Real = 0.0, dEdt::Real = 0.0, dIdt::Real = 0.0)
-		new(protocol, current_step, current_step_number, time, current, voltage, target, dIdt, dEdt)
+	function GenericController(protocol::GenericProtocol, step::Union{Nothing, AbstractControlStep}, step_number::Int, cycle_number::Int, time::Real, current::Real, voltage::Real; target::Real = 0.0, dEdt::Real = 0.0, dIdt::Real = 0.0)
+		new(protocol, step, step_number, cycle_number, time, current, voltage, target, dIdt, dEdt)
 	end
 end
 
 
 @inline function Jutul.numerical_type(x::GenericController)
-	return typeof(x.current_step)
+	return typeof(x.step)
 end
 
 
@@ -36,8 +37,8 @@ Function to create (deep) copy of generic controller
 function copyController!(cv_copy::GenericController, cv::GenericController)
 
 	cv_copy.protocol = cv.protocol
-	cv_copy.current_step = cv.current_step
-	cv_copy.current_step_number = cv.current_step_number
+	cv_copy.step = cv.step
+	cv_copy.step_number = cv.step_number
 	cv_copy.time = cv.time
 	cv_copy.current = cv.current
 	cv_copy.voltage = cv.voltage
@@ -52,7 +53,7 @@ Overload function to copy GenericController
 """
 function Base.copy(cv::GenericController)
 	# Construct using the known type parameter S
-	cv_copy = GenericController(cv.protocol, cv.current_step, cv.current_step_number, cv.time, cv.current, cv.voltage; target = cv.target, dIdt = cv.dIdt, dEdt = cv.dEdt)
+	cv_copy = GenericController(cv.protocol, cv.step, cv.step_number, cv.cycle_number, cv.time, cv.current, cv.voltage; target = cv.target, dIdt = cv.dIdt, dEdt = cv.dEdt)
 
 	return cv_copy
 end

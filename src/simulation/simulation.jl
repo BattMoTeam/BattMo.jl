@@ -679,7 +679,7 @@ function solver_configuration(sim::JutulSimulator,
 		# 		end
 		# 	elseif model[:Control].system.policy isa GenericProtocol
 		# 		number_of_steps = model[:Control].system.policy.number_of_control_steps
-		# 		if s.state.Control.Controller.current_step_number > number_of_steps
+		# 		if s.state.Control.Controller.step_number > number_of_steps
 		# 			report[:stopnow] = true
 		# 		else
 		# 			report[:stopnow] = false
@@ -883,7 +883,13 @@ function setup_timesteps(input;
 			dt = simulation_settings["TimeStepDuration"]
 			n  = Int64(floor(totalTime / dt))
 
-			timesteps = repeat([dt], n)
+			if haskey(input.model_settings, "RampUp")
+				nr = simulation_settings["RampUpSteps"]
+			else
+				nr = 1
+			end
+
+			timesteps = compute_rampup_timesteps(totalTime, dt, nr)
 		end
 
 	elseif protocol == "CCCV"
@@ -899,8 +905,13 @@ function setup_timesteps(input;
 		dt = simulation_settings["TimeStepDuration"]
 		n  = Int64(floor(totalTime / dt))
 
+		if haskey(input.model_settings, "RampUp")
+			nr = simulation_settings["RampUpSteps"]
+		else
+			nr = 1
+		end
 
-		timesteps = repeat([dt], n)
+		timesteps = compute_rampup_timesteps(totalTime, dt, nr)
 
 	elseif protocol == "Function"
 		totalTime = cycling_protocol["TotalTime"]
@@ -912,7 +923,12 @@ function setup_timesteps(input;
 		totalTime = cycling_protocol["TotalTime"]
 		dt = simulation_settings["TimeStepDuration"]
 		n = totalTime / dt
-		timesteps = repeat([dt], Int64(floor(n)))
+		if haskey(input.model_settings, "RampUp")
+			nr = simulation_settings["RampUpSteps"]
+		else
+			nr = 1
+		end
+		timesteps = compute_rampup_timesteps(totalTime, dt, Int(nr))
 
 	else
 

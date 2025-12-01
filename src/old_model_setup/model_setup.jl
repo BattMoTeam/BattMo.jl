@@ -1747,7 +1747,7 @@ function setup_config(sim::JutulSimulator,
 
 				elseif model[:Control].system.policy isa GenericProtocol
 
-					if s.state.Control.Controller.current_step_number + 1 >= length(m[:Control].system.policy.control_steps) && s.state.Control.Controller.stop_simulation
+					if s.state.Control.Controller.step_number + 1 >= length(m[:Control].system.policy.control_steps) && s.state.Control.Controller.stop_simulation
 
 						done = true
 						report[:stopnow] = true

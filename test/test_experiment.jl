@@ -21,9 +21,9 @@ using GLMakie
 						"Rest for 1 hour",
 						"Charge at 0.5 W for 800 s",
 						"Charge at 0.5 C until 4.0 V",
-						"Hold at 4.0 V until 0.1 mA change",
+						"Hold at 4.0 V until 1-e4 A/s",
 						"Discharge at 1 A until 3.0 V",
-						"Rest until 1e-4 V change",
+						"Rest until 1e-4 V/s",
 						"Charge at 1/20 C for 30 minutes",
 					],
 			),
@@ -41,20 +41,18 @@ using GLMakie
 		Current = time_series["Current"]
 
 
-		@test length(Current) ≈ 593 atol = 0
+		@test length(Current) ≈ 464 atol = 0
 		@test Voltage[5] ≈ 2.6952925314125666 atol = 1e-1
 		@test Voltage[100] ≈ 3.3778613498753916 atol = 1e-1
-		@test Voltage[300] ≈ 3.858867243469192 atol = 1e-1
-		@test Voltage[500] ≈ 3.389290249401052 atol = 1e-1
+		@test Voltage[300] ≈ 3.562169483882482 atol = 1e-1
+		@test Voltage[400] ≈ 3.2650296286127776 atol = 1e-1
 		@test Voltage[end-5] ≈ 3.1855346007007763 atol = 1e-1
 
 		@test Current[5] ≈ 0.0 atol = 1e-1
 		@test Current[100] ≈ -2.545210901747287 atol = 1e-1
 		@test Current[300] ≈ 1.0 atol = 1e-1
-		@test Current[500] ≈ 1.0 atol = 1e-4
+		@test Current[400] ≈ 1.0 atol = 1e-4
 		@test Current[end-5] ≈ -0.25452109017472874 atol = 0
-
-		plot_dashboard(output)
 
 
 		cycling_protocol2 = CyclingProtocol(
@@ -65,15 +63,18 @@ using GLMakie
 				"Experiment" =>
 					[
 						"Rest for 1 hour",
-						Dict(
-							"NumberOfCycles" => 3,
-							"Steps" => [
-								"Charge at 0.5 C until 4.0 V",
-								"Hold at 4.0 V until 0.1 mA change",
-								"Discharge at 1/2 C until 3.0 V",
-								"Rest until 1e-4 V change",
-							],
-						),
+						[
+							"Charge at 0.5 C until 4.0 V",
+							"Hold at 4.0 V until 0.1 mA/s",
+							"Discharge at 1/2 C until 3.0 V",
+							"Rest until 1e-4 V/s",
+							"Rest for 1 hour",
+							"Charge at 0.5 C until 4.0 V",
+							"Increase cycle count",
+							"Repeat 1 times",
+						],
+						"Rest for 1 hour",
+						"Repeat 1 times",
 					],
 			),
 		)
@@ -81,6 +82,8 @@ using GLMakie
 		sim2 = Simulation(model_setup, cell_parameters, cycling_protocol2)
 
 		output2 = solve(sim2)
+
+		plot_dashboard(output2)
 
 		time_series2 = output2.time_series
 
@@ -100,8 +103,6 @@ using GLMakie
 		@test Current2[300] ≈ 2.545210901747287 atol = 1e-1
 		@test Current2[500] ≈ -0.3782046805536095 atol = 1e-4
 		@test Current2[end-5] ≈ 2.545210901747287 atol = 0
-
-		plot_dashboard(output2)
 
 
 

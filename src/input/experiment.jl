@@ -61,24 +61,21 @@ end
 
 
 
+
+
 function extract_numeric_values(str::AbstractString)
-	# Pattern: number (decimal, scientific, or fraction) + unit + optional extra words
-	pattern = r"((?:[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?|[0-9]+/[0-9]+))\s*([a-zA-Z]+(?:\s+[a-zA-Z]+)*)"
+	# Pattern: number + valid unit (letters, optional /letters)
+	pattern = r"((?:[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?|[0-9]+/[0-9]+))\s*([a-zA-Z]+(?:/[a-zA-Z]+)?)"
 	matches = collect(eachmatch(pattern, str))
 
-	# Parse numbers: handle fractions separately
 	values = [occursin("/", m.captures[1]) ?
 			  Base.parse(Float64, split(m.captures[1], "/")[1]) / Base.parse(Float64, split(m.captures[1], "/")[2]) :
 			  Base.parse(Float64, m.captures[1]) for m in matches]
 
-	# Units: keep first word for first match, full unit for others
-	units = if length(matches) > 1
-		[i == 1 ? split(m.captures[2])[1] : m.captures[2] for (i, m) in enumerate(matches)]
-	else
-		[m.captures[2] for m in matches]
-	end
+	units = [strip(m.captures[2]) for m in matches]
 
 	return values, units
+
 end
 
 
@@ -86,11 +83,23 @@ end
 
 function type_to_unit(value::Float64, unit::AbstractString; capacity = nothing)
 	if containsi(unit, "V")
-		quantity = containsi(unit, "change") ? "VoltageChange" : "Voltage"
-		return convert_to_V(value, unit), quantity
+		if containsi(unit, "V/")
+			quantity = "VoltageChange"
+			@info "unit", unit
+			@info "quantity", quantity
+			return convert_to_V_s(value, unit), quantity
+		else
+			quantity = "Voltage"
+			return convert_to_V(value, unit), quantity
+		end
 	elseif containsi(unit, "A")
-		quantity = containsi(unit, "change") ? "CurrentChange" : "Current"
-		return convert_to_A(value, unit), quantity
+		if containsi(unit, "A/")
+			quantity = "CurrentChange"
+			return convert_to_A_s(value, unit), quantity
+		else
+			quantity = "Current"
+			return convert_to_A(value, unit), quantity
+		end
 	elseif any(tu -> containsi(unit, tu), time_units())
 		return convert_to_seconds(value, unit), "Time"
 	elseif containsi(unit, "W")
@@ -122,7 +131,7 @@ end
 
 function convert_to_V(value::Float64, unit::AbstractString)
 	@assert isa(value, Number)
-	unit_part = containsi(unit, "change") ? split(unit)[1] : unit
+	unit_part = unit
 
 	if unit_part == "V"
 		return value
@@ -135,7 +144,7 @@ end
 
 function convert_to_A(value::Float64, unit::AbstractString; capacity = nothing)
 	@assert isa(value, Number)
-	unit_part = containsi(unit, "change") ? split(unit)[1] : unit
+	unit_part = unit
 	if unit_part == "A"
 		return value
 	elseif unit_part == "mA"
@@ -161,6 +170,47 @@ function convert_to_W(value::Float64, unit::AbstractString)
 		error("Unknown unit: $unit")
 	end
 end
+
+
+function convert_to_V_s(value::Float64, unit::AbstractString)
+	@assert isa(value, Number)
+	unit = strip(unit)
+
+	parts = split(unit, '/')
+	if length(parts) != 2
+		error("Invalid unit format for voltage change: $unit")
+	end
+
+	voltage_unit = parts[1]
+	time_unit = parts[2]
+
+	# Use existing conversion functions
+	voltage_in_volts = convert_to_V(1.0, voltage_unit)  # scale factor for voltage
+	time_in_seconds = convert_to_seconds(1.0, time_unit) # scale factor for time
+
+	return value * voltage_in_volts / time_in_seconds
+end
+
+
+function convert_to_A_s(value::Float64, unit::AbstractString)
+	@assert isa(value, Number)
+	unit = strip(unit)
+
+	parts = split(unit, '/')
+	if length(parts) != 2
+		error("Invalid unit format for current change: $unit")
+	end
+
+	current_unit = parts[1]
+	time_unit = parts[2]
+
+	# Use existing conversion functions
+	current_in_amperes = convert_to_A(1.0, current_unit)  # scale factor for current
+	time_in_seconds = convert_to_seconds(1.0, time_unit) # scale factor for time
+
+	return value * current_in_amperes / time_in_seconds
+end
+
 
 function containsi(a::AbstractString, b::AbstractString)
 	return occursin(Regex(b, "i"), a)

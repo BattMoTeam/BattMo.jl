@@ -8,19 +8,22 @@ cycling_protocol = CyclingProtocol(
 		"Capacity" => 5,
 		"Experiment" =>
 			[
-				# "Rest for 1 hour",
+				"Charge at 1 C until 4.0 V",
+				"Hold at 4.0 V until 1e-4 A/s",
+				"Discharge at 1 C until 3.0 V",
+				"Rest until 1e-4 V/s",
+				"Rest for 1 hour",
+				"Increase cycle count",
 				[
-					"Charge at 1/2 C until 4.0 V",
-					"Rest for 1 hour",
-					"Discharge at 1/4 C until 3.0 V",
+					"Charge at 1 C until 4.0 V",
+					"Hold at 4.0 V until 1e-4 A/s",
+					"Discharge at 1 C until 3.0 V",
+					"Rest until 1e-4 V/s",
 					"Rest for 1 hour",
 					"Increase cycle count",
 					"Repeat 2 times",
 				],
-				"Rest for 1 hour",
-				"Repeat 2 times",
-
-				# "Rest until 1e-4 V/s",
+				"Repeat 1 times",
 			],
 	),
 )
@@ -35,4 +38,71 @@ sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_sett
 
 output = solve(sim; info_level = 0)
 
+
 plot_dashboard(output)
+
+# cycling_protocol2 = load_cycling_protocol(from_default_set = "cccv")
+
+# sim2 = Simulation(model_setup, cell_parameters, cycling_protocol2; simulation_settings)
+
+# output2 = solve(sim2; info_level = 0)
+
+f = Figure(size = (1000, 400))
+
+
+ax = Axis(f[1, 1],
+	title = "Length",
+	xlabel = "Cycle steps / s",
+	ylabel = "Cycle number / V",
+	xlabelsize = 25,
+	ylabelsize = 25,
+	xticklabelsize = 25,
+	yticklabelsize = 25,
+)
+
+# ax2 = Axis(f[2, 1],
+# 	title = "Length",
+# 	xlabel = "Time / s",
+# 	ylabel = "Current / V",
+# 	xlabelsize = 25,
+# 	ylabelsize = 25,
+# 	xticklabelsize = 25,
+# 	yticklabelsize = 25,
+# )
+
+line1 = scatterlines!(ax,
+	output.time_series["StepNumber"],
+	output.time_series["CycleNumber"];
+	linewidth = 10,
+	markersize = 10,
+	marker = :cross,
+	markercolor = :black)
+
+# line2 = scatterlines!(ax,
+# 	output2.time_series["Time"],
+# 	output2.time_series["Voltage"], ;
+# 	linewidth = 4,
+# 	markersize = 10,
+# 	marker = :cross,
+# 	markercolor = :black)
+
+
+# line3 = scatterlines!(ax2,
+# 	output.time_series["Time"],
+# 	output.time_series["Current"];
+# 	linewidth = 10,
+# 	markersize = 10,
+# 	marker = :cross,
+# 	markercolor = :black)
+
+# line4 = scatterlines!(ax2,
+# 	output2.time_series["Time"],
+# 	output2.time_series["Current"], ;
+# 	linewidth = 4,
+# 	markersize = 10,
+# 	marker = :cross,
+# 	markercolor = :black)
+# Legend(f[1, 2], [line1, line2], ["Generic", "CC"])
+# Legend(f[2, 2], [line3, line4], ["Generic", "CC"])
+f
+

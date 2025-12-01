@@ -670,6 +670,7 @@ function setupRegionSwitchFlags(policy::Union{CyclingCVPolicy, CCPolicy}, state,
 	elseif ctrlType == cc_discharge2
 
 		dEdt = state.Controller.dEdt
+
 		if !ismissing(dEdt)
 			before = abs(dEdt) > dEdtMin * (1 + tol)
 			after  = abs(dEdt) < dEdtMin * (1 - tol)
@@ -686,6 +687,7 @@ function setupRegionSwitchFlags(policy::Union{CyclingCVPolicy, CCPolicy}, state,
 	elseif ctrlType == cv_charge2
 
 		dIdt = state.Controller.dIdt
+
 		if !ismissing(dIdt)
 			before = abs(dIdt) > dIdtMin * (1 + tol)
 			after  = abs(dIdt) < dIdtMin * (1 - tol)
@@ -754,12 +756,12 @@ function check_constraints(model, storage)
 
 		control_steps = policy.steps
 
-		control_step = state[:Controller].current_step
-		control_step_previous = state0[:Controller].current_step
+		control_step = state[:Controller].step
+		control_step_previous = state0[:Controller].step
 
-		step_number_previous = state0[:Controller].current_step_number
+		step_number_previous = state0[:Controller].step_number
 		step_index_previous = step_number_previous + 1
-		step_number = state[:Controller].current_step_number
+		step_number = state[:Controller].step_number
 		step_index = step_number + 1
 
 		if step_index >= length(policy.steps)
@@ -775,7 +777,7 @@ function check_constraints(model, storage)
 		# rswN = setupRegionSwitchFlags(control_step_next, state, controller)
 		rswN = get_status_on_termination_region(control_step_next.termination, state)
 
-		if (step_index == step_index_previous && rsw.after_termination_region) || (step_index == step_index_next && !rswN.before_termination_region)
+		if (step_index == step_index_previous && rsw.after_termination_region) || (step_index == step_index_next && !rswN.before_termination_region && step_index != length(control_steps))
 
 			arefulfilled = false
 
@@ -865,7 +867,7 @@ function update_controller!(state, state0, policy::AbstractProtocol, dt)
 
 		update_control_step_in_controller!(state, state0, policy, dt)
 
-		step = state.Controller.current_step
+		step = state.Controller.step
 		update_values_in_controller!(state, step)
 	else
 		update_control_type_in_controller!(state, state0, policy, dt)
@@ -1253,11 +1255,11 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquati
 
 	if ctrl isa GenericController
 
-		if ctrl.current_step isa VoltageStep
+		if ctrl.step isa VoltageStep
 			v[] = phi - ctrl.target
-		elseif ctrl.current_step isa CurrentStep
+		elseif ctrl.step isa CurrentStep
 			v[] = I - ctrl.target
-		elseif ctrl.current_step isa RestStep
+		elseif ctrl.step isa RestStep
 			v[] = I - ctrl.target
 		end
 
@@ -1464,12 +1466,13 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 
 	elseif policy isa GenericProtocol
 		number_of_steps = length(policy.steps)
-		current_step_number = 0
-		current_step = policy.steps[1]
+		step_number = 0
+		cycle_number = 1
+		step = policy.steps[1]
 		time_in_step = 0.0
 		current = 0.0
 		voltage = 0.0
-		state[:Controller] = GenericController(policy, current_step, current_step_number, time_in_step, current, voltage)
+		state[:Controller] = GenericController(policy, step, step_number, cycle_number, time_in_step, current, voltage)
 
 	end
 

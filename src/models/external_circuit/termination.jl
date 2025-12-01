@@ -1,15 +1,4 @@
 
-
-mutable struct Termination <: AbstractTerminationCriterion
-	quantity::String
-	comparison::Union{String, Nothing}
-	value::Real
-	function Termination(quantity, value; comparison = nothing)
-		return new{}(quantity, comparison, value)
-	end
-end
-
-
 """
 	TimeTermination(end_time)
 
@@ -222,7 +211,7 @@ end
 function Jutul.timestepping_is_done(C::ControlStepIndexTermination, simulator, states, substates, reports, solve_recorder)
 
 	s = get_simulator_storage(simulator)
-	return s.state.Control.Controller.current_step_number + 1 > C.end_control_step_index
+	return s.state.Control.Controller.step_number + 1 > C.end_control_step_index
 end
 
 

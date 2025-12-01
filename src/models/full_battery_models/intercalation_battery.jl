@@ -712,6 +712,7 @@ function set_parameters(model::IntercalationBattery, input
 		cap = computeCellCapacity(multimodel)
 		con = Constants()
 
+
 		DRate                       = cycling_protocol["DRate"]
 		CRate                       = cycling_protocol["CRate"]
 		prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
