@@ -260,7 +260,6 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 				if index <= number_of_control_steps && step_number <= (number_of_control_steps - 1)
 					# 	# Copy the policy step so we can mutate termination without altering original policy
 					cycle_number = cycle_numbers[index]
-					@info "change cycle number" cycle_number
 					control_step = deepcopy(control_steps[index])
 
 					# Adjust time-based termination (if needed)
@@ -281,7 +280,7 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 				step_number = previous_step_number
 				cycle_number = previous_cycle_number
 				control_step = previous_control_step
-				@info "change2 cycle number" cycle_number
+
 			end
 
 		else
@@ -310,14 +309,12 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 				control_step = control_steps[1]
 			end
 		end
+
 	end
 
 	# --- Finalize: clamp stepnum and set controller fields ---
 	# Ensure we stay within valid [0, nsteps-1] for stepnum convention
 	# step_number = clamp(step_number, 0, max(0, nsteps - 1))
-
-	@info step_number
-
 
 	controller.step_number = step_number
 	controller.cycle_number = cycle_number

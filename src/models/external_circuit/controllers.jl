@@ -39,6 +39,7 @@ function copyController!(cv_copy::GenericController, cv::GenericController)
 	cv_copy.protocol = cv.protocol
 	cv_copy.step = cv.step
 	cv_copy.step_number = cv.step_number
+	cv_copy.cycle_number = cv.cycle_number
 	cv_copy.time = cv.time
 	cv_copy.current = cv.current
 	cv_copy.voltage = cv.voltage
