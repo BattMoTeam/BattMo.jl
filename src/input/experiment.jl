@@ -12,39 +12,33 @@ function parse_experiment_step(step::String, capacity::Real, use_ramp_up::Bool; 
 	step_instance = nothing
 
 	if containsi(step, "Rest")
-		values, units = extract_numeric_values(step)
+		step_processed = process_values(step, capacity)
 
-		value1, quantity1 = type_to_unit(values[1], string(units[1]))
-
-		termination = get_termination_instance(quantity1, value1)
+		termination = get_termination_instance(step_processed[:termination][:type], step_processed[:termination][:target])
 
 		step_instance = RestStep(0.0, termination)
 
 	elseif containsi(step, "Discharge") || containsi(step, "Charge")
-		direction = containsi(step, "Discharge") ? "discharging" : "charging"
+		step_processed = process_values(step, capacity)
 
-		values, units = extract_numeric_values(step)
-		value1, quantity1 = type_to_unit(values[1], units[1]; capacity)
-		value2, quantity2 = type_to_unit(values[2], units[2])
+		control_type = step_processed[:control][:type]
 
-		termination = get_termination_instance(quantity2, value2; direction = direction)
+		termination = get_termination_instance(step_processed[:termination][:type], step_processed[:termination][:target]; direction = step_processed[:control][:direction])
 
-		if quantity1 == "Current"
-			step_instance = CurrentStep(value1, direction, termination, use_ramp_up; ramp_up_time)
-		elseif quantity1 == "Power"
-			step_instance = PowerStep(value1, direction, termination)
+		if control_type == "Current"
+			step_instance = CurrentStep(step_processed[:control][:target], step_processed[:control][:direction], termination, use_ramp_up; ramp_up_time)
+		elseif control_type == "Power"
+			step_instance = PowerStep(step_processed[:control][:target], step_processed[:control][:direction], termination)
 		else
 			error("Quantity $quantity1 is not recognized as control step for a charge or discharge.")
 		end
 
 	elseif containsi(step, "Hold")
-		values, units = extract_numeric_values(step)
-		value1, quantity1 = type_to_unit(values[1], units[1])
-		value2, quantity2 = type_to_unit(values[2], units[2])
+		step_processed = process_values(step, capacity)
 
-		termination = get_termination_instance(quantity2, value2)
+		termination = get_termination_instance(step_processed[:termination][:type], step_processed[:termination][:target])
 
-		step_instance = VoltageStep(value1, termination)
+		step_instance = VoltageStep(step_processed[:control][:target], termination)
 
 	elseif containsi(step, "Increase cycle count")
 		increase_cycle_count = true
@@ -60,33 +54,156 @@ function parse_experiment_step(step::String, capacity::Real, use_ramp_up::Bool; 
 end
 
 
+function parse_number_or_fraction(s::AbstractString)::Float64
+	s = strip(s)
+	if occursin('/', s)
+		a, b = split(s, '/'; limit = 2)
+		return Base.parse(Float64, strip(a)) / Base.parse(Float64, strip(b))
+	else
+		return Base.parse(Float64, s)  # handles "0.5", "1e-3", etc.
+	end
+end
 
 
 
-function extract_numeric_values(str::AbstractString)
-	# Pattern: number + valid unit (letters, optional /letters)
-	pattern = r"((?:[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?|[0-9]+/[0-9]+))\s*([a-zA-Z]+(?:/[a-zA-Z]+)?)"
-	matches = collect(eachmatch(pattern, str))
+function process_values(str::AbstractString, capacity)
+	# Split the string into parts by spaces
+	parts = split(str)
 
-	values = [occursin("/", m.captures[1]) ?
-			  Base.parse(Float64, split(m.captures[1], "/")[1]) / Base.parse(Float64, split(m.captures[1], "/")[2]) :
-			  Base.parse(Float64, m.captures[1]) for m in matches]
+	if parts[2] == "at"
+		control_target = parse_number_or_fraction(parts[3])
+		control_unit = parts[4]
 
-	units = [strip(m.captures[2]) for m in matches]
+		control_direction = type_to_direction(parts[1])
+		control_target, control_type = type_to_unit(control_target, control_unit; capacity)
 
-	return values, units
 
+		if parts[5] in ["for", "until"]
+			if length(parts) <= 7
+				termination_target = parse_number_or_fraction(parts[6])
+				termination_unit = parts[7]
+
+				termination_target, termination_type = type_to_unit(termination_target, termination_unit)
+
+			elseif length(parts) > 7 && parts[8] == "or"
+
+				termination_target = parse_number_or_fraction(parts[6])
+				termination_unit = parts[7]
+
+				termination_target, termination_type = type_to_unit(termination_target, termination_unit)
+
+				if parts[9] in ["for", "until"]
+
+					termination_target_2 = parse_number_or_fraction(parts[10])
+					termination_unit_2 = parts[11]
+					termination_target_2, termination_type_2 = type_to_unit(termination_target_2, termination_unit_2)
+
+					termination_target = [termination_target, termination_target_2]
+					termination_type = [termination_type, termination_type_2]
+
+				else
+					error("Conditional termination does not recognize $(parts[6])")
+				end
+			else
+				error("The conditional termination does not have the correct structure.")
+
+			end
+		else
+			error("$(parts[5]) in experiment string not recognized.")
+		end
+
+	elseif parts[2] in ["for", "until"]
+		control_type = nothing
+		control_target = nothing
+		control_direction = nothing
+
+		if length(parts) <= 4
+			termination_target = parse_number_or_fraction(parts[3])
+			termination_unit = parts[4]
+
+			termination_target, termination_type = type_to_unit(termination_target, termination_unit)
+
+		elseif length(parts) > 4 && parts[5] == "or"
+
+			termination_target = parse_number_or_fraction(parts[3])
+			termination_unit = parts[4]
+
+			termination_target, termination_type = type_to_unit(termination_target, termination_unit)
+
+
+			if parts[6] in ["for", "until"]
+
+				termination_target_2 = parse_number_or_fraction(parts[7])
+				termination_unit_2 = parts[8]
+
+				termination_target_2, termination_type_2 = type_to_unit(termination_target_2, termination_unit_2)
+
+				termination_target = [termination_target, termination_target_2]
+				termination_type = [termination_type, termination_type_2]
+			else
+				error("Conditional termination does not recognize $(parts[6])")
+			end
+		else
+			error("The conditional termination does not have the correct structure.")
+
+		end
+	else
+		error("$(parts[2]) in experiment string not recognized.")
+	end
+
+	step_dict = Dict(
+		:control => Dict(
+			:type=>control_type,
+			:target => control_target,
+			:direction => control_direction,
+		),
+		:termination => Dict(
+			:type => termination_type,
+			:target => termination_target,
+		))
+
+
+
+	return step_dict
 end
 
 
 
 
+# function extract_numeric_values(str::AbstractString)
+# 	# Pattern: number + valid unit (letters, optional /letters)
+# 	pattern = r"((?:[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?|[0-9]+/[0-9]+))\s*([a-zA-Z]+(?:/[a-zA-Z]+)?)"
+# 	matches = collect(eachmatch(pattern, str))
+
+# 	values = [occursin("/", m.captures[1]) ?
+# 			  Base.parse(Float64, split(m.captures[1], "/")[1]) / Base.parse(Float64, split(m.captures[1], "/")[2]) :
+# 			  Base.parse(Float64, m.captures[1]) for m in matches]
+
+# 	units = [strip(m.captures[2]) for m in matches]
+
+# 	return values, units
+
+# end
+
+function type_to_direction(value::AbstractString)
+
+	if value == "Charge"
+		direction = "charging"
+	elseif value == "Discharge"
+		direction = "discharging"
+	else
+		direction = nothing
+	end
+	return direction
+end
+
+
+
 function type_to_unit(value::Float64, unit::AbstractString; capacity = nothing)
+
 	if containsi(unit, "V")
 		if containsi(unit, "V/")
 			quantity = "VoltageChange"
-			@info "unit", unit
-			@info "quantity", quantity
 			return convert_to_V_s(value, unit), quantity
 		else
 			quantity = "Voltage"

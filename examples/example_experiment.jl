@@ -8,11 +8,10 @@ cycling_protocol = CyclingProtocol(
 		"Capacity" => 5,
 		"Experiment" =>
 			[
-				"Charge at 1 C until 4.0 V",
-				"Hold at 4.0 V until 1e-4 A/s",
+				"Charge at 1/2 C until 4.0 V",
+				"Hold at 4 V until 1e-4 A/s",
 				"Discharge at 1 C until 3.0 V",
 				"Rest until 1e-4 V/s",
-				"Rest for 1 hour",
 				"Increase cycle count",
 				"Repeat 2 times",
 			],
@@ -30,8 +29,14 @@ sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_sett
 output = solve(sim; info_level = 0)
 
 
-plot_dashboard(output)
+f = plot_dashboard(output)
 
+DataInspector(f)
+f
+
+f2 = plot_output(output, ["Voltage vs Time", "CycleCount vs Time", "StepIndex vs Time", "StepCount vs Time"], layout = (4, 1))
+DataInspector(f2)
+f2
 # cycling_protocol2 = load_cycling_protocol(from_default_set = "cccv")
 
 # sim2 = Simulation(model_setup, cell_parameters, cycling_protocol2; simulation_settings)
@@ -39,33 +44,33 @@ plot_dashboard(output)
 # output2 = solve(sim2; info_level = 0)
 
 
-f = Figure(size = (1000, 400))
+# f = Figure(size = (1000, 400))
 
-ax = Axis(f[1, 1],
-	title = "Length",
-	xlabel = "Cycle steps / s",
-	ylabel = "Cycle number / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
-)
+# ax = Axis(f[1, 1],
+# 	title = "Length",
+# 	xlabel = "Cycle steps / s",
+# 	ylabel = "Cycle number / V",
+# 	xlabelsize = 25,
+# 	ylabelsize = 25,
+# 	xticklabelsize = 25,
+# 	yticklabelsize = 25,
+# )
 
-# Example data
-xs = output.time_series["StepNumber"]
-ys = output.time_series["CycleNumber"]
+# # Example data
+# xs = output.time_series["StepNumber"]
+# ys = output.time_series["CycleNumber"]
 
-# Create custom tooltips for each point
-tooltips = ["Step: $(x), Cycle: $(y)" for (x, y) in zip(xs, ys)]
+# # Create custom tooltips for each point
+# tooltips = ["Step: $(x), Cycle: $(y)" for (x, y) in zip(xs, ys)]
 
-line1 = scatterlines!(ax, xs, ys;
-	linewidth = 10,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-	# tooltip = tooltips,
-)
+# line1 = scatterlines!(ax, xs, ys;
+# 	linewidth = 10,
+# 	markersize = 10,
+# 	marker = :cross,
+# 	markercolor = :black,
+# 	# tooltip = tooltips,
+# )
 
-DataInspector(f)
-f
+# DataInspector(f)
+# f
 

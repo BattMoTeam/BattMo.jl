@@ -59,22 +59,33 @@ end
 
 
 """
-	CycleIndexTermination(end_cycle_index)
+	ConditionalTermination(end_current_change)
 
-A termination criterion that stops time-stepping when the global cycle_index reaches `end_cycle_index`.
+A termination criterion that stops a control step or time-stepping when one of the conditions has terminated.
 """
-struct CycleIndexTermination <: AbstractTerminationCriterion
-	end_cycle_index::Float64
+mutable struct ConditionalTermination <: AbstractTerminationCriterion
+	condition_1::AbstractTerminationCriterion
+	condition_2::AbstractTerminationCriterion
 end
 
 
 """
-	ControlStepIndexTermination(end_control_step_index)
+	CycleCountTermination(end_cycle_index)
+
+A termination criterion that stops time-stepping when the global cycle_index reaches `end_cycle_index`.
+"""
+struct CycleCountTermination <: AbstractTerminationCriterion
+	end_cycle_count::Float64
+end
+
+
+"""
+	ControlStepCountTermination(end_control_step_index)
 
 A termination criterion that stops time-stepping when the global control_step_index reaches `end_control_step_index`.
 """
-struct ControlStepIndexTermination <: AbstractTerminationCriterion
-	end_control_step_index::Float64
+struct ControlStepCountTermination <: AbstractTerminationCriterion
+	end_control_step_count::Float64
 end
 
 
@@ -83,7 +94,17 @@ end
 # Termination criterion for the end of a control step
 ###########################################################
 
-function get_termination_instance(quantity, target; direction = "discharge")
+function get_termination_instance(quantity::Vector{String}, target; direction = discharge)
+
+	termination_1 = get_termination_instance(quantity[1], target[1]; direction)
+	termination_2 = get_termination_instance(quantity[2], target[2]; direction)
+	termination = ConditionalTermination(termination_1, termination_2)
+	return termination
+
+end
+
+function get_termination_instance(quantity::AbstractString, target; direction = "discharge")
+
 
 	if quantity == "Voltage"
 		return VoltageTermination(target, direction, 1e-4)
@@ -99,6 +120,25 @@ function get_termination_instance(quantity, target; direction = "discharge")
 		error("Unknown quantity: $quantity")
 	end
 
+end
+
+function adjust_time_based_termination_target!(termination::TimeTermination, time)
+
+	termination.end_time < time
+	termination.end_time = time + termination.end_time
+end
+
+function adjust_time_based_termination_target!(termination::ConditionalTermination, time)
+
+	if termination.condition_1 isa TimeTermination
+		adjust_time_based_termination_target!(termination.condition_1, time)
+	end
+	if termination.condition_2 isa TimeTermination
+		adjust_time_based_termination_target!(termination.condition_2, time)
+	end
+end
+
+function adjust_time_based_termination_target!(termination::T, time) where T <: Union{VoltageTermination, VoltageChangeTermination, CurrentTermination, CurrentChangeTermination}
 end
 
 
@@ -194,24 +234,44 @@ function get_status_on_termination_region(T::TimeTermination, state)
 	return (before_termination_region = before, after_termination_region = after)
 end
 
+function get_status_on_termination_region(T::ConditionalTermination, state)
+	condition_1 = T.condition_1
+	condition_2 = T.condition_2
+
+	before_1, after_1 = get_status_on_termination_region(condition_1, state)
+	before_2, after_2 = get_status_on_termination_region(condition_2, state)
+
+	before = true
+	after = false
+
+	if before_1 == false || before_2 == false
+		before = false
+	end
+
+	if after_1 || after_2
+		after = true
+	end
+
+	return (before_termination_region = before, after_termination_region = after)
+end
 
 
 ###########################################################
 # Termination criterion for the end of the simulation
 ###########################################################
 
-function Jutul.timestepping_is_done(C::CycleIndexTermination, simulator, states, substates, reports, solve_recorder)
+function Jutul.timestepping_is_done(C::CycleCountTermination, simulator, states, substates, reports, solve_recorder)
 
 	s = get_simulator_storage(simulator)
 
-	return s.state.Control.Controller.numberOfCycles >= C.end_cycle_index
+	return s.state.Control.Controller.numberOfCycles >= C.end_cycle_count
 end
 
 
-function Jutul.timestepping_is_done(C::ControlStepIndexTermination, simulator, states, substates, reports, solve_recorder)
+function Jutul.timestepping_is_done(C::ControlStepCountTermination, simulator, states, substates, reports, solve_recorder)
 
 	s = get_simulator_storage(simulator)
-	return s.state.Control.Controller.step_number + 1 > C.end_control_step_index
+	return s.state.Control.Controller.step_count + 1 > C.end_control_step_count
 end
 
 

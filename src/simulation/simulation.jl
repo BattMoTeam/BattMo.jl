@@ -185,7 +185,7 @@ function setup_termination_criterion(multimodel)
 
 	if multimodel[:Control].system.policy isa CyclingCVPolicy
 
-		termination_criterion = CycleIndexTermination(multimodel[:Control].system.policy.numberOfCycles)
+		termination_criterion = CycleCountTermination(multimodel[:Control].system.policy.numberOfCycles)
 
 	elseif multimodel[:Control].system.policy isa CCPolicy
 
@@ -203,11 +203,11 @@ function setup_termination_criterion(multimodel)
 
 			end
 		else
-			termination_criterion = CycleIndexTermination(multimodel[:Control].system.policy.numberOfCycles)
+			termination_criterion = CycleCountTermination(multimodel[:Control].system.policy.numberOfCycles)
 
 		end
 	elseif multimodel[:Control].system.policy isa GenericProtocol
-		termination_criterion = ControlStepIndexTermination(length(multimodel[:Control].system.policy.steps))
+		termination_criterion = ControlStepCountTermination(length(multimodel[:Control].system.policy.steps))
 
 	elseif multimodel[:Control].system.policy isa FunctionPolicy
 		termination_criterion = nothing

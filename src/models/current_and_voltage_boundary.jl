@@ -759,30 +759,28 @@ function check_constraints(model, storage)
 		control_step = state[:Controller].step
 		control_step_previous = state0[:Controller].step
 
-		step_number_previous = state0[:Controller].step_number
-		step_index_previous = step_number_previous + 1
-		step_number = state[:Controller].step_number
-		step_index = step_number + 1
+		step_count_previous = state0[:Controller].step_count
+		step_count = state[:Controller].step_count
+		step_count_next = step_count + 1
 
-		if step_index >= length(policy.steps)
-			step_index_next = 1
-			control_step_next = control_steps[step_index_next]
+		index = step_count + 1
+
+		if index >= length(policy.steps)
+			index_next = 1
+			control_step_next = control_steps[index_next]
 		else
-			step_index_next = step_index + 1
-			control_step_next = control_steps[step_index_next]
+			index_next = index + 1
+			control_step_next = control_steps[index_next]
 		end
 
-		# rsw  = setupRegionSwitchFlags(control_step, state, controller)
 		rsw = get_status_on_termination_region(control_step.termination, state)
-		# rswN = setupRegionSwitchFlags(control_step_next, state, controller)
 		rswN = get_status_on_termination_region(control_step_next.termination, state)
 
-		if (step_index == step_index_previous && rsw.after_termination_region) || (step_index == step_index_next && !rswN.before_termination_region && step_index != length(control_steps))
+		if (step_count == step_count_previous && rsw.after_termination_region) || (step_count == step_count_next && !rswN.before_termination_region && index != length(control_steps))
 
 			arefulfilled = false
 
 		end
-
 	else
 		error("Policy $(typeof(policy)) not recognized")
 	end
@@ -1466,13 +1464,14 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 
 	elseif policy isa GenericProtocol
 		number_of_steps = length(policy.steps)
-		step_number = 0
-		cycle_number = 1
+		step_count = 0
+		step_index = 0
+		cycle_count = 0
 		step = policy.steps[1]
 		time_in_step = 0.0
 		current = 0.0
 		voltage = 0.0
-		state[:Controller] = GenericController(policy, step, step_number, cycle_number, time_in_step, current, voltage)
+		state[:Controller] = GenericController(policy, step, step_count, step_index, cycle_count, time_in_step, current, voltage)
 
 	end
 

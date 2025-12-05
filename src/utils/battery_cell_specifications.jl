@@ -253,7 +253,7 @@ function computeEnergyEfficiency(states; cycle_number = nothing)
 	I = [state[:Control][:Current][1] for state in states]
 
 	if !isnothing(cycle_number)
-		cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : [state[:Control][:Controller].cycle_number for state in states]
+		cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : [state[:Control][:Controller].cycle_count for state in states]
 
 		cycle_index = findall(x -> x == cycle_number, cycle_array)
 

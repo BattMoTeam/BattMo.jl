@@ -5,16 +5,27 @@ export GenericProtocol
 struct GenericProtocol <: AbstractProtocol
 	steps::Vector{AbstractControlStep}
 	step_indices::Vector{Int}
-	cycle_numbers::Vector{Int}
+	step_counts::Vector{Int}
+	cycle_counts::Vector{Int}
 	maximum_current::Real
 
 	function GenericProtocol(protocol::C, input) where C <: AbstractProtocol
 
-		steps, step_indices, cycle_numbers, maximum_current = setup_generic_protocol(protocol, input)
-		return new(steps, step_indices, cycle_numbers, maximum_current)
+		stepper, maximum_current = setup_generic_protocol(protocol, input)
+		return new(stepper.steps, stepper.step_indices, stepper.step_counts, stepper.cycle_counts, maximum_current)
 	end
 
 
+end
+
+mutable struct Stepper
+	steps::Vector{AbstractControlStep}
+	step_count::Int
+	step_index::Int
+	cycle_count::Int
+	step_counts::Vector{Int}
+	step_indices::Vector{Int}
+	cycle_counts::Vector{Int}
 end
 
 function setup_generic_protocol(control_steps::Experiment, input)
@@ -33,23 +44,16 @@ function setup_generic_protocol(control_steps::Experiment, input)
 		experiment_list = [experiment_list]
 	end
 
-	steps = []
-	step_indices = []
-	cycle_indices = []
-
-	step_index = 1
-	cycle_index = 1
-
-
+	stepper = Stepper([], 0, 0, 0, [], [], [])
 
 	for (idx, step) in enumerate(experiment_list)
-		step_index, cycle_index = process_step(step, idx, experiment_list, steps, step_indices, cycle_indices, step_index, cycle_index, capacity, use_ramp_up, ramp_up_time)
+		stepper = update_stepper!(stepper, step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time)
 	end
 
-	# Get maximum current value in complete policy
+	# Get maximum current value of all steps
 
 	current = []
-	for step in steps
+	for step in stepper.steps
 
 		if step isa CurrentStep
 			push!(current, step.value)
@@ -58,7 +62,7 @@ function setup_generic_protocol(control_steps::Experiment, input)
 	end
 	current_max = maximum(current)
 
-	return steps, step_indices, cycle_indices, current_max
+	return stepper, current_max
 
 end
 
@@ -66,30 +70,32 @@ end
 """
 Add a parsed step to the lists and update indices.
 """
-function add_step!(step_instance, steps, step_indices, cycle_indices, step_index, cycle_index)
+function add_step!(stepper, step_instance)
 	if !isnothing(step_instance)
-		push!(steps, step_instance)
-		push!(step_indices, step_index)
-		push!(cycle_indices, cycle_index)
-		step_index += 1
+		push!(stepper.steps, step_instance)
+		push!(stepper.step_indices, stepper.step_index)
+		push!(stepper.step_counts, stepper.step_count)
+		push!(stepper.cycle_counts, stepper.cycle_count)
+		stepper.step_index += 1
+		stepper.step_count += 1
 	end
-	return step_index, cycle_index
+	return stepper
 end
 
 """
 Handle repeats for a given list of previous steps.
 """
-function handle_repeats!(previous_steps, number_of_repeats, experiment_list, steps, step_indices, cycle_indices, step_index, cycle_index, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10)
+function handle_repeats!(stepper, previous_steps, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10)
 	if depth > max_depth
 		error("Exceeded maximum repeat depth to prevent infinite recursion.")
 	end
 
 	for _ in 1:number_of_repeats
 		for (idx, prev_step) in enumerate(previous_steps)
-			step_index, cycle_index = process_step(prev_step, idx, experiment_list, steps, step_indices, cycle_indices, step_index, cycle_index, capacity, use_ramp_up, ramp_up_time; depth = depth+1, max_depth = max_depth)
+			stepper = update_stepper!(stepper, prev_step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth+1, max_depth = max_depth)
 		end
 	end
-	return step_index, cycle_index
+	return stepper
 end
 
 
@@ -97,35 +103,38 @@ end
 Process a single step (String or Vector).
 """
 
-function process_step(step, idx, experiment_list, steps, step_indices, cycle_indices, step_index, cycle_index, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10)
+function update_stepper!(stepper, step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10)
 	if step isa String
 		step_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(step, capacity, use_ramp_up; ramp_up_time)
-		step_index, cycle_index = add_step!(step_instance, steps, step_indices, cycle_indices, step_index, cycle_index)
+		stepper = add_step!(stepper, step_instance)
 		if increase_cycle_count
-			cycle_index += 1
+			stepper.cycle_count += 1
+			stepper.step_index = 0
 		end
 		if !isnothing(number_of_repeats)
 			previous_strings = experiment_list[1:(idx-1)]
-			step_index, cycle_index = handle_repeats!(previous_strings, number_of_repeats, experiment_list, steps, step_indices, cycle_indices, step_index, cycle_index, capacity, use_ramp_up, ramp_up_time; depth = depth, max_depth = max_depth)
+			stepper = handle_repeats!(stepper, previous_strings, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth, max_depth = max_depth)
 		end
 
 	elseif step isa Vector
 		for (idx_sub, sub_step) in enumerate(step)
 			sub_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(sub_step, capacity, use_ramp_up; ramp_up_time)
-			step_index, cycle_index = add_step!(sub_instance, steps, step_indices, cycle_indices, step_index, cycle_index)
+			stepper = add_step!(stepper, sub_instance)
 			if increase_cycle_count
-				cycle_index += 1
+				stepper.cycle_count += 1
+				stepper.step_index = 0
+
 			end
 			if !isnothing(number_of_repeats)
 				previous_strings = step[1:(idx_sub-1)]
-				step_index, cycle_index = handle_repeats!(previous_strings, number_of_repeats, step, steps, step_indices, cycle_indices, step_index, cycle_index, capacity, use_ramp_up, ramp_up_time; depth = depth, max_depth = max_depth)
+				stepper = handle_repeats!(stepper, previous_strings, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth, max_depth = max_depth)
 			end
 		end
 	else
 		error("Experiment step must be a String or Vector.")
 	end
 
-	return step_index, cycle_index
+	return stepper
 end
 
 
@@ -181,20 +190,21 @@ function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, mode
 end
 
 """
-Implementation of the generic control policy
+Implementation of the generic control protocol
 """
-function update_control_step_in_controller!(state, state0, policy::GenericProtocol, dt)
-	control_steps = policy.steps
-	cycle_numbers = policy.cycle_numbers
+function update_control_step_in_controller!(state, state0, protocol::GenericProtocol, dt)
+	control_steps = protocol.steps
+	cycle_counts = protocol.cycle_counts
+	step_indices = protocol.step_indices
 
-	number_of_control_steps = length(policy.steps)
+	number_of_control_steps = length(protocol.steps)
 
-	# --- Helpers: mapping between controller.step_number (zero-based) and control_steps (1-based) ---
+	# --- Helpers: mapping between controller.step_count (zero-based) and control_steps (1-based) ---
 
-	# Map controller.step_number (which in your logs is 0 for the first step)
+	# Map controller.step_count (which in your logs is 0 for the first step)
 	# to 1-based index used for control_steps array
-	stepnum_to_index(step_number::Integer) = clamp(step_number + 1, 1, number_of_control_steps)   # stepnum 0 -> index 1
-	index_to_stepnum(index::Integer) = clamp(index - 1, 0, number_of_control_steps - 1)      # index 1 -> stepnum 0
+	stepcount_to_index(step_count::Integer) = clamp(step_count + 1, 1, number_of_control_steps)   # stepnum 0 -> index 1
+	index_to_stepcount(index::Integer) = clamp(index - 1, 0, number_of_control_steps - 1)      # index 1 -> stepnum 0
 
 	# --- Extract scalars safely ---
 	E_vals  = value(state[:ElectricPotential])
@@ -222,9 +232,10 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 	controller.voltage = E
 
 	# --- Determine previous/ current indices and types (clearly mapped) ---
-	previous_step_number = state0.Controller.step_number                # e.g. 0 for first step
-	previous_cycle_number = state0.Controller.cycle_number                # e.g. 0 for first step
-	previous_index = stepnum_to_index(previous_step_number)                     # 1-based index into control_steps
+	previous_step_count = state0.Controller.step_count                # e.g. 0 for first step
+	previous_step_index = state0.Controller.step_index                # e.g. 0 for first step
+	previous_cycle_count = state0.Controller.cycle_count                # e.g. 0 for first cycle
+	previous_index = stepcount_to_index(previous_step_count)                     # 1-based index into control_steps
 	previous_control_step = state0.Controller.step
 
 
@@ -238,47 +249,47 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 	if status_previous.before_termination_region
 		# We have not entered the switching region in the time step. We are not going to change control.
 
-		step_number = previous_step_number
-		cycle_number = previous_cycle_number
+		step_count = previous_step_count
+		step_index = previous_step_index
+		cycle_count = previous_cycle_count
 		control_step = previous_control_step
 
 	else
 		# We entered the switch region in the previous time step. We consider switching control
 
 		# If controller hasn't already changed this Newton iteration, decide
-		if controller.step_number == state0.Controller.step_number
+		if controller.step_count == state0.Controller.step_count
 			# The control has not changed from previous time step and we want to determine if we should change it.
 			# status_current = setupRegionSwitchFlags(previous_control_step, state, controller)
-			status_current = get_status_on_termination_region(previous_control_step.termination, state)
+			status = get_status_on_termination_region(previous_control_step.termination, state)
 
-			if status_current.after_termination_region
+			if status.after_termination_region
 				# Attempt to move forward one stepnum
-				step_number = previous_step_number + 1   # still zero-based
+				step_count = previous_step_count + 1   # still zero-based
 				index = previous_index + 1
 
 
-				if index <= number_of_control_steps && step_number <= (number_of_control_steps - 1)
+				if index <= number_of_control_steps && step_count <= (number_of_control_steps - 1)
 					# 	# Copy the policy step so we can mutate termination without altering original policy
-					cycle_number = cycle_numbers[index]
+					cycle_count = cycle_counts[index]
+					step_index = step_indices[index]
 					control_step = deepcopy(control_steps[index])
 
 					# Adjust time-based termination (if needed)
-					if control_step.termination isa TimeTermination &&
-					   control_step.termination.end_time < controller.time
-
-						control_step.termination.end_time = controller.time + control_step.termination.end_time
-					end
+					adjust_time_based_termination_target!(control_step.termination, controller.time)
 
 				else
-					step_number = step_number
-					cycle_number = cycle_numbers[step_number]
+					step_count = step_count
+					cycle_count = cycle_counts[step_count]
+					step_index = step_indices[step_count]
 
 					control_step = control_steps[1]
 				end
 
 			else
-				step_number = previous_step_number
-				cycle_number = previous_cycle_number
+				step_count = previous_step_count
+				step_index = previous_step_index
+				cycle_count = previous_cycle_count
 				control_step = previous_control_step
 
 			end
@@ -287,24 +298,22 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 			# controller already advanced this iteration: We do not switch back to avoid oscillation. We are anyway within the given tolerance for the
 			# control so that we keep the control as it is.
 
-			step_number = previous_step_number + 1   # still zero-based
+			step_count = previous_step_count + 1   # still zero-based
 			index = previous_index + 1
 
-			if index <= number_of_control_steps && step_number <= (number_of_control_steps - 1)
+			if index <= number_of_control_steps && step_count <= (number_of_control_steps - 1)
 				# 	# Copy the policy step so we can mutate termination without altering original policy
-				cycle_number = cycle_numbers[index]
+				cycle_count = cycle_counts[index]
+				step_index = step_indices[index]
 				control_step = deepcopy(control_steps[index])
 
 				# Adjust time-based termination (if needed)
-				if control_step.termination isa TimeTermination &&
-				   control_step.termination.end_time < controller.time
-
-					control_step.termination.end_time = controller.time + control_step.termination.end_time
-				end
+				adjust_time_based_termination_target!(control_step.termination, controller.time)
 
 			else
-				step_number = step_number
-				cycle_number = cycle_numbers[step_number]
+				step_count = step_count
+				step_index = step_indices[step_count]
+				cycle_count = cycle_counts[step_count]
 
 				control_step = control_steps[1]
 			end
@@ -316,8 +325,9 @@ function update_control_step_in_controller!(state, state0, policy::GenericProtoc
 	# Ensure we stay within valid [0, nsteps-1] for stepnum convention
 	# step_number = clamp(step_number, 0, max(0, nsteps - 1))
 
-	controller.step_number = step_number
-	controller.cycle_number = cycle_number
+	controller.step_count = step_count
+	controller.step_index = step_index
+	controller.cycle_count = cycle_count
 	controller.step = control_step
 
 	return nothing

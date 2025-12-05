@@ -43,8 +43,9 @@ function get_output_time_series(jutul_output::NamedTuple; quantities::Union{Noth
 	time = extract_output_times(jutul_output)
 	cumulative_capacity = compute_capacity(jutul_output, "Cumulative")
 	net_capacity = compute_capacity(jutul_output, "Net")
-	cycle_number = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : [state[:Control][:Controller].cycle_number for state in states]
-	step_index = hasproperty(states[1][:Control][:Controller], :step_number) ? [state[:Control][:Controller].step_number for state in states] : nothing
+	cycle_count = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : [state[:Control][:Controller].cycle_count for state in states]
+	step_count = hasproperty(states[1][:Control][:Controller], :step_count) ? [state[:Control][:Controller].step_count for state in states] : nothing
+	step_index = hasproperty(states[1][:Control][:Controller], :step_index) ? [state[:Control][:Controller].step_index for state in states] : nothing
 
 
 	# Available data mapping
@@ -56,12 +57,16 @@ function get_output_time_series(jutul_output::NamedTuple; quantities::Union{Noth
 		"NetCapacity" => net_capacity,
 	)
 
-	if !isnothing(cycle_number)
-		data_map["CycleNumber"] = cycle_number
+	if !isnothing(cycle_count)
+		data_map["CycleCount"] = cycle_count
+	end
+
+	if !isnothing(step_count)
+		data_map["StepCount"] = step_count
 	end
 
 	if !isnothing(step_index)
-		data_map["StepNumber"] = step_index
+		data_map["StepIndex"] = step_index
 	end
 
 	if isnothing(quantities)
@@ -166,7 +171,7 @@ function get_output_metrics(
 		)
 	elseif isa(controller, GenericController)
 
-		cycle_array = [state[:Control][:Controller].cycle_number for state in states]
+		cycle_array = [state[:Control][:Controller].cycle_count for state in states]
 
 		# Metric storage
 		discharge_cap = Float64[]
