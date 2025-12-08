@@ -2,139 +2,36 @@ export GenericProtocol
 
 
 
-struct GenericProtocol <: AbstractProtocol
+struct GenericProtocol{V} <: AbstractProtocol where V <: Vector{Int}
 	steps::Vector{AbstractControlStep}
-	step_indices::Vector{Int}
-	step_counts::Vector{Int}
-	cycle_counts::Vector{Int}
+	step_indices::V
+	step_counts::V
+	cycle_counts::V
 	maximum_current::Real
-
-	function GenericProtocol(protocol::C, input) where C <: AbstractProtocol
-
-		stepper, maximum_current = setup_generic_protocol(protocol, input)
-		return new(stepper.steps, stepper.step_indices, stepper.step_counts, stepper.cycle_counts, maximum_current)
-	end
-
-
 end
 
-mutable struct Stepper
-	steps::Vector{AbstractControlStep}
-	step_count::Int
-	step_index::Int
-	cycle_count::Int
-	step_counts::Vector{Int}
-	step_indices::Vector{Int}
-	cycle_counts::Vector{Int}
-end
+function GenericProtocol(protocol::C, input) where C <: AbstractPolicy
 
-function setup_generic_protocol(control_steps::Experiment, input)
-
-	use_ramp_up = haskey(input.model_settings, "RampUp")
-	ramp_up_time = haskey(input.simulation_settings, "RampUpTime") ? input.simulation_settings["RampUpTime"] : 0.1
-
-	if haskey(input.cycling_protocol, "Capacity")
-		capacity = input.cycling_protocol["Capacity"]
-	else
-		capacity = compute_cell_theoretical_capacity(input.cell_parameters)
-	end
-
-	experiment_list = control_steps.all
-	if isa(experiment_list, String)
-		experiment_list = [experiment_list]
-	end
-
-	stepper = Stepper([], 0, 0, 0, [], [], [])
-
-	for (idx, step) in enumerate(experiment_list)
-		stepper = update_stepper!(stepper, step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time)
-	end
-
-	# Get maximum current value of all steps
-
-	current = []
-	for step in stepper.steps
-
-		if step isa CurrentStep
-			push!(current, step.value)
-		end
-
-	end
-	current_max = maximum(current)
-
-	return stepper, current_max
-
+	stepper, maximum_current = setup_generic_protocol(protocol, input)
+	return GenericProtocol{typeof(stepper.step_indices)}(stepper.steps, stepper.step_indices, stepper.step_counts, stepper.cycle_counts, maximum_current)
 end
 
 
 """
-Add a parsed step to the lists and update indices.
+FunctionProtocol
 """
-function add_step!(stepper, step_instance)
-	if !isnothing(step_instance)
-		push!(stepper.steps, step_instance)
-		push!(stepper.step_indices, stepper.step_index)
-		push!(stepper.step_counts, stepper.step_count)
-		push!(stepper.cycle_counts, stepper.cycle_count)
-		stepper.step_index += 1
-		stepper.step_count += 1
+struct FunctionProtocol <: AbstractProtocol
+	current_function::Function
+
+	function FunctionProtocol(function_name::String; file_path::Union{Nothing, String} = nothing)
+		current_function = setup_function_from_function_name(function_name; file_path = file_path)
+		new{}(current_function)
 	end
-	return stepper
+
 end
 
-"""
-Handle repeats for a given list of previous steps.
-"""
-function handle_repeats!(stepper, previous_steps, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10)
-	if depth > max_depth
-		error("Exceeded maximum repeat depth to prevent infinite recursion.")
-	end
-
-	for _ in 1:number_of_repeats
-		for (idx, prev_step) in enumerate(previous_steps)
-			stepper = update_stepper!(stepper, prev_step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth+1, max_depth = max_depth)
-		end
-	end
-	return stepper
-end
-
-
-"""
-Process a single step (String or Vector).
-"""
-
-function update_stepper!(stepper, step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10)
-	if step isa String
-		step_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(step, capacity, use_ramp_up; ramp_up_time)
-		stepper = add_step!(stepper, step_instance)
-		if increase_cycle_count
-			stepper.cycle_count += 1
-			stepper.step_index = 0
-		end
-		if !isnothing(number_of_repeats)
-			previous_strings = experiment_list[1:(idx-1)]
-			stepper = handle_repeats!(stepper, previous_strings, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth, max_depth = max_depth)
-		end
-
-	elseif step isa Vector
-		for (idx_sub, sub_step) in enumerate(step)
-			sub_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(sub_step, capacity, use_ramp_up; ramp_up_time)
-			stepper = add_step!(stepper, sub_instance)
-			if increase_cycle_count
-				stepper.cycle_count += 1
-				stepper.step_index = 0
-
-			end
-			if !isnothing(number_of_repeats)
-				previous_strings = step[1:(idx_sub-1)]
-				stepper = handle_repeats!(stepper, previous_strings, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth, max_depth = max_depth)
-			end
-		end
-	else
-		error("Experiment step must be a String or Vector.")
-	end
-
-	return stepper
+function get_initial_current(policy::FunctionProtocol)
+	return 0.0
 end
 
 
@@ -154,11 +51,6 @@ function Jutul.reset_state_to_previous_state!(
 
 	copyController!(storage.state[:Controller], storage.state0[:Controller])
 end
-
-
-#######################################
-# Helper functions for control switch #
-#######################################
 
 
 
@@ -207,29 +99,29 @@ function update_control_step_in_controller!(state, state0, protocol::GenericProt
 	index_to_stepcount(index::Integer) = clamp(index - 1, 0, number_of_control_steps - 1)      # index 1 -> stepnum 0
 
 	# --- Extract scalars safely ---
-	E_vals  = value(state[:ElectricPotential])
-	I_vals  = value(state[:Current])
-	E0_vals = value(state0[:ElectricPotential])
-	I0_vals = value(state0[:Current])
+	voltage_values = value(state[:ElectricPotential])
+	current_values = value(state[:Current])
+	voltage_0_values = value(state0[:ElectricPotential])
+	current_0_values = value(state0[:Current])
 
-	@assert length(E_vals) == 1 "Expected scalar ElectricPotential"
-	@assert length(I_vals) == 1 "Expected scalar Current"
-	@assert length(E0_vals) == 1 "Expected scalar ElectricPotential (state0)"
-	@assert length(I0_vals) == 1 "Expected scalar Current (state0)"
+	@assert length(voltage_values) == 1 "Expected scalar ElectricPotential"
+	@assert length(current_values) == 1 "Expected scalar Current"
+	@assert length(voltage_0_values) == 1 "Expected scalar ElectricPotential (state0)"
+	@assert length(current_0_values) == 1 "Expected scalar Current (state0)"
 
-	E  = first(E_vals)
-	I  = first(I_vals)
-	E0 = first(E0_vals)
-	I0 = first(I0_vals)
+	voltage = first(voltage_values)
+	current = first(current_values)
+	voltage_0 = first(voltage_0_values)
+	current_0 = first(current_0_values)
 
 	# --- Time and derivatives ---
 	controller = state[:Controller]
 
 	controller.time = state0.Controller.time + dt
-	controller.dIdt = dt > 0 ? (I - I0) / dt : 0.0
-	controller.dEdt = dt > 0 ? (E - E0) / dt : 0.0
-	controller.current = I
-	controller.voltage = E
+	controller.dIdt = dt > 0 ? (abs(current) - abs(current_0)) / dt : 0.0
+	controller.dEdt = dt > 0 ? (voltage - voltage_0) / dt : 0.0
+	controller.current = current
+	controller.voltage = voltage
 
 	# --- Determine previous/ current indices and types (clearly mapped) ---
 	previous_step_count = state0.Controller.step_count                # e.g. 0 for first step
@@ -237,9 +129,6 @@ function update_control_step_in_controller!(state, state0, protocol::GenericProt
 	previous_cycle_count = state0.Controller.cycle_count                # e.g. 0 for first cycle
 	previous_index = stepcount_to_index(previous_step_count)                     # 1-based index into control_steps
 	previous_control_step = state0.Controller.step
-
-
-
 
 	# Compute region switch flags for previous states
 	# status_previous = setupRegionSwitchFlags(previous_control_step, state0, controller)
@@ -333,122 +222,25 @@ function update_control_step_in_controller!(state, state0, protocol::GenericProt
 	return nothing
 end
 
-
-function update_values_in_controller!(state, step::PowerStep)
-
-
-	P = step.value
-	E = state.Controller.voltage
-
-	I = P/E
-
-	state.Controller.target = I
-
-end
-
-function update_values_in_controller!(state, step::CurrentStep)
-
-
-	current_function = step.current_function
-
-	I_t = current_function(state.Controller.time)
-
-	state.Controller.target = I_t
-
-end
-
-function update_values_in_controller!(state, step::VoltageStep)
-	state.Controller.target = step.value
-
-end
-
-function update_values_in_controller!(state, step::RestStep)
-	state.Controller.target = step.value
-
-end
-
-
 """
-Update controller target value (current or voltage) based on the active control step
+Implementation of the function policy
 """
-function update_values_in_controller!(state, policy::GenericProtocol)
+function update_control_type_in_controller!(state, state0, policy::FunctionProtocol, dt)
+	controller                   = state.Controller
+	controller.target_is_voltage = false
+	controller.time              = state0.Controller.time + dt
 
-	controller = state[:Controller]
-	step_index = controller.step_number + 1
+end
 
-	control_steps = policy.steps
+function update_values_in_controller!(state, policy::FunctionProtocol)
 
-	# if step_index > length(control_steps)
-	# 	step_index = length(control_steps)
-	# end
+	controller = state.Controller
 
-	step = state.Controller.step
+	cf = policy.current_function
 
-	if step isa CurrentStep
+	I_p = cf(controller.time, value(only(state.ElectricPotential)))
 
+	controller.target = I_p
 
-		control_direction = step.direction
-
-		current_function = step.current_function
-
-
-		if !ismissing(current_function)
-
-			if current_function isa Real
-				I_t = current_function
-			else
-				# Function of time at the end of interval
-				I_t = current_function(controller.time)
-			end
-
-			if control_direction == "discharging"
-
-				target = I_t
-
-			elseif control_direction == "charging"
-
-				# minus sign below follows from convention
-				target = -I_t
-			else
-				error("Control type $control_direction not recognized")
-			end
-		else
-
-			tup = state.Controller.time + 100 #Float64(AbstractInput["Control"]["rampupTime"])
-			cFun(time) = get_current_value(time, step.value, tup)
-
-			step.current_function = cFun
-			current_function = step.current_function
-			if current_function isa Real
-				I_t = current_function
-			else
-				# Function of time at the end of interval
-				I_t = current_function(controller.time)
-			end
-			if control_direction == "discharging"
-
-				target = I_t
-
-			elseif control_direction == "charging"
-
-				# minus sign below follows from convention
-				target = -I_t
-			else
-				error("Control type $ctrlType not recognized")
-			end
-		end
-
-	elseif step isa VoltageStep
-		target = step.value
-
-	elseif step isa RestStep
-		# Assume voltage hold during rest
-		target = 0.0
-
-	else
-		error("Unsupported step type: $(typeof(step))")
-	end
-
-	controller.target = target
 
 end

@@ -4,11 +4,15 @@ using BattMo, GLMakie
 
 # We use the setup provided in the [p2d_40.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/p2d_40.json#L152) file. In particular, see the data under the `Control` key.
 file_path_cell = parameter_file_path("cell_parameters", "chen_2020.json")
-file_path_cycling = parameter_file_path("cycling_protocols", "cccv.json")
+file_path_cycling = parameter_file_path("cycling_protocols", "cc_cycling.json")
 
 
 cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
 cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
+
+cycling_protocol["CRate"] = 1
+cycling_protocol["DRate"] = 1
+cycling_protocol["InitialControl"] = "charging"
 
 
 model = LithiumIonBattery();

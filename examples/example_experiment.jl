@@ -8,12 +8,14 @@ cycling_protocol = CyclingProtocol(
 		"Capacity" => 5,
 		"Experiment" =>
 			[
-				"Charge at 1/2 C until 4.0 V",
-				"Hold at 4 V until 1e-4 A/s",
-				"Discharge at 1 C until 3.0 V",
+				"Rest for 1 hour",
+				"Charge at 5 W for 4 hour or until 3.5 V",
+				"Charge at 0.5 C until 4.0 V or until 1 hour",
+				"Hold at 4.0 V until 1e-4 A/s",
+				"Discharge at 1 A until 3.4 V",
+				"Discharge at 2 W until 3.0 V",
 				"Rest until 1e-4 V/s",
-				"Increase cycle count",
-				"Repeat 2 times",
+				"Charge at 1/20 C for 30 minutes",
 			],
 	),
 )
@@ -34,9 +36,9 @@ f = plot_dashboard(output)
 DataInspector(f)
 f
 
-f2 = plot_output(output, ["Voltage vs Time", "CycleCount vs Time", "StepIndex vs Time", "StepCount vs Time"], layout = (4, 1))
-DataInspector(f2)
-f2
+# f2 = plot_output(output, ["Voltage vs Time", "CycleCount vs Time", "StepIndex vs Time", "StepCount vs Time"], layout = (4, 1))
+# DataInspector(f2)
+# f2
 # cycling_protocol2 = load_cycling_protocol(from_default_set = "cccv")
 
 # sim2 = Simulation(model_setup, cell_parameters, cycling_protocol2; simulation_settings)

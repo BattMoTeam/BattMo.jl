@@ -40,17 +40,17 @@ end
 function get_initial_current(step::CurrentStep)
 
 	if !ismissing(step.current_function)
-		I = step.current_function(0.0)
+		current = step.current_function(0.0)
 	else
 		if step.direction == "discharging"
-			I = step.value
+			current = step.value
 		elseif step.direction == "charging"
-			I = -step.value
+			current = -step.value
 		else
 			error("Initial control direction not recognized")
 		end
 	end
-	return I
+	return current
 end
 
 function get_initial_current(step::PowerStep)
@@ -65,4 +65,38 @@ end
 
 function get_initial_current(step::RestStep)
 	return 0.0
+end
+
+
+function update_values_in_controller!(state, step::PowerStep)
+
+
+	power = step.value
+	voltage = state.Controller.voltage
+
+	current = power/voltage
+
+	state.Controller.target = adjust_current_sign(current, step.direction)
+
+end
+
+function update_values_in_controller!(state, step::CurrentStep)
+
+
+	current_function = step.current_function
+
+	current = current_function(state.Controller.time)
+
+	state.Controller.target = current
+
+end
+
+function update_values_in_controller!(state, step::VoltageStep)
+	state.Controller.target = step.value
+
+end
+
+function update_values_in_controller!(state, step::RestStep)
+	state.Controller.target = step.value
+
 end

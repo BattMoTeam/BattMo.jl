@@ -1,7 +1,7 @@
 {
     "Protocol": "Experiment",
     "InitialStateOfCharge": 0.01,
-    "InitialKelvinTemperature": 298.15,
+    "InitialTemperature": 298.15,
     "Experiment": [
         "Charge at 1 A until 4.0 V",
         "Hold at 4.0 V until 1e-4 A change",

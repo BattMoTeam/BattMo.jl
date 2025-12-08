@@ -8,27 +8,39 @@
 
 
 
-mutable struct GenericController <: Controller
+mutable struct GenericController{R <: Real, I <: Int} <: Controller
 	protocol::GenericProtocol
 	step::AbstractControlStep
-	step_count::Int
-	step_index::Int
-	cycle_count::Int
-	time::Real
-	current::Real
-	voltage::Real
-	target::Real
-	dIdt::Real
-	dEdt::Real
-
-	function GenericController(protocol::GenericProtocol, step::Union{Nothing, AbstractControlStep}, step_count::Int, step_index::Int, cycle_count::Int, time::Real, current::Real, voltage::Real; target::Real = 0.0, dEdt::Real = 0.0, dIdt::Real = 0.0)
-		new(protocol, step, step_count, step_index, cycle_count, time, current, voltage, target, dIdt, dEdt)
-	end
+	step_count::I
+	step_index::I
+	cycle_count::I
+	time::R
+	current::R
+	voltage::R
+	target::R
+	dIdt::R
+	dEdt::R
+end
+function GenericController(protocol::GenericProtocol, step::Union{Nothing, AbstractControlStep}, step_count::Int, step_index::Int, cycle_count::Int, time::Real, current::Real, voltage::Real; target::Real = 0.0, dEdt::Real = 0.0, dIdt::Real = 0.0)
+	GenericController{typeof(time), typeof(step_index)}(protocol, step, step_count, step_index, cycle_count, time, current, voltage, target, dIdt, dEdt)
 end
 
+mutable struct FunctionController{R <: Real} <: Controller
+	target::R
+	time::R
+	target_is_voltage::Bool
+end
 
-@inline function Jutul.numerical_type(x::GenericController)
-	return typeof(x.step)
+FunctionController() = FunctionController(0.0, 0.0, false)
+
+
+
+@inline function Jutul.numerical_type(x::GenericController{R, I}) where {R, I}
+	return R
+end
+
+@inline function Jutul.numerical_type(x::FunctionController{R}) where {R}
+	return R
 end
 
 
@@ -52,6 +64,18 @@ function copyController!(cv_copy::GenericController, cv::GenericController)
 end
 
 """
+Function to create (deep) copy of function controller
+"""
+function copyController!(cv_copy::FunctionController, cv::FunctionController)
+
+	cv_copy.target = cv.target
+	cv_copy.time = cv.time
+	cv_copy.target_is_voltage = cv.target_is_voltage
+
+end
+
+
+"""
 Overload function to copy GenericController
 """
 function Base.copy(cv::GenericController)
@@ -61,11 +85,27 @@ function Base.copy(cv::GenericController)
 	return cv_copy
 end
 
+"""
+Overload function to copy function controller
+"""
+function Base.copy(cv::FunctionController)
+
+	cv_copy = FunctionController()
+	copyController!(cv_copy, cv)
+
+	return cv_copy
+
+end
+
 function Jutul.update_values!(old::GenericController, new::GenericController)
 
 	copyController!(old, new)
 
 end
 
+function Jutul.update_values!(old::FunctionController, new::FunctionController)
 
+	copyController!(old, new)
+
+end
 

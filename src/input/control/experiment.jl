@@ -1,9 +1,151 @@
 
 export convert_experiment_to_battmo_control_input
 
-struct Experiment <: AbstractProtocol
-	all::Vector{Any}
+abstract type AbstractPolicy end
 
+function Base.getindex(ps::AbstractPolicy, key::String)
+	value = get(ps.all, key, nothing)
+	if value === nothing
+		error("Parameter not found: $key")
+	else
+		return value
+	end
+end
+
+function Base.setindex!(ps::AbstractPolicy, value, key::String)
+	ps.all[key] = value
+end
+
+function Base.haskey(ps::AbstractPolicy, key::String)
+	return haskey(ps.all, key)
+end
+
+struct Experiment <: AbstractPolicy
+	all::AbstractDict
+end
+
+mutable struct Stepper
+	steps::Vector{AbstractControlStep}
+	step_count::Int
+	step_index::Int
+	cycle_count::Int
+	step_counts::Vector{Int}
+	step_indices::Vector{Int}
+	cycle_counts::Vector{Int}
+end
+
+function setup_generic_protocol(cycling_protocol::Experiment, input)
+
+	use_ramp_up = haskey(input.model_settings, "RampUp")
+	ramp_up_time = haskey(input.simulation_settings, "RampUpTime") ? input.simulation_settings["RampUpTime"] : 0.1
+
+	if haskey(cycling_protocol, "Capacity")
+		capacity = cycling_protocol["Capacity"]
+	else
+		capacity = compute_cell_theoretical_capacity(input.cell_parameters)
+	end
+
+	experiment_list = cycling_protocol["Experiment"]
+	if isa(experiment_list, String)
+		experiment_list = [experiment_list]
+	end
+
+	stepper = Stepper([], 0, 0, 0, [], [], [])
+
+	for (idx, step) in enumerate(experiment_list)
+		stepper = update_stepper!(stepper, step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time)
+	end
+
+	# Get maximum current value of all steps
+
+	current = []
+	for step in stepper.steps
+
+		if step isa CurrentStep || step isa RestStep
+			push!(current, step.value)
+		end
+
+	end
+
+	if isempty(current)
+		error("..")
+	else
+		current_max = maximum(current)
+	end
+
+	return stepper, current_max
+
+end
+
+
+"""
+Add a parsed step to the lists and update indices.
+"""
+function add_step!(stepper, step_instance)
+	if !isnothing(step_instance)
+		push!(stepper.steps, step_instance)
+		push!(stepper.step_indices, stepper.step_index)
+		push!(stepper.step_counts, stepper.step_count)
+		push!(stepper.cycle_counts, stepper.cycle_count)
+		stepper.step_index += 1
+		stepper.step_count += 1
+	end
+	return stepper
+end
+
+"""
+Handle repeats for a given list of previous steps.
+"""
+function handle_repeats!(stepper, previous_steps, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10)
+	if depth > max_depth
+		error("Exceeded maximum repeat depth to prevent infinite recursion.")
+	end
+
+	for _ in 1:number_of_repeats
+		for (idx, prev_step) in enumerate(previous_steps)
+			stepper = update_stepper!(stepper, prev_step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth+1, max_depth = max_depth)
+		end
+	end
+	return stepper
+end
+
+
+"""
+Process a single step (String or Vector).
+"""
+
+function update_stepper!(stepper, step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10)
+	if step isa String
+		step_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(step, capacity, use_ramp_up; ramp_up_time)
+		stepper = add_step!(stepper, step_instance)
+		if increase_cycle_count
+			stepper.cycle_count += 1
+			stepper.step_index = 0
+		end
+		if !isnothing(number_of_repeats)
+			previous_strings = experiment_list[1:(idx-1)]
+			stepper = handle_repeats!(stepper, previous_strings, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth, max_depth = max_depth)
+		end
+
+	elseif step isa Vector
+		for (idx_sub, sub_step) in enumerate(step)
+			sub_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(sub_step, capacity, use_ramp_up; ramp_up_time)
+			stepper = add_step!(stepper, sub_instance)
+			if increase_cycle_count
+				stepper.cycle_count += 1
+				stepper.step_index = 0
+
+			end
+			if !isnothing(number_of_repeats)
+				previous_strings = step[1:(idx_sub-1)]
+				stepper = handle_repeats!(stepper, previous_strings, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth, max_depth = max_depth)
+			end
+		end
+	else
+		error("Experiment step must be a String or Vector.")
+	end
+
+	return stepper
 end
 
 function parse_experiment_step(step::String, capacity::Real, use_ramp_up::Bool; ramp_up_time = 0.1)
@@ -168,23 +310,6 @@ function process_values(str::AbstractString, capacity)
 end
 
 
-
-
-# function extract_numeric_values(str::AbstractString)
-# 	# Pattern: number + valid unit (letters, optional /letters)
-# 	pattern = r"((?:[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?|[0-9]+/[0-9]+))\s*([a-zA-Z]+(?:/[a-zA-Z]+)?)"
-# 	matches = collect(eachmatch(pattern, str))
-
-# 	values = [occursin("/", m.captures[1]) ?
-# 			  Base.parse(Float64, split(m.captures[1], "/")[1]) / Base.parse(Float64, split(m.captures[1], "/")[2]) :
-# 			  Base.parse(Float64, m.captures[1]) for m in matches]
-
-# 	units = [strip(m.captures[2]) for m in matches]
-
-# 	return values, units
-
-# end
-
 function type_to_direction(value::AbstractString)
 
 	if value == "Charge"
@@ -196,8 +321,6 @@ function type_to_direction(value::AbstractString)
 	end
 	return direction
 end
-
-
 
 function type_to_unit(value::Float64, unit::AbstractString; capacity = nothing)
 

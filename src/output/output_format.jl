@@ -43,7 +43,9 @@ function get_output_time_series(jutul_output::NamedTuple; quantities::Union{Noth
 	time = extract_output_times(jutul_output)
 	cumulative_capacity = compute_capacity(jutul_output, "Cumulative")
 	net_capacity = compute_capacity(jutul_output, "Net")
-	cycle_count = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : [state[:Control][:Controller].cycle_count for state in states]
+	cycle_count =
+		hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] :
+		hasproperty(states[1][:Control][:Controller], :cycle_count) ? [state[:Control][:Controller].cycle_count for state in states] : nothing
 	step_count = hasproperty(states[1][:Control][:Controller], :step_count) ? [state[:Control][:Controller].step_count for state in states] : nothing
 	step_index = hasproperty(states[1][:Control][:Controller], :step_index) ? [state[:Control][:Controller].step_index for state in states] : nothing
 

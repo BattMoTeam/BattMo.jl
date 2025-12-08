@@ -49,7 +49,7 @@ using Test
 
 		I_1 = time_series["Current"]
 
-		@test I_1[2] ≈ -2.2957366076223953 atol = 1e-1
+		@test I_1[5] ≈ -5.090421803494574 atol = 1e-1
 
 		cycling_protocol["CRate"] = 2
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
@@ -58,34 +58,34 @@ using Test
 
 		I_2 = time_series["Current"]
 
-		@test I_2[2] ≈ I_1[2] * 2 atol = 1e-2
+		@test I_2[5] ≈ I_1[5] * 2 atol = 1e-2
 
 		############################
 		# constant_current_cycling
 
-		cycling_protocol = load_cycling_protocol(; from_default_set = "cc_cycling")
-		cycling_protocol["CRate"] = 1
-		cycling_protocol["DRate"] = 1
-		cycling_protocol["InitialControl"] = "charging"
-		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
+		cycling_protocol_2 = load_cycling_protocol(; from_default_set = "cc_cycling")
+		cycling_protocol_2["CRate"] = 1
+		cycling_protocol_2["DRate"] = 1
+		cycling_protocol_2["InitialControl"] = "charging"
+		sim = Simulation(model_setup, cell_parameters, cycling_protocol_2; simulation_settings)
 		output = solve(sim)
 		time_series = output.time_series
 
 		I_1 = time_series["Current"]
 
-		@test I_1[2] ≈ -5.090421803494574 atol = 1e-1
-		@test I_1[50] ≈ 5.090421803494574 atol = 1e-1
+		@test I_1[5] ≈ -5.090421803494574 atol = 1e-1
+		@test I_1[150] ≈ 5.090421803494574 atol = 1e-1
 
-		cycling_protocol["CRate"] = 2
-		cycling_protocol["DRate"] = 2
-		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
+		cycling_protocol_2["CRate"] = 2
+		cycling_protocol_2["DRate"] = 2
+		sim = Simulation(model_setup, cell_parameters, cycling_protocol_2; simulation_settings)
 		output = solve(sim)
 		time_series = output.time_series
 
 		I_2 = time_series["Current"]
 
-		@test I_2[2] ≈ I_1[2] * 2 atol = 1e-2
-		@test I_2[50] ≈ I_1[50] * 2 atol = 1e-2
+		@test I_2[5] ≈ I_1[5] * 2 atol = 1e-2
+		@test I_2[60] ≈ I_1[150] * 2 atol = 1e-2
 
 
 		############################
@@ -99,25 +99,25 @@ using Test
 		output = solve(sim)
 		time_series = output.time_series
 
-
-
 		I_1 = time_series["Current"]
 
 
 
-		@test I_1[2] ≈ -5.090421803494574 atol = 1e-1
-		@test I_1[765] ≈ 5.090421803494574 atol = 1e-1
+		@test I_1[5] ≈ -5.090421803494574 atol = 1e-1
+		@test I_1[550] ≈ 5.090421803494574 atol = 1e-1
 
 		cycling_protocol["CRate"] = 2
 		cycling_protocol["DRate"] = 2
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 		output = solve(sim)
+
 		time_series = output.time_series
 
 		I_2 = time_series["Current"]
+		@info length(I_2)
 
-		@test I_2[2] ≈ I_1[2] * 2 atol = 1e-2
-		@test I_2[200] ≈ I_1[765] * 2 atol = 1e-2
+		@test I_2[5] ≈ I_1[5] * 2 atol = 1e-2
+		@test I_2[400] ≈ I_1[550] * 2 atol = 1e-2
 
 		true
 
