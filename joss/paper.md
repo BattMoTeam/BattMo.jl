@@ -44,16 +44,14 @@ bibliography: paper.bib
 This paper introduces BattMo.jl, the Battery Modelling Toolbox, an open-source Julia framework for continuum-scale simulation of electrochemical devices. Using a finite-volume approach, BattMo.jl supports pseudo-2-dimensional (P2D) models for fast screening on a reduced-order mesh, as well as more comprehensive pseudo-four-dimensional (P4D) models that incorporate the 3D design of realistic geometries, including cylindrical cells and pouch cells. The toolbox combines high-performance solvers, built-in libraries of battery designs and cycling protocols, and an intuitive programmatic and graphical interface. It further includes an adjoint-based optimization framework for parameter estimation and model calibration, enabling close integration of modelling with experimental workflows. The [BattMoTeam](https://batterymodel.com/our-team/) collaborates closely with the [SINTEF Battery Lab](https://www.sintef.no/en/all-laboratories/sintef-battery-lab/), gaining valuable input from experienced battery researchers and helping to bridge the gap between academic modelling and industrial innovation. This partnership helps ensure that the toolbox remains relevant and effective in real-world applications, driving innovation and advancing the field of energy storage technology.
 
 # Statement of need
-New high-performance and sustainable battery designs are essential for achieving the goals of the energy transition. To reduce costly prototyping and accelerate innovation, both industry and academia increasingly rely on rigorous digital workflows that complement experimental research and provide deeper insights into battery behavior. Accurate models that are fast and efficient are also crucial for their inclusion in battery management systems (BMS), ensuring that devices are operated safely and efficiently.
+New high-performance and sustainable battery designs are essential for achieving the goals of the energy transition. To reduce costly prototyping and accelerate innovation, both industry and academia increasingly rely on digital workflows that complement experimental research and provide deeper insights into battery behavior. Accurate models that are fast and efficient are also crucial for their inclusion in battery management systems (BMS), ensuring that devices are operated safely and efficiently.
 
-Recently, a variety of open-source battery modelling codes have been released including PyBaMM [@sulzer2021python], cideMOD [@CiriaAylagas2022], LIONSIMBA [@torchio2016lionsimba], PETLion [@Berliner_2021], and MPET [@mpet_github], among others. These open-source modelling frameworks help the battery community reduce the cost of model development and help ensure the validity and the reproducibility of findings. Yet there remains a clear need for tools that (i) address both Li-ion and other chemistries, (ii) are extensible to other electrochemical devices like electrolyzers and fuel cells, (iii) support full 3D cell simulations, and (iv) combine computational efficiency with broad accessibility.
+Recently, a variety of open-source battery modelling codes have been released including PyBaMM [@sulzer2021python], cideMOD [@CiriaAylagas2022], LIONSIMBA [@torchio2016lionsimba], PETLion [@Berliner_2021], and MPET [@mpet_github], among others. These open-source modelling frameworks help the battery community to run simulations in a validated model environment, instead of relying on homemade code that risk poor reproducibility of results. Yet there remains a clear need for tools that (i) address both Li-ion and other chemistries, (ii) are extensible to other electrochemical devices like electrolyzers and fuel cells, (iii) support full 3D cell simulations, and (iv) combine computational efficiency with broad accessibility.
 
 BattMo.jl responds to these needs by creating a flexible model architecture, providing a framework for 3D simulations together with a library of standard battery geometries, offering very short runtimes (e.g., ~500 ms for a standard P2D discharge), and by laying an emphasis on usability and accessibility through its intuitive API and [graphical interface](https://app.batterymodel.com/). In addition, BattMo.jl features an in-house API for adjoint-based optimization, making parameter calibration and design optimization both robust and convenient through a familiar interface.
 
 # High-level architecture
-The high-level architecture of BattMo.jl is designed to be modular and extensible, enabling users to combine standard battery models with customized physics and workflows. The framework separates the physical model definition (which equations to solve) from the simulation configuration (which parameters and settings to apply). This design allows researchers to introduce new mechanisms or scale simulations without restructuring the workflow.
-
-Figure \ref{fig:backend} shows the high-level architecture of some core workflows in BattMo.jl. The BattMo framework is configured through five different input sets, all of which can be provided in JSON format:
+The framework separates the workflow of running a simulation into 1) cell parameters and cycling protocols, which have direct correspondance to measurable and controllable quantities in experiments, 2) the physical model definition, which outlines the mathematical equations to solve, and 3) settings, which tailor the physical models, the simulation and the solver. This framework is represented in figure \ref{fig:backend} which shows the high-level architecture of some core workflows in BattMo.jl - running a simulation and an optimization. The workflows are configured through five different input sets, all of which can be provided in JSON format:
 
 - Cell parameters: descriptions of the cell geometry, electrodes, and electrolyte materials.
 - Cycling protocol: specification of operating conditions, such as current profiles or voltage limits.
@@ -61,15 +59,15 @@ Figure \ref{fig:backend} shows the high-level architecture of some core workflow
 - Simulation settings: numerical resolution settings, such as timesteps and spatial discretization.
 - Solver settings: options controlling solver behavior and verbosity.
 
-The model settings are passed to the selected base model (e.g., LithiumIonBattery), which instantiates a configured model. This model defines the set of governing equations and constitutive laws used in the simulation. For the lithium-ion battery and other insertion-based batteries, the default model is based on the Doyle–Fuller–Newman (DFN) model [@Doyle1993ModelingCell], which can be extended with additional physics modules (e.g., SEI growth) depending on the configuration of the model settings.
+Each workflow starts with configuring a battery model representing the set of governing equations and constitutive laws used in the simulation. This can be done by instantiating a base model (e.g., LithiumIonBattery) and passing model settings to further personalize the model. For the lithium-ion battery and other insertion-based batteries, the base model is based on the Doyle–Fuller–Newman (DFN) model [@Doyle1993ModelingCell], which can be extended with additional physics modules (e.g., SEI growth) depending on the configuration of the model settings.
 
 ![High-level architecture of some core workflows in BattMo.jl. The black arrows represent a simulation workflow and the striped arrows an optimization workflow. The grey arrows represent actions that are optional for the user. The orange rounded blocks represent classes (structs) and the file blocks represent the input parameter sets and settings. \label{fig:backend}](./assets/battmo_backend.png "High-level Architecture")
 
-The configured model is combined with the cell parameters, cycling protocol, and simulation settings to form a simulation instance. At this stage, the input parameters are mapped onto the model equations, for example, by setting up active material models, electrolyte properties, cell geometry and grids, load conditions, initial states, and timestepping. The result is a simulation instance, which can be validated against a set of internal requirements.
+The configured model can be combined with the cell parameters, cycling protocol, and simulation settings to create a simulation instance. At this stage, the input parameters are mapped onto the model equations, for example, by setting up active material models, electrolyte properties, cell geometry and grids, load conditions, initial states, and timestepping. The result is a simulation instance, which represents the complete system to be solved.
 
-This simulation instance is passed to the `solve` function together with the solver settings, which configures the numerical solver, and executes the simulation. BattMo.jl’s solver leverages automatic differentiation and supports adjoint computations, enabling efficient calculation of parameter sensitivities and gradients of arbitrary objective functions. This enables gradient-based optimization workflows.
+In order to execute the configured simulation, the simulation instance can be passed to the `solve` function together with the solver settings, which configure the numerical solver. BattMo.jl’s solver leverages automatic differentiation and supports adjoint computations, enabling efficient calculation of parameter sensitivities and gradients of arbitrary objective functions. This enables gradient-based optimization workflows.
 
-As illustrated in Figure \ref{fig:backend}, one example optimization application is parameter calibration from a voltage curve (VoltageCalibration). Here, a simulation instance with initial parameter guesses is combined with experimental data. The VoltageCalibration instance can be configured to either freeze or free parameters during the calibration and to set the bounds of the parameters that are calibrated. The calibration problem is then solved iteratively using the adjoint-enabled solver until the simulated voltage matches the experimental measurements within tolerance.
+In addition to the simulation workflow, figure \ref{fig:backend} also outlines the architecture of an optimization workflow. One example optimization application is parameter calibration from a voltage curve (VoltageCalibration). A parameter calibration fits the parameter values to experimental data. In order to setup the calibration, the previously defined simulation instance, describing our system to solve, can be passed to the VoltageCalibration instance together with the experimental data the parameters will be fitted to. The VoltageCalibration instance can be configured to either freeze or free certain parameters during the calibration and to set the bounds for the parameters that are calibrated. The calibration instance can then be passed to the solve function, which uses the adjoint-enabled solver to iteratively adjust the calibration until the simulated voltage matches the experimental measurements within a tolerance.
 
 The architecture is designed to enhance the user experience and provide a gentler learning curve by organizing core workflows and input parameters into well-defined steps and categories. By making the settings optional, users can initially focus on creating the virtual representation of the cell and defining cycling protocols. Later, they can explore and adjust the settings to personalize configurations as they become more familiar with the software.
 
@@ -100,7 +98,7 @@ plot_dashboard(output, plot_type = "contour")
 
 ```
 
-![P2D simulation results. \label{fig:cylindrical}](./assets/contour.png "P2D results")
+![Dashboard with P2D simulation results. The current and voltage time series are visualized along with the time evolution of lithium concentrations and potentials across the simulated cell geometry. \label{fig:cylindrical}](./assets/contour.png "P2D results")
 
 The contour plots illustrate lithium concentrations and potentials, offering insights into the cell’s kinetic and transport processes. For example, the lithium concentration in the electrolyte shows expected values between 800 $\frac{mol}{m^3}$ and 1400 $\frac{mol}{m^3}$. However, the order reduction in P2D models can overlook important geometric effects. P4D models address this limitation by accurately capturing these geometry-dependent phenomena. We can see this in the following example. 
 
@@ -127,11 +125,11 @@ sim = Simulation(model, cell_parameters, cycling_protocol);
 # Solve the simulation
 output = solve(sim)
 
-# Cool interactive plotting of the results in the 3D geometry
+# Interactive plotting of the results in the 3D geometry
 plot_interactive_3d(output)
 ```
 
-![P4D cylindrical cell simulation results. \label{fig:cylindrical}](./assets/elyte_conc.png "P4D results")
+![P4D cylindrical cell simulation results showing the electrolyte concentration in the 3D geometry at the end of discharge. \label{fig:cylindrical}](./assets/elyte_conc.png "P4D results")
 
 Figure \ref{fig:cylindrical} shows zoomed in 3-dimensional results of the electrolyte lithium concentration at the end of the discharge. At the beginning and ending of the roll we can we can see an imbalance in lithium concentration. These electrolyte depletions and oversaturations may influence the performance of the cell and would have been overlooked in simplified models, underlining the importance of 3-dimensional modelling.
 
@@ -168,17 +166,17 @@ time_series_0 = output0.time_series
 cal = VoltageCalibration(t_exp, V_exp, sim)
 
 # Free the parameters that should be calibrated
-free_calibration_parameter!(calibration_high_rate,
+free_calibration_parameter!(cal,
     ["NegativeElectrode","ActiveMaterial", "ReactionRateConstant"];
     lower_bound = 1e-16, upper_bound = 1e-10)
-free_calibration_parameter!(calibration_high_rate,
+free_calibration_parameter!(cal,
     ["PositiveElectrode","ActiveMaterial", "ReactionRateConstant"];
     lower_bound = 1e-16, upper_bound = 1e-10)
 
-free_calibration_parameter!(calibration_high_rate,
+free_calibration_parameter!(cal,
     ["NegativeElectrode","ActiveMaterial", "DiffusionCoefficient"];
     lower_bound = 1e-16, upper_bound = 1e-12)
-free_calibration_parameter!(calibration_high_rate,
+free_calibration_parameter!(cal,
     ["PositiveElectrode","ActiveMaterial", "DiffusionCoefficient"];
     lower_bound = 1e-16, upper_bound = 1e-12)
 
