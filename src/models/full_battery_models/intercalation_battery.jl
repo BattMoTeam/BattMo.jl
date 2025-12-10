@@ -113,7 +113,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 		# 	T = T_i,
 		# )
 		policy = ConstantCurrent(cycling_protocol.all)
-		protocol = GenericProtocol(policy, input)
+		protocol = setup_generic_protocol(policy, input)
 
 
 	elseif protocol == "CCCV"
@@ -126,7 +126,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 		# 	cycling_protocol["TotalNumberOfCycles"];
 		# 	use_ramp_up = use_ramp_up)
 		policy = ConstantCurrentConstantVoltage(cycling_protocol.all)
-		protocol = GenericProtocol(policy, input)
+		protocol = setup_generic_protocol(policy, input)
 
 	elseif protocol == "Function"
 
@@ -142,7 +142,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 		experiment = Experiment(cycling_protocol.all)
 
 
-		protocol = GenericProtocol(experiment, input)
+		protocol = setup_generic_protocol(experiment, input)
 
 
 	else
@@ -151,8 +151,8 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 
 	end
 
-	sys_control    = CurrentAndVoltageSystem(protocol)
-	domain_control = CurrentAndVoltageDomain()
+	sys_control    = ExternalCircuitSystem(protocol)
+	domain_control = ExternalCircuitDomain()
 	model_control  = SimulationModel(domain_control, sys_control)
 
 	return model_control
@@ -668,68 +668,16 @@ function set_parameters(model::IntercalationBattery, input
 
 	protocol = cycling_protocol["Protocol"]
 
-	if protocol == "CC"
-		if cycling_protocol["TotalNumberOfCycles"] == 0
-			if cycling_protocol["InitialControl"] == "discharging"
-
-				cap = computeCellCapacity(multimodel)
-				con = Constants()
-
-				DRate = cycling_protocol["DRate"]
-
-				prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
-
-
-				parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
-			else
-				cap = computeCellCapacity(multimodel)
-				con = Constants()
-
-				CRate = cycling_protocol["CRate"]
-
-				prm_control[:ImaxCharge] = (cap / con.hour) * CRate
-
-				parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
-			end
-
-		else
-
-			cap = computeCellCapacity(multimodel)
-			con = Constants()
-
-			DRate                       = cycling_protocol["DRate"]
-			CRate                       = cycling_protocol["CRate"]
-			prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
-			prm_control[:ImaxCharge]    = (cap / con.hour) * CRate
-
-			parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
-		end
-
-
-	elseif protocol == "Function"
+	if protocol == "Function"
 		cap = computeCellCapacity(multimodel)
 		con = Constants()
 		parameters[:Control] = setup_parameters(multimodel[:Control])
 
-	elseif protocol == "CCCV"
-
-		cap = computeCellCapacity(multimodel)
-		con = Constants()
-
-
-		DRate                       = cycling_protocol["DRate"]
-		CRate                       = cycling_protocol["CRate"]
-		prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
-		prm_control[:ImaxCharge]    = (cap / con.hour) * CRate
-
-		parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
-
-	elseif protocol == "Experiment"
-		prm_control[:TotalTime] = cycling_protocol["TotalTime"]
-		parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
-
 	else
-		error("control policy $protocol not recognized")
+		total_time = haskey(cycling_protocol, "TotalTime") ? cycling_protocol["TotalTime"] : calculate_total_time(cycling_protocol)
+		prm_control[:TotalTime] = total_time
+		parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
+
 	end
 
 	return parameters

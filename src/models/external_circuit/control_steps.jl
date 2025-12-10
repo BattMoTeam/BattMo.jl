@@ -1,3 +1,11 @@
+#######################################################################################################################
+# Control steps
+#
+# This script defines different control stepo types:
+#	- GenericProtocol: a protocol that can contain any combination and order of control steps
+#######################################################################################################################
+
+
 abstract type AbstractControlStep end
 
 struct CurrentStep <: AbstractControlStep

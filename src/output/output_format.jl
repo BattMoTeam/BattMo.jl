@@ -433,7 +433,7 @@ function get_padded_states(jutul_output::NamedTuple)
 	total_number_of_cells = 0
 	for (i, k) in enumerate(model_keys)
 		pp = physical_representation(multimodel[k].data_domain)
-		if pp isa CurrentAndVoltageDomain
+		if pp isa ExternalCircuitDomain
 			keep = false
 		else
 			gg = multimodel[k].domain.representation

@@ -1,7 +1,41 @@
+#######################################################################################################################
+# Policies
+#
+# A policy is a specific type of control
+#
+# This script defines policies:
+#	- ConstantCurrent: a constant current control
+#	- ConstantCurrentConstantVoltage: a constant current constant voltage control
+# 	- Experiment: a flexible experiment like control
+#
+# These policy types are defined to create different user APIs for the generic control. The user can use the flexible 
+# experiment strings API or the specific policy ConstantCurrent or ConstantCurrentConstantVoltage API
+#
+#######################################################################################################################
 
-export convert_experiment_to_battmo_control_input
 
 abstract type AbstractPolicy end
+
+
+##################################################
+# Define the different policy types
+
+struct Experiment <: AbstractPolicy
+	all::AbstractDict
+end
+
+struct ConstantCurrent <: AbstractPolicy
+	all::AbstractDict
+end
+
+struct ConstantCurrentConstantVoltage <: AbstractPolicy
+	all::AbstractDict
+end
+
+
+
+#################################################################################
+# Define extensions for commonly used base functions for the AbstractPolicy type
 
 function Base.getindex(ps::AbstractPolicy, key::String)
 	value = get(ps.all, key, nothing)
@@ -20,9 +54,10 @@ function Base.haskey(ps::AbstractPolicy, key::String)
 	return haskey(ps.all, key)
 end
 
-struct Experiment <: AbstractPolicy
-	all::AbstractDict
-end
+
+
+#################################################################################
+# Functions and types used to parse the experiment cycling protocol
 
 mutable struct Stepper
 	steps::Vector{AbstractControlStep}
@@ -32,49 +67,6 @@ mutable struct Stepper
 	step_counts::Vector{Int}
 	step_indices::Vector{Int}
 	cycle_counts::Vector{Int}
-end
-
-function setup_generic_protocol(cycling_protocol::Experiment, input)
-
-	use_ramp_up = haskey(input.model_settings, "RampUp")
-	ramp_up_time = haskey(input.simulation_settings, "RampUpTime") ? input.simulation_settings["RampUpTime"] : 0.1
-
-	if haskey(cycling_protocol, "Capacity")
-		capacity = cycling_protocol["Capacity"]
-	else
-		capacity = compute_cell_theoretical_capacity(input.cell_parameters)
-	end
-
-	experiment_list = cycling_protocol["Experiment"]
-	if isa(experiment_list, String)
-		experiment_list = [experiment_list]
-	end
-
-	stepper = Stepper([], 0, 0, 0, [], [], [])
-
-	for (idx, step) in enumerate(experiment_list)
-		stepper = update_stepper!(stepper, step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time)
-	end
-
-	# Get maximum current value of all steps
-
-	current = []
-	for step in stepper.steps
-
-		if step isa CurrentStep || step isa RestStep
-			push!(current, step.value)
-		end
-
-	end
-
-	if isempty(current)
-		error("..")
-	else
-		current_max = maximum(current)
-	end
-
-	return stepper, current_max
-
 end
 
 

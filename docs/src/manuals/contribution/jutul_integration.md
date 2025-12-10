@@ -19,7 +19,7 @@ The BattMo backend defines the complete simulation model by combining several su
 - ElectrolyteModel
 - CurrentCollectorModel
 - SEIModel
-- CurrentAndVoltageModel
+- ExternalCircuitModel
 
 Each of these submodels is stored as a `Jutul.SimulationModel` [Struct](https://sintefmath.github.io/Jutul.jl/dev/usage/#Jutul.SimulationModel), and then the submodels are stored within a `Jutul.MultiModel` [Struct](https://sintefmath.github.io/Jutul.jl/dev/usage/#Jutul.MultiModel).
 - model settings

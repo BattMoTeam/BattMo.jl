@@ -150,7 +150,7 @@ function simulation_configuration(model, input)
 	forces = setup_forces(model.multimodel)
 
 	# setup jutul simulator
-	simulator = Simulator(model.multimodel; state0 = initial_state, parameters = parameters, copy_state = true)
+	# simulator = Simulator(model.multimodel; state0 = initial_state, parameters = parameters, copy_state = true)
 
 	# setup time steps
 	time_steps = Float64.(setup_timesteps(input))
@@ -160,10 +160,12 @@ function simulation_configuration(model, input)
 
 	# setup jutul case
 	if isnothing(termination_criterion)
-		jutul_case = JutulCase(model.multimodel, time_steps, forces; parameters = parameters, state0 = initial_state)
+		jutul_case = JutulCase(deepcopy(model.multimodel), deepcopy(time_steps), deepcopy(forces); parameters = deepcopy(parameters), state0 = deepcopy(initial_state))
 	else
-		jutul_case = JutulCase(model.multimodel, time_steps, forces; parameters = parameters, state0 = initial_state, termination_criterion = termination_criterion)
+		jutul_case = JutulCase(deepcopy(model.multimodel), deepcopy(time_steps), deepcopy(forces); parameters = deepcopy(parameters), state0 = deepcopy(initial_state), termination_criterion = deepcopy(termination_criterion))
 	end
+
+	simulator = Simulator(jutul_case)
 
 	return (
 		model = model,
@@ -183,33 +185,10 @@ end
 
 function setup_termination_criterion(multimodel)
 
-	if multimodel[:Control].system.policy isa CyclingCVPolicy
+	if multimodel[:Control].system.protocol isa GenericProtocol
+		termination_criterion = ControlStepCountTermination(length(multimodel[:Control].system.protocol.steps))
 
-		termination_criterion = CycleCountTermination(multimodel[:Control].system.policy.numberOfCycles)
-
-	elseif multimodel[:Control].system.policy isa CCPolicy
-
-		if multimodel[:Control].system.policy.numberOfCycles == 0
-			direction = multimodel[:Control].system.policy.initialControl
-			tol = 1e-4
-
-			if multimodel[:Control].system.policy.initialControl == "charging"
-
-				termination_criterion = VoltageTermination(multimodel[:Control].system.policy.upperCutoffVoltage, direction, tol)
-
-			elseif multimodel[:Control].system.policy.initialControl == "discharging"
-
-				termination_criterion = VoltageTermination(multimodel[:Control].system.policy.lowerCutoffVoltage, direction, tol)
-
-			end
-		else
-			termination_criterion = CycleCountTermination(multimodel[:Control].system.policy.numberOfCycles)
-
-		end
-	elseif multimodel[:Control].system.policy isa GenericProtocol
-		termination_criterion = ControlStepCountTermination(length(multimodel[:Control].system.policy.steps))
-
-	elseif multimodel[:Control].system.policy isa FunctionPolicy
+	elseif multimodel[:Control].system.protocol isa FunctionProtocol
 		termination_criterion = nothing
 
 	else
@@ -358,7 +337,7 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 
 
 	# Perform simulation
-	jutul_states, jutul_reports = simulate(jutul_case; config = cfg)
+	jutul_states, jutul_reports = simulate(deepcopy(jutul_case); config = deepcopy(cfg))
 	# jutul_states, jutul_reports = simulate(state0, simulator, termination_criterion; forces = forces, config = cfg)
 
 	jutul_output = (
@@ -626,77 +605,9 @@ function solver_configuration(sim::JutulSimulator,
 		end
 	end
 
-	if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy || model[:Control].system.policy isa GenericProtocol
-		if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa GenericProtocol
+	if model[:Control].system.protocol isa GenericProtocol
 
-			cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
-
-		elseif model[:Control].system.policy isa CCPolicy && model[:Control].system.policy.numberOfCycles > 0
-			cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
-		end
-
-		# function post_hook(done, report, sim, dt, forces, max_iter, cfg)
-
-		# 	s = get_simulator_storage(sim)
-		# 	m = get_simulator_model(sim)
-
-		# 	if model[:Control].system.policy isa CyclingCVPolicy
-
-		# 		if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-		# 			report[:stopnow] = true
-		# 		else
-		# 			report[:stopnow] = false
-		# 		end
-
-		# 	elseif model[:Control].system.policy isa CCPolicy
-
-		# 		if m[:Control].system.policy.numberOfCycles == 0
-
-		# 			if m[:Control].system.policy.initialControl == "charging"
-
-		# 				if s.state.Control.ElectricPotential[1] >= m[:Control].system.policy.upperCutoffVoltage
-		# 					report[:stopnow] = true
-		# 				else
-		# 					report[:stopnow] = false
-		# 				end
-
-		# 			elseif m[:Control].system.policy.initialControl == "discharging"
-
-		# 				if s.state.Control.ElectricPotential[1] <= m[:Control].system.policy.lowerCutoffVoltage
-		# 					report[:stopnow] = true
-
-		# 				else
-
-		# 					report[:stopnow] = false
-		# 				end
-		# 			end
-		# 		else
-		# 			if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-		# 				report[:stopnow] = true
-		# 			else
-		# 				report[:stopnow] = false
-		# 			end
-		# 		end
-		# 	elseif model[:Control].system.policy isa GenericProtocol
-		# 		number_of_steps = model[:Control].system.policy.number_of_control_steps
-		# 		if s.state.Control.Controller.step_number > number_of_steps
-		# 			report[:stopnow] = true
-		# 		else
-		# 			report[:stopnow] = false
-		# 		end
-		# 		# Do nothing
-		# 	else
-		# 		error("Unknown control policy")
-		# 	end
-
-
-		# 	return (done, report)
-
-		# end
-
-		# cfg[:post_ministep_hook] = post_hook
-
-
+		cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
 	end
 
 

@@ -94,7 +94,7 @@ print_info(vc05)
 # ### Solve the first calibration problem
 # The calibration is performed by solving the optimization problem. This makes
 # use of the adjoint method implemented in Jutul.jl and the LBFGS algorithm.
-solve(vc05);
+solve(vc05; info_level = 2);
 cell_parameters_calibrated = vc05.calibrated_cell_parameters;
 print_info(vc05)
 # ## Compare the results of the calibration against the experimental data

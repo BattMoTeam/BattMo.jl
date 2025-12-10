@@ -1,21 +1,19 @@
-export GenericProtocol
+#######################################################################################################################
+# Protocols
+#
+# A protocol is a instance of a certain policy or a combination of policies.
+#
+# This script defines cycling protocol types:
+#	- GenericProtocol: a protocol that can contain any combination and order of control steps
+#######################################################################################################################
+
+
+abstract type AbstractProtocol end
 
 
 
-struct GenericProtocol{V} <: AbstractProtocol where V <: Vector{Int}
-	steps::Vector{AbstractControlStep}
-	step_indices::V
-	step_counts::V
-	cycle_counts::V
-	maximum_current::Real
-end
-
-function GenericProtocol(protocol::C, input) where C <: AbstractPolicy
-
-	stepper, maximum_current = setup_generic_protocol(protocol, input)
-	return GenericProtocol{typeof(stepper.step_indices)}(stepper.steps, stepper.step_indices, stepper.step_counts, stepper.cycle_counts, maximum_current)
-end
-
+############################################
+# Define the protocol types
 
 """
 FunctionProtocol
@@ -35,51 +33,216 @@ function get_initial_current(policy::FunctionProtocol)
 end
 
 
-
 """
-We need to add the specific treatment of the controller variables for GenericProtocol
+GenericProtocol
 """
-function Jutul.reset_state_to_previous_state!(
-	storage,
-	model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{GenericProtocol}, T3, T4},
-) where {T3, T4}
-
-	invoke(reset_state_to_previous_state!,
-		Tuple{typeof(storage), SimulationModel},
-		storage,
-		model)
-
-	copyController!(storage.state[:Controller], storage.state0[:Controller])
+struct GenericProtocol{V} <: AbstractProtocol where V <: Vector{Int}
+	steps::Vector{AbstractControlStep}
+	step_indices::V
+	step_counts::V
+	cycle_counts::V
+	maximum_current::Real
 end
 
+function GenericProtocol(cycling_protocol::Experiment; use_ramp_up = true, ramp_up_time = 0.1, capacity = nothing)
 
+	experiment_list = cycling_protocol["Experiment"]
 
-"""
-We need a more fine-tuned update of the variables when we use a cycling policies, to avoid convergence problem.
-"""
-function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, model::P, dx, w) where {Q <: GenericProtocol, P <: CurrentAndVoltageModel{Q}}
-
-	entity = associated_entity(p)
-	active = active_entities(model.domain, entity, for_variables = true)
-	v = state[state_symbol]
-
-	nu = length(active)
-
-	time = state.Controller.time
-	maximum_current = model.system.policy.maximum_current
-
-	abs_max = 0.2 * maximum_current
-	abs_max = nothing
-	rel_max = relative_increment_limit(p)
-	maxval = maximum_value(p)
-	minval = minimum_value(p)
-	scale = variable_scale(p)
-	@inbounds for i in 1:nu
-		a_i = active[i]
-		v[a_i] = update_value(v[a_i], w * dx[i], abs_max, rel_max, minval, maxval, scale)
+	if isa(experiment_list, String)
+		experiment_list = [experiment_list]
 	end
 
+	stepper = Stepper([], 0, 0, 0, [], [], [])
+
+	for (idx, step) in enumerate(experiment_list)
+		stepper = update_stepper!(stepper, step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time)
+	end
+
+	# Get maximum current value of all steps
+
+	current = []
+	for step in stepper.steps
+
+		if step isa CurrentStep || step isa RestStep
+			push!(current, step.value)
+		end
+
+	end
+
+	if isempty(current)
+		error("..")
+	else
+		maximum_current = maximum(current)
+	end
+
+	return GenericProtocol{typeof(stepper.step_indices)}(stepper.steps, stepper.step_indices, stepper.step_counts, stepper.cycle_counts, maximum_current)
 end
+
+function GenericProtocol(cycling_protocol::Experiment, input)
+
+	use_ramp_up = haskey(input.model_settings, "RampUp")
+	ramp_up_time = haskey(input.simulation_settings, "RampUpTime") ? input.simulation_settings["RampUpTime"] : 0.1
+
+	if haskey(cycling_protocol, "Capacity")
+		capacity = cycling_protocol["Capacity"]
+	else
+		capacity = compute_cell_theoretical_capacity(input.cell_parameters)
+	end
+
+	return GenericProtocol(cycling_protocol::Experiment; use_ramp_up = use_ramp_up, ramp_up_time = ramp_up_time, capacity = capacity)
+end
+
+
+
+function GenericProtocol(cycling_protocol::ConstantCurrent, input)
+	total_time = calculate_total_time(cycling_protocol)
+
+	experiment_dict = Dict{String, Any}(
+		"InitialStateOfCharge" => cycling_protocol["InitialStateOfCharge"],
+		"TotalTime" => total_time,
+	)
+
+	experiment_list = []
+
+	experiment_list = create_current_controlled_experiment_string(experiment_list, cycling_protocol, cycling_protocol["InitialControl"], "CC")
+
+
+	if cycling_protocol["TotalNumberOfCycles"] > 0
+		opposite_direction = get_opposite_direction(cycling_protocol["InitialControl"])
+		experiment_list = create_current_controlled_experiment_string(experiment_list, cycling_protocol, opposite_direction, "CC")
+
+		push!(experiment_list, "Increase cycle count")
+		push!(experiment_list, "Repeat $(cycling_protocol["TotalNumberOfCycles"]-1) times")
+	end
+
+	if haskey(cycling_protocol, "InitialTemperature")
+		experiment_dict["InitialTemperature"] = cycling_protocol["InitialTemperature"]
+	end
+
+	experiment_dict["Experiment"] = experiment_list
+
+	experiment = Experiment(experiment_dict)
+
+	return GenericProtocol(experiment, input)
+end
+
+function add_experiment_strings!(experiment_list, cycling_protocol, direction, policy)
+
+	if direction == "charging"
+		if haskey(cycling_protocol, "CRate")
+			rate = "$(cycling_protocol["CRate"]) C"
+		elseif haskey(cycling_protocol, "MaximumCurrent")
+			rate = "$(cycling_protocol["MaximumCurrent"]) A"
+		else
+			error("Both CRate and MaximumCurrent not specified in cycling protocol.")
+		end
+		push!(experiment_list, "Charge at $rate until $(cycling_protocol["UpperVoltageLimit"]) V")
+
+		if policy == "CCCV"
+
+			push!(experiment_list, "Hold at $(cycling_protocol["UpperVoltageLimit"]) V until $(cycling_protocol["CurrentChangeLimit"]) A/s")
+		end
+
+	elseif direction == "discharging"
+		if haskey(cycling_protocol, "DRate")
+			rate = "$(cycling_protocol["DRate"]) C"
+		elseif haskey(cycling_protocol, "MaximumCurrent")
+			rate = "$(cycling_protocol["MaximumCurrent"]) A"
+		else
+			error("Both DRate and MaximumCurrent not specified in cycling protocol.")
+		end
+		push!(experiment_list, "Discharge at $rate until $(cycling_protocol["LowerVoltageLimit"]) V")
+		if policy == "CCCV"
+
+			push!(experiment_list, "Rest until $(cycling_protocol["VoltageChangeLimit"]) V/s")
+
+		end
+
+	else
+		error("direction $direction not recognized.")
+	end
+	return experiment_list
+
+end
+
+function GenericProtocol(cycling_protocol::ConstantCurrentConstantVoltage, input)
+	total_time = calculate_total_time(cycling_protocol)
+
+	experiment_dict = Dict{String, Any}(
+		"InitialStateOfCharge" => cycling_protocol["InitialStateOfCharge"],
+		"TotalTime" => total_time,
+	)
+
+	experiment_list = []
+	if cycling_protocol["InitialControl"] == "charging"
+		if haskey(cycling_protocol, "CRate")
+			rate = "$(cycling_protocol["CRate"]) C"
+		elseif haskey(cycling_protocol, "MaximumCurrent")
+			rate = "$(cycling_protocol["MaximumCurrent"]) A"
+		else
+			error("Both CRate and MaximumCurrent not specified in cycling protocol.")
+		end
+		push!(experiment_list, "Charge at $rate until $(cycling_protocol["UpperVoltageLimit"]) V")
+		push!(experiment_list, "Hold at $(cycling_protocol["UpperVoltageLimit"]) V until $(cycling_protocol["CurrentChangeLimit"]) A/s")
+	elseif cycling_protocol["InitialControl"] == "discharging"
+		if haskey(cycling_protocol, "DRate")
+			rate = "$(cycling_protocol["DRate"]) C"
+		elseif haskey(cycling_protocol, "MaximumCurrent")
+			rate = "$(cycling_protocol["MaximumCurrent"]) A"
+		else
+			error("Both DRate and MaximumCurrent not specified in cycling protocol.")
+		end
+		push!(experiment_list, "Discharge at $rate until $(cycling_protocol["LowerVoltageLimit"]) V")
+		push!(experiment_list, "Rest until $(cycling_protocol["VoltageChangeLimit"]) V/s")
+
+	else
+		error("Initial control $(cycling_protocol["InitialControl"]) not recognized.")
+	end
+
+	if cycling_protocol["TotalNumberOfCycles"] > 0
+		if cycling_protocol["InitialControl"] == "charging"
+			if haskey(cycling_protocol, "DRate")
+				rate = "$(cycling_protocol["DRate"]) C"
+			elseif haskey(cycling_protocol, "MaximumCurrent")
+				rate = "$(cycling_protocol["MaximumCurrent"]) A"
+			else
+				error("Both DRate and MaximumCurrent not specified in cycling protocol.")
+			end
+			push!(experiment_list, "Discharge at $rate until $(cycling_protocol["LowerVoltageLimit"]) V")
+			push!(experiment_list, "Rest until $(cycling_protocol["VoltageChangeLimit"]) V/s")
+
+		elseif cycling_protocol["InitialControl"] == "discharging"
+			if haskey(cycling_protocol, "CRate")
+				rate = "$(cycling_protocol["CRate"]) C"
+			elseif haskey(cycling_protocol, "MaximumCurrent")
+				rate = "$(cycling_protocol["MaximumCurrent"]) A"
+			else
+				error("Both CRate and MaximumCurrent not specified in cycling protocol.")
+			end
+			push!(experiment_list, "Charge at $rate until $(cycling_protocol["UpperVoltageLimit"]) V")
+			push!(experiment_list, "Hold at $(cycling_protocol["UpperVoltageLimit"]) V until $(cycling_protocol["CurrentChangeLimit"]) A/s")
+
+		else
+			error("Initial control $(cycling_protocol["InitialControl"]) not recognized.")
+		end
+		push!(experiment_list, "Increase cycle count")
+		push!(experiment_list, "Repeat $(cycling_protocol["TotalNumberOfCycles"]-1) times")
+	end
+
+	if haskey(cycling_protocol, "InitialTemperature")
+		experiment_dict["InitialTemperature"] = cycling_protocol["InitialTemperature"]
+	end
+
+	experiment_dict["Experiment"] = experiment_list
+
+	experiment = Experiment(experiment_dict)
+
+	return GenericProtocol(experiment, input)
+end
+
+
+##############################################
+# Update the control step in the controller
 
 """
 Implementation of the generic control protocol
@@ -134,7 +297,6 @@ function update_control_step_in_controller!(state, state0, protocol::GenericProt
 	# status_previous = setupRegionSwitchFlags(previous_control_step, state0, controller)
 	status_previous = get_status_on_termination_region(previous_control_step.termination, state0)
 
-
 	if status_previous.before_termination_region
 		# We have not entered the switching region in the time step. We are not going to change control.
 
@@ -169,6 +331,8 @@ function update_control_step_in_controller!(state, state0, protocol::GenericProt
 
 				else
 					step_count = step_count
+					# @info "step_count", step_count
+					# @info "index", index
 					cycle_count = cycle_counts[step_count]
 					step_index = step_indices[step_count]
 

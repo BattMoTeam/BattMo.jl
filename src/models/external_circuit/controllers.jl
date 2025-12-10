@@ -6,7 +6,7 @@
 
 ## The controller are implemented as mutable structures and will be attached to the state
 
-
+abstract type Controller end
 
 mutable struct GenericController{R <: Real, I <: Int} <: Controller
 	protocol::GenericProtocol
@@ -96,6 +96,8 @@ function Base.copy(cv::FunctionController)
 	return cv_copy
 
 end
+
+
 
 function Jutul.update_values!(old::GenericController, new::GenericController)
 

@@ -67,7 +67,7 @@ function run_simulation(simulation_input::MatlabInput; solver_settings::Union{So
 	# setup the cross terms which couples the submodels.
 	setup_coupling_cross_terms!(simulation_input, model, parameters, couplings)
 
-	setup_initial_control_policy!(model[:Control].system.policy, simulation_input, parameters)
+	setup_initial_control_policy!(model[:Control].system.protocol, simulation_input, parameters)
 
 	state0 = setup_initial_state(simulation_input, model)
 

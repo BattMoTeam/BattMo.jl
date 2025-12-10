@@ -185,7 +185,7 @@ else
 	parameters = BattMo.setup_battery_parameters(init, model)
 	state0 = BattMo.setup_battery_initial_state(init, model)
 	BattMo.setup_coupling_grid!(init, model, parameters)
-	BattMo.setup_policy!(model[:Control].system.policy, init, parameters)
+	BattMo.setup_policy!(model[:Control].system.protocol, init, parameters)
 
 	minE = init.object["Control"]["lowerCutoffVoltage"]
 	@. state0[:Control][:ElectricPotential] = minE * 1.5

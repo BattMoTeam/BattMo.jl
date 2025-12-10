@@ -387,6 +387,7 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing;
 		simulation_settings = sim.settings)
 
 	model = sim.model
+	termination_criterion = deepcopy(sim.termination_criterion)
 
 	grids, couplings = setup_grids_and_couplings(model, input)
 
@@ -398,14 +399,14 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing;
 		timesteps = timesteps[stepix]
 	end
 
-	return Jutul.JutulCase(model.multimodel, timesteps, forces, parameters = parameters, state0 = state0, input_data = input)
+	return Jutul.JutulCase(deepcopy(model.multimodel), deepcopy(timesteps), deepcopy(forces), parameters = deepcopy(parameters), state0 = deepcopy(state0), input_data = deepcopy(input), termination_criterion = termination_criterion)
 end
 
 function simulate_battmo_case_for_calibration(case, solver_settings;
 	simulator = missing,
 	config = missing,
 )
-
+	case = deepcopy(case)
 	if ismissing(simulator)
 		simulator = Simulator(case)
 	end
@@ -418,13 +419,15 @@ function simulate_battmo_case_for_calibration(case, solver_settings;
 			info_level = -1,
 		)
 	end
-	result = Jutul.simulate!(simulator,
-		case.dt,
-		state0 = case.state0,
-		parameters = case.parameters,
-		forces = case.forces,
-		config = config,
-	)
+	result = Jutul.simulate(case; config = deepcopy(config))
+	# result = Jutul.simulate!(simulator,
+	# 	case.dt,
+	# 	state0 = case.state0,
+	# 	parameters = case.parameters,
+	# 	forces = case.forces,
+	# 	config = config,
+	# )
+
 	# last_solves = result.reports[end][:ministeps][end]
 	# if !result.reports[end][:ministeps][end][:success]
 	# TODO: handle case where the solver fails.

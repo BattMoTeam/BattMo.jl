@@ -2,27 +2,27 @@
 # control policy setup (Matlab input specific) #
 ################################################
 
-function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::MatlabInput, parameters)
+# function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::MatlabInput, parameters)
 
-	Imax = Float64(inputparams["model"]["Control"]["Imax"])
-	tup = Float64(inputparams["model"]["Control"]["rampupTime"])
+# 	Imax = Float64(inputparams["model"]["Control"]["Imax"])
+# 	tup = Float64(inputparams["model"]["Control"]["rampupTime"])
 
-	cFun(time) = get_current_value(time, Imax, tup)
+# 	cFun(time) = get_current_value(time, Imax, tup)
 
-	policy.current_function = cFun
-	policy.Imax             = Imax
-	policy.voltage          = Float64(inputparams["model"]["Control"]["lowerCutoffVoltage"])
+# 	policy.current_function = cFun
+# 	policy.Imax             = Imax
+# 	policy.voltage          = Float64(inputparams["model"]["Control"]["lowerCutoffVoltage"])
 
-end
+# end
 
 
-function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::MatlabInput, parameters)
+# function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::MatlabInput, parameters)
 
-	error("not updated, use inputparams to get values")
-	policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
-	policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])
+# 	error("not updated, use inputparams to get values")
+# 	policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
+# 	policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])
 
-end
+# end
 
 
 ######################
@@ -310,7 +310,7 @@ function setup_model!(inputparams::MatlabInput)
 	# setup the cross terms which couples the submodels.
 	setup_coupling_cross_terms!(inputparams, model, parameters, couplings)
 
-	setup_initial_control_policy!(model[:Control].system.policy, inputparams, parameters)
+	setup_initial_control_policy!(model[:Control].system.protocol, inputparams, parameters)
 
 	output = (model = model,
 		parameters = parameters,
@@ -493,13 +493,18 @@ function setup_submodels(inputparams::MatlabInput)
 
 	if controlPolicy == "CCDischarge"
 
-		minE   = inputparams["Control"]["lowerCutoffVoltage"]
-		inputI = inputparams["Control"]["Imax"]
-		dtup   = inputparams["Control"]["rampupTime"]
+		ramp_up_time = inputparams["Control"]["rampupTime"]
 
-		cFun(time) = get_current_value(time, inputI, dtup)
+		cycling_protocol_dict = Dict(
+			"Protocol" => "CC",
+			"InitialControl" => "discharging",
+			"TotalNumberOfCycles" => 0,
+			"LowerVoltageLimit" => inputparams["Control"]["lowerCutoffVoltage"],
+			"MaximumCurrent" => inputparams["Control"]["Imax"],
+		)
 
-		policy = SimpleCVPolicy(current_function = cFun, voltage = minE)
+		policy = ConstantCurrent(cycling_protocol_dict)
+		protocol = setup_generic_protocol(policy; use_ramp_up = true, ramp_up_time = ramp_up_time)
 
 	elseif controlPolicy == "CCCV"
 
@@ -512,14 +517,37 @@ function setup_submodels(inputparams::MatlabInput)
 			ctrl["initialControl"],
 			ctrl["numberOfCycles"])
 
+		cycling_protocol_dict = Dict(
+			"Protocol" => "CCCV",
+			"InitialControl" => ctrl["initialControl"],
+			"TotalNumberOfCycles" => ctrl["numberOfCycles"],
+			"LowerVoltageLimit" => ctrl["lowerCutoffVoltage"],
+			"UpperVoltageLimit" => ctrl["upperCutoffVoltage"],
+			"MaximumCurrent" => ctrl["Imax"],
+			"CurrentChangeLimit" => ctrl["dIdtLimit"],
+			"VoltageChangeLimit" => ctrl["dEdtLimit"],
+		)
+
+		ramp_up_time = haskey(ctrl, "rampupTime") ? ctrl["rampupTime"] : nothing
+
+		if !isnothing(ramp_up_time)
+			use_ramp_up = true
+		else
+			use_ramp_up = false
+		end
+
+		policy = ConstantCurrent(cycling_protocol_dict)
+		protocol = setup_generic_protocol(policy; use_ramp_up = use_ramp_up, ramp_up_time = ramp_up_time)
+
+
 	else
 
 		error("controlPolicy $controlPolicy not recognized.")
 
 	end
 
-	sys_control    = CurrentAndVoltageSystem(policy)
-	domain_control = CurrentAndVoltageDomain()
+	sys_control    = ExternalCircuitSystem(protocol)
+	domain_control = ExternalCircuitDomain()
 	model_control  = SimulationModel(domain_control, sys_control, context = DefaultContext())
 
 	if !include_cc

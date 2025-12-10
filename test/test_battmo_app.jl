@@ -110,7 +110,7 @@ function setup_config(cfg,
 	dt_tot,
 	i)
 
-	if model[:Control].system.policy isa CyclingCVPolicy
+	if model[:Control].system.protocol isa CyclingCVPolicy
 
 		cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> BattMo.check_constraints(model, storage)
 
@@ -119,7 +119,7 @@ function setup_config(cfg,
 			s = Jutul.get_simulator_storage(sim)
 			m = Jutul.get_simulator_model(sim)
 
-			if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+			if s.state.Control.Controller.numberOfCycles >= m[:Control].system.protocol.numberOfCycles
 				report[:stopnow] = true
 			else
 				report[:stopnow] = false

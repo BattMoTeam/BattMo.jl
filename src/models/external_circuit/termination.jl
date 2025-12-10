@@ -94,7 +94,7 @@ end
 # Termination criterion for the end of a control step
 ###########################################################
 
-function get_termination_instance(quantity::Vector{String}, target; direction = discharge)
+function get_termination_instance(quantity::Vector{String}, target; direction = "discharge")
 
 	termination_1 = get_termination_instance(quantity[1], target[1]; direction)
 	termination_2 = get_termination_instance(quantity[2], target[2]; direction)
@@ -281,10 +281,10 @@ function Jutul.timestepping_is_done(C::VoltageTermination, simulator, states, su
 	m = get_simulator_model(simulator)
 
 
-	if m[:Control].system.policy.initialControl == "charging"
+	if m[:Control].system.protocol.initialControl == "charging"
 
 		terminate = s.state.Control.ElectricPotential[1] >= C.end_voltage
-	elseif m[:Control].system.policy.initialControl == "discharging"
+	elseif m[:Control].system.protocol.initialControl == "discharging"
 
 		terminate = s.state.Control.ElectricPotential[1] <= C.end_voltage
 

@@ -183,7 +183,6 @@ using Jutul: get_diagonal_entries
 using Jutul: get_dependencies, get_entry, convert_to_immutable_storage
 using Jutul: tpfv_geometry, apply!, is_cell_major
 using Jutul: StaticCSR, ParallelCSRContext
-using ForwardDiff: ForwardDiff
 using Jutul: jutul_message
 using Jutul: get_1d_interpolator
 using PythonCall: pyconvert, Py
@@ -235,14 +234,19 @@ include("models/current_collector.jl")
 include("models/ocp.jl")
 include("models/activematerial.jl")
 include("models/sei_layer.jl")
-include("models/external_circuit/current_and_voltage_boundary.jl")
+
+include("models/external_circuit/ramp_up.jl")
 include("models/external_circuit/termination.jl")
 include("models/external_circuit/control_steps.jl")
+
 include("input/control/experiment.jl")
 include("input/control/policies.jl")
+
 include("models/external_circuit/protocols.jl")
 include("models/external_circuit/controllers.jl")
-include("models/generic_control.jl")
+include("models/external_circuit/external_circuit.jl")
+
+
 include("models/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")
 
