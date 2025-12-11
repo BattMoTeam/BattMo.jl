@@ -1,4 +1,8 @@
-
+#######################################################################################################################
+# External circuit utils
+#
+# This script defines some helper function used within the external circuit model
+#######################################################################################################################
 
 function calculate_total_time(cycling_protocol)
 	number_of_cycles = cycling_protocol["TotalNumberOfCycles"]
@@ -23,4 +27,16 @@ end
 
 function get_opposite_direction(direction)
 	return isequal(direction, "charging") ? "discharging" : "charging"
+end
+
+function adjust_current_sign(I, direction)
+	if direction == "discharging"
+		val = I
+	elseif direction == "charging"
+		val = -I
+	else
+		error("The direction $direction is not recognized.")
+	end
+
+	return val
 end

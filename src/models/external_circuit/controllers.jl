@@ -1,12 +1,19 @@
-###########################################################################################################
-# Definition of the controller and some basic utility functions. The controller will be part of the state #
-###########################################################################################################
+#######################################################################################################################
+# Controller
+#
+# This script defines the controllers that regulates the state of the external circuit during a simulation.
+# It is a state object
+#######################################################################################################################
 
-## A controller provides the information to exert the current control
 
-## The controller are implemented as mutable structures and will be attached to the state
+##################################################
+# Define the abstract type
 
 abstract type Controller end
+
+
+##################################################
+# Define the different controller types
 
 mutable struct GenericController{R <: Real, I <: Int} <: Controller
 	protocol::GenericProtocol
@@ -43,6 +50,9 @@ end
 	return R
 end
 
+
+########################################################################
+# Define some function for quick copying of the controller instance
 
 """
 Function to create (deep) copy of generic controller
@@ -98,6 +108,8 @@ function Base.copy(cv::FunctionController)
 end
 
 
+##################################################
+# Update controller values
 
 function Jutul.update_values!(old::GenericController, new::GenericController)
 

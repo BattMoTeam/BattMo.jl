@@ -113,7 +113,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 		# 	T = T_i,
 		# )
 		policy = ConstantCurrent(cycling_protocol.all)
-		protocol = setup_generic_protocol(policy, input)
+		protocol = GenericProtocol(policy, input)
 
 
 	elseif protocol == "CCCV"
@@ -126,7 +126,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 		# 	cycling_protocol["TotalNumberOfCycles"];
 		# 	use_ramp_up = use_ramp_up)
 		policy = ConstantCurrentConstantVoltage(cycling_protocol.all)
-		protocol = setup_generic_protocol(policy, input)
+		protocol = GenericProtocol(policy, input)
 
 	elseif protocol == "Function"
 
@@ -137,12 +137,9 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 
 	elseif protocol == "Experiment"
 
-		# experiment = convert_experiment_to_battmo_control_input(cycling_protocol["Experiment"])
+		policy = Experiment(cycling_protocol.all)
 
-		experiment = Experiment(cycling_protocol.all)
-
-
-		protocol = setup_generic_protocol(experiment, input)
+		protocol = GenericProtocol(policy, input)
 
 
 	else

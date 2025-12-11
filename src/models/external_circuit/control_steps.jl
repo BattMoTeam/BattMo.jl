@@ -1,15 +1,24 @@
 #######################################################################################################################
 # Control steps
 #
-# This script defines different control stepo types:
-#	- GenericProtocol: a protocol that can contain any combination and order of control steps
+# This script defines different control step types:
+#	- CurrentStep: current controlled control step
+#	- VoltageStep: voltage controlled control step
+#	- RestStep: control step where the current is set to zero
+#	- PowerStep: power controlled control step
 #######################################################################################################################
 
+##################################################
+# Define the abstract type
 
 abstract type AbstractControlStep end
 
+
+##################################################
+# Define the different control step types
+
 struct CurrentStep <: AbstractControlStep
-	value::Real
+	value::Union{Real, AbstractString}
 	direction::Union{String}
 	termination::AbstractTerminationCriterion
 	current_function::Function
@@ -22,6 +31,11 @@ end
 struct VoltageStep <: AbstractControlStep
 	value::Real
 	termination::AbstractTerminationCriterion
+	voltage_function::Function
+
+	function VoltageStep(value, termination, voltage_function = setup_voltage_function(value))
+		return new(value, termination, voltage_function)
+	end
 end
 
 mutable struct RestStep <: AbstractControlStep
@@ -33,39 +47,123 @@ struct PowerStep <: AbstractControlStep
 	value::Union{Nothing, Real}
 	direction::Union{Nothing, String}
 	termination::AbstractTerminationCriterion
+	power_function::Function
+
+	function PowerStep(value, direction, termination, voltage_function = setup_power_function(value))
+		return new(value, direction, termination, voltage_function)
+	end
 end
 
 
-function setup_current_function(I, ramp_up_time, use_ramp_up; direction = "discharging")
+###########################################################################
+# Setup the current function that determines the current fot a CurrentStep
 
-	current_function(time) = get_current_value(time, I, ramp_up_time; use_ramp_up = use_ramp_up, direction)
+function setup_current_function(current, ramp_up_time, use_ramp_up; direction = "discharging")
+
+	current_function(time) = get_current_value(time, current, ramp_up_time; use_ramp_up = use_ramp_up, direction)
 
 	return current_function
 
 end
 
+function get_current_value(time::Real, current::Real, ramp_up_time::Real = 0.1; use_ramp_up = true, direction = "discharging")
+	if current isa AbstractString
+		time, ramp_up_time, value = promote(time, ramp_up_time, 0.0)
+
+		func = setup_function_from_function_name(current)
+
+		value_signed = func(time)
+
+	elseif current isa Real
+		time, current, ramp_up_time, value = promote(time, current, ramp_up_time, 0.0)
+		if use_ramp_up == false
+			value = current
+		else
+			if time <= ramp_up_time
+				value = sineup(0.0, current, 0.0, ramp_up_time, time)
+			else
+				value = current
+			end
+		end
+		value_signed = adjust_current_sign(value, direction)
+	else
+		error("Type $(typeof(current)) not handled.")
+	end
+
+	return value_signed
+end
+
+
+###########################################################################
+# Setup the voltage function that determines the voltage for a VoltageStep
+
+function setup_voltage_function(voltage)
+
+	voltage_function(time) = get_voltage_value(time, voltage)
+
+	return voltage_function
+
+end
+
+function get_voltage_value(time::Real, voltage::Real)
+	if voltage isa AbstractString
+		time, value = promote(time, 0.0)
+
+		func = setup_function_from_function_name(voltage)
+
+		value = func(time)
+
+	elseif voltage isa Real
+		time, voltage, value = promote(time, voltage, 0.0)
+
+		value = voltage
+	else
+		error("Type $(typeof(voltage)) not handled.")
+	end
+	return value
+end
+
+
+###########################################################################
+# Setup the power function that determines the power for a PowerStep
+
+function setup_power_function(voltage)
+
+	power_function(time) = get_power_value(time, voltage)
+
+	return power_function
+
+end
+
+function get_power_value(time::Real, power::Real)
+	if power isa AbstractString
+		time, value = promote(time, 0.0)
+
+
+		func = setup_function_from_function_name(power)
+
+		value = func(time)
+
+	elseif power isa Real
+		time, power, value = promote(time, power, 0.0)
+
+		value = power
+	else
+		error("Type $(typeof(power)) not handled.")
+	end
+	return value
+end
+
+##################################################
+# Get initial current values
 
 function get_initial_current(step::CurrentStep)
-
-	if !ismissing(step.current_function)
-		current = step.current_function(0.0)
-	else
-		if step.direction == "discharging"
-			current = step.value
-		elseif step.direction == "charging"
-			current = -step.value
-		else
-			error("Initial control direction not recognized")
-		end
-	end
-	return current
+	return step.current_function(0.0)
 end
 
 function get_initial_current(step::PowerStep)
-
 	error("Power control cannot be the first control step")
 end
-
 
 function get_initial_current(step::VoltageStep)
 	error("Voltage control cannot be the first control step")
@@ -76,8 +174,10 @@ function get_initial_current(step::RestStep)
 end
 
 
-function update_values_in_controller!(state, step::PowerStep)
+##################################################
+# Update the controller
 
+function update_values_in_controller!(state, step::PowerStep)
 
 	power = step.value
 	voltage = state.Controller.voltage

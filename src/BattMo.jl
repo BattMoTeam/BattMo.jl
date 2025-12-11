@@ -235,12 +235,12 @@ include("models/ocp.jl")
 include("models/activematerial.jl")
 include("models/sei_layer.jl")
 
+include("models/external_circuit/utils.jl")
 include("models/external_circuit/ramp_up.jl")
 include("models/external_circuit/termination.jl")
 include("models/external_circuit/control_steps.jl")
 
-include("input/control/experiment.jl")
-include("input/control/policies.jl")
+include("models/external_circuit/policies.jl")
 
 include("models/external_circuit/protocols.jl")
 include("models/external_circuit/controllers.jl")

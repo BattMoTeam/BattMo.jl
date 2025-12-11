@@ -1,6 +1,26 @@
+#############################################################################################################################################################
+# Termination Criterion
+#
+# A termination criterion is an instance describing when a control step of simulation should terminate.
+#
+# This script defines termination types:
+#	- TimeTermination: the control step or simulation will terminate when the time reaches `end_time`
+#	- VoltageTermination: the control step or simulation will terminate when the voltage reaches `end_voltage`
+#	- VoltageChangeTermination: the control step or simulation will terminate when the voltage changes reaches `end_voltage_change`
+#	- CurrentTermination: the control step or simulation will terminate when the current reaches `end_current`
+#	- CurrentChangeTermination: the control step or simulation will terminate when the current change reaches `end_current_change`
+#	- ConditionalTermination: the control step or simulation will terminate when one of the conditions has terminated
+#	- CycleCountTermination: the control step or simulation will terminate when the global cycle_index reaches `end_cycle_index`
+#	- ControlStepCountTermination: the control step or simulation will terminate when the global control_step_count reaches `end_control_step_count`
+#
+#############################################################################################################################################################
+
+
+############################################
+# Define the termination types
 
 """
-	TimeTermination(end_time)
+	TimeTermination(end_time, tolerance)
 
 A termination criterion that stops a control step or time-stepping when the time reaches `end_time`.
 """
@@ -11,7 +31,7 @@ end
 
 
 """
-	VoltageTermination(end_voltage,comparison)
+	VoltageTermination(end_voltage,direction. tolerance)
 
 A termination criterion that stops a control step or time-stepping when the voltage reaches `end_voltage`.
 """
@@ -24,7 +44,7 @@ end
 
 
 """
-	VoltageChangeTermination(end_voltage_change,comparison)
+	VoltageChangeTermination(end_voltage_change,tolerance)
 
 A termination criterion that stops a control step or time-stepping when the voltage changes reaches `end_voltage_change`.
 """
@@ -35,7 +55,7 @@ end
 
 
 """
-	CurrentTermination(end_current,comparison)
+	CurrentTermination(end_current,direction,tolerance)
 
 A termination criterion that stops a control step or time-stepping when the current reaches `end_current`.
 """
@@ -47,7 +67,7 @@ mutable struct CurrentTermination <: AbstractTerminationCriterion
 end
 
 """
-	CurrentChangeTermination(end_current_change)
+	CurrentChangeTermination(end_current_change, tolerance)
 
 A termination criterion that stops a control step or time-stepping when the current change reaches `end_current_change`.
 """
@@ -59,7 +79,7 @@ end
 
 
 """
-	ConditionalTermination(end_current_change)
+	ConditionalTermination(condition_1, condition_2)
 
 A termination criterion that stops a control step or time-stepping when one of the conditions has terminated.
 """
@@ -82,17 +102,16 @@ end
 """
 	ControlStepCountTermination(end_control_step_index)
 
-A termination criterion that stops time-stepping when the global control_step_index reaches `end_control_step_index`.
+A termination criterion that stops time-stepping when the global control_step_count reaches `end_control_step_count`.
 """
 struct ControlStepCountTermination <: AbstractTerminationCriterion
 	end_control_step_count::Float64
 end
 
 
+#############################################################
+# Define termination criterion for the end of a control step
 
-###########################################################
-# Termination criterion for the end of a control step
-###########################################################
 
 function get_termination_instance(quantity::Vector{String}, target; direction = "discharge")
 
@@ -256,9 +275,9 @@ function get_status_on_termination_region(T::ConditionalTermination, state)
 end
 
 
-###########################################################
-# Termination criterion for the end of the simulation
-###########################################################
+
+##############################################################
+# Define termination criterion for the end of the simulation
 
 function Jutul.timestepping_is_done(C::CycleCountTermination, simulator, states, substates, reports, solve_recorder)
 

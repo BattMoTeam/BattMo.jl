@@ -54,7 +54,8 @@ function compute_electrode_coating_mass(params::CellParameters, electrode::Strin
 	end
 
 	effective_density = params[electrode]["Coating"]["EffectiveDensity"]
-	area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
+	println(params["Cell"])
+	area = haskey(params["Cell"], "ElectrodeGeometricSurfaceArea") ? params["Cell"]["ElectrodeGeometricSurfaceArea"] : params["Cell"]["ElectrodeWidth"] * params["Cell"]["ElectrodeLength"]
 	thickness = params[electrode]["Coating"]["Thickness"]
 
 	return effective_density * area * thickness
