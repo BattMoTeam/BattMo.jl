@@ -54,6 +54,12 @@ struct PowerStep <: AbstractControlStep
 	end
 end
 
+mutable struct StateOfChargeStep <: AbstractControlStep
+	value::Real
+	termination::AbstractTerminationCriterion
+end
+
+
 
 ###########################################################################
 # Setup the current function that determines the current fot a CurrentStep
@@ -67,6 +73,7 @@ function setup_current_function(current, ramp_up_time, use_ramp_up; direction = 
 end
 
 function get_current_value(time::Real, current::Real, ramp_up_time::Real = 0.1; use_ramp_up = true, direction = "discharging")
+
 	if current isa AbstractString
 		time, ramp_up_time, value = promote(time, ramp_up_time, 0.0)
 
@@ -169,6 +176,10 @@ function get_initial_current(step::VoltageStep)
 	error("Voltage control cannot be the first control step")
 end
 
+function get_initial_current(step::StateOfChargeStep)
+	error("State of charge control cannot be the first control step")
+end
+
 function get_initial_current(step::RestStep)
 	return 0.0
 end
@@ -185,6 +196,15 @@ function update_values_in_controller!(state, step::PowerStep)
 	current = power/voltage
 
 	state.Controller.target = adjust_current_sign(current, step.direction)
+
+end
+
+function update_values_in_controller!(state, step::StateOfChargeStep)
+
+	state_of_charge = step.value
+	voltage = state.Controller.voltage
+
+	state.Controller.target = voltage
 
 end
 

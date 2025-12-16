@@ -15,6 +15,7 @@ using Test
 
 		inputparams = merge_input_params(inputparams_geometry, inputparams)
 
+		inputparams["TimeStepping"]["timeStepDuration"] = 40
 		cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_to_parameter_sets(inputparams)
 
 		model_setup = LithiumIonBattery(; model_settings)
@@ -53,7 +54,7 @@ using Test
 
 
 		output = solve(sim; accept_invalid = true,
-			info_level = -1,
+			info_level = 0,
 			failure_cuts_timestep = false,
 			linear_solver = linear_solver)
 
@@ -62,13 +63,13 @@ using Test
 
 		Cc = map(x -> x[:Control][:Current][1], jutul_states)
 		phi = map(x -> x[:Control][:ElectricPotential][1], jutul_states)
-		@test length(jutul_states) == 73
-		@test Cc[1] ≈ 0.009073153883779286 atol = 1e-4
-		for i in 3:length(Cc)
+		@test length(jutul_states) == 95
+		@test Cc[1] ≈ 0.0 atol = 0.0
+		for i in 6:length(Cc)
 			@test Cc[i] ≈ 0.009073153883779286 atol = 1e-4
 		end
-		@test phi[1] ≈ 3.9917657059881697 atol = 1e-2
-		@test phi[end] ≈ 2.58407097391479 atol = 1e-2
+		@test phi[1] ≈ 4.192911496766219 atol = 1e-2
+		@test phi[end] ≈ 2.5509998796470175 atol = 1e-2
 
 		true
 	end

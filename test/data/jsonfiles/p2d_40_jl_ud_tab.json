@@ -1162,14 +1162,14 @@
    "Control": {
       "controlPolicy": "CCCV",
       "initialControl": "discharging",
-      "numberOfCycles": 1,
+      "numberOfCycles": 2,
       "CRate": 1.0,
       "DRate": 1.0,
       "lowerCutoffVoltage": 2.4,
       "rampupTime": 10.0,
       "upperCutoffVoltage": 4.1,
-      "dIdtLimit": 0.01,
-      "dEdtLimit": 0.01
+      "dIdtLimit": 0.001,
+      "dEdtLimit": 0.001
    },
    "ThermalModel": {
       "externalHeatTransferCoefficient": 1000.0,

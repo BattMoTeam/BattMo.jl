@@ -24,12 +24,26 @@ mutable struct GenericController{R <: Real, I <: Int} <: Controller
 	time::R
 	current::R
 	voltage::R
+	state_of_charge::R
 	target::R
 	dIdt::R
 	dEdt::R
 end
-function GenericController(protocol::GenericProtocol, step::Union{Nothing, AbstractControlStep}, step_count::Int, step_index::Int, cycle_count::Int, time::Real, current::Real, voltage::Real; target::Real = 0.0, dEdt::Real = 0.0, dIdt::Real = 0.0)
-	GenericController{typeof(time), typeof(step_index)}(protocol, step, step_count, step_index, cycle_count, time, current, voltage, target, dIdt, dEdt)
+function GenericController(
+	protocol::GenericProtocol,
+	step::Union{Nothing, AbstractControlStep},
+	step_count::Int,
+	step_index::Int,
+	cycle_count::Int,
+	time::Real,
+	current::Real,
+	voltage::Real,
+	state_of_charge::Real;
+	target::Real = 0.0,
+	dEdt::Real = 0.0,
+	dIdt::Real = 0.0,
+)
+	GenericController{typeof(time), typeof(step_index)}(protocol, step, step_count, step_index, cycle_count, time, current, voltage, state_of_charge, target, dIdt, dEdt)
 end
 
 mutable struct FunctionController{R <: Real} <: Controller
@@ -67,6 +81,7 @@ function copyController!(cv_copy::GenericController, cv::GenericController)
 	cv_copy.time = cv.time
 	cv_copy.current = cv.current
 	cv_copy.voltage = cv.voltage
+	cv_copy.state_of_charge = cv.state_of_charge
 	cv_copy.target = cv.target
 	cv_copy.dEdt = cv.dEdt
 	cv_copy.dIdt = cv.dIdt
@@ -90,7 +105,7 @@ Overload function to copy GenericController
 """
 function Base.copy(cv::GenericController)
 	# Construct using the known type parameter S
-	cv_copy = GenericController(cv.protocol, cv.step, cv.step_count, cv.step_index, cv.cycle_count, cv.time, cv.current, cv.voltage; target = cv.target, dIdt = cv.dIdt, dEdt = cv.dEdt)
+	cv_copy = GenericController(cv.protocol, cv.step, cv.step_count, cv.step_index, cv.cycle_count, cv.time, cv.current, cv.voltage, cv.state_of_charge; target = cv.target, dIdt = cv.dIdt, dEdt = cv.dEdt)
 
 	return cv_copy
 end

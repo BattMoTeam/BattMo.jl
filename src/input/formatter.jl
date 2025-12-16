@@ -81,13 +81,18 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 		error("ModelFramework not recognized. Please use '1D', '3D-demo' or 'jellyRoll'.")
 	end
 
-
 	model_settings = Dict(
 		"ModelFramework" => geom,
 		"TransportInSolid" => "FullDiffusion",
 		"PotentialFlowDiscretization" => "GeneralAD",
 		"ButlerVolmer" => "Standard",
 	)
+
+	if haskey(params["TimeStepping"], "useRampup") && params["TimeStepping"]["useRampup"] == true
+		model_settings["RampUp"] = "Sinusoidal"
+	end
+
+
 
 	if haskey(params["NegativeElectrode"]["Coating"]["ActiveMaterial"], "SEImodel")
 		model_settings["SEIModel"] = "Bolay"
@@ -117,7 +122,7 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 
 	if haskey(model_settings, "RampUp")
 		simulation_settings["RampUpTime"] = params["Control"]["rampupTime"]
-		simulation_settings["RampUpSteps"] = params["TimeStepping"]["numberOfRampupSteps"]
+		simulation_settings["RampUpSteps"] = haskey(params["TimeStepping"], "numberOfRampupSteps") ? params["TimeStepping"]["numberOfRampupSteps"] : 10
 	end
 
 	if model_settings["ModelFramework"] == "P4D Cylindrical"

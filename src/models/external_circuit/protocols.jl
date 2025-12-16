@@ -44,13 +44,14 @@ struct GenericProtocol{V} <: AbstractProtocol where V <: Vector{Int}
 	step_counts::V
 	cycle_counts::V
 	maximum_current::Real
+	rated_capacity::Real
+	initial_state_of_charge::Real
 end
 
 function GenericProtocol(cycling_protocol::Experiment;
 	use_ramp_up = true,
 	ramp_up_time = 0.1,
 	capacity = nothing)
-
 
 	experiment_list = cycling_protocol["Experiment"]
 
@@ -80,14 +81,15 @@ function GenericProtocol(cycling_protocol::Experiment;
 	else
 		maximum_current = maximum(current_values)
 	end
-
-	return GenericProtocol{typeof(stepper.step_indices)}(stepper.steps, stepper.step_indices, stepper.step_counts, stepper.cycle_counts, maximum_current)
+	println(stepper.steps)
+	return GenericProtocol{typeof(stepper.step_indices)}(stepper.steps, stepper.step_indices, stepper.step_counts, stepper.cycle_counts, maximum_current, capacity, cycling_protocol["InitialStateOfCharge"])
 end
 
-function GenericProtocol(cycling_protocol::Experiment, input)
+function GenericProtocol(cycling_protocol::AbstractPolicy, input)
 
 	use_ramp_up = haskey(input.model_settings, "RampUp")
-	ramp_up_time = haskey(input.simulation_settings, "RampUpTime") ? input.simulation_settings["RampUpTime"] : 0.1
+
+	ramp_up_time = haskey(input.simulation_settings, "RampUpTime") ? input.simulation_settings["RampUpTime"] : 100
 
 	if haskey(cycling_protocol, "Capacity")
 		capacity = cycling_protocol["Capacity"]
@@ -95,12 +97,12 @@ function GenericProtocol(cycling_protocol::Experiment, input)
 		capacity = compute_cell_theoretical_capacity(input.cell_parameters)
 	end
 
-	return GenericProtocol(cycling_protocol::Experiment; use_ramp_up = use_ramp_up, ramp_up_time = ramp_up_time, capacity = capacity)
+	return GenericProtocol(cycling_protocol; use_ramp_up = use_ramp_up, ramp_up_time = ramp_up_time, capacity = capacity)
 end
 
 
 
-function GenericProtocol(cycling_protocol::ConstantCurrent, input)
+function GenericProtocol(cycling_protocol::ConstantCurrent; use_ramp_up = false, ramp_up_time = 10, capacity = nothing)
 	total_time = calculate_total_time(cycling_protocol)
 
 	experiment_dict = Dict{String, Any}(
@@ -129,11 +131,11 @@ function GenericProtocol(cycling_protocol::ConstantCurrent, input)
 
 	experiment = Experiment(experiment_dict)
 
-	return GenericProtocol(experiment, input)
+	return GenericProtocol(experiment; use_ramp_up, ramp_up_time, capacity)
 end
 
 
-function GenericProtocol(cycling_protocol::ConstantCurrentConstantVoltage, input)
+function GenericProtocol(cycling_protocol::ConstantCurrentConstantVoltage; use_ramp_up = false, ramp_up_time = 10, capacity = nothing)
 	total_time = calculate_total_time(cycling_protocol)
 
 	experiment_dict = Dict{String, Any}(
@@ -163,7 +165,7 @@ function GenericProtocol(cycling_protocol::ConstantCurrentConstantVoltage, input
 
 	experiment = Experiment(experiment_dict)
 
-	return GenericProtocol(experiment, input)
+	return GenericProtocol(experiment; use_ramp_up, ramp_up_time, capacity)
 end
 
 

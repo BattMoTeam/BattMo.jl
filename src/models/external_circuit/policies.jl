@@ -164,7 +164,7 @@ function parse_experiment_step(step::String, capacity::Real, use_ramp_up::Bool; 
 		elseif control_type == "Power"
 			step_instance = PowerStep(step_processed[:control][:target], step_processed[:control][:direction], termination)
 		else
-			error("Quantity $quantity1 is not recognized as control step for a charge or discharge.")
+			error("Quantity $control_type is not recognized as control step for a charge or discharge.")
 		end
 
 	elseif containsi(step, "Hold")
@@ -172,7 +172,15 @@ function parse_experiment_step(step::String, capacity::Real, use_ramp_up::Bool; 
 
 		termination = get_termination_instance(step_processed[:termination][:type], step_processed[:termination][:target])
 
-		step_instance = VoltageStep(step_processed[:control][:target], termination)
+		control_type = step_processed[:control][:type]
+		if control_type == "Voltage"
+			step_instance = VoltageStep(step_processed[:control][:target], termination)
+		elseif control_type == "StateOfCharge"
+			step_instance = StateOfChargeStep(step_processed[:control][:target], termination)
+		else
+			error("Quantity $control_type is not recognized as control step for a charge or discharge.")
+		end
+
 
 	elseif containsi(step, "Increase cycle count")
 		increase_cycle_count = true
@@ -217,20 +225,20 @@ function process_values(str::AbstractString, capacity)
 				termination_target = parse_number_or_fraction(parts[6])
 				termination_unit = parts[7]
 
-				termination_target, termination_type = type_to_unit(termination_target, termination_unit)
+				termination_target, termination_type = type_to_unit(termination_target, termination_unit; capacity)
 
 			elseif length(parts) > 7 && parts[8] == "or"
 
 				termination_target = parse_number_or_fraction(parts[6])
 				termination_unit = parts[7]
 
-				termination_target, termination_type = type_to_unit(termination_target, termination_unit)
+				termination_target, termination_type = type_to_unit(termination_target, termination_unit; capacity)
 
 				if parts[9] in ["for", "until"]
 
 					termination_target_2 = parse_number_or_fraction(parts[10])
 					termination_unit_2 = parts[11]
-					termination_target_2, termination_type_2 = type_to_unit(termination_target_2, termination_unit_2)
+					termination_target_2, termination_type_2 = type_to_unit(termination_target_2, termination_unit_2; capacity)
 
 					termination_target = [termination_target, termination_target_2]
 					termination_type = [termination_type, termination_type_2]
@@ -315,7 +323,6 @@ function type_to_direction(value::AbstractString)
 end
 
 function type_to_unit(value::Float64, unit::AbstractString; capacity = nothing)
-
 	if containsi(unit, "V")
 		if containsi(unit, "V/")
 			quantity = "VoltageChange"
@@ -332,12 +339,16 @@ function type_to_unit(value::Float64, unit::AbstractString; capacity = nothing)
 			quantity = "Current"
 			return convert_to_A(value, unit), quantity
 		end
-	elseif any(tu -> containsi(unit, tu), time_units())
+	elseif any(tu -> lowercase(unit) == lowercase(tu), time_units())
 		return convert_to_seconds(value, unit), "Time"
+	elseif containsi(unit, "C")
+		if containsi(unit, "SOC")
+			return value, "StateOfCharge"
+		else
+			return convert_to_A(value, unit; capacity), "Current"
+		end
 	elseif containsi(unit, "W")
 		return convert_to_W(value, unit), "Power"
-	elseif containsi(unit, "C")
-		return convert_to_A(value, unit; capacity), "Current"
 	else
 		error("Unknown unit: $unit")
 	end

@@ -49,6 +49,7 @@ function get_output_time_series(jutul_output::NamedTuple; quantities::Union{Noth
 	step_count = hasproperty(states[1][:Control][:Controller], :step_count) ? [state[:Control][:Controller].step_count for state in states] : nothing
 	step_index = hasproperty(states[1][:Control][:Controller], :step_index) ? [state[:Control][:Controller].step_index for state in states] : nothing
 
+	state_of_charge = hasproperty(states[1][:Control][:Controller], :state_of_charge) ? [state[:Control][:Controller].state_of_charge for state in states] : nothing
 
 	# Available data mapping
 	data_map = Dict(
@@ -69,6 +70,10 @@ function get_output_time_series(jutul_output::NamedTuple; quantities::Union{Noth
 
 	if !isnothing(step_index)
 		data_map["StepIndex"] = step_index
+	end
+
+	if !isnothing(state_of_charge)
+		data_map["StateOfCharge"] = state_of_charge
 	end
 
 	if isnothing(quantities)

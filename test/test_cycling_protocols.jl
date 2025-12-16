@@ -85,7 +85,7 @@ using Test
 		I_2 = time_series["Current"]
 
 		@test I_2[5] ≈ I_1[5] * 2 atol = 1e-2
-		@test I_2[60] ≈ I_1[150] * 2 atol = 1e-2
+		@test I_2[50] ≈ I_1[150] * 2 atol = 1e-2
 
 
 		############################

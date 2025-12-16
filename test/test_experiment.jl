@@ -43,7 +43,7 @@ using GLMakie
 		Current = time_series["Current"]
 
 
-		@test length(Current) ≈ 639 atol = 0
+		@test length(Current) ≈ 642 atol = 0
 		@test Voltage[5] ≈ 2.6952925314125666 atol = 1e-1
 		@test Voltage[100] ≈ 3.3778613498753916 atol = 1e-1
 		@test Voltage[200] ≈ 4.0 atol = 1e-1
@@ -90,7 +90,7 @@ using GLMakie
 
 
 
-		@test length(current_2) ≈ 1424 atol = 0
+		@test length(current_2) ≈ 1436 atol = 0
 		@test voltage_2[5] ≈ 2.6952925314125666 atol = 1e-1
 		@test voltage_2[100] ≈ 3.571426080043763 atol = 1e-1
 		@test voltage_2[300] ≈ 3.5423111082816585 atol = 1e-1
@@ -100,7 +100,7 @@ using GLMakie
 		@test current_2[5] ≈ 0.0 atol = 1e-1
 		@test current_2[100] ≈ -2.545210901747287 atol = 1e-1
 		@test current_2[300] ≈ 2.545210901747287 atol = 1e-1
-		@test current_2[500] ≈ -0.4193779601359255 atol = 1e-4
+		@test current_2[500] ≈ -0.4651948979796583 atol = 1e-4
 		@test current_2[end-5] ≈ 0.0 atol = 0
 
 		@test cycle_count_2[5] ≈ 0.0 atol = 0

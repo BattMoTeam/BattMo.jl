@@ -129,6 +129,8 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquati
 			v[] = I - ctrl.target
 		elseif ctrl.step isa PowerStep
 			v[] = I - ctrl.target
+		elseif ctrl.step isa StateOfChargeStep
+			v[] = phi - ctrl.target
 		else
 			error("Step $(ctrl.step) does not have an update equation.")
 		end
@@ -212,11 +214,30 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::ExternalCircu
 		time_in_step = 0.0
 		current = 0.0
 		voltage = 0.0
-		state[:Controller] = GenericController(protocol, step, step_count, step_index, cycle_count, time_in_step, current, voltage)
+		state[:Controller] = GenericController(protocol, step, step_count, step_index, cycle_count, time_in_step, current, voltage, protocol.initial_state_of_charge)
 
 	end
 
 end
+
+
+function compute_state_of_charge(previous_state_of_charge::Real,
+	dt::Real,
+	rated_capacity::Real,
+	current::Real;
+	η_chg::Real = 1.0,
+	η_dis::Real = 1.0)
+
+	# Choose efficiency based on the sign convention: I>0 discharge, I<0 charge
+	η = current >= 0 ? η_dis : η_chg
+
+	# Coulomb counting update; 3600 converts Ah to As
+	soc_next = previous_state_of_charge - (η * current * dt) / (3600.0 * rated_capacity)
+
+	# Clamp to physical bounds
+	return clamp(soc_next, 0.0, 1.0)
+end
+
 
 """
 Implementation of the generic control protocol
@@ -255,6 +276,7 @@ function update_control_step_in_controller!(state, state0, protocol::GenericProt
 	controller = state[:Controller]
 
 	controller.time = state0.Controller.time + dt
+	controller.state_of_charge = compute_state_of_charge(state0.Controller.state_of_charge, dt, protocol.rated_capacity, current)
 	controller.dIdt = dt > 0 ? (abs(current) - abs(current_0)) / dt : 0.0
 	controller.dEdt = dt > 0 ? (voltage - voltage_0) / dt : 0.0
 	controller.current = current
@@ -270,6 +292,7 @@ function update_control_step_in_controller!(state, state0, protocol::GenericProt
 	# Compute region switch flags for previous states
 	# status_previous = setupRegionSwitchFlags(previous_control_step, state0, controller)
 	status_previous = get_status_on_termination_region(previous_control_step.termination, state0)
+
 
 	if status_previous.before_termination_region
 		# We have not entered the switching region in the time step. We are not going to change control.
@@ -298,10 +321,10 @@ function update_control_step_in_controller!(state, state0, protocol::GenericProt
 					# 	# Copy the policy step so we can mutate termination without altering original policy
 					cycle_count = cycle_counts[index]
 					step_index = step_indices[index]
-					control_step = deepcopy(control_steps[index])
+					control_step = control_steps[index]
 
 					# Adjust time-based termination (if needed)
-					adjust_time_based_termination_target!(control_step.termination, controller.time)
+					adjust_time_based_termination_target!(control_step.termination, state0.Controller.time)
 
 				else
 					step_count = step_count
@@ -332,10 +355,10 @@ function update_control_step_in_controller!(state, state0, protocol::GenericProt
 				# 	# Copy the policy step so we can mutate termination without altering original policy
 				cycle_count = cycle_counts[index]
 				step_index = step_indices[index]
-				control_step = deepcopy(control_steps[index])
+				control_step = control_steps[index]
 
 				# Adjust time-based termination (if needed)
-				adjust_time_based_termination_target!(control_step.termination, controller.time)
+				adjust_time_based_termination_target!(control_step.termination, state0.Controller.time)
 
 			else
 				step_count = step_count

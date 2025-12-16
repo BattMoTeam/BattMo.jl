@@ -501,21 +501,16 @@ function setup_submodels(inputparams::MatlabInput)
 			"TotalNumberOfCycles" => 0,
 			"LowerVoltageLimit" => inputparams["Control"]["lowerCutoffVoltage"],
 			"MaximumCurrent" => inputparams["Control"]["Imax"],
+			"DRate" => inputparams["Control"]["DRate"],
+			"InitialStateOfCharge" => inputparams["SOC"],
 		)
 
 		policy = ConstantCurrent(cycling_protocol_dict)
-		protocol = setup_generic_protocol(policy; use_ramp_up = true, ramp_up_time = ramp_up_time)
+		protocol = GenericProtocol(policy; use_ramp_up = true, ramp_up_time = ramp_up_time)
 
 	elseif controlPolicy == "CCCV"
 
 		ctrl = inputparams["Control"]
-
-		policy = CyclingCVPolicy(ctrl["lowerCutoffVoltage"],
-			ctrl["upperCutoffVoltage"],
-			ctrl["dIdtLimit"],
-			ctrl["dEdtLimit"],
-			ctrl["initialControl"],
-			ctrl["numberOfCycles"])
 
 		cycling_protocol_dict = Dict(
 			"Protocol" => "CCCV",
@@ -526,6 +521,8 @@ function setup_submodels(inputparams::MatlabInput)
 			"MaximumCurrent" => ctrl["Imax"],
 			"CurrentChangeLimit" => ctrl["dIdtLimit"],
 			"VoltageChangeLimit" => ctrl["dEdtLimit"],
+			"DRate" => ctrl["DRate"],
+			"CRate" => ctrl["CRate"],
 		)
 
 		ramp_up_time = haskey(ctrl, "rampupTime") ? ctrl["rampupTime"] : nothing
@@ -537,7 +534,7 @@ function setup_submodels(inputparams::MatlabInput)
 		end
 
 		policy = ConstantCurrent(cycling_protocol_dict)
-		protocol = setup_generic_protocol(policy; use_ramp_up = use_ramp_up, ramp_up_time = ramp_up_time)
+		protocol = GenericProtocol(policy; use_ramp_up = use_ramp_up, ramp_up_time = ramp_up_time)
 
 
 	else

@@ -4,8 +4,8 @@ cycling_protocol = CyclingProtocol(
 	Dict(
 		"Protocol" => "Experiment",
 		"TotalTime" => 18000000,
-		"InitialStateOfCharge" => 0.01,
-		"Capacity" => 5,
+		"InitialStateOfCharge" => 0.99,
+		# "Capacity" => 5,
 		"Experiment" =>
 			[
 				"Rest for 1 hour",
@@ -23,6 +23,7 @@ cycling_protocol = CyclingProtocol(
 cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
 simulation_settings = load_simulation_settings(; from_default_set = "p2d")
 simulation_settings["RampUpTime"] = 100
+simulation_settings["TimeStepDuration"] = 20
 
 model_setup = LithiumIonBattery()
 

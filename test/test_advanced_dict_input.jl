@@ -2,11 +2,11 @@ using BattMo
 using Test
 
 names = [
-	# "p2d_40_jl_chen2020",
-	# "p2d_40_jl_ud_func",
+	"p2d_40_jl_chen2020",
+	"p2d_40_jl_ud_func",
 	"p2d_40_jl_ud_tab",
-	# "p2d_40_no_cc",
-	# "p2d_40_cccv",
+	"p2d_40_no_cc",
+	"p2d_40_cccv",
 ]
 
 @testset "basic tests" begin
@@ -16,10 +16,11 @@ names = [
 				fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
 				inputparams = load_advanced_dict_input(fn)
 
+
+				inputparams["Control"]["rampupTime"] = 100
+				inputparams["TimeStepping"]["timeStepDuration"] = 20
+
 				output = run_simulation(inputparams; accept_invalid = true, error_on_incomplete = true)
-				f = plot_dashboard(output)
-				DataInspector(f)
-				f
 
 				true
 			end

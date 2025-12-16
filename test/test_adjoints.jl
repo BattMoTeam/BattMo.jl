@@ -65,7 +65,7 @@ function test_adjoints()
 
 	x0, x_setup = BattMo.vectorize_cell_parameters_for_calibration(vc, vc.sim)
 	x0_copy = deepcopy(x0)
-	setup_battmo_case(X, step_info = missing) = BattMo.setup_battmo_case_for_calibration(X, vc.sim, x_setup, step_info)
+	setup_battmo_case(X, step_info = missing) = BattMo.setup_battmo_case_for_calibration(X, deepcopy(vc.sim), x_setup, step_info)
 	numg = similar(x0)
 	f, = BattMo.solve_and_differentiate_for_calibration(x0, setup_battmo_case, vc, obj, solver_settings, gradient = false)
 	for i in eachindex(numg)

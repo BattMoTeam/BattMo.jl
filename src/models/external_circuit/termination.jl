@@ -26,6 +26,7 @@ A termination criterion that stops a control step or time-stepping when the time
 """
 mutable struct TimeTermination <: AbstractTerminationCriterion
 	end_time::Real
+	end_time_adjusted::Real
 	tolerance::Real
 end
 
@@ -79,6 +80,19 @@ end
 
 
 """
+	StateOfChargeTermination(end_state_of_charge, tolerance)
+
+A termination criterion that stops a control step or time-stepping when the state of charge reaches `end_state_of_charge`.
+"""
+mutable struct StateOfChargeTermination <: AbstractTerminationCriterion
+	end_state_of_charge::Real
+	direction::AbstractString
+	tolerance::Real
+
+end
+
+
+"""
 	ConditionalTermination(condition_1, condition_2)
 
 A termination criterion that stops a control step or time-stepping when one of the conditions has terminated.
@@ -126,15 +140,17 @@ function get_termination_instance(quantity::AbstractString, target; direction = 
 
 
 	if quantity == "Voltage"
-		return VoltageTermination(target, direction, 1e-4)
+		return VoltageTermination(target, direction, 1e-3)
 	elseif quantity == "VoltageChange"
-		return VoltageChangeTermination(target, 1e-3)
+		return VoltageChangeTermination(target, 1e-1)
 	elseif quantity == "Current"
 		return CurrentTermination(target, direction, 1e-4)
 	elseif quantity == "CurrentChange"
-		return CurrentChangeTermination(target, 1e-4)
+		return CurrentChangeTermination(target, 1e-1)
 	elseif quantity == "Time"
-		return TimeTermination(target, 1e-2)
+		return TimeTermination(target, target, 1e-3)
+	elseif quantity == "StateOfCharge"
+		return StateOfChargeTermination(target, direction, 1e-3)
 	else
 		error("Unknown quantity: $quantity")
 	end
@@ -143,8 +159,7 @@ end
 
 function adjust_time_based_termination_target!(termination::TimeTermination, time)
 
-	termination.end_time < time
-	termination.end_time = time + termination.end_time
+	termination.end_time_adjusted = time + termination.end_time
 end
 
 function adjust_time_based_termination_target!(termination::ConditionalTermination, time)
@@ -157,7 +172,7 @@ function adjust_time_based_termination_target!(termination::ConditionalTerminati
 	end
 end
 
-function adjust_time_based_termination_target!(termination::T, time) where T <: Union{VoltageTermination, VoltageChangeTermination, CurrentTermination, CurrentChangeTermination}
+function adjust_time_based_termination_target!(termination::T, time) where T <: Union{VoltageTermination, VoltageChangeTermination, CurrentTermination, CurrentChangeTermination, StateOfChargeTermination}
 end
 
 
@@ -168,7 +183,7 @@ The get_status_on_termination_region function detects from the current state and
 """
 function get_status_on_termination_region(T::VoltageTermination, state)
 	target = T.end_voltage
-	tol = T.tolerance #1e-4
+	tol = T.tolerance
 
 	E = only(state.Controller.voltage)
 
@@ -183,13 +198,12 @@ function get_status_on_termination_region(T::VoltageTermination, state)
 		after  = E > target * (1 + tol)
 	end
 
-
 	return (before_termination_region = before, after_termination_region = after)
 end
 
 function get_status_on_termination_region(T::VoltageChangeTermination, state)
 	target = T.end_voltage_change
-	tol = T.tolerance #1e-4
+	tol = T.tolerance #1e-1
 
 	dEdt = state.Controller.dEdt
 
@@ -225,9 +239,10 @@ end
 
 function get_status_on_termination_region(T::CurrentChangeTermination, state)
 	target = T.end_current_change
-	tol = T.tolerance #1e-4
+	tol = T.tolerance #1e-1
 
 	dIdt = state.Controller.dIdt
+
 
 	before = false
 	after = false
@@ -241,7 +256,7 @@ end
 function get_status_on_termination_region(T::TimeTermination, state)
 	t = state.Controller.time
 
-	target = T.end_time
+	target = T.end_time_adjusted
 	tol = T.tolerance #1e-1
 
 	before = false
@@ -249,6 +264,31 @@ function get_status_on_termination_region(T::TimeTermination, state)
 
 	before = t < target - tol
 	after  = t > target + tol
+
+	return (before_termination_region = before, after_termination_region = after)
+end
+
+"""
+The get_status_on_termination_region function detects from the current state and control, if we are in the termination region. The functions return two flags :
+- before_termination_region : the state is before the termination region for the current control
+- after_termination_region : the state is after the termination region for the current control
+"""
+function get_status_on_termination_region(T::StateOfChargeTermination, state)
+	target = T.end_state_of_charge
+	tol = T.tolerance
+
+	state_of_charge = only(state.Controller.state_of_charge)
+
+	before = false
+	after = false
+
+	if isnothing(T.direction) || T.direction == "discharging"
+		before = state_of_charge > target * (1 + tol)
+		after  = state_of_charge < target * (1 - tol)
+	elseif T.direction == "charging"
+		before = state_of_charge < target * (1 - tol)
+		after  = state_of_charge > target * (1 + tol)
+	end
 
 	return (before_termination_region = before, after_termination_region = after)
 end

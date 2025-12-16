@@ -1,5 +1,6 @@
 using BattMo
 using Test
+using GLMakie
 
 @testset "current function" begin
 
@@ -18,7 +19,7 @@ using Test
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 
 		output = solve(sim)
-
+		plot_dashboard(output)
 		true
 	end
 

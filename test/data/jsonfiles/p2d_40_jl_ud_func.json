@@ -151,8 +151,8 @@
     "DRate": 1,
     "lowerCutoffVoltage": 2.4,
     "upperCutoffVoltage": 4.1,
-    "dIdtLimit": 0.01,
-    "dEdtLimit": 0.01,
+    "dIdtLimit": 0.001,
+    "dEdtLimit": 0.001,
     "rampupTime": 10
   },
   "Electrolyte": {
