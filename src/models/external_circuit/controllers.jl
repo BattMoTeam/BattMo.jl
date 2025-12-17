@@ -30,20 +30,22 @@ mutable struct GenericController{R <: Real, I <: Int} <: Controller
 	dEdt::R
 end
 function GenericController(
-	protocol::GenericProtocol,
-	step::Union{Nothing, AbstractControlStep},
-	step_count::Int,
-	step_index::Int,
-	cycle_count::Int,
-	time::Real,
-	current::Real,
-	voltage::Real,
-	state_of_charge::Real;
-	target::Real = 0.0,
-	dEdt::Real = 0.0,
-	dIdt::Real = 0.0,
-)
-	GenericController{typeof(time), typeof(step_index)}(protocol, step, step_count, step_index, cycle_count, time, current, voltage, state_of_charge, target, dIdt, dEdt)
+		protocol::GenericProtocol,
+		step::Union{Nothing, AbstractControlStep},
+		step_count::Int,
+		step_index::Int,
+		cycle_count::Int,
+		time::Real,
+		current::Real,
+		voltage::Real,
+		state_of_charge::Real;
+		target::Real = 0.0,
+		dEdt::Real = 0.0,
+		dIdt::Real = 0.0,
+		T = Float64
+	)
+	T = promote_type(T, typeof(time), typeof(current), typeof(voltage), typeof(state_of_charge), typeof(target), typeof(dEdt), typeof(dIdt))
+	GenericController{T, typeof(step_index)}(protocol, step, step_count, step_index, cycle_count, time, current, voltage, state_of_charge, target, dIdt, dEdt)
 end
 
 mutable struct FunctionController{R <: Real} <: Controller

@@ -214,7 +214,7 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::ExternalCircu
 		time_in_step = 0.0
 		current = 0.0
 		voltage = 0.0
-		state[:Controller] = GenericController(protocol, step, step_count, step_index, cycle_count, time_in_step, current, voltage, protocol.initial_state_of_charge)
+		state[:Controller] = GenericController(protocol, step, step_count, step_index, cycle_count, time_in_step, current, voltage, protocol.initial_state_of_charge, T = T)
 
 	end
 
