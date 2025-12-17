@@ -6,7 +6,7 @@
 # This script defines policies:
 #	- ConstantCurrent: a constant current control
 #	- ConstantCurrentConstantVoltage: a constant current constant voltage control
-# 	- Experiment: a flexible experiment like control
+# 	- Experiment: a flexible experiment-like control
 #
 # These policy types are defined to create different user APIs for the generic control. The user can use the flexible 
 # experiment strings API or the specific policy ConstantCurrent or ConstantCurrentConstantVoltage API
