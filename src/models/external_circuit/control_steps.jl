@@ -6,6 +6,7 @@
 #	- VoltageStep: voltage controlled control step
 #	- RestStep: control step where the current is set to zero
 #	- PowerStep: power controlled control step
+#	- StateOfChargeStep: SOC controlled control step
 #######################################################################################################################
 
 ##################################################

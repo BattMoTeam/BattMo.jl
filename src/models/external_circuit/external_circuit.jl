@@ -257,6 +257,7 @@ function update_control_step_in_controller!(state, state0, protocol::GenericProt
 	index_to_stepcount(index::Integer) = clamp(index - 1, 0, number_of_control_steps - 1)      # index 1 -> stepnum 0
 
 	# --- Extract scalars safely ---
+	@info "type = ", typeof(state[:ElectricPotential])
 	voltage_values = value(state[:ElectricPotential])
 	current_values = value(state[:Current])
 	voltage_0_values = value(state0[:ElectricPotential])

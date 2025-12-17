@@ -81,7 +81,7 @@ function GenericProtocol(cycling_protocol::Experiment;
 	else
 		maximum_current = maximum(current_values)
 	end
-	println(stepper.steps)
+
 	return GenericProtocol{typeof(stepper.step_indices)}(stepper.steps, stepper.step_indices, stepper.step_counts, stepper.cycle_counts, maximum_current, capacity, cycling_protocol["InitialStateOfCharge"])
 end
 

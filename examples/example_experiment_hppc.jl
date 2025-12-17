@@ -4,42 +4,21 @@ cycling_protocol = CyclingProtocol(
 	Dict(
 		"Protocol" => "Experiment",
 		"TotalTime" => 18000000,
-		"InitialStateOfCharge" => 0.99,
-		# "Capacity" => 5,
+		"InitialStateOfCharge" => 0.8,
 		"Experiment" =>
 			[
-				"Discharge at 1 C until 2.5 V",
-				"Charge at 1 C until 0.8 SOC",
-				"Rest for 20 minutes",
-
-				# SOC 90%
-				# "Discharge at 0.05 C until 0.90 SOC",
-				# "Rest for 20 minutes",
-				# "Hold at 0.90 SOC until 0.001 C or until 1 hour",
-				# "Rest for 20 minutes",
-				# "Charge at 0.1 C for 0.6 seconds",
-				# "Discharge at 0.1 C for 0.6 seconds",
-
-				# # Repeat for 80% 
-				# "Discharge at 0.05 C until 0.80 SOC",
-				# "Rest for 20 minutes",
-				# "Hold at 0.80 SOC until 0.001 C",
-				# "Rest for 20 minutes",
-				# "Charge at 0.1 C for 0.6 seconds",
-				# "Discharge at 0.1 C for 0.6 seconds",
-
-				# Repeat for 70%
+				# State of charge 70%
 				"Discharge at 0.05 C until 0.70 SOC",
 				"Rest for 20 minutes",
-				"Hold at 0.70 SOC until 0.001 C",
+				"Hold at 0.70 SOC until 0.001 C or for 4 hours",
 				"Rest for 20 minutes",
 				"Charge at 0.1 C for 0.6 seconds",
 				"Discharge at 0.1 C for 0.6 seconds",
 
-				# # Repeat for 60%
+				# Repeat for 60%
 				"Discharge at 0.05 C until 0.60 SOC",
 				"Rest for 20 minutes",
-				"Hold at 0.60 SOC until 0.001 C",
+				"Hold at 0.60 SOC until 0.001 C or for 4 hours",
 				"Rest for 20 minutes",
 				"Charge at 0.1 C for 0.6 seconds",
 				"Discharge at 0.1 C for 0.6 seconds",
@@ -47,7 +26,7 @@ cycling_protocol = CyclingProtocol(
 				# # Repeat for 50%
 				"Discharge at 0.05 C until 0.50 SOC",
 				"Rest for 20 minutes",
-				"Hold at 0.50 SOC until 0.001 C",
+				"Hold at 0.50 SOC until 0.001 C or for 4 hours",
 				"Rest for 20 minutes",
 				"Charge at 0.1 C for 0.6 seconds",
 				"Discharge at 0.1 C for 0.6 seconds",
@@ -55,7 +34,7 @@ cycling_protocol = CyclingProtocol(
 				# # Repeat for 40%
 				"Discharge at 0.05 C until 0.40 SOC",
 				"Rest for 20 minutes",
-				"Hold at 0.40 SOC until 0.001 C",
+				"Hold at 0.40 SOC until 0.001 C or for 4 hours",
 				"Rest for 20 minutes",
 				"Charge at 0.1 C for 0.6 seconds",
 				"Discharge at 0.1 C for 0.6 seconds",
@@ -63,18 +42,18 @@ cycling_protocol = CyclingProtocol(
 				# # Repeat for 30%
 				"Discharge at 0.05 C until 0.30 SOC",
 				"Rest for 20 minutes",
-				"Hold at 0.30 SOC until 0.001 C",
+				"Hold at 0.30 SOC until 0.001 C or for 4 hours",
 				"Rest for 20 minutes",
 				"Charge at 0.1 C for 0.6 seconds",
 				"Discharge at 0.1 C for 0.6 seconds",
 
-				# # Repeat for 20%
-				# "Discharge at 0.05 C until 0.20 SOC",
-				# "Rest for 20 minutes",
-				# "Hold at 0.20 SOC until 0.001 C or",
-				# "Rest for 20 minutes",
-				# "Charge at 0.1 C for 0.6 seconds",
-				# "Discharge at 0.1 C for 0.6 seconds",
+				# Repeat for 20%
+				"Discharge at 0.05 C until 0.20 SOC",
+				"Rest for 20 minutes",
+				"Hold at 0.20 SOC until 0.001 C or for 4 hours",
+				"Rest for 20 minutes",
+				"Charge at 0.1 C for 0.6 seconds",
+				"Discharge at 0.1 C for 0.6 seconds",
 
 				# # Repeat for 10%
 				# "Discharge at 0.5 C until 0.10 SOC or until 30 minutes",
@@ -104,48 +83,51 @@ sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_sett
 output = solve(sim; info_level = 0)
 
 
-f = plot_dashboard(output)
-
-DataInspector(f)
-f
-
-# f2 = plot_output(output, ["Voltage vs Time", "CycleCount vs Time", "StepIndex vs Time", "StepCount vs Time"], layout = (4, 1))
-# DataInspector(f2)
-# f2
-# cycling_protocol2 = load_cycling_protocol(from_default_set = "cccv")
-
-# sim2 = Simulation(model_setup, cell_parameters, cycling_protocol2; simulation_settings)
-
-# output2 = solve(sim2; info_level = 0)
-
-
-# f = Figure(size = (1000, 400))
-
-# ax = Axis(f[1, 1],
-# 	title = "Length",
-# 	xlabel = "Cycle steps / s",
-# 	ylabel = "Cycle number / V",
-# 	xlabelsize = 25,
-# 	ylabelsize = 25,
-# 	xticklabelsize = 25,
-# 	yticklabelsize = 25,
-# )
-
-# # Example data
-# xs = output.time_series["StepNumber"]
-# ys = output.time_series["CycleNumber"]
-
-# # Create custom tooltips for each point
-# tooltips = ["Step: $(x), Cycle: $(y)" for (x, y) in zip(xs, ys)]
-
-# line1 = scatterlines!(ax, xs, ys;
-# 	linewidth = 10,
-# 	markersize = 10,
-# 	marker = :cross,
-# 	markercolor = :black,
-# 	# tooltip = tooltips,
-# )
+# f = plot_dashboard(output)
 
 # DataInspector(f)
 # f
 
+
+f = Figure(size = (1000, 400))
+
+ax = Axis(f[2, 1],
+	title = "Voltage",
+	xlabel = "Time / h",
+	ylabel = "Voltage / V",
+	xlabelsize = 25,
+	ylabelsize = 25,
+	xticklabelsize = 25,
+	yticklabelsize = 25,
+)
+
+scatterlines!(ax,
+	output.time_series["Time"] / 3600,
+	output.time_series["Voltage"];
+	linewidth = 4,
+	# markersize = 10,
+	# marker = :cross,
+	# markercolor = :black,
+)
+
+
+ax = Axis(f[1, 1],
+	title = "Current",
+	xlabel = "Time / h",
+	ylabel = "Current / A",
+	xlabelsize = 25,
+	ylabelsize = 25,
+	xticklabelsize = 25,
+	yticklabelsize = 25,
+)
+
+scatterlines!(ax,
+	output.time_series["Time"] / 3600,
+	output.time_series["Current"];
+	linewidth = 4,
+	# markersize = 10,
+	# marker = :cross,
+	# markercolor = :black,
+)
+
+f

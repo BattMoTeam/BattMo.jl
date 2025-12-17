@@ -1,7 +1,7 @@
 #############################################################################################################################################################
 # Termination Criterion
 #
-# A termination criterion is an instance describing when a control step of simulation should terminate.
+# A termination criterion is an instance describing when a control step or simulation should terminate.
 #
 # This script defines termination types:
 #	- TimeTermination: the control step or simulation will terminate when the time reaches `end_time`
@@ -127,7 +127,7 @@ end
 # Define termination criterion for the end of a control step
 
 
-function get_termination_instance(quantity::Vector{String}, target; direction = "discharge")
+function get_termination_instance(quantity::Vector{String}, target; direction = "discharging")
 
 	termination_1 = get_termination_instance(quantity[1], target[1]; direction)
 	termination_2 = get_termination_instance(quantity[2], target[2]; direction)
@@ -136,7 +136,7 @@ function get_termination_instance(quantity::Vector{String}, target; direction = 
 
 end
 
-function get_termination_instance(quantity::AbstractString, target; direction = "discharge")
+function get_termination_instance(quantity::AbstractString, target; direction = "discharging")
 
 
 	if quantity == "Voltage"
@@ -221,18 +221,21 @@ function get_status_on_termination_region(T::CurrentTermination, state)
 	target = T.end_current
 	tol = T.tolerance #1e-4
 
-	I = only(state.Controller.current)
+	current = only(state.Controller.current)
 
 	before = false
 	after = false
 
 	if isnothing(T.direction) || T.direction == "discharging"
-		before = abs(I) > target * (1 + tol)
-		after  = abs(I) < target * (1 - tol)
+		before = abs(current) > target * (1 + tol)
+		after  = abs(current) < target * (1 - tol)
+
 	elseif T.direction == "charging"
-		before = abs(I) < target * (1 - tol)
-		after  = abs(I) > target * (1 + tol)
+		before = abs(current) < target * (1 - tol)
+		after  = abs(current) > target * (1 + tol)
 	end
+
+
 
 	return (before_termination_region = before, after_termination_region = after)
 end
@@ -242,7 +245,6 @@ function get_status_on_termination_region(T::CurrentChangeTermination, state)
 	tol = T.tolerance #1e-1
 
 	dIdt = state.Controller.dIdt
-
 
 	before = false
 	after = false
