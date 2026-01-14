@@ -45,7 +45,7 @@ print_info("concentration", view = "OutputVariable")
 # As the time series, states, and metrics structures are dicts we can retrieve quantities by accessing their key. Let's for example create a simple voltage vs capacity plot.
 
 voltage = output.time_series["Voltage"]
-capacity = output.time_series["Capacity"]
+capacity = output.time_series["CumulativeCapacity"]
 
 fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Capacity / Ah", title = "Discharge curve")

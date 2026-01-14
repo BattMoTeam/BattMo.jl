@@ -31,14 +31,20 @@ jobs:
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v1
       - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
+
+      - name: Run tests with coverage
+        run: julia --project=. -e 'using Pkg; Pkg.test("BattMo"; coverage=true)'
+
+      - name: Coverage threshold
+        run: |
+          julia --project=. -e '
+            include("test/coverage/report_coverage.jl")
+           '
       - uses: julia-actions/julia-processcoverage@v1
-      - uses: codecov/codecov-action@v2
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
         with:
-          files: lcov.info
-      # - uses: julia-actions/julia-uploadcoveralls@v1
-      #  env:
-      #    COVERALLS_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
+          token: ${{ secrets.CODECOV_TOKEN }}
   docs:
     name: Documentation
     runs-on: ubuntu-latest
