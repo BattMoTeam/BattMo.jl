@@ -57,8 +57,8 @@ function remove_cells(G_raw::AbstractDict, cells)
 	G["cells"]["faces"] = G["cells"]["faces"][RemoveIndices, :]
 
 	n = G["faces"]["neighbors"]
-	G["faces"]["neighbors"][n[:, 1].>0, 1] = cellmap[n[n[:, 1].>0, 1]]
-	G["faces"]["neighbors"][n[:, 2].>0, 2] = cellmap[n[n[:, 2].>0, 2]]
+	G["faces"]["neighbors"][n[:, 1] .> 0, 1] = cellmap[n[n[:, 1] .> 0, 1]]
+	G["faces"]["neighbors"][n[:, 2] .> 0, 2] = cellmap[n[n[:, 2] .> 0, 2]]
 
 
 	numFaces = numFaces[.!ind]
@@ -114,5 +114,9 @@ function remove_cells(G_raw::AbstractDict, cells)
 	facemap = findall(!iszero, facemap)
 	nodemap = findall(!iszero, nodemap)
 
-	return G, cellmap, facemap, nodemap
+	maps = (cellmap = cellmap,
+		facemap = facemap,
+		nodemap = nodemap)
+
+	return G, maps
 end

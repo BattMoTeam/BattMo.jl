@@ -53,6 +53,7 @@ struct Simulation <: AbstractSimulation
 	couplings::Any
 	parameters::Any
 	simulator::Any
+	global_maps::Any
 
 
 	function Simulation(
@@ -100,8 +101,9 @@ struct Simulation <: AbstractSimulation
 				forces = sim_cfg.forces
 				simulator = sim_cfg.simulator
 				time_steps = sim_cfg.time_steps
+				global_maps = sim_cfg.global_maps
 
-				return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator)
+				return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator, global_maps)
 			catch e
 				if is_valid == false
 					error(
@@ -134,10 +136,10 @@ end
 function simulation_configuration(model, input)
 
 	# Setup grids and couplings
-	grids, couplings = setup_grids_and_couplings(model, input)
+	grids, couplings, global_maps = setup_grids_and_couplings(model, input)
 
 	# Setup simulation
-	model, parameters = setup_model!(model, input, grids, couplings)
+	model, parameters, global_maps = setup_model!(model, input, grids, couplings)
 
 	# setup initial state
 	initial_state = setup_initial_state(input, model)
@@ -159,6 +161,7 @@ function simulation_configuration(model, input)
 		forces = forces,
 		simulator = simulator,
 		time_steps = time_steps,
+		global_maps = global_maps,
 	)
 
 end

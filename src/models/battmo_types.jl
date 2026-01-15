@@ -6,16 +6,18 @@ export BCCurrent
 export TPFAInterfaceFluxCT, ButlerVolmerActmatToElyteCT, ButlerVolmerElyteToActmatCT, ButlerVolmerInterfaceFluxCT
 export BoundaryDirichletFaces
 
+struct BoundaryDirichletFaces <: Jutul.JutulEntity end
+
 abstract type BattMoSystem <: JutulSystem end
 # Alias for a general electro-chemical model
-
-const BattMoModel = SimulationModel{<:Any, <:BattMoSystem, <:Any, <:Any}
-
-struct BoundaryDirichletFaces <: JutulEntity end
 
 function Base.getindex(system::BattMoSystem, key::Symbol)
 	return system.params[key]
 end
+
+const BattMoModel = SimulationModel{<:Any, <:BattMoSystem, <:Any, <:Any}
+
+const BatteryModel = MultiModel{:Battery}
 
 abstract type BattMoGrid <: JutulMesh end
 
@@ -79,29 +81,29 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
 	"""
 	Simple grid for a electro chemical component
 	"""
-    volumes::V
+	volumes::V
 
 	neighborship::N    # Internal faces only
-    halftransfaces::NT # half transmissibilities for the internal faces
+	halftransfaces::NT # half transmissibilities for the internal faces
 
-    cell_face_tbl::N  # cell-face pairs
-    cell_face_hT::BT  # value of the half-transmissibility for the corresponding cell-face pair
+	cell_face_tbl::N  # cell-face pairs
+	cell_face_hT::BT  # value of the half-transmissibility for the corresponding cell-face pair
 
-    P::M              # Tensor to map from cells to faces, not used for the moment
+	P::M              # Tensor to map from cells to faces, not used for the moment
 	S::M              # Tensor map cell vector to cell scalar, not used for the moment
-    
+
 	vol_frac::V
 
 	function MinimalTpfaGrid(volumes,
-                             N,
-                             N_hT,
-                             cf,  # cell-face pairs
-                             cf_hT,  # value of the half-transmissibility for the corresponding cell-face pair
-                             vf)
+		N,
+		N_hT,
+		cf,  # cell-face pairs
+		cf_hT,  # value of the half-transmissibility for the corresponding cell-face pair
+		vf)
 
-        nc = length(volumes)
+		nc = length(volumes)
 
-        volumes::AbstractVector
+		volumes::AbstractVector
 		@assert all(volumes .> 0)
 
 		@assert size(N, 1) == 2
@@ -109,10 +111,10 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
 			@assert minimum(N) > 0
 			@assert maximum(N) <= nc
 		end
-        
-        nf = size(N, 2)
-        @assert size(N_hT, 1) == 2
-        @assert size(N_hT, 2) == nf
+
+		nf = size(N, 2)
+		@assert size(N_hT, 1) == 2
+		@assert size(N_hT, 2) == nf
 
 		if isempty(vf)
 			vf = 1
@@ -121,25 +123,25 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
 			vf = vf * ones(nc)
 		end
 
-        P = []
-        S = []
-        
+		P = []
+		S = []
+
 		return new{typeof(volumes),
-                   typeof(N),
-                   typeof(N_hT),
-                   typeof(cf),
-                   typeof(cf_hT),
-                   typeof(P)}(volumes,
-                              N,
-                              N_hT,
-                              cf,
-                              cf_hT,
-                              P,
-                              S,
-                              vf)
+			typeof(N),
+			typeof(N_hT),
+			typeof(cf),
+			typeof(cf_hT),
+			typeof(P)}(volumes,
+			N,
+			N_hT,
+			cf,
+			cf_hT,
+			P,
+			S,
+			vf)
 
 	end
-    
+
 end
 
 function Jutul.declare_entities(G::MinimalTpfaGrid)
@@ -151,7 +153,7 @@ function Jutul.declare_entities(G::MinimalTpfaGrid)
 end
 
 function Base.getindex(grid::MinimalTpfaGrid, key::Symbol)
-    return getfield(grid, key)
+	return getfield(grid, key)
 end
 
 

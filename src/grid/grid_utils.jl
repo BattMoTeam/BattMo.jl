@@ -19,8 +19,8 @@ export
 function find_coupling(maps1, maps2, modelname = "placeholder")
 	Coupling = Dict()
 	Coupling["model"] = modelname
-	Coupling["cells"] = find_common(maps1[1], maps2[1])
-	Coupling["faces"] = find_common(maps1[2], maps2[2])
+	Coupling["cells"] = find_common(maps1[:cellmap], maps2[:cellmap])
+	Coupling["faces"] = find_common(maps1[:facemap], maps2[:facemap])
 	return Coupling
 end
 
@@ -150,7 +150,7 @@ function convert_geometry(grids, couplings; include_current_collectors = true)
 						rface = face
 						rawfaces = grid["faces"]
 						lnodePos = rawfaces["nodePos"][rface:(rface+1)]
-						lnodes = Set(rawfaces["nodes"][lnodePos[1]:lnodePos[2]-1])
+						lnodes = Set(rawfaces["nodes"][lnodePos[1]:(lnodePos[2]-1)])
 						count = 0
 
 						for lfi in eachindex(candidates)

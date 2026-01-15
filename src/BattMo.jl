@@ -235,6 +235,8 @@ include("models/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")
 
+include("utils/assembly.jl")
+
 include("simulation/simulation.jl")
 include("simulation/simulation_utils.jl")
 include("simulation/simulation_wrappers.jl")

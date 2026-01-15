@@ -13,7 +13,7 @@ function get_neigh(c, model)
     (T = a, face = b, self = c, other = d)
     of all neighbours of cell c.
     """
-    mf        = model.domain.discretizations.charge_flow
+    mf        = model.domain.discretizations.flow
     conn_pos  = mf.conn_pos
     conn_data = mf.conn_data
     indx      = conn_pos[c]:(conn_pos[c + 1] - 1)
@@ -38,7 +38,7 @@ function face_to_cell!(j_cell, J, c, model)
     """
 
     P        = model.domain.representation.P
-    mf       = model.domain.discretizations.charge_flow
+    mf       = model.domain.discretizations.flow
     cfcv     = mf.cellfacecellvec
     cfcv2ccv = mf.maps.cfcv2ccv
     cfcv2fc  = mf.maps.cfcv2fc
@@ -60,7 +60,7 @@ function vec_to_scalar!(jsq, j, c, model)
     jsq[c, c'] = S[c, 2*(c-1) + i] * j[c, c', i]^2
     """
     S      = model.domain.representation.S
-    mf     = model.domain.discretizations.charge_flow
+    mf     = model.domain.discretizations.flow
     ccv    = mf.cellcellvec
     ccv2cc = mf.maps.ccv2cc
     

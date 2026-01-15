@@ -128,6 +128,7 @@ function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:C
 end
 
 function Jutul.face_flux!(::T, cell, other_cell, face, face_sign, eq::ConservationLaw{:Energy, <:Any}, state, model, dt, flow_disc) where T
+function Jutul.face_flux!(::T, cell, other_cell, face, face_sign, eq::ConservationLaw{:Energy, <:Any}, state, model, dt, flow_disc) where T
 
 	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
 	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Temperature, state.Conductivity)

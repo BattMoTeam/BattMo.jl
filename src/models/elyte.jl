@@ -174,7 +174,7 @@ end
 	""" Compute the diffusion coefficient as a function of concentration
 	"""
 	# Calculate diffusion coefficients constant for the diffusion coefficient calculation
-	cnst = [                                                                                                                                                        -4.43 -54
+	cnst = [                                                                                                                                                            -4.43 -54
 		-0.22 0.0]
 
 	Tgi = [229 5.0]

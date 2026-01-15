@@ -14,7 +14,7 @@ function setup_multimodel(model::IntercalationBattery, submodels, input; use_gro
 				PositiveElectrodeActiveMaterial = submodels.model_peam,
 				Control = submodels.model_control,
 			),
-			Val(:IntercalationBattery);
+			:IntercalationBattery;
 			groups = groups)
 	else
 		models = (
@@ -36,7 +36,7 @@ function setup_multimodel(model::IntercalationBattery, submodels, input; use_gro
 		end
 
 		multimodel = MultiModel(models,
-			Val(:IntercalationBattery);
+			:IntercalationBattery;
 			groups = groups, reduction = reduction)
 
 	end

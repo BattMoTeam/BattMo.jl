@@ -14,10 +14,12 @@ function CurrentCollector(params::CurrentCollectorParameters, scalings = Dict())
 	return CurrentCollector{typeof(params), typeof(scalings)}(params, scalings)
 end
 
-
 function CurrentCollector()
 	CurrentCollector(Dict())
 end
+
+const CurrentCollectorModel = SimulationModel{O, S} where {O <: JutulDomain, S <: CurrentCollector}
+
 
 function Jutul.select_minimum_output_variables!(out,
 	system::CurrentCollector, model::SimulationModel,
@@ -52,10 +54,10 @@ function Jutul.select_parameters!(S,
 
 end
 
-function Jutul.select_equations!(eqs,
+function select_equations!(eqs,
 	system::CurrentCollector,
 	model::SimulationModel)
-	disc = model.domain.discretizations.flow
+	disc = model.domain.discretizations.charge_flow
 
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 

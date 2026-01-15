@@ -53,20 +53,24 @@ function setup_grids_and_couplings(model::M, input) where {M <: Battery}
 
 		grids, couplings = one_dimensional_grid(input)
 
+		error("we should return the global map")
+
 	elseif case_type == "P4D Pouch"
 
-		grids, couplings = pouch_grid(input)
+		grids, couplings, global_maps = pouch_grid(input)
 
 	elseif case_type == "P4D Cylindrical"
 
 		grids, couplings = jelly_roll_grid(input)
+
+		error("we should return the global map")
 
 	else
 		error("geometry case type not recognized")
 
 	end
 
-	return grids, couplings
+	return grids, couplings, global_maps
 
 end
 
@@ -78,7 +82,7 @@ function setup_component(grid::FiniteVolumeMesh,
 
 	domain = DataDomain(grid)
 
-	# opertors only use geometry not property
+	# operators only use geometry not property
 	k = ones(number_of_cells(grid))
 
 	T    = compute_face_trans(domain, k)
@@ -125,28 +129,28 @@ end
 ######################
 
 function getTrans(model1::Dict{String, <:Any},
-	              model2::Dict{String, Any},
-	              faces,
-	              cells,
-	              quantity::String)
+	model2::Dict{String, Any},
+	faces,
+	cells,
+	quantity::String)
 	""" setup transmissibility for coupling between models at boundaries"""
 
 	hT1 = getHalfTrans(model1, faces[:, 1], cells[:, 1], quantity)
 	hT2 = getHalfTrans(model2, faces[:, 2], cells[:, 2], quantity)
 
-	T = 1.0 ./ (1.0./hT1 + 1.0./hT2)
+	T = 1.0 ./ (1.0 ./ hT1 + 1.0 ./ hT2)
 
 	return T
 
 end
 
 function getTrans(model1::SimulationModel,
-	              model2::SimulationModel,
-	              bcfaces,
-	              bccells,
-	              parameters1,
-	              parameters2,
-	              quantity)
+	model2::SimulationModel,
+	bcfaces,
+	bccells,
+	parameters1,
+	parameters2,
+	quantity)
 	""" setup transmissibility for coupling between models at boundaries."""
 
 	d1 = physical_representation(model1)

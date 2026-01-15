@@ -21,6 +21,7 @@ struct NoParticleDiffusion <: SolidDiffusionDiscretization end
 
 abstract type AbstractActiveMaterial{label} <: BattMoSystem end
 
+
 activematerial_label(::AbstractActiveMaterial{label}) where label = label
 
 struct ActiveMaterial{label, D, T, Di} <: AbstractActiveMaterial{label} where {D <: SolidDiffusionDiscretization, T <: ActiveMaterialParameters, Di <: AbstractDict}
@@ -219,12 +220,12 @@ function Jutul.select_secondary_variables!(S,
 end
 
 
-function Jutul.select_equations!(eqs,
+function select_equations!(eqs,
 	system::ActiveMaterialP2D,
 	model::SimulationModel,
 )
 
-	disc                      = model.domain.discretizations.flow
+	disc                      = model.domain.discretizations.charge_flow
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 	eqs[:mass_conservation]   = SolidMassCons()
 	eqs[:solid_diffusion_bc]  = SolidDiffusionBc()
@@ -524,12 +525,12 @@ function Jutul.select_parameters!(S,
 
 end
 
-function Jutul.select_equations!(eqs,
+function select_equations!(eqs,
 	system::ActiveMaterialNoParticleDiffusion,
 	model::SimulationModel,
 )
 
-	disc                      = model.domain.discretizations.flow
+	disc                      = model.domain.discretizations.charge_flow
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 	eqs[:mass_conservation]   = ConservationLaw(disc, :Mass)
 
