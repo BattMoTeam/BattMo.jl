@@ -235,7 +235,7 @@ function setup_thermal_model(::Val{:simple}, inputparams::AdditionaInputFormats;
 end
 
 
-function setup_thermal_model(model, input::AdditionaInputFormats;
+function setup_thermal_model(inputparams::AdditionaInputFormats;
 	general_ad = true,
 	kwargs...)
 

@@ -45,6 +45,12 @@ function get_model_settings_meta_data()
 			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/arrhenius",
 			"description" => """Temperature dependence model for electrode diffusion coefficients and reaction rates. Example: "Arrhenius".""",
 		),
+		"ThermalModel" => Dict(
+			"type" => String,
+			"options" => ["Sequential"],
+			"category" => "ModelSettings",
+			"description" => """Sequential thermal model""",
+		),
 		"TransportInSolid" => Dict(
 			"type" => String,
 			"options" => ["FullDiffusion"],
