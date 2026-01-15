@@ -51,9 +51,7 @@ function setup_grids_and_couplings(model::M, input) where {M <: Battery}
 
 	if case_type == "P2D"
 
-		grids, couplings = one_dimensional_grid(input)
-
-		error("we should return the global map")
+		grids, couplings, global_maps = one_dimensional_grid(input)
 
 	elseif case_type == "P4D Pouch"
 
@@ -61,9 +59,7 @@ function setup_grids_and_couplings(model::M, input) where {M <: Battery}
 
 	elseif case_type == "P4D Cylindrical"
 
-		grids, couplings = jelly_roll_grid(input)
-
-		error("we should return the global map")
+		grids, couplings, global_maps = jelly_roll_grid(input)
 
 	else
 		error("geometry case type not recognized")

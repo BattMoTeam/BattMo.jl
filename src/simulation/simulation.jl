@@ -139,7 +139,7 @@ function simulation_configuration(model, input)
 	grids, couplings, global_maps = setup_grids_and_couplings(model, input)
 
 	# Setup simulation
-	model, parameters, global_maps = setup_model!(model, input, grids, couplings)
+	model, parameters = setup_model!(model, input, grids, couplings)
 
 	# setup initial state
 	initial_state = setup_initial_state(input, model)

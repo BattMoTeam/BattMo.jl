@@ -54,10 +54,10 @@ function Jutul.select_parameters!(S,
 
 end
 
-function select_equations!(eqs,
+function Jutul.select_equations!(eqs,
 	system::CurrentCollector,
 	model::SimulationModel)
-	disc = model.domain.discretizations.charge_flow
+	disc = model.domain.discretizations.flow
 
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 

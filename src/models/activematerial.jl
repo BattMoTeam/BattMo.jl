@@ -220,12 +220,12 @@ function Jutul.select_secondary_variables!(S,
 end
 
 
-function select_equations!(eqs,
+function Jutul.select_equations!(eqs,
 	system::ActiveMaterialP2D,
 	model::SimulationModel,
 )
 
-	disc                      = model.domain.discretizations.charge_flow
+	disc                      = model.domain.discretizations.flow
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 	eqs[:mass_conservation]   = SolidMassCons()
 	eqs[:solid_diffusion_bc]  = SolidDiffusionBc()
@@ -525,7 +525,7 @@ function Jutul.select_parameters!(S,
 
 end
 
-function select_equations!(eqs,
+function Jutul.select_equations!(eqs,
 	system::ActiveMaterialNoParticleDiffusion,
 	model::SimulationModel,
 )

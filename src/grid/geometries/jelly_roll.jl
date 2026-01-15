@@ -125,7 +125,7 @@ function jelly_roll_grid(input)
 		couplings[component]["External"] = setup_tab_couplings(grids, input, component)
 	end
 
-	return grids, couplings
+	return grids, couplings, global_maps
 
 end
 
@@ -159,9 +159,9 @@ function setup_tab_couplings(grids, input, component)
 		nz = simulation_settings["HeightGridPoints"]
 
 		if component == "NegativeCurrentCollector"
-			vectbcface = vectbcface[abs.(zc .- maximum(zc)).<=0.01/nz*(maximum(zc)-minimum(zc))]
+			vectbcface = vectbcface[abs.(zc .- maximum(zc)) .<= 0.01/nz*(maximum(zc)-minimum(zc))]
 		else
-			vectbcface = vectbcface[abs.(zc .- minimum(zc)).<=0.01/nz*(maximum(zc)-minimum(zc))]
+			vectbcface = vectbcface[abs.(zc .- minimum(zc)) .<= 0.01/nz*(maximum(zc)-minimum(zc))]
 		end
 
 		# we sort by radius, so that the cells are ordered along the spiral in increasing order of radius
@@ -208,7 +208,7 @@ function setup_tab_couplings(grids, input, component)
 			im = grid.boundary_faces.cells_to_faces
 			tabfaces = []
 			for cell in cells
-				for iface in im.pos[cell]:im.pos[cell+1]-1
+				for iface in im.pos[cell]:(im.pos[cell+1]-1)
 					f = im.vals[iface]
 					n = geo.boundary_normals[:, f]
 					if abs(n[1]) + abs(n[2]) < 1e-3 * abs(n[3])

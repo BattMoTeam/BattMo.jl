@@ -19,8 +19,8 @@ export
 function find_coupling(maps1, maps2, modelname = "placeholder")
 	Coupling = Dict()
 	Coupling["model"] = modelname
-	Coupling["cells"] = find_common(maps1[:cellmap], maps2[:cellmap])
-	Coupling["faces"] = find_common(maps1[:facemap], maps2[:facemap])
+	Coupling["cells"] = find_common(maps1[1][:cellmap], maps2[1][:cellmap])
+	Coupling["faces"] = find_common(maps1[1][:facemap], maps2[1][:facemap])
 	return Coupling
 end
 
