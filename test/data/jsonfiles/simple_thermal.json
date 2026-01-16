@@ -1,0 +1,6 @@
+{ "ThermalModel" : {
+  "capacity" : 632000.0,
+  "conductivity" : 1.04,
+  "externalTemperature" : 298,
+  "externalHeatTransferCoefficient": 10.
+}}
