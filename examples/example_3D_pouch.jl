@@ -7,7 +7,8 @@ simulation_settings = load_simulation_settings(; from_default_set = "p4d_pouch")
 
 cell_parameters["Cell"]["NumberOfLayers"] = 4
 cell_parameters["Cell"]["TabsOnSameSide"] = false
-cell_parameters["Cell"]["TabPositionFraction"] = 0.3
+cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabPositionFraction"] = 0.2
+cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabPositionFraction"] = 0.8
 
 
 model = LithiumIonBattery(; model_settings)
