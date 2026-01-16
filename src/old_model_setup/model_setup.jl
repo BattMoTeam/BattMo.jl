@@ -736,8 +736,8 @@ function setup_submodels(inputparams::InputParamsOld;
 
 	if include_cc
 
-		grid     = grids["NegativeCurrentCollector"]
-		coupling = couplings["NegativeCurrentCollector"]
+		grid     = grids["NegativeElectrodeCurrentCollector"]
+		coupling = couplings["NegativeElectrodeCurrentCollector"]
 
 		boundary = coupling["External"]
 		necc_params = JutulStorage()
@@ -838,7 +838,7 @@ function setup_submodels(inputparams::InputParamsOld;
 
 	if include_cc
 
-		grid = grids["PositiveCurrentCollector"]
+		grid = grids["PositiveElectrodeCurrentCollector"]
 		pecc_params = JutulStorage()
 		pecc_params[:density] = jsondict["PositiveElectrode"]["CurrentCollector"]["density"]
 
@@ -1031,7 +1031,7 @@ function setup_component(grid::FiniteVolumeMesh,
 
 	domain[:trans, Faces()]           = T
 	domain[:halfTrans, HalfFaces()]   = T_hf
-	domain[:halftransfaces, Faces()]  = setup_half_transFaces(domain)
+	domain[:halftransfaces, Faces()]  = setup_half_trans_faces(domain)
 	domain[:bcTrans, BoundaryFaces()] = T_b
 
 	if !isnothing(dirichletBoundary)
@@ -1352,10 +1352,10 @@ function setup_coupling_cross_terms!(inputparams::InputParamsOld,
 	include_cc = inputparams["include_current_collectors"]
 
 
-	stringNames = Dict(:NegativeElectrodeCurrentCollector => "NegativeCurrentCollector",
+	stringNames = Dict(:NegativeElectrodeCurrentCollector => "NegativeElectrodeCurrentCollector",
 		:NegativeElectrodeActiveMaterial => "NegativeElectrode",
 		:PositiveElectrodeActiveMaterial => "PositiveElectrode",
-		:PositiveElectrodeCurrentCollector => "PositiveCurrentCollector")
+		:PositiveElectrodeCurrentCollector => "PositiveElectrodeCurrentCollector")
 
 	#################################
 	# Setup coupling NeAm <-> Elyte #
@@ -1438,11 +1438,11 @@ function setup_coupling_cross_terms!(inputparams::InputParamsOld,
 
 		#Ncc  = geomparams[:NegativeElectrodeCurrentCollector][:N]
 
-		srange_cells = collect(couplings["NegativeCurrentCollector"]["NegativeElectrode"]["cells"])
-		trange_cells = collect(couplings["NegativeElectrode"]["NegativeCurrentCollector"]["cells"])
+		srange_cells = collect(couplings["NegativeElectrodeCurrentCollector"]["NegativeElectrode"]["cells"])
+		trange_cells = collect(couplings["NegativeElectrode"]["NegativeElectrodeCurrentCollector"]["cells"])
 
-		srange_faces = collect(couplings["NegativeCurrentCollector"]["NegativeElectrode"]["faces"])
-		trange_faces = collect(couplings["NegativeElectrode"]["NegativeCurrentCollector"]["faces"])
+		srange_faces = collect(couplings["NegativeElectrodeCurrentCollector"]["NegativeElectrode"]["faces"])
+		trange_faces = collect(couplings["NegativeElectrode"]["NegativeElectrodeCurrentCollector"]["faces"])
 
 		msource = model[:NegativeElectrodeCurrentCollector]
 		mtarget = model[:NegativeElectrodeActiveMaterial]
@@ -1478,11 +1478,11 @@ function setup_coupling_cross_terms!(inputparams::InputParamsOld,
 
 		#Npam  = geomparams[:PositiveElectrodeActiveMaterial][:N]
 
-		srange_cells = collect(couplings["PositiveCurrentCollector"]["PositiveElectrode"]["cells"])
-		trange_cells = collect(couplings["PositiveElectrode"]["PositiveCurrentCollector"]["cells"])
+		srange_cells = collect(couplings["PositiveElectrodeCurrentCollector"]["PositiveElectrode"]["cells"])
+		trange_cells = collect(couplings["PositiveElectrode"]["PositiveElectrodeCurrentCollector"]["cells"])
 
-		srange_faces = collect(couplings["PositiveCurrentCollector"]["PositiveElectrode"]["faces"])
-		trange_faces = collect(couplings["PositiveElectrode"]["PositiveCurrentCollector"]["faces"])
+		srange_faces = collect(couplings["PositiveElectrodeCurrentCollector"]["PositiveElectrode"]["faces"])
+		trange_faces = collect(couplings["PositiveElectrode"]["PositiveElectrodeCurrentCollector"]["faces"])
 
 		msource = model[:PositiveElectrodeCurrentCollector]
 		mtarget = model[:PositiveElectrodeActiveMaterial]

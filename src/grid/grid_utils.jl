@@ -101,21 +101,12 @@ end
  Convert the grids given in MRST format (given as dictionnaries, also called raw grids) to Jutul format (UnstructuredMesh)
  In particular, for the external face couplings, we need to recover the coupling face indices in the boundary face indexing (jutul mesh structure holds a different indexing for the boundary faces)
 """
-function convert_geometry(grids, couplings; include_current_collectors = true)
+function convert_geometry(model, grids, couplings; include_current_collectors = true)
 
-	if include_current_collectors
-		components = ["NegativeCurrentCollector",
-			"NegativeElectrode",
-			"Separator",
-			"PositiveElectrode",
-			"PositiveCurrentCollector",
-			"Electrolyte"]
-	else
-		components = ["NegativeElectrode",
-			"Separator",
-			"PositiveElectrode",
-			"Electrolyte"]
-	end
+	components = get_component_list(model;
+		include_current_collectors,
+		include_electrolyte = true,
+		include_separator = true)
 
 	ugrids = Dict()
 
@@ -183,11 +174,10 @@ function get_grids(model::MultiModel{:IntercalationBattery})
 	has_cc = include_current_collectors(model)
 
 	components = [:NegativeElectrodeCurrentCollector, :NegativeElectrodeActiveMaterial, :Electrolyte, :PositiveElectrodeActiveMaterial, :PositiveElectrodeCurrentCollector]
-	names = ["NegativeCurrentCollector",
-		"NegativeElectrode",
-		"Electrolyte",
-		"PositiveElectrode",
-		"PositiveCurrentCollector"]
+	names = get_component_list(model;
+		include_current_collectors,
+		include_electrolyte = true,
+		include_separator = true)
 
 	if !has_cc
 		components = components[2:4]

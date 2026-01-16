@@ -137,24 +137,27 @@ function apply_boundary_temperature!(acc, state, parameters, model::ThermalModel
 
 	dolegacy = false
 
-	if model.domain.representation isa MinimalECTPFAGrid
+	# if model.domain.representation isa MinimalECTPFAGrid
 
-		error("not supported yet")
-		bc = model.domain.representation.boundary_cells
-		if length(bc) > 0
-			dobc = true
-		else
-			dobc = false
-		end
+	# 	error("not supported yet")
+	# 	bc = model.domain.representation.boundary_cells
+	# 	if length(bc) > 0
+	# 		dobc = true
+	# 	else
+	# 		dobc = false
+	# 	end
 
-		dolegacy = true
+	# 	dolegacy = true
 
-	else
+	# else
 
-		bchalftrans = model.domain.representation[:bcTrans]
-		bccells     = model.domain.representation[:boundary_neighbors]
+	# 	bchalftrans = model.domain.representation[:bcTrans]
+	# 	bccells     = model.domain.representation[:boundary_neighbors]
 
-	end
+	# end
+
+	bchalftrans = model.domain.representation[:bcTrans]
+	bccells     = model.domain.representation[:boundary_neighbors]
 
 	dobc = true
 
@@ -188,6 +191,37 @@ end
 #######################
 # setup thermal model #
 #######################
+
+function setup_thermal_model(input, grids)
+
+	cell_parameters = input.cell_parameters
+
+	grid = grids["ThermalModel"]
+
+	thermalsystem = ThermalSystem()
+
+	model = setup_component(grid, thermalsystem)
+
+	# setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
+	# sensitivities)
+
+	prm                                   = Dict{Symbol, Any}()
+	prm[:Capacity]                        = cell_parameters["ThermalModel"]["Capacity"]
+	prm[:Conductivity]                    = cell_parameters["ThermalModel"]["Conductivity"]
+	prm[:BoundaryTemperature]             = cell_parameters["ThermalModel"]["ExternalTemperature"]
+	prm[:ExternalHeatTransferCoefficient] = cell_parameters["ThermalModel"]["ExternalHeatTransferCoefficient"]
+
+	parameters = setup_parameters(model, prm)
+
+	# parameters[:Source]                   .= parameters[:Source].*parameters[:Volume]
+	parameters[:ExternalHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:ExternalHeatTransferCoefficient]
+
+	return model, parameters
+
+end
+
+###########################################
+# The following two setups are not working
 
 function setup_thermal_model(::Val{:simple}, inputparams::AdditionaInputFormats; N = 2, Nz = 10)
 
@@ -266,3 +300,5 @@ function setup_thermal_model(inputparams::AdditionaInputFormats;
 	return model, parameters
 
 end
+
+

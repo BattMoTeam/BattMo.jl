@@ -8,16 +8,16 @@ export pouch_grid
 	returns two dictionaries containing the grids and the couplings.
 
 	The fields for the `grid` dictionary are:
-	+ "NegativeCurrentCollector"
+	+ "NegativeElectrodeCurrentCollector"
 	+ "NegativeElectrode"
 	+ "Separator"
 	+ "PositiveElectrode",
-	+ "PositiveCurrentCollector"
+	+ "PositiveElectrodeCurrentCollector"
 
 	The fields for the `couplings` dictionary are the same as `grid`. For each component, we have again a dictionary
 	with field as in `grid` which provides the coupling with the two resulting components.
 """
-function pouch_grid(input)
+function pouch_grid(model, input)
 
 	cell_parameters = input.cell_parameters
 	simulation_settings = input.simulation_settings
@@ -117,30 +117,30 @@ function pouch_grid(input)
 
 	globalgrid, = remove_cells(H_back, vcat(pe_extra_cells, ne_extra_cells))
 
-	grids, couplings, global_maps = setup_pouch_cell_geometry(globalgrid, zvals)
-	grids, couplings = convert_geometry(grids, couplings)
+	grids, couplings, global_maps = setup_pouch_cell_geometry(model, globalgrid, zvals)
+	grids, couplings = convert_geometry(model, grids, couplings)
 
 	# Negative current collector external coupling
 
-	grid = grids["NegativeCurrentCollector"]
+	grid = grids["NegativeElectrodeCurrentCollector"]
 
 	neighbors = get_neighborship(grid; internal = false)
 
 	bcfaces = findBoundary(grid, 2, false)
 	bccells = neighbors[bcfaces]
 
-	couplings["NegativeCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)
+	couplings["NegativeElectrodeCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)
 
 	# Positive current collector external coupling
 
-	grid = grids["PositiveCurrentCollector"]
+	grid = grids["PositiveElectrodeCurrentCollector"]
 
 	neighbors = get_neighborship(grid; internal = false)
 
 	bcfaces = findBoundary(grid, 2, true)
 	bccells = neighbors[bcfaces]
 
-	couplings["PositiveCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)
+	couplings["PositiveElectrodeCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)
 
 	if haskey(input.model_settings, "ThermalModel")
 		# Setup thermal model
@@ -213,16 +213,15 @@ end
 From a global grid and the position of the z-values for the different components, returns the grids with the coupling.
 
 """
-function setup_pouch_cell_geometry(H_mother, paramsz)
+function setup_pouch_cell_geometry(model, H_mother, paramsz)
 
 	grids       = Dict()
 	global_maps = Dict()
 
-	components = ["NegativeCurrentCollector",
-		"NegativeElectrode",
-		"Separator",
-		"PositiveElectrode",
-		"PositiveCurrentCollector"]
+	components = get_component_list(model;
+		include_current_collectors = true,
+		include_electrolyte = false,
+		include_separator = true)
 
 	tags = find_tags(UnstructuredMesh(H_mother), paramsz)
 

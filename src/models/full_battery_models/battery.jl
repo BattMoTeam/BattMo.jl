@@ -51,15 +51,15 @@ function setup_grids_and_couplings(model::M, input) where {M <: Battery}
 
 	if case_type == "P2D"
 
-		grids, couplings, global_maps = one_dimensional_grid(input)
+		grids, couplings, global_maps = one_dimensional_grid(model, input)
 
 	elseif case_type == "P4D Pouch"
 
-		grids, couplings, global_maps = pouch_grid(input)
+		grids, couplings, global_maps = pouch_grid(model, input)
 
 	elseif case_type == "P4D Cylindrical"
 
-		grids, couplings, global_maps = jelly_roll_grid(input)
+		grids, couplings, global_maps = jelly_roll_grid(model, input)
 
 	else
 		error("geometry case type not recognized")
@@ -87,7 +87,7 @@ function setup_component(grid::FiniteVolumeMesh,
 
 	domain[:trans, Faces()]           = T
 	domain[:halfTrans, HalfFaces()]   = T_hf
-	domain[:halftransfaces, Faces()]  = setup_half_transFaces(domain)
+	domain[:halftransfaces, Faces()]  = setup_half_trans_faces(domain)
 	domain[:bcTrans, BoundaryFaces()] = T_b
 
 	if !isnothing(dirichletBoundary)

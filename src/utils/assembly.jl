@@ -1,31 +1,24 @@
 export compute_flux_vector
 
-function get_energy_source!(thermal_model::ThermalModel, model::BatteryModel, state, maps, operators = setup_flux_operators(model))
+function get_energy_source!(thermal_model::ThermalModel, model::IntercalationBattery, state, maps, operators = setup_flux_operators(model))
+	multimodel = model.multimodel
 
 	nc = number_of_cells(thermal_model.domain)
 	src = zeros(Float64, nc)
 
-	# names of component versus names in maps (since they do not match... should be fixed for the sake of simplicity)
-	mapnames = (Elyte = "Electrolyte",
-		NeCc = "NegativeCurrentCollector",
-		PeAm = "PositiveElectrode",
-		PeCc = "PositiveCurrentCollector",
-		NeAm = "NegativeElectrode")
-
-	if include_current_collectors(model)
-		components = (:NeCc, :NeAm, :Elyte, :PeAm, :PeCc)
-	else
-		components = (:NeAm, :Elyte, :PeAm)
-	end
+	components = get_component_list(model;
+		include_current_collectors = include_current_collectors(multimodel),
+		include_electrolyte = true,
+		include_separator = false)
 
 	sources = Dict()
 
 	for component in components
 
-		map = maps[mapnames[component]][:cellmap]
-		comp_src = get_energy_source(model[component],
-			state[component],
-			operators[component],
+		map = maps[component][1][:cellmap]
+		comp_src = get_energy_source(multimodel[Symbol(component)],
+			state[Symbol(component)],
+			operators[Symbol(component)],
 		)
 
 		src[map] .+= comp_src
@@ -197,15 +190,20 @@ function compute_flux_vector(model, state, operators; fieldname = :Charge)
 end
 
 
-function setup_flux_operators(model::BatteryModel)
+function setup_flux_operators(model::IntercalationBattery)
 
-	models = model.models
+	models = model.multimodel.models
 
 	operators = Dict()
 
+	components = Symbol.(get_component_list(model;
+		include_current_collectors = true,
+		include_electrolyte = true,
+		include_separator = false))
+
 	for name in keys(models)
 		submodel = models[name]
-		if name in [:NeCc, :NeAm, :Elyte, :PeAm, :PeCc]
+		if name in components
 			operators[name] = setup_flux_operator(submodel.domain.representation)
 		end
 	end

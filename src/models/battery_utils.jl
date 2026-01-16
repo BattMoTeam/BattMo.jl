@@ -230,7 +230,7 @@ end
 
 apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw) = nothing
 
-function setup_half_transFaces(domain)
+function setup_half_trans_faces(domain)
 
 	g = domain.representation
 	neighbors = get_neighborship(g)

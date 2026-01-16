@@ -103,6 +103,10 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 		model_settings["RampUp"] = "Sinusoidal"
 	end
 
+	if haskey(params, "ThermalModel") && params["ThermalModel"]["thermal"] == true
+		model_settings["ThermalModel"] = "Sequential"
+	end
+
 
 	####################################
 	# SimulationSettings
@@ -316,6 +320,18 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 			))
 
 		cell_parameters["NegativeElectrode"]["Interphase"] = inter["Interphase"]
+	end
+
+	if haskey(model_settings, "ThermalModel")
+		thermal = Dict(
+			"ThermalModel" => Dict(
+				"Capacity" => params["ThermalModel"]["capacity"],
+				"Conductivity" => params["ThermalModel"]["conductivity"],
+				"ExternalTemperature" => params["ThermalModel"]["externalTemperature"],
+				"ExternalHeatTransferCoefficient" => params["ThermalModel"]["externalHeatTransferCoefficient"],
+			))
+
+		cell_parameters["ThermalModel"] = thermal["ThermalModel"]
 	end
 
 	if model_settings["ModelFramework"] == "P2D"

@@ -41,8 +41,8 @@ let ax, components, colors
 	components = [
 		"NegativeElectrode",
 		"PositiveElectrode",
-		"NegativeCurrentCollector",
-		"PositiveCurrentCollector",
+		"NegativeElectrodeCurrentCollector",
+		"PositiveElectrodeCurrentCollector",
 	]
 
 	colors = [
@@ -65,8 +65,8 @@ let ax, components, colors
 	end
 
 	components = [
-		"NegativeCurrentCollector",
-		"PositiveCurrentCollector",
+		"NegativeElectrodeCurrentCollector",
+		"PositiveElectrodeCurrentCollector",
 	]
 
 	for component in components

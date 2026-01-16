@@ -4,7 +4,7 @@ export one_dimensional_grid
 # one dimensional grid setup #
 ##############################
 
-function one_dimensional_grid(input)
+function one_dimensional_grid(model, input)
 
 	grids       = Dict()
 	global_maps = Dict()
@@ -51,23 +51,18 @@ function one_dimensional_grid(input)
 
 	if include_current_collectors
 
-		components = ["NegativeCurrentCollector",
-			"NegativeElectrode",
-			"Separator",
-			"PositiveElectrode",
-			"PositiveCurrentCollector"]
-
 		elyte_comp_start = 2
 
 	else
 
-		components = ["NegativeElectrode",
-			"Separator",
-			"PositiveElectrode"]
-
 		elyte_comp_start = 1
 
 	end
+
+	components = get_component_list(model;
+		include_current_collectors,
+		include_electrolyte = true,
+		include_separator = true)
 
 	ns = vals["N"]
 	xs = vals["thickness"]
@@ -104,13 +99,13 @@ function one_dimensional_grid(input)
 
 	couplings = setup_couplings(components, grids, global_maps)
 
-	grids, couplings = convert_geometry(grids, couplings; include_current_collectors = include_current_collectors)
+	grids, couplings = convert_geometry(model, grids, couplings; include_current_collectors = include_current_collectors)
 
 	"""Add  external coupling to the coupling structure.
 	   Function can be used both with and without current collector."""
 	if include_current_collectors
-		boundaryComponents = Dict("left" => "NegativeCurrentCollector",
-			"right" => "PositiveCurrentCollector")
+		boundaryComponents = Dict("left" => "NegativeElectrodeCurrentCollector",
+			"right" => "PositiveElectrodeCurrentCollector")
 	else
 		boundaryComponents = Dict("left" => "NegativeElectrode",
 			"right" => "PositiveElectrode")

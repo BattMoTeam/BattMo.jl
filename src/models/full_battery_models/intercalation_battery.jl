@@ -7,24 +7,53 @@ function setup_multimodel(model::IntercalationBattery, submodels, input; use_gro
 	if !haskey(model.settings, "CurrentCollectors")
 		groups = nothing
 
-		multimodel = MultiModel(
-			(
+		if haskey(model.settings, "ThermalModel")
+			multimodel = MultiModel(
+				(
+					NegativeElectrodeActiveMaterial = submodels.model_neam,
+					Electrolyte = submodels.model_elyte,
+					PositiveElectrodeActiveMaterial = submodels.model_peam,
+					ThermalModel = submodels.model_thermal,
+					Control = submodels.model_control,
+				),
+				Val(:IntercalationBattery);
+				groups = groups)
+
+		else
+			multimodel = MultiModel(
+				(
+					NegativeElectrodeActiveMaterial = submodels.model_neam,
+					Electrolyte = submodels.model_elyte,
+					PositiveElectrodeActiveMaterial = submodels.model_peam,
+					Control = submodels.model_control,
+				),
+				Val(:IntercalationBattery);
+				groups = groups)
+		end
+	else
+
+		if haskey(model.settings, "ThermalModel")
+			models = (
+				NegativeElectrodeCurrentCollector = submodels.model_necc,
 				NegativeElectrodeActiveMaterial = submodels.model_neam,
 				Electrolyte = submodels.model_elyte,
 				PositiveElectrodeActiveMaterial = submodels.model_peam,
+				PositiveElectrodeCurrentCollector = submodels.model_pecc,
+				# ThermalModel = submodels.model_thermal,
 				Control = submodels.model_control,
-			),
-			:IntercalationBattery;
-			groups = groups)
-	else
-		models = (
-			NegativeElectrodeCurrentCollector = submodels.model_necc,
-			NegativeElectrodeActiveMaterial = submodels.model_neam,
-			Electrolyte = submodels.model_elyte,
-			PositiveElectrodeActiveMaterial = submodels.model_peam,
-			PositiveElectrodeCurrentCollector = submodels.model_pecc,
-			Control = submodels.model_control,
-		)
+			)
+
+		else
+			models = (
+				NegativeElectrodeCurrentCollector = submodels.model_necc,
+				NegativeElectrodeActiveMaterial = submodels.model_neam,
+				Electrolyte = submodels.model_elyte,
+				PositiveElectrodeActiveMaterial = submodels.model_peam,
+				PositiveElectrodeCurrentCollector = submodels.model_pecc,
+				Control = submodels.model_control,
+			)
+		end
+
 		if use_groups
 			groups = ones(Int64, length(models))
 			# Should be Control
@@ -36,7 +65,7 @@ function setup_multimodel(model::IntercalationBattery, submodels, input; use_gro
 		end
 
 		multimodel = MultiModel(models,
-			:IntercalationBattery;
+			Val(:IntercalationBattery);
 			groups = groups, reduction = reduction)
 
 	end
@@ -64,17 +93,29 @@ function setup_submodels(model::IntercalationBattery, input, grids, couplings; k
 
 	model_elyte = setup_electrolyte(model, input, grids)
 
+	if haskey(model.settings, "ThermalModel")
+		model_thermal = setup_thermal_model(input, grids)
+	end
+
 	model_control = setup_control_model(input, model_neam, model_peam; kwargs...)
 
 
-
-	submodels = (model_neam = model_neam,
-		model_peam = model_peam,
-		model_necc = model_necc,
-		model_pecc = model_pecc,
-		model_elyte = model_elyte,
-		model_control = model_control)
-
+	if haskey(model.settings, "ThermalModel")
+		submodels = (model_neam = model_neam,
+			model_peam = model_peam,
+			model_necc = model_necc,
+			model_pecc = model_pecc,
+			model_elyte = model_elyte,
+			model_thermal = model_thermal,
+			model_control = model_control)
+	else
+		submodels = (model_neam = model_neam,
+			model_peam = model_peam,
+			model_necc = model_necc,
+			model_pecc = model_pecc,
+			model_elyte = model_elyte,
+			model_control = model_control)
+	end
 	return submodels
 
 end
@@ -146,8 +187,8 @@ function setup_volume_fractions!(model::IntercalationBattery, grids, coupling)
 	Nelyte = number_of_cells(grids["Electrolyte"])
 
 	names = [:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial]
-	stringNames = Dict(:NegativeElectrodeActiveMaterial => "NegativeElectrode",
-		:PositiveElectrodeActiveMaterial => "PositiveElectrode")
+	stringNames = Dict(:NegativeElectrodeActiveMaterial => "NegativeElectrodeActiveMaterial",
+		:PositiveElectrodeActiveMaterial => "PositiveElectrodeActiveMaterial")
 
 	vfracs = map(name -> multimodel[name].system[:volume_fraction], names)
 	separator_porosity = multimodel[:Electrolyte].system[:separator_porosity]
@@ -268,8 +309,8 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 end
 
 function setup_ne_current_collector(input, grids, couplings)
-	grid = grids["NegativeCurrentCollector"]
-	coupling = couplings["NegativeCurrentCollector"]
+	grid = grids["NegativeElectrodeCurrentCollector"]
+	coupling = couplings["NegativeElectrodeCurrentCollector"]
 
 	boundary = coupling["External"]
 	necc_params = JutulStorage()
@@ -285,7 +326,7 @@ function setup_ne_current_collector(input, grids, couplings)
 end
 
 function setup_pe_current_collector(input, grids, couplings)
-	grid = grids["PositiveCurrentCollector"]
+	grid = grids["PositiveElectrodeCurrentCollector"]
 	pecc_params = JutulStorage()
 	pecc_params[:density] = input.cell_parameters["PositiveElectrode"]["CurrentCollector"]["Density"]
 
@@ -506,8 +547,8 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		sys_am = ActiveMaterialNoParticleDiffusion(am_params)
 	end
 
-	grid     = grids[stringName]
-	coupling = couplings[stringName]
+	grid     = grids["$(stringName)ActiveMaterial"]
+	coupling = couplings["$(stringName)ActiveMaterial"]
 
 	boundary = nothing
 	if !haskey(model.settings, "CurrentCollectors") && name == :NegativeElectrodeActiveMaterial
@@ -725,17 +766,17 @@ function setup_coupling_cross_terms!(model::IntercalationBattery,
 
 	multimodel = model.multimodel
 
-	stringNames = Dict(:NegativeElectrodeCurrentCollector => "NegativeCurrentCollector",
-		:NegativeElectrodeActiveMaterial => "NegativeElectrode",
-		:PositiveElectrodeActiveMaterial => "PositiveElectrode",
-		:PositiveElectrodeCurrentCollector => "PositiveCurrentCollector")
+	stringNames = Dict(:NegativeElectrodeCurrentCollector => "NegativeElectrodeCurrentCollector",
+		:NegativeElectrodeActiveMaterial => "NegativeElectrodeActiveMaterial",
+		:PositiveElectrodeActiveMaterial => "PositiveElectrodeActiveMaterial",
+		:PositiveElectrodeCurrentCollector => "PositiveElectrodeCurrentCollector")
 
 	#################################
 	# Setup coupling NeAm <-> Elyte #
 	#################################
 
-	srange = collect(couplings["NegativeElectrode"]["Electrolyte"]["cells"])
-	trange = collect(couplings["Electrolyte"]["NegativeElectrode"]["cells"]) # electrolyte (negative side)
+	srange = collect(couplings["NegativeElectrodeActiveMaterial"]["Electrolyte"]["cells"])
+	trange = collect(couplings["Electrolyte"]["NegativeElectrodeActiveMaterial"]["cells"]) # electrolyte (negative side)
 
 	if discretisation_type(multimodel[:NegativeElectrodeActiveMaterial]) == :P2Ddiscretization
 
@@ -774,8 +815,8 @@ function setup_coupling_cross_terms!(model::IntercalationBattery,
 	# setup coupling Elyte <-> PeAm #
 	#################################
 
-	srange = collect(couplings["PositiveElectrode"]["Electrolyte"]["cells"])
-	trange = collect(couplings["Electrolyte"]["PositiveElectrode"]["cells"])
+	srange = collect(couplings["PositiveElectrodeActiveMaterial"]["Electrolyte"]["cells"])
+	trange = collect(couplings["Electrolyte"]["PositiveElectrodeActiveMaterial"]["cells"])
 
 	if discretisation_type(multimodel[:PositiveElectrodeActiveMaterial]) == :P2Ddiscretization
 
@@ -811,11 +852,11 @@ function setup_coupling_cross_terms!(model::IntercalationBattery,
 
 		#Ncc  = geomparams[:NegativeElectrodeCurrentCollector][:N]
 
-		srange_cells = collect(couplings["NegativeCurrentCollector"]["NegativeElectrode"]["cells"])
-		trange_cells = collect(couplings["NegativeElectrode"]["NegativeCurrentCollector"]["cells"])
+		srange_cells = collect(couplings["NegativeElectrodeCurrentCollector"]["NegativeElectrodeActiveMaterial"]["cells"])
+		trange_cells = collect(couplings["NegativeElectrodeActiveMaterial"]["NegativeElectrodeCurrentCollector"]["cells"])
 
-		srange_faces = collect(couplings["NegativeCurrentCollector"]["NegativeElectrode"]["faces"])
-		trange_faces = collect(couplings["NegativeElectrode"]["NegativeCurrentCollector"]["faces"])
+		srange_faces = collect(couplings["NegativeElectrodeCurrentCollector"]["NegativeElectrodeActiveMaterial"]["faces"])
+		trange_faces = collect(couplings["NegativeElectrodeActiveMaterial"]["NegativeElectrodeCurrentCollector"]["faces"])
 
 		msource = multimodel[:NegativeElectrodeCurrentCollector]
 		mtarget = multimodel[:NegativeElectrodeActiveMaterial]
@@ -851,11 +892,11 @@ function setup_coupling_cross_terms!(model::IntercalationBattery,
 
 		#Npam  = geomparams[:PositiveElectrodeActiveMaterial][:N]
 
-		srange_cells = collect(couplings["PositiveCurrentCollector"]["PositiveElectrode"]["cells"])
-		trange_cells = collect(couplings["PositiveElectrode"]["PositiveCurrentCollector"]["cells"])
+		srange_cells = collect(couplings["PositiveElectrodeCurrentCollector"]["PositiveElectrodeActiveMaterial"]["cells"])
+		trange_cells = collect(couplings["PositiveElectrodeActiveMaterial"]["PositiveElectrodeCurrentCollector"]["cells"])
 
-		srange_faces = collect(couplings["PositiveCurrentCollector"]["PositiveElectrode"]["faces"])
-		trange_faces = collect(couplings["PositiveElectrode"]["PositiveCurrentCollector"]["faces"])
+		srange_faces = collect(couplings["PositiveElectrodeCurrentCollector"]["PositiveElectrodeActiveMaterial"]["faces"])
+		trange_faces = collect(couplings["PositiveElectrodeActiveMaterial"]["PositiveElectrodeCurrentCollector"]["faces"])
 
 		msource = multimodel[:PositiveElectrodeCurrentCollector]
 		mtarget = multimodel[:PositiveElectrodeActiveMaterial]
