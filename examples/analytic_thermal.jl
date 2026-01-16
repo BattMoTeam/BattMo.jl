@@ -1,47 +1,73 @@
-h     = inputparams["ThermalModel"]["externalHeatTransferCoefficient"]
-alpha = inputparams["ThermalModel"]["conductivity"]
-Text  = inputparams["ThermalModel"]["externalTemperature"]
 
-# For comparison, the value should be set to the same as in example_thermal
-source = 1e8
+using GLMakie
 
-M = [1 h;
-     (1 + h/alpha) -h]
+# ---------------------------------------------------------
+# PARAMETERS
+# ---------------------------------------------------------
 
-b = [h*Text, -source + h*(-source/(2*alpha) - Text)]
+h = 1e20          # Very large convection coefficient (external heat transfer coefficient) → fixed temperature at x = 0
+alpha = 12            # Thermal conductivity
+Text = 298           # Boundary temperature at x = 0 (K)
+source = 1e4          # Volumetric heat generation term
 
-x =M\b
+# ---------------------------------------------------------
+# SOLVE FOR CONSTANTS A AND B IN THE ANALYTIC SOLUTION
+#
+# Temperature form:
+#   T(x) = -q/(2α) * x^2 - (A/α)*x + B
+#
+# Boundary conditions encoded in matrix system M * [A; B] = b
+# ---------------------------------------------------------
 
-A = x[1]
-B = x[2]
+M = [
+	1              h;
+	(1 + h/alpha)  -h
+]
 
-temp(x) = -1/(2*alpha) * source * x^2 - A/alpha*x + B
+b = [
+	h * Text;
+	-source + h * (-source/(2*alpha) - Text)
+]
 
-x = collect(0 : 0.01 : 1)
-y = [temp(xx) for xx in x]
+coeffs = M \ b
+A, B = coeffs
 
+# ---------------------------------------------------------
+# TEMPERATURE FUNCTION
+# ---------------------------------------------------------
 
-f = Figure(size = (1000, 400))
+temp(x) = -source/(2*alpha) * x^2 - (A/alpha) * x + B
 
-ax = Axis(f[1, 1],
-          xlabelsize = 25,
-          ylabelsize = 25,
-          xticklabelsize = 25,
-          yticklabelsize = 25)
+# ---------------------------------------------------------
+# EVALUATE TEMPERATURE FIELD
+# ---------------------------------------------------------
 
-scatterlines!(ax,
-              x,
-              y;
-              linewidth = 4,
-              markersize = 10,
-              marker = :cross, 
-              markercolor = :green,
-              )
+xs = 0:0.01:1
+ys = temp.(xs)
 
-display(GLMakie.Screen(), f)
+# ---------------------------------------------------------
+# PLOT TEMPERATURE PROFILE
+# ---------------------------------------------------------
 
+fig = Figure(size = (1000, 400))
 
+ax = Axis(fig[1, 1],
+	xlabel = "Position x",
+	ylabel = "Temperature T(x)",
+	xlabelsize = 25,
+	ylabelsize = 25,
+	xticklabelsize = 25,
+	yticklabelsize = 25,
+)
 
+scatterlines!(
+	ax,
+	xs,
+	ys;
+	linewidth = 4,
+	markersize = 10,
+	marker = :cross,
+	markercolor = :green,
+)
 
-
-
+display(GLMakie.Screen(), fig)

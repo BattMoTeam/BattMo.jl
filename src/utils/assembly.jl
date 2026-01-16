@@ -1,105 +1,105 @@
-export computeFluxVector
+export compute_flux_vector
 
-function getEnergySource!(thermal_model::ThermalModel, model::BatteryModel, state, maps, operators = setupFluxOperators(model))
+function get_energy_source!(thermal_model::ThermalModel, model::BatteryModel, state, maps, operators = setup_flux_operators(model))
 
-    nc = number_of_cells(thermal_model.domain)
-    src = zeros(Float64, nc)
-    
-    # names of component versus names in maps (since they do not match... should be fixed for the sake of simplicity)
-    mapnames = (Elyte = "Electrolyte"             ,
-                NeCc  = "NegativeCurrentCollector",
-                PeAm  = "PositiveElectrode"       ,
-                PeCc  = "PositiveCurrentCollector",
-                NeAm  = "NegativeElectrode")
+	nc = number_of_cells(thermal_model.domain)
+	src = zeros(Float64, nc)
 
-    if include_current_collectors(model)
-        components = (:NeCc, :NeAm, :Elyte, :PeAm, :PeCc)
-    else
-        components = (:NeAm, :Elyte, :PeAm)
-    end
+	# names of component versus names in maps (since they do not match... should be fixed for the sake of simplicity)
+	mapnames = (Elyte = "Electrolyte",
+		NeCc = "NegativeCurrentCollector",
+		PeAm = "PositiveElectrode",
+		PeCc = "PositiveCurrentCollector",
+		NeAm = "NegativeElectrode")
 
-    sources = Dict()
-    
-    for component in components
+	if include_current_collectors(model)
+		components = (:NeCc, :NeAm, :Elyte, :PeAm, :PeCc)
+	else
+		components = (:NeAm, :Elyte, :PeAm)
+	end
 
-        map = maps[mapnames[component]][:cellmap]
-        comp_src = getEnergySource(model[component],
-                                             state[component],
-                                             operators[component]
-                                             )
+	sources = Dict()
 
-        src[map] .+= comp_src
+	for component in components
 
-        sources[component] = fill(NaN, nc)
-        sources[component][map] = comp_src
-        
-    end
+		map = maps[mapnames[component]][:cellmap]
+		comp_src = get_energy_source(model[component],
+			state[component],
+			operators[component],
+		)
 
-    return src, sources
+		src[map] .+= comp_src
 
-end
+		sources[component] = fill(NaN, nc)
+		sources[component][map] = comp_src
 
-function getEnergySource(model::ElectrolyteModel, state, operators)
+	end
 
-    vols = state[:Volume]
-    
-    # Ohmic flux
-
-    kappa = state[:Conductivity] # Effective conductivity
-    
-    fluxvec = computeFluxVector(model, state, operators)
-    fluxnorm = transpose(sum(fluxvec.^2; dims = 1))
-
-    src = fluxnorm.*vols./kappa
-
-    # Diffusion flux
-    
-    D     = state[:Diffusivity] # Effective diffusivity
-    dmudc = state[:DmuDc] # Effective diffusivity
-    
-    fluxvec = computeFluxVector(model, state, operators, fieldname = :Diffusion)
-    fluxnorm = transpose(sum(fluxvec.^2; dims = 1))
-
-    src .+= dmudc.*fluxnorm.*vols./D
-    
-    return src
+	return src, sources
 
 end
 
-function getEnergySource(model::ActiveMaterialModel, state, operators)
+function get_energy_source(model::ElectrolyteModel, state, operators)
 
-    vols  = state[:Volume]
-    kappa = state[:Conductivity] # Effective conductivity
-    
-    # Ohmic flux
+	vols = state[:Volume]
 
-    fluxvec = computeFluxVector(model, state, operators)
-    fluxnorm = transpose(sum(fluxvec.^2; dims = 1))
+	# Ohmic flux
 
-    src = fluxnorm.*vols./kappa
-    
-    return src
-    
+	kappa = state[:Conductivity] # Effective conductivity
+
+	fluxvec = compute_flux_vector(model, state, operators)
+	fluxnorm = transpose(sum(fluxvec .^ 2; dims = 1))
+
+	src = fluxnorm .* vols ./ kappa
+
+	# Diffusion flux
+
+	D     = state[:Diffusivity] # Effective diffusivity
+	dmudc = state[:DmuDc] # Effective diffusivity
+
+	fluxvec = compute_flux_vector(model, state, operators, fieldname = :Diffusion)
+	fluxnorm = transpose(sum(fluxvec .^ 2; dims = 1))
+
+	src .+= dmudc .* fluxnorm .* vols ./ D
+
+	return src
+
 end
 
-function getEnergySource(model::CurrentCollectorModel, state, operators)
+function get_energy_source(model::ActiveMaterialModel, state, operators)
 
-    vols  = state[:Volume]
-    kappa = state[:Conductivity]
-    
-    # Ohmic flux
+	vols  = state[:Volume]
+	kappa = state[:Conductivity] # Effective conductivity
 
-    fluxvec = computeFluxVector(model, state, operators)
-    fluxnorm = transpose(sum(fluxvec.^2; dims = 1))
+	# Ohmic flux
 
-    src = fluxnorm.*vols./kappa
-    
-    return src
+	fluxvec = compute_flux_vector(model, state, operators)
+	fluxnorm = transpose(sum(fluxvec .^ 2; dims = 1))
+
+	src = fluxnorm .* vols ./ kappa
+
+	return src
+
+end
+
+function get_energy_source(model::CurrentCollectorModel, state, operators)
+
+	vols  = state[:Volume]
+	kappa = state[:Conductivity]
+
+	# Ohmic flux
+
+	fluxvec = compute_flux_vector(model, state, operators)
+	fluxnorm = transpose(sum(fluxvec .^ 2; dims = 1))
+
+	src = fluxnorm .* vols ./ kappa
+
+	return src
 
 end
 
 """
-   getStateWithSecondaryVariables(model, state, parameters)
+   get_state_with_secondary_variables(model, state, parameters)
 
 Compute and add to the state variables all the secondary variables
 
@@ -113,26 +113,26 @@ Compute and add to the state variables all the secondary variables
 state : state with the added secondary variables
 
 """
-function getStateWithSecondaryVariables(model, state, parameters)
+function get_state_with_secondary_variables(model, state, parameters)
 
-    storage = Jutul.setup_storage(model;
-                                  setup_linearized_system = false,
-                                  setup_equations         = false,
-                                  state0                  = state,
-                                  parameters              = parameters,
-                                  state_ad                = false)
+	storage = Jutul.setup_storage(model;
+		setup_linearized_system = false,
+		setup_equations         = false,
+		state0                  = state,
+		parameters              = parameters,
+		state_ad                = false)
 
-    storage = convert_to_immutable_storage(storage)
-    Jutul.update_secondary_variables!(storage, model)
+	storage = convert_to_immutable_storage(storage)
+	Jutul.update_secondary_variables!(storage, model)
 
-    state = storage[:state]
+	state = storage[:state]
 
-    return state
+	return state
 
 end
 
 """
-   computeFluxVector(model, state, operators; fieldname = :Charge)
+   compute_flux_vector(model, state, operators; fieldname = :Charge)
 
 For a given model and state, compute the reconstruction of the flux vector at each cell from the integrated flux value
 at the faces (which we typically simply call flux)
@@ -141,84 +141,84 @@ at the faces (which we typically simply call flux)
 
 - `model`              : simulation model
 - `state`              : state variable
-                         All the secondary variables that are needed to compute the flux should be present there.
-                         To add those, you can use the `getStateWithSecondaryVariables` function
+						 All the secondary variables that are needed to compute the flux should be present there.
+						 To add those, you can use the `get_state_with_secondary_variables` function
 - `operators`          : list of local matrices that are used to compute the flux vector from face integratedvalues,
-                         see `setupFluxOperator
+						 see `setup_flux_operator
 - `fieldname = :Charge`: Name of the flux that is computed, which corresponds to the name of the equation where this flux is primarily intended to be used,
-                         see the function `computeFlux` and their specializations
+						 see the function `compute_flux` and their specializations
 
 # Returns
 
 - fluxVector : Flux vector of size dim x ncells, where dim is the spatial dimension and ncells is the number of discretization cells
 
 """
-function computeFluxVector(model, state, operators; fieldname = :Charge)
+function compute_flux_vector(model, state, operators; fieldname = :Charge)
 
-    domain = model.domain.representation
+	domain = model.domain.representation
 
-    g = domain.representation
+	g = domain.representation
 
-    cfmap     = g.faces.cells_to_faces
-    neighbors = g.faces.neighbors
+	cfmap     = g.faces.cells_to_faces
+	neighbors = g.faces.neighbors
 
-    nc = Jutul.number_of_cells(g)
+	nc = Jutul.number_of_cells(g)
 
-    fluxVector = Array{Float64}(undef, 3, nc)
+	fluxVector = Array{Float64}(undef, 3, nc)
 
-    for cell in 1 : nc
+	for cell in 1:nc
 
-        cface_inds = cfmap.pos[cell] : (cfmap.pos[cell + 1] - 1)
-        cface_inds = cfmap.vals[cface_inds]
+		cface_inds = cfmap.pos[cell]:(cfmap.pos[cell+1]-1)
+		cface_inds = cfmap.vals[cface_inds]
 
-        localflux = Vector{Float64}(undef, length(cface_inds))
+		localflux = Vector{Float64}(undef, length(cface_inds))
 
-        for (iloc, iface) in enumerate(cface_inds)
-            if cell == neighbors[iface][1]
-                other_cell = neighbors[iface][2]
-                face_sign = 1
-            else
-                other_cell = neighbors[iface][1]
-                face_sign = 2
-            end
+		for (iloc, iface) in enumerate(cface_inds)
+			if cell == neighbors[iface][1]
+				other_cell = neighbors[iface][2]
+				face_sign = 1
+			else
+				other_cell = neighbors[iface][1]
+				face_sign = 2
+			end
 
-            localflux[iloc] = computeFlux(Val(fieldname), model, state, cell, other_cell, iface, face_sign)
+			localflux[iloc] = compute_flux(Val(fieldname), model, state, cell, other_cell, iface, face_sign)
 
-        end
+		end
 
-        op = operators[cell]
+		op = operators[cell]
 
-        fluxVector[:, cell] = op*localflux
+		fluxVector[:, cell] = op*localflux
 
-    end
+	end
 
-    return fluxVector
+	return fluxVector
 
 end
 
 
-function setupFluxOperators(model::BatteryModel)
+function setup_flux_operators(model::BatteryModel)
 
-    models = model.models
+	models = model.models
 
-    operators = Dict()
+	operators = Dict()
 
-    for name in keys(models)
-        submodel = models[name]
-        if name in [:NeCc, :NeAm, :Elyte, :PeAm, :PeCc]
-            operators[name] = setupFluxOperator(submodel.domain.representation)
-        end
-    end
+	for name in keys(models)
+		submodel = models[name]
+		if name in [:NeCc, :NeAm, :Elyte, :PeAm, :PeCc]
+			operators[name] = setup_flux_operator(submodel.domain.representation)
+		end
+	end
 
-    return operators
+	return operators
 
 end
 
 """
-    setupFluxOperator(domain::DataDomain{R, <:Any, <:Any}) where {R <: UnstructuredMesh}
+	setup_flux_operator(domain::DataDomain{R, <:Any, <:Any}) where {R <: UnstructuredMesh}
 
 Assemble the list of the operators, one per cell. For a given cell the operator maps the integrated flux on each face
-(called only flux in rest of code) to the flux vector in the cell, see setupFluxOperator(normals::AbstractVector, flux::AbstractVector) 
+(called only flux in rest of code) to the flux vector in the cell, see setup_flux_operator(normals::AbstractVector, flux::AbstractVector) 
 
 
 # Arguments
@@ -227,48 +227,48 @@ Assemble the list of the operators, one per cell. For a given cell the operator 
 # Returns
 - List of flux operators, one per cell
 """
-function setupFluxOperator(domain::DataDomain{R, <:Any, <:Any}) where {R <: UnstructuredMesh}
+function setup_flux_operator(domain::DataDomain{R, <:Any, <:Any}) where {R <: UnstructuredMesh}
 
-    g = domain.representation
-    # IndirectionMap
-    cfmap     = g.faces.cells_to_faces
-    neighbors = g.faces.neighbors
+	g = domain.representation
+	# IndirectionMap
+	cfmap     = g.faces.cells_to_faces
+	neighbors = g.faces.neighbors
 
-    nc = Jutul.number_of_cells(g)
+	nc = Jutul.number_of_cells(g)
 
-    # normals array (size dim x nf)
-    normals = domain[:normals]
-    areas   = domain[:areas]
+	# normals array (size dim x nf)
+	normals = domain[:normals]
+	areas   = domain[:areas]
 
-    operator = []
+	operator = []
 
-    for ic in 1 : nc
+	for ic in 1:nc
 
-        cface_inds = cfmap.pos[ic] : (cfmap.pos[ic + 1] - 1)
-        cface_inds = cfmap.vals[cface_inds]
+		cface_inds = cfmap.pos[ic]:(cfmap.pos[ic+1]-1)
+		cface_inds = cfmap.vals[cface_inds]
 
-        cnormals = normals[:, cface_inds]
-        for (iloc, iface) in enumerate(cface_inds)
-            if ic == neighbors[iface][1]
-                sgn = 1
-            else
-                sgn = -1
-            end
-            cnormals[:, iloc] = sgn*areas[iface]*cnormals[:, iloc]
-        end
+		cnormals = normals[:, cface_inds]
+		for (iloc, iface) in enumerate(cface_inds)
+			if ic == neighbors[iface][1]
+				sgn = 1
+			else
+				sgn = -1
+			end
+			cnormals[:, iloc] = sgn*areas[iface]*cnormals[:, iloc]
+		end
 
-        locoperator = setupFluxOperator(cnormals)
+		locoperator = setup_flux_operator(cnormals)
 
-        push!(operator, locoperator)
+		push!(operator, locoperator)
 
-    end
+	end
 
-    return operator
+	return operator
 
 end
 
 """
-    setupFluxOperator(normals::AbstractVector, flux::AbstractVector)
+	setup_flux_operator(normals::AbstractVector, flux::AbstractVector)
 
 Assemble an operator that maps the integrated flux on each face (called only flux in rest of code) to the flux vector in the cell
 
@@ -280,8 +280,8 @@ We use a least square method for the reconstruction
 # Returns
 - Flux operator, matrix of size (dim x nf)
 """
-function setupFluxOperator(normals::AbstractArray)
+function setup_flux_operator(normals::AbstractArray)
 
-    return inv(normals*transpose(normals))*normals
+	return inv(normals*transpose(normals))*normals
 
 end

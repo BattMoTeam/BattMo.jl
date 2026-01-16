@@ -392,7 +392,7 @@ function rampupTimesteps(time::Real, dt::Real, n::Integer = 8)
 	dt_init = [dt / 2^k for k in ind]
 	cs_time = cumsum(dt_init)
 	if any(cs_time .> time)
-		dt_init = dt_init[cs_time.<time]
+		dt_init = dt_init[cs_time .< time]
 	end
 	dt_left = time .- sum(dt_init)
 
@@ -1031,7 +1031,7 @@ function setup_component(grid::FiniteVolumeMesh,
 
 	domain[:trans, Faces()]           = T
 	domain[:halfTrans, HalfFaces()]   = T_hf
-	domain[:halftransfaces, Faces()]  = setupHalfTransFaces(domain)
+	domain[:halftransfaces, Faces()]  = setup_half_transFaces(domain)
 	domain[:bcTrans, BoundaryFaces()] = T_b
 
 	if !isnothing(dirichletBoundary)
