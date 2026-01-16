@@ -89,7 +89,7 @@ scatterlines!(ax,
 	markercolor = :black)
 
 display(GLMakie.Screen(), f) # hide
-f # hide
+
 
 
 # ## Plot of voltage drop 
@@ -127,4 +127,8 @@ scatterlines!(ax,
 	markercolor = :black,
 	label = "xmax")
 
+display(GLMakie.Screen(), f) # hide
 
+# ## Plot of discharge capacity
+
+plot_output(output, ["DischargeCapacity vs CycleIndex"])
