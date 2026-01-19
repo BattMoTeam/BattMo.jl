@@ -27,6 +27,27 @@ function pouch_grid(input)
 
 	# Number of repeated cell layers (in z)
 	num_layers = cell_parameters["Cell"]["NumberOfLayers"]
+	double_coated = get(cell_parameters["Cell"], "DoubleCoatedElectrodes", true)
+
+	if num_layers > 1
+		extra_ne = true
+	else
+		extra_ne = false
+	end
+
+	if haskey(cell_parameters["Cell"], "CloseOffWithNegativeElectrode")
+		extra_ne = cell_parameters["Cell"]["CloseOffWithNegativeElectrode"]
+	else
+		extra_ne = extra_ne
+	end
+
+	if num_layers > 1 && double_coated == false
+		error("A multi-layer pouch cannot have single coated electrodes.")
+	end
+
+	if num_layers == 1 && extra_ne == true
+		error("A single-layer pouch cannot be closed off with an extra negative electrode.")
+	end
 
 	# --- Tab placement configuration ---
 	# If true, both NE and PE tabs are placed on the same y-edge (top or bottom).
@@ -86,21 +107,6 @@ function pouch_grid(input)
 
 	# --------------------------------------------------------
 	# 5) x/y segmentation for per-cell size setup (mesh geometry only)
-	#
-	#    IMPORTANT:
-	#      - In y-direction, the geometry literally has a "tab region | active | tab region".
-	#        We reflect that to ensure the tab rows at the ends have the correct thickness.
-	#
-	#      - In x-direction, the tabs *lie within* the electrode width, not outside it.
-	#        Using three x-regions here is acceptable if your intent is to give the tab columns
-	#        different per-cell sizes than the active columns. If you want the entire x-width to
-	#        be homogeneous instead, you can set:
-	#
-	#            width_segments = [width_points]
-	#            width_sizes    = [electrode_width]
-	#
-	#        and keep all x-variation handled purely by tab carving (recommended if you want
-	#        fractions to be strictly uniform along x).
 	# --------------------------------------------------------
 	width_segments  = [
 	neg_tab_width_points,
@@ -118,32 +124,56 @@ function pouch_grid(input)
 	length_sizes = [neg_tab_length, electrode_length - (neg_tab_length + pos_tab_length), pos_tab_length]
 
 	# --------------------------------------------------------
-	# 6) Build z-direction (thickness) segments according to the
-	#    double-coated "no outer collectors" pattern.
+	# 6) Build z-direction (thickness) segments.
+	#	 
+	#	 One layer double coated: NE_co | NE_cc | NE_co | SEP | PE_co | PE_cc | PE_co 
+	#	 One layer single coated: NE_cc | NE_co | SEP | PE_co | PE_cc 
 	#
-	#    Per layer: NE_co | NE_cc | NE_co | SEP | PE_co | PE_cc | PE_co | (interlayer SEP)
+	# 	 Multi-layer double coated:
+	#     - Per layer: NE_co | NE_cc | NE_co | SEP | PE_co | PE_cc | PE_co | (interlayer SEP)
+	# 	  - Extra NE at the top: | SEP | NE_co | NE_cc | NE_co
+	#
 	#    We collect (z_points_per_segment, z_thickness_per_segment) for the whole stack.
 	# --------------------------------------------------------
 	z_points_per_segment    = Int[]
 	z_thickness_per_segment = Float64[]
 
-	for layer in 1:num_layers
+	if double_coated == true
+
+		for layer in 1:num_layers
+			append!(z_points_per_segment, (
+				neg_coating_points, neg_cc_points, neg_coating_points,
+				separator_points,
+				pos_coating_points, pos_cc_points, pos_coating_points,
+			))
+			append!(z_thickness_per_segment, (
+				neg_coating_thickness, neg_cc_thickness, neg_coating_thickness,
+				separator_thickness,
+				pos_coating_thickness, pos_cc_thickness, pos_coating_thickness,
+			))
+
+			# Interlayer separator between repeated stacks
+			if layer < num_layers
+				append!(z_points_per_segment, separator_points)
+				append!(z_thickness_per_segment, separator_thickness)
+			end
+		end
+		if extra_ne == true
+			append!(z_points_per_segment, separator_points, neg_coating_points, neg_cc_points, neg_coating_points)
+			append!(z_thickness_per_segment, separator_thickness, neg_coating_thickness, neg_cc_thickness, neg_coating_thickness)
+		end
+	else
+
 		append!(z_points_per_segment, (
-			neg_coating_points, neg_cc_points, neg_coating_points,
+			neg_cc_points, neg_coating_points,
 			separator_points,
-			pos_coating_points, pos_cc_points, pos_coating_points,
+			pos_coating_points, pos_cc_points,
 		))
 		append!(z_thickness_per_segment, (
-			neg_coating_thickness, neg_cc_thickness, neg_coating_thickness,
+			neg_cc_thickness, neg_coating_thickness,
 			separator_thickness,
-			pos_coating_thickness, pos_cc_thickness, pos_coating_thickness,
+			pos_coating_thickness, pos_cc_thickness,
 		))
-
-		# Interlayer separator between repeated stacks
-		if layer < num_layers
-			append!(z_points_per_segment, separator_points)
-			append!(z_thickness_per_segment, separator_thickness)
-		end
 	end
 
 	# Keep a copy of the physical segment thicknesses for later region tagging
@@ -181,7 +211,7 @@ function pouch_grid(input)
 	#        and remove the rest of the y-endboxes in that layer.
 	#
 	#    HOW:
-	#      - Build the y-endbox cell ranges for *every* z-layer (as in original code).
+	#      - Build the y-endbox cell ranges for *every* z-layer.
 	#      - Compute x-columns for the tab corridor based on a fraction across Nx.
 	#      - Keep only the intersection (endbox ∩ corridor) for CC layers.
 	# --------------------------------------------------------
@@ -192,29 +222,77 @@ function pouch_grid(input)
 	#   - tab_l: number of rows from the y-edge to keep (length of the tab corridor)
 	#   - frac : fractional horizontal position across Nx (0..1 across the whole x span in this version)
 	#   - y_side: "bottom" → rows 1:tab_l, "top" → rows (Ny-tab_l+1):Ny
-	compute_tab_indices_local = function (Nx::Int, Ny::Int, tab_w::Int, tab_l::Int, frac::Float64; y_side::String = "bottom")
-		# Column center from fraction (NOTE: uses the full Nx range, not active-width normalization)
-		col_center = clamp(round(Int, frac * Nx), 1, Nx)
-		col_start  = clamp(col_center - div(tab_w, 2), 1, max(1, Nx - tab_w + 1))
-		col_stop   = min(col_start + tab_w - 1, Nx)
 
-		# Select rows at the requested edge
+	compute_tab_indices_local = function (Nx::Int, Ny::Int,
+		tab_w::Int, tab_l::Int,
+		frac::Float64; y_side::String = "top",
+		align::Symbol = :left)
+		# Map fraction -> x columns
+		if align == :center
+			# Center-based mapping: 0..1 maps to centers in [1..Nx]
+			col_center = clamp(round(Int, frac * (Nx - 1)) + 1, 1, Nx)
+			col_start  = clamp(col_center - div(tab_w, 2), 1, max(1, Nx - tab_w + 1))
+			col_stop   = min(col_start + tab_w - 1, Nx)
+		else
+			# Left-edge-based mapping (recommended for tabs): 0..1 maps to starts in [1..Nx - tab_w + 1]
+			col_start = clamp(round(Int, frac * (Nx - tab_w)) + 1, 1, max(1, Nx - tab_w + 1))
+			col_stop  = col_start + tab_w - 1
+		end
+
+		# Select rows at the requested y-edge
 		rows = (y_side == "bottom") ? (1:tab_l) : ((Ny-tab_l+1):Ny)
 
-		# Build local linear indices for the rectangular corridor
-		vcat([(Nx * (r - 1) .+ (col_start:col_stop)) for r in rows]...)
+		# Build local linear indices
+		return vcat([(Nx * (r - 1) .+ (col_start:col_stop)) for r in rows]...)
 	end
 
-	# y-endbox linear indices (absolute) for each z-layer
-	# - "pos_endbox_per_layer[i]" are the top rows (y-high side) in z-layer i
-	# - "neg_endbox_per_layer[i]" are the bottom rows (y-low side) in z-layer i
-	pos_endbox_per_layer = [(Nx*(i*Ny-pos_tab_length_points)+1):(Nx*Ny*i) for i in 1:Nz]
-	neg_endbox_per_layer = [(Nx*Ny*(i-1)+1):(Nx*(Ny*(i-1)+neg_tab_length_points)) for i in 1:Nz]
+
+	neg_endbox_bottom = [(Nx*Ny*(i-1)+1):(Nx*(Ny*(i-1)+neg_tab_length_points)) for i in 1:Nz]
+	neg_endbox_top    = [(Nx*(i*Ny-neg_tab_length_points)+1):(Nx*Ny*i) for i in 1:Nz]
+
+	pos_endbox_top    = [(Nx*(i*Ny-pos_tab_length_points)+1):(Nx*Ny*i) for i in 1:Nz]
+	pos_endbox_bottom = [(Nx*Ny*(i-1)+1):(Nx*(Ny*(i-1)+pos_tab_length_points)) for i in 1:Nz]
+
+	# Final assignment based on tab configuration
+
+	if tabs_on_same_side
+		if same_side_y_side == "top"
+			neg_endbox_per_layer = neg_endbox_top       # NE on top
+			pos_endbox_per_layer = pos_endbox_top       # PE on top
+			neg_y_side = "top"                          # MATCH
+			pos_y_side = "top"
+		else # "bottom"
+			neg_endbox_per_layer = neg_endbox_bottom    # NE bottom
+			pos_endbox_per_layer = pos_endbox_bottom    # PE bottom
+			neg_y_side = "bottom"                       # MATCH
+			pos_y_side = "bottom"
+		end
+	else
+		# Opposite sides
+		neg_endbox_per_layer = neg_endbox_bottom        # NE bottom
+		pos_endbox_per_layer = pos_endbox_top           # PE top
+		neg_y_side = "bottom"                           # MATCH
+		pos_y_side = "top"
+	end
+
 
 	# Identify which z-segments are NE/PE CC and convert them to z-layer indices
 	total_segments = length(z_thickness_per_segment)
-	neg_cc_segments = [(1 + 8 * k) + 1 for k in 0:(num_layers-1)]  # NE_cc at base+1 (base = 1+8k)
-	pos_cc_segments = [(1 + 8 * k) + 5 for k in 0:(num_layers-1)]  # PE_cc at base+5
+
+	if double_coated == true
+		neg_cc_segments = [(1 + 8 * k) + 1 for k in 0:(num_layers-1)]  # NE_cc at base+1 (base = 1+8k)
+		pos_cc_segments = [(1 + 8 * k) + 5 for k in 0:(num_layers-1)]  # PE_cc at base+5
+
+		if num_layers > 1
+			if extra_ne == true
+				push!(neg_cc_segments, total_segments - 1)  # <- this is the extra NE_cc
+			end
+		end
+	else
+		neg_cc_segments = [(1 + 8 * k) + 0 for k in 0:(num_layers-1)]  # NE_cc at base+1 (base = 1+8k)
+		pos_cc_segments = [(1 + 8 * k) + 4 for k in 0:(num_layers-1)]  # PE_cc at base+5
+
+	end
 
 	# Map z-segment indices to [start:stop] z-layer ranges using cumulative z-points
 	cum_points = cumsum(z_points_per_segment)
@@ -224,11 +302,11 @@ function pouch_grid(input)
 	neg_cc_layers = vcat([seg_lo[s]:seg_hi[s] for s in neg_cc_segments]...)
 	pos_cc_layers = vcat([seg_lo[s]:seg_hi[s] for s in pos_cc_segments]...)
 
-	# y-side selection based on same-side vs opposite-side configuration
-	# - When opposite: NE bottom / PE top
-	# - When same: both use same_side_y_side ("bottom" or "top")
-	neg_y_side = tabs_on_same_side ? same_side_y_side : "bottom"
-	pos_y_side = tabs_on_same_side ? same_side_y_side : "top"
+	# # y-side selection based on same-side vs opposite-side configuration
+	# # - When opposite: NE bottom / PE top
+	# # - When same: both use same_side_y_side ("bottom" or "top")
+	# neg_y_side = tabs_on_same_side ? same_side_y_side : "bottom"
+	# pos_y_side = tabs_on_same_side ? same_side_y_side : "top"
 
 	# Build local corridors (same x/y rectangle applied to each relevant z-layer)
 	neg_tab_corridor_local = compute_tab_indices_local(Nx, Ny, neg_tab_width_points, neg_tab_length_points, neg_tab_position_fraction; y_side = neg_y_side)
@@ -253,13 +331,25 @@ function pouch_grid(input)
 	end
 
 	# Remove all endbox cells EXCEPT those in tab corridors (kept)
+
 	pos_endbox_all = vcat(pos_endbox_per_layer...)
 	neg_endbox_all = vcat(neg_endbox_per_layer...)
+	endbox_all     = union(pos_endbox_all, neg_endbox_all)  # protects against overlap
 
-	pos_cells_to_remove = setdiff(pos_endbox_all, pos_tab_cells)
-	neg_cells_to_remove = setdiff(neg_endbox_all, neg_tab_cells)
+	# Build "cells to keep": union of both corridors
+	keep_cells = union(neg_tab_cells, pos_tab_cells)
 
-	global_grid, = remove_cells(raw_grid, vcat(pos_cells_to_remove, neg_cells_to_remove))
+	# Final removal set: ONLY endbox cells that are not in any corridor
+	cells_to_remove = sort!(collect(setdiff(endbox_all, keep_cells)))
+
+	# (Optional sanity)
+	@assert !isempty(cells_to_remove)
+	@assert all(1 .<= cells_to_remove .<= Nx*Ny*Nz)
+
+
+
+
+	global_grid, = remove_cells(raw_grid, cells_to_remove)
 
 	# ------------------------------------------------------------------
 	# (Optional) NOTE on "active-width normalization" for tab fractions:
@@ -282,7 +372,7 @@ function pouch_grid(input)
 	#    - setup_pouch_cell_geometry tags CC / coatings / separator regions
 	#    - convert_geometry maps MRST faces -> Jutul boundary faces and preserves couplings
 	# --------------------------------------------------------
-	grids, couplings = setup_pouch_cell_geometry(global_grid, z_segment_thicknesses)
+	grids, couplings = setup_pouch_cell_geometry(global_grid, z_segment_thicknesses, extra_ne, double_coated)
 	grids, couplings = convert_geometry(grids, couplings)
 
 	# External couplings on outer faces for CCs:
@@ -307,48 +397,113 @@ Multilayer pouch cell utility function
 Find the tags of each cell (tag from 1 to 5 for each grid component such as negative current collector and so on).
 Returns a list with 5 elements, each element containing a list of cells for the corresponding component.
 """
-function find_tags(h, paramsz_z)
 
-	# Compute geometry and z-centroids
+function find_tags(h, paramsz_z; extra_ne::Bool = true, double_coated = true)
+
+	# Geometry / centroids
 	h_with_geo = tpfv_geometry(h)
 	z_centroids = h_with_geo.cell_centroids[3, :]
 
-	# Compute cumulative cut-offs for each z-segment
 	cut_offs = cumsum(paramsz_z)
 	S = length(cut_offs)
-
-	# Tag each cell by segment index (1-based)
 	segment_tag = searchsortedfirst.([cut_offs], z_centroids)
 
-	# Infer number of layers
-	S = length(paramsz_z)
+	# -----------------------------------------
+	# Infer number of layers depending on pattern
+	# -----------------------------------------
+	if double_coated == true
 
-	@assert (S + 1) % 8 == 0 "paramsz_z does not match expected multilayer pattern"
-	number_of_layers = Int((S + 1) ÷ 8)
+		if extra_ne
+			@assert (S - 3) % 8 == 0 "paramsz_z does not match expected extra-NE multilayer pattern"
+			number_of_layers = Int((S - 3) ÷ 8) + 1
+		else
+			@assert (S + 1) % 8 == 0 "paramsz_z does not match expected multilayer pattern"
+			number_of_layers = Int((S + 1) ÷ 8)
+		end
 
-	# Segment indices
+	else
+
+		@assert (S + 1) % 6 == 0 "paramsz_z does not match expected multilayer pattern"
+		number_of_layers = Int((S + 1) ÷ 6)
+
+
+	end
+
+	# Output groups
 	ne_cc_segs = Int[]
 	ne_co_segs = Int[]
 	sep_segs   = Int[]
 	pe_co_segs = Int[]
 	pe_cc_segs = Int[]
 
-	for k in 0:(number_of_layers-1)
-		base = 1 + 8*k
-		# NE coatings and NE collector
-		push!(ne_co_segs, base + 0, base + 2)
-		push!(ne_cc_segs, base + 1)
-		# Separator(s)
-		push!(sep_segs, base + 3)
-		if k < number_of_layers - 1
-			push!(sep_segs, base + 7) # interlayer SEP
+	# -----------------------------------------
+	# Build segmentation rules
+	# -----------------------------------------
+	if double_coated == true
+
+		if !extra_ne
+			# -----------------------------
+			# Standard pattern (original)
+			# -----------------------------
+			for k in 0:(number_of_layers-1)
+				base = 1 + 8*k
+				# NE triple
+				push!(ne_co_segs, base + 0, base + 2)
+				push!(ne_cc_segs, base + 1)
+				# Separator
+				push!(sep_segs, base + 3)
+				if k < number_of_layers - 1
+					push!(sep_segs, base + 7)
+				end
+				# PE block
+				push!(pe_co_segs, base + 4, base + 6)
+				push!(pe_cc_segs, base + 5)
+			end
+
+		else
+			# -----------------------------
+			# Extended NE-ending pattern
+			# -----------------------------
+			# (number_of_layers - 1) full layers
+			for k in 0:(number_of_layers-2)
+				base = 1 + 8*k
+				# NE triple
+				push!(ne_co_segs, base + 0, base + 2)
+				push!(ne_cc_segs, base + 1)
+				# SEP
+				push!(sep_segs, base + 3)
+				# PE block
+				push!(pe_co_segs, base + 4, base + 6)
+				push!(pe_cc_segs, base + 5)
+				# Interlayer SEP
+				push!(sep_segs, base + 7)
+			end
+
+			# Final block: SEP | NE_co | NE_cc | NE_co
+			final_base = S-3
+			push!(sep_segs, final_base + 0)
+			push!(ne_co_segs, final_base + 1, final_base + 3)
+			push!(ne_cc_segs, final_base + 2)
 		end
-		# PE coatings and PE collector
-		push!(pe_co_segs, base + 4, base + 6)
-		push!(pe_cc_segs, base + 5)
+	else
+		for k in 0:(number_of_layers-1)
+			base = 1 + 6*k
+			# NE triple
+			push!(ne_cc_segs, base + 0)
+			push!(ne_co_segs, base + 1)
+			# Separator
+			push!(sep_segs, base + 2)
+			# PE block
+			push!(pe_co_segs, base + 3)
+			push!(pe_cc_segs, base + 4)
+
+
+		end
 	end
 
-	# Aggregate tags into 5 logical groups
+	# -----------------------------------------
+	# Build final tag groups
+	# -----------------------------------------
 	tags = Vector{Vector{Int}}(undef, 5)
 	tags[1] = findall(x -> x in ne_cc_segs, segment_tag)
 	tags[2] = findall(x -> x in ne_co_segs, segment_tag)
@@ -358,6 +513,7 @@ function find_tags(h, paramsz_z)
 
 	return tags
 end
+
 
 # """
 # Single layer pouch cell utility function
@@ -413,7 +569,7 @@ From a global grid and the position of the z-values for the different components
 
 """
 
-function setup_pouch_cell_geometry(H_mother, paramsz)
+function setup_pouch_cell_geometry(H_mother, paramsz, extra_ne, double_coated)
 	grids       = Dict{String, Any}()
 	global_maps = Dict{String, Any}()
 
@@ -430,7 +586,7 @@ function setup_pouch_cell_geometry(H_mother, paramsz)
 	nglobal = number_of_cells(grids["Global"])
 
 	# Get grouped tags directly (length 5)
-	grouped_tags = find_tags(grids["Global"], paramsz)
+	grouped_tags = find_tags(grids["Global"], paramsz; extra_ne, double_coated)
 
 	# Build per-component grids
 	allinds = 1:nglobal
