@@ -53,7 +53,7 @@ function Jutul.update_primary_variable!(state, p::Current, state_symbol, model::
 	maximum_current = model.system.protocol.maximum_current
 
 	abs_max = 0.2 * maximum_current
-	abs_max = nothing
+	# abs_max = nothing
 	rel_max = relative_increment_limit(p)
 	maxval = maximum_value(p)
 	minval = minimum_value(p)
@@ -257,7 +257,6 @@ function update_control_step_in_controller!(state, state0, protocol::GenericProt
 	index_to_stepcount(index::Integer) = clamp(index - 1, 0, number_of_control_steps - 1)      # index 1 -> stepnum 0
 
 	# --- Extract scalars safely ---
-	@info "type = ", typeof(state[:ElectricPotential])
 	voltage_values = value(state[:ElectricPotential])
 	current_values = value(state[:Current])
 	voltage_0_values = value(state0[:ElectricPotential])
