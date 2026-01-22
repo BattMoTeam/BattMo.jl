@@ -132,7 +132,7 @@ function build_battmo_docs(build_format              = nothing;
 	## Docs
 	if isnothing(build_format)
 		build_format = DocumenterVitepress.MarkdownVitepress(
-			repo = "github.com/BattMoTeam/BattMo.jl",
+			repo = "github.com/BattMoTeam/BattMo.jl.git",
 			devbranch = "main",
 			devurl = "dev",
 		)
