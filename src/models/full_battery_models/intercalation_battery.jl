@@ -95,13 +95,13 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 	if protocol == "CC"
 
 		policy = ConstantCurrent(cycling_protocol.all)
-		protocol = GenericProtocol(policy, input)
+		protocol = GenericProtocol(policy, input; T = T)
 
 
 	elseif protocol == "CCCV"
 
 		policy = ConstantCurrentConstantVoltage(cycling_protocol.all)
-		protocol = GenericProtocol(policy, input)
+		protocol = GenericProtocol(policy, input; T = T)
 
 	elseif protocol == "Function"
 
@@ -114,7 +114,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 
 		policy = Experiment(cycling_protocol.all)
 
-		protocol = GenericProtocol(policy, input)
+		protocol = GenericProtocol(policy, input; T = T)
 
 
 	else

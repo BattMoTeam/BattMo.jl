@@ -24,10 +24,10 @@
 
 A termination criterion that stops a control step or time-stepping when the time reaches `end_time`.
 """
-mutable struct TimeTermination <: AbstractTerminationCriterion
-	end_time::Real
-	end_time_adjusted::Real
-	tolerance::Real
+mutable struct TimeTermination{R} <: AbstractTerminationCriterion
+	end_time::R
+	end_time_adjusted::R
+	tolerance::R
 end
 
 
@@ -36,10 +36,10 @@ end
 
 A termination criterion that stops a control step or time-stepping when the voltage reaches `end_voltage`.
 """
-mutable struct VoltageTermination <: AbstractTerminationCriterion
-	end_voltage::Real
+mutable struct VoltageTermination{R} <: AbstractTerminationCriterion
+	end_voltage::R
 	direction::String
-	tolerance::Real
+	tolerance::R
 
 end
 
@@ -49,9 +49,9 @@ end
 
 A termination criterion that stops a control step or time-stepping when the voltage changes reaches `end_voltage_change`.
 """
-mutable struct VoltageChangeTermination <: AbstractTerminationCriterion
-	end_voltage_change::Real
-	tolerance::Real
+mutable struct VoltageChangeTermination{R} <: AbstractTerminationCriterion
+	end_voltage_change::R
+	tolerance::R
 end
 
 
@@ -60,10 +60,10 @@ end
 
 A termination criterion that stops a control step or time-stepping when the current reaches `end_current`.
 """
-mutable struct CurrentTermination <: AbstractTerminationCriterion
-	end_current::Real
+mutable struct CurrentTermination{R} <: AbstractTerminationCriterion
+	end_current::R
 	direction::String
-	tolerance::Real
+	tolerance::R
 
 end
 
@@ -72,9 +72,9 @@ end
 
 A termination criterion that stops a control step or time-stepping when the current change reaches `end_current_change`.
 """
-mutable struct CurrentChangeTermination <: AbstractTerminationCriterion
-	end_current_change::Real
-	tolerance::Real
+mutable struct CurrentChangeTermination{R} <: AbstractTerminationCriterion
+	end_current_change::R
+	tolerance::R
 
 end
 
@@ -84,10 +84,10 @@ end
 
 A termination criterion that stops a control step or time-stepping when the state of charge reaches `end_state_of_charge`.
 """
-mutable struct StateOfChargeTermination <: AbstractTerminationCriterion
-	end_state_of_charge::Real
+mutable struct StateOfChargeTermination{R} <: AbstractTerminationCriterion
+	end_state_of_charge::R
 	direction::AbstractString
-	tolerance::Real
+	tolerance::R
 
 end
 
@@ -108,8 +108,8 @@ end
 
 A termination criterion that stops time-stepping when the global cycle_index reaches `end_cycle_index`.
 """
-struct CycleCountTermination <: AbstractTerminationCriterion
-	end_cycle_count::Float64
+struct CycleCountTermination{R} <: AbstractTerminationCriterion
+	end_cycle_count::R
 end
 
 
@@ -118,8 +118,8 @@ end
 
 A termination criterion that stops time-stepping when the global control_step_count reaches `end_control_step_count`.
 """
-struct ControlStepCountTermination <: AbstractTerminationCriterion
-	end_control_step_count::Float64
+struct ControlStepCountTermination{R} <: AbstractTerminationCriterion
+	end_control_step_count::R
 end
 
 
@@ -158,6 +158,7 @@ function get_termination_instance(quantity::AbstractString, target; direction = 
 end
 
 function adjust_time_based_termination_target!(termination::TimeTermination, time)
+	promote(typeof(time), typeof(termination.end_time))
 
 	termination.end_time_adjusted = time + termination.end_time
 end

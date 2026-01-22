@@ -264,7 +264,7 @@ function solve(vc::AbstractCalibration;
 		single_step_sparsity = false,
 		do_prep = true,
 	),
-	kwarg...,
+	kwargs...,
 )
 	sim = deepcopy(vc.sim)
 	x0, x_setup = vectorize_cell_parameters_for_calibration(vc, sim)
@@ -287,6 +287,7 @@ function solve(vc::AbstractCalibration;
 	solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective, solver_settings;
 		adj_cache = adj_cache,
 		backend_arg,
+		kwargs...,
 	)
 	jutul_message("Calibration", "Starting calibration of $(length(x0)) parameters.", color = :green)
 
@@ -330,6 +331,7 @@ function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objec
 	adj_cache = Dict(),
 	backend_arg = NamedTuple(),
 	gradient = true,
+	kwargs...,
 )
 	case = setup_battmo_case(x)
 	states, dt = simulate_battmo_case_for_calibration(case, solver_settings)
@@ -347,7 +349,7 @@ function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objec
 		S = adj_cache[:storage]
 		g = similar(x)
 		Jutul.AdjointsDI.solve_adjoint_generic!(
-			g, x, setup_battmo_case, S, states, dt, objective,
+			g, x, setup_battmo_case, S, states, dt, objective; kwargs...,
 		)
 		# g = Jutul.AdjointsDI.solve_adjoint_generic(
 		#     x, setup_battmo_case, states, dt, objective,
@@ -381,6 +383,8 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing;
 	sim = deepcopy(sim)
 	T = eltype(X)
 	Jutul.AdjointsDI.devectorize_nested!(sim.cell_parameters.all, X, x_setup)
+
+
 	input = (
 		model_settings = sim.model.settings,
 		cell_parameters = sim.cell_parameters,
@@ -400,14 +404,23 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing;
 		timesteps = timesteps[stepix]
 	end
 
-	return Jutul.JutulCase(model.multimodel, timesteps, forces, parameters = parameters, state0 = state0, input_data = input, termination_criterion = termination_criterion)
+	input_data = FullSimulationInput(
+		Dict(
+			"BaseModel" => string(nameof(typeof(sim.model))),
+			"ModelSettings" => sim.model.settings.all,
+			"CellParameters" => sim.cell_parameters.all,
+			"CyclingProtocol" => sim.cycling_protocol.all,
+			"SimulationSettings" => sim.settings.all),
+	)
+
+	return Jutul.JutulCase(model.multimodel, timesteps, forces, parameters = parameters, state0 = state0, input_data = input_data, termination_criterion = termination_criterion)
 end
 
 function simulate_battmo_case_for_calibration(case, solver_settings;
 	simulator = missing,
 	config = missing,
 )
-	case = case
+	case = deepcopy(case)
 	if ismissing(simulator)
 		simulator = Simulator(case)
 	end

@@ -18,45 +18,45 @@ abstract type AbstractControlStep end
 ##################################################
 # Define the different control step types
 
-struct CurrentStep <: AbstractControlStep
-	value::Union{Real, AbstractString}
+struct CurrentStep{R} <: AbstractControlStep
+	value::Union{R, AbstractString}
 	direction::Union{String}
 	termination::AbstractTerminationCriterion
 	current_function::Function
 
 	function CurrentStep(value, direction, termination, use_ramp_up; ramp_up_time = nothing, current_function = setup_current_function(value, ramp_up_time, use_ramp_up; direction))
-		return new(value, direction, termination, current_function)
+		return new{typeof(value)}(value, direction, termination, current_function)
 	end
 end
 
-struct VoltageStep <: AbstractControlStep
-	value::Real
+struct VoltageStep{R} <: AbstractControlStep
+	value::R
 	termination::AbstractTerminationCriterion
 	voltage_function::Function
 
 	function VoltageStep(value, termination, voltage_function = setup_voltage_function(value))
-		return new(value, termination, voltage_function)
+		return new{typeof(value)}(value, termination, voltage_function)
 	end
 end
 
-mutable struct RestStep <: AbstractControlStep
-	value::Real
+mutable struct RestStep{R} <: AbstractControlStep
+	value::R
 	termination::AbstractTerminationCriterion
 end
 
-struct PowerStep <: AbstractControlStep
-	value::Union{Nothing, Real}
+struct PowerStep{R} <: AbstractControlStep
+	value::Union{Nothing, R}
 	direction::Union{Nothing, String}
 	termination::AbstractTerminationCriterion
 	power_function::Function
 
 	function PowerStep(value, direction, termination, voltage_function = setup_power_function(value))
-		return new(value, direction, termination, voltage_function)
+		return new{typeof(value)}(value, direction, termination, voltage_function)
 	end
 end
 
-mutable struct StateOfChargeStep <: AbstractControlStep
-	value::Real
+mutable struct StateOfChargeStep{R} <: AbstractControlStep
+	value::R
 	termination::AbstractTerminationCriterion
 end
 

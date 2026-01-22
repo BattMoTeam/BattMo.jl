@@ -88,14 +88,14 @@ end
 """
 Handle repeats for a given list of previous steps.
 """
-function handle_repeats!(stepper, previous_steps, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10)
+function handle_repeats!(stepper, previous_steps, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10, T = Float64)
 	if depth > max_depth
 		error("Exceeded maximum repeat depth to prevent infinite recursion.")
 	end
 
 	for _ in 1:number_of_repeats
 		for (idx, prev_step) in enumerate(previous_steps)
-			stepper = update_stepper!(stepper, prev_step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth+1, max_depth = max_depth)
+			stepper = update_stepper!(stepper, prev_step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth+1, max_depth = max_depth, T = T)
 		end
 	end
 	return stepper
@@ -106,9 +106,9 @@ end
 Process a single step (String or Vector).
 """
 
-function update_stepper!(stepper, step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10)
+function update_stepper!(stepper, step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10, T = Float64)
 	if step isa String
-		step_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(step, capacity, use_ramp_up; ramp_up_time)
+		step_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(step, capacity, use_ramp_up; ramp_up_time, T = T)
 		stepper = add_step!(stepper, step_instance)
 		if increase_cycle_count
 			stepper.cycle_count += 1
@@ -121,7 +121,7 @@ function update_stepper!(stepper, step, idx, experiment_list, capacity, use_ramp
 
 	elseif step isa Vector
 		for (idx_sub, sub_step) in enumerate(step)
-			sub_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(sub_step, capacity, use_ramp_up; ramp_up_time)
+			sub_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(sub_step, capacity, use_ramp_up; ramp_up_time, T = T)
 			stepper = add_step!(stepper, sub_instance)
 			if increase_cycle_count
 				stepper.cycle_count += 1
@@ -130,7 +130,7 @@ function update_stepper!(stepper, step, idx, experiment_list, capacity, use_ramp
 			end
 			if !isnothing(number_of_repeats)
 				previous_strings = step[1:(idx_sub-1)]
-				stepper = handle_repeats!(stepper, previous_strings, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth, max_depth = max_depth)
+				stepper = handle_repeats!(stepper, previous_strings, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth, max_depth = max_depth, T = T)
 			end
 		end
 	else
@@ -140,7 +140,7 @@ function update_stepper!(stepper, step, idx, experiment_list, capacity, use_ramp
 	return stepper
 end
 
-function parse_experiment_step(step::String, capacity::Real, use_ramp_up::Bool; ramp_up_time = 0.1)
+function parse_experiment_step(step::String, capacity, use_ramp_up::Bool; ramp_up_time = 0.1, T = Float64)
 	increase_cycle_count = false
 	number_of_repeats = nothing
 	step_instance = nothing
@@ -148,14 +148,18 @@ function parse_experiment_step(step::String, capacity::Real, use_ramp_up::Bool; 
 	if containsi(step, "Rest")
 		step_processed = process_values(step, capacity)
 
+		T = promote_type(T, typeof(step_processed[:termination][:target]))
+
 		termination = get_termination_instance(step_processed[:termination][:type], step_processed[:termination][:target])
 
-		step_instance = RestStep(0.0, termination)
+		step_instance = RestStep(zero(T), termination)
 
 	elseif containsi(step, "Discharge") || containsi(step, "Charge")
 		step_processed = process_values(step, capacity)
 
 		control_type = step_processed[:control][:type]
+
+		T = promote_type(T, typeof(step_processed[:termination][:target]), typeof(step_processed[:control][:target]))
 
 		termination = get_termination_instance(step_processed[:termination][:type], step_processed[:termination][:target]; direction = step_processed[:control][:direction])
 
@@ -169,6 +173,8 @@ function parse_experiment_step(step::String, capacity::Real, use_ramp_up::Bool; 
 
 	elseif containsi(step, "Hold")
 		step_processed = process_values(step, capacity)
+
+		T = promote_type(T, typeof(step_processed[:termination][:target]), typeof(step_processed[:control][:target]))
 
 		termination = get_termination_instance(step_processed[:termination][:type], step_processed[:termination][:target])
 
