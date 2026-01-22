@@ -2,16 +2,21 @@ using BattMo, Test, Jutul
 import BattMo: VoltageCalibration, free_calibration_parameter!, freeze_calibration_parameter!, print_calibration_overview
 
 function test_adjoints()
+	model_settings = load_model_settings(; from_default_set = "p2d")
 	cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
-	cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+	cycling_protocol = load_cycling_protocol(; from_default_set = "experiment")
 	solver_settings = load_solver_settings(; from_default_set = "direct")
 
+	cycling_protocol["Experiment"] = ["Discharge at 0.5 C for 100 s"]
+
 	cycling_protocol["InitialStateOfCharge"] = 0.8
-	cycling_protocol["LowerVoltageLimit"] = 2.0
+	# cycling_protocol["LowerVoltageLimit"] = 3.2
 
-	model_setup = LithiumIonBattery()
+	pop!(model_settings.all, "RampUp")
 
-	cycling_protocol["DRate"] = 0.5
+	model_setup = LithiumIonBattery(; model_settings)
+
+	# cycling_protocol["DRate"] = 0.5
 	sim = Simulation(model_setup, cell_parameters, cycling_protocol)
 
 	output0 = solve(sim, info_level = -1)
@@ -65,18 +70,19 @@ function test_adjoints()
 
 	x0, x_setup = BattMo.vectorize_cell_parameters_for_calibration(vc, vc.sim)
 	x0_copy = deepcopy(x0)
-	setup_battmo_case(X, step_info = missing) = BattMo.setup_battmo_case_for_calibration(X, deepcopy(vc.sim), x_setup, step_info)
+	setup_battmo_case(X, step_info = missing) = BattMo.setup_battmo_case_for_calibration(X, deepcopy(vc.sim), deepcopy(x_setup), step_info)
 	numg = similar(x0)
-	f, = BattMo.solve_and_differentiate_for_calibration(x0, setup_battmo_case, vc, obj, solver_settings, gradient = false)
+	f, = BattMo.solve_and_differentiate_for_calibration(x0, setup_battmo_case, vc, obj, solver_settings, gradient = false, info_level = 3)
 	for i in eachindex(numg)
 		x = copy(x0)
 		ϵ = max(1e-8 * abs(x[i]), 1e-16)
 		x[i] += ϵ
-		f1, = BattMo.solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, obj, solver_settings, gradient = false)
+		f1, = BattMo.solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, obj, solver_settings, gradient = false, info_level = 3)
 		numg[i] = (f1 - f) / ϵ
 	end
 
-	f, g = BattMo.solve_and_differentiate_for_calibration(x0, setup_battmo_case, vc, obj, solver_settings)
+	@show x_setup.names
+	f, g = BattMo.solve_and_differentiate_for_calibration(x0, setup_battmo_case, vc, obj, solver_settings, info_level = 3)
 	mynorm = x -> sum(x -> x^2, x)^(1 / 2)
 	@test mynorm(numg - g) / mynorm(numg) ≈ 0.0 atol = 1e-4
 	for i in eachindex(numg)
