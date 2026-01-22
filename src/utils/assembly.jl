@@ -136,7 +136,7 @@ at the faces (which we typically simply call flux)
 - `state`              : state variable
 						 All the secondary variables that are needed to compute the flux should be present there.
 						 To add those, you can use the `get_state_with_secondary_variables` function
-- `operators`          : list of local matrices that are used to compute the flux vector from face integratedvalues,
+- `operators`          : list of local matrices that are used to compute the flux vector from face integrated values,
 						 see `setup_flux_operator
 - `fieldname = :Charge`: Name of the flux that is computed, which corresponds to the name of the equation where this flux is primarily intended to be used,
 						 see the function `compute_flux` and their specializations
