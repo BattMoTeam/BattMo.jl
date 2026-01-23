@@ -132,9 +132,7 @@ function build_battmo_docs(build_format              = nothing;
 	## Docs
 	if isnothing(build_format)
 		build_format = DocumenterVitepress.MarkdownVitepress(
-			repo = "github.com/BattMoTeam/BattMo.jl.git",
-			devbranch = "main",
-			devurl = "dev",
+			repo = "github.com/BattMoTeam/BattMo.jl",
 		)
 	end
 
@@ -208,7 +206,7 @@ function build_battmo_docs(build_format              = nothing;
 	end
 	if deploy
 		DocumenterVitepress.deploydocs(;
-			repo = "github.com/BattMoTeam/BattMo.jl",
+			repo = "github.com/BattMoTeam/BattMo.jl.git",
 			devbranch = "main",
 			target = "build", # this is where Vitepress stores its output
 			branch = "gh-pages",
