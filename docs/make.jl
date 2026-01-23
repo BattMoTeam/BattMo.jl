@@ -8,6 +8,7 @@ using DocumenterCitations
 using DocumenterVitepress
 ##
 cd(@__DIR__)
+
 function build_battmo_docs(build_format              = nothing;
 	build_examples            = true,
 	build_tutorials           = build_examples,
