@@ -470,6 +470,44 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		am_params[:ocp_func] = interpolation_object
 	end
 
+    if haskey(inputparams_active_material, "EntropyChange")
+        if haskey(inputparams_active_material, "IncludeEntropyChange")
+            am_params[:include_entropy_change] = false
+        else
+            am_params[:include_entropy_change] = true
+        end
+        am_params[:reference_temperature] = inputparams_active_material["ReferenceTemperature"]
+        # For supported function format,  see [Function.schema.json](https://github.com/BattMoTeam/BattMo/blob/main/Utilities/JsonSchemas/Function.schema.json#L7)
+        functionFormat = inputparams_active_material["EntropyChange"]["functionFormat"]
+        number_of_arguments = length(inputparams_active_material["EntropyChange"]["argumentList"])
+        
+        if functionFormat == "tabulated"
+            
+            data_x = inputparams_active_material["EntropyChange"]["dataX"]
+		    data_y = inputparams_active_material["EntropyChange"]["dataY"]
+            
+		    interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
+		    am_params[:entropychange_func] = interpolation_object
+            am_params[:entropychange_func_number_of_arguments] = number_of_arguments
+            
+        elseif functionFormat == "named function"
+            
+            func_name = inputparams_active_material["EntropyChange"]["functionName"]
+            func_path = inputparams_active_material["EntropyChange"]["functionPath"] # this is not covered in schema
+		    fcn = setup_function_from_function_name(func_name; file_path = func_path)
+		    am_params[:entropychange_func] = fcn
+            am_params[:entropychange_func_number_of_arguments] = number_of_arguments
+
+        else
+            # we could/shoud support "string expression", "constant" "csv"
+            # see [Function.schema.json](https://github.com/BattMoTeam/BattMo/blob/main/Utilities/JsonSchemas/Function.schema.json#L7)
+            error("function format not supported")
+        end
+        
+    else
+        am_params[:include_entropy_change] = false
+    end
+    
 	refT     = 298.15
 	T        = get(input.cycling_protocol, "InitialTemperature", refT)
 	SOC_init = input.cycling_protocol["InitialStateOfCharge"]

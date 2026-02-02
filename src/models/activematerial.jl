@@ -212,10 +212,11 @@ function Jutul.select_secondary_variables!(S,
 	system::ActiveMaterialP2D,
 	model::SimulationModel,
 )
-	S[:Charge] = Charge()
+	S[:Charge]               = Charge()
 	S[:OpenCircuitPotential] = OpenCircuitPotential()
+	S[:EntropyChange]        = EntropyChange()
 	S[:ReactionRateConstant] = ReactionRateConstant()
-	S[:SolidDiffFlux] = SolidDiffFlux()
+	S[:SolidDiffFlux]        = SolidDiffFlux()
 	S[:DiffusionCoefficient] = DiffusionCoefficient()
 
 end
@@ -317,7 +318,11 @@ end
 		                           SurfaceConcentration,
 		                           ix) where {label, D, T, Di}
 
-		entropychange_func = model.system.params[:entropychange_func]
+        if model.system.params[:include_entropy_change]
+            return
+        end
+
+        entropychange_func = model.system.params[:entropychange_func]
 
 		cmax = model.system.params[:maximum_concentration]
 
