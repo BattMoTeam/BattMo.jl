@@ -61,6 +61,7 @@ const ActiveMaterialP2D{label, D, T, Di} = ActiveMaterial{label, D, T, Di}
 const ActiveMaterialNoParticleDiffusion{T} = ActiveMaterial{nothing, NoParticleDiffusion, T}
 
 struct OpenCircuitPotential <: ScalarVariable end
+struct EntropyChange <: ScalarVariable end # entropy change
 struct DiffusionCoefficient <: ScalarVariable end
 struct ReactionRateConstant <: ScalarVariable end
 struct ParticleConcentration <: VectorVariables end # particle concentrations in p2d model
@@ -261,23 +262,17 @@ end
 
 @jutul_secondary(
 	function update_vocp!(OpenCircuitPotential,
-		tv::OpenCircuitPotential,
-		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
-		Temperature,
-		SurfaceConcentration,
-		ix,
-	) where {label, D, T, Di}
+		                  tv::OpenCircuitPotential,
+		                  model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
+		                  Temperature,
+		                  SurfaceConcentration,
+                          EntropyChange,
+		                  ix,
+	                      ) where {label, D, T, Di}
 
 		ocp_func = model.system.params[:ocp_func]
 
 		cmax = model.system.params[:maximum_concentration]
-		refT = 298.15
-
-		if Jutul.haskey(model.system.params, :ocp_funcexp)
-			theta0   = model.system.params[:theta0]
-			theta100 = model.system.params[:theta100]
-		end
-
 
 		for cell in ix
 
@@ -290,15 +285,70 @@ end
 				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell] / cmax)
 
 			elseif Jutul.haskey(model.system.params, :ocp_funcconstant)
+
 				@inbounds OpenCircuitPotential[cell] = ocp_func
+                
 			else
 
 				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax)
 
 			end
+            
+		end
+
+        if model.system.params[:include_entropy_change]
+
+		    refT = model.system.params[:reference_temperature]
+            
+		    for cell in ix
+                
+                @inbounds OpenCircuitPotential[cell] += EntropyChange[cell]*(Temperature[cell] - refT)
+                
+            end
+
+        end
+	end
+)
+
+@jutul_secondary(
+	function update_entropychange!(EntropyChange,
+		                           tv::EntropyChange,
+		                           model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
+		                           SurfaceConcentration,
+		                           ix) where {label, D, T, Di}
+
+		entropychange_func = model.system.params[:entropychange_func]
+
+		cmax = model.system.params[:maximum_concentration]
+
+		for cell in ix
+
+			if Jutul.haskey(model.system.params, :entropychange_func_number_of_arguments)
+
+                if model.system.params[:entropychange_func_number_of_arguments] == 1
+                
+                    @inbounds EntropyChange[cell] = entropychange_func(SurfaceConcentration[cell] / cmax)
+                    
+                elseif model.system.params[:entropychange_func_number_of_arguments] == 2
+                    
+				    @inbounds EntropyChange[cell] = entropychange_func(SurfaceConcentration[cell], cmax)
+
+                else
+
+                    error("number of arguments not implemented")
+                    
+                end
+                
+			else
+
+				@inbounds EntropyChange[cell] = entropychange_func(SurfaceConcentration[cell] / cmax)
+
+			end
 		end
 	end
 )
+
+
 
 @jutul_secondary(
 	function update_diffusion_coefficient!(DiffusionCoefficient,
