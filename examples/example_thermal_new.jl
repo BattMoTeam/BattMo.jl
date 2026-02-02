@@ -64,4 +64,4 @@ thermal_states, = simulate(thermal_sim, timesteps; info_level = -1, forces = for
 
 plot_interactive(thermal_model, thermal_states)
 
-Jutul.plot_interactive_impl(thermal_model.domain.representation.representation, sources)
+# Jutul.plot_interactive_impl(thermal_model.domain.representation.representation, sources)

@@ -234,9 +234,6 @@ function Jutul.select_equations!(eqs,
 
 end
 
-
-
-
 # Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::SolidDiffusionBc) = 1
 
 function Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::SolidMassCons)
@@ -274,7 +271,8 @@ end
 		ocp_func = model.system.params[:ocp_func]
 
 		cmax = model.system.params[:maximum_concentration]
-
+        refT = 298.15
+        
 		for cell in ix
 
 			if Jutul.haskey(model.system.params, :ocp_funcexp)
@@ -318,6 +316,8 @@ end
 		                           SurfaceConcentration,
 		                           ix) where {label, D, T, Di}
 
+        return
+        
         if model.system.params[:include_entropy_change]
             return
         end
