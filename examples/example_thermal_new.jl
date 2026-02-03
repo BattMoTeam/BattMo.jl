@@ -16,7 +16,7 @@ inputparams = merge_input_params(inputparams_geometry, inputparams)
 inputparams = merge_input_params(inputparams, inputparams_thermal)
 
 # Add Thermal Model
-inputparams["ThermalModel"]["thermal"] = true
+inputparams["use_thermal"] = true
 
 # Add thermal parameters
 # inputparams["ThermalModel"]["externalHeatTransferCoefficient"] = 1e20
