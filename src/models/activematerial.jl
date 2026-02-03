@@ -271,27 +271,22 @@ end
 		ocp_func = model.system.params[:ocp_func]
 
 		cmax = model.system.params[:maximum_concentration]
-        refT = 298.15
         
 		for cell in ix
 
-			if Jutul.haskey(model.system.params, :ocp_funcexp)
-
-				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax)
-
-			elseif Jutul.haskey(model.system.params, :ocp_funcdata)
-
-				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell] / cmax)
-
-			elseif Jutul.haskey(model.system.params, :ocp_funcconstant)
-
-				@inbounds OpenCircuitPotential[cell] = ocp_func
+            if model.system.params[:ocp_func_number_of_arguments] == 1
                 
-			else
+                @inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell] / cmax)
+                
+            elseif model.system.params[:ocp_func_number_of_arguments] == 2
+                
+				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], cmax)
 
-				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax)
+            else
 
-			end
+                error("number of arguments not implemented")
+                
+            end
             
 		end
 
@@ -306,6 +301,7 @@ end
             end
 
         end
+        
 	end
 )
 
@@ -316,9 +312,8 @@ end
 		                           SurfaceConcentration,
 		                           ix) where {label, D, T, Di}
 
-        return
         
-        if model.system.params[:include_entropy_change]
+        if !model.system.params[:include_entropy_change]
             return
         end
 
@@ -328,27 +323,21 @@ end
 
 		for cell in ix
 
-			if Jutul.haskey(model.system.params, :entropychange_func_number_of_arguments)
-
-                if model.system.params[:entropychange_func_number_of_arguments] == 1
+            if model.system.params[:entropychange_func_number_of_arguments] == 1
                 
-                    @inbounds EntropyChange[cell] = entropychange_func(SurfaceConcentration[cell] / cmax)
-                    
-                elseif model.system.params[:entropychange_func_number_of_arguments] == 2
-                    
-				    @inbounds EntropyChange[cell] = entropychange_func(SurfaceConcentration[cell], cmax)
-
-                else
-
-                    error("number of arguments not implemented")
-                    
-                end
+                @inbounds EntropyChange[cell] = entropychange_func(SurfaceConcentration[cell] / cmax)
                 
-			else
+            elseif model.system.params[:entropychange_func_number_of_arguments] == 2
+                
+				@inbounds EntropyChange[cell] = entropychange_func(SurfaceConcentration[cell], cmax)
 
-				@inbounds EntropyChange[cell] = entropychange_func(SurfaceConcentration[cell] / cmax)
+            else
 
-			end
+                error("number of arguments not implemented")
+                
+            end
+            
+
 		end
 	end
 )
