@@ -103,10 +103,9 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 		model_settings["RampUp"] = "Sinusoidal"
 	end
 
-	if haskey(params, "ThermalModel") && params["ThermalModel"]["thermal"] == true
+	if haskey(params, "use_thermal") && params["use_thermal"]
 		model_settings["ThermalModel"] = "Sequential"
 	end
-
 
 	####################################
 	# SimulationSettings
