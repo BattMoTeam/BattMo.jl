@@ -213,6 +213,7 @@ heatmap(states.Position, states.Time, states.ElectrolyteConcentration)
 """
 function get_output_states(
 	jutul_output::NamedTuple,
+	grids,
 	input::FullSimulationInput;
 	quantities::Union{Nothing, Vector{String}} = nothing,
 )
@@ -230,7 +231,7 @@ function get_output_states(
 	# Initialize available quantities (consistent key type = String)
 	available_quantities = Dict{String, Any}(
 		"Time" => time,
-		"Position" => x,
+		"Position" => position,
 		"NegativeElectrodeActiveMaterialRadius" => r_ne,
 		"PositiveElectrodeActiveMaterialRadius" => r_pe,
 	)

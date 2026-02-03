@@ -11,7 +11,7 @@ cell_parameters["Cell"]["DoubleCoatedElectrodes"] = false
 cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabPositionFraction"] = 0.22
 cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabPositionFraction"] = 0.78
 
-simulation_settings["ElectrodeWidthGridPoints"] = 11
+simulation_settings["ElectrodeWidthGridPoints"] = 30
 
 cycling_protocol["DRate"] = 1
 
@@ -32,20 +32,50 @@ nothing #hide
 
 for (i, component) in enumerate(components)
 	if i == 1
-		global fig, ax = plot_mesh(grids[component],
+		global fig1, ax1 = plot_mesh(grids[component],
 			color = colors[i],
 			label = string(component))
-		ax.aspect = :data
+		# ax.aspect = :data
 	else
-		plot_mesh!(ax,
+		plot_mesh!(ax1,
 			grids[component],
 			color = colors[i],
 			label = string(component))
 	end
 end
-axislegend(ax, position = :rb)
+legend_elements = [
+	PolyElement(color = colors[i]) for i in eachindex(components)
+]
 
-output = solve(sim)
+Legend(fig1[1, 2], legend_elements, components)
 
-plot_interactive_3d(output; colormap = :curl)
+display(GLMakie.Screen(), fig1)
+
+# We plot the grid
+
+for (i, component) in enumerate(components)
+	if i == 1
+		global fig2, ax2 = plot_mesh_edges(grids[component],
+			color = colors[i],
+			label = string(component))
+		ax2.aspect = :data
+	else
+		plot_mesh_edges!(ax2,
+			grids[component],
+			color = colors[i],
+			label = string(component))
+	end
+end
+legend_elements = [
+	PolyElement(color = colors[i]) for i in eachindex(components)
+]
+
+Legend(fig2[1, 2], legend_elements, components)
+display(GLMakie.Screen(), fig2)
+
+
+
+# output = solve(sim)
+
+# plot_interactive_3d(output; colormap = :curl)
 
