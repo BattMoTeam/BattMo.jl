@@ -25,12 +25,13 @@
           "openCircuitPotential": {
             "functionFormat": "named function",
             "functionName": "computeOCP_Graphite_Torchio",
-            "argumentList": [
-              "concentration",
-              "temperature",
-              "cmax"
-            ]
-          }
+            "argumentList": ["stoichiometry"]},
+          "includeEntropyChange" : true,
+          "entropyChange" : {
+            "functionFormat": "named function",
+            "functionName": "computeEntropyChange_Graphite_Torchio",
+            "argumentList": ["stoichiometry"]},
+          "referenceTemperature" : 298.15
         },
         "diffusionModelType": "full",
         "SolidDiffusion": {
@@ -85,12 +86,13 @@
           "openCircuitPotential": {
             "functionFormat": "named function",
             "functionName": "computeOCP_NMC111",
-            "argumentList": [
-              "concentration",
-              "temperature",
-              "cmax"
-            ]
-          }
+            "argumentList": ["stoichiometry"]},
+          "includeEntropyChange" : true,
+          "entropyChange" : {
+            "functionFormat": "named function",
+            "functionName": "computeEntropyChenage_NMC111",
+            "argumentList": ["stoichiometry"]},
+          "referenceTemperature" : 298.15
         },
         "diffusionModelType": "full",
         "SolidDiffusion": {
@@ -159,7 +161,7 @@
     "bruggemanCoefficient": 1.5
   },
   "ThermalModel": {
-    "externalHeatTransferCoefficient": 1000,
+    "externalHeatTransferCoefficient": 1000.0,
     "externalTemperature": 298.15
   }
 }
