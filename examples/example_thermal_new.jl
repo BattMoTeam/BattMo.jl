@@ -1,19 +1,25 @@
 using Jutul, BattMo, GLMakie, Statistics
 
 # ## Setup input parameters
-name = "p2d_40_jl_chen2020"
-
-fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
-inputparams = load_advanced_dict_input(fn)
+fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/lithium_ion_battery_nmc_graphite.json")
+inputparams_material = load_advanced_dict_input(fn)
 
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
 inputparams_geometry = load_advanced_dict_input(fn)
 
+inputparams = merge_input_params([inputparams_material, inputparams_geometry])
+
+# Add control parameters
+fn = string(dirname(pathof(BattMo)), "/../examples/Experimental/jsoninputs/cc_discharge_control.json")
+inputparams_control = load_advanced_dict_input(fn)
+
+inputparams = merge_input_params(inputparams_control, inputparams; warn = true)
+
+# Add thermal parameters
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/simple_thermal.json")
 inputparams_thermal = load_advanced_dict_input(fn)
 
-inputparams = merge_input_params(inputparams_geometry, inputparams)
-inputparams = merge_input_params(inputparams, inputparams_thermal)
+inputparams = merge_input_params(inputparams_thermal, inputparams; warn = true)
 
 # Add Thermal Model
 inputparams["use_thermal"] = true
@@ -23,7 +29,7 @@ inputparams["use_thermal"] = true
 # inputparams["ThermalModel"]["source"]                          = 1e4
 # inputparams["ThermalModel"]["conductivity"]                    = 12
 
-output = run_simulation(inputparams);
+output = run_simulation(inputparams; accept_invalid = true);
 
 model      = output.model
 multimodel = model.multimodel
@@ -31,12 +37,38 @@ states     = output.jutul_output.states
 parameters = output.simulation.parameters
 grids      = output.simulation.grids
 maps       = output.simulation.global_maps
-timesteps  = output.simulation.time_steps
+timesteps  = output.simulation.time_steps[1 : length(states)]
+
+t = [state[:Control][:Controller].time for state in states]
+E = [state[:Control][:ElectricPotential][1] for state in states]
+I = [state[:Control][:Current][1] for state in states]
+
+f = Figure(size = (1000, 400))
+
+ax = Axis(f[1, 1],
+	title = "Voltage",
+	xlabel = "Time / s",
+	ylabel = "Voltage / V",
+	xlabelsize = 25,
+	ylabelsize = 25,
+	xticklabelsize = 25,
+	yticklabelsize = 25,
+)
+
+scatterlines!(ax,
+	t,
+	E;
+	linewidth = 4,
+	markersize = 10,
+	marker = :cross,
+	markercolor = :black,
+	label = "Julia",
+)
 
 input = (
-	model_settings = output.simulation.model.settings,
-	cell_parameters = output.simulation.cell_parameters,
-	cycling_protocol = output.simulation.cycling_protocol,
+	model_settings      = output.simulation.model.settings,
+	cell_parameters     = output.simulation.cell_parameters,
+	cycling_protocol    = output.simulation.cycling_protocol,
 	simulation_settings = output.simulation.settings,
 )
 
