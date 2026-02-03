@@ -168,8 +168,6 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
         
     end
 
-    ne_ocp = convertFunctionParams(params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"])
-    pe_ocp = convertFunctionParams(params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"])
     cond = convertFunctionParams(params["Electrolyte"]["ionicConductivity"])
     diff = convertFunctionParams(params["Electrolyte"]["diffusionCoefficient"])
 
@@ -192,7 +190,10 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 				"MaximumConcentration" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["saturationConcentration"],
 				"StoichiometricCoefficientAtSOC0" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["guestStoichiometry0"],
 				"StoichiometricCoefficientAtSOC100" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["guestStoichiometry100"],
-				"OpenCircuitPotential" => ne_ocp,
+				"OpenCircuitPotential" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"],
+				"IncludeEntropyChange" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["includeEntropyChange"],
+				"EntropyChange" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["entropyChange"],
+				"ReferenceTemperature" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["referenceTemperature"],
 				"NumberOfElectronsTransfered" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["numberOfElectronsTransferred"],
 				"ActivationEnergyOfReaction" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["activationEnergyOfReaction"],
 				"ReactionRateConstant" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["reactionRateConstant"],
@@ -225,7 +226,10 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 				"MaximumConcentration" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["saturationConcentration"],
 				"StoichiometricCoefficientAtSOC0" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["guestStoichiometry0"],
 				"StoichiometricCoefficientAtSOC100" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["guestStoichiometry100"],
-				"OpenCircuitPotential" => pe_ocp,
+				"OpenCircuitPotential" =>  params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"],
+				"IncludeEntropyChange" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["includeEntropyChange"],
+				"EntropyChange" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["entropyChange"],
+                "ReferenceTemperature" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["referenceTemperature"],
 				"NumberOfElectronsTransfered" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["numberOfElectronsTransferred"],
 				"ActivationEnergyOfReaction" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["activationEnergyOfReaction"],
 				"ReactionRateConstant" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["reactionRateConstant"],
@@ -317,12 +321,13 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 		end
 
 	elseif model_settings["ModelFramework"] == "P4D Cylindrical"
+        
 		cell_parameters["Cell"]["Height"] = params["Geometry"]["height"]
 		cell_parameters["Cell"]["InnerRadius"] = params["Geometry"]["innerRadius"]
 		cell_parameters["Cell"]["OuterRadius"] = params["Geometry"]["outerRadius"]
 
-
 		if haskey(model_settings, "CurrentCollectors")
+            
 			pos_cc = Dict(
 				"CurrentCollector" => Dict(
 					"Thickness" => params["PositiveElectrode"]["CurrentCollector"]["thickness"],

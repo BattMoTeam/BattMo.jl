@@ -1,6 +1,45 @@
 
 abstract type IntercalationBattery <: Battery end
 
+function setupFunction(inputparams)
+    functionFormat = inputparams["functionFormat"]
+    number_of_arguments = length(inputparams["argumentList"])
+    
+    if functionFormat == "tabulated"
+        
+        data_x = inputparams["dataX"]
+		data_y = inputparams["dataY"]
+        
+		interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
+		func = interpolation_object
+        
+    elseif functionFormat == "named function"
+
+        func_name = inputparams["functionName"]
+        
+		if haskey(inputparams, "FilePath")
+			raw_path = inputparams["FilePath"]
+			func_path = joinpath(base_path, normalize_path(raw_path))
+		else
+			func_path = nothing
+		end
+        
+		func = setup_function_from_function_name(func_name; file_path = func_path)
+
+    elseif functionFormat == "string expression"
+        
+        exp = setup_diffusivity_evaluation_expression_from_string(inputparams)
+		func = @RuntimeGeneratedFunction(exp)
+        
+    else
+        # we could/shoud support "string expression", "constant" "csv"
+        # see [Function.schema.json](https://github.com/BattMoTeam/BattMo/blob/main/Utilities/JsonSchemas/Function.schema.json#L7)
+        error("function format not supported")
+    end
+
+    return func, number_of_arguments
+    
+end
 
 function setup_multimodel(model::IntercalationBattery, submodels, input; use_groups = false)
 
@@ -435,77 +474,38 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		am_params[:reaction_rate_constant_func] = interpolation_object
 	end
 
-	if isa(inputparams_active_material["OpenCircuitPotential"], Real)
-		am_params[:ocp_funcconstant] = true
-		am_params[:ocp_func] = inputparams_active_material["OpenCircuitPotential"]
+    if haskey(inputparams_active_material, "OpenCircuitPotential")
 
-	elseif isa(inputparams_active_material["OpenCircuitPotential"], String)
+        func, noa = setupFunction(inputparams_active_material["OpenCircuitPotential"])
 
-		am_params[:ocp_funcexp] = true
-		ocp_exp = inputparams_active_material["OpenCircuitPotential"]
-		exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
-		f_generated = @RuntimeGeneratedFunction(exp)
-		am_params[:ocp_func] = f_generated
-
-	elseif haskey(inputparams_active_material["OpenCircuitPotential"], "FunctionName")
-
-		funcname = inputparams_active_material["OpenCircuitPotential"]["FunctionName"]
-
-		if haskey(inputparams_active_material["OpenCircuitPotential"], "FilePath")
-			rawpath = inputparams_active_material["OpenCircuitPotential"]["FilePath"]
-			funcpath = joinpath(base_path, normalize_path(rawpath))
-		else
-			funcpath = nothing
-		end
-
-		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-		am_params[:ocp_func] = fcn
-
-	else
-		am_params[:ocp_funcdata] = true
-		data_x = inputparams_active_material["OpenCircuitPotential"]["x"]
-		data_y = inputparams_active_material["OpenCircuitPotential"]["y"]
-
-		interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-		am_params[:ocp_func] = interpolation_object
-	end
+        am_params[:ocp_func] = func;
+        am_params[:ocp_func_number_of_arguments] = noa;
+        
+    end
 
     if haskey(inputparams_active_material, "EntropyChange")
-        if haskey(inputparams_active_material, "IncludeEntropyChange")
-            am_params[:include_entropy_change] = false
-        else
-            am_params[:include_entropy_change] = true
-        end
-        am_params[:reference_temperature] = inputparams_active_material["ReferenceTemperature"]
-        # For supported function format,  see [Function.schema.json](https://github.com/BattMoTeam/BattMo/blob/main/Utilities/JsonSchemas/Function.schema.json#L7)
-        functionFormat = inputparams_active_material["EntropyChange"]["functionFormat"]
-        number_of_arguments = length(inputparams_active_material["EntropyChange"]["argumentList"])
-        
-        if functionFormat == "tabulated"
-            
-            data_x = inputparams_active_material["EntropyChange"]["dataX"]
-		    data_y = inputparams_active_material["EntropyChange"]["dataY"]
-            
-		    interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-		    am_params[:entropychange_func] = interpolation_object
-            am_params[:entropychange_func_number_of_arguments] = number_of_arguments
-            
-        elseif functionFormat == "named function"
-            
-            func_name = inputparams_active_material["EntropyChange"]["functionName"]
-            func_path = inputparams_active_material["EntropyChange"]["functionPath"] # this is not covered in schema
-		    fcn = setup_function_from_function_name(func_name; file_path = func_path)
-		    am_params[:entropychange_func] = fcn
-            am_params[:entropychange_func_number_of_arguments] = number_of_arguments
 
+        if !haskey(inputparams_active_material, "IncludeEntropyChange")
+            am_params[:include_entropy_change] = true
         else
-            # we could/shoud support "string expression", "constant" "csv"
-            # see [Function.schema.json](https://github.com/BattMoTeam/BattMo/blob/main/Utilities/JsonSchemas/Function.schema.json#L7)
-            error("function format not supported")
+            am_params[:include_entropy_change] = inputparams_active_material["IncludeEntropyChange"]
+        end
+
+        if am_params[:include_entropy_change]
+            
+            am_params[:reference_temperature] = inputparams_active_material["ReferenceTemperature"]
+        
+            func, noa = setupFunction(inputparams_active_material["EntropyChange"])
+            
+            am_params[:entropychange_func] = func;
+            am_params[:entropychange_func_number_of_arguments] = noa;
+        
         end
         
     else
+        
         am_params[:include_entropy_change] = false
+        
     end
     
 	refT     = 298.15
@@ -1038,17 +1038,25 @@ function setup_initial_state(input, model::IntercalationBattery)
 			init[:normalizedSEIvoltageDrop] = zeros(nc)
 		end
 
-		if haskey(multimodel[name].system.params, :ocp_funcexp)
-			OCP = multimodel[name].system[:ocp_func](c, T, refT, cmax)
-		elseif haskey(multimodel[name].system.params, :ocp_funcdata)
-
-			OCP = multimodel[name].system[:ocp_func](theta)
-		elseif haskey(multimodel[name].system.params, :ocp_constant)
-			OCP = multimodel[name].system[:ocp_constant]
-
+		if multimodel[name].system.params[:ocp_func_number_of_arguments] == 1
+			OCP = multimodel[name].system[:ocp_func](c/cmax)
+		elseif multimodel[name].system.params[:ocp_func_number_of_arguments] == 2
+			OCP = multimodel[name].system[:ocp_func](c, cmax)
 		else
-			OCP = multimodel[name].system[:ocp_func](c, T, refT, cmax)
+			error("not cover")
 		end
+
+        if multimodel[name].system.params[:include_entropy_change]
+		    if multimodel[name].system.params[:entropychange_func_number_of_arguments] == 1
+			    entropyChange = multimodel[name].system[:entropychange_func](c/cmax)
+		    elseif multimodel[name].system.params[:entropychange_func_number_of_arguments] == 2
+			    entropyChange = multimodel[name].system[:entropychange_func](c, cmax)
+		    else
+			    error("not cover")
+		    end
+            refT = multimodel[name].system.params[:reference_temperature]
+            OCP = OCP + (T - refT)
+        end
 
 		return (init, nc, OCP)
 
