@@ -89,9 +89,7 @@ struct Simulation <: AbstractSimulation
 
 			try
 				# Run configuration with all warnings and errors silenced
-				sim_cfg = Logging.with_logger(Logging.NullLogger()) do
-					simulation_configuration(model, input)
-				end
+				simulation_configuration(model, input)
 
 				model = sim_cfg.model
 				grids = sim_cfg.grids

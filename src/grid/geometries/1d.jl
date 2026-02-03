@@ -79,7 +79,9 @@ function one_dimensional_grid(model, input)
 	uParentGrid = tpfv_geometry(uParentGrid)
 
 	## setup the grid for each component
+
 	for (icomponent, component) in enumerate(components)
+        @info component
 		allinds = collect((1:sum(ns)))
 		inds = cinds[icomponent]:(cinds[icomponent+1]-1)
 		G, maps... = remove_cells(parentGrid, setdiff!(allinds, inds))
