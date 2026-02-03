@@ -215,16 +215,16 @@ function Jutul.update_cross_term_in_entity!(out,
 
 	vols = state_t.Volume[ind_t]
 
-	phi_e = state_t.ElectricPotential[ind_t]
-	phi_a = state_s.ElectricPotential[ind_s]
-	ocp = state_s.OpenCircuitPotential[ind_s]
-	R0 = state_s.ReactionRateConstant[ind_s]
-	c_e = state_t.ElectrolyteConcentration[ind_t]
+	phi_e    = state_t.ElectricPotential[ind_t]
+	phi_a    = state_s.ElectricPotential[ind_s]
+	ocp      = state_s.OpenCircuitPotential[ind_s]
+	R0       = state_s.ReactionRateConstant[ind_s]
+	c_e      = state_t.ElectrolyteConcentration[ind_t]
 	c_a_surf = state_s.SurfaceConcentration[ind_s]
-	c_a = state_s.ParticleConcentration[ind_s]
-	T = state_s.Temperature[ind_s]
-	c_av = mean(c_a)
-	c_av_e = mean(state_t.ElectrolyteConcentration)
+	c_a      = state_s.ParticleConcentration[ind_s]
+	T        = state_s.Temperature[ind_s]
+	c_av     = mean(c_a)
+	c_av_e   = mean(state_t.ElectrolyteConcentration)
 
 	# overpotential
 	eta = phi_a - phi_e - ocp
