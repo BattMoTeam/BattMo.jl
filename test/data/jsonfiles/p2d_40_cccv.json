@@ -26,8 +26,8 @@
           "guestStoichiometry0": 0.1429,
           "chargeTransferCoefficient": 0.5,
           "openCircuitPotential": {
-            "type": "function",
-            "functionname": "computeOCP_Graphite_Torchio",
+            "functionFormat": "named function",
+            "functionName": "computeOCP_Graphite_Torchio",
             "argumentlist": [
               "concentration",
               "temperature",
@@ -82,8 +82,8 @@
           "guestStoichiometry0": 0.99174,
           "chargeTransferCoefficient": 0.5,
           "openCircuitPotential": {
-            "type": "function",
-            "functionname": "computeOCP_NMC111",
+            "functionFormat": "named function",
+            "functionName": "computeOCP_NMC111",
             "argumentlist": [
               "concentration",
               "temperature",
@@ -147,16 +147,16 @@
     "thermalConductivity": 0.6,
     "density": 1200,
     "ionicConductivity": {
-      "type": "function",
-      "functionname": "computeElectrolyteConductivity_default",
+      "functionFormat": "named function",
+      "functionName": "computeElectrolyteConductivity_default",
       "argumentlist": [
         "concentration",
         "temperature"
       ]
     },
     "diffusionCoefficient": {
-      "type": "function",
-      "functionname": "computeDiffusionCoefficient_default",
+      "functionFormat": "named function",
+      "functionName": "computeDiffusionCoefficient_default",
       "argumentlist": [
         "concentration",
         "temperature"

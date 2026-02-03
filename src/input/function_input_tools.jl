@@ -73,8 +73,8 @@ function update_json_input(; file_path::String = nothing,
 							if haskey(json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"], "function")
 								json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"]["function"] = expression
 								json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"]["argumentlist"] = [x_name]
-							elseif haskey(json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"], "functionname")
-								delete!(json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"], "functionname")
+							elseif haskey(json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"], "functionName")
+								delete!(json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"], "functionName")
 								json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"]["function"] = expression
 								json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"]["argumentlist"] = [x_name]
 							else
@@ -118,8 +118,8 @@ function update_json_input(; file_path::String = nothing,
 				if haskey(json_data["Electrolyte"][y_name], "function")
 					json_data["Electrolyte"][y_name]["function"] = expression
 					json_data["Electrolyte"][y_name]["argumentlist"] = [x_name]
-				elseif haskey(json_data["Electrolyte"][y_name], "functionname")
-					delete!(json_data["Electrolyte"][y_name], "functionname")
+				elseif haskey(json_data["Electrolyte"][y_name], "functionName")
+					delete!(json_data["Electrolyte"][y_name], "functionName")
 					json_data["Electrolyte"][y_name]["function"] = expression
 					json_data["Electrolyte"][y_name]["argumentlist"] = [x_name]
 				else

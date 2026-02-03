@@ -26,9 +26,9 @@
                "guestStoichiometry0": 0.0279,
                "chargeTransferCoefficient": 0.5,
                "openCircuitPotential": {
-                  "type": "function",
-                  "functionname": "computeOCP_Graphite_SiOx_chen_2020",
-                  "argumentlist": [
+                  "functionFormat": "named function",
+                  "functionName": "computeOCP_Graphite_SiOx_chen_2020",
+                  "argumentList": [
                      "c",
                      "cmax"
                   ]
@@ -87,9 +87,9 @@
                "guestStoichiometry0": 0.9084,
                "chargeTransferCoefficient": 0.5,
                "openCircuitPotential": {
-                  "type": "function",
-                  "functionname": "computeOCP_NMC811_chen_2020",
-                  "argumentlist": [
+                  "functionFormat": "named function",
+                  "functionName": "computeOCP_NMC811_chen_2020",
+                  "argumentList": [
                      "c",
                      "cmax"
                   ]
@@ -140,16 +140,16 @@
       "thermalConductivity": 0.099,
       "density": 1200,
       "ionicConductivity": {
-         "type": "function",
-         "functionname": "computeElectrolyteConductivity_chen_2020",
-         "argumentlist": [
+         "functionFormat": "named function",
+         "functionName": "computeElectrolyteConductivity_chen_2020",
+         "argumentList": [
             "c"
          ]
       },
       "diffusionCoefficient": {
-         "type": "function",
-         "functionname": "computeDiffusionCoefficient_chen_2020",
-         "argumentlist": [
+         "functionFormat": "named function",
+         "functionName": "computeDiffusionCoefficient_chen_2020",
+         "argumentList": [
             "c"
          ]
       },

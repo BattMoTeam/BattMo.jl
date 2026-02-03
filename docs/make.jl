@@ -8,6 +8,7 @@ using DocumenterCitations
 using DocumenterVitepress
 ##
 cd(@__DIR__)
+
 function build_battmo_docs(build_format              = nothing;
 	build_examples            = true,
 	build_tutorials           = build_examples,
@@ -133,8 +134,6 @@ function build_battmo_docs(build_format              = nothing;
 	if isnothing(build_format)
 		build_format = DocumenterVitepress.MarkdownVitepress(
 			repo = "github.com/BattMoTeam/BattMo.jl",
-			devbranch = "main",
-			devurl = "dev",
 		)
 	end
 
@@ -208,7 +207,7 @@ function build_battmo_docs(build_format              = nothing;
 	end
 	if deploy
 		DocumenterVitepress.deploydocs(;
-			repo = "github.com/BattMoTeam/BattMo.jl",
+			repo = "github.com/BattMoTeam/BattMo.jl.git",
 			devbranch = "main",
 			target = "build", # this is where Vitepress stores its output
 			branch = "gh-pages",

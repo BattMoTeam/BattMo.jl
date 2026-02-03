@@ -667,9 +667,9 @@ function setup_submodels(inputparams::InputParamsOld;
 			exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
 			am_params[:ocp_func] = @RuntimeGeneratedFunction(exp)
 
-		elseif haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionname")
+		elseif haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionName")
 
-			funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
+			funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionName"]
 			funcpath = haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionpath") ? inputparams_am["Interface"]["openCircuitPotential"]["functionpath"] : nothing
 			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 			am_params[:ocp_func] = fcn
@@ -779,9 +779,9 @@ function setup_submodels(inputparams::InputParamsOld;
 		exp = setup_diffusivity_evaluation_expression_from_string(inputparams_elyte["diffusionCoefficient"]["function"])
 		params[:diffusivity_func] = @RuntimeGeneratedFunction(exp)
 
-	elseif haskey(inputparams_elyte["diffusionCoefficient"], "functionname")
+	elseif haskey(inputparams_elyte["diffusionCoefficient"], "functionName")
 
-		funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
+		funcname = inputparams_elyte["diffusionCoefficient"]["functionName"]
 		funcpath = haskey(inputparams_elyte["diffusionCoefficient"], "functionpath") ? inputparams_elyte["diffusionCoefficient"]["functionpath"] : nothing
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:diffusivity_func] = fcn
@@ -805,9 +805,9 @@ function setup_submodels(inputparams::InputParamsOld;
 		exp = setup_conductivity_evaluation_expression_from_string(inputparams_elyte["ionicConductivity"]["function"])
 		params[:conductivity_func] = @RuntimeGeneratedFunction(exp)
 
-	elseif haskey(inputparams_elyte["ionicConductivity"], "functionname")
+	elseif haskey(inputparams_elyte["ionicConductivity"], "functionName")
 
-		funcname = inputparams_elyte["ionicConductivity"]["functionname"]
+		funcname = inputparams_elyte["ionicConductivity"]["functionName"]
 		funcpath = haskey(inputparams_elyte["ionicConductivity"], "functionpath") ? inputparams_elyte["ionicConductivity"]["functionpath"] : nothing
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:conductivity_func] = fcn
