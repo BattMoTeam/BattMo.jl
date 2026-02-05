@@ -75,15 +75,25 @@ function pouch_grid(input)
 	# --------------------------------------------------------
 	# 4) Tab physical sizes & grid points
 	# --------------------------------------------------------
-	neg_tab_width_points  = simulation_settings["NegativeElectrodeCurrentCollectorTabWidthGridPoints"]
-	neg_tab_length_points = simulation_settings["NegativeElectrodeCurrentCollectorTabLengthGridPoints"]
-	neg_tab_width         = cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"]
-	neg_tab_length        = cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabLength"]
 
-	pos_tab_width_points  = simulation_settings["PositiveElectrodeCurrentCollectorTabWidthGridPoints"]
-	pos_tab_length_points = simulation_settings["PositiveElectrodeCurrentCollectorTabLengthGridPoints"]
-	pos_tab_width         = cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"]
-	pos_tab_length        = cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabLength"]
+	# --- Unified tab width and grid resolution ---
+	tab_width_points  = simulation_settings["TabWidthGridPoints"]
+	tab_width         = cell_parameters["Cell"]["TabWidth"]
+	tab_length_points = simulation_settings["TabLengthGridPoints"]
+	tab_length        = cell_parameters["Cell"]["TabLength"]
+
+	# Apply identical width to both electrodes
+	neg_tab_width = tab_width
+	pos_tab_width = tab_width
+	neg_tab_width_points = tab_width_points
+	pos_tab_width_points = tab_width_points
+
+	# Tab lengths remain separate unless you want them unified:
+	neg_tab_length_points = tab_length_points
+	neg_tab_length        = tab_length
+
+	pos_tab_length_points = tab_length_points
+	pos_tab_length        = tab_length
 
 	# --------------------------------------------------------
 	# 5) X-direction segmentation with tabs anywhere
@@ -95,30 +105,64 @@ function pouch_grid(input)
 	pos_tab_start_frac = clamp(pos_tab_pos_frac - 0.5 * pos_tab_width / electrode_width, 0.0, 1.0)
 	pos_tab_end_frac   = clamp(pos_tab_pos_frac + 0.5 * pos_tab_width / electrode_width, 0.0, 1.0)
 
-	@show neg_tab_start_frac
-	@show neg_tab_end_frac
-	@show pos_tab_start_frac
-	@show pos_tab_end_frac
+	if neg_tab_pos_frac <= pos_tab_pos_frac
+		left_tab_start_frac = neg_tab_start_frac
+		left_tab_end_frac = neg_tab_end_frac
+		right_tab_start_frac = pos_tab_start_frac
+		right_tab_end_frac = pos_tab_end_frac
+		left_tab = "NegativeElectrode"
+	else
+		left_tab_start_frac = pos_tab_start_frac
+		left_tab_end_frac = pos_tab_end_frac
+		right_tab_start_frac = neg_tab_start_frac
+		right_tab_end_frac = neg_tab_end_frac
+		left_tab = "PositiveElectrode"
+	end
 
 
-	# Define segment widths
+	middle_active_frac = (right_tab_start_frac - left_tab_end_frac)
+
+	if middle_active_frac > 0
+		# Tabs do not overlap
+		middle_active_width = clamp((right_tab_start_frac - left_tab_end_frac) * electrode_width, 0, electrode_width)
+		overlapping_tab_width = 0.0
+		left_tab_width = tab_width
+		right_tab_width = tab_width
+	else
+		# Tabs overlap
+		overlapping_tab_width = abs(right_tab_start_frac - left_tab_end_frac) * electrode_width
+		left_tab_width = clamp((left_tab_end_frac - left_tab_start_frac) * electrode_width - overlapping_tab_width, 0, electrode_width) # NE tab remainder
+		right_tab_width = clamp((right_tab_end_frac - right_tab_start_frac) * electrode_width - overlapping_tab_width, 0, electrode_width) # PE tab remainder
+		middle_active_width = 0.0
+	end
+
+	# Define segment widths in x-direction (total 5 segments if no overlap, 6 segments if partly overlap, 3 segments if full overlap)
+	# 1: left active, 2: left tab remainder, 3: middle active,
+	# 4: overlap,     5: right tab remainder, 6: right active
+
 	segment_widths = [
-		neg_tab_start_frac * electrode_width,                  # left active
-		neg_tab_width,                                         # NE tab
-		clamp((pos_tab_start_frac - neg_tab_end_frac) * electrode_width, 0, 1), # middle active
-		pos_tab_width,                                         # PE tab
-		(1.0 - pos_tab_end_frac) * electrode_width,            # right active
+		left_tab_start_frac * electrode_width,                 # left active
+		left_tab_width,                                # NE tab remainder 
+		middle_active_width, # middle active
+		overlapping_tab_width,                                  # overlapping tabs (if any)
+		right_tab_width,# PE tab remainder 
+		(1.0 - right_tab_end_frac) * electrode_width,            # right active
 	]
-	@show segment_widths
 
 	# Assign grid points to segments
 	remaining_points = width_points - (neg_tab_width_points + pos_tab_width_points)
+	tab_cell_width = tab_width / tab_width_points
+	overlapping_tab_width_points = round(Int, segment_widths[4] / tab_cell_width)
+	left_tab_width_points = round(Int, tab_width_points-overlapping_tab_width_points)
+	right_tab_width_points = round(Int, tab_width_points-overlapping_tab_width_points)
+
 	segment_points = [
-		round(Int, segment_widths[1] / sum(segment_widths[[1, 3, 5]]) * remaining_points),
-		neg_tab_width_points,
-		round(Int, segment_widths[3] / sum(segment_widths[[1, 3, 5]]) * remaining_points),
-		pos_tab_width_points,
-		remaining_points - round(Int, segment_widths[1] / sum(segment_widths[[1, 3, 5]]) * remaining_points) - round(Int, segment_widths[3] / sum(segment_widths[[1, 3, 5]]) * remaining_points),
+		round(Int, (segment_widths[1] / sum(segment_widths[[1, 3, 6]])) * remaining_points),
+		left_tab_width_points,
+		round(Int, (segment_widths[3] / sum(segment_widths[[1, 3, 6]])) * remaining_points),
+		overlapping_tab_width_points,
+		right_tab_width_points,
+		remaining_points - round(Int, (segment_widths[1] / sum(segment_widths[[1, 3, 6]])) * remaining_points) - round(Int, (segment_widths[3] / sum(segment_widths[[1, 3, 6]])) * remaining_points),
 	]
 
 	width_sizes_per_cell = segment_widths ./ segment_points
@@ -126,9 +170,58 @@ function pouch_grid(input)
 	# --------------------------------------------------------
 	# 6) Length segmentation (y-direction)
 	# --------------------------------------------------------
-	length_segments = [neg_tab_length_points, length_points - (neg_tab_length_points + pos_tab_length_points), pos_tab_length_points]
-	length_sizes = [neg_tab_length, electrode_length - (neg_tab_length + pos_tab_length), pos_tab_length]
+
+	if tabs_on_same_side
+		active_points = length_points
+		active_length = electrode_length
+
+		tab_strip_length        = max(neg_tab_length, pos_tab_length)
+		tab_strip_length_points = max(neg_tab_length_points, pos_tab_length_points)
+
+		if lowercase(same_side_y_side) == "bottom"
+			# bottom: TAB STRIP → ACTIVE
+			length_segments = [
+				tab_strip_length_points,
+				active_points,
+			]
+			length_sizes = [
+				tab_strip_length,
+				active_length,
+			]
+		else
+			# top: ACTIVE → TAB STRIP
+			length_segments = [
+				active_points,
+				tab_strip_length_points,
+			]
+			length_sizes = [
+				active_length,
+				tab_strip_length,
+			]
+		end
+	else
+		# Opposite-side behavior (unchanged)
+		active_points = length_points
+		active_length = electrode_length
+
+		length_segments = [
+			neg_tab_length_points,
+			active_points,
+			pos_tab_length_points,
+		]
+		length_sizes = [
+			neg_tab_length,
+			active_length,
+			pos_tab_length,
+		]
+	end
+
+
 	length_sizes_per_cell = length_sizes ./ length_segments
+
+	@show length_segments
+	@show length_sizes
+	@show length_sizes_per_cell
 
 	# --------------------------------------------------------
 	# 7) Build z-direction (thickness) segments
@@ -181,32 +274,12 @@ function pouch_grid(input)
 	# --------------------------------------------------------
 	# 9) TAB CARVING
 	# --------------------------------------------------------
-	compute_tab_indices_local = function (Nx::Int, Ny::Int, tab_w::Int, tab_l::Int, tab_start_idx::Int, y_side::String)
-		col_start = tab_start_idx
-		col_stop  = col_start + tab_w - 1
-		rows      = (y_side == "bottom") ? (1:tab_l) : ((Ny-tab_l+1):Ny)
-		return vcat([Nx*(r-1) .+ (col_start:col_stop) for r in rows]...)
-	end
 
-	# Compute tab start indices in grid points
-	neg_tab_start_idx = sum(segment_points[1:1]) + 1 # left active is segment 1
-	pos_tab_start_idx = sum(segment_points[1:3]) + 1 # PE tab is segment 4
+	# Compute tab start indices (x-direction)
+	left_tab_start_idx  = sum(segment_points[1:1]) + 1      # start of segment 2
+	right_tab_start_idx = sum(segment_points[1:4]) + 1      # start of segment 5
 
-	# # NE tab start index
-	# neg_tab_start_idx = clamp(
-	# 	round(Int, (neg_tab_pos_frac - 0.5 * neg_tab_width / electrode_width) * width_points),
-	# 	1,
-	# 	width_points - neg_tab_width_points + 1,
-	# )
-
-	# # PE tab start index
-	# pos_tab_start_idx = clamp(
-	# 	round(Int, (pos_tab_pos_frac - 0.5 * pos_tab_width / electrode_width) * width_points),
-	# 	1,
-	# 	width_points - pos_tab_width_points + 1,
-	# )
-
-	# Determine y-side
+	# Determine tab sides
 	if tabs_on_same_side
 		neg_y_side = same_side_y_side
 		pos_y_side = same_side_y_side
@@ -215,44 +288,92 @@ function pouch_grid(input)
 		pos_y_side = "top"
 	end
 
-	# Build local corridors
-	neg_tab_local = compute_tab_indices_local(Nx, Ny, neg_tab_width_points, neg_tab_length_points, neg_tab_start_idx, neg_y_side)
-	pos_tab_local = compute_tab_indices_local(Nx, Ny, pos_tab_width_points, pos_tab_length_points, pos_tab_start_idx, pos_y_side)
+	# ---------------------------------------------
+	# Build y-row ranges for each tab (critical part)
+	# ---------------------------------------------
 
-	# Build endbox arrays
-	neg_endbox = [(Nx*Ny*(i-1)+1):(Nx*(Ny*(i-1)+neg_tab_length_points)) for i in 1:Nz]
-	pos_endbox = [(Nx*(i*Ny-pos_tab_length_points)+1):(Nx*Ny*i) for i in 1:Nz]
 
-	# Assign layers
+	if tabs_on_same_side
+		if lowercase(same_side_y_side) == "bottom"
+			# Both start at row 1
+			neg_rows = 1:neg_tab_length_points
+			pos_rows = 1:pos_tab_length_points
+		else
+			# Both start at the electrode top boundary:
+			strip_bottom = Ny - max(neg_tab_length_points, pos_tab_length_points) + 1
+
+			neg_rows = (strip_bottom):(strip_bottom+neg_tab_length_points-1)
+
+			pos_rows = (strip_bottom):(strip_bottom+pos_tab_length_points-1)
+		end
+	else
+		# Original (opposite-side) behavior
+		neg_rows = 1:neg_tab_length_points
+		pos_rows = (Ny-pos_tab_length_points+1):Ny
+	end
+
+	# Compute the corridors using y-row ranges
+	neg_tab_local = compute_tab_indices_local(
+		segment_points, "NegativeElectrode", tabs_on_same_side,
+		Nx, Ny, neg_tab_length_points, neg_y_side;
+		row_range = neg_rows,
+	)
+
+	pos_tab_local = compute_tab_indices_local(
+		segment_points, "PositiveElectrode", tabs_on_same_side,
+		Nx, Ny, pos_tab_length_points, pos_y_side;
+		row_range = pos_rows,
+	)
+
+
+	# ---------------------------------------------
+	# Build endboxes (regions to be carved)
+	# ---------------------------------------------
+
+	neg_endbox = [(Nx*Ny*(i-1)+(neg_rows.start-1)*Nx+1):(Nx*Ny*(i-1)+neg_rows.stop*Nx)
+				  for i in 1:Nz]
+
+	pos_endbox = [(Nx*Ny*(i-1)+(pos_rows.start-1)*Nx+1):(Nx*Ny*(i-1)+pos_rows.stop*Nx)
+				  for i in 1:Nz]
+
+	# ---------------------------------------------
+	# Map tab corridors into each z-layer
+	# ---------------------------------------------
+
 	total_segments = length(z_thickness_per_segment)
-	neg_cc_segments = [s for s in 1:total_segments if (z_thickness_per_segment[s] == neg_cc_thickness)]
-	pos_cc_segments = [s for s in 1:total_segments if (z_thickness_per_segment[s] == pos_cc_thickness)]
+
+	neg_cc_segments = [s for s in 1:total_segments if z_thickness_per_segment[s] == neg_cc_thickness]
+	pos_cc_segments = [s for s in 1:total_segments if z_thickness_per_segment[s] == pos_cc_thickness]
 
 	cum_points = cumsum(z_points_per_segment)
 	seg_lo = vcat(1, cum_points[1:(end-1)] .+ 1)
 	seg_hi = cum_points
+
 	neg_cc_layers = vcat([seg_lo[s]:seg_hi[s] for s in neg_cc_segments]...)
 	pos_cc_layers = vcat([seg_lo[s]:seg_hi[s] for s in pos_cc_segments]...)
 
-	# Convert to absolute tab cells
 	neg_tab_cells = Int[]
 	pos_tab_cells = Int[]
+
 	for layer in neg_cc_layers
-		offset = (layer-1)*Nx*Ny
+		offset = (layer - 1) * Nx * Ny
 		append!(neg_tab_cells, offset .+ neg_tab_local)
 	end
+
 	for layer in pos_cc_layers
-		offset = (layer-1)*Nx*Ny
+		offset = (layer - 1) * Nx * Ny
 		append!(pos_tab_cells, offset .+ pos_tab_local)
 	end
 
+	# ---------------------------------------------
 	# Remove endbox cells outside tab corridors
+	# ---------------------------------------------
+
 	endbox_all = vcat(vcat(neg_endbox...), vcat(pos_endbox...))
 	keep_cells = union(neg_tab_cells, pos_tab_cells)
 	cells_to_remove = sort!(setdiff(endbox_all, keep_cells))
 
 	global_grid, = remove_cells(raw_grid, cells_to_remove)
-
 	# --------------------------------------------------------
 	# 10) Build sub-grids and couplings
 	# --------------------------------------------------------
@@ -266,15 +387,88 @@ function pouch_grid(input)
 		couplings[component]["External"] = Dict("cells"=>neighbors[boundary_faces], "boundaryfaces"=>boundary_faces)
 	end
 
-	@show "Δx in active region = $(cell_widths[1])"
-	@show "NE tab width = $neg_tab_width_points points"
-	@show "PE tab width = $pos_tab_width_points points"
-
 	return grids, couplings
 end
 
 
+"""
+	compute_tab_indices_local(segment_points, tab_type, tabs_on_same_side,
+							  Nx, Ny, tab_l, y_side; row_range=nothing)
 
+Returns linear x–y indices for a tab footprint.
+
+`row_range` MUST be provided when tabs are on the same side.
+Otherwise, traditional bottom/top anchoring is used.
+
+Segment layout:
+	1: left active
+	2: left tab remainder
+	3: middle active
+	4: overlap (if any)
+	5: right tab remainder
+	6: right active
+"""
+function compute_tab_indices_local(
+	segment_points,
+	tab_type::String,
+	tabs_on_same_side::Bool,
+	Nx::Int, Ny::Int,
+	tab_l::Int,
+	y_side::String;
+	row_range::Union{Nothing, UnitRange{Int}} = nothing,
+)
+
+	# ----------------------------
+	# 1) Pick y-rows
+	# ----------------------------
+	rows =
+		if tabs_on_same_side
+			@assert row_range !== nothing "row_range must be provided when tabs_on_same_side == true"
+			row_range
+		else
+			ys = lowercase(y_side)
+			@assert 1 <= tab_l <= Ny "tab_l out of range"
+			ys == "bottom" ? (1:tab_l) :
+			ys == "top" ? ((Ny-tab_l+1):Ny) :
+			error("y_side must be 'bottom' or 'top'")
+		end
+
+	# ----------------------------
+	# 2) Pick x-columns (width)
+	# ----------------------------
+	@assert sum(segment_points) == Nx
+	p = cumsum(vcat(0, segment_points))   # segment boundaries
+
+	# helper: x-fastest indexing
+	get_idx_for_run = function (col_start, col_stop)
+		col_start = clamp(col_start, 1, Nx)
+		col_stop  = clamp(col_stop, 1, Nx)
+		col_stop < col_start && return Int[]
+		vcat([(r-1)*Nx .+ (col_start:col_stop) for r in rows]...)
+	end
+
+	idxs = Int[]
+
+	if segment_points[4] == 0
+		# No overlap: NE = seg 2, PE = seg 5
+		if tab_type == "NegativeElectrode"
+			append!(idxs, get_idx_for_run(p[2] + 1, p[3]))   # segment 2
+		else
+			append!(idxs, get_idx_for_run(p[5] + 1, p[6]))   # segment 5
+		end
+	else
+		# Overlap: segment 4 always included
+		append!(idxs, get_idx_for_run(p[4] + 1, p[5]))       # overlap segment
+
+		if tab_type == "NegativeElectrode"
+			append!(idxs, get_idx_for_run(p[2] + 1, p[3]))   # NE remainder
+		else
+			append!(idxs, get_idx_for_run(p[5] + 1, p[6]))   # PE remainder
+		end
+	end
+
+	return unique!(sort!(idxs))
+end
 
 
 """
