@@ -20,6 +20,11 @@
         "NominalCapacity": 16.5,
         "ElectrodeWidth": 67e-3,
         "ElectrodeLength": 105e-3,
+        "NumberOfLayersInParallel": 1,
+        "DoubleCoatedElectrodes": false,
+        "TabsOnSameSide": true,
+        "TabLength" : 10e-3,
+        "TabWidth": 15e-3,
         "ElectrodeGeometricSurfaceArea": 0.6683250000000001
     },
     "Electrolyte": {
@@ -75,8 +80,7 @@
             "Thickness": 16e-06,
             "Density": 2700,
             "ElectronicConductivity": 3.83e7,
-            "TabWidth": 15e-3,
-            "TabLength": 10e-3
+            "TabPositionFraction": 0.22
         }
     },
     "Separator": {
@@ -129,8 +133,8 @@
             "Thickness": 9e-06,
             "Density": 8900,
             "ElectronicConductivity": 6.33e7,
-            "TabWidth": 15e-3,
-            "TabLength": 10e-3
+            "TabPositionFraction": 0.78
+
         }
     }
 }

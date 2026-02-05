@@ -119,12 +119,12 @@ simulation_settings = load_simulation_settings(; from_default_set = "p4d_cylindr
 
 # We adjust the parameters so that the simulation in this example is not too long (around a couple of minutes)
 
-cell_parameters["Cell"]["OuterRadius"]                                   = 0.004
+cell_parameters["Cell"]["OuterRadius"] = 0.004
 cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabFractions"] = [0.5]
 cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabFractions"] = [0.5]
-cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
-cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
-simulation_settings["AngularGridPoints"]                                 = 8
+cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"] = 0.002
+cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"] = 0.002
+simulation_settings["AngularGridPoints"] = 8
 
 # We setup the simulation and run it
 model = LithiumIonBattery(; model_settings)

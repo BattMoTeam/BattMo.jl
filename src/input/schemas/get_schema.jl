@@ -129,6 +129,11 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 					"HeatTransferCoefficient" => create_property(parameter_meta, "HeatTransferCoefficient"),
 					"ElectrodeWidth" => create_property(parameter_meta, "ElectrodeWidth"),
 					"ElectrodeLength" => create_property(parameter_meta, "ElectrodeLength"),
+					"NumberOfLayersInParallel" => create_property(parameter_meta, "NumberOfLayersInParallel"),
+					"DoubleCoatedElectrodes" => create_property(parameter_meta, "DoubleCoatedElectrodes"),
+					"TabsOnSameSide" => create_property(parameter_meta, "TabsOnSameSide"),
+					"TabLength" => create_property(parameter_meta, "TabLength"),
+					"TabWidth" => create_property(parameter_meta, "TabWidth"),
 					"Height" => create_property(parameter_meta, "Height"),
 					"ElectrodeGeometricSurfaceArea" => create_property(parameter_meta, "ElectrodeGeometricSurfaceArea"),
 				),
@@ -216,6 +221,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"TabWidth" => create_property(parameter_meta, "TabWidth"),
 							"TabLength" => create_property(parameter_meta, "TabLength"),
 							"TabFractions" => create_property(parameter_meta, "TabFractions"),
+							"TabPositionFraction" => create_property(parameter_meta, "TabPositionFraction"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					)),
@@ -290,7 +296,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"TabWidth" => create_property(parameter_meta, "TabWidth"),
 							"TabLength" => create_property(parameter_meta, "TabLength"),
 							"TabFractions" => create_property(parameter_meta, "TabFractions"),
-						),
+							"TabPositionFraction" => create_property(parameter_meta, "TabPositionFraction")),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
 					)),
 				"required" => ["Coating", "ActiveMaterial", "Binder", "ConductiveAdditive"],
@@ -356,13 +362,18 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 		push!(cell_required, "ElectrodeWidth")
 		push!(cell_required, "ElectrodeLength")
 		if haskey(model_settings, "CurrentCollectors")
+			push!(cell_required, "NumberOfLayersInParallel")
+			push!(cell_required, "DoubleCoatedElectrodes")
+			push!(cell_required, "TabsOnSameSide")
+			push!(cell_required, "TabWidth")
+			push!(cell_required, "TabLength")
+
 			push!(ne_required, "CurrentCollector")
 			push!(pe_required, "CurrentCollector")
+			push!(ne_cc_required, "TabPositionFraction")
+			push!(pe_cc_required, "TabPositionFraction")
 
-			push!(ne_cc_required, "TabWidth")
-			push!(pe_cc_required, "TabWidth")
-			push!(ne_cc_required, "TabLength")
-			push!(pe_cc_required, "TabLength")
+
 		end
 
 	elseif model_settings["ModelFramework"] == "P4D Cylindrical"
@@ -523,6 +534,8 @@ function get_schema_simulation_settings(model_settings)
 			"AngularGridPoints" => create_property(parameter_meta, "AngularGridPoints"),
 			"ElectrodeWidthGridPoints" => create_property(parameter_meta, "ElectrodeWidthGridPoints"),
 			"ElectrodeLengthGridPoints" => create_property(parameter_meta, "ElectrodeLengthGridPoints"),
+			"TabWidthGridPoints" => create_property(parameter_meta, "TabWidthGridPoints"),
+			"TabLengthGridPoints" => create_property(parameter_meta, "TabLengthGridPoints"),
 			"PositiveElectrodeCoatingGridPoints" => create_property(parameter_meta, "PositiveElectrodeCoatingGridPoints"),
 			"PositiveElectrodeParticleGridPoints" => create_property(parameter_meta, "PositiveElectrodeParticleGridPoints"),
 			"PositiveElectrodeCurrentCollectorGridPoints" => create_property(parameter_meta, "PositiveElectrodeCurrentCollectorGridPoints"),
@@ -554,6 +567,8 @@ function get_schema_simulation_settings(model_settings)
 	if model_settings["ModelFramework"] == "P4D Pouch"
 		push!(required, "ElectrodeWidthGridPoints")
 		push!(required, "ElectrodeLengthGridPoints")
+		push!(required, "TabWidthGridPoints")
+		push!(required, "TabLengthGridPoints")
 
 		if haskey(model_settings, "CurrentCollectors")
 			push!(required, "PositiveElectrodeCurrentCollectorGridPoints")

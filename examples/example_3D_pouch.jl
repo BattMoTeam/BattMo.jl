@@ -5,21 +5,6 @@ cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 model_settings = load_model_settings(; from_default_set = "p4d_pouch")
 simulation_settings = load_simulation_settings(; from_default_set = "p4d_pouch")
 
-cell_parameters["Cell"]["NumberOfLayers"] = 2
-cell_parameters["Cell"]["TabsOnSameSide"] = true
-cell_parameters["Cell"]["DoubleCoatedElectrodes"] = true
-cell_parameters["Cell"]["TabWidth"] = 20e-3  # 15 mm
-cell_parameters["Cell"]["TabLength"] = 10e-3  # 15 mm
-cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabPositionFraction"] = 0.25
-cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabPositionFraction"] = 0.75
-
-
-simulation_settings["ElectrodeWidthGridPoints"] = 30
-simulation_settings["ElectrodeLengthGridPoints"] = 10
-simulation_settings["TabWidthGridPoints"] = 5
-simulation_settings["TabLengthGridPoints"] = 7
-
-
 cycling_protocol["DRate"] = 1
 
 

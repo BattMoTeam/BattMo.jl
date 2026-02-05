@@ -26,7 +26,7 @@ function pouch_grid(input)
 	simulation_settings = input.simulation_settings
 
 	# Number of repeated cell layers (in z)
-	num_layers = cell_parameters["Cell"]["NumberOfLayers"]
+	num_layers = cell_parameters["Cell"]["NumberOfLayersInParallel"]
 	double_coated = get(cell_parameters["Cell"], "DoubleCoatedElectrodes", true)
 
 	extra_ne = num_layers > 1
@@ -218,10 +218,6 @@ function pouch_grid(input)
 
 
 	length_sizes_per_cell = length_sizes ./ length_segments
-
-	@show length_segments
-	@show length_sizes
-	@show length_sizes_per_cell
 
 	# --------------------------------------------------------
 	# 7) Build z-direction (thickness) segments

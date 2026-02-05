@@ -11,12 +11,12 @@ using Test
 		model_settings      = load_model_settings(; from_default_set = "p4d_cylindrical")
 		simulation_settings = load_simulation_settings(; from_default_set = "p4d_cylindrical")
 
-		cell_parameters["Cell"]["OuterRadius"]                                   = 0.004
+		cell_parameters["Cell"]["OuterRadius"] = 0.004
 		cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabFractions"] = [0.5]
 		cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabFractions"] = [0.5]
-		cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
-		cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
-		simulation_settings["AngularGridPoints"]                                 = 8
+		cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"] = 0.002
+		cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"] = 0.002
+		simulation_settings["AngularGridPoints"] = 8
 
 		model_setup = LithiumIonBattery(; model_settings)
 
