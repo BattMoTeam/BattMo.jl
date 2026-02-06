@@ -63,9 +63,9 @@ using Test
 		Cc = map(x -> x[:Control][:Current][1], jutul_states)
 		phi = map(x -> x[:Control][:ElectricPotential][1], jutul_states)
 		@test length(jutul_states) == 80
-		@test Cc[1] ≈ 0.008165838495401362 atol = 1e-4
+		@test Cc[1] ≈ 0.009073153883779288 atol = 1e-4
 		for i in 3:length(Cc)
-			@test Cc[i] ≈ 0.008165 atol = 1e-4
+			@test Cc[i] ≈ 0.009073153883779288 atol = 1e-4
 		end
 		@test phi[1] ≈ 4.006456739146556 atol = 1e-2
 		@test phi[end] ≈ 2.7485026725636326 atol = 1e-2

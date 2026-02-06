@@ -67,7 +67,7 @@ display(GLMakie.Screen(), fig2)
 
 
 
-# output = solve(sim)
+output = solve(sim)
 
-# plot_interactive_3d(output; colormap = :curl)
+plot_interactive_3d(output; colormap = :curl)
 

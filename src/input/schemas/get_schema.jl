@@ -572,11 +572,7 @@ function get_schema_simulation_settings(model_settings)
 
 		if haskey(model_settings, "CurrentCollectors")
 			push!(required, "PositiveElectrodeCurrentCollectorGridPoints")
-			push!(required, "PositiveElectrodeCurrentCollectorTabWidthGridPoints")
-			push!(required, "PositiveElectrodeCurrentCollectorTabLengthGridPoints")
 			push!(required, "NegativeElectrodeCurrentCollectorGridPoints")
-			push!(required, "NegativeElectrodeCurrentCollectorTabWidthGridPoints")
-			push!(required, "NegativeElectrodeCurrentCollectorTabLengthGridPoints")
 		end
 	end
 	if haskey(model_settings, "RampUp") && model_settings["RampUp"] == "Sinusoidal"
