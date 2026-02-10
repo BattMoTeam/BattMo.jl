@@ -24,12 +24,12 @@ names = [
 end
 
 function getinput(name)
-	return load_advanced_dict_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
+	return load_advanced_dict_input(joinpath(pkgdir(BattMo), "test", "data", "jsonfiles", name))
 end
 
 geometries = ["4680-geometry.json",
-	          "geometry-1d.json",
-	          "geometry-3d-demo.json"]
+	"geometry-1d.json",
+	"geometry-3d-demo.json"]
 
 @testset "iterative solvers" begin
 	for geometry in geometries
@@ -38,15 +38,17 @@ geometries = ["4680-geometry.json",
 
 				inputparams_geometry = getinput(geometry)
 				inputparams_material = getinput("lithium_ion_battery_nmc_graphite.json")
-				inputparams_control  = getinput("cc_discharge_control.json")
+				inputparams_material["use_thermal"] = false
+				inputparams_control = getinput("cc_discharge_control.json")
 
 				inputparams = merge_input_params([inputparams_geometry,
 					inputparams_material,
 					inputparams_control])
 
-
 				cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_to_parameter_sets(inputparams)
 				solver_settings = load_solver_settings(; from_default_set = "iterative")
+
+				print_info(model_settings)
 
 				solver_settings["NonLinearSolver"]["MaxNonLinearIterations"] = 20
 				solver_settings["NonLinearSolver"]["ErrorOnIncomplete"] = true

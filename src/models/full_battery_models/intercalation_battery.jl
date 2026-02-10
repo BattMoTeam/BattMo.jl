@@ -1,46 +1,6 @@
 
 abstract type IntercalationBattery <: Battery end
 
-function setupFunction(inputparams)
-    functionFormat = inputparams["functionFormat"]
-    number_of_arguments = length(inputparams["argumentList"])
-    
-    if functionFormat == "tabulated"
-        
-        data_x = inputparams["dataX"]
-		data_y = inputparams["dataY"]
-        
-		interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-		func = interpolation_object
-        
-    elseif functionFormat == "named function"
-
-        func_name = inputparams["functionName"]
-        
-		if haskey(inputparams, "FilePath")
-			raw_path = inputparams["FilePath"]
-			func_path = joinpath(base_path, normalize_path(raw_path))
-		else
-			func_path = nothing
-		end
-        
-		func = setup_function_from_function_name(func_name; file_path = func_path)
-
-    elseif functionFormat == "string expression"
-        
-        exp = setup_diffusivity_evaluation_expression_from_string(inputparams)
-		func = @RuntimeGeneratedFunction(exp)
-        
-    else
-        # we could/shoud support "string expression", "constant" "csv"
-        # see [Function.schema.json](https://github.com/BattMoTeam/BattMo/blob/main/Utilities/JsonSchemas/Function.schema.json#L7)
-        error("function format not supported")
-    end
-
-    return func, number_of_arguments
-    
-end
-
 function setup_multimodel(model::IntercalationBattery, submodels, input; use_groups = false)
 
 	if !haskey(model.settings, "CurrentCollectors")
@@ -132,14 +92,14 @@ function setup_submodels(model::IntercalationBattery, input, grids, couplings; k
 
 	model_elyte = setup_electrolyte(model, input, grids)
 
-	if haskey(model.settings, "ThermalModel")
+	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
 		model_thermal = setup_thermal_model(input, grids)
 	end
 
 	model_control = setup_control_model(input, model_neam, model_peam; kwargs...)
 
 
-	if haskey(model.settings, "ThermalModel")
+	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
 		submodels = (model_neam = model_neam,
 			model_peam = model_peam,
 			model_necc = model_necc,
@@ -276,67 +236,21 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 	params[:separator_density]   = cell_parameters["Separator"]["Density"]
 
 	# setup diffusion coefficient function
-	if isa(inputparams_elyte["DiffusionCoefficient"], Real)
+	if haskey(inputparams_elyte, "DiffusionCoefficient")
 
-		params[:diffusivity_constant] = inputparams_elyte["DiffusionCoefficient"]
-	elseif isa(inputparams_elyte["DiffusionCoefficient"], String)
+		func, func_type = setup_function(base_path, inputparams_elyte["DiffusionCoefficient"], "Electrolyte", "DiffusionCoefficient")
 
-		exp = setup_diffusivity_evaluation_expression_from_string(inputparams_elyte["DiffusionCoefficient"])
-		params[:diffusivity_func] = @RuntimeGeneratedFunction(exp)
-
-	elseif haskey(inputparams_elyte["DiffusionCoefficient"], "FunctionName")
-
-		funcname = inputparams_elyte["DiffusionCoefficient"]["FunctionName"]
-		if haskey(inputparams_elyte["DiffusionCoefficient"], "FilePath")
-			rawpath = inputparams_elyte["DiffusionCoefficient"]["FilePath"]
-			funcpath = joinpath(base_path, normalize_path(rawpath))
-		else
-			funcpath = nothing
-		end
-
-		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-		params[:diffusivity_func] = fcn
-
-	else
-		data_x = inputparams_elyte["DiffusionCoefficient"]["x"]
-		data_y = inputparams_elyte["DiffusionCoefficient"]["y"]
-
-		interpolation = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-		params[:diffusivity_data] = true
-		params[:diffusivity_func] = interpolation
+		params[:diffusion_coefficient_func] = func;
+		params[:diffusion_coefficient_func_type] = func_type;
 
 	end
-
 	# setup conductivity function
-	if isa(inputparams_elyte["IonicConductivity"], Real)
+	if haskey(inputparams_elyte, "IonicConductivity")
 
-		params[:conductivity_constant] = inputparams_elyte["IonicConductivity"]
-	elseif isa(inputparams_elyte["IonicConductivity"], String)
+		func, func_type = setup_function(base_path, inputparams_elyte["IonicConductivity"], "Electrolyte", "IonicConductivity")
 
-		exp = setup_conductivity_evaluation_expression_from_string(inputparams_elyte["IonicConductivity"])
-		params[:conductivity_func] = @RuntimeGeneratedFunction(exp)
-
-	elseif haskey(inputparams_elyte["IonicConductivity"], "FunctionName")
-
-		funcname = inputparams_elyte["IonicConductivity"]["FunctionName"]
-
-		if haskey(inputparams_elyte["IonicConductivity"], "FilePath")
-			rawpath = inputparams_elyte["IonicConductivity"]["FilePath"]
-			funcpath = joinpath(base_path, normalize_path(rawpath))
-		else
-			funcpath = nothing
-		end
-
-		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-		params[:conductivity_func] = fcn
-
-	else
-		data_x = inputparams_elyte["IonicConductivity"]["x"]
-		data_y = inputparams_elyte["IonicConductivity"]["y"]
-
-		interpolation = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-		params[:conductivity_data] = true
-		params[:conductivity_func] = interpolation
+		params[:ionic_conductivity_func] = func;
+		params[:ionic_conductivity_func_type] = func_type;
 
 	end
 
@@ -434,80 +348,54 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	am_params[:setting_temperature_dependence] = get(model.settings, "TemperatureDependence", nothing)
 	am_params[:setting_butler_volmer] = get(model.settings, "ButlerVolmer", nothing)
 
+	am_params[:reference_temperature] = 298.15
+
 	if am_params[:setting_temperature_dependence] == "Arrhenius"
 		am_params[:activation_energy_of_diffusion] = inputparams_active_material["ActivationEnergyOfDiffusion"]
 		am_params[:activation_energy_of_reaction] = inputparams_active_material["ActivationEnergyOfReaction"]
 	end
 
-	if isa(inputparams_active_material["ReactionRateConstant"], Real)
-		am_params[:ecd_funcconstant] = true
-		am_params[:reaction_rate_constant_func] = inputparams_active_material["ReactionRateConstant"]
+	if haskey(inputparams_active_material, "ReactionRateConstant")
+		func, func_type = setup_function(base_path, inputparams_active_material["ReactionRateConstant"], "ActiveMaterial", "ReactionRateConstant")
 
-	elseif isa(inputparams_active_material["ReactionRateConstant"], String)
+		am_params[:reaction_rate_constant_func] = func;
+		am_params[:reaction_rate_constant_func_type] = func_type;
 
-		am_params[:ecd_funcexp] = true
-		ocp_exp = inputparams_active_material["ReactionRateConstant"]
-		exp = setup_reaction_rate_constant_evaluation_expression_from_string(ocp_exp)
-		f_generated = @RuntimeGeneratedFunction(exp)
-		am_params[:reaction_rate_constant_func] = f_generated
-
-	elseif haskey(inputparams_active_material["ReactionRateConstant"], "FunctionName")
-
-		funcname = inputparams_active_material["ReactionRateConstant"]["FunctionName"]
-
-		if haskey(inputparams_active_material["ReactionRateConstant"], "FilePath")
-			rawpath = inputparams_active_material["ReactionRateConstant"]["FilePath"]
-			funcpath = joinpath(base_path, normalize_path(rawpath))
-		else
-			funcpath = nothing
-		end
-
-		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-		am_params[:reaction_rate_constant_func] = fcn
-
-	else
-		am_params[:ecd_funcdata] = true
-		data_x = inputparams_active_material["ReactionRateConstant"]["x"]
-		data_y = inputparams_active_material["ReactionRateConstant"]["y"]
-
-		interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-		am_params[:reaction_rate_constant_func] = interpolation_object
 	end
 
-    if haskey(inputparams_active_material, "OpenCircuitPotential")
+	if haskey(inputparams_active_material, "OpenCircuitPotential")
 
-        func, noa = setupFunction(inputparams_active_material["OpenCircuitPotential"])
+		func, func_type = setup_function(base_path, inputparams_active_material["OpenCircuitPotential"], "ActiveMaterial", "OpenCircuitPotential")
 
-        am_params[:ocp_func] = func;
-        am_params[:ocp_func_number_of_arguments] = noa;
-        
-    end
+		am_params[:ocp_func] = func;
+		am_params[:ocp_func_type] = func_type;
 
-    if haskey(inputparams_active_material, "EntropyChange")
+	end
 
-        if !haskey(inputparams_active_material, "IncludeEntropyChange")
-            am_params[:include_entropy_change] = true
-        else
-            am_params[:include_entropy_change] = inputparams_active_material["IncludeEntropyChange"]
-        end
+	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
+		am_params[:reference_temperature] = inputparams_active_material["ReferenceTemperature"]
 
-        if am_params[:include_entropy_change]
-            
-            am_params[:reference_temperature] = inputparams_active_material["ReferenceTemperature"]
-        
-            func, noa = setupFunction(inputparams_active_material["EntropyChange"])
-            
-            am_params[:entropychange_func] = func;
-            am_params[:entropychange_func_number_of_arguments] = noa;
-        
-        end
-        
-    else
-        
-        am_params[:include_entropy_change] = false
-        
-    end
-    
+		if !haskey(inputparams_active_material, "IncludeEntropyChange")
+			am_params[:include_entropy_change] = true
+		else
+			am_params[:include_entropy_change] = inputparams_active_material["IncludeEntropyChange"]
+		end
+
+		if am_params[:include_entropy_change]
+
+			func, func_type = setup_function(base_path, inputparams_active_material["EntropyChange"], "ActiveMaterial", "EntropyChange")
+
+			am_params[:entropy_change_func] = func;
+			am_params[:entropy_change_func_type] = func_type;
+
+		end
+
+	else
+
+		am_params[:include_entropy_change] = false
+
+	end
+
 	refT     = 298.15
 	T        = get(input.cycling_protocol, "InitialTemperature", refT)
 	SOC_init = input.cycling_protocol["InitialStateOfCharge"]
@@ -524,43 +412,23 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		rp = inputparams_active_material["ParticleRadius"]
 		N  = Int64(input.simulation_settings[stringName*"ParticleGridPoints"])
 
-		if isa(inputparams_active_material["DiffusionCoefficient"], Real)
-			am_params[:diff_funcconstant] = true
-			am_params[:diff_func] = inputparams_active_material["DiffusionCoefficient"]
-			D = am_params[:diff_func]
+		if haskey(inputparams_active_material, "DiffusionCoefficient")
 
-		elseif isa(inputparams_active_material["DiffusionCoefficient"], String)
+			func, func_type = setup_function(base_path, inputparams_active_material["DiffusionCoefficient"], "ActiveMaterial", "DiffusionCoefficient")
 
-			am_params[:diff_funcexp] = true
-			diff_exp = inputparams_active_material["DiffusionCoefficient"]
-			exp = setup_electrode_diff_evaluation_expression_from_string(diff_exp)
-			f_generated = @RuntimeGeneratedFunction(exp)
-			am_params[:diff_func] = f_generated
-			D = am_params[:diff_func](c, T, refT, cmax)
-		elseif haskey(inputparams_active_material["DiffusionCoefficient"], "FunctionName")
+			am_params[:diffusion_coefficient_func] = func;
+			am_params[:diffusion_coefficient_func_type] = func_type;
 
-			funcname = inputparams_active_material["DiffusionCoefficient"]["FunctionName"]
-
-			if haskey(inputparams_active_material["DiffusionCoefficient"], "FilePath")
-				rawpath = inputparams_active_material["DiffusionCoefficient"]["FilePath"]
-				funcpath = joinpath(base_path, normalize_path(rawpath))
+			if func_type == :interpolator
+				D = am_params[:diffusion_coefficient_func](c / cmax)
+			elseif func_type == :expression || func_type == :function
+				D = am_params[:diffusion_coefficient_func](c, T, refT, cmax)
+			elseif func_type == :constant
+				D = am_params[:diffusion_coefficient_func]
 			else
-				funcpath = nothing
+				error("Unrecognized function type for diffusion coefficient function: $func_type")
 			end
 
-			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-
-			am_params[:diff_func] = fcn
-			D = am_params[:diff_func](c, T, refT, cmax)
-
-		else
-			am_params[:diff_funcdata] = true
-			data_x = inputparams_active_material["DiffusionCoefficient"]["x"]
-			data_y = inputparams_active_material["DiffusionCoefficient"]["y"]
-
-			interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-			am_params[:diff_func] = interpolation_object
-			D = am_params[:diff_func](c / cmax)
 		end
 
 		if haskey(model.settings, "SEIModel") && model.settings["SEIModel"] == "Bolay" && haskey(inputparams_electrode, "Interphase")
@@ -1038,25 +906,29 @@ function setup_initial_state(input, model::IntercalationBattery)
 			init[:normalizedSEIvoltageDrop] = zeros(nc)
 		end
 
-		if multimodel[name].system.params[:ocp_func_number_of_arguments] == 1
+		if multimodel[name].system.params[:ocp_func_type] == :interpolator
 			OCP = multimodel[name].system[:ocp_func](c/cmax)
-		elseif multimodel[name].system.params[:ocp_func_number_of_arguments] == 2
-			OCP = multimodel[name].system[:ocp_func](c, cmax)
+		elseif multimodel[name].system.params[:ocp_func_type] == :function || multimodel[name].system.params[:ocp_func_type] == :expression
+			OCP = multimodel[name].system[:ocp_func](c, T, refT, cmax)
+		elseif multimodel[name].system.params[:ocp_func_type] == :constant
+			OCP = multimodel[name].system[:ocp_func]
 		else
 			error("not cover")
 		end
 
-        if multimodel[name].system.params[:include_entropy_change]
-		    if multimodel[name].system.params[:entropychange_func_number_of_arguments] == 1
-			    entropyChange = multimodel[name].system[:entropychange_func](c/cmax)
-		    elseif multimodel[name].system.params[:entropychange_func_number_of_arguments] == 2
-			    entropyChange = multimodel[name].system[:entropychange_func](c, cmax)
-		    else
-			    error("not cover")
-		    end
-            refT = multimodel[name].system.params[:reference_temperature]
-            OCP = OCP + (T - refT)
-        end
+		if multimodel[name].system.params[:include_entropy_change]
+			if multimodel[name].system.params[:entropy_change_func_type] == :interpolator
+				entropyChange = multimodel[name].system[:entropy_change_func](c/cmax)
+			elseif multimodel[name].system.params[:entropy_change_func_type] == :function || multimodel[name].system.params[:entropy_change_func_type] == :expression
+				entropyChange = multimodel[name].system[:entropy_change_func](c, cmax)
+			elseif multimodel[name].system.params[:entropychange_func_type] == :constant
+				entropyChange = multimodel[name].system[:entropy_change_func]
+			else
+				error("not cover")
+			end
+			refT = multimodel[name].system.params[:reference_temperature]
+			OCP = OCP + (T - refT)
+		end
 
 		return (init, nc, OCP)
 

@@ -260,83 +260,92 @@ end
 
 @jutul_secondary(
 	function update_vocp!(OpenCircuitPotential,
-		                  tv::OpenCircuitPotential,
-		                  model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
-		                  Temperature,
-		                  SurfaceConcentration,
-                          EntropyChange,
-		                  ix,
-	                      ) where {label, D, T, Di}
+		tv::OpenCircuitPotential,
+		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
+		Temperature,
+		SurfaceConcentration,
+		EntropyChange,
+		ix,
+	) where {label, D, T, Di}
 
 		ocp_func = model.system.params[:ocp_func]
+		function_type = model.system.params[:ocp_func_type]
 
 		cmax = model.system.params[:maximum_concentration]
-        
+		refT = model.system.params[:reference_temperature]
+
 		for cell in ix
 
-            if model.system.params[:ocp_func_number_of_arguments] == 1
-                
-                @inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell] / cmax)
-                
-            elseif model.system.params[:ocp_func_number_of_arguments] == 2
-                
-				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], cmax)
+			if function_type == :interpolator
 
-            else
+				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell] / cmax)
 
-                error("number of arguments not implemented")
-                
-            end
-            
+			elseif function_type == :expression || function_type == :function
+
+				@inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax)
+
+			elseif function_type == :constant
+
+				@inbounds OpenCircuitPotential[cell] = ocp_func
+
+			else
+				error("Open Circuit Potential function type not recognized")
+
+			end
+
 		end
 
-        if model.system.params[:include_entropy_change]
+		if model.system.params[:include_entropy_change]
 
-		    refT = model.system.params[:reference_temperature]
-            
-		    for cell in ix
-                
-                @inbounds OpenCircuitPotential[cell] += EntropyChange[cell]*(Temperature[cell] - refT)
-                
-            end
+			for cell in ix
 
-        end
-        
+				@inbounds OpenCircuitPotential[cell] += EntropyChange[cell]*(Temperature[cell] - refT)
+
+			end
+
+		end
+
 	end
 )
 
 @jutul_secondary(
 	function update_entropychange!(EntropyChange,
-		                           tv::EntropyChange,
-		                           model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
-		                           SurfaceConcentration,
-		                           ix) where {label, D, T, Di}
+		tv::EntropyChange,
+		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
+		SurfaceConcentration,
+		ix) where {label, D, T, Di}
 
-        
-        if !model.system.params[:include_entropy_change]
-            return
-        end
 
-        entropychange_func = model.system.params[:entropychange_func]
+		if !model.system.params[:include_entropy_change]
+			return
+		end
 
+		@show model.system.params[:entropy_change_func]
+
+		entropy_change_function = model.system.params[:entropy_change_func]
+		function_type = model.system.params[:entropy_change_func_type]
 		cmax = model.system.params[:maximum_concentration]
 
 		for cell in ix
 
-            if model.system.params[:entropychange_func_number_of_arguments] == 1
-                
-                @inbounds EntropyChange[cell] = entropychange_func(SurfaceConcentration[cell] / cmax)
-                
-            elseif model.system.params[:entropychange_func_number_of_arguments] == 2
-                
-				@inbounds EntropyChange[cell] = entropychange_func(SurfaceConcentration[cell], cmax)
+			if function_type == :interpolator
 
-            else
+				@inbounds EntropyChange[cell] = entropy_change_function(SurfaceConcentration[cell] / cmax)
 
-                error("number of arguments not implemented")
-                
-            end
-            
+			elseif function_type == :expression || function_type == :function
+
+				@inbounds EntropyChange[cell] = entropy_change_function(SurfaceConcentration[cell], cmax)
+
+			elseif function_type == :constant
+
+				@inbounds EntropyChange[cell] = entropy_change_function
+
+			else
+
+				error("number of arguments not implemented")
+
+			end
+
 
 		end
 	end
@@ -353,7 +362,8 @@ end
 		ix,
 	) where {label, D, T, Di}
 
-		diff_func = model.system.params[:diff_func]
+		diffusion_coefficient_function = model.system.params[:diffusion_coefficient_func]
+		function_type = model.system.params[:diffusion_coefficient_func_type]
 
 		cmax = model.system.params[:maximum_concentration]
 		setting_temperature_dependence = model.system.params[:setting_temperature_dependence]
@@ -371,22 +381,23 @@ end
 		end
 
 
+
 		for cell in ix
 
-			if Jutul.haskey(model.system.params, :diff_funcexp)
+			if function_type == :expression || function_type == :function
 
-				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax); Ea, dependent = setting_temperature_dependence)
+				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function(SurfaceConcentration[cell], Temperature[cell], refT, cmax); Ea, dependent = setting_temperature_dependence)
 
-			elseif Jutul.haskey(model.system.params, :diff_funcdata)
+			elseif function_type == :interpolator
 
-				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func(SurfaceConcentration[cell] / cmax); Ea, dependent = setting_temperature_dependence)
+				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function(SurfaceConcentration[cell] / cmax); Ea, dependent = setting_temperature_dependence)
 
-			elseif Jutul.haskey(model.system.params, :diff_funcconstant)
-				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func; Ea, dependent = setting_temperature_dependence)
+			elseif function_type == :constant
+
+				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function; Ea, dependent = setting_temperature_dependence)
+
 			else
-
-				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax); Ea, dependent = setting_temperature_dependence)
-
+				error("Diffusion Coefficient function type not recognized")
 			end
 		end
 	end
@@ -399,7 +410,10 @@ end
 		SurfaceConcentration,
 		Temperature,
 		ix) where {label, D, T, Di}
-		rate_func = model.system.params[:reaction_rate_constant_func]
+
+		reaction_rate_function = model.system.params[:reaction_rate_constant_func]
+		function_type = model.system.params[:reaction_rate_constant_func_type]
+
 		if haskey(model.system.params, :activation_energy_of_diffusion)
 			Ea = model.system.params[:activation_energy_of_diffusion]
 		else
@@ -411,20 +425,20 @@ end
 
 		for cell in ix
 
-			if Jutul.haskey(model.system.params, :ecd_funcexp)
+			if function_type == :expression || function_type == :function
 
-				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func(SurfaceConcentration[cell], Temperature[cell]); Ea, dependent = setting_temperature_dependence)
+				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function(SurfaceConcentration[cell], Temperature[cell]); Ea, dependent = setting_temperature_dependence)
 
-			elseif Jutul.haskey(model.system.params, :ecd_funcdata)
+			elseif function_type == :interpolator
 
-				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func(SurfaceConcentration[cell] / cmax); Ea, dependent = setting_temperature_dependence)
+				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function(SurfaceConcentration[cell] / cmax); Ea, dependent = setting_temperature_dependence)
 
-			elseif Jutul.haskey(model.system.params, :ecd_funcconstant)
-				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func; Ea, dependent = setting_temperature_dependence)
+			elseif function_type == :constant
+
+				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function; Ea, dependent = setting_temperature_dependence)
+
 			else
-
-				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func(SurfaceConcentration[cell], Temperature[cell]); Ea, dependent = setting_temperature_dependence)
-
+				error("Reaction Rate Constant function type not recognized")
 			end
 		end
 	end

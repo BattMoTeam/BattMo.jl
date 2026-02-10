@@ -174,7 +174,7 @@ end
 	""" Compute the diffusion coefficient as a function of concentration
 	"""
 	# Calculate diffusion coefficients constant for the diffusion coefficient calculation
-	cnst = [                                                                                                                                                                    -4.43 -54
+	cnst = [                                                                                                                                                                                                        -4.43 -54
 		-0.22 0.0]
 
 	Tgi = [229 5.0]
@@ -203,15 +203,24 @@ end
 		"""
 
 		# We use Bruggeman coefficient
+
+		function_type = model.system.params[:ionic_conductivity_func_type]
 		for i in ix
 			b = BruggemanCoefficient[i]
-			if haskey(model.system.params, :conductivity_data)
+			if function_type == :interpolator
 
-				@inbounds kappa[i] = model.system[:conductivity_func](ElectrolyteConcentration[i]) * VolumeFraction[i]^b
-			elseif haskey(model.system.params, :conductivity_constant)
-				@inbounds kappa[i] = model.system[:conductivity_constant] * VolumeFraction[i]^b
+				@inbounds kappa[i] = model.system[:ionic_conductivity_func](ElectrolyteConcentration[i]) * VolumeFraction[i]^b
+
+			elseif function_type == :constant
+
+				@inbounds kappa[i] = model.system[:ionic_conductivity_func] * VolumeFraction[i]^b
+
+			elseif function_type == :expression || function_type == :function
+
+				@inbounds kappa[i] = model.system[:ionic_conductivity_func](ElectrolyteConcentration[i], Temperature[i]) * VolumeFraction[i]^b
+
 			else
-				@inbounds kappa[i] = model.system[:conductivity_func](ElectrolyteConcentration[i], Temperature[i]) * VolumeFraction[i]^b
+				error("Conductivity function type not recognized")
 			end
 		end
 	end
@@ -221,18 +230,22 @@ end
 	""" Register diffusivity function
 	"""
 
+	function_type = model.system.params[:diffusion_coefficient_func_type]
 	for i in ix
 		b = BruggemanCoefficient[i]
-		if haskey(model.system.params, :diffusivity_data)
+		if function_type == :interpolator
 
-			@inbounds D[i] = model.system[:diffusivity_func](ElectrolyteConcentration[i]) * VolumeFraction[i]^b
+			@inbounds D[i] = model.system[:diffusion_coefficient_func](ElectrolyteConcentration[i]) * VolumeFraction[i]^b
 
-		elseif haskey(model.system.params, :diffusivity_constant)
-			@inbounds D[i] = model.system[:diffusivity_constant] * VolumeFraction[i]^b
+		elseif function_type == :constant
+			@inbounds D[i] = model.system[:diffusion_coefficient_func] * VolumeFraction[i]^b
+
+		elseif function_type == :expression || function_type == :function
+
+			@inbounds D[i] = model.system[:diffusion_coefficient_func](ElectrolyteConcentration[i], Temperature[i]) * VolumeFraction[i]^b
 
 		else
-
-			@inbounds D[i] = model.system[:diffusivity_func](ElectrolyteConcentration[i], Temperature[i]) * VolumeFraction[i]^b
+			error("Diffusivity function type not recognized")
 		end
 
 	end

@@ -58,21 +58,21 @@ function jelly_roll_grid(model, input)
 	depths = [0; cumsum(repeat([height / nz], nz))]
 
 	components = ["PositiveElectrodeCurrentCollector",
-		"PositiveElectrode",
+		"PositiveElectrodeActiveMaterial",
 		"Separator",
 		"Electrolyte",
-		"NegativeElectrode",
+		"NegativeElectrodeActiveMaterial",
 		"NegativeElectrodeCurrentCollector"]
 
 	component_indices = Dict()
-	component_indices["PositiveElectrode"] = [1, 3]
+	component_indices["PositiveElectrodeActiveMaterial"] = [1, 3]
 	component_indices["PositiveElectrodeCurrentCollector"] = [2]
 	component_indices["Separator"] = [4, 8]
-	component_indices["NegativeElectrode"] = [5, 7]
+	component_indices["NegativeElectrodeActiveMaterial"] = [5, 7]
 	component_indices["NegativeElectrodeCurrentCollector"] = [6]
-	component_indices["Electrolyte"] = reduce(vcat, [component_indices["PositiveElectrode"],
+	component_indices["Electrolyte"] = reduce(vcat, [component_indices["PositiveElectrodeActiveMaterial"],
 		component_indices["Separator"],
-		component_indices["NegativeElectrode"]])
+		component_indices["NegativeElectrodeActiveMaterial"]])
 	spacingtags = Dict()
 	for component in components
 		inds = Bool[]

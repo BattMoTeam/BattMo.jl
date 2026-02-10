@@ -61,7 +61,7 @@ function one_dimensional_grid(model, input)
 
 	components = get_component_list(model;
 		include_current_collectors,
-		include_electrolyte = true,
+		include_electrolyte = false,
 		include_separator = true)
 
 	ns = vals["N"]
@@ -81,7 +81,6 @@ function one_dimensional_grid(model, input)
 	## setup the grid for each component
 
 	for (icomponent, component) in enumerate(components)
-        @info component
 		allinds = collect((1:sum(ns)))
 		inds = cinds[icomponent]:(cinds[icomponent+1]-1)
 		G, maps... = remove_cells(parentGrid, setdiff!(allinds, inds))
@@ -109,8 +108,8 @@ function one_dimensional_grid(model, input)
 		boundaryComponents = Dict("left" => "NegativeElectrodeCurrentCollector",
 			"right" => "PositiveElectrodeCurrentCollector")
 	else
-		boundaryComponents = Dict("left" => "NegativeElectrode",
-			"right" => "PositiveElectrode")
+		boundaryComponents = Dict("left" => "NegativeElectrodeActiveMaterial",
+			"right" => "PositiveElectrodeActiveMaterial")
 	end
 
 	"""get x-coordinate of the boundary faces"""

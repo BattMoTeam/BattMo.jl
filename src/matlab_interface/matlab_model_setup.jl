@@ -371,16 +371,21 @@ function setup_submodels(inputparams::MatlabInput)
 		Eak                                 = inputparams_itf["activationEnergyOfReaction"]
 
 		am_params[:setting_temperature_dependence] = true
-		am_params[:reaction_rate_constant_func]    = k0
-		am_params[:ecd_funcconstant]               = true
-		am_params[:activation_energy_of_reaction]  = Eak
+		am_params[:reaction_rate_constant_func] = k0
+		am_params[:reaction_rate_constant_func_type] = :constant
+		am_params[:ecd_funcconstant] = true
+		am_params[:activation_energy_of_reaction] = Eak
 
 		funcname = inputparams_itf["openCircuitPotential"]["functionName"] # This matlab parameter must have been converted from function handle to string before call
 		func = getfield(BattMo, Symbol(funcname))
 		am_params[:ocp_func] = func
+		am_params[:ocp_func_type] = :function
 
 		am_params[:theta0]   = inputparams_itf["guestStoichiometry0"]
 		am_params[:theta100] = inputparams_itf["guestStoichiometry100"]
+
+		am_params[:include_entropy_change] = false
+		am_params[:reference_temperature] = 293.15
 
 		# Solid diffusion
 		if use_p2d
@@ -388,8 +393,8 @@ function setup_submodels(inputparams::MatlabInput)
 			N = Int64(inputparams_sd["N"])
 			D = inputparams_sd["referenceDiffusionCoefficient"]
 
-			am_params[:diff_funcconstant] = true
-			am_params[:diff_func] = D
+			am_params[:diffusion_coefficient_func_type] = :constant
+			am_params[:diffusion_coefficient_func] = D
 
 			sys_am = ActiveMaterialP2D(am_params, rp, N, D)
 		else
@@ -450,13 +455,15 @@ function setup_submodels(inputparams::MatlabInput)
 	# TODO : add general code
 	funcname = "computeDiffusionCoefficient_default"
 	func = getfield(BattMo, Symbol(funcname))
-	params[:diffusivity_func] = func
+	params[:diffusion_coefficient_func] = func
+	params[:diffusion_coefficient_func_type] = :function
 
 	# setup diffusion coefficient function
 	# TODO : add general code
 	funcname = "computeElectrolyteConductivity_default"
 	func = getfield(BattMo, Symbol(funcname))
-	params[:conductivity_func] = func
+	params[:ionic_conductivity_func] = func
+	params[:ionic_conductivity_func_type] = :function
 
 	elyte = Electrolyte(params)
 	model_elyte = setup_component(inputparams["Electrolyte"],

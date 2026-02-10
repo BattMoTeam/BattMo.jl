@@ -205,9 +205,9 @@ function setup_thermal_model(input, grids)
 	# setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
 	# sensitivities)
 
-	prm                                   = Dict{Symbol, Any}()
-	prm[:Capacity]                        = cell_parameters["ThermalModel"]["Capacity"]
-	prm[:Conductivity]                    = cell_parameters["ThermalModel"]["Conductivity"]
+	prm = Dict{Symbol, Any}()
+	# prm[:Capacity]                        = cell_parameters["ThermalModel"]["Capacity"]
+	# prm[:Conductivity]                    = cell_parameters["ThermalModel"]["Conductivity"]
 	prm[:BoundaryTemperature]             = cell_parameters["ThermalModel"]["ExternalTemperature"]
 	prm[:ExternalHeatTransferCoefficient] = cell_parameters["ThermalModel"]["ExternalHeatTransferCoefficient"]
 
@@ -223,82 +223,82 @@ end
 ###########################################
 # The following two setups are not working
 
-function setup_thermal_model(::Val{:simple}, inputparams::AdditionaInputFormats; N = 2, Nz = 10)
+# function setup_thermal_model(::Val{:simple}, inputparams::AdditionaInputFormats; N = 2, Nz = 10)
 
-	grid = CartesianMesh((N, N, Nz), (1.0, 1.0, 1.0))
-	grid = UnstructuredMesh(grid)
+# 	grid = CartesianMesh((N, N, Nz), (1.0, 1.0, 1.0))
+# 	grid = UnstructuredMesh(grid)
 
-	sys = ThermalSystem()
+# 	sys = ThermalSystem()
 
-	domain = DataDomain(grid)
+# 	domain = DataDomain(grid)
 
-	# operators only, use geometry, not property
-	k = ones(number_of_cells(grid))
+# 	# operators only, use geometry, not property
+# 	k = ones(number_of_cells(grid))
 
-	T    = compute_face_trans(domain, k)
-	T_hf = compute_half_face_trans(domain, k)
-	T_b  = compute_boundary_trans(domain, k)
+# 	T    = compute_face_trans(domain, k)
+# 	T_hf = compute_half_face_trans(domain, k)
+# 	T_b  = compute_boundary_trans(domain, k)
 
-	domain[:trans, Faces()]           = T
-	domain[:halfTrans, HalfFaces()]   = T_hf
-	domain[:bcTrans, BoundaryFaces()] = T_b
+# 	domain[:trans, Faces()]           = T
+# 	domain[:halfTrans, HalfFaces()]   = T_hf
+# 	domain[:bcTrans, BoundaryFaces()] = T_b
 
-	flow = PotentialFlow(grid)
+# 	flow = PotentialFlow(grid)
 
-	disc = (flow = flow,)
-	domain = DiscretizedDomain(domain, disc)
+# 	disc = (flow = flow,)
+# 	domain = DiscretizedDomain(domain, disc)
 
-	model = SimulationModel(domain, sys)
+# 	model = SimulationModel(domain, sys)
 
-	prm                                   = Dict{Symbol, Any}()
-	prm[:Capacity]                        = inputparams["ThermalModel"]["capacity"]
-	prm[:Conductivity]                    = inputparams["ThermalModel"]["conductivity"]
-	prm[:BoundaryTemperature]             = inputparams["ThermalModel"]["externalTemperature"]
-	prm[:ExternalHeatTransferCoefficient] = inputparams["ThermalModel"]["externalHeatTransferCoefficient"]
+# 	prm                                   = Dict{Symbol, Any}()
+# 	prm[:Capacity]                        = inputparams["ThermalModel"]["capacity"]
+# 	prm[:Conductivity]                    = inputparams["ThermalModel"]["conductivity"]
+# 	prm[:BoundaryTemperature]             = inputparams["ThermalModel"]["externalTemperature"]
+# 	prm[:ExternalHeatTransferCoefficient] = inputparams["ThermalModel"]["externalHeatTransferCoefficient"]
 
-	parameters = setup_parameters(model, prm)
+# 	parameters = setup_parameters(model, prm)
 
-	parameters[:ExternalHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:ExternalHeatTransferCoefficient]
+# 	parameters[:ExternalHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:ExternalHeatTransferCoefficient]
 
-	vertfaces = [findBoundary(grid, 1, true); findBoundary(grid, 1, false)]
-	vertfaces = append!(vertfaces, [findBoundary(grid, 2, true); findBoundary(grid, 2, false)])
-	parameters[:ExternalHeatTransferCoefficient][vertfaces] .= 0
+# 	vertfaces = [findBoundary(grid, 1, true); findBoundary(grid, 1, false)]
+# 	vertfaces = append!(vertfaces, [findBoundary(grid, 2, true); findBoundary(grid, 2, false)])
+# 	parameters[:ExternalHeatTransferCoefficient][vertfaces] .= 0
 
-	return model, parameters
+# 	return model, parameters
 
-end
-
-
-function setup_thermal_model(inputparams::AdditionaInputFormats;
-	general_ad = true,
-	kwargs...)
-
-	grids, = setup_grids_and_couplings(inputparams)
-
-	grid = grids["ThermalModel"]
-
-	thermalsystem = ThermalSystem()
-
-	model = setup_component(grid, thermalsystem;
-		general_ad = general_ad)
+# end
 
 
-	# setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
-	# sensitivities)
+# function setup_thermal_model(inputparams::AdditionaInputFormats;
+# 	general_ad = true,
+# 	kwargs...)
 
-	prm                                   = Dict{Symbol, Any}()
-	prm[:Capacity]                        = inputparams["ThermalModel"]["capacity"]
-	prm[:Conductivity]                    = inputparams["ThermalModel"]["conductivity"]
-	prm[:BoundaryTemperature]             = inputparams["ThermalModel"]["externalTemperature"]
-	prm[:ExternalHeatTransferCoefficient] = inputparams["ThermalModel"]["externalHeatTransferCoefficient"]
+# 	grids, = setup_grids_and_couplings(inputparams)
 
-	parameters = setup_parameters(model, prm)
+# 	grid = grids["ThermalModel"]
 
-	# parameters[:Source]                   .= parameters[:Source].*parameters[:Volume]
-	parameters[:ExternalHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:ExternalHeatTransferCoefficient]
+# 	thermalsystem = ThermalSystem()
 
-	return model, parameters
+# 	model = setup_component(grid, thermalsystem;
+# 		general_ad = general_ad)
 
-end
+
+# 	# setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
+# 	# sensitivities)
+
+# 	prm                                   = Dict{Symbol, Any}()
+# 	prm[:Capacity]                        = inputparams["ThermalModel"]["capacity"]
+# 	prm[:Conductivity]                    = inputparams["ThermalModel"]["conductivity"]
+# 	prm[:BoundaryTemperature]             = inputparams["ThermalModel"]["externalTemperature"]
+# 	prm[:ExternalHeatTransferCoefficient] = inputparams["ThermalModel"]["externalHeatTransferCoefficient"]
+
+# 	parameters = setup_parameters(model, prm)
+
+# 	# parameters[:Source]                   .= parameters[:Source].*parameters[:Volume]
+# 	parameters[:ExternalHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:ExternalHeatTransferCoefficient]
+
+# 	return model, parameters
+
+# end
 
 
