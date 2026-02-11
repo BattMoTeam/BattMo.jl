@@ -320,8 +320,6 @@ end
 			return
 		end
 
-		@show model.system.params[:entropy_change_func]
-
 		entropy_change_function = model.system.params[:entropy_change_func]
 		function_type = model.system.params[:entropy_change_func_type]
 		cmax = model.system.params[:maximum_concentration]

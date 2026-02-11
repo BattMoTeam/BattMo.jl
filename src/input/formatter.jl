@@ -276,8 +276,8 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 	if haskey(model_settings, "ThermalModel")
 		thermal = Dict(
 			"ThermalModel" => Dict(
-				# "Capacity" => params["ThermalModel"]["capacity"],
-				# "Conductivity" => params["ThermalModel"]["conductivity"],
+				"Capacity" => params["ThermalModel"]["capacity"],
+				"Conductivity" => params["ThermalModel"]["conductivity"],
 				"ExternalTemperature" => params["ThermalModel"]["externalTemperature"],
 				"ExternalHeatTransferCoefficient" => params["ThermalModel"]["externalHeatTransferCoefficient"],
 			))

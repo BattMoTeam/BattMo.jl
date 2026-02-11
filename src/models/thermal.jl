@@ -205,9 +205,9 @@ function setup_thermal_model(input, grids)
 	# setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
 	# sensitivities)
 
-	prm = Dict{Symbol, Any}()
-	# prm[:Capacity]                        = cell_parameters["ThermalModel"]["Capacity"]
-	# prm[:Conductivity]                    = cell_parameters["ThermalModel"]["Conductivity"]
+	prm                                   = Dict{Symbol, Any}()
+	prm[:Capacity]                        = cell_parameters["ThermalModel"]["Capacity"]
+	prm[:Conductivity]                    = cell_parameters["ThermalModel"]["Conductivity"]
 	prm[:BoundaryTemperature]             = cell_parameters["ThermalModel"]["ExternalTemperature"]
 	prm[:ExternalHeatTransferCoefficient] = cell_parameters["ThermalModel"]["ExternalHeatTransferCoefficient"]
 
