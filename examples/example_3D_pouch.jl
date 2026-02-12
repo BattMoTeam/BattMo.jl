@@ -65,9 +65,11 @@ legend_elements = [
 Legend(fig2[1, 2], legend_elements, components)
 display(GLMakie.Screen(), fig2)
 
-
-
 output = solve(sim)
+
+fig, ax = plot_cell_data(output.states["NegativeElectrodeCurrentCollectorPosition"], output.states["NegativeElectrodeCurrentCollectorPotential"][end])
+ax.aspect = :data
+fig
 
 plot_interactive_3d(output; colormap = :curl)
 

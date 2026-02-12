@@ -229,12 +229,29 @@ function get_output_states(
 	output_data = extract_spatial_data(padded_states)
 
 	# Initialize available quantities (consistent key type = String)
-	available_quantities = Dict{String, Any}(
-		"Time" => time,
-		"Position" => position,
-		"NegativeElectrodeActiveMaterialRadius" => r_ne,
-		"PositiveElectrodeActiveMaterialRadius" => r_pe,
-	)
+	if input["ModelSettings"]["ModelFramework"] == "P2D"
+		available_quantities = Dict{String, Any}(
+			"Time" => time,
+			"Position" => x,
+			"NegativeElectrodeActiveMaterialRadius" => r_ne,
+			"PositiveElectrodeActiveMaterialRadius" => r_pe,
+		)
+
+	elseif input["ModelSettings"]["ModelFramework"] == "P4D Pouch" || input["ModelSettings"]["ModelFramework"] == "P4D Cylindrical"
+		available_quantities = Dict{String, Any}(
+			"Time" => time,
+			"NegativeElectrodeActiveMaterialPosition" => grids["NegativeElectrode"],
+			"PositiveElectrodeActiveMaterialPosition" => grids["PositiveElectrode"],
+			"NegativeElectrodeCurrentCollectorPosition" => grids["NegativeCurrentCollector"],
+			"PositiveElectrodeCurrentCollectorPosition" => grids["PositiveCurrentCollector"],
+			"ElectrolytePosition" => grids["Electrolyte"],
+			"SeparatorPosition" => grids["Separator"],
+			"NegativeElectrodeActiveMaterialRadius" => r_ne,
+			"PositiveElectrodeActiveMaterialRadius" => r_pe,
+		)
+	else
+		error("Unsupported model framework: $(input["ModelSettings"]["ModelFramework"]). Supported frameworks are: P2D, P4D Pouch, P4D Cylindrical.")
+	end
 
 	for (k, v) in output_data
 		available_quantities[k] = v
@@ -278,15 +295,19 @@ function extract_spatial_data(states::Vector)
 		"PositiveElectrodeActiveMaterialReactionRateConstant"  => [:PositiveElectrodeActiveMaterial, :ReactionRateConstant],
 		"ElectrolyteConcentration"                             => [:Electrolyte, :ElectrolyteConcentration],
 		"NegativeElectrodeActiveMaterialPotential"             => [:NegativeElectrodeActiveMaterial, :ElectricPotential],
+		"NegativeElectrodeCurrentCollectorPotential"           => [:NegativeElectrodeCurrentCollector, :ElectricPotential],
 		"ElectrolytePotential"                                 => [:Electrolyte, :ElectricPotential],
 		"PositiveElectrodeActiveMaterialPotential"             => [:PositiveElectrodeActiveMaterial, :ElectricPotential],
+		"PositiveElectrodeCurrentCollectorPotential"           => [:PositiveElectrodeCurrentCollector, :ElectricPotential],
 		"NegativeElectrodeActiveMaterialTemperature"           => [:NegativeElectrodeActiveMaterial, :Temperature],
 		"PositiveElectrodeActiveMaterialTemperature"           => [:PositiveElectrodeActiveMaterial, :Temperature],
 		"NegativeElectrodeActiveMaterialOpenCircuitPotential"  => [:NegativeElectrodeActiveMaterial, :OpenCircuitPotential],
 		"PositiveElectrodeActiveMaterialOpenCircuitPotential"  => [:PositiveElectrodeActiveMaterial, :OpenCircuitPotential],
 		"NegativeElectrodeActiveMaterialCharge"                => [:NegativeElectrodeActiveMaterial, :Charge],
+		"NegativeElectrodeCurrentCollectorCharge"              => [:NegativeElectrodeCurrentCollector, :Charge],
 		"ElectrolyteCharge"                                    => [:Electrolyte, :Charge],
 		"PositiveElectrodeActiveMaterialCharge"                => [:PositiveElectrodeActiveMaterial, :Charge],
+		"PositiveElectrodeCurrentCollectorCharge"              => [:PositiveElectrodeCurrentCollector, :Charge],
 		"ElectrolyteMass"                                      => [:Electrolyte, :Mass],
 		"ElectrolyteDiffusivity"                               => [:Electrolyte, :Diffusivity],
 		"ElectrolyteConductivity"                              => [:Electrolyte, :Conductivity],
