@@ -56,7 +56,7 @@ ax = Axis(f[1, 1],
 )
 
 scatterlines!(ax,
-	t,
+	t ./ 3600,
 	E;
 	linewidth = 4,
 	markersize = 10,
@@ -65,12 +65,16 @@ scatterlines!(ax,
 	label = "Julia",
 )
 
+display(GLMakie.Screen(), f)
+
 input = (
 	model_settings      = output.simulation.model.settings,
 	cell_parameters     = output.simulation.cell_parameters,
 	cycling_protocol    = output.simulation.cycling_protocol,
 	simulation_settings = output.simulation.settings,
 )
+
+
 
 thermal_model, thermal_parameters = BattMo.setup_thermal_model(input, grids)
 
@@ -94,8 +98,32 @@ thermal_sim = Simulator(thermal_model;
 	copy_state = true)
 thermal_states, = simulate(thermal_sim, timesteps; info_level = -1, forces = forces)
 
-T = [maximum(state[:Temperature]) for state in thermal_states]
-
 plot_interactive(thermal_model, thermal_states)
 
-# Jutul.plot_interactive_impl(thermal_model.domain.representation.representation, sources)
+# Plot maximum temperature in the cell over time
+
+T = [maximum(state[:Temperature]) for state in thermal_states]
+
+f2 = Figure(size = (1000, 400))
+
+ax = Axis(f2[1, 1],
+	title = "Maximum temperature in the cell",
+	xlabel = "Time / s",
+	ylabel = "Temperature / K",
+	xlabelsize = 25,
+	ylabelsize = 25,
+	xticklabelsize = 25,
+	yticklabelsize = 25,
+)
+
+scatterlines!(ax,
+	t ./ 3600, # convert time to hours
+	T;
+	linewidth = 4,
+	markersize = 10,
+	marker = :cross,
+	markercolor = :black,
+	# label = "Julia",
+)
+
+display(GLMakie.Screen(), f2)
