@@ -1,164 +1,608 @@
 export pouch_grid
 
 #################################
-# single layer pouch cell setup #
+# Multi layer pouch cell setup #
 #################################
 
-""" Create a single layer pouch grid
-	returns two dictionaries containing the grids and the couplings.
+"""
+Create a multilayer pouch cell grid with flexible tab placement.
 
-	The fields for the `grid` dictionary are:
-	+ "NegativeCurrentCollector"
-	+ "NegativeElectrode"
-	+ "Separator"
-	+ "PositiveElectrode",
-	+ "PositiveCurrentCollector"
+Features:
+- Double-coated multilayer stack *without* outer collectors.
+  Per layer (z-segments): NE_coating | NE_CC | NE_coating | Separator | PE_coating | PE_CC | PE_coating | (interlayer Separator)
+- Tabs (in y-direction) can be on the same side or on opposite sides.
+- Each current collector has its own tab position *fraction across the x-width*.
+- Tab size in grid-points comes from simulation settings; physical sizes are used to set per-cell sizes.
 
-	The fields for the `couplings` dictionary are the same as `grid`. For each component, we have again a dictionary
-	with field as in `grid` which provides the coupling with the two resulting components.
+Returns:
+- `grids`: component grids for NegativeCurrentCollector, NegativeElectrode, Separator, PositiveElectrode, PositiveCurrentCollector, Electrolyte
+- `couplings`: coupling information between components
 """
 function pouch_grid(input)
-
-	cell_parameters = input.cell_parameters
+	# --------------------------------------------------------
+	# 1) Read inputs
+	# --------------------------------------------------------
+	cell_parameters     = input.cell_parameters
 	simulation_settings = input.simulation_settings
 
-	ne_cc_z  = cell_parameters["NegativeElectrode"]["CurrentCollector"]["Thickness"]
-	ne_cc_nz = simulation_settings["NegativeElectrodeCurrentCollectorGridPoints"]
+	# Number of repeated cell layers (in z)
+	num_layers = cell_parameters["Cell"]["NumberOfLayersInParallel"]
+	double_coated = get(cell_parameters["Cell"], "DoubleCoatedElectrodes", true)
 
-	ne_co_z  = cell_parameters["NegativeElectrode"]["Coating"]["Thickness"]
-	ne_co_nz = simulation_settings["NegativeElectrodeCoatingGridPoints"]
-
-	pe_cc_z  = cell_parameters["PositiveElectrode"]["CurrentCollector"]["Thickness"]
-	pe_cc_nz = simulation_settings["PositiveElectrodeCurrentCollectorGridPoints"]
-
-	pe_co_z  = cell_parameters["PositiveElectrode"]["Coating"]["Thickness"]
-	pe_co_nz = simulation_settings["PositiveElectrodeCoatingGridPoints"]
-
-	sep_z  = cell_parameters["Separator"]["Thickness"]
-	sep_nz = simulation_settings["SeparatorGridPoints"]
-
-	x  = cell_parameters["Cell"]["ElectrodeWidth"]
-	y  = cell_parameters["Cell"]["ElectrodeLength"]
-	nx = simulation_settings["ElectrodeWidthGridPoints"]
-	ny = simulation_settings["ElectrodeLengthGridPoints"]
-
-	ne_tab_nx = simulation_settings["NegativeElectrodeCurrentCollectorTabWidthGridPoints"]
-	ne_tab_ny = simulation_settings["NegativeElectrodeCurrentCollectorTabLengthGridPoints"]
-	ne_tab_x  = cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"]
-	ne_tab_y  = cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabLength"]
-
-	pe_tab_nx = simulation_settings["PositiveElectrodeCurrentCollectorTabWidthGridPoints"]
-	pe_tab_ny = simulation_settings["PositiveElectrodeCurrentCollectorTabLengthGridPoints"]
-	pe_tab_x  = cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"]
-	pe_tab_y  = cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabLength"]
-
-	nx = [ne_tab_nx, nx - (ne_tab_nx + pe_tab_nx), pe_tab_nx]
-	ny = [ne_tab_ny, ny - (ne_tab_ny + pe_tab_ny), pe_tab_ny]
-	nz = [ne_cc_nz, ne_co_nz, sep_nz, pe_co_nz, pe_cc_nz]
-
-	xs = [ne_tab_x, x - (ne_tab_x + pe_tab_x), pe_tab_x]
-	ys = [ne_tab_y, y - (ne_tab_y + pe_tab_y), pe_tab_y]
-	zs = [ne_cc_z, ne_co_z, sep_z, pe_co_z, pe_cc_z]
-
-	zvals = zs  # used to recover the different regions in setup_pouch_cell_geometry (see below)
-
-	xs = xs ./ nx
-	ys = ys ./ ny
-	zs = zs ./ nz
-
-	same_side = false # if true, needs pe_cc_ny >= ne_cc_ny. I think they usually are equal
-
-	Lx = inverse_rle(xs, nx)
-	Ly = inverse_rle(ys, ny)
-	Lz = inverse_rle(zs, nz)
-
-	Nx = length(Lx)
-	Ny = length(Ly)
-	Nz = length(Lz)
-
-	h = CartesianMesh((Nx, Ny, Nz), (Lx, Ly, Lz))
-
-	H_back = convert_to_mrst_grid(UnstructuredMesh(h))
-
-	#################################################################
-
-	# Iterators in the z-direction over horizontal layers at the end where the positive current collector is located
-	pe_endbox_list_of_iterators = [Nx*(i*Ny-pe_tab_ny)+1:Nx*Ny*i for i in 1:Nz]
-
-	# collect from previous iterator. The result is the set of cells that makes up the box-shape end of the domain (in
-	# the y-direction), which includes the pe_cc tab
-	pe_extra_cells = cat(pe_endbox_list_of_iterators..., dims = 1)
-
-	# (x-y) Carthesian indices of the cells of the positive current collector tab (not expanded in the z direction)
-	pe_tab_horz_index = cat([Nx*i-pe_tab_nx+1:Nx*i for i in 1:pe_tab_ny]..., dims = 1)
-
-	# Index of the positive current collector tab.
-	# 1) From the pc_cc_list_of_iterators, we take only the horizontal layer that contains tab : pe_endbox_list_of_iterators[end - pe_cc_nz + 1 : end]
-	# 2) From each of these layers, we take only the cells that we have a (x, y) cartesian index in the tab region
-	pe_tab_cells = cat(getindex.(pe_endbox_list_of_iterators[end-pe_cc_nz+1:end], [pe_tab_horz_index])..., dims = 1)
-
-	# From the end of the domain (in y-direction), we remove the cells that constitutes the tab
-	setdiff!(pe_extra_cells, pe_tab_cells)
-
-	# We proceed in the same way for the negative current collector
-
-	ne_endbox_list_of_operators = [Nx*Ny*(i-1)+1:Nx*(Ny*(i-1)+ne_tab_ny) for i in 1:Nz]
-	ne_extra_cells = cat(ne_endbox_list_of_operators..., dims = 1)
-
-	ne_tab_horz_index = cat([Nx*(i-1)+1:Nx*(i-1)+pe_tab_nx for i in 1:ne_tab_ny]..., dims = 1)
-
-	if same_side
-		ne_tab_cells = cat(getindex.(pe_endbox_list_of_iterators[1:ne_cc_nz], [ne_tab_horz_index])..., dims = 1)
-		setdiff!(pe_extra_cells, ne_tab_cells)
-	else
-		ne_tab_cells = cat(getindex.(ne_endbox_list_of_operators[1:ne_cc_nz], [ne_tab_horz_index])..., dims = 1)
-		setdiff!(ne_extra_cells, ne_tab_cells)
+	extra_ne = num_layers > 1
+	if haskey(cell_parameters["Cell"], "CloseOffWithNegativeElectrode")
+		extra_ne = cell_parameters["Cell"]["CloseOffWithNegativeElectrode"]
 	end
 
-	globalgrid, = remove_cells(H_back, vcat(pe_extra_cells, ne_extra_cells))
+	if num_layers > 1 && double_coated == false
+		error("A multi-layer pouch cannot have single coated electrodes.")
+	end
 
-	grids, couplings = setup_pouch_cell_geometry(globalgrid, zvals)
+	if num_layers == 1 && extra_ne == true
+		error("A single-layer pouch cannot be closed off with an extra negative electrode.")
+	end
+
+	# --- Tab placement configuration ---
+	tabs_on_same_side = get(cell_parameters["Cell"], "TabsOnSameSide", false)
+	neg_tab_pos_frac = get(cell_parameters["NegativeElectrode"]["CurrentCollector"], "TabPositionFraction", 0.2)
+	pos_tab_pos_frac = get(cell_parameters["PositiveElectrode"]["CurrentCollector"], "TabPositionFraction", 0.8)
+	same_side_y_side = "top"
+
+	# --------------------------------------------------------
+	# 2) Material thickness (z)
+	# --------------------------------------------------------
+	neg_cc_thickness      = cell_parameters["NegativeElectrode"]["CurrentCollector"]["Thickness"]
+	neg_cc_points         = simulation_settings["NegativeElectrodeCurrentCollectorGridPoints"]
+	neg_coating_thickness = cell_parameters["NegativeElectrode"]["Coating"]["Thickness"]
+	neg_coating_points    = simulation_settings["NegativeElectrodeCoatingGridPoints"]
+
+	pos_cc_thickness      = cell_parameters["PositiveElectrode"]["CurrentCollector"]["Thickness"]
+	pos_cc_points         = simulation_settings["PositiveElectrodeCurrentCollectorGridPoints"]
+	pos_coating_thickness = cell_parameters["PositiveElectrode"]["Coating"]["Thickness"]
+	pos_coating_points    = simulation_settings["PositiveElectrodeCoatingGridPoints"]
+
+	separator_thickness = cell_parameters["Separator"]["Thickness"]
+	separator_points    = simulation_settings["SeparatorGridPoints"]
+
+	# --------------------------------------------------------
+	# 3) Electrode planform
+	# --------------------------------------------------------
+	electrode_width  = cell_parameters["Cell"]["ElectrodeWidth"]
+	electrode_length = cell_parameters["Cell"]["ElectrodeLength"]
+	width_points     = simulation_settings["ElectrodeWidthGridPoints"]
+	length_points    = simulation_settings["ElectrodeLengthGridPoints"]
+
+	# --------------------------------------------------------
+	# 4) Tab physical sizes & grid points
+	# --------------------------------------------------------
+
+	# --- Unified tab width and grid resolution ---
+	tab_width_points  = simulation_settings["TabWidthGridPoints"]
+	tab_width         = cell_parameters["Cell"]["TabWidth"]
+	tab_length_points = simulation_settings["TabLengthGridPoints"]
+	tab_length        = cell_parameters["Cell"]["TabLength"]
+
+	# Apply identical width to both electrodes
+	neg_tab_width = tab_width
+	pos_tab_width = tab_width
+	neg_tab_width_points = tab_width_points
+	pos_tab_width_points = tab_width_points
+
+	# Tab lengths remain separate unless you want them unified:
+	neg_tab_length_points = tab_length_points
+	neg_tab_length        = tab_length
+
+	pos_tab_length_points = tab_length_points
+	pos_tab_length        = tab_length
+
+	# --------------------------------------------------------
+	# 5) X-direction segmentation with tabs anywhere
+	# --------------------------------------------------------
+	# Compute tab start/end fractions in electrode width
+	neg_tab_start_frac = clamp(neg_tab_pos_frac - 0.5 * neg_tab_width / electrode_width, 0.0, 1.0)
+	neg_tab_end_frac   = clamp(neg_tab_pos_frac + 0.5 * neg_tab_width / electrode_width, 0.0, 1.0)
+
+	pos_tab_start_frac = clamp(pos_tab_pos_frac - 0.5 * pos_tab_width / electrode_width, 0.0, 1.0)
+	pos_tab_end_frac   = clamp(pos_tab_pos_frac + 0.5 * pos_tab_width / electrode_width, 0.0, 1.0)
+
+	if neg_tab_pos_frac <= pos_tab_pos_frac
+		left_tab_start_frac = neg_tab_start_frac
+		left_tab_end_frac = neg_tab_end_frac
+		right_tab_start_frac = pos_tab_start_frac
+		right_tab_end_frac = pos_tab_end_frac
+		left_tab = "NegativeElectrode"
+	else
+		left_tab_start_frac = pos_tab_start_frac
+		left_tab_end_frac = pos_tab_end_frac
+		right_tab_start_frac = neg_tab_start_frac
+		right_tab_end_frac = neg_tab_end_frac
+		left_tab = "PositiveElectrode"
+	end
+
+
+	middle_active_frac = (right_tab_start_frac - left_tab_end_frac)
+
+	if middle_active_frac > 0
+		# Tabs do not overlap
+		middle_active_width = clamp((right_tab_start_frac - left_tab_end_frac) * electrode_width, 0, electrode_width)
+		overlapping_tab_width = 0.0
+		left_tab_width = tab_width
+		right_tab_width = tab_width
+	else
+		# Tabs overlap
+		overlapping_tab_width = abs(right_tab_start_frac - left_tab_end_frac) * electrode_width
+		left_tab_width = clamp((left_tab_end_frac - left_tab_start_frac) * electrode_width - overlapping_tab_width, 0, electrode_width) # NE tab remainder
+		right_tab_width = clamp((right_tab_end_frac - right_tab_start_frac) * electrode_width - overlapping_tab_width, 0, electrode_width) # PE tab remainder
+		middle_active_width = 0.0
+	end
+
+	# Define segment widths in x-direction (total 5 segments if no overlap, 6 segments if partly overlap, 3 segments if full overlap)
+	# 1: left active, 2: left tab remainder, 3: middle active,
+	# 4: overlap,     5: right tab remainder, 6: right active
+
+	segment_widths = [
+		left_tab_start_frac * electrode_width,                 # left active
+		left_tab_width,                                # NE tab remainder 
+		middle_active_width, # middle active
+		overlapping_tab_width,                                  # overlapping tabs (if any)
+		right_tab_width,# PE tab remainder 
+		(1.0 - right_tab_end_frac) * electrode_width,            # right active
+	]
+
+	# Assign grid points to segments
+	remaining_points = width_points - (neg_tab_width_points + pos_tab_width_points)
+	tab_cell_width = tab_width / tab_width_points
+	overlapping_tab_width_points = round(Int, segment_widths[4] / tab_cell_width)
+	left_tab_width_points = round(Int, tab_width_points-overlapping_tab_width_points)
+	right_tab_width_points = round(Int, tab_width_points-overlapping_tab_width_points)
+
+	segment_points = [
+		round(Int, (segment_widths[1] / sum(segment_widths[[1, 3, 6]])) * remaining_points),
+		left_tab_width_points,
+		round(Int, (segment_widths[3] / sum(segment_widths[[1, 3, 6]])) * remaining_points),
+		overlapping_tab_width_points,
+		right_tab_width_points,
+		remaining_points - round(Int, (segment_widths[1] / sum(segment_widths[[1, 3, 6]])) * remaining_points) - round(Int, (segment_widths[3] / sum(segment_widths[[1, 3, 6]])) * remaining_points),
+	]
+
+	width_sizes_per_cell = segment_widths ./ segment_points
+
+	# --------------------------------------------------------
+	# 6) Length segmentation (y-direction)
+	# --------------------------------------------------------
+
+	if tabs_on_same_side
+		active_points = length_points
+		active_length = electrode_length
+
+		tab_strip_length        = max(neg_tab_length, pos_tab_length)
+		tab_strip_length_points = max(neg_tab_length_points, pos_tab_length_points)
+
+		if lowercase(same_side_y_side) == "bottom"
+			# bottom: TAB STRIP → ACTIVE
+			length_segments = [
+				tab_strip_length_points,
+				active_points,
+			]
+			length_sizes = [
+				tab_strip_length,
+				active_length,
+			]
+		else
+			# top: ACTIVE → TAB STRIP
+			length_segments = [
+				active_points,
+				tab_strip_length_points,
+			]
+			length_sizes = [
+				active_length,
+				tab_strip_length,
+			]
+		end
+	else
+		# Opposite-side behavior (unchanged)
+		active_points = length_points
+		active_length = electrode_length
+
+		length_segments = [
+			neg_tab_length_points,
+			active_points,
+			pos_tab_length_points,
+		]
+		length_sizes = [
+			neg_tab_length,
+			active_length,
+			pos_tab_length,
+		]
+	end
+
+
+	length_sizes_per_cell = length_sizes ./ length_segments
+
+	# --------------------------------------------------------
+	# 7) Build z-direction (thickness) segments
+	# --------------------------------------------------------
+	z_points_per_segment = Int[]
+	z_thickness_per_segment = Float64[]
+
+	if double_coated
+		for layer in 1:num_layers
+			append!(z_points_per_segment, (
+				neg_coating_points, neg_cc_points, neg_coating_points,
+				separator_points,
+				pos_coating_points, pos_cc_points, pos_coating_points,
+			))
+			append!(z_thickness_per_segment, (
+				neg_coating_thickness, neg_cc_thickness, neg_coating_thickness,
+				separator_thickness,
+				pos_coating_thickness, pos_cc_thickness, pos_coating_thickness,
+			))
+			if layer < num_layers
+				append!(z_points_per_segment, separator_points)
+				append!(z_thickness_per_segment, separator_thickness)
+			end
+		end
+		if extra_ne
+			append!(z_points_per_segment, separator_points, neg_coating_points, neg_cc_points, neg_coating_points)
+			append!(z_thickness_per_segment, separator_thickness, neg_coating_thickness, neg_cc_thickness, neg_coating_thickness)
+		end
+	else
+		append!(z_points_per_segment, (neg_cc_points, neg_coating_points, separator_points, pos_coating_points, pos_cc_points))
+		append!(z_thickness_per_segment, (neg_cc_thickness, neg_coating_thickness, separator_thickness, pos_coating_thickness, pos_cc_thickness))
+	end
+
+	z_sizes_per_cell = z_thickness_per_segment ./ z_points_per_segment
+
+	# --------------------------------------------------------
+	# 8) Expand per-cell sizes
+	# --------------------------------------------------------
+	cell_widths  = inverse_rle(width_sizes_per_cell, segment_points)
+	cell_lengths = inverse_rle(length_sizes_per_cell, length_segments)
+	cell_heights = inverse_rle(z_sizes_per_cell, z_points_per_segment)
+
+	Nx = length(cell_widths)
+	Ny = length(cell_lengths)
+	Nz = length(cell_heights)
+
+	mesh = CartesianMesh((Nx, Ny, Nz), (cell_widths, cell_lengths, cell_heights))
+	raw_grid = convert_to_mrst_grid(UnstructuredMesh(mesh))
+
+	# --------------------------------------------------------
+	# 9) TAB CARVING
+	# --------------------------------------------------------
+
+	# Compute tab start indices (x-direction)
+	left_tab_start_idx  = sum(segment_points[1:1]) + 1      # start of segment 2
+	right_tab_start_idx = sum(segment_points[1:4]) + 1      # start of segment 5
+
+	# Determine tab sides
+	if tabs_on_same_side
+		neg_y_side = same_side_y_side
+		pos_y_side = same_side_y_side
+	else
+		neg_y_side = "bottom"
+		pos_y_side = "top"
+	end
+
+	# ---------------------------------------------
+	# Build y-row ranges for each tab (critical part)
+	# ---------------------------------------------
+
+
+	if tabs_on_same_side
+		if lowercase(same_side_y_side) == "bottom"
+			# Both start at row 1
+			neg_rows = 1:neg_tab_length_points
+			pos_rows = 1:pos_tab_length_points
+		else
+			# Both start at the electrode top boundary:
+			strip_bottom = Ny - max(neg_tab_length_points, pos_tab_length_points) + 1
+
+			neg_rows = (strip_bottom):(strip_bottom+neg_tab_length_points-1)
+
+			pos_rows = (strip_bottom):(strip_bottom+pos_tab_length_points-1)
+		end
+	else
+		# Original (opposite-side) behavior
+		neg_rows = 1:neg_tab_length_points
+		pos_rows = (Ny-pos_tab_length_points+1):Ny
+	end
+
+	# Compute the corridors using y-row ranges
+	neg_tab_local = compute_tab_indices_local(
+		segment_points, "NegativeElectrode", tabs_on_same_side,
+		Nx, Ny, neg_tab_length_points, neg_y_side;
+		row_range = neg_rows,
+	)
+
+	pos_tab_local = compute_tab_indices_local(
+		segment_points, "PositiveElectrode", tabs_on_same_side,
+		Nx, Ny, pos_tab_length_points, pos_y_side;
+		row_range = pos_rows,
+	)
+
+
+	# ---------------------------------------------
+	# Build endboxes (regions to be carved)
+	# ---------------------------------------------
+
+	neg_endbox = [(Nx*Ny*(i-1)+(neg_rows.start-1)*Nx+1):(Nx*Ny*(i-1)+neg_rows.stop*Nx)
+				  for i in 1:Nz]
+
+	pos_endbox = [(Nx*Ny*(i-1)+(pos_rows.start-1)*Nx+1):(Nx*Ny*(i-1)+pos_rows.stop*Nx)
+				  for i in 1:Nz]
+
+	# ---------------------------------------------
+	# Map tab corridors into each z-layer
+	# ---------------------------------------------
+
+	total_segments = length(z_thickness_per_segment)
+
+	neg_cc_segments = [s for s in 1:total_segments if z_thickness_per_segment[s] == neg_cc_thickness]
+	pos_cc_segments = [s for s in 1:total_segments if z_thickness_per_segment[s] == pos_cc_thickness]
+
+	cum_points = cumsum(z_points_per_segment)
+	seg_lo = vcat(1, cum_points[1:(end-1)] .+ 1)
+	seg_hi = cum_points
+
+	neg_cc_layers = vcat([seg_lo[s]:seg_hi[s] for s in neg_cc_segments]...)
+	pos_cc_layers = vcat([seg_lo[s]:seg_hi[s] for s in pos_cc_segments]...)
+
+	neg_tab_cells = Int[]
+	pos_tab_cells = Int[]
+
+	for layer in neg_cc_layers
+		offset = (layer - 1) * Nx * Ny
+		append!(neg_tab_cells, offset .+ neg_tab_local)
+	end
+
+	for layer in pos_cc_layers
+		offset = (layer - 1) * Nx * Ny
+		append!(pos_tab_cells, offset .+ pos_tab_local)
+	end
+
+	# ---------------------------------------------
+	# Remove endbox cells outside tab corridors
+	# ---------------------------------------------
+
+	endbox_all = vcat(vcat(neg_endbox...), vcat(pos_endbox...))
+	keep_cells = union(neg_tab_cells, pos_tab_cells)
+	cells_to_remove = sort!(setdiff(endbox_all, keep_cells))
+
+	global_grid, = remove_cells(raw_grid, cells_to_remove)
+	# --------------------------------------------------------
+	# 10) Build sub-grids and couplings
+	# --------------------------------------------------------
+	grids, couplings = setup_pouch_cell_geometry(global_grid, z_thickness_per_segment, extra_ne, double_coated)
 	grids, couplings = convert_geometry(grids, couplings)
 
-	# Negative current collector external coupling
-
-	grid = grids["NegativeCurrentCollector"]
-
-	neighbors = get_neighborship(grid; internal = false)
-
-	bcfaces = findBoundary(grid, 2, false)
-	bccells = neighbors[bcfaces]
-
-	couplings["NegativeCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)
-
-	# Positive current collector external coupling
-
-	grid = grids["PositiveCurrentCollector"]
-
-	neighbors = get_neighborship(grid; internal = false)
-
-	bcfaces = findBoundary(grid, 2, true)
-	bccells = neighbors[bcfaces]
-
-	couplings["PositiveCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)
+	for (component, side_is_high) in [("NegativeCurrentCollector", false), ("PositiveCurrentCollector", true)]
+		grid = grids[component]
+		neighbors = get_neighborship(grid; internal = false)
+		boundary_faces = findBoundary(grid, 2, side_is_high)
+		couplings[component]["External"] = Dict("cells"=>neighbors[boundary_faces], "boundaryfaces"=>boundary_faces)
+	end
 
 	return grids, couplings
-
 end
 
-s"""
-Single layer pouch cell utility function
-find the tags of each cell (tag from 1 to 5 for each grid component such as negative current collector and so
-on). Returns a list with 5 elements, each element containing a list of cells for the corresponding tag
+
 """
-function find_tags(h, paramsz_z)
+	compute_tab_indices_local(segment_points, tab_type, tabs_on_same_side,
+							  Nx, Ny, tab_l, y_side; row_range=nothing)
 
-	h_with_geo = tpfv_geometry(h)
-	cut_offs = cumsum(paramsz_z)
-	tag = searchsortedfirst.([cut_offs], h_with_geo.cell_centroids[3, :])
-	return [findall(x -> x == i, tag) for i in 1:5]
+Returns linear x–y indices for a tab footprint.
 
+`row_range` MUST be provided when tabs are on the same side.
+Otherwise, traditional bottom/top anchoring is used.
+
+Segment layout:
+	1: left active
+	2: left tab remainder
+	3: middle active
+	4: overlap (if any)
+	5: right tab remainder
+	6: right active
+"""
+function compute_tab_indices_local(
+	segment_points,
+	tab_type::String,
+	tabs_on_same_side::Bool,
+	Nx::Int, Ny::Int,
+	tab_l::Int,
+	y_side::String;
+	row_range::Union{Nothing, UnitRange{Int}} = nothing,
+)
+
+	# ----------------------------
+	# 1) Pick y-rows
+	# ----------------------------
+	rows =
+		if tabs_on_same_side
+			@assert row_range !== nothing "row_range must be provided when tabs_on_same_side == true"
+			row_range
+		else
+			ys = lowercase(y_side)
+			@assert 1 <= tab_l <= Ny "tab_l out of range"
+			ys == "bottom" ? (1:tab_l) :
+			ys == "top" ? ((Ny-tab_l+1):Ny) :
+			error("y_side must be 'bottom' or 'top'")
+		end
+
+	# ----------------------------
+	# 2) Pick x-columns (width)
+	# ----------------------------
+	@assert sum(segment_points) == Nx
+	p = cumsum(vcat(0, segment_points))   # segment boundaries
+
+	# helper: x-fastest indexing
+	get_idx_for_run = function (col_start, col_stop)
+		col_start = clamp(col_start, 1, Nx)
+		col_stop  = clamp(col_stop, 1, Nx)
+		col_stop < col_start && return Int[]
+		vcat([(r-1)*Nx .+ (col_start:col_stop) for r in rows]...)
+	end
+
+	idxs = Int[]
+
+	if segment_points[4] == 0
+		# No overlap: NE = seg 2, PE = seg 5
+		if tab_type == "NegativeElectrode"
+			append!(idxs, get_idx_for_run(p[2] + 1, p[3]))   # segment 2
+		else
+			append!(idxs, get_idx_for_run(p[5] + 1, p[6]))   # segment 5
+		end
+	else
+		# Overlap: segment 4 always included
+		append!(idxs, get_idx_for_run(p[4] + 1, p[5]))       # overlap segment
+
+		if tab_type == "NegativeElectrode"
+			append!(idxs, get_idx_for_run(p[2] + 1, p[3]))   # NE remainder
+		else
+			append!(idxs, get_idx_for_run(p[5] + 1, p[6]))   # PE remainder
+		end
+	end
+
+	return unique!(sort!(idxs))
 end
+
+
+"""
+Multilayer pouch cell utility function
+Find the tags of each cell (tag from 1 to 5 for each grid component such as negative current collector and so on).
+Returns a list with 5 elements, each element containing a list of cells for the corresponding component.
+"""
+
+function find_tags(h, paramsz_z; extra_ne::Bool = true, double_coated = true)
+
+	# Geometry / centroids
+	h_with_geo = tpfv_geometry(h)
+	z_centroids = h_with_geo.cell_centroids[3, :]
+
+	cut_offs = cumsum(paramsz_z)
+	S = length(cut_offs)
+	segment_tag = searchsortedfirst.([cut_offs], z_centroids)
+
+	# -----------------------------------------
+	# Infer number of layers depending on pattern
+	# -----------------------------------------
+	if double_coated == true
+
+		if extra_ne
+			@assert (S - 3) % 8 == 0 "paramsz_z does not match expected extra-NE multilayer pattern"
+			number_of_layers = Int((S - 3) ÷ 8) + 1
+		else
+			@assert (S + 1) % 8 == 0 "paramsz_z does not match expected multilayer pattern"
+			number_of_layers = Int((S + 1) ÷ 8)
+		end
+
+	else
+
+		@assert (S + 1) % 6 == 0 "paramsz_z does not match expected multilayer pattern"
+		number_of_layers = Int((S + 1) ÷ 6)
+
+
+	end
+
+	# Output groups
+	ne_cc_segs = Int[]
+	ne_co_segs = Int[]
+	sep_segs   = Int[]
+	pe_co_segs = Int[]
+	pe_cc_segs = Int[]
+
+	# -----------------------------------------
+	# Build segmentation rules
+	# -----------------------------------------
+	if double_coated == true
+
+		if !extra_ne
+			# -----------------------------
+			# Standard pattern (original)
+			# -----------------------------
+			for k in 0:(number_of_layers-1)
+				base = 1 + 8*k
+				# NE triple
+				push!(ne_co_segs, base + 0, base + 2)
+				push!(ne_cc_segs, base + 1)
+				# Separator
+				push!(sep_segs, base + 3)
+				if k < number_of_layers - 1
+					push!(sep_segs, base + 7)
+				end
+				# PE block
+				push!(pe_co_segs, base + 4, base + 6)
+				push!(pe_cc_segs, base + 5)
+			end
+
+		else
+			# -----------------------------
+			# Extended NE-ending pattern
+			# -----------------------------
+			# (number_of_layers - 1) full layers
+			for k in 0:(number_of_layers-2)
+				base = 1 + 8*k
+				# NE triple
+				push!(ne_co_segs, base + 0, base + 2)
+				push!(ne_cc_segs, base + 1)
+				# SEP
+				push!(sep_segs, base + 3)
+				# PE block
+				push!(pe_co_segs, base + 4, base + 6)
+				push!(pe_cc_segs, base + 5)
+				# Interlayer SEP
+				push!(sep_segs, base + 7)
+			end
+
+			# Final block: SEP | NE_co | NE_cc | NE_co
+			final_base = S-3
+			push!(sep_segs, final_base + 0)
+			push!(ne_co_segs, final_base + 1, final_base + 3)
+			push!(ne_cc_segs, final_base + 2)
+		end
+	else
+		for k in 0:(number_of_layers-1)
+			base = 1 + 6*k
+			# NE triple
+			push!(ne_cc_segs, base + 0)
+			push!(ne_co_segs, base + 1)
+			# Separator
+			push!(sep_segs, base + 2)
+			# PE block
+			push!(pe_co_segs, base + 3)
+			push!(pe_cc_segs, base + 4)
+
+
+		end
+	end
+
+	# -----------------------------------------
+	# Build final tag groups
+	# -----------------------------------------
+	tags = Vector{Vector{Int}}(undef, 5)
+	tags[1] = findall(x -> x in ne_cc_segs, segment_tag)
+	tags[2] = findall(x -> x in ne_co_segs, segment_tag)
+	tags[3] = findall(x -> x in sep_segs, segment_tag)
+	tags[4] = findall(x -> x in pe_co_segs, segment_tag)
+	tags[5] = findall(x -> x in pe_cc_segs, segment_tag)
+
+	return tags
+end
+
+
+# """
+# Single layer pouch cell utility function
+# find the tags of each cell (tag from 1 to 5 for each grid component such as negative current collector and so
+# on). Returns a list with 5 elements, each element containing a list of cells for the corresponding tag
+# """
+# function find_tags(h, paramsz_z)
+
+# 	h_with_geo = tpfv_geometry(h)
+# 	cut_offs = cumsum(paramsz_z)
+# 	tag = searchsortedfirst.([cut_offs], h_with_geo.cell_centroids[3, :])
+# 	return [findall(x -> x == i, tag) for i in 1:5]
+
+# end
 
 """
 Single layer pouch cell utility function
@@ -199,42 +643,46 @@ end
 From a global grid and the position of the z-values for the different components, returns the grids with the coupling.
 
 """
-function setup_pouch_cell_geometry(H_mother, paramsz)
 
-	grids       = Dict()
-	global_maps = Dict()
+function setup_pouch_cell_geometry(H_mother, paramsz, extra_ne, double_coated)
+	grids       = Dict{String, Any}()
+	global_maps = Dict{String, Any}()
 
-	components = ["NegativeCurrentCollector",
+	components = [
+		"NegativeCurrentCollector",
 		"NegativeElectrode",
 		"Separator",
 		"PositiveElectrode",
-		"PositiveCurrentCollector"]
+		"PositiveCurrentCollector",
+	]
 
-	tags = find_tags(UnstructuredMesh(H_mother), paramsz)
-
+	# Mother grid
 	grids["Global"] = UnstructuredMesh(H_mother)
 	nglobal = number_of_cells(grids["Global"])
-	tags = find_tags(grids["Global"], paramsz)
 
-	# Setup the grids and mapping for all components
+	# Get grouped tags directly (length 5)
+	grouped_tags = find_tags(grids["Global"], paramsz; extra_ne, double_coated)
+
+	# Build per-component grids
 	allinds = 1:nglobal
-	for (ind, component) in enumerate(components)
-		G, maps... = remove_cells(H_mother, setdiff(allinds, tags[ind]))
-		grids[component] = G
-		global_maps[component] = maps
+	for (i, comp) in enumerate(components)
+		keep = grouped_tags[i]
+		G, maps... = remove_cells(H_mother, setdiff(allinds, keep))
+		grids[comp] = G
+		global_maps[comp] = maps
 	end
 
-	# Setup the grid and mapping for the electrolyte
-	G, maps... = remove_cells(H_mother, setdiff(allinds, vcat(tags[2:4]...)))
-	grids["Electrolyte"] = G
-	global_maps["Electrolyte"] = maps
+	# Electrolyte = NE + SEP + PE
+	electrolyte_cells = vcat(grouped_tags[2], grouped_tags[3], grouped_tags[4])
+	G_elec, maps_elec... = remove_cells(H_mother, setdiff(allinds, electrolyte_cells))
+	grids["Electrolyte"] = G_elec
+	global_maps["Electrolyte"] = maps_elec
 
-	# Add Electrolyte in the component list
 	push!(components, "Electrolyte")
 
-	# Setup the couplings
+	# Couplings from intersections
 	couplings = setup_couplings(components, grids, global_maps)
 
 	return grids, couplings
-
 end
+

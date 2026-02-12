@@ -38,6 +38,22 @@ function get_simulation_settings_meta_data()
 			"context_type_iri" => nothing,
 			"description" => "Number of grid points along the length dimension of the electrode.",
 		),
+		"TabWidthGridPoints" => Dict(
+			"type" => Int,
+			"min_value" => 1,
+			"max_value" => 1000,
+			"category" => "SimulationSettings",
+			"context_type_iri" => nothing,
+			"description" => "Number of grid points along the width dimension of the tab.",
+		),
+		"TabLengthGridPoints" => Dict(
+			"type" => Int,
+			"min_value" => 1,
+			"max_value" => 1000,
+			"category" => "SimulationSettings",
+			"context_type_iri" => nothing,
+			"description" => "Number of grid points along the length dimension of the tab.",
+		),
 		"PositiveElectrodeCoatingGridPoints" => Dict(
 			"type" => Int,
 			"min_value" => 1,

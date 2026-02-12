@@ -322,7 +322,7 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 	)
 
 	time_series = get_output_time_series(jutul_output)
-	states = get_output_states(jutul_output, input)
+	states = get_output_states(jutul_output, grids, input)
 	metrics = get_output_metrics(jutul_output)
 
 	return SimulationOutput(

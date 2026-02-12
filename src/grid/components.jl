@@ -1,0 +1,33 @@
+
+abstract type AbstractBatteryComponentGeometry end
+
+struct SingleLayerELectrodesGeometry() <: AbstractBatteryComponentGeometry
+	negative_electrode_current_collector_thickness::Union{Nothing, Float64}
+	negative_electrode_current_collector_grid_points::Union{Nothing, Int64}
+	negative_electrode_coating_thickness::Float64
+	negative_electrode_coating_grid_points::Float64
+	separator_thickness::Float64
+	separator_grid_points::Float64
+	positive_electrode_coating_thickness::Float64
+	positive_electrode_coating_grid_points::Float64
+	positive_electrode_current_collector_thickness::Union{Nothing, Float64}
+	positive_electrode_current_collector_grid_points::Union{Nothing, Int64}
+end
+
+
+struct DoubleLayerELectrodesGeometry() <: AbstractBatteryComponentGeometry
+	negative_electrode_coating_above_thickness::Float64
+	negative_electrode_coating_above_grid_points::Float64
+	negative_electrode_current_collector_thickness::Float64
+	negative_electrode_current_collector_grid_points::Float64
+	negative_electrode_coating_below_thickness::Float64
+	negative_electrode_coating_below_grid_points::Float64
+	separator_thickness::Float64
+	separator_grid_points::Float64
+	positive_electrode_coating_above_thickness::Float64
+	positive_electrode_coating_above_grid_points::Float64
+	positive_electrode_current_collector_thickness::Float64
+	positive_electrode_current_collector_grid_points::Float64
+	positive_electrode_coating_below_thickness::Float64
+	positive_electrode_coating_below_grid_points::Float64
+end
