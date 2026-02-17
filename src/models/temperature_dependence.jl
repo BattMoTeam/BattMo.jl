@@ -1,6 +1,6 @@
 """ Arrhenius model for temperature dependence of diffusion coefficients and reaction rates
 """
-function arrhenius(T, A0, Ea)
+@noinline function arrhenius(T, A0, Ea)
 
 	R = GAS_CONSTANT
 	refT = 298.15
@@ -9,9 +9,9 @@ function arrhenius(T, A0, Ea)
 
 end
 
-function temperature_dependent(T, A0; Ea = nothing, dependent = nothing)
+@inline function temperature_dependent(T, A0, Ea, dependent)
 
-	if dependent == "Arrhenius"
+	if dependent == :Arrhenius
 		val = arrhenius(T, A0, Ea)
 	else
 		val = A0
