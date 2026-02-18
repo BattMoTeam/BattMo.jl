@@ -68,7 +68,7 @@ end
 p_ref = deepcopy(cycling_protocol)
 p_ref["InitialTemperature"] = T_ref
 sim = Simulation(model, cell_parameters, p_ref)
-out_ref = solve(; info_level = -1);
+out_ref = solve(sim; info_level = -1);
 
 k_ne_ref = out_ref.states["NegativeElectrodeActiveMaterialReactionRateConstant"][1, :]
 d_ne_ref = out_ref.states["NegativeElectrodeActiveMaterialDiffusionCoefficient"][1, :]
