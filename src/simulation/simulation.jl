@@ -641,6 +641,7 @@ end
 function get_scalings(model, parameters)
 
 	refT = 298.15
+	T = refT
 
 	eldes = (:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial)
 
@@ -656,20 +657,23 @@ function get_scalings(model, parameters)
 		# Eak       = model[elde].system[:activation_energy_of_reaction]
 		vsa = model[elde].system[:volumetric_surface_area]
 
-		if hasproperty(model[elde].system.params, :activation_energy_of_reaction)
-			Ea = model[elde].system[:activation_energy_of_reaction]
-		else
-			Ea = nothing
-		end
-		setting_temperature_dependence = model[elde].system[:setting_temperature_dependence]
+		Ea = hasproperty(model[elde].system.params, :activation_energy_of_diffusion) ?
+			 model[elde].system.params[:activation_energy_of_diffusion] :
+			 0.0
+
+		temperature_dependence_model = Symbol(model[elde].system[:setting_temperature_dependence])
 
 		c_a = 0.5 * cmax
 
 		if isa(rate_func, Real)
-			R0 = temperature_dependent(refT, rate_func; Ea, dependent = setting_temperature_dependence)
+			R0 = temperature_dependent(refT, rate_func, Ea, temperature_dependence_model)
 			# R0 = arrhenius(refT, rate_func, Eak)
+		elseif isa(rate_func, String) || isa(rate_func, Function)
+			R0 = temperature_dependent(refT, rate_func(c_a, T, refT, cmax), Ea, temperature_dependence_model)
+		elseif isa(rate_func, Dict)
+			R0 = temperature_dependent(refT, rate_func(c_a), Ea, temperature_dependence_model)
 		else
-			R0 = temperature_dependent(refT, rate_func(c_a, refT); Ea, dependent = setting_temperature_dependence)
+			error("Unsupported type for reaction rate constant function: $(typeof(rate_func))")
 		end
 		c_e            = 1000.0
 		activematerial = model[elde].system

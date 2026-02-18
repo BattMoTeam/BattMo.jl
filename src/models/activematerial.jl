@@ -364,14 +364,12 @@ end
 		function_type = model.system.params[:diffusion_coefficient_func_type]
 
 		cmax = model.system.params[:maximum_concentration]
-		setting_temperature_dependence = model.system.params[:setting_temperature_dependence]
+		temperature_dependence_model = Symbol(model.system.params[:setting_temperature_dependence])
 		refT = 298.15
 
-		if haskey(model.system.params, :activation_energy_of_diffusion)
-			Ea = model.system.params[:activation_energy_of_diffusion]
-		else
-			Ea = nothing
-		end
+		Ea = haskey(model.system.params, :activation_energy_of_diffusion) ?
+			 model.system.params[:activation_energy_of_diffusion] :
+			 0.0
 
 		if Jutul.haskey(model.system.params, :diff_funcexp)
 			theta0   = model.system.params[:theta0]
@@ -384,15 +382,15 @@ end
 
 			if function_type == :expression || function_type == :function
 
-				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function(SurfaceConcentration[cell], Temperature[cell], refT, cmax); Ea, dependent = setting_temperature_dependence)
+				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Ea, temperature_dependence_model)
 
 			elseif function_type == :interpolator
 
-				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function(SurfaceConcentration[cell] / cmax); Ea, dependent = setting_temperature_dependence)
+				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function(SurfaceConcentration[cell] / cmax), Ea, temperature_dependence_model)
 
 			elseif function_type == :constant
 
-				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function; Ea, dependent = setting_temperature_dependence)
+				@inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function, Ea, temperature_dependence_model)
 
 			else
 				error("Diffusion Coefficient function type not recognized")
@@ -412,28 +410,27 @@ end
 		reaction_rate_function = model.system.params[:reaction_rate_constant_func]
 		function_type = model.system.params[:reaction_rate_constant_func_type]
 
-		if haskey(model.system.params, :activation_energy_of_diffusion)
-			Ea = model.system.params[:activation_energy_of_diffusion]
-		else
-			Ea = nothing
-		end
-		setting_temperature_dependence = model.system.params[:setting_temperature_dependence]
 
+		Ea = hasproperty(model.system.params, :activation_energy_of_reaction) ? model.system.params[:activation_energy_of_reaction] : 0.0
+
+		cmax = model.system.params[:maximum_concentration]
+		temperature_dependence_model = Symbol(model.system.params[:setting_temperature_dependence])
 		refT = 298.15
+
 
 		for cell in ix
 
 			if function_type == :expression || function_type == :function
 
-				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function(SurfaceConcentration[cell], Temperature[cell]); Ea, dependent = setting_temperature_dependence)
+				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Ea, temperature_dependence_model)
 
 			elseif function_type == :interpolator
 
-				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function(SurfaceConcentration[cell] / cmax); Ea, dependent = setting_temperature_dependence)
+				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function(SurfaceConcentration[cell] / cmax), Ea, temperature_dependence_model)
 
 			elseif function_type == :constant
 
-				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function; Ea, dependent = setting_temperature_dependence)
+				@inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function, Ea, temperature_dependence_model)
 
 			else
 				error("Reaction Rate Constant function type not recognized")
