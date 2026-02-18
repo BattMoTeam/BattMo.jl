@@ -116,7 +116,6 @@ ln_D_pe_ref = log(d_pe_ref_val)
 # ### Plot the simulation data, fitted lines, and theoretical lines (shifted-x)
 fig1 = Figure(size = (1200, 900))
 
-# We plot against x_ref = (1/T - 1/T_ref)
 xs = range(minimum(x_ref), maximum(x_ref), length = 100)
 
 
@@ -124,10 +123,8 @@ ax1 = Axis(fig1[1, 1],
 	title = "Arrhenius Validation (with T_ref): NE reaction rate constant k",
 	xlabel = "1/T - 1/T_ref (1/K)", ylabel = "ln(k)")
 scatter!(ax1, x_ref, log.(kvals_ne), color = :blue, label = "Simulation data")
-# Fitted line in shifted-x form: ln(k) ≈ a + b*x_ref
 lines!(ax1, xs, a_k_ne .+ b_k_ne .* xs, color = :blue,
 	label = "Fit slope = $(round(slope_fit_k_ne, digits=4))")
-# Theory line passing through ln(k_ref) at x=0 with slope -Ea/R
 lines!(ax1, xs, ln_k_ne_ref .+ slope_theory_k_ne .* xs,
 	color = :black, linestyle = :dash,
 	label = "Theory slope = $(round(slope_theory_k_ne, digits=4))")
@@ -166,7 +163,7 @@ lines!(ax4, xs, ln_D_pe_ref .+ slope_theory_D_pe .* xs,
 	label = "Theory slope = $(round(slope_theory_D_pe, digits=4))")
 axislegend(ax4, position = :rb)
 
-display(fig1)
+fig1 # hide
 
 # From te results, we can see that the log(k) and log(D) values from the simulations have a linear relationship with (1/T - 1/T_ref) and that the fitted lines closely follow the theoretical lines, which are anchored at the reference temperature point. 
 # We can also see that the fitted slopes (from the simulation data) closely match the theoretical slopes (-Ea/R), validating the Arrhenius temperature dependence implementation.
