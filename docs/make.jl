@@ -58,6 +58,7 @@ function build_battmo_docs(build_format              = nothing;
 	]
 	tutorials_markdown = []
 	examples_markdown = []
+	validation_notebooks_markdown = []
 	function update_footer(content, pth, dir)
 		return content * "\n\n # ## Example on GitHub\n " *
 			   "# If you would like to run this example yourself, it can be downloaded from " *
@@ -95,7 +96,7 @@ function build_battmo_docs(build_format              = nothing;
 	end
 	tutorial_path(pth) = joinpath(battmo_dir, "examples", "beginner_tutorials", "$pth.jl")
 	example_path(pth) = joinpath(battmo_dir, "examples", "$pth.jl")
-	validation_path(pth) = joinpath(battmo_dir, "examples", "validations_notebooks", "$pth.jl")
+	validation_path(pth) = joinpath(battmo_dir, "examples", "validation_notebooks", "$pth.jl")
 	examples_out_dir = joinpath(@__DIR__, "src", "examples")
 	tutorials_out_dir = joinpath(@__DIR__, "src", "tutorials")
 	validations_out_dir = joinpath(@__DIR__, "src", "validations")
@@ -156,9 +157,9 @@ function build_battmo_docs(build_format              = nothing;
 			if is_intro
 				ex_dest = intros_markdown
 			else
-				ex_dest = examples_markdown
+				ex_dest = validation_notebooks_markdown
 			end
-			do_build = build_examples
+			do_build = build_validation_examples
 		end
 		if do_build
 			push!(ex_dest, ex => joinpath("validations", "$pth.md"))
@@ -211,7 +212,7 @@ function build_battmo_docs(build_format              = nothing;
 		"Advanced examples" => examples_markdown
 	],
 		"Validations" => [
-		"Validation notebooks" => validation_markdown
+		"Validation notebooks" => validation_notebooks_markdown
 	],
 		"API Documentation" => [
 		"High level API" => "manuals/api_documentation/highlevel.md"
