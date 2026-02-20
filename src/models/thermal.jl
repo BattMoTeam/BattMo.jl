@@ -21,6 +21,7 @@ function Jutul.select_minimum_output_variables!(out,
 	system::ThermalSystem, model::SimulationModel,
 )
 	push!(out, :Temperature)
+	push!(out, :Energy)
 end
 
 function Jutul.select_primary_variables!(

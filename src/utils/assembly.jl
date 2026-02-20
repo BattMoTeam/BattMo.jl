@@ -1,35 +1,37 @@
 export compute_flux_vector
 
 function get_energy_source!(thermal_model::ThermalModel, model::IntercalationBattery, state, maps, operators = setup_flux_operators(model))
-    
+
 	multimodel = model.multimodel
 
 	nc = number_of_cells(thermal_model.domain)
 	src = zeros(Float64, nc)
 
 	components_ = ["NegativeElectrodeActiveMaterial",
-                   "PositiveElectrodeActiveMaterial",
-				   "Electrolyte"]
+		"PositiveElectrodeActiveMaterial",
+		"Electrolyte"]
 
-    if include_current_collectors(multimodel)
+	if include_current_collectors(multimodel)
 
-        components_ = vcat(components_,
-        	               ["NegativeElectrodeCurrentCollector",
-        	                "PositiveElectrodeCurrentCollector"])
-    end
+		components_ = vcat(components_,
+			["NegativeElectrodeCurrentCollector",
+				"PositiveElectrodeCurrentCollector"])
+	end
 
-    components = map(components_) do component Symbol(component) end
+	components = map(components_) do component
+		Symbol(component)
+	end
 
-    symb2str = Dict(zip(components, components_)) # map from symbol tro string
-    
+	symb2str = Dict(zip(components, components_)) # map from symbol tro string
+
 	sources = Dict()
 
 	for component in components
 
 		map = maps[symb2str[component]][1][:cellmap]
 		comp_src = get_energy_source(multimodel[component],
-			                         state[component],
-			                         operators[component])
+			state[component],
+			operators[component])
 
 		src[map] .+= comp_src
 
@@ -38,30 +40,30 @@ function get_energy_source!(thermal_model::ThermalModel, model::IntercalationBat
 
 	end
 
-    cross_terms = filter(model.multimodel.cross_terms) do c
-        isa(c.cross_term,  ButlerVolmerActmatToElyteCT) && c.target_equation == :charge_conservation
-    end
+	cross_terms = filter(model.multimodel.cross_terms) do c
+		isa(c.cross_term, ButlerVolmerActmatToElyteCT) && c.target_equation == :charge_conservation
+	end
 
-    for cross_term in cross_terms
-        reaction_src = get_reaction_energy_source(cross_term, multimodel, state)
-        map = maps[symb2str[cross_term.source]][1][:cellmap]
-        src[map] .+= reaction_src
-    end
-    
+	for cross_term in cross_terms
+		reaction_src = get_reaction_energy_source(cross_term, multimodel, state)
+		map = maps[symb2str[cross_term.source]][1][:cellmap]
+		src[map] .+= reaction_src
+	end
+
 	return src, sources
 
 end
 
 function get_reaction_energy_source(cross_term, models, state)
 
-    elde_cells = cross_term.cross_term.source_cells
-    elyte_cells = cross_term.cross_term.target_cells
+	elde_cells = cross_term.cross_term.source_cells
+	elyte_cells = cross_term.cross_term.target_cells
 
-    elde  = cross_term.source    
-    elyte = cross_term.target
+	elde  = cross_term.source
+	elyte = cross_term.target
 
-    activematerial = models[elde].system
-    
+	activematerial = models[elde].system
+
 	phi_e    = state[elyte][:ElectricPotential][elyte_cells]
 	phi_a    = state[elde][:ElectricPotential][elde_cells]
 	ocp      = state[elde][:OpenCircuitPotential][elde_cells]
@@ -70,40 +72,41 @@ function get_reaction_energy_source(cross_term, models, state)
 	c_a_surf = state[elde][:SurfaceConcentration][elde_cells]
 	T        = state[elde][:Temperature][elde_cells]
 
-    if activematerial.params[:include_entropy_change]
-        dUdT = state[elde][:EntropyChange]
-    end
-    
-    vols = models[elde].data_domain[:volumes]
+	if activematerial.params[:include_entropy_change]
+		dUdT = state[elde][:EntropyChange]
+	end
+
+	vols = models[elde].data_domain[:volumes]
 
 	eta = phi_a - phi_e - ocp
 
-    src = similar(eta)
+	src = similar(eta)
 
-    F   = FARADAY_CONSTANT
+	F   = FARADAY_CONSTANT
 	n   = activematerial.params[:n_charge_carriers]
 	vsa = activematerial.params[:volumetric_surface_area]
 
-    for i in eachindex(src)
-        
-	    R = reaction_rate(eta[i],
-			              c_a_surf[i],
-			              R0[i],
-			              T[i],
-			              c_e[i],
-			              activematerial,
-			              models[elyte].system)
-        if activematerial.params[:include_entropy_change]
-            R = R*eta[i] + T[i]*dUdT[i]
-        else
-            R = R*eta[i]
-        end
-        src[i] = n*F*vols[i]*vsa*R
-        
-    end
+	for i in eachindex(src)
 
-    return src
-    
+		R = reaction_rate(eta[i],
+			c_a_surf[i],
+			R0[i],
+			T[i],
+			c_e[i],
+			activematerial,
+			models[elyte].system)
+
+		if activematerial.params[:include_entropy_change]
+			R = R*eta[i] + R*T[i]*dUdT[i]
+		else
+			R = R*eta[i]
+		end
+		src[i] = n * F * vols[i] * R * vsa
+
+	end
+
+	return src
+
 end
 
 function get_energy_source(model::ElectrolyteModel, state, operators)
@@ -271,15 +274,15 @@ function setup_flux_operators(model::IntercalationBattery)
 	models = model.multimodel.models
 
 	components = [:NegativeElectrodeActiveMaterial,
-                  :PositiveElectrodeActiveMaterial,
-				  :Electrolyte]
+		:PositiveElectrodeActiveMaterial,
+		:Electrolyte]
 
-    if include_current_collectors(model.multimodel)
+	if include_current_collectors(model.multimodel)
 
-        components = vcat(components,
-        	              [:NegativeElectrodeCurrentCollector,
-        	              :PositiveElectrodeCurrentCollector])
-    end
+		components = vcat(components,
+			[:NegativeElectrodeCurrentCollector,
+				:PositiveElectrodeCurrentCollector])
+	end
 
 	operators = Dict()
 
