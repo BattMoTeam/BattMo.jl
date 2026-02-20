@@ -100,13 +100,13 @@ if include_cc
 	##
 	fig = Figure()#size = (600, 650))
 	ax = Axis3(fig[1, 1])
-	g = ugrids["PositiveCurrentCollector"]
+	g = ugrids["PositiveElectrodeCurrentCollector"]
 	faces, val = findBoundary(g, 2, true)
 	faces = Vector{Int64}(faces)
 	#faces = faces[1:2]
 	cells = g.boundary_faces.neighbors[faces]
 	coupling_control = Dict("cells" => cells, "boundaryfaces" => faces)
-	#coupling_control2 = Dict("PositiveCurrentCollector" => Dict("cells" => ones(size(cells)), "boundaryfaces" => faces))
+	#coupling_control2 = Dict("PositiveElectrodeCurrentCollector" => Dict("cells" => ones(size(cells)), "boundaryfaces" => faces))
 	if do_plot
 		plot_mesh!(ax, g, transparency = true, alpha = 0.2, color = :green)
 		Jutul.plot_mesh_edges!(ax, g)
@@ -121,11 +121,11 @@ if include_cc
 	end
 	##
 
-	g = ugrids["NegativeCurrentCollector"]
+	g = ugrids["NegativeElectrodeCurrentCollector"]
 	faces, val = findBoundary(g, 2, false)
 	faces = Vector{Int64}(faces)
 	cells = g.boundary_faces.neighbors[faces]
-	boundary = Dict("NegativeCurrentCollector" => Dict("cells" => cells, "boundaryfaces" => faces))
+	boundary = Dict("NegativeElectrodeCurrentCollector" => Dict("cells" => cells, "boundaryfaces" => faces))
 	if do_plot
 		plot_mesh!(ax, g, transparency = true, alpha = 0.3, color = :green)
 		Jutul.plot_mesh_edges!(ax, g)
@@ -135,7 +135,7 @@ if include_cc
 	end
 
 	#ugrids["Couplings"]["Control"] = coupling_control
-	ugrids["Couplings"]["PositiveCurrentCollector"]["Control"] = coupling_control
+	ugrids["Couplings"]["PositiveElectrodeCurrentCollector"]["Control"] = coupling_control
 	ugrids["Boundary"] = boundary
 
 	if do_plot
@@ -282,7 +282,7 @@ end
 mystep = Int64(floor(size(states, 1) / 2))
 state = states[mystep]
 if (include_cc)
-	names = ["Electrolyte", "NegativeElectrode", "PositiveElectrode", "NegativeCurrentCollector", "PositiveCurrentCollector"]
+	names = ["Electrolyte", "NegativeElectrode", "PositiveElectrode", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
 	syms = [:Electrolyte, :NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial, :NegativeElectrodeCurrentCollector, :PositiveElectrodeCurrentCollector]
 else
 	names = ["Electrolyte", "NegativeElectrode", "PositiveElectrode"]

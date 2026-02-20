@@ -174,7 +174,7 @@ end
 	""" Compute the diffusion coefficient as a function of concentration
 	"""
 	# Calculate diffusion coefficients constant for the diffusion coefficient calculation
-	cnst = [                                                                                                                                                        -4.43 -54
+	cnst = [                                                                                                                                                                                                        -4.43 -54
 		-0.22 0.0]
 
 	Tgi = [229 5.0]
@@ -203,15 +203,24 @@ end
 		"""
 
 		# We use Bruggeman coefficient
+
+		function_type = model.system.params[:ionic_conductivity_func_type]
 		for i in ix
 			b = BruggemanCoefficient[i]
-			if haskey(model.system.params, :conductivity_data)
+			if function_type == :interpolator
 
-				@inbounds kappa[i] = model.system[:conductivity_func](ElectrolyteConcentration[i]) * VolumeFraction[i]^b
-			elseif haskey(model.system.params, :conductivity_constant)
-				@inbounds kappa[i] = model.system[:conductivity_constant] * VolumeFraction[i]^b
+				@inbounds kappa[i] = model.system[:ionic_conductivity_func](ElectrolyteConcentration[i]) * VolumeFraction[i]^b
+
+			elseif function_type == :constant
+
+				@inbounds kappa[i] = model.system[:ionic_conductivity_func] * VolumeFraction[i]^b
+
+			elseif function_type == :expression || function_type == :function
+
+				@inbounds kappa[i] = model.system[:ionic_conductivity_func](ElectrolyteConcentration[i], Temperature[i]) * VolumeFraction[i]^b
+
 			else
-				@inbounds kappa[i] = model.system[:conductivity_func](ElectrolyteConcentration[i], Temperature[i]) * VolumeFraction[i]^b
+				error("Conductivity function type not recognized")
 			end
 		end
 	end
@@ -221,18 +230,22 @@ end
 	""" Register diffusivity function
 	"""
 
+	function_type = model.system.params[:diffusion_coefficient_func_type]
 	for i in ix
 		b = BruggemanCoefficient[i]
-		if haskey(model.system.params, :diffusivity_data)
+		if function_type == :interpolator
 
-			@inbounds D[i] = model.system[:diffusivity_func](ElectrolyteConcentration[i]) * VolumeFraction[i]^b
+			@inbounds D[i] = model.system[:diffusion_coefficient_func](ElectrolyteConcentration[i]) * VolumeFraction[i]^b
 
-		elseif haskey(model.system.params, :diffusivity_constant)
-			@inbounds D[i] = model.system[:diffusivity_constant] * VolumeFraction[i]^b
+		elseif function_type == :constant
+			@inbounds D[i] = model.system[:diffusion_coefficient_func] * VolumeFraction[i]^b
+
+		elseif function_type == :expression || function_type == :function
+
+			@inbounds D[i] = model.system[:diffusion_coefficient_func](ElectrolyteConcentration[i], Temperature[i]) * VolumeFraction[i]^b
 
 		else
-
-			@inbounds D[i] = model.system[:diffusivity_func](ElectrolyteConcentration[i], Temperature[i]) * VolumeFraction[i]^b
+			error("Diffusivity function type not recognized")
 		end
 
 	end
@@ -251,9 +264,9 @@ end
 end
 
 
-function computeFlux(::Val{:Charge}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
+function compute_flux(::Val{:Charge}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
 
-	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
+	htrans_cell, htrans_other = setup_half_trans(model, face, cell, other_cell, face_sign)
 
 	j     = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.Conductivity)
 	jchem = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectrolyteConcentration, state.ChemCoef)
@@ -267,14 +280,14 @@ end
 
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
 
-	j = computeFlux(Val(:Charge), model, state, c, other, face, face_sign)
+	j = compute_flux(Val(:Charge), model, state, c, other, face, face_sign)
 
 	return T(j)
 
 end
 
 """ 
-   computeFlux(::Val{:Diffusion}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
+   compute_flux(::Val{:Diffusion}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
 
    Uses the (effective) diffusitivty coefficient and return  -D grad(c) , where D is effective diffusivity coefficient and ElectrolyteConcentration in the concentration
 # Arguments
@@ -288,22 +301,22 @@ end
 # Returns
 diffFlux
 """
-function computeFlux(::Val{:Diffusion}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
+function compute_flux(::Val{:Diffusion}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
 
-	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
+	htrans_cell, htrans_other = setup_half_trans(model, face, cell, other_cell, face_sign)
 	diffFlux = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectrolyteConcentration, state.Diffusivity)
 
 	return diffFlux
 
 end
 
-function computeFlux(::Val{:Mass}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
+function compute_flux(::Val{:Mass}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
 
 	t = transference(model.system)
 	z = 1.0
 	F = FARADAY_CONSTANT
 
-	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
+	htrans_cell, htrans_other = setup_half_trans(model, face, cell, other_cell, face_sign)
 
 	diffFlux = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectrolyteConcentration, state.Diffusivity)
 	j        = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.Conductivity)
@@ -320,7 +333,7 @@ end
 
 function Jutul.face_flux!(q::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
 
-	massFlux = computeFlux(Val(:Mass), model, state, c, other, face, face_sign)
+	massFlux = compute_flux(Val(:Mass), model, state, c, other, face, face_sign)
 
 	return setindex(q, massFlux, 1)::T
 

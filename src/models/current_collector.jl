@@ -14,10 +14,12 @@ function CurrentCollector(params::CurrentCollectorParameters, scalings = Dict())
 	return CurrentCollector{typeof(params), typeof(scalings)}(params, scalings)
 end
 
-
 function CurrentCollector()
 	CurrentCollector(Dict())
 end
+
+const CurrentCollectorModel = SimulationModel{O, S} where {O <: JutulDomain, S <: CurrentCollector}
+
 
 function Jutul.select_minimum_output_variables!(out,
 	system::CurrentCollector, model::SimulationModel,

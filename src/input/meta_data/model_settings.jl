@@ -45,6 +45,13 @@ function get_model_settings_meta_data()
 			"documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/arrhenius",
 			"description" => """Temperature dependence model for electrode diffusion coefficients and reaction rates. Example: "Arrhenius".""",
 		),
+		"ThermalModel" => Dict(
+			"type" => String,
+			"options" => ["Sequential"],
+			"category" => "ModelSettings",
+			"description" => """A model that predicts how temperature inside the system changes over time by calculating how heat is generated, transfered and stored.
+									For now we have the Sequential thermal model implemented. This model is a loosely coupled electro-thermal which means that is solves the electrochemistry and the thermal field one after the other, not simultaneously.""",
+		),
 		"TransportInSolid" => Dict(
 			"type" => String,
 			"options" => ["FullDiffusion"],

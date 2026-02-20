@@ -69,6 +69,7 @@ function Jutul.select_secondary_variables!(S,
 	S[:Charge] = Charge()
 	S[:OpenCircuitPotential] = OpenCircuitPotential()
 	S[:ReactionRateConstant] = ReactionRateConstant()
+	S[:EntropyChange] = EntropyChange()
 	S[:SolidDiffFlux] = SolidDiffFlux()
 	S[:SEIlength] = SEIlength()
 	S[:SEIvoltageDrop] = SEIvoltageDrop()

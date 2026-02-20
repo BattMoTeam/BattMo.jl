@@ -23,14 +23,15 @@
           "guestStoichiometry0": 0.1429,
           "chargeTransferCoefficient": 0.5,
           "openCircuitPotential": {
-            "type": "function",
-            "functionname": "computeOCP_Graphite_Torchio",
-            "argumentlist": [
-              "concentration",
-              "temperature",
-              "cmax"
-            ]
-          }
+            "functionFormat": "named function",
+            "functionName": "computeOCP_Graphite_Torchio",
+            "argumentList": ["stoichiometry"]},
+          "includeEntropyChange" : true,
+          "entropyChange" : {
+            "functionFormat": "named function",
+            "functionName": "computeEntropyChange_Graphite_Torchio",
+            "argumentList": ["stoichiometry"]},
+          "referenceTemperature" : 298.15
         },
         "diffusionModelType": "full",
         "SolidDiffusion": {
@@ -83,14 +84,15 @@
           "guestStoichiometry0": 0.99174,
           "chargeTransferCoefficient": 0.5,
           "openCircuitPotential": {
-            "type": "function",
-            "functionname": "computeOCP_NMC111",
-            "argumentlist": [
-              "concentration",
-              "temperature",
-              "cmax"
-            ]
-          }
+            "functionFormat": "named function",
+            "functionName": "computeOCP_NMC111",
+            "argumentList": ["stoichiometry"]},
+          "includeEntropyChange" : true,
+          "entropyChange" : {
+            "functionFormat": "named function",
+            "functionName": "computeEntropyChenage_NMC111",
+            "argumentList": ["stoichiometry"]},
+          "referenceTemperature" : 298.15
         },
         "diffusionModelType": "full",
         "SolidDiffusion": {
@@ -129,17 +131,17 @@
     "initialConcentration": 999.99999999999977,
     "nominalEthyleneCarbonateConcentration": 999.99999999999977,
     "ionicConductivity": {
-      "type": "function",
-      "functionname": "computeElectrolyteConductivity_default",
-      "argumentlist": [
+      "functionFormat": "named function",
+      "functionName": "computeElectrolyteConductivity_default",
+      "argumentList": [
         "concentration",
         "temperature"
       ]
     },
     "diffusionCoefficient": {
-      "type": "function",
-      "functionname": "computeDiffusionCoefficient_default",
-      "argumentlist": [
+      "functionFormat": "named function",
+      "functionName": "computeDiffusionCoefficient_default",
+      "argumentList": [
         "concentration",
         "temperature"
       ]
@@ -159,7 +161,7 @@
     "bruggemanCoefficient": 1.5
   },
   "ThermalModel": {
-    "externalHeatTransferCoefficient": 1000,
+    "externalHeatTransferCoefficient": 1000.0,
     "externalTemperature": 298.15
   }
 }

@@ -314,7 +314,7 @@ function recursive_merge_dict(d1, d2; warn = false)
 	else
 
 		if (d1 != d2) && warn
-			println("Some variables have distinct values, we use the value give by the first one")
+			println("Some variables have distinct values ($d1 and $d2), we use the value give by the first one")
 		end
 
 		return d1

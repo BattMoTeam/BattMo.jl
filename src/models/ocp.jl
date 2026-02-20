@@ -30,25 +30,24 @@ const coeff2_graphite = Polynomial([
 
 function computeOCP_Graphite_Torchio(c, T, refT, cmax)
 	"""Compute OCP for GenericGraphite as function of temperature and concentration"""
-	theta  = c ./ cmax
-	refT   = 298.15
-	refOCP = (0.7222
-	+ 0.1387 * theta
-	+ 0.0290 * theta^0.5
-	- 0.0172 / theta
-	+ 0.0019 / theta^1.5
-	+ 0.2808 * exp(0.9 - 15.0 * theta)
-	- 0.7984 * exp(0.4465 * theta - 0.4108)
-)
-
-	dUdT = 1e-3 * coeff1_graphite(theta) / coeff2_graphite(theta)
-
-	ocp = refOCP + (T - refT) * dUdT
-
-	return ocp
-
+	theta = c / cmax
+	return (0.7222
+			+ 0.1387 * theta
+			+ 0.0290 * theta^0.5
+			-
+			0.0172 / theta
+			+ 0.0019 / theta^1.5
+			+ 0.2808 * exp(0.9 - 15.0 * theta)
+			-
+			0.7984 * exp(0.4465 * theta - 0.4108)
+	)
 end
 
+function computeEntropyChange_Graphite_Torchio(c, cmax)
+	"""Compute Entropy Change for GenericGraphite as function of temperature and concentration"""
+	theta = c / cmax
+	return 1e-3 * coeff1_graphite(theta) / coeff2_graphite(theta)
+end
 
 function compute_reaction_rate_constant_graphite(c, T, refT, cmax)
 
@@ -140,13 +139,17 @@ end
 function computeOCP_NMC111(c, T, refT, cmax)
 
 	"""Compute OCP for GenericNMC111 as function of temperature and concentration"""
-	refT   = 298.15
-	theta  = c / cmax
-	refOCP = coeff1_refOCP_nmc111(theta) / coeff2_refOCP_nmc111(theta)
-	dUdT   = -1e-3 * coeff1_dUdT_nmc111(theta) / coeff2_dUdT_nmc111(theta)
-	ocp    = refOCP + (T - refT) * dUdT
+	theta = c / cmax
+	return coeff1_refOCP_nmc111(theta) / coeff2_refOCP_nmc111(theta)
 
-	return ocp
+end
+
+
+function computeEntropyChenage_NMC111(c, cmax)
+	theta = c / cmax
+
+	"""Compute Entropy Change for GenericNMC111 as function of temperature and concentration"""
+	return -1e-3 * coeff1_dUdT_nmc111(theta) / coeff2_dUdT_nmc111(theta)
 
 end
 

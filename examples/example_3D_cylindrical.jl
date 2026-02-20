@@ -65,7 +65,7 @@ nothing #hide
 
 # Define a list of the component to iterate over in the ploting routin below
 
-components = ["NegativeElectrode", "PositiveElectrode", "NegativeCurrentCollector", "PositiveCurrentCollector"]
+components = ["NegativeElectrode", "PositiveElectrode", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
 colors = [:gray, :green, :blue, :black]
 nothing #hide
 
@@ -91,8 +91,8 @@ fig #hide
 # in red.
 
 components = [
-	"NegativeCurrentCollector",
-	"PositiveCurrentCollector",
+	"NegativeElectrodeCurrentCollector",
+	"PositiveElectrodeCurrentCollector",
 ]
 
 for component in components

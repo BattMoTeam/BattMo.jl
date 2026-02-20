@@ -392,7 +392,7 @@ function rampupTimesteps(time::Real, dt::Real, n::Integer = 8)
 	dt_init = [dt / 2^k for k in ind]
 	cs_time = cumsum(dt_init)
 	if any(cs_time .> time)
-		dt_init = dt_init[cs_time.<time]
+		dt_init = dt_init[cs_time .< time]
 	end
 	dt_left = time .- sum(dt_init)
 
@@ -667,9 +667,9 @@ function setup_submodels(inputparams::InputParamsOld;
 			exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
 			am_params[:ocp_func] = @RuntimeGeneratedFunction(exp)
 
-		elseif haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionname")
+		elseif haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionName")
 
-			funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionname"]
+			funcname = inputparams_am["Interface"]["openCircuitPotential"]["functionName"]
 			funcpath = haskey(inputparams_am["Interface"]["openCircuitPotential"], "functionpath") ? inputparams_am["Interface"]["openCircuitPotential"]["functionpath"] : nothing
 			fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 			am_params[:ocp_func] = fcn
@@ -736,8 +736,8 @@ function setup_submodels(inputparams::InputParamsOld;
 
 	if include_cc
 
-		grid     = grids["NegativeCurrentCollector"]
-		coupling = couplings["NegativeCurrentCollector"]
+		grid     = grids["NegativeElectrodeCurrentCollector"]
+		coupling = couplings["NegativeElectrodeCurrentCollector"]
 
 		boundary = coupling["External"]
 		necc_params = JutulStorage()
@@ -779,9 +779,9 @@ function setup_submodels(inputparams::InputParamsOld;
 		exp = setup_diffusivity_evaluation_expression_from_string(inputparams_elyte["diffusionCoefficient"]["function"])
 		params[:diffusivity_func] = @RuntimeGeneratedFunction(exp)
 
-	elseif haskey(inputparams_elyte["diffusionCoefficient"], "functionname")
+	elseif haskey(inputparams_elyte["diffusionCoefficient"], "functionName")
 
-		funcname = inputparams_elyte["diffusionCoefficient"]["functionname"]
+		funcname = inputparams_elyte["diffusionCoefficient"]["functionName"]
 		funcpath = haskey(inputparams_elyte["diffusionCoefficient"], "functionpath") ? inputparams_elyte["diffusionCoefficient"]["functionpath"] : nothing
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:diffusivity_func] = fcn
@@ -805,9 +805,9 @@ function setup_submodels(inputparams::InputParamsOld;
 		exp = setup_conductivity_evaluation_expression_from_string(inputparams_elyte["ionicConductivity"]["function"])
 		params[:conductivity_func] = @RuntimeGeneratedFunction(exp)
 
-	elseif haskey(inputparams_elyte["ionicConductivity"], "functionname")
+	elseif haskey(inputparams_elyte["ionicConductivity"], "functionName")
 
-		funcname = inputparams_elyte["ionicConductivity"]["functionname"]
+		funcname = inputparams_elyte["ionicConductivity"]["functionName"]
 		funcpath = haskey(inputparams_elyte["ionicConductivity"], "functionpath") ? inputparams_elyte["ionicConductivity"]["functionpath"] : nothing
 		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
 		params[:conductivity_func] = fcn
@@ -838,7 +838,7 @@ function setup_submodels(inputparams::InputParamsOld;
 
 	if include_cc
 
-		grid = grids["PositiveCurrentCollector"]
+		grid = grids["PositiveElectrodeCurrentCollector"]
 		pecc_params = JutulStorage()
 		pecc_params[:density] = jsondict["PositiveElectrode"]["CurrentCollector"]["density"]
 
@@ -1031,7 +1031,7 @@ function setup_component(grid::FiniteVolumeMesh,
 
 	domain[:trans, Faces()]           = T
 	domain[:halfTrans, HalfFaces()]   = T_hf
-	domain[:halftransfaces, Faces()]  = setupHalfTransFaces(domain)
+	domain[:halftransfaces, Faces()]  = setup_half_trans_faces(domain)
 	domain[:bcTrans, BoundaryFaces()] = T_b
 
 	if !isnothing(dirichletBoundary)
@@ -1352,10 +1352,10 @@ function setup_coupling_cross_terms!(inputparams::InputParamsOld,
 	include_cc = inputparams["include_current_collectors"]
 
 
-	stringNames = Dict(:NegativeElectrodeCurrentCollector => "NegativeCurrentCollector",
+	stringNames = Dict(:NegativeElectrodeCurrentCollector => "NegativeElectrodeCurrentCollector",
 		:NegativeElectrodeActiveMaterial => "NegativeElectrode",
 		:PositiveElectrodeActiveMaterial => "PositiveElectrode",
-		:PositiveElectrodeCurrentCollector => "PositiveCurrentCollector")
+		:PositiveElectrodeCurrentCollector => "PositiveElectrodeCurrentCollector")
 
 	#################################
 	# Setup coupling NeAm <-> Elyte #
@@ -1438,11 +1438,11 @@ function setup_coupling_cross_terms!(inputparams::InputParamsOld,
 
 		#Ncc  = geomparams[:NegativeElectrodeCurrentCollector][:N]
 
-		srange_cells = collect(couplings["NegativeCurrentCollector"]["NegativeElectrode"]["cells"])
-		trange_cells = collect(couplings["NegativeElectrode"]["NegativeCurrentCollector"]["cells"])
+		srange_cells = collect(couplings["NegativeElectrodeCurrentCollector"]["NegativeElectrode"]["cells"])
+		trange_cells = collect(couplings["NegativeElectrode"]["NegativeElectrodeCurrentCollector"]["cells"])
 
-		srange_faces = collect(couplings["NegativeCurrentCollector"]["NegativeElectrode"]["faces"])
-		trange_faces = collect(couplings["NegativeElectrode"]["NegativeCurrentCollector"]["faces"])
+		srange_faces = collect(couplings["NegativeElectrodeCurrentCollector"]["NegativeElectrode"]["faces"])
+		trange_faces = collect(couplings["NegativeElectrode"]["NegativeElectrodeCurrentCollector"]["faces"])
 
 		msource = model[:NegativeElectrodeCurrentCollector]
 		mtarget = model[:NegativeElectrodeActiveMaterial]
@@ -1478,11 +1478,11 @@ function setup_coupling_cross_terms!(inputparams::InputParamsOld,
 
 		#Npam  = geomparams[:PositiveElectrodeActiveMaterial][:N]
 
-		srange_cells = collect(couplings["PositiveCurrentCollector"]["PositiveElectrode"]["cells"])
-		trange_cells = collect(couplings["PositiveElectrode"]["PositiveCurrentCollector"]["cells"])
+		srange_cells = collect(couplings["PositiveElectrodeCurrentCollector"]["PositiveElectrode"]["cells"])
+		trange_cells = collect(couplings["PositiveElectrode"]["PositiveElectrodeCurrentCollector"]["cells"])
 
-		srange_faces = collect(couplings["PositiveCurrentCollector"]["PositiveElectrode"]["faces"])
-		trange_faces = collect(couplings["PositiveElectrode"]["PositiveCurrentCollector"]["faces"])
+		srange_faces = collect(couplings["PositiveElectrodeCurrentCollector"]["PositiveElectrode"]["faces"])
+		trange_faces = collect(couplings["PositiveElectrode"]["PositiveElectrodeCurrentCollector"]["faces"])
 
 		msource = model[:PositiveElectrodeCurrentCollector]
 		mtarget = model[:PositiveElectrodeActiveMaterial]

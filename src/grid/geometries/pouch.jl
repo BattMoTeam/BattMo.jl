@@ -8,16 +8,16 @@ export pouch_grid
 	returns two dictionaries containing the grids and the couplings.
 
 	The fields for the `grid` dictionary are:
-	+ "NegativeCurrentCollector"
+	+ "NegativeElectrodeCurrentCollector"
 	+ "NegativeElectrode"
 	+ "Separator"
 	+ "PositiveElectrode",
-	+ "PositiveCurrentCollector"
+	+ "PositiveElectrodeCurrentCollector"
 
 	The fields for the `couplings` dictionary are the same as `grid`. For each component, we have again a dictionary
 	with field as in `grid` which provides the coupling with the two resulting components.
 """
-function pouch_grid(input)
+function pouch_grid(model, input)
 
 	cell_parameters = input.cell_parameters
 	simulation_settings = input.simulation_settings
@@ -83,29 +83,29 @@ function pouch_grid(input)
 	#################################################################
 
 	# Iterators in the z-direction over horizontal layers at the end where the positive current collector is located
-	pe_endbox_list_of_iterators = [Nx*(i*Ny-pe_tab_ny)+1:Nx*Ny*i for i in 1:Nz]
+	pe_endbox_list_of_iterators = [(Nx*(i*Ny-pe_tab_ny)+1):(Nx*Ny*i) for i in 1:Nz]
 
 	# collect from previous iterator. The result is the set of cells that makes up the box-shape end of the domain (in
 	# the y-direction), which includes the pe_cc tab
 	pe_extra_cells = cat(pe_endbox_list_of_iterators..., dims = 1)
 
 	# (x-y) Carthesian indices of the cells of the positive current collector tab (not expanded in the z direction)
-	pe_tab_horz_index = cat([Nx*i-pe_tab_nx+1:Nx*i for i in 1:pe_tab_ny]..., dims = 1)
+	pe_tab_horz_index = cat([(Nx*i-pe_tab_nx+1):(Nx*i) for i in 1:pe_tab_ny]..., dims = 1)
 
 	# Index of the positive current collector tab.
 	# 1) From the pc_cc_list_of_iterators, we take only the horizontal layer that contains tab : pe_endbox_list_of_iterators[end - pe_cc_nz + 1 : end]
 	# 2) From each of these layers, we take only the cells that we have a (x, y) cartesian index in the tab region
-	pe_tab_cells = cat(getindex.(pe_endbox_list_of_iterators[end-pe_cc_nz+1:end], [pe_tab_horz_index])..., dims = 1)
+	pe_tab_cells = cat(getindex.(pe_endbox_list_of_iterators[(end-pe_cc_nz+1):end], [pe_tab_horz_index])..., dims = 1)
 
 	# From the end of the domain (in y-direction), we remove the cells that constitutes the tab
 	setdiff!(pe_extra_cells, pe_tab_cells)
 
 	# We proceed in the same way for the negative current collector
 
-	ne_endbox_list_of_operators = [Nx*Ny*(i-1)+1:Nx*(Ny*(i-1)+ne_tab_ny) for i in 1:Nz]
+	ne_endbox_list_of_operators = [(Nx*Ny*(i-1)+1):(Nx*(Ny*(i-1)+ne_tab_ny)) for i in 1:Nz]
 	ne_extra_cells = cat(ne_endbox_list_of_operators..., dims = 1)
 
-	ne_tab_horz_index = cat([Nx*(i-1)+1:Nx*(i-1)+pe_tab_nx for i in 1:ne_tab_ny]..., dims = 1)
+	ne_tab_horz_index = cat([(Nx*(i-1)+1):(Nx*(i-1)+pe_tab_nx) for i in 1:ne_tab_ny]..., dims = 1)
 
 	if same_side
 		ne_tab_cells = cat(getindex.(pe_endbox_list_of_iterators[1:ne_cc_nz], [ne_tab_horz_index])..., dims = 1)
@@ -117,36 +117,50 @@ function pouch_grid(input)
 
 	globalgrid, = remove_cells(H_back, vcat(pe_extra_cells, ne_extra_cells))
 
-	grids, couplings = setup_pouch_cell_geometry(globalgrid, zvals)
-	grids, couplings = convert_geometry(grids, couplings)
+	grids, couplings, global_maps = setup_pouch_cell_geometry(model, globalgrid, zvals)
+	grids, couplings = convert_geometry(model, grids, couplings)
 
 	# Negative current collector external coupling
 
-	grid = grids["NegativeCurrentCollector"]
+	grid = grids["NegativeElectrodeCurrentCollector"]
 
 	neighbors = get_neighborship(grid; internal = false)
 
 	bcfaces = findBoundary(grid, 2, false)
 	bccells = neighbors[bcfaces]
 
-	couplings["NegativeCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)
+	couplings["NegativeElectrodeCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)
 
 	# Positive current collector external coupling
 
-	grid = grids["PositiveCurrentCollector"]
+	grid = grids["PositiveElectrodeCurrentCollector"]
 
 	neighbors = get_neighborship(grid; internal = false)
 
 	bcfaces = findBoundary(grid, 2, true)
 	bccells = neighbors[bcfaces]
 
-	couplings["PositiveCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)
+	couplings["PositiveElectrodeCurrentCollector"]["External"] = Dict("cells" => bccells, "boundaryfaces" => bcfaces)
 
-	return grids, couplings
+	if haskey(input.model_settings, "ThermalModel")
+		# Setup thermal model
+
+		grids["ThermalModel"] = grids["Global"]
+
+		grid = grids["ThermalModel"]
+
+		nf = number_of_boundary_faces(grid)
+		bcfaces = collect(1:nf)
+		bccells = grid.boundary_faces.neighbors
+
+		couplings["ThermalModel"] = Dict("External" => Dict("cells" => bccells, "boundaryfaces" => bcfaces))
+	end
+
+	return grids, couplings, global_maps
 
 end
 
-s"""
+"""
 Single layer pouch cell utility function
 find the tags of each cell (tag from 1 to 5 for each grid component such as negative current collector and so
 on). Returns a list with 5 elements, each element containing a list of cells for the corresponding tag
@@ -199,16 +213,15 @@ end
 From a global grid and the position of the z-values for the different components, returns the grids with the coupling.
 
 """
-function setup_pouch_cell_geometry(H_mother, paramsz)
+function setup_pouch_cell_geometry(model, H_mother, paramsz)
 
 	grids       = Dict()
 	global_maps = Dict()
 
-	components = ["NegativeCurrentCollector",
-		"NegativeElectrode",
-		"Separator",
-		"PositiveElectrode",
-		"PositiveCurrentCollector"]
+	components = get_component_list(model;
+		include_current_collectors = true,
+		include_electrolyte = false,
+		include_separator = true)
 
 	tags = find_tags(UnstructuredMesh(H_mother), paramsz)
 
@@ -235,6 +248,6 @@ function setup_pouch_cell_geometry(H_mother, paramsz)
 	# Setup the couplings
 	couplings = setup_couplings(components, grids, global_maps)
 
-	return grids, couplings
+	return grids, couplings, global_maps
 
 end
