@@ -95,13 +95,12 @@ function get_reaction_energy_source(cross_term, models, state)
 			c_e[i],
 			activematerial,
 			models[elyte].system)
-
 		if activematerial.params[:include_entropy_change]
-			R = R*eta[i] + R*T[i]*dUdT[i]
+			R = R*(eta[i] + T[i]*dUdT[i])
 		else
 			R = R*eta[i]
 		end
-		src[i] = n * F * vols[i] * R * vsa
+		src[i] = n*F*vols[i]*vsa*R
 
 	end
 
