@@ -302,7 +302,7 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 
 
 	# Perform simulation
-	jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+	jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
 
 	jutul_output = (
 		states = jutul_states,
