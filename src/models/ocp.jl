@@ -86,7 +86,7 @@ end
 
 ## Define OCP and entropy change (dUdT) for NMC111 using polynomials
 
-const coeff1_refOCP_nmc111 = Polynomial([
+const coeff1_refOCP_lco = Polynomial([
 	-4.656,
 	0,
 	+88.669,
@@ -100,7 +100,7 @@ const coeff1_refOCP_nmc111 = Polynomial([
 	+433.434,
 ]);
 
-const coeff2_refOCP_nmc111 = Polynomial([
+const coeff2_refOCP_lco = Polynomial([
 	-1,
 	0,
 	+18.933,
@@ -136,11 +136,12 @@ function computeOCP_LFP_Gerver2011(c, T, refT, cmax)
 	return ocp
 end
 
-function computeOCP_NMC111(c, T, refT, cmax)
 
-	"""Compute OCP for GenericNMC111 as function of temperature and concentration"""
+function computeOCP_LCO(c, T, refT, cmax)
+
+	# From Ramadass et al. 2004 (10.1149/1.1634273), same rational form as MATLAB BattMo.
 	theta = c / cmax
-	return coeff1_refOCP_nmc111(theta) / coeff2_refOCP_nmc111(theta)
+	return coeff1_refOCP_lco(theta) / coeff2_refOCP_lco(theta)
 
 end
 
@@ -153,6 +154,22 @@ function computeEntropyChenage_NMC111(c, cmax)
 
 end
 
+function computeEntropyChange_LCO(c, cmax)
+	# From PyBaMM / Scott Moura fastDFN parameterization for LCO.
+	theta = c / cmax
+	stretch = 1.062
+	theta = stretch * theta
+	c_s_max = 51217.9257309275
 
+	dUdT =
+		0.07645 * (-54.4806 / c_s_max) * (1.0 / cosh(30.834 - 54.4806 * theta))^2 +
+		2.1581 * (-50.294 / c_s_max) * (1.0 / cosh(52.294 - 50.294 * theta))^2 +
+		0.14169 * (19.854 / c_s_max) * (1.0 / cosh(11.0923 - 19.8543 * theta))^2 -
+		0.2051 * (5.4888 / c_s_max) * (1.0 / cosh(1.4684 - 5.4888 * theta))^2 -
+		(0.2531 / 0.1316 / c_s_max) * (1.0 / cosh((-theta + 0.56478) / 0.1316))^2 -
+		(0.02167 / 0.006 / c_s_max) * (1.0 / cosh((theta - 0.525) / 0.006))^2
+
+	return dUdT
+end
 
 
