@@ -146,7 +146,7 @@ function computeOCP_LCO(c, T, refT, cmax)
 end
 
 
-function computeEntropyChenage_NMC111(c, cmax)
+function computeEntropyChange_NMC111(c, cmax)
 	theta = c / cmax
 
 	"""Compute Entropy Change for GenericNMC111 as function of temperature and concentration"""

@@ -10,19 +10,27 @@ file = matopen(fn)
 data = read(file)
 close(file)
 
-t_matlab = data["time"][:, 1]
-E_matlab = data["E"][:, 1]
+t_matlab = data["time"][:, 1][1:(end-1)]
+E_matlab = data["E"][:, 1][1:(end-1)]
 sources_matlab = data["sourceTerms"]
 
-outer = vec(sources_matlab)  # converts (52,1) to a Vector{Any} of length 52
-inner_sizes = map(x -> size(x), outer)  # should show (1000, 1) for each
+# helper function to convert matlab cells to matrix
 
-# Example: each inner (1000×1) contains numbers; collect to Vector{Vector{T}}
-vectors = [vec(inner[:, 1]) for inner in outer]  # each becomes Vector of length 1000
+function convert_matlab_cells_to_matrix(cells)
+	# Step 1: ensure we have a simple Vector of inner arrays
+	outer = vec(cells)
 
-# If you know all are the same length (1000), stack into a matrix 52×1000 or 1000×52:
-M = reduce(hcat, vectors)   # 1000 × 52
-M = permutedims(M)          # 52 × 1000, if that’s what you want
+	# Step 2: convert each (1000×1) inner matrix into a Vector
+	vectors = [vec(inner[:, 1]) for inner in outer]
+
+	# Step 3: stack vectors horizontally into a matrix (1000 × 52)
+	M = reduce(hcat, vectors)
+
+	# Step 4: transpose to get (52 × 1000)
+	return permutedims(M)
+end
+
+M = convert_matlab_cells_to_matrix(sources_matlab)
 
 
 T_max_matlab = Float64[]
@@ -30,6 +38,16 @@ for i in eachindex(t_matlab)
 	T_matlab = data["states_thermal"][i]["T"]
 	push!(T_max_matlab, maximum(vec(T_matlab)))
 end
+matlab_states = data["output_isothermal"]["states"]
+c_e_matlab = [state["Electrolyte"]["c"] for state in matlab_states]
+c_e_clean_matlab = convert_matlab_cells_to_matrix(replace(c_e_matlab, NaN => 0.0))
+c_e_av_matlab = vec(mean(c_e_clean_matlab, dims = 2))[1:(end-1)]
+c_s_ne_matlab = [state["NegativeElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["cSurface"] for state in matlab_states]
+c_s_ne_clean_matlab = convert_matlab_cells_to_matrix(replace(c_s_ne_matlab, NaN => 0.0))
+c_s_ne_av_matlab = vec(mean(c_s_ne_clean_matlab, dims = 2))[1:(end-1)]
+c_s_pe_matlab = [state["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["cSurface"] for state in matlab_states]
+c_s_pe_clean_matlab = convert_matlab_cells_to_matrix(replace(c_s_pe_matlab, NaN => 0.0))
+c_s_pe_av_matlab = vec(mean(c_s_pe_clean_matlab, dims = 2))[1:(end-1)]
 
 
 ###################################################
@@ -59,6 +77,7 @@ inputparams = merge_input_params(inputparams_thermal, inputparams; warn = true)
 
 # Add Thermal Model
 inputparams["use_thermal"] = true
+inputparams["ThermalModel"]["externalHeatTransferCoefficient"] = 0.1
 
 output = run_simulation(inputparams; accept_invalid = true);
 
@@ -105,7 +124,7 @@ src_matrix = reduce(vcat, (x' for x in src_matric))
 diff_sources = src_matrix - M[1:(end-1), :]
 
 nc = number_of_cells(thermal_model.domain)
-T0 = 298*ones(nc)
+T0 = 298.15*ones(nc)
 
 thermal_state0 = setup_state(thermal_model, Dict(:Temperature => T0))
 
@@ -116,6 +135,12 @@ thermal_sim = Simulator(thermal_model;
 thermal_states, = simulate(thermal_sim, timesteps; info_level = -1, forces = forces)
 
 t = output.time_series["Time"]
+c_e = output.states["ElectrolyteConcentration"]
+
+c_e_clean = c_e
+c_e_av = vec(mean(c_e_clean, dims = 2))
+
+
 T = thermal_states
 T_max = [maximum(state[:Temperature]) for state in thermal_states]
 
@@ -126,6 +151,7 @@ println("T_max comparison (Julia - MATLAB) in K over $ncmp steps:")
 println("  mean ΔT_max = ", mean(ΔT_max))
 println("  min  ΔT_max = ", minimum(ΔT_max))
 println("  max  ΔT_max = ", maximum(ΔT_max))
+
 
 #########################################################
 # Comparison plot
@@ -191,3 +217,36 @@ Legend(f2[1, 2],
 	[matlab_, julia_],
 	["MATLAB", "Julia"])
 display(GLMakie.Screen(), f2)
+
+
+f3 = Figure(size = (1000, 400))
+ax3 = Axis(f3[1, 1],
+	title = "ElectrolyteConcentration",
+	xlabel = "Time / s",
+	ylabel = "Concentration / mol·m⁻³",
+	xlabelsize = 25,
+	ylabelsize = 25,
+	xticklabelsize = 25,
+	yticklabelsize = 25,
+)
+matlab_ = scatterlines!(ax3,
+	t_matlab,
+	c_e_av_matlab;
+	linewidth = 4,
+	markersize = 10,
+	marker = :cross,
+	markercolor = :black,
+)
+julia_ = scatterlines!(ax3,
+	t,
+	c_e_av;
+	linewidth = 4,
+	markersize = 10,
+	marker = :circle,
+	markercolor = :red,
+)
+Legend(f3[1, 2],
+	[matlab_, julia_],
+	["MATLAB", "Julia"])
+display(GLMakie.Screen(), f3)
+

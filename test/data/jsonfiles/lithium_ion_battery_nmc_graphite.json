@@ -25,13 +25,19 @@
           "openCircuitPotential": {
             "functionFormat": "named function",
             "functionName": "computeOCP_Graphite_Torchio",
-            "argumentList": ["stoichiometry"]},
-          "includeEntropyChange" : true,
-          "entropyChange" : {
+            "argumentList": [
+              "stoichiometry"
+            ]
+          },
+          "includeEntropyChange": true,
+          "entropyChange": {
             "functionFormat": "named function",
             "functionName": "computeEntropyChange_Graphite_Torchio",
-            "argumentList": ["stoichiometry"]},
-          "referenceTemperature" : 298.15
+            "argumentList": [
+              "stoichiometry"
+            ]
+          },
+          "referenceTemperature": 298.15
         },
         "diffusionModelType": "full",
         "SolidDiffusion": {
@@ -85,14 +91,20 @@
           "chargeTransferCoefficient": 0.5,
           "openCircuitPotential": {
             "functionFormat": "named function",
-            "functionName": "computeOCP_NMC111",
-            "argumentList": ["stoichiometry"]},
-          "includeEntropyChange" : true,
-          "entropyChange" : {
+            "functionName": "computeOCP_LCO",
+            "argumentList": [
+              "stoichiometry"
+            ]
+          },
+          "includeEntropyChange": true,
+          "entropyChange": {
             "functionFormat": "named function",
-            "functionName": "computeEntropyChenage_NMC111",
-            "argumentList": ["stoichiometry"]},
-          "referenceTemperature" : 298.15
+            "functionName": "computeEntropyChange_LCO",
+            "argumentList": [
+              "stoichiometry"
+            ]
+          },
+          "referenceTemperature": 298.15
         },
         "diffusionModelType": "full",
         "SolidDiffusion": {
