@@ -392,7 +392,7 @@ function rampupTimesteps(time::Real, dt::Real, n::Integer = 8)
 	dt_init = [dt / 2^k for k in ind]
 	cs_time = cumsum(dt_init)
 	if any(cs_time .> time)
-		dt_init = dt_init[cs_time.<time]
+		dt_init = dt_init[cs_time .< time]
 	end
 	dt_left = time .- sum(dt_init)
 
@@ -763,12 +763,12 @@ function setup_submodels(inputparams::InputParamsOld;
 	params = JutulStorage()
 	inputparams_elyte = jsondict["Electrolyte"]
 
-	params[:transference]        = inputparams_elyte["species"]["transferenceNumber"]
-	params[:charge]              = inputparams_elyte["species"]["chargeNumber"]
-	params[:separator_porosity]  = jsondict["Separator"]["porosity"]
-	params[:bruggeman]           = inputparams_elyte["bruggemanCoefficient"]
+	params[:transference_number] = inputparams_elyte["species"]["transferenceNumber"]
+	params[:charge] = inputparams_elyte["species"]["chargeNumber"]
+	params[:separator_porosity] = jsondict["Separator"]["porosity"]
+	params[:bruggeman] = inputparams_elyte["bruggemanCoefficient"]
 	params[:electrolyte_density] = jsondict["Separator"]["porosity"]
-	params[:separator_density]   = inputparams_elyte["density"]
+	params[:separator_density] = inputparams_elyte["density"]
 
 	# setup diffusion coefficient function
 	if isa(inputparams_elyte["diffusionCoefficient"], Real)

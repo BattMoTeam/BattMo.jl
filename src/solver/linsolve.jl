@@ -79,8 +79,9 @@ function modify_equation!(lsys, maps, tfac, context)#::Jutul.DefaultContext)
 
 	(mass_index, charge_index, mass_cons_map, charge_cons_map) = maps
 	vals = nonzeros(lsys.jac)
-	@. vals[mass_index] -= tfac * vals[charge_index]
-	@. lsys.r[mass_cons_map] -= tfac * lsys.r[charge_cons_map]
+
+	@. vals[mass_index] -= value(tfac)[1] * vals[charge_index]
+	@. lsys.r[mass_cons_map] -= value(tfac)[1] * lsys.r[charge_cons_map]
 end
 
 function modify_equation!(lsys, mass_cons_map, charge_cons_map, tfac, nc, context::ParallelCSRContext)
@@ -168,7 +169,8 @@ function Jutul.post_update_linearized_system!(lsys, executor, storage, model::Mu
 		end
 		#C_map = setup_subset_residual_map(model, storage, e_models, :ElectrolyteConcentration)
 		#Main.@infiltrate true
-		tfac = model[:Electrolyte].system[:transference] / BattMo.FARADAY_CONSTANT
+
+		tfac = storage[:Electrolyte].state[:TransferenceNumber] / BattMo.FARADAY_CONSTANT
 		modify_equation!(lsys, storage[:eq_maps].maps, tfac, context)
 		## to control reduction ?
 		#Main.@infiltrate true

@@ -225,6 +225,14 @@ function setup_conductivity_evaluation_expression_from_string(str)
 
 end
 
+function setup_transference_number_evaluation_expression_from_string(str)
+	""" setup the Expr from a sting for the electrolyte transference number function, with the proper signature."""
+
+	str = "function f(c, T) return $str end"
+	return Meta.parse(str)
+
+end
+
 function setup_reaction_rate_constant_evaluation_expression_from_string(str)
 	""" setup the Expr from a sting for the electrolyte conductivity function, with the proper signature."""
 

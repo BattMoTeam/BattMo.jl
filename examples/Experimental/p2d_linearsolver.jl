@@ -43,7 +43,7 @@ e_models = [:Electrolyte]
 mass_cons_map = BattMo.setup_subset_equation_map(model, storage, e_models, :mass_conservation)
 charge_cons_map = BattMo.setup_subset_equation_map(model, storage, e_models, :charge_conservation)
 i = 1
-tfac = model[:Electrolyte].system[:transference] / BattMo.FARADAY_CONST
+tfac = model[:Electrolyte].system[:transference_number] / BattMo.FARADAY_CONST
 ##
 vals = nonzeros(lsys.jac)
 mass_ind = nzrange(lsys.jac, mass_cons_map[i])

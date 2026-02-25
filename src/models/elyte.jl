@@ -22,7 +22,7 @@ struct Electrolyte{D} <: BattMoSystem where {D <: AbstractDict}
 	# - diffusivity_data   
 	# - diffusivity_func   
 	# - separator_porosity 
-	# - transference
+	# - transference_number
 	# - electrolyte_density
 	# - separator_density
 	scalings::D
@@ -40,6 +40,7 @@ const ElectrolyteModel = SimulationModel{<:Any, <:Electrolyte, <:Any, <:Any}
 # Is it necesessary with a new struct for all of these?
 struct DmuDc <: ScalarVariable end
 struct ChemCoef <: ScalarVariable end
+struct TransferenceNumber <: ScalarVariable end
 
 function Jutul.select_primary_variables!(S,
 	system::Electrolyte,
@@ -78,12 +79,14 @@ function Jutul.select_secondary_variables!(S,
 	model::SimulationModel)
 
 	S[:Conductivity] = Conductivity()
-	S[:Diffusivity]  = Diffusivity()
-	S[:DmuDc]        = DmuDc()
-	S[:ChemCoef]     = ChemCoef()
+	S[:Diffusivity] = Diffusivity()
+	S[:TransferenceNumber] = TransferenceNumber()
+	S[:DmuDc] = DmuDc()
+	S[:ChemCoef] = ChemCoef()
 
 	S[:Charge] = Charge()
 	S[:Mass]   = Mass()
+
 
 end
 
@@ -91,7 +94,7 @@ function Jutul.select_minimum_output_variables!(out,
 	system::Electrolyte,
 	model::SimulationModel)
 
-	for k in [:Charge, :Mass, :Conductivity, :Diffusivity]
+	for k in [:Charge, :Mass, :Conductivity, :Diffusivity, :TransferenceNumber]
 		push!(out, k)
 	end
 
@@ -174,8 +177,9 @@ end
 	""" Compute the diffusion coefficient as a function of concentration
 	"""
 	# Calculate diffusion coefficients constant for the diffusion coefficient calculation
-	cnst = [                                                                                                                                                        -4.43 -54
-		-0.22 0.0]
+	cnst =
+		[                                                                                                                                         -4.43 -54
+			-0.22 0.0]
 
 	Tgi = [229 5.0]
 
@@ -186,7 +190,7 @@ end
 end
 
 @inline function transference(system::Electrolyte)
-	return system[:transference]
+	return system[:transference_number]
 end
 
 @jutul_secondary(
@@ -197,6 +201,25 @@ end
 )
 
 # ? Does this maybe look better ?
+@jutul_secondary(
+	function update_transference_number!(transference_number, transference_number_def::TransferenceNumber, model::ElectrolyteModel, Temperature, ElectrolyteConcentration, VolumeFraction, BruggemanCoefficient, ix)
+		""" Register conductivity function
+		"""
+
+		# We use Bruggeman coefficient
+		for i in ix
+			if haskey(model.system.params, :transference_data)
+
+				@inbounds transference_number[i] = model.system[:transference_number_func](ElectrolyteConcentration[i])
+			elseif haskey(model.system.params, :transference_constant)
+				@inbounds transference_number[i] = model.system[:transference_constant]
+			else
+				@inbounds transference_number[i] = model.system[:transference_number_func](ElectrolyteConcentration[i], Temperature[i])
+			end
+		end
+	end
+)
+
 @jutul_secondary(
 	function update_conductivity!(kappa, kappa_def::Conductivity, model::ElectrolyteModel, Temperature, ElectrolyteConcentration, VolumeFraction, BruggemanCoefficient, ix)
 		""" Register conductivity function
@@ -239,14 +262,13 @@ end
 
 end
 
-@jutul_secondary function update_chem_coef!(chemCoef, tv::ChemCoef, model::ElectrolyteModel, Conductivity, DmuDc, ix)
+@jutul_secondary function update_chem_coef!(chemCoef, tv::ChemCoef, model::ElectrolyteModel, TransferenceNumber, Conductivity, DmuDc, ix)
 	"""Register constant for chemical flux
 	"""
 	sys = model.system
-	t = transference(sys)
 	F = FARADAY_CONSTANT
 	for i in ix
-		@inbounds chemCoef[i] = 1.0 / F * (1.0 - t) * Conductivity[i] * 2.0 * DmuDc[i]
+		@inbounds chemCoef[i] = 1.0 / F * (1.0 - TransferenceNumber[i]) * Conductivity[i] * 2.0 * DmuDc[i]
 	end
 end
 
@@ -299,9 +321,10 @@ end
 
 function computeFlux(::Val{:Mass}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
 
-	t = transference(model.system)
 	z = 1.0
 	F = FARADAY_CONSTANT
+
+	t = value(state.TransferenceNumber.data)[1]
 
 	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
 

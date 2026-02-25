@@ -45,9 +45,6 @@ cycling_protocol_25 = deepcopy(cycling_protocol)
 cycling_protocol_10["InitialTemperature"] = 10 + kelvin
 cycling_protocol_25["InitialTemperature"] = 25 + kelvin
 
-@show typeof(cell_parameters_R["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"])
-@show cell_parameters_R["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"]
-
 solve_R = true
 solve_F = false
 

@@ -188,12 +188,43 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 	inputparams_elyte = cell_parameters["Electrolyte"]
 	base_path = isnothing(cell_parameters.source_path) ? "" : dirname(cell_parameters.source_path)
 
-	params[:transference]        = inputparams_elyte["TransferenceNumber"]
-	params[:charge]              = inputparams_elyte["ChargeNumber"]
-	params[:separator_porosity]  = cell_parameters["Separator"]["Porosity"]
-	params[:bruggeman]           = cell_parameters["Separator"]["BruggemanCoefficient"]
+	params[:charge] = inputparams_elyte["ChargeNumber"]
+	params[:separator_porosity] = cell_parameters["Separator"]["Porosity"]
+	params[:bruggeman] = cell_parameters["Separator"]["BruggemanCoefficient"]
 	params[:electrolyte_density] = inputparams_elyte["Density"]
-	params[:separator_density]   = cell_parameters["Separator"]["Density"]
+	params[:separator_density] = cell_parameters["Separator"]["Density"]
+
+	# setup transference number
+	if isa(inputparams_elyte["TransferenceNumber"], Real)
+
+		params[:transference_constant] = inputparams_elyte["TransferenceNumber"]
+	elseif isa(inputparams_elyte["TransferenceNumber"], String)
+
+		exp = setup_transference_number_evaluation_expression_from_string(inputparams_elyte["TransferenceNumber"])
+		params[:transference_number_func] = @RuntimeGeneratedFunction(exp)
+
+	elseif haskey(inputparams_elyte["TransferenceNumber"], "FunctionName")
+
+		funcname = inputparams_elyte["TransferenceNumber"]["FunctionName"]
+		if haskey(inputparams_elyte["TransferenceNumber"], "FilePath")
+			rawpath = inputparams_elyte["TransferenceNumber"]["FilePath"]
+			funcpath = joinpath(base_path, normalize_path(rawpath))
+		else
+			funcpath = nothing
+		end
+
+		fcn = setup_function_from_function_name(funcname; file_path = funcpath)
+		params[:transference_number_func] = fcn
+
+	else
+		data_x = inputparams_elyte["TransferenceNumber"]["x"]
+		data_y = inputparams_elyte["TransferenceNumber"]["y"]
+
+		interpolation = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
+		params[:transference_data] = true
+		params[:transference_number_func] = interpolation
+
+	end
 
 	# setup diffusion coefficient function
 	if isa(inputparams_elyte["DiffusionCoefficient"], Real)
@@ -1003,6 +1034,21 @@ function setup_initial_state(input, model::IntercalationBattery)
 	init = Dict()
 	init[:ElectrolyteConcentration] = input.cell_parameters["Electrolyte"]["Concentration"] * ones(nc)
 	init[:ElectricPotential] = fill(-negOCP, nc)
+	c_e = input.cell_parameters["Electrolyte"]["Concentration"]
+
+	if haskey(multimodel[:Electrolyte].system.params, :transference_funcexp)
+		t = multimodel[:Electrolyte].system[:transference_number_func](c_e, T)
+	elseif haskey(multimodel[:Electrolyte].system.params, :transference_funcdata)
+
+		t = multimodel[:Electrolyte].system[:transference_number_func](c_e)
+	elseif haskey(multimodel[:Electrolyte].system.params, :transference_constant)
+		t = multimodel[:Electrolyte].system[:transference_constant]
+
+	else
+		t = multimodel[:Electrolyte].system[:transference_number_func](c_e, T)
+	end
+
+	init[:TransferenceNumber] = t * ones(nc)
 
 	initState[:Electrolyte] = init
 
