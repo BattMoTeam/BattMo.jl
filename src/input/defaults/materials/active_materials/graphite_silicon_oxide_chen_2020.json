@@ -1,0 +1,11 @@
+{
+    "MaximumConcentration": 29583.0,
+    "VolumetricSurfaceArea": 383959.0,
+    "Density": 2260.0,
+    "NumberOfElectronsTransfered": 1,
+    "ActivationEnergyOfReaction": 35000.0,
+    "ReactionRateConstant": 6.716e-12,
+    "StoichiometricCoefficientAtSOC100": 0.9014,
+    "StoichiometricCoefficientAtSOC0": 0.0279,
+    "OpenCircuitPotential": "1.9793 * exp(-39.3631*(c/cmax)) + 0.2482 - 0.0909 * tanh(29.8538*((c/cmax) - 0.1234)) - 0.04478 * tanh(14.9159*((c/cmax) - 0.2769)) - 0.0205 * tanh(30.4444*((c/cmax) - 0.6103))"
+}
