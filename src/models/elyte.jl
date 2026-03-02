@@ -178,7 +178,7 @@ end
 	"""
 	# Calculate diffusion coefficients constant for the diffusion coefficient calculation
 	cnst =
-		[                                                                                                                                         -4.43 -54
+		[                                                                                               -4.43 -54
 			-0.22 0.0]
 
 	Tgi = [229 5.0]
@@ -190,7 +190,7 @@ end
 end
 
 @inline function transference(system::Electrolyte)
-	return system[:transference_number]
+	return system.params[:transference_constant]
 end
 
 @jutul_secondary(
@@ -324,7 +324,7 @@ function computeFlux(::Val{:Mass}, model::ElectrolyteModel, state, cell, other_c
 	z = 1.0
 	F = FARADAY_CONSTANT
 
-	t = value(state.TransferenceNumber.data)[1]
+	t = transference(model.system)
 
 	htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
 

@@ -14,14 +14,37 @@ model_settings["SEIModel"] = "Bolay"
 
 model = LithiumIonBattery(; model_settings)
 
-cell_parameters["Electrolyte"]["TransferenceNumber"] = 0.4
+# Validation currently expects numeric transference number.
+cell_parameters["Electrolyte"]["TransferenceNumber"] = 0.4083333333333333
 
+# Calculate effective densities
+pe_am_mf = cell_parameters["PositiveElectrode"]["ActiveMaterial"]["MassFraction"]
+pe_b_mf = cell_parameters["PositiveElectrode"]["Binder"]["MassFraction"]
+pe_add_mf = cell_parameters["PositiveElectrode"]["ConductiveAdditive"]["MassFraction"]
+pe_am_density = cell_parameters["PositiveElectrode"]["ActiveMaterial"]["Density"]
+pe_b_density = cell_parameters["PositiveElectrode"]["Binder"]["Density"]
+pe_add_density = cell_parameters["PositiveElectrode"]["ConductiveAdditive"]["Density"]
+pe_porosity = 0.3658
+
+ne_am_mf = cell_parameters["NegativeElectrode"]["ActiveMaterial"]["MassFraction"]
+ne_b_mf = cell_parameters["NegativeElectrode"]["Binder"]["MassFraction"]
+ne_add_mf = cell_parameters["NegativeElectrode"]["ConductiveAdditive"]["MassFraction"]
+ne_am_density = cell_parameters["NegativeElectrode"]["ActiveMaterial"]["Density"]
+ne_b_density = cell_parameters["NegativeElectrode"]["Binder"]["Density"]
+ne_add_density = cell_parameters["NegativeElectrode"]["ConductiveAdditive"]["Density"]
+ne_porosity = 0.4883
+
+cell_parameters["PositiveElectrode"]["Coating"]["EffectiveDensity"] = (1-pe_porosity) * (pe_am_mf * pe_am_density + pe_b_mf * pe_b_density + pe_add_mf * pe_add_density)
+cell_parameters["NegativeElectrode"]["Coating"]["EffectiveDensity"] = (1-ne_porosity) * (ne_am_mf * ne_am_density + ne_b_mf * ne_b_density + ne_add_mf * ne_add_density)
+
+@show cell_parameters["PositiveElectrode"]["Coating"]["EffectiveDensity"]
+@show cell_parameters["NegativeElectrode"]["Coating"]["EffectiveDensity"]
 # cycling_protocol["Experiment"] = [
 # 	"Discharge at 0.3 A until 3.0 V"]
 
 cycling_protocol["InitialTemperature"] = 298.15 - 5
 cycling_protocol["InitialStateOfCharge"] = 0.99
-cycling_protocol["DRate"] = 0.1
+cycling_protocol["DRate"] = 1/3
 cycling_protocol["LowerVoltageLimit"] = 3.0
 
 
@@ -33,9 +56,9 @@ time = output.time_series["Time"]
 voltage = output.time_series["Voltage"]
 capacity = output.time_series["CumulativeCapacity"]
 
-csv_file = joinpath(battmo_base, "examples/Experimental/resources/bolay_discharge_data.csv")
+csv_file = joinpath(battmo_base, "examples/Experimental/resources/bolay_discharge_data_1.csv")
 exp_data = readdlm(csv_file, ',', Float64)
-exp_capacity = exp_data[:, 1]
+exp_time = exp_data[:, 1]
 exp_voltage = exp_data[:, 2]
 
 # Convert simulation time to hours when it is given in seconds.
@@ -61,7 +84,7 @@ function linear_interpolate(x_grid::AbstractVector, y_grid::AbstractVector, xq::
 	return yq
 end
 
-sim_voltage_on_exp = linear_interpolate(sim_time_h, voltage, exp_capacity)
+sim_voltage_on_exp = linear_interpolate(sim_time_h, voltage, exp_time)
 valid = .!isnan.(sim_voltage_on_exp)
 residual = sim_voltage_on_exp[valid] .- exp_voltage[valid]
 rmse = sqrt(mean(residual .^ 2))
@@ -81,7 +104,7 @@ ax = GLMakie.Axis(f[1, 1],
 )
 
 scatterlines!(ax,
-	capacity,
+	sim_time_h,
 	voltage;
 	linewidth = 4,
 	markersize = 10,
@@ -91,7 +114,7 @@ scatterlines!(ax,
 )
 
 scatterlines!(ax,
-	exp_capacity,
+	exp_time,
 	exp_voltage;
 	linewidth = 2,
 	markersize = 7,

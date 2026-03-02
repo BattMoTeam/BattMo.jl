@@ -41,19 +41,19 @@
             "StoichiometricCoefficientAtSOC100": 0.14778,
             "ReactionRateConstant": 4.48e-7,
             "MassFraction": 0.735259870858,
-            "MaximumConcentration": 26000,
+            "MaximumConcentration": 31600,
             "VolumetricSurfaceArea": 2.14e5,
             "DiffusionCoefficient": 1.13e-13,
             "ParticleRadius": 1.15e-6,
-            "Density": 3450,
+            "Density": 4436,
             "ElectronicConductivity": 0.01,
             "ChargeTransferCoefficient": 0.5,
             "OpenCircuitPotential": "289.99 - 336.28 * (c/cmax) - 164.73 * tanh(((c/cmax) + 0.5302) * 6.824)- 0.0768 * tanh(((c/cmax) - 0.442) * 7.617)- 0.171 * tanh(((c/cmax) - 0.9051) * 13.16)- 0.3126 * tanh(((c/cmax) - 0.9908) * 96.14)+ 3896.375 * tanh(((c/cmax) - 0.36182) * 0.08632)"
         },
         "Coating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 1797.3,
-            "Thickness": 74.5e-6
+            "EffectiveDensity": 2387.095,
+            "Thickness": 58e-6
         },
         "ConductiveAdditive": {
             "Description": "Unknown",
@@ -92,9 +92,9 @@
             "ActivationEnergyOfReaction": 0.0,
             "ActivationEnergyOfDiffusion": 0.0,
             "MassFraction": 0.847639912368,
-            "MaximumConcentration": 31610,
-            "VolumetricSurfaceArea": 3.03e5,
-            "DiffusionCoefficient": 1.13e-13,
+            "MaximumConcentration": 3375,
+            "VolumetricSurfaceArea": 250000,
+            "DiffusionCoefficient": 10e-13,
             "ParticleRadius": 14.75e-6,
             "Density": 2660,
             "ElectronicConductivity": 215.0,
@@ -103,8 +103,8 @@
         },
         "Coating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 1284.3,
-            "Thickness": 45.5e-6
+            "EffectiveDensity": 1303.017,
+            "Thickness": 50e-6
         },
         "ConductiveAdditive": {
             "Description": "Unknown",
