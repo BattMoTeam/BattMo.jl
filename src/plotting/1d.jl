@@ -71,12 +71,13 @@ Plot a dashboard summarizing simulation output with selectable styles.
 
 # Arguments
 - `output`: Simulation output NamedTuple.
-- `plot_type`: One of `"simple"`, `"line"`, or `"contour"` (default `"simple"`).
+- `plot_type`: One of `"simple"`, `"line"`, `"contour"`, or `"breakdown"` (default `"simple"`).
 
 # Description
 - `"simple"`: Shows time series of current and voltage.
 - `"line"`: Adds interactive line plots of concentrations and potentials with a time slider.
 - `"contour"`: Shows contour plots of concentrations and potentials over time and position.
+- `"breakdown"`: Adds an approximate voltage decomposition into OCV, concentration, kinetic, ohmic, and SEI components.
 
 # Example
 ```julia
