@@ -117,6 +117,23 @@ free_calibration_parameter!(cal, ["NegativeElectrode", "ActiveMaterial", "Stoich
 # free_calibration_parameter!(cal, ["Cell", "ElectrodeGeometricSurfaceArea"]; lower_bound = 0.1, upper_bound = 0.3)
 
 
+#  "ReactionRateConstant" of both electrodes
+free_calibration_parameter!(vc05,
+	["NegativeElectrode", "ActiveMaterial", "ReactionRateConstant"];
+	lower_bound = 1e-16, upper_bound = 1e-10)
+free_calibration_parameter!(vc05,
+	["PositiveElectrode", "ActiveMaterial", "ReactionRateConstant"];
+	lower_bound = 1e-16, upper_bound = 1e-10)
+
+#  "DiffusionCoefficient" of both electrodes
+free_calibration_parameter!(vc05,
+	["NegativeElectrode", "ActiveMaterial", "DiffusionCoefficient"];
+	lower_bound = 1e-16, upper_bound = 1e-12)
+free_calibration_parameter!(vc05,
+	["PositiveElectrode", "ActiveMaterial", "DiffusionCoefficient"];
+	lower_bound = 1e-16, upper_bound = 1e-12)
+
+
 print_info(cal)
 solve(cal)
 print_info(cal)

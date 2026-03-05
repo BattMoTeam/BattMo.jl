@@ -39,7 +39,7 @@
             "StoichiometricCoefficientAtSOC0": 1.0,
             "OpenCircuitPotential": "289.99 - 336.28 * (c/cmax) - 164.73 * tanh(((c/cmax) + 0.5302) * 6.824)- 0.0768 * tanh(((c/cmax) - 0.442) * 7.617)- 0.171 * tanh(((c/cmax) - 0.9051) * 13.16)- 0.3126 * tanh(((c/cmax) - 0.9908) * 96.14)+ 3896.375 * tanh(((c/cmax) - 0.36182) * 0.08632)",
             "ReactionRateConstant": 4.48e-7,
-            "MassFraction": 0.6935813041476754,
+            "MassFraction": 0.6911516500116908,
             "StoichiometricCoefficientAtSOC100": 0.3,
             "MaximumConcentration": 26000,
             "VolumetricSurfaceArea": 214000.0,
@@ -52,13 +52,13 @@
         },
         "Binder": {
             "Description": "Unknown",
-            "MassFraction": 0.0942589202578085,
+            "MassFraction": 0.09476169290292541,
             "Density": 1800,
             "ElectronicConductivity": 100.0
         },
         "Coating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 2258.37,
+            "EffectiveDensity": 2258.368,
             "Thickness": 7.45e-5
         },
         "CurrentCollector": {
@@ -71,7 +71,7 @@
         },
         "ConductiveAdditive": {
             "Description": "Unknown",
-            "MassFraction": 0.17792404516852126,
+            "MassFraction": 0.17986726111644696,
             "Density": 1950,
             "ElectronicConductivity": 100.0
         }
@@ -96,16 +96,16 @@
         "ActiveMaterial": {
             "ActivationEnergyOfDiffusion": 0.0,
             "NumberOfElectronsTransfered": 1,
-            "StoichiometricCoefficientAtSOC0": 0.14136843999729087,
+            "StoichiometricCoefficientAtSOC0": 0.143448336553159,
             "OpenCircuitPotential": "254.5443 - 0.02525 * (c/cmax)- 254.273365 * tanh(((c/cmax) + 0.0097) * 319.5)- 0.3086345 * tanh(((c/cmax) - 0.0199) * 47.0)- 0.025 * tanh(((c/cmax) - 0.1414) * 27.52)- 0.015 * tanh(((c/cmax) - 0.2275) * 18.36)- 0.1978 * tanh(((c/cmax) - 1.0444) * 14.43)- 0.0155 * tanh(((c/cmax) - 0.56616) * 12.625)",
             "ReactionRateConstant": 5.92e-6,
             "MassFraction": 0.847639912368,
-            "StoichiometricCoefficientAtSOC100": 0.8253651543399604,
+            "StoichiometricCoefficientAtSOC100": 0.824798667728746,
             "ActivationEnergyOfReaction": 0.0,
             "MaximumConcentration": 31610,
-            "VolumetricSurfaceArea": 303000.0,
+            "VolumetricSurfaceArea": 303000,
             "Description": "Graphite",
-            "DiffusionCoefficient": 1.13e-13,
+            "DiffusionCoefficient": 1.0e-12,
             "ParticleRadius": 1.475e-5,
             "Density": 2660,
             "ElectronicConductivity": 215.0,
@@ -119,7 +119,7 @@
         },
         "Coating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 1527.87,
+            "EffectiveDensity": 1527.868,
             "Thickness": 4.55e-5
         },
         "CurrentCollector": {

@@ -41,7 +41,7 @@
             "StoichiometricCoefficientAtSOC100": 0.14778,
             "ReactionRateConstant": 4.48e-7,
             "MassFraction": 0.735259870858,
-            "MaximumConcentration": 31600,
+            "MaximumConcentration": 26000,
             "VolumetricSurfaceArea": 2.14e5,
             "DiffusionCoefficient": 1.13e-13,
             "ParticleRadius": 1.15e-6,
@@ -52,8 +52,8 @@
         },
         "Coating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 2387.095,
-            "Thickness": 58e-6
+            "EffectiveDensity": 2258.368,
+            "Thickness": 74.5e-6
         },
         "ConductiveAdditive": {
             "Description": "Unknown",
@@ -92,8 +92,8 @@
             "ActivationEnergyOfReaction": 0.0,
             "ActivationEnergyOfDiffusion": 0.0,
             "MassFraction": 0.847639912368,
-            "MaximumConcentration": 3375,
-            "VolumetricSurfaceArea": 250000,
+            "MaximumConcentration": 31610,
+            "VolumetricSurfaceArea": 303000,
             "DiffusionCoefficient": 10e-13,
             "ParticleRadius": 14.75e-6,
             "Density": 2660,
@@ -103,8 +103,8 @@
         },
         "Coating": {
             "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 1303.017,
-            "Thickness": 50e-6
+            "EffectiveDensity": 1527.868,
+            "Thickness": 45.5e-6
         },
         "ConductiveAdditive": {
             "Description": "Unknown",
