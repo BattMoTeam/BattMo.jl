@@ -584,7 +584,7 @@ function setup_battery_parameters(inputparams::MatlabInput,
 
 		prm_necc = Dict{Symbol, Any}()
 		exported_necc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
-		prm_necc[:Conductivity] = exported_necc["effectiveElectronicConductivity"][1]
+		prm_necc[:ElectronicConductivity] = exported_necc["effectiveElectronicConductivity"][1]
 		parameters[:NeCc] = setup_parameters(model[:NeCc], prm_necc)
 
 	end
@@ -595,7 +595,7 @@ function setup_battery_parameters(inputparams::MatlabInput,
 
 	prm_neam = Dict{Symbol, Any}()
 	exported_neam = exported["model"]["NegativeElectrode"]["Coating"]
-	prm_neam[:Conductivity] = exported_neam["effectiveElectronicConductivity"][1]
+	prm_neam[:ElectronicConductivity] = exported_neam["effectiveElectronicConductivity"][1]
 	prm_neam[:Temperature] = T0
 
 	if discretisation_type(model[:NeAm]) == :P2Ddiscretization
@@ -623,7 +623,7 @@ function setup_battery_parameters(inputparams::MatlabInput,
 
 	prm_peam = Dict{Symbol, Any}()
 	exported_peam = exported["model"]["PositiveElectrode"]["Coating"]
-	prm_peam[:Conductivity] = exported_peam["effectiveElectronicConductivity"][1]
+	prm_peam[:ElectronicConductivity] = exported_peam["effectiveElectronicConductivity"][1]
 	prm_peam[:Temperature] = T0
 
 	if discretisation_type(model[:PeAm]) == :P2Ddiscretization
@@ -643,7 +643,7 @@ function setup_battery_parameters(inputparams::MatlabInput,
 
 		prm_pecc = Dict{Symbol, Any}()
 		exported_pecc = exported["model"]["PositiveElectrode"]["CurrentCollector"]
-		prm_pecc[:Conductivity] = exported_pecc["effectiveElectronicConductivity"][1]
+		prm_pecc[:ElectronicConductivity] = exported_pecc["effectiveElectronicConductivity"][1]
 
 		parameters[:PeCc] = setup_parameters(model[:PeCc], prm_pecc)
 	end
@@ -828,7 +828,7 @@ function get_matlab_scalings(model, parameters)
 
 			# We use the same scaling as for the coating multiplied by the conductivity ration
 			cc = cc_mapping[elde]
-			coef = parameters[cc][:Conductivity] / parameters[elde][:Conductivity]
+			coef = parameters[cc][:ElectronicConductivity] / parameters[elde][:ElectronicConductivity]
 
 			scaling = (model_label = cc, equation_label = :charge_conservation, value = F * coef[1] * volRefs[elde] * RvolRef)
 			push!(scalings, scaling)

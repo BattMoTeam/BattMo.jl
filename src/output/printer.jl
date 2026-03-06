@@ -40,7 +40,7 @@ function print_overview(output::SimulationOutput)
 		:PositiveElectrodeActiveMaterialCharge               => [:PositiveElectrodeActiveMaterial, :Charge],
 		:ElectrolyteMass                                     => [:Electrolyte, :Mass],
 		:ElectrolyteDiffusivity                              => [:Electrolyte, :Diffusivity],
-		:ElectrolyteConductivity                             => [:Electrolyte, :Conductivity],
+		:ElectrolyteConductivity                             => [:Electrolyte, :ElectronicConductivity],
 		:SEIThickness                                        => [:NegativeElectrodeActiveMaterial, :SEIlength],
 		:NormalizedSEIThickness                              => [:NegativeElectrodeActiveMaterial, :normalizedSEIlength],
 		:SEIVoltageDrop                                      => [:NegativeElectrodeActiveMaterial, :SEIvoltageDrop],

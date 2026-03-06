@@ -77,10 +77,10 @@ function Jutul.select_secondary_variables!(S,
 	system::Electrolyte,
 	model::SimulationModel)
 
-	S[:Conductivity] = Conductivity()
-	S[:Diffusivity]  = Diffusivity()
-	S[:DmuDc]        = DmuDc()
-	S[:ChemCoef]     = ChemCoef()
+	S[:ElectronicConductivity] = ElectronicConductivity()
+	S[:Diffusivity] = Diffusivity()
+	S[:DmuDc] = DmuDc()
+	S[:ChemCoef] = ChemCoef()
 
 	S[:Charge] = Charge()
 	S[:Mass]   = Mass()
@@ -91,7 +91,7 @@ function Jutul.select_minimum_output_variables!(out,
 	system::Electrolyte,
 	model::SimulationModel)
 
-	for k in [:Charge, :Mass, :Conductivity, :Diffusivity]
+	for k in [:Charge, :Mass, :ElectronicConductivity, :Diffusivity]
 		push!(out, k)
 	end
 
@@ -174,7 +174,7 @@ end
 	""" Compute the diffusion coefficient as a function of concentration
 	"""
 	# Calculate diffusion coefficients constant for the diffusion coefficient calculation
-	cnst = [                                                                                                                                                                                                        -4.43 -54
+	cnst = [                                                                                                                                                                                                                            -4.43 -54
 		-0.22 0.0]
 
 	Tgi = [229 5.0]
@@ -198,7 +198,7 @@ end
 
 # ? Does this maybe look better ?
 @jutul_secondary(
-	function update_conductivity!(kappa, kappa_def::Conductivity, model::ElectrolyteModel, Temperature, ElectrolyteConcentration, VolumeFraction, BruggemanCoefficient, ix)
+	function update_conductivity!(kappa, kappa_def::ElectronicConductivity, model::ElectrolyteModel, Temperature, ElectrolyteConcentration, VolumeFraction, BruggemanCoefficient, ix)
 		""" Register conductivity function
 		"""
 
@@ -220,7 +220,7 @@ end
 				@inbounds kappa[i] = model.system[:ionic_conductivity_func](ElectrolyteConcentration[i], Temperature[i]) * VolumeFraction[i]^b
 
 			else
-				error("Conductivity function type not recognized")
+				error("ElectronicConductivity function type not recognized")
 			end
 		end
 	end
@@ -252,14 +252,14 @@ end
 
 end
 
-@jutul_secondary function update_chem_coef!(chemCoef, tv::ChemCoef, model::ElectrolyteModel, Conductivity, DmuDc, ix)
+@jutul_secondary function update_chem_coef!(chemCoef, tv::ChemCoef, model::ElectrolyteModel, ElectronicConductivity, DmuDc, ix)
 	"""Register constant for chemical flux
 	"""
 	sys = model.system
 	t = transference(sys)
 	F = FARADAY_CONSTANT
 	for i in ix
-		@inbounds chemCoef[i] = 1.0 / F * (1.0 - t) * Conductivity[i] * 2.0 * DmuDc[i]
+		@inbounds chemCoef[i] = 1.0 / F * (1.0 - t) * ElectronicConductivity[i] * 2.0 * DmuDc[i]
 	end
 end
 
@@ -268,7 +268,7 @@ function compute_flux(::Val{:Charge}, model::ElectrolyteModel, state, cell, othe
 
 	htrans_cell, htrans_other = setup_half_trans(model, face, cell, other_cell, face_sign)
 
-	j     = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.Conductivity)
+	j     = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.ElectronicConductivity)
 	jchem = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectrolyteConcentration, state.ChemCoef)
 
 	j = j - jchem * (1.0)
@@ -319,7 +319,7 @@ function compute_flux(::Val{:Mass}, model::ElectrolyteModel, state, cell, other_
 	htrans_cell, htrans_other = setup_half_trans(model, face, cell, other_cell, face_sign)
 
 	diffFlux = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectrolyteConcentration, state.Diffusivity)
-	j        = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.Conductivity)
+	j        = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.ElectronicConductivity)
 	jchem    = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectrolyteConcentration, state.ChemCoef)
 
 	j = j - jchem * (1.0)

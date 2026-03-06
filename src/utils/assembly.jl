@@ -54,6 +54,95 @@ function get_energy_source!(thermal_model::ThermalModel, model::IntercalationBat
 
 end
 
+"""
+	get_energy_source_by_type!(thermal_model, model, state, maps, operators = setup_flux_operators(model))
+
+Compute thermal source terms grouped by source type (instead of battery component).
+
+Returned categories are:
+- `:OhmicActiveMaterial`
+- `:OhmicElectrolyte`
+- `:DiffusionElectrolyte`
+- `:OhmicCurrentCollector` (if current collectors are included)
+- `:ReactionIrreversible`
+- `:ReactionReversible` (only when entropy term is enabled)
+"""
+function get_energy_source_by_type!(thermal_model::ThermalModel, model::IntercalationBattery, state, maps, operators = setup_flux_operators(model))
+
+	multimodel = model.multimodel
+
+	nc = number_of_cells(thermal_model.domain)
+	src = zeros(Float64, nc)
+	sources = Dict{Symbol, Vector{Float64}}()
+
+	components_ = ["NegativeElectrodeActiveMaterial",
+		"PositiveElectrodeActiveMaterial",
+		"Electrolyte"]
+
+	if include_current_collectors(multimodel)
+		components_ = vcat(components_,
+			["NegativeElectrodeCurrentCollector",
+				"PositiveElectrodeCurrentCollector"])
+	end
+
+	components = map(components_) do component
+		Symbol(component)
+	end
+	symb2str = Dict(zip(components, components_))
+
+	for component in components
+		map = maps[symb2str[component]][1][:cellmap]
+		comp_terms = get_energy_source_terms(multimodel[component], state[component], operators[component])
+		for (label, local_src) in comp_terms
+			tagged_label = Symbol("$(String(label)) ($(component_short_tag(component)))")
+			add_mapped_source!(sources, tagged_label, map, local_src, nc)
+			src[map] .+= local_src
+		end
+	end
+
+	cross_terms = filter(model.multimodel.cross_terms) do c
+		isa(c.cross_term, ButlerVolmerActmatToElyteCT) && c.target_equation == :charge_conservation
+	end
+
+	for cross_term in cross_terms
+		reaction_src_irrev, reaction_src_rev = get_reaction_energy_source_terms(cross_term, multimodel, state)
+		map = maps[symb2str[cross_term.source]][1][:cellmap]
+		tagged_irrev = Symbol("ReactionIrreversible ($(component_short_tag(cross_term.source)))")
+		tagged_rev = Symbol("ReactionReversible ($(component_short_tag(cross_term.source)))")
+
+		if any(!iszero, reaction_src_irrev)
+			add_mapped_source!(sources, tagged_irrev, map, reaction_src_irrev, nc)
+			src[map] .+= reaction_src_irrev
+		end
+		if any(!iszero, reaction_src_rev)
+			add_mapped_source!(sources, tagged_rev, map, reaction_src_rev, nc)
+			src[map] .+= reaction_src_rev
+		end
+	end
+
+	return src, sources
+end
+
+function component_short_tag(component::Symbol)
+	if component == :NegativeElectrodeActiveMaterial || component == :NegativeElectrodeCurrentCollector
+		return "neg"
+	elseif component == :PositiveElectrodeActiveMaterial || component == :PositiveElectrodeCurrentCollector
+		return "pos"
+	elseif component == :Electrolyte
+		return "elyte"
+	else
+		return "other"
+	end
+end
+
+function add_mapped_source!(sources, label::Symbol, map, local_src, nc::Int)
+	if !haskey(sources, label)
+		sources[label] = zeros(Float64, nc)
+	end
+	sources[label][map] .+= local_src
+	return nothing
+end
+
 function get_reaction_energy_source(cross_term, models, state)
 
 	elde_cells = cross_term.cross_term.source_cells
@@ -73,7 +162,7 @@ function get_reaction_energy_source(cross_term, models, state)
 	T        = state[elde][:Temperature][elde_cells]
 
 	if activematerial.params[:include_entropy_change]
-		dUdT = state[elde][:EntropyChange]
+		dUdT = state[elde][:EntropyChange][elde_cells]
 	end
 
 	vols = models[elde].data_domain[:volumes]
@@ -100,12 +189,65 @@ function get_reaction_energy_source(cross_term, models, state)
 		else
 			R = R*eta[i]
 		end
-		src[i] = n*F*vols[i]*vsa*R
+		src[i] = n*F*vols[elde_cells[i]]*vsa*R
 
 	end
 
 	return src
 
+end
+
+function get_reaction_energy_source_terms(cross_term, models, state)
+
+	elde_cells = cross_term.cross_term.source_cells
+	elyte_cells = cross_term.cross_term.target_cells
+
+	elde  = cross_term.source
+	elyte = cross_term.target
+
+	activematerial = models[elde].system
+
+	phi_e    = state[elyte][:ElectricPotential][elyte_cells]
+	phi_a    = state[elde][:ElectricPotential][elde_cells]
+	ocp      = state[elde][:OpenCircuitPotential][elde_cells]
+	R0       = state[elde][:ReactionRateConstant][elde_cells]
+	c_e      = state[elyte][:ElectrolyteConcentration][elyte_cells]
+	c_a_surf = state[elde][:SurfaceConcentration][elde_cells]
+	T        = state[elde][:Temperature][elde_cells]
+
+	if activematerial.params[:include_entropy_change]
+		dUdT = state[elde][:EntropyChange][elde_cells]
+	end
+
+	vols = models[elde].data_domain[:volumes]
+
+	eta = phi_a - phi_e - ocp
+
+	src_irrev = similar(eta)
+	src_rev = zeros(eltype(src_irrev), length(src_irrev))
+
+	F   = FARADAY_CONSTANT
+	n   = activematerial.params[:n_charge_carriers]
+	vsa = activematerial.params[:volumetric_surface_area]
+
+	for i in eachindex(src_irrev)
+
+		R = reaction_rate(eta[i],
+			c_a_surf[i],
+			R0[i],
+			T[i],
+			c_e[i],
+			activematerial,
+			models[elyte].system)
+
+		coef = n * F * vols[elde_cells[i]] * vsa * R
+		src_irrev[i] = coef * eta[i]
+		if activematerial.params[:include_entropy_change]
+			src_rev[i] = coef * T[i] * dUdT[i]
+		end
+	end
+
+	return src_irrev, src_rev
 end
 
 function get_energy_source(model::ElectrolyteModel, state, operators)
@@ -114,7 +256,7 @@ function get_energy_source(model::ElectrolyteModel, state, operators)
 
 	# Ohmic flux
 
-	kappa = state[:Conductivity] # Effective conductivity
+	kappa = state[:EffectiveThermalConductivity] # Effective conductivity
 
 	fluxvec = compute_flux_vector(model, state, operators)
 	fluxnorm = transpose(sum(fluxvec .^ 2; dims = 1))
@@ -135,12 +277,33 @@ function get_energy_source(model::ElectrolyteModel, state, operators)
 
 end
 
+function get_energy_source_terms(model::ElectrolyteModel, state, operators)
+
+	vols = state[:Volume]
+
+	kappa = state[:EffectiveThermalConductivity]
+	fluxvec = compute_flux_vector(model, state, operators)
+	fluxnorm = transpose(sum(fluxvec .^ 2; dims = 1))
+	src_ohmic = fluxnorm .* vols ./ kappa
+
+	D = state[:Diffusivity]
+	dmudc = state[:DmuDc]
+	fluxvec = compute_flux_vector(model, state, operators, fieldname = :Diffusion)
+	fluxnorm = transpose(sum(fluxvec .^ 2; dims = 1))
+	src_diffusion = dmudc .* fluxnorm .* vols ./ D
+
+	return Dict(
+		:OhmicElectrolyte => src_ohmic,
+		:DiffusionElectrolyte => src_diffusion,
+	)
+end
+
 
 
 function get_energy_source(model::ActiveMaterialModel, state, operators)
 
 	vols  = state[:Volume]
-	kappa = state[:Conductivity] # Effective conductivity
+	kappa = state[:EffectiveThermalConductivity] # Effective conductivity
 
 	# Ohmic flux
 
@@ -153,10 +316,15 @@ function get_energy_source(model::ActiveMaterialModel, state, operators)
 
 end
 
+function get_energy_source_terms(model::ActiveMaterialModel, state, operators)
+	src = get_energy_source(model, state, operators)
+	return Dict(:OhmicActiveMaterial => src)
+end
+
 function get_energy_source(model::CurrentCollectorModel, state, operators)
 
 	vols  = state[:Volume]
-	kappa = state[:Conductivity]
+	kappa = state[:EffectiveThermalConductivity]
 
 	# Ohmic flux
 
@@ -167,6 +335,11 @@ function get_energy_source(model::CurrentCollectorModel, state, operators)
 
 	return src
 
+end
+
+function get_energy_source_terms(model::CurrentCollectorModel, state, operators)
+	src = get_energy_source(model, state, operators)
+	return Dict(:OhmicCurrentCollector => src)
 end
 
 """
@@ -250,7 +423,7 @@ function compute_flux_vector(model, state, operators; fieldname = :Charge)
 				face_sign = 1
 			else
 				other_cell = neighbors[iface][1]
-				face_sign = 2
+				face_sign = -1 #2
 			end
 
 			localflux[iloc] = compute_flux(Val(fieldname), model, state, cell, other_cell, iface, face_sign)

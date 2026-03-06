@@ -198,8 +198,8 @@ function Jutul.select_parameters!(S,
 	system::ActiveMaterialP2D,
 	model::SimulationModel)
 
-	S[:Temperature]    = Temperature()
-	S[:Conductivity]   = Conductivity()
+	S[:Temperature] = Temperature()
+	S[:ElectronicConductivity] = ElectronicConductivity()
 	S[:VolumeFraction] = VolumeFraction()
 
 	if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
@@ -568,7 +568,7 @@ function Jutul.select_parameters!(S,
 	model::SimulationModel)
 
 	S[:Temperature] = Temperature()
-	S[:Conductivity] = Conductivity()
+	S[:ElectronicConductivity] = ElectronicConductivity()
 	S[:Diffusivity] = Diffusivity()
 	S[:VolumeFraction] = VolumeFraction()
 

@@ -114,7 +114,7 @@ end
 function compute_flux(::Val{:Charge}, model, state, cell, other_cell, face, face_sign)
 
 	htrans_cell, htrans_other = setup_half_trans(model, face, cell, other_cell, face_sign)
-	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.Conductivity)
+	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.ElectronicConductivity)
 
 	return q
 
@@ -130,7 +130,7 @@ end
 function Jutul.face_flux!(::T, cell, other_cell, face, face_sign, eq::ConservationLaw{:Energy, <:Any}, state, model, dt, flow_disc) where T
 
 	htrans_cell, htrans_other = setup_half_trans(model, face, cell, other_cell, face_sign)
-	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Temperature, state.Conductivity)
+	q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Temperature, state.ElectronicConductivity)
 
 	return T(q)
 
@@ -217,7 +217,7 @@ function apply_boundary_potential!(acc, state, parameters, model::BattMoModel, e
 
 			ElectricPotential = state[:ElectricPotential]
 			BoundaryVoltage   = state[:BoundaryVoltage]
-			conductivity      = state[:Conductivity]
+			conductivity      = state[:ElectronicConductivity]
 
 			for (ht, c, i) in zip(bcdirhalftrans, bcdircells, bcdirinds)
 				@inbounds acc[c] += conductivity[c] * ht * (ElectricPotential[c] - value(BoundaryVoltage[i]))

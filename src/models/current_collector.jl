@@ -45,7 +45,7 @@ function Jutul.select_parameters!(S,
 	system::CurrentCollector,
 	model::SimulationModel)
 
-	S[:Conductivity] = Conductivity()
+	S[:ElectronicConductivity] = ElectronicConductivity()
 	if hasentity(model.data_domain, BoundaryDirichletFaces())
 		if count_active_entities(model.data_domain, BoundaryDirichletFaces()) > 0
 			S[:BoundaryVoltage] = BoundaryPotential(:ElectricPotential)

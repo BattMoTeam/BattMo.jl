@@ -139,7 +139,7 @@ function simulation_configuration(model, input)
 	grids, couplings, global_maps = setup_grids_and_couplings(model, input)
 
 	# Setup simulation
-	model, parameters = setup_model!(model, input, grids, couplings)
+	model, parameters = setup_model!(model, input, grids, couplings; global_maps)
 
 	# setup initial state
 	initial_state = setup_initial_state(input, model)
@@ -726,7 +726,7 @@ function get_scalings(model, parameters)
 
 			# We use the same scaling as for the coating multiplied by the conductivity ration
 			cc = cc_mapping[elde]
-			coef = parameters[cc][:Conductivity] / parameters[elde][:Conductivity]
+			coef = parameters[cc][:ElectronicConductivity] / parameters[elde][:ElectronicConductivity]
 
 			scaling = (model_label = cc, equation_label = :charge_conservation, value = F * coef[1] * volRefs[elde] * RvolRef)
 			push!(scalings, scaling)

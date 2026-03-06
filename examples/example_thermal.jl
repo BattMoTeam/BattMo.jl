@@ -12,6 +12,7 @@ inputparams = merge_input_params([inputparams_material, inputparams_geometry])
 # Add control parameters
 fn = string(dirname(pathof(BattMo)), "/../examples/Experimental/jsoninputs/cc_discharge_control.json")
 inputparams_control = load_advanced_dict_input(fn)
+inputparams_control["Control"]["lowerCutoffVoltage"] = 3.6
 
 inputparams = merge_input_params(inputparams_control, inputparams; warn = true)
 
@@ -82,10 +83,14 @@ forces = []
 sources = []
 for (i, state) in enumerate(states)
 	state = BattMo.get_state_with_secondary_variables(multimodel, state, parameters)
-	src, stepsources = BattMo.get_energy_source!(thermal_model, model, state, maps)
+	src, stepsources = BattMo.get_energy_source_by_type!(thermal_model, model, state, maps)
 	push!(forces, (value = src,))
 	push!(sources, stepsources)
 end
+
+total_sources = [f.value for f in forces]
+fsrc = BattMo.plot_thermal_source_contributions(t, sources; total_source = total_sources)
+display(GLMakie.Screen(), fsrc)
 
 nc = number_of_cells(thermal_model.domain)
 T0 = 298*ones(nc)

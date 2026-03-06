@@ -260,8 +260,8 @@ function get_cell_parameters_meta_data()
 			"unit_name" => "emmo:JoulePerKiloGramKelvin",
 			"unit_iri" => "https://w3id.org/emmo#JoulePerKiloGramKelvin",
 		),
-		"ThermalConductivity" => Dict(
-			"context_type" => "ThermalConductivity",
+		"EffectiveThermalConductivity" => Dict(
+			"context_type" => "EffectiveThermalConductivity",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_8dd40ec6_2c5a_43f3_bf64_cadcd447a1c1",
 			"max_value" => 1.0e4,
 			"min_value" => 1.0e-2,

@@ -198,16 +198,22 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 				"ActivationEnergyOfReaction" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["activationEnergyOfReaction"],
 				"ReactionRateConstant" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["reactionRateConstant"],
 				"ChargeTransferCoefficient" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["chargeTransferCoefficient"],
+				"SpecificHeatCapacity" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["specificHeatCapacity"],
+				"ThermalConductivity" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["thermalConductivity"],
 			),
 			"ConductiveAdditive" => Dict(
 				"Density" => params["NegativeElectrode"]["Coating"]["ConductingAdditive"]["density"],
 				"MassFraction" => params["NegativeElectrode"]["Coating"]["ConductingAdditive"]["massFraction"],
 				"ElectronicConductivity" => params["NegativeElectrode"]["Coating"]["ConductingAdditive"]["electronicConductivity"],
+				"SpecificHeatCapacity" => params["NegativeElectrode"]["Coating"]["ConductingAdditive"]["specificHeatCapacity"],
+				"ThermalConductivity" => params["NegativeElectrode"]["Coating"]["ConductingAdditive"]["thermalConductivity"],
 			),
 			"Binder" => Dict(
 				"Density" => params["NegativeElectrode"]["Coating"]["Binder"]["density"],
 				"MassFraction" => params["NegativeElectrode"]["Coating"]["Binder"]["massFraction"],
 				"ElectronicConductivity" => params["NegativeElectrode"]["Coating"]["Binder"]["electronicConductivity"],
+				"SpecificHeatCapacity" => params["NegativeElectrode"]["Coating"]["Binder"]["specificHeatCapacity"],
+				"ThermalConductivity" => params["NegativeElectrode"]["Coating"]["Binder"]["thermalConductivity"],
 			)),
 		"PositiveElectrode" => Dict(
 			"Coating" => Dict(
@@ -231,22 +237,30 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 				"ActivationEnergyOfReaction" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["activationEnergyOfReaction"],
 				"ReactionRateConstant" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["reactionRateConstant"],
 				"ChargeTransferCoefficient" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["chargeTransferCoefficient"],
+				"SpecificHeatCapacity" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["specificHeatCapacity"],
+				"ThermalConductivity" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["thermalConductivity"],
 			),
 			"ConductiveAdditive" => Dict(
 				"Density" => params["PositiveElectrode"]["Coating"]["ConductingAdditive"]["density"],
 				"MassFraction" => params["PositiveElectrode"]["Coating"]["ConductingAdditive"]["massFraction"],
 				"ElectronicConductivity" => params["PositiveElectrode"]["Coating"]["ConductingAdditive"]["electronicConductivity"],
+				"SpecificHeatCapacity" => params["PositiveElectrode"]["Coating"]["ConductingAdditive"]["specificHeatCapacity"],
+				"ThermalConductivity" => params["PositiveElectrode"]["Coating"]["ConductingAdditive"]["thermalConductivity"],
 			),
 			"Binder" => Dict(
 				"Density" => params["PositiveElectrode"]["Coating"]["Binder"]["density"],
 				"MassFraction" => params["PositiveElectrode"]["Coating"]["Binder"]["massFraction"],
 				"ElectronicConductivity" => params["PositiveElectrode"]["Coating"]["Binder"]["electronicConductivity"],
+				"SpecificHeatCapacity" => params["PositiveElectrode"]["Coating"]["Binder"]["specificHeatCapacity"],
+				"ThermalConductivity" => params["PositiveElectrode"]["Coating"]["Binder"]["thermalConductivity"],
 			)),
 		"Separator" => Dict(
 			"Porosity" => params["Separator"]["porosity"],
 			"Density" => params["Separator"]["density"],
 			"BruggemanCoefficient" => params["Separator"]["bruggemanCoefficient"],
 			"Thickness" => params["Separator"]["thickness"],
+			"SpecificHeatCapacity" => params["Separator"]["specificHeatCapacity"],
+			"ThermalConductivity" => params["Separator"]["thermalConductivity"],
 		),
 		"Electrolyte" => Dict(
 			"Density" => params["Electrolyte"]["density"],
@@ -255,6 +269,8 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 			"TransferenceNumber" => params["Electrolyte"]["species"]["transferenceNumber"],
 			"IonicConductivity" => cond,
 			"DiffusionCoefficient" => diff,
+			"SpecificHeatCapacity" => params["Electrolyte"]["specificHeatCapacity"],
+			"ThermalConductivity" => params["Electrolyte"]["thermalConductivity"],
 		),
 	)
 
@@ -274,13 +290,20 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 	end
 
 	if haskey(model_settings, "ThermalModel")
-		thermal = Dict(
-			"ThermalModel" => Dict(
-				"Capacity" => params["ThermalModel"]["capacity"],
-				"Conductivity" => params["ThermalModel"]["conductivity"],
-				"ExternalTemperature" => params["ThermalModel"]["externalTemperature"],
-				"ExternalHeatTransferCoefficient" => params["ThermalModel"]["externalHeatTransferCoefficient"],
-			))
+		thermal_model = Dict(
+			"Capacity" => params["ThermalModel"]["capacity"],
+			"Conductivity" => params["ThermalModel"]["conductivity"],
+			"ExternalTemperature" => params["ThermalModel"]["externalTemperature"],
+			"ExternalHeatTransferCoefficient" => params["ThermalModel"]["externalHeatTransferCoefficient"],
+		)
+		# Optional switch for boundary heat-transfer closure in thermal-only model.
+		if haskey(params["ThermalModel"], "useBoundarySeriesResistance")
+			thermal_model["UseBoundarySeriesResistance"] = params["ThermalModel"]["useBoundarySeriesResistance"]
+		elseif haskey(params["ThermalModel"], "UseBoundarySeriesResistance")
+			thermal_model["UseBoundarySeriesResistance"] = params["ThermalModel"]["UseBoundarySeriesResistance"]
+		end
+
+		thermal = Dict("ThermalModel" => thermal_model)
 
 		ne_entropy = convert_functional_parameters(params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["entropyChange"])
 		pe_entropy = convert_functional_parameters(params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["entropyChange"])
@@ -304,6 +327,8 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 		cell_parameters["Cell"]["ElectrodeWidth"] = params["Geometry"]["width"]
 		cell_parameters["Cell"]["ElectrodeLength"] = params["Geometry"]["height"]
 
+		@show model_settings
+
 		if haskey(model_settings, "CurrentCollectors")
 			pos_cc = Dict(
 				"CurrentCollector" => Dict(
@@ -323,6 +348,13 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 					"ElectronicConductivity" => params["NegativeElectrode"]["CurrentCollector"]["electronicConductivity"],
 				),
 			)
+
+			if haskey(model_settings, "ThermalModel")
+				pos_cc["CurrentCollector"]["SpecificHeatCapacity"] = params["PositiveElectrode"]["CurrentCollector"]["specificHeatCapacity"]
+				pos_cc["CurrentCollector"]["ThermalConductivity"] = params["PositiveElectrode"]["CurrentCollector"]["thermalConductivity"]
+				neg_cc["CurrentCollector"]["SpecificHeatCapacity"] = params["NegativeElectrode"]["CurrentCollector"]["specificHeatCapacity"]
+				neg_cc["CurrentCollector"]["ThermalConductivity"] = params["NegativeElectrode"]["CurrentCollector"]["thermalConductivity"]
+			end
 
 			cell_parameters["NegativeElectrode"]["CurrentCollector"] = neg_cc["CurrentCollector"]
 			cell_parameters["PositiveElectrode"]["CurrentCollector"] = pos_cc["CurrentCollector"]
@@ -354,6 +386,13 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 					"ElectronicConductivity" => params["NegativeElectrode"]["CurrentCollector"]["electronicConductivity"],
 				),
 			)
+
+			if haskey(model_settings, "ThermalModel")
+				pos_cc["CurrentCollector"]["SpecificHeatCapacity"] = params["PositiveElectrode"]["CurrentCollector"]["specificHeatCapacity"]
+				pos_cc["CurrentCollector"]["ThermalConductivity"] = params["PositiveElectrode"]["CurrentCollector"]["thermalConductivity"]
+				neg_cc["CurrentCollector"]["SpecificHeatCapacity"] = params["NegativeElectrode"]["CurrentCollector"]["specificHeatCapacity"]
+				neg_cc["CurrentCollector"]["ThermalConductivity"] = params["NegativeElectrode"]["CurrentCollector"]["thermalConductivity"]
+			end
 
 			cell_parameters["NegativeElectrode"]["CurrentCollector"] = neg_cc["CurrentCollector"]
 			cell_parameters["PositiveElectrode"]["CurrentCollector"] = pos_cc["CurrentCollector"]

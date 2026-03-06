@@ -145,6 +145,14 @@ function computeOCP_LCO(c, T, refT, cmax)
 
 end
 
+function computeOCP_NMC111(c, T, refT, cmax)
+
+	# From Ramadass et al. 2004 (10.1149/1.1634273), same rational form as MATLAB BattMo.
+	theta = c / cmax
+	return coeff1_refOCP_lco(theta) / coeff2_refOCP_lco(theta)
+
+end
+
 
 function computeEntropyChange_NMC111(c, cmax)
 	theta = c / cmax

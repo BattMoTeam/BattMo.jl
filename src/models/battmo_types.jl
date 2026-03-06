@@ -41,7 +41,7 @@ struct BruggemanCoefficient <: ScalarVariable end
 
 Jutul.default_value(model, ::BruggemanCoefficient) = 1.5
 
-struct Conductivity <: ScalarVariable end
+struct ElectronicConductivity <: ScalarVariable end
 struct Diffusivity <: ScalarVariable end
 
 # Jutul.variable_scale(::Diffusivity) = 1e-10

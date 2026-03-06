@@ -1114,7 +1114,7 @@ function setup_battery_parameters(inputparams::InputParamsOld,
 
 		prm_necc = Dict{Symbol, Any}()
 		inputparams_necc = inputparams["NegativeElectrode"]["CurrentCollector"]
-		prm_necc[:Conductivity] = inputparams_necc["electronicConductivity"]
+		prm_necc[:ElectronicConductivity] = inputparams_necc["electronicConductivity"]
 		parameters[:NegativeElectrodeCurrentCollector] = setup_parameters(model[:NegativeElectrodeCurrentCollector], prm_necc)
 
 	end
@@ -1126,7 +1126,7 @@ function setup_battery_parameters(inputparams::InputParamsOld,
 	prm_neam = Dict{Symbol, Any}()
 	inputparams_neam = inputparams["NegativeElectrode"]["Coating"]["ActiveMaterial"]
 
-	prm_neam[:Conductivity] = computeEffectiveConductivity(model[:NegativeElectrodeActiveMaterial], inputparams["NegativeElectrode"]["Coating"])
+	prm_neam[:ElectronicConductivity] = computeEffectiveConductivity(model[:NegativeElectrodeActiveMaterial], inputparams["NegativeElectrode"]["Coating"])
 	prm_neam[:Temperature] = T0
 
 	if discretisation_type(model[:NegativeElectrodeActiveMaterial]) == :P2Ddiscretization
@@ -1156,7 +1156,7 @@ function setup_battery_parameters(inputparams::InputParamsOld,
 	prm_peam = Dict{Symbol, Any}()
 	inputparams_peam = inputparams["PositiveElectrode"]["Coating"]["ActiveMaterial"]
 
-	prm_peam[:Conductivity] = computeEffectiveConductivity(model[:PositiveElectrodeActiveMaterial], inputparams["PositiveElectrode"]["Coating"])
+	prm_peam[:ElectronicConductivity] = computeEffectiveConductivity(model[:PositiveElectrodeActiveMaterial], inputparams["PositiveElectrode"]["Coating"])
 	prm_peam[:Temperature] = T0
 
 
@@ -1177,7 +1177,7 @@ function setup_battery_parameters(inputparams::InputParamsOld,
 
 		prm_pecc = Dict{Symbol, Any}()
 		inputparams_pecc = inputparams["PositiveElectrode"]["CurrentCollector"]
-		prm_pecc[:Conductivity] = inputparams_pecc["electronicConductivity"]
+		prm_pecc[:ElectronicConductivity] = inputparams_pecc["electronicConductivity"]
 
 		parameters[:PositiveElectrodeCurrentCollector] = setup_parameters(model[:PositiveElectrodeCurrentCollector], prm_pecc)
 	end
@@ -1463,7 +1463,7 @@ function setup_coupling_cross_terms!(inputparams::InputParamsOld,
 			couplingfaces,
 			couplingcells,
 			psource, ptarget,
-			:Conductivity)
+			:ElectronicConductivity)
 		@assert size(trans, 1) == size(srange_cells, 1)
 		ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
 		ct_pair = setup_cross_term(ct, target = :NegativeElectrodeActiveMaterial, source = :NegativeElectrodeCurrentCollector, equation = :charge_conservation)
@@ -1504,7 +1504,7 @@ function setup_coupling_cross_terms!(inputparams::InputParamsOld,
 			couplingfaces,
 			couplingcells,
 			psource, ptarget,
-			:Conductivity)
+			:ElectronicConductivity)
 		@assert size(trans, 1) == size(srange_cells, 1)
 		ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
 		ct_pair = setup_cross_term(ct, target = :PositiveElectrodeActiveMaterial, source = :PositiveElectrodeCurrentCollector, equation = :charge_conservation)
@@ -1537,7 +1537,7 @@ function setup_coupling_cross_terms!(inputparams::InputParamsOld,
 	# Here the indexing in BoundaryFaces in used
 	couplingfaces = couplings[stringControlComp]["External"]["boundaryfaces"]
 	couplingcells = trange
-	trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
+	trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :ElectronicConductivity)
 
 	ct = TPFAInterfaceFluxCT(trange, srange, trans)
 	ct_pair = setup_cross_term(ct, target = controlComp, source = :Control, equation = :charge_conservation)
