@@ -159,6 +159,18 @@ function get_cycling_protocol_meta_data()
 			"unit_name" => "emmo:VoltPerSecond",
 			"unit_iri" => "https://w3id.org/emmo#VoltPerSecond",
 		),
+            "Times" => Dict(
+		"type" => "array",
+		"items" => Dict("type" => "number"),
+		"description" => "Time points for the InputCurrentSeries protocol",
+                "unit" => "s",
+	    ),
+	    "Currents" => Dict(
+		"type" => "array",
+		"items" => Dict("type" => "number"),
+		"description" => "Current values for the InputCurrentSeries protocol",
+                "unit" => "A"
+	    ),
 	)
 
 	return meta_data
