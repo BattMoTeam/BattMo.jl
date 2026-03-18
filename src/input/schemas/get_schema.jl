@@ -422,6 +422,8 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
 			"VoltageChangeLimit" => create_property(parameter_meta, "VoltageChangeLimit"),
 			"AmbientTemperature" => create_property(parameter_meta, "AmbientTemperature"),
 			"InitialTemperature" => create_property(parameter_meta, "InitialTemperature"),
+		    "Times" => create_property(parameter_meta, "Times"),
+                    "Currents" => create_property(parameter_meta, "Currents"),
 		),
 		"required" => ["Protocol"],
 		"allOf" => [
@@ -494,6 +496,17 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
 						"DRate",
 						"UpperVoltageLimit",
 						"LowerVoltageLimit",
+					]),
+			),
+			Dict(
+				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "InputCurrentSeries"))),
+				"then" => Dict(
+					"required" => [
+						"InitialStateOfCharge",
+						"Times",
+						"Currents",
+						"LowerVoltageLimit",
+						"UpperVoltageLimit",
 					]),
 			),
 		],

@@ -126,26 +126,30 @@ function get_output_metrics(
 		charge_energy = Float64[]
 		round_trip_efficiency = Float64[]
 
-		# Identify unique non-zero cycles
-		unique_cycles = unique(cycle_array)
-		cycles_reduced = Int.(unique_cycles[1:(end-1)]) # Exclude last cycle index because it is incomplete
-
-
-		if isempty(cycles_reduced)
-			# Compute globally
-			push!(discharge_cap, compute_discharge_capacity(jutul_output))
-			push!(charge_cap, compute_charge_capacity(jutul_output))
-			push!(discharge_energy, compute_discharge_energy(jutul_output))
-			push!(charge_energy, compute_charge_energy(jutul_output))
-			push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output))
+		if isnothing(cycle_array)
+			# No cycle tracking (e.g. InputCurrentSeries)
+                        error("This is not yet implemented")
 		else
-			# Compute per unique cycle (avoids duplicate pushes)
-			for cycle in cycles_reduced
-				push!(discharge_cap, compute_discharge_capacity(jutul_output; cycle_number = cycle))
-				push!(charge_cap, compute_charge_capacity(jutul_output; cycle_number = cycle))
-				push!(discharge_energy, compute_discharge_energy(jutul_output; cycle_number = cycle))
-				push!(charge_energy, compute_charge_energy(jutul_output; cycle_number = cycle))
-				push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output; cycle_number = cycle))
+			# Identify unique non-zero cycles
+			unique_cycles = unique(cycle_array)
+			cycles_reduced = Int.(unique_cycles[1:(end-1)]) # Exclude last cycle index because it is incomplete
+
+			if isempty(cycles_reduced)
+				# Compute globally
+				push!(discharge_cap, compute_discharge_capacity(jutul_output))
+				push!(charge_cap, compute_charge_capacity(jutul_output))
+				push!(discharge_energy, compute_discharge_energy(jutul_output))
+				push!(charge_energy, compute_charge_energy(jutul_output))
+				push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output))
+			else
+				# Compute per unique cycle (avoids duplicate pushes)
+				for cycle in cycles_reduced
+					push!(discharge_cap, compute_discharge_capacity(jutul_output; cycle_number = cycle))
+					push!(charge_cap, compute_charge_capacity(jutul_output; cycle_number = cycle))
+					push!(discharge_energy, compute_discharge_energy(jutul_output; cycle_number = cycle))
+					push!(charge_energy, compute_charge_energy(jutul_output; cycle_number = cycle))
+					push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output; cycle_number = cycle))
+				end
 			end
 		end
 
