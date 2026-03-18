@@ -89,7 +89,7 @@ println("Max voltage:            $(round(maximum(V_sim); digits=3)) V")
 println("Min current:            $(round(minimum(I_sim); digits=3)) A")
 println("Max current:            $(round(maximum(I_sim); digits=3)) A")
 
-doplot = true
+doplot = false
 if doplot
     using GLMakie
     plot_dashboard(output; plot_type = "simple")
