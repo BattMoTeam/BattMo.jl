@@ -116,7 +116,9 @@ function get_output_metrics(
 
 	controller = states[1][:Control][:Controller]
 
-	if !isa(controller, FunctionController)
+    if isa(controller, FunctionController) || isa(controller, InputCurrentController)
+	available_quantities = Dict()
+    else
 		cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : nothing
 
 		# Metric storage
@@ -126,10 +128,6 @@ function get_output_metrics(
 		charge_energy = Float64[]
 		round_trip_efficiency = Float64[]
 
-		if isnothing(cycle_array)
-			# No cycle tracking (e.g. InputCurrentSeries)
-                        error("This is not yet implemented")
-		else
 			# Identify unique non-zero cycles
 			unique_cycles = unique(cycle_array)
 			cycles_reduced = Int.(unique_cycles[1:(end-1)]) # Exclude last cycle index because it is incomplete
@@ -151,7 +149,7 @@ function get_output_metrics(
 					push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output; cycle_number = cycle))
 				end
 			end
-		end
+
 
 		# Dictionary of all available quantities
 		available_quantities = Dict(
@@ -162,8 +160,7 @@ function get_output_metrics(
 			"ChargeEnergy"        => charge_energy,
 			"RoundTripEfficiency" => round_trip_efficiency,
 		)
-	else
-		available_quantities = Dict()
+
 	end
 
 	# Return only requested metrics or all
