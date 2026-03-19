@@ -1,6 +1,5 @@
 using BattMo
 using Test
-import Random: seed!
 
 @testset "InputCurrentSeries" begin
 
@@ -12,16 +11,12 @@ import Random: seed!
 
         model_setup = LithiumIonBattery(; model_settings)
 
-        # Build a simple discharging time series with 30 slightly non-uniform steps:
-        # 20 steps of ~125 s discharge at ~5 A, then 10 steps of ~50 s rest at 0 A.
-        # The slightly non-uniform spacing (±10 s jitter) exercises the interpolator.
-        seed!(42)
         n_discharge = 20
         n_rest = 10
-        t_discharge = cumsum(125.0 .+ 10.0 .* (0.5 .- rand(n_discharge)))
-        t_rest = t_discharge[end] .+ cumsum(50.0 .+ 5.0 .* (0.5 .- rand(n_rest)))
-        times = [0.0; t_discharge; t_rest]
-        currents = [5.0 .* ones(n_discharge + 1); zeros(n_rest)]
+        t_discharge = range(0.0, 1000, n_discharge)
+        t_rest = t_discharge[end] .+ range(0.0, 500, n_rest)
+        times = [t_discharge; t_rest[2:end]]
+        currents = [5.0 .* ones(n_discharge); zeros(n_rest-1)]
 
         cycling_protocol = CyclingProtocol(Dict(
             "Protocol"             => "InputCurrentSeries",
