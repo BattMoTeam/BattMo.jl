@@ -4,38 +4,37 @@ using Test
 
 @testset "optimization" begin
 
-	@test begin
+    @test begin
 
-		name = "chen_2020"
-		cell_parameters = load_cell_parameters(; from_default_set = name)
-		cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+        name = "chen_2020"
+        cell_parameters = load_cell_parameters(; from_default_set = name)
+        cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
-		model_setup = LithiumIonBattery()
+        model_setup = LithiumIonBattery()
 
-		sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+        sim = Simulation(model_setup, cell_parameters, cycling_protocol)
 
-		output_0 = solve(sim)
+        output_0 = solve(sim)
 
-		states = output_0.jutul_output.states
+        states = output_0.jutul_output.states
 
-		# # Specify an objective
+        # # Specify an objective
 
-		# Objective: Penalize any voltage less than target value of 4.2 (higher than initial voltage for battery)
-		v_target = 4.2
-		function objective(model, state, dt, step_no, forces)
-			return dt * max(v_target - state[:Control][:Voltage][1], 0)^2
-		end
+        # Objective: Penalize any voltage less than target value of 4.2 (higher than initial voltage for battery)
+        v_target = 4.2
+        function objective(model, state, dt, step_no, forces)
+            return dt * max(v_target - state[:Control][:Voltage][1], 0)^2
+        end
 
-		# # Setup the optimization problem
+        # # Setup the optimization problem
 
-		opt = Optimization(output_0, objective)
+        opt = Optimization(output_0, objective)
 
-		# # Solve the optimization problem
+        # # Solve the optimization problem
 
-		output_tuned = solve(opt)
+        output_tuned = solve(opt)
 
-		true
-	end
+        true
+    end
 
 end
-

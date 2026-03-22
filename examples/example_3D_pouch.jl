@@ -10,5 +10,3 @@ sim = Simulation(model, cell_parameters, cycling_protocol);
 output = solve(sim)
 
 plot_interactive_3d(output; colormap = :curl)
-
-
