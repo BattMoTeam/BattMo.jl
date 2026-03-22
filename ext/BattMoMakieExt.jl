@@ -5,6 +5,7 @@ using Makie: Makie
 using Makie: Slider, Label, Axis, Colorbar, Figure, Observable, GridLayout
 using Makie: scatterlines!, contourf!, vlines!, lines!, autolimits!
 using Makie: on, axislegend
+using Jutul: si_unit
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
@@ -451,7 +452,7 @@ end
 function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = true)
 
 	time_series = output.time_series
-	t = time_series["Time"]
+	t = time_series["Time"] / si_unit("hour")
 	I = time_series["Current"]
 	E = time_series["Voltage"]
 
@@ -474,11 +475,11 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 		Label(grid[0, 1:3], "Simple Dashboard", fontsize = 24, halign = :center)
 
 		ax_current = Axis(grid[1, 1:3], title = "Current  /  A")
-		ax_current.xlabel = "Time  /  s"
+		ax_current.xlabel = "Time  /  h"
 		scatterlines!(ax_current, t, I; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		ax_voltage = Axis(grid[2, 1:3], title = "Voltage  /  V")
-		ax_voltage.xlabel = "Time  /  s"
+		ax_voltage.xlabel = "Time  /  h"
 		scatterlines!(ax_voltage, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		if new_window
@@ -494,11 +495,11 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 		Label(grid[0, 1:3], "Line Dashboard", fontsize = 24, halign = :center)
 
 		ax_current = Axis(grid[1, 1:3], title = "Current  /  A")
-		ax_current.xlabel = "Time  /  s"
+		ax_current.xlabel = "Time  /  h"
 		scatterlines!(ax_current, t, I; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		ax_voltage = Axis(grid[2, 1:3], title = "Voltage  /  V")
-		ax_voltage.xlabel = "Time  /  s"
+		ax_voltage.xlabel = "Time  /  h"
 		scatterlines!(ax_voltage, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		slider = Slider(grid[6, 1:3], range = 1:n_steps, startvalue = 1)
@@ -549,11 +550,11 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 		Label(grid[0, 1:3], "Contour Dashboard", fontsize = 24, halign = :center)
 
 		ax_current = Axis(grid[1, 1:3], title = "Current  /  A")
-		ax_current.xlabel = "Time  /  s"
+		ax_current.xlabel = "Time  /  h"
 		scatterlines!(ax_current, t, I; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		ax_voltage = Axis(grid[2, 1:3], title = "Voltage  /  V")
-		ax_voltage.xlabel = "Time  /  s"
+		ax_voltage.xlabel = "Time  /  h"
 		scatterlines!(ax_voltage, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		function contour_with_labels(parent_grid, row, col, data, title)
@@ -561,7 +562,7 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 
 			ax_678 = Axis(subgrid[1, 1])
 			plt = contourf!(ax_678, x, t, data')
-			ax_678.ylabel = "Time  /  s"
+			ax_678.ylabel = "Time  /  h"
 			ax_678.xlabel = "Position  / μm"
 			ax_678.title = title
 
