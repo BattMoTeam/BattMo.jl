@@ -147,77 +147,28 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 	###########################################
 	# CellParameters
 
-	ne_ocp_ = params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"]
+    function convertFunctionParams(funcparams_)
+        if funcparams_["functionFormat"] == "string expression"
+		    funcparams = funcparams_["expression"]["formula"]
+	    elseif funcparams_["functionFormat"] == "named function"
+		    funcparams = Dict(
+			    "FunctionName" => funcparams_["functionName"],
+		    )
+	    elseif funcparams_["functionFormat"] == "tabulated"
+		    funcparams = Dict(
+			    "x" => funcparams_["dataX"],
+			    "y" => funcparams_["dataY"],
+		    )
+	    else
+		    funcparams = funcparams_
+	    end
+        
+    end
 
-	if haskey(ne_ocp_, "function")
-		ne_ocp = ne_ocp_["function"]
-	elseif haskey(ne_ocp_, "functionname")
-		ne_ocp = Dict(
-			"FunctionName" => ne_ocp_["functionname"],
-		)
-	elseif haskey(ne_ocp_, "data_x")
-		ne_ocp = Dict(
-			"x" => ne_ocp_["data_x"],
-			"y" => ne_ocp_["data_y"],
-		)
-	else
-		ne_ocp = ne_ocp_
-
-	end
-
-	pe_ocp_ = params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"]
-
-	if haskey(pe_ocp_, "function")
-		pe_ocp = pe_ocp_["function"]
-	elseif haskey(ne_ocp_, "functionname")
-		pe_ocp = Dict(
-			"FunctionName" => pe_ocp_["functionname"],
-		)
-	elseif haskey(pe_ocp_, "data_x")
-		pe_ocp = Dict(
-			"x" => pe_ocp_["data_x"],
-			"y" => pe_ocp_["data_y"],
-		)
-	else
-		pe_ocp = pe_ocp_
-
-	end
-
-	cond_ = params["Electrolyte"]["ionicConductivity"]
-
-	if haskey(cond_, "function")
-		cond = cond_["function"]
-	elseif haskey(cond_, "functionname")
-		cond = Dict(
-			"FunctionName" => cond_["functionname"],
-		)
-	elseif haskey(cond_, "data_x")
-		cond = Dict(
-			"x" => cond_["data_x"],
-			"y" => cond_["data_y"],
-		)
-	else
-		cond = cond_
-
-	end
-
-	diff_ = params["Electrolyte"]["diffusionCoefficient"]
-
-	if haskey(diff_, "function")
-		diff = diff_["function"]
-	elseif haskey(diff_, "functionname")
-		diff = Dict(
-			"FunctionName" => diff_["functionname"],
-		)
-	elseif haskey(diff_, "data_x")
-		diff = Dict(
-			"x" => diff_["data_x"],
-			"y" => diff_["data_y"],
-		)
-	else
-		diff = diff_
-
-	end
+    ne_ocp = convertFunctionParams(params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"])
+    pe_ocp = convertFunctionParams(params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"])
+    cond = convertFunctionParams(params["Electrolyte"]["ionicConductivity"])
+    diff = convertFunctionParams(params["Electrolyte"]["diffusionCoefficient"])
 
 	cell_parameters = Dict(
 		"Cell" => Dict(),
@@ -509,7 +460,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 		if haskey(ne_ocp_value, "FunctionName")
 			ne_ocp = Dict(
 				"type" => "function",
-				"functionname" => ne_ocp_value["FunctionName"],
+				"functionName" => ne_ocp_value["FunctionName"],
 				"functionpath" => isnothing(get_key_value(ne_ocp_value, "FilePath")) ? nothing : normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(ne_ocp_value, "FilePath"))),
 			)
 		else
@@ -540,7 +491,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 		if haskey(pe_ocp_value, "FunctionName")
 			pe_ocp = Dict(
 				"type" => "function",
-				"functionname" => pe_ocp_value["FunctionName"],
+				"functionName" => pe_ocp_value["FunctionName"],
 				"functionpath" => isnothing(get_key_value(pe_ocp_value, "FilePath")) ? nothing : normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(pe_ocp_value, "FilePath"))),
 			)
 		else
@@ -569,7 +520,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 		if haskey(diff_value, "FunctionName")
 			diff = Dict(
 				"type" => "function",
-				"functionname" => diff_value["FunctionName"],
+				"functionName" => diff_value["FunctionName"],
 				"functionpath" => isnothing(get_key_value(diff_value, "FilePath")) ? nothing : normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(diff_value, "FilePath"))),
 			)
 		else
@@ -598,7 +549,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 		if haskey(cond_value, "FunctionName")
 			cond = Dict(
 				"type" => "function",
-				"functionname" => cond_value["FunctionName"],
+				"functionName" => cond_value["FunctionName"],
 				"functionpath" => isnothing(get_key_value(cond_value, "FilePath")) ? nothing : normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(cond_value, "FilePath"))),
 			)
 		else
