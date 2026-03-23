@@ -1,7 +1,7 @@
 using BattMo, GLMakie
 
 function getinput(name)
-	return load_advanced_dict_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
+    return load_advanced_dict_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
 end
 
 ############################
@@ -12,10 +12,10 @@ inputparams_geometry = getinput("4680-geometry.json")
 
 change_settings = false
 if change_settings
-	set_input_params!(inputparams_geometry, ["Geometry", "numberOfDiscretizationCellsAngular"], 4, handleMismatch = :warn)
-	set_input_params!(inputparams_geometry, ["Geometry", "outerRadius"], 4e-3, handleMismatch = :warn)
-	set_input_params!(inputparams_geometry, ["NegativeElectrode", "CurrentCollector", "tabparams", "usetab"], false, handleMismatch = :warn)
-	set_input_params!(inputparams_geometry, ["PositiveElectrode", "CurrentCollector", "tabparams", "usetab"], false, handleMismatch = :warn)
+    set_input_params!(inputparams_geometry, ["Geometry", "numberOfDiscretizationCellsAngular"], 4, handleMismatch = :warn)
+    set_input_params!(inputparams_geometry, ["Geometry", "outerRadius"], 4.0e-3, handleMismatch = :warn)
+    set_input_params!(inputparams_geometry, ["NegativeElectrode", "CurrentCollector", "tabparams", "usetab"], false, handleMismatch = :warn)
+    set_input_params!(inputparams_geometry, ["PositiveElectrode", "CurrentCollector", "tabparams", "usetab"], false, handleMismatch = :warn)
 end
 
 # inputparams_geometry = getinput("geometry-1d.json")
@@ -44,23 +44,29 @@ inputparams_solver = getinput("solver_setup.json")
 # merge parameters #
 ####################
 
-inputparams = merge_input_params([inputparams_geometry,
-	inputparams_material,
-	inputparams_control,
-	inputparams_solver])
+inputparams = merge_input_params(
+    [
+        inputparams_geometry,
+        inputparams_material,
+        inputparams_control,
+        inputparams_solver,
+    ]
+)
 
 ##################
 # run simulation #
 ##################
 
-function hook(simulator,
-	model,
-	state0,
-	forces,
-	timesteps,
-	cfg)
+function hook(
+        simulator,
+        model,
+        state0,
+        forces,
+        timesteps,
+        cfg
+    )
 
-	cfg[:info_level] = 2
+    return cfg[:info_level] = 2
 
 end
 
@@ -78,44 +84,46 @@ I = [state[:Control][:Current][1] for state in states]
 
 fig = Figure(size = (1000, 400))
 
-ax = Axis(fig[1, 1],
-	title = "Voltage",
-	xlabel = "Time / hour",
-	ylabel = "Voltage / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
+ax = Axis(
+    fig[1, 1],
+    title = "Voltage",
+    xlabel = "Time / hour",
+    ylabel = "Voltage / V",
+    xlabelsize = 25,
+    ylabelsize = 25,
+    xticklabelsize = 25,
+    yticklabelsize = 25,
 )
 
-scatterlines!(ax,
-	t / 3600,
-	E;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
+scatterlines!(
+    ax,
+    t / 3600,
+    E;
+    linewidth = 4,
+    markersize = 10,
+    marker = :cross,
+    markercolor = :black,
 )
 
-ax = Axis(fig[1, 2],
-	title = "Current",
-	xlabel = "Time / hour",
-	ylabel = "Current / A",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
+ax = Axis(
+    fig[1, 2],
+    title = "Current",
+    xlabel = "Time / hour",
+    ylabel = "Current / A",
+    xlabelsize = 25,
+    ylabelsize = 25,
+    xticklabelsize = 25,
+    yticklabelsize = 25,
 )
 
-scatterlines!(ax,
-	t / 3600,
-	I;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
+scatterlines!(
+    ax,
+    t / 3600,
+    I;
+    linewidth = 4,
+    markersize = 10,
+    marker = :cross,
+    markercolor = :black,
 )
 
 fig
-
-
