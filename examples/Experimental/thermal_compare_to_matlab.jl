@@ -3,7 +3,7 @@ using BattMo, GLMakie, MAT, Jutul, Statistics
 ###############################################
 # MATLAB data
 
-fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/run_only_thermal.mat")
+fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/runOnlyThermal.mat")
 
 file = matopen(fn)
 data = read(file)
@@ -26,6 +26,8 @@ M = convert_matlab_cells_to_matrix(sources_matlab)
 t_source_ref = length(t_matlab_full) == size(M, 1) ? t_matlab_full : t_matlab
 
 # Toggle use of MATLAB-retrieved quantities in Julia.
+# For strict thermal parity against the MATLAB runOnlyThermal case, use the MATLAB
+# source terms on the MATLAB time grid.
 use_matlab_source_terms = false
 
 function interpolate_source_at_time(tq, t_ref, M; pre_first_mode::Symbol = :hold_first)
@@ -65,37 +67,27 @@ inputparams_material = load_advanced_dict_input(fn)
 
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
 inputparams_geometry = load_advanced_dict_input(fn)
-# Match MATLAB runOnlyThermal geometry resolution by default.
-# Set this to `true` only when intentionally running a higher-resolution Julia case.
-use_custom_geometry_resolution = true
-if use_custom_geometry_resolution
-	inputparams_geometry["Geometry"]["Nh"] = 16
-end
 
 inputparams = merge_input_params([inputparams_material, inputparams_geometry])
 
-# Add control parameters
 fn = string(dirname(pathof(BattMo)), "/../examples/Experimental/jsoninputs/cc_discharge_control.json")
 inputparams_control = load_advanced_dict_input(fn)
-inputparams_control["Control"]["lowerCutoffVoltage"] = 3.6
 inputparams = merge_input_params(inputparams_control, inputparams; warn = true)
 
-# Add thermal parameters
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/simple_thermal.json")
 inputparams_thermal = load_advanced_dict_input(fn)
 inputparams = merge_input_params(inputparams_thermal, inputparams; warn = true)
 
-# Add thermal model
-inputparams["use_thermal"] = true
-external_h_nominal = 0.1
-inputparams["ThermalModel"]["externalHeatTransferCoefficient"] = external_h_nominal
+
+inputparams["NegativeElectrode"]["Coating"]["ActiveMaterial"]["specificHeatCapacity"] = 31.6
+inputparams["PositiveElectrode"]["Coating"]["ActiveMaterial"]["specificHeatCapacity"] = 35.0
+inputparams["NegativeElectrode"]["CurrentCollector"]["specificHeatCapacity"] = 19.25
+inputparams["PositiveElectrode"]["CurrentCollector"]["specificHeatCapacity"] = 43.75
+inputparams["Electrolyte"]["specificHeatCapacity"] = 102.75
+inputparams["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["activationEnergyOfReaction"] = 37480
+inputparams["Control"]["lowerCutoffVoltage"] = 3.6
 
 
-# Parity test toggle for boundary cooling closure:
-# true  => m = 1/(1/(ht*k) + 1/hA) (default BattMo.jl behavior)
-# false => m = hA                (direct Robin at cell center)
-use_boundary_series_resistance = true
-inputparams["ThermalModel"]["useBoundarySeriesResistance"] = use_boundary_series_resistance
 
 output = run_simulation(inputparams; accept_invalid = true)
 
@@ -117,10 +109,8 @@ grids = output.simulation.grids
 maps = output.simulation.global_maps
 timesteps = output.simulation.time_steps[1:length(states)]
 
-@show propertynames(output.model.multimodel.models)
-
-input.cell_parameters["ThermalModel"]["EffectiveVolumetricHeatCapacity"] = output.model.multimodel.models[:ThermalModel].parameters["EffectiveVolumetricHeatCapacity"]
-input.cell_parameters["ThermalModel"]["EffectiveThermalConductivity"] = output.model.multimodel.models[:ThermalModel].parameters["EffectiveThermalConductivity"]
+input.cell_parameters["ThermalModel"]["EffectiveVolumetricHeatCapacity"] = output.simulation.parameters[:ThermalModel][:EffectiveVolumetricHeatCapacity]
+input.cell_parameters["ThermalModel"]["EffectiveThermalConductivity"] = output.simulation.parameters[:ThermalModel][:EffectiveThermalConductivity]
 
 thermal_model, thermal_parameters = BattMo.setup_thermal_model(input, grids)
 nc = number_of_cells(thermal_model.domain)
@@ -146,8 +136,14 @@ end
 
 
 forces = NamedTuple[]
+thermal_timesteps = timesteps
+thermal_time = t
 if use_matlab_source_terms
-	push!(forces, (value = M[1:(end-1), :],))
+	thermal_timesteps = vcat(t_matlab[1], diff(t_matlab))
+	thermal_time = t_matlab
+	for i in 1:length(thermal_timesteps)
+		push!(forces, (value = vec(M[i, :]),))
+	end
 else
 	for src in src_matric
 		push!(forces, (value = src,))
@@ -173,7 +169,7 @@ sim = Simulator(thermal_model;
 	parameters = thermal_parameters,
 	copy_state = true)
 
-states_loc, = simulate(sim, timesteps; info_level = -1, forces = forces)
+thermal_states, = simulate(sim, thermal_timesteps; info_level = -1, forces = forces)
 
 
 T_max = [maximum(state[:Temperature]) for state in thermal_states]
@@ -202,7 +198,7 @@ matlab_ = scatterlines!(ax1,
 )
 
 julia_ = scatterlines!(ax1,
-	t,
+	thermal_time,
 	T_max .- 273.15;
 	linewidth = 4,
 	markersize = 10,
@@ -210,18 +206,10 @@ julia_ = scatterlines!(ax1,
 	markercolor = :red,
 )
 
-julia_matgrid_ = scatterlines!(ax1,
-	t_matlab[1:length(T_max_matgrid)],
-	T_max_matgrid .- 273.15;
-	linewidth = 3,
-	markersize = 8,
-	marker = :utriangle,
-	markercolor = :orange,
-)
 
 Legend(f1[1, 2],
-	[matlab_, julia_, julia_matgrid_],
-	["MATLAB", "Julia (Julia dt)", "Julia (MATLAB dt)"])
+	[matlab_, julia_],
+	["MATLAB", use_matlab_source_terms ? "Julia (MATLAB sources/time)" : "Julia (Julia dt)"])
 display(GLMakie.Screen(), f1)
 
 f2 = Figure(size = (1000, 400))
@@ -252,37 +240,4 @@ julia_v = scatterlines!(ax2,
 )
 Legend(f2[1, 2], [matlab_v, julia_v], ["MATLAB", "Julia"])
 display(GLMakie.Screen(), f2)
-
-f3 = Figure(size = (1000, 400))
-ax3 = Axis(f3[1, 1],
-	title = "ElectrolyteConcentration",
-	xlabel = "Time / s",
-	ylabel = "Concentration / mol�m^-3",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
-)
-matlab_ce = scatterlines!(ax3,
-	t_matlab,
-	c_e_av_matlab;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-)
-julia_ce = scatterlines!(ax3,
-	t,
-	c_e_av;
-	linewidth = 4,
-	markersize = 10,
-	marker = :circle,
-	markercolor = :red,
-)
-Legend(f3[1, 2], [matlab_ce, julia_ce], ["MATLAB", "Julia"])
-display(GLMakie.Screen(), f3)
-
-
-
-
-
+BattMo.plot_thermal_source_contributions(t, sources; total_source = src_matric)

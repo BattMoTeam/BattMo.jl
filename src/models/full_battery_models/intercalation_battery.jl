@@ -75,6 +75,66 @@ function setup_multimodel(model::IntercalationBattery, submodels, input; use_gro
 
 end
 
+function setup_volume_fractions!(model_neam, model_peam, model_elyte, grids, coupling)
+	Nelyte = number_of_cells(grids["Electrolyte"])
+
+	names = (
+		(:NegativeElectrodeActiveMaterial, "NegativeElectrodeActiveMaterial", model_neam),
+		(:PositiveElectrodeActiveMaterial, "PositiveElectrodeActiveMaterial", model_peam),
+	)
+
+	vfracs = map(x -> x[3].system[:volume_fraction], names)
+	separator_porosity = model_elyte.system[:separator_porosity]
+
+	T = Base.promote_type(map(typeof, vfracs)..., typeof(separator_porosity))
+
+	vfelyte     = zeros(T, Nelyte)
+	vfseparator = zeros(T, Nelyte)
+
+	for (i, (_, stringName, ammodel)) in enumerate(names)
+		ncell = number_of_cells(grids[stringName])
+		vf = vfracs[i]
+		ammodel.domain.representation[:volumeFraction] = vf * ones(ncell)
+		elytecells = coupling[stringName]["cells"]
+		vfelyte[elytecells] .= 1 - vf
+	end
+
+	elytecells = coupling["Separator"]["cells"]
+
+	vfelyte[elytecells]     .= separator_porosity * ones()
+	vfseparator[elytecells] .= (1 - separator_porosity)
+
+	model_elyte.domain.representation[:volumeFraction] = vfelyte
+	model_elyte.domain.representation[:separator_volume_fraction] = vfseparator
+
+	return nothing
+end
+
+function setup_effective_thermal_conductivities!(input, battery_models)
+	cell_parameters = input.cell_parameters
+
+	for elde in ("NegativeElectrode", "PositiveElectrode")
+		am_key = string(elde, "ActiveMaterial")
+		ammodel = battery_models[am_key]
+		ammodel.domain.representation[:effective_thermal_conductivity] = compute_effective_thermal_conductivity(ammodel.system.params, cell_parameters[elde])
+	end
+
+	elytemodel = battery_models["Electrolyte"]
+	vf = elytemodel.domain.representation[:volumeFraction]
+	bg = cell_parameters["Separator"]["BruggemanCoefficient"]
+	elytemodel.domain.representation[:effective_thermal_conductivity] = (vf .^ bg) .* cell_parameters["Electrolyte"]["ThermalConductivity"]
+
+	if haskey(battery_models, "NegativeElectrodeCurrentCollector") && !isnothing(battery_models["NegativeElectrodeCurrentCollector"])
+		battery_models["NegativeElectrodeCurrentCollector"].domain.representation[:effective_thermal_conductivity] = cell_parameters["NegativeElectrode"]["CurrentCollector"]["ThermalConductivity"]
+	end
+
+	if haskey(battery_models, "PositiveElectrodeCurrentCollector") && !isnothing(battery_models["PositiveElectrodeCurrentCollector"])
+		battery_models["PositiveElectrodeCurrentCollector"].domain.representation[:effective_thermal_conductivity] = cell_parameters["PositiveElectrode"]["CurrentCollector"]["ThermalConductivity"]
+	end
+
+	return nothing
+end
+
 function setup_submodels(model::IntercalationBattery, input, grids, couplings; global_maps = nothing, kwargs...)
 
 	if haskey(model.settings, "CurrentCollectors")
@@ -92,6 +152,7 @@ function setup_submodels(model::IntercalationBattery, input, grids, couplings; g
 
 	model_elyte = setup_electrolyte(model, input, grids)
 	model_sep = setup_separator(model, input, grids)
+	setup_volume_fractions!(model_neam, model_peam, model_elyte, grids, couplings["Electrolyte"])
 
 	battery_models = Dict("NegativeElectrodeActiveMaterial" => model_neam,
 		"PositiveElectrodeActiveMaterial" => model_peam,
@@ -99,9 +160,10 @@ function setup_submodels(model::IntercalationBattery, input, grids, couplings; g
 		"PositiveElectrodeCurrentCollector" => model_pecc,
 		"Electrolyte" => model_elyte,
 		"Separator" => model_sep)
+	setup_effective_thermal_conductivities!(input, battery_models)
 
 	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
-		model_thermal = setup_thermal_model(model, battery_models, input, grids, global_maps)
+		model_thermal, _ = setup_thermal_model(model, battery_models, input, grids, global_maps)
 	end
 
 	model_control = setup_control_model(input, model_neam, model_peam; kwargs...)
@@ -192,38 +254,13 @@ end
 
 function setup_volume_fractions!(model::IntercalationBattery, grids, coupling)
 	multimodel = model.multimodel
-	Nelyte = number_of_cells(grids["Electrolyte"])
-
-	names = [:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial]
-	stringNames = Dict(:NegativeElectrodeActiveMaterial => "NegativeElectrodeActiveMaterial",
-		:PositiveElectrodeActiveMaterial => "PositiveElectrodeActiveMaterial")
-
-	vfracs = map(name -> multimodel[name].system[:volume_fraction], names)
-	separator_porosity = multimodel[:Electrolyte].system[:separator_porosity]
-
-	T = Base.promote_type(map(typeof, vfracs)..., typeof(separator_porosity))
-
-	vfelyte     = zeros(T, Nelyte)
-	vfseparator = zeros(T, Nelyte)
-
-	for (i, name) in enumerate(names)
-		stringName = stringNames[name]
-		ncell = number_of_cells(grids[stringName])
-		ammodel = multimodel[name]
-		vf = vfracs[i]
-		ammodel.domain.representation[:volumeFraction] = vf * ones(ncell)
-		elytecells = coupling[stringName]["cells"]
-		vfelyte[elytecells] .= 1 - vf
-	end
-
-	elytecells = coupling["Separator"]["cells"]
-
-	vfelyte[elytecells]     .= separator_porosity * ones()
-	vfseparator[elytecells] .= (1 - separator_porosity)
-
-	multimodel[:Electrolyte].domain.representation[:volumeFraction] = vfelyte
-	multimodel[:Electrolyte].domain.representation[:separator_volume_fraction] = vfseparator
-
+	setup_volume_fractions!(
+		multimodel[:NegativeElectrodeActiveMaterial],
+		multimodel[:PositiveElectrodeActiveMaterial],
+		multimodel[:Electrolyte],
+		grids,
+		coupling,
+	)
 end
 
 function normalize_path(path::AbstractString)
@@ -244,15 +281,6 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 	params[:electrolyte_density] = inputparams_elyte["Density"]
 	params[:separator_density]   = cell_parameters["Separator"]["Density"]
 
-	vf = cell_parameters["Separator"]["Porosity"]
-	density = inputparams_elyte["Density"]
-	bg = cell_parameters["Separator"]["BruggemanCoefficient"]
-
-	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
-
-		params[:effective_volumetric_heat_capacity] = vf * density * cell_parameters["Electrolyte"]["SpecificHeatCapacity"]
-		params[:effective_thermal_conductivity] = (vf^bg) * cell_parameters["Electrolyte"]["ThermalConductivity"]
-	end
 
 	# setup diffusion coefficient function
 	if haskey(inputparams_elyte, "DiffusionCoefficient")
@@ -291,17 +319,6 @@ function setup_separator(model::IntercalationBattery, input, grids)
 	params[:bruggeman]          = cell_parameters["Separator"]["BruggemanCoefficient"]
 	params[:density]            = cell_parameters["Separator"]["Density"]
 
-	vf = 1 - cell_parameters["Separator"]["Porosity"]
-	density = params[:density]
-	bg = cell_parameters["Separator"]["BruggemanCoefficient"]
-
-	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
-
-		params[:effective_volumetric_heat_capacity] = vf * density * cell_parameters["Separator"]["SpecificHeatCapacity"]
-		params[:effective_thermal_conductivity] = (vf^bg) * cell_parameters["Separator"]["ThermalConductivity"]
-	end
-
-
 	separator = Separator(params)
 
 	model_separator = setup_component(grids["Separator"], separator, general_ad = true)
@@ -318,11 +335,6 @@ function setup_ne_current_collector(model, input, grids, couplings)
 	necc_params = JutulStorage()
 	necc_params[:density] = input.cell_parameters["NegativeElectrode"]["CurrentCollector"]["Density"]
 
-	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
-		necc_params[:effective_volumetric_heat_capacity] = necc_params[:density] * input.cell_parameters["NegativeElectrode"]["CurrentCollector"]["SpecificHeatCapacity"]
-		necc_params[:effective_thermal_conductivity] = input.cell_parameters["NegativeElectrode"]["CurrentCollector"]["ThermalConductivity"]
-	end
-
 	sys_necc = CurrentCollector(necc_params)
 	model_necc = setup_component(grid,
 		sys_necc,
@@ -336,11 +348,6 @@ function setup_pe_current_collector(model, input, grids, couplings)
 	grid = grids["PositiveElectrodeCurrentCollector"]
 	pecc_params = JutulStorage()
 	pecc_params[:density] = input.cell_parameters["PositiveElectrode"]["CurrentCollector"]["Density"]
-
-	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
-		pecc_params[:effective_volumetric_heat_capacity] = pecc_params[:density] * input.cell_parameters["PositiveElectrode"]["CurrentCollector"]["SpecificHeatCapacity"]
-		pecc_params[:effective_thermal_conductivity] = input.cell_parameters["PositiveElectrode"]["CurrentCollector"]["ThermalConductivity"]
-	end
 
 	sys_pecc = CurrentCollector(pecc_params)
 
@@ -412,12 +419,6 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	if am_params[:setting_temperature_dependence] == "Arrhenius"
 		am_params[:activation_energy_of_diffusion] = inputparams_active_material["ActivationEnergyOfDiffusion"]
 		am_params[:activation_energy_of_reaction] = inputparams_active_material["ActivationEnergyOfReaction"]
-	end
-
-	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
-		am_params[:effective_thermal_conductivity] = compute_effective_thermal_conductivity(am_params, cell_parameters[stringNames[name]])
-		am_params[:effective_volumetric_heat_capacity] = compute_effective_heat_capacity(am_params, cell_parameters[stringNames[name]])
-
 	end
 
 	if haskey(inputparams_active_material, "ReactionRateConstant")
@@ -570,7 +571,9 @@ end
 
 function compute_effective_heat_capacity(comodel, coinputparams)
 
-	# Compute effective thermal conductivity for the coating
+	# Compute volumetric heat capacity for the porous coating.
+	# effective_density is the bulk coating density [kg/m^3], so multiplying it by the
+	# mixture specific heat [J/kg/K] yields a volumetric quantity [J/m^3/K].
 
 	am = "ActiveMaterial"
 	bd = "Binder"
@@ -578,20 +581,14 @@ function compute_effective_heat_capacity(comodel, coinputparams)
 
 	compnames = [am, bd, ad]
 
-	heat_capacity = 0.0
-
-	volume_fractions = comodel[:volume_fractions]
+	specific_heat_capacity = 0.0
 
 	for icomp in eachindex(compnames)
 		compname = compnames[icomp]
-		component_volume_fraction = volume_fractions[icomp]
-		heat_capacity += coinputparams[compname]["MassFraction"] * coinputparams[compname]["SpecificHeatCapacity"]
+		specific_heat_capacity += coinputparams[compname]["MassFraction"] * coinputparams[compname]["SpecificHeatCapacity"]
 	end
 
-	coating_volume_fraction = comodel[:volume_fraction]
-	bg = coinputparams["Coating"]["BruggemanCoefficient"]
-
-	effective_heat_capacity = (coating_volume_fraction^bg) * heat_capacity
+	effective_heat_capacity = comodel[:effective_density] * specific_heat_capacity
 
 	return effective_heat_capacity
 
@@ -691,7 +688,6 @@ function set_parameters(model::IntercalationBattery, input
 	prm_peam[:ElectronicConductivity] = compute_effective_electronic_conductivity(multimodel[:PositiveElectrodeActiveMaterial], cell_parameters["PositiveElectrode"])
 	prm_peam[:Temperature] = T
 
-
 	if discretisation_type(multimodel[:PositiveElectrodeActiveMaterial]) == :P2Ddiscretization
 		# nothing to do
 	else
@@ -711,7 +707,18 @@ function set_parameters(model::IntercalationBattery, input
 		inputparams_pecc = cell_parameters["PositiveElectrode"]["CurrentCollector"]
 		prm_pecc[:ElectronicConductivity] = inputparams_pecc["ElectronicConductivity"]
 
+
 		parameters[:PositiveElectrodeCurrentCollector] = setup_parameters(multimodel[:PositiveElectrodeCurrentCollector], prm_pecc)
+	end
+
+	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
+		prm_thermal = Dict{Symbol, Any}()
+		thermal_sys = multimodel[:ThermalModel].system.params
+		prm_thermal[:BoundaryTemperature] = thermal_sys[:BoundaryTemperature]
+		prm_thermal[:ExternalHeatTransferCoefficient] = thermal_sys[:ExternalHeatTransferCoefficient]
+		prm_thermal[:EffectiveVolumetricHeatCapacity] = thermal_sys[:EffectiveVolumetricHeatCapacity]
+		prm_thermal[:EffectiveThermalConductivity] = thermal_sys[:EffectiveThermalConductivity]
+		parameters[:ThermalModel] = setup_parameters(multimodel[:ThermalModel], prm_thermal)
 	end
 
 	###########
@@ -1099,6 +1106,11 @@ function setup_initial_state(input, model::IntercalationBattery)
 		initState[:NegativeElectrodeCurrentCollector] = setup_current_collector(:NegativeElectrodeCurrentCollector, 0, multimodel)
 		# Setup positive current collector
 		initState[:PositiveElectrodeCurrentCollector] = setup_current_collector(:PositiveElectrodeCurrentCollector, posOCP - negOCP, multimodel)
+	end
+
+	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
+		nc = count_entities(multimodel[:ThermalModel].data_domain, Cells())
+		initState[:ThermalModel] = Dict(:Temperature => fill(T, nc))
 	end
 
 	init = Dict()

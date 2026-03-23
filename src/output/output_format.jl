@@ -367,7 +367,14 @@ end
 function get_padded_states(jutul_output::NamedTuple)
 	multimodel = jutul_output.multimodel
 	states = jutul_output[:states]
-	model_keys = keys(multimodel.models)
+	supported_model_keys = (
+		:NegativeElectrodeCurrentCollector,
+		:NegativeElectrodeActiveMaterial,
+		:Electrolyte,
+		:PositiveElectrodeActiveMaterial,
+		:PositiveElectrodeCurrentCollector,
+	)
+	model_keys = [k for k in supported_model_keys if haskey(multimodel.models, k)]
 
 	n = length(model_keys)
 	ncells = Dict{Symbol, Any}()
@@ -390,11 +397,9 @@ function get_padded_states(jutul_output::NamedTuple)
 
 	# Setup some dicts
 	padded_state = Dict{Symbol, Any}()
-	start_idx = Dict{Symbol, Any}()
-	end_idx = Dict{Symbol, Any}()
+	start_idx = Dict{Symbol, Int}()
+	end_idx = Dict{Symbol, Int}()
 	for k in model_keys
-		start_idx[k] = Dict{Symbol, Any}()
-		end_idx[k] = Dict{Symbol, Any}()
 		padded_state[k] = Dict{Symbol, Any}()
 	end
 

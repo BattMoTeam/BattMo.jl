@@ -1,5 +1,15 @@
 export compute_flux_vector
 
+function get_ohmic_conductivity(model, state)
+	if haskey(state, :ElectronicConductivity)
+		return state[:ElectronicConductivity]
+	elseif haskey(model.system.params, :ElectronicConductivity)
+		return model.system[:ElectronicConductivity]
+	else
+		error("Ohmic conductivity not available for $(typeof(model.system)).")
+	end
+end
+
 function get_energy_source!(thermal_model::ThermalModel, model::IntercalationBattery, state, maps, operators = setup_flux_operators(model))
 
 	multimodel = model.multimodel
@@ -240,12 +250,12 @@ function get_reaction_energy_source_terms(cross_term, models, state)
 			activematerial,
 			models[elyte].system)
 
-		coef = n * F * vols[elde_cells[i]] * vsa * R
-		src_irrev[i] = coef * eta[i]
-		if activematerial.params[:include_entropy_change]
-			src_rev[i] = coef * T[i] * dUdT[i]
+			coef = n * F * vols[elde_cells[i]] * vsa * R
+			src_irrev[i] = coef * eta[i]
+			if activematerial.params[:include_entropy_change]
+				src_rev[i] = coef * T[i] * dUdT[i]
+			end
 		end
-	end
 
 	return src_irrev, src_rev
 end
@@ -256,7 +266,7 @@ function get_energy_source(model::ElectrolyteModel, state, operators)
 
 	# Ohmic flux
 
-	kappa = state[:EffectiveThermalConductivity] # Effective conductivity
+	kappa = get_ohmic_conductivity(model, state)
 
 	fluxvec = compute_flux_vector(model, state, operators)
 	fluxnorm = transpose(sum(fluxvec .^ 2; dims = 1))
@@ -281,7 +291,7 @@ function get_energy_source_terms(model::ElectrolyteModel, state, operators)
 
 	vols = state[:Volume]
 
-	kappa = state[:EffectiveThermalConductivity]
+	kappa = get_ohmic_conductivity(model, state)
 	fluxvec = compute_flux_vector(model, state, operators)
 	fluxnorm = transpose(sum(fluxvec .^ 2; dims = 1))
 	src_ohmic = fluxnorm .* vols ./ kappa
@@ -303,7 +313,7 @@ end
 function get_energy_source(model::ActiveMaterialModel, state, operators)
 
 	vols  = state[:Volume]
-	kappa = state[:EffectiveThermalConductivity] # Effective conductivity
+	kappa = get_ohmic_conductivity(model, state)
 
 	# Ohmic flux
 
@@ -324,7 +334,7 @@ end
 function get_energy_source(model::CurrentCollectorModel, state, operators)
 
 	vols  = state[:Volume]
-	kappa = state[:EffectiveThermalConductivity]
+	kappa = get_ohmic_conductivity(model, state)
 
 	# Ohmic flux
 

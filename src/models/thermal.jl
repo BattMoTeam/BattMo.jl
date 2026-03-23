@@ -170,7 +170,6 @@ function apply_boundary_temperature!(acc, state, parameters, model::ThermalModel
 		BoundaryT = state[:BoundaryTemperature]
 		conductivity = state[:EffectiveThermalConductivity]
 		extcoef = state[:ExternalHeatTransferCoefficient]
-		use_boundary_series_resistance = get(model.system.params, :use_boundary_series_resistance, true)
 
 		if dolegacy
 			T_hf = model.domain.representation.boundary_hfT
@@ -181,7 +180,6 @@ function apply_boundary_temperature!(acc, state, parameters, model::ThermalModel
 		else
 			for (i, (ht, c)) in enumerate(zip(bchalftrans, bccells))
 				if extcoef[i] > 0
-
 					m = 1/(1/(ht*conductivity[c]) + 1/extcoef[i])
 
 				else
@@ -197,6 +195,36 @@ end
 #######################
 # setup thermal model #
 #######################
+
+function effective_current_collector_heat_capacity(ccmodel, ccinputparams)
+	return ccmodel.system[:density] * ccinputparams["SpecificHeatCapacity"]
+end
+
+function effective_current_collector_thermal_conductivity(ccinputparams)
+	return ccinputparams["ThermalConductivity"]
+end
+
+function effective_electrolyte_heat_capacity(elytemodel, elyteparams)
+	vf = elytemodel.domain.representation[:volumeFraction]
+	return vf .* elyteparams["Density"] .* elyteparams["SpecificHeatCapacity"]
+end
+
+function effective_electrolyte_thermal_conductivity(elytemodel, elyteparams, separatorparams)
+	vf = elytemodel.domain.representation[:volumeFraction]
+	bg = separatorparams["BruggemanCoefficient"]
+	return (vf .^ bg) .* elyteparams["ThermalConductivity"]
+end
+
+function effective_separator_heat_capacity(separatorparams)
+	vf = 1 - separatorparams["Porosity"]
+	return vf * separatorparams["Density"] * separatorparams["SpecificHeatCapacity"]
+end
+
+function effective_separator_thermal_conductivity(separatorparams)
+	vf = 1 - separatorparams["Porosity"]
+	bg = separatorparams["BruggemanCoefficient"]
+	return (vf^bg) * separatorparams["ThermalConductivity"]
+end
 
 function setup_thermal_model(model, submodels, input, grids, global_maps)
 
@@ -231,8 +259,10 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 		if haskey(model.settings, "CurrentCollectors")
 
 			cc_map = maps[string(elde, cc)][1].cellmap
-			cc_volumetric_heat_capacity = submodels[string(elde, cc)].system.params[:effective_volumetric_heat_capacity]
-			cc_thermal_conductivity = submodels[string(elde, cc)].system.params[:effective_thermal_conductivity]
+			ccmodel = submodels[string(elde, cc)]
+			ccparams = cell_parameters[string(elde)]["CurrentCollector"]
+			cc_volumetric_heat_capacity = effective_current_collector_heat_capacity(ccmodel, ccparams)
+			cc_thermal_conductivity = effective_current_collector_thermal_conductivity(ccparams)
 
 			volumetric_heat_capacity[cc_map] .= cc_volumetric_heat_capacity
 			thermal_conductivity[cc_map] .= cc_thermal_conductivity
@@ -240,8 +270,10 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 
 		# Active material (coating)
 		am_map = maps[string(elde, am)][1].cellmap
-		am_volumetric_heat_capacity = submodels[string(elde, am)].system.params[:effective_volumetric_heat_capacity]
-		am_thermal_conductivity = submodels[string(elde, am)].system.params[:effective_thermal_conductivity]
+		ammodel = submodels[string(elde, am)]
+		amparams = cell_parameters[string(elde)]
+		am_volumetric_heat_capacity = compute_effective_heat_capacity(ammodel.system.params, amparams)
+		am_thermal_conductivity = compute_effective_thermal_conductivity(ammodel.system.params, amparams)
 
 		volumetric_heat_capacity[am_map] .= am_volumetric_heat_capacity
 		thermal_conductivity[am_map] .= am_thermal_conductivity
@@ -250,16 +282,17 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 
 	# Electrolyte
 	elyte_map = maps[string(elyte)][1].cellmap
-	elyte_volumetric_heat_capacity = submodels[string(elyte)].system.params[:effective_volumetric_heat_capacity]
-	elyte_thermal_conductivity = submodels[string(elyte)].system.params[:effective_thermal_conductivity]
+	elytemodel = submodels[string(elyte)]
+	elyte_volumetric_heat_capacity = effective_electrolyte_heat_capacity(elytemodel, cell_parameters[string(elyte)])
+	elyte_thermal_conductivity = effective_electrolyte_thermal_conductivity(elytemodel, cell_parameters[string(elyte)], cell_parameters[string(sep)])
 
 	volumetric_heat_capacity[elyte_map] .= elyte_volumetric_heat_capacity
 	thermal_conductivity[elyte_map] .= elyte_thermal_conductivity
 
 	# Separator
 	sep_map = maps[string(sep)][1].cellmap
-	sep_volumetric_heat_capacity = submodels[string(sep)].system.params[:effective_volumetric_heat_capacity]
-	sep_thermal_conductivity = submodels[string(sep)].system.params[:effective_thermal_conductivity]
+	sep_volumetric_heat_capacity = effective_separator_heat_capacity(cell_parameters[string(sep)])
+	sep_thermal_conductivity = effective_separator_thermal_conductivity(cell_parameters[string(sep)])
 
 	volumetric_heat_capacity[sep_map] .= sep_volumetric_heat_capacity
 	thermal_conductivity[sep_map] .= sep_thermal_conductivity
@@ -305,10 +338,6 @@ function setup_thermal_model(input, grids)
 	nc = Jutul.number_of_cells(grid)
 	thermal_parameters = cell_parameters["ThermalModel"]
 
-	thermalsystem = ThermalSystem()
-
-	model = setup_component(grid, thermalsystem)
-
 	# setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
 	# sensitivities)
 
@@ -320,6 +349,8 @@ function setup_thermal_model(input, grids)
 
 	prm[:EffectiveThermalConductivity] = thermal_parameters["EffectiveThermalConductivity"]
 
+	thermalsystem = ThermalSystem(JutulStorage(prm))
+	model = setup_component(grid, thermalsystem)
 	parameters = setup_parameters(model, prm)
 
 	# parameters[:Source]                   .= parameters[:Source].*parameters[:Volume]
@@ -411,5 +442,3 @@ end
 # 	return model, parameters
 
 # end
-
-
