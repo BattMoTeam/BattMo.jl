@@ -18,5 +18,3 @@ include("test_loader.jl")
 include("test_matlab_input.jl")
 include("test_temperature_dependence.jl")
 include("test_input_current_series.jl")
-
-
