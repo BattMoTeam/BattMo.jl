@@ -1,7 +1,7 @@
 # # Handling Cell Parameters
 
-# To change cell parameters, cycling protocols and settings, we can modify the JSON files directly, or we can read 
-# them into objects in the script and modify them as Dictionaries. 
+# To change cell parameters, cycling protocols and settings, we can modify the JSON files directly, or we can read
+# them into objects in the script and modify them as Dictionaries.
 
 # ###  Load parameter files and initialize Model
 
@@ -21,16 +21,16 @@ keys(cell_parameters)
 # Now we access the Separator key.
 cell_parameters["Separator"]
 
-# We have a flat list of parameters and values for the separator. In other cases, a key might nest other dictionaries, 
-# which can be accessed using the normal dictionary notation. Lets see for instance the  active material parameters of 
+# We have a flat list of parameters and values for the separator. In other cases, a key might nest other dictionaries,
+# which can be accessed using the normal dictionary notation. Lets see for instance the  active material parameters of
 # the negative electrode.
 cell_parameters["NegativeElectrode"]["ActiveMaterial"]
 
-# In addition to manipulating parameters as dictionaries, we provide additional handy attributes and functions. 
+# In addition to manipulating parameters as dictionaries, we provide additional handy attributes and functions.
 # For instance, we can display all cell parameters:
 cell_parameters.all
 
-# However, there are many parameters, nested into dictionaries. Often, we are more interested in a specific subset of parameters. 
+# However, there are many parameters, nested into dictionaries. Often, we are more interested in a specific subset of parameters.
 # We can find a parameter with the search_parameter function. For example, we'd like to now how electrode related objects and parameters are named:
 search_parameter(cell_parameters, "Electrode")
 
@@ -43,7 +43,7 @@ search_parameter(cell_parameters, "char")
 # ### Editing scalar parameters
 
 # Parameter that take single numerical values (e.g. real, integers, booleans) can be directly modified. Examples:
-cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 1e-13
+cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"] = 1.0e-13
 nothing # hide
 
 cell_parameters["PositiveElectrode"]["Coating"]["Thickness"] = 8.2e-5
@@ -53,13 +53,13 @@ nothing # hide
 # ### Editing non-scalar parameters
 
 # Some parameters are described as functions or arrays, since the parameter value depends on other variables. For instance
-# the Open Circuit Potentials of the Active Materials depend on the lithium stoichiometry and temperature. 
+# the Open Circuit Potentials of the Active Materials depend on the lithium stoichiometry and temperature.
 
-# > MISSING 
+# > MISSING
 
-# ### Compare simulations 
+# ### Compare simulations
 
-# After the updates, we instantiate the model and the simulations, verify the simulation to be valid, 
+# After the updates, we instantiate the model and the simulations, verify the simulation to be valid,
 # and run it as in the first tutorial.
 
 model = LithiumIonBattery()

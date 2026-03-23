@@ -854,7 +854,6 @@ function setup_timesteps(
         timesteps = repeat([dt], Int64(floor(n)))
 
     elseif protocol == "InputCurrentSeries"
-
         # The time series defines the time steps directly
         series_times = Float64.(cycling_protocol["Times"])
         timesteps = diff(series_times)
@@ -867,6 +866,7 @@ function setup_timesteps(
     end
 
     return timesteps
+
 end
 
 function compute_rampup_timesteps(time::Real, dt::Real, n::Integer = 8)

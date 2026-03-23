@@ -407,6 +407,7 @@ end
 
 
 function get_schema_cycling_protocol(model_settings::ModelSettings)
+
     # Retrieve meta-data for validation
     parameter_meta = get_cycling_protocol_meta_data()
     schema = Dict(

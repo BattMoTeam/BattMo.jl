@@ -1,4 +1,5 @@
 export
+
     CurrentAndVoltageSystem,
     CurrentAndVoltageDomain,
     VoltageVar,
@@ -684,7 +685,6 @@ function setup_initial_control_policy!(policy::CyclingCVPolicy, input, parameter
     policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
     return policy.lowerCutoffVoltage = cycling_protocol["LowerVoltageLimit"]
 
-
 end
 
 function setup_initial_control_policy!(policy::InputCurrentPolicy, input, parameters)
@@ -924,6 +924,7 @@ function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{Cu
         model
     )
     return copyController!(storage.state[:Controller], storage.state0[:Controller])
+
 end
 
 
@@ -1502,7 +1503,6 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
         error("Policy $(typeof(policy)) not recognized")
 
     end
-
 
 end
 
