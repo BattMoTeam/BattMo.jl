@@ -168,8 +168,6 @@ function setup_submodels(model::IntercalationBattery, input, grids, couplings; g
 
 	model_control = setup_control_model(input, model_neam, model_peam; kwargs...)
 
-	@show model.settings
-
 	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
 		submodels = (model_neam = model_neam,
 			model_peam = model_peam,
@@ -588,7 +586,7 @@ function compute_effective_heat_capacity(comodel, coinputparams)
 		specific_heat_capacity += coinputparams[compname]["MassFraction"] * coinputparams[compname]["SpecificHeatCapacity"]
 	end
 
-	effective_heat_capacity = comodel[:effective_density] * specific_heat_capacity
+	effective_heat_capacity = comodel[:volume_fraction] * comodel[:effective_density] * specific_heat_capacity
 
 	return effective_heat_capacity
 

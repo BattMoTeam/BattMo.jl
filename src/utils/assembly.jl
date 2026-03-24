@@ -250,12 +250,14 @@ function get_reaction_energy_source_terms(cross_term, models, state)
 			activematerial,
 			models[elyte].system)
 
-			coef = n * F * vols[elde_cells[i]] * vsa * R
-			src_irrev[i] = coef * eta[i]
-			if activematerial.params[:include_entropy_change]
-				src_rev[i] = coef * T[i] * dUdT[i]
-			end
+		coef = n * F * vols[elde_cells[i]] * vsa * R
+		src_irrev[i] = coef * eta[i]
+		if activematerial.params[:include_entropy_change]
+			src_rev[i] = coef * T[i] * dUdT[i]
 		end
+		# @show src_rev[i], vols[elde_cells[i]], vsa*R
+	end
+
 
 	return src_irrev, src_rev
 end

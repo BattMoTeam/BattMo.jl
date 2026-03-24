@@ -140,25 +140,6 @@ function apply_boundary_temperature!(acc, state, parameters, model::ThermalModel
 
 	dolegacy = false
 
-	# if model.domain.representation isa MinimalECTPFAGrid
-
-	# 	error("not supported yet")
-	# 	bc = model.domain.representation.boundary_cells
-	# 	if length(bc) > 0
-	# 		dobc = true
-	# 	else
-	# 		dobc = false
-	# 	end
-
-	# 	dolegacy = true
-
-	# else
-
-	# 	bchalftrans = model.domain.representation[:bcTrans]
-	# 	bccells     = model.domain.representation[:boundary_neighbors]
-
-	# end
-
 	bchalftrans = model.domain.representation[:bcTrans]
 	bccells     = model.domain.representation[:boundary_neighbors]
 
@@ -185,6 +166,7 @@ function apply_boundary_temperature!(acc, state, parameters, model::ThermalModel
 				else
 					m = 0
 				end
+				# @show m, conductivity[c], extcoef[i], T[c], BoundaryT[i]
 				@inbounds acc[c] += m*(T[c] - value(BoundaryT[i]))
 			end
 		end
@@ -232,8 +214,6 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 	thermal_parameters = cell_parameters["ThermalModel"]
 	maps = global_maps
 
-	@show keys(maps)
-
 	ne = "NegativeElectrode"
 	pe = "PositiveElectrode"
 	elyte = "Electrolyte"
@@ -264,8 +244,8 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 			cc_volumetric_heat_capacity = effective_current_collector_heat_capacity(ccmodel, ccparams)
 			cc_thermal_conductivity = effective_current_collector_thermal_conductivity(ccparams)
 
-			volumetric_heat_capacity[cc_map] .= cc_volumetric_heat_capacity
-			thermal_conductivity[cc_map] .= cc_thermal_conductivity
+			volumetric_heat_capacity[cc_map] .+= cc_volumetric_heat_capacity
+			thermal_conductivity[cc_map] .+= cc_thermal_conductivity
 		end
 
 		# Active material (coating)
@@ -275,8 +255,10 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 		am_volumetric_heat_capacity = compute_effective_heat_capacity(ammodel.system.params, amparams)
 		am_thermal_conductivity = compute_effective_thermal_conductivity(ammodel.system.params, amparams)
 
-		volumetric_heat_capacity[am_map] .= am_volumetric_heat_capacity
-		thermal_conductivity[am_map] .= am_thermal_conductivity
+		volumetric_heat_capacity[am_map] .+= am_volumetric_heat_capacity
+		thermal_conductivity[am_map] .+= am_thermal_conductivity
+
+
 
 	end
 
@@ -285,17 +267,18 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 	elytemodel = submodels[string(elyte)]
 	elyte_volumetric_heat_capacity = effective_electrolyte_heat_capacity(elytemodel, cell_parameters[string(elyte)])
 	elyte_thermal_conductivity = effective_electrolyte_thermal_conductivity(elytemodel, cell_parameters[string(elyte)], cell_parameters[string(sep)])
-
-	volumetric_heat_capacity[elyte_map] .= elyte_volumetric_heat_capacity
-	thermal_conductivity[elyte_map] .= elyte_thermal_conductivity
+	volumetric_heat_capacity[elyte_map] .+= elyte_volumetric_heat_capacity
+	thermal_conductivity[elyte_map] .+= elyte_thermal_conductivity
 
 	# Separator
 	sep_map = maps[string(sep)][1].cellmap
+
+
 	sep_volumetric_heat_capacity = effective_separator_heat_capacity(cell_parameters[string(sep)])
 	sep_thermal_conductivity = effective_separator_thermal_conductivity(cell_parameters[string(sep)])
 
-	volumetric_heat_capacity[sep_map] .= sep_volumetric_heat_capacity
-	thermal_conductivity[sep_map] .= sep_thermal_conductivity
+	volumetric_heat_capacity[sep_map] .+= sep_volumetric_heat_capacity
+	thermal_conductivity[sep_map] .+= sep_thermal_conductivity
 
 
 	# setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
@@ -319,13 +302,12 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 
 	model = setup_component(global_grid, thermalsystem)
 
-	@show propertynames(prm)
-
 	parameters = setup_parameters(model, prm_dict)
 
 	# parameters[:Source]                   .= parameters[:Source].*parameters[:Volume]
 	parameters[:ExternalHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:ExternalHeatTransferCoefficient]
 
+	@show size(model.domain.representation[:boundary_areas]), model.domain.representation[:boundary_areas]
 	return model, parameters
 
 end
@@ -420,6 +402,7 @@ end
 # 	grid = grids["ThermalModel"]
 
 # 	thermalsystem = ThermalSystem()
+
 
 # 	model = setup_component(grid, thermalsystem;
 # 		general_ad = general_ad)
