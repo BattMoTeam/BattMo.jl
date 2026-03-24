@@ -124,9 +124,10 @@
       "enum": [
         "CC",
         "CCCV",
-        "Function"
+        "Function",
+        "InputCurrentSeries"
       ],
-      "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('CCCV')."
+      "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('CCCV'), or a prescribed current time series ('InputCurrentSeries')."
     },
     "FunctionName": {
       "type": "string",

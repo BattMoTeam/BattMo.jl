@@ -1,4 +1,3 @@
-
 function get_nested_json_value(x::ParameterSet, key::Vector{String})
     return get_nested_json_value(x.all, key)
 end
@@ -15,8 +14,8 @@ function set_nested_json_value!(x::ParameterSet, key::Vector{String}, value)
 end
 
 function set_nested_json_value!(x::AbstractDict, key::Vector{String}, value)
-    for k in key[1:end-1]
+    for k in key[1:(end - 1)]
         x = x[k]
     end
-    x[key[end]] = value
+    return x[key[end]] = value
 end

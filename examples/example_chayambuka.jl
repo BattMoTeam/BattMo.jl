@@ -1,7 +1,7 @@
 # # Sodium ion modeling
 
 # This is an example for showing a sodium ion simulation based on [chayambuka_2022](https://www.sciencedirect.com/science/article/pii/S0013468621020478?via%3Dihub).
-# There is hardly any difference between the sodium ion and lithium ion PXD basis model and equations. The only difference is that for the SodiumIonBattery model 
+# There is hardly any difference between the sodium ion and lithium ion PXD basis model and equations. The only difference is that for the SodiumIonBattery model
 # you can chose a slightly adapted butler volmer equation from [chayambuka_2022](https://www.sciencedirect.com/science/article/pii/S0013468621020478?via%3Dihub). See documentation for more information.
 
 using BattMo, GLMakie
@@ -40,15 +40,15 @@ ax = Axis(fig[1, 1], title = "Voltage", xlabel = "Capacity / mAh", ylabel = "Vol
 outputs_crate = []
 for (i, rate) in enumerate(drates)
 
-	cycling_protocol["DRate"] = rate
-	simulation_settings["TimeStepDuration"] = delta_t[i]
+    cycling_protocol["DRate"] = rate
+    simulation_settings["TimeStepDuration"] = delta_t[i]
 
-	sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
+    sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
 
-	output = solve(sim;)
-	time_series = output.time_series
+    output = solve(sim)
+    time_series = output.time_series
 
-	lines!(ax, time_series["CumulativeCapacity"] .* 1000, time_series["Voltage"], label = "$rate C")
+    lines!(ax, time_series["CumulativeCapacity"] .* 1000, time_series["Voltage"], label = "$rate C")
 
 end
 
