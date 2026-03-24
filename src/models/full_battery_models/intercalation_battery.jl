@@ -970,8 +970,8 @@ end
 
 function setup_initial_state(input, model::IntercalationBattery)
 
-    if !isnothing(model.initial_state)
-        return model.initial_state
+    if !isnothing(input.initial_state)
+        return input.initial_state
     end
 
     multimodel = model.multimodel

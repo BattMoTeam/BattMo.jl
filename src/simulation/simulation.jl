@@ -63,7 +63,7 @@ struct Simulation <: AbstractSimulation
             cycling_protocol::CyclingProtocol;
             simulation_settings::SimulationSettings = get_default_simulation_settings(model),
             time_steps = nothing,
-            state0 = nothing,
+            initial_state = nothing,
             hook = nothing,
             kwargs...,
         ) where {M <: ModelConfigured}
@@ -89,7 +89,7 @@ struct Simulation <: AbstractSimulation
                 cycling_protocol = cycling_protocol,
                 simulation_settings = simulation_settings,
                 time_steps = time_steps,
-                state0 = state0,
+                initial_state = initial_state,
             )
 
             try
