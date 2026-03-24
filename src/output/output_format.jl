@@ -116,7 +116,9 @@ function get_output_metrics(
 
     controller = states[1][:Control][:Controller]
 
-    if !isa(controller, FunctionController)
+    if isa(controller, FunctionController) || isa(controller, InputCurrentController)
+        available_quantities = Dict()
+    else
         cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : nothing
 
         # Metric storage
@@ -158,8 +160,7 @@ function get_output_metrics(
             "ChargeEnergy" => charge_energy,
             "RoundTripEfficiency" => round_trip_efficiency,
         )
-    else
-        available_quantities = Dict()
+
     end
 
     # Return only requested metrics or all

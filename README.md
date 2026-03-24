@@ -114,6 +114,10 @@ plot_3D_results(output)
 
 ![3D plot](docs/src/assets/3d_plot.png)
 
+## Contributing
+
+Please report bugs, issues or suggest enhancements by filing an issue. To contribute code to BattMo, please create a pull request. You're also most welcome to email the developers at battmo@sintef.no if you have questions.
+
 ## Acknowledgements
 
 BattMo has received funding from the European Union’s Horizon 2020 innovation program under grant agreement numbers:

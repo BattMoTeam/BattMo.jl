@@ -133,6 +133,15 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 
         policy = FunctionPolicy(function_name; file_path)
 
+    elseif protocol == "InputCurrentSeries"
+
+        times = cycling_protocol["Times"]
+        currents = cycling_protocol["Currents"]
+        lower_v = cycling_protocol["LowerVoltageLimit"]
+        upper_v = cycling_protocol["UpperVoltageLimit"]
+
+        policy = InputCurrentPolicy(times, currents, lower_v, upper_v)
+
     else
 
         error("controlPolicy not recognized.")
@@ -724,6 +733,10 @@ function set_parameters(
         prm_control[:ImaxCharge] = (cap / con.hour) * CRate
 
         parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
+
+    elseif protocol == "InputCurrentSeries"
+
+        parameters[:Control] = setup_parameters(multimodel[:Control])
 
     else
         error("control policy $controlPolicy not recognized")

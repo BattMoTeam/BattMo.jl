@@ -1,4 +1,5 @@
 export
+
     CurrentAndVoltageSystem,
     CurrentAndVoltageDomain,
     VoltageVar,
@@ -6,7 +7,8 @@ export
     sineup,
     SimpleCVPolicy,
     CyclingCVPolicy,
-    OperationalMode
+    OperationalMode,
+    InputCurrentPolicy
 
 ################################
 # Define the operational modes #
@@ -130,6 +132,39 @@ struct FunctionPolicy <: AbstractPolicy
         return new{}(current_function)
     end
 
+end
+
+"""
+Input current series policy.
+
+Applies a prescribed current time series (times in seconds, currents in amperes).
+The `times` vector must be strictly increasing. A Jutul linear interpolator
+(`get_1d_interpolator`) is used to evaluate the current at any simulation time.
+Voltage limits are enforced: if the voltage response exceeds `upperCutoffVoltage` or
+falls below `lowerCutoffVoltage`, the controller switches to constant-voltage control
+at the respective limit. The lengths of `times` and `currents` must match.
+
+Voltage limits may be set to `±Inf` if they should not be enforced.
+"""
+mutable struct InputCurrentPolicy{R} <: AbstractPolicy
+    times::Vector{R}
+    current_function::Any      # get_1d_interpolator(times, currents) – callable as f(t)
+    lowerCutoffVoltage::R
+    upperCutoffVoltage::R
+
+    function InputCurrentPolicy(
+            times::AbstractVector,
+            currents::AbstractVector,
+            lowerCutoffVoltage::Real,
+            upperCutoffVoltage::Real,
+        )
+        @assert length(times) == length(currents) "times and currents must have the same length"
+        @assert length(times) >= 1 "times and currents must be non-empty"
+        @assert issorted(times, lt = <) "times must be strictly increasing"
+        T = promote_type(eltype(times), eltype(currents), typeof(lowerCutoffVoltage), typeof(upperCutoffVoltage))
+        current_function = get_1d_interpolator(times, currents, cap_endpoints = true)
+        return new{T}(convert(Vector{T}, times), current_function, T(lowerCutoffVoltage), T(upperCutoffVoltage))
+    end
 end
 
 """ Standard CC-CV policy
@@ -343,6 +378,20 @@ end
     return R
 end
 
+## InputCurrentController
+
+mutable struct InputCurrentController{R} <: Controller
+    target::R
+    time::R
+    target_is_voltage::Bool
+end
+
+InputCurrentController() = InputCurrentController(0.0, 0.0, false)
+
+@inline function Jutul.numerical_type(x::InputCurrentController{R}) where {R}
+    return R
+end
+
 
 """
 Function to create (deep) copy of simple controller
@@ -441,6 +490,28 @@ function Base.copy(cv::CcCvController)
 end
 
 """
+Function to create (deep) copy of input current controller
+"""
+function copyController!(cv_copy::InputCurrentController, cv::InputCurrentController)
+
+    cv_copy.target = cv.target
+    cv_copy.time = cv.time
+    return cv_copy.target_is_voltage = cv.target_is_voltage
+
+end
+
+"""
+Overload function to copy input current controller
+"""
+function Base.copy(cv::InputCurrentController)
+
+    cv_copy = InputCurrentController()
+    copyController!(cv_copy, cv)
+
+    return cv_copy
+
+end
+"""
 We add the controller in the output
 """
 function Jutul.select_minimum_output_variables!(
@@ -509,6 +580,11 @@ function getInitCurrent(policy::CyclingCVPolicy)
     end
     return val
 
+end
+
+function getInitCurrent(policy::InputCurrentPolicy)
+    # Return the current at the first time point using the interpolator
+    return policy.current_function(policy.times[1])
 end
 
 function getInitCurrent(model::CurrentAndVoltageModel)
@@ -609,7 +685,11 @@ function setup_initial_control_policy!(policy::CyclingCVPolicy, input, parameter
     policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
     return policy.lowerCutoffVoltage = cycling_protocol["LowerVoltageLimit"]
 
+end
 
+function setup_initial_control_policy!(policy::InputCurrentPolicy, input, parameters)
+    # The policy already contains the full time series and voltage limits.
+    # Nothing additional needs to be set up from parameters.
 end
 
 ###################################
@@ -784,6 +864,12 @@ function Jutul.update_values!(old::CcCvController, new::CcCvController)
 
 end
 
+function Jutul.update_values!(old::InputCurrentController, new::InputCurrentController)
+
+    return copyController!(old, new)
+
+end
+
 """
 In addition to update the values in all primary variables, we need also to update the values in the controller. We do that by specializing the method perform_step_solve_impl!
 """
@@ -824,6 +910,21 @@ function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{Cu
         model
     )
     return copyController!(storage.state[:Controller], storage.state0[:Controller])
+end
+
+function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{InputCurrentPolicy{T1}}, T3, T4}) where {T1, T3, T4}
+
+    invoke(
+        reset_state_to_previous_state!,
+        Tuple{
+            typeof(storage),
+            SimulationModel,
+        },
+        storage,
+        model
+    )
+    return copyController!(storage.state[:Controller], storage.state0[:Controller])
+
 end
 
 
@@ -1025,6 +1126,60 @@ end
 # Functions to update the values in the controller in state #
 #############################################################
 
+"""
+Implementation of the InputCurrentPolicy.
+
+The prescribed current is evaluated by calling the Jutul linear interpolator
+(`policy.current_function`) at the current simulation time.
+If the resulting voltage response would violate the voltage limits, constant-voltage
+control is applied at the respective limit instead, preventing voltage spikes.
+"""
+function update_control_type_in_controller!(state, state0, policy::InputCurrentPolicy, dt)
+
+    # Relative tolerance for voltage hysteresis: if the voltage is within this fraction
+    # of the limit, we remain in CV mode to avoid oscillating between CC and CV control
+    # during Newton iterations at the transition boundary.
+    const_voltage_hysteresis_tol = 1.0e-4
+
+    controller = state.Controller
+
+    controller.time = state0.Controller.time + dt
+
+    E = only(value(state[:ElectricPotential]))
+    t = controller.time
+
+    I_target = policy.current_function(t)
+
+    # Determine which voltage limit is relevant based on the sign of the prescribed current,
+    # then check whether the voltage has crossed that limit.
+    if I_target > 0
+        # Discharging: enforce lower voltage limit
+        target_is_voltage = (E <= policy.lowerCutoffVoltage)
+    elseif I_target < 0
+        # Charging: enforce upper voltage limit
+        target_is_voltage = (E >= policy.upperCutoffVoltage)
+    else
+        # Zero current (rest): no voltage limit applies
+        target_is_voltage = false
+    end
+
+    # Hysteresis: if we were already in voltage-control mode in the converged previous
+    # state, stay in voltage-control mode as long as the limit is still binding.
+    # This prevents oscillations at the CC/CV boundary within Newton iterations.
+    if state0.Controller.target_is_voltage && !target_is_voltage
+        # We were in CV mode; only switch back to CC if the prescribed current
+        # would not immediately violate the limit again.
+        if I_target > 0 && E <= policy.lowerCutoffVoltage * (1 + const_voltage_hysteresis_tol)
+            target_is_voltage = true
+        elseif I_target < 0 && E >= policy.upperCutoffVoltage * (1 - const_voltage_hysteresis_tol)
+            target_is_voltage = true
+        end
+    end
+
+    return controller.target_is_voltage = target_is_voltage
+
+end
+
 # Once the controller has been assigned the given control, we adjust the target value which is used in the equation
 # assembly
 
@@ -1198,6 +1353,29 @@ function update_values_in_controller!(state, policy::CyclingCVPolicy)
 
 end
 
+function update_values_in_controller!(state, policy::InputCurrentPolicy)
+
+    controller = state.Controller
+    t = controller.time
+
+    I_target = policy.current_function(t)
+
+    return if controller.target_is_voltage
+        # In voltage-control mode: use the appropriate voltage limit
+        if I_target >= 0
+            # Discharging hit the lower limit
+            controller.target = policy.lowerCutoffVoltage
+        else
+            # Charging hit the upper limit
+            controller.target = policy.upperCutoffVoltage
+        end
+    else
+        # In current-control mode: use the interpolated time-series current
+        controller.target = I_target
+    end
+
+end
+
 #############################
 # Assembly of the equations #
 #############################
@@ -1316,13 +1494,15 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
             ctrl.numberOfCycles = ncycles
         end
 
+    elseif policy isa InputCurrentPolicy
+
+        copyController!(storage.state0[:Controller], ctrl)
 
     else
 
         error("Policy $(typeof(policy)) not recognized")
 
     end
-
 
 end
 
@@ -1407,6 +1587,15 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
         end
 
         update_values_in_controller!(state, policy)
+
+    elseif policy isa InputCurrentPolicy
+
+        time = 0.0
+        target = policy.current_function(time)
+        target_is_voltage = false
+
+        target, time = promote(target, time)
+        state[:Controller] = InputCurrentController(target, time, target_is_voltage)
 
     end
 

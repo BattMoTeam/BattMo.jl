@@ -853,6 +853,12 @@ function setup_timesteps(
         n = totalTime / dt
         timesteps = repeat([dt], Int64(floor(n)))
 
+    elseif protocol == "InputCurrentSeries"
+        # The time series defines the time steps directly
+        series_times = Float64.(cycling_protocol["Times"])
+        timesteps = diff(series_times)
+        timesteps = timesteps[timesteps .> 0.0]
+
     else
 
         error("Control policy $controlPolicy not recognized")
@@ -860,6 +866,7 @@ function setup_timesteps(
     end
 
     return timesteps
+
 end
 
 function compute_rampup_timesteps(time::Real, dt::Real, n::Integer = 8)
