@@ -132,3 +132,9 @@ scatterlines!(ax,
 )
 
 display(GLMakie.Screen(), f2)
+
+
+#########################################################
+# Plot source term contributions
+
+BattMo.plot_thermal_source_contributions(t, sources_julia; total_source = sources_julia_matrix)

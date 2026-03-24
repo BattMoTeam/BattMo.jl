@@ -255,7 +255,7 @@ function get_reaction_energy_source_terms(cross_term, models, state)
 		if activematerial.params[:include_entropy_change]
 			src_rev[i] = coef * T[i] * dUdT[i]
 		end
-		# @show src_rev[i], vols[elde_cells[i]], vsa*R
+
 	end
 
 
@@ -332,6 +332,7 @@ function get_energy_source_terms(model::ActiveMaterialModel, state, operators)
 	src = get_energy_source(model, state, operators)
 	return Dict(:OhmicActiveMaterial => src)
 end
+
 
 function get_energy_source(model::CurrentCollectorModel, state, operators)
 
@@ -435,7 +436,7 @@ function compute_flux_vector(model, state, operators; fieldname = :Charge)
 				face_sign = 1
 			else
 				other_cell = neighbors[iface][1]
-				face_sign = -1 #2
+				face_sign = -1 # This was 2 instead of -1
 			end
 
 			localflux[iloc] = compute_flux(Val(fieldname), model, state, cell, other_cell, iface, face_sign)

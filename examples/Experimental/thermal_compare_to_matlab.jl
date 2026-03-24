@@ -1,7 +1,7 @@
 using BattMo, GLMakie, MAT, Jutul, Statistics
 
 ###############################################
-# MATLAB data
+# Retrieve MATLAB data
 
 fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/run_only_thermal.mat")
 
@@ -13,13 +13,20 @@ t_matlab_full = data["time"][:, 1]
 t_matlab = t_matlab_full[1:(end-1)]
 E_matlab = data["E"][:, 1][1:(end-1)]
 sources_matlab = data["sourceTerms"]
-states_heat = data["states_heat"]
-
-@show keys(states_heat[end]["ThermalModel"])
+states_heat_matlab = data["states_heat"]
+heat_source_data_matlab = data["heatSourceData"]
 
 for (k, v) in data
-	println("KEY: ", k, " | TYPE: ", typeof(v))
+	println("MATLAB data key: ", k, " | type: ", typeof(v))
 end
+
+println("")
+println("Heat source terms in matlab (states_heat_matlab):")
+println(keys(states_heat_matlab[end]["ThermalModel"]))
+println("")
+println("Heat source terms in matlab (heatSourceData):")
+println(keys(heat_source_data_matlab))
+
 
 effective_thermal_conductivity_matlab = vec(data["effectiveThermalConductivity"])
 effective_volumetric_heat_capacity_matlab = vec(data["effectiveVolumetricHeatCapacity"])
@@ -28,49 +35,26 @@ effective_volumetric_heat_capacity_matlab = vec(data["effectiveVolumetricHeatCap
 function convert_matlab_cells_to_matrix(cells)
 	outer = vec(cells)
 	vectors = [vec(inner[:, 1]) for inner in outer]
-	M = reduce(hcat, vectors)
-	return permutedims(M)
+	sources_matlab_matrix = reduce(hcat, vectors)
+	return permutedims(sources_matlab_matrix)
 end
 
-M = convert_matlab_cells_to_matrix(sources_matlab)
-t_source_ref = length(t_matlab_full) == size(M, 1) ? t_matlab_full : t_matlab
+sources_matlab_matrix = convert_matlab_cells_to_matrix(sources_matlab)
+t_source_ref = length(t_matlab_full) == size(sources_matlab_matrix, 1) ? t_matlab_full : t_matlab
 
-# Toggle use of MATLAB-retrieved quantities in Julia.
-# For strict thermal parity against the MATLAB runOnlyThermal case, use the MATLAB
-# source terms on the MATLAB time grid.
-use_matlab_source_terms = true
+# Toggle use of MATLAB-retrieved sourced terms in the julia simulation.
+use_matlab_source_terms = false
 
-function interpolate_source_at_time(tq, t_ref, M; pre_first_mode::Symbol = :hold_first)
-	if tq < t_ref[1]
-		if pre_first_mode == :zero
-			return zeros(eltype(M), size(M, 2))
-		end
-		return vec(M[1, :])
-	elseif tq == t_ref[1]
-		return vec(M[1, :])
-	elseif tq >= t_ref[end]
-		return vec(M[end, :])
-	else
-		i0 = searchsortedlast(t_ref, tq)
-		i1 = i0 + 1
-		w = (tq - t_ref[i0])/(t_ref[i1] - t_ref[i0])
-		return vec((1 - w) .* M[i0, :] .+ w .* M[i1, :])
-	end
-end
-
+# Compute maximum temperature from matlab data
 T_max_matlab = Float64[]
 for i in eachindex(t_matlab)
 	T_matlab = data["states_thermal"][i]["T"]
 	push!(T_max_matlab, maximum(vec(T_matlab)))
 end
 
-matlab_states = haskey(data, "output_isothermal_states") ? data["output_isothermal_states"] : data["output_isothermal"]["states"]
-c_e_matlab = [state["Electrolyte"]["c"] for state in matlab_states]
-c_e_clean_matlab = convert_matlab_cells_to_matrix(replace(c_e_matlab, NaN => 0.0))
-c_e_av_matlab = vec(mean(c_e_clean_matlab, dims = 2))[1:(end-1)]
 
 ###################################################
-# Julia data
+# Run electrochemical simulation in Julia
 
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/lithium_ion_battery_nmc_graphite.json")
 inputparams_material = load_advanced_dict_input(fn)
@@ -88,7 +72,9 @@ fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/simple_thermal.jso
 inputparams_thermal = load_advanced_dict_input(fn)
 inputparams = merge_input_params(inputparams_thermal, inputparams; warn = true)
 
-# reduce specific heat capacities
+
+
+# Adjust input parameters to match the MATLAB simulation
 
 function getnested(d, keys::Tuple)
 	for k in keys
@@ -120,16 +106,92 @@ end
 
 
 inputparams["Control"]["lowerCutoffVoltage"] = 3.6
-inputparams["Geometry"]["Nh"] = 16
-inputparams["Geometry"]["height"] = 2e-2 + 2*1e-3
-inputparams["PositiveElectrode"]["CurrentCollector"]["thickness"] = 80e-6
-inputparams["NegativeElectrode"]["CurrentCollector"]["thickness"] = 100e-6
+inputparams["Geometry"]["Nh"] = 16  # needs to be electrode Nh + 2 * tab Nh from MATLAB geometry
+inputparams["Geometry"]["height"] = 2e-2 + 2*1e-3# needs to be electrode height + 2 * tab height from MATLAB geometry
+inputparams["PositiveElectrode"]["CurrentCollector"]["thickness"] = 80e-6 # in order to match the MATLAB geometry.
+inputparams["NegativeElectrode"]["CurrentCollector"]["thickness"] = 100e-6# in order to match the MATLAB geometry.
 
+
+# Run simulation
 
 output = run_simulation(inputparams; accept_invalid = true)
 
+
+#########################################################
+# Plot grid geometry
+
+grids     = output.simulation.grids
+couplings = output.simulation.couplings
+
+
+components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
+colors = [:gray, :green, :blue, :black]
+nothing #hide
+
+# We plot the grid
+
+for (i, component) in enumerate(components)
+	if i == 1
+		global fig2, ax2 = plot_mesh_edges(grids[component],
+			color = colors[i],
+			label = string(component))
+		# ax2.aspect = :data
+	else
+		plot_mesh_edges!(ax2,
+			grids[component],
+			color = colors[i],
+			label = string(component))
+	end
+end
+legend_elements = [
+	PolyElement(color = colors[i]) for i in eachindex(components)
+]
+
+Legend(fig2[1, 2], legend_elements, components)
+display(GLMakie.Screen(), fig2)
+
+
+###################################################
+# Compare voltage curves
+
+
 E = output.time_series["Voltage"]
 t = output.time_series["Time"]
+
+
+f1 = Figure(size = (1000, 400))
+ax1 = Axis(f1[1, 1],
+	title = "Voltage",
+	xlabel = "Time / s",
+	ylabel = "Voltage / V",
+	xlabelsize = 25,
+	ylabelsize = 25,
+	xticklabelsize = 25,
+	yticklabelsize = 25,
+)
+matlab_v = scatterlines!(ax1,
+	t_matlab,
+	E_matlab;
+	linewidth = 4,
+	markersize = 10,
+	marker = :cross,
+	markercolor = :black,
+)
+julia_v = scatterlines!(ax1,
+	t,
+	E;
+	linewidth = 4,
+	markersize = 10,
+	marker = :circle,
+	markercolor = :red,
+)
+Legend(f1[1, 2], [matlab_v, julia_v], ["MATLAB", "Julia"])
+display(GLMakie.Screen(), f1)
+
+
+###################################################
+# Run thermal simulation
+
 
 input = (
 	model_settings      = output.simulation.model.settings,
@@ -146,60 +208,59 @@ grids = output.simulation.grids
 maps = output.simulation.global_maps
 timesteps = output.simulation.time_steps[1:length(states)]
 
+# Retrieve effective thermal parameters from the electrochemical simulation.
+
 effective_thermal_conductivity_julia = output.simulation.parameters[:ThermalModel][:EffectiveThermalConductivity]
 effective_volumetric_heat_capacity_julia = output.simulation.parameters[:ThermalModel][:EffectiveVolumetricHeatCapacity]
 
 input.cell_parameters["ThermalModel"]["EffectiveVolumetricHeatCapacity"] = effective_volumetric_heat_capacity_julia
 input.cell_parameters["ThermalModel"]["EffectiveThermalConductivity"] = effective_thermal_conductivity_julia
 
+# Setup thermal model
+
 thermal_model, thermal_parameters = BattMo.setup_thermal_model(input, grids)
 nc = number_of_cells(thermal_model.domain)
 
-
-
-# Parity controls:
-# - source_time_alignment: :left, :mid, :right, :average
-# - source_row_shift: integer shift for direct row indexing when not interpolating.
-source_time_alignment = :left
-source_row_shift = -1
-source_pre_first_mode = :zero
-sources = []
-src_matric = []
+sources_julia = []
+sources_julia_matrix = []
 
 
 for state in states
 	state = BattMo.get_state_with_secondary_variables(multimodel, state, parameters)
 	src, stepsources = BattMo.get_energy_source_by_type!(thermal_model, model, state, maps)
-	push!(sources, stepsources)
-	push!(src_matric, src)
+	push!(sources_julia, stepsources)
+	push!(sources_julia_matrix, src)
 end
 
+println("")
+println("Heat source terms in Julia (sources_julia):")
+println(keys(sources_julia[1]))
 
+# Use Julia or MATLAB computed source terms
 forces = NamedTuple[]
 thermal_timesteps = timesteps
 thermal_time = t
+
 if use_matlab_source_terms
 	thermal_timesteps = vcat(t_matlab[1], diff(t_matlab))
 	thermal_time = t_matlab
 	for i in 1:length(thermal_timesteps)
-		push!(forces, (value = vec(M[i, :]),))
+		push!(forces, (value = vec(sources_matlab_matrix[i, :]),))
 	end
 else
-	for src in src_matric
+	for src in sources_julia_matrix
 		push!(forces, (value = src,))
 	end
 end
 
-src_matrix = reduce(vcat, (x' for x in src_matric))
-if size(src_matrix, 1) == size(M, 1)-1 && size(src_matrix, 2) == size(M, 2)
-	diff_sources = src_matrix - M[1:(end-1), :]
-else
-	diff_sources = nothing
-	println("Skipping direct source-matrix subtraction due to shape mismatch:")
-	println("  Julia source matrix size = $(size(src_matrix))")
-	println("  MATLAB source matrix size = $(size(M))")
-end
+# Compare source term matrix sizes
 
+src_matrix = reduce(vcat, (x' for x in sources_julia_matrix))
+
+println("  Julia source matrix size = $(size(src_matrix))")
+println("  MxATLAB source matrix size = $(size(sources_matlab_matrix))")
+
+# Run thermal simulation
 T0 = 298.15 * ones(nc)
 
 thermal_state0 = setup_state(thermal_model, Dict(:Temperature => T0))
@@ -211,17 +272,22 @@ sim = Simulator(thermal_model;
 
 thermal_states, = simulate(sim, thermal_timesteps; info_level = -1, forces = forces)
 
+# Compute T_max from thermal simulation
 
-T_max = [maximum(state[:Temperature]) for state in thermal_states]
+T_max_julia = [maximum(state[:Temperature]) for state in thermal_states]
+
 
 #########################################################
-# Comparison plots
+# Plot source term contributions
+
+BattMo.plot_thermal_source_contributions(t, sources_julia; total_source = sources_julia_matrix)
 
 
+#########################################################
+# Comparison maximum temperature
 
-
-f1 = Figure(size = (1000, 400))
-ax1 = Axis(f1[1, 1],
+f2 = Figure(size = (1000, 400))
+ax2 = Axis(f2[1, 1],
 	title = "Maximum Temperature",
 	xlabel = "Time / s",
 	ylabel = "Temperature / C",
@@ -231,7 +297,7 @@ ax1 = Axis(f1[1, 1],
 	yticklabelsize = 25,
 )
 
-matlab_ = scatterlines!(ax1,
+matlab_ = scatterlines!(ax2,
 	t_matlab,
 	T_max_matlab .- 273.15;
 	linewidth = 4,
@@ -240,9 +306,9 @@ matlab_ = scatterlines!(ax1,
 	markercolor = :black,
 )
 
-julia_ = scatterlines!(ax1,
+julia_ = scatterlines!(ax2,
 	thermal_time,
-	T_max .- 273.15;
+	T_max_julia .- 273.15;
 	linewidth = 2,
 	markersize = 5,
 	marker = :circle,
@@ -250,39 +316,14 @@ julia_ = scatterlines!(ax1,
 )
 
 
-Legend(f1[1, 2],
+Legend(f2[1, 2],
 	[matlab_, julia_],
 	["MATLAB", use_matlab_source_terms ? "Julia (MATLAB sources/time)" : "Julia (Julia dt)"])
-display(GLMakie.Screen(), f1)
-
-f2 = Figure(size = (1000, 400))
-ax2 = Axis(f2[1, 1],
-	title = "Voltage",
-	xlabel = "Time / s",
-	ylabel = "Voltage / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
-)
-matlab_v = scatterlines!(ax2,
-	t_matlab,
-	E_matlab;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-)
-julia_v = scatterlines!(ax2,
-	t,
-	E;
-	linewidth = 4,
-	markersize = 10,
-	marker = :circle,
-	markercolor = :red,
-)
-Legend(f2[1, 2], [matlab_v, julia_v], ["MATLAB", "Julia"])
 display(GLMakie.Screen(), f2)
+
+
+#########################################################
+# Comparison effective thermal parameters
 
 f3 = Figure(size = (1000, 400))
 ax3 = Axis(f3[1, 1],
@@ -317,6 +358,7 @@ Legend(f3[1, 2],
 	["MATLAB", "Julia"])
 display(GLMakie.Screen(), f3)
 
+
 f4 = Figure(size = (1000, 400))
 ax4 = Axis(f4[1, 1],
 	title = "Effective volumetric heat capacity comparison",
@@ -350,161 +392,161 @@ Legend(f4[1, 2],
 	["MATLAB", "Julia"])
 display(GLMakie.Screen(), f4)
 
-BattMo.plot_thermal_source_contributions(t, sources; total_source = src_matric)
+
+#########################################################
+# Comparison source terms
 
 
 
-using GLMakie
+keys_matlab = filter(k -> !(k in ["Total", "Residual"]), collect(keys(heat_source_data_matlab)))
+nkeys = length(keys_matlab)
 
-"""
-	plot_source_comparison(sources, states_heat; t = nothing)
 
-Compares Julia BattMo source terms to MATLAB heat sources stored under
-states_heat[end]["ThermalModel"], using GLMakie.
+matlab_to_julia_keymap = Dict(
+	# Ohmic current collectors
+	"OhmicCurrentCollector_pos_" => Symbol("OhmicCurrentCollector (pos)"),
+	"OhmicCurrentCollector_neg_" => Symbol("OhmicCurrentCollector (neg)"),
 
-Arguments
----------
-- sources :: Vector{Dict{Symbol, Vector{Float64}}}
-- states_heat :: Vector{Dict{String, Any}}  (BattMo thermal states)
-- t :: Vector (optional)   time axis
+	# Ohmic active material
+	"OhmicActiveMaterial_pos_" => Symbol("OhmicActiveMaterial (pos)"),
+	"OhmicActiveMaterial_neg_" => Symbol("OhmicActiveMaterial (neg)"),
 
-Returns
--------
-GLMakie Figure with Julia vs MATLAB curves.
-"""
-function plot_source_comparison(sources, states_heat; t = nothing)
+	# Electrolyte ohmic
+	"OhmicElectrolyte_elyte_" => Symbol("OhmicElectrolyte (elyte)"),
 
-	# ----------------------------------------------------------
-	# 1. Extract Julia sources and group them
-	# ----------------------------------------------------------
+	# Reaction reversible
+	"ReactionReversible_pos_" => Symbol("ReactionReversible (pos)"),
+	"ReactionReversible_neg_" => Symbol("ReactionReversible (neg)"),
 
-	lastsrc = sources[end]
+	# Reaction irreversible
+	"ReactionIrreversible_pos_" => Symbol("ReactionIrreversible (pos)"),
+	"ReactionIrreversible_neg_" => Symbol("ReactionIrreversible (neg)"),
 
-	# group by source type (strip "(pos)" / "(neg)")
-	groups = Dict{String, Vector{Vector{Float64}}}()
+	# Diffusion (electrolyte)
+	"DiffusionElectrolyte_elyte_" => Symbol("DiffusionElectrolyte (elyte)"),
 
-	for key in keys(lastsrc)
-		name = String(key)
-		basetype = strip(split(name, "(")[1])
+	# Total / Residual (if you add them)
+	# "Total"    => Symbol("Total"),
+	# "Residual" => Symbol("Residual"),
+)
 
-		if !haskey(groups, basetype)
-			groups[basetype] = Vector{Vector{Float64}}()
+# ----- Helper: retrieve and sum Julia heat source totals -----
+function get_julia_series(key)
+	sym = matlab_to_julia_keymap[key]   # map MATLAB → Julia symbol
+	nt = length(sources_julia)
+	vals = zeros(nt)
+
+	for i in 1:nt
+		d = sources_julia[i]
+		if haskey(d, sym)
+			v = d[sym]
+			vals[i] = v isa Number ? v : sum(v)
+		else
+			@warn "Missing Julia key $sym at timestep $i"
+			vals[i] = NaN
 		end
-		push!(groups[basetype], lastsrc[key])
 	end
 
-	# Sum positive + negative contributions
-	julia_summed = Dict{String, Vector{Float64}}()
-	for (basetype, arrs) in groups
-		julia_summed[basetype] = reduce(+, arrs)
-	end
-
-	# ----------------------------------------------------------
-	# 2. Extract MATLAB sources
-	# ----------------------------------------------------------
-
-	mat = states_heat[end]["ThermalModel"]
-
-	matlab_sources = Dict(
-		"ReactionReversible"   => mat["jHeatRevReactionSource"],
-		"ReactionIrreversible" => mat["jHeatIrrevReactionSource"],
-		"Ohmic"                => mat["jHeatOhmSource"],
-		"Chemical"             => mat["jHeatChemicalSource"],
-		"ReactionTotal"        => mat["jHeatReactionSource"],
-		"TotalHeat"            => mat["jHeatSource"],
-	)
-
-	# ----------------------------------------------------------
-	# 3. Time axis
-	# ----------------------------------------------------------
-
-	N = maximum(length.(values(julia_summed)))
-
-	if isnothing(t)
-		t = 1:N
-	end
-
-	# ----------------------------------------------------------
-	# 4. Plot comparison
-	# ----------------------------------------------------------
-
-	fig = Figure(size = (1200, 800))
-
-	row = 1
-	for (label, julia_arr) in julia_summed
-		# Only plot if there is a MATLAB equivalent
-		haskey(matlab_sources, label) || continue
-
-		matlab_arr = matlab_sources[label]
-
-		ax = Axis(fig[row, 1],
-			title = "$label: Julia vs MATLAB",
-			xlabel = "Index",
-			ylabel = "Value")
-
-		lines!(ax, julia_arr, label = "Julia ($label)", linewidth = 2)
-		lines!(ax, vec(matlab_arr), label = "MATLAB ($label)", linewidth = 2, linestyle = :dash)
-
-		axislegend(ax)
-		row += 1
-	end
-
-	return fig
+	return vals
 end
 
-f5 = plot_source_comparison(sources, states_heat; t = t_matlab)
+# ----- Plot each source term -----
+
+ncols = 2
+nrows = ceil(Int, nkeys / ncols)
+
+f5 = Figure(size = (1400, 350 * nrows))
+
+for (idx, key) in enumerate(keys_matlab)
+
+	# Determine grid position: (row, col)
+	row = ceil(Int, idx / ncols)
+	col = idx % ncols == 0 ? ncols : idx % ncols
+
+	mat = heat_source_data_matlab[key]
+	time_mat = mat[:, 1]
+	values_mat = mat[:, 2]
+
+	values_julia = get_julia_series(key)
+
+
+	ax = Axis(f5[row, col],
+		title = key,
+		xlabel = "Time / s",
+		ylabel = "Heat / W·m⁻³",
+		xticklabelsize = 16,
+		yticklabelsize = 16,
+	)
+
+	mplot = scatterlines!(
+		ax, time_mat, values_mat;
+		linewidth = 3,
+		marker = :cross,
+		markersize = 8,
+		color = :black,
+	)
+
+	jplot = scatterlines!(
+		ax, t, values_julia;
+		linewidth = 2,
+		marker = :circle,
+		markersize = 6,
+		color = :red,
+	)
+
+	axislegend(ax, [mplot, jplot], ["MATLAB", "Julia"], position = :rt)
+
+end
+
 display(GLMakie.Screen(), f5)
 
 
-grids     = output.simulation.grids
-couplings = output.simulation.couplings
 
+# Total heat 
 
-components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
-colors = [:gray, :green, :blue, :black]
-nothing #hide
-
-# # We plot the geometry
-
-# for (i, component) in enumerate(components)
-# 	if i == 1
-# 		global fig1, ax1 = plot_mesh(grids[component],
-# 			color = colors[i],
-# 			label = string(component))
-# 		# ax.aspect = :data
-# 	else
-# 		plot_mesh!(ax1,
-# 			grids[component],
-# 			color = colors[i],
-# 			label = string(component))
-# 	end
-# end
-# legend_elements = [
-# 	PolyElement(color = colors[i]) for i in eachindex(components)
-# ]
-
-# Legend(fig1[1, 2], legend_elements, components)
-
-# display(GLMakie.Screen(), fig1)
-
-# We plot the grid
-
-for (i, component) in enumerate(components)
-	if i == 1
-		global fig2, ax2 = plot_mesh_edges(grids[component],
-			color = colors[i],
-			label = string(component))
-		# ax2.aspect = :data
-	else
-		plot_mesh_edges!(ax2,
-			grids[component],
-			color = colors[i],
-			label = string(component))
-	end
-end
-legend_elements = [
-	PolyElement(color = colors[i]) for i in eachindex(components)
+total_heat_matlab = [
+	sum(states_heat_matlab[i]["ThermalModel"]["jHeatSource"])
+	for i in 1:length(states_heat_matlab)
 ]
 
-Legend(fig2[1, 2], legend_elements, components)
-display(GLMakie.Screen(), fig2)
+nt = length(t)
+total_heat_julia = zeros(nt)
+for it in 1:nt
+	step_total = sources_julia_matrix[it]
+	total_heat_julia[it] = step_total isa Number ? Float64(step_total) : sum(step_total)
+end
+
+f6 = Figure(size = (1000, 400))
+ax6 = Axis(f6[1, 1],
+	title = "Total Heat Generation",
+	xlabel = "Time / s",
+	ylabel = "Heat / W m^-3",
+	xlabelsize = 25,
+	ylabelsize = 25,
+	xticklabelsize = 25,
+	yticklabelsize = 25,
+)
+
+matlab_ = scatterlines!(ax6,
+	total_heat_matlab;
+	linewidth = 4,
+	markersize = 10,
+	marker = :cross,
+	markercolor = :black,
+)
+
+julia_ = scatterlines!(ax6,
+	total_heat_julia;
+	linewidth = 2,
+	markersize = 5,
+	marker = :circle,
+	markercolor = :red,
+)
+
+
+Legend(f6[1, 2],
+	[matlab_, julia_],
+	["MATLAB", "Julia"])
+display(GLMakie.Screen(), f6)
+
+

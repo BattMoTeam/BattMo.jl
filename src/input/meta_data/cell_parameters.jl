@@ -253,7 +253,7 @@ function get_cell_parameters_meta_data()
 			"context_type" => "SpecificHeatCapacity",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_b4f4ed28_d24c_4a00_9583_62ab839abeca",
 			"max_value" => 2.0e4,
-			"min_value" => 1.0e2,
+			"min_value" => 1.0,
 			"description" => "Heat capacity of the material per unit of mass.",
 			"type" => Real,
 			"unit" => "J·kg⁻¹·K⁻¹",

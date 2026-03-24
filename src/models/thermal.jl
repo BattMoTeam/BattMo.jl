@@ -166,7 +166,7 @@ function apply_boundary_temperature!(acc, state, parameters, model::ThermalModel
 				else
 					m = 0
 				end
-				# @show m, conductivity[c], extcoef[i], T[c], BoundaryT[i]
+
 				@inbounds acc[c] += m*(T[c] - value(BoundaryT[i]))
 			end
 		end
@@ -307,7 +307,6 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 	# parameters[:Source]                   .= parameters[:Source].*parameters[:Volume]
 	parameters[:ExternalHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:ExternalHeatTransferCoefficient]
 
-	@show size(model.domain.representation[:boundary_areas]), model.domain.representation[:boundary_areas]
 	return model, parameters
 
 end

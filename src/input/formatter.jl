@@ -327,8 +327,6 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 		cell_parameters["Cell"]["ElectrodeWidth"] = params["Geometry"]["width"]
 		cell_parameters["Cell"]["ElectrodeLength"] = params["Geometry"]["height"]
 
-		@show model_settings
-
 		if haskey(model_settings, "CurrentCollectors")
 			pos_cc = Dict(
 				"CurrentCollector" => Dict(
