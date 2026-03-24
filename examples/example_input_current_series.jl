@@ -1,7 +1,5 @@
 using BattMo
 
-const HOUR = 3600.0
-
 ###
 # Example: InputCurrentSeries protocol with discharge, rest, and charge
 #
@@ -22,6 +20,7 @@ I_discharge = 6.0
 I_charge = -5.0
 
 # Set time duration
+const HOUR = 3600.0
 T_discharge = 1 * HOUR
 T_rest = 0.5 * HOUR
 T_charge = 1 * HOUR
@@ -60,16 +59,8 @@ cycling_protocol = CyclingProtocol(
 # Create a simulation case
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 
-# The user can also override the time steps after creating the Simulation.
-# For example, to use the exact diff(times) from data:
-
-# dt = sim.time_steps
-# empty!(dt)
-# append!(dt, diff(times))
-
-# This is useful when loading time series from an external file.
-
-output = solve(sim; accept_invalid = true)
+# Solve
+output = solve(sim)
 
 # Inspect results
 ts = output.time_series
@@ -84,7 +75,7 @@ println("Max voltage:            $(round(maximum(V_sim); digits = 3)) V")
 println("Min current:            $(round(minimum(I_sim); digits = 3)) A")
 println("Max current:            $(round(maximum(I_sim); digits = 3)) A")
 
-doplot = true
+doplot = false
 if doplot
     using GLMakie
     plot_dashboard(output; plot_type = "simple")

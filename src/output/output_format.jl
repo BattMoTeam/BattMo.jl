@@ -132,33 +132,6 @@ function get_output_metrics(
         unique_cycles = unique(cycle_array)
         cycles_reduced = Int.(unique_cycles[1:(end - 1)]) # Exclude last cycle index because it is incomplete
 
-        if isempty(cycles_reduced)
-            # Compute globally
-            push!(discharge_cap, compute_discharge_capacity(jutul_output))
-            push!(charge_cap, compute_charge_capacity(jutul_output))
-            push!(discharge_energy, compute_discharge_energy(jutul_output))
-            push!(charge_energy, compute_charge_energy(jutul_output))
-            push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output))
-        else
-            # Compute per unique cycle (avoids duplicate pushes)
-            for cycle in cycles_reduced
-                push!(discharge_cap, compute_discharge_capacity(jutul_output; cycle_number = cycle))
-                push!(charge_cap, compute_charge_capacity(jutul_output; cycle_number = cycle))
-                push!(discharge_energy, compute_discharge_energy(jutul_output; cycle_number = cycle))
-                push!(charge_energy, compute_charge_energy(jutul_output; cycle_number = cycle))
-                push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output; cycle_number = cycle))
-            end
-        end
-
-        # Dictionary of all available quantities
-        available_quantities = Dict(
-            "CycleIndex" => cycles_reduced,
-            "DischargeCapacity" => discharge_cap,
-            "ChargeCapacity" => charge_cap,
-            "DischargeEnergy" => discharge_energy,
-            "ChargeEnergy" => charge_energy,
-            "RoundTripEfficiency" => round_trip_efficiency,
-        )
 
         if isempty(cycles_reduced)
             # Compute globally
