@@ -37,6 +37,7 @@ function plot_interactive_3d(output::SimulationOutput; shift = nothing, colormap
 end
 
 
+
 function Jutul.plot_mesh_impl(position::BattMoPosition; kwarg...)
 	return Jutul.plot_mesh_impl(position.mesh; kwarg...)
 end

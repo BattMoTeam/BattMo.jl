@@ -1,4 +1,4 @@
-export AbstractOutput, SimulationOutput, BattMoPosition, BattMoStateArray
+export AbstractOutput, SimulationOutput, BattMoPosition
 
 abstract type AbstractOutput end
 
@@ -18,4 +18,3 @@ struct SimulationOutput <: AbstractOutput
 end
 
 Jutul.physical_representation(position::BattMoPosition) = physical_representation(position.mesh)
-

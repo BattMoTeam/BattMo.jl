@@ -228,6 +228,7 @@ function get_output_states(
 		padded_states = get_padded_states(jutul_output)
 		x = get_x_coords(jutul_output.multimodel)
 		output_data = extract_spatial_data(padded_states)
+		component_positions = get_component_positions_1d(grids)
 
 		available_quantities = Dict{String, Any}(
 			"Time" => time,
@@ -235,6 +236,9 @@ function get_output_states(
 			"NegativeElectrodeActiveMaterialRadius" => r_ne,
 			"PositiveElectrodeActiveMaterialRadius" => r_pe,
 		)
+		for (k, v) in component_positions
+			available_quantities[k] = v
+		end
 
 	elseif input["ModelSettings"]["ModelFramework"] == "P4D Pouch" || input["ModelSettings"]["ModelFramework"] == "P4D Cylindrical"
 		output_data = extract_spatial_data(jutul_output[:states])
@@ -255,21 +259,134 @@ function get_output_states(
 	end
 
 	for (k, v) in output_data
-		available_quantities[k] = wrap_output_state_data(v)
+		available_quantities[k] = v
 	end
 
-	# Select quantities
+	filtered_quantities = Dict(k => v for (k, v) in available_quantities if !isnothing(v))
+	nested_quantities = nest_output_states(filtered_quantities)
+
 	if isnothing(quantities)
-		# Return all available non-nothing quantities
-		return Dict(k => v for (k, v) in available_quantities if !isnothing(v))
+		return nested_quantities
 	else
-		# Validate requested quantities
-		return Dict(q => get(available_quantities, q, error("Metric \"$q\" is not available. Available metrics are: $(join(keys(available_quantities), ", "))")))
+		return Dict(q => get_nested_output_value(nested_quantities, output_state_path(q), q) for q in quantities)
 	end
 end
 
-wrap_output_state_data(v) = v
-wrap_output_state_data(v::AbstractArray) = BattMoStateArray(v)
+function get_component_positions_1d(grids)
+	component_positions = Dict{String, Any}()
+
+	component_map = Dict(
+		"NegativeElectrodeActiveMaterialPosition" => "NegativeElectrode",
+		"PositiveElectrodeActiveMaterialPosition" => "PositiveElectrode",
+		"ElectrolytePosition" => "Electrolyte",
+		"SeparatorPosition" => "Separator",
+	)
+
+	if haskey(grids, "NegativeCurrentCollector")
+		component_map["NegativeElectrodeCurrentCollectorPosition"] = "NegativeCurrentCollector"
+	end
+	if haskey(grids, "PositiveCurrentCollector")
+		component_map["PositiveElectrodeCurrentCollectorPosition"] = "PositiveCurrentCollector"
+	end
+
+	for (output_name, grid_name) in component_map
+		if haskey(grids, grid_name)
+			component_positions[output_name] = get_grid_x_coords(grids[grid_name])
+		end
+	end
+
+	return component_positions
+end
+
+function get_grid_x_coords(grid)
+	pp = physical_representation(grid)
+	primitives = Jutul.plot_primitives(pp, :meshscatter)
+	return primitives.points[:, 1]
+end
+
+function nest_output_states(flat_quantities::AbstractDict{String, <:Any})
+	nested = Dict{String, Any}()
+
+	for (key, value) in flat_quantities
+		path = output_state_path(key)
+		set_nested_output_value!(nested, path, value)
+	end
+
+	return nested
+end
+
+function set_nested_output_value!(dict::Dict{String, Any}, path::Vector{String}, value)
+	current = dict
+	for key in path[1:(end-1)]
+		current = get!(() -> Dict{String, Any}(), current, key)
+	end
+	current[path[end]] = value
+	return dict
+end
+
+function get_nested_output_value(dict::Dict{String, Any}, path::Vector{String}, name::String)
+	value = dict
+	for key in path
+		if value isa AbstractDict{String, Any} && haskey(value, key)
+			value = value[key]
+		else
+			error("Metric \"$name\" is not available.")
+		end
+	end
+	return value
+end
+
+function output_state_path(key::String)
+	if key == "Time"
+		return ["Time"]
+	elseif key == "Position"
+		return ["Cell", "Position"]
+	elseif key == "NegativeElectrodeActiveMaterialRadius"
+		return ["NegativeElectrode", "ActiveMaterial", "Radius"]
+	elseif key == "PositiveElectrodeActiveMaterialRadius"
+		return ["PositiveElectrode", "ActiveMaterial", "Radius"]
+	elseif key == "SEIThickness"
+		return ["NegativeElectrode", "Interphase", "Thickness"]
+	elseif key == "NormalizedSEIThickness"
+		return ["NegativeElectrode", "Interphase", "NormalizedThickness"]
+	elseif key == "SEIVoltageDrop"
+		return ["NegativeElectrode", "Interphase", "VoltageDrop"]
+	elseif key == "NormalizedSEIVoltageDrop"
+		return ["NegativeElectrode", "Interphase", "NormalizedVoltageDrop"]
+	end
+
+	active_material_prefixes = [
+		("NegativeElectrodeActiveMaterial", ["NegativeElectrode", "ActiveMaterial"]),
+		("PositiveElectrodeActiveMaterial", ["PositiveElectrode", "ActiveMaterial"]),
+	]
+	for (prefix, path_prefix) in active_material_prefixes
+		if startswith(key, prefix)
+			suffix = key[(length(prefix)+1):end]
+			return vcat(path_prefix, [suffix])
+		end
+	end
+
+	current_collector_prefixes = [
+		("NegativeElectrodeCurrentCollector", ["NegativeElectrode", "CurrentCollector"]),
+		("PositiveElectrodeCurrentCollector", ["PositiveElectrode", "CurrentCollector"]),
+	]
+	for (prefix, path_prefix) in current_collector_prefixes
+		if startswith(key, prefix)
+			suffix = key[(length(prefix)+1):end]
+			return vcat(path_prefix, [suffix])
+		end
+	end
+
+	if startswith(key, "Electrolyte")
+		suffix = key[(length("Electrolyte")+1):end]
+		return ["Electrolyte", suffix]
+	elseif startswith(key, "Separator")
+		suffix = key[(length("Separator")+1):end]
+		return ["Separator", suffix]
+	else
+		return [key]
+	end
+end
 
 
 function get_r_coords(input::FullSimulationInput)

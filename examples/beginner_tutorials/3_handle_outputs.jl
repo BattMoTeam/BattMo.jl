@@ -53,8 +53,8 @@ lines!(ax, capacity, voltage)
 display(fig)
 
 # Or lets plot the lithium concentration versus the active material particle radius of the positive electrode close to the separator at the and of the discharge:
-radius = output.states["PositiveElectrodeActiveMaterialRadius"]
-positive_electrode_concentration = output.states["PositiveElectrodeActiveMaterialParticleConcentration"]
+radius = output.states["PositiveElectrode"]["ActiveMaterial"]["Radius"]
+positive_electrode_concentration = output.states["PositiveElectrode"]["ActiveMaterial"]["ParticleConcentration"]
 
 simulation_settings = output.input["SimulationSettings"] # Retrieve the default simulation settings to get the grid point number that we need.
 
@@ -66,6 +66,5 @@ fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Lithium concentration / mol·L⁻¹", xlabel = "Particle radius / m", title = "Positive electrode concentration")
 lines!(ax, radius, concentration_at_grid_point)
 display(fig)
-
 
 

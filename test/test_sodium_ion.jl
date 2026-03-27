@@ -50,7 +50,7 @@ include(joinpath(battmo_base, "src/input/defaults/cell_parameters/function_param
 
 			output = solve(sim;)
 			I = output.time_series["Current"]
-			c_pe = output.states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
+			c_pe = output.states["PositiveElectrode"]["ActiveMaterial"]["SurfaceConcentration"]
 
 			@test I[end] ≈ I_test[i] atol = 1e-1
 

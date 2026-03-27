@@ -151,7 +151,7 @@ end
 		I = time_series["Current"]
 		V = time_series["Voltage"]
 
-		c_pe = states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
+		c_pe = states["PositiveElectrode"]["ActiveMaterial"]["SurfaceConcentration"]
 
 		@test length(I) ≈ 73 atol = 0
 		@test I[2] ≈ 2.2957366076223953 atol = 1e-1
@@ -177,7 +177,7 @@ end
 		I = time_series["Current"]
 		V = time_series["Voltage"]
 
-		c_pe = states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
+		c_pe = states["PositiveElectrode"]["ActiveMaterial"]["SurfaceConcentration"]
 
 		@test length(I) ≈ 71 atol = 0
 		@test I[2] ≈ 7.785132857514498 atol = 1e-1
