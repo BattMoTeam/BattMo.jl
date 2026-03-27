@@ -1,4 +1,5 @@
 using BattMo
+using Jutul
 using Test
 
 
@@ -31,9 +32,16 @@ using Test
 			@test Cc[i] ≈ 0.09085401794790987 atol = 1e-2
 		end
 		@test Voltage[1] ≈ 3.3506683313852914 atol = 1e-2
+		cc_pos = output.states["NegativeElectrodeCurrentCollectorPosition"]
+		cc_phi = output.states["NegativeElectrodeCurrentCollectorPotential"]
+		@test cc_pos isa BattMoPosition
+		@test cc_phi isa BattMoStateArray
+		@test size(cc_phi, 2) == Jutul.number_of_cells(cc_pos.mesh)
+		@test all(isfinite, cc_phi[end, :])
+		@test length(cc_phi[end]) == Jutul.number_of_cells(cc_pos.mesh)
+		@test Jutul.physical_representation(cc_pos) === Jutul.physical_representation(sim.grids["NegativeCurrentCollector"])
 		true
 
 	end
 
 end
-

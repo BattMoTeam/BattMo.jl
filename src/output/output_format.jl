@@ -219,17 +219,16 @@ function get_output_states(
 )
 	# Get time and coordinates
 	time = extract_output_times(jutul_output)
-	padded_states = get_padded_states(jutul_output)
-	x = get_x_coords(jutul_output.multimodel)
 	r_coords = get_r_coords(input)
 	r_ne = r_coords.ne_radii
 	r_pe = r_coords.pe_radii
 
-	# Extract data
-	output_data = extract_spatial_data(padded_states)
-
 	# Initialize available quantities (consistent key type = String)
 	if input["ModelSettings"]["ModelFramework"] == "P2D"
+		padded_states = get_padded_states(jutul_output)
+		x = get_x_coords(jutul_output.multimodel)
+		output_data = extract_spatial_data(padded_states)
+
 		available_quantities = Dict{String, Any}(
 			"Time" => time,
 			"Position" => x,
@@ -238,14 +237,16 @@ function get_output_states(
 		)
 
 	elseif input["ModelSettings"]["ModelFramework"] == "P4D Pouch" || input["ModelSettings"]["ModelFramework"] == "P4D Cylindrical"
+		output_data = extract_spatial_data(jutul_output[:states])
+
 		available_quantities = Dict{String, Any}(
 			"Time" => time,
-			"NegativeElectrodeActiveMaterialPosition" => grids["NegativeElectrode"],
-			"PositiveElectrodeActiveMaterialPosition" => grids["PositiveElectrode"],
-			"NegativeElectrodeCurrentCollectorPosition" => grids["NegativeCurrentCollector"],
-			"PositiveElectrodeCurrentCollectorPosition" => grids["PositiveCurrentCollector"],
-			"ElectrolytePosition" => grids["Electrolyte"],
-			"SeparatorPosition" => grids["Separator"],
+			"NegativeElectrodeActiveMaterialPosition" => BattMoPosition(grids["NegativeElectrode"], "NegativeElectrode"),
+			"PositiveElectrodeActiveMaterialPosition" => BattMoPosition(grids["PositiveElectrode"], "PositiveElectrode"),
+			"NegativeElectrodeCurrentCollectorPosition" => BattMoPosition(grids["NegativeCurrentCollector"], "NegativeCurrentCollector"),
+			"PositiveElectrodeCurrentCollectorPosition" => BattMoPosition(grids["PositiveCurrentCollector"], "PositiveCurrentCollector"),
+			"ElectrolytePosition" => BattMoPosition(grids["Electrolyte"], "Electrolyte"),
+			"SeparatorPosition" => BattMoPosition(grids["Separator"], "Separator"),
 			"NegativeElectrodeActiveMaterialRadius" => r_ne,
 			"PositiveElectrodeActiveMaterialRadius" => r_pe,
 		)
@@ -254,7 +255,7 @@ function get_output_states(
 	end
 
 	for (k, v) in output_data
-		available_quantities[k] = v
+		available_quantities[k] = wrap_output_state_data(v)
 	end
 
 	# Select quantities
@@ -266,6 +267,9 @@ function get_output_states(
 		return Dict(q => get(available_quantities, q, error("Metric \"$q\" is not available. Available metrics are: $(join(keys(available_quantities), ", "))")))
 	end
 end
+
+wrap_output_state_data(v) = v
+wrap_output_state_data(v::AbstractArray) = BattMoStateArray(v)
 
 
 function get_r_coords(input::FullSimulationInput)

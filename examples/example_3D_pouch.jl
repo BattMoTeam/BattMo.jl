@@ -67,7 +67,7 @@ display(GLMakie.Screen(), fig2)
 
 output = solve(sim)
 
-fig, ax = plot_cell_data(output.states["NegativeElectrodeCurrentCollectorPosition"], output.states["NegativeElectrodeCurrentCollectorPotential"][end])
+fig, ax = plot_cell_data(output.states["NegativeElectrodeCurrentCollectorPosition"], output.states["NegativeElectrodeCurrentCollectorPotential"][end, :])
 ax.aspect = :data
 fig
 
