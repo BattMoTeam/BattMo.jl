@@ -354,6 +354,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	am_params[:setting_temperature_dependence] = get(model.settings, "TemperatureDependence", nothing)
 	am_params[:setting_butler_volmer] = get(model.settings, "ButlerVolmer", nothing)
 
+
 	if am_params[:setting_temperature_dependence] == "Arrhenius"
 		am_params[:activation_energy_of_diffusion] = inputparams_active_material["ActivationEnergyOfDiffusion"]
 		am_params[:activation_energy_of_reaction] = inputparams_active_material["ActivationEnergyOfReaction"]
@@ -368,6 +369,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		am_params[:ecd_funcexp] = true
 		ocp_exp = inputparams_active_material["ReactionRateConstant"]
 		exp = setup_reaction_rate_constant_evaluation_expression_from_string(ocp_exp)
+
 		f_generated = @RuntimeGeneratedFunction(exp)
 		am_params[:reaction_rate_constant_func] = f_generated
 
@@ -455,6 +457,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 			am_params[:diff_funcexp] = true
 			diff_exp = inputparams_active_material["DiffusionCoefficient"]
 			exp = setup_electrode_diff_evaluation_expression_from_string(diff_exp)
+
 			f_generated = @RuntimeGeneratedFunction(exp)
 			am_params[:diff_func] = f_generated
 			D = am_params[:diff_func](c, T, refT, cmax)

@@ -50,7 +50,7 @@ function computeOCP_Graphite_Torchio(c, T, refT, cmax)
 end
 
 
-function compute_reaction_rate_constant_graphite(c, T)
+function compute_reaction_rate_constant_graphite(c, T, refT, cmax)
 
 	refT = 298.15
 	k0   = 5.0310e-11

@@ -92,14 +92,14 @@ function calc_ne_D_test(c, T, refT, cmax)
 end
 
 
-function calc_ne_k_test(c, T)
+function calc_ne_k_test(c, T, refT, cmax)
 
 	diff = get_1d_interpolator(c_ne_k, ne_k)
 	return diff(c)
 end
 
 
-function calc_pe_k_test(c, T)
+function calc_pe_k_test(c, T, refT, cmax)
 
 	diff = get_1d_interpolator(c_pe_k, pe_k)
 	return diff(c)

@@ -8,6 +8,7 @@ using DocumenterCitations
 using DocumenterVitepress
 ##
 cd(@__DIR__)
+
 function build_battmo_docs(build_format              = nothing;
 	build_examples            = true,
 	build_tutorials           = build_examples,
@@ -52,8 +53,12 @@ function build_battmo_docs(build_format              = nothing;
 		"Headless UI " => "example_headless",
 	]
 
+	validations = [
+		"Arrhenius implementation" => "arrhenius",
+	]
 	tutorials_markdown = []
 	examples_markdown = []
+	validation_notebooks_markdown = []
 	function update_footer(content, pth, dir)
 		return content * "\n\n # ## Example on GitHub\n " *
 			   "# If you would like to run this example yourself, it can be downloaded from " *
@@ -79,11 +84,22 @@ function build_battmo_docs(build_format              = nothing;
 				println("Did not find generated example \"$ex\", skipping removal:\n\t$delpath")
 			end
 		end
+		for (ex, pth) in validations
+			delpath = joinpath(@__DIR__, "src", "validations", "$pth.md")
+			if isfile(delpath)
+				println("Deleting generated validation \"$ex\":\n\t$delpath")
+				rm(delpath)
+			else
+				println("Did not find generated validation \"$ex\", skipping removal:\n\t$delpath")
+			end
+		end
 	end
 	tutorial_path(pth) = joinpath(battmo_dir, "examples", "beginner_tutorials", "$pth.jl")
 	example_path(pth) = joinpath(battmo_dir, "examples", "$pth.jl")
+	validation_path(pth) = joinpath(battmo_dir, "examples", "validation_notebooks", "$pth.jl")
 	examples_out_dir = joinpath(@__DIR__, "src", "examples")
 	tutorials_out_dir = joinpath(@__DIR__, "src", "tutorials")
+	validations_out_dir = joinpath(@__DIR__, "src", "validations")
 	notebook_dir = joinpath(@__DIR__, "assets")
 	for (ex, pth) in tutorials
 		in_pth = tutorial_path(pth)
@@ -129,12 +145,32 @@ function build_battmo_docs(build_format              = nothing;
 			Literate.markdown(in_pth, examples_out_dir, preprocess = upd)
 		end
 	end
+	for (ex, pth) in validations
+		in_pth = validation_path(pth)
+		is_validation = startswith(ex, "Validation:")
+		is_intro = startswith(ex, "Intro: ")
+		is_example = !(is_intro || is_validation)
+		if is_validation
+			ex_dest = validation_markdown
+			do_build = build_validation_examples
+		else
+			if is_intro
+				ex_dest = intros_markdown
+			else
+				ex_dest = validation_notebooks_markdown
+			end
+			do_build = build_validation_examples
+		end
+		if do_build
+			push!(ex_dest, ex => joinpath("validations", "$pth.md"))
+			upd(content) = update_footer(content, pth, "validations")
+			Literate.markdown(in_pth, validations_out_dir, preprocess = upd)
+		end
+	end
 	## Docs
 	if isnothing(build_format)
 		build_format = DocumenterVitepress.MarkdownVitepress(
 			repo = "github.com/BattMoTeam/BattMo.jl",
-			devbranch = "main",
-			devurl = "dev",
 		)
 	end
 
@@ -176,6 +212,9 @@ function build_battmo_docs(build_format              = nothing;
 		"Examples" => [
 		"Advanced examples" => examples_markdown
 	],
+		"Validations" => [
+		"Validation notebooks" => validation_notebooks_markdown
+	],
 		"API Documentation" => [
 		"High level API" => "manuals/api_documentation/highlevel.md"
 	],
@@ -206,10 +245,15 @@ function build_battmo_docs(build_format              = nothing;
 			@info "$ex Writing notebook to $notebook_dir"
 			Literate.notebook(in_pth, notebook_dir, execute = false)
 		end
+		for (ex, pth) in validations
+			in_pth = validation_path(pth)
+			@info "$ex Writing notebook to $notebook_dir"
+			Literate.notebook(in_pth, notebook_dir, execute = false)
+		end
 	end
 	if deploy
 		DocumenterVitepress.deploydocs(;
-			repo = "github.com/BattMoTeam/BattMo.jl",
+			repo = "github.com/BattMoTeam/BattMo.jl.git",
 			devbranch = "main",
 			target = "build", # this is where Vitepress stores its output
 			branch = "gh-pages",
