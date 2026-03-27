@@ -297,7 +297,7 @@ function solve(vc::AbstractCalibration;
 			print = 1,
 			grad_tol = grad_tol,
 			obj_change_tol = obj_change_tol,
-			kwarg...,
+			kwargs...,
 		)
 	else
 		self_cache = Dict()
@@ -339,14 +339,16 @@ function solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objec
 	f = evaluate_calibration_objective(vc, objective, case, states, dt)
 	# Solve adjoints
 	if gradient
-		if !haskey(adj_cache, :storage)
-			adj_cache[:storage] = Jutul.AdjointsDI.setup_adjoint_storage_generic(
-				x, setup_battmo_case, states, dt, objective;
-				backend_arg...,
-				info_level = 0,
-			)
-		end
-		S = adj_cache[:storage]
+		# The case setup rebuilds the BattMo/Jutul model from the calibration
+		# parameters. Reusing adjoint storage across iterations can therefore leave
+		# the forward/backward adjoint simulators out of sync with the current case.
+		# This became visible after switching the workflow to JutulCase.
+		S = Jutul.AdjointsDI.setup_adjoint_storage_generic(
+			x, setup_battmo_case, states, dt, objective;
+			backend_arg...,
+			info_level = 0,
+		)
+		adj_cache[:storage] = S
 		g = similar(x)
 		Jutul.AdjointsDI.solve_adjoint_generic!(
 			g, x, setup_battmo_case, S, states, dt, objective; kwargs...,
@@ -433,14 +435,15 @@ function simulate_battmo_case_for_calibration(case, solver_settings;
 			info_level = -1,
 		)
 	end
-	result = Jutul.simulate(case; config = config)
-	# result = Jutul.simulate!(simulator,
-	# 	case.dt,
-	# 	state0 = case.state0,
-	# 	parameters = case.parameters,
-	# 	forces = case.forces,
-	# 	config = config,
-	# )
+	result = Jutul.simulate!(simulator,
+		case.dt,
+		state0 = case.state0,
+		parameters = case.parameters,
+		forces = case.forces,
+		termination_criterion = case.termination_criterion,
+		start_date = case.start_date,
+		config = config,
+	)
 
 	# last_solves = result.reports[end][:ministeps][end]
 	# if !result.reports[end][:ministeps][end][:success]
