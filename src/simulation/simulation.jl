@@ -20,6 +20,8 @@ Constructs a `Simulation` object that sets up and validates all necessary compon
 - `cell_parameters::CellParameters`: Parameters defining the physical characteristics of the battery cell.
 - `cycling_protocol::CyclingProtocol`: The protocol specifying the charging/discharging cycles for the simulation.
 - `simulation_settings::SimulationSettings` (optional): Configuration settings controlling solver behavior, time stepping, etc. If not provided, default settings are generated based on the model.
+- `time_steps` (optional): A pre-computed array of time steps to use for the simulation. If `nothing` (default), time steps are computed from the cycling protocol and simulation settings.
+- `state0` (optional): A pre-computed initial state to use for the simulation. If `nothing` (default), the initial state is computed from the model and cycling protocol.
 
 # Behavior
 - Validates `model`, `cell_parameters`, `cycling_protocol`, and `simulation_settings`.
@@ -60,6 +62,8 @@ struct Simulation <: AbstractSimulation
             cell_parameters::CellParameters,
             cycling_protocol::CyclingProtocol;
             simulation_settings::SimulationSettings = get_default_simulation_settings(model),
+            time_steps = nothing,
+            initial_state = nothing,
             hook = nothing,
             kwargs...,
         ) where {M <: ModelConfigured}
@@ -74,7 +78,6 @@ struct Simulation <: AbstractSimulation
 
             if cell_parameters_is_valid && cycling_protocol_is_valid && simulation_settings_is_valid
                 is_valid = true
-
             else
                 is_valid = false
             end
@@ -85,6 +88,8 @@ struct Simulation <: AbstractSimulation
                 cell_parameters = cell_parameters,
                 cycling_protocol = cycling_protocol,
                 simulation_settings = simulation_settings,
+                time_steps = time_steps,
+                initial_state = initial_state,
             )
 
             try
@@ -142,17 +147,18 @@ function simulation_configuration(model, input)
     # Setup simulation
     model, parameters = setup_model!(model, input, grids, couplings)
 
-    # setup initial state
+    # Setup initial state
     initial_state = setup_initial_state(input, model)
 
-    # setup forces
+    # Setup forces
     forces = setup_forces(model.multimodel)
 
-    # setup jutul simulator
+    # Setup jutul simulator
     simulator = Simulator(model.multimodel; state0 = initial_state, parameters = parameters, copy_state = true)
 
-    # setup time steps
+    # Setup time steps
     time_steps = setup_timesteps(input)
+
     return (
         model = model,
         grids = grids,
@@ -786,6 +792,10 @@ function setup_timesteps(
     """
     	Method setting up the timesteps from a json file object. 
     """
+    if !isnothing(input.time_steps)
+        return input.time_steps
+    end
+
     cycling_protocol = input.cycling_protocol
     simulation_settings = input.simulation_settings
 
@@ -848,12 +858,14 @@ function setup_timesteps(
         timesteps = repeat([dt], n)
 
     elseif protocol == "Function"
+
         totalTime = cycling_protocol["TotalTime"]
         dt = simulation_settings["TimeStepDuration"]
         n = totalTime / dt
         timesteps = repeat([dt], Int64(floor(n)))
 
     elseif protocol == "InputCurrentSeries"
+
         # The time series defines the time steps directly
         series_times = Float64.(cycling_protocol["Times"])
         timesteps = diff(series_times)

@@ -970,6 +970,10 @@ end
 
 function setup_initial_state(input, model::IntercalationBattery)
 
+    if !isnothing(input.initial_state)
+        return input.initial_state
+    end
+
     multimodel = model.multimodel
 
     include_cc = haskey(model.settings, "CurrentCollectors")
