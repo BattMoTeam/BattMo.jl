@@ -47,46 +47,29 @@ For `P2D`, BattMo provides:
 - a global through-cell position, `output.states["Cell"]["Position"]`
 - component-wise positions, such as `output.states["NegativeElectrode"]["ActiveMaterial"]["Position"]`
 
-````@example p2d_geometry
-using BattMo, GLMakie
+### Main Cell Parameters
 
-cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
-cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
-model_settings = load_model_settings(; from_default_set = "p2d")
-simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+| Input path | Meaning |
+| --- | --- |
+| `["NegativeElectrode"]["Coating"]["Thickness"]` | Negative electrode coating thickness. |
+| `["PositiveElectrode"]["Coating"]["Thickness"]` | Positive electrode coating thickness. |
+| `["Separator"]["Thickness"]` | Separator thickness. |
+| `["NegativeElectrode"]["CurrentCollector"]["Thickness"]` | Negative current collector thickness, when current collectors are enabled. |
+| `["PositiveElectrode"]["CurrentCollector"]["Thickness"]` | Positive current collector thickness, when current collectors are enabled. |
 
-sim = Simulation(LithiumIonBattery(; model_settings), cell_parameters, cycling_protocol; simulation_settings)
-positions = BattMo.get_component_positions_1d(sim.grids)
+### Main Simulation Settings
 
-fig = Figure(size = (950, 240))
-ax = Axis(fig[1, 1];
-	title = "P2D Through-Thickness Geometry",
-	xlabel = "Position / m",
-	ylabel = "",
-	yticks = (1:5, ["Neg. CC", "Neg. electrode", "Separator", "Pos. electrode", "Pos. CC"]),
-)
+| Setting | Meaning |
+| --- | --- |
+| `NegativeElectrodeCoatingGridPoints` | Number of cells through the negative electrode coating thickness. |
+| `PositiveElectrodeCoatingGridPoints` | Number of cells through the positive electrode coating thickness. |
+| `SeparatorGridPoints` | Number of cells through the separator thickness. |
+| `NegativeElectrodeParticleGridPoints` | Radial resolution inside negative active-material particles. |
+| `PositiveElectrodeParticleGridPoints` | Radial resolution inside positive active-material particles. |
+| `NegativeElectrodeCurrentCollectorGridPoints` | Number of cells through the negative current collector thickness. |
+| `PositiveElectrodeCurrentCollectorGridPoints` | Number of cells through the positive current collector thickness. |
 
-component_specs = [
-	("NegativeElectrodeCurrentCollectorPosition", 1, :steelblue),
-	("NegativeElectrodeActiveMaterialPosition", 2, :slategray),
-	("SeparatorPosition", 3, :goldenrod),
-	("PositiveElectrodeActiveMaterialPosition", 4, :seagreen),
-	("PositiveElectrodeCurrentCollectorPosition", 5, :black),
-]
-
-for (name, y, color) in component_specs
-	if haskey(positions, name)
-		x = positions[name]
-		scatter!(ax, x, fill(y, length(x)); color = color, markersize = 14)
-		lines!(ax, [minimum(x), maximum(x)], [y, y]; color = color, linewidth = 6)
-	end
-end
-
-hidedecorations!(ax; grid = false, minorgrid = false, ticks = false, minorticks = false, label = false)
-ax.yticksvisible = false
-ax.ylabelvisible = false
-fig
-````
+![P2D through-thickness geometry](/assets/geometry_p2d.png)
 
 ## P4D Pouch
 
@@ -114,33 +97,44 @@ BattMo provides component-wise mesh positions for these domains in the output, f
 - `output.states["PositiveElectrode"]["ActiveMaterial"]["Position"]`
 - `output.states["Electrolyte"]["Position"]`
 
-````@example p4d_pouch_geometry
-using BattMo, GLMakie, Jutul
+### Main Cell Parameters
 
-cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
-cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
-model_settings = load_model_settings(; from_default_set = "p4d_pouch")
-simulation_settings = load_simulation_settings(; from_default_set = "p4d_pouch")
+| Input path | Meaning |
+| --- | --- |
+| `["Cell"]["ElectrodeWidth"]` | Physical electrode width of the pouch cell. |
+| `["Cell"]["ElectrodeLength"]` | Physical electrode length of the pouch cell. |
+| `["Cell"]["TabWidth"]` | Width of the pouch tabs. |
+| `["Cell"]["TabLength"]` | Length of the pouch tabs. |
+| `["Cell"]["TabsOnSameSide"]` | Whether positive and negative tabs are placed on the same side of the pouch. |
+| `["NegativeElectrode"]["CurrentCollector"]["TabPositionFraction"]` | Tab position along the negative current collector width, from `0` to `1`. |
+| `["PositiveElectrode"]["CurrentCollector"]["TabPositionFraction"]` | Tab position along the positive current collector width, from `0` to `1`. |
+| `["NegativeElectrode"]["Coating"]["Thickness"]` | Negative electrode coating thickness. |
+| `["PositiveElectrode"]["Coating"]["Thickness"]` | Positive electrode coating thickness. |
+| `["Separator"]["Thickness"]` | Separator thickness. |
+| `["NegativeElectrode"]["CurrentCollector"]["Thickness"]` | Negative current collector thickness. |
+| `["PositiveElectrode"]["CurrentCollector"]["Thickness"]` | Positive current collector thickness. |
 
-sim = Simulation(LithiumIonBattery(; model_settings), cell_parameters, cycling_protocol; simulation_settings)
+### Main Simulation Settings
 
-components = ["NegativeElectrode", "PositiveElectrode", "NegativeCurrentCollector", "PositiveCurrentCollector"]
-colors = [:slategray, :seagreen, :steelblue, :black]
+| Setting | Meaning |
+| --- | --- |
+| `ElectrodeWidthGridPoints` | In-plane grid resolution along pouch width. |
+| `ElectrodeLengthGridPoints` | In-plane grid resolution along pouch length. |
+| `TabWidthGridPoints` | In-plane resolution across the pouch tab width. |
+| `TabLengthGridPoints` | In-plane resolution along the pouch tab length. |
+| `NegativeElectrodeCoatingGridPoints` | Number of cells through the negative electrode coating thickness. |
+| `PositiveElectrodeCoatingGridPoints` | Number of cells through the positive electrode coating thickness. |
+| `SeparatorGridPoints` | Number of cells through the separator thickness. |
+| `NegativeElectrodeParticleGridPoints` | Radial resolution inside negative active-material particles. |
+| `PositiveElectrodeParticleGridPoints` | Radial resolution inside positive active-material particles. |
+| `NegativeElectrodeCurrentCollectorGridPoints` | Number of cells through the negative current collector thickness. |
+| `PositiveElectrodeCurrentCollectorGridPoints` | Number of cells through the positive current collector thickness. |
+| `NegativeElectrodeCurrentCollectorTabWidthGridPoints` | Resolution across the negative tab face. |
+| `NegativeElectrodeCurrentCollectorTabLengthGridPoints` | Resolution along the negative pouch-tab face length. |
+| `PositiveElectrodeCurrentCollectorTabWidthGridPoints` | Resolution across the positive tab face. |
+| `PositiveElectrodeCurrentCollectorTabLengthGridPoints` | Resolution along the positive pouch-tab face length. |
 
-for (i, component) in enumerate(components)
-	if i == 1
-		global fig, ax, _ = plot_mesh(sim.grids[component]; color = colors[i])
-	else
-		plot_mesh!(ax, sim.grids[component]; color = colors[i])
-	end
-end
-
-ax.title = "P4D Pouch Geometry"
-ax.azimuth[] = 5.1
-ax.elevation[] = 0.45
-ax.aspect = :data
-fig
-````
+![P4D pouch geometry](/assets/geometry_p4d_pouch.png)
 
 See also:
 
@@ -159,48 +153,40 @@ This geometry is useful when:
 
 As for the pouch case, outputs are provided component-wise for the resolved domains.
 
-````@example p4d_cylindrical_geometry
-using BattMo, GLMakie, Jutul
+### Main Cell Parameters
 
-cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
-cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
-model_settings = load_model_settings(; from_default_set = "p4d_cylindrical")
-simulation_settings = load_simulation_settings(; from_default_set = "p4d_cylindrical")
+| Input path | Meaning |
+| --- | --- |
+| `["Cell"]["InnerRadius"]` | Inner jelly-roll radius. |
+| `["Cell"]["OuterRadius"]` | Outer jelly-roll radius. |
+| `["Cell"]["Height"]` | Axial height of the cylindrical cell. |
+| `["NegativeElectrode"]["CurrentCollector"]["TabFractions"]` | Angular or spiral placement of one or more negative tabs as fractions of total spiral length. |
+| `["PositiveElectrode"]["CurrentCollector"]["TabFractions"]` | Angular or spiral placement of one or more positive tabs as fractions of total spiral length. |
+| `["NegativeElectrode"]["CurrentCollector"]["TabWidth"]` | Width of the negative current-collector tab. |
+| `["PositiveElectrode"]["CurrentCollector"]["TabWidth"]` | Width of the positive current-collector tab. |
+| `["NegativeElectrode"]["Coating"]["Thickness"]` | Negative electrode coating thickness. |
+| `["PositiveElectrode"]["Coating"]["Thickness"]` | Positive electrode coating thickness. |
+| `["Separator"]["Thickness"]` | Separator thickness. |
+| `["NegativeElectrode"]["CurrentCollector"]["Thickness"]` | Negative current collector thickness. |
+| `["PositiveElectrode"]["CurrentCollector"]["Thickness"]` | Positive current collector thickness. |
 
-cell_parameters["Cell"]["OuterRadius"] = 0.010
-cell_parameters["NegativeElectrode"]["CurrentCollector"]["Thickness"] = 50e-6
-cell_parameters["PositiveElectrode"]["CurrentCollector"]["Thickness"] = 50e-6
-cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabFractions"] = [0.5 / 3, 0.5, 0.5 + 0.5 / 3]
-cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabFractions"] = [0.5 / 3, 0.5, 0.5 + 0.5 / 3]
-cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"] = 0.002
-cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"] = 0.002
-simulation_settings["AngularGridPoints"] = 24
+### Main Simulation Settings
 
-sim = Simulation(LithiumIonBattery(; model_settings), cell_parameters, cycling_protocol; simulation_settings)
+| Setting | Meaning |
+| --- | --- |
+| `HeightGridPoints` | Number of grid cells along the cylinder height. |
+| `AngularGridPoints` | Number of angular sectors used around the jelly roll. |
+| `NegativeElectrodeCoatingGridPoints` | Number of cells through the negative electrode coating thickness. |
+| `PositiveElectrodeCoatingGridPoints` | Number of cells through the positive electrode coating thickness. |
+| `SeparatorGridPoints` | Number of cells through the separator thickness. |
+| `NegativeElectrodeParticleGridPoints` | Radial resolution inside negative active-material particles. |
+| `PositiveElectrodeParticleGridPoints` | Radial resolution inside positive active-material particles. |
+| `NegativeElectrodeCurrentCollectorGridPoints` | Number of cells through the negative current collector thickness. |
+| `PositiveElectrodeCurrentCollectorGridPoints` | Number of cells through the positive current collector thickness. |
+| `NegativeElectrodeCurrentCollectorTabWidthGridPoints` | Resolution across the negative tab face. |
+| `PositiveElectrodeCurrentCollectorTabWidthGridPoints` | Resolution across the positive tab face. |
 
-components = ["NegativeElectrode", "PositiveElectrode", "NegativeCurrentCollector", "PositiveCurrentCollector"]
-colors = [:slategray, :seagreen, :steelblue, :black]
-
-for (i, component) in enumerate(components)
-	if i == 1
-		global fig, ax, _ = plot_mesh(sim.grids[component]; color = colors[i])
-	else
-		plot_mesh!(ax, sim.grids[component]; color = colors[i])
-	end
-end
-
-for component in ["NegativeCurrentCollector", "PositiveCurrentCollector"]
-	plot_mesh!(ax, sim.grids[component];
-		boundaryfaces = sim.couplings[component]["External"]["boundaryfaces"],
-		color = :red)
-end
-
-ax.title = "P4D Cylindrical Geometry"
-ax.azimuth[] = 4.0
-ax.elevation[] = 1.56
-ax.aspect = :data
-fig
-````
+![P4D cylindrical geometry](/assets/geometry_p4d_cylindrical.png)
 
 See also:
 

@@ -195,6 +195,21 @@ function BattMo.plot_output_impl(
 	# Get metadata for units
 	meta_data = BattMo.get_output_variables_meta_data()
 
+	function flatten_states_for_plotting(states_data)
+		flat = Dict{String, Any}()
+		for (name, info) in meta_data
+			if get(info, "case", nothing) != "states"
+				continue
+			end
+			try
+				flat[name] = BattMo.get_nested_output_value(states_data, BattMo.output_state_path(name), name)
+			catch
+			end
+		end
+		return flat
+	end
+	flat_states_data = flatten_states_for_plotting(output.states)
+
 	# Helper: Parse variable string
 	function parse_variable(varstr::String)
 		base = match(r"(.+)vs", varstr) |> x -> strip(x[1])
@@ -296,7 +311,7 @@ function BattMo.plot_output_impl(
 				main_unit_str = get_main_unit_str(clean_var)
 
 				# State variables and metrics
-				states_data = output.states
+				states_data = flat_states_data
 				metric_data = output.metrics
 				time_series = output.time_series
 
@@ -454,19 +469,7 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 	t = time_series["Time"]
 	I = time_series["Current"]
 	E = time_series["Voltage"]
-
-	states = output.states
-
 	n_steps = length(t)
-	x = states["Position"] * 10^6
-
-	NeAm_conc = states["NegativeElectrodeActiveMaterialSurfaceConcentration"]
-	PeAm_conc = states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
-	Elyte_conc = states["ElectrolyteConcentration"]
-
-	NeAm_pot = states["NegativeElectrodeActiveMaterialPotential"]
-	PeAm_pot = states["PositiveElectrodeActiveMaterialPotential"]
-	Elyte_pot = states["ElectrolytePotential"]
 	if plot_type == "simple"
 		fig = Figure(size = (1200, 1000))
 		grid = fig[1, 1] = GridLayout()
@@ -488,6 +491,30 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 		return fig
 
 	elseif plot_type == "line"
+		meta_data = BattMo.get_output_variables_meta_data()
+		states = Dict{String, Any}()
+		for (name, info) in meta_data
+			if get(info, "case", nothing) != "states"
+				continue
+			end
+			try
+				states[name] = BattMo.get_nested_output_value(output.states, BattMo.output_state_path(name), name)
+			catch
+			end
+		end
+
+		if !haskey(states, "Position")
+			error("plot_dashboard(output; plot_type = \"line\") currently requires 1D/P2D output with a global Position field.")
+		end
+
+		x = states["Position"] * 10.0^6
+		NeAm_conc = states["NegativeElectrodeActiveMaterialSurfaceConcentration"]
+		PeAm_conc = states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
+		Elyte_conc = states["ElectrolyteConcentration"]
+		NeAm_pot = states["NegativeElectrodeActiveMaterialPotential"]
+		PeAm_pot = states["PositiveElectrodeActiveMaterialPotential"]
+		Elyte_pot = states["ElectrolytePotential"]
+
 		fig = Figure(size = (1200, 1000))
 		grid = fig[1, 1] = GridLayout()
 
@@ -543,6 +570,30 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 		return fig
 
 	elseif plot_type == "contour"
+		meta_data = BattMo.get_output_variables_meta_data()
+		states = Dict{String, Any}()
+		for (name, info) in meta_data
+			if get(info, "case", nothing) != "states"
+				continue
+			end
+			try
+				states[name] = BattMo.get_nested_output_value(output.states, BattMo.output_state_path(name), name)
+			catch
+			end
+		end
+
+		if !haskey(states, "Position")
+			error("plot_dashboard(output; plot_type = \"contour\") currently requires 1D/P2D output with a global Position field.")
+		end
+
+		x = states["Position"] * 10.0^6
+		NeAm_conc = states["NegativeElectrodeActiveMaterialSurfaceConcentration"]
+		PeAm_conc = states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
+		Elyte_conc = states["ElectrolyteConcentration"]
+		NeAm_pot = states["NegativeElectrodeActiveMaterialPotential"]
+		PeAm_pot = states["PositiveElectrodeActiveMaterialPotential"]
+		Elyte_pot = states["ElectrolytePotential"]
+
 		fig = Figure(size = (1200, 1000))
 		grid = fig[1, 1] = GridLayout()
 

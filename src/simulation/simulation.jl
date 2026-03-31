@@ -746,9 +746,9 @@ function get_scalings(model, parameters)
 			L   = model[elde].system[:InitialThickness]
 			k   = model[elde].system[:IonicConductivity]
 
-			SEIvoltageDropRef = F * RvolRef / vsa * L / k
+			SEIVoltageDropRef = F * RvolRef / vsa * L / k
 
-			scaling = (model_label = elde, equation_label = :sei_voltage_drop, value = SEIvoltageDropRef)
+			scaling = (model_label = elde, equation_label = :sei_voltage_drop, value = SEIVoltageDropRef)
 			push!(scalings, scaling)
 
 			De = model[elde].system[:ElectronicDiffusionCoefficient]

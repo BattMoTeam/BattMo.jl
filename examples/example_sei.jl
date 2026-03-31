@@ -39,8 +39,8 @@ plot_dashboard(output; plot_type = "simple")
 # ## Plot of SEI thickness
 
 # We recover the SEI thickness from the `state` output
-seilength_x1 = output.states["SEIThickness"][:, 1]
-seilength_xend = output.states["SEIThickness"][:, end]
+seilength_x1 = output.states["NegativeElectrode"]["Interphase"]["Thickness"][:, 1]
+seilength_xend = output.states["NegativeElectrode"]["Interphase"]["Thickness"][:, end]
 
 f = Figure(size = (1000, 400))
 
@@ -94,8 +94,8 @@ f # hide
 
 # ## Plot of voltage drop 
 
-u_x1 = output.states["SEIVoltageDrop"][:, 1]
-u_xend = output.states["SEIVoltageDrop"][:, end]
+u_x1 = output.states["NegativeElectrode"]["Interphase"]["VoltageDrop"][:, 1]
+u_xend = output.states["NegativeElectrode"]["Interphase"]["VoltageDrop"][:, end]
 
 f = Figure(size = (1000, 400))
 

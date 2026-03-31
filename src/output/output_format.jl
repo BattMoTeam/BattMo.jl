@@ -432,10 +432,10 @@ function extract_spatial_data(states::Vector)
 		"ElectrolyteMass"                                      => [:Electrolyte, :Mass],
 		"ElectrolyteDiffusivity"                               => [:Electrolyte, :Diffusivity],
 		"ElectrolyteConductivity"                              => [:Electrolyte, :Conductivity],
-		"SEIThickness"                                         => [:NegativeElectrodeActiveMaterial, :SEIlength],
-		"NormalizedSEIThickness"                               => [:NegativeElectrodeActiveMaterial, :normalizedSEIlength],
-		"SEIVoltageDrop"                                       => [:NegativeElectrodeActiveMaterial, :SEIvoltageDrop],
-		"NormalizedSEIVoltageDrop"                             => [:NegativeElectrodeActiveMaterial, :normalizedSEIvoltageDrop])
+		"SEIThickness"                                         => [:NegativeElectrodeActiveMaterial, :SEIThickness],
+		"NormalizedSEIThickness"                               => [:NegativeElectrodeActiveMaterial, :NormalizedSEIThickness],
+		"SEIVoltageDrop"                                       => [:NegativeElectrodeActiveMaterial, :SEIVoltageDrop],
+		"NormalizedSEIVoltageDrop"                             => [:NegativeElectrodeActiveMaterial, :NormalizedSEIVoltageDrop])
 
 	output_data = Dict{String, Any}()
 

@@ -1,58 +1,58 @@
-using BattMo, MAT, Test
+using BattMo, MAT, Test, Jutul
 
 @testset "matlab test" begin
 
 	@test begin
 
-        errval = 1e-5
-        
-        fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/p2d_40.mat")
-        inputparams = load_matlab_input(fn)
+		errval = 1e-5
 
-        output = BattMo.get_simulation_input(inputparams::MatlabInput)
+		fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/p2d_40.mat")
+		inputparams = load_matlab_input(fn)
 
-        simulator  = output[:simulator]
-        model      = output[:model]
-        parameters = output[:parameters]
-        state0     = output[:state0]
-        timesteps  = output[:timesteps]
-        forces     = output[:forces]
+		output = BattMo.get_simulation_input(inputparams::MatlabInput)
 
-        ##############################
-        # Setup solver configuration #
-        ##############################
+		simulator  = output[:simulator]
+		model      = output[:model]
+		parameters = output[:parameters]
+		state0     = output[:state0]
+		timesteps  = output[:timesteps]
+		forces     = output[:forces]
 
-        cfg = simulator_config(simulator)
-        cfg[:info_level] = 0
+		##############################
+		# Setup solver configuration #
+		##############################
 
-        use_model_scaling = true
-        if use_model_scaling
-	        scalings = BattMo.get_matlab_scalings(model, parameters)
-	        tol_default = 1e-5
-	        for scaling in scalings
-		        model_label = scaling[:model_label]
-		        equation_label = scaling[:equation_label]
-		        value = scaling[:value]
-		        cfg[:tolerances][model_label][equation_label] = value * tol_default
-	        end
-        else
-	        for key in submodels_symbols(model)
-		        cfg[:tolerances][key][:default] = 1e-5
-	        end
-        end
+		cfg = simulator_config(simulator)
+		cfg[:info_level] = 0
 
-        states, = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
+		use_model_scaling = true
+		if use_model_scaling
+			scalings = BattMo.get_matlab_scalings(model, parameters)
+			tol_default = 1e-5
+			for scaling in scalings
+				model_label = scaling[:model_label]
+				equation_label = scaling[:equation_label]
+				value = scaling[:value]
+				cfg[:tolerances][model_label][equation_label] = value * tol_default
+			end
+		else
+			for key in submodels_symbols(model)
+				cfg[:tolerances][key][:default] = 1e-5
+			end
+		end
+
+		states, = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
 
 
-        t = [state[:Control][:Controller].time[1] for state in states]
-        E = [state[:Control][:ElectricPotential][1] for state in states]
+		t = [state[:Control][:Controller].time[1] for state in states]
+		E = [state[:Control][:ElectricPotential][1] for state in states]
 
-        matlab_states = inputparams["states"]
+		matlab_states = inputparams["states"]
 
-        tref = vec([state["time"][1] for state in matlab_states])
-        Eref = vec([state["Control"]["E"][1] for state in matlab_states])
+		tref = vec([state["time"][1] for state in matlab_states])
+		Eref = vec([state["Control"]["E"][1] for state in matlab_states])
 
-		isapprox(E, Eref[1 : length(t)], rtol = errval)
+		isapprox(E, Eref[1:length(t)], rtol = errval)
 
 	end
 

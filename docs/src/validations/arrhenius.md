@@ -28,8 +28,8 @@ using Statistics
 ### Load model with Arrhenius temperature dependence
 
 ````@example arrhenius
-params = load_cell_parameters(; from_default_set = "chen_2020")
-protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 model_settings = load_model_settings(; from_default_set = "p2d")
 
 model_settings["TemperatureDependence"] = "Arrhenius"
@@ -43,10 +43,10 @@ T_ref = 298.15
 ### Activation energies from parameter set (assumed in J/mol)
 
 ````@example arrhenius
-Ea_ne_R = params["NegativeElectrode"]["ActiveMaterial"]["ActivationEnergyOfReaction"]
-Ea_ne_D = params["NegativeElectrode"]["ActiveMaterial"]["ActivationEnergyOfDiffusion"]
-Ea_pe_R = params["PositiveElectrode"]["ActiveMaterial"]["ActivationEnergyOfReaction"]
-Ea_pe_D = params["PositiveElectrode"]["ActiveMaterial"]["ActivationEnergyOfDiffusion"]
+Ea_ne_R = cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ActivationEnergyOfReaction"]
+Ea_ne_D = cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ActivationEnergyOfDiffusion"]
+Ea_pe_R = cell_parameters["PositiveElectrode"]["ActiveMaterial"]["ActivationEnergyOfReaction"]
+Ea_pe_D = cell_parameters["PositiveElectrode"]["ActiveMaterial"]["ActivationEnergyOfDiffusion"]
 ````
 
 ### Run simulations and extract values
@@ -59,9 +59,10 @@ kvals_pe = Float64[]     # reaction rate (PE)
 Dvals_pe = Float64[]     # diffusion (PE)
 
 for TC in temps_C
-	p = deepcopy(protocol)
+	p = deepcopy(cycling_protocol)
 	p["InitialTemperature"] = TC + 273.15
-	out = solve(Simulation(model, params, p));
+	sim = Simulation(model, cell_parameters, p)
+	out = solve(sim; info_level = -1);
 
 	k_ne = out.states["NegativeElectrodeActiveMaterialReactionRateConstant"][1, :]
 	d_ne = out.states["NegativeElectrodeActiveMaterialDiffusionCoefficient"][1, :]
@@ -80,9 +81,10 @@ end
 Also run once at the reference temperature to anchor the theoretical lines at ln(Y_ref)
 
 ````@example arrhenius
-p_ref = deepcopy(protocol)
+p_ref = deepcopy(cycling_protocol)
 p_ref["InitialTemperature"] = T_ref
-out_ref = solve(Simulation(model, params, p_ref));
+sim = Simulation(model, cell_parameters, p_ref)
+out_ref = solve(sim; info_level = -1);
 
 k_ne_ref = out_ref.states["NegativeElectrodeActiveMaterialReactionRateConstant"][1, :]
 d_ne_ref = out_ref.states["NegativeElectrodeActiveMaterialDiffusionCoefficient"][1, :]
@@ -144,11 +146,8 @@ We plot against x_ref = (1/T - 1/T_ref)
 
 ````@example arrhenius
 xs = range(minimum(x_ref), maximum(x_ref), length = 100)
-````
 
---- NE Reaction ---
 
-````@example arrhenius
 ax1 = Axis(fig1[1, 1],
 	title = "Arrhenius Validation (with T_ref): NE reaction rate constant k",
 	xlabel = "1/T - 1/T_ref (1/K)", ylabel = "ln(k)")
@@ -169,11 +168,7 @@ lines!(ax1, xs, ln_k_ne_ref .+ slope_theory_k_ne .* xs,
 	color = :black, linestyle = :dash,
 	label = "Theory slope = $(round(slope_theory_k_ne, digits=4))")
 axislegend(ax1, position = :rb)
-````
 
---- PE Reaction ---
-
-````@example arrhenius
 ax2 = Axis(fig1[1, 2],
 	title = "Arrhenius Validation (with T_ref): PE reaction rate constant k",
 	xlabel = "1/T - 1/T_ref (1/K)", ylabel = "ln(k)")
@@ -184,11 +179,7 @@ lines!(ax2, xs, ln_k_pe_ref .+ slope_theory_k_pe .* xs,
 	color = :black, linestyle = :dash,
 	label = "Theory slope = $(round(slope_theory_k_pe, digits=4))")
 axislegend(ax2, position = :rb)
-````
 
---- NE Diffusion ---
-
-````@example arrhenius
 ax3 = Axis(fig1[2, 1],
 	title = "Arrhenius Validation (with T_ref): NE diffusion coefficient D",
 	xlabel = "1/T - 1/T_ref (1/K)", ylabel = "ln(D)")
@@ -199,11 +190,7 @@ lines!(ax3, xs, ln_D_ne_ref .+ slope_theory_D_ne .* xs,
 	color = :black, linestyle = :dash,
 	label = "Theory slope = $(round(slope_theory_D_ne, digits=4))")
 axislegend(ax3, position = :rb)
-````
 
---- PE Diffusion ---
-
-````@example arrhenius
 ax4 = Axis(fig1[2, 2],
 	title = "Arrhenius Validation (with T_ref): PE diffusion coefficient D",
 	xlabel = "1/T - 1/T_ref (1/K)", ylabel = "ln(D)")

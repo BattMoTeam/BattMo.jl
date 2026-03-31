@@ -12,10 +12,10 @@ SEImodel = SimulationModel{O, S, F, C} where {O <: JutulDomain,
 # Variable for SEI model added to ActiveMaterial #
 ##################################################
 
-struct normalizedSEIlength <: ScalarVariable end
-struct normalizedSEIvoltageDrop <: ScalarVariable end
-struct SEIlength <: ScalarVariable end
-struct SEIvoltageDrop <: ScalarVariable end
+struct NormalizedSEIThickness <: ScalarVariable end
+struct NormalizedSEIVoltageDrop <: ScalarVariable end
+struct SEIThickness <: ScalarVariable end
+struct SEIVoltageDrop <: ScalarVariable end
 
 
 ###################################################
@@ -24,20 +24,20 @@ struct SEIvoltageDrop <: ScalarVariable end
 
 # SEI mass conservation equation
 
-struct SEImassCons <: JutulEquation end
+struct SEIMassConservation <: JutulEquation end
 
-Jutul.local_discretization(::SEImassCons, i) = nothing
+Jutul.local_discretization(::SEIMassConservation, i) = nothing
 
-function Jutul.number_of_equations_per_entity(model::SEImodel, ::SEImassCons)
+function Jutul.number_of_equations_per_entity(model::SEImodel, ::SEIMassConservation)
 	return 1
 end
 
 # SEI voltage drop equation
 
-struct SEIvoltageDropEquation <: JutulEquation end
-Jutul.local_discretization(::SEIvoltageDropEquation, i) = nothing
+struct SEIVoltageDropEquation <: JutulEquation end
+Jutul.local_discretization(::SEIVoltageDropEquation, i) = nothing
 
-function Jutul.number_of_equations_per_entity(model::SEImodel, ::SEIvoltageDropEquation)
+function Jutul.number_of_equations_per_entity(model::SEImodel, ::SEIVoltageDropEquation)
 	return 1
 end
 
@@ -54,8 +54,8 @@ function Jutul.select_primary_variables!(S,
 	S[:ElectricPotential]        = ElectricPotential()
 	S[:ParticleConcentration]    = ParticleConcentration()
 	S[:SurfaceConcentration]     = SurfaceConcentration()
-	S[:normalizedSEIlength]      = normalizedSEIlength()
-	S[:normalizedSEIvoltageDrop] = normalizedSEIvoltageDrop()
+	S[:NormalizedSEIThickness]   = NormalizedSEIThickness()
+	S[:NormalizedSEIVoltageDrop] = NormalizedSEIVoltageDrop()
 
 end
 
@@ -69,9 +69,10 @@ function Jutul.select_secondary_variables!(S,
 	S[:Charge] = Charge()
 	S[:OpenCircuitPotential] = OpenCircuitPotential()
 	S[:ReactionRateConstant] = ReactionRateConstant()
+	S[:DiffusionCoefficient] = DiffusionCoefficient()
 	S[:SolidDiffFlux] = SolidDiffFlux()
-	S[:SEIlength] = SEIlength()
-	S[:SEIvoltageDrop] = SEIvoltageDrop()
+	S[:SEIThickness] = SEIThickness()
+	S[:SEIVoltageDrop] = SEIVoltageDrop()
 
 end
 
@@ -80,9 +81,13 @@ function Jutul.select_minimum_output_variables!(outputs,
 	system::ActiveMaterialP2D,
 	model::SEImodel,
 )
-
-	push!(outputs, :SEIlength)
-	push!(outputs, :SEIvoltageDrop)
+	push!(outputs, :Charge)
+	push!(outputs, :OpenCircuitPotential)
+	push!(outputs, :Temperature)
+	push!(outputs, :ReactionRateConstant)
+	push!(outputs, :DiffusionCoefficient)
+	push!(outputs, :SEIThickness)
+	push!(outputs, :SEIVoltageDrop)
 
 end
 
@@ -100,8 +105,8 @@ function Jutul.select_equations!(eqs,
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 	eqs[:mass_conservation]   = SolidMassCons()
 	eqs[:solid_diffusion_bc]  = SolidDiffusionBc()
-	eqs[:sei_mass_cons]       = SEImassCons()
-	eqs[:sei_voltage_drop]    = SEIvoltageDropEquation()
+	eqs[:sei_mass_cons]       = SEIMassConservation()
+	eqs[:sei_voltage_drop]    = SEIVoltageDropEquation()
 
 end
 
@@ -109,7 +114,7 @@ function Jutul.update_equation_in_entity!(eq_buf,
 	self_cell,
 	state,
 	state0,
-	eq::SEImassCons,
+	eq::SEIMassConservation,
 	model,
 	dt,
 	ldisc = nothing)
@@ -120,18 +125,18 @@ function Jutul.update_equation_in_entity!(eq_buf,
 	self_cell,
 	state,
 	state0,
-	eq::SEIvoltageDropEquation,
+	eq::SEIVoltageDropEquation,
 	model,
 	dt,
 	ldisc = nothing)
 	# do nothing    
 end
 
-function apply_bc_to_equation!(storage, parameters, model::SEImodel, eq::SEImassCons, eq_s)
+function apply_bc_to_equation!(storage, parameters, model::SEImodel, eq::SEIMassConservation, eq_s)
 	# do nothing
 end
 
-function apply_bc_to_equation!(storage, parameters, model::SEImodel, eq::SEIvoltageDropEquation, eq_s)
+function apply_bc_to_equation!(storage, parameters, model::SEImodel, eq::SEIVoltageDropEquation, eq_s)
 	# do nothing
 end
 
@@ -140,32 +145,32 @@ end
 ##############################
 
 @jutul_secondary(
-	function update_vocp!(SEIlength,
-		tv::SEIlength,
+	function update_vocp!(SEIThickness,
+		tv::SEIThickness,
 		model::SEImodel,
-		normalizedSEIlength,
+		NormalizedSEIThickness,
 		ix,
 	)
 		scaling = model.system.params[:InitialThickness]
 
 		for cell in ix
-			@inbounds SEIlength[cell] = scaling * normalizedSEIlength[cell]
+			@inbounds SEIThickness[cell] = scaling * NormalizedSEIThickness[cell]
 		end
 
 	end
 )
 
 @jutul_secondary(
-	function update_vocp!(SEIvoltageDrop,
-		tv::SEIvoltageDrop,
+	function update_vocp!(SEIVoltageDrop,
+		tv::SEIVoltageDrop,
 		model::SEImodel,
-		normalizedSEIvoltageDrop,
+		NormalizedSEIVoltageDrop,
 		ix,
 	)
 
 		scaling = model.system.params[:InitialPotentialDrop]
 		for cell in ix
-			@inbounds SEIvoltageDrop[cell] = scaling * normalizedSEIvoltageDrop[cell]
+			@inbounds SEIVoltageDrop[cell] = scaling * NormalizedSEIVoltageDrop[cell]
 		end
 	end
 )
@@ -199,7 +204,7 @@ function Jutul.update_cross_term_in_entity!(out,
 	ind_s = ct.source_cells[ind]
 
 	phi_a = state_s.ElectricPotential[ind_s]
-	seiU = state_s.SEIvoltageDrop[ind_s]
+	seiU = state_s.SEIVoltageDrop[ind_s]
 	ocp = state_s.OpenCircuitPotential[ind_s]
 	R0 = state_s.ReactionRateConstant[ind_s]
 	c_a_surf = state_s.SurfaceConcentration[ind_s]
@@ -279,7 +284,7 @@ function Jutul.update_cross_term_in_entity!(out,
 	c_a_surf = state_t.SurfaceConcentration[ind_t]
 	c_a = state_t.ParticleConcentration[ind_t]
 	phi_a = state_t.ElectricPotential[ind_t]
-	seiU = state_t.SEIvoltageDrop[ind_t]
+	seiU = state_t.SEIVoltageDrop[ind_t]
 	ocp = state_t.OpenCircuitPotential[ind_t]
 	R0 = state_t.ReactionRateConstant[ind_t]
 	T = state_t.Temperature[ind_t]
@@ -345,7 +350,7 @@ function Jutul.update_cross_term_in_entity!(out,
 	model_t::SEImodel,
 	model_s,
 	ct::ButlerVolmerElyteToActmatCT,
-	eq::SEImassCons,
+	eq::SEIMassConservation,
 	dt,
 	ldisc = local_discretization(ct, ind),
 )
@@ -364,13 +369,13 @@ function Jutul.update_cross_term_in_entity!(out,
 	ind_t = ct.target_cells[ind]
 	ind_s = ct.source_cells[ind]
 
-	L0 = state0_t.SEIlength[ind_t]
+	L0 = state0_t.SEIThickness[ind_t]
 
-	L     = state_t.SEIlength[ind_t]
+	L     = state_t.SEIThickness[ind_t]
 	T     = state_t.Temperature[ind_t]
 	phi_a = state_t.ElectricPotential[ind_t]
-	Usei  = state_t.SEIvoltageDrop[ind_t]
-	L     = state_t.SEIlength[ind_t]
+	Usei  = state_t.SEIVoltageDrop[ind_t]
+	L     = state_t.SEIThickness[ind_t]
 
 	phi_e = state_s.ElectricPotential[ind_s]
 
@@ -393,7 +398,7 @@ function Jutul.update_cross_term_in_entity!(out,
 	model_t::SEImodel,
 	model_s,
 	ct::ButlerVolmerElyteToActmatCT,
-	eq::SEIvoltageDropEquation,
+	eq::SEIVoltageDropEquation,
 	dt,
 	ldisc = local_discretization(ct, ind),
 )
@@ -410,13 +415,13 @@ function Jutul.update_cross_term_in_entity!(out,
 	ind_s = ct.source_cells[ind]
 
 	phi_a = state_t.ElectricPotential[ind_t]
-	seiU = state_t.SEIvoltageDrop[ind_t]
+	seiU = state_t.SEIVoltageDrop[ind_t]
 	ocp = state_t.OpenCircuitPotential[ind_t]
 	R0 = state_t.ReactionRateConstant[ind_t]
 	c_a_surf = state_t.SurfaceConcentration[ind_t]
 	c_a = state_t.ParticleConcentration[ind_t]
 	T = state_t.Temperature[ind_t]
-	L = state_t.SEIlength[ind_t]
+	L = state_t.SEIThickness[ind_t]
 
 	phi_e = state_s.ElectricPotential[ind_s]
 	c_e = state_s.ElectrolyteConcentration[ind_s]

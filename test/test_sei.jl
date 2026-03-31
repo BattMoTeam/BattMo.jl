@@ -31,8 +31,8 @@ using Test
 
 		states = output.states
 
-		sei_thickness = states["NegativeElectrode"]["Interphase"]["SEIThickness"]
-		voltage_drop = states["NegativeElectrode"]["Interphase"]["SEIVoltageDrop"]
+		sei_thickness = states["NegativeElectrode"]["Interphase"]["Thickness"]
+		voltage_drop = states["NegativeElectrode"]["Interphase"]["VoltageDrop"]
 
 
 		@test length(sei_thickness[:, 2]) ≈ 2629 atol = 0
