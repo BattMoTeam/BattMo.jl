@@ -111,12 +111,14 @@ function pouch_grid(input)
 		right_tab_start_frac = pos_tab_start_frac
 		right_tab_end_frac = pos_tab_end_frac
 		left_tab = "NegativeElectrode"
+		right_tab = "PositiveElectrode"
 	else
 		left_tab_start_frac = pos_tab_start_frac
 		left_tab_end_frac = pos_tab_end_frac
 		right_tab_start_frac = neg_tab_start_frac
 		right_tab_end_frac = neg_tab_end_frac
 		left_tab = "PositiveElectrode"
+		right_tab = "NegativeElectrode"
 	end
 
 
@@ -271,10 +273,6 @@ function pouch_grid(input)
 	# 9) TAB CARVING
 	# --------------------------------------------------------
 
-	# Compute tab start indices (x-direction)
-	left_tab_start_idx  = sum(segment_points[1:1]) + 1      # start of segment 2
-	right_tab_start_idx = sum(segment_points[1:4]) + 1      # start of segment 5
-
 	# Determine tab sides
 	if tabs_on_same_side
 		neg_y_side = same_side_y_side
@@ -308,15 +306,18 @@ function pouch_grid(input)
 		pos_rows = (Ny-pos_tab_length_points+1):Ny
 	end
 
+	neg_tab_cols = compute_tab_columns(cell_widths, neg_tab_pos_frac, neg_tab_width, neg_tab_width_points)
+	pos_tab_cols = compute_tab_columns(cell_widths, pos_tab_pos_frac, pos_tab_width, pos_tab_width_points)
+
 	# Compute the corridors using y-row ranges
 	neg_tab_local = compute_tab_indices_local(
-		segment_points, "NegativeElectrode", tabs_on_same_side,
+		neg_tab_cols, tabs_on_same_side,
 		Nx, Ny, neg_tab_length_points, neg_y_side;
 		row_range = neg_rows,
 	)
 
 	pos_tab_local = compute_tab_indices_local(
-		segment_points, "PositiveElectrode", tabs_on_same_side,
+		pos_tab_cols, tabs_on_same_side,
 		Nx, Ny, pos_tab_length_points, pos_y_side;
 		row_range = pos_rows,
 	)
@@ -338,8 +339,9 @@ function pouch_grid(input)
 
 	total_segments = length(z_thickness_per_segment)
 
-	neg_cc_segments = [s for s in 1:total_segments if z_thickness_per_segment[s] == neg_cc_thickness]
-	pos_cc_segments = [s for s in 1:total_segments if z_thickness_per_segment[s] == pos_cc_thickness]
+	neg_cc_segments, pos_cc_segments = get_current_collector_segment_indices(num_layers; extra_ne, double_coated)
+	@assert all(1 .<= neg_cc_segments .<= total_segments)
+	@assert all(1 .<= pos_cc_segments .<= total_segments)
 
 	cum_points = cumsum(z_points_per_segment)
 	seg_lo = vcat(1, cum_points[1:(end-1)] .+ 1)
@@ -388,7 +390,7 @@ end
 
 
 """
-	compute_tab_indices_local(segment_points, tab_type, tabs_on_same_side,
+	compute_tab_indices_local(tab_cols, tabs_on_same_side,
 							  Nx, Ny, tab_l, y_side; row_range=nothing)
 
 Returns linear x–y indices for a tab footprint.
@@ -396,17 +398,9 @@ Returns linear x–y indices for a tab footprint.
 `row_range` MUST be provided when tabs are on the same side.
 Otherwise, traditional bottom/top anchoring is used.
 
-Segment layout:
-	1: left active
-	2: left tab remainder
-	3: middle active
-	4: overlap (if any)
-	5: right tab remainder
-	6: right active
 """
 function compute_tab_indices_local(
-	segment_points,
-	tab_type::String,
+	tab_cols::UnitRange{Int},
 	tabs_on_same_side::Bool,
 	Nx::Int, Ny::Int,
 	tab_l::Int,
@@ -429,12 +423,6 @@ function compute_tab_indices_local(
 			error("y_side must be 'bottom' or 'top'")
 		end
 
-	# ----------------------------
-	# 2) Pick x-columns (width)
-	# ----------------------------
-	@assert sum(segment_points) == Nx
-	p = cumsum(vcat(0, segment_points))   # segment boundaries
-
 	# helper: x-fastest indexing
 	get_idx_for_run = function (col_start, col_stop)
 		col_start = clamp(col_start, 1, Nx)
@@ -443,27 +431,74 @@ function compute_tab_indices_local(
 		vcat([(r-1)*Nx .+ (col_start:col_stop) for r in rows]...)
 	end
 
-	idxs = Int[]
+	return unique!(sort!(get_idx_for_run(first(tab_cols), last(tab_cols))))
+end
 
-	if segment_points[4] == 0
-		# No overlap: NE = seg 2, PE = seg 5
-		if tab_type == "NegativeElectrode"
-			append!(idxs, get_idx_for_run(p[2] + 1, p[3]))   # segment 2
-		else
-			append!(idxs, get_idx_for_run(p[5] + 1, p[6]))   # segment 5
-		end
-	else
-		# Overlap: segment 4 always included
-		append!(idxs, get_idx_for_run(p[4] + 1, p[5]))       # overlap segment
+function compute_tab_columns(
+	cell_widths::AbstractVector{<:Real},
+	tab_pos_frac::Real,
+	tab_width::Real,
+	tab_width_points::Int,
+)
+	Nx = length(cell_widths)
+	ncols = clamp(tab_width_points, 1, Nx)
+	x_edges = vcat(0.0, cumsum(cell_widths))
+	total_width = x_edges[end]
 
-		if tab_type == "NegativeElectrode"
-			append!(idxs, get_idx_for_run(p[2] + 1, p[3]))   # NE remainder
-		else
-			append!(idxs, get_idx_for_run(p[5] + 1, p[6]))   # PE remainder
+	target_center = clamp(tab_pos_frac, 0.0, 1.0) * total_width
+	target_start = clamp(target_center - tab_width / 2, 0.0, total_width)
+	target_end = clamp(target_center + tab_width / 2, 0.0, total_width)
+
+	best_start = 1
+	best_overlap = -Inf
+	best_center_distance = Inf
+	best_width_distance = Inf
+
+	for start in 1:(Nx - ncols + 1)
+		stop = start + ncols - 1
+		block_start = x_edges[start]
+		block_end = x_edges[stop + 1]
+		overlap = max(0.0, min(block_end, target_end) - max(block_start, target_start))
+		block_center = 0.5 * (block_start + block_end)
+		center_distance = abs(block_center - target_center)
+		width_distance = abs((block_end - block_start) - (target_end - target_start))
+
+		better =
+			(overlap > best_overlap + 1e-12) ||
+			(abs(overlap - best_overlap) <= 1e-12 && center_distance < best_center_distance - 1e-12) ||
+			(abs(overlap - best_overlap) <= 1e-12 && abs(center_distance - best_center_distance) <= 1e-12 && width_distance < best_width_distance - 1e-12)
+
+		if better
+			best_start = start
+			best_overlap = overlap
+			best_center_distance = center_distance
+			best_width_distance = width_distance
 		end
 	end
 
-	return unique!(sort!(idxs))
+	return best_start:(best_start + ncols - 1)
+end
+
+function get_current_collector_segment_indices(num_layers::Integer; extra_ne::Bool, double_coated::Bool)
+	neg_cc_segments = Int[]
+	pos_cc_segments = Int[]
+
+	if double_coated
+		for layer in 1:num_layers
+			base = 1 + 8 * (layer - 1)
+			push!(neg_cc_segments, base + 1)
+			push!(pos_cc_segments, base + 5)
+		end
+
+		if extra_ne
+			push!(neg_cc_segments, 8 * num_layers + 2)
+		end
+	else
+		push!(neg_cc_segments, 1)
+		push!(pos_cc_segments, 5)
+	end
+
+	return neg_cc_segments, pos_cc_segments
 end
 
 
@@ -685,4 +720,3 @@ function setup_pouch_cell_geometry(H_mother, paramsz, extra_ne, double_coated)
 
 	return grids, couplings
 end
-

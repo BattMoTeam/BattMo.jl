@@ -44,7 +44,7 @@ cell_parameters["NegativeElectrode"]["CurrentCollector"]["Thickness"] = 18e-6
 cell_parameters["PositiveElectrode"]["CurrentCollector"]["Thickness"] = 20e-6
 
 # A slightly coarser in-plane grid keeps the example fairly quick to set up.
-simulation_settings["ElectrodeWidthGridPoints"] = 8
+simulation_settings["ElectrodeWidthGridPoints"] = 12
 simulation_settings["ElectrodeLengthGridPoints"] = 8
 nothing #hide
 

@@ -58,7 +58,7 @@ function save_p4d_pouch_geometry()
 	cell_parameters["NegativeElectrode"]["CurrentCollector"]["Thickness"] = 18e-6
 	cell_parameters["PositiveElectrode"]["CurrentCollector"]["Thickness"] = 20e-6
 
-	simulation_settings["ElectrodeWidthGridPoints"] = 8
+	simulation_settings["ElectrodeWidthGridPoints"] = 12
 	simulation_settings["ElectrodeLengthGridPoints"] = 8
 
 	sim = Simulation(LithiumIonBattery(; model_settings), cell_parameters, cycling_protocol; simulation_settings)
