@@ -40,9 +40,47 @@ date: 17 November 2025
 bibliography: paper.bib
 ---
 <!-- To compile this file, after installing docker, from this directory, run : docker run --rm --volume $PWD:/data --user $(id -u):$(id -g) --env JOURNAL=joss openjournals/inara  -->
+
+
 # Summary
-This paper introduces BattMo.jl, the Battery Modelling Toolbox, an open-source Julia framework for continuum-scale simulation of electrochemical devices. Using a finite-volume approach, BattMo.jl supports pseudo-2-dimensional (P2D) models for fast screening on a reduced-order mesh, as well as more comprehensive pseudo-four-dimensional (P4D) models that incorporate the 3D design of realistic geometries, including cylindrical cells and pouch cells. 
------ add a few functionalities -----
+
+
+
+# Statement of need
+Physics based battery cell modelling has several applications within the battery field. It can bring insight into the electrochemical processes that are happening within a battery cell, it's tool that can be used to improve cell design and analyse short and long term cell performance without having to do long term cycling within the lab, it can be used for improving battery cell loading limits for an extended life time of a cell, it can be a virtual twin accompanion during battery cell testing in the lab, monitoring and guiding testing procedures, etc.
+
+Within research, physics based modeling has been used to drive innovation within a wide variety of battery chemistries. For example, 
+
+.....
+
+In the end, physics based battery cell models enable a cheaper and less time consuming way to test battery cells and can therefore be very valuable to the innovation within the battery field. But, the value of such models does not only lie within the direct battery market and research. It also adds great value within education, where battery cell models can help students and early researches understand the processes and performance standards of commercial and non-commercial battery chemistries, shaping the future researchers and battery cell designers.
+
+For this purpose, BattMo.jl puts great value to the usability and accessability of the software, providing not only an open-sourced user-friendly command line API, but also an open-sourced, accessible and easy to use graphical user interface that teachers can incorparate within their curicculum showing virtual examples that compliment theory.
+
+
+
+# State of the field
+Recently, a variety of open-source battery modelling codes have been released including PyBaMM [@sulzer2021python], cideMOD [@CiriaAylagas2022], LIONSIMBA [@torchio2016lionsimba], PETLion [@Berliner_2021], and MPET [@mpet_github], among others. These open-source modelling frameworks help the battery community to run simulations in a validated model environment, instead of relying on homemade code that risk poor reproducibility of results. Yet there remains a clear need for tools that (i) address both Li-ion and other chemistries, (ii) support full 3D cell simulations, and (iv) combine computational efficiency with broad accessibility.
+
+Following show a comparison of results for a standard P2D lithium ion simulation between similar softwares and their simulation run times. To get the true run time durations from the Julia packages, the second simulation is measured after pre-compilation has been done.
+
+# Software design
+
+
+
+# Research impact statement
+
+
+# AI usage disclosure
+AI was used during development of the BattMo.jl code. AI has not been used during the development of the core PXD model within BattMo.jl, but it has been used for the generation of some of the functionalities and features on top of the core model, like for example some of the quick plotting functionalities and additional geometry meshes. It has been used during the generation of a few parts of the documentation, testing scripts, and github workflows. Furthermore, has AI sporadically been used for debugging purposes.
+
+Within this paper, AI was only used to check spelling.
+
+All code that was generated or modified by AI has been validated and tested by the authors. AI generated and modified text has been proofread by the authors.
+
+-----
+# Summary
+This paper introduces BattMo.jl, an open-source Julia framework for continuum-scale simulation of electrochemical devices. Using a finite-volume approach, BattMo.jl supports pseudo-2-dimensional (P2D) models for fast screening on a reduced-order mesh, as well as more comprehensive pseudo-four-dimensional (P4D) models that incorporate the 3D design of realistic geometries, including cylindrical cells and pouch cells. 
 
 The toolbox combines high-performance solvers, built-in libraries of battery designs and cycling protocols, calculation of cell KPI's, quick plotting tools, and an intuitive programmatic and graphical interface. It further includes an adjoint-based optimization framework for parameter estimation and model calibration, enabling close integration of modelling with experimental workflows. The [BattMoTeam](https://batterymodel.com/our-team/) collaborates closely with the [SINTEF Battery Lab](https://www.sintef.no/en/all-laboratories/sintef-battery-lab/), gaining valuable input from experienced battery researchers and helping to bridge the gap between academic modelling and industrial innovation. This partnership helps ensure that the toolbox remains relevant and effective in real-world applications, driving innovation and advancing the field of energy storage technology.
 
