@@ -7,7 +7,7 @@
 # - Save outputs
 # - Load outputs.
 
-# Lets start with loading some pre-defined cell parameters, cycling protocols, and running a simulation. 
+# Lets start with loading some pre-defined cell parameters, cycling protocols, and running a simulation.
 
 using BattMo, GLMakie
 
@@ -24,12 +24,12 @@ nothing # hide
 
 
 # Now we'll have a look into what the output entail. The ouput is of type SimulationOutput and contains multiple output quantity dicts, the full input dict and some other structures. Lets print the
-# properties of the SimulationOutput. 
+# properties of the SimulationOutput.
 
 propertynames(output)
 
 # In terms of simulation results, we can see that the output structure includes time series data, states data and metrics data. Furthermore, it includes the full input dict, some output structure from Jutul, the model instance, and the simulation instance.
-# Let's for now have a look into the simulation results and see how we can access certain output quantities. 
+# Let's for now have a look into the simulation results and see how we can access certain output quantities.
 
 # In BattMo, we make a distinction between three types of results:
 # - time series: includes all quantities that only depend on time. For example, time itself, cell voltage, current, capacity, etc.
@@ -66,5 +66,3 @@ fig = Figure()
 ax = Axis(fig[1, 1], ylabel = "Lithium concentration / mol·L⁻¹", xlabel = "Particle radius / m", title = "Positive electrode concentration")
 lines!(ax, radius, concentration_at_grid_point)
 display(fig)
-
-

@@ -1,9 +1,9 @@
-# # Example with SEI layer 
+# # Example with SEI layer
 
 # ## Preparation of the input
 using Jutul, BattMo, GLMakie
 
-# We use the SEI model presented in [bolay2022](@cite). We use the json data given in [bolay.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/bolay.json#L157) which contains the parameters for the SEI layer. 
+# We use the SEI model presented in [bolay2022](@cite). We use the json data given in [bolay.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/bolay.json#L157) which contains the parameters for the SEI layer.
 
 cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
 cycling_protocol = load_cycling_protocol(; from_default_set = "cccv")
@@ -44,87 +44,98 @@ seilength_xend = output.states["NegativeElectrode"]["Interphase"]["Thickness"][:
 
 f = Figure(size = (1000, 400))
 
-ax = Axis(f[1, 1],
-	title = "Length",
-	xlabel = "Time / s",
-	ylabel = "Thickness / m",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
+ax = Axis(
+    f[1, 1],
+    title = "Length",
+    xlabel = "Time / s",
+    ylabel = "Thickness / m",
+    xlabelsize = 25,
+    ylabelsize = 25,
+    xticklabelsize = 25,
+    yticklabelsize = 25,
 )
 
-scatterlines!(ax,
-	t,
-	seilength_x1;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black)
-
-scatterlines!(ax,
-	t,
-	seilength_xend;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black)
-
-ax = Axis(f[2, 1],
-	title = "SEI thicknesss",
-	xlabel = "Time / s",
-	ylabel = "Voltage / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
+scatterlines!(
+    ax,
+    t,
+    seilength_x1;
+    linewidth = 4,
+    markersize = 10,
+    marker = :cross,
+    markercolor = :black
 )
 
-scatterlines!(ax,
-	t,
-	E;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black)
+scatterlines!(
+    ax,
+    t,
+    seilength_xend;
+    linewidth = 4,
+    markersize = 10,
+    marker = :cross,
+    markercolor = :black
+)
+
+ax = Axis(
+    f[2, 1],
+    title = "SEI thicknesss",
+    xlabel = "Time / s",
+    ylabel = "Voltage / V",
+    xlabelsize = 25,
+    ylabelsize = 25,
+    xticklabelsize = 25,
+    yticklabelsize = 25,
+)
+
+scatterlines!(
+    ax,
+    t,
+    E;
+    linewidth = 4,
+    markersize = 10,
+    marker = :cross,
+    markercolor = :black
+)
 
 display(GLMakie.Screen(), f) # hide
 f # hide
 
 
-# ## Plot of voltage drop 
+# ## Plot of voltage drop
 
 u_x1 = output.states["NegativeElectrode"]["Interphase"]["VoltageDrop"][:, 1]
 u_xend = output.states["NegativeElectrode"]["Interphase"]["VoltageDrop"][:, end]
 
 f = Figure(size = (1000, 400))
 
-ax = Axis(f[1, 1],
-	title = "SEI voltage drop",
-	xlabel = "Time / s",
-	ylabel = "Voltage / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
+ax = Axis(
+    f[1, 1],
+    title = "SEI voltage drop",
+    xlabel = "Time / s",
+    ylabel = "Voltage / V",
+    xlabelsize = 25,
+    ylabelsize = 25,
+    xticklabelsize = 25,
+    yticklabelsize = 25,
 )
 
-scatterlines!(ax,
-	t,
-	u_x1;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :blue,
-	label = "xmin")
+scatterlines!(
+    ax,
+    t,
+    u_x1;
+    linewidth = 4,
+    markersize = 10,
+    marker = :cross,
+    markercolor = :blue,
+    label = "xmin"
+)
 
-scatterlines!(ax,
-	t,
-	u_xend;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-	label = "xmax")
-
-
+scatterlines!(
+    ax,
+    t,
+    u_xend;
+    linewidth = 4,
+    markersize = 10,
+    marker = :cross,
+    markercolor = :black,
+    label = "xmax"
+)

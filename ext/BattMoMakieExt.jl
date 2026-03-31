@@ -5,6 +5,7 @@ using Makie: Makie
 using Makie: Slider, Label, Axis, Colorbar, Figure, Observable, GridLayout
 using Makie: scatterlines!, contourf!, vlines!, lines!, autolimits!
 using Makie: on, axislegend
+using Jutul: si_unit
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
@@ -14,7 +15,7 @@ end
 
 function BattMo.independent_figure(fig)
 	backend_str = string(nameof(Makie.current_backend()))
-	if backend_str == "GLMakie"
+	return if backend_str == "GLMakie"
 		BattMo.independent_figure_GLMakie(fig)
 	elseif backend_str == "WGLMakie"
 		BattMo.independent_figure_WGLMakie(fig)
@@ -114,8 +115,10 @@ function BattMo.plot_cell_curves_impl(cell_parameters::CellParameters; new_windo
 		if isa(val, AbstractString) && haskey(param_map, param_path)
 			quantity = last_key(param_path)
 			unit = meta_data[quantity]["unit"]
-			ax = Axis(fig[row, col], title = param_path,
-				xlabel = x_label, ylabel = "$quantity / $unit")
+			ax = Axis(
+				fig[row, col], title = param_path,
+				xlabel = x_label, ylabel = "$quantity / $unit",
+			)
 			setup_func, args_symbols = param_map[param_path]
 			f_expr = setup_func(val)
 			f_generated = @RuntimeGeneratedFunction(f_expr)
@@ -133,8 +136,10 @@ function BattMo.plot_cell_curves_impl(cell_parameters::CellParameters; new_windo
 		elseif isa(val, Dict)
 			quantity = last_key(param_path)
 			unit = meta_data[quantity]["unit"]
-			ax = Axis(fig[row, col], title = param_path,
-				xlabel = x_label, ylabel = "$quantity / $unit")
+			ax = Axis(
+				fig[row, col], title = param_path,
+				xlabel = x_label, ylabel = "$quantity / $unit",
+			)
 
 			if all(haskey(val, k) for k in ["X", "Y"])
 				x_values, y = val["X"], val["Y"]
@@ -159,8 +164,6 @@ function BattMo.plot_cell_curves_impl(cell_parameters::CellParameters; new_windo
 	end
 	return fig
 end
-
-
 
 
 function BattMo.plot_output_impl(
@@ -254,7 +257,7 @@ function BattMo.plot_output_impl(
 			# Determine unit string for dimension
 			unit_str = ""
 			if d == "Position" || d == "NegativeElectrodeActiveMaterialRadius" || d == "PositiveElectrodeActiveMaterialRadius"
-				val = val * 1e6   # convert from meters to μm
+				val = val * 1.0e6   # convert from meters to μm
 				unit_str = " μm"
 			elseif d == :Time
 				if haskey(meta_data, "Time") && haskey(meta_data["Time"], "unit")
@@ -276,7 +279,7 @@ function BattMo.plot_output_impl(
 			push!(parts, "$(d)=$val_str$unit_str")
 		end
 
-		isempty(parts) ? "" : " at " * join(parts, ", ")
+		return isempty(parts) ? "" : " at " * join(parts, ", ")
 	end
 
 	# Helper: Warn and skip if all data are NaNs
@@ -319,9 +322,9 @@ function BattMo.plot_output_impl(
 
 				var_data = data[clean_var]
 
-				rad_pe = data["PositiveElectrodeActiveMaterialRadius"] * 1e6
-				rad_ne = data["NegativeElectrodeActiveMaterialRadius"] * 1e6
-				pos = data["Position"] * 1e6
+				rad_pe = data["PositiveElectrodeActiveMaterialRadius"] * 1.0e6
+				rad_ne = data["NegativeElectrodeActiveMaterialRadius"] * 1.0e6
+				pos = data["Position"] * 1.0e6
 				nt = length(full_time)
 				cycles = metric_data["CycleIndex"]
 
@@ -466,10 +469,22 @@ end
 function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = true)
 
 	time_series = output.time_series
-	t = time_series["Time"]
+	t = time_series["Time"] / si_unit("hour")
 	I = time_series["Current"]
 	E = time_series["Voltage"]
+
+	states = output.states
+
 	n_steps = length(t)
+	x = states["Position"] * 10^6
+
+	NeAm_conc = states["NegativeElectrodeActiveMaterialSurfaceConcentration"]
+	PeAm_conc = states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
+	Elyte_conc = states["ElectrolyteConcentration"]
+
+	NeAm_pot = states["NegativeElectrodeActiveMaterialPotential"]
+	PeAm_pot = states["PositiveElectrodeActiveMaterialPotential"]
+	Elyte_pot = states["ElectrolytePotential"]
 	if plot_type == "simple"
 		fig = Figure(size = (1200, 1000))
 		grid = fig[1, 1] = GridLayout()
@@ -477,11 +492,11 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 		Label(grid[0, 1:3], "Simple Dashboard", fontsize = 24, halign = :center)
 
 		ax_current = Axis(grid[1, 1:3], title = "Current  /  A")
-		ax_current.xlabel = "Time  /  s"
+		ax_current.xlabel = "Time  /  h"
 		scatterlines!(ax_current, t, I; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		ax_voltage = Axis(grid[2, 1:3], title = "Voltage  /  V")
-		ax_voltage.xlabel = "Time  /  s"
+		ax_voltage.xlabel = "Time  /  h"
 		scatterlines!(ax_voltage, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		if new_window
@@ -521,11 +536,11 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 		Label(grid[0, 1:3], "Line Dashboard", fontsize = 24, halign = :center)
 
 		ax_current = Axis(grid[1, 1:3], title = "Current  /  A")
-		ax_current.xlabel = "Time  /  s"
+		ax_current.xlabel = "Time  /  h"
 		scatterlines!(ax_current, t, I; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		ax_voltage = Axis(grid[2, 1:3], title = "Voltage  /  V")
-		ax_voltage.xlabel = "Time  /  s"
+		ax_voltage.xlabel = "Time  /  h"
 		scatterlines!(ax_voltage, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		slider = Slider(grid[6, 1:3], range = 1:n_steps, startvalue = 1)
@@ -547,7 +562,7 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 			obs_data = Observable(data[1, :])
 			plt = lines!(ax_678, x, obs_data, label = label; linewidth = 4)
 			ax_678.xlabel = "Position  /  μm"
-			on(ts) do i
+			return on(ts) do i
 				obs_data[] = data[i, :]
 				autolimits!(ax_678)
 			end
@@ -600,11 +615,11 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 		Label(grid[0, 1:3], "Contour Dashboard", fontsize = 24, halign = :center)
 
 		ax_current = Axis(grid[1, 1:3], title = "Current  /  A")
-		ax_current.xlabel = "Time  /  s"
+		ax_current.xlabel = "Time  /  h"
 		scatterlines!(ax_current, t, I; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		ax_voltage = Axis(grid[2, 1:3], title = "Voltage  /  V")
-		ax_voltage.xlabel = "Time  /  s"
+		ax_voltage.xlabel = "Time  /  h"
 		scatterlines!(ax_voltage, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
 		function contour_with_labels(parent_grid, row, col, data, title)
@@ -612,11 +627,11 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 
 			ax_678 = Axis(subgrid[1, 1])
 			plt = contourf!(ax_678, x, t, data')
-			ax_678.ylabel = "Time  /  s"
+			ax_678.ylabel = "Time  /  h"
 			ax_678.xlabel = "Position  / μm"
 			ax_678.title = title
 
-			Colorbar(subgrid[1, 2], plt, width = 15)
+			return Colorbar(subgrid[1, 2], plt, width = 15)
 		end
 
 		# Concentration plots
@@ -639,8 +654,6 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 		error("Unsupported plot_type $plot_type. Use \"line\" or \"contour\".")
 	end
 end
-
-
 
 
 end # module

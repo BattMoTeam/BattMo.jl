@@ -52,9 +52,9 @@ include(joinpath(battmo_base, "src/input/defaults/cell_parameters/function_param
 			I = output.time_series["Current"]
 			c_pe = output.states["PositiveElectrode"]["ActiveMaterial"]["SurfaceConcentration"]
 
-			@test I[end] ≈ I_test[i] atol = 1e-1
+			@test I[end] ≈ I_test[i] atol = 1.0e-1
 
-			@test c_pe[2, 23] ≈ c_test[i] atol = 1e-1
+			@test c_pe[2, 23] ≈ c_test[i] atol = 1.0e-1
 
 
 		end
@@ -65,4 +65,3 @@ include(joinpath(battmo_base, "src/input/defaults/cell_parameters/function_param
 	end
 
 end
-

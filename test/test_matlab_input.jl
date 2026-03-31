@@ -4,7 +4,7 @@ using BattMo, MAT, Test, Jutul
 
 	@test begin
 
-		errval = 1e-5
+		errval = 1.0e-5
 
 		fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/p2d_40.mat")
 		inputparams = load_matlab_input(fn)
@@ -28,7 +28,7 @@ using BattMo, MAT, Test, Jutul
 		use_model_scaling = true
 		if use_model_scaling
 			scalings = BattMo.get_matlab_scalings(model, parameters)
-			tol_default = 1e-5
+			tol_default = 1.0e-5
 			for scaling in scalings
 				model_label = scaling[:model_label]
 				equation_label = scaling[:equation_label]
@@ -37,7 +37,7 @@ using BattMo, MAT, Test, Jutul
 			end
 		else
 			for key in submodels_symbols(model)
-				cfg[:tolerances][key][:default] = 1e-5
+				cfg[:tolerances][key][:default] = 1.0e-5
 			end
 		end
 
@@ -57,5 +57,3 @@ using BattMo, MAT, Test, Jutul
 	end
 
 end
-
-

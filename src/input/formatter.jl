@@ -4,9 +4,21 @@ export convert_parameter_sets_to_old_input_format, convert_to_parameter_sets, fl
 function flatten_input(input::P) where {P <: ParameterSet}
     input_dict = input.all
     return flatten_dict(input_dict)
+    input_dict = input.all
+    return flatten_dict(input_dict)
 end
 
 function flatten_dict(dict; parent_key::String = "")
+    flat = Dict{String, Any}()
+    for (k, v) in dict
+        new_key = isempty(parent_key) ? k : string(parent_key, k)
+        if v isa Dict
+            merge!(flat, flatten_dict(v; parent_key = new_key))
+        else
+            flat[new_key] = v
+        end
+    end
+    return flat
     flat = Dict{String, Any}()
     for (k, v) in dict
         new_key = isempty(parent_key) ? k : string(parent_key, k)
@@ -77,6 +89,11 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
     elseif params["Geometry"]["case"] == "3D-demo" || params["Geometry"]["case"] == "multiLayerPouch"
         geom = "P4D Pouch"
 
+    elseif params["Geometry"]["case"] == "jellyRoll"
+        geom = "P4D Cylindrical"
+    else
+        error("ModelFramework not recognized. Please use '1D', '3D-demo' or 'jellyRoll'.")
+    end
     elseif params["Geometry"]["case"] == "jellyRoll"
         geom = "P4D Cylindrical"
     else

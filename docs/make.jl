@@ -9,13 +9,14 @@ using DocumenterVitepress
 ##
 cd(@__DIR__)
 
-function build_battmo_docs(build_format              = nothing;
-	build_examples            = true,
-	build_tutorials           = build_examples,
+function build_battmo_docs(
+	build_format = nothing;
+	build_examples = true,
+	build_tutorials = build_examples,
 	build_validation_examples = build_examples,
-	build_notebooks           = true,
-	clean                     = true,
-	deploy                    = true,
+	build_notebooks = true,
+	clean = true,
+	deploy = true,
 )
 
 	# In case we want to include docs of Jutul functions
@@ -62,7 +63,7 @@ function build_battmo_docs(build_format              = nothing;
 	function update_footer(content, pth, dir)
 		return content * "\n\n # ## Example on GitHub\n " *
 			   "# If you would like to run this example yourself, it can be downloaded from " *
-			   "the BattMo.jl GitHub repository [as a script](https://github.com/BattMoTeam/BattMo.jl/blob/main/$dir/$pth.jl)."#, " *
+			   "the BattMo.jl GitHub repository [as a script](https://github.com/BattMoTeam/BattMo.jl/blob/main/$dir/$pth.jl)." #, " *
 		#"or as a [Jupyter Notebook](https://github.com/BattMoTeam/BattMo.jl/blob/gh-pages/dev/final_site/notebooks/$pth.ipynb)"
 	end
 	if clean
@@ -175,60 +176,61 @@ function build_battmo_docs(build_format              = nothing;
 	end
 
 	makedocs(;
-		modules  = [BattMo],
-		authors  = "SINTEF BattMo team and contributors",
-		repo     = "https://github.com/BattMoTeam/BattMo.jl/blob/{commit}{path}#{line}",
+		modules = [BattMo],
+		authors = "SINTEF BattMo team and contributors",
+		repo = "https://github.com/BattMoTeam/BattMo.jl/blob/{commit}{path}#{line}",
 		sitename = "BattMo.jl",
 		warnonly = [:missing_docs],
-		plugins  = [bib],
-		format   = build_format,
-		draft    = false,
-		source   = "src",
-		build    = "build",
-		pages    = [
-		"User Guide" => [
-		"Getting started" => [
-		"Installation" => "manuals/user_guide/installation.md",
-		"Getting started" => "manuals/user_guide/getting_started.md"
-	],
-		"Battery models" => [
-		"Lithium ion model" => "manuals/user_guide/pxd_model.md",
-		"Geometries" => "manuals/user_guide/geometries.md",
-		"Sodium ion model" => "manuals/user_guide/sodium_ion_model.md"
-	],
-		"Sub-models" => [
-		"Overview" => "manuals/user_guide/sub_models.md",
-		"Ramp up" => "manuals/user_guide/ramp_up.md",
-		"SEI" => "manuals/user_guide/sei_model.md",
-		"Temperature dependence" => "manuals/user_guide/arrhenius.md"
-	],
-		"Public API" => [
-		"Input terminology" => "manuals/user_guide/terminology.md",
-		"Simulation dependent input parameters" => "manuals/user_guide/simulation_dependent_input.md",
-		"Functions and types" => "manuals/user_guide/public_api.md"
-	],
-		"Tutorials" => tutorials_markdown
-	],
-		"Examples" => [
-		"Advanced examples" => examples_markdown
-	],
-		"Validations" => [
-		"Validation notebooks" => validation_notebooks_markdown
-	],
-		"API Documentation" => [
-		"High level API" => "manuals/api_documentation/highlevel.md"
-	],
-		"Contribution guide" => [
-		"Contribute to BattMo.jl" => "manuals/contribution/contribution.md"
-		"Jutul" => "manuals/contribution/jutul_integration.md"
-	],
-		"References" => [
-		"Bibliography" => "extras/refs.md"
-	],
-		"PyBattMo" => [
-		"Installation" => "manuals/pybattmo/installation.md",
-		"Examples" => "manuals/pybattmo/examples.md"
-	]],
+		plugins = [bib],
+		format = build_format,
+		draft = false,
+		source = "src",
+		build = "build",
+		pages = [
+			"User Guide" => [
+				"Getting started" => [
+					"Installation" => "manuals/user_guide/installation.md",
+					"Getting started" => "manuals/user_guide/getting_started.md",
+				],
+				"Battery models" => [
+					"Lithium ion model" => "manuals/user_guide/pxd_model.md",
+					"Geometries" => "manuals/user_guide/geometries.md",
+					"Sodium ion model" => "manuals/user_guide/sodium_ion_model.md",
+				],
+				"Sub-models" => [
+					"Overview" => "manuals/user_guide/sub_models.md",
+					"Ramp up" => "manuals/user_guide/ramp_up.md",
+					"SEI" => "manuals/user_guide/sei_model.md",
+					"Temperature dependence" => "manuals/user_guide/arrhenius.md",
+				],
+				"Public API" => [
+					"Input terminology" => "manuals/user_guide/terminology.md",
+					"Simulation dependent input parameters" => "manuals/user_guide/simulation_dependent_input.md",
+					"Functions and types" => "manuals/user_guide/public_api.md",
+				],
+				"Tutorials" => tutorials_markdown,
+			],
+			"Examples" => [
+				"Advanced examples" => examples_markdown,
+			],
+			"Validations" => [
+				"Validation notebooks" => validation_notebooks_markdown,
+			],
+			"API Documentation" => [
+				"High level API" => "manuals/api_documentation/highlevel.md",
+			],
+			"Contribution guide" => [
+				"Contribute to BattMo.jl" => "manuals/contribution/contribution.md"
+				"Jutul" => "manuals/contribution/jutul_integration.md"
+			],
+			"References" => [
+				"Bibliography" => "extras/refs.md",
+			],
+			"PyBattMo" => [
+				"Installation" => "manuals/pybattmo/installation.md",
+				"Examples" => "manuals/pybattmo/examples.md",
+			],
+		],
 	)
 	if build_notebooks
 		# Subfolder of final site build folder
@@ -260,7 +262,7 @@ function build_battmo_docs(build_format              = nothing;
 			push_preview = true,
 		)
 	end
-	GLMakie.closeall()
+	return GLMakie.closeall()
 end
 ##
 # build_battmo_docs(build_examples = false, build_validation_examples = false)

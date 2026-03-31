@@ -12,7 +12,7 @@ cycling_protocol["TotalNumberOfCycles"] = 10
 
 sim = Simulation(model, cell_parameters, cycling_protocol);
 
-output = solve(sim;)
+output = solve(sim)
 
 print_info(output)
 
@@ -31,7 +31,8 @@ plot_dashboard(output; plot_type = "line")
 plot_dashboard(output; plot_type = "contour")
 
 # Some simple examples plotting time series quantities using the `plot_output` function
-plot_output(output,
+plot_output(
+	output,
 	[
 		"Current vs Time",
 		"Voltage vs Time",
@@ -41,7 +42,8 @@ plot_output(output,
 
 # Some simple examples plotting state quantities using the `plot_output` function
 
-plot_output(output,
+plot_output(
+	output,
 	[
 		["NegativeElectrodeActiveMaterialSurfaceConcentration vs Time at Position index 10", "NegativeElectrodeActiveMaterialSurfaceConcentration vs Time at Position index 1"],
 		"NegativeElectrodeActiveMaterialParticleConcentration vs Time at Position index 10 and NegativeElectrodeActiveMaterialRadius index 5",
@@ -53,7 +55,8 @@ plot_output(output,
 )
 
 # Some simple examples plotting metrics using the `plot_output` function
-plot_output(output,
+plot_output(
+	output,
 	[
 		"DischargeCapacity vs CycleIndex",
 		"CycleNumber vs Time",
@@ -62,8 +65,6 @@ plot_output(output,
 	];
 	layout = (4, 2),
 )
-
-
 
 
 # Access state data and plot for a specific time step
@@ -90,4 +91,3 @@ hm1 = contourf!(ax2, output_data["Cell"]["Position"], output_data["NegativeElect
 hm2 = contourf!(ax2, output_data["Cell"]["Position"], output_data["PositiveElectrode"]["ActiveMaterial"]["Radius"], output_data["PositiveElectrode"]["ActiveMaterial"]["ParticleConcentration"][t, :, :])
 Colorbar(g[1, 2], hm1)
 display(GLMakie.Screen(), g)
-

@@ -18,5 +18,4 @@ include("test_cycling_protocols.jl")
 include("test_sodium_ion.jl")
 include("test_advanced_dict_input.jl")
 
-
-
+include("test_input_current_series.jl")
