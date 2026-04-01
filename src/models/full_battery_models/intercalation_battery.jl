@@ -999,8 +999,8 @@ function setup_initial_state(input, model::IntercalationBattery)
 		init[:ParticleConcentration] = fill(c, N, nc)
 
 		if multimodel[name] isa SEImodel
-			init[:normalizedSEIlength] = ones(nc)
-			init[:normalizedSEIvoltageDrop] = zeros(nc)
+			init[:NormalizedSEIThickness] = ones(nc)
+			init[:NormalizedSEIVoltageDrop] = zeros(nc)
 		end
 
 		if haskey(multimodel[name].system.params, :ocp_funcexp)

@@ -4,11 +4,6 @@ export
 	findBoundary,
 	convert_geometry,
 	get_grids
-find_coupling,
-find_common,
-findBoundary,
-convert_geometry,
-get_grids
 
 
 #####################
