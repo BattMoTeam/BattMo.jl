@@ -330,7 +330,6 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
         )
     end
 
-
     # Perform simulation
     jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
 
@@ -822,7 +821,7 @@ function setup_timesteps(
     """
     	Method setting up the timesteps from a json file object. 
     """
-    if !isnothing(input.time_steps)
+    if hasproperty(input, :time_steps) && !isnothing(input.time_steps)
         return input.time_steps
     end
 
@@ -842,7 +841,6 @@ function setup_timesteps(
 
             con = Constants()
             totalTime = 1.1 * con.hour / CRate
-
 
             dt = simulation_settings["TimeStepDuration"]
 

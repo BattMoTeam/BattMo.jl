@@ -970,7 +970,7 @@ end
 
 function setup_initial_state(input, model::IntercalationBattery)
 
-    if !isnothing(input.initial_state)
+    if hasproperty(input, :initial_state) && !isnothing(input.initial_state)
         state = deepcopy(input.initial_state)
 
         # Reset controller
