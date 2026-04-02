@@ -1,5 +1,4 @@
 using BattMo
-using GLMakie
 
 # ## Parameters
 
@@ -17,9 +16,9 @@ model = LithiumIonBattery()
 cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
 
 # Step 0: full discharge--charge cycle as reference
-HOUR = 3600.0
-discharge_duration = HOUR / rate
-charge_duration = HOUR / rate
+con = Constants()
+discharge_duration = con.hour / rate
+charge_duration = con.hour / rate
 t_total = discharge_duration + charge_duration
 
 N = 11
@@ -98,16 +97,20 @@ milli = 1.0e-3
 println("RMSE total: $(round(rmse_total / milli; digits = 6)) mV")
 
 # Plot
-fig = Figure()
-ax = Axis(fig[1, 1], title = "Lower Cutoff = $(lower_cutoff) V", xlabel = "Time  /  h", ylabel = "Voltage  /  V")
-lines!(ax, t_ref / HOUR, E_ref; label = "Reference", color = :blue)
-lines!(ax, t_discharge / HOUR, E_discharge; label = "Discharge", color = :orange, linestyle = :dash)
-lines!(ax, t_charge / HOUR, E_charge; label = "Charge", color = :red, linestyle = :dash)
-scatter!(ax, t_discharge[end] / HOUR, E_discharge[end]; label = "Discharge end", color = :black, marker = :circle, markersize = 10)
-ylims!(ax, lower_cutoff - 0.1, upper_cutoff + 0.1)
-axislegend(ax; position = :rb)
+doplot = false
+if doplot
+    using GLMakie
+    fig = Figure()
+    ax = Axis(fig[1, 1], title = "Lower Cutoff = $(lower_cutoff) V", xlabel = "Time  /  h", ylabel = "Voltage  /  V")
+    lines!(ax, t_ref / con.hour, E_ref; label = "Reference", color = :blue)
+    lines!(ax, t_discharge / con.hour, E_discharge; label = "Discharge", color = :orange, linestyle = :dash)
+    lines!(ax, t_charge / con.hour, E_charge; label = "Charge", color = :red, linestyle = :dash)
+    scatter!(ax, t_discharge[end] / con.hour, E_discharge[end]; label = "Discharge end", color = :black, marker = :circle, markersize = 10)
+    ylims!(ax, lower_cutoff - 0.1, upper_cutoff + 0.1)
+    axislegend(ax; position = :rb)
 
-ax = Axis(fig[2, 1], xlabel = "Time  /  h", ylabel = "Voltage Error  /  mV")
-lines!(ax, t_ref / HOUR, (E_ref .- E_merge) ./ milli; label = "Error", color = :red)
+    ax = Axis(fig[2, 1], xlabel = "Time  /  h", ylabel = "Voltage Error  /  mV")
+    lines!(ax, t_ref / con.hour, (E_ref .- E_merge) ./ milli; label = "Error", color = :red)
 
-display(GLMakie.Screen(), fig)
+    display(GLMakie.Screen(), fig)
+end
