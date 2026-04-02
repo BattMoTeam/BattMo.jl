@@ -197,12 +197,7 @@ end
 # --- Helper functions ---
 
 function make_invokable(func)
-    # if it's a Python function, wrap with pyconvert(Real, ...)
-    if func isa Py
-        return (args...) -> pyconvert(Real, func(args...))
-    else
-        return (args...) -> Base.invokelatest(func, args...)
-    end
+    return (args...) -> Base.invokelatest(func, args...)
 end
 
 function setup_ocp_evaluation_expression_from_string(str)

@@ -19,7 +19,6 @@ using Jutul
         @eval Main electrolyte_conductivity_Xu_2015_py = $electrolyte_conductivity_Xu_2015_py
         @eval Main electrolyte_diffusivity_Xu_2015_py = $electrolyte_diffusivity_Xu_2015_py
 
-
         cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
         cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
