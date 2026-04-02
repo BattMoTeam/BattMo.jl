@@ -43,7 +43,7 @@ function current_function(time, voltage)
     return power_func(time) / voltage / factor
 end
 
-@eval Main current_function = $current_function
+@eval Main const current_function = $current_function
 
 # Load a cycling protocol that uses the current function
 cycling_protocol = load_cycling_protocol(; from_default_set = "user_defined_current_function")
