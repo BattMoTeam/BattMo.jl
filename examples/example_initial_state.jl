@@ -22,18 +22,18 @@ discharge_duration = HOUR / rate
 charge_duration = HOUR / rate
 t_total = discharge_duration + charge_duration
 
-N = 61
+N = 11
 t_discharge = collect(range(0.0, discharge_duration, N))
 t_charge = collect(range(discharge_duration, t_total, N))
 t_ref = vcat(t_discharge, t_charge[2:end])  # drop duplicate join point
 I_app = rate * cell_parameters["Cell"]["NominalCapacity"]
-I_ref = vcat(I_app .* ones(N), -I_app .* ones(N - 1))
+I_tmp = vcat(fill(I_app, N), fill(-I_app, N - 1))
 
 ref_protocol = CyclingProtocol(
     Dict(
         "Protocol" => "InputCurrentSeries",
         "Times" => t_ref,
-        "Currents" => I_ref,
+        "Currents" => I_tmp,
         "LowerVoltageLimit" => lower_cutoff,
         "UpperVoltageLimit" => upper_cutoff,
         "InitialStateOfCharge" => initial_soc,
@@ -99,11 +99,15 @@ println("RMSE total: $(round(rmse_total / milli; digits = 6)) mV")
 
 # Plot
 fig = Figure()
-ax = Axis(fig[1, 1], title = "Discharge -- Charge Cycle, Lower Cutoff = $(lower_cutoff) V", xlabel = "Time  /  h", ylabel = "Voltage  /  V")
+ax = Axis(fig[1, 1], title = "Lower Cutoff = $(lower_cutoff) V", xlabel = "Time  /  h", ylabel = "Voltage  /  V")
 lines!(ax, t_ref / HOUR, E_ref; label = "Reference", color = :blue)
 lines!(ax, t_discharge / HOUR, E_discharge; label = "Discharge", color = :orange, linestyle = :dash)
 lines!(ax, t_charge / HOUR, E_charge; label = "Charge", color = :red, linestyle = :dash)
 scatter!(ax, t_discharge[end] / HOUR, E_discharge[end]; label = "Discharge end", color = :black, marker = :circle, markersize = 10)
 ylims!(ax, lower_cutoff - 0.1, upper_cutoff + 0.1)
 axislegend(ax; position = :rb)
+
+ax = Axis(fig[2, 1], xlabel = "Time  /  h", ylabel = "Voltage Error  /  mV")
+lines!(ax, t_ref / HOUR, (E_ref .- E_merge) ./ milli; label = "Error", color = :red)
+
 display(GLMakie.Screen(), fig)
