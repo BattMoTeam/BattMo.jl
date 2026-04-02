@@ -978,11 +978,9 @@ function setup_initial_state(input, model::IntercalationBattery)
             ctrl = state[:Control]
             if haskey(ctrl, :Controller)
                 controller = ctrl[:Controller]
-                tcontroller = typeof(controller)
-                for fd in fieldnames(tcontroller)
-                    if hasfield(tcontroller, fd)
-                        setfield!(controller, fd, zero(getfield(controller, fd)))
-                    end
+                for fd in fieldnames(typeof(controller))
+                    value = getfield(controller, fd)
+                    setfield!(controller, fd, zero(value))
                 end
             end
             ctrl[:Current] = [getInitCurrent(model.multimodel[:Control])]
@@ -1023,11 +1021,9 @@ function setup_initial_state(input, model::IntercalationBattery)
         if haskey(multimodel[name].system.params, :ocp_funcexp)
             OCP = multimodel[name].system[:ocp_func](c, T, refT, cmax)
         elseif haskey(multimodel[name].system.params, :ocp_funcdata)
-
             OCP = multimodel[name].system[:ocp_func](theta)
         elseif haskey(multimodel[name].system.params, :ocp_constant)
             OCP = multimodel[name].system[:ocp_constant]
-
         else
             OCP = multimodel[name].system[:ocp_func](c, T, refT, cmax)
         end
