@@ -47,7 +47,7 @@ bibliography: paper.bib
 
 
 # Statement of need
-Physics based battery cell modelling has several applications within the battery field. It can bring insight into the electrochemical processes that are happening within a battery cell, it's tool that can be used to improve cell design and analyse short and long term cell performance without having to do long term cycling within the lab, it can be used for improving battery cell loading limits for an extended life time of a cell, it can be a virtual twin accompanion during battery cell testing in the lab, monitoring and guiding testing procedures, etc.
+Physics based battery cell modelling has several applications within the battery field. It can bring insight into the electrochemical processes that are happening within a battery cell, it's tool that can be used to improve cell design and analyze short and long term cell performance without having to do long term cycling within the lab, it can be used for improving battery cell loading limits for an extended life time of a cell, it can be a virtual twin accompanion during battery cell testing in the lab, monitoring and guiding testing procedures, etc.
 
 Within research, physics based modeling has been used to drive innovation within a wide variety of battery chemistries. For example, 
 
