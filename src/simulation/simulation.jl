@@ -22,6 +22,7 @@ Constructs a `Simulation` object that sets up and validates all necessary compon
 - `simulation_settings::SimulationSettings` (optional): Configuration settings controlling solver behavior, time stepping, etc. If not provided, default settings are generated based on the model.
 - `time_steps` (optional): A pre-computed array of time steps to use for the simulation. If `nothing` (default), time steps are computed from the cycling protocol and simulation settings.
 - `state0` (optional): A pre-computed initial state to use for the simulation. If `nothing` (default), the initial state is computed from the model and cycling protocol.
+- `output_all_secondary_variables::Bool` (optional): If `true`, all secondary variables (e.g. `SolidDiffFlux`, `DmuDc`, `ChemCoef`) are included in the simulation output states. This makes the output states directly usable as `initial_state` for subsequent simulations. Default is `false`.
 
 # Behavior
 - Validates `model`, `cell_parameters`, `cycling_protocol`, and `simulation_settings`.
@@ -64,6 +65,7 @@ struct Simulation <: AbstractSimulation
 		simulation_settings::SimulationSettings = get_default_simulation_settings(model),
 		time_steps = nothing,
 		initial_state = nothing,
+		output_all_secondary_variables::Bool = false,
 		hook = nothing,
 		kwargs...,
 	) where {M <: ModelConfigured}
@@ -90,6 +92,7 @@ struct Simulation <: AbstractSimulation
 				simulation_settings = simulation_settings,
 				time_steps = time_steps,
 				initial_state = initial_state,
+				output_all_secondary_variables = output_all_secondary_variables,
 			)
 
 			try
@@ -153,6 +156,14 @@ function simulation_configuration(model, input)
 	# Setup forces
 	forces = setup_forces(model.multimodel)
 
+	# Add all secondary variables to output if requested
+	if get(input, :output_all_secondary_variables, false)
+		for key in submodels_symbols(model.multimodel)
+			submodel = model.multimodel[key]
+			union!(submodel.output_variables, keys(submodel.secondary_variables))
+		end
+	end
+
 	# Setup jutul simulator
 	simulator = Simulator(model.multimodel; state0 = initial_state, parameters = parameters, copy_state = true)
 
@@ -178,7 +189,7 @@ end
 #########
 
 """
-	solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, end_report = info_level > -1, kwargs...)
+	solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, end_report = info_level > -1, include_initial_state = false, kwargs...)
 
 Solves a battery `Simulation` problem by executing the simulation workflow defined in `solve_simulation`.
 
@@ -188,6 +199,10 @@ Solves a battery `Simulation` problem by executing the simulation workflow defin
 - `hook` (optional): A user-defined callback or observer function that can be inserted into the simulation loop.
 - `info_level::Int` (optional): Controls verbosity of simulation logging and output. Default is `0`.
 - `end_report::Bool` (optional): Whether to print a summary report after simulation. Defaults to `true` if `info_level > -1`.
+- `include_initial_state::Bool` (optional): If `true`, the initial state (at `t = 0`) is
+  prepended to the output time series (`Time`, `Voltage`, `Current`, capacity, etc.).
+  This eliminates the gap between the initial condition and the first solver output,
+  improving plots and RMSE comparisons when restarting from a saved state.  Default is `false`.
 - `kwargs...`: Additional keyword arguments forwarded to `solve_simulation`.
 
 # Behavior
@@ -205,17 +220,20 @@ Solves a battery `Simulation` problem by executing the simulation workflow defin
 ```julia
 sim = Simulation(model, cell_parameters, cycling_protocol)
 result = solve(sim; info_level = 1)
+
+# Include initial state in the time series output
+result = solve(sim; include_initial_state = true)
 ```
 """
-function solve(problem::Simulation; accept_invalid = false, solver_settings = get_default_solver_settings(problem.model), logger = nothing, kwargs...)
+function solve(problem::Simulation; accept_invalid = false, solver_settings = get_default_solver_settings(problem.model), logger = nothing, include_initial_state = false, kwargs...)
 
 
 	# Note: Typically function_to_solve is run_battery
 	return if accept_invalid == true
-		output = solve_simulation(problem; solver_settings, logger, kwargs...)
+		output = solve_simulation(problem; solver_settings, logger, include_initial_state, kwargs...)
 	else
 		if problem.is_valid == true
-			output = solve_simulation(problem; solver_settings, logger, kwargs...)
+			output = solve_simulation(problem; solver_settings, logger, include_initial_state, kwargs...)
 
 			return output
 		else
@@ -275,7 +293,7 @@ A named tuple with the following fields:
 result = solve_simulation(sim)
 ```
 """
-function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, logger = nothing, kwargs...)
+function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, logger = nothing, include_initial_state = false, kwargs...)
 
 	simulator = sim.simulator
 	model = sim.model
@@ -335,8 +353,21 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 		),
 	)
 
-	time_series = get_output_time_series(jutul_output)
-	states = get_output_states(jutul_output, grids, input)
+	# For time series computation, optionally include the initial
+	# state as the first data point
+	if include_initial_state
+		jutul_output_for_ts = (
+			states = vcat([deepcopy(state0)], jutul_states),
+			reports = jutul_reports,
+			solver_configuration = cfg,
+			multimodel = model.multimodel,
+		)
+	else
+		jutul_output_for_ts = jutul_output
+	end
+
+	time_series = get_output_time_series(jutul_output_for_ts)
+	states = get_output_states(jutul_output, input)
 	metrics = get_output_metrics(jutul_output)
 
 	return SimulationOutput(
@@ -792,7 +823,7 @@ function setup_timesteps(
 	"""
 		Method setting up the timesteps from a json file object. 
 	"""
-	if !isnothing(input.time_steps)
+	if hasproperty(input, :time_steps) && !isnothing(input.time_steps)
 		return input.time_steps
 	end
 
@@ -812,7 +843,6 @@ function setup_timesteps(
 
 			con = Constants()
 			totalTime = 1.1 * con.hour / CRate
-
 
 			dt = simulation_settings["TimeStepDuration"]
 
