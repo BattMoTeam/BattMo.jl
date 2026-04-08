@@ -241,7 +241,7 @@ function get_output_states(
 			available_quantities[k] = v
 		end
 
-	elseif input["ModelSettings"]["ModelFramework"] == "P4D Pouch" || input["ModelSettings"]["ModelFramework"] == "P4D Cylindrical"
+	elseif input["ModelSettings"]["ModelFramework"] == "P4D Pouch" || input["ModelSettings"]["ModelFramework"] == "P4D Prismatic" || input["ModelSettings"]["ModelFramework"] == "P4D Cylindrical"
 		output_data = extract_spatial_data(jutul_output[:states])
 
 		available_quantities = Dict{String, Any}(
@@ -256,7 +256,7 @@ function get_output_states(
 			"PositiveElectrodeActiveMaterialRadius" => r_pe,
 		)
 	else
-		error("Unsupported model framework: $(input["ModelSettings"]["ModelFramework"]). Supported frameworks are: P2D, P4D Pouch, P4D Cylindrical.")
+		error("Unsupported model framework: $(input["ModelSettings"]["ModelFramework"]). Supported frameworks are: P2D, P4D Pouch, P4D Prismatic, P4D Cylindrical.")
 	end
 
 	for (k, v) in output_data

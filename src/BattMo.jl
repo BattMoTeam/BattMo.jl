@@ -259,6 +259,7 @@ include("grid/grid_conversion.jl")
 include("grid/grid_utils.jl")
 include("grid/geometries/1d.jl")
 include("grid/geometries/pouch.jl")
+include("grid/geometries/prismatic.jl")
 include("grid/geometries/jelly_roll.jl")
 
 include("solver/solver_as_preconditioner_system.jl")

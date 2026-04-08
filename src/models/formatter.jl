@@ -77,10 +77,13 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
     elseif params["Geometry"]["case"] == "3D-demo" || params["Geometry"]["case"] == "multiLayerPouch"
         geom = "P4D Pouch"
 
+    elseif params["Geometry"]["case"] == "prismatic"
+        geom = "P4D Prismatic"
+
     elseif params["Geometry"]["case"] == "jellyRoll"
         geom = "P4D Cylindrical"
     else
-        error("ModelFramework not recognized. Please use '1D', '3D-demo' or 'jellyRoll'.")
+        error("ModelFramework not recognized. Please use '1D', '3D-demo', 'prismatic' or 'jellyRoll'.")
     end
 
 
@@ -122,7 +125,7 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
         simulation_settings["RampUpSteps"] = params["TimeStepping"]["numberOfRampupSteps"]
     end
 
-    if model_settings["ModelFramework"] == "P4D Cylindrical"
+    if model_settings["ModelFramework"] == "P4D Cylindrical" || model_settings["ModelFramework"] == "P4D Prismatic"
         simulation_settings["HeightGridPoints"] = params["Geometry"]["numberOfDiscretizationCellsVertical"]
         simulation_settings["AngularGridPoints"] = params["Geometry"]["numberOfDiscretizationCellsAngular"]
 
@@ -389,7 +392,7 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
             end
         end
 
-    elseif model_settings["ModelFramework"] == "P4D Cylindrical"
+    elseif model_settings["ModelFramework"] == "P4D Cylindrical" || model_settings["ModelFramework"] == "P4D Prismatic"
         cell_parameters["Cell"]["Height"] = params["Geometry"]["height"]
         cell_parameters["Cell"]["InnerRadius"] = params["Geometry"]["innerRadius"]
         cell_parameters["Cell"]["OuterRadius"] = params["Geometry"]["outerRadius"]
@@ -520,11 +523,13 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
             geom_case = "1D"
         elseif geom == "P4D Pouch"
             geom_case = "3D-demo"
+        elseif geom == "P4D Prismatic"
+            geom_case = "prismatic"
 
         elseif geom == "P4D Cylindrical"
             geom_case = "jellyRoll"
         else
-            error("ModelFramework $geom not recognized. Please use 'P2D', 'P4D Pouch' or 'P4D Cylindrical'.")
+            error("ModelFramework $geom not recognized. Please use 'P2D', 'P4D Pouch', 'P4D Prismatic' or 'P4D Cylindrical'.")
         end
     end
 

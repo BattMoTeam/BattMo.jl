@@ -8,9 +8,10 @@
       "enum": [
         "P2D",
         "P4D Pouch",
+        "P4D Prismatic",
         "P4D Cylindrical"
       ],
-      "description": "Framework defining the dimensionality of the electrochemical model. Examples: \"P2D\", \"P4D Pouch\"."
+      "description": "Framework defining the dimensionality of the electrochemical model. Examples: \"P2D\", \"P4D Pouch\", \"P4D Prismatic\"."
     },
     "SEIModel": {
       "type": "string",

@@ -5,12 +5,12 @@ function get_model_settings_meta_data()
     meta_data = Dict(
         "ModelFramework" => Dict(
             "type" => String,
-            "options" => ["P2D", "P4D Pouch", "P4D Cylindrical"],
+            "options" => ["P2D", "P4D Pouch", "P4D Prismatic", "P4D Cylindrical"],
             "context_type" => "ModelFramework",
             "context_type_iri" => "https://w3id.org/emmo/domain/battery#battery_b1921f7b_afac_465a_a275_26f929f7f936",
             "category" => "ModelSettings",
             "documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/pxd_model",
-            "description" => """Framework defining the dimensionality of the electrochemical model. Examples: "P2D", "P4D Pouch". """,
+            "description" => """Framework defining the dimensionality of the electrochemical model. Examples: "P2D", "P4D Pouch", "P4D Prismatic". """,
         ),
         "SEIModel" => Dict(
             "type" => String,

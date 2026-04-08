@@ -8,9 +8,10 @@
             "enum": [
                 "P2D",
                 "P4D Pouch",
+                "P4D Prismatic",
                 "P4D Cylindrical"
             ],
-            "description": "Framework defining the dimensionality of the electrochemical model. Examples: \"P2D\", \"P4D Pouch\"."
+            "description": "Framework defining the dimensionality of the electrochemical model. Examples: \"P2D\", \"P4D Pouch\", \"P4D Prismatic\"."
         },
         "SEIModel": {
             "type": "string",
@@ -80,6 +81,20 @@
             "if": {
                 "properties": {
                     "ModelFramework": {
+                        "const": "P4D Prismatic"
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "CurrentCollectors"
+                ]
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "ModelFramework": {
                         "const": "P4D Cylindrical"
                     }
                 }
@@ -108,6 +123,17 @@
             "properties": {
                 "ModelFramework": {
                     "const": "P4D Pouch"
+                }
+            },
+            "required": [
+                "ModelFramework"
+            ]
+        },
+        "useP4DPrismatic": {
+            "type": "object",
+            "properties": {
+                "ModelFramework": {
+                    "const": "P4D Prismatic"
                 }
             },
             "required": [

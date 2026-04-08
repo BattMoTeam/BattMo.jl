@@ -56,6 +56,8 @@ function get_default_simulation_settings(model::SodiumIonBattery)
         settings = load_simulation_settings(; from_default_set = "p2d_fine_resolution")
     elseif model_framework == "P4D Pouch"
         settings = load_simulation_settings(; from_default_set = "p4d_pouch")
+    elseif model_framework == "P4D Prismatic"
+        settings = load_simulation_settings(; from_default_set = "p4d_prismatic")
     elseif model_framework == "P4D Cylindrical"
         settings = load_simulation_settings(; from_default_set = "p4d_cylindrical")
     else

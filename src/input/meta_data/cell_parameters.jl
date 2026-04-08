@@ -5,10 +5,10 @@ function get_cell_parameters_meta_data()
 	meta_data = Dict(
 		"Case" => Dict(
 			"type" => String,
-			"options" => ["Cylindrical", "Pouch"],
+			"options" => ["Cylindrical", "Pouch", "Prismatic"],
 			"context_type" => "hasCase",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_3dcfe33d_6825_43c0_a798_68e871a68d39",
-			"description" => "Type of physical container encapsulating the electrochemical cell. Examples: Cylindrical, Pouch.",
+			"description" => "Type of physical container encapsulating the electrochemical cell. Examples: Cylindrical, Pouch, Prismatic.",
 		),
 		"EffectiveDensity" => Dict(
 			"type" => Real,
@@ -69,6 +69,28 @@ function get_cell_parameters_meta_data()
 			"context_type" => "OuterRadius",
 			"description" => "Radius of the rolled electrodes within a cylindrical cell, measured from the center of the cell to the outer side of the cell wall.",
 		),
+		"CaseWidth" => Dict(
+			"type" => Real,
+			"min_value" => 0.001,
+			"max_value" => 0.2,
+			"unit" => "m",
+			"unit_name" => "emmo:Metre",
+			"unit_iri" => "https://w3id.org/emmo#Metre",
+			"context_type" => "Width",
+			"context_type_iri" => "https://w3id.org/emmo#EMMO_e4de48b1_dabb_4490_ac2b_040f926c64f0",
+			"description" => "Outer width of the invisible rectangular case used to deform a wound prismatic cell cross-section.",
+		),
+		"CaseThickness" => Dict(
+			"type" => Real,
+			"min_value" => 0.001,
+			"max_value" => 0.2,
+			"unit" => "m",
+			"unit_name" => "emmo:Metre",
+			"unit_iri" => "https://w3id.org/emmo#Metre",
+			"context_type" => "Thickness",
+			"context_type_iri" => "https://w3id.org/emmo#EMMO_43003c86_9d15_433b_9789_ee2940920656",
+			"description" => "Outer thickness of the invisible rectangular case used to deform a wound prismatic cell cross-section.",
+		),
 		"ElectrodeWidth" => Dict(
 			"type" => Real,
 			"min_value" => 0.01,
@@ -83,7 +105,7 @@ function get_cell_parameters_meta_data()
 		"ElectrodeLength" => Dict(
 			"type" => Real,
 			"min_value" => 0.01,
-			"max_value" => 0.5,
+			"max_value" => 2.0,
 			"unit" => "m",
 			"unit_name" => "emmo:Metre",
 			"unit_iri" => "https://w3id.org/emmo#Metre",

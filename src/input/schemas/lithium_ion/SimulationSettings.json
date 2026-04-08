@@ -164,6 +164,29 @@
                         "$ref": "https://example.com/ModelSettings.json#/$defs/useCurrentCollectors"
                     },
                     {
+                        "$ref": "https://example.com/ModelSettings.json#/$defs/useP4DPrismatic"
+                    }
+                ]
+            },
+            "then": {
+                "required": [
+                    "HeightGridPoints",
+                    "AngularGridPoints",
+                    "PositiveElectrodeCurrentCollectorGridPoints",
+                    "PositiveElectrodeCurrentCollectorTabWidthGridPoints",
+                    "NegativeElectrodeCurrentCollectorGridPoints",
+                    "NegativeElectrodeCurrentCollectorTabWidthGridPoints",
+                    "SeparatorGridPoints"
+                ]
+            }
+        },
+        {
+            "if": {
+                "allof": [
+                    {
+                        "$ref": "https://example.com/ModelSettings.json#/$defs/useCurrentCollectors"
+                    },
+                    {
                         "$ref": "https://example.com/ModelSettings.json#/$defs/useP4DPouch"
                     }
                 ]
