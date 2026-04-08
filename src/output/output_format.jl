@@ -346,13 +346,13 @@ function output_state_path(key::String)
 		return ["NegativeElectrode", "ActiveMaterial", "Radius"]
 	elseif key == "PositiveElectrodeActiveMaterialRadius"
 		return ["PositiveElectrode", "ActiveMaterial", "Radius"]
-	elseif key == "SEIThickness"
+	elseif key == "NegativeElectrodeInterphaseThickness" || key == "SEIThickness"
 		return ["NegativeElectrode", "Interphase", "Thickness"]
-	elseif key == "NormalizedSEIThickness"
+	elseif key == "NegativeElectrodeInterphaseNormalizedThickness" || key == "NormalizedSEIThickness"
 		return ["NegativeElectrode", "Interphase", "NormalizedThickness"]
-	elseif key == "SEIVoltageDrop"
+	elseif key == "NegativeElectrodeInterphaseVoltageDrop" || key == "SEIVoltageDrop"
 		return ["NegativeElectrode", "Interphase", "VoltageDrop"]
-	elseif key == "NormalizedSEIVoltageDrop"
+	elseif key == "NegativeElectrodeInterphaseNormalizedVoltageDrop" || key == "NormalizedSEIVoltageDrop"
 		return ["NegativeElectrode", "Interphase", "NormalizedVoltageDrop"]
 	end
 
@@ -433,6 +433,10 @@ function extract_spatial_data(states::Vector)
 		"ElectrolyteMass" => [:Electrolyte, :Mass],
 		"ElectrolyteDiffusivity" => [:Electrolyte, :Diffusivity],
 		"ElectrolyteConductivity" => [:Electrolyte, :Conductivity],
+		"NegativeElectrodeInterphaseThickness" => [:NegativeElectrodeActiveMaterial, :SEIThickness],
+		"NegativeElectrodeInterphaseNormalizedThickness" => [:NegativeElectrodeActiveMaterial, :NormalizedSEIThickness],
+		"NegativeElectrodeInterphaseVoltageDrop" => [:NegativeElectrodeActiveMaterial, :SEIVoltageDrop],
+		"NegativeElectrodeInterphaseNormalizedVoltageDrop" => [:NegativeElectrodeActiveMaterial, :NormalizedSEIVoltageDrop],
 		"SEIThickness" => [:NegativeElectrodeActiveMaterial, :SEIThickness],
 		"NormalizedSEIThickness" => [:NegativeElectrodeActiveMaterial, :NormalizedSEIThickness],
 		"SEIVoltageDrop" => [:NegativeElectrodeActiveMaterial, :SEIVoltageDrop],

@@ -1,11 +1,12 @@
 module BattMoMakieExt
 
 using BattMo, RuntimeGeneratedFunctions
+using Statistics: mean
 using Makie: Makie
 using Makie: Slider, Label, Axis, Colorbar, Figure, Observable, GridLayout
 using Makie: scatterlines!, contourf!, vlines!, lines!, autolimits!
 using Makie: on, axislegend
-using Jutul: si_unit
+using Jutul: si_unit, plot_primitives, physical_representation
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
@@ -198,6 +199,16 @@ function BattMo.plot_output_impl(
 	# Get metadata for units
 	meta_data = BattMo.get_output_variables_meta_data()
 
+	function canonical_output_variable_name(name::AbstractString)
+		aliases = Dict(
+			"SEIThickness" => "NegativeElectrodeInterphaseThickness",
+			"NormalizedSEIThickness" => "NegativeElectrodeInterphaseNormalizedThickness",
+			"SEIVoltageDrop" => "NegativeElectrodeInterphaseVoltageDrop",
+			"NormalizedSEIVoltageDrop" => "NegativeElectrodeInterphaseNormalizedVoltageDrop",
+		)
+		return get(aliases, name, name)
+	end
+
 	function flatten_states_for_plotting(states_data)
 		flat = Dict{String, Any}()
 		for (name, info) in meta_data
@@ -205,13 +216,24 @@ function BattMo.plot_output_impl(
 				continue
 			end
 			try
-				flat[name] = BattMo.get_nested_output_value(states_data, BattMo.output_state_path(name), name)
+				canonical_name = canonical_output_variable_name(name)
+				if !haskey(flat, canonical_name)
+					flat[canonical_name] = BattMo.get_nested_output_value(states_data, BattMo.output_state_path(canonical_name), canonical_name)
+				end
 			catch
 			end
 		end
 		return flat
 	end
 	flat_states_data = flatten_states_for_plotting(output.states)
+
+	function resolve_output_variable_name(data::AbstractDict, name::AbstractString)
+		canonical_name = canonical_output_variable_name(name)
+		if haskey(data, canonical_name)
+			return canonical_name
+		end
+		return String(name)
+	end
 
 	# Helper: Parse variable string
 	function parse_variable(varstr::String)
@@ -305,13 +327,9 @@ function BattMo.plot_output_impl(
 		for varstr in var_group
 			try
 				parsed = parse_variable(varstr)
-
-				clean_var = parsed.base
 				dims = parsed.dims
 				dims = String.(dims)
 				sel = parsed.selectors
-
-				main_unit_str = get_main_unit_str(clean_var)
 
 				# State variables and metrics
 				states_data = flat_states_data
@@ -319,6 +337,8 @@ function BattMo.plot_output_impl(
 				time_series = output.time_series
 
 				data = merge(states_data, metric_data, time_series)
+				clean_var = resolve_output_variable_name(data, parsed.base)
+				main_unit_str = get_main_unit_str(clean_var)
 
 				var_data = data[clean_var]
 
@@ -445,7 +465,7 @@ function BattMo.plot_output_impl(
 				end
 
 			catch e
-				error("Failed to plot \"$varstr\": $(e.msg)")
+				error("Failed to plot \"$varstr\": $(sprint(showerror, e))")
 			end
 		end
 
@@ -473,18 +493,6 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 	I = time_series["Current"]
 	E = time_series["Voltage"]
 
-	states = output.states
-
-	n_steps = length(t)
-	x = states["Position"] * 10^6
-
-	NeAm_conc = states["NegativeElectrodeActiveMaterialSurfaceConcentration"]
-	PeAm_conc = states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
-	Elyte_conc = states["ElectrolyteConcentration"]
-
-	NeAm_pot = states["NegativeElectrodeActiveMaterialPotential"]
-	PeAm_pot = states["PositiveElectrodeActiveMaterialPotential"]
-	Elyte_pot = states["ElectrolytePotential"]
 	if plot_type == "simple"
 		fig = Figure(size = (1200, 1000))
 		grid = fig[1, 1] = GridLayout()
@@ -506,29 +514,18 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 		return fig
 
 	elseif plot_type == "line"
-		meta_data = BattMo.get_output_variables_meta_data()
-		states = Dict{String, Any}()
-		for (name, info) in meta_data
-			if get(info, "case", nothing) != "states"
-				continue
-			end
-			try
-				states[name] = BattMo.get_nested_output_value(output.states, BattMo.output_state_path(name), name)
-			catch
-			end
-		end
+		states = output.states
 
-		if !haskey(states, "Position")
-			error("plot_dashboard(output; plot_type = \"line\") currently requires 1D/P2D output with a global Position field.")
-		end
-
-		x = states["Position"] * 10.0^6
-		NeAm_conc = states["NegativeElectrodeActiveMaterialSurfaceConcentration"]
-		PeAm_conc = states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
-		Elyte_conc = states["ElectrolyteConcentration"]
-		NeAm_pot = states["NegativeElectrodeActiveMaterialPotential"]
-		PeAm_pot = states["PositiveElectrodeActiveMaterialPotential"]
-		Elyte_pot = states["ElectrolytePotential"]
+		n_steps = length(t)
+		NeAm_pos = states["NegativeElectrode"]["ActiveMaterial"]["Position"]
+		PeAm_pos = states["PositiveElectrode"]["ActiveMaterial"]["Position"]
+		Elyte_pos = states["Electrolyte"]["Position"]
+		NeAm_conc = states["NegativeElectrode"]["ActiveMaterial"]["SurfaceConcentration"]
+		PeAm_conc = states["PositiveElectrode"]["ActiveMaterial"]["SurfaceConcentration"]
+		Elyte_conc = states["Electrolyte"]["Concentration"]
+		NeAm_pot = states["NegativeElectrode"]["ActiveMaterial"]["Potential"]
+		PeAm_pot = states["PositiveElectrode"]["ActiveMaterial"]["Potential"]
+		Elyte_pot = states["Electrolyte"]["Potential"]
 
 		fig = Figure(size = (1200, 1000))
 		grid = fig[1, 1] = GridLayout()
@@ -558,25 +555,26 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 			t_line[] = t[i]
 		end
 
-		function state_plot(ax_678, data, label)
-			obs_data = Observable(data[1, :])
-			plt = lines!(ax_678, x, obs_data, label = label; linewidth = 4)
-			ax_678.xlabel = "Position  /  μm"
+		function state_plot(ax_678, position, data, label)
+			x, processed_data, x_label = dashboard_profile(states, position, data)
+			obs_data = Observable(processed_data[1, :])
+			lines!(ax_678, x, obs_data, label = label; linewidth = 4)
+			ax_678.xlabel = x_label
 			return on(ts) do i
-				obs_data[] = data[i, :]
+				obs_data[] = processed_data[i, :]
 				autolimits!(ax_678)
 			end
 		end
 
 		# Concentrations
-		state_plot(Axis(grid[3, 1], title = "NeAm Surface Concentration  /  mol·m⁻³"), NeAm_conc, "NeAm SurfaceConcentration")
-		state_plot(Axis(grid[3, 2], title = "Electrolyte Concentration  /  mol·m⁻³"), Elyte_conc, "Elyte C")
-		state_plot(Axis(grid[3, 3], title = "PeAm Surface Concentration  /  mol·m⁻³"), PeAm_conc, "PeAm SurfaceConcentration")
+		state_plot(Axis(grid[3, 1], title = "NeAm Surface Concentration  /  mol·m⁻³"), NeAm_pos, NeAm_conc, "NeAm SurfaceConcentration")
+		state_plot(Axis(grid[3, 2], title = "Electrolyte Concentration  /  mol·m⁻³"), Elyte_pos, Elyte_conc, "Elyte C")
+		state_plot(Axis(grid[3, 3], title = "PeAm Surface Concentration  /  mol·m⁻³"), PeAm_pos, PeAm_conc, "PeAm SurfaceConcentration")
 
 		# Potentials
-		state_plot(Axis(grid[4, 1], title = "NeAm Potential  /  V"), NeAm_pot, "NeAm ϕ")
-		state_plot(Axis(grid[4, 2], title = "Electrolyte Potential  /  V"), Elyte_pot, "Elyte ϕ")
-		state_plot(Axis(grid[4, 3], title = "PeAm Potential  /  V"), PeAm_pot, "PeAm ϕ")
+		state_plot(Axis(grid[4, 1], title = "NeAm Potential  /  V"), NeAm_pos, NeAm_pot, "NeAm ϕ")
+		state_plot(Axis(grid[4, 2], title = "Electrolyte Potential  /  V"), Elyte_pos, Elyte_pot, "Elyte ϕ")
+		state_plot(Axis(grid[4, 3], title = "PeAm Potential  /  V"), PeAm_pos, PeAm_pot, "PeAm ϕ")
 
 		if new_window
 			BattMo.independent_figure(fig)
@@ -585,29 +583,17 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 		return fig
 
 	elseif plot_type == "contour"
-		meta_data = BattMo.get_output_variables_meta_data()
-		states = Dict{String, Any}()
-		for (name, info) in meta_data
-			if get(info, "case", nothing) != "states"
-				continue
-			end
-			try
-				states[name] = BattMo.get_nested_output_value(output.states, BattMo.output_state_path(name), name)
-			catch
-			end
-		end
+		states = output.states
 
-		if !haskey(states, "Position")
-			error("plot_dashboard(output; plot_type = \"contour\") currently requires 1D/P2D output with a global Position field.")
-		end
-
-		x = states["Position"] * 10.0^6
-		NeAm_conc = states["NegativeElectrodeActiveMaterialSurfaceConcentration"]
-		PeAm_conc = states["PositiveElectrodeActiveMaterialSurfaceConcentration"]
-		Elyte_conc = states["ElectrolyteConcentration"]
-		NeAm_pot = states["NegativeElectrodeActiveMaterialPotential"]
-		PeAm_pot = states["PositiveElectrodeActiveMaterialPotential"]
-		Elyte_pot = states["ElectrolytePotential"]
+		NeAm_pos = states["NegativeElectrode"]["ActiveMaterial"]["Position"]
+		PeAm_pos = states["PositiveElectrode"]["ActiveMaterial"]["Position"]
+		Elyte_pos = states["Electrolyte"]["Position"]
+		NeAm_conc = states["NegativeElectrode"]["ActiveMaterial"]["SurfaceConcentration"]
+		PeAm_conc = states["PositiveElectrode"]["ActiveMaterial"]["SurfaceConcentration"]
+		Elyte_conc = states["Electrolyte"]["Concentration"]
+		NeAm_pot = states["NegativeElectrode"]["ActiveMaterial"]["Potential"]
+		PeAm_pot = states["PositiveElectrode"]["ActiveMaterial"]["Potential"]
+		Elyte_pot = states["Electrolyte"]["Potential"]
 
 		fig = Figure(size = (1200, 1000))
 		grid = fig[1, 1] = GridLayout()
@@ -622,27 +608,28 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 		ax_voltage.xlabel = "Time  /  h"
 		scatterlines!(ax_voltage, t, E; linewidth = 4, markersize = 10, marker = :cross, markercolor = :black)
 
-		function contour_with_labels(parent_grid, row, col, data, title)
+		function contour_with_labels(parent_grid, row, col, position, data, title)
 			subgrid = parent_grid[row, col] = GridLayout()
+			x, processed_data, x_label = dashboard_profile(states, position, data)
 
 			ax_678 = Axis(subgrid[1, 1])
-			plt = contourf!(ax_678, x, t, data')
+			plt = contourf!(ax_678, x, t, processed_data')
 			ax_678.ylabel = "Time  /  h"
-			ax_678.xlabel = "Position  / μm"
+			ax_678.xlabel = x_label
 			ax_678.title = title
 
 			return Colorbar(subgrid[1, 2], plt, width = 15)
 		end
 
 		# Concentration plots
-		contour_with_labels(grid, 3, 1, NeAm_conc, "NeAm Surface Concentration  /  mol·m⁻³")
-		contour_with_labels(grid, 3, 2, Elyte_conc, "Electrolyte Concentration  /  mol·m⁻³")
-		contour_with_labels(grid, 3, 3, PeAm_conc, "PeAm Surface Concentration  /  mol·m⁻³")
+		contour_with_labels(grid, 3, 1, NeAm_pos, NeAm_conc, "NeAm Surface Concentration  /  mol·m⁻³")
+		contour_with_labels(grid, 3, 2, Elyte_pos, Elyte_conc, "Electrolyte Concentration  /  mol·m⁻³")
+		contour_with_labels(grid, 3, 3, PeAm_pos, PeAm_conc, "PeAm Surface Concentration  /  mol·m⁻³")
 
 		# Potential plots
-		contour_with_labels(grid, 4, 1, NeAm_pot, "NeAm Potential  /  V")
-		contour_with_labels(grid, 4, 2, Elyte_pot, "Electrolyte Potential  /  V")
-		contour_with_labels(grid, 4, 3, PeAm_pot, "PeAm Potential  /  V")
+		contour_with_labels(grid, 4, 1, NeAm_pos, NeAm_pot, "NeAm Potential  /  V")
+		contour_with_labels(grid, 4, 2, Elyte_pos, Elyte_pot, "Electrolyte Potential  /  V")
+		contour_with_labels(grid, 4, 3, PeAm_pos, PeAm_pot, "PeAm Potential  /  V")
 
 		if new_window
 			BattMo.independent_figure(fig)
@@ -653,6 +640,56 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 	else
 		error("Unsupported plot_type $plot_type. Use \"line\" or \"contour\".")
 	end
+end
+
+function dashboard_profile(states, position, data)
+	if haskey(states, "Cell") && haskey(states["Cell"], "Position")
+		cell_position = states["Cell"]["Position"]
+		if cell_position isa AbstractVector && size(data, 2) == length(cell_position)
+			return (cell_position * 10.0^6, data, "Position  /  μm")
+		end
+	end
+
+	if position isa AbstractVector && size(data, 2) == length(position)
+		return (position * 10.0^6, data, "Position  /  μm")
+	end
+
+	x = component_x_coordinates(position)
+	if size(data, 2) != length(x)
+		error("Could not match position information to data with shape $(size(data)).")
+	end
+	return collapse_profile_to_x(x, data)
+end
+
+function component_x_coordinates(position)
+	pp = physical_representation(position)
+	primitives = plot_primitives(pp, :meshscatter)
+	return primitives.points[:, 1]
+end
+
+function collapse_profile_to_x(x_raw, data)
+	order = sortperm(x_raw)
+	x_sorted = x_raw[order]
+	data_sorted = data[:, order]
+	n_steps = size(data_sorted, 1)
+
+	x_vals = Float64[]
+	columns = Vector{Vector{Float64}}()
+	i = 1
+	while i <= length(x_sorted)
+		j = i
+		xi = round(x_sorted[i], sigdigits = 8)
+		while j < length(x_sorted) && round(x_sorted[j+1], sigdigits = 8) == xi
+			j += 1
+		end
+		push!(x_vals, mean(x_sorted[i:j]) * 10.0^6)
+		block = data_sorted[:, i:j]
+		push!(columns, vec(sum(block, dims = 2)) ./ size(block, 2))
+		i = j + 1
+	end
+
+	profile = hcat(columns...)'
+	return (x_vals, profile', "x-position  /  μm")
 end
 
 

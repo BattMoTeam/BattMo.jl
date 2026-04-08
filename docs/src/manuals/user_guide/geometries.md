@@ -69,7 +69,7 @@ For `P2D`, BattMo provides:
 | `NegativeElectrodeCurrentCollectorGridPoints` | Number of cells through the negative current collector thickness. |
 | `PositiveElectrodeCurrentCollectorGridPoints` | Number of cells through the positive current collector thickness. |
 
-![P2D through-thickness geometry](/assets/geometry_p2d.png)
+![P2D through-thickness geometry](../../assets/geometry_p2d.svg)
 
 ## P4D Pouch
 
@@ -134,11 +134,11 @@ BattMo provides component-wise mesh positions for these domains in the output, f
 | `PositiveElectrodeCurrentCollectorTabWidthGridPoints` | Resolution across the positive tab face. |
 | `PositiveElectrodeCurrentCollectorTabLengthGridPoints` | Resolution along the positive pouch-tab face length. |
 
-![P4D pouch geometry](/assets/geometry_p4d_pouch.png)
+![P4D pouch geometry](../../assets/geometry_p4d_pouch.png)
 
 See also:
 
-- [3D Pouch example](/examples/example_3D_pouch)
+- [3D Pouch example](../../examples/example_3D_pouch.md)
 
 ## P4D Cylindrical
 
@@ -186,11 +186,11 @@ As for the pouch case, outputs are provided component-wise for the resolved doma
 | `NegativeElectrodeCurrentCollectorTabWidthGridPoints` | Resolution across the negative tab face. |
 | `PositiveElectrodeCurrentCollectorTabWidthGridPoints` | Resolution across the positive tab face. |
 
-![P4D cylindrical geometry](/assets/geometry_p4d_cylindrical.png)
+![P4D cylindrical geometry](../../assets/geometry_p4d_cylindrical.png)
 
 See also:
 
-- [3D cylindrical example](/examples/example_3D_cylindrical)
+- [3D cylindrical example](../../examples/example_3D_cylindrical.md)
 
 ## Choosing A Geometry
 
@@ -215,6 +215,6 @@ model_settings["ModelFramework"] = "P2D"
 
 ## Related Pages
 
-- [Lithium ion model](/manuals/user_guide/pxd_model)
-- [Grid parameters](/manuals/user_guide/grid_params)
-- [Simulation output](/manuals/user_guide/simulation_output)
+- [Lithium ion model](pxd_model.md)
+- [Grid parameters](grid_params.md)
+- [Simulation output](simulation_output.md)
