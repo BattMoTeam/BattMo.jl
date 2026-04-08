@@ -74,9 +74,9 @@ Plot a dashboard summarizing simulation output with selectable styles.
 - `plot_type`: One of `"simple"`, `"line"`, or `"contour"` (default `"simple"`).
 
 # Description
-- `"simple"`: Shows time series of current and voltage.
-- `"line"`: Adds interactive line plots of concentrations and potentials with a time slider.
-- `"contour"`: Shows contour plots of concentrations and potentials over time and position.
+- `"simple"`: Shows time series of current and voltage. Works for both `P2D` and `P4D` outputs.
+- `"line"`: Adds interactive line plots of concentrations and potentials with a time slider. Requires `P2D` output with a global `Cell/Position`.
+- `"contour"`: Shows contour plots of concentrations and potentials over time and position. Requires `P2D` output with a global `Cell/Position`.
 
 # Example
 ```julia

@@ -1,13 +1,14 @@
 """
 	print_overview(output::SimulationOutput)
 
-Print a categorized summary of the output variables available in a simulation result.
+Print a structured summary of the output variables available in a simulation result.
 
 # Description
-Groups variables by type (`time_series`, `metrics`, `states`) and prints their names and units if present in the output.
+Recursively traverses `time_series`, `states`, and `metrics` and prints the available
+quantities in the same path-oriented style used by `print_info(input::ParameterSet)`.
 
 # Arguments
-- `output`: A simulation output as a `NamedTuple`, typically from a `Simulation.run()` call.
+- `output::SimulationOutput`: Simulation output to inspect.
 
 # Example
 ```julia
@@ -15,94 +16,90 @@ print_overview(output)
 ```
 """
 function print_overview(output::SimulationOutput)
-    meta_data = get_output_variables_meta_data()
+	meta_data = get_output_variables_meta_data()
+	case_groups = Dict(
+		"time_series" => NamedTuple[],
+		"states" => NamedTuple[],
+		"metrics" => NamedTuple[],
+	)
 
-    var_map = Dict(
-        :NegativeElectrodeActiveMaterialSurfaceConcentration => [:NegativeElectrodeActiveMaterial, :SurfaceConcentration],
-        :PositiveElectrodeActiveMaterialSurfaceConcentration => [:PositiveElectrodeActiveMaterial, :SurfaceConcentration],
-        :NegativeElectrodeActiveMaterialConcentration => [:NegativeElectrodeActiveMaterial, :ParticleConcentration],
-        :PositiveElectrodeActiveMaterialConcentration => [:PositiveElectrodeActiveMaterial, :ParticleConcentration],
-        :NegativeElectrodeActiveMaterialDiffusionCoefficient => [:NegativeElectrodeActiveMaterial, :DiffusionCoefficient],
-        :PositiveElectrodeActiveMaterialDiffusionCoefficient => [:PositiveElectrodeActiveMaterial, :DiffusionCoefficient],
-        :NegativeElectrodeActiveMaterialReactionRateConstant => [:NegativeElectrodeActiveMaterial, :ReactionRateConstant],
-        :PositiveElectrodeActiveMaterialReactionRateConstant => [:PositiveElectrodeActiveMaterial, :ReactionRateConstant],
-        :ElectrolyteConcentration => [:Electrolyte, :ElectrolyteConcentration],
-        :NegativeElectrodeActiveMaterialPotential => [:NegativeElectrodeActiveMaterial, :ElectricPotential],
-        :ElectrolytePotential => [:Electrolyte, :ElectricPotential],
-        :PositiveElectrodeActiveMaterialPotential => [:PositiveElectrodeActiveMaterial, :ElectricPotential],
-        :NegativeElectrodeActiveMaterialTemperature => [:NegativeElectrodeActiveMaterial, :Temperature],
-        :PositiveElectrodeActiveMaterialTemperature => [:PositiveElectrodeActiveMaterial, :Temperature],
-        :NegativeElectrodeActiveMaterialOpenCircuitPotential => [:NegativeElectrodeActiveMaterial, :OpenCircuitPotential],
-        :PositiveElectrodeActiveMaterialOpenCircuitPotential => [:PositiveElectrodeActiveMaterial, :OpenCircuitPotential],
-        :NegativeElectrodeActiveMaterialCharge => [:NegativeElectrodeActiveMaterial, :Charge],
-        :ElectrolyteCharge => [:Electrolyte, :Charge],
-        :PositiveElectrodeActiveMaterialCharge => [:PositiveElectrodeActiveMaterial, :Charge],
-        :ElectrolyteMass => [:Electrolyte, :Mass],
-        :ElectrolyteDiffusivity => [:Electrolyte, :Diffusivity],
-        :ElectrolyteConductivity => [:Electrolyte, :Conductivity],
-        :SEIThickness => [:NegativeElectrodeActiveMaterial, :SEIlength],
-        :NormalizedSEIThickness => [:NegativeElectrodeActiveMaterial, :normalizedSEIlength],
-        :SEIVoltageDrop => [:NegativeElectrodeActiveMaterial, :SEIvoltageDrop],
-        :NormalizedSEIVoltageDrop => [:NegativeElectrodeActiveMaterial, :normalizedSEIvoltageDrop],
-    )
+	function collect_outputs!(d::AbstractDict{String, Any}, category::String, prefix::Vector{String} = String[])
+		for (k, v) in sort(collect(d); by = first)
+			path = vcat(prefix, string(k))
+			if v isa AbstractDict{String, Any}
+				collect_outputs!(v, category, path)
+			else
+				push!(case_groups[category], (category = category, path = path, key = string(k), value = v, type = typeof(v)))
+			end
+		end
+		return
+	end
 
-    # Group variables by case
-    case_groups = Dict{String, Vector{NamedTuple}}()
-    state = output.jutul_output[:states][3]
+	collect_outputs!(output.time_series, "time_series")
+	collect_outputs!(output.states, "states")
+	collect_outputs!(output.metrics, "metrics")
+	total_params = sum(length(values) for values in values(case_groups))
 
-    for (name, info) in meta_data
-        case = get(info, "case", "uncategorized")
-        has_data = false
+	par_space = 105
+	unit_space = 20
+	shape_space = 30
 
-        if case == "states"
-            symname = Symbol(name)
-            if haskey(var_map, symname)
-                path = var_map[symname]
-                has_data = try
-                    value = state[path[1]][path[2]]
-                    true
-                catch
-                    false
-                end
+	println("\nOUTPUT OVERVIEW")
+	println("="^(par_space + unit_space + shape_space))
+	println(rpad("Variable", par_space), rpad("Unit", unit_space), rpad("Shape", shape_space))
+	println("-"^(par_space + unit_space + shape_space))
 
-            else
-                has_data = true
-            end
-        else
-            # Always include time_series and metrics
-            has_data = true
-        end
+	function output_metadata_key(category::String, path::Vector{String})
+		if category == "states"
+			for flat_key in keys(meta_data)
+				info = meta_data[flat_key]
+				if get(info, "case", nothing) == "states" && output_state_path(flat_key) == path
+					return flat_key
+				end
+			end
+			return last(path)
+		else
+			return last(path)
+		end
+	end
 
-        if has_data
-            if !haskey(case_groups, case)
-                case_groups[case] = NamedTuple[]
-            end
-            push!(
-                case_groups[case], (
-                    name = name,
-                    isdefault = get(info, "isdefault", false),
-                    unit = get(info, "unit", "N/A"),
-                    shape = get(info, "shape", "N/A"),
-                )
-            )
-        end
-    end
+	function print_group(title, group_params)
+		isempty(group_params) && return
+		println("\n$(uppercase(title))")
+		println("="^(par_space + unit_space + shape_space))
+		println(rpad("Variable", par_space), rpad("Unit", unit_space), rpad("Shape", shape_space))
+		println("-"^(par_space + unit_space + shape_space))
 
-    function print_table(case_name::String, vars::Vector{NamedTuple})
-        println("\nCase: $(uppercase(case_name))")
-        println("="^160)
-        println(rpad("Variable", 65), rpad("Unit", 30), "Shape")
-        println("-"^160)
-        for v in sort(vars, by = x -> x.name)
-            println(rpad(string(v.name), 65), rpad(v.unit, 30), v.shape)
-        end
-        return println("="^160)
-    end
+		for p in group_params
+			full_path = join(["[ \"$(s)\" ]" for s in p.path], "")
+			meta_key = output_metadata_key(p.category, p.path)
+			info = get(meta_data, meta_key, Dict())
+			unit = get(info, "unit", "N/A")
+			shape_str = get(info, "shape", output_value_shape(p.value))
 
-    for case in ["time_series", "metrics", "states"]
-        if haskey(case_groups, case)
-            print_table(case, case_groups[case])
-        end
-    end
-    return
+			println(
+				rpad(full_path, par_space),
+				rpad(unit, unit_space),
+				rpad(shape_str, shape_space),
+			)
+		end
+
+		return println("="^(par_space + unit_space + shape_space))
+	end
+
+	print_group("time_series", case_groups["time_series"])
+	print_group("states", case_groups["states"])
+	print_group("metrics", case_groups["metrics"])
+
+	return println("Total output variables: $(total_params)")
+end
+
+function output_value_shape(v)
+	if v isa AbstractArray
+		return "(" * join(size(v), ", ") * ")"
+	elseif v isa BattMoPosition
+		return "(mesh)"
+	else
+		return "N/A"
+	end
 end
