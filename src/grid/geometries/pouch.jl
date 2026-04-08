@@ -386,7 +386,27 @@ function pouch_grid(input)
 	grids, couplings = setup_pouch_cell_geometry(global_grid, z_thickness_per_segment, extra_ne, double_coated)
 	grids, couplings = convert_geometry(grids, couplings)
 
-	for (component, side_is_high) in [("NegativeCurrentCollector", false), ("PositiveCurrentCollector", true)]
+	external_side_is_high =
+		if tabs_on_same_side
+			lowercase(same_side_y_side) == "top"
+		else
+			nothing
+		end
+
+	external_components =
+		if tabs_on_same_side
+			[
+				("NegativeCurrentCollector", external_side_is_high),
+				("PositiveCurrentCollector", external_side_is_high),
+			]
+		else
+			[
+				("NegativeCurrentCollector", false),
+				("PositiveCurrentCollector", true),
+			]
+		end
+
+	for (component, side_is_high) in external_components
 		grid = grids[component]
 		neighbors = get_neighborship(grid; internal = false)
 		boundary_faces = findBoundary(grid, 2, side_is_high)
