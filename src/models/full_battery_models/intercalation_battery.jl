@@ -980,7 +980,10 @@ function setup_initial_state(input, model::IntercalationBattery)
 				controller = ctrl[:Controller]
 				for fd in fieldnames(typeof(controller))
 					value = getfield(controller, fd)
-					setfield!(controller, fd, zero(value))
+					if !isa(value, String)
+						value = zero(value)
+					end
+					setfield!(controller, fd, value)
 				end
 			end
 			ctrl[:Current] = [getInitCurrent(model.multimodel[:Control])]
