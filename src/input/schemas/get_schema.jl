@@ -563,6 +563,7 @@ function get_schema_simulation_settings(model_settings)
 	meta_data_solv = get_solver_settings_meta_data()
 	meta_data_1 = merge_dict(meta_data_mod, meta_data_sim)
 	parameter_meta = merge_dict(meta_data_1, meta_data_solv)
+
 	schema = Dict(
 		"\$schema" => "http://json-schema.org/draft-07/schema#",
 		"type" => "object",

@@ -3,8 +3,8 @@ module BattMoMakieExt
 using BattMo, RuntimeGeneratedFunctions
 using Statistics: mean
 using Makie: Makie
-using Makie: Slider, Label, Axis, Colorbar, Figure, Observable, GridLayout
-using Makie: scatterlines!, contourf!, vlines!, lines!, autolimits!
+using Makie: Slider, Label, Axis, Colorbar, Figure, Observable, GridLayout, Legend
+using Makie: scatterlines!, contourf!, vlines!, lines!, autolimits!, band!
 using Makie: on, axislegend
 using Jutul: si_unit, plot_primitives, physical_representation
 
@@ -637,9 +637,109 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
 
 		return fig
 
+	elseif plot_type == "breakdown"
+		# Slide-friendly widescreen layout (~1:1.74 height:width ratio)
+		fig = Figure(size = (1740, 1000))
+		grid = fig[1, 1] = GridLayout()
+
+		title_fs = 34
+		label_fs = 30
+		tick_fs = 24
+		legend_label_fs = 24
+
+		breakdown = BattMo.compute_voltage_breakdown(output)
+		t = breakdown["Time"]
+		t_h = t ./ 3600
+		V = breakdown["Voltage"]
+		Vocv = breakdown["OpenCircuitVoltage"]
+
+		ax_voltage = Axis(grid[1, 1], title = "Terminal Voltage and Overvoltage Contributions")
+		ax_voltage.xlabel = "Time  /  h"
+		ax_voltage.ylabel = "Voltage  /  V"
+		ax_voltage.titlesize = title_fs
+		ax_voltage.xlabelsize = label_fs
+		ax_voltage.ylabelsize = label_fs
+		ax_voltage.xticklabelsize = tick_fs
+		ax_voltage.yticklabelsize = tick_fs
+		lines!(ax_voltage, t_h, V, label = "Voltage", linewidth = 3, color = :black)
+		lines!(ax_voltage, t_h, Vocv, label = "OCV", linewidth = 2, color = "#4D4D4D", linestyle = :dash)
+
+		terms = [
+			("Concentration (pos)", breakdown["PositiveSolidConcentrationOverpotential"], "#1F77B4"),
+			("Concentration (neg)", breakdown["NegativeSolidConcentrationOverpotential"], "#17BECF"),
+			("Concentration (elyte)", breakdown["ElectrolyteConcentrationOverpotential"], "#2CA02C"),
+			("Kinetic (pos)", breakdown["PositiveReactionOverpotential"], "#D62728"),
+			("Kinetic (neg)", breakdown["NegativeReactionOverpotential"], "#FF7F0E"),
+			("Ohmic (pos)", breakdown["PositiveSolidPotentialDrop"], "#9467BD"),
+			("Ohmic (neg)", breakdown["NegativeSolidPotentialDrop"], "#8C564B"),
+			("Ohmic (elyte)", breakdown["ElectrolyteOhmicPotentialDrop"], "#7F7F7F"),
+		]
+
+		if haskey(breakdown, "NegativeSEIOverpotential")
+			push!(terms, ("SEI (η_SEI)", breakdown["NegativeSEIOverpotential"], "#111111"))
+		end
+
+		# Partition the instantaneous voltage gap (OCV - V) by absolute contribution weights.
+		# This keeps the stacked top aligned with the OCV curve.
+		gap = Vocv .- V
+		total_abs = zeros(length(t))
+		for (label, values, color) in terms
+			total_abs .+= abs.(values)
+		end
+		cumulative_gap = copy(V)
+		for (label, values, color) in terms
+			abs_values = abs.(values)
+			fraction = zeros(length(t))
+			mask = total_abs .> eps()
+			fraction[mask] = abs_values[mask] ./ total_abs[mask]
+			contrib_gap = gap .* fraction
+			next_gap = cumulative_gap .+ contrib_gap
+			lower = min.(cumulative_gap, next_gap)
+			upper = max.(cumulative_gap, next_gap)
+			band!(ax_voltage, t_h, lower, upper; color = (color, 0.45), label = label)
+			cumulative_gap = next_gap
+		end
+		Legend(
+			grid[1, 2],
+			ax_voltage;
+			labelsize = legend_label_fs,
+		)
+
+		ax_stack = Axis(grid[2, 1], title = "Overvoltage Contributions (Zoomed Reference)")
+		ax_stack.xlabel = "Time  /  h"
+		ax_stack.ylabel = "Voltage  /  V"
+		ax_stack.titlesize = title_fs
+		ax_stack.xlabelsize = label_fs
+		ax_stack.ylabelsize = label_fs
+		ax_stack.xticklabelsize = tick_fs
+		ax_stack.yticklabelsize = tick_fs
+		cumulative = zeros(length(t))
+		for (label, values, color) in terms
+			next_vals = cumulative .+ abs.(values)
+			band!(ax_stack, t_h, cumulative, next_vals; color = (color, 0.75), label = label)
+			cumulative = next_vals
+		end
+		Legend(
+			grid[2, 2],
+			ax_stack;
+			labelsize = legend_label_fs,
+		)
+		Makie.colsize!(grid, 1, Makie.Relative(0.78))
+		Makie.colsize!(grid, 2, Makie.Relative(0.22))
+		Makie.rowsize!(grid, 1, Makie.Relative(0.58))
+		Makie.rowsize!(grid, 2, Makie.Relative(0.42))
+		Makie.colgap!(grid, 16)
+		Makie.rowgap!(grid, 14)
+
+		if new_window
+			BattMo.independent_figure(fig)
+		end
+		return fig
+
 	else
-		error("Unsupported plot_type $plot_type. Use \"line\" or \"contour\".")
+		error("Unsupported plot_type $plot_type. Use \"simple\", \"line\", \"contour\", or \"breakdown\".")
 	end
+
 end
 
 function dashboard_profile(states, position, data)

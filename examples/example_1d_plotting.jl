@@ -16,8 +16,6 @@ output = solve(sim)
 
 print_info(output)
 
-
-time_series = output.time_series
 states = output.states
 metrics = output.metrics
 
@@ -29,6 +27,9 @@ plot_dashboard(output; plot_type = "line")
 
 # Plot a dashboard with contour plots
 plot_dashboard(output; plot_type = "contour")
+
+# Plot a dashboard with a breakdown of contributions to overpotential
+plot_dashboard(output; plot_type = "breakdown")
 
 # Some simple examples plotting time series quantities using the `plot_output` function
 plot_output(

@@ -87,6 +87,7 @@ function Jutul.select_minimum_output_variables!(
 	push!(outputs, :Charge)
 	push!(outputs, :OpenCircuitPotential)
 	push!(outputs, :Temperature)
+	push!(outputs, :ElectricPotential)
 	push!(outputs, :ReactionRateConstant)
 	push!(outputs, :DiffusionCoefficient)
 	push!(outputs, :SEIThickness)

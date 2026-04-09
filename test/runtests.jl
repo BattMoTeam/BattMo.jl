@@ -1,6 +1,9 @@
 using BattMo
 using Test
 
+include("test_voltage_breakdown.jl")
+include("test_input_current_series.jl")
+include("test_initial_state.jl")
 include("test_sei.jl")
 include("test_loader.jl")
 include("test_matlab_input.jl")
@@ -18,5 +21,4 @@ include("test_cycling_protocols.jl")
 include("test_sodium_ion.jl")
 include("test_advanced_dict_input.jl")
 
-include("test_input_current_series.jl")
-include("test_initial_state.jl")
+

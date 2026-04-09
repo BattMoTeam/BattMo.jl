@@ -6,7 +6,7 @@ export plot_dashboard, plot_output, plot_cell_curves
 #####################################################################################################
 
 """
-    BattMo.plot_cell_curves_impl(cell_parameters::CellParameters; new_window = true)
+	BattMo.plot_cell_curves_impl(cell_parameters::CellParameters; new_window = true)
 
 Plot functional parameter curves from a cell parameter set.
 
@@ -25,8 +25,8 @@ reaction rate constant, conductivity) and plots their dependence on concentratio
 - The layout and axes are auto-scaled based on the number and type of parameters.
 """
 function plot_cell_curves(arg...; kwarg...)
-    check_plotting_availability()
-    return plot_cell_curves_impl(arg...; kwarg...)
+	check_plotting_availability()
+	return plot_cell_curves_impl(arg...; kwarg...)
 end
 
 function plot_cell_curves_impl end
@@ -58,8 +58,8 @@ fig = BattMo.plot_output(output,
 ```
 """
 function plot_output(arg...; kwarg...)
-    check_plotting_availability()
-    return plot_output_impl(arg...; kwarg...)
+	check_plotting_availability()
+	return plot_output_impl(arg...; kwarg...)
 end
 
 function plot_output_impl end
@@ -71,12 +71,13 @@ Plot a dashboard summarizing simulation output with selectable styles.
 
 # Arguments
 - `output`: Simulation output NamedTuple.
-- `plot_type`: One of `"simple"`, `"line"`, or `"contour"` (default `"simple"`).
+- `plot_type`: One of `"simple"`, `"line"`, `"contour"`, or `"breakdown"` (default `"simple"`).
 
 # Description
-- `"simple"`: Shows time series of current and voltage. Works for both `P2D` and `P4D` outputs.
-- `"line"`: Adds interactive line plots of concentrations and potentials with a time slider. Requires `P2D` output with a global `Cell/Position`.
-- `"contour"`: Shows contour plots of concentrations and potentials over time and position. Requires `P2D` output with a global `Cell/Position`.
+- `"simple"`: Shows time series of current and voltage.
+- `"line"`: Adds interactive line plots of concentrations and potentials with a time slider.
+- `"contour"`: Shows contour plots of concentrations and potentials over time and position.
+- `"breakdown"`: Adds an approximate voltage decomposition into OCV, concentration, kinetic, ohmic, and SEI components.
 
 # Example
 ```julia
@@ -85,8 +86,8 @@ fig = BattMo.plot_dashboard(output; plot_type="line")
 ```
 """
 function plot_dashboard(arg...; kwarg...)
-    check_plotting_availability()
-    return plot_dashboard_impl(arg...; kwarg...)
+	check_plotting_availability()
+	return plot_dashboard_impl(arg...; kwarg...)
 end
 
 function plot_dashboard_impl end

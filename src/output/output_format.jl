@@ -1,4 +1,4 @@
-export get_output_time_series, get_output_metrics, get_output_states
+export get_output_time_series, get_output_metrics, get_output_states, compute_voltage_breakdown
 
 # for debugging
 export extract_time_series_data, extract_output_times, get_multimodel_centroids, extract_spatial_data, get_simple_output
@@ -65,6 +65,454 @@ function get_output_time_series(jutul_output::NamedTuple; quantities::Union{Noth
 		# Select only requested quantities
 		return Dict(q => get(data_map, q, error("Quantity $q is not available")) for q in quantities)
 	end
+end
+
+function find_nearest_finite_index(values::AbstractVector{<:Real}, target::Int)
+
+	n = length(values)
+	if target < 1 || target > n
+		error("Target index $target is out of bounds for vector of length $n.")
+	end
+
+	if isfinite(values[target])
+		return target
+	end
+
+	for offset in 1:(n-1)
+		left = target - offset
+		if left >= 1 && isfinite(values[left])
+			return left
+		end
+		right = target + offset
+		if right <= n && isfinite(values[right])
+			return right
+		end
+	end
+
+	error("No finite value found in vector while searching around index $target.")
+end
+
+function mean_finite(values::AbstractVector{<:Real})
+	sum_finite = 0.0
+	n_finite = 0
+	for v in values
+		if isfinite(v)
+			sum_finite += v
+			n_finite += 1
+		end
+	end
+	n_finite == 0 && return NaN
+	return sum_finite / n_finite
+end
+
+function clip_to_finite_magnitude(x::Real; max_abs::Real = 700.0)
+	if !isfinite(x)
+		return sign(x) * max_abs
+	end
+	return clamp(x, -max_abs, max_abs)
+end
+
+function effective_exchange_current_density(
+	R0_vals::AbstractVector{<:Real},
+	c_e_vals::AbstractVector{<:Real},
+	c_s_vals::AbstractVector{<:Real},
+	cmax::Real,
+	n::Real,
+)
+	F = FARADAY_CONSTANT
+	nvals = min(length(R0_vals), length(c_e_vals), length(c_s_vals))
+	sum_j0 = 0.0
+	nj0 = 0
+	cmax_loc = max(cmax, 1e-12)
+	th = 1e-3 * cmax_loc
+	for k in 1:nvals
+		R0 = R0_vals[k]
+		ce = c_e_vals[k]
+		cs = c_s_vals[k]
+		if !(isfinite(R0) && isfinite(ce) && isfinite(cs))
+			continue
+		end
+		ce_loc = max(ce, 0.0)
+		cs_loc = clamp(cs, 0.0, cmax_loc)
+		term = ce_loc * (cmax_loc - cs_loc) * cs_loc
+		if term <= 0
+			j0 = 0.0
+		elseif term <= th
+			j0 = R0 * (term / th) * sqrt(th) * n * F
+		else
+			j0 = R0 * sqrt(term) * n * F
+		end
+		if isfinite(j0) && j0 >= 0
+			sum_j0 += j0
+			nj0 += 1
+		end
+	end
+	nj0 == 0 && return NaN
+	return sum_j0 / nj0
+end
+
+function effective_net_reaction_overpotential(
+	I_cell::Real,
+	A_geo::Real,
+	vol_surf_area::Real,
+	thickness::Real,
+	n::Real,
+	T::Real,
+	j0_eff::Real,
+	sign_reference::Real,
+)
+	if !(isfinite(I_cell) && isfinite(A_geo) && isfinite(vol_surf_area) && isfinite(thickness) && isfinite(n) && isfinite(T) && isfinite(j0_eff))
+		return NaN
+	end
+	if A_geo <= 0 || vol_surf_area <= 0 || thickness <= 0 || n <= 0 || T <= 0 || j0_eff <= 0
+		return NaN
+	end
+	R = GAS_CONSTANT
+	F = FARADAY_CONSTANT
+	i_geo = I_cell / A_geo
+	j_net = abs(i_geo) / (vol_surf_area * thickness)
+	argument = clip_to_finite_magnitude(j_net / (2.0 * j0_eff))
+	eta_mag = 2.0 * R * T / (n * F) * asinh(argument)
+	sgn = sign(sign_reference)
+	if sgn == 0
+		return 0.0
+	end
+	return sgn * eta_mag
+end
+
+function eval_ocp_from_system(system, c::Real, T::Real)
+	params = system.params
+	ocp_fun = system[:ocp_func]
+	cmax = system[:maximum_concentration]
+	refT = 298.15
+	c_clamped = clamp(c, 1e-12, cmax - 1e-12)
+
+	if haskey(params, :ocp_funcconstant)
+		return ocp_fun
+	elseif haskey(params, :ocp_funcdata)
+		return ocp_fun(c_clamped / cmax)
+	end
+
+	# Handle several OCP function signatures used across parameter definitions.
+	for candidate in (
+		() -> ocp_fun(c_clamped, T, refT, cmax),
+		() -> ocp_fun(c_clamped, T, cmax),
+		() -> ocp_fun(c_clamped, T),
+		() -> ocp_fun(c_clamped),
+	)
+		try
+			return candidate()
+		catch err
+			err isa MethodError || rethrow(err)
+		end
+	end
+
+	error("Failed to evaluate OCP function for concentration $c_clamped and temperature $T.")
+end
+
+"""
+	compute_voltage_breakdown(output::SimulationOutput)
+
+Compute an approximate decomposition of terminal voltage into physically meaningful components.
+
+The decomposition is based on interface values and reconstructs:
+
+`Voltage ≈ OCV_avg + η_conc,solid,pos + η_conc,solid,neg + η_pos + η_neg + Δϕ_e,conc + Δϕ_e,ohm + Δϕ_s,pos + Δϕ_s,neg (+ η_SEI) + Residual`
+
+where each term is returned as a time series.
+"""
+function compute_voltage_breakdown(output::SimulationOutput)
+
+	states = output.states
+	time_series = output.time_series
+
+	get_state(name::AbstractString; required::Bool = true) =
+		try
+			get_nested_output_value(states, output_state_path(String(name)), String(name))
+		catch err
+			if required
+				error("Cannot compute voltage breakdown. Missing output state \"$(String(name))\".")
+			end
+			if err isa ErrorException
+				return nothing
+			end
+			rethrow(err)
+		end
+
+	required = [
+		"NegativeElectrodeActiveMaterialPotential",
+		"PositiveElectrodeActiveMaterialPotential",
+		"ElectrolytePotential",
+		"NegativeElectrodeActiveMaterialOpenCircuitPotential",
+		"PositiveElectrodeActiveMaterialOpenCircuitPotential",
+	]
+
+	for key in required
+		get_state(key)
+	end
+
+	if !haskey(time_series, "Time") || !haskey(time_series, "Voltage") || !haskey(time_series, "Current")
+		error("Cannot compute voltage breakdown. Time-series output must contain \"Time\", \"Voltage\", and \"Current\".")
+	end
+
+	phi_n = get_state("NegativeElectrodeActiveMaterialPotential")
+	phi_p = get_state("PositiveElectrodeActiveMaterialPotential")
+	phi_e = get_state("ElectrolytePotential")
+	ocp_n = get_state("NegativeElectrodeActiveMaterialOpenCircuitPotential")
+	ocp_p = get_state("PositiveElectrodeActiveMaterialOpenCircuitPotential")
+	c_n_surf = get_state("NegativeElectrodeActiveMaterialSurfaceConcentration"; required = false)
+	c_p_surf = get_state("PositiveElectrodeActiveMaterialSurfaceConcentration"; required = false)
+	R0_n_field = get_state("NegativeElectrodeActiveMaterialReactionRateConstant"; required = false)
+	R0_p_field = get_state("PositiveElectrodeActiveMaterialReactionRateConstant"; required = false)
+	c_e = get_state("ElectrolyteConcentration"; required = false)
+	c_n_part = get_state("NegativeElectrodeActiveMaterialParticleConcentration"; required = false)
+	c_p_part = get_state("PositiveElectrodeActiveMaterialParticleConcentration"; required = false)
+	T_n = get_state("NegativeElectrodeActiveMaterialTemperature"; required = false)
+	T_p = get_state("PositiveElectrodeActiveMaterialTemperature"; required = false)
+
+	nsteps = min(
+		length(time_series["Time"]),
+		length(time_series["Voltage"]),
+		size(phi_n, 1),
+		size(phi_p, 1),
+		size(phi_e, 1),
+		size(ocp_n, 1),
+		size(ocp_p, 1),
+	)
+
+	if nsteps < 2
+		error("Need at least 2 time steps to compute a voltage breakdown.")
+	end
+
+	time = time_series["Time"][1:nsteps]
+	voltage = time_series["Voltage"][1:nsteps]
+	current = time_series["Current"][1:nsteps]
+
+	n_idx = findall(isfinite, phi_n[1, :])
+	p_idx = findall(isfinite, phi_p[1, :])
+
+	isempty(n_idx) && error("Negative electrode potential field has no finite entries.")
+	isempty(p_idx) && error("Positive electrode potential field has no finite entries.")
+
+	ne_cc_idx = first(n_idx)
+	ne_sep_idx = last(n_idx)
+	pe_sep_idx = first(p_idx)
+	pe_cc_idx = last(p_idx)
+
+	e_ne_idx = find_nearest_finite_index(vec(phi_e[1, :]), ne_sep_idx)
+	e_pe_idx = find_nearest_finite_index(vec(phi_e[1, :]), pe_sep_idx)
+	e_ne_map = [find_nearest_finite_index(vec(phi_e[1, :]), idx) for idx in n_idx]
+	e_pe_map = [find_nearest_finite_index(vec(phi_e[1, :]), idx) for idx in p_idx]
+
+	sei = get_state("NegativeElectrodeInterphaseVoltageDrop"; required = false)
+	has_sei = !isnothing(sei)
+	sei_idx = has_sei ? find_nearest_finite_index(vec(sei[1, :]), ne_sep_idx) : 0
+
+	ne_system = output.model.multimodel[:NegativeElectrodeActiveMaterial].system
+	pe_system = output.model.multimodel[:PositiveElectrodeActiveMaterial].system
+
+	ne_params = ne_system.params
+	pe_params = pe_system.params
+
+	a_n = haskey(ne_params, :volumetric_surface_area) ? ne_params[:volumetric_surface_area] : NaN
+	a_p = haskey(pe_params, :volumetric_surface_area) ? pe_params[:volumetric_surface_area] : NaN
+	n_n = haskey(ne_params, :n_charge_carriers) ? ne_params[:n_charge_carriers] : 1.0
+	n_p = haskey(pe_params, :n_charge_carriers) ? pe_params[:n_charge_carriers] : 1.0
+	cmax_n = haskey(ne_params, :maximum_concentration) ? ne_params[:maximum_concentration] : NaN
+	cmax_p = haskey(pe_params, :maximum_concentration) ? pe_params[:maximum_concentration] : NaN
+	bv_ne = haskey(ne_params, :setting_butler_volmer) ? ne_params[:setting_butler_volmer] : nothing
+	bv_pe = haskey(pe_params, :setting_butler_volmer) ? pe_params[:setting_butler_volmer] : nothing
+
+	cell_params = output.input["CellParameters"]
+	cell_geometry = cell_params["Cell"]
+	A_geo = get(cell_geometry, "ElectrodeGeometricSurfaceArea", NaN)
+	if !(isfinite(A_geo) && A_geo > 0)
+		w = get(cell_geometry, "ElectrodeWidth", NaN)
+		l = get(cell_geometry, "ElectrodeLength", get(cell_geometry, "Height", NaN))
+		if isfinite(w) && isfinite(l) && w > 0 && l > 0
+			A_geo = w * l
+		end
+	end
+	L_n = get(cell_params["NegativeElectrode"]["Coating"], "Thickness", NaN)
+	L_p = get(cell_params["PositiveElectrode"]["Coating"], "Thickness", NaN)
+
+	use_net_reactive_kinetics =
+		!isnothing(c_e) &&
+		!isnothing(c_n_surf) &&
+		!isnothing(c_p_surf) &&
+		!isnothing(R0_n_field) &&
+		!isnothing(R0_p_field) &&
+		isfinite(A_geo) &&
+		A_geo > 0 &&
+		isfinite(a_n) &&
+		a_n > 0 &&
+		isfinite(a_p) &&
+		a_p > 0 &&
+		isfinite(L_n) &&
+		L_n > 0 &&
+		isfinite(L_p) &&
+		L_p > 0 &&
+		isfinite(cmax_n) &&
+		cmax_n > 0 &&
+		isfinite(cmax_p) &&
+		cmax_p > 0 &&
+		(bv_ne != "Chayambuka") &&
+		(bv_pe != "Chayambuka")
+
+	t_plus = output.input["CellParameters"]["Electrolyte"]["TransferenceNumber"]
+	F = FARADAY_CONSTANT
+	R = GAS_CONSTANT
+
+	ocv_surface = zeros(nsteps)
+	ocv_average = zeros(nsteps)
+	conc_solid_pos = zeros(nsteps)
+	conc_solid_neg = zeros(nsteps)
+	pos_kin = zeros(nsteps)
+	neg_kin = zeros(nsteps)
+	elyte_drop_total = zeros(nsteps)
+	elyte_conc = zeros(nsteps)
+	elyte_ohmic = zeros(nsteps)
+	solid_drop_pos = zeros(nsteps)
+	solid_drop_neg = zeros(nsteps)
+	neg_sei = zeros(nsteps)
+	reconstructed = zeros(nsteps)
+
+	for i in 1:nsteps
+		phi_n_cc = phi_n[i, ne_cc_idx]
+		phi_n_sep = phi_n[i, ne_sep_idx]
+		phi_p_sep = phi_p[i, pe_sep_idx]
+		phi_p_cc = phi_p[i, pe_cc_idx]
+
+		phi_e_n = phi_e[i, e_ne_idx]
+		phi_e_p = phi_e[i, e_pe_idx]
+
+		U_n = ocp_n[i, ne_sep_idx]
+		U_p = ocp_p[i, pe_sep_idx]
+		ocv_surface[i] = U_p - U_n
+
+		eta_n_total = phi_n_sep - phi_e_n - U_n
+		eta_p_total = phi_p_sep - phi_e_p - U_p
+
+		if !isnothing(c_n_part) && !isnothing(c_p_part) && ndims(c_n_part) == 3 && ndims(c_p_part) == 3
+			cn_profile = vec(c_n_part[i, ne_sep_idx, :])
+			cp_profile = vec(c_p_part[i, pe_sep_idx, :])
+			cn_avg = mean_finite(cn_profile)
+			cp_avg = mean_finite(cp_profile)
+
+			Tn_loc = isnothing(T_n) ? 298.15 : T_n[i, ne_sep_idx]
+			Tp_loc = isnothing(T_p) ? 298.15 : T_p[i, pe_sep_idx]
+
+			U_n_avg = eval_ocp_from_system(ne_system, cn_avg, Tn_loc)
+			U_p_avg = eval_ocp_from_system(pe_system, cp_avg, Tp_loc)
+
+			ocv_average[i] = U_p_avg - U_n_avg
+			conc_solid_pos[i] = U_p - U_p_avg
+			conc_solid_neg[i] = U_n_avg - U_n
+		else
+			ocv_average[i] = ocv_surface[i]
+		end
+
+		local_pos_kin = eta_p_total
+		elyte_drop_total[i] = phi_e_p - phi_e_n
+		solid_drop_pos[i] = phi_p_cc - phi_p_sep
+		solid_drop_neg[i] = phi_n_sep - phi_n_cc
+
+		T_elyte = isnothing(T_n) || isnothing(T_p) ? 298.15 : 0.5 * (T_n[i, ne_sep_idx] + T_p[i, pe_sep_idx])
+		if !isnothing(c_e)
+			cen = clamp(c_e[i, e_ne_idx], 1e-12, Inf)
+			cep = clamp(c_e[i, e_pe_idx], 1e-12, Inf)
+			elyte_conc[i] = 2.0 * R * T_elyte / F * (1.0 - t_plus) * log(cep / cen)
+			elyte_ohmic[i] = elyte_drop_total[i] - elyte_conc[i]
+		else
+			elyte_ohmic[i] = elyte_drop_total[i]
+		end
+
+		if has_sei
+			sei_u = sei[i, sei_idx]
+			neg_sei[i] = -sei_u
+			# Keep SEI separate from reaction kinetics in the returned decomposition.
+			local_neg_kin = -eta_n_total - neg_sei[i]
+		else
+			local_neg_kin = -eta_n_total
+		end
+
+		if use_net_reactive_kinetics
+			Tn_eff = isnothing(T_n) ? 298.15 : mean_finite(vec(T_n[i, n_idx]))
+			Tp_eff = isnothing(T_p) ? 298.15 : mean_finite(vec(T_p[i, p_idx]))
+
+			c_e_n_vals = vec(c_e[i, e_ne_map])
+			c_e_p_vals = vec(c_e[i, e_pe_map])
+			c_s_n_vals = vec(c_n_surf[i, n_idx])
+			c_s_p_vals = vec(c_p_surf[i, p_idx])
+			R0_n_vals = vec(R0_n_field[i, n_idx])
+			R0_p_vals = vec(R0_p_field[i, p_idx])
+
+			j0_eff_n = effective_exchange_current_density(R0_n_vals, c_e_n_vals, c_s_n_vals, cmax_n, n_n)
+			j0_eff_p = effective_exchange_current_density(R0_p_vals, c_e_p_vals, c_s_p_vals, cmax_p, n_p)
+
+			eta_neg_eff = effective_net_reaction_overpotential(
+				current[i],
+				A_geo,
+				a_n,
+				L_n,
+				n_n,
+				Tn_eff,
+				j0_eff_n,
+				local_neg_kin,
+			)
+			eta_pos_eff = effective_net_reaction_overpotential(
+				current[i],
+				A_geo,
+				a_p,
+				L_p,
+				n_p,
+				Tp_eff,
+				j0_eff_p,
+				local_pos_kin,
+			)
+
+			neg_kin[i] = isfinite(eta_neg_eff) ? eta_neg_eff : local_neg_kin
+			pos_kin[i] = isfinite(eta_pos_eff) ? eta_pos_eff : local_pos_kin
+		else
+			neg_kin[i] = local_neg_kin
+			pos_kin[i] = local_pos_kin
+		end
+
+		reconstructed[i] = ocv_average[i] + conc_solid_pos[i] + conc_solid_neg[i] + pos_kin[i] + neg_kin[i] + elyte_conc[i] + elyte_ohmic[i] + solid_drop_pos[i] + solid_drop_neg[i] + neg_sei[i]
+	end
+
+	residual = voltage .- reconstructed
+
+	breakdown = Dict{String, Any}(
+		"Time" => time,
+		"Voltage" => voltage,
+		"Current" => current,
+		"OpenCircuitVoltage" => ocv_average,
+		"OpenCircuitVoltageAverage" => ocv_average,
+		"OpenCircuitVoltageSurface" => ocv_surface,
+		"PositiveSolidConcentrationOverpotential" => conc_solid_pos,
+		"NegativeSolidConcentrationOverpotential" => conc_solid_neg,
+		"ElectrolyteConcentrationOverpotential" => elyte_conc,
+		"PositiveReactionOverpotential" => pos_kin,
+		"NegativeReactionOverpotential" => neg_kin,
+		"ElectrolytePotentialDrop" => elyte_drop_total,
+		"ElectrolyteOhmicPotentialDrop" => elyte_ohmic,
+		"PositiveSolidPotentialDrop" => solid_drop_pos,
+		"NegativeSolidPotentialDrop" => solid_drop_neg,
+		"ReconstructedVoltage" => reconstructed,
+		"ResidualVoltage" => residual,
+		"KineticOverpotentialMode" => use_net_reactive_kinetics ? "NetReactiveEffective" : "InterfaceLocal",
+	)
+
+	if has_sei
+		breakdown["NegativeSEIOverpotential"] = neg_sei
+	end
+
+	if haskey(time_series, "CumulativeCapacity")
+		breakdown["CumulativeCapacity"] = time_series["CumulativeCapacity"][1:nsteps]
+	end
+
+	return breakdown
 end
 
 
