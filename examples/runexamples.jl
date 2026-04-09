@@ -1,32 +1,29 @@
-# include("compare_inputs.jl")
-# include("example_1d_plotting.jl")
-# include("example_3D_cylindrical.jl")
-# include("example_3D_pouch.jl")
-# include("example_3d_demo.jl")
-# include("example_3d_demo_iterative_amg.jl")
-# include("example_Xu2015.jl")
-# include("example_advanced_dict.jl")
-# include("example_arrhenius.jl")
-# # include("example_battery.jl")
-# include("example_calibration.jl")
-# include("example_chayambuka.jl")
-# include("example_cycle.jl")
-# include("example_grid_optimization.jl")
-# include("example_headless.jl")
-# include("example_matlab.jl")
-# include("example_run_current_function.jl")
-# include("example_sei.jl")
+# Run all the examples in this folder and in the beginner_tutorials
+# folder, and catch any errors that occur
 
-# include("beginner_tutorials/1_useful_tools.jl")
-# include("beginner_tutorials/2_run_a_simulation.jl")
-# include("beginner_tutorials/3_handle_outputs.jl")
-# include("beginner_tutorials/4_select_a_model.jl")
-# include("beginner_tutorials/5_create_parameter_sets.jl")
-# include("beginner_tutorials/6_handle_cell_parameters.jl")
-# include("beginner_tutorials/7_handle_cycling_protocols.jl")
-# include("beginner_tutorials/8_compute_cell_kpis.jl")
-# include("beginner_tutorials/9_run_parameter_sweep.jl")
-# include("beginner_tutorials/10_handling_grid_time_resolution.jl")
-# include("beginner_tutorials/11_handling_solver_settings.jl")
-# include("beginner_tutorials/reproducing_cryptic_errors.jl")
-include("beginner_tutorials/study_power_capability.jl")
+failed = String[]
+
+topfiles = [
+    f for f in readdir(pwd(); join = false)
+        if endswith(f, ".jl") && f != "runexamples.jl"
+]
+
+tutorialfiles = [
+    f for f in readdir(joinpath(pwd(), "beginner_tutorials"); join = true)
+        if endswith(f, ".jl")
+]
+
+files = vcat(sort(topfiles), sort(tutorialfiles))
+
+for file in files
+    try
+        println("Including $file")
+        include(file)
+    catch err
+        push!(failed, file)
+        @warn "Failed to include $file" exception = (err, catch_backtrace())
+    end
+end
+
+println("Failed files:")
+foreach(println, failed)

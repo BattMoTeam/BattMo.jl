@@ -38,12 +38,12 @@ power_func = get_1d_interpolator(t, P, cap_endpoints = false)
 
 function current_function(time, voltage)
 
-    factor = 4000 # Tot account for the fact that we're simulating a single cell instead of a battery pack
+	factor = 4000 # Tot account for the fact that we're simulating a single cell instead of a battery pack
 
-    return power_func(time) / voltage / factor
+	return power_func(time) / voltage / factor
 end
 
-@eval Main current_function = $current_function
+@eval Main const current_function = $current_function
 
 # Load a cycling protocol that uses the current function
 cycling_protocol = load_cycling_protocol(; from_default_set = "user_defined_current_function")
@@ -104,10 +104,10 @@ print_info("NegativeElectrode"; view = "SimulationSettings")
 
 # Lets have a look at the current number of grid points and increase them.
 println(
-    "Current grid resolution in positive electrode coating and separator: ",
-    simulation_settings["PositiveElectrodeCoatingGridPoints"],
-    " and ",
-    simulation_settings["NegativeElectrodeCoatingGridPoints"]
+	"Current grid resolution in positive electrode coating and separator: ",
+	simulation_settings["PositiveElectrodeCoatingGridPoints"],
+	" and ",
+	simulation_settings["NegativeElectrodeCoatingGridPoints"],
 )
 
 simulation_settings["PositiveElectrodeCoatingGridPoints"] = 20 # Increase the number of grid points in the positive electrode coating to 20

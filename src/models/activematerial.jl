@@ -40,9 +40,9 @@ struct ActiveMaterial{label, D, T, Di} <: AbstractActiveMaterial{label} where {D
 	# - effective_density::Real
 	#
 	# If SEI layer is present, we have the following in addition
-	# - SEIlengthInitial
-	# - SEIvoltageDropRef
-	# - SEIlengthRef
+	# - SEIThicknessInitial
+	# - SEIVoltageDropRef
+	# - SEIThicknessRef
 	# - SEIstoichiometryCoefficient
 	# - SEImolarVolume
 	# - SEIelectronicDiffusionCoefficient
@@ -258,8 +258,8 @@ function Jutul.select_minimum_output_variables!(
 	push!(out, :OpenCircuitPotential)
 	push!(out, :Temperature)
 	push!(out, :ReactionRateConstant)
-	push!(out, :DiffusionCoefficient)
-	return
+	push!(out, :ElectricPotential)
+	return push!(out, :DiffusionCoefficient)
 
 end
 

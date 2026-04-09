@@ -23,9 +23,7 @@ nothing # hide
 
 # ## Plot discharge curve
 
-states = output[:states]
-model = output[:extra][:model]
-
+states = output.jutul_output.states
 t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:ElectricPotential][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
@@ -80,6 +78,8 @@ f # hide
 # ## Plot potential on grid at last time step #
 state = states[10]
 
+models = model.multimodel.models
+
 function plot_potential(am, cc, label)
     f3D = Figure(size = (600, 650))
     ax3d = Axis3(
@@ -94,7 +94,7 @@ function plot_potential(am, cc, label)
 
     components = [am, cc]
     for component in components
-        g = model[component].domain.representation
+        g = models[component].domain.representation
         phi = state[component][:ElectricPotential]
         Jutul.plot_cell_data!(ax3d, g, phi .- minVoltage; colormap = :viridis, colorrange = colorrange)
     end
@@ -129,7 +129,7 @@ function plot_surface_concentration(component, label)
     mincs = minimum(cs)
 
     colorrange = [0, maxcs - mincs]
-    g = model[component].domain.representation
+    g = models[component].domain.representation
     Jutul.plot_cell_data!(
         ax3d, g, cs .- mincs;
         colormap = :viridis,
@@ -164,7 +164,7 @@ function plot_elyte(var, label)
 
     colorrange = [0, maxval - minval]
 
-    g = model[:Electrolyte].domain.representation
+    g = models[:Electrolyte].domain.representation
     Jutul.plot_cell_data!(
         ax3d, g, val .- minval;
         colormap = :viridis,
@@ -183,7 +183,7 @@ end
 nothing # hide
 
 # ## Plot of the concentration in the electrolyte
-plot_elyte(Concentration, "concentration")
+plot_elyte(:ElectrolyteConcentration, "concentration")
 
 # ## Plot of the potential in the electrolyte
 plot_elyte(:ElectricPotential, "potential")
