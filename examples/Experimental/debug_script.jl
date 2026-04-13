@@ -11,14 +11,15 @@ states, reports, extra = run_battery(init; info_level = 0, max_timestep_cuts = 1
 
 t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:ElectricPotential][1] for state in states]
-plt = plot(t, E;
-	title     = "Discharge Voltage",
-	size      = (1000, 800),
-	label     = "BattMo.jl",
-	xlabel    = "Time / s",
-	ylabel    = "Voltage / V",
-	linewidth = 4,
-	xtickfont = font(pointsize = 15),
-	ytickfont = font(pointsize = 15))
+plt = plot(
+    t, E;
+    title = "Discharge Voltage",
+    size = (1000, 800),
+    label = "BattMo.jl",
+    xlabel = "Time / s",
+    ylabel = "Voltage / V",
+    linewidth = 4,
+    xtickfont = font(pointsize = 15),
+    ytickfont = font(pointsize = 15)
+)
 display(plt)
-

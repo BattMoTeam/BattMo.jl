@@ -3,8 +3,8 @@ using BattMo, Jutul
 function runP2DBatt(json_file)
 
 	fraction_tot = 0
-	dt_tot       = 0
-	i            = 0
+	dt_tot = 0
+	i = 0
 
 	# read input parameters from json file
 	inputparams = load_advanced_dict_input(json_file)
@@ -38,50 +38,51 @@ function runP2DBatt(json_file)
 	multimodel = sim.model.multimodel
 
 	energy_efficiency = output.metrics["RoundTripEfficiency"]
-	discharge_energy  = output.metrics["DischargeEnergy"]
+	discharge_energy = output.metrics["DischargeEnergy"]
 
 	con = BattMo.Constants()
 
 	time_series = output.time_series
 
 	# Get some result values
-	number_of_states                 = size(states)
-	time_values                      = time_series["Time"]
-	cell_voltage                     = [state[:Control][:ElectricPotential][1] for state in states]
-	cell_current                     = [state[:Control][:Current][1] for state in states]
-	negative_electrode_grid_wrap     = physical_representation(multimodel[:NegativeElectrodeActiveMaterial])
-	electrolyte_grid_wrap            = physical_representation(multimodel[:Electrolyte])
-	positive_electrode_grid_wrap     = physical_representation(multimodel[:PositiveElectrodeActiveMaterial])
+	number_of_states = size(states)
+	time_values = time_series["Time"]
+	cell_voltage = [state[:Control][:ElectricPotential][1] for state in states]
+	cell_current = [state[:Control][:Current][1] for state in states]
+	negative_electrode_grid_wrap = physical_representation(multimodel[:NegativeElectrodeActiveMaterial])
+	electrolyte_grid_wrap = physical_representation(multimodel[:Electrolyte])
+	positive_electrode_grid_wrap = physical_representation(multimodel[:PositiveElectrodeActiveMaterial])
 	negative_electrode_concentration = Array([[state[:NegativeElectrodeActiveMaterial][:SurfaceConcentration] for state in states] / 1000])
-	electrolyte_concentration        = [state[:Electrolyte][:ElectrolyteConcentration] for state in states] / 1000
+	electrolyte_concentration = [state[:Electrolyte][:ElectrolyteConcentration] for state in states] / 1000
 	positive_electrode_concentration = Array([[state[:PositiveElectrodeActiveMaterial][:SurfaceConcentration] for state in states]] / 1000)
-	negative_electrode_potential     = [state[:NegativeElectrodeActiveMaterial][:ElectricPotential] for state in states]
-	electrolyte_potential            = [state[:Electrolyte][:ElectricPotential] for state in states]
-	positive_electrode_potential     = [state[:PositiveElectrodeActiveMaterial][:ElectricPotential] for state in states]
+	negative_electrode_potential = [state[:NegativeElectrodeActiveMaterial][:ElectricPotential] for state in states]
+	electrolyte_potential = [state[:Electrolyte][:ElectricPotential] for state in states]
+	positive_electrode_potential = [state[:PositiveElectrodeActiveMaterial][:ElectricPotential] for state in states]
 
 	nsteps = length(cell_voltage)
 	time_values = time_values[1:nsteps]
 
 	# Mesh cell centroids coordinates
-	centroids_NeAm  = negative_electrode_grid_wrap[:cell_centroids, Cells()]
+	centroids_NeAm = negative_electrode_grid_wrap[:cell_centroids, Cells()]
 	centroids_Elyte = electrolyte_grid_wrap[:cell_centroids, Cells()]
-	centroids_PeAm  = positive_electrode_grid_wrap[:cell_centroids, Cells()]
+	centroids_PeAm = positive_electrode_grid_wrap[:cell_centroids, Cells()]
 
 	# Boundary faces coordinates
-	boundaries_NeAm  = negative_electrode_grid_wrap[:boundary_centroids, BoundaryFaces()]
+	boundaries_NeAm = negative_electrode_grid_wrap[:boundary_centroids, BoundaryFaces()]
 	boundaries_Elyte = electrolyte_grid_wrap[:boundary_centroids, BoundaryFaces()]
-	boundaries_PeAm  = positive_electrode_grid_wrap[:boundary_centroids, BoundaryFaces()]
+	boundaries_PeAm = positive_electrode_grid_wrap[:boundary_centroids, BoundaryFaces()]
 
-	negative_electrode_grid          = centroids_NeAm .* 10^6
-	negative_electrode_grid_bc       = boundaries_NeAm .* 10^6
-	electrolyte_grid                 = centroids_Elyte .* 10^6
-	electrolyte_grid_bc              = boundaries_Elyte .* 10^6
-	positive_electrode_grid          = centroids_PeAm .* 10^6
-	positive_electrode_grid_bc       = boundaries_PeAm .* 10^6
+	negative_electrode_grid = centroids_NeAm .* 10^6
+	negative_electrode_grid_bc = boundaries_NeAm .* 10^6
+	electrolyte_grid = centroids_Elyte .* 10^6
+	electrolyte_grid_bc = boundaries_Elyte .* 10^6
+	positive_electrode_grid = centroids_PeAm .* 10^6
+	positive_electrode_grid_bc = boundaries_PeAm .* 10^6
 	negative_electrode_concentration = negative_electrode_concentration[1]
 	positive_electrode_concentration = positive_electrode_concentration[1]
 
-	return (number_of_states,
+	return (
+		number_of_states,
 		cell_voltage,
 		cell_current,
 		time_values,
@@ -98,17 +99,20 @@ function runP2DBatt(json_file)
 		electrolyte_potential,
 		positive_electrode_potential,
 		discharge_energy,
-		energy_efficiency)
+		energy_efficiency,
+	)
 
 end
 
 
-function setup_config(cfg,
+function setup_config(
+	cfg,
 	model::MultiModel,
 	timesteps,
 	fraction_tot,
 	dt_tot,
-	i)
+	i,
+)
 
 	if model[:Control].system.protocol isa CyclingCVPolicy
 
@@ -126,10 +130,10 @@ function setup_config(cfg,
 			end
 
 			if done
-				i            += 1
-				total_time   = sum(timesteps)
-				dt_tot       += dt
-				fraction     = dt / total_time
+				i += 1
+				total_time = sum(timesteps)
+				dt_tot += dt
+				fraction = dt / total_time
 				fraction_tot += fraction
 			end
 

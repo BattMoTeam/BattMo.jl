@@ -1,7 +1,6 @@
 export SodiumIonBattery
 
 
-
 """
 	struct SodiumIonBattery <: Battery
 
@@ -18,53 +17,51 @@ Creates an instance of `SodiumIonBattery` with the specified or default model se
 The model name is automatically generated based on the model geometry.
 """
 mutable struct SodiumIonBattery <: IntercalationBattery
-	name::String
-	settings::ModelSettings
-	is_valid::Bool
-	multimodel::Union{Missing, MultiModel}
+    name::String
+    settings::ModelSettings
+    is_valid::Bool
+    multimodel::Union{Missing, MultiModel}
 
 
-	function SodiumIonBattery(; model_settings = get_default_model_settings(SodiumIonBattery))
+    function SodiumIonBattery(; model_settings = get_default_model_settings(SodiumIonBattery))
 
-		is_valid = validate_parameter_set(model_settings)
+        is_valid = validate_parameter_set(model_settings)
 
-		model_geometry = model_settings["ModelFramework"]
-		name = "Setup object for a $model_geometry lithium-ion model"
-
-
+        model_geometry = model_settings["ModelFramework"]
+        name = "Setup object for a $model_geometry lithium-ion model"
 
 
-		return new{}(
-			name,
-			model_settings,
-			is_valid,
-		)
-	end
+        return new{}(
+            name,
+            model_settings,
+            is_valid,
+        )
+    end
 end
 
 function get_default_model_settings(::Type{SodiumIonBattery})
-	settings = load_model_settings(; from_default_set = "p2d")
-	return settings
+    settings = load_model_settings(; from_default_set = "p2d")
+    return settings
 end
 
 function get_default_solver_settings(model::SodiumIonBattery)
-	settings = load_solver_settings(; from_default_set = "direct")
-	return settings
+    settings = load_solver_settings(; from_default_set = "direct")
+    return settings
 end
 
 function get_default_simulation_settings(model::SodiumIonBattery)
 
-	model_framework = model.settings["ModelFramework"]
-	if model_framework == "P2D"
-		settings = load_simulation_settings(; from_default_set = "p2d_fine_resolution")
-	elseif model_framework == "P4D Pouch"
-		settings = load_simulation_settings(; from_default_set = "p4d_pouch")
-	elseif model_framework == "P4D Cylindrical"
-		settings = load_simulation_settings(; from_default_set = "p4d_cylindrical")
-	else
-		error("ModelFramework $model_famework not recognized")
-	end
+    model_framework = model.settings["ModelFramework"]
+    if model_framework == "P2D"
+        settings = load_simulation_settings(; from_default_set = "p2d_fine_resolution")
+    elseif model_framework == "P4D Pouch"
+        settings = load_simulation_settings(; from_default_set = "p4d_pouch")
+    elseif model_framework == "P4D Cylindrical"
+        settings = load_simulation_settings(; from_default_set = "p4d_cylindrical")
+    else
+        error("ModelFramework $model_famework not recognized")
+    end
 
-	return settings
+    return settings
 
 end

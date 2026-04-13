@@ -70,28 +70,40 @@ fig
 # setup before calibration starts.
 vc05 = VoltageCalibration(t_exp_05, V_exp_05, sim)
 
-free_calibration_parameter!(vc05,
+free_calibration_parameter!(
+	vc05,
 	["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
-	lower_bound = 0.0, upper_bound = 1.0)
-free_calibration_parameter!(vc05,
+	lower_bound = 0.0, upper_bound = 1.0,
+)
+free_calibration_parameter!(
+	vc05,
 	["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
-	lower_bound = 0.0, upper_bound = 1.0);
+	lower_bound = 0.0, upper_bound = 1.0,
+);
 
 # "StoichiometricCoefficientAtSOC0" at both electrodes
-free_calibration_parameter!(vc05,
+free_calibration_parameter!(
+	vc05,
 	["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
-	lower_bound = 0.0, upper_bound = 1.0)
-free_calibration_parameter!(vc05,
+	lower_bound = 0.0, upper_bound = 1.0,
+)
+free_calibration_parameter!(
+	vc05,
 	["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
-	lower_bound = 0.0, upper_bound = 1.0);
+	lower_bound = 0.0, upper_bound = 1.0,
+);
 
 #  "MaximumConcentration" of both electrodes
-free_calibration_parameter!(vc05,
+free_calibration_parameter!(
+	vc05,
 	["NegativeElectrode", "ActiveMaterial", "MaximumConcentration"];
-	lower_bound = 10000.0, upper_bound = 1e5)
-free_calibration_parameter!(vc05,
+	lower_bound = 10000.0, upper_bound = 1.0e5,
+)
+free_calibration_parameter!(
+	vc05,
 	["PositiveElectrode", "ActiveMaterial", "MaximumConcentration"];
-	lower_bound = 10000.0, upper_bound = 1e5)
+	lower_bound = 10000.0, upper_bound = 1.0e5,
+)
 
 print_info(vc05)
 # ### Solve the first calibration problem
@@ -142,20 +154,28 @@ print_info(vc05)
 
 # vc2 = VoltageCalibration(t_exp_2, V_exp_2, sim2)
 
-# free_calibration_parameter!(vc2,
-# 	["NegativeElectrode", "ActiveMaterial", "ReactionRateConstant"];
-# 	lower_bound = 1e-16, upper_bound = 1e-10)
-# free_calibration_parameter!(vc2,
-# 	["PositiveElectrode", "ActiveMaterial", "ReactionRateConstant"];
-# 	lower_bound = 1e-16, upper_bound = 1e-10)
+free_calibration_parameter!(
+	vc2,
+	["NegativeElectrode", "ActiveMaterial", "ReactionRateConstant"];
+	lower_bound = 1.0e-16, upper_bound = 1.0e-10,
+)
+free_calibration_parameter!(
+	vc2,
+	["PositiveElectrode", "ActiveMaterial", "ReactionRateConstant"];
+	lower_bound = 1.0e-16, upper_bound = 1.0e-10,
+)
 
-# free_calibration_parameter!(vc2,
-# 	["NegativeElectrode", "ActiveMaterial", "DiffusionCoefficient"];
-# 	lower_bound = 1e-16, upper_bound = 1e-12)
-# free_calibration_parameter!(vc2,
-# 	["PositiveElectrode", "ActiveMaterial", "DiffusionCoefficient"];
-# 	lower_bound = 1e-16, upper_bound = 1e-12)
-# print_info(vc2)
+free_calibration_parameter!(
+	vc2,
+	["NegativeElectrode", "ActiveMaterial", "DiffusionCoefficient"];
+	lower_bound = 1.0e-16, upper_bound = 1.0e-12,
+)
+free_calibration_parameter!(
+	vc2,
+	["PositiveElectrode", "ActiveMaterial", "DiffusionCoefficient"];
+	lower_bound = 1.0e-16, upper_bound = 1.0e-12,
+)
+print_info(vc2)
 
 # # ### Solve the second calibration problem
 # cell_parameters_calibrated2, = solve(vc2);
@@ -192,42 +212,42 @@ print_info(vc05)
 # outputs_base = []
 # outputs_calibrated = []
 
-# for CRate in CRates
-# 	cycling_protocol["DRate"] = CRate
-# 	simuc = Simulation(model, cell_parameters, cycling_protocol)
+for CRate in CRates
+	cycling_protocol["DRate"] = CRate
+	simuc = Simulation(model, cell_parameters, cycling_protocol)
 
-# 	output = solve(simuc, info_level = -1)
-# 	push!(outputs_base, (CRate = CRate, output = output))
+	output = solve(simuc, info_level = -1)
+	push!(outputs_base, (CRate = CRate, output = output))
 
-# 	simc = Simulation(model, cell_parameters_calibrated2, cycling_protocol)
-# 	output_c = solve(simc, info_level = -1)
+	simc = Simulation(model, cell_parameters_calibrated2, cycling_protocol)
+	output_c = solve(simc, info_level = -1)
 
-# 	push!(outputs_calibrated, (CRate = CRate, output = output_c))
-# end
+	push!(outputs_calibrated, (CRate = CRate, output = output_c))
+end
 
 # colors = Makie.wong_colors()
 
 # fig = Figure(size = (1200, 600))
 # ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 
-# for (i, data) in enumerate(outputs_base)
-# 	t_i = data.output.time_series["Time"]
-# 	V_i = data.output.time_series["Voltage"]
-# 	lines!(ax, t_i, V_i, label = "Simulation (initial) $(round(data.CRate, digits = 2))", color = colors[i])
-# end
+for (i, data) in enumerate(outputs_base)
+	t_i = data.output.time_series["Time"]
+	V_i = data.output.time_series["Voltage"]
+	lines!(ax, t_i, V_i, label = "Simulation (initial) $(round(data.CRate, digits = 2))", color = colors[i])
+end
 
-# for (i, data) in enumerate(outputs_calibrated)
-# 	t_i = data.output.time_series["Time"]
-# 	V_i = data.output.time_series["Voltage"]
-# 	lines!(ax, t_i, V_i, label = "Simulation (calibrated) $(round(data.CRate, digits = 2))", color = colors[i], linestyle = :dash)
-# end
+for (i, data) in enumerate(outputs_calibrated)
+	t_i = data.output.time_series["Time"]
+	V_i = data.output.time_series["Voltage"]
+	lines!(ax, t_i, V_i, label = "Simulation (calibrated) $(round(data.CRate, digits = 2))", color = colors[i], linestyle = :dash)
+end
 
-# for (i, df) in enumerate(dfs)
-# 	t_i = df[:, 1]
-# 	V_i = df[:, 2]
-# 	label = "Experimental $(round(CRates[i], digits = 2))"
-# 	lines!(ax, t_i, V_i, linestyle = :dot, label = label, color = colors[i])
-# end
+for (i, df) in enumerate(dfs)
+	t_i = df[:, 1]
+	V_i = df[:, 2]
+	label = "Experimental $(round(CRates[i], digits = 2))"
+	lines!(ax, t_i, V_i, linestyle = :dot, label = label, color = colors[i])
+end
 
 # fig[1, 2] = Legend(fig, ax, "C rate", framevisible = false)
 # fig

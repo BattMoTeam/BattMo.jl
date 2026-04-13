@@ -7,8 +7,6 @@ export
 	compute_capacity
 
 
-
-
 function compute_capacity(output::SimulationOutput, type)
 	return compute_capacity(output.jutul_output, type)
 end
@@ -52,11 +50,13 @@ function compute_discharge_capacity(jutul_output::NamedTuple; cycle_number = not
 	if hasproperty(state_end[:Control][:Controller], :numberOfCycles) && state_end[:Control][:Controller].numberOfCycles > 0
 		if isnothing(cycle_number)
 
-			error("""Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
+			error(
+				"""Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
 
-							compute_discharge_capacity(output; cycle_number = 1)
+								compute_discharge_capacity(output; cycle_number = 1)
 
-			""")
+				""",
+			)
 
 		end
 	end
@@ -127,11 +127,13 @@ function compute_charge_capacity(jutul_output::NamedTuple; cycle_number = nothin
 	if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
 		if isnothing(cycle_number)
 
-			error("""Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
+			error(
+				"""Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
 
-							compute_charge_capacity(output; cycle_number = 1)
+								compute_charge_capacity(output; cycle_number = 1)
 
-			""")
+				""",
+			)
 
 		end
 	end
@@ -181,11 +183,13 @@ function compute_round_trip_efficiency(jutul_output::NamedTuple; cycle_number = 
 	if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
 		if isnothing(cycle_number)
 
-			error("""Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
+			error(
+				"""Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
 
-							compute_round_trip_efficiency(output; cycle_number = 1)
+								compute_round_trip_efficiency(output; cycle_number = 1)
 
-			""")
+				""",
+			)
 
 		end
 	end
@@ -203,11 +207,13 @@ function compute_discharge_energy(jutul_output::NamedTuple; cycle_number = nothi
 	if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
 		if isnothing(cycle_number)
 
-			error("""Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
+			error(
+				"""Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
 
-							compute_discharge_energy(output; cycle_number = 1)
+								compute_discharge_energy(output; cycle_number = 1)
 
-			""")
+				""",
+			)
 
 		end
 	end
@@ -267,11 +273,13 @@ function compute_charge_energy(jutul_output::NamedTuple; cycle_number = nothing)
 	if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
 		if isnothing(cycle_number)
 
-			error("""Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
+			error(
+				"""Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
 
-							compute_discharge_energy(output; cycle_number = 1)
+								compute_discharge_energy(output; cycle_number = 1)
 
-			""")
+				""",
+			)
 
 		end
 	end

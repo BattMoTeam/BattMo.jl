@@ -17,5 +17,3 @@ output = solve(sim)
 plot_dashboard(output)
 
 plot_interactive_3d(output; colormap = :curl)
-
-

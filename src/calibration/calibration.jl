@@ -111,7 +111,8 @@ nested structure of the parameter in the simulation's cell parameters.
 - The `initial_value` is optional and can be set to `missing` if not provided.
 - The `lower_bound` and `upper_bound` must be provided and cannot be `missing`.
 """
-function free_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String};
+function free_calibration_parameter!(
+	vc::AbstractCalibration, parameter_name::Vector{String};
 	initial_value = missing,
 	lower_bound = missing,
 	upper_bound = missing,
@@ -144,7 +145,7 @@ function freeze_calibration_parameter!(vc::AbstractCalibration, parameter_name::
 	if !ismissing(val)
 		set_calibration_parameter!(vc, parameter_name, val)
 	end
-	delete!(vc.parameter_targets, parameter_name)
+	return delete!(vc.parameter_targets, parameter_name)
 end
 
 """
@@ -173,13 +174,13 @@ function print_calibration_overview(vc::AbstractCalibration)
 			tab[i, 3] = "$(pt[k].vmin) - $(pt[k].vmax)"
 			if is_optimized
 				v = value(get_nested_json_value(opt_cell, k))
-				perc = round(100 * (v - v0) / max(v0, 1e-20), digits = 2)
+				perc = round(100 * (v - v0) / max(v0, 1.0e-20), digits = 2)
 				tab[i, 4] = v
 				tab[i, 5] = "$perc%"
 			end
 		end
 		# TODO: Do this properly instead of via Jutul's import...
-		Jutul.PrettyTables.pretty_table(tab, header = header, title = t)
+		return Jutul.PrettyTables.pretty_table(tab, header = header, title = t)
 	end
 
 	pt = vc.parameter_targets
@@ -193,6 +194,7 @@ function print_calibration_overview(vc::AbstractCalibration)
 		subkeys = filter(x -> x[1] == outer_key, pkeys)
 		print_table(subkeys, "$outer_key: Active calibration parameters")
 	end
+	return
 end
 
 """
@@ -201,7 +203,7 @@ end
 Set a calibration parameter to a specific value.
 """
 function set_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vector{String}, value)
-	set_nested_json_value!(vc.sim.cell_parameters, parameter_name, value)
+	return set_nested_json_value!(vc.sim.cell_parameters, parameter_name, value)
 end
 
 function setup_calibration_objective(vc::VoltageCalibration)
@@ -253,10 +255,11 @@ A tuple `(calibrated_cell_parameters, optimization_history)`.
 calibrated_params, history = solve(vc; grad_tol = 1e-7)
 ```
 """
-function solve(vc::AbstractCalibration;
+function solve(
+	vc::AbstractCalibration;
 	solver_settings = get_default_solver_settings(vc.sim.model),
-	grad_tol = 1e-6,
-	obj_change_tol = 1e-6,
+	grad_tol = 1.0e-6,
+	obj_change_tol = 1.0e-6,
 	opt_fun = missing,
 	backend_arg = (
 		use_sparsity = false,
@@ -264,7 +267,7 @@ function solve(vc::AbstractCalibration;
 		single_step_sparsity = false,
 		do_prep = true,
 	),
-	kwargs...,
+	kwarg...,
 )
 	sim = deepcopy(vc.sim)
 	x0, x_setup = vectorize_cell_parameters_for_calibration(vc, sim)
@@ -284,7 +287,8 @@ function solve(vc::AbstractCalibration;
 	adj_cache = Dict()
 
 	setup_battmo_case(X, step_info = missing) = setup_battmo_case_for_calibration(X, sim, x_setup, step_info)
-	solve_and_differentiate(x) = solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, objective, solver_settings;
+	solve_and_differentiate(x) = solve_and_differentiate_for_calibration(
+		x, setup_battmo_case, vc, objective, solver_settings;
 		adj_cache = adj_cache,
 		backend_arg,
 		kwargs...,
@@ -292,7 +296,8 @@ function solve(vc::AbstractCalibration;
 	jutul_message("Calibration", "Starting calibration of $(length(x0)) parameters.", color = :green)
 
 	t_opt = @elapsed if ismissing(opt_fun)
-		v, x, history = Jutul.LBFGS.box_bfgs(x0, solve_and_differentiate, lb, ub;
+		v, x, history = Jutul.LBFGS.box_bfgs(
+			x0, solve_and_differentiate, lb, ub;
 			maximize = false,
 			print = 1,
 			grad_tol = grad_tol,
@@ -374,7 +379,8 @@ function vectorize_cell_parameters_for_calibration(vc, sim)
 		throw(ArgumentError("No free parameters set, unable to calibrate."))
 	end
 	# Set up the functions to serialize
-	x0, x_setup = Jutul.AdjointsDI.vectorize_nested(sim.cell_parameters.all,
+	x0, x_setup = Jutul.AdjointsDI.vectorize_nested(
+		sim.cell_parameters.all,
 		active = pkeys,
 		active_type = Real,
 	)

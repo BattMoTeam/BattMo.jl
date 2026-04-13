@@ -1,4 +1,3 @@
-
 abstract type IntercalationBattery <: Battery end
 
 
@@ -15,7 +14,8 @@ function setup_multimodel(model::IntercalationBattery, submodels, input; use_gro
 				Control = submodels.model_control,
 			),
 			Val(:IntercalationBattery);
-			groups = groups)
+			groups = groups,
+		)
 	else
 		models = (
 			NegativeElectrodeCurrentCollector = submodels.model_necc,
@@ -31,13 +31,15 @@ function setup_multimodel(model::IntercalationBattery, submodels, input; use_gro
 			groups[end] = 2
 			reduction = :schur_apply
 		else
-			groups    = nothing
+			groups = nothing
 			reduction = :reduction
 		end
 
-		multimodel = MultiModel(models,
+		multimodel = MultiModel(
+			models,
 			Val(:IntercalationBattery);
-			groups = groups, reduction = reduction)
+			groups = groups, reduction = reduction,
+		)
 
 	end
 
@@ -64,18 +66,17 @@ function setup_submodels(model::IntercalationBattery, input, grids, couplings; k
 
 	model_elyte = setup_electrolyte(model, input, grids)
 
-
-
 	model_control = setup_control_model(input, model_neam, model_peam; kwargs...)
 
 
-
-	submodels = (model_neam = model_neam,
+	submodels = (
+		model_neam = model_neam,
 		model_peam = model_peam,
 		model_necc = model_necc,
 		model_pecc = model_pecc,
 		model_elyte = model_elyte,
-		model_control = model_control)
+		model_control = model_control,
+	)
 
 	return submodels
 
@@ -90,7 +91,6 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 	use_ramp_up = haskey(model_settings, "RampUp")
 
 	protocol = cycling_protocol["Protocol"]
-
 
 	if protocol == "CC"
 
@@ -117,6 +117,15 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 		protocol = GenericProtocol(policy, input; T = T)
 
 
+	elseif protocol == "InputCurrentSeries"
+
+		times = cycling_protocol["Times"]
+		currents = cycling_protocol["Currents"]
+		lower_v = cycling_protocol["LowerVoltageLimit"]
+		upper_v = cycling_protocol["UpperVoltageLimit"]
+
+		policy = InputCurrentPolicy(times, currents, lower_v, upper_v)
+
 	else
 
 		error("controlPolicy not recognized.")
@@ -136,15 +145,17 @@ function setup_volume_fractions!(model::IntercalationBattery, grids, coupling)
 	Nelyte = number_of_cells(grids["Electrolyte"])
 
 	names = [:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial]
-	stringNames = Dict(:NegativeElectrodeActiveMaterial => "NegativeElectrode",
-		:PositiveElectrodeActiveMaterial => "PositiveElectrode")
+	stringNames = Dict(
+		:NegativeElectrodeActiveMaterial => "NegativeElectrode",
+		:PositiveElectrodeActiveMaterial => "PositiveElectrode",
+	)
 
 	vfracs = map(name -> multimodel[name].system[:volume_fraction], names)
 	separator_porosity = multimodel[:Electrolyte].system[:separator_porosity]
 
 	T = Base.promote_type(map(typeof, vfracs)..., typeof(separator_porosity))
 
-	vfelyte     = zeros(T, Nelyte)
+	vfelyte = zeros(T, Nelyte)
 	vfseparator = zeros(T, Nelyte)
 
 	for (i, name) in enumerate(names)
@@ -159,16 +170,16 @@ function setup_volume_fractions!(model::IntercalationBattery, grids, coupling)
 
 	elytecells = coupling["Separator"]["cells"]
 
-	vfelyte[elytecells]     .= separator_porosity * ones()
+	vfelyte[elytecells] .= separator_porosity * ones()
 	vfseparator[elytecells] .= (1 - separator_porosity)
 
 	multimodel[:Electrolyte].domain.representation[:volumeFraction] = vfelyte
-	multimodel[:Electrolyte].domain.representation[:separator_volume_fraction] = vfseparator
+	return multimodel[:Electrolyte].domain.representation[:separator_volume_fraction] = vfseparator
 
 end
 
 function normalize_path(path::AbstractString)
-	normpath(replace(path, '\\' => '/'))
+	return normpath(replace(path, '\\' => '/'))
 end
 
 function setup_electrolyte(model::IntercalationBattery, input, grids)
@@ -178,12 +189,12 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 	inputparams_elyte = cell_parameters["Electrolyte"]
 	base_path = isnothing(cell_parameters.source_path) ? "" : dirname(cell_parameters.source_path)
 
-	params[:transference]        = inputparams_elyte["TransferenceNumber"]
-	params[:charge]              = inputparams_elyte["ChargeNumber"]
-	params[:separator_porosity]  = cell_parameters["Separator"]["Porosity"]
-	params[:bruggeman]           = cell_parameters["Separator"]["BruggemanCoefficient"]
+	params[:transference] = inputparams_elyte["TransferenceNumber"]
+	params[:charge] = inputparams_elyte["ChargeNumber"]
+	params[:separator_porosity] = cell_parameters["Separator"]["Porosity"]
+	params[:bruggeman] = cell_parameters["Separator"]["BruggemanCoefficient"]
 	params[:electrolyte_density] = inputparams_elyte["Density"]
-	params[:separator_density]   = cell_parameters["Separator"]["Density"]
+	params[:separator_density] = cell_parameters["Separator"]["Density"]
 
 	# setup diffusion coefficient function
 	if isa(inputparams_elyte["DiffusionCoefficient"], Real)
@@ -266,10 +277,12 @@ function setup_ne_current_collector(input, grids, couplings)
 	necc_params[:density] = input.cell_parameters["NegativeElectrode"]["CurrentCollector"]["Density"]
 
 	sys_necc = CurrentCollector(necc_params)
-	model_necc = setup_component(grid,
+	model_necc = setup_component(
+		grid,
 		sys_necc,
 		dirichletBoundary = boundary,
-		flow_discretization = input.model_settings["PotentialFlowDiscretization"])
+		flow_discretization = input.model_settings["PotentialFlowDiscretization"],
+	)
 
 	return model_necc
 end
@@ -281,8 +294,10 @@ function setup_pe_current_collector(input, grids, couplings)
 
 	sys_pecc = CurrentCollector(pecc_params)
 
-	model_pecc = setup_component(grid, sys_pecc,
-		flow_discretization = input.model_settings["PotentialFlowDiscretization"])
+	model_pecc = setup_component(
+		grid, sys_pecc,
+		flow_discretization = input.model_settings["PotentialFlowDiscretization"],
+	)
 
 	return model_pecc
 end
@@ -311,8 +326,8 @@ function compute_volume_fraction(codict)
 end
 
 """
-	Helper function to setup the active materials
-	"""
+Helper function to setup the active materials
+"""
 function setup_active_material(model::IntercalationBattery, name::Symbol, input, grids, couplings)
 
 	stringNames = Dict(
@@ -344,6 +359,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	am_params[:setting_temperature_dependence] = get(model.settings, "TemperatureDependence", nothing)
 	am_params[:setting_butler_volmer] = get(model.settings, "ButlerVolmer", nothing)
 
+
 	if am_params[:setting_temperature_dependence] == "Arrhenius"
 		am_params[:activation_energy_of_diffusion] = inputparams_active_material["ActivationEnergyOfDiffusion"]
 		am_params[:activation_energy_of_reaction] = inputparams_active_material["ActivationEnergyOfReaction"]
@@ -358,6 +374,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		am_params[:ecd_funcexp] = true
 		ocp_exp = inputparams_active_material["ReactionRateConstant"]
 		exp = setup_reaction_rate_constant_evaluation_expression_from_string(ocp_exp)
+
 		f_generated = @RuntimeGeneratedFunction(exp)
 		am_params[:reaction_rate_constant_func] = f_generated
 
@@ -419,21 +436,21 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		am_params[:ocp_func] = interpolation_object
 	end
 
-	refT     = 298.15
-	T        = get(input.cycling_protocol, "InitialTemperature", refT)
+	refT = 298.15
+	T = get(input.cycling_protocol, "InitialTemperature", refT)
 	SOC_init = input.cycling_protocol["InitialStateOfCharge"]
 
-	theta0   = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
+	theta0 = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
 	theta100 = inputparams_active_material["StoichiometricCoefficientAtSOC100"]
-	cmax     = inputparams_active_material["MaximumConcentration"]
+	cmax = inputparams_active_material["MaximumConcentration"]
 
 
 	theta = SOC_init * (theta100 - theta0) + theta0
-	c     = theta * cmax
+	c = theta * cmax
 
 	if haskey(model.settings, "TransportInSolid") && model.settings["TransportInSolid"] == "FullDiffusion"
 		rp = inputparams_active_material["ParticleRadius"]
-		N  = Int64(input.simulation_settings[stringName*"ParticleGridPoints"])
+		N = Int64(input.simulation_settings[stringName*"ParticleGridPoints"])
 
 		if isa(inputparams_active_material["DiffusionCoefficient"], Real)
 			am_params[:diff_funcconstant] = true
@@ -445,6 +462,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 			am_params[:diff_funcexp] = true
 			diff_exp = inputparams_active_material["DiffusionCoefficient"]
 			exp = setup_electrode_diff_evaluation_expression_from_string(diff_exp)
+
 			f_generated = @RuntimeGeneratedFunction(exp)
 			am_params[:diff_func] = f_generated
 			D = am_params[:diff_func](c, T, refT, cmax)
@@ -476,13 +494,15 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 
 		if haskey(model.settings, "SEIModel") && model.settings["SEIModel"] == "Bolay" && haskey(inputparams_electrode, "Interphase")
 			label = :sei
-			fds = ["InitialThickness",
+			fds = [
+				"InitialThickness",
 				"InitialPotentialDrop",
 				"StoichiometricCoefficient",
 				"MolarVolume",
 				"ElectronicDiffusionCoefficient",
 				"InterstitialConcentration",
-				"IonicConductivity"]
+				"IonicConductivity",
+			]
 			for fd in fds
 				am_params[Symbol(fd)] = inputparams_electrode["Interphase"][fd]
 
@@ -496,7 +516,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		sys_am = ActiveMaterialNoParticleDiffusion(am_params)
 	end
 
-	grid     = grids[stringName]
+	grid = grids[stringName]
 	coupling = couplings[stringName]
 
 	boundary = nothing
@@ -508,10 +528,12 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 		boundary = nothing
 	end
 
-	model_am = setup_component(grid,
+	model_am = setup_component(
+		grid,
 		sys_am;
 		general_ad = true,
-		dirichletBoundary = boundary)
+		dirichletBoundary = boundary,
+	)
 
 	return model_am
 
@@ -545,7 +567,8 @@ function compute_effective_conductivity(comodel, coinputparams)
 
 end
 
-function set_parameters(model::IntercalationBattery, input
+function set_parameters(
+	model::IntercalationBattery, input,
 )
 	multimodel = model.multimodel
 	cycling_protocol = input.cycling_protocol
@@ -645,6 +668,10 @@ function set_parameters(model::IntercalationBattery, input
 		con = Constants()
 		parameters[:Control] = setup_parameters(multimodel[:Control])
 
+	elseif protocol == "InputCurrentSeries"
+
+		parameters[:Control] = setup_parameters(multimodel[:Control])
+
 	else
 		total_time = haskey(cycling_protocol, "TotalTime") ? cycling_protocol["TotalTime"] : calculate_total_time(cycling_protocol)
 		prm_control[:TotalTime] = total_time
@@ -657,21 +684,24 @@ function set_parameters(model::IntercalationBattery, input
 end
 
 
-
 ##################
 # Setup coupling #
 ##################
 
-function setup_coupling_cross_terms!(model::IntercalationBattery,
+function setup_coupling_cross_terms!(
+	model::IntercalationBattery,
 	parameters::Dict{Symbol, <:Any},
-	couplings)
+	couplings,
+)
 
 	multimodel = model.multimodel
 
-	stringNames = Dict(:NegativeElectrodeCurrentCollector => "NegativeCurrentCollector",
+	stringNames = Dict(
+		:NegativeElectrodeCurrentCollector => "NegativeCurrentCollector",
 		:NegativeElectrodeActiveMaterial => "NegativeElectrode",
 		:PositiveElectrodeActiveMaterial => "PositiveElectrode",
-		:PositiveElectrodeCurrentCollector => "PositiveCurrentCollector")
+		:PositiveElectrodeCurrentCollector => "PositiveCurrentCollector",
+	)
 
 	#################################
 	# Setup coupling NeAm <-> Elyte #
@@ -775,11 +805,13 @@ function setup_coupling_cross_terms!(model::IntercalationBattery,
 		couplingcells[:, 1] = srange_cells
 		couplingcells[:, 2] = trange_cells
 
-		trans = getTrans(msource, mtarget,
+		trans = getTrans(
+			msource, mtarget,
 			couplingfaces,
 			couplingcells,
 			psource, ptarget,
-			:Conductivity)
+			:Conductivity,
+		)
 		@assert size(trans, 1) == size(srange_cells, 1)
 		ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
 		ct_pair = setup_cross_term(ct, target = :NegativeElectrodeActiveMaterial, source = :NegativeElectrodeCurrentCollector, equation = :charge_conservation)
@@ -816,11 +848,13 @@ function setup_coupling_cross_terms!(model::IntercalationBattery,
 		couplingcells[:, 1] = srange_cells
 		couplingcells[:, 2] = trange_cells
 
-		trans = getTrans(msource, mtarget,
+		trans = getTrans(
+			msource, mtarget,
 			couplingfaces,
 			couplingcells,
 			psource, ptarget,
-			:Conductivity)
+			:Conductivity,
+		)
 		@assert size(trans, 1) == size(srange_cells, 1)
 		ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
 		ct_pair = setup_cross_term(ct, target = :PositiveElectrodeActiveMaterial, source = :PositiveElectrodeCurrentCollector, equation = :charge_conservation)
@@ -847,7 +881,7 @@ function setup_coupling_cross_terms!(model::IntercalationBattery,
 	trange = couplings[stringControlComp]["External"]["cells"]
 	srange = Int64.(ones(size(trange)))
 
-	msource     = multimodel[controlComp]
+	msource = multimodel[controlComp]
 	mparameters = parameters[controlComp]
 
 	# Here the indexing in BoundaryFaces in used
@@ -865,7 +899,7 @@ function setup_coupling_cross_terms!(model::IntercalationBattery,
 
 	ct1 = AccumulatorInterfaceFluxCT(1, trange, trans * 0.0)
 	ct1_pair = setup_cross_term(ct1, target = :Control, source = controlComp, equation = :control)
-	add_cross_term!(multimodel, ct1_pair)
+	return add_cross_term!(multimodel, ct1_pair)
 
 
 end
@@ -873,21 +907,40 @@ end
 
 function setup_initial_state(input, model::IntercalationBattery)
 
+	if hasproperty(input, :initial_state) && !isnothing(input.initial_state)
+		state = deepcopy(input.initial_state)
+
+		# Reset controller
+		if haskey(state, :Control)
+			ctrl = state[:Control]
+			if haskey(ctrl, :Controller)
+				controller = ctrl[:Controller]
+				for fd in fieldnames(typeof(controller))
+					value = getfield(controller, fd)
+					setfield!(controller, fd, zero(value))
+				end
+			end
+			ctrl[:Current] = [getInitCurrent(model.multimodel[:Control])]
+		end
+
+		return state
+	end
+
 	multimodel = model.multimodel
 
 	include_cc = haskey(model.settings, "CurrentCollectors")
 
-	refT     = 298.15
-	T        = get(input.cycling_protocol, "InitialTemperature", refT)
+	refT = 298.15
+	T = get(input.cycling_protocol, "InitialTemperature", refT)
 	SOC_init = input.cycling_protocol["InitialStateOfCharge"]
 
 	function setup_init_am(name, multimodel)
 
-		theta0   = multimodel[name].system[:theta0]
+		theta0 = multimodel[name].system[:theta0]
 		theta100 = multimodel[name].system[:theta100]
-		cmax     = multimodel[name].system[:maximum_concentration]
-		N        = multimodel[name].system.discretization[:N]
-		refT     = 298.15
+		cmax = multimodel[name].system[:maximum_concentration]
+		N = multimodel[name].system.discretization[:N]
+		refT = 298.15
 
 		theta = SOC_init * (theta100 - theta0) + theta0
 		c = theta * cmax
@@ -905,11 +958,9 @@ function setup_initial_state(input, model::IntercalationBattery)
 		if haskey(multimodel[name].system.params, :ocp_funcexp)
 			OCP = multimodel[name].system[:ocp_func](c, T, refT, cmax)
 		elseif haskey(multimodel[name].system.params, :ocp_funcdata)
-
 			OCP = multimodel[name].system[:ocp_func](theta)
 		elseif haskey(multimodel[name].system.params, :ocp_constant)
 			OCP = multimodel[name].system[:ocp_constant]
-
 		else
 			OCP = multimodel[name].system[:ocp_func](c, T, refT, cmax)
 		end

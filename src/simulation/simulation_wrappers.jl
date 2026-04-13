@@ -51,7 +51,6 @@ end
 function run_simulation(simulation_input::AdvancedDictInput; base_model = "LithiumIonBattery", accept_invalid = false, solver_settings::Union{SolverSettings, Missing} = missing, logger = nothing, kwargs...)
 
 	full_simulation_input = convert_to_full_simulation_input(simulation_input, base_model; solver_settings)
-
 	return run_simulation(full_simulation_input; accept_invalid)
 
 end
@@ -100,7 +99,8 @@ function run_simulation(simulation_input::MatlabInput; solver_settings::Union{So
 
 	states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
 
-	extra = Dict(:simulator => simulator,
+	extra = Dict(
+		:simulator => simulator,
 		:forces => forces,
 		:state0 => state0,
 		:parameters => parameters,
@@ -108,13 +108,16 @@ function run_simulation(simulation_input::MatlabInput; solver_settings::Union{So
 		:couplings => couplings,
 		:grids => grids,
 		:timesteps => timesteps,
-		:cfg => cfg)
+		:cfg => cfg,
+	)
 	extra[:timesteps] = timesteps
 
-	return (states             = states,
+	return (
+		states = states,
 		cellSpecifications = cellSpecifications,
-		reports            = reports,
-		input              = input,
-		extra              = extra)
+		reports = reports,
+		input = input,
+		extra = extra,
+	)
 
 end

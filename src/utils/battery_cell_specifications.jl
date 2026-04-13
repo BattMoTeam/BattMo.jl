@@ -52,8 +52,8 @@ end
 function computeCellEnergy(states)
 	# Only take discharge curves
 	time = [state[:Control][:Controller].time for state in states if state[:Control][:Current][1] > 0]
-	E    = [state[:Control][:ElectricPotential][1] for state in states if state[:Control][:Current][1] > 0]
-	I    = [state[:Control][:Current][1] for state in states if state[:Control][:Current][1] > 0]
+	E = [state[:Control][:ElectricPotential][1] for state in states if state[:Control][:Current][1] > 0]
+	I = [state[:Control][:Current][1] for state in states if state[:Control][:Current][1] > 0]
 
 	dt = diff(time)
 
@@ -81,10 +81,10 @@ function computeCellMaximumEnergy(model::MultiModel; T = 298.15, capacities = mi
 
 	for elde in eldes
 
-		cmax    = model[elde].system[:maximum_concentration]
-		c0      = cmax * model[elde].system[:theta100]
-		cT      = cmax * model[elde].system[:theta0]
-		refT    = 298.15
+		cmax = model[elde].system[:maximum_concentration]
+		c0 = cmax * model[elde].system[:theta100]
+		cT = cmax * model[elde].system[:theta0]
+		refT = 298.15
 		ocpfunc = model[elde].system[:ocp_func]
 
 		smax = capacity / capacities[elde]
@@ -94,7 +94,7 @@ function computeCellMaximumEnergy(model::MultiModel; T = 298.15, capacities = mi
 
 		f = Vector{Float64}(undef, N + 1)
 
-		for i ∈ 1:(N+1)
+		for i in 1:(N+1)
 			if haskey(model[elde].system.params, :ocp_funcexp)
 				f[i] = ocpfunc(c[i], T, refT, cmax)
 			elseif haskey(model[elde].system.params, :ocp_funcdata)
@@ -132,16 +132,16 @@ function computeCellMass(model::MultiModel)
 
 	# Electrolyte mass
 
-	rho  = model[:Electrolyte].system[:electrolyte_density]
-	vf   = model[:Electrolyte].domain.representation[:volumeFraction]
+	rho = model[:Electrolyte].system[:electrolyte_density]
+	vf = model[:Electrolyte].domain.representation[:volumeFraction]
 	vols = model[:Electrolyte].domain.representation[:volumes]
 
 	mass = mass + sum(vf .* rho .* vols)
 
 	# Separator mass
 
-	rho  = model[:Electrolyte].system[:separator_density]
-	vf   = model[:Electrolyte].domain.representation[:separator_volume_fraction]
+	rho = model[:Electrolyte].system[:separator_density]
+	vf = model[:Electrolyte].domain.representation[:separator_volume_fraction]
 	vols = model[:Electrolyte].domain.representation[:volumes]
 
 	mass = mass + sum(vf .* rho .* vols)
@@ -152,7 +152,7 @@ function computeCellMass(model::MultiModel)
 
 	for cc in ccs
 		if haskey(model.models, cc)
-			rho  = model[cc].system[:density]
+			rho = model[cc].system[:density]
 			vols = model[cc].domain.representation[:volumes]
 			mass = mass + sum(rho .* vols)
 		end
@@ -182,8 +182,8 @@ function computeCellSpecifications(model::MultiModel; T = 298.15)
 
 	specs["NegativeElectrodeCapacity"] = capacities.NegativeElectrodeActiveMaterial
 	specs["PositiveElectrodeCapacity"] = capacities.PositiveElectrodeActiveMaterial
-	specs["MaximumEnergy"]             = energy
-	specs["Mass"]                      = mass
+	specs["MaximumEnergy"] = energy
+	specs["Mass"] = mass
 
 	return specs
 
@@ -207,8 +207,8 @@ function computeEnergyEfficiency(inputparams::AdvancedDictInput)
 		ctrldict["controlPolicy"] = "CCCV"
 		ctrldict["CRate"] = 1.0
 		ctrldict["DRate"] = 1.0
-		ctrldict["dEdtLimit"] = 1e-2
-		ctrldict["dIdtLimit"] = 1e-4
+		ctrldict["dEdtLimit"] = 1.0e-2
+		ctrldict["dIdtLimit"] = 1.0e-4
 		ctrldict["numberOfCycles"] = 1
 		ctrldict["initialControl"] = "charging"
 		rate = ctrldict["DRate"]
@@ -219,8 +219,8 @@ function computeEnergyEfficiency(inputparams::AdvancedDictInput)
 	elseif controlPolicy == "CCCV"
 
 		ctrldict["initialControl"] = "charging"
-		ctrldict["dIdtLimit"]      = 1e-5
-		ctrldict["dEdtLimit"]      = 1e-5
+		ctrldict["dIdtLimit"] = 1.0e-5
+		ctrldict["dEdtLimit"] = 1.0e-5
 		ctrldict["numberOfCycles"] = 1
 
 		jsondict["SOC"] = 0.0

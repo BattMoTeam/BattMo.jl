@@ -134,50 +134,9 @@ function get_output_metrics(
 
 	controller = states[1][:Control][:Controller]
 
-	if !isa(controller, FunctionController) && !isa(controller, GenericController)
-		cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : nothing
-
-		# Metric storage
-		discharge_cap = Float64[]
-		charge_cap = Float64[]
-		discharge_energy = Float64[]
-		charge_energy = Float64[]
-		round_trip_efficiency = Float64[]
-
-		# Identify unique non-zero cycles
-		unique_cycles = unique(cycle_array)
-		cycles_reduced = Int.(unique_cycles[1:(end-1)]) # Exclude last cycle index because it is incomplete
-
-
-		if isempty(cycles_reduced)
-			# Compute globally
-			push!(discharge_cap, compute_discharge_capacity(jutul_output))
-			push!(charge_cap, compute_charge_capacity(jutul_output))
-			push!(discharge_energy, compute_discharge_energy(jutul_output))
-			push!(charge_energy, compute_charge_energy(jutul_output))
-			push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output))
-		else
-			# Compute per unique cycle (avoids duplicate pushes)
-			for cycle in cycles_reduced
-				push!(discharge_cap, compute_discharge_capacity(jutul_output; cycle_number = cycle))
-				push!(charge_cap, compute_charge_capacity(jutul_output; cycle_number = cycle))
-				push!(discharge_energy, compute_discharge_energy(jutul_output; cycle_number = cycle))
-				push!(charge_energy, compute_charge_energy(jutul_output; cycle_number = cycle))
-				push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output; cycle_number = cycle))
-			end
-		end
-
-		# Dictionary of all available quantities
-		available_quantities = Dict(
-			"CycleIndex"          => cycles_reduced,
-			"DischargeCapacity"   => discharge_cap,
-			"ChargeCapacity"      => charge_cap,
-			"DischargeEnergy"     => discharge_energy,
-			"ChargeEnergy"        => charge_energy,
-			"RoundTripEfficiency" => round_trip_efficiency,
-		)
+	if isa(controller, FunctionController) || isa(controller, InputCurrentController)
+		available_quantities = Dict()
 	elseif isa(controller, GenericController)
-
 		cycle_array = [state[:Control][:Controller].cycle_count for state in states]
 
 		# Metric storage
@@ -221,7 +180,48 @@ function get_output_metrics(
 		)
 
 	else
-		available_quantities = Dict()
+		cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : nothing
+
+		# Metric storage
+		discharge_cap = Float64[]
+		charge_cap = Float64[]
+		discharge_energy = Float64[]
+		charge_energy = Float64[]
+		round_trip_efficiency = Float64[]
+
+		# Identify unique non-zero cycles
+		unique_cycles = unique(cycle_array)
+		cycles_reduced = Int.(unique_cycles[1:(end-1)]) # Exclude last cycle index because it is incomplete
+
+
+		if isempty(cycles_reduced)
+			# Compute globally
+			push!(discharge_cap, compute_discharge_capacity(jutul_output))
+			push!(charge_cap, compute_charge_capacity(jutul_output))
+			push!(discharge_energy, compute_discharge_energy(jutul_output))
+			push!(charge_energy, compute_charge_energy(jutul_output))
+			push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output))
+		else
+			# Compute per unique cycle (avoids duplicate pushes)
+			for cycle in cycles_reduced
+				push!(discharge_cap, compute_discharge_capacity(jutul_output; cycle_number = cycle))
+				push!(charge_cap, compute_charge_capacity(jutul_output; cycle_number = cycle))
+				push!(discharge_energy, compute_discharge_energy(jutul_output; cycle_number = cycle))
+				push!(charge_energy, compute_charge_energy(jutul_output; cycle_number = cycle))
+				push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output; cycle_number = cycle))
+			end
+		end
+
+		# Dictionary of all available quantities
+		available_quantities = Dict(
+			"CycleIndex"          => cycles_reduced,
+			"DischargeCapacity"   => discharge_cap,
+			"ChargeCapacity"      => charge_cap,
+			"DischargeEnergy"     => discharge_energy,
+			"ChargeEnergy"        => charge_energy,
+			"RoundTripEfficiency" => round_trip_efficiency,
+		)
+
 	end
 
 	# Return only requested metrics or all
@@ -329,32 +329,33 @@ end
 function extract_spatial_data(states::Vector)
 	# Map from quantity names to symbol chains used to extract data
 	var_map = Dict(
-		"NegativeElectrodeActiveMaterialSurfaceConcentration"  => [:NegativeElectrodeActiveMaterial, :SurfaceConcentration],
-		"PositiveElectrodeActiveMaterialSurfaceConcentration"  => [:PositiveElectrodeActiveMaterial, :SurfaceConcentration],
+		"NegativeElectrodeActiveMaterialSurfaceConcentration" => [:NegativeElectrodeActiveMaterial, :SurfaceConcentration],
+		"PositiveElectrodeActiveMaterialSurfaceConcentration" => [:PositiveElectrodeActiveMaterial, :SurfaceConcentration],
 		"NegativeElectrodeActiveMaterialParticleConcentration" => [:NegativeElectrodeActiveMaterial, :ParticleConcentration],
 		"PositiveElectrodeActiveMaterialParticleConcentration" => [:PositiveElectrodeActiveMaterial, :ParticleConcentration],
-		"NegativeElectrodeActiveMaterialDiffusionCoefficient"  => [:NegativeElectrodeActiveMaterial, :DiffusionCoefficient],
-		"PositiveElectrodeActiveMaterialDiffusionCoefficient"  => [:PositiveElectrodeActiveMaterial, :DiffusionCoefficient],
-		"NegativeElectrodeActiveMaterialReactionRateConstant"  => [:NegativeElectrodeActiveMaterial, :ReactionRateConstant],
-		"PositiveElectrodeActiveMaterialReactionRateConstant"  => [:PositiveElectrodeActiveMaterial, :ReactionRateConstant],
-		"ElectrolyteConcentration"                             => [:Electrolyte, :ElectrolyteConcentration],
-		"NegativeElectrodeActiveMaterialPotential"             => [:NegativeElectrodeActiveMaterial, :ElectricPotential],
-		"ElectrolytePotential"                                 => [:Electrolyte, :ElectricPotential],
-		"PositiveElectrodeActiveMaterialPotential"             => [:PositiveElectrodeActiveMaterial, :ElectricPotential],
-		"NegativeElectrodeActiveMaterialTemperature"           => [:NegativeElectrodeActiveMaterial, :Temperature],
-		"PositiveElectrodeActiveMaterialTemperature"           => [:PositiveElectrodeActiveMaterial, :Temperature],
-		"NegativeElectrodeActiveMaterialOpenCircuitPotential"  => [:NegativeElectrodeActiveMaterial, :OpenCircuitPotential],
-		"PositiveElectrodeActiveMaterialOpenCircuitPotential"  => [:PositiveElectrodeActiveMaterial, :OpenCircuitPotential],
-		"NegativeElectrodeActiveMaterialCharge"                => [:NegativeElectrodeActiveMaterial, :Charge],
-		"ElectrolyteCharge"                                    => [:Electrolyte, :Charge],
-		"PositiveElectrodeActiveMaterialCharge"                => [:PositiveElectrodeActiveMaterial, :Charge],
-		"ElectrolyteMass"                                      => [:Electrolyte, :Mass],
-		"ElectrolyteDiffusivity"                               => [:Electrolyte, :Diffusivity],
-		"ElectrolyteConductivity"                              => [:Electrolyte, :Conductivity],
-		"SEIThickness"                                         => [:NegativeElectrodeActiveMaterial, :SEIlength],
-		"NormalizedSEIThickness"                               => [:NegativeElectrodeActiveMaterial, :normalizedSEIlength],
-		"SEIVoltageDrop"                                       => [:NegativeElectrodeActiveMaterial, :SEIvoltageDrop],
-		"NormalizedSEIVoltageDrop"                             => [:NegativeElectrodeActiveMaterial, :normalizedSEIvoltageDrop])
+		"NegativeElectrodeActiveMaterialDiffusionCoefficient" => [:NegativeElectrodeActiveMaterial, :DiffusionCoefficient],
+		"PositiveElectrodeActiveMaterialDiffusionCoefficient" => [:PositiveElectrodeActiveMaterial, :DiffusionCoefficient],
+		"NegativeElectrodeActiveMaterialReactionRateConstant" => [:NegativeElectrodeActiveMaterial, :ReactionRateConstant],
+		"PositiveElectrodeActiveMaterialReactionRateConstant" => [:PositiveElectrodeActiveMaterial, :ReactionRateConstant],
+		"ElectrolyteConcentration" => [:Electrolyte, :ElectrolyteConcentration],
+		"NegativeElectrodeActiveMaterialPotential" => [:NegativeElectrodeActiveMaterial, :ElectricPotential],
+		"ElectrolytePotential" => [:Electrolyte, :ElectricPotential],
+		"PositiveElectrodeActiveMaterialPotential" => [:PositiveElectrodeActiveMaterial, :ElectricPotential],
+		"NegativeElectrodeActiveMaterialTemperature" => [:NegativeElectrodeActiveMaterial, :Temperature],
+		"PositiveElectrodeActiveMaterialTemperature" => [:PositiveElectrodeActiveMaterial, :Temperature],
+		"NegativeElectrodeActiveMaterialOpenCircuitPotential" => [:NegativeElectrodeActiveMaterial, :OpenCircuitPotential],
+		"PositiveElectrodeActiveMaterialOpenCircuitPotential" => [:PositiveElectrodeActiveMaterial, :OpenCircuitPotential],
+		"NegativeElectrodeActiveMaterialCharge" => [:NegativeElectrodeActiveMaterial, :Charge],
+		"ElectrolyteCharge" => [:Electrolyte, :Charge],
+		"PositiveElectrodeActiveMaterialCharge" => [:PositiveElectrodeActiveMaterial, :Charge],
+		"ElectrolyteMass" => [:Electrolyte, :Mass],
+		"ElectrolyteDiffusivity" => [:Electrolyte, :Diffusivity],
+		"ElectrolyteConductivity" => [:Electrolyte, :Conductivity],
+		"SEIThickness" => [:NegativeElectrodeActiveMaterial, :SEIlength],
+		"NormalizedSEIThickness" => [:NegativeElectrodeActiveMaterial, :normalizedSEIlength],
+		"SEIVoltageDrop" => [:NegativeElectrodeActiveMaterial, :SEIvoltageDrop],
+		"NormalizedSEIVoltageDrop" => [:NegativeElectrodeActiveMaterial, :normalizedSEIvoltageDrop],
+	)
 
 	output_data = Dict{String, Any}()
 
@@ -414,8 +415,6 @@ function extract_spatial_data(states::Vector)
 
 	return output_data
 end
-
-
 
 
 function get_x_coords(model::MultiModel{:IntercalationBattery})

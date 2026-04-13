@@ -62,23 +62,25 @@ function compute_electrode_coating_mass(params::CellParameters, electrode::Strin
 end
 
 
-
 function compute_electrode_theoretical_density(params::CellParameters, electrode::String)
 
 	if !(electrode in ["PositiveElectrode", "NegativeElectrode"])
 		error("Electrode must be either PositiveElectrode or NegativeElectrode, not $electrode. Check for typos")
 	end
 
-	component_mass_fractions = [params[electrode]["ActiveMaterial"]["MassFraction"],
+	component_mass_fractions = [
+		params[electrode]["ActiveMaterial"]["MassFraction"],
 		params[electrode]["ConductiveAdditive"]["MassFraction"],
-		params[electrode]["Binder"]["MassFraction"]]
-	component_densities = [params[electrode]["ActiveMaterial"]["Density"],
+		params[electrode]["Binder"]["MassFraction"],
+	]
+	component_densities = [
+		params[electrode]["ActiveMaterial"]["Density"],
 		params[electrode]["ConductiveAdditive"]["Density"],
-		params[electrode]["Binder"]["Density"]]
+		params[electrode]["Binder"]["Density"],
+	]
 
 	return 1 / sum(component_mass_fractions ./ component_densities)
 end
-
 
 
 function compute_separator_mass(params::CellParameters)
@@ -88,7 +90,6 @@ function compute_separator_mass(params::CellParameters)
 	porosity = params["Separator"]["Porosity"]
 	return thickness * area * (1 - porosity) * density
 end
-
 
 
 function compute_current_collector_mass(params::CellParameters, electrode::String)
@@ -156,17 +157,19 @@ function compute_cell_mass(params::CellParameters; print_breakdown::Bool = false
 	composition = compute_cell_mass_composition(params)
 
 	if print_breakdown
-		print("""
-				Component                 | Mass/kg |  Percentage
-		-------------------------------------------------------------
-		Cell                                 | $(round(masses["total_cell_mass"], digits=5)) |    100
-		Positive Electrode                   | $(round(masses["mass_positive_electrode"], digits=5)) |    $(round(composition["positive_electrode"], digits=1))
-		Negative Electrode                   | $(round(masses["mass_negative_electrode"], digits=5)) |    $(round(composition["negative_electrode"], digits=1))
-		Positive Electrode Current Collector | $(round(masses["mass_positive_electrode_current_collector"], digits=5)) |    $(round(composition["positive_electrode_current_collector"], digits=1))
-		Negative Electrode Current Collector | $(round(masses["mass_negative_electrode_current_collector"], digits=5)) |    $(round(composition["negative_electrode_current_collector"], digits=1))
-		Electrolyte                          | $(round(masses["mass_electrolyte"], digits=5)) |    $(round(composition["electrolyte"], digits=1))
-		Separator                            | $(round(masses["mass_separator"], digits=5)) |    $(round(composition["separator"], digits=1))
-		""")
+		print(
+			"""
+					Component                 | Mass/kg |  Percentage
+			-------------------------------------------------------------
+			Cell                                 | $(round(masses["total_cell_mass"], digits = 5)) |    100
+			Positive Electrode                   | $(round(masses["mass_positive_electrode"], digits = 5)) |    $(round(composition["positive_electrode"], digits = 1))
+			Negative Electrode                   | $(round(masses["mass_negative_electrode"], digits = 5)) |    $(round(composition["negative_electrode"], digits = 1))
+			Positive Electrode Current Collector | $(round(masses["mass_positive_electrode_current_collector"], digits = 5)) |    $(round(composition["positive_electrode_current_collector"], digits = 1))
+			Negative Electrode Current Collector | $(round(masses["mass_negative_electrode_current_collector"], digits = 5)) |    $(round(composition["negative_electrode_current_collector"], digits = 1))
+			Electrolyte                          | $(round(masses["mass_electrolyte"], digits = 5)) |    $(round(composition["electrolyte"], digits = 1))
+			Separator                            | $(round(masses["mass_separator"], digits = 5)) |    $(round(composition["separator"], digits = 1))
+			""",
+		)
 
 	end
 
@@ -207,12 +210,14 @@ function compute_cell_volume(params::CellParameters)
 	if haskey(params["Cell"], "Case")
 		case = params["Cell"]["Case"]
 	else
-		error("""We need to know the type of cell case in order to calculated the cell volume. 
-					A case can be for example cylindrical or pouch.
-						
-						Add the following parameter to your cell parameter input:
-						
-						["Cell"]["Case"]""")
+		error(
+			"""We need to know the type of cell case in order to calculated the cell volume. 
+			A case can be for example cylindrical or pouch.
+				
+				Add the following parameter to your cell parameter input:
+				
+				["Cell"]["Case"]""",
+		)
 	end
 
 	if case == "Pouch"

@@ -1,7 +1,7 @@
 export get_schema_cell_parameters, get_schema_cycling_protocol, get_schema_simulation_settings, get_schema_model_settings
 
 function julia_to_json_schema_type!(dict, meta::Dict)
-	if meta["type"] == Real
+	return if meta["type"] == Real
 		dict["type"] = "number"  # JSON schema type for Real numbers (includes both integer and float)
 		dict["minimum"] = get(meta, "min_value", nothing)  # Enforce min value if present
 		dict["maximum"] = get(meta, "max_value", nothing)  # Enforce max value if present
@@ -92,7 +92,6 @@ function create_property(parameter_meta, name)
 end
 
 
-
 function get_schema_cell_parameters(model_settings::ModelSettings)
 	# Retrieve meta-data for validation
 	parameter_meta = get_cell_parameters_meta_data()
@@ -168,9 +167,11 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"ReactionRateConstant" => create_property(parameter_meta, "ReactionRateConstant"),
 							"ChargeTransferCoefficient" => create_property(parameter_meta, "ChargeTransferCoefficient"),
 						),
-						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
+						"required" => [
+							"MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ReactionRateConstant", "ChargeTransferCoefficient"],
+							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ReactionRateConstant", "ChargeTransferCoefficient",
+						],
 					),
 					"Interphase" => Dict(
 						"type" => "object",
@@ -218,7 +219,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"TabFractions" => create_property(parameter_meta, "TabFractions"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
-					)),
+					),
+				),
 				"required" => ["Coating", "ActiveMaterial", "Binder", "ConductiveAdditive"],
 			),
 			"PositiveElectrode" => Dict(
@@ -255,9 +257,11 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"ReactionRateConstant" => create_property(parameter_meta, "ReactionRateConstant"),
 							"ChargeTransferCoefficient" => create_property(parameter_meta, "ChargeTransferCoefficient"),
 						),
-						"required" => ["MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
+						"required" => [
+							"MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
 							"ParticleRadius", "MaximumConcentration", "StoichiometricCoefficientAtSOC0", "StoichiometricCoefficientAtSOC100",
-							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ReactionRateConstant", "ChargeTransferCoefficient"],
+							"OpenCircuitPotential", "NumberOfElectronsTransfered", "ReactionRateConstant", "ChargeTransferCoefficient",
+						],
 					),
 					"ConductiveAdditive" => Dict(
 						"type" => "object",
@@ -292,7 +296,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 							"TabFractions" => create_property(parameter_meta, "TabFractions"),
 						),
 						"required" => ["Density", "Thickness", "ElectronicConductivity"],
-					)),
+					),
+				),
 				"required" => ["Coating", "ActiveMaterial", "Binder", "ConductiveAdditive"],
 			),
 			"Separator" => Dict(
@@ -423,6 +428,8 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
 			"VoltageChangeLimit" => create_property(parameter_meta, "VoltageChangeLimit"),
 			"AmbientTemperature" => create_property(parameter_meta, "AmbientTemperature"),
 			"InitialTemperature" => create_property(parameter_meta, "InitialTemperature"),
+			"Times" => create_property(parameter_meta, "Times"),
+			"Currents" => create_property(parameter_meta, "Currents"),
 		),
 		"required" => ["Protocol"],
 		"allOf" => [
@@ -513,6 +520,18 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
 					],
 				),
 			),
+			Dict(
+				"if" => Dict("properties" => Dict("Protocol" => Dict("const" => "InputCurrentSeries"))),
+				"then" => Dict(
+					"required" => [
+						"InitialStateOfCharge",
+						"Times",
+						"Currents",
+						"LowerVoltageLimit",
+						"UpperVoltageLimit",
+					],
+				),
+			),
 		],
 	)
 	required = schema["required"]
@@ -563,7 +582,8 @@ function get_schema_simulation_settings(model_settings)
 			"NegativeElectrodeCoatingGridPoints",
 			"NegativeElectrodeParticleGridPoints",
 			"SeparatorGridPoints",
-			"TimeStepDuration"],
+			"TimeStepDuration",
+		],
 	)
 
 	required = schema["required"]
@@ -627,7 +647,8 @@ function get_schema_solver_settings()
 					"ExtraTiming" => create_property(parameter_meta, "ExtraTiming"),
 					"TimeStepSelectors" => create_property(parameter_meta, "TimeStepSelectors"),
 					"Relaxation" => create_property(parameter_meta, "Relaxation"),
-				)),
+				),
+			),
 			"LinearSolver" => Dict(
 				"type" => "object",
 				"properties" => Dict(
@@ -648,7 +669,8 @@ function get_schema_solver_settings()
 					"ASCIITerminal" => create_property(parameter_meta, "ASCIITerminal"),
 					"ID" => create_property(parameter_meta, "ID"),
 					"ProgressColor" => create_property(parameter_meta, "ProgressColor"),
-					"progress_glyphs" => create_property(parameter_meta, "progress_glyphs")),
+					"progress_glyphs" => create_property(parameter_meta, "progress_glyphs"),
+				),
 			),
 			"Output" => Dict(
 				"type" => "object",
@@ -658,20 +680,25 @@ function get_schema_solver_settings()
 					"OutputPath" => create_property(parameter_meta, "OutputPath"),
 					"InMemoryReports" => create_property(parameter_meta, "InMemoryReports"),
 					"ReportLevel" => create_property(parameter_meta, "ReportLevel"),
-					"OutputSubstrates" => create_property(parameter_meta, "OutputSubstrates")),
-			)),
+					"OutputSubstrates" => create_property(parameter_meta, "OutputSubstrates"),
+				),
+			),
+		),
 		"allOf" => [
 			Dict(
 				"if" => Dict(
 					"properties" => Dict("LinearSolver" => Dict("properties" => Dict("Method" => Dict("const" => "Direct")))),
 				),
-				"then" => Dict("properties" => Dict("LinearSolver" => Dict("required" => ["MaxSize"]))
-				)),
+				"then" => Dict(
+					"properties" => Dict("LinearSolver" => Dict("required" => ["MaxSize"])),
+				),
+			),
 			Dict(
 				"if" => Dict(
 					"properties" => Dict("LinearSolver" => Dict("properties" => Dict("Method" => Dict("const" => "Iterative")))),
 				),
-				"then" => Dict("properties" => Dict("LinearSolver" => Dict("required" => ["Verbosity", "MaxLinearIterations", "LinearTolerance"]))
+				"then" => Dict(
+					"properties" => Dict("LinearSolver" => Dict("required" => ["Verbosity", "MaxLinearIterations", "LinearTolerance"])),
 				),
 			),
 			Dict(
@@ -732,4 +759,3 @@ function get_schema_model_settings()
 	)
 
 end
-

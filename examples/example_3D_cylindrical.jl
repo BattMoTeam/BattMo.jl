@@ -5,9 +5,9 @@
 using BattMo, Jutul, GLMakie
 
 # ## Load the cell parameters
-cell_parameters     = load_cell_parameters(; from_default_set = "chen_2020")
-cycling_protocol    = load_cycling_protocol(; from_default_set = "cc_discharge")
-model_settings      = load_model_settings(; from_default_set = "p4d_cylindrical")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+model_settings = load_model_settings(; from_default_set = "p4d_cylindrical")
 simulation_settings = load_simulation_settings(; from_default_set = "p4d_cylindrical")
 nothing #hide
 
@@ -20,12 +20,12 @@ nothing #hide
 # We go through some of the geometrical and discretization parameters. We modify some of them to obtain a cell where the different components are easier to visualize
 
 # The cell geometry is determined by the inner and outer radius and the height. We reduce the outer radius
-cell_parameters["Cell"]["OuterRadius"] = 0.010
+cell_parameters["Cell"]["OuterRadius"] = 0.01
 nothing #hide
 
 # We modify the current collector thicknesses, for visualization purpose
-cell_parameters["NegativeElectrode"]["CurrentCollector"]["Thickness"] = 50e-6
-cell_parameters["PositiveElectrode"]["CurrentCollector"]["Thickness"] = 50e-6
+cell_parameters["NegativeElectrode"]["CurrentCollector"]["Thickness"] = 50.0e-6
+cell_parameters["PositiveElectrode"]["CurrentCollector"]["Thickness"] = 50.0e-6
 nothing #hide
 
 # The tabs are part of the current collectors that connect the electrodes to the external circuit. The location of the
@@ -57,7 +57,7 @@ nothing #hide
 
 # We retrieve the grids and coupling structure from the simulation object, which we want to visualize prior running the simulation
 
-grids     = sim.grids
+grids = sim.grids
 couplings = sim.couplings
 nothing #hide
 
@@ -72,14 +72,18 @@ nothing #hide
 # We plot the components
 
 for (i, component) in enumerate(components)
-	if i == 1
-		global fig, ax = plot_mesh(grids[component],
-			color = colors[i])
-	else
-		plot_mesh!(ax,
-			grids[component],
-			color = colors[i])
-	end
+    if i == 1
+        global fig, ax = plot_mesh(
+            grids[component],
+            color = colors[i]
+        )
+    else
+        plot_mesh!(
+            ax,
+            grids[component],
+            color = colors[i]
+        )
+    end
 end
 fig #hide
 
@@ -91,14 +95,16 @@ fig #hide
 # in red.
 
 components = [
-	"NegativeCurrentCollector",
-	"PositiveCurrentCollector",
+    "NegativeCurrentCollector",
+    "PositiveCurrentCollector",
 ]
 
 for component in components
-	plot_mesh!(ax, grids[component];
-		boundaryfaces = couplings[component]["External"]["boundaryfaces"],
-		color = :red)
+    plot_mesh!(
+        ax, grids[component];
+        boundaryfaces = couplings[component]["External"]["boundaryfaces"],
+        color = :red
+    )
 end
 
 # fig #hide
@@ -112,19 +118,19 @@ fig #hide
 
 # We reload the original parameters
 
-cell_parameters     = load_cell_parameters(; from_default_set = "chen_2020")
-cycling_protocol    = load_cycling_protocol(; from_default_set = "cc_discharge")
-model_settings      = load_model_settings(; from_default_set = "p4d_cylindrical")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+model_settings = load_model_settings(; from_default_set = "p4d_cylindrical")
 simulation_settings = load_simulation_settings(; from_default_set = "p4d_cylindrical")
 
 # We adjust the parameters so that the simulation in this example is not too long (around a couple of minutes)
 
-cell_parameters["Cell"]["OuterRadius"]                                   = 0.004
+cell_parameters["Cell"]["OuterRadius"] = 0.004
 cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabFractions"] = [0.5]
 cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabFractions"] = [0.5]
-cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
-cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"]     = 0.002
-simulation_settings["AngularGridPoints"]                                 = 8
+cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"] = 0.002
+cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabWidth"] = 0.002
+simulation_settings["AngularGridPoints"] = 8
 
 # We setup the simulation and run it
 model = LithiumIonBattery(; model_settings)

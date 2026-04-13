@@ -20,6 +20,9 @@ Constructs a `Simulation` object that sets up and validates all necessary compon
 - `cell_parameters::CellParameters`: Parameters defining the physical characteristics of the battery cell.
 - `cycling_protocol::CyclingProtocol`: The protocol specifying the charging/discharging cycles for the simulation.
 - `simulation_settings::SimulationSettings` (optional): Configuration settings controlling solver behavior, time stepping, etc. If not provided, default settings are generated based on the model.
+- `time_steps` (optional): A pre-computed array of time steps to use for the simulation. If `nothing` (default), time steps are computed from the cycling protocol and simulation settings.
+- `state0` (optional): A pre-computed initial state to use for the simulation. If `nothing` (default), the initial state is computed from the model and cycling protocol.
+- `output_all_secondary_variables::Bool` (optional): If `true`, all secondary variables (e.g. `SolidDiffFlux`, `DmuDc`, `ChemCoef`) are included in the simulation output states. This makes the output states directly usable as `initial_state` for subsequent simulations. Default is `false`.
 
 # Behavior
 - Validates `model`, `cell_parameters`, `cycling_protocol`, and `simulation_settings`.
@@ -62,11 +65,14 @@ struct Simulation <: AbstractSimulation
 		cell_parameters::CellParameters,
 		cycling_protocol::CyclingProtocol;
 		simulation_settings::SimulationSettings = get_default_simulation_settings(model),
+		time_steps = nothing,
+		initial_state = nothing,
+		output_all_secondary_variables::Bool = false,
 		hook = nothing,
 		kwargs...,
 	) where {M <: ModelConfigured}
 
-		if model.is_valid
+		return if model.is_valid
 
 			# Here will come a validation function
 			model_settings = model.settings
@@ -76,16 +82,19 @@ struct Simulation <: AbstractSimulation
 
 			if cell_parameters_is_valid && cycling_protocol_is_valid && simulation_settings_is_valid
 				is_valid = true
-
 			else
 				is_valid = false
 			end
 
 			# Combine the parameter sets and settings
-			input = (model_settings = model_settings,
+			input = (
+				model_settings = model_settings,
 				cell_parameters = cell_parameters,
 				cycling_protocol = cycling_protocol,
 				simulation_settings = simulation_settings,
+				time_steps = time_steps,
+				initial_state = initial_state,
+				output_all_secondary_variables = output_all_secondary_variables,
 			)
 
 			try
@@ -112,9 +121,9 @@ struct Simulation <: AbstractSimulation
 						"""
 						  Oops! Your Simulation object cannot be configured because some of you input is not valid. 🛑
 
-						  Check the warnings to see where things went wrong. 🔍
+						Check the warnings to see where things went wrong. 🔍
 
-						  """,
+						""",
 					)
 				else
 					rethrow(e)
@@ -122,13 +131,15 @@ struct Simulation <: AbstractSimulation
 			end
 
 		else
-			error("""
-			Oops! Your Model object is not valid. 🛑
+			error(
+				"""
+				Oops! Your Model object is not valid. 🛑
 
-			TIP: Validation happens when instantiating the Model object. 
-			Check the warnings to see exactly where things went wrong. 🔍
+				TIP: Validation happens when instantiating the Model object. 
+				Check the warnings to see exactly where things went wrong. 🔍
 
-			""")
+				""",
+			)
 		end
 
 	end
@@ -143,13 +154,21 @@ function simulation_configuration(model, input)
 	# Setup simulation
 	model, parameters = setup_model!(model, input, grids, couplings)
 
-	# setup initial state
+	# Setup initial state
 	initial_state = setup_initial_state(input, model)
 
-	# setup forces
+	# Setup forces
 	forces = setup_forces(model.multimodel)
 
-	# setup jutul simulator
+	# Add all secondary variables to output if requested
+	if get(input, :output_all_secondary_variables, false)
+		for key in submodels_symbols(model.multimodel)
+			submodel = model.multimodel[key]
+			union!(submodel.output_variables, keys(submodel.secondary_variables))
+		end
+	end
+
+	# Setup jutul simulator
 	# simulator = Simulator(model.multimodel; state0 = initial_state, parameters = parameters, copy_state = true)
 
 	# setup time steps
@@ -202,7 +221,7 @@ end
 #########
 
 """
-	solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, end_report = info_level > -1, kwargs...)
+	solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, end_report = info_level > -1, include_initial_state = false, kwargs...)
 
 Solves a battery `Simulation` problem by executing the simulation workflow defined in `solve_simulation`.
 
@@ -212,6 +231,10 @@ Solves a battery `Simulation` problem by executing the simulation workflow defin
 - `hook` (optional): A user-defined callback or observer function that can be inserted into the simulation loop.
 - `info_level::Int` (optional): Controls verbosity of simulation logging and output. Default is `0`.
 - `end_report::Bool` (optional): Whether to print a summary report after simulation. Defaults to `true` if `info_level > -1`.
+- `include_initial_state::Bool` (optional): If `true`, the initial state (at `t = 0`) is
+  prepended to the output time series (`Time`, `Voltage`, `Current`, capacity, etc.).
+  This eliminates the gap between the initial condition and the first solver output,
+  improving plots and RMSE comparisons when restarting from a saved state.  Default is `false`.
 - `kwargs...`: Additional keyword arguments forwarded to `solve_simulation`.
 
 # Behavior
@@ -229,34 +252,39 @@ Solves a battery `Simulation` problem by executing the simulation workflow defin
 ```julia
 sim = Simulation(model, cell_parameters, cycling_protocol)
 result = solve(sim; info_level = 1)
+
+# Include initial state in the time series output
+result = solve(sim; include_initial_state = true)
 ```
 """
-function solve(problem::Simulation; accept_invalid = false, solver_settings = get_default_solver_settings(problem.model), logger = nothing, kwargs...)
+function solve(problem::Simulation; accept_invalid = false, solver_settings = get_default_solver_settings(problem.model), logger = nothing, include_initial_state = false, kwargs...)
 
 
 	# Note: Typically function_to_solve is run_battery
-	if accept_invalid == true
-		output = solve_simulation(problem; solver_settings, logger, kwargs...)
+	return if accept_invalid == true
+		output = solve_simulation(problem; solver_settings, logger, include_initial_state, kwargs...)
 	else
 		if problem.is_valid == true
-			output = solve_simulation(problem; solver_settings, logger, kwargs...)
+			output = solve_simulation(problem; solver_settings, logger, include_initial_state, kwargs...)
 
 			return output
 		else
 
-			error("""
-			Oops! Your Simulation object is not valid. 🛑
+			error(
+				"""
+				Oops! Your Simulation object is not valid. 🛑
 
-			TIP: Validation happens when instantiating the Simulation object. 
-			Check the warnings to see exactly where things went wrong. 🔍
+				TIP: Validation happens when instantiating the Simulation object. 
+				Check the warnings to see exactly where things went wrong. 🔍
 
-			If you’re confident you know what you're doing, you can bypass the validation result 
-			by setting the flag "accept_invalid = true": 
+				If you’re confident you know what you're doing, you can bypass the validation result 
+				by setting the flag "accept_invalid = true": 
 
-				solve(sim; accept_invalid = true)
+					solve(sim; accept_invalid = true)
 
-			But proceed with caution! 😎 
-			""")
+				But proceed with caution! 😎 
+				""",
+			)
 		end
 	end
 
@@ -297,7 +325,7 @@ A named tuple with the following fields:
 result = solve_simulation(sim)
 ```
 """
-function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, logger = nothing, kwargs...)
+function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, logger = nothing, include_initial_state = false, kwargs...)
 
 	simulator = sim.simulator
 	model = sim.model
@@ -315,7 +343,8 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 
 
 	# setup solver configuration
-	cfg = solver_configuration(simulator,
+	cfg = solver_configuration(
+		simulator,
 		model.multimodel,
 		parameters;
 		solver_settings,
@@ -326,19 +355,18 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 	# Setup hook if given
 	hook = get(kwargs, :hook, nothing)
 	if !isnothing(hook)
-		hook(simulator,
-			model.multimodel,
-			initial_state,
+		hook(
+			simulator,
+			model.multimodel, initial_state,
 			forces,
 			time_steps,
-			cfg)
+			cfg,
+		)
 	end
 
-
-
 	# Perform simulation
-	jutul_states, jutul_reports = simulate(deepcopy(jutul_case); config = deepcopy(cfg))
-	# jutul_states, jutul_reports = simulate(state0, simulator, termination_criterion; forces = forces, config = cfg)
+	jutul_states, jutul_reports = simulate(deepcopy(jutul_case); config = deepcopy(cfg), kwargs...)
+	# jutul_states, jutul_reports = simulate(state0, simulator, termination_criterion; forces = forces, config = cfg, kwargs...)
 
 	jutul_output = (
 		states = jutul_states,
@@ -354,13 +382,26 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 			"CellParameters" => cell_parameters.all,
 			"CyclingProtocol" => cycling_protocol.all,
 			"SimulationSettings" => simulation_settings.all,
-			"SolverSettings" => solver_settings.all),
+			"SolverSettings" => solver_settings.all,
+		),
 	)
 
-	time_series = get_output_time_series(jutul_output)
+	# For time series computation, optionally include the initial
+	# state as the first data point
+	if include_initial_state
+		jutul_output_for_ts = (
+			states = vcat([deepcopy(state0)], jutul_states),
+			reports = jutul_reports,
+			solver_configuration = cfg,
+			multimodel = model.multimodel,
+		)
+	else
+		jutul_output_for_ts = jutul_output
+	end
+
+	time_series = get_output_time_series(jutul_output_for_ts)
 	states = get_output_states(jutul_output, input)
 	metrics = get_output_metrics(jutul_output)
-
 
 	return SimulationOutput(
 		time_series,
@@ -369,7 +410,8 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 		input,
 		jutul_output,
 		model,
-		sim)
+		sim,
+	)
 
 end
 
@@ -428,10 +470,12 @@ function overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
 
 	end
 
-	return (solver_settings = solver_settings,
+	return (
+		solver_settings = solver_settings,
 		linear_solver = linear_solver,
 		relaxation = relaxation,
-		timestep_selectors = timestep_selectors)
+		timestep_selectors = timestep_selectors,
+	)
 
 end
 
@@ -475,7 +519,8 @@ function kwarg_dict(; kwargs...)
 			"InMemoryReports" => get(kwargs, :in_memory_reports, nothing),
 			"ReportLevel" => get(kwargs, :report_level, nothing),
 			"OutputSubstrates" => get(kwargs, :output_substates, nothing),
-		))
+		),
+	)
 
 	return kwarg_dict
 end
@@ -505,13 +550,15 @@ Sets up the config object used during simulation. In this current version this
 setup is the same for json and mat files. The specific setup values should
 probably be given as inputs in future versions of BattMo.jl
 """
-function solver_configuration(sim::JutulSimulator,
+function solver_configuration(
+	sim::JutulSimulator,
 	model::MultiModel,
 	parameters;
 	use_model_scaling::Bool = true,
 	solver_settings,
 	logger = nothing,
-	kwargs...)
+	kwargs...,
+)
 
 	# Overwrite solver settings with kwargs
 	overwritten_settings = overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
@@ -592,7 +639,7 @@ function solver_configuration(sim::JutulSimulator,
 
 	if use_model_scaling
 		scalings = get_scalings(model, parameters)
-		tol_default = 1e-5
+		tol_default = 1.0e-5
 		for scaling in scalings
 			model_label = scaling[:model_label]
 			equation_label = scaling[:equation_label]
@@ -601,7 +648,7 @@ function solver_configuration(sim::JutulSimulator,
 		end
 	else
 		for key in submodels_symbols(model)
-			cfg[:tolerances][key][:default] = 1e-5
+			cfg[:tolerances][key][:default] = 1.0e-5
 		end
 	end
 
@@ -616,14 +663,14 @@ function solver_configuration(sim::JutulSimulator,
 end
 
 
-
 function get_scalings(model, parameters)
 
 	refT = 298.15
+	T = refT
 
 	eldes = (:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial)
 
-	j0s   = Array{Float64}(undef, 2)
+	j0s = Array{Float64}(undef, 2)
 	Rvols = Array{Float64}(undef, 2)
 
 	F = FARADAY_CONSTANT
@@ -631,26 +678,29 @@ function get_scalings(model, parameters)
 	for (i, elde) in enumerate(eldes)
 
 		rate_func = model[elde].system.params[:reaction_rate_constant_func]
-		cmax      = model[elde].system[:maximum_concentration]
+		cmax = model[elde].system[:maximum_concentration]
 		# Eak       = model[elde].system[:activation_energy_of_reaction]
 		vsa = model[elde].system[:volumetric_surface_area]
 
-		if hasproperty(model[elde].system.params, :activation_energy_of_reaction)
-			Ea = model[elde].system[:activation_energy_of_reaction]
-		else
-			Ea = nothing
-		end
-		setting_temperature_dependence = model[elde].system[:setting_temperature_dependence]
+		Ea = hasproperty(model[elde].system.params, :activation_energy_of_diffusion) ?
+			 model[elde].system.params[:activation_energy_of_diffusion] :
+			 0.0
+
+		temperature_dependence_model = Symbol(model[elde].system[:setting_temperature_dependence])
 
 		c_a = 0.5 * cmax
 
 		if isa(rate_func, Real)
-			R0 = temperature_dependent(refT, rate_func; Ea, dependent = setting_temperature_dependence)
+			R0 = temperature_dependent(refT, rate_func, Ea, temperature_dependence_model)
 			# R0 = arrhenius(refT, rate_func, Eak)
+		elseif isa(rate_func, String) || isa(rate_func, Function)
+			R0 = temperature_dependent(refT, rate_func(c_a, T, refT, cmax), Ea, temperature_dependence_model)
+		elseif isa(rate_func, Dict)
+			R0 = temperature_dependent(refT, rate_func(c_a), Ea, temperature_dependence_model)
 		else
-			R0 = temperature_dependent(refT, rate_func(c_a, refT); Ea, dependent = setting_temperature_dependence)
+			error("Unsupported type for reaction rate constant function: $(typeof(rate_func))")
 		end
-		c_e            = 1000.0
+		c_e = 1000.0
 		activematerial = model[elde].system
 
 		j0s[i] = reaction_rate_coefficient(R0, c_e, c_a, activematerial)
@@ -661,12 +711,12 @@ function get_scalings(model, parameters)
 
 	end
 
-	j0Ref   = mean(j0s)
+	j0Ref = mean(j0s)
 	RvolRef = mean(Rvols)
 
 	if include_current_collectors(model)
 		component_names = (:NegativeElectrodeCurrentCollector, :NegativeElectrodeActiveMaterial, :Electrolyte, :PositiveElectrodeActiveMaterial, :PositiveElectrodeCurrentCollector)
-		cc_mapping      = Dict(:NegativeElectrodeActiveMaterial => :NegativeElectrodeCurrentCollector, :PositiveElectrodeActiveMaterial => :PositiveElectrodeCurrentCollector)
+		cc_mapping = Dict(:NegativeElectrodeActiveMaterial => :NegativeElectrodeCurrentCollector, :PositiveElectrodeActiveMaterial => :PositiveElectrodeCurrentCollector)
 	else
 		component_names = (:NegativeElectrodeActiveMaterial, :Electrolyte, :PositiveElectrodeActiveMaterial)
 	end
@@ -708,7 +758,7 @@ function get_scalings(model, parameters)
 
 		end
 
-		rp   = model[elde].system.discretization[:rp]
+		rp = model[elde].system.discretization[:rp]
 		volp = 4 / 3 * pi * rp^3
 
 		coef = RvolRef * volp
@@ -721,8 +771,8 @@ function get_scalings(model, parameters)
 		if model[elde] isa SEImodel
 
 			vsa = model[elde].system[:volumetric_surface_area]
-			L   = model[elde].system[:InitialThickness]
-			k   = model[elde].system[:IonicConductivity]
+			L = model[elde].system[:InitialThickness]
+			k = model[elde].system[:IonicConductivity]
 
 			SEIvoltageDropRef = F * RvolRef / vsa * L / k
 
@@ -744,12 +794,17 @@ function get_scalings(model, parameters)
 end
 
 
-
-function setup_timesteps(input;
-	kwargs...)
+function setup_timesteps(
+	input;
+	kwargs...,
+)
 	"""
 		Method setting up the timesteps from a json file object. 
 	"""
+	if hasproperty(input, :time_steps) && !isnothing(input.time_steps)
+		return input.time_steps
+	end
+
 	cycling_protocol = input.cycling_protocol
 	simulation_settings = input.simulation_settings
 
@@ -766,8 +821,6 @@ function setup_timesteps(input;
 
 			con = Constants()
 			totalTime = 1.1 * con.hour / CRate
-
-
 
 			dt = simulation_settings["TimeStepDuration"]
 
@@ -790,9 +843,8 @@ function setup_timesteps(input;
 			totalTime = ncycles * 2 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
 
-
 			dt = simulation_settings["TimeStepDuration"]
-			n  = Int64(floor(totalTime / dt))
+			n = Int64(floor(totalTime / dt))
 
 			if haskey(input.model_settings, "RampUp")
 				nr = simulation_settings["RampUpSteps"]
@@ -814,7 +866,7 @@ function setup_timesteps(input;
 		totalTime = ncycles * 2.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
 		dt = simulation_settings["TimeStepDuration"]
-		n  = Int64(floor(totalTime / dt))
+		n = Int64(floor(totalTime / dt))
 
 		if haskey(input.model_settings, "RampUp")
 			nr = simulation_settings["RampUpSteps"]
@@ -822,9 +874,10 @@ function setup_timesteps(input;
 			nr = 1
 		end
 
-		timesteps = compute_rampup_timesteps(totalTime, dt, nr)
+		timesteps = repeat([dt], n)
 
 	elseif protocol == "Function"
+
 		totalTime = cycling_protocol["TotalTime"]
 		dt = simulation_settings["TimeStepDuration"]
 		n = totalTime / dt
@@ -841,6 +894,13 @@ function setup_timesteps(input;
 		end
 		timesteps = compute_rampup_timesteps(totalTime, dt, Int(nr))
 
+	elseif protocol == "InputCurrentSeries"
+
+		# The time series defines the time steps directly
+		series_times = Float64.(cycling_protocol["Times"])
+		timesteps = diff(series_times)
+		timesteps = timesteps[timesteps .> 0.0]
+
 	else
 
 		error("Control policy $protocol not recognized")
@@ -848,6 +908,7 @@ function setup_timesteps(input;
 	end
 
 	return timesteps
+
 end
 
 

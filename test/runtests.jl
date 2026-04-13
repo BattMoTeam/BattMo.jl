@@ -19,5 +19,5 @@ include("test_temperature_dependence.jl")
 include("test_pythoncall.jl")
 include("test_adjoints.jl")
 include("test_matlab_input.jl")
-
-
+include("test_input_current_series.jl")
+include("test_initial_state.jl")

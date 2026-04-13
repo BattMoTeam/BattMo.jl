@@ -55,12 +55,14 @@ function extract_input_sets(simulation_input::FullSimulationInput)
 		solver_settings = SolverSettings(solver_settings)
 	end
 
-	return (base_model = base_model,
+	return (
+		base_model = base_model,
 		model_settings = model_settings,
 		cell_parameters = cell_parameters,
 		cycling_protocol = cycling_protocol,
 		simulation_settings = simulation_settings,
-		solver_settings = solver_settings)
+		solver_settings = solver_settings,
+	)
 
 end
 
@@ -80,6 +82,7 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 	else
 		error("ModelFramework not recognized. Please use '1D', '3D-demo' or 'jellyRoll'.")
 	end
+
 
 	model_settings = Dict(
 		"ModelFramework" => geom,
@@ -258,7 +261,8 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 				"Density" => params["NegativeElectrode"]["Coating"]["Binder"]["density"],
 				"MassFraction" => params["NegativeElectrode"]["Coating"]["Binder"]["massFraction"],
 				"ElectronicConductivity" => params["NegativeElectrode"]["Coating"]["Binder"]["electronicConductivity"],
-			)),
+			),
+		),
 		"PositiveElectrode" => Dict(
 			"Coating" => Dict(
 				"BruggemanCoefficient" => params["PositiveElectrode"]["Coating"]["bruggemanCoefficient"],
@@ -291,7 +295,8 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 				"Density" => params["PositiveElectrode"]["Coating"]["Binder"]["density"],
 				"MassFraction" => params["PositiveElectrode"]["Coating"]["Binder"]["massFraction"],
 				"ElectronicConductivity" => params["PositiveElectrode"]["Coating"]["Binder"]["electronicConductivity"],
-			)),
+			),
+		),
 		"Separator" => Dict(
 			"Porosity" => params["Separator"]["porosity"],
 			"Density" => params["Separator"]["density"],
@@ -318,7 +323,8 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 				"InterstitialConcentration" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["SEIinterstitialConcentration"],
 				"InitialThickness" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["SEIlengthInitial"],
 				"InitialPotentialDrop" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["SEIvoltageDropRef"],
-			))
+			),
+		)
 
 		cell_parameters["NegativeElectrode"]["Interphase"] = inter["Interphase"]
 	end
@@ -339,7 +345,8 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 					"TabLength" => params["PositiveElectrode"]["CurrentCollector"]["tab"]["height"],
 					"Density" => params["PositiveElectrode"]["CurrentCollector"]["density"],
 					"ElectronicConductivity" => params["PositiveElectrode"]["CurrentCollector"]["electronicConductivity"],
-				))
+				),
+			)
 
 			neg_cc = Dict(
 				"CurrentCollector" => Dict(
@@ -369,7 +376,8 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 					"TabFractions" => params["PositiveElectrode"]["CurrentCollector"]["tabparams"]["fractions"],
 					"Density" => params["PositiveElectrode"]["CurrentCollector"]["density"],
 					"ElectronicConductivity" => params["PositiveElectrode"]["CurrentCollector"]["electronicConductivity"],
-				))
+				),
+			)
 
 			neg_cc = Dict(
 				"CurrentCollector" => Dict(
@@ -418,10 +426,12 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 		cycling_protocol["VoltageChangeLimit"] = params["Control"]["dEdtLimit"]
 	end
 
-	return (CellParameters(cell_parameters),
+	return (
+		CellParameters(cell_parameters),
 		CyclingProtocol(cycling_protocol),
 		ModelSettings(model_settings),
-		SimulationSettings(simulation_settings))
+		SimulationSettings(simulation_settings),
+	)
 end
 
 function convert_to_full_simulation_input(input::AdvancedDictInput, base_model = "LithiumIonBattery"; solver_settings = missing)
@@ -753,7 +763,8 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 					"width" => get_key_value(ne_cc, "TabWidth"),
 					"height" => get_key_value(ne_cc, "TabLength"),
 					"Nw" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabWidth"),
-					"Nh" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabLength")),
+					"Nh" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabLength"),
+				),
 				"tabparams" => Dict(
 					"usetab" => true,
 					"width" => get_key_value(ne_cc, "TabWidth"),

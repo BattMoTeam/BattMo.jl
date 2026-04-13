@@ -5,10 +5,10 @@ function get_cycling_protocol_meta_data()
 	meta_data = Dict(
 		"Protocol" => Dict(
 			"type" => String,
-			"options" => ["CC", "CCCV", "Experiment", "Function"],
+			"options" => ["CC", "CCCV", "Experiment", "Function", "InputCurrentSeries"],
 			"context_type" => "Protocol",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_d3e2d213_d078_4b9a_8beb_62f063e57d69",
-			"description" => """Type of cycling procedure used to cycle a cell. For instance: Constant Current ("CC"), Constant Current - Constant Voltage ("CCCV").""",
+			"description" => """Type of cycling procedure used to cycle a cell. For instance: Constant Current ("CC"), Constant Current - Constant Voltage ("CCCV"), a custom function ("Function"), or a prescribed current time series ("InputCurrentSeries").""",
 		),
 		"FunctionName" => Dict(
 			"type" => String,
@@ -32,7 +32,8 @@ function get_cycling_protocol_meta_data()
 			"options" => ["charging", "discharging"],
 			"context_type" => "Protocol",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_472a0ca2_58bf_4618_b561_6fe68bd9fd49",
-			"description" => "Whether a cycling protocol starts with \"charging\" or \"discharging\"."),
+			"description" => "Whether a cycling protocol starts with \"charging\" or \"discharging\".",
+		),
 		"RestingTimeAfterCharge" => Dict(
 			"type" => Real,
 			"min_value" => 0.0,
@@ -55,7 +56,8 @@ function get_cycling_protocol_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_2678a656_4a27_4706_8dde_b0a93e9b92fa",
 			"description" => "Time during which the cell is kept at open-circuit conditions after completing a discharging step.",
 		),
-		"AmbientTemperature" => Dict("context_type" => "AmbientThermodynamicTemperature",
+		"AmbientTemperature" => Dict(
+			"context_type" => "AmbientThermodynamicTemperature",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_39a44af0_0e1a_4859_b550_bdabad64386e",
 			"max_value" => 373.15,
 			"min_value" => 238.15,
@@ -65,7 +67,8 @@ function get_cycling_protocol_meta_data()
 			"unit_name" => "emmo:Kelvin",
 			"unit_iri" => "https://w3id.org/emmo#Kelvin",
 		),
-		"InitialTemperature" => Dict("context_type" => "InititalThermodynamicTemperature",
+		"InitialTemperature" => Dict(
+			"context_type" => "InititalThermodynamicTemperature",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_9c9b80a4_a00b_4b91_8e17_3a7831f2bf2f",
 			"max_value" => 373.15,
 			"min_value" => 238.15,
@@ -162,6 +165,16 @@ function get_cycling_protocol_meta_data()
 		"Experiment" => Dict(
 			"description" => "A set of control step policies that form a virtual experiment.",
 			"type" => Vector{String},
+		),
+		"Times" => Dict(
+			"type" => Vector,
+			"description" => "Time points for the InputCurrentSeries protocol",
+			"unit" => "s",
+		),
+		"Currents" => Dict(
+			"type" => Vector,
+			"description" => "Current values for the InputCurrentSeries protocol",
+			"unit" => "A",
 		),
 	)
 
