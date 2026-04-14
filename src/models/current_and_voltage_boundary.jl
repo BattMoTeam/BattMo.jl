@@ -929,8 +929,16 @@ end
 
 function update_controller!(state, state0, policy::AbstractPolicy, dt)
 
-	update_control_type_in_controller!(state, state0, policy, dt)
-	return update_values_in_controller!(state, policy)
+	if policy isa GenericProtocol
+
+		update_control_step_in_controller!(state, state0, policy, dt)
+
+		step = state.Controller.step
+		return update_values_in_controller!(state, step)
+	else
+		update_control_type_in_controller!(state, state0, policy, dt)
+		return update_values_in_controller!(state, policy)
+	end
 
 end
 
@@ -1393,11 +1401,30 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquati
 
 	ctrl = state[:Controller]
 
-	return if ctrl.target_is_voltage
-		v[] = phi - ctrl.target
+	if ctrl isa GenericController
+
+		return if ctrl.step isa VoltageStep
+			v[] = phi - ctrl.target
+		elseif ctrl.step isa CurrentStep
+			v[] = I - ctrl.target
+		elseif ctrl.step isa RestStep
+			v[] = I - ctrl.target
+		elseif ctrl.step isa PowerStep
+			v[] = I - ctrl.target
+		elseif ctrl.step isa StateOfChargeStep
+			v[] = phi - ctrl.target
+		else
+			error("Step $(ctrl.step) does not have an update equation.")
+		end
+
 	else
 
-		v[] = I - ctrl.target
+		return if ctrl.target_is_voltage
+			v[] = phi - ctrl.target
+		else
+
+			v[] = I - ctrl.target
+		end
 	end
 
 end
@@ -1497,6 +1524,9 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 
 		copyController!(storage.state0[:Controller], ctrl)
 
+	elseif policy isa GenericProtocol
+
+		copyController!(storage.state0[:Controller], ctrl)
 	else
 
 		error("Policy $(typeof(policy)) not recognized")
@@ -1596,6 +1626,17 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 		target, time = promote(target, time)
 		state[:Controller] = InputCurrentController(target, time, target_is_voltage)
 
+	elseif policy isa GenericProtocol
+		number_of_steps = length(policy.steps)
+		step_count = 0
+		step_index = 0
+		cycle_count = 0
+		step = policy.steps[1]
+		time_in_step = 0.0
+		current = 0.0
+		voltage = 0.0
+		state[:Controller] = GenericController(policy, step, step_count, step_index, cycle_count, time_in_step, current, voltage, policy.initial_state_of_charge, T = T)
+
 	end
 
 end
@@ -1667,4 +1708,22 @@ function sineup(y1, y2, x1, x2, x)
 
 	return res
 
+end
+
+
+function compute_state_of_charge(previous_state_of_charge::Real,
+	dt::Real,
+	rated_capacity::Real,
+	current::Real;
+	η_chg::Real = 1.0,
+	η_dis::Real = 1.0)
+
+	# Choose efficiency based on the sign convention: I>0 discharge, I<0 charge
+	η = current >= 0 ? η_dis : η_chg
+
+	# Coulomb counting update; 3600 converts Ah to As
+	soc_next = previous_state_of_charge - (η * current * dt) / (3600.0 * rated_capacity)
+
+	# Clamp to physical bounds
+	return clamp(soc_next, 0.0, 1.0)
 end

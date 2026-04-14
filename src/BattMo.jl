@@ -142,6 +142,7 @@ using Jutul: update_half_face_flux!
 using Jutul: SimulationModel, MultiModel
 using Jutul: JutulSimulator, Simulator
 using Jutul: JutulSystem, JutulFormulation, JutulContext, DefaultContext
+using Jutul: AbstractTerminationCriterion
 
 using Jutul: simulate, simulator_config, simulator_config!
 using Jutul: setup_forces, setup_state, setup_state!, setup_parameters
@@ -231,6 +232,12 @@ include("models/ocp.jl")
 include("models/activematerial.jl")
 include("models/sei_layer.jl")
 include("models/current_and_voltage_boundary.jl")
+include("models/experiment/termination.jl")
+include("models/experiment/control_steps.jl")
+include("models/experiment/experiment.jl")
+include("models/experiment/generic_protocol.jl")
+include("models/experiment/generic_controller.jl")
+include("models/experiment/utils.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")
 
@@ -271,20 +278,20 @@ include("tools/print_info.jl")
 
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 @compile_workload begin
-    function workload_fn()
-        model_settings = load_model_settings(; from_default_set = "p2d")
-        cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
-        cycling_protocol = load_cycling_protocol(; from_default_set = "cccv")
-        simulation_settings = load_simulation_settings(; from_default_set = "p2d")
-        model_setup = LithiumIonBattery(; model_settings)
-        sim = Simulation(model_setup, cell_parameters, cycling_protocol)
-        output = solve(sim, info_level = -1)
-    end
-    try
-        redirect_stdout(workload_fn, devnull)
-    catch e
-        @warn "Precompilation failed with exception" e
-    end
+	function workload_fn()
+		model_settings = load_model_settings(; from_default_set = "p2d")
+		cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+		cycling_protocol = load_cycling_protocol(; from_default_set = "cccv")
+		simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+		model_setup = LithiumIonBattery(; model_settings)
+		sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+		output = solve(sim, info_level = -1)
+	end
+	try
+		redirect_stdout(workload_fn, devnull)
+	catch e
+		@warn "Precompilation failed with exception" e
+	end
 end
 
 end # module

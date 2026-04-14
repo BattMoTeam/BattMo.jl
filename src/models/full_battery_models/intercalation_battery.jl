@@ -126,6 +126,14 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 			use_ramp_up = use_ramp_up,
 		)
 
+	elseif protocol == "Experiment"
+
+		protocol = Experiment(cycling_protocol.all)
+		ramp_up_time = haskey(input.simulation_settings, "RampUpTime") ? input.simulation_settings["RampUpTime"] : 100
+		capacity = haskey(cycling_protocol, "Capacity") ? cycling_protocol["Capacity"] : compute_cell_theoretical_capacity(input.cell_parameters)
+
+		policy = GenericProtocol_(protocol; use_ramp_up = use_ramp_up, ramp_up_time = ramp_up_time, capacity = capacity, T = T)
+
 	elseif protocol == "Function"
 
 		function_name = cycling_protocol["FunctionName"]
@@ -738,8 +746,15 @@ function set_parameters(
 
 		parameters[:Control] = setup_parameters(multimodel[:Control])
 
+	elseif protocol == "Experiment"
+		cap = computeCellCapacity(multimodel)
+		con = Constants()
+		
+
+		parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
+
 	else
-		error("control policy $controlPolicy not recognized")
+		error("control policy $protocol not recognized")
 	end
 
 	return parameters

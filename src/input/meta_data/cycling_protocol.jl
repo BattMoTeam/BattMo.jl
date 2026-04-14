@@ -5,7 +5,7 @@ function get_cycling_protocol_meta_data()
 	meta_data = Dict(
 		"Protocol" => Dict(
 			"type" => String,
-			"options" => ["CC", "CCCV", "Function", "InputCurrentSeries"],
+			"options" => ["CC", "CCCV", "Experiment", "Function", "InputCurrentSeries"],
 			"context_type" => "Protocol",
 			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_d3e2d213_d078_4b9a_8beb_62f063e57d69",
 			"description" => """Type of cycling procedure used to cycle a cell. For instance: Constant Current ("CC"), Constant Current - Constant Voltage ("CCCV"), a custom function ("Function"), or a prescribed current time series ("InputCurrentSeries").""",
@@ -161,6 +161,10 @@ function get_cycling_protocol_meta_data()
 			"unit" => "V·s⁻¹",
 			"unit_name" => "emmo:VoltPerSecond",
 			"unit_iri" => "https://w3id.org/emmo#VoltPerSecond",
+		),
+		"Experiment" => Dict(
+			"description" => "A set of control step policies that form a virtual experiment.",
+			"type" => Vector{String},
 		),
 		"Times" => Dict(
 			"type" => Vector,

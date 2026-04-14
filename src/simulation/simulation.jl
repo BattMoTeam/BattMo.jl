@@ -901,9 +901,19 @@ function setup_timesteps(
 		timesteps = diff(series_times)
 		timesteps = timesteps[timesteps .> 0.0]
 
+	elseif protocol == "Experiment"
+		totalTime = cycling_protocol["TotalTime"]
+		dt = simulation_settings["TimeStepDuration"]
+		n = totalTime / dt
+		if haskey(input.model_settings, "RampUp")
+			nr = simulation_settings["RampUpSteps"]
+		else
+			nr = 1
+		end
+		timesteps = compute_rampup_timesteps(totalTime, dt, Int(nr))
 	else
 
-		error("Control policy $controlPolicy not recognized")
+		error("Control policy $protocol not recognized")
 
 	end
 
