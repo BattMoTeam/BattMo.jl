@@ -12,12 +12,10 @@ cycling_protocol["TotalNumberOfCycles"] = 10
 
 sim = Simulation(model, cell_parameters, cycling_protocol);
 
-output = solve(sim;)
+output = solve(sim)
 
 print_info(output)
 
-
-time_series = output.time_series
 states = output.states
 metrics = output.metrics
 
@@ -30,8 +28,12 @@ plot_dashboard(output; plot_type = "line")
 # Plot a dashboard with contour plots
 plot_dashboard(output; plot_type = "contour")
 
+# Plot a dashboard with a breakdown of contributions to overpotential
+plot_dashboard(output; plot_type = "breakdown")
+
 # Some simple examples plotting time series quantities using the `plot_output` function
-plot_output(output,
+plot_output(
+	output,
 	[
 		"Current vs Time",
 		"Voltage vs Time",
@@ -41,7 +43,8 @@ plot_output(output,
 
 # Some simple examples plotting state quantities using the `plot_output` function
 
-plot_output(output,
+plot_output(
+	output,
 	[
 		["NegativeElectrodeActiveMaterialSurfaceConcentration vs Time at Position index 10", "NegativeElectrodeActiveMaterialSurfaceConcentration vs Time at Position index 1"],
 		"NegativeElectrodeActiveMaterialParticleConcentration vs Time at Position index 10 and NegativeElectrodeActiveMaterialRadius index 5",
@@ -53,7 +56,8 @@ plot_output(output,
 )
 
 # Some simple examples plotting metrics using the `plot_output` function
-plot_output(output,
+plot_output(
+	output,
 	[
 		"DischargeCapacity vs CycleIndex",
 		"CycleNumber vs Time",
@@ -64,31 +68,27 @@ plot_output(output,
 )
 
 
-
-
 # Access state data and plot for a specific time step
 
 output_data = output.states;
 
 t = 100 # time step to plot
 
-d1 = output_data["NegativeElectrodeActiveMaterialSurfaceConcentration"][t, :]
-d2 = output_data["PositiveElectrodeActiveMaterialSurfaceConcentration"][t, :]
-d3 = output_data["ElectrolyteConcentration"][t, :]
+d1 = output_data["NegativeElectrode"]["ActiveMaterial"]["SurfaceConcentration"][t, :]
+d2 = output_data["PositiveElectrode"]["ActiveMaterial"]["SurfaceConcentration"][t, :]
+d3 = output_data["Electrolyte"]["Concentration"][t, :]
 
 f = Figure()
 ax = Axis(f[1, 1], title = "Concentration at t = $(output_data["Time"][t]) s", xlabel = "Position [m]", ylabel = "Concentration")
-l1 = lines!(ax, output_data["Position"], d1, color = :red, linewidth = 2, label = "NeAmSurfaceConcentration")
-l2 = lines!(ax, output_data["Position"], d2, color = :blue, linewidth = 2, label = "PeAmSurfaceConcentration")
-l3 = lines!(ax, output_data["Position"], d3, color = :green, linewidth = 2, label = "ElectrolyteConcentration")
+l1 = lines!(ax, output_data["Cell"]["Position"], d1, color = :red, linewidth = 2, label = "NeAmSurfaceConcentration")
+l2 = lines!(ax, output_data["Cell"]["Position"], d2, color = :blue, linewidth = 2, label = "PeAmSurfaceConcentration")
+l3 = lines!(ax, output_data["Cell"]["Position"], d3, color = :green, linewidth = 2, label = "ElectrolyteConcentration")
 axislegend(ax)
 display(GLMakie.Screen(), f)
 
 g = Figure()
 ax2 = Axis(g[1, 1], title = "Active Material Concentration at t = $(output_data["Time"][t]) s", xlabel = "Position", ylabel = "Depth")
-hm1 = contourf!(ax2, output_data["Position"], output_data["NegativeElectrodeActiveMaterialRadius"], output_data["NegativeElectrodeActiveMaterialParticleConcentration"][t, :, :])
-hm2 = contourf!(ax2, output_data["Position"], output_data["PositiveElectrodeActiveMaterialRadius"], output_data["PositiveElectrodeActiveMaterialParticleConcentration"][t, :, :])
+hm1 = contourf!(ax2, output_data["Cell"]["Position"], output_data["NegativeElectrode"]["ActiveMaterial"]["Radius"], output_data["NegativeElectrode"]["ActiveMaterial"]["ParticleConcentration"][t, :, :])
+hm2 = contourf!(ax2, output_data["Cell"]["Position"], output_data["PositiveElectrode"]["ActiveMaterial"]["Radius"], output_data["PositiveElectrode"]["ActiveMaterial"]["ParticleConcentration"][t, :, :])
 Colorbar(g[1, 2], hm1)
 display(GLMakie.Screen(), g)
-
-

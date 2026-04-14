@@ -1,18 +1,17 @@
-
 ##NB genneral version
 # function modify_equation!(lsys, maps, tfac, context)
 #     # slow genneral version
 #     (mass_index, charge_index, mass_cons_map, charge_cons_map) = maps
 #     for i in 1:length(mass_cons_map)
 #         ## decouple mass end charge conservation based on the property
-#         # that charge and mass transport is propotioinal due to change 
-#         #storage.LinearizedSystem.jac[mass_cons_map[i],:] += storage.LinearizedSystem.jac[charge_cons_map[i],:] 
-#         #storage.LinearizedSystem.r[mass_cons_map[i],:] += storage.LinearizedSystem.r[charge_cons_map[i],:] 
+#         # that charge and mass transport is propotioinal due to change
+#         #storage.LinearizedSystem.jac[mass_cons_map[i],:] += storage.LinearizedSystem.jac[charge_cons_map[i],:]
+#         #storage.LinearizedSystem.r[mass_cons_map[i],:] += storage.LinearizedSystem.r[charge_cons_map[i],:]
 #         if true #needed for separate saturation solve
-#         @.    lsys.jac[mass_cons_map[i],:] .-= tfac.*lsys.jac[charge_cons_map[i],:] 
+#         @.    lsys.jac[mass_cons_map[i],:] .-= tfac.*lsys.jac[charge_cons_map[i],:]
 #             #lsys.r[mass_cons_map[i]] .-= tfac.*lsys.r[charge_cons_map[i]]
 #             lsys.r[mass_cons_map[i]] -= tfac*lsys.r[charge_cons_map[i]]
-#         end 
+#         end
 #     end
 # end
 function matrix_maps(lsys, mass_cons_map, charge_cons_map, context::DefaultContext)
@@ -75,13 +74,13 @@ function matrix_maps(lsys, mass_cons_map, charge_cons_map, context::ParallelCSRC
 end
 
 
-function modify_equation!(lsys, maps, tfac, context)#::Jutul.DefaultContext)
+function modify_equation!(lsys, maps, tfac, context) #::Jutul.DefaultContext)
 
 	(mass_index, charge_index, mass_cons_map, charge_cons_map) = maps
 	vals = nonzeros(lsys.jac)
 
 	@. vals[mass_index] -= value(tfac)[1] * vals[charge_index]
-	@. lsys.r[mass_cons_map] -= value(tfac)[1] * lsys.r[charge_cons_map]
+	return @. lsys.r[mass_cons_map] -= value(tfac)[1] * lsys.r[charge_cons_map]
 end
 
 function modify_equation!(lsys, mass_cons_map, charge_cons_map, tfac, nc, context::ParallelCSRContext)
@@ -90,9 +89,9 @@ function modify_equation!(lsys, mass_cons_map, charge_cons_map, tfac, nc, contex
 	#colvals = colvals(lsys.jac)
 	for i in 1:nc
 		## decouple mass end charge conservation based on the property
-		# that charge and mass transport is propotioinal due to change 
-		#storage.LinearizedSystem.jac[mass_cons_map[i],:] += storage.LinearizedSystem.jac[charge_cons_map[i],:] 
-		#storage.LinearizedSystem.r[mass_cons_map[i],:] += storage.LinearizedSystem.r[charge_cons_map[i],:] 
+		# that charge and mass transport is propotioinal due to change
+		#storage.LinearizedSystem.jac[mass_cons_map[i],:] += storage.LinearizedSystem.jac[charge_cons_map[i],:]
+		#storage.LinearizedSystem.r[mass_cons_map[i],:] += storage.LinearizedSystem.r[charge_cons_map[i],:]
 		mass_ind = nzrange(lsys.jac, mass_cons_map[i])
 		charge_ind = nzrange(lsys.jac, mass_cons_map[i])
 		@assert length(mass_ind) == length(charge_ind)
@@ -102,11 +101,12 @@ function modify_equation!(lsys, mass_cons_map, charge_cons_map, tfac, nc, contex
 		@. vals[mass_ind] -= tfac * vals[charge_ind]
 		lsys.r[mass_cons_map[i]] -= tfac * lsys.r[charge_cons_map[i]]
 	end
+	return
 end
 
 
 function fix_control!(lsys, context::DefaultContext)
-	if lsys.jac[end, end] == 1 && lsys.jac[end, end-1] == 0
+	return if lsys.jac[end, end] == 1 && lsys.jac[end, end-1] == 0
 		#Main.@infiltrate !(lsys.jac[end-1,end] == 1)
 		@assert lsys.jac[end, end-1] == 0
 		@assert lsys.jac[end-1, end] == 1
@@ -134,7 +134,7 @@ function fix_control!(lsys, context::DefaultContext)
 end
 
 function fix_control!(lsys, context::ParallelCSRContext)
-	if lsys.jac[end, end] == 1
+	return if lsys.jac[end, end] == 1
 		@assert lsys.jac[end, end-1] == 0
 		@assert lsys.jac[end-1, end] == 1
 		fac = lsys.jac[end-1, end]
@@ -142,7 +142,7 @@ function fix_control!(lsys, context::ParallelCSRContext)
 		lsys.r[end-1] -= lsys.r[end] * fac
 		@assert lsys.jac[end-1, end] == 0
 	else
-		if (true)#NB !!!!!!!!!!!!!!!
+		if (true) #NB !!!!!!!!!!!!!!!
 			@assert lsys.jac[end, end-1] == 1
 			@assert lsys.jac[end, end] == 0
 			jac_l = deepcopy(lsys.jac[end, :])
@@ -156,9 +156,9 @@ function fix_control!(lsys, context::ParallelCSRContext)
 end
 
 function Jutul.post_update_linearized_system!(lsys, executor, storage, model::MultiModel{:IntercalationBattery})
-	context = first(model.models).context# NB hack to get context of mulitmodel
-	if (true)
-		# fix linear system 
+	context = first(model.models).context # NB hack to get context of mulitmodel
+	return if (true)
+		# fix linear system
 		e_models = [:Electrolyte]
 		if isnothing(storage[:eq_maps].maps)
 			mass_cons_map = setup_subset_equation_map(model, storage, e_models, :mass_conservation)
@@ -193,7 +193,7 @@ function update_local_cphi_preconditioner!(prec, A, r, ind_eq, ind_var, executor
 	sys = LinearizedSystem(A_s)
 	dummy_model = Nothing()
 	dummy_storage = Nothing()
-	update_preconditioner!(prec, sys, DefaultContext(), dummy_model, dummy_storage, ProgressRecorder(), executor)
+	return update_preconditioner!(prec, sys, DefaultContext(), dummy_model, dummy_storage, ProgressRecorder(), executor)
 	#NB ok??
 	#Jutul.update_preconditioner!(prec, A_s, view(r, ix), DefaultContext(), executor)
 end
@@ -205,7 +205,7 @@ function apply_local_cphi_preconditioner!(x, prec, r, S, arg...)
 	ix = S.ix
 	@. r_i = r[ix]
 	apply!(x_i, prec, r_i, arg...)
-	@. x[ix] = x_i
+	return @. x[ix] = x_i
 end
 
 
@@ -279,14 +279,14 @@ function battery_linsolve(inputparams)
 
 		solver = :fgmres
 
-		set_default_input_params!(inputparams, ["Tolerance"], 1e-7)
+		set_default_input_params!(inputparams, ["Tolerance"], 1.0e-7)
 		set_default_input_params!(inputparams, ["MaxLinearIterations"], 50)
 		set_default_input_params!(inputparams, ["Verbosity"], 0)
 
-		tolerance      = inputparams["Tolerance"]
-		atol           = 1e-28
+		tolerance = inputparams["Tolerance"]
+		atol = 1.0e-28
 		max_iterations = inputparams["MaxLinearIterations"]
-		verbosity      = inputparams["Verbosity"]
+		verbosity = inputparams["Verbosity"]
 
 		# Battery general preconditioner that combines different preconditioners for different variables as
 		# follows. First we solve for the control variables which are removed from the system, We use AMG for electric
@@ -316,20 +316,22 @@ function battery_linsolve(inputparams)
 		# Type of method used for the block preconditioners. Here "block" means separatly (other options can be found
 		# BatteryGeneralPreconditione)
 		params["method"] = "block"
-		# Option for post- and pre-solve of the control system. 
+		# Option for post- and pre-solve of the control system.
 		params["post_solve_control"] = true
-		params["pre_solve_control"]  = true
+		params["pre_solve_control"] = true
 
 		# We setup the preconditioner, which combines both the block and global preconditioners
 		prec = BattMo.BatteryGeneralPreconditioner(varpreconds, g_varprecond, params)
 		#prec = Jutul.ILUZeroPreconditioner()
 
-		lsolve = Jutul.GenericKrylov(solver,
+		lsolve = Jutul.GenericKrylov(
+			solver,
 			verbose = verbosity,
 			preconditioner = prec,
 			relative_tolerance = tolerance,
 			absolute_tolerance = atol, ## may skip linear iterations all to getter.
-			max_iterations = max_iterations)
+			max_iterations = max_iterations,
+		)
 
 		return lsolve
 

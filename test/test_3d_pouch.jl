@@ -1,8 +1,9 @@
 using BattMo
+using Jutul
 using Test
 
 
-@testset "3d" begin
+@testset "3d single layer pouch" begin
 
 	@test begin
 
@@ -28,12 +29,20 @@ using Test
 		@test length(jutul_states) == 142
 		@test Cc[2] ≈ 0.03316973899191637 atol = 1e-2
 		for i in 3:length(Cc)
-			@test Cc[i] ≈ 0.07354849071973657 atol = 1e-2
+			@test Cc[i] ≈ 0.09085401794790987 atol = 1e-2
 		end
 		@test Voltage[1] ≈ 3.3506683313852914 atol = 1e-2
+		cc_pos = output.states["NegativeElectrode"]["CurrentCollector"]["Position"]
+		cc_phi = output.states["NegativeElectrode"]["CurrentCollector"]["Potential"]
+		@test output.states isa Dict{String, Any}
+		@test cc_pos isa BattMoPosition
+		@test cc_phi isa AbstractMatrix
+		@test size(cc_phi, 2) == Jutul.number_of_cells(cc_pos.mesh)
+		@test all(isfinite, cc_phi[end, :])
+		@test size(cc_phi[end, :], 1) == Jutul.number_of_cells(cc_pos.mesh)
+		@test Jutul.physical_representation(cc_pos) === Jutul.physical_representation(sim.grids["NegativeCurrentCollector"])
 		true
 
 	end
 
 end
-

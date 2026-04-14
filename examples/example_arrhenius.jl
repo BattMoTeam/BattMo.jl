@@ -49,121 +49,129 @@ solve_R = true
 solve_F = false
 
 if solve_R == true
-	sim_R_10 = Simulation(model_setup, cell_parameters_R, cycling_protocol_10)
-	sim_R_25 = Simulation(model_setup, cell_parameters_R, cycling_protocol_25)
+    sim_R_10 = Simulation(model_setup, cell_parameters_R, cycling_protocol_10)
+    sim_R_25 = Simulation(model_setup, cell_parameters_R, cycling_protocol_25)
 end
 
 if solve_F == true
-	sim_F_10 = Simulation(model_setup, cell_parameters_F, cycling_protocol_10)
-	sim_F_25 = Simulation(model_setup, cell_parameters_F, cycling_protocol_25)
+    sim_F_10 = Simulation(model_setup, cell_parameters_F, cycling_protocol_10)
+    sim_F_25 = Simulation(model_setup, cell_parameters_F, cycling_protocol_25)
 end
 
 
 if solve_R == true
-	output_R_10 = solve(sim_R_10)
-	output_R_25 = solve(sim_R_25)
+    output_R_10 = solve(sim_R_10)
+    output_R_25 = solve(sim_R_25)
 
-	t_R_10 = output_R_10.time_series["Time"]
-	E_R_10 = output_R_10.time_series["Voltage"]
+    t_R_10 = output_R_10.time_series["Time"]
+    E_R_10 = output_R_10.time_series["Voltage"]
 
-	r_R_10 = output_R_10.states["NegativeElectrodeActiveMaterialReactionRateConstant"]
-	D_R_10 = output_R_10.states["NegativeElectrodeActiveMaterialDiffusionCoefficient"]
+    r_R_10 = output_R_10.states["NegativeElectrodeActiveMaterialReactionRateConstant"]
+    D_R_10 = output_R_10.states["NegativeElectrodeActiveMaterialDiffusionCoefficient"]
 
-	t_R_25 = output_R_25.time_series["Time"]
-	E_R_25 = output_R_25.time_series["Voltage"]
-	r_R_25 = output_R_25.states["NegativeElectrodeActiveMaterialReactionRateConstant"]
-	D_R_25 = output_R_25.states["NegativeElectrodeActiveMaterialDiffusionCoefficient"]
+    t_R_25 = output_R_25.time_series["Time"]
+    E_R_25 = output_R_25.time_series["Voltage"]
+    r_R_25 = output_R_25.states["NegativeElectrodeActiveMaterialReactionRateConstant"]
+    D_R_25 = output_R_25.states["NegativeElectrodeActiveMaterialDiffusionCoefficient"]
 
-	@info "The voltage at 10°C with R is: $(E_R_10[10]) V"
-	@info "The voltage at 25°C with R is: $(E_R_25[10]) V"
+    @info "The voltage at 10°C with R is: $(E_R_10[10]) V"
+    @info "The voltage at 25°C with R is: $(E_R_25[10]) V"
 
-	@info "The r at 10°C with R is: $(r_R_10[10])"
-	@info "The r at 25°C with R is: $(r_R_25[10])"
+    @info "The r at 10°C with R is: $(r_R_10[10])"
+    @info "The r at 25°C with R is: $(r_R_25[10])"
 
-	@info "The D at 10°C with R is: $(D_R_10[10])"
-	@info "The D at 25°C with R is: $(D_R_25[10])"
+    @info "The D at 10°C with R is: $(D_R_10[10])"
+    @info "The D at 25°C with R is: $(D_R_25[10])"
 end
 
 if solve_F == true
-	output_F_10 = solve(sim_F_10)
-	output_F_25 = solve(sim_F_25)
+    output_F_10 = solve(sim_F_10)
+    output_F_25 = solve(sim_F_25)
 
-	t_F_10 = output_F_10.time_series["Time"]
-	E_F_10 = output_F_10.time_series["Voltage"]
-	r_F_10 = output_F_10.states["NegativeElectrodeActiveMaterialReactionRateConstant"]
-	D_F_10 = output_F_10.states["NegativeElectrodeActiveMaterialDiffusionCoefficient"]
-
-
-	t_F_25 = output_F_25.time_series["Time"]
-	E_F_25 = output_F_25.time_series["Voltage"]
-	r_F_25 = output_F_25.states["NegativeElectrodeActiveMaterialReactionRateConstant"]
-	D_F_25 = output_F_25.states["NegativeElectrodeActiveMaterialDiffusionCoefficient"]
-
-	@info "The voltage at 10°C with F is: $(E_F_10[10]) V"
-	# @info "The voltage at 25°C with F is: $(E_F_25[10]) V"
+    t_F_10 = output_F_10.time_series["Time"]
+    E_F_10 = output_F_10.time_series["Voltage"]
+    r_F_10 = output_F_10.states["NegativeElectrodeActiveMaterialReactionRateConstant"]
+    D_F_10 = output_F_10.states["NegativeElectrodeActiveMaterialDiffusionCoefficient"]
 
 
-	@info "The r at 10°C with F is: $(r_F_10[10])"
-	# @info "The r at 25°C with F is: $(r_F_25[10])"
+    t_F_25 = output_F_25.time_series["Time"]
+    E_F_25 = output_F_25.time_series["Voltage"]
+    r_F_25 = output_F_25.states["NegativeElectrodeActiveMaterialReactionRateConstant"]
+    D_F_25 = output_F_25.states["NegativeElectrodeActiveMaterialDiffusionCoefficient"]
+
+    @info "The voltage at 10°C with F is: $(E_F_10[10]) V"
+    # @info "The voltage at 25°C with F is: $(E_F_25[10]) V"
 
 
-	@info "The D at 10°C with F is: $(D_F_10[10])"
-	# @info "The D at 25°C with F is: $(D_F_25[10])"
+    @info "The r at 10°C with F is: $(r_F_10[10])"
+    # @info "The r at 25°C with F is: $(r_F_25[10])"
+
+
+    @info "The D at 10°C with F is: $(D_F_10[10])"
+    # @info "The D at 25°C with F is: $(D_F_25[10])"
 end
 
 
 f = Figure(size = (1000, 400))
 
-ax = Axis(f[1, 1],
-	title = "Voltage",
-	xlabel = "Time / s",
-	ylabel = "Voltage / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
+ax = Axis(
+    f[1, 1],
+    title = "Voltage",
+    xlabel = "Time / s",
+    ylabel = "Voltage / V",
+    xlabelsize = 25,
+    ylabelsize = 25,
+    xticklabelsize = 25,
+    yticklabelsize = 25,
 )
 
 if solve_R == true
-	scatterlines!(ax,
-		t_R_10,
-		E_R_10;
-		linewidth = 4,
-		markersize = 1,
+    scatterlines!(
+        ax,
+        t_R_10,
+        E_R_10;
+        linewidth = 4,
+        markersize = 1,
 
-		# marker = :cross,
-		# markercolor = :black,
-		label = "R_10K",
-	)
+        # marker = :cross,
+        # markercolor = :black,
+        label = "R_10K",
+    )
 
-	scatterlines!(ax,
-		t_R_25,
-		E_R_25;
-		linewidth = 2,
-		# marker = :cross,
-		# markercolor = :black,
-		markersize = 1,
-		label = "R_25K")
+    scatterlines!(
+        ax,
+        t_R_25,
+        E_R_25;
+        linewidth = 2,
+        # marker = :cross,
+        # markercolor = :black,
+        markersize = 1,
+        label = "R_25K"
+    )
 end
 
 if solve_F == true
-	scatterlines!(ax,
-		t_F_10,
-		E_F_10;
-		linewidth = 2,
-		# marker = :cross,
-		# markercolor = :black,
-		markersize = 1,
-		label = "F_10K")
+    scatterlines!(
+        ax,
+        t_F_10,
+        E_F_10;
+        linewidth = 2,
+        # marker = :cross,
+        # markercolor = :black,
+        markersize = 1,
+        label = "F_10K"
+    )
 
-	scatterlines!(ax,
-		t_F_25,
-		E_F_25;
-		linewidth = 2,
-		# marker = :cross,
-		# markercolor = :black,
-		markersize = 1,
-		label = "F_25K")
+    scatterlines!(
+        ax,
+        t_F_25,
+        E_F_25;
+        linewidth = 2,
+        # marker = :cross,
+        # markercolor = :black,
+        markersize = 1,
+        label = "F_25K"
+    )
 end
 axislegend()
 display(f)
