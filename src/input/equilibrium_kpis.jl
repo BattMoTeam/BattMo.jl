@@ -55,10 +55,41 @@ function compute_electrode_coating_mass(params::CellParameters, electrode::Strin
 
 	effective_density = params[electrode]["Coating"]["EffectiveDensity"]
 
-	area = haskey(params["Cell"], "ElectrodeGeometricSurfaceArea") ? params["Cell"]["ElectrodeGeometricSurfaceArea"] : params["Cell"]["ElectrodeWidth"] * params["Cell"]["ElectrodeLength"]
-	thickness = params[electrode]["Coating"]["Thickness"]
+	if haskey(params["Cell"], "ElectrodeGeometricSurfaceArea")
+		area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
+		thickness = params[electrode]["Coating"]["Thickness"]
 
-	return effective_density * area * thickness
+		mass = effective_density * area * thickness
+	elseif haskey(params["Cell"], "ElectrodeLength") && haskey(params["Cell"], "ElectrodeWidth")
+		area = params["Cell"]["ElectrodeWidth"] * params["Cell"]["ElectrodeLength"]
+		thickness = params[electrode]["Coating"]["Thickness"]
+		mass = effective_density * area * thickness
+
+	elseif haskey(params["Cell"], "InnerRadius") && haskey(params["Cell"], "OuterRadius") && haskey(params["Cell"], "Height")
+		r_inner = params["Cell"]["InnerRadius"]
+		r_outer = params["Cell"]["OuterRadius"]
+		height = params["Cell"]["Height"]
+		thickness_coating = params[electrode]["Coating"]["Thickness"]
+		t_pe_cc = params["PositiveElectrode"]["CurrentCollector"]["Thickness"]
+		t_pe_coating = params["PositiveElectrode"]["Coating"]["Thickness"]
+		t_ne_cc = params["NegativeElectrode"]["CurrentCollector"]["Thickness"]
+		t_ne_coating = params["NegativeElectrode"]["Coating"]["Thickness"]
+		t_separator = params["Separator"]["Thickness"]
+
+		thickness_total =
+			t_pe_cc +
+			2*t_pe_coating +
+			t_ne_cc +
+			2*t_ne_coating +
+			2*t_separator
+
+		area = 2 * π * (r_outer^2 - r_inner^2) * height / thickness_total # electrode geometrical surface area
+
+		mass = effective_density * area * thickness_coating
+	end
+
+
+	return mass
 end
 
 
@@ -309,22 +340,37 @@ function compute_electrode_maximum_capacity(params::CellParameters, electrode::S
 	stoichiometry_0 = params[electrode]["ActiveMaterial"]["StoichiometricCoefficientAtSOC0"]
 
 	stoichiometric_range = abs(stoichiometry_100 - stoichiometry_0)
-	active_material_mass = electrode_mass * mass_fraction
-	faraday_constant_Ah = FARADAY_CONSTANT / 3600.0
 
-	return stoichiometric_range * (max_concentration / density) * active_material_mass * faraday_constant_Ah
+	if !isnothing(electrode_mass)
+		active_material_mass = electrode_mass * mass_fraction
+		faraday_constant_Ah = FARADAY_CONSTANT / 3600.0
+		capacity = stoichiometric_range * (max_concentration / density) * active_material_mass * faraday_constant_Ah
+	else
+		capacity = nothing
+	end
+
+	return capacity
 end
 
 function compute_np_ratio(params::CellParameters)
 	pe_maximum_capacity = compute_electrode_maximum_capacity(params, "PositiveElectrode")
 	ne_maximum_capacity = compute_electrode_maximum_capacity(params, "NegativeElectrode")
-	return ne_maximum_capacity / pe_maximum_capacity
+	if isnothing(pe_maximum_capacity) || isnothing(ne_maximum_capacity)
+		return nothing
+	else
+		return ne_maximum_capacity / pe_maximum_capacity
+	end
 end
 
 function compute_cell_theoretical_capacity(params::CellParameters)
 	pe_maximum_capacity = compute_electrode_maximum_capacity(params, "PositiveElectrode")
 	ne_maximum_capacity = compute_electrode_maximum_capacity(params, "NegativeElectrode")
-	return min(pe_maximum_capacity, ne_maximum_capacity)
+	if isnothing(pe_maximum_capacity) || isnothing(ne_maximum_capacity)
+		return nothing
+	else
+		return min(pe_maximum_capacity, ne_maximum_capacity)
+	end
+
 end
 
 """

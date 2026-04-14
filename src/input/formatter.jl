@@ -115,7 +115,7 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 	####################################
 	# SimulationSettings
 
-	simulation_settings = Dict(
+	simulation_settings = Dict{String, Real}(
 		"PositiveElectrodeCoatingGridPoints" => params["PositiveElectrode"]["Coating"]["N"],
 		"PositiveElectrodeParticleGridPoints" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["SolidDiffusion"]["N"],
 		"NegativeElectrodeCoatingGridPoints" => params["NegativeElectrode"]["Coating"]["N"],

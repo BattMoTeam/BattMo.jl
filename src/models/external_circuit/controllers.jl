@@ -57,6 +57,15 @@ end
 FunctionController() = FunctionController(0.0, 0.0, false)
 
 
+mutable struct InputCurrentController{R} <: Controller
+	target::R
+	time::R
+	target_is_voltage::Bool
+end
+
+InputCurrentController() = InputCurrentController(0.0, 0.0, false)
+
+
 
 @inline function Jutul.numerical_type(x::GenericController{R, I}) where {R, I}
 	return R
@@ -66,6 +75,9 @@ end
 	return R
 end
 
+@inline function Jutul.numerical_type(x::InputCurrentController{R}) where {R}
+	return R
+end
 
 ########################################################################
 # Define some function for quick copying of the controller instance
@@ -102,6 +114,18 @@ function copyController!(cv_copy::FunctionController, cv::FunctionController)
 end
 
 
+
+"""
+Function to create (deep) copy of input current controller
+"""
+function copyController!(cv_copy::InputCurrentController, cv::InputCurrentController)
+
+	cv_copy.target = cv.target
+	cv_copy.time = cv.time
+	return cv_copy.target_is_voltage = cv.target_is_voltage
+
+end
+
 """
 Overload function to copy GenericController
 """
@@ -124,6 +148,18 @@ function Base.copy(cv::FunctionController)
 
 end
 
+"""
+Overload function to copy input current controller
+"""
+function Base.copy(cv::InputCurrentController)
+
+	cv_copy = InputCurrentController()
+	copyController!(cv_copy, cv)
+
+	return cv_copy
+
+end
+
 
 ##################################################
 # Update controller values
@@ -140,3 +176,8 @@ function Jutul.update_values!(old::FunctionController, new::FunctionController)
 
 end
 
+function Jutul.update_values!(old::InputCurrentController, new::InputCurrentController)
+
+	return copyController!(old, new)
+
+end

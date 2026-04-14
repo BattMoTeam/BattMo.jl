@@ -14,7 +14,7 @@
     "NegativeElectrodeCoatingGridPoints": 10,
     "NegativeElectrodeParticleGridPoints": 10,
     "SeparatorGridPoints": 3,
-    "TimeStepDuration": 50,
-    "RampUpTime": 10,
+    "TimeStepDuration": 50.0,
+    "RampUpTime": 10.0,
     "RampUpSteps": 5
 }

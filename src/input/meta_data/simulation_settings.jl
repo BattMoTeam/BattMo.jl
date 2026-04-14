@@ -143,7 +143,7 @@ function get_simulation_settings_meta_data()
 			"description" => "Number of ramp-up steps applied to initialize the cell simulation.",
 		),
 		"RampUpTime" => Dict(
-			"type" => Int,
+			"type" => Real,
 			"min_value" => 0,
 			"max_value" => 500,
 			"unit" => "s",

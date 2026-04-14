@@ -152,7 +152,7 @@ function parse_experiment_step(step::String, capacity, use_ramp_up::Bool; ramp_u
 
 		termination = get_termination_instance(step_processed[:termination][:type], step_processed[:termination][:target])
 
-		step_instance = RestStep(zero(T), termination)
+		step_instance = RestStep(zero(Float64), termination)
 
 	elseif containsi(step, "Discharge") || containsi(step, "Charge")
 		step_processed = process_values(step, capacity)
@@ -246,7 +246,7 @@ function process_values(str::AbstractString, capacity)
 					termination_unit_2 = parts[11]
 					termination_target_2, termination_type_2 = type_to_unit(termination_target_2, termination_unit_2; capacity)
 
-					termination_target = [termination_target, termination_target_2]
+					termination_target = Vector{Float64}([termination_target, termination_target_2])
 					termination_type = [termination_type, termination_type_2]
 
 				else
@@ -286,7 +286,7 @@ function process_values(str::AbstractString, capacity)
 
 				termination_target_2, termination_type_2 = type_to_unit(termination_target_2, termination_unit_2)
 
-				termination_target = [termination_target, termination_target_2]
+				termination_target = Vector{Float64}([termination_target, termination_target_2])
 				termination_type = [termination_type, termination_type_2]
 			else
 				error("Conditional termination does not recognize $(parts[6])")

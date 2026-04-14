@@ -93,7 +93,7 @@ function test_adjoints()
 	f, = BattMo.solve_and_differentiate_for_calibration(x0, setup_battmo_case, vc, obj, solver_settings, gradient = false)
 	for i in eachindex(numg)
 		x = copy(x0)
-		ϵ = max(1e-8 * abs(x[i]), 1e-16)
+		ϵ = max(1.0e-8 * abs(x[i]), 1.0e-16)
 		x[i] += ϵ
 		f1, = BattMo.solve_and_differentiate_for_calibration(x, setup_battmo_case, vc, obj, solver_settings, gradient = false)
 		numg[i] = (f1 - f) / ϵ

@@ -400,6 +400,19 @@ function Jutul.reset_state_to_previous_state!(
 end
 
 
+function Jutul.reset_state_to_previous_state!(
+	storage,
+	model::SimulationModel{ExternalCircuitDomain, ExternalCircuitSystem{InputCurrentProtocol{T1}}, T3, T4}) where {T1, T3, T4}
+
+	invoke(reset_state_to_previous_state!,
+		Tuple{typeof(storage), SimulationModel},
+		storage,
+		model)
+
+	copyController!(storage.state[:Controller], storage.state0[:Controller])
+end
+
+
 """ Update after convergence. Here, we copy the controller to state0
 """
 function Jutul.update_after_step!(storage, domain::ExternalCircuitDomain, model::ExternalCircuitModel, dt, forces; time = NaN)
@@ -432,6 +445,60 @@ function update_control_type_in_controller!(state, state0, policy::FunctionProto
 
 end
 
+"""
+Implementation of the InputCurrentProtocol.
+
+The prescribed current is evaluated by calling the Jutul linear interpolator
+(`policy.current_function`) at the current simulation time.
+If the resulting voltage response would violate the voltage limits, constant-voltage
+control is applied at the respective limit instead, preventing voltage spikes.
+"""
+function update_control_type_in_controller!(state, state0, policy::InputCurrentProtocol, dt)
+
+	# Relative tolerance for voltage hysteresis: if the voltage is within this fraction
+	# of the limit, we remain in CV mode to avoid oscillating between CC and CV control
+	# during Newton iterations at the transition boundary.
+	const_voltage_hysteresis_tol = 1.0e-4
+
+	controller = state.Controller
+
+	controller.time = state0.Controller.time + dt
+
+	E = only(value(state[:ElectricPotential]))
+	t = controller.time
+
+	I_target = policy.current_function(t)
+
+	# Determine which voltage limit is relevant based on the sign of the prescribed current,
+	# then check whether the voltage has crossed that limit.
+	if I_target > 0
+		# Discharging: enforce lower voltage limit
+		target_is_voltage = (E <= policy.lower_voltage_limit)
+	elseif I_target < 0
+		# Charging: enforce upper voltage limit
+		target_is_voltage = (E >= policy.upper_voltage_limit)
+	else
+		# Zero current (rest): no voltage limit applies
+		target_is_voltage = false
+	end
+
+	# Hysteresis: if we were already in voltage-control mode in the converged previous
+	# state, stay in voltage-control mode as long as the limit is still binding.
+	# This prevents oscillations at the CC/CV boundary within Newton iterations.
+	if state0.Controller.target_is_voltage && !target_is_voltage
+		# We were in CV mode; only switch back to CC if the prescribed current
+		# would not immediately violate the limit again.
+		if I_target > 0 && E <= policy.lower_voltage_limit * (1 + const_voltage_hysteresis_tol)
+			target_is_voltage = true
+		elseif I_target < 0 && E >= policy.upper_voltage_limit * (1 - const_voltage_hysteresis_tol)
+			target_is_voltage = true
+		end
+	end
+
+	return controller.target_is_voltage = target_is_voltage
+
+end
+
 function update_values_in_controller!(state, policy::FunctionProtocol)
 
 	controller = state.Controller
@@ -442,6 +509,29 @@ function update_values_in_controller!(state, policy::FunctionProtocol)
 
 	controller.target = I_p
 
+
+end
+
+function update_values_in_controller!(state, policy::InputCurrentProtocol)
+
+	controller = state.Controller
+	t = controller.time
+
+	I_target = policy.current_function(t)
+
+	return if controller.target_is_voltage
+		# In voltage-control mode: use the appropriate voltage limit
+		if I_target >= 0
+			# Discharging hit the lower limit
+			controller.target = policy.lower_voltage_limit
+		else
+			# Charging hit the upper limit
+			controller.target = policy.upper_voltage_limit
+		end
+	else
+		# In current-control mode: use the interpolated time-series current
+		controller.target = I_target
+	end
 
 end
 

@@ -36,6 +36,45 @@ end
 
 
 """
+Input current series protocol.
+
+Applies a prescribed current time series (times in seconds, currents in amperes).
+The `times` vector must be strictly increasing. A Jutul linear interpolator
+(`get_1d_interpolator`) is used to evaluate the current at any simulation time.
+Voltage limits are enforced: if the voltage response exceeds `upperCutoffVoltage` or
+falls below `lowerCutoffVoltage`, the controller switches to constant-voltage control
+at the respective limit. The lengths of `times` and `currents` must match.
+
+Voltage limits may be set to `±Inf` if they should not be enforced.
+"""
+mutable struct InputCurrentProtocol{R} <: AbstractPolicy
+	times::Vector{R}
+	current_function::Any      # get_1d_interpolator(times, currents) – callable as f(t)
+	lower_voltage_limit::R
+	upper_voltage_limit::R
+
+	function InputCurrentProtocol(
+		times::AbstractVector,
+		currents::AbstractVector,
+		lower_voltage_limit::Real,
+		upper_voltage_limit::Real,
+	)
+		@assert length(times) == length(currents) "times and currents must have the same length"
+		@assert length(times) >= 1 "times and currents must be non-empty"
+		@assert issorted(times, lt = <) "times must be strictly increasing"
+		T = promote_type(eltype(times), eltype(currents), typeof(lower_voltage_limit), typeof(upper_voltage_limit))
+		current_function = get_1d_interpolator(times, currents, cap_endpoints = true)
+		return new{T}(convert(Vector{T}, times), current_function, T(lower_voltage_limit), T(upper_voltage_limit))
+	end
+end
+
+
+function get_initial_current(policy::InputCurrentProtocol)
+	# Return the current at the first time point using the interpolator
+	return policy.current_function(policy.times[1])
+end
+
+"""
 GenericProtocol
 """
 struct GenericProtocol{V, R} <: AbstractProtocol where V <: Vector{Int}

@@ -10,7 +10,7 @@
     "NegativeElectrodeCurrentCollectorGridPoints": 3,
     "NegativeElectrodeCurrentCollectorTabWidthGridPoints": 2,
     "SeparatorGridPoints": 3,
-    "TimeStepDuration": 50,
-    "RampUpTime": 10,
+    "TimeStepDuration": 50.0,
+    "RampUpTime": 10.0,
     "RampUpSteps": 5
 }
