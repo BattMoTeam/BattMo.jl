@@ -267,7 +267,7 @@ function solve(
 		single_step_sparsity = false,
 		do_prep = true,
 	),
-	kwarg...,
+	kwargs...,
 )
 	sim = deepcopy(vc.sim)
 	x0, x_setup = vectorize_cell_parameters_for_calibration(vc, sim)

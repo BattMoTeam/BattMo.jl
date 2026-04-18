@@ -112,47 +112,47 @@ print_info(vc05)
 solve(vc05;);
 cell_parameters_calibrated = vc05.calibrated_cell_parameters;
 print_info(vc05)
-# # ## Compare the results of the calibration against the experimental data
-# # We can now compare the results of the calibrated model against the
-# # experimental data for the 0.5C discharge curve.
-# sim_opt = Simulation(model, cell_parameters_calibrated, cycling_protocol)
-# output_opt = solve(sim_opt);
-# t_opt = output_opt.time_series["Time"]
-# V_opt = output_opt.time_series["Voltage"]
+# ## Compare the results of the calibration against the experimental data
+# We can now compare the results of the calibrated model against the
+# experimental data for the 0.5C discharge curve.
+sim_opt = Simulation(model, cell_parameters_calibrated, cycling_protocol)
+output_opt = solve(sim_opt);
+t_opt = output_opt.time_series["Time"]
+V_opt = output_opt.time_series["Voltage"]
 
-# fig = Figure()
-# ax = Axis(fig[1, 1], title = "CRate = 0.5")
-# lines!(ax, t0, V0, label = "BattMo initial")
-# lines!(ax, t_exp_05, V_exp_05, label = "Experimental data")
-# lines!(ax, t_opt, V_opt, label = "BattMo calibrated", linestyle = :dash)
-# axislegend(position = :lb)
-# fig
-# # ## Set up the second calibration
-# # The second calibration is performed against the 2.0C discharge curve. In the
-# # same manner as for the first discharge curve, we set up a set of parameters to
-# # calibrate against experimental data. The parameters are:
-# #
-# # - The reaction rate constant of both electrodes
-# # - The diffusion coefficient of both electrodes
-# #
-# # The calibration this time around starts from the parameters calibrated in the
-# # first step, so we use the `cell_parameters_calibrated` from the first `solve`
-# # call when defining the new object:
-# t_exp_2, V_exp_2 = get_tV(df_2)
+fig = Figure()
+ax = Axis(fig[1, 1], title = "CRate = 0.5")
+lines!(ax, t0, V0, label = "BattMo initial")
+lines!(ax, t_exp_05, V_exp_05, label = "Experimental data")
+lines!(ax, t_opt, V_opt, label = "BattMo calibrated", linestyle = :dash)
+axislegend(position = :lb)
+fig
+# ## Set up the second calibration
+# The second calibration is performed against the 2.0C discharge curve. In the
+# same manner as for the first discharge curve, we set up a set of parameters to
+# calibrate against experimental data. The parameters are:
+#
+# - The reaction rate constant of both electrodes
+# - The diffusion coefficient of both electrodes
+#
+# The calibration this time around starts from the parameters calibrated in the
+# first step, so we use the `cell_parameters_calibrated` from the first `solve`
+# call when defining the new object:
+t_exp_2, V_exp_2 = get_tV(df_2)
 
-# cycling_protocol2 = deepcopy(cycling_protocol)
-# cycling_protocol2["DRate"] = 2.0
-# sim2 = Simulation(model, cell_parameters_calibrated, cycling_protocol2)
-# output2 = solve(sim2);
-# t2 = output2.time_series["Time"]
-# V2 = output2.time_series["Voltage"]
+cycling_protocol2 = deepcopy(cycling_protocol)
+cycling_protocol2["DRate"] = 2.0
+sim2 = Simulation(model, cell_parameters_calibrated, cycling_protocol2)
+output2 = solve(sim2);
+t2 = output2.time_series["Time"]
+V2 = output2.time_series["Voltage"]
 
-# sim2_0 = Simulation(model, cell_parameters, cycling_protocol2)
-# output2_0 = solve(sim2_0);
-# t2_0 = output2_0.time_series["Time"]
-# V2_0 = output2_0.time_series["Voltage"]
+sim2_0 = Simulation(model, cell_parameters, cycling_protocol2)
+output2_0 = solve(sim2_0);
+t2_0 = output2_0.time_series["Time"]
+V2_0 = output2_0.time_series["Voltage"]
 
-# vc2 = VoltageCalibration(t_exp_2, V_exp_2, sim2)
+vc2 = VoltageCalibration(t_exp_2, V_exp_2, sim2)
 
 free_calibration_parameter!(
 	vc2,
@@ -177,40 +177,40 @@ free_calibration_parameter!(
 )
 print_info(vc2)
 
-# # ### Solve the second calibration problem
-# cell_parameters_calibrated2, = solve(vc2);
-# print_info(vc2)
-# # ## Compare the results of the second calibration against the experimental data
-# # We can now compare the results of the calibrated model against the
-# # experimental data for the 2.0C discharge curve. We compare three simulations against the experimental data:
-# # 1. The initial simulation with the original parameters.
-# # 2. The simulation with the parameters calibrated against the 0.5C discharge curve.
-# # 3. The simulation with the parameters calibrated against the 0.5C and 2.0C discharge curves.
-# sim_c2 = Simulation(model, cell_parameters_calibrated2, cycling_protocol2)
-# output2_c = solve(sim_c2, accept_invalid = false);
+# ### Solve the second calibration problem
+cell_parameters_calibrated2, = solve(vc2);
+print_info(vc2)
+# ## Compare the results of the second calibration against the experimental data
+# We can now compare the results of the calibrated model against the
+# experimental data for the 2.0C discharge curve. We compare three simulations against the experimental data:
+# 1. The initial simulation with the original parameters.
+# 2. The simulation with the parameters calibrated against the 0.5C discharge curve.
+# 3. The simulation with the parameters calibrated against the 0.5C and 2.0C discharge curves.
+sim_c2 = Simulation(model, cell_parameters_calibrated2, cycling_protocol2)
+output2_c = solve(sim_c2, accept_invalid = false);
 
-# t2_c = output2_c.time_series["Time"]
-# V2_c = output2_c.time_series["Voltage"]
+t2_c = output2_c.time_series["Time"]
+V2_c = output2_c.time_series["Voltage"]
 
-# fig = Figure()
-# ax = Axis(fig[1, 1], title = "CRate = 2.0")
-# lines!(ax, t2_0, V2_0, label = "BattMo.jl")
-# lines!(ax, t2, V2, label = "BattMo.jl (after CRate=0.5 calibration)")
+fig = Figure()
+ax = Axis(fig[1, 1], title = "CRate = 2.0")
+lines!(ax, t2_0, V2_0, label = "BattMo.jl")
+lines!(ax, t2, V2, label = "BattMo.jl (after CRate=0.5 calibration)")
 
-# lines!(ax, t_exp_2, V_exp_2, label = "Experimental data")
-# lines!(ax, t2_c, V2_c, label = "BattMo.jl (after CRate=0.5 + Crate=2.0 calibration)", linestyle = :dash)
-# axislegend(position = :lb)
-# fig
-# # ## Compare the results of the calibrated model against the experimental data
-# # We can now compare the results of the calibrated model against the
-# # experimental data for the 0.5C, 1.0C, and 2.0C discharge curves.
+lines!(ax, t_exp_2, V_exp_2, label = "Experimental data")
+lines!(ax, t2_c, V2_c, label = "BattMo.jl (after CRate=0.5 + Crate=2.0 calibration)", linestyle = :dash)
+axislegend(position = :lb)
+fig
+# ## Compare the results of the calibrated model against the experimental data
+# We can now compare the results of the calibrated model against the
+# experimental data for the 0.5C, 1.0C, and 2.0C discharge curves.
 
-# # Note that we did not calibrate the model for the 1.0C discharge curve, but we
-# # still obtain a good fit.
+# Note that we did not calibrate the model for the 1.0C discharge curve, but we
+# still obtain a good fit.
 
-# CRates = [0.5, 1.0, 2.0]
-# outputs_base = []
-# outputs_calibrated = []
+CRates = [0.5, 1.0, 2.0]
+outputs_base = []
+outputs_calibrated = []
 
 for CRate in CRates
 	cycling_protocol["DRate"] = CRate

@@ -94,14 +94,43 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 
 	if protocol == "CC"
 
-		policy = ConstantCurrent(cycling_protocol.all)
-		protocol = GenericProtocol(policy, input; T = T)
+		initial_control = cycling_protocol["InitialControl"]
+
+		number_of_cycles = cycling_protocol["TotalNumberOfCycles"]
+
+		DRate = get(cycling_protocol, "DRate", 0.0)
+		CRate = get(cycling_protocol, "CRate", 0.0)
+
+		# Capacity goes into actual realized rates, so check the type for AD/promotion
+		cap = min(computeElectrodeCapacity(model_neam, :NegativeElectrodeActiveMaterial), computeElectrodeCapacity(model_peam, :PositiveElectrodeActiveMaterial))
+		T_i = promote_type(typeof(DRate), typeof(CRate), typeof(cap), T)
+
+		protocol = CCPolicy(
+			number_of_cycles,
+			initial_control,
+			cycling_protocol["LowerVoltageLimit"],
+			cycling_protocol["UpperVoltageLimit"],
+			use_ramp_up,
+			T = T_i,
+		)
+
+		# policy = ConstantCurrent(cycling_protocol.all)
+		# protocol = GenericProtocol(policy, input; T = T)
 
 
 	elseif protocol == "CCCV"
 
-		policy = ConstantCurrentConstantVoltage(cycling_protocol.all)
-		protocol = GenericProtocol(policy, input; T = T)
+		protocol = CyclingCVPolicy(
+			cycling_protocol["LowerVoltageLimit"],
+			cycling_protocol["UpperVoltageLimit"],
+			cycling_protocol["CurrentChangeLimit"],
+			cycling_protocol["VoltageChangeLimit"],
+			cycling_protocol["InitialControl"],
+			cycling_protocol["TotalNumberOfCycles"];
+			use_ramp_up = use_ramp_up,
+		)
+		# policy = ConstantCurrentConstantVoltage(cycling_protocol.all)
+		# protocol = GenericProtocol(policy, input; T = T)
 
 	elseif protocol == "Function"
 
@@ -124,7 +153,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 		lower_v = cycling_protocol["LowerVoltageLimit"]
 		upper_v = cycling_protocol["UpperVoltageLimit"]
 
-		policy = InputCurrentPolicy(times, currents, lower_v, upper_v)
+		policy = InputCurrentProtocol(times, currents, lower_v, upper_v)
 
 	else
 
@@ -663,7 +692,56 @@ function set_parameters(
 
 	protocol = cycling_protocol["Protocol"]
 
-	if protocol == "Function"
+	if protocol == "CC"
+		if cycling_protocol["TotalNumberOfCycles"] == 0
+			if cycling_protocol["InitialControl"] == "discharging"
+
+				cap = computeCellCapacity(multimodel)
+				con = Constants()
+
+				DRate = cycling_protocol["DRate"]
+
+				prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
+
+
+				parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
+			else
+				cap = computeCellCapacity(multimodel)
+				con = Constants()
+
+				CRate = cycling_protocol["CRate"]
+
+				prm_control[:ImaxCharge] = (cap / con.hour) * CRate
+
+				parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
+			end
+
+		else
+
+			cap = computeCellCapacity(multimodel)
+			con = Constants()
+
+			DRate = cycling_protocol["DRate"]
+			CRate = cycling_protocol["CRate"]
+			prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
+			prm_control[:ImaxCharge] = (cap / con.hour) * CRate
+
+			parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
+		end
+
+	elseif protocol == "CCCV"
+
+		cap = computeCellCapacity(multimodel)
+		con = Constants()
+
+		DRate = cycling_protocol["DRate"]
+		CRate = cycling_protocol["CRate"]
+		prm_control[:ImaxDischarge] = (cap / con.hour) * DRate
+		prm_control[:ImaxCharge] = (cap / con.hour) * CRate
+
+		parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
+
+	elseif protocol == "Function"
 		cap = computeCellCapacity(multimodel)
 		con = Constants()
 		parameters[:Control] = setup_parameters(multimodel[:Control])
@@ -917,6 +995,9 @@ function setup_initial_state(input, model::IntercalationBattery)
 				controller = ctrl[:Controller]
 				for fd in fieldnames(typeof(controller))
 					value = getfield(controller, fd)
+					if !isa(value, String)
+						value = zero(value)
+					end
 					setfield!(controller, fd, zero(value))
 				end
 			end

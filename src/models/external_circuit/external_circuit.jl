@@ -26,7 +26,7 @@ Jutul.number_of_cells(::ExternalCircuitDomain) = 1
 
 
 #########################################################
-# Define the variables in the external circuit model 
+# Define the variables in the external circuit model 	
 
 struct Voltage <: ScalarVariable end
 struct Current <: ScalarVariable end
@@ -196,7 +196,70 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::ExternalCircu
 
 	protocol = model.system.protocol
 
-	if protocol isa FunctionProtocol
+	return if policy isa SimpleCVPolicy
+
+		time = 0.0
+		Imax = policy.Imax
+		if !ismissing(policy.current_function)
+			target = policy.current_function(time)
+		else
+			target = Imax
+		end
+		target_is_voltage = false
+		ctrlType = discharging
+		state[:Controller] = SimpleControllerCV(target, time, target_is_voltage, ctrlType)
+
+
+	elseif policy isa CCPolicy
+
+		time = 0.0
+
+		if policy.initialControl == "discharging"
+			ctrlType = "discharging"
+			Imax = policy.ImaxDischarge
+		elseif policy.initialControl == "charging"
+			ctrlType = "charging"
+			Imax = -policy.ImaxCharge
+
+		end
+
+		if !ismissing(policy.current_function)
+			I = policy.current_function(time)
+			if policy.initialControl == "discharging"
+				target = I
+			elseif policy.initialControl == "charging"
+				target = -I
+
+			end
+
+		else
+			target = Imax
+		end
+		target_is_voltage = false
+
+		number_of_cycles = 0
+		target, time = promote(target, time)
+		state[:Controller] = CCController(number_of_cycles, target, time, target_is_voltage, ctrlType)
+
+	elseif policy isa CyclingCVPolicy
+
+		state[:Controller] = CcCvController()
+
+		if policy.initialControl == discharging
+
+			state[:Controller].ctrlType = cc_discharge1
+
+		elseif policy.initialControl == charging
+
+			state[:Controller].ctrlType = cc_charge1
+
+		else
+			error("Initial control $(typeof(policy.initialControl)) not recognized")
+		end
+
+		update_values_in_controller!(state, policy)
+
+	elseif protocol isa FunctionProtocol
 
 		time = 0.0
 		target = 0.0
@@ -216,8 +279,9 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::ExternalCircu
 		voltage = 0.0
 		state[:Controller] = GenericController(protocol, step, step_count, step_index, cycle_count, time_in_step, current, voltage, protocol.initial_state_of_charge, T = T)
 
+	else
+		error("Protocol $(protocol) not recognized for controller initialization in ExternalCircuitModel.")
 	end
-
 end
 
 
@@ -419,7 +483,91 @@ function Jutul.update_after_step!(storage, domain::ExternalCircuitDomain, model:
 
 	ctrl = storage.state[:Controller]
 
-	copyController!(storage.state0[:Controller], ctrl)
+	policy = model.system.policy
+
+	return if policy isa CyclingCVPolicy
+
+		initctrl = policy.initialControl
+
+		ctrlType = ctrl.ctrlType
+
+		ctrlType0 = storage.state0[:Controller].ctrlType
+		ncycles = storage.state0[:Controller].numberOfCycles
+
+		copyController!(storage.state0[:Controller], ctrl)
+
+		if initctrl == charging
+
+			if (ctrlType0 == cc_discharge1 || ctrlType0 == cc_discharge2) && (ctrlType == cc_charge1 || ctrlType == cv_charge2)
+				ncycles = ncycles + 1
+			end
+
+		elseif initctrl == discharging
+
+			if (ctrlType0 == cc_charge1 || ctrlType0 == cv_charge2) && (ctrlType == cc_discharge1 || ctrlType == cc_discharge2)
+				ncycles = ncycles + 1
+			end
+
+		end
+
+		ctrl.numberOfCycles = ncycles
+
+	elseif policy isa SimpleCVPolicy
+
+		copyController!(storage.state0[:Controller], ctrl)
+
+	elseif policy isa FunctionProtocol
+
+		copyController!(storage.state0[:Controller], ctrl)
+
+	elseif policy isa CCPolicy
+
+		if policy.numberOfCycles == 0
+			copyController!(storage.state0[:Controller], ctrl)
+
+		else
+
+			initctrl = policy.initialControl
+
+			ctrlType = ctrl.ctrlType
+
+			ctrlType0 = storage.state0[:Controller].ctrlType
+			ncycles = storage.state0[:Controller].numberOfCycles
+
+			copyController!(storage.state0[:Controller], ctrl)
+
+			if initctrl == "charging"
+
+				if ctrlType0 == "discharging" && ctrlType == "charging"
+					ncycles = ncycles + 1
+				end
+
+			elseif initctrl == "discharging"
+
+				if ctrlType0 == "charging" && ctrlType == "discharging"
+					ncycles = ncycles + 1
+				end
+
+			end
+
+			ctrl.numberOfCycles = ncycles
+		end
+
+	elseif policy isa InputCurrentProtocol
+
+		copyController!(storage.state0[:Controller], ctrl)
+
+	elseif policy isa GenericProtocol
+
+		copyController!(storage.state0[:Controller], ctrl)
+
+
+	else
+		error("Policy $(policy) not recognized for update after step in ExternalCircuitModel.")
+
+	end
+
+
 
 end
 
@@ -570,35 +718,65 @@ function check_constraints(model, storage)
 
 	controller = state[:Controller]
 
-	arefulfilled = true
+	if policy isa GenericProtocol
+
+		arefulfilled = true
 
 
-	control_steps = policy.steps
+		control_steps = policy.steps
 
-	control_step = state[:Controller].step
-	control_step_previous = state0[:Controller].step
+		control_step = state[:Controller].step
+		control_step_previous = state0[:Controller].step
 
-	step_count_previous = state0[:Controller].step_count
-	step_count = state[:Controller].step_count
-	step_count_next = step_count + 1
+		step_count_previous = state0[:Controller].step_count
+		step_count = state[:Controller].step_count
+		step_count_next = step_count + 1
 
-	index = step_count + 1
+		index = step_count + 1
 
-	if index >= length(policy.steps)
-		index_next = 1
-		control_step_next = control_steps[index_next]
+		if index >= length(policy.steps)
+			index_next = 1
+			control_step_next = control_steps[index_next]
+		else
+			index_next = index + 1
+			control_step_next = control_steps[index_next]
+		end
+
+		rsw = get_status_on_termination_region(control_step.termination, state)
+		rswN = get_status_on_termination_region(control_step_next.termination, state)
+
+		if (step_count == step_count_previous && rsw.after_termination_region) || (step_count == step_count_next && !rswN.before_termination_region && index != length(control_steps))
+
+			arefulfilled = false
+
+		end
+
 	else
-		index_next = index + 1
-		control_step_next = control_steps[index_next]
-	end
+		ctrlType = state[:Controller].ctrlType
+		ctrlType0 = state0[:Controller].ctrlType
 
-	rsw = get_status_on_termination_region(control_step.termination, state)
-	rswN = get_status_on_termination_region(control_step_next.termination, state)
+		if policy isa CyclingCVPolicy
+			nextCtrlType = getNextCtrlTypecccv(ctrlType0)
+		elseif policy isa CCPolicy
+			if ctrlType == "discharging"
+				nextCtrlType = "charging"
+			else
+				nextCtrlType = "discharging"
+			end
+		else
+			error("Policy $(typeof(policy)) not recognized")
+		end
 
-	if (step_count == step_count_previous && rsw.after_termination_region) || (step_count == step_count_next && !rswN.before_termination_region && index != length(control_steps))
+		arefulfilled = true
 
-		arefulfilled = false
+		rsw = setupRegionSwitchFlags(policy, state, ctrlType)
+		rswN = setupRegionSwitchFlags(policy, state, nextCtrlType)
 
+		if (ctrlType == ctrlType0 && rsw.afterSwitchRegion) || (ctrlType == nextCtrlType && !rswN.beforeSwitchRegion)
+
+			arefulfilled = false
+
+		end
 	end
 
 	return arefulfilled

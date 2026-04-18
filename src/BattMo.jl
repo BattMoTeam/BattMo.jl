@@ -245,8 +245,10 @@ include("models/external_circuit/protocols.jl")
 include("models/external_circuit/controllers.jl")
 include("models/external_circuit/external_circuit.jl")
 
+include("models/external_circuit/old_control_policies.jl")
 
-include("models/battery_cross_terms.jl") # Works now
+
+include("models/battery_cross_terms.jl")
 include("models/battery_utils.jl")
 
 include("simulation/simulation.jl")
@@ -286,20 +288,20 @@ include("tools/print_info.jl")
 
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 @compile_workload begin
-    function workload_fn()
-        model_settings = load_model_settings(; from_default_set = "p2d")
-        cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
-        cycling_protocol = load_cycling_protocol(; from_default_set = "cccv")
-        simulation_settings = load_simulation_settings(; from_default_set = "p2d")
-        model_setup = LithiumIonBattery(; model_settings)
-        sim = Simulation(model_setup, cell_parameters, cycling_protocol)
-        output = solve(sim, info_level = -1)
-    end
-    try
-        redirect_stdout(workload_fn, devnull)
-    catch e
-        @warn "Precompilation failed with exception" e
-    end
+	function workload_fn()
+		model_settings = load_model_settings(; from_default_set = "p2d")
+		cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+		cycling_protocol = load_cycling_protocol(; from_default_set = "cccv")
+		simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+		model_setup = LithiumIonBattery(; model_settings)
+		sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+		output = solve(sim, info_level = -1)
+	end
+	try
+		redirect_stdout(workload_fn, devnull)
+	catch e
+		@warn "Precompilation failed with exception" e
+	end
 end
 
 end # module
