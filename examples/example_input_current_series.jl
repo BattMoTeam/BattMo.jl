@@ -20,10 +20,10 @@ I_discharge = 6.0
 I_charge = -5.0
 
 # Set time duration
-const HOUR = 3600.0
-T_discharge = 1 * HOUR
-T_rest = 0.5 * HOUR
-T_charge = 1 * HOUR
+con = Constants()
+T_discharge = 1 * con.hour
+T_rest = 0.5 * con.hour
+T_charge = 1 * con.hour
 
 # Set number of time steps
 n_discharge = 50
@@ -68,7 +68,7 @@ t_sim = ts["Time"]
 I_sim = ts["Current"]
 V_sim = ts["Voltage"]
 
-println("Total simulation time:  $(round(t_sim[end] / HOUR; digits = 2)) h")
+println("Total simulation time:  $(round(t_sim[end] / con.hour; digits = 2)) h")
 println("Number of time steps:   $(length(t_sim))")
 println("Min voltage:            $(round(minimum(V_sim); digits = 3)) V")
 println("Max voltage:            $(round(maximum(V_sim); digits = 3)) V")

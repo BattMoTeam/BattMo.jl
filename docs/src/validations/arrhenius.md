@@ -28,8 +28,8 @@ using Statistics
 ### Load model with Arrhenius temperature dependence
 
 ````@example arrhenius
-params = load_cell_parameters(; from_default_set = "chen_2020")
-protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 model_settings = load_model_settings(; from_default_set = "p2d")
 
 model_settings["TemperatureDependence"] = "Arrhenius"
@@ -43,30 +43,31 @@ T_ref = 298.15
 ### Activation energies from parameter set (assumed in J/mol)
 
 ````@example arrhenius
-Ea_ne_R = params["NegativeElectrode"]["ActiveMaterial"]["ActivationEnergyOfReaction"]
-Ea_ne_D = params["NegativeElectrode"]["ActiveMaterial"]["ActivationEnergyOfDiffusion"]
-Ea_pe_R = params["PositiveElectrode"]["ActiveMaterial"]["ActivationEnergyOfReaction"]
-Ea_pe_D = params["PositiveElectrode"]["ActiveMaterial"]["ActivationEnergyOfDiffusion"]
+Ea_ne_R = cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ActivationEnergyOfReaction"]
+Ea_ne_D = cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ActivationEnergyOfDiffusion"]
+Ea_pe_R = cell_parameters["PositiveElectrode"]["ActiveMaterial"]["ActivationEnergyOfReaction"]
+Ea_pe_D = cell_parameters["PositiveElectrode"]["ActiveMaterial"]["ActivationEnergyOfDiffusion"]
 ````
 
 ### Run simulations and extract values
 
 ````@example arrhenius
-T        = Float64[]     # K
+T = Float64[]     # K
 kvals_ne = Float64[]     # reaction rate (NE)
 Dvals_ne = Float64[]     # diffusion (NE)
 kvals_pe = Float64[]     # reaction rate (PE)
 Dvals_pe = Float64[]     # diffusion (PE)
 
 for TC in temps_C
-	p = deepcopy(protocol)
+	p = deepcopy(cycling_protocol)
 	p["InitialTemperature"] = TC + 273.15
-	out = solve(Simulation(model, params, p));
+	sim = Simulation(model, cell_parameters, p)
+	out = solve(sim; info_level = -1)
 
-	k_ne = out.states["NegativeElectrodeActiveMaterialReactionRateConstant"][1, :]
-	d_ne = out.states["NegativeElectrodeActiveMaterialDiffusionCoefficient"][1, :]
-	k_pe = out.states["PositiveElectrodeActiveMaterialReactionRateConstant"][1, :]
-	d_pe = out.states["PositiveElectrodeActiveMaterialDiffusionCoefficient"][1, :]
+	k_ne = out.states["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"][1, :]
+	d_ne = out.states["NegativeElectrode"]["ActiveMaterial"]["DiffusionCoefficient"][1, :]
+	k_pe = out.states["PositiveElectrode"]["ActiveMaterial"]["ReactionRateConstant"][1, :]
+	d_pe = out.states["PositiveElectrode"]["ActiveMaterial"]["DiffusionCoefficient"][1, :]
 
 	push!(kvals_ne, mean(filter(!isnan, collect(k_ne))))
 	push!(Dvals_ne, mean(filter(!isnan, collect(d_ne))))
@@ -80,14 +81,15 @@ end
 Also run once at the reference temperature to anchor the theoretical lines at ln(Y_ref)
 
 ````@example arrhenius
-p_ref = deepcopy(protocol)
+p_ref = deepcopy(cycling_protocol)
 p_ref["InitialTemperature"] = T_ref
-out_ref = solve(Simulation(model, params, p_ref));
+sim = Simulation(model, cell_parameters, p_ref)
+out_ref = solve(sim; info_level = -1);
 
-k_ne_ref = out_ref.states["NegativeElectrodeActiveMaterialReactionRateConstant"][1, :]
-d_ne_ref = out_ref.states["NegativeElectrodeActiveMaterialDiffusionCoefficient"][1, :]
-k_pe_ref = out_ref.states["PositiveElectrodeActiveMaterialReactionRateConstant"][1, :]
-d_pe_ref = out_ref.states["PositiveElectrodeActiveMaterialDiffusionCoefficient"][1, :]
+k_ne_ref = out_ref.states["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"][1, :]
+d_ne_ref = out_ref.states["NegativeElectrode"]["ActiveMaterial"]["DiffusionCoefficient"][1, :]
+k_pe_ref = out_ref.states["PositiveElectrode"]["ActiveMaterial"]["ReactionRateConstant"][1, :]
+d_pe_ref = out_ref.states["PositiveElectrode"]["ActiveMaterial"]["DiffusionCoefficient"][1, :]
 
 k_ne_ref_val = mean(filter(!isnan, collect(k_ne_ref)))
 d_ne_ref_val = mean(filter(!isnan, collect(d_ne_ref)))
@@ -102,7 +104,7 @@ function linfit(x, y)
 	x̄ = mean(x)
 	ȳ = mean(y)
 	b = sum((x .- x̄) .* (y .- ȳ)) / sum((x .- x̄) .^ 2)
-	a = ȳ - b*x̄
+	a = ȳ - b * x̄
 	return a, b
 end
 
@@ -138,84 +140,79 @@ ln_D_pe_ref = log(d_pe_ref_val)
 
 ````@example arrhenius
 fig1 = Figure(size = (1200, 900))
-````
 
-We plot against x_ref = (1/T - 1/T_ref)
-
-````@example arrhenius
 xs = range(minimum(x_ref), maximum(x_ref), length = 100)
-````
 
---- NE Reaction ---
 
-````@example arrhenius
-ax1 = Axis(fig1[1, 1],
+ax1 = Axis(
+	fig1[1, 1],
 	title = "Arrhenius Validation (with T_ref): NE reaction rate constant k",
-	xlabel = "1/T - 1/T_ref (1/K)", ylabel = "ln(k)")
+	xlabel = "1/T - 1/T_ref (1/K)", ylabel = "ln(k)",
+)
 scatter!(ax1, x_ref, log.(kvals_ne), color = :blue, label = "Simulation data")
-````
-
-Fitted line in shifted-x form: ln(k) ≈ a + b*x_ref
-
-````@example arrhenius
-lines!(ax1, xs, a_k_ne .+ b_k_ne .* xs, color = :blue,
-	label = "Fit slope = $(round(slope_fit_k_ne, digits=4))")
-````
-
-Theory line passing through ln(k_ref) at x=0 with slope -Ea/R
-
-````@example arrhenius
-lines!(ax1, xs, ln_k_ne_ref .+ slope_theory_k_ne .* xs,
+lines!(
+	ax1, xs, a_k_ne .+ b_k_ne .* xs, color = :blue,
+	label = "Fit slope = $(round(slope_fit_k_ne, digits = 4))",
+)
+lines!(
+	ax1, xs, ln_k_ne_ref .+ slope_theory_k_ne .* xs,
 	color = :black, linestyle = :dash,
-	label = "Theory slope = $(round(slope_theory_k_ne, digits=4))")
+	label = "Theory slope = $(round(slope_theory_k_ne, digits = 4))",
+)
 axislegend(ax1, position = :rb)
-````
 
---- PE Reaction ---
-
-````@example arrhenius
-ax2 = Axis(fig1[1, 2],
+ax2 = Axis(
+	fig1[1, 2],
 	title = "Arrhenius Validation (with T_ref): PE reaction rate constant k",
-	xlabel = "1/T - 1/T_ref (1/K)", ylabel = "ln(k)")
+	xlabel = "1/T - 1/T_ref (1/K)", ylabel = "ln(k)",
+)
 scatter!(ax2, x_ref, log.(copy(kvals_pe)), color = :blue, label = "Simulation data")
-lines!(ax2, xs, a_k_pe .+ b_k_pe .* xs, color = :blue,
-	label = "Fit slope = $(round(slope_fit_k_pe, digits=4))")
-lines!(ax2, xs, ln_k_pe_ref .+ slope_theory_k_pe .* xs,
+lines!(
+	ax2, xs, a_k_pe .+ b_k_pe .* xs, color = :blue,
+	label = "Fit slope = $(round(slope_fit_k_pe, digits = 4))",
+)
+lines!(
+	ax2, xs, ln_k_pe_ref .+ slope_theory_k_pe .* xs,
 	color = :black, linestyle = :dash,
-	label = "Theory slope = $(round(slope_theory_k_pe, digits=4))")
+	label = "Theory slope = $(round(slope_theory_k_pe, digits = 4))",
+)
 axislegend(ax2, position = :rb)
-````
 
---- NE Diffusion ---
-
-````@example arrhenius
-ax3 = Axis(fig1[2, 1],
+ax3 = Axis(
+	fig1[2, 1],
 	title = "Arrhenius Validation (with T_ref): NE diffusion coefficient D",
-	xlabel = "1/T - 1/T_ref (1/K)", ylabel = "ln(D)")
+	xlabel = "1/T - 1/T_ref (1/K)", ylabel = "ln(D)",
+)
 scatter!(ax3, x_ref, log.(Dvals_ne), color = :red, label = "Simulation data")
-lines!(ax3, xs, a_D_ne .+ b_D_ne .* xs, color = :red,
-	label = "Fit slope = $(round(slope_fit_D_ne, digits=4))")
-lines!(ax3, xs, ln_D_ne_ref .+ slope_theory_D_ne .* xs,
+lines!(
+	ax3, xs, a_D_ne .+ b_D_ne .* xs, color = :red,
+	label = "Fit slope = $(round(slope_fit_D_ne, digits = 4))",
+)
+lines!(
+	ax3, xs, ln_D_ne_ref .+ slope_theory_D_ne .* xs,
 	color = :black, linestyle = :dash,
-	label = "Theory slope = $(round(slope_theory_D_ne, digits=4))")
+	label = "Theory slope = $(round(slope_theory_D_ne, digits = 4))",
+)
 axislegend(ax3, position = :rb)
-````
 
---- PE Diffusion ---
-
-````@example arrhenius
-ax4 = Axis(fig1[2, 2],
+ax4 = Axis(
+	fig1[2, 2],
 	title = "Arrhenius Validation (with T_ref): PE diffusion coefficient D",
-	xlabel = "1/T - 1/T_ref (1/K)", ylabel = "ln(D)")
+	xlabel = "1/T - 1/T_ref (1/K)", ylabel = "ln(D)",
+)
 scatter!(ax4, x_ref, log.(Dvals_pe), color = :red, label = "Simulation data")
-lines!(ax4, xs, a_D_pe .+ b_D_pe .* xs, color = :red,
-	label = "Fit slope = $(round(slope_fit_D_pe, digits=4))")
-lines!(ax4, xs, ln_D_pe_ref .+ slope_theory_D_pe .* xs,
+lines!(
+	ax4, xs, a_D_pe .+ b_D_pe .* xs, color = :red,
+	label = "Fit slope = $(round(slope_fit_D_pe, digits = 4))",
+)
+lines!(
+	ax4, xs, ln_D_pe_ref .+ slope_theory_D_pe .* xs,
 	color = :black, linestyle = :dash,
-	label = "Theory slope = $(round(slope_theory_D_pe, digits=4))")
+	label = "Theory slope = $(round(slope_theory_D_pe, digits = 4))",
+)
 axislegend(ax4, position = :rb)
 
-display(fig1)
+fig1 # hide
 ````
 
 From te results, we can see that the log(k) and log(D) values from the simulations have a linear relationship with (1/T - 1/T_ref) and that the fitted lines closely follow the theoretical lines, which are anchored at the reference temperature point.

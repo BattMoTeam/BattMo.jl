@@ -160,7 +160,7 @@
           "SEIstoichiometricCoefficient": 2.0,
           "SEIinterstitialConcentration": 0.015,
           "SEIlengthInitial": 1E-8,
-          "SEIvoltageDropRef": 0.0024,
+          "SEIVoltageDropRef": 0.0024,
           "SEIlengthRef": 1E-8,
           "density": 2240
         },
