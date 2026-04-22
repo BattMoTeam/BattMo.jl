@@ -53,8 +53,15 @@ function run_sei_simulation(model, cell_parameters, cycling_protocol, experiment
 	protocol["InitialTemperature"] = 298.15
 	protocol["InitialStateOfCharge"] = 0.99
 
-	sim = Simulation(model, cell_parameters, protocol)
-	output = solve(sim; accept_invalid = true, info_level = -1, error_on_incomplete = true)
+	simulation_settings = load_simulation_settings(; from_default_set = "p4d")
+	simulation_settings["TimeStepDuration"] = 5
+	# simulation_settings["NegativeElectrodeCoatingGridPoints"] = 30
+	# simulation_settings["NegativeElectrodeParticleGridPoints"] = 30
+
+	sim = Simulation(model, cell_parameters, protocol; simulation_settings = simulation_settings)
+	output = solve(sim; accept_invalid = true, info_level = 0, error_on_incomplete = false)
+
+	plot_dashboard(output)
 
 	time = output.time_series["Time"]
 	cycle_count = output.time_series["CycleCount"]
@@ -67,10 +74,10 @@ end
 
 # ### Load model with Arrhenius temperature dependence
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
-fn = joinpath(battmo_base, "examples/Experimental/jsoninputs/bolay_cell_parameters_calibrated.json")
+fn = joinpath(battmo_base, "examples/Experimental/jsoninputs/bolay_cell_parameters.json")
 cell_parameters = load_cell_parameters(; from_file_path = fn)
 cycling_protocol = load_cycling_protocol(; from_default_set = "experiment")
-model_settings = load_model_settings(; from_default_set = "p2d")
+model_settings = load_model_settings(; from_default_set = "p4d_")
 
 model_settings["SEIModel"] = "Bolay"
 
@@ -83,17 +90,18 @@ cell_parameters["Electrolyte"]["TransferenceNumber"] = 0.4083333333333333
 baseline_experiment = [
 	"Discharge at 1.0 A for 35 min",
 	"Charge at 1.5 A until 4.1 V",
-	"Hold at 4.1 V until 0.001 A/s",
+	"Rest for 10 s",
+	"Hold at 4.1 V for 65 min",
 	"Increase cycle count",
-	"Repeat 24 times",
+	"Repeat 50 times",
 ]
 
 high_rate_experiment = [
 	"Discharge at 2.0 A for 35 min",
 	"Charge at 3.0 A until 4.1 V",
-	"Hold at 4.1 V until 0.001 A/s",
+	"Hold at 4.1 V for 65 min",
 	"Increase cycle count",
-	"Repeat 24 times",
+	"Repeat 50 times",
 ]
 
 baseline = run_sei_simulation(model, cell_parameters, cycling_protocol, baseline_experiment)

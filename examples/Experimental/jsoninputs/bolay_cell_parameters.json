@@ -1,140 +1,140 @@
 {
-    "Metadata": {
-        "Title": "Bolay2022",
-        "Source": "https://doi.org/10.1016/j.powera.2022.100083",
-        "Description": "Model parameter set extracted from Bolay et al. (2022) Supporting Information.",
-        "Models": {
-            "ModelFramework": [
-                "P2D",
-                "P4D Pouch"
-            ],
-            "TransportInSolid": "FullDiffusion",
-            "CurrentCollectors": "Generic",
-            "RampUp": "Sinusoidal"
-        }
-    },
-    "Cell": {
-        "Name": "",
-        "Case": "Pouch",
-        "NominalVoltage": 4.1,
-        "NominalCapacity": 3,
-        "ElectrodeWidth": 80e-3,
-        "ElectrodeLength": 145e-3,
-        "ElectrodeGeometricSurfaceArea": 0.139,
-        "EnergyDensity": 340,
-        "SpecificEnergy": 158
-    },
     "Electrolyte": {
+        "TransferenceNumber": 0.4083333333333333,
         "Description": "1.5 mol/l LiPF6 in EC:DMC (1:1)",
-        "TransferenceNumber": "0.4 + 0.2*(c/1000) - 0.125*(c/1000)^2",
         "DiffusionCoefficient": "2.84e-10 * exp(-0.45 * (c/1000))",
-        "IonicConductivity": "(3.4*c - 4.7*(c/1000)^(3/2) + 2*(c/1000)^2) / (1 + 0.2*(c/1000)^4)",
+        "IonicConductivity": "(3.4*(c/1000) - 4.7*(c/1000)^(3/2) + 2*(c/1000)^2) / (1 + 0.2*(c/1000)^4)",
         "Density": 1210,
         "ChargeNumber": 1,
         "Concentration": 1500
     },
+    "Cell": {
+        "ElectrodeGeometricSurfaceArea": 0.139,
+        "NominalCapacity": 3,
+        "SpecificEnergy": 158,
+        "ElectrodeWidth": 0.08,
+        "ElectrodeLength": 0.145,
+        "EnergyDensity": 340,
+        "Name": "",
+        "Case": "Pouch",
+        "NominalVoltage": 4.1
+    },
+    "Metadata": {
+        "Description": "Model parameter set extracted from Bolay et al. (2022) Supporting Information.",
+        "Source": "https://doi.org/10.1016/j.powera.2022.100083",
+        "Models": {
+            "CurrentCollectors": "Generic",
+            "RampUp": "Sinusoidal",
+            "TransportInSolid": "FullDiffusion",
+            "ModelFramework": [
+                "P2D",
+                "P4D Pouch"
+            ]
+        },
+        "Title": "Bolay2022"
+    },
     "PositiveElectrode": {
         "ActiveMaterial": {
-            "Description": "LixMn2O4",
             "NumberOfElectronsTransfered": 1,
             "StoichiometricCoefficientAtSOC0": 0.999,
-            "StoichiometricCoefficientAtSOC100": 0.14778,
-            "ReactionRateConstant": 4.48e-7,
+            "OpenCircuitPotential": "289.99 - 336.28 * (c/cmax) - 164.73 * tanh(((c/cmax) + 0.5302) * 6.824)- 0.0768 * tanh(((c/cmax) - 0.442) * 7.617)- 0.171 * tanh(((c/cmax) - 0.9051) * 13.16)- 0.3126 * tanh(((c/cmax) - 0.9908) * 96.14)+ 3896.375 * tanh(((c/cmax) - 0.36182) * 0.08632)",
+            "ReactionRateConstant": 4.64e-12,
             "MassFraction": 0.735259870858,
-            "MaximumConcentration": 31600,
-            "VolumetricSurfaceArea": 2.14e5,
+            "StoichiometricCoefficientAtSOC100": 0.14778,
+            "MaximumConcentration": 26000,
+            "VolumetricSurfaceArea": 214000.0,
+            "Description": "LixMn2O4",
             "DiffusionCoefficient": 1.13e-13,
             "ParticleRadius": 1.15e-6,
             "Density": 4436,
             "ElectronicConductivity": 0.01,
-            "ChargeTransferCoefficient": 0.5,
-            "OpenCircuitPotential": "289.99 - 336.28 * (c/cmax) - 164.73 * tanh(((c/cmax) + 0.5302) * 6.824)- 0.0768 * tanh(((c/cmax) - 0.442) * 7.617)- 0.171 * tanh(((c/cmax) - 0.9051) * 13.16)- 0.3126 * tanh(((c/cmax) - 0.9908) * 96.14)+ 3896.375 * tanh(((c/cmax) - 0.36182) * 0.08632)"
-        },
-        "Coating": {
-            "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 2387.095,
-            "Thickness": 58e-6
-        },
-        "ConductiveAdditive": {
-            "Description": "Unknown",
-            "Density": 1950,
-            "MassFraction": 0.17201227903,
-            "ElectronicConductivity": 100.0
+            "ChargeTransferCoefficient": 0.5
         },
         "Binder": {
             "Description": "Unknown",
-            "Density": 1800,
             "MassFraction": 0.092727850111,
+            "Density": 1800,
             "ElectronicConductivity": 100.0
+        },
+        "Coating": {
+            "BruggemanCoefficient": 1.5,
+            "EffectiveDensity": 3000.0,
+            "Thickness": 7.45e-5
         },
         "CurrentCollector": {
             "Description": "Aluminum",
-            "Thickness": 16e-6,
+            "TabLength": 0.01,
             "Density": 2700,
             "ElectronicConductivity": 3.83e7,
-            "TabWidth": 15e-3,
-            "TabLength": 10e-3
+            "Thickness": 1.6e-5,
+            "TabWidth": 0.015
+        },
+        "ConductiveAdditive": {
+            "Description": "Unknown",
+            "MassFraction": 0.17201227903,
+            "Density": 1950,
+            "ElectronicConductivity": 100.0
         }
     },
     "Separator": {
         "Density": 779,
         "BruggemanCoefficient": 1.5,
-        "Thickness": 30e-6,
+        "Thickness": 3.0e-5,
         "Porosity": 0.5
     },
     "NegativeElectrode": {
+        "Interphase": {
+            "Description": "EC-based SEI, from Bolay2022.",
+            "ElectronicDiffusionCoefficient": 1.6e-12,
+            "InterstitialConcentration": 0.015,
+            "InitialThickness": 1.0e-8,
+            "IonicConductivity": 1.0e-5,
+            "StoichiometricCoefficient": 2,
+            "InitialPotentialDrop": 0.5,
+            "MolarVolume": 9.586e-5
+        },
         "ActiveMaterial": {
-            "Description": "Graphite",
-            "NumberOfElectronsTransfered": 1,
-            "StoichiometricCoefficientAtSOC0": 0.0279,
-            "StoichiometricCoefficientAtSOC100": 0.9014,
-            "ReactionRateConstant": 59.2e-7,
-            "ActivationEnergyOfReaction": 0.0,
             "ActivationEnergyOfDiffusion": 0.0,
+            "NumberOfElectronsTransfered": 1,
+            "StoichiometricCoefficientAtSOC0": 0.03478684821313804,
+            "OpenCircuitPotential": "254.5443 - 0.02525 * (c/cmax)- 254.273365 * tanh(((c/cmax) + 0.0097) * 319.5)- 0.3086345 * tanh(((c/cmax) - 0.0199) * 47.0)- 0.025 * tanh(((c/cmax) - 0.1414) * 27.52)- 0.015 * tanh(((c/cmax) - 0.2275) * 18.36)- 0.1978 * tanh(((c/cmax) - 1.0444) * 14.43)- 0.0155 * tanh(((c/cmax) - 0.56616) * 12.625)",
+            "ReactionRateConstant": 6.14e-11,
             "MassFraction": 0.847639912368,
-            "MaximumConcentration": 3375,
-            "VolumetricSurfaceArea": 250000,
-            "DiffusionCoefficient": 10e-13,
-            "ParticleRadius": 14.75e-6,
+            "StoichiometricCoefficientAtSOC100": 0.8945131517868585,
+            "ActivationEnergyOfReaction": 0.0,
+            "MaximumConcentration": 31610,
+            "VolumetricSurfaceArea": 303000,
+            "Description": "Graphite",
+            "DiffusionCoefficient": 1.0e-12,
+            "ParticleRadius": 1.475e-5,
             "Density": 2660,
             "ElectronicConductivity": 215.0,
-            "ChargeTransferCoefficient": 0.5,
-            "OpenCircuitPotential": "254.5443 - 0.02525 * (c/cmax)- 254.273365 * tanh(((c/cmax) + 0.0097) * 319.5)- 0.3086345 * tanh(((c/cmax) - 0.0199) * 47.0)- 0.025 * tanh(((c/cmax) - 0.1414) * 27.52)- 0.015 * tanh(((c/cmax) - 0.2275) * 18.36)- 0.1978 * tanh(((c/cmax) - 1.0444) * 14.43)- 0.0155 * tanh(((c/cmax) - 0.56616) * 12.625)"
-        },
-        "Coating": {
-            "BruggemanCoefficient": 1.5,
-            "EffectiveDensity": 1303.017,
-            "Thickness": 50e-6
-        },
-        "ConductiveAdditive": {
-            "Description": "Unknown",
-            "Density": 1950,
-            "MassFraction": 0.1165106552,
-            "ElectronicConductivity": 100.0
+            "ChargeTransferCoefficient": 0.5
         },
         "Binder": {
             "Description": "Unknown",
-            "Density": 1800,
             "MassFraction": 0.03584943238,
+            "Density": 1800,
             "ElectronicConductivity": 100.0
         },
-        "Interphase": {
-            "Description": "EC-based SEI, from Bolay2022.",
-            "MolarVolume": 95.86e-6,
-            "IonicConductivity": 1e-5,
-            "ElectronicDiffusionCoefficient": 1.6e-12,
-            "StoichiometricCoefficient": 2,
-            "InterstitialConcentration": 1.5e-2,
-            "InitialThickness": 10e-9,
-            "InitialPotentialDrop": 0.5
+        "Coating": {
+            "BruggemanCoefficient": 1.5,
+            "EffectiveDensity": 1933.035888570132,
+            "Thickness": 4.55e-5
         },
         "CurrentCollector": {
             "Description": "Copper",
-            "Thickness": 9e-6,
+            "TabLength": 0.01,
             "Density": 8900,
             "ElectronicConductivity": 6.33e7,
-            "TabWidth": 15e-3,
-            "TabLength": 10e-3
+            "Thickness": 9.0e-6,
+            "TabWidth": 0.015
+        },
+        "ConductiveAdditive": {
+            "Description": "Unknown",
+            "MassFraction": 0.1165106552,
+            "Density": 1950,
+            "ElectronicConductivity": 100.0
         }
     }
 }
