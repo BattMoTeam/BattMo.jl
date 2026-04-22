@@ -196,13 +196,12 @@ end
 
 # --- Helper functions ---
 
+function make_invokable(func::Function)
+    return (args...) -> Base.invokelatest(func, args...)
+end
+
 function make_invokable(func)
-    # if it's a Python function, wrap with pyconvert(Real, ...)
-    if func isa Py
-        return (args...) -> pyconvert(Real, func(args...))
-    else
-        return (args...) -> Base.invokelatest(func, args...)
-    end
+    error("Unsupported callable type $(typeof(func)). Load the relevant extension or pass a Julia function. Only Python functions (via PythonCall) and Julia functions are currently supported.")
 end
 
 function setup_ocp_evaluation_expression_from_string(str)

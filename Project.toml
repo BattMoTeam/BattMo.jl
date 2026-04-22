@@ -39,6 +39,7 @@ WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 BattMoGLMakieExt = ["GLMakie"]
 BattMoMakieExt = ["Makie"]
 BattMoWGLMakieExt = ["WGLMakie"]
+BattMoPythonCallExt = ["PythonCall"]
 
 [compat]
 CSV = "0.10.15"
