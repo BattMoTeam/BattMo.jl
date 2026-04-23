@@ -12,6 +12,7 @@ close(file)
 t_matlab_full = data["time"][:, 1]
 t_matlab = t_matlab_full[1:(end-1)]
 E_matlab = data["E"][:, 1][1:(end-1)]
+I_matlab = data["I"][:, 1]
 sources_matlab = data["sourceTerms"]
 states_heat_matlab = data["states_heat"]
 heat_source_data_matlab = data["heatSourceData"]
@@ -43,7 +44,7 @@ sources_matlab_matrix = convert_matlab_cells_to_matrix(sources_matlab)
 t_source_ref = length(t_matlab_full) == size(sources_matlab_matrix, 1) ? t_matlab_full : t_matlab
 
 # Toggle use of MATLAB-retrieved sourced terms in the julia simulation.
-use_matlab_source_terms = false
+use_matlab_source_terms = true
 
 # Compute maximum temperature from matlab data
 T_max_matlab = Float64[]
@@ -116,6 +117,26 @@ inputparams["NegativeElectrode"]["CurrentCollector"]["thickness"] = 100e-6# in o
 
 output = run_simulation(inputparams; accept_invalid = true)
 
+
+model_settings      = output.simulation.model.settings
+cell_parameters     = output.simulation.cell_parameters
+cycling_protocol_   = output.simulation.cycling_protocol
+simulation_settings = output.simulation.settings
+
+
+cycling_protocol = CyclingProtocol(
+	Dict(
+		"Protocol" => "InputCurrentSeries",
+		"Times" => t_matlab,
+		"Currents" => I_matlab,
+		"LowerVoltageLimit" => cycling_protocol_["LowerVoltageLimit"],
+		"UpperVoltageLimit" => cycling_protocol_["UpperVoltageLimit"],
+		"InitialStateOfCharge" => cycling_protocol_["InitialStateOfCharge"],
+	),
+)
+model = LithiumIonBattery(; model_settings)
+sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings = simulation_settings)
+output = solve(sim)
 
 #########################################################
 # Plot grid geometry

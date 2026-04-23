@@ -75,8 +75,8 @@ input = (
 	simulation_settings = output.simulation.settings,
 )
 
-
-
+input.cell_parameters["ThermalModel"]["EffectiveVolumetricHeatCapacity"] = parameters[:ThermalModel][:EffectiveVolumetricHeatCapacity]
+input.cell_parameters["ThermalModel"]["EffectiveThermalConductivity"] = parameters[:ThermalModel][:EffectiveThermalConductivity]
 thermal_model, thermal_parameters = BattMo.setup_thermal_model(input, grids)
 
 forces = []
@@ -137,4 +137,4 @@ display(GLMakie.Screen(), f2)
 #########################################################
 # Plot source term contributions
 
-BattMo.plot_thermal_source_contributions(t, sources_julia; total_source = sources_julia_matrix)
+BattMo.plot_thermal_source_contributions(t, sources; total_source = total_sources)
