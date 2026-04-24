@@ -883,7 +883,7 @@ function setup_timesteps(
 
     else
 
-        error("Control policy $controlPolicy not recognized")
+        error("Protocol $protocol not recognized")
 
     end
 
