@@ -310,9 +310,9 @@ function solve_simulation_case(sim::Union{Simulation, NamedTuple}; solver_settin
         hook(
             simulator,
             model.multimodel,
-            initial_state,
+            state0,
             forces,
-            time_steps,
+            timesteps,
             cfg,
         )
     end
