@@ -46,6 +46,7 @@ A `Simulation` struct instance that includes:
 """
 struct Simulation <: AbstractSimulation
     is_valid::Bool
+    validate::Bool
     model::ModelConfigured
     cell_parameters::CellParameters
     cycling_protocol::CyclingProtocol
@@ -58,7 +59,6 @@ struct Simulation <: AbstractSimulation
     parameters::Any
     simulator::Any
 
-
     function Simulation(
             model::M,
             cell_parameters::CellParameters,
@@ -68,21 +68,26 @@ struct Simulation <: AbstractSimulation
             initial_state = nothing,
             output_all_secondary_variables::Bool = false,
             hook = nothing,
+            validate = true,
             kwargs...,
         ) where {M <: ModelConfigured}
 
         return if model.is_valid
 
-            # Here will come a validation function
             model_settings = model.settings
-            cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
-            cycling_protocol_is_valid = validate_parameter_set(cycling_protocol, model_settings)
-            simulation_settings_is_valid = validate_parameter_set(simulation_settings, model_settings)
 
-            if cell_parameters_is_valid && cycling_protocol_is_valid && simulation_settings_is_valid
-                is_valid = true
+            if validate
+                cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
+                cycling_protocol_is_valid = validate_parameter_set(cycling_protocol, model_settings)
+                simulation_settings_is_valid = validate_parameter_set(simulation_settings, model_settings)
+
+                if cell_parameters_is_valid && cycling_protocol_is_valid && simulation_settings_is_valid
+                    is_valid = true
+                else
+                    is_valid = false
+                end
             else
-                is_valid = false
+                is_valid = true
             end
 
             # Combine the parameter sets and settings
@@ -96,43 +101,26 @@ struct Simulation <: AbstractSimulation
                 output_all_secondary_variables = output_all_secondary_variables,
             )
 
-            try
-                # Run configuration with all warnings and errors silenced
-                sim_cfg = Logging.with_logger(Logging.NullLogger()) do
-                    simulation_configuration(model, input)
-                end
+            # Get configuration
+            sim_cfg = simulation_configuration(model, input)
 
-                model = sim_cfg.model
-                grids = sim_cfg.grids
-                couplings = sim_cfg.couplings
-                parameters = sim_cfg.parameters
-                initial_state = sim_cfg.initial_state
-                forces = sim_cfg.forces
-                simulator = sim_cfg.simulator
-                time_steps = sim_cfg.time_steps
+            model = sim_cfg.model
+            grids = sim_cfg.grids
+            couplings = sim_cfg.couplings
+            parameters = sim_cfg.parameters
+            initial_state = sim_cfg.initial_state
+            forces = sim_cfg.forces
+            simulator = sim_cfg.simulator
+            time_steps = sim_cfg.time_steps
 
-                return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator)
-            catch e
-                if is_valid == false
-                    error(
-                        """
-                        Oops! Your Simulation object cannot be configured because some of you input is not valid. 🛑
-
-                        Check the warnings to see where things went wrong. 🔍
-
-                        """,
-                    )
-                else
-                    rethrow(e)
-                end
-            end
+            return new{}(is_valid, validate, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator)
 
         else
             error(
                 """
-                Oops! Your Model object is not valid. 🛑
+                Your Model object is not valid. 🛑
 
-                TIP: Validation happens when instantiating the Model object. 
+                TIP: Validation happens when instantiating the Model object.
                 Check the warnings to see exactly where things went wrong. 🔍
 
                 """,
@@ -192,7 +180,7 @@ end
 """
 	solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, end_report = info_level > -1, include_initial_state = false, kwargs...)
 
-Solves a battery `Simulation` problem by executing the simulation workflow defined in `solve_simulation`.
+Solves a battery `Simulation` problem by executing the simulation workflow defined in `solve_simulation_case`.
 
 # Arguments
 - `problem::Simulation`: A fully constructed `Simulation` object, containing all model parameters, solver settings, and initial conditions.
@@ -204,15 +192,15 @@ Solves a battery `Simulation` problem by executing the simulation workflow defin
   prepended to the output time series (`Time`, `Voltage`, `Current`, capacity, etc.).
   This eliminates the gap between the initial condition and the first solver output,
   improving plots and RMSE comparisons when restarting from a saved state.  Default is `false`.
-- `kwargs...`: Additional keyword arguments forwarded to `solve_simulation`.
+- `kwargs...`: Additional keyword arguments forwarded to `solve_simulation_case`.
 
 # Behavior
 - Validates the `Simulation` object unless `accept_invalid` is `true`.
 - Prepares simulation configuration options, including verbosity and report behavior.
-- Calls `solve_simulation`, passing in the simulation problem and configuration.
+- Calls `solve_simulation_case`, passing in the simulation problem and configuration.
 
 # Returns
-- The result of `solve_simulation`, typically containing simulation outputs such as state trajectories, solver diagnostics, and performance metrics.
+- The result of `solve_simulation_case`, typically containing simulation outputs such as state trajectories, solver diagnostics, and performance metrics.
 
 # Throws
 - An error if the `Simulation` object is invalid and `accept_invalid` is not set to `true`.
@@ -228,30 +216,27 @@ result = solve(sim; include_initial_state = true)
 """
 function solve(problem::Simulation; accept_invalid = false, solver_settings = get_default_solver_settings(problem.model), logger = nothing, include_initial_state = false, kwargs...)
 
-
-    # Note: Typically function_to_solve is run_battery
-    return if accept_invalid == true
-        output = solve_simulation(problem; solver_settings, logger, include_initial_state, kwargs...)
+    if accept_invalid
+        output = solve_simulation_case(problem; solver_settings, logger, include_initial_state, kwargs...)
+        return output
     else
         if problem.is_valid == true
-            output = solve_simulation(problem; solver_settings, logger, include_initial_state, kwargs...)
-
+            output = solve_simulation_case(problem; solver_settings, logger, include_initial_state, kwargs...)
             return output
         else
-
             error(
                 """
-                Oops! Your Simulation object is not valid. 🛑
+                Your Simulation object is not valid. 🛑
 
-                TIP: Validation happens when instantiating the Simulation object. 
+                TIP: Validation happens when instantiating the Simulation object.
                 Check the warnings to see exactly where things went wrong. 🔍
 
-                If you’re confident you know what you're doing, you can bypass the validation result 
-                by setting the flag "accept_invalid = true": 
+                If you’re confident you know what you're doing, you can bypass the validation result
+                by setting the flag "accept_invalid = true":
 
                 	solve(sim; accept_invalid = true)
 
-                But proceed with caution! 😎 
+                But proceed with caution! 😎
                 """,
             )
         end
@@ -261,7 +246,7 @@ end
 
 
 """
-	solve_simulation(sim::Simulation; hook = nothing, use_p2d = true, kwargs...)
+	solve_simulation_case(sim::Simulation; hook = nothing, use_p2d = true, kwargs...)
 
 Executes the simulation workflow for a battery `Simulation` object by advancing the system state over the defined time steps using the configured solver and model.
 
@@ -291,10 +276,10 @@ A named tuple with the following fields:
 
 # Example
 ```julia
-result = solve_simulation(sim)
+result = solve_simulation_case(sim)
 ```
 """
-function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, logger = nothing, include_initial_state = false, kwargs...)
+function solve_simulation_case(sim::Union{Simulation, NamedTuple}; solver_settings, logger = nothing, include_initial_state = false, kwargs...)
 
     simulator = sim.simulator
     model = sim.model
@@ -308,13 +293,13 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
     cell_parameters = sim.cell_parameters
     cycling_protocol = sim.cycling_protocol
 
-
     # setup solver configuration
     cfg = solver_configuration(
         simulator,
         model.multimodel,
         parameters;
         solver_settings,
+        validate = sim.validate,
         logger,
         kwargs...,
     )
@@ -331,7 +316,6 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
             cfg,
         )
     end
-
 
     # Perform simulation
     jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
@@ -354,8 +338,7 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
         ),
     )
 
-    # For time series computation, optionally include the initial
-    # state as the first data point
+    # Optionally include the initial state as the first data point
     if include_initial_state
         jutul_output_for_ts = (
             states = vcat([deepcopy(state0)], jutul_states),
@@ -493,14 +476,6 @@ function kwarg_dict(; kwargs...)
     return kwarg_dict
 end
 
-function process_solver_settings_kwargs(solver_settings; kwargs...)
-
-
-    # Validate solver settings
-    solver_settings_is_valid = validate_parameter_set(solver_settings)
-    return solver_settings_is_valid
-end
-
 ######################################
 # Setup solver configuration options #
 ######################################
@@ -525,7 +500,8 @@ function solver_configuration(
         use_model_scaling::Bool = true,
         solver_settings,
         logger = nothing,
-        kwargs...,
+        validate = true,
+        kwargs...
     )
 
     # Overwrite solver settings with kwargs
@@ -533,8 +509,11 @@ function solver_configuration(
     solver_settings = overwritten_settings.solver_settings
 
     # Validate solver settings
-    solver_settings_is_valid = validate_parameter_set(solver_settings)
-
+    if validate
+        solver_settings_is_valid = true
+    else
+        solver_settings_is_valid = validate_parameter_set(solver_settings)
+    end
 
     non_linear_solver = solver_settings["NonLinearSolver"]
     linear_solver_dict = solver_settings["LinearSolver"]
@@ -822,7 +801,7 @@ function setup_timesteps(
         kwargs...,
     )
     """
-    	Method setting up the timesteps from a json file object. 
+    	Method setting up the timesteps from a json file object.
     """
     if hasproperty(input, :time_steps) && !isnothing(input.time_steps)
         return input.time_steps
