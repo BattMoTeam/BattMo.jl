@@ -20,5 +20,3 @@ include("test_3d_pouch_amg.jl")
 include("test_cycling_protocols.jl")
 include("test_sodium_ion.jl")
 include("test_advanced_dict_input.jl")
-
-
