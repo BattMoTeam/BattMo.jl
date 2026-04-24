@@ -113,7 +113,7 @@ struct Simulation <: AbstractSimulation
             simulator = sim_cfg.simulator
             time_steps = sim_cfg.time_steps
 
-            return new{}(is_valid, validate, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator)
+            return new(is_valid, validate, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator)
 
         else
             error(
@@ -397,7 +397,6 @@ function overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
                                 solver_settings[dict_key][key] = "UserDefined"
                                 timestep_selectors = value
                             end
-
 
                         elseif key == :Relaxation
                             if isa(value, String)
@@ -844,7 +843,6 @@ function setup_timesteps(
 
             totalTime = ncycles * 2 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
-
             dt = simulation_settings["TimeStepDuration"]
             n = Int64(floor(totalTime / dt))
 
@@ -863,7 +861,6 @@ function setup_timesteps(
 
         dt = simulation_settings["TimeStepDuration"]
         n = Int64(floor(totalTime / dt))
-
 
         timesteps = repeat([dt], n)
 
