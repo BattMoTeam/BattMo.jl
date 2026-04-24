@@ -510,9 +510,9 @@ function solver_configuration(
 
     # Validate solver settings
     if validate
-        solver_settings_is_valid = true
-    else
         solver_settings_is_valid = validate_parameter_set(solver_settings)
+    else
+        solver_settings_is_valid = true
     end
 
     non_linear_solver = solver_settings["NonLinearSolver"]
