@@ -45,8 +45,6 @@ A `Simulation` struct instance that includes:
 
 """
 struct Simulation <: AbstractSimulation
-    is_valid::Bool
-    validate::Bool
     model::ModelConfigured
     cell_parameters::CellParameters
     cycling_protocol::CyclingProtocol
@@ -58,6 +56,7 @@ struct Simulation <: AbstractSimulation
     couplings::Any
     parameters::Any
     simulator::Any
+    is_valid::Bool
 
     function Simulation(
             model::M,
@@ -72,7 +71,7 @@ struct Simulation <: AbstractSimulation
             kwargs...,
         ) where {M <: ModelConfigured}
 
-        return if model.is_valid
+        if model.is_valid
 
             model_settings = model.settings
 
@@ -113,7 +112,7 @@ struct Simulation <: AbstractSimulation
             simulator = sim_cfg.simulator
             time_steps = sim_cfg.time_steps
 
-            return new(is_valid, validate, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator)
+            return new(model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator, is_valid)
 
         else
             error(
@@ -293,13 +292,13 @@ function solve_simulation_case(sim::Union{Simulation, NamedTuple}; solver_settin
     cell_parameters = sim.cell_parameters
     cycling_protocol = sim.cycling_protocol
 
-    # setup solver configuration
+    # Setup solver configuration
     cfg = solver_configuration(
         simulator,
         model.multimodel,
         parameters;
         solver_settings,
-        validate = sim.validate,
+        validate = validate,
         logger,
         kwargs...,
     )
@@ -510,8 +509,25 @@ function solver_configuration(
     # Validate solver settings
     if validate
         solver_settings_is_valid = validate_parameter_set(solver_settings)
-    else
-        solver_settings_is_valid = true
+        if !solver_settings_is_valid
+            error(
+                """
+                Your SolverSettings are not valid. 🛑
+
+                TIP: Validation happens when instantiating the Simulation object.
+                Check the warnings to see exactly where things went wrong. 🔍
+
+                If you’re confident you know what you're doing, you can bypass the validation result
+                by setting the flag "accept_invalid = true" when calling solve:
+
+                	solve(sim; accept_invalid = true)
+
+                But proceed with caution! 😎
+                """,
+            )
+        else
+            solver_settings_is_valid = true
+        end
     end
 
     non_linear_solver = solver_settings["NonLinearSolver"]
@@ -520,22 +536,25 @@ function solver_configuration(
     verbose = solver_settings["Verbose"]
 
     relaxation = non_linear_solver["Relaxation"]
-    timestep_selector = non_linear_solver["TimeStepSelectors"]
     if relaxation == "NoRelaxation"
         relax = NoRelaxation()
-    else
+    elseif relaxation == "SimpleRelaxation"
         relax = SimpleRelaxation()
+    else
+        error("Relaxation method $(relaxation) not recognized. Only 'NoRelaxation' and 'SimpleRelaxation' are currently implemented.")
     end
 
+    timestep_selector = non_linear_solver["TimeStepSelectors"]
     if timestep_selector == "TimestepSelector"
         timesel = [TimestepSelector()]
+    else
+        error("Timestep selector $(timestep_selector) not recognized. Only 'TimestepSelector' is currently implemented.")
     end
 
     if linear_solver_dict["Method"] == "UserDefined"
         linear_solver = overwritten_settings.linear_solver
     else
         linear_solver = battery_linsolve(linear_solver_dict)
-
     end
 
     cfg = simulator_config(
@@ -655,9 +674,7 @@ function solver_configuration(
 
         cfg[:post_ministep_hook] = post_hook
 
-
     end
-
 
     return cfg
 
@@ -918,11 +935,15 @@ end
 ####################
 
 function currentFun(t::Real, inputI::Real, tup::Real = 0.1)
+
     t, inputI, tup, val = promote(t, inputI, tup, 0.0)
+
     if t <= tup
         val = sineup(0.0, inputI, 0.0, tup, t)
     else
         val = inputI
     end
+
     return val
+
 end
