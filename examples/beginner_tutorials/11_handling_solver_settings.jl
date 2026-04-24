@@ -41,10 +41,10 @@ nothing # hide
 
 solver_settings["OutputPath"] = "example_path/"
 try # hide
-	output = solve(sim; solver_settings)
-	nothing # hide
+    output = solve(sim; solver_settings)
+    nothing # hide
 catch e # hide
-	@warn "Expected to fail because the path does not exist" exception = e # hide
+    @warn "Expected to fail because the path does not exist" exception = e # hide
 end # hide
 nothing # hide
 
