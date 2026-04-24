@@ -245,14 +245,27 @@ function compute_cell_volume(params::CellParameters)
         volume = area * thickness
 
     elseif case == "Cylindrical"
-        if haskey(params["Cell"], "Height") && haskey(params["Cell"], "OuterRadius")
+        if haskey(params["Cell"], "ElectrodeWidth") && haskey(params["Cell"], "OuterRadius")
+            height = params["Cell"]["ElectrodeWidth"]
+            radius = params["Cell"]["OuterRadius"]
+
+            volume = pi * radius^2 * height
+        elseif haskey(params["Cell"], "Height") && haskey(params["Cell"], "OuterRadius")
             height = params["Cell"]["Height"]
             radius = params["Cell"]["OuterRadius"]
 
             volume = pi * radius^2 * height
         else
             volume = nothing
-            println("Parameter set doesn't contain the required parameters to calculate the volume: ['Cell']['Height'] and ['Cell']['OuterRadius']")
+            println("Parameter set doesn't contain the required parameters to calculate the volume: ['Cell']['ElectrodeWidth'] or ['Cell']['Height'], and ['Cell']['OuterRadius']")
+        end
+
+    elseif case == "Prismatic"
+        if haskey(params["Cell"], "ElectrodeWidth") && haskey(params["Cell"], "CaseWidth") && haskey(params["Cell"], "CaseThickness")
+            volume = params["Cell"]["ElectrodeWidth"] * params["Cell"]["CaseWidth"] * params["Cell"]["CaseThickness"]
+        else
+            volume = nothing
+            println("Parameter set doesn't contain the required parameters to calculate the volume: ['Cell']['ElectrodeWidth'], ['Cell']['CaseWidth'] and ['Cell']['CaseThickness']")
         end
 
 

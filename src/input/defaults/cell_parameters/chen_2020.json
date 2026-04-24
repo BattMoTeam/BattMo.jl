@@ -4,7 +4,11 @@
         "Source": "https://doi.org/10.1149/1945-7111/ab9050",
         "Description": "Parameter set of a cylindrical 21700 commercial cell (LGM50), for an electrochemical pseudo-two-dimensional (P2D) model, after calibration. SEI parameters are from Bolay2022: https://doi.org/10.1016/j.powera.2022.100083 .",
         "Models": {
-            "ModelFramework": "P2D",
+            "ModelFramework": [
+                "P2D",
+                "P4D Cylindrical",
+                "P4D Prismatic"
+            ],
             "TransportInSolid": "FullDiffusion",
             "CurrentCollectors": "Generic",
             "RampUp": "Sinusoidal",
@@ -15,8 +19,12 @@
         "Name": "LG INR 21700 M50",
         "Case": "Cylindrical",
         "Height": 0.065,
+        "ElectrodeWidth": 0.065,
+        "ElectrodeLength": 3.6748,
         "OuterRadius": 0.021,
         "InnerRadius": 2e-3,
+        "CaseWidth": 0.036,
+        "CaseThickness": 0.014,
         "ElectrodeGeometricSurfaceArea": 0.1027,
         "NominalVoltage": 3.71,
         "NominalCapacity": 4.8

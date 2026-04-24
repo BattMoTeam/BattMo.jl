@@ -4,6 +4,73 @@ export jelly_roll_grid
 # jelly roll grid setup #
 #########################
 
+function get_jelly_roll_stack_thickness(cell_parameters)
+    dxs = [
+        cell_parameters["PositiveElectrode"]["Coating"]["Thickness"],
+        cell_parameters["PositiveElectrode"]["CurrentCollector"]["Thickness"],
+        cell_parameters["PositiveElectrode"]["Coating"]["Thickness"],
+        cell_parameters["Separator"]["Thickness"],
+        cell_parameters["NegativeElectrode"]["Coating"]["Thickness"],
+        cell_parameters["NegativeElectrode"]["CurrentCollector"]["Thickness"],
+        cell_parameters["NegativeElectrode"]["Coating"]["Thickness"],
+        cell_parameters["Separator"]["Thickness"],
+    ]
+    return sum(dxs)
+end
+
+function jelly_roll_arc_length(outer_radius, inner_radius, stack_thickness)
+    A = stack_thickness / (2 * pi)
+    u0 = inner_radius
+    u1 = outer_radius
+    F(u) = u * sqrt(u^2 + A^2) + A^2 * asinh(u / A)
+    return (F(u1) - F(u0)) / (2 * A)
+end
+
+function outer_radius_from_winding_length(winding_length, inner_radius, stack_thickness)
+    @assert winding_length > 0.0 "ElectrodeLength must be positive."
+    @assert inner_radius > 0.0 "InnerRadius must be positive."
+    @assert stack_thickness > 0.0 "Cell stack thickness must be positive."
+
+    lo = inner_radius
+    hi = inner_radius + stack_thickness
+    while jelly_roll_arc_length(hi, inner_radius, stack_thickness) < winding_length
+        hi *= 2
+    end
+
+    for _ in 1:80
+        mid = 0.5 * (lo + hi)
+        if jelly_roll_arc_length(mid, inner_radius, stack_thickness) < winding_length
+            lo = mid
+        else
+            hi = mid
+        end
+    end
+    return hi
+end
+
+function get_jelly_roll_dimensions(cell_parameters)
+    cell = cell_parameters["Cell"]
+    inner_radius = cell["InnerRadius"]
+    height = get(cell, "ElectrodeWidth", get(cell, "Height", nothing))
+    if isnothing(height)
+        error("Jelly-roll geometries require Cell/ElectrodeWidth, or Cell/Height as a fallback.")
+    end
+
+    stack_thickness = get_jelly_roll_stack_thickness(cell_parameters)
+    winding_length = get(cell, "ElectrodeLength", nothing)
+
+    outer_radius =
+        if !isnothing(winding_length)
+            outer_radius_from_winding_length(winding_length, inner_radius, stack_thickness)
+        elseif haskey(cell, "OuterRadius")
+            cell["OuterRadius"]
+        else
+            error("Jelly-roll geometries require Cell/ElectrodeLength, or Cell/OuterRadius as a fallback.")
+        end
+
+    return (inner_radius = inner_radius, outer_radius = outer_radius, height = height, stack_thickness = stack_thickness)
+end
+
 function jelly_roll_grid(input)
 
     cell_parameters = input.cell_parameters
@@ -13,9 +80,10 @@ function jelly_roll_grid(input)
 
     nangles = simulation_settings["AngularGridPoints"]
     nz = simulation_settings["HeightGridPoints"]
-    rinner = cell["InnerRadius"]
-    router = cell["OuterRadius"]
-    height = cell["Height"]
+    dims = get_jelly_roll_dimensions(cell_parameters)
+    rinner = dims.inner_radius
+    router = dims.outer_radius
+    height = dims.height
 
     function get_vector(geomparams, fdname)
         # double coated electrode
@@ -57,7 +125,7 @@ function jelly_roll_grid(input)
     spacing = [0; cumsum(dx)]
     spacing = spacing / spacing[end]
 
-    thickness = sum(dxs)
+    thickness = dims.stack_thickness
 
     depths = [0; cumsum(repeat([height / nz], nz))]
 

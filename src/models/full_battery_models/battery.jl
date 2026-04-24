@@ -59,6 +59,10 @@ function setup_grids_and_couplings(model::M, input) where {M <: Battery}
 
         grids, couplings = pouch_grid(input)
 
+    elseif case_type == "P4D Prismatic"
+
+        grids, couplings = prismatic_grid(input)
+
     elseif case_type == "P4D Cylindrical"
 
         grids, couplings = jelly_roll_grid(input)

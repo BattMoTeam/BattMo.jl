@@ -19,8 +19,12 @@ nothing #hide
 # ## Review and modify the cell parameters
 # We go through some of the geometrical and discretization parameters. We modify some of them to obtain a cell where the different components are easier to visualize
 
-# The cell geometry is determined by the inner and outer radius and the height. We reduce the outer radius
-cell_parameters["Cell"]["OuterRadius"] = 0.01
+# The wound geometry is determined primarily by the inner radius, the winding
+# length and the jelly-roll height. We shorten the winding length here to make
+# the geometry more compact.
+cell_parameters["Cell"]["ElectrodeWidth"] = 0.065
+cell_parameters["Cell"]["ElectrodeLength"] = 1.6
+cell_parameters["Cell"]["InnerRadius"] = 2e-3
 nothing #hide
 
 # We modify the current collector thicknesses, for visualization purpose
@@ -125,7 +129,9 @@ simulation_settings = load_simulation_settings(; from_default_set = "p4d_cylindr
 
 # We adjust the parameters so that the simulation in this example is not too long (around a couple of minutes)
 
-cell_parameters["Cell"]["OuterRadius"] = 0.004
+cell_parameters["Cell"]["ElectrodeWidth"] = 0.065
+cell_parameters["Cell"]["ElectrodeLength"] = 0.55
+cell_parameters["Cell"]["InnerRadius"] = 2e-3
 cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabFractions"] = [0.5]
 cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabFractions"] = [0.5]
 cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabWidth"] = 0.002

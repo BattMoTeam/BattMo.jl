@@ -5,7 +5,7 @@
 
 | ModelSetting                      | Sub-model(s)                              | Description                                                           |      
 |-----------------------------------|-------------------------------------------|-----------------------------------------------------------------------|
-| `"ModelFrameWork"`                | "P2D", "P4D Pouch", "P4D Cylindrical"     | [See the PXD section](../user_guide/pxd_model.md)                     |
+| `"ModelFrameWork"`                | "P2D", "P4D Pouch", "P4D Prismatic", "P4D Cylindrical"     | [See the PXD section](../user_guide/pxd_model.md)                     |
 | `"TransportInSolid"`              | "FullDiffusion"                           | -                                                                     |
 | `"RampUp"`                        | "Sinusoidal"                              | [See the Ramp Up section](../user_guide/ramp_up.md)                   |
 | `"ButlerVolmer"`                  | "Standard", "Chayambuka"                  | [See the Sodium ion section](../user_guide/sodium_ion_model.md)       |   

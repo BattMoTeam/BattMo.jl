@@ -123,6 +123,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 					"DeviceSurfaceArea" => create_property(parameter_meta, "DeviceSurfaceArea"),
 					"InnerRadius" => create_property(parameter_meta, "InnerRadius"),
 					"OuterRadius" => create_property(parameter_meta, "OuterRadius"),
+					"CaseWidth" => create_property(parameter_meta, "CaseWidth"),
+					"CaseThickness" => create_property(parameter_meta, "CaseThickness"),
 					"NominalVoltage" => create_property(parameter_meta, "NominalVoltage"),
 					"NominalCapacity" => create_property(parameter_meta, "NominalCapacity"),
 					"HeatTransferCoefficient" => create_property(parameter_meta, "HeatTransferCoefficient"),
@@ -382,11 +384,15 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 
 		end
 
-	elseif model_settings["ModelFramework"] == "P4D Cylindrical"
+	elseif model_settings["ModelFramework"] == "P4D Cylindrical" || model_settings["ModelFramework"] == "P4D Prismatic"
 
+		push!(cell_required, "ElectrodeWidth")
 		push!(cell_required, "InnerRadius")
-		push!(cell_required, "OuterRadius")
-		push!(cell_required, "Height")
+		if model_settings["ModelFramework"] == "P4D Prismatic"
+			push!(cell_required, "ElectrodeLength")
+			push!(cell_required, "CaseWidth")
+			push!(cell_required, "CaseThickness")
+		end
 
 		if haskey(model_settings, "CurrentCollectors")
 			push!(ne_required, "CurrentCollector")
@@ -619,7 +625,7 @@ function get_schema_simulation_settings(model_settings)
 		push!(required, "RampUpSteps")
 	end
 
-	if model_settings["ModelFramework"] == "P4D Cylindrical"
+	if model_settings["ModelFramework"] == "P4D Cylindrical" || model_settings["ModelFramework"] == "P4D Prismatic"
 		push!(required, "HeightGridPoints")
 		push!(required, "AngularGridPoints")
 		if haskey(model_settings, "CurrentCollectors")

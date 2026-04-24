@@ -3,6 +3,7 @@
 On this page, we describe the different models available in BattMo for simulation a lithium ion battery cell. We have models available for simulating 1D and 3D geometries:
  - P2D: Pseudo-two-dimensional model
  - P4D Pouch: Pseudo-four-dimensional model for pouch cells
+ - P4D Prismatic: Pseudo-four-dimensional model for prismatic cells
  - P4D Cylindrical: Pseudo-four-dimensional model for cylindrical cells
 
 ## P2D model
