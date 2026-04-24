@@ -123,7 +123,7 @@ The code should be formatted using Runic.jl. You can run this with
 julia -e 'using Pkg; Pkg.add("Runic")'
 julia -e 'using Runic; exit(Runic.main(["--inplace", "."]))'
 ```
-See the documentation [[https://github.com/fredrikekre/Runic.jl]] for details.
+See the documentation [[https://github.com/fredrikekre/Runic.jl]] for details and how to integrate Runic with your editor.
 
 
 ## Acknowledgements
