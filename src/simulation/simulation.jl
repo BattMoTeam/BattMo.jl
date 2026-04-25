@@ -51,7 +51,7 @@ struct Simulation <: AbstractSimulation
     model::ModelConfigured
     cell_parameters::CellParameters
     cycling_protocol::CyclingProtocol
-    simulation_settings::SimulationSettings
+    settings::SimulationSettings
     time_steps::Any
     forces::Any
     initial_state::Any
@@ -62,7 +62,6 @@ struct Simulation <: AbstractSimulation
     output_all_secondary_variables::Bool
     is_valid::Bool
     validate::Bool
-
 
     function Simulation(
             model::M,
@@ -346,7 +345,7 @@ function solve_simulation_case(
     grids = sim.grids
     couplings = sim.couplings
     parameters = sim.parameters
-    simulation_settings = sim.simulation_settings
+    simulation_settings = sim.settings
     cell_parameters = sim.cell_parameters
     cycling_protocol = sim.cycling_protocol
 
