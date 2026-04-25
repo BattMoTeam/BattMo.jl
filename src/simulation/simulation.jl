@@ -81,10 +81,25 @@ struct Simulation <: AbstractSimulation
 
         if validate
             model_is_valid = model.is_valid
+
+            if !model_is_valid
+                error(
+                    """
+                    Oops! Your Model object is not valid. 🛑
+
+                    TIP: Validation happens when instantiating the Model object.
+                    Check the warnings to see exactly where things went wrong. 🔍
+
+                    """
+                )
+            end
+
             cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
             cycling_protocol_is_valid = validate_parameter_set(cycling_protocol, model_settings)
             simulation_settings_is_valid = validate_parameter_set(simulation_settings, model_settings)
+
             is_valid = model_is_valid && cell_parameters_is_valid && cycling_protocol_is_valid && simulation_settings_is_valid
+
         else
             is_valid = true
         end
@@ -100,6 +115,17 @@ struct Simulation <: AbstractSimulation
         )
 
         sim_cfg = simulation_configuration(model, input)
+
+        if !is_valid
+            error(
+                """
+                Oops! Your Simulation object cannot be configured because some of you input is not valid. 🛑
+
+                Check the warnings to see where things went wrong. 🔍
+
+                """,
+            )
+        end
 
         return new(
             sim_cfg.model,
