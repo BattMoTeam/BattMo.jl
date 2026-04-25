@@ -98,8 +98,10 @@ struct Simulation <: AbstractSimulation
             cycling_protocol_is_valid = validate_parameter_set(cycling_protocol, model_settings)
             simulation_settings_is_valid = validate_parameter_set(simulation_settings, model_settings)
 
-            is_valid = model_is_valid && cell_parameters_is_valid && cycling_protocol_is_valid && simulation_settings_is_valid
-
+            is_valid = model_is_valid &&
+                cell_parameters_is_valid &&
+                cycling_protocol_is_valid &&
+                simulation_settings_is_valid
         else
             is_valid = true
         end
@@ -114,17 +116,27 @@ struct Simulation <: AbstractSimulation
             output_all_secondary_variables = output_all_secondary_variables,
         )
 
-        sim_cfg = simulation_configuration(model, input)
+        if validate
+            try
+                sim_cfg = Logging.with_logger(Logging.NullLogger()) do
+                    simulation_configuration(model, input)
+                end
+            catch e
+                if !is_valid
+                    error(
+                        """
+                        Oops! Your Simulation object cannot be configured because some of your input is not valid. 🛑
 
-        if !is_valid
-            error(
-                """
-                Oops! Your Simulation object cannot be configured because some of you input is not valid. 🛑
+                        Check the warnings to see where things went wrong. 🔍
 
-                Check the warnings to see where things went wrong. 🔍
-
-                """,
-            )
+                        """,
+                    )
+                else
+                    rethrow(e)
+                end
+            end
+        else
+            sim_cfg = simulation_configuration(model, input)
         end
 
         return new(
@@ -143,7 +155,6 @@ struct Simulation <: AbstractSimulation
             is_valid,
             validate,
         )
-
     end
 end
 
