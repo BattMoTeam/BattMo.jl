@@ -222,6 +222,10 @@ function solve(
 
     validate = problem.validate
 
+    if accept_invalid && !validate
+        error("If accept_invalid = true, validation must be enabled")
+    end
+
     if validate && !problem.is_valid && !accept_invalid
         error(
             """
