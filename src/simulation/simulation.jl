@@ -213,7 +213,7 @@ end
               include_initial_state = false,
               kwargs...)
 
-Solves a battery `Simulation` problem by executing the simulation workflow defined in `solve_simulation_case`.
+Solves a battery `Simulation` problem by executing the simulation workflow defined in `solve_simulation`.
 
 # Arguments
 - `problem::Simulation`: A fully constructed `Simulation` object, containing all model parameters, solver settings, and initial conditions.
@@ -225,15 +225,15 @@ Solves a battery `Simulation` problem by executing the simulation workflow defin
   prepended to the output time series (`Time`, `Voltage`, `Current`, capacity, etc.).
   This eliminates the gap between the initial condition and the first solver output,
   improving plots and RMSE comparisons when restarting from a saved state.  Default is `false`.
-- `kwargs...`: Additional keyword arguments forwarded to `solve_simulation_case`.
+- `kwargs...`: Additional keyword arguments forwarded to `solve_simulation`.
 
 # Behavior
 - Validates the `Simulation` object unless `accept_invalid` is `true`.
 - Prepares simulation configuration options, including verbosity and report behavior.
-- Calls `solve_simulation_case`, passing in the simulation problem and configuration.
+- Calls `solve_simulation`, passing in the simulation problem and configuration.
 
 # Returns
-- The result of `solve_simulation_case`, typically containing simulation outputs such as state trajectories, solver diagnostics, and performance metrics.
+- The result of `solve_simulation`, typically containing simulation outputs such as state trajectories, solver diagnostics, and performance metrics.
 
 # Throws
 - An error if the `Simulation` object is invalid and `accept_invalid` is not set to `true`.
@@ -280,7 +280,7 @@ function solve(
         )
     end
 
-    return solve_simulation_case(
+    return solve_simulation(
         problem;
         solver_settings,
         logger,
@@ -293,7 +293,7 @@ function solve(
 end
 
 """
-	solve_simulation_case(sim::Simulation;
+	solve_simulation(sim::Simulation;
                               hook = nothing,
                               kwargs...)
 
@@ -324,10 +324,10 @@ A named tuple with the following fields:
 
 # Example
 ```julia
-result = solve_simulation_case(sim)
+result = solve_simulation(sim)
 ```
 """
-function solve_simulation_case(
+function solve_simulation(
         sim::Union{Simulation, NamedTuple};
         solver_settings,
         logger = nothing,
