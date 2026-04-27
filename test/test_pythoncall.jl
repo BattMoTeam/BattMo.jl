@@ -4,6 +4,11 @@ using Test
 using Jutul
 
 
+@testset "PythonCall extension is loaded" begin
+    @test Base.get_extension(BattMo, :BattMoPythonCallExt) !== nothing
+    @test hasmethod(BattMo.make_invokable, Tuple{PythonCall.Py})
+end
+
 @testset "extension is active for Python Py objects" begin
     pyfunc = pybuiltins.abs
     @test pyfunc isa PythonCall.Py
@@ -12,7 +17,7 @@ using Jutul
 end
 
 
-@testset "BattMo PythonCall extension loads" begin
+@testset "BattMo PythonCall extension with a builtin function" begin
     pyfunc = pybuiltins.abs
     wrapped = BattMo.make_invokable(pyfunc)
     @test wrapped(-3.0) == 3.0
