@@ -610,7 +610,7 @@ function Jutul.select_equations!(
 	model::SimulationModel,
 )
 
-	disc                      = model.domain.discretizations.flow
+	disc = model.domain.discretizations.flow
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 	return eqs[:mass_conservation] = ConservationLaw(disc, :Mass)
 

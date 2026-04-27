@@ -1,6 +1,6 @@
 # # Handling cycling protocols
 
-# In this tutorial, we demonstrate functionality to handle cycling protcols. We will illustrate the effect that the DRate has on battery 
+# In this tutorial, we demonstrate functionality to handle cycling protcols. We will illustrate the effect that the DRate has on battery
 # performance during discharge, using a constant-current (CC) discharge protocol.
 
 # ### Load required packages and data
@@ -43,12 +43,12 @@ d_rates = [0.2, 0.5, 1.0, 2.0]
 outputs = []
 
 for d_rate in d_rates
-	protocol = deepcopy(cc_discharge_protocol)
-	protocol["DRate"] = d_rate
+    protocol = deepcopy(cc_discharge_protocol)
+    protocol["DRate"] = d_rate
 
-	sim = Simulation(model, cell_parameters, protocol)
-	output = solve(sim; info_level = -1)
-	push!(outputs, (d_rate = d_rate, output = output))
+    sim = Simulation(model, cell_parameters, protocol)
+    output = solve(sim; info_level = -1)
+    push!(outputs, (d_rate = d_rate, output = output))
 end
 nothing # hide
 
@@ -60,12 +60,12 @@ ax1 = Axis(fig[1, 1], title = "Voltage vs Time", xlabel = "Time / s", ylabel = "
 
 for result in outputs
 
-	t = result.output.time_series["Time"]
-	E = result.output.time_series["Voltage"]
-	I = result.output.time_series["Current"]
+    t = result.output.time_series["Time"]
+    E = result.output.time_series["Voltage"]
+    I = result.output.time_series["Current"]
 
-	label_str = @sprintf("%.1fC", result.d_rate)
-	lines!(ax1, t, E, label = label_str)
+    label_str = @sprintf("%.1fC", result.d_rate)
+    lines!(ax1, t, E, label = label_str)
 
 end
 

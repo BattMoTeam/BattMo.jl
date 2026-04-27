@@ -25,8 +25,8 @@ reaction rate constant, conductivity) and plots their dependence on concentratio
 - The layout and axes are auto-scaled based on the number and type of parameters.
 """
 function plot_cell_curves(arg...; kwarg...)
-	check_plotting_availability()
-	return plot_cell_curves_impl(arg...; kwarg...)
+    check_plotting_availability()
+    return plot_cell_curves_impl(arg...; kwarg...)
 end
 
 function plot_cell_curves_impl end
@@ -58,8 +58,8 @@ fig = BattMo.plot_output(output,
 ```
 """
 function plot_output(arg...; kwarg...)
-	check_plotting_availability()
-	return plot_output_impl(arg...; kwarg...)
+    check_plotting_availability()
+    return plot_output_impl(arg...; kwarg...)
 end
 
 function plot_output_impl end
@@ -86,8 +86,8 @@ fig = BattMo.plot_dashboard(output; plot_type="line")
 ```
 """
 function plot_dashboard(arg...; kwarg...)
-	check_plotting_availability()
-	return plot_dashboard_impl(arg...; kwarg...)
+    check_plotting_availability()
+    return plot_dashboard_impl(arg...; kwarg...)
 end
 
 function plot_dashboard_impl end

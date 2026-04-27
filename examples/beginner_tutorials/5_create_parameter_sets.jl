@@ -40,8 +40,8 @@ print_info("OpenCircuitPotential")
 # ## Step 5: Now you can load you own parameter set to run simulations with it.
 
 try # hide
-	cell_parameters = load_cell_parameters(; from_file_path = "my_custom_parameters.json")
-	nothing # hide
+    cell_parameters = load_cell_parameters(; from_file_path = "my_custom_parameters.json")
+    nothing # hide
 catch # hide
-	nothing # hide
+    nothing # hide
 end # hide

@@ -286,13 +286,12 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 	inputparams_elyte = cell_parameters["Electrolyte"]
 	base_path = isnothing(cell_parameters.source_path) ? "" : dirname(cell_parameters.source_path)
 
-	params[:transference]        = inputparams_elyte["TransferenceNumber"]
-	params[:charge]              = inputparams_elyte["ChargeNumber"]
-	params[:separator_porosity]  = cell_parameters["Separator"]["Porosity"]
-	params[:bruggeman]           = cell_parameters["Separator"]["BruggemanCoefficient"]
+	params[:transference] = inputparams_elyte["TransferenceNumber"]
+	params[:charge] = inputparams_elyte["ChargeNumber"]
+	params[:separator_porosity] = cell_parameters["Separator"]["Porosity"]
+	params[:bruggeman] = cell_parameters["Separator"]["BruggemanCoefficient"]
 	params[:electrolyte_density] = inputparams_elyte["Density"]
-	params[:separator_density]   = cell_parameters["Separator"]["Density"]
-
+	params[:separator_density] = cell_parameters["Separator"]["Density"]
 
 	# setup diffusion coefficient function
 	if haskey(inputparams_elyte, "DiffusionCoefficient")

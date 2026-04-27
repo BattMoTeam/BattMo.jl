@@ -33,38 +33,38 @@ plot_dashboard(output; plot_type = "breakdown")
 
 # Some simple examples plotting time series quantities using the `plot_output` function
 plot_output(
-	output,
-	[
-		"Current vs Time",
-		"Voltage vs Time",
-	];
-	layout = (2, 1),
+    output,
+    [
+        "Current vs Time",
+        "Voltage vs Time",
+    ];
+    layout = (2, 1),
 )
 
 # Some simple examples plotting state quantities using the `plot_output` function
 
 plot_output(
-	output,
-	[
-		["NegativeElectrodeActiveMaterialSurfaceConcentration vs Time at Position index 10", "NegativeElectrodeActiveMaterialSurfaceConcentration vs Time at Position index 1"],
-		"NegativeElectrodeActiveMaterialParticleConcentration vs Time at Position index 10 and NegativeElectrodeActiveMaterialRadius index 5",
-		"NegativeElectrodeActiveMaterialSurfaceConcentration vs Position and Time",
-		"PositiveElectrodeActiveMaterialParticleConcentration vs Time and Position at PositiveElectrodeActiveMaterialRadius index end",
-		"NegativeElectrodeActiveMaterialPotential vs Time at Position index 10",
-	];
-	layout = (4, 2),
+    output,
+    [
+        ["NegativeElectrodeActiveMaterialSurfaceConcentration vs Time at Position index 10", "NegativeElectrodeActiveMaterialSurfaceConcentration vs Time at Position index 1"],
+        "NegativeElectrodeActiveMaterialParticleConcentration vs Time at Position index 10 and NegativeElectrodeActiveMaterialRadius index 5",
+        "NegativeElectrodeActiveMaterialSurfaceConcentration vs Position and Time",
+        "PositiveElectrodeActiveMaterialParticleConcentration vs Time and Position at PositiveElectrodeActiveMaterialRadius index end",
+        "NegativeElectrodeActiveMaterialPotential vs Time at Position index 10",
+    ];
+    layout = (4, 2),
 )
 
 # Some simple examples plotting metrics using the `plot_output` function
 plot_output(
-	output,
-	[
-		"DischargeCapacity vs CycleIndex",
-		"CycleNumber vs Time",
-		"RoundTripEfficiency vs CycleIndex",
-		"RoundTripEfficiency vs DischargeCapacity",
-	];
-	layout = (4, 2),
+    output,
+    [
+        "DischargeCapacity vs CycleIndex",
+        "CycleNumber vs Time",
+        "RoundTripEfficiency vs CycleIndex",
+        "RoundTripEfficiency vs DischargeCapacity",
+    ];
+    layout = (4, 2),
 )
 
 

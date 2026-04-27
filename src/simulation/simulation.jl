@@ -2,6 +2,7 @@ export Simulation
 export solve
 export setup_config
 
+
 """
 	abstract type AbstractSimulation
 
@@ -835,8 +836,6 @@ function setup_timesteps(
 
 	protocol = cycling_protocol["Protocol"]
 
-	@show protocol
-
 	if protocol == "CC"
 		if cycling_protocol["TotalNumberOfCycles"] == 0
 
@@ -905,9 +904,6 @@ function setup_timesteps(
 		series_times = Float64.(cycling_protocol["Times"])
 		timesteps = diff(series_times)
 		timesteps = timesteps[timesteps .> 0.0]
-
-		@show series_times
-		@show timesteps
 
 	else
 

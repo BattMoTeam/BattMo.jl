@@ -123,8 +123,8 @@ function effective_exchange_current_density(
 	nvals = min(length(R0_vals), length(c_e_vals), length(c_s_vals))
 	sum_j0 = 0.0
 	nj0 = 0
-	cmax_loc = max(cmax, 1e-12)
-	th = 1e-3 * cmax_loc
+	cmax_loc = max(cmax, 1.0e-12)
+	th = 1.0e-3 * cmax_loc
 	for k in 1:nvals
 		R0 = R0_vals[k]
 		ce = c_e_vals[k]
@@ -185,7 +185,7 @@ function eval_ocp_from_system(system, c::Real, T::Real)
 	ocp_fun = system[:ocp_func]
 	cmax = system[:maximum_concentration]
 	refT = 298.15
-	c_clamped = clamp(c, 1e-12, cmax - 1e-12)
+	c_clamped = clamp(c, 1.0e-12, cmax - 1.0e-12)
 
 	if haskey(params, :ocp_funcconstant)
 		return ocp_fun
@@ -419,8 +419,8 @@ function compute_voltage_breakdown(output::SimulationOutput)
 
 		T_elyte = isnothing(T_n) || isnothing(T_p) ? 298.15 : 0.5 * (T_n[i, ne_sep_idx] + T_p[i, pe_sep_idx])
 		if !isnothing(c_e)
-			cen = clamp(c_e[i, e_ne_idx], 1e-12, Inf)
-			cep = clamp(c_e[i, e_pe_idx], 1e-12, Inf)
+			cen = clamp(c_e[i, e_ne_idx], 1.0e-12, Inf)
+			cep = clamp(c_e[i, e_pe_idx], 1.0e-12, Inf)
 			elyte_conc[i] = 2.0 * R * T_elyte / F * (1.0 - t_plus) * log(cep / cen)
 			elyte_ohmic[i] = elyte_drop_total[i] - elyte_conc[i]
 		else

@@ -26,11 +26,11 @@ sim = Simulation(model, cell_parameters, cycling_protocol);
 # setup solver             #
 ############################
 
-solver  = :fgmres
-fac     = 1e-3  #NEEDED  1e-4 ok for 3D case 1e-7 need for 1D case
-rtol    = 1e-4 * fac  # for simple face rtol=1e7 and atol 1e-9 seems give same number ononlinear as direct
-atol    = 1e-5 * fac # seems important
-max_it  = 100
+solver = :fgmres
+fac = 1.0e-3  #NEEDED  1e-4 ok for 3D case 1e-7 need for 1D case
+rtol = 1.0e-4 * fac  # for simple face rtol=1e7 and atol 1e-9 seems give same number ononlinear as direct
+atol = 1.0e-5 * fac # seems important
+max_it = 100
 verbose = 10
 
 # We combine two preconditioners. One working on a subset of variables and equations (we call it block-preconditioner)
@@ -50,20 +50,21 @@ params = Dict()
 # Type of method used for the block preconditioners. Here "block" means separatly (other options can be found
 # BatteryGeneralPreconditione)
 params["method"] = "block"
-# Option for post- and pre-solve of the control system. 
+# Option for post- and pre-solve of the control system.
 params["post_solve_control"] = true
-params["pre_solve_control"]  = true
+params["pre_solve_control"] = true
 
 # We setup the preconditioner, which combines both the block and global preconditioners
 prec = BattMo.BatteryGeneralPreconditioner(varpreconds, g_varprecond, params)
 #prec = Jutul.ILUZeroPreconditioner()
 
-linear_solver = GenericKrylov(solver, verbose = verbose,
-	preconditioner = prec,
-	relative_tolerance = rtol,
-	absolute_tolerance = atol * 1e-20,## may skip linear iterations all to getter.
-	max_iterations = max_it)
-
+linear_solver = GenericKrylov(
+    solver, verbose = verbose,
+    preconditioner = prec,
+    relative_tolerance = rtol,
+    absolute_tolerance = atol * 1.0e-20, ## may skip linear iterations all to getter.
+    max_iterations = max_it
+)
 
 
 ############################
@@ -71,10 +72,11 @@ linear_solver = GenericKrylov(solver, verbose = verbose,
 ############################
 
 
-output = BattMo.solve(sim;
-	info_level = 10,
-	linear_solver = linear_solver,
-	extra_timing = true,
+output = BattMo.solve(
+    sim;
+    info_level = 10,
+    linear_solver = linear_solver,
+    extra_timing = true,
 )
 
 # plot_interactive_3d(output; colormap = :curl)
@@ -94,32 +96,38 @@ I = [state[:Control][:Current][1] for state in states]
 # plot_dashboard(output)
 
 
-grids     = sim.grids
+grids = sim.grids
 couplings = sim.couplings
 
 components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeCurrentCollector", "PositiveCurrentCollector"]
 colors = [:gray, :green, :blue, :black]
 
 for (i, component) in enumerate(components)
-	if i == 1
-		global fig, ax = plot_mesh(grids[component],
-			color = colors[i])
-	else
-		plot_mesh!(ax,
-			grids[component],
-			color = colors[i])
-	end
+    if i == 1
+        global fig, ax = plot_mesh(
+            grids[component],
+            color = colors[i]
+        )
+    else
+        plot_mesh!(
+            ax,
+            grids[component],
+            color = colors[i]
+        )
+    end
 end
 
 components = [
-	"NegativeCurrentCollector",
-	"PositiveCurrentCollector",
+    "NegativeCurrentCollector",
+    "PositiveCurrentCollector",
 ]
 
 for component in components
-	plot_mesh!(ax, grids[component];
-		boundaryfaces = couplings[component]["External"]["boundaryfaces"],
-		color = :red)
+    plot_mesh!(
+        ax, grids[component];
+        boundaryfaces = couplings[component]["External"]["boundaryfaces"],
+        color = :red
+    )
 end
 
 ############################################
