@@ -27,9 +27,11 @@ function getinput(name)
 	return load_advanced_dict_input(joinpath(pkgdir(BattMo), "test", "data", "jsonfiles", name))
 end
 
-geometries = ["4680-geometry.json",
+geometries = [
+	"4680-geometry.json",
 	"geometry-1d.json",
-	"geometry-3d-demo.json"]
+	"geometry-3d-demo.json",
+]
 
 @testset "iterative solvers" begin
 	for geometry in geometries
@@ -41,21 +43,25 @@ geometries = ["4680-geometry.json",
 				inputparams_material["use_thermal"] = false
 				inputparams_control = getinput("cc_discharge_control.json")
 
-				inputparams = merge_input_params([inputparams_geometry,
+				inputparams = merge_input_params(
+					[
+					inputparams_geometry,
 					inputparams_material,
-					inputparams_control])
+					inputparams_control,
+				]
+				)
+
 
 				cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_to_parameter_sets(inputparams)
 				solver_settings = load_solver_settings(; from_default_set = "iterative")
-
-				print_info(model_settings)
 
 				solver_settings["NonLinearSolver"]["MaxNonLinearIterations"] = 20
 				solver_settings["NonLinearSolver"]["ErrorOnIncomplete"] = true
 
 				model_setup = LithiumIonBattery(; model_settings)
 				sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
-				output = solve(sim;
+				output = solve(
+					sim;
 					accept_invalid = true,
 					solver_settings = solver_settings,
 				)
@@ -64,4 +70,3 @@ geometries = ["4680-geometry.json",
 		end
 	end
 end
-

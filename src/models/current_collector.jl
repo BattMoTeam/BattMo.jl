@@ -15,35 +15,38 @@ function CurrentCollector(params::CurrentCollectorParameters, scalings = Dict())
 end
 
 function CurrentCollector()
-	CurrentCollector(Dict())
+	return CurrentCollector(Dict())
 end
 
 const CurrentCollectorModel = SimulationModel{O, S} where {O <: JutulDomain, S <: CurrentCollector}
 
 
-function Jutul.select_minimum_output_variables!(out,
+function Jutul.select_minimum_output_variables!(
+	out,
 	system::CurrentCollector, model::SimulationModel,
 )
-	push!(out, :Charge)
+	return push!(out, :Charge)
 end
 
 function Jutul.select_primary_variables!(
 	S, system::CurrentCollector, model::SimulationModel,
 )
-	S[:ElectricPotential] = ElectricPotential()
+	return S[:ElectricPotential] = ElectricPotential()
 end
 
 function Jutul.select_secondary_variables!(
 	S, system::CurrentCollector, model::SimulationModel,
 )
 	# S[:TPkGrad_Voltage] = TPkGrad{ElectricPotential}()
-	S[:Charge] = Charge()
+	return S[:Charge] = Charge()
 
 end
 
-function Jutul.select_parameters!(S,
+function Jutul.select_parameters!(
+	S,
 	system::CurrentCollector,
-	model::SimulationModel)
+	model::SimulationModel,
+)
 
 	S[:ElectronicConductivity] = ElectronicConductivity()
 	if hasentity(model.data_domain, BoundaryDirichletFaces())
@@ -54,12 +57,13 @@ function Jutul.select_parameters!(S,
 
 end
 
-function Jutul.select_equations!(eqs,
+function Jutul.select_equations!(
+	eqs,
 	system::CurrentCollector,
-	model::SimulationModel)
+	model::SimulationModel,
+)
 	disc = model.domain.discretizations.flow
 
-	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
+	return eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
 
 end
-

@@ -10,8 +10,8 @@ function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::Matl
 	cFun(time) = currentFun(time, Imax, tup)
 
 	policy.current_function = cFun
-	policy.Imax             = Imax
-	policy.voltage          = Float64(inputparams["model"]["Control"]["lowerCutoffVoltage"])
+	policy.Imax = Imax
+	return policy.voltage = Float64(inputparams["model"]["Control"]["lowerCutoffVoltage"])
 
 end
 
@@ -20,7 +20,7 @@ function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::Mat
 
 	error("not updated, use inputparams to get values")
 	policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
-	policy.ImaxCharge    = only(parameters[:Control][:ImaxCharge])
+	return policy.ImaxCharge = only(parameters[:Control][:ImaxCharge])
 
 end
 
@@ -31,9 +31,9 @@ end
 
 function setup_timesteps(inputparams::MatlabInput)
 	"""
-	Method setting up the timesteps from a mat file object. If use_state_ref is true
-	the simulation will use the same timesteps as the pre-run matlab simulation.
-	"""
+		Method setting up the timesteps from a mat file object. If use_state_ref is true
+		the simulation will use the same timesteps as the pre-run matlab simulation.
+		"""
 
 	if inputparams["use_state_ref"]
 
@@ -45,7 +45,7 @@ function setup_timesteps(inputparams::MatlabInput)
 		#Alternative to minE=3.2
 		minE = inputparams["model"]["Control"]["lowerCutoffVoltage"]
 
-		for i ∈ 1:steps
+		for i in 1:steps
 			alltimesteps[i] = inputparams["states"][i]["time"] - time
 			time = inputparams["states"][i]["time"]
 			E = inputparams["states"][i]["Control"]["E"]
@@ -67,10 +67,12 @@ end
 # Setup coupling #
 ##################
 
-function setup_coupling_cross_terms!(inputparams::MatlabInput,
+function setup_coupling_cross_terms!(
+	inputparams::MatlabInput,
 	model::MultiModel,
 	parameters::Dict{Symbol, <:Any},
-	couplings)
+	couplings,
+)
 
 	exported_all = inputparams.all
 
@@ -237,7 +239,7 @@ function setup_coupling_cross_terms!(inputparams::MatlabInput,
 	# Accmulation of charge
 	ct = AccumulatorInterfaceFluxCT(1, trange, trans)
 	ct_pair = setup_cross_term(ct, target = :Control, source = component, equation = :charge_conservation)
-	add_cross_term!(model, ct_pair)
+	return add_cross_term!(model, ct_pair)
 
 end
 
@@ -245,7 +247,6 @@ end
 ########################################################################
 # Setup model
 ########################################################################
-
 
 
 function include_current_collectors(inputparams::MatlabInput)
@@ -285,14 +286,16 @@ function get_simulation_input(inputparams::MatlabInput)
 
 	timesteps = setup_timesteps(inputparams)
 
-	output = Dict(:simulator   => simulator,
-		:forces      => forces,
-		:state0      => state0,
-		:parameters  => parameters,
+	output = Dict(
+		:simulator => simulator,
+		:forces => forces,
+		:state0 => state0,
+		:parameters => parameters,
 		:inputparams => inputparams,
-		:model       => model,
-		:couplings   => couplings,
-		:timesteps   => timesteps)
+		:model => model,
+		:couplings => couplings,
+		:timesteps => timesteps,
+	)
 
 	return output
 
@@ -312,9 +315,11 @@ function setup_model!(inputparams::MatlabInput)
 
 	setup_initial_control_policy!(model[:Control].system.policy, inputparams, parameters)
 
-	output = (model = model,
+	output = (
+		model = model,
 		parameters = parameters,
-		couplings = couplings)
+		couplings = couplings,
+	)
 
 	return output
 
@@ -322,15 +327,17 @@ end
 
 function setup_submodels(inputparams::MatlabInput)
 
-	use_p2d::Bool    = true
+	use_p2d::Bool = true
 	general_ad::Bool = true
 
 	include_cc = include_current_collectors(inputparams)
 
-	function setup_component(obj::Dict,
+	function setup_component(
+		obj::Dict,
 		sys,
 		general_ad::Bool,
-		dirichletBoundary = nothing)
+		dirichletBoundary = nothing,
+	)
 
 		domain, data_domain = exported_model_to_domain(obj; dirichletBoundary = dirichletBoundary, general_ad = general_ad)
 
@@ -352,13 +359,15 @@ function setup_submodels(inputparams::MatlabInput)
 
 		stringName = stringNames[name]
 
-		inputparams_co  = inputparams[stringName]["Coating"]
+		inputparams_co = inputparams[stringName]["Coating"]
 		inputparams_itf = inputparams[stringName]["Coating"]["ActiveMaterial"]["Interface"]
-		inputparams_sd  = inputparams[stringName]["Coating"]["ActiveMaterial"]["SolidDiffusion"]
+		inputparams_sd = inputparams[stringName]["Coating"]["ActiveMaterial"]["SolidDiffusion"]
 
 		am_params = JutulStorage()
 
-		am_params[:volume_fraction]  = inputparams_co["volumeFraction"]
+		am_params[:include_entropy_change] = false
+
+		am_params[:volume_fraction] = inputparams_co["volumeFraction"]
 		am_params[:volume_fractions] = inputparams_co["volumeFractions"]
 
 		# Interface
@@ -371,21 +380,16 @@ function setup_submodels(inputparams::MatlabInput)
 		Eak                                 = inputparams_itf["activationEnergyOfReaction"]
 
 		am_params[:setting_temperature_dependence] = true
-		am_params[:reaction_rate_constant_func] = k0
-		am_params[:reaction_rate_constant_func_type] = :constant
-		am_params[:ecd_funcconstant] = true
-		am_params[:activation_energy_of_reaction] = Eak
+		am_params[:reaction_rate_constant_func]    = k0
+		am_params[:ecd_funcconstant]               = true
+		am_params[:activation_energy_of_reaction]  = Eak
 
 		funcname = inputparams_itf["openCircuitPotential"]["functionName"] # This matlab parameter must have been converted from function handle to string before call
 		func = getfield(BattMo, Symbol(funcname))
 		am_params[:ocp_func] = func
-		am_params[:ocp_func_type] = :function
 
 		am_params[:theta0]   = inputparams_itf["guestStoichiometry0"]
 		am_params[:theta100] = inputparams_itf["guestStoichiometry100"]
-
-		am_params[:include_entropy_change] = false
-		am_params[:reference_temperature] = 293.15
 
 		# Solid diffusion
 		if use_p2d
@@ -393,8 +397,8 @@ function setup_submodels(inputparams::MatlabInput)
 			N = Int64(inputparams_sd["N"])
 			D = inputparams_sd["referenceDiffusionCoefficient"]
 
-			am_params[:diffusion_coefficient_func_type] = :constant
-			am_params[:diffusion_coefficient_func] = D
+			am_params[:diff_funcconstant] = true
+			am_params[:diff_func] = D
 
 			sys_am = ActiveMaterialP2D(am_params, rp, N, D)
 		else
@@ -445,25 +449,23 @@ function setup_submodels(inputparams::MatlabInput)
 	# Setup Elyte #
 	###############
 
-	params                = JutulStorage()
-	inputparams_elyte     = inputparams["Electrolyte"]
+	params = JutulStorage()
+	inputparams_elyte = inputparams["Electrolyte"]
 	params[:transference] = inputparams_elyte["species"]["transferenceNumber"]
-	params[:charge]       = inputparams_elyte["species"]["chargeNumber"]
-	params[:bruggeman]    = inputparams_elyte["bruggemanCoefficient"]
+	params[:charge] = inputparams_elyte["species"]["chargeNumber"]
+	params[:bruggeman] = inputparams_elyte["bruggemanCoefficient"]
 
 	# setup diffusion coefficient function, hard coded for the moment because function name is not passed throught model
 	# TODO : add general code
 	funcname = "computeDiffusionCoefficient_default"
 	func = getfield(BattMo, Symbol(funcname))
-	params[:diffusion_coefficient_func] = func
-	params[:diffusion_coefficient_func_type] = :function
+	params[:diffusivity_func] = func
 
 	# setup diffusion coefficient function
 	# TODO : add general code
 	funcname = "computeElectrolyteConductivity_default"
 	func = getfield(BattMo, Symbol(funcname))
-	params[:ionic_conductivity_func] = func
-	params[:ionic_conductivity_func_type] = :function
+	params[:conductivity_func] = func
 
 	elyte = Electrolyte(params)
 	model_elyte = setup_component(inputparams["Electrolyte"],
@@ -500,9 +502,9 @@ function setup_submodels(inputparams::MatlabInput)
 
 	if controlPolicy == "CCDischarge"
 
-		minE   = inputparams["Control"]["lowerCutoffVoltage"]
+		minE = inputparams["Control"]["lowerCutoffVoltage"]
 		inputI = inputparams["Control"]["Imax"]
-		dtup   = inputparams["Control"]["rampupTime"]
+		dtup = inputparams["Control"]["rampupTime"]
 
 		cFun(time) = currentFun(time, inputI, dtup)
 
@@ -512,12 +514,14 @@ function setup_submodels(inputparams::MatlabInput)
 
 		ctrl = inputparams["Control"]
 
-		policy = CyclingCVPolicy(ctrl["lowerCutoffVoltage"],
+		policy = CyclingCVPolicy(
+			ctrl["lowerCutoffVoltage"],
 			ctrl["upperCutoffVoltage"],
 			ctrl["dIdtLimit"],
 			ctrl["dEdtLimit"],
 			ctrl["initialControl"],
-			ctrl["numberOfCycles"])
+			ctrl["numberOfCycles"],
+		)
 
 	else
 
@@ -525,9 +529,9 @@ function setup_submodels(inputparams::MatlabInput)
 
 	end
 
-	sys_control    = CurrentAndVoltageSystem(policy)
+	sys_control = CurrentAndVoltageSystem(policy)
 	domain_control = CurrentAndVoltageDomain()
-	model_control  = SimulationModel(domain_control, sys_control, context = DefaultContext())
+	model_control = SimulationModel(domain_control, sys_control, context = DefaultContext())
 
 	if !include_cc
 		groups = nothing
@@ -536,7 +540,7 @@ function setup_submodels(inputparams::MatlabInput)
 			PeAm        = model_peam,
 			Control     = model_control)
 		model = MultiModel(models,
-			:Battery;
+			Val(:Battery);
 			groups = groups)
 	else
 		groups = nothing
@@ -548,7 +552,7 @@ function setup_submodels(inputparams::MatlabInput)
 			Control     = model_control,
 		)
 		model = MultiModel(models,
-			:Battery;
+			Val(:Battery);
 			groups = groups)
 
 	end
@@ -584,7 +588,7 @@ function setup_battery_parameters(inputparams::MatlabInput,
 
 		prm_necc = Dict{Symbol, Any}()
 		exported_necc = exported["model"]["NegativeElectrode"]["CurrentCollector"]
-		prm_necc[:ElectronicConductivity] = exported_necc["effectiveElectronicConductivity"][1]
+		prm_necc[:Conductivity] = exported_necc["effectiveElectronicConductivity"][1]
 		parameters[:NeCc] = setup_parameters(model[:NeCc], prm_necc)
 
 	end
@@ -595,7 +599,7 @@ function setup_battery_parameters(inputparams::MatlabInput,
 
 	prm_neam = Dict{Symbol, Any}()
 	exported_neam = exported["model"]["NegativeElectrode"]["Coating"]
-	prm_neam[:ElectronicConductivity] = exported_neam["effectiveElectronicConductivity"][1]
+	prm_neam[:Conductivity] = exported_neam["effectiveElectronicConductivity"][1]
 	prm_neam[:Temperature] = T0
 
 	if discretisation_type(model[:NeAm]) == :P2Ddiscretization
@@ -623,7 +627,7 @@ function setup_battery_parameters(inputparams::MatlabInput,
 
 	prm_peam = Dict{Symbol, Any}()
 	exported_peam = exported["model"]["PositiveElectrode"]["Coating"]
-	prm_peam[:ElectronicConductivity] = exported_peam["effectiveElectronicConductivity"][1]
+	prm_peam[:Conductivity] = exported_peam["effectiveElectronicConductivity"][1]
 	prm_peam[:Temperature] = T0
 
 	if discretisation_type(model[:PeAm]) == :P2Ddiscretization
@@ -643,7 +647,7 @@ function setup_battery_parameters(inputparams::MatlabInput,
 
 		prm_pecc = Dict{Symbol, Any}()
 		exported_pecc = exported["model"]["PositiveElectrode"]["CurrentCollector"]
-		prm_pecc[:ElectronicConductivity] = exported_pecc["effectiveElectronicConductivity"][1]
+		prm_pecc[:Conductivity] = exported_pecc["effectiveElectronicConductivity"][1]
 
 		parameters[:PeCc] = setup_parameters(model[:PeCc], prm_pecc)
 	end
@@ -659,7 +663,8 @@ end
 # Setup initial state #
 #######################
 
-function setup_initial_state(inputparams::MatlabInput,
+function setup_initial_state(
+	inputparams::MatlabInput,
 	model::MultiModel,
 )
 
@@ -689,7 +694,7 @@ function setup_initial_state(inputparams::MatlabInput,
 
 		init = Dict()
 		init[:ElectricPotential] = state0[stringNames[name]]["Coating"]["phi"][1]
-		initState[name] = init
+		return initState[name] = init
 
 	end
 
@@ -713,7 +718,7 @@ function setup_initial_state(inputparams::MatlabInput,
 			init[:ElectrolyteConcentration] = c
 		end
 
-		initState[name] = init
+		return initState[name] = init
 
 	end
 
@@ -724,7 +729,7 @@ function setup_initial_state(inputparams::MatlabInput,
 		init[:ElectricPotential] = state0["Electrolyte"]["phi"][1]
 		init[:ElectrolyteConcentration] = state0["Electrolyte"]["c"][1]
 
-		initState[:Electrolyte] = init
+		return initState[:Electrolyte] = init
 
 	end
 
@@ -732,7 +737,7 @@ function setup_initial_state(inputparams::MatlabInput,
 
 		init = Dict(:ElectricPotential => state0["Control"]["E"], :Current => state0["Control"]["I"])
 
-		initState[:Control] = init
+		return initState[:Control] = init
 
 	end
 
@@ -765,7 +770,7 @@ function get_matlab_scalings(model, parameters)
 
 	eldes = (:NeAm, :PeAm)
 
-	j0s   = Array{Float64}(undef, 2)
+	j0s = Array{Float64}(undef, 2)
 	Rvols = Array{Float64}(undef, 2)
 
 	F = FARADAY_CONSTANT
@@ -773,9 +778,9 @@ function get_matlab_scalings(model, parameters)
 	for (i, elde) in enumerate(eldes)
 
 		rate_func = model[elde].system.params[:reaction_rate_constant_func]
-		cmax      = model[elde].system[:maximum_concentration]
-		Eak       = model[elde].system[:activation_energy_of_reaction]
-		vsa       = model[elde].system[:volumetric_surface_area]
+		cmax = model[elde].system[:maximum_concentration]
+		Eak = model[elde].system[:activation_energy_of_reaction]
+		vsa = model[elde].system[:volumetric_surface_area]
 
 		c_a = 0.5 * cmax
 
@@ -784,7 +789,7 @@ function get_matlab_scalings(model, parameters)
 		else
 			R0 = arrhenius(refT, rate_func(c_a, refT), Eak)
 		end
-		c_e            = 1000.0
+		c_e = 1000.0
 		activematerial = model[elde].system
 
 		j0s[i] = reaction_rate_coefficient(R0, c_e, c_a, activematerial)
@@ -795,12 +800,12 @@ function get_matlab_scalings(model, parameters)
 
 	end
 
-	j0Ref   = mean(j0s)
+	j0Ref = mean(j0s)
 	RvolRef = mean(Rvols)
 
 	if include_current_collectors(model)
 		component_names = (:NeCc, :NeAm, :Electrolyte, :PeAm, :PeCc)
-		cc_mapping      = Dict(:NeAm => :NeCc, :PeAm => :PeCc)
+		cc_mapping = Dict(:NeAm => :NeCc, :PeAm => :PeCc)
 	else
 		component_names = (:NeAm, :Electrolyte, :PeAm)
 	end
@@ -828,14 +833,14 @@ function get_matlab_scalings(model, parameters)
 
 			# We use the same scaling as for the coating multiplied by the conductivity ration
 			cc = cc_mapping[elde]
-			coef = parameters[cc][:ElectronicConductivity] / parameters[elde][:ElectronicConductivity]
+			coef = parameters[cc][:Conductivity] / parameters[elde][:Conductivity]
 
 			scaling = (model_label = cc, equation_label = :charge_conservation, value = F * coef[1] * volRefs[elde] * RvolRef)
 			push!(scalings, scaling)
 
 		end
 
-		rp   = model[elde].system.discretization[:rp]
+		rp = model[elde].system.discretization[:rp]
 		volp = 4 / 3 * pi * rp^3
 
 		coef = RvolRef * volp
@@ -848,8 +853,8 @@ function get_matlab_scalings(model, parameters)
 		if model[elde] isa SEImodel
 
 			vsa = model[elde].system[:volumetric_surface_area]
-			L   = model[elde].system[:InitialThickness]
-			k   = model[elde].system[:IonicConductivity]
+			L = model[elde].system[:InitialThickness]
+			k = model[elde].system[:IonicConductivity]
 
 			SEIvoltageDropRef = F * RvolRef / vsa * L / k
 
@@ -1005,4 +1010,3 @@ function getHalfTrans(model::Dict{String, <:Any},
 	return hT
 
 end
-

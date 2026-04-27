@@ -50,7 +50,6 @@ using StatsBase: inverse_rle                      # Statistical utility
 using Tullio: @tullio                             # Einstein summation notation
 
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 🏗️ Jutul Core Structures & functions
 # ─────────────────────────────────────────────────────────────────────────────
@@ -183,7 +182,6 @@ using Jutul: tpfv_geometry, apply!, is_cell_major
 using Jutul: StaticCSR, ParallelCSRContext
 using Jutul: jutul_message
 using Jutul: get_1d_interpolator
-using PythonCall: pyconvert, Py
 using Logging: Logging
 
 
@@ -204,6 +202,10 @@ include("input/schemas/get_schema.jl")
 include("input/schemas/get_json_from_schema.jl")
 
 include("utils/physical_constants.jl")
+
+include("grid/geometries/1d.jl")
+include("grid/geometries/pouch.jl")
+include("grid/geometries/jelly_roll.jl")
 
 include("models/full_battery_models/battery.jl")
 include("models/battmo_types.jl")
@@ -263,9 +265,7 @@ include("grid/tensor_tools.jl")
 include("grid/remove_cells.jl") #Trenger StatsBase
 include("grid/grid_conversion.jl")
 include("grid/grid_utils.jl")
-include("grid/geometries/1d.jl")
-include("grid/geometries/pouch.jl")
-include("grid/geometries/jelly_roll.jl")
+
 
 include("solver/solver_as_preconditioner_system.jl")
 include("solver/precondgenneral.jl")

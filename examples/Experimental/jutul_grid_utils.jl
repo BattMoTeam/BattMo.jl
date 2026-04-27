@@ -1,6 +1,6 @@
 function plot_grid_test(G)
 	fig, ax = plot_mesh(G)
-	Jutul.plot_mesh_edges!(ax, G)
+	return Jutul.plot_mesh_edges!(ax, G)
 end;
 
 
@@ -12,13 +12,13 @@ function find_tags(h, paramsz_z)
 end;
 
 function basic_grid_example_p4d2(; nx = 1, ny = 1, nz = 1, tab_cell_nx = 0, tab_cell_ny = 0, test = false)
-	# just defining some values. feel free to change them. 
-	#these values are taken from picture 
+	# just defining some values. feel free to change them.
+	#these values are taken from picture
 	#https://battmoteam.github.io/BattMo/geometryinput.html#batterygeneratorp4d
 	#nx = 1
 	#ny = 2
 	#nz=3
-	#@assert tab_cell <= nx    
+	#@assert tab_cell <= nx
 	ne_cc_nx = tab_cell_nx
 	int_elyte_nx = nx
 	pe_cc_nx = tab_cell_nx
@@ -28,11 +28,11 @@ function basic_grid_example_p4d2(; nx = 1, ny = 1, nz = 1, tab_cell_nx = 0, tab_
 	pe_cc_ny = tab_cell_ny
 
 	if (test)
-		ne_cc_nz = 1*nz
-		ne_am_nz = 4*nz
-		sep_nz = 3*nz
-		pe_am_nz = 5*nz
-		pe_cc_nz = 2*nz
+		ne_cc_nz = 1 * nz
+		ne_am_nz = 4 * nz
+		sep_nz = 3 * nz
+		pe_am_nz = 5 * nz
+		pe_cc_nz = 2 * nz
 	else
 		ne_cc_nz = nz
 		ne_am_nz = nz
@@ -47,11 +47,9 @@ function basic_grid_example_p4d2(; nx = 1, ny = 1, nz = 1, tab_cell_nx = 0, tab_
 	paramsy = [ne_cc_ny, elyte_ny, pe_cc_ny]
 	paramsz = [ne_cc_nz, ne_am_nz, sep_nz, pe_am_nz, pe_cc_nz]
 
-	x = [x0, 4, 2, 4, x4] .* 1e-2/nx
-	y = [2, 20, 2] .* 1e-3/ny
-	z = [10, 100, 50, 80, 10] .* 1e-6/nz
-
-
+	x = [x0, 4, 2, 4, x4] .* 1.0e-2 / nx
+	y = [2, 20, 2] .* 1.0e-3 / ny
+	z = [10, 100, 50, 80, 10] .* 1.0e-6 / nz
 
 
 	same_side = false # if true, needs pe_cc_ny >= ne_cc_ny. I think they usually are equal
@@ -66,7 +64,7 @@ function basic_grid_example_p4d2(; nx = 1, ny = 1, nz = 1, tab_cell_nx = 0, tab_
 	Nz = length(Lz)
 
 	h = CartesianMesh((Nx, Ny, Nz), (Lx, Ly, Lz))
-	H_back = back_converter(UnstructuredMesh(h));
+	H_back = back_converter(UnstructuredMesh(h))
 
 	#################################################################
 
@@ -100,11 +98,11 @@ end;
 
 function setup_geometry(H_mother, paramsz)
 	couplings = []
-	grids=Dict()
+	grids = Dict()
 	global_maps = Dict()
 
-	components = ["NegativeElectrodeCurrentCollector", "NegativeElectrode", "Separator",
-		"PositiveElectrode", "PositiveElectrodeCurrentCollector"]#"Electrolyte"]             
+	components = ["NegativeElectrodeCurrentCollector", "NegativeElectrodeActiveMaterial", "Separator",
+		"PositiveElectrodeActiveMaterial", "PositiveElectrodeCurrentCollector"]#"Electrolyte"]             
 
 	tags = find_tags(UnstructuredMesh(H_mother), paramsz)
 
@@ -113,13 +111,13 @@ function setup_geometry(H_mother, paramsz)
 	tags = find_tags(grids["Global"], paramsz)
 	allinds = 1:nglobal
 	for (ind, component) in enumerate(components)
-		G, maps... = remove_cells(H_mother, setdiff(allinds, tags[ind]))
-		grids[component] = G#UnstructuredMesh(G)
+		G, maps = remove_cells(H_mother, setdiff(allinds, tags[ind]))
+		grids[component] = G #UnstructuredMesh(G)
 		global_maps[component] = maps
 	end
 	begin
-		G, maps... = remove_cells(H_mother, setdiff(allinds, vcat(tags[2:4]...)))
-		grids["Electrolyte"] = G#UnstructuredMesh(G)
+		G, maps = remove_cells(H_mother, setdiff(allinds, vcat(tags[2:4]...)))
+		grids["Electrolyte"] = G #UnstructuredMesh(G)
 		global_maps["Electrolyte"] = maps
 	end
 	##
@@ -130,7 +128,7 @@ function setup_geometry(H_mother, paramsz)
 		grids["Couplings"][comp1] = Dict{String, Any}()
 		for (ind2, comp2) in enumerate(allcomps)
 			#println([comp1,comp2])
-			intersection=find_coupling(global_maps[comp1], global_maps[comp2], [comp1, comp2])
+			intersection = find_coupling(global_maps[comp1], global_maps[comp2], [comp1, comp2])
 			intersection_tmp = Dict() # intersection
 			#tmp = Dict(comp2=> intersection)
 			if (ind1 < ind2)
@@ -183,16 +181,16 @@ end
 function findBoundary(g, dim, dir)
 	nf = number_of_boundary_faces(g)
 	if (dir)
-		max_min = -1e99
+		max_min = -1.0e99
 	else
-		max_min = 1e99
+		max_min = 1.0e99
 	end
 	face = BoundaryFaces()
 	faces = Vector()
-	tol = 1000*eps()
+	tol = 1000 * eps()
 	for i in 1:nf
 		centroid, area = Jutul.compute_centroid_and_measure(g, face, i)
-		diffmax = centroid[dim]-max_min
+		diffmax = centroid[dim] - max_min
 		if dir
 			if diffmax > 0
 				#push!(faces, i)
@@ -207,7 +205,7 @@ function findBoundary(g, dim, dir)
 	end
 	for i in 1:nf
 		centroid, area = Jutul.compute_centroid_and_measure(g, face, i)
-		diffmax = centroid[dim]-max_min
+		diffmax = centroid[dim] - max_min
 		if dir
 			if abs(diffmax) < tol
 				push!(faces, i)
@@ -225,8 +223,8 @@ function findBoundary(g, dim, dir)
 end
 
 function convert_geometry(grids)
-	components = ["NegativeElectrodeCurrentCollector", "NegativeElectrode", "Separator",
-		"PositiveElectrode", "PositiveElectrodeCurrentCollector", "Electrolyte"]
+	components = ["NegativeElectrodeCurrentCollector", "NegativeElectrodeActiveMaterial", "Separator",
+		"PositiveElectrodeActiveMaterial", "PositiveElectrodeCurrentCollector", "Electrolyte"]
 	ugrids = Dict()
 	for (ind, component) in enumerate(components)
 		#println(component)

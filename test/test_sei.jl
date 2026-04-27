@@ -31,16 +31,16 @@ using Test
 
 		states = output.states
 
-		sei_thickness = states["SEIThickness"]
-		voltage_drop = states["SEIVoltageDrop"]
+		sei_thickness = states["NegativeElectrode"]["Interphase"]["Thickness"]
+		voltage_drop = states["NegativeElectrode"]["Interphase"]["VoltageDrop"]
 
 
 		@test length(sei_thickness[:, 2]) ≈ 2629 atol = 0
-		@test sei_thickness[2, 2] ≈ 1.0000000339846753e-8 atol = 1e-1
-		@test voltage_drop[2, 2] ≈ -0.001401323958482127 atol = 1e-1
+		@test sei_thickness[2, 2] ≈ 1.0000000339846753e-8 atol = 1.0e-1
+		@test voltage_drop[2, 2] ≈ -0.001401323958482127 atol = 1.0e-1
 
-		@test sei_thickness[100, 2] ≈ 1.0000000339846753e-8 atol = 1e-1
-		@test voltage_drop[100, 2] ≈ -0.001401323958482127 atol = 1e-1
+		@test sei_thickness[100, 2] ≈ 1.0000000339846753e-8 atol = 1.0e-1
+		@test voltage_drop[100, 2] ≈ -0.001401323958482127 atol = 1.0e-1
 
 
 		true
@@ -48,4 +48,3 @@ using Test
 	end
 
 end
-

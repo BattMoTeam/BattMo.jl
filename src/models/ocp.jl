@@ -3,29 +3,33 @@
 con = Constants()
 const FARADAY_CONSTANT = con.F
 
-const coeff1_graphite = Polynomial([
+const coeff1_graphite = Polynomial(
+	[
 	+0.005269056,
 	+3.299265709,
 	-91.79325798,
 	+1004.911008,
 	-5812.278127,
-	+19329.75490,
-	-37147.89470,
+	+19329.7549,
+	-37147.8947,
 	+38379.18127,
 	-16515.05308,
-]);
+]
+);
 
-const coeff2_graphite = Polynomial([
+const coeff2_graphite = Polynomial(
+	[
 	1,
 	-48.09287227,
 	+1017.234804,
 	-10481.80419,
-	+59431.30000,
+	+59431.3,
 	-195881.6488,
 	+374577.3152,
 	-385821.1607,
 	+165705.8597,
-]);
+]
+);
 
 
 function computeOCP_Graphite_Torchio(c, T, refT, cmax)
@@ -52,9 +56,9 @@ end
 function compute_reaction_rate_constant_graphite(c, T, refT, cmax)
 
 	refT = 298.15
-	k0   = 5.0310e-11
-	Eak  = 5000
-	val  = k0 .* exp(-Eak ./ FARADAY_CONSTANT .* (1.0 ./ T - 1 / refT))
+	k0 = 5.031e-11
+	Eak = 5000
+	val = k0 .* exp(-Eak ./ FARADAY_CONSTANT .* (1.0 ./ T - 1 / refT))
 
 	return val
 
@@ -77,7 +81,7 @@ end
 function computeOCP_NMC811_chen_2020(c, T, refT, cmax)
 	x = c ./ cmax
 
-	ocp = -0.8090 * x + 4.4875 - 0.0428 * tanh(18.5138 * (x - 0.5542)) - 17.7326 * tanh(15.7890 * (x - 0.3117)) + 17.5842 * tanh(15.9308 * (x - 0.3120))
+	ocp = -0.809 * x + 4.4875 - 0.0428 * tanh(18.5138 * (x - 0.5542)) - 17.7326 * tanh(15.789 * (x - 0.3117)) + 17.5842 * tanh(15.9308 * (x - 0.312))
 
 
 	return ocp
@@ -114,25 +118,29 @@ const coeff2_refOCP_lco = Polynomial([
 	+95.960,
 ])
 
-const coeff1_dUdT_nmc111 = Polynomial([
+const coeff1_dUdT_nmc111 = Polynomial(
+	[
 	0.199521039,
 	-0.928373822,
 	+1.364550689000003,
 	-0.611544893999998,
-]);
+]
+);
 
-const coeff2_dUdT_nmc111 = Polynomial([
+const coeff2_dUdT_nmc111 = Polynomial(
+	[
 	1,
 	-5.661479886999997,
 	+11.47636191,
 	-9.82431213599998,
 	+3.048755063,
-])
+]
+)
 
 
 function computeOCP_LFP_Gerver2011(c, T, refT, cmax)
 
-	ocp = 3.41285712e+00 - 1.49721852e-02 * c / cmax + 3.54866018e+14 * exp(-3.95729493e+02 * c / cmax) - 1.45998465e+00 * exp(-1.10108622e+02 * (1 - c / cmax))
+	ocp = 3.41285712e+0 - 1.49721852e-2 * c / cmax + 3.54866018e+14 * exp(-3.95729493e+2 * c / cmax) - 1.45998465e+0 * exp(-1.10108622e+2 * (1 - c / cmax))
 	return ocp
 end
 

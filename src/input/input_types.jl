@@ -19,7 +19,6 @@ standard Julia [dictionary](https://docs.julialang.org/en/v1/base/collections/#D
 abstract type AbstractInput end
 
 
-
 #########################################################
 # Extensions for Abstract type AbstractInput
 
@@ -56,7 +55,7 @@ Extends `Base.setindex!` to allow setting values in the parameter set.
 - `key ::String` : The key to assign the value to.
 """
 function Base.setindex!(ps::AbstractInput, value, key::String)
-	ps.all[key] = value
+	return ps.all[key] = value
 end
 
 """
@@ -103,7 +102,7 @@ end
 New method extending Base.delete! to remove a parameter-value pair
 """
 function Base.delete!(ps::AbstractInput, key::String)
-	delete!(ps.all, key)
+	return delete!(ps.all, key)
 end
 
 """
@@ -115,7 +114,7 @@ function Base.iterate(ps::AbstractInput, state = nothing)
 end
 
 function Base.show(io::IO, dict::Dict)
-	pretty_print_dict(io, dict, 0)
+	return pretty_print_dict(io, dict, 0)
 end
 
 function pretty_print_dict(io::IO, dict::Dict, indent_level::Int)
@@ -131,13 +130,12 @@ function pretty_print_dict(io::IO, dict::Dict, indent_level::Int)
 			println(io, repr(v))
 		end
 	end
-	print(io, indent * "}")
+	return print(io, indent * "}")
 end
 
 function Base.show(io::IO, ob::AbstractInput)
-	pretty_print_dict(io, ob.all, 0)
+	return pretty_print_dict(io, ob.all, 0)
 end
-
 
 
 ##################################################################
@@ -183,7 +181,7 @@ function search_parameter(ps::ParameterSet, query::String)
 		end
 	end
 
-	if isempty(search_matches)
+	return if isempty(search_matches)
 		println("No matches found.")
 
 	else
@@ -195,7 +193,6 @@ function search_parameter(ps::ParameterSet, query::String)
 
 	end
 end
-
 
 
 ###########################################
@@ -216,7 +213,7 @@ struct CyclingProtocol <: ParameterSet
 	all::Dict{String, Any}
 	source_path::Union{String, Nothing}
 	function CyclingProtocol(all::Dict; source_path::Union{String, Nothing} = nothing)
-		new(to_string_any(all), source_path)
+		return new(to_string_any(all), source_path)
 	end
 end
 
@@ -225,7 +222,7 @@ struct ModelSettings <: ParameterSet
 	all::Dict{String, Any}
 	source_path::Union{String, Nothing}
 	function ModelSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
-		new(to_string_any(all), source_path)
+		return new(to_string_any(all), source_path)
 	end
 end
 
@@ -235,7 +232,7 @@ struct SimulationSettings <: ParameterSet
 	all::Dict{String, Any}
 	source_path::Union{String, Nothing}
 	function SimulationSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
-		new(to_string_any(all), source_path)
+		return new(to_string_any(all), source_path)
 	end
 end
 
@@ -245,7 +242,7 @@ struct SolverSettings <: ParameterSet
 	all::Dict{String, Any}
 	source_path::Union{String, Nothing}
 	function SolverSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
-		new(to_string_any(all), source_path)
+		return new(to_string_any(all), source_path)
 	end
 end
 
@@ -254,10 +251,9 @@ struct FullSimulationInput <: ParameterSet
 	all::Dict{String, Any}
 	source_path::Union{String, Nothing}
 	function FullSimulationInput(all::Dict; source_path::Union{String, Nothing} = nothing)
-		new(to_string_any(all), source_path)
+		return new(to_string_any(all), source_path)
 	end
 end
-
 
 
 ################################################################
@@ -284,7 +280,7 @@ struct AdvancedDictInput <: AdditionaInputFormats
 	all::Dict{String, Any}
 	source_path::Union{String, Nothing}
 	function AdvancedDictInput(all::Dict; source_path::Union{String, Nothing} = nothing)
-		new(to_string_any(all), source_path)
+		return new(to_string_any(all), source_path)
 	end
 end
 
@@ -372,7 +368,7 @@ function get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{Str
 
 	fieldname = fieldnamelist[1]
 
-	if length(fieldnamelist) == 1
+	return if length(fieldnamelist) == 1
 
 		if isa(inputparams, Union{T, Dict} where {T <: AdditionaInputFormats}) && haskey(inputparams, fieldname)
 			return inputparams[fieldname]
@@ -415,7 +411,7 @@ function set_input_params!(inputparams::Union{T, Dict{String, K}}, fieldnamelist
 
 	fieldname = fieldnamelist[1]
 
-	if length(fieldnamelist) > 1
+	return if length(fieldnamelist) > 1
 
 		if !haskey(inputparams, fieldname)
 
@@ -473,7 +469,7 @@ function set_default_input_params!(inputparams::Union{T, Dict}, fieldnamelist::V
 
 	current_value = get_input_params(inputparams, fieldnamelist)
 
-	if ismissing(current_value)
+	return if ismissing(current_value)
 
 		set_input_params!(inputparams, fieldnamelist, value; handleMismatch)
 

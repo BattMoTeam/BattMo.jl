@@ -38,7 +38,7 @@ function get_energy_source!(thermal_model::ThermalModel, model::IntercalationBat
 
 	for component in components
 
-		map = maps[symb2str[component]][1][:cellmap]
+		map = maps[symb2str[component]][:cellmap]
 		comp_src = get_energy_source(multimodel[component],
 			state[component],
 			operators[component])
@@ -56,7 +56,7 @@ function get_energy_source!(thermal_model::ThermalModel, model::IntercalationBat
 
 	for cross_term in cross_terms
 		reaction_src = get_reaction_energy_source(cross_term, multimodel, state)
-		map = maps[symb2str[cross_term.source]][1][:cellmap]
+		map = maps[symb2str[cross_term.source]][:cellmap]
 		src[map] .+= reaction_src
 	end
 
@@ -101,7 +101,7 @@ function get_energy_source_by_type!(thermal_model::ThermalModel, model::Intercal
 	symb2str = Dict(zip(components, components_))
 
 	for component in components
-		map = maps[symb2str[component]][1][:cellmap]
+		map = maps[symb2str[component]][:cellmap]
 		comp_terms = get_energy_source_terms(multimodel[component], state[component], operators[component])
 		for (label, local_src) in comp_terms
 			tagged_label = Symbol("$(String(label)) ($(component_short_tag(component)))")
@@ -116,7 +116,7 @@ function get_energy_source_by_type!(thermal_model::ThermalModel, model::Intercal
 
 	for cross_term in cross_terms
 		reaction_src_irrev, reaction_src_rev = get_reaction_energy_source_terms(cross_term, multimodel, state)
-		map = maps[symb2str[cross_term.source]][1][:cellmap]
+		map = maps[symb2str[cross_term.source]][:cellmap]
 		tagged_irrev = Symbol("ReactionIrreversible ($(component_short_tag(cross_term.source)))")
 		tagged_rev = Symbol("ReactionReversible ($(component_short_tag(cross_term.source)))")
 

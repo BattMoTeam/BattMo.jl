@@ -1,4 +1,3 @@
-
 export ActiveMaterial, ActiveMaterialModel, SolidMassCons, NoParticleDiffusion
 
 ## The parameter for the active material are stored in a dictionnary
@@ -21,8 +20,7 @@ struct NoParticleDiffusion <: SolidDiffusionDiscretization end
 
 abstract type AbstractActiveMaterial{label} <: BattMoSystem end
 
-
-activematerial_label(::AbstractActiveMaterial{label}) where label = label
+activematerial_label(::AbstractActiveMaterial{label}) where {label} = label
 
 struct ActiveMaterial{label, D, T, Di} <: AbstractActiveMaterial{label} where {D <: SolidDiffusionDiscretization, T <: ActiveMaterialParameters, Di <: AbstractDict}
 	params::T
@@ -42,9 +40,9 @@ struct ActiveMaterial{label, D, T, Di} <: AbstractActiveMaterial{label} where {D
 	# - effective_density::Real
 	#
 	# If SEI layer is present, we have the following in addition
-	# - SEIlengthInitial
-	# - SEIvoltageDropRef
-	# - SEIlengthRef
+	# - SEIThicknessInitial
+	# - SEIVoltageDropRef
+	# - SEIThicknessRef
 	# - SEIstoichiometryCoefficient
 	# - SEImolarVolume
 	# - SEIelectronicDiffusionCoefficient
@@ -113,7 +111,7 @@ function discretisation_type(system::ActiveMaterialNoParticleDiffusion)
 end
 
 function discretisation_type(model::ActiveMaterialModel)
-	discretisation_type(model.system)
+	return discretisation_type(model.system)
 end
 
 function solid_diffusion_discretization_number(system::ActiveMaterialP2D)
@@ -131,25 +129,25 @@ function setupSolidDiffusionDiscretization(rp, N, D)
 
 	N = Int64(N)
 
-	hT   = zeros(T, N + 1)
+	hT = zeros(T, N + 1)
 	vols = zeros(T, N)
 
 	dr = rp / N
-	rc = [dr * (i - 1 / 2) for i ∈ 1:N]
-	rf = [dr * i for i ∈ 0:(N+1)]
+	rc = [dr * (i - 1 / 2) for i in 1:N]
+	rf = [dr * i for i in 0:(N+1)]
 
-	for i ∈ 1:N
+	for i in 1:N
 		vols[i] = 4 * pi / 3 * (rf[i+1]^3 - rf[i]^3)
 	end
 
-	for i ∈ 1:(N+1)
+	for i in 1:(N+1)
 		hT[i] = (4 * pi * rf[i]^2 / (dr / 2))
 	end
 
 	div = Vector{Tuple{Int64, Int64, Int64}}(undef, 2 * (N - 1))
 
 	k = 1
-	for j ∈ 1:(N-1)
+	for j in 1:(N-1)
 		div[k] = (j, j, 1)
 		k += 1
 		div[k] = (j + 1, j, -1)
@@ -159,12 +157,13 @@ function setupSolidDiffusionDiscretization(rp, N, D)
 	div = SVector(div...)
 	vols = SVector(vols...)
 
-	data = Dict(:N    => N,
-		:D    => D,
-		:rp   => rp,
-		:hT   => hT,
+	data = Dict(
+		:N => N,
+		:D => D,
+		:rp => rp,
+		:hT => hT,
 		:vols => vols,
-		:div  => div,
+		:div => div,
 	)
 	# Convert to concrete type
 	return NamedTuple(pairs(data))
@@ -174,41 +173,49 @@ end
 # setup case with full P2d discretization : variables and equations declaration #
 #################################################################################
 
-function Jutul.select_primary_variables!(S,
+function Jutul.select_primary_variables!(
+	S,
 	system::ActiveMaterialP2D,
 	model::SimulationModel,
 )
 	S[:ElectricPotential] = ElectricPotential()
 	S[:ParticleConcentration] = ParticleConcentration()
-	S[:SurfaceConcentration] = SurfaceConcentration()
+	return S[:SurfaceConcentration] = SurfaceConcentration()
 
 end
 
-function Jutul.degrees_of_freedom_per_entity(model::ActiveMaterialModel,
-	::ParticleConcentration)
+function Jutul.degrees_of_freedom_per_entity(
+	model::ActiveMaterialModel,
+	::ParticleConcentration,
+)
 	return solid_diffusion_discretization_number(model.system)
 end
 
-function Jutul.degrees_of_freedom_per_entity(model::ActiveMaterialModel,
-	::SolidDiffFlux)
+function Jutul.degrees_of_freedom_per_entity(
+	model::ActiveMaterialModel,
+	::SolidDiffFlux,
+)
 	return solid_diffusion_discretization_number(model.system) - 1
 end
 
-function Jutul.select_parameters!(S,
+function Jutul.select_parameters!(
+	S,
 	system::ActiveMaterialP2D,
-	model::SimulationModel)
+	model::SimulationModel,
+)
 
 	S[:Temperature] = Temperature()
 	S[:ElectronicConductivity] = ElectronicConductivity()
 	S[:VolumeFraction] = VolumeFraction()
 
-	if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
+	return if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
 		S[:BoundaryVoltage] = BoundaryPotential(:ElectricPotential)
 	end
 
 end
 
-function Jutul.select_secondary_variables!(S,
+function Jutul.select_secondary_variables!(
+	S,
 	system::ActiveMaterialP2D,
 	model::SimulationModel,
 )
@@ -222,17 +229,19 @@ function Jutul.select_secondary_variables!(S,
 end
 
 
-function Jutul.select_equations!(eqs,
+function Jutul.select_equations!(
+	eqs,
 	system::ActiveMaterialP2D,
 	model::SimulationModel,
 )
 
-	disc                      = model.domain.discretizations.flow
+	disc = model.domain.discretizations.flow
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
-	eqs[:mass_conservation]   = SolidMassCons()
-	eqs[:solid_diffusion_bc]  = SolidDiffusionBc()
+	eqs[:mass_conservation] = SolidMassCons()
+	return eqs[:solid_diffusion_bc] = SolidDiffusionBc()
 
 end
+
 
 # Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::SolidDiffusionBc) = 1
 
@@ -242,14 +251,17 @@ function Jutul.number_of_equations_per_entity(model::ActiveMaterialModel, ::Soli
 
 end
 
-function Jutul.select_minimum_output_variables!(out,
+function Jutul.select_minimum_output_variables!(
+	out,
 	system::ActiveMaterialP2D,
-	model::SimulationModel)
+	model::SimulationModel,
+)
 	push!(out, :Charge)
 	push!(out, :OpenCircuitPotential)
 	push!(out, :Temperature)
 	push!(out, :ReactionRateConstant)
-	push!(out, :DiffusionCoefficient)
+	push!(out, :ElectricPotential)
+	return push!(out, :DiffusionCoefficient)
 
 end
 
@@ -259,7 +271,8 @@ end
 ##############################
 
 @jutul_secondary(
-	function update_vocp!(OpenCircuitPotential,
+	function update_vocp!(
+		OpenCircuitPotential,
 		tv::OpenCircuitPotential,
 		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
 		Temperature,
@@ -352,7 +365,8 @@ end
 
 
 @jutul_secondary(
-	function update_diffusion_coefficient!(DiffusionCoefficient,
+	function update_diffusion_coefficient!(
+		DiffusionCoefficient,
 		tv::DiffusionCoefficient,
 		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
 		Temperature,
@@ -372,7 +386,7 @@ end
 			 0.0
 
 		if Jutul.haskey(model.system.params, :diff_funcexp)
-			theta0   = model.system.params[:theta0]
+			theta0 = model.system.params[:theta0]
 			theta100 = model.system.params[:theta100]
 		end
 
@@ -400,7 +414,8 @@ end
 )
 
 @jutul_secondary(
-	function update_reaction_rate!(ReactionRateConstant,
+	function update_reaction_rate!(
+		ReactionRateConstant,
 		tv::ReactionRateConstant,
 		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
 		SurfaceConcentration,
@@ -440,11 +455,13 @@ end
 )
 
 @jutul_secondary(
-	function update_solid_diffusion_flux!(SolidDiffFlux,
+	function update_solid_diffusion_flux!(
+		SolidDiffFlux,
 		tv::SolidDiffFlux,
 		model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
 		ParticleConcentration,
-		ix) where {label, D, T, Di}
+		ix,
+	) where {label, D, T, Di}
 		s = model.system
 		for cell in ix
 			@inbounds @views update_solid_flux!(SolidDiffFlux[:, cell], ParticleConcentration[:, cell], s)
@@ -458,36 +475,39 @@ function update_solid_flux!(flux, ParticleConcentration, system::ActiveMaterialP
 	# but this is going to change.
 
 	disc = system.discretization
-	N    = disc[:N]
-	hT   = disc[:hT]
-	D    = disc[:D]
+	N = disc[:N]
+	hT = disc[:hT]
+	D = disc[:D]
 
 	@inline globFace(i::Int64) = i + 1
 
-	for i ∈ 1:(N-1)
+	for i in 1:(N-1)
 		# At the moment D is equal in the whole domain, but it will be changed later
 		T1 = hT[globFace(i)] * D
 		T2 = hT[globFace(i)] * D
-		T  = 1 / (1 / T1 + 1 / T2)
+		T = 1 / (1 / T1 + 1 / T2)
 
 		flux[i] = -T * (ParticleConcentration[i+1] - ParticleConcentration[i])
 
 	end
 
+	return
 end
 
 ########################################
 # update equations for solid diffusion #
 ########################################
 
-function Jutul.update_equation_in_entity!(eq_buf,
+function Jutul.update_equation_in_entity!(
+	eq_buf,
 	self_cell,
 	state,
 	state0,
 	eq::SolidMassCons,
 	model,
 	dt,
-	ldisc = Nothing)
+	ldisc = Nothing,
+)
 
 	disc = model.system.discretization
 	N = length(eq_buf)
@@ -501,28 +521,30 @@ function Jutul.update_equation_in_entity!(eq_buf,
 	flux = @views state.SolidDiffFlux[:, self_cell]
 	SurfaceConcentration = state.SurfaceConcentration[self_cell]
 
-	for i ∈ 1:N
+	for i in 1:N
 		eq_buf[i] = vols[i] * (ParticleConcentration[i] - Cp0[i]) / dt
 	end
 
-	for k ∈ 1:length(div)
+	for k in 1:length(div)
 		i, j, sgn = div[k]
 		eq_buf[i] += sgn * flux[j]
 	end
 
-	eq_buf[N] += hT[N+1] * D * (ParticleConcentration[N] - SurfaceConcentration)
+	return eq_buf[N] += hT[N+1] * D * (ParticleConcentration[N] - SurfaceConcentration)
 
 end
 
 
-function Jutul.update_equation_in_entity!(eq_buf,
+function Jutul.update_equation_in_entity!(
+	eq_buf,
 	self_cell,
 	state,
 	state0,
 	eq::SolidDiffusionBc,
 	model,
 	dt,
-	ldisc = Nothing)
+	ldisc = Nothing,
+)
 
 	disc = model.system.discretization
 	N = disc[:N]
@@ -532,7 +554,7 @@ function Jutul.update_equation_in_entity!(eq_buf,
 	ParticleConcentration = state.ParticleConcentration[N, self_cell]
 	SurfaceConcentration = state.SurfaceConcentration[self_cell]
 
-	eq_buf[] = hT[N+1] * D * (ParticleConcentration - SurfaceConcentration)
+	return eq_buf[] = hT[N+1] * D * (ParticleConcentration - SurfaceConcentration)
 
 end
 
@@ -542,16 +564,18 @@ end
 #####################################################
 
 
-function Jutul.select_primary_variables!(S,
+function Jutul.select_primary_variables!(
+	S,
 	system::ActiveMaterialNoParticleDiffusion,
 	model::SimulationModel,
 )
 	S[:ElectricPotential] = ElectricPotential()
-	S[:Concentration] = Concentration()
+	return S[:Concentration] = Concentration()
 
 end
 
-function Jutul.select_secondary_variables!(S,
+function Jutul.select_secondary_variables!(
+	S,
 	system::ActiveMaterialNoParticleDiffusion,
 	model::SimulationModel,
 )
@@ -559,48 +583,51 @@ function Jutul.select_secondary_variables!(S,
 	S[:Charge] = Charge()
 	S[:Mass] = Mass()
 	S[:OpenCircuitPotential] = OpenCircuitPotential()
-	S[:ReactionRateConstant] = ReactionRateConstant()
+	return S[:ReactionRateConstant] = ReactionRateConstant()
 
 end
 
-function Jutul.select_parameters!(S,
+function Jutul.select_parameters!(
+	S,
 	system::ActiveMaterialNoParticleDiffusion,
-	model::SimulationModel)
+	model::SimulationModel,
+)
 
 	S[:Temperature] = Temperature()
 	S[:ElectronicConductivity] = ElectronicConductivity()
 	S[:Diffusivity] = Diffusivity()
 	S[:VolumeFraction] = VolumeFraction()
 
-	if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
+	return if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
 		S[:BoundaryVoltage] = BoundaryPotential(:ElectricPotential)
 	end
 
 end
 
-function Jutul.select_equations!(eqs,
+function Jutul.select_equations!(
+	eqs,
 	system::ActiveMaterialNoParticleDiffusion,
 	model::SimulationModel,
 )
 
-	disc                      = model.domain.discretizations.charge_flow
+	disc                      = model.domain.discretizations.flow
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
-	eqs[:mass_conservation]   = ConservationLaw(disc, :Mass)
+	return eqs[:mass_conservation] = ConservationLaw(disc, :Mass)
 
 end
 
 
-function Jutul.select_minimum_output_variables!(out,
+function Jutul.select_minimum_output_variables!(
+	out,
 	system::ActiveMaterialNoParticleDiffusion,
 	model::SimulationModel,
 )
 	push!(out, :Charge)
 	push!(out, :Mass)
 	push!(out, :OpenCircuitPotential)
-	push!(out, :Temperature)
+	return push!(out, :Temperature)
 
 end
-
 
 
 # @jutul_secondary(
@@ -628,13 +655,14 @@ end
 # )
 
 @jutul_secondary(
-	function update_vocp!(OpenCircuitPotential,
+	function update_vocp!(
+		OpenCircuitPotential,
 		tv::OpenCircuitPotential,
 		model::SimulationModel{<:Any, ActiveMaterialNoParticleDiffusion{T}, <:Any, <:Any},
 		Temperature,
 		SurfaceConcentration,
 		ix,
-	) where T
+	) where {T}
 
 		ocp_func = model.system.params[:ocp_func]
 
@@ -642,7 +670,7 @@ end
 		refT = 298.15
 
 		if Jutul.haskey(model.system.params, :ocp_funcexp)
-			theta0   = model.system.params[:theta0]
+			theta0 = model.system.params[:theta0]
 			theta100 = model.system.params[:theta100]
 		end
 
@@ -667,12 +695,13 @@ end
 )
 
 @jutul_secondary(
-	function update_reaction_rate!(ReactionRateConstant,
+	function update_reaction_rate!(
+		ReactionRateConstant,
 		tv::ReactionRateConstant,
 		model::SimulationModel{<:Any, ActiveMaterialNoParticleDiffusion{T}, <:Any, <:Any},
 		SurfaceConcentration,
 		ix,
-	) where T
+	) where {T}
 		rate_func = model.system.params[:reaction_rate_constant_func]
 		refT = 298.15
 		for i in ix
@@ -680,4 +709,3 @@ end
 		end
 	end
 )
-

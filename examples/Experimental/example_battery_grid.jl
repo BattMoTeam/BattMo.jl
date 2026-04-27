@@ -32,7 +32,7 @@ function makeGeometry(case, include_cc)
 	coupling = Dict()
 	geometry["Couplings"] = Dict()
 
-	bcomponents = ["Separator"]#,"NegativeElectrode","PositiveElectrode"]
+	bcomponents = ["Separator"] #,"NegativeElectrode","PositiveElectrode"]
 	for component in bcomponents
 		Lloc = case[component]["thickness"]
 		Nloc = case[component]["N"]
@@ -102,8 +102,6 @@ coupling = Dict()
 #coupling =
 
 
-
-
 init.object["Geometry"]["case"] = "Grid"
 init.object["Grids"] = geometry
 init.object["Grids"]["faceArea"] = init.object["Geometry"]["faceArea"]
@@ -115,8 +113,8 @@ E = [state[:Control][:ElectricPotential][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 
-
-p1 = Plots.plot(t, E;
+p1 = Plots.plot(
+	t, E;
 	label = "",
 	size = (1000, 800),
 	title = "Voltage",
@@ -127,10 +125,12 @@ p1 = Plots.plot(t, E;
 	markersize = 1,
 	linewidth = 4,
 	xtickfont = font(pointsize = 15),
-	ytickfont = font(pointsize = 15))
+	ytickfont = font(pointsize = 15),
+)
 
 
-p2 = Plots.plot(t, I;
+p2 = Plots.plot(
+	t, I;
 	label = "",
 	size = (1000, 800),
 	title = "Current",
@@ -141,7 +141,8 @@ p2 = Plots.plot(t, I;
 	markersize = 1,
 	linewidth = 4,
 	xtickfont = font(pointsize = 15),
-	ytickfont = font(pointsize = 15))
+	ytickfont = font(pointsize = 15),
+)
 
 
 Plots.plot(p1, p2, layout = (2, 1))
@@ -157,7 +158,8 @@ t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:ElectricPotential][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 ##
-p1 = Plots.plot(t, E;
+p1 = Plots.plot(
+	t, E;
 	label = "",
 	size = (1000, 800),
 	title = "Voltage",
@@ -168,10 +170,12 @@ p1 = Plots.plot(t, E;
 	markersize = 1,
 	linewidth = 4,
 	xtickfont = font(pointsize = 15),
-	ytickfont = font(pointsize = 15))
+	ytickfont = font(pointsize = 15),
+)
 
 
-p2 = Plots.plot(t, I;
+p2 = Plots.plot(
+	t, I;
 	label = "",
 	size = (1000, 800),
 	title = "Current",
@@ -182,7 +186,8 @@ p2 = Plots.plot(t, I;
 	markersize = 1,
 	linewidth = 4,
 	xtickfont = font(pointsize = 15),
-	ytickfont = font(pointsize = 15))
+	ytickfont = font(pointsize = 15),
+)
 
 
 Plots.plot(p1, p2, layout = (2, 1))

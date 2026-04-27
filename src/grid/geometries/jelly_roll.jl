@@ -12,40 +12,44 @@ function jelly_roll_grid(model, input)
 	cell = cell_parameters["Cell"]
 
 	nangles = simulation_settings["AngularGridPoints"]
-	nz      = simulation_settings["HeightGridPoints"]
-	rinner  = cell["InnerRadius"]
-	router  = cell["OuterRadius"]
-	height  = cell["Height"]
+	nz = simulation_settings["HeightGridPoints"]
+	rinner = cell["InnerRadius"]
+	router = cell["OuterRadius"]
+	height = cell["Height"]
 
 	function get_vector(geomparams, fdname)
 		# double coated electrode
-		v = [geomparams["PositiveElectrode"]["Coating"][fdname],
+		v = [
+			geomparams["PositiveElectrode"]["Coating"][fdname],
 			geomparams["PositiveElectrode"]["CurrentCollector"][fdname],
 			geomparams["PositiveElectrode"]["Coating"][fdname],
 			geomparams["Separator"][fdname],
 			geomparams["NegativeElectrode"]["Coating"][fdname],
 			geomparams["NegativeElectrode"]["CurrentCollector"][fdname],
 			geomparams["NegativeElectrode"]["Coating"][fdname],
-			geomparams["Separator"][fdname]]
+			geomparams["Separator"][fdname],
+		]
 
 		return v
 	end
 
 	function get_simulation_settings(simulation_settings)
 		# double coated electrode
-		v = [simulation_settings["PositiveElectrodeCoatingGridPoints"],
+		v = [
+			simulation_settings["PositiveElectrodeCoatingGridPoints"],
 			simulation_settings["PositiveElectrodeCurrentCollectorGridPoints"],
 			simulation_settings["PositiveElectrodeCoatingGridPoints"],
 			simulation_settings["SeparatorGridPoints"],
 			simulation_settings["NegativeElectrodeCoatingGridPoints"],
 			simulation_settings["NegativeElectrodeCurrentCollectorGridPoints"],
 			simulation_settings["NegativeElectrodeCoatingGridPoints"],
-			simulation_settings["SeparatorGridPoints"]]
+			simulation_settings["SeparatorGridPoints"],
+		]
 
 		return v
 	end
 
-	Ns  = get_simulation_settings(simulation_settings)
+	Ns = get_simulation_settings(simulation_settings)
 	dxs = get_vector(cell_parameters, "Thickness")
 
 	dx = mapreduce((dx, N) -> repeat([dx], N), vcat, dxs ./ Ns, Ns)
@@ -95,10 +99,14 @@ function jelly_roll_grid(model, input)
 
 	parentGrid = convert_to_mrst_grid(uParentGrid)
 
-	components = get_component_list(model;
-		include_current_collectors = true,
-		include_electrolyte = true,
-		include_separator = true)
+	components = [
+		"PositiveElectrodeCurrentCollector",
+		"PositiveElectrodeActiveMaterial",
+		"Separator",
+		"Electrolyte",
+		"NegativeElectrodeActiveMaterial",
+		"NegativeElectrodeCurrentCollector",
+	]
 
 	grids = Dict()
 	global_maps = Dict()
@@ -108,7 +116,7 @@ function jelly_roll_grid(model, input)
 	for component in components
 		allinds = collect(1:parentGrid["cells"]["num"])
 		inds = findall(x -> x in spacingtags[component], tags[:spacing])
-		G, maps... = remove_cells(parentGrid, setdiff!(allinds, inds))
+		G, maps = remove_cells(parentGrid, setdiff!(allinds, inds))
 		grids[component] = G
 		global_maps[component] = maps
 	end
@@ -146,8 +154,8 @@ function setup_tab_couplings(grids, input, component)
 		# We use the vertical faces of the current collector, at the top, to compute the spiral length. We collect their indices
 		# in the structure vectbcface
 
-		c  = geo.boundary_centroids[1:2, :]
-		n  = geo.boundary_normals[1:2, :]
+		c = geo.boundary_centroids[1:2, :]
+		n = geo.boundary_normals[1:2, :]
 		nc = [norm(col) for col in eachslice(c, dims = 2)]
 
 		vectbcface = findall(((1.0 ./ nc) .* vec(sum(c .* n, dims = 1))) .< -(1 - 0.01))
@@ -156,7 +164,7 @@ function setup_tab_couplings(grids, input, component)
 
 		nz = simulation_settings["HeightGridPoints"]
 
-		if component == "NegativeElectrodeCurrentCollector"
+		if component == "NegativeCurrentCollector"
 			vectbcface = vectbcface[abs.(zc .- maximum(zc)) .<= 0.01/nz*(maximum(zc)-minimum(zc))]
 		else
 			vectbcface = vectbcface[abs.(zc .- minimum(zc)) .<= 0.01/nz*(maximum(zc)-minimum(zc))]
@@ -173,12 +181,12 @@ function setup_tab_couplings(grids, input, component)
 		dl = [norm(col) for col in eachslice(dc, dims = 2)]
 
 		spiral_lengths = [0; cumsum(dl)]
-		spiral_length  = spiral_lengths[end]
+		spiral_length = spiral_lengths[end]
 
 		# We recover the parameters for the tabs. The location of the tabs is given by a fraction which determines the fraction
 		# of the total spiral length where the tab is located.
 
-		tab_width     = cell_parameters[ip_component]["CurrentCollector"]["TabWidth"]
+		tab_width = cell_parameters[ip_component]["CurrentCollector"]["TabWidth"]
 		tab_fractions = cell_parameters[ip_component]["CurrentCollector"]["TabFractions"]
 
 		# The tab_intervals is an array of intervals given the lower and upper limit of the tab extent in term of the spiral
@@ -231,7 +239,7 @@ function setup_tab_couplings(grids, input, component)
 		end
 
 		# We setup angle and radius of the top (bottom) faces.
-		angle_horzfaces  = [atan(c[2], c[1]) for c in eachslice(geo.boundary_centroids[1:2, horzfaces], dims = 2)]
+		angle_horzfaces = [atan(c[2], c[1]) for c in eachslice(geo.boundary_centroids[1:2, horzfaces], dims = 2)]
 		radius_horzfaces = [norm(c) for c in eachslice(geo.boundary_centroids[1:2, horzfaces], dims = 2)]
 
 		""" Given a face in the first row of current collector, we collect the other cells in the radial direction. The
@@ -297,6 +305,6 @@ function spiral_grid(geomparams::InputGeometryParams)
 	dx = mapreduce((dx, N) -> repeat([dx], N), vcat, dxs, Ns)
 
 	spacing = [0; cumsum(dx)]
-	spacing = spacing / spacing[end]
+	return spacing = spacing / spacing[end]
 
 end

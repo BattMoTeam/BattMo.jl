@@ -4,9 +4,21 @@ export convert_parameter_sets_to_old_input_format, convert_to_parameter_sets, fl
 function flatten_input(input::P) where {P <: ParameterSet}
 	input_dict = input.all
 	return flatten_dict(input_dict)
+	input_dict = input.all
+	return flatten_dict(input_dict)
 end
 
 function flatten_dict(dict; parent_key::String = "")
+	flat = Dict{String, Any}()
+	for (k, v) in dict
+		new_key = isempty(parent_key) ? k : string(parent_key, k)
+		if v isa Dict
+			merge!(flat, flatten_dict(v; parent_key = new_key))
+		else
+			flat[new_key] = v
+		end
+	end
+	return flat
 	flat = Dict{String, Any}()
 	for (k, v) in dict
 		new_key = isempty(parent_key) ? k : string(parent_key, k)
@@ -55,12 +67,14 @@ function extract_input_sets(simulation_input::FullSimulationInput)
 		solver_settings = SolverSettings(solver_settings)
 	end
 
-	return (base_model = base_model,
+	return (
+		base_model = base_model,
 		model_settings = model_settings,
 		cell_parameters = cell_parameters,
 		cycling_protocol = cycling_protocol,
 		simulation_settings = simulation_settings,
-		solver_settings = solver_settings)
+		solver_settings = solver_settings,
+	)
 
 end
 
@@ -72,13 +86,13 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 	if params["Geometry"]["case"] == "1D"
 		geom = "P2D"
 
-	elseif params["Geometry"]["case"] == "3D-demo"
+	elseif params["Geometry"]["case"] == "3D-demo" || params["Geometry"]["case"] == "multiLayerPouch"
 		geom = "P4D Pouch"
 
 	elseif params["Geometry"]["case"] == "jellyRoll"
 		geom = "P4D Cylindrical"
 	else
-		error("ModelFramework not recognized. Please use '1D', '3D-demo' or 'jellyRoll'.")
+		error("ModelFramework not recognized. Please use '1D', '3D-demo', 'multiLayerPouch' or 'jellyRoll'.")
 	end
 
 
@@ -139,11 +153,10 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 
 		if haskey(model_settings, "CurrentCollectors")
 			simulation_settings["PositiveElectrodeCurrentCollectorGridPoints"] = params["PositiveElectrode"]["CurrentCollector"]["N"]
-			simulation_settings["PositiveElectrodeCurrentCollectorTabWidthGridPoints"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"]
-			simulation_settings["PositiveElectrodeCurrentCollectorTabLengthGridPoints"] = params["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"]
 			simulation_settings["NegativeElectrodeCurrentCollectorGridPoints"] = params["NegativeElectrode"]["CurrentCollector"]["N"]
-			simulation_settings["NegativeElectrodeCurrentCollectorTabWidthGridPoints"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"]
-			simulation_settings["NegativeElectrodeCurrentCollectorTabLengthGridPoints"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"]
+			simulation_settings["TabWidthGridPoints"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"]
+			simulation_settings["TabLengthGridPoints"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"]
+			@warn "Currently, the model uses a unified length and width resolution for the tabs, which is set to the negative electrode current collector tab resolution specified in your input."
 		end
 	end
 
@@ -284,7 +297,8 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 				"InterstitialConcentration" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["SEIinterstitialConcentration"],
 				"InitialThickness" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["SEIlengthInitial"],
 				"InitialPotentialDrop" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["SEIvoltageDropRef"],
-			))
+			),
+		)
 
 		cell_parameters["NegativeElectrode"]["Interphase"] = inter["Interphase"]
 	end
@@ -327,21 +341,29 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 		cell_parameters["Cell"]["ElectrodeWidth"] = params["Geometry"]["width"]
 		cell_parameters["Cell"]["ElectrodeLength"] = params["Geometry"]["height"]
 
+		if haskey(params["Geometry"], "nLayers")
+			cell_parameters["Cell"]["NumberOfLayersInParallel"] = params["Geometry"]["nLayers"]
+		else
+			cell_parameters["Cell"]["NumberOfLayersInParallel"] = 1
+			@warn "Number of layers in parallel not specified. Defaulting to 1 layer."
+		end
+
 		if haskey(model_settings, "CurrentCollectors")
 			pos_cc = Dict(
 				"CurrentCollector" => Dict(
 					"Thickness" => params["PositiveElectrode"]["CurrentCollector"]["thickness"],
-					"TabWidth" => params["PositiveElectrode"]["CurrentCollector"]["tab"]["width"],
-					"TabLength" => params["PositiveElectrode"]["CurrentCollector"]["tab"]["height"],
+					# "TabWidth" => params["PositiveElectrode"]["CurrentCollector"]["tab"]["width"],
+					# "TabLength" => params["PositiveElectrode"]["CurrentCollector"]["tab"]["height"],
 					"Density" => params["PositiveElectrode"]["CurrentCollector"]["density"],
 					"ElectronicConductivity" => params["PositiveElectrode"]["CurrentCollector"]["electronicConductivity"],
-				))
+				),
+			)
 
 			neg_cc = Dict(
 				"CurrentCollector" => Dict(
 					"Thickness" => params["NegativeElectrode"]["CurrentCollector"]["thickness"],
-					"TabWidth" => params["NegativeElectrode"]["CurrentCollector"]["tab"]["width"],
-					"TabLength" => params["NegativeElectrode"]["CurrentCollector"]["tab"]["height"],
+					# "TabWidth" => params["NegativeElectrode"]["CurrentCollector"]["tab"]["width"],
+					# "TabLength" => params["NegativeElectrode"]["CurrentCollector"]["tab"]["height"],
 					"Density" => params["NegativeElectrode"]["CurrentCollector"]["density"],
 					"ElectronicConductivity" => params["NegativeElectrode"]["CurrentCollector"]["electronicConductivity"],
 				),
@@ -356,6 +378,33 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 
 			cell_parameters["NegativeElectrode"]["CurrentCollector"] = neg_cc["CurrentCollector"]
 			cell_parameters["PositiveElectrode"]["CurrentCollector"] = pos_cc["CurrentCollector"]
+
+			cell_parameters["Cell"]["TabWidth"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["width"]
+			cell_parameters["Cell"]["TabLength"] = params["NegativeElectrode"]["CurrentCollector"]["tab"]["height"]
+			@warn "Currently, the model uses a unified length and width for the tabs, which is set to the negative electrode current collector tab dimensions specified in your input."
+
+			if !haskey(cell_parameters["NegativeElectrode"]["CurrentCollector"], "TabFractions")
+				cell_parameters["NegativeElectrode"]["CurrentCollector"]["TabPositionFraction"] = 0.2
+				@warn "Tab position fraction not specified for negative electrode current collector. Defaulting to 0.2 (20% from the left edge)."
+			end
+
+			if !haskey(cell_parameters["PositiveElectrode"]["CurrentCollector"], "TabFractions")
+				cell_parameters["PositiveElectrode"]["CurrentCollector"]["TabPositionFraction"] = 0.8
+				@warn "Tab position fraction not specified for positive electrode current collector. Defaulting to 0.8 (80% from the left edge)."
+			end
+
+			if !haskey(cell_parameters["Cell"], "TabsOnSameSide")
+				cell_parameters["Cell"]["TabsOnSameSide"] = true
+				@warn "Whether tabs are on the same side of the cell not specified. Defaulting to true (tabs on the same side)."
+			end
+
+			if !haskey(cell_parameters["Cell"], "DoubleCoatedElectrodes") && cell_parameters["Cell"]["NumberOfLayersInParallel"] > 1
+				cell_parameters["Cell"]["DoubleCoatedElectrodes"] = true
+				@warn "Whether electrodes are double coated not specified. Defaulting to true (double coated electrodes) since number of layers in parallel is greater than 1."
+			elseif !haskey(cell_parameters["Cell"], "DoubleCoatedElectrodes") && cell_parameters["Cell"]["NumberOfLayersInParallel"] == 1
+				cell_parameters["Cell"]["DoubleCoatedElectrodes"] = false
+				@warn "Whether electrodes are double coated not specified. Defaulting to false (single coated electrodes)."
+			end
 		end
 
 	elseif model_settings["ModelFramework"] == "P4D Cylindrical"
@@ -373,7 +422,8 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 					"TabFractions" => params["PositiveElectrode"]["CurrentCollector"]["tabparams"]["fractions"],
 					"Density" => params["PositiveElectrode"]["CurrentCollector"]["density"],
 					"ElectronicConductivity" => params["PositiveElectrode"]["CurrentCollector"]["electronicConductivity"],
-				))
+				),
+			)
 
 			neg_cc = Dict(
 				"CurrentCollector" => Dict(
@@ -429,10 +479,12 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 		cycling_protocol["VoltageChangeLimit"] = params["Control"]["dEdtLimit"]
 	end
 
-	return (CellParameters(cell_parameters),
+	return (
+		CellParameters(cell_parameters),
 		CyclingProtocol(cycling_protocol),
 		ModelSettings(model_settings),
-		SimulationSettings(simulation_settings))
+		SimulationSettings(simulation_settings),
+	)
 end
 
 function convert_to_full_simulation_input(input::AdvancedDictInput, base_model = "LithiumIonBattery"; solver_settings = missing)
@@ -761,7 +813,8 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
 					"width" => get_key_value(ne_cc, "TabWidth"),
 					"height" => get_key_value(ne_cc, "TabLength"),
 					"Nw" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabWidth"),
-					"Nh" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabLength")),
+					"Nh" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabLength"),
+				),
 				"tabparams" => Dict(
 					"usetab" => true,
 					"width" => get_key_value(ne_cc, "TabWidth"),

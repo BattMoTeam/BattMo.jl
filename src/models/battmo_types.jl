@@ -56,7 +56,7 @@ struct Energy <: ScalarVariable end
 
 const BCCurrent = Dict(
 	:Charge => :BCCharge,
-	:Mass   => :BCMass,
+	:Mass => :BCMass,
 	:Energy => :BCCurrent,
 )
 
@@ -70,8 +70,8 @@ Jutul.associated_entity(::BoundaryPotential) = BoundaryDirichletFaces()
 
 struct BoundaryCurrent{label, C} <: ScalarVariable
 	cells::C
-	function BoundaryCurrent(cells::C, label::Symbol) where C
-		new{label, C}(cells)
+	function BoundaryCurrent(cells::C, label::Symbol) where {C}
+		return new{label, C}(cells)
 	end
 end
 
@@ -94,12 +94,14 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
 
 	vol_frac::V
 
-	function MinimalTpfaGrid(volumes,
+	function MinimalTpfaGrid(
+		volumes,
 		N,
 		N_hT,
 		cf,  # cell-face pairs
 		cf_hT,  # value of the half-transmissibility for the corresponding cell-face pair
-		vf)
+		vf,
+	)
 
 		nc = length(volumes)
 
@@ -126,19 +128,23 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
 		P = []
 		S = []
 
-		return new{typeof(volumes),
+		return new{
+			typeof(volumes),
 			typeof(N),
 			typeof(N_hT),
 			typeof(cf),
 			typeof(cf_hT),
-			typeof(P)}(volumes,
+			typeof(P),
+		}(
+			volumes,
 			N,
 			N_hT,
 			cf,
 			cf_hT,
 			P,
 			S,
-			vf)
+			vf,
+		)
 
 	end
 
@@ -171,7 +177,7 @@ struct TPFAInterfaceFluxCT{T, F} <: AdditiveCrossTerm
 	source_cells::T
 	trans::F
 	function TPFAInterfaceFluxCT(target::T, source::T, trans::F) where {T, F}
-		new{T, F}(target, source, trans)
+		return new{T, F}(target, source, trans)
 	end
 end
 
@@ -181,7 +187,7 @@ struct AccumulatorInterfaceFluxCT{T, F} <: AdditiveCrossTerm
 	source_cells::T
 	trans::F
 	function AccumulatorInterfaceFluxCT(target::Integer, source::T, trans::F) where {T, F}
-		new{T, F}(target, source, trans)
+		return new{T, F}(target, source, trans)
 	end
 end
 
@@ -277,4 +283,3 @@ function BatteryGeneralPreconditioner()
 	params["pre_solve_control"] = true
 	return BatteryGeneralPreconditioner(varpreconds, g_varprecond, params, nothing)
 end
-

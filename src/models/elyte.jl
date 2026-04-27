@@ -14,14 +14,14 @@ const ElectrolyteParameters = JutulStorage
 
 struct Electrolyte{D} <: BattMoSystem where {D <: AbstractDict}
 	params::ElectrolyteParameters
-	#  
-	# - bruggeman          
-	# - charge             
-	# - conductivity_data  
-	# - conductivity_func  
-	# - diffusivity_data   
-	# - diffusivity_func   
-	# - separator_porosity 
+	#
+	# - bruggeman
+	# - charge
+	# - conductivity_data
+	# - conductivity_func
+	# - diffusivity_data
+	# - diffusivity_func
+	# - separator_porosity
 	# - transference
 	# - electrolyte_density
 	# - separator_density
@@ -41,27 +41,31 @@ const ElectrolyteModel = SimulationModel{<:Any, <:Electrolyte, <:Any, <:Any}
 struct DmuDc <: ScalarVariable end
 struct ChemCoef <: ScalarVariable end
 
-function Jutul.select_primary_variables!(S,
+function Jutul.select_primary_variables!(
+	S,
 	system::Electrolyte,
-	model::SimulationModel)
+	model::SimulationModel,
+)
 
 	S[:ElectricPotential] = ElectricPotential()
-	S[:ElectrolyteConcentration] = ElectrolyteConcentration()
+	return S[:ElectrolyteConcentration] = ElectrolyteConcentration()
 
 end
 
-function Jutul.select_parameters!(S,
+function Jutul.select_parameters!(
+	S,
 	system::Electrolyte,
 	model::SimulationModel,
 )
 
 	S[:Temperature] = Temperature()
 	S[:BruggemanCoefficient] = BruggemanCoefficient()
-	S[:VolumeFraction] = VolumeFraction()
+	return S[:VolumeFraction] = VolumeFraction()
 
 end
 
-function Jutul.select_equations!(eqs,
+function Jutul.select_equations!(
+	eqs,
 	system::Electrolyte,
 	model::SimulationModel,
 )
@@ -69,13 +73,15 @@ function Jutul.select_equations!(eqs,
 	disc = model.domain.discretizations.flow
 
 	eqs[:charge_conservation] = ConservationLaw(disc, :Charge)
-	eqs[:mass_conservation]   = ConservationLaw(disc, :Mass)
+	return eqs[:mass_conservation] = ConservationLaw(disc, :Mass)
 
 end
 
-function Jutul.select_secondary_variables!(S,
+function Jutul.select_secondary_variables!(
+	S,
 	system::Electrolyte,
-	model::SimulationModel)
+	model::SimulationModel,
+)
 
 	S[:ElectronicConductivity] = ElectronicConductivity()
 	S[:Diffusivity] = Diffusivity()
@@ -83,18 +89,21 @@ function Jutul.select_secondary_variables!(S,
 	S[:ChemCoef] = ChemCoef()
 
 	S[:Charge] = Charge()
-	S[:Mass]   = Mass()
+	return S[:Mass] = Mass()
 
 end
 
-function Jutul.select_minimum_output_variables!(out,
+function Jutul.select_minimum_output_variables!(
+	out,
 	system::Electrolyte,
-	model::SimulationModel)
+	model::SimulationModel,
+)
 
 	for k in [:Charge, :Mass, :ElectronicConductivity, :Diffusivity]
 		push!(out, k)
 	end
 
+	return
 end
 
 
@@ -104,7 +113,7 @@ end
 
 const poly_param = [
 	-10.5       0.074       -6.96e-5;
-	0.668e-3    -1.78e-5    2.80e-8;
+	0.668e-3    -1.78e-5    2.8e-8;
 	0.494e-6    -8.86e-10   0
 ]
 const p1 = Polynomial(poly_param[1:end, 1])
@@ -114,7 +123,7 @@ const p3 = Polynomial(poly_param[1:end, 3])
 @inline function computeElectrolyteConductivity_default(c::Real, T::Real)
 	""" Compute the electrolyte conductivity as a function of temperature and concentration
 	"""
-	fact = 1e-4
+	fact = 1.0e-4
 	return fact * c * (p1(c) + p2(c) * T + p3(c) * T^2)^2
 end
 
@@ -128,11 +137,11 @@ end
 @inline function computeElectrolyteConductivity_xu_2015(c::Real, T::Real)
 	""" Compute the electrolyte conductivity as a function of concentration
 	"""
-	conductivityFactor = 1e-4
+	conductivityFactor = 1.0e-4
 
 	# cnst = [-10.5   , 0.074    , -6.96e-5; ...
 	#         0.668e-3, -1.78e-5 , 2.80e-8; ...
-	#         0.494e-6, -8.86e-10, 0];            
+	#         0.494e-6, -8.86e-10, 0];
 
 
 	#  Ionic conductivity, [S m^-1]
@@ -140,7 +149,7 @@ end
 	#                                           polyval(cnst(end:-1:1,3),c) .* T.^2).^2;
 	# From cideMOD
 
-	conductivity = c * 1e-4 * 1.2544 * (-8.2488 + 0.053248 * T - 2.987e-5 * (T^2) + 0.26235e-3 * c - 9.3063e-6 * c * T + 8.069e-9 * c * T^2 + 2.2002e-7 * c^2 - 1.765e-10 * T * c^2)
+	conductivity = c * 1.0e-4 * 1.2544 * (-8.2488 + 0.053248 * T - 2.987e-5 * (T^2) + 0.26235e-3 * c - 9.3063e-6 * c * T + 8.069e-9 * c * T^2 + 2.2002e-7 * c^2 - 1.765e-10 * T * c^2)
 	return conductivity
 end
 
@@ -154,10 +163,10 @@ const Tgi = [229 5.0]
 	""" Compute the diffusion coefficient as a function of temperature and concentration
 	"""
 	return (
-		1e-4 * 10^(
+		1.0e-4 * 10^(
 			diff_params[1, 1] +
-			diff_params[1, 2] / (T - Tgi[1] - Tgi[2] * c * 1e-3) +
-			diff_params[2, 1] * c * 1e-3
+			diff_params[1, 2] / (T - Tgi[1] - Tgi[2] * c * 1.0e-3) +
+			diff_params[2, 1] * c * 1.0e-3
 		)
 	)
 end
@@ -174,14 +183,16 @@ end
 	""" Compute the diffusion coefficient as a function of concentration
 	"""
 	# Calculate diffusion coefficients constant for the diffusion coefficient calculation
-	cnst = [                                                                                                                                                                                                                            -4.43 -54
-		-0.22 0.0]
+	cnst = [
+		-4.43 -54
+		-0.22 0.0
+	]
 
 	Tgi = [229 5.0]
 
 	# Diffusion coefficient, [m^2 s^-1]
 	#Removed 10⁻⁴ otherwise the same
-	D = 10^((cnst[1, 1] + cnst[1, 2] / (T - Tgi[1] - Tgi[2] * c * 1e-3) + cnst[2, 1] * c * 1e-3))
+	D = 10^((cnst[1, 1] + cnst[1, 2] / (T - Tgi[1] - Tgi[2] * c * 1.0e-3) + cnst[2, 1] * c * 1.0e-3))
 	return D
 end
 
@@ -268,7 +279,7 @@ function compute_flux(::Val{:Charge}, model::ElectrolyteModel, state, cell, othe
 
 	htrans_cell, htrans_other = setup_half_trans(model, face, cell, other_cell, face_sign)
 
-	j     = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.ElectronicConductivity)
+	j = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.ElectronicConductivity)
 	jchem = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectrolyteConcentration, state.ChemCoef)
 
 	j = j - jchem * (1.0)
@@ -278,7 +289,7 @@ function compute_flux(::Val{:Charge}, model::ElectrolyteModel, state, cell, othe
 end
 
 
-function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
+function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where {T}
 
 	j = compute_flux(Val(:Charge), model, state, c, other, face, face_sign)
 
@@ -331,7 +342,7 @@ function compute_flux(::Val{:Mass}, model::ElectrolyteModel, state, cell, other_
 end
 
 
-function Jutul.face_flux!(q::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where T
+function Jutul.face_flux!(q::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model::ElectrolyteModel, dt, flow_disc) where {T}
 
 	massFlux = compute_flux(Val(:Mass), model, state, c, other, face, face_sign)
 

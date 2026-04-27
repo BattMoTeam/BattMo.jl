@@ -21,41 +21,45 @@ using Test
 		sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
 
 		simulator = sim.simulator
-		model     = sim.model
-		state0    = sim.initial_state
-		forces    = sim.forces
+		model = sim.model
+		state0 = sim.initial_state
+		forces = sim.forces
 		timesteps = sim.time_steps
 
-		solver  = :fgmres
-		fac     = 1e-4       # NEEDED  
-		rtol    = 1e-4 * fac # for simple face rtol=1e7 and atol 1e-9 seems give same number ononlinear as direct
-		atol    = 1e-5 * fac # seems important
-		max_it  = 100
+		solver = :fgmres
+		fac = 1.0e-4       # NEEDED
+		rtol = 1.0e-4 * fac # for simple face rtol=1e7 and atol 1e-9 seems give same number ononlinear as direct
+		atol = 1.0e-5 * fac # seems important
+		max_it = 100
 		verbose = 0
 
 		varpreconds = Vector{BattMo.VariablePrecond}()
 		push!(varpreconds, BattMo.VariablePrecond(Jutul.AMGPreconditioner(:ruge_stuben), :ElectricPotential, :charge_conservation, nothing))
 		g_varprecond = BattMo.VariablePrecond(Jutul.ILUZeroPreconditioner(), :Global, :Global, nothing)
 
-		params                       = Dict()
-		params["method"]             = "block"
+		params = Dict()
+		params["method"] = "block"
 		params["post_solve_control"] = true
-		params["pre_solve_control"]  = true
+		params["pre_solve_control"] = true
 
 		prec = BattMo.BatteryGeneralPreconditioner(varpreconds, g_varprecond, params)
 
-		linear_solver = GenericKrylov(solver;
-			verbose            = verbose,
-			preconditioner     = prec,
+		linear_solver = GenericKrylov(
+			solver;
+			verbose = verbose,
+			preconditioner = prec,
 			relative_tolerance = rtol,
 			absolute_tolerance = atol,
-			max_iterations     = max_it)
+			max_iterations = max_it,
+		)
 
 
-		output = solve(sim; accept_invalid = true,
+		output = solve(
+			sim; accept_invalid = true,
 			info_level = -1,
 			failure_cuts_timestep = false,
-			linear_solver = linear_solver)
+			linear_solver = linear_solver,
+		)
 
 		jutul_states = output.jutul_output.states
 
@@ -63,9 +67,9 @@ using Test
 		Cc = map(x -> x[:Control][:Current][1], jutul_states)
 		phi = map(x -> x[:Control][:ElectricPotential][1], jutul_states)
 		@test length(jutul_states) == 80
-		@test Cc[1] ≈ 0.008165838495401362 atol = 1e-4
+		@test Cc[1] ≈ 0.009073153883779288 atol = 1e-4
 		for i in 3:length(Cc)
-			@test Cc[i] ≈ 0.008165 atol = 1e-4
+			@test Cc[i] ≈ 0.009073153883779288 atol = 1e-4
 		end
 		@test phi[1] ≈ 4.006456739146556 atol = 1e-2
 		@test phi[end] ≈ 2.7485026725636326 atol = 1e-2

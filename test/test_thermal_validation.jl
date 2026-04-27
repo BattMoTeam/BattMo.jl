@@ -114,7 +114,7 @@ end
 			src_reaction = zeros(length(src_total))
 			for cross_term in cross_terms
 				reaction_src = BattMo.get_reaction_energy_source(cross_term, multimodel, state)
-				map = maps[string(cross_term.source)][1][:cellmap]
+				map = maps[string(cross_term.source)][:cellmap]
 				src_reaction[map] .+= reaction_src
 			end
 

@@ -1,4 +1,3 @@
-
 export remove_cells
 
 function map_excluding(indices)
@@ -20,7 +19,8 @@ function remove_cells(G_raw::AbstractDict, cells)
 		maps = (
 			cellmap = cellmap,
 			facemap = facemap,
-			nodemap = nodemap)
+			nodemap = nodemap,
+		)
 
 		return G_raw, maps
 	end
@@ -33,17 +33,17 @@ function remove_cells(G_raw::AbstractDict, cells)
 
 	if haskey(G["faces"], "nodes")
 		G["faces"]["nodes"] = Int.(G["faces"]["nodes"])
-		G["nodes"]["num"]   = Int.(G["nodes"]["num"])
+		G["nodes"]["num"] = Int.(G["nodes"]["num"])
 	end
 
 
 	G["faces"]["neighbors"] = Int.(G["faces"]["neighbors"])
-	G["faces"]["num"]       = Int.(G["faces"]["num"])
-	G["faces"]["nodePos"]   = Int.(G["faces"]["nodePos"])
+	G["faces"]["num"] = Int.(G["faces"]["num"])
+	G["faces"]["nodePos"] = Int.(G["faces"]["nodePos"])
 
-	G["cells"]["faces"]   = Int.(G["cells"]["faces"])
+	G["cells"]["faces"] = Int.(G["cells"]["faces"])
 	G["cells"]["facePos"] = Int.(G["cells"]["facePos"])
-	G["cells"]["num"]     = Int.(G["cells"]["num"])
+	G["cells"]["num"] = Int.(G["cells"]["num"])
 
 
 	all_cells = collect(1:G["cells"]["num"])
@@ -119,9 +119,11 @@ function remove_cells(G_raw::AbstractDict, cells)
 	facemap = findall(!iszero, facemap)
 	nodemap = findall(!iszero, nodemap)
 
-	maps = (cellmap = cellmap,
+	maps = (
+		cellmap = cellmap,
 		facemap = facemap,
-		nodemap = nodemap)
+		nodemap = nodemap,
+	)
 
 	return G, maps
 end

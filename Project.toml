@@ -19,7 +19,6 @@ Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
-PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 RuntimeGeneratedFunctions = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
@@ -33,12 +32,14 @@ x264_jll = "1270edf5-f2f9-52d2-97e9-ab00b5d0237a"
 [weakdeps]
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 
 [extensions]
 BattMoGLMakieExt = ["GLMakie"]
 BattMoMakieExt = ["Makie"]
 BattMoWGLMakieExt = ["WGLMakie"]
+BattMoPythonCallExt = ["PythonCall"]
 
 [compat]
 CSV = "0.10.15"
@@ -64,14 +65,7 @@ StaticArrays = "1.5.17"
 StatsBase = "0.34"
 Tullio = "0.3.5"
 WGLMakie = "0.11.10"
-julia = "1.8"
+julia = "1.9"
 
-[extras]
-GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
-Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
-WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
-
-
-[targets]
-docs = ["GLMakie"]
-test = ["GLMakie"]
+[workspace]
+projects = ["docs", "test"]

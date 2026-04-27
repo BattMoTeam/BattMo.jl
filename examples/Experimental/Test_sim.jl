@@ -23,18 +23,18 @@ fac = 1 # discretisation factor
 
 ## Create the pouch_grid
 
-#x = [x0, 4, 2, 4, x4] .* 1e-2/nx 
+#x = [x0, 4, 2, 4, x4] .* 1e-2/nx
 #y = [2, 20, 2] .* 1e-3/ny
 #z = [10, 100, 50, 80, 10] .* 1e-6/nz
 tab_nx = 3
 tab_ny = 3
 (nx, ny) = (2 + 2 * tab_nx, 3 + 2 * tab_ny)
 n = [4, 4, 4, 4, 4]
-z = [10, 100, 50, 80, 10] .* 1e-6 ./ nz
-tab_w = 4 * 1e-2
-tab_h = 2 * 1e-3
-x = 10 * 1e-2 + 2 * tab_w
-y = 20 * 1e-3 + 2 * tab_h
+z = [10, 100, 50, 80, 10] .* 1.0e-6 ./ nz
+tab_w = 4 * 1.0e-2
+tab_h = 2 * 1.0e-3
+x = 10 * 1.0e-2 + 2 * tab_w
+y = 20 * 1.0e-3 + 2 * tab_h
 #geomparam = Dict()
 
 geomparams = Dict()
@@ -85,7 +85,7 @@ ugrids, couplings = pouch_grid(parameters)
 
 if do_plot
 	fig = Figure(size = (1600, 900))
-	ax  = Axis3(fig[1, 1], zreversed = false)
+	ax = Axis3(fig[1, 1], zreversed = false)
 	for grid in ugrids
 		if isa(grid, UnstructuredMesh)
 			plot_mesh(ax, grid)
@@ -149,7 +149,7 @@ if include_cc
 else
 	##
 	do_plot = true
-	fig = Figure()#size = (600, 650))
+	fig = Figure() #size = (600, 650))
 	ax = Axis3(fig[1, 1])
 	g = ugrids["PositiveElectrode"]
 
@@ -178,14 +178,12 @@ else
 		plot_mesh!(ax, g, transparency = true, alpha = 0.3, color = :blue)
 		Jutul.plot_mesh_edges!(ax, g)
 	end
-	## 
+	##
 end
 if do_plot
 	display(GLMakie.Screen(; resolution = (1000, 500), focus_on_show = true), fig)
 end
 ##
-
-
 
 
 # name = "p2d_40_cccv"
@@ -204,30 +202,32 @@ case["PositiveElectrode"]["CurrentCollector"]["density"] = 1000
 
 use_lower_cc_conductivity = false
 if use_lower_cc_conductivity
-	cond = 1e5
+	cond = 1.0e5
 	init.object["PositiveElectrode"]["CurrentCollector"]["electronicConductivity"] = cond
 	init.object["NegativeElectrode"]["CurrentCollector"]["electronicConductivity"] = cond
 end
 
-init.object["Geometry"]["case"]      = "Grid"
-init.object["Geometry"]["Grids"]     = grids
+init.object["Geometry"]["case"] = "Grid"
+init.object["Geometry"]["Grids"] = grids
 init.object["Geometry"]["Couplings"] = couplings
-init.object["Geometry"]["faceArea"]  = 1.0
+init.object["Geometry"]["faceArea"] = 1.0
 
-init.object["Control"]["CRate"]      = 0.1
-init.object["Control"]["DRate"]      = 0.1108 * 1e-1
-init.object["Control"]["rampupTime"] = 1e2 / init.object["Control"]["DRate"]
+init.object["Control"]["CRate"] = 0.1
+init.object["Control"]["DRate"] = 0.1108 * 1.0e-1
+init.object["Control"]["rampupTime"] = 1.0e2 / init.object["Control"]["DRate"]
 
 if !include_cc
 	init.object["Geometry"]["NegativeElectrode"] = Dict()
 	init.object["Geometry"]["PostitiveElectrode"] = Dict()
 end
 
-sim, forces, state0, parameters, init, model = BattMo.setup_sim(init;
-	use_p2d    = use_p2d,
+sim, forces, state0, parameters, init, model = BattMo.setup_sim(
+	init;
+	use_p2d = use_p2d,
 	use_groups = false,
 	general_ad = false,
-	max_step   = nothing)
+	max_step = nothing,
+)
 
 #Set up config and timesteps
 timesteps = BattMo.setup_timesteps(init; max_step = nothing)
@@ -245,7 +245,8 @@ E = [state[:Control][:ElectricPotential][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 if (false)
-	p1 = Plots.plot(t, E;
+	p1 = Plots.plot(
+		t, E;
 		label = "",
 		size = (1000, 800),
 		title = "Voltage",
@@ -256,9 +257,11 @@ if (false)
 		markersize = 1,
 		linewidth = 4,
 		xtickfont = font(pointsize = 15),
-		ytickfont = font(pointsize = 15))
+		ytickfont = font(pointsize = 15),
+	)
 
-	p2 = Plots.plot(t, I;
+	p2 = Plots.plot(
+		t, I;
 		label = "",
 		size = (1000, 800),
 		title = "Current",
@@ -269,7 +272,8 @@ if (false)
 		markersize = 1,
 		linewidth = 4,
 		xtickfont = font(pointsize = 15),
-		ytickfont = font(pointsize = 15))
+		ytickfont = font(pointsize = 15),
+	)
 
 	println("Volatage ", state[:Control][:ElectricPotential])
 
@@ -304,7 +308,7 @@ for ind in 1:5
 	nc = number_of_cells(g)
 	z = zeros(nc)
 	go = tpfv_geometry(g)
-	z = go.cell_centroids[end, :]##
+	z = go.cell_centroids[end, :] ##
 	val = state[sym][:ElectricPotential]
 	#if(myfirst)
 	GLMakie.lines!(axlines, z, val)
@@ -319,7 +323,7 @@ for ind in 1:5
 	end
 
 	if add_right
-		ind1, minz = findBoundary(g, 3, true)#
+		ind1, minz = findBoundary(g, 3, true) #
 		ind2, maxz = findBoundary(g, 3, false)
 		#minz = minimum(z)
 		#maxz = maximum(z)
@@ -329,8 +333,8 @@ for ind in 1:5
 	end
 
 	if add_left
-		ind1, minz = findBoundary(g, 3, true)#minimum(z)
-		ind2, maxz = findBoundary(g, 3, false)#maximum(z)
+		ind1, minz = findBoundary(g, 3, true) #minimum(z)
+		ind2, maxz = findBoundary(g, 3, false) #maximum(z)
 		vals = Vector{Float64}([0, 0])
 		pos = Vector{Float64}([minz, maxz])
 		GLMakie.lines!(axlines, pos, vals)

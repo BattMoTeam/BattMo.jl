@@ -1,8 +1,10 @@
 export polyfit, update_json_input, compute_ocp_from_string
 
-function polyfit(x,
+function polyfit(
+	x,
 	y;
-	degree = 5)
+	degree = 5,
+)
 
 	"""Compute the OCP fitted function for a material based on the given data"""
 
@@ -22,12 +24,14 @@ function polyfit(x,
 	return fit_
 end
 
-function update_json_input(; file_path::String = nothing,
+function update_json_input(;
+	file_path::String = nothing,
 	interpolation_object = nothing,
 	component_name::String = nothing,
 	x_name::String = nothing,
 	y_name::String = nothing,
-	new_file_path = nothing)
+	new_file_path = nothing,
+)
 
 	"""Update json input file with a new function expression for the following quantities:
 		- openCircuitPotential
@@ -73,8 +77,8 @@ function update_json_input(; file_path::String = nothing,
 							if haskey(json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"], "function")
 								json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"]["function"] = expression
 								json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"]["argumentlist"] = [x_name]
-							elseif haskey(json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"], "functionName")
-								delete!(json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"], "functionName")
+							elseif haskey(json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"], "functionname")
+								delete!(json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"], "functionname")
 								json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"]["function"] = expression
 								json_data[component_name]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"]["argumentlist"] = [x_name]
 							else
@@ -118,8 +122,8 @@ function update_json_input(; file_path::String = nothing,
 				if haskey(json_data["Electrolyte"][y_name], "function")
 					json_data["Electrolyte"][y_name]["function"] = expression
 					json_data["Electrolyte"][y_name]["argumentlist"] = [x_name]
-				elseif haskey(json_data["Electrolyte"][y_name], "functionName")
-					delete!(json_data["Electrolyte"][y_name], "functionName")
+				elseif haskey(json_data["Electrolyte"][y_name], "functionname")
+					delete!(json_data["Electrolyte"][y_name], "functionname")
 					json_data["Electrolyte"][y_name]["function"] = expression
 					json_data["Electrolyte"][y_name]["argumentlist"] = [x_name]
 				else
@@ -240,13 +244,12 @@ end
 
 # --- Helper functions ---
 
+function make_invokable(func::Function)
+	return (args...) -> Base.invokelatest(func, args...)
+end
+
 function make_invokable(func)
-	# if it's a Python function, wrap with pyconvert(Real, ...)
-	if func isa Py
-		return (args...) -> pyconvert(Real, func(args...))
-	else
-		return (args...) -> Base.invokelatest(func, args...)
-	end
+	error("Unsupported callable type $(typeof(func)). Load the relevant extension or pass a Julia function. Only Python functions (via PythonCall) and Julia functions are currently supported.")
 end
 
 function setup_evaluation_expression_from_string(str, component, parameter_name)
@@ -281,6 +284,7 @@ function setup_entropy_change_evaluation_expression_from_string(str)
 	return Meta.parse(str)
 
 end
+
 
 function setup_ocp_evaluation_expression_from_string(str)
 	""" setup the Expr from a sting for the OCP function, with the proper signature."""

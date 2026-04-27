@@ -6,8 +6,6 @@ on:
       - main
     tags: "*"
   pull_request:
-  release:
-    types: [published]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -54,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     if: >
       github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main') ||
-      github.event_name == 'release'
+      github.event_name == 'pull_request'
     permissions:
       contents: write
       actions: write
@@ -80,6 +78,9 @@ jobs:
       - name: BuildPkg
         uses: julia-actions/julia-buildpkg@v1
       - name: Deploy docs
+        if: >
+          github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository
         uses: julia-actions/julia-docdeploy@v1
         with:
           prefix: xvfb-run

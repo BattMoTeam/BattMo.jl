@@ -1,9 +1,9 @@
 # # Selecting a model
 
-# As mentioned in the first tutorial, a model can be thought as a mathematical implementation of the electrochemical and transport phenomena occuring in a real battery cell. 
-# The implementation consist of a system of partial differential equations and their corresponding parameters, constants, boundary conditions and assumptions. 
+# As mentioned in the first tutorial, a model can be thought as a mathematical implementation of the electrochemical and transport phenomena occuring in a real battery cell.
+# The implementation consist of a system of partial differential equations and their corresponding parameters, constants, boundary conditions and assumptions.
 
-# The default Lithium-Ion Battery Model corresponds to a basic p2d model, where neither current collectors, degradation nor thermal effects are considered. 
+# The default Lithium-Ion Battery Model corresponds to a basic p2d model, where neither current collectors, degradation nor thermal effects are considered.
 # BattMo has implemented several variants of the Lithium-Ion Battery Model, which can be accessed by *configuring the model object*. In this tutorial, we’ll configure a
 # p2d model with degradation driven by SEI (Solid Electrolyte Interphase) growth.
 
@@ -13,12 +13,12 @@ using BattMo, GLMakie
 # Let’s begin by loading the default model settings for a p2d simulation. This will return a ModelSettings object:
 
 model_settings = load_model_settings(; from_default_set = "p2d")
-nothing #hide 
+nothing #hide
 
 # We can inspect all current settings with:
 model_settings.all
 
-# By default, the "SEIModel" parameter is set to false. Since we want to observe SEI-driven degradation effects, we’ll specify which SEI model we'd like to use, and with that enable the use of 
+# By default, the "SEIModel" parameter is set to false. Since we want to observe SEI-driven degradation effects, we’ll specify which SEI model we'd like to use, and with that enable the use of
 # the SEI model during the simulation. Let's have a look at which models are available to include in the settings:
 
 print_submodels()
@@ -33,7 +33,7 @@ model_settings.all
 
 model = LithiumIonBattery(; model_settings);
 
-# When setting up the model, the LithiumIonBattery constructor runs a validation on the model_settings. 
+# When setting up the model, the LithiumIonBattery constructor runs a validation on the model_settings.
 # In this case, because we set the "SEIModel" parameter to true, the validator provides a warning that we should define which SEI model we would like to use.
 # If we ignore any warnings and pass the model to the Simulation constructor then we get an error. Let's create such a situation:
 
@@ -81,15 +81,17 @@ plot_dashboard(output; plot_type = "simple")
 
 # We recover the SEI length from the `state` output
 
-seilength = output.states["SEIThickness"]
+seilength = output.states["NegativeElectrode"]["Interphase"]["Thickness"]
 
 # We can plot it using the plot_ouput function
 
 ne_index = sim.settings["NegativeElectrodeCoatingGridPoints"]
 
-plot_output(output,
-	["SEIThickness vs Time at Position index $ne_index",
-		"Voltage vs Time"],
-	layout = (2, 1))
-
-
+plot_output(
+	output,
+	[
+		"NegativeElectrodeInterphaseThickness vs Time at Position index $ne_index",
+		"Voltage vs Time",
+	],
+	layout = (2, 1),
+)

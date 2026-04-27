@@ -43,7 +43,7 @@ function current_function(time, voltage)
 	return power_func(time) / voltage / factor
 end
 
-@eval Main current_function = $current_function
+@eval Main const current_function = $current_function
 
 # Load a cycling protocol that uses the current function
 cycling_protocol = load_cycling_protocol(; from_default_set = "user_defined_current_function")
@@ -62,7 +62,7 @@ nothing # hide
 # run the simulation
 model = LithiumIonBattery()
 sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
-output = solve(sim;)
+output = solve(sim)
 nothing # hide
 
 # Plot the results
@@ -79,12 +79,12 @@ simulation_settings["TimeStepDuration"] = 1.0 # Set the initial time step durati
 
 # Now let's rerun the simulation with the new time step duration and plot the results.
 sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
-output = solve(sim;)
+output = solve(sim)
 plot_dashboard(output)
 
 # We can see that the time resolution is much better now and we can capture the dynamics of the drive cycle.
 
-# We can also plot the concentrations and potentials in the cell to see how they change over time and position. 
+# We can also plot the concentrations and potentials in the cell to see how they change over time and position.
 # Let's plot them as line plots over position so we can have a look at the grid resolution.
 
 plot_dashboard(output; plot_type = "line")
@@ -103,17 +103,19 @@ print_info("NegativeElectrode"; view = "SimulationSettings")
 # We can see that the grid resolutions can be controlled by PositiveElectrodeCoatingGridPoints and NegativeElectrodeCoatingGridPoints.
 
 # Lets have a look at the current number of grid points and increase them.
-println("Current grid resolution in positive electrode coating and separator: ",
+println(
+	"Current grid resolution in positive electrode coating and separator: ",
 	simulation_settings["PositiveElectrodeCoatingGridPoints"],
 	" and ",
-	simulation_settings["NegativeElectrodeCoatingGridPoints"])
+	simulation_settings["NegativeElectrodeCoatingGridPoints"],
+)
 
 simulation_settings["PositiveElectrodeCoatingGridPoints"] = 20 # Increase the number of grid points in the positive electrode coating to 20
 simulation_settings["NegativeElectrodeCoatingGridPoints"] = 20 # Increase the number of grid points in the separator to 10
 
 #Let's rerun the simulation with the new grid resolution and plot the results.
 sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
-output = solve(sim;)
+output = solve(sim)
 plot_dashboard(output; plot_type = "line")
 
 # We can see that the electrolyte concentration and positive electrode surface concentration over position are now smooth.

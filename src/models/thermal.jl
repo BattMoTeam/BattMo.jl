@@ -69,7 +69,7 @@ end
 
 function Jutul.select_parameters!(S,
 	system::ThermalSystem,
-	model::BattMoModel)
+	model::SimulationModel)
 
 	S[:EffectiveThermalConductivity] = EffectiveThermalConductivity()
 	S[:EffectiveVolumetricHeatCapacity] = EffectiveVolumetricHeatCapacity()
@@ -241,7 +241,7 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 		# Current collectors
 		if haskey(model.settings, "CurrentCollectors")
 
-			cc_map = maps[string(elde, cc)][1].cellmap
+			cc_map = maps[string(elde, cc)][:cellmap]
 			ccmodel = submodels[string(elde, cc)]
 			ccparams = cell_parameters[string(elde)]["CurrentCollector"]
 			cc_volumetric_heat_capacity = effective_current_collector_heat_capacity(ccmodel, ccparams)
@@ -252,7 +252,7 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 		end
 
 		# Active material (coating)
-		am_map = maps[string(elde, am)][1].cellmap
+		am_map = maps[string(elde, am)].cellmap
 		ammodel = submodels[string(elde, am)]
 		amparams = cell_parameters[string(elde)]
 		am_volumetric_heat_capacity = compute_effective_heat_capacity(ammodel.system.params, amparams)
@@ -266,7 +266,7 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 	end
 
 	# Electrolyte
-	elyte_map = maps[string(elyte)][1].cellmap
+	elyte_map = maps[string(elyte)].cellmap
 	elytemodel = submodels[string(elyte)]
 	elyte_volumetric_heat_capacity = effective_electrolyte_heat_capacity(elytemodel, cell_parameters[string(elyte)])
 	elyte_thermal_conductivity = effective_electrolyte_thermal_conductivity(elytemodel, cell_parameters[string(elyte)], cell_parameters[string(sep)])
@@ -274,7 +274,7 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 	thermal_conductivity[elyte_map] .+= elyte_thermal_conductivity
 
 	# Separator
-	sep_map = maps[string(sep)][1].cellmap
+	sep_map = maps[string(sep)].cellmap
 
 
 	sep_volumetric_heat_capacity = effective_separator_heat_capacity(cell_parameters[string(sep)])

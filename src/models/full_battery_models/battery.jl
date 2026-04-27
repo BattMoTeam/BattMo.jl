@@ -33,8 +33,10 @@ function setup_model!(model::M, input, grids, couplings; global_maps = nothing, 
 	setup_initial_control_policy!(model.multimodel[:Control].system.policy, input, parameters)
 	#model.context = DefaultContext()
 
-	output = (model = model,
-		parameters = parameters)
+	output = (
+		model = model,
+		parameters = parameters,
+	)
 
 	return output
 
@@ -70,20 +72,22 @@ function setup_grids_and_couplings(model::M, input) where {M <: Battery}
 
 end
 
-function setup_component(grid::FiniteVolumeMesh,
+function setup_component(
+	grid::FiniteVolumeMesh,
 	sys;
 	flow_discretization::String = "GeneralAD",
 	dirichletBoundary = nothing,
-	kwargs...)
+	kwargs...,
+)
 
 	domain = DataDomain(grid)
 
 	# operators only use geometry not property
 	k = ones(number_of_cells(grid))
 
-	T    = compute_face_trans(domain, k)
+	T = compute_face_trans(domain, k)
 	T_hf = compute_half_face_trans(domain, k)
-	T_b  = compute_boundary_trans(domain, k)
+	T_b = compute_boundary_trans(domain, k)
 
 	domain[:trans, Faces()]           = T
 	domain[:halfTrans, HalfFaces()]   = T_hf
@@ -99,10 +103,10 @@ function setup_component(grid::FiniteVolumeMesh,
 		bcDirFace = dirichletBoundary["boundaryfaces"] # in BoundaryFaces indexing
 		bcDirCell = dirichletBoundary["cells"]
 
-		bcDirInd                                          = Vector{Int64}(1:nb)
+		bcDirInd = Vector{Int64}(1:nb)
 		domain[:bcDirHalfTrans, BoundaryDirichletFaces()] = domain[:bcTrans][bcDirFace]
-		domain[:bcDirCells, BoundaryDirichletFaces()]     = bcDirCell
-		domain[:bcDirInds, BoundaryDirichletFaces()]      = bcDirInd
+		domain[:bcDirCells, BoundaryDirichletFaces()] = bcDirCell
+		domain[:bcDirInds, BoundaryDirichletFaces()] = bcDirInd
 
 	end
 
@@ -124,11 +128,13 @@ end
 # Transmissibilities #
 ######################
 
-function getTrans(model1::Dict{String, <:Any},
+function getTrans(
+	model1::Dict{String, <:Any},
 	model2::Dict{String, Any},
 	faces,
 	cells,
-	quantity::String)
+	quantity::String,
+)
 	""" setup transmissibility for coupling between models at boundaries"""
 
 	hT1 = getHalfTrans(model1, faces[:, 1], cells[:, 1], quantity)
@@ -140,13 +146,15 @@ function getTrans(model1::Dict{String, <:Any},
 
 end
 
-function getTrans(model1::SimulationModel,
+function getTrans(
+	model1::SimulationModel,
 	model2::SimulationModel,
 	bcfaces,
 	bccells,
 	parameters1,
 	parameters2,
-	quantity)
+	quantity,
+)
 	""" setup transmissibility for coupling between models at boundaries."""
 
 	d1 = physical_representation(model1)
@@ -154,8 +162,8 @@ function getTrans(model1::SimulationModel,
 
 	bcTrans1 = d1[:bcTrans][bcfaces[:, 1]]
 	bcTrans2 = d2[:bcTrans][bcfaces[:, 2]]
-	cells1   = bccells[:, 1]
-	cells2   = bccells[:, 2]
+	cells1 = bccells[:, 1]
+	cells2 = bccells[:, 2]
 
 	s1 = parameters1[quantity][cells1]
 	s2 = parameters2[quantity][cells2]
@@ -166,16 +174,18 @@ function getTrans(model1::SimulationModel,
 
 end
 
-function getHalfTrans(model::SimulationModel,
+function getHalfTrans(
+	model::SimulationModel,
 	bcfaces,
 	bccells,
 	parameters,
-	quantity)
+	quantity,
+)
 	""" recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the corresponding given cells. Note the indexing in BoundaryFaces is used"""
 
-	d       = physical_representation(model)
+	d = physical_representation(model)
 	bcTrans = d[:bcTrans][bcfaces]
-	s       = parameters[quantity][bccells]
+	s = parameters[quantity][bccells]
 
 	T = bcTrans .* s
 

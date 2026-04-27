@@ -21,52 +21,56 @@ sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
 output = solve(sim)
 nothing # hide
 
-# ## Plot discharge curve 
+# ## Plot discharge curve
 
-states = output[:states]
-model  = output[:extra][:model]
-
+states = output.jutul_output.states
 t = [state[:Control][:Controller].time for state in states]
 E = [state[:Control][:ElectricPotential][1] for state in states]
 I = [state[:Control][:Current][1] for state in states]
 
 f = Figure(size = (1000, 400))
 
-ax = Axis(f[1, 1],
-	title = "Voltage",
-	xlabel = "Time / s",
-	ylabel = "Voltage / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25)
-
-scatterlines!(ax,
-	t,
-	E;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
+ax = Axis(
+    f[1, 1],
+    title = "Voltage",
+    xlabel = "Time / s",
+    ylabel = "Voltage / V",
+    xlabelsize = 25,
+    ylabelsize = 25,
+    xticklabelsize = 25,
+    yticklabelsize = 25
 )
 
-ax = Axis(f[1, 2],
-	title = "Current",
-	xlabel = "Time / s",
-	ylabel = "Current / A",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
+scatterlines!(
+    ax,
+    t,
+    E;
+    linewidth = 4,
+    markersize = 10,
+    marker = :cross,
+    markercolor = :black,
 )
 
-scatterlines!(ax,
-	t,
-	I;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black)
+ax = Axis(
+    f[1, 2],
+    title = "Current",
+    xlabel = "Time / s",
+    ylabel = "Current / A",
+    xlabelsize = 25,
+    ylabelsize = 25,
+    xticklabelsize = 25,
+    yticklabelsize = 25,
+)
+
+scatterlines!(
+    ax,
+    t,
+    I;
+    linewidth = 4,
+    markersize = 10,
+    marker = :cross,
+    markercolor = :black
+)
 
 display(f) # hide
 f # hide
@@ -74,29 +78,35 @@ f # hide
 # ## Plot potential on grid at last time step #
 state = states[10]
 
+models = model.multimodel.models
+
 function plot_potential(am, cc, label)
-	f3D = Figure(size = (600, 650))
-	ax3d = Axis3(f3D[1, 1];
-		title = "Potential in $label electrode (coating and active material)")
+    f3D = Figure(size = (600, 650))
+    ax3d = Axis3(
+        f3D[1, 1];
+        title = "Potential in $label electrode (coating and active material)"
+    )
 
-	maxVoltage = maximum([maximum(state[cc][:ElectricPotential]), maximum(state[am][:ElectricPotential])])
-	minVoltage = minimum([minimum(state[cc][:ElectricPotential]), minimum(state[am][:ElectricPotential])])
+    maxVoltage = maximum([maximum(state[cc][:ElectricPotential]), maximum(state[am][:ElectricPotential])])
+    minVoltage = minimum([minimum(state[cc][:ElectricPotential]), minimum(state[am][:ElectricPotential])])
 
-	colorrange = [0, maxVoltage - minVoltage]
+    colorrange = [0, maxVoltage - minVoltage]
 
-	components = [am, cc]
-	for component in components
-		g = model[component].domain.representation
-		phi = state[component][:ElectricPotential]
-		Jutul.plot_cell_data!(ax3d, g, phi .- minVoltage; colormap = :viridis, colorrange = colorrange)
-	end
+    components = [am, cc]
+    for component in components
+        g = models[component].domain.representation
+        phi = state[component][:ElectricPotential]
+        Jutul.plot_cell_data!(ax3d, g, phi .- minVoltage; colormap = :viridis, colorrange = colorrange)
+    end
 
-	cbar = GLMakie.Colorbar(f3D[1, 2];
-		colormap = :viridis,
-		colorrange = colorrange .+ minVoltage,
-		label = "potential")
-	display(GLMakie.Screen(), f3D)
-	return f3D
+    cbar = GLMakie.Colorbar(
+        f3D[1, 2];
+        colormap = :viridis,
+        colorrange = colorrange .+ minVoltage,
+        label = "potential"
+    )
+    display(GLMakie.Screen(), f3D)
+    return f3D
 end
 nothing # hide
 
@@ -108,26 +118,32 @@ plot_potential(:NegativeElectrodeActiveMaterial, :NegativeElectrodeCurrentCollec
 
 # ## Plot surface concentration on grid at last time step
 function plot_surface_concentration(component, label)
-	f3D = Figure(size = (600, 650))
-	ax3d = Axis3(f3D[1, 1];
-		title = "Surface concentration in $label electrode")
+    f3D = Figure(size = (600, 650))
+    ax3d = Axis3(
+        f3D[1, 1];
+        title = "Surface concentration in $label electrode"
+    )
 
-	cs = state[component][:SurfaceConcentration]
-	maxcs = maximum(cs)
-	mincs = minimum(cs)
+    cs = state[component][:SurfaceConcentration]
+    maxcs = maximum(cs)
+    mincs = minimum(cs)
 
-	colorrange = [0, maxcs - mincs]
-	g = model[component].domain.representation
-	Jutul.plot_cell_data!(ax3d, g, cs .- mincs;
-		colormap = :viridis,
-		colorrange = colorrange)
+    colorrange = [0, maxcs - mincs]
+    g = models[component].domain.representation
+    Jutul.plot_cell_data!(
+        ax3d, g, cs .- mincs;
+        colormap = :viridis,
+        colorrange = colorrange
+    )
 
-	cbar = GLMakie.Colorbar(f3D[1, 2];
-		colormap = :viridis,
-		colorrange = colorrange .+ mincs,
-		label = "concentration")
-	display(GLMakie.Screen(), f3D)
-	return f3D
+    cbar = GLMakie.Colorbar(
+        f3D[1, 2];
+        colormap = :viridis,
+        colorrange = colorrange .+ mincs,
+        label = "concentration"
+    )
+    display(GLMakie.Screen(), f3D)
+    return f3D
 end
 nothing # hide
 
@@ -139,31 +155,35 @@ plot_surface_concentration(:NegativeElectrodeActiveMaterial, "negative")
 
 # ## Plot electrolyte concentration and potential on grid at last time step
 function plot_elyte(var, label)
-	f3D = Figure(size = (600, 650))
-	ax3d = Axis3(f3D[1, 1]; title = "$label in electrolyte")
+    f3D = Figure(size = (600, 650))
+    ax3d = Axis3(f3D[1, 1]; title = "$label in electrolyte")
 
-	val = state[:Electrolyte][var]
-	maxval = maximum(val)
-	minval = minimum(val)
+    val = state[:Electrolyte][var]
+    maxval = maximum(val)
+    minval = minimum(val)
 
-	colorrange = [0, maxval - minval]
+    colorrange = [0, maxval - minval]
 
-	g = model[:Electrolyte].domain.representation
-	Jutul.plot_cell_data!(ax3d, g, val .- minval;
-		colormap = :viridis,
-		colorrange = colorrange)
+    g = models[:Electrolyte].domain.representation
+    Jutul.plot_cell_data!(
+        ax3d, g, val .- minval;
+        colormap = :viridis,
+        colorrange = colorrange
+    )
 
-	cbar = GLMakie.Colorbar(f3D[1, 2];
-		colormap = :viridis,
-		colorrange = colorrange .+ minval,
-		label = "$label")
-	display(GLMakie.Screen(), f3D)
-	f3D
+    cbar = GLMakie.Colorbar(
+        f3D[1, 2];
+        colormap = :viridis,
+        colorrange = colorrange .+ minval,
+        label = "$label"
+    )
+    display(GLMakie.Screen(), f3D)
+    return f3D
 end
 nothing # hide
 
 # ## Plot of the concentration in the electrolyte
-plot_elyte(Concentration, "concentration")
+plot_elyte(:ElectrolyteConcentration, "concentration")
 
 # ## Plot of the potential in the electrolyte
 plot_elyte(:ElectricPotential, "potential")

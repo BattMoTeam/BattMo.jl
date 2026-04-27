@@ -33,5 +33,30 @@ function plot_interactive_3d(output::SimulationOutput; shift = nothing, colormap
 	solved_model = output.jutul_output.multimodel
 
 
-	plot_multimodel_interactive(solved_model, jutul_states; shift = shift_copy, colormap = colormap)
+	return plot_multimodel_interactive(solved_model, jutul_states; shift = shift_copy, colormap = colormap)
+end
+
+
+function Jutul.plot_mesh_impl(position::BattMoPosition; kwarg...)
+	return Jutul.plot_mesh_impl(position.mesh; kwarg...)
+end
+
+function Jutul.plot_mesh_impl!(ax, position::BattMoPosition; kwarg...)
+	return Jutul.plot_mesh_impl!(ax, position.mesh; kwarg...)
+end
+
+function Jutul.plot_mesh_edges_impl(position::BattMoPosition; kwarg...)
+	return Jutul.plot_mesh_edges_impl(position.mesh; kwarg...)
+end
+
+function Jutul.plot_mesh_edges_impl!(ax, position::BattMoPosition; kwarg...)
+	return Jutul.plot_mesh_edges_impl!(ax, position.mesh; kwarg...)
+end
+
+function Jutul.plot_cell_data_impl(position::BattMoPosition, data; kwarg...)
+	return Jutul.plot_cell_data_impl(position.mesh, data; kwarg...)
+end
+
+function Jutul.plot_cell_data_impl!(ax, position::BattMoPosition, data; kwarg...)
+	return Jutul.plot_cell_data_impl!(ax, position.mesh, data; kwarg...)
 end
