@@ -11,8 +11,9 @@ close(file)
 
 t_matlab_full = data["time"][:, 1]
 t_matlab = t_matlab_full[1:(end-1)]
-E_matlab = data["E"][:, 1][1:(end-1)]
+E_matlab = data["E"][:, 1]
 I_matlab = data["I"][:, 1]
+electrolyte_concentration_matlab = data["c_e_first"][:, 1]
 sources_matlab = data["sourceTerms"]
 states_heat_matlab = data["states_heat"]
 heat_source_data_matlab = data["heatSourceData"]
@@ -41,14 +42,14 @@ function convert_matlab_cells_to_matrix(cells)
 end
 
 sources_matlab_matrix = convert_matlab_cells_to_matrix(sources_matlab)
-t_source_ref = length(t_matlab_full) == size(sources_matlab_matrix, 1) ? t_matlab_full : t_matlab
+t_source_ref = length(t_matlab_full) == size(sources_matlab_matrix, 1) ? t_matlab_full : t_matlab_full
 
 # Toggle use of MATLAB-retrieved sourced terms in the julia simulation.
-use_matlab_source_terms = true
+use_matlab_source_terms = false
 
 # Compute maximum temperature from matlab data
 T_max_matlab = Float64[]
-for i in eachindex(t_matlab)
+for i in eachindex(t_matlab_full)
 	T_matlab = data["states_thermal"][i]["T"]
 	push!(T_max_matlab, maximum(vec(T_matlab)))
 end
@@ -107,28 +108,27 @@ end
 
 
 inputparams["Control"]["lowerCutoffVoltage"] = 3.6
-inputparams["Geometry"]["Nh"] = 16  # needs to be electrode Nh + 2 * tab Nh from MATLAB geometry
-inputparams["Geometry"]["height"] = 2e-2 + 2*1e-3# needs to be electrode height + 2 * tab height from MATLAB geometry
+# inputparams["Geometry"]["Nh"] = 16  # needs to be electrode Nh + 2 * tab Nh from MATLAB geometry
+# inputparams["Geometry"]["height"] = 2e-2 + 2*1e-3# needs to be electrode height + 2 * tab height from MATLAB geometry
 inputparams["PositiveElectrode"]["CurrentCollector"]["thickness"] = 80e-6 # in order to match the MATLAB geometry.
 inputparams["NegativeElectrode"]["CurrentCollector"]["thickness"] = 100e-6# in order to match the MATLAB geometry.
 
 
 # Run simulation
 
-output = run_simulation(inputparams; accept_invalid = true)
+output_test = run_simulation(inputparams; accept_invalid = true)
 
 
-model_settings      = output.simulation.model.settings
-cell_parameters     = output.simulation.cell_parameters
-cycling_protocol_   = output.simulation.cycling_protocol
-simulation_settings = output.simulation.settings
-
+model_settings      = deepcopy(output_test.simulation.model.settings)
+cell_parameters     = deepcopy(output_test.simulation.cell_parameters)
+cycling_protocol_   = deepcopy(output_test.simulation.cycling_protocol)
+simulation_settings = deepcopy(output_test.simulation.settings)
 
 cycling_protocol = CyclingProtocol(
 	Dict(
 		"Protocol" => "InputCurrentSeries",
-		"Times" => t_matlab,
-		"Currents" => I_matlab,
+		"Times" => vcat([0], t_matlab_full),
+		"Currents" => vcat([I_matlab[1]], I_matlab),
 		"LowerVoltageLimit" => cycling_protocol_["LowerVoltageLimit"],
 		"UpperVoltageLimit" => cycling_protocol_["UpperVoltageLimit"],
 		"InitialStateOfCharge" => cycling_protocol_["InitialStateOfCharge"],
@@ -178,6 +178,7 @@ display(GLMakie.Screen(), fig2)
 
 E = output.time_series["Voltage"]
 t = output.time_series["Time"]
+c_elyte = output.states["Electrolyte"]["Concentration"][:, 1]
 
 
 f1 = Figure(size = (1000, 400))
@@ -191,7 +192,7 @@ ax1 = Axis(f1[1, 1],
 	yticklabelsize = 25,
 )
 matlab_v = scatterlines!(ax1,
-	t_matlab,
+	t_matlab_full,
 	E_matlab;
 	linewidth = 4,
 	markersize = 10,
@@ -199,8 +200,38 @@ matlab_v = scatterlines!(ax1,
 	markercolor = :black,
 )
 julia_v = scatterlines!(ax1,
-	t,
-	E;
+	t_matlab_full,
+	c_elyte;
+	linewidth = 4,
+	markersize = 10,
+	marker = :circle,
+	markercolor = :red,
+)
+Legend(f1[1, 2], [matlab_v, julia_v], ["MATLAB", "Julia"])
+display(GLMakie.Screen(), f1)
+
+
+f1 = Figure(size = (1000, 400))
+ax1 = Axis(f1[1, 1],
+	title = "Electrolyte concentration",
+	xlabel = "Time / s",
+	ylabel = "Electrolyte concentration / mol·m⁻³",
+	xlabelsize = 25,
+	ylabelsize = 25,
+	xticklabelsize = 25,
+	yticklabelsize = 25,
+)
+matlab_v = scatterlines!(ax1,
+	t_matlab_full,
+	electrolyte_concentration_matlab;
+	linewidth = 4,
+	markersize = 10,
+	marker = :cross,
+	markercolor = :black,
+)
+julia_v = scatterlines!(ax1,
+	t_matlab_full,
+	c_elyte;
 	linewidth = 4,
 	markersize = 10,
 	marker = :circle,
@@ -263,8 +294,8 @@ thermal_timesteps = timesteps
 thermal_time = t
 
 if use_matlab_source_terms
-	thermal_timesteps = vcat(t_matlab[1], diff(t_matlab))
-	thermal_time = t_matlab
+	thermal_timesteps = vcat(t_matlab_full[1], diff(t_matlab_full))
+	thermal_time = t_matlab_full
 	for i in 1:length(thermal_timesteps)
 		push!(forces, (value = vec(sources_matlab_matrix[i, :]),))
 	end
@@ -301,7 +332,7 @@ T_max_julia = [maximum(state[:Temperature]) for state in thermal_states]
 #########################################################
 # Plot source term contributions
 
-BattMo.plot_thermal_source_contributions(t, sources_julia; total_source = sources_julia_matrix)
+BattMo.plot_thermal_source_contributions(t_matlab_full, sources_julia; total_source = sources_julia_matrix)
 
 
 #########################################################
@@ -319,7 +350,7 @@ ax2 = Axis(f2[1, 1],
 )
 
 matlab_ = scatterlines!(ax2,
-	t_matlab,
+	t_matlab_full,
 	T_max_matlab .- 273.15;
 	linewidth = 4,
 	markersize = 10,
@@ -328,7 +359,7 @@ matlab_ = scatterlines!(ax2,
 )
 
 julia_ = scatterlines!(ax2,
-	thermal_time,
+	t_matlab_full,
 	T_max_julia .- 273.15;
 	linewidth = 2,
 	markersize = 5,
