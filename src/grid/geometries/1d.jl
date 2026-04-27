@@ -4,151 +4,148 @@ export one_dimensional_grid
 # one dimensional grid setup #
 ##############################
 
-function one_dimensional_grid(input)
+function one_dimensional_grid(model, input)
 
-    grids = Dict()
-    global_maps = Dict()
+	grids = Dict()
+	global_maps = Dict()
 
-    cell_parameters = input.cell_parameters
-    simulation_settings = input.simulation_settings
+	cell_parameters = input.cell_parameters
+	simulation_settings = input.simulation_settings
 
-    include_current_collectors = haskey(input.model_settings, "CurrentCollectors")
+	include_current_collectors = haskey(input.model_settings, "CurrentCollectors")
 
-    faceArea = cell_parameters["Cell"]["ElectrodeGeometricSurfaceArea"]
+	faceArea = cell_parameters["Cell"]["ElectrodeGeometricSurfaceArea"]
 
-    function get_cell_parameter_vals(var)
-        neval = cell_parameters["NegativeElectrode"]["Coating"][var]
-        sepval = cell_parameters["Separator"][var]
-        peval = cell_parameters["PositiveElectrode"]["Coating"][var]
-        if include_current_collectors
-            ne_ccval = cell_parameters["NegativeElectrode"]["CurrentCollector"][var]
-            pe_ccval = cell_parameters["PositiveElectrode"]["CurrentCollector"][var]
-            out = [ne_ccval, neval, sepval, peval, pe_ccval]
-        else
-            out = [neval, sepval, peval]
-        end
-        return out
-    end
+	function get_cell_parameter_vals(var)
+		neval = cell_parameters["NegativeElectrode"]["Coating"][var]
+		sepval = cell_parameters["Separator"][var]
+		peval = cell_parameters["PositiveElectrode"]["Coating"][var]
+		if include_current_collectors
+			ne_ccval = cell_parameters["NegativeElectrode"]["CurrentCollector"][var]
+			pe_ccval = cell_parameters["PositiveElectrode"]["CurrentCollector"][var]
+			out = [ne_ccval, neval, sepval, peval, pe_ccval]
+		else
+			out = [neval, sepval, peval]
+		end
+		return out
+	end
 
-    function get_grid_settings_vals()
-        neval = simulation_settings["NegativeElectrodeCoatingGridPoints"]
-        sepval = simulation_settings["SeparatorGridPoints"]
-        peval = simulation_settings["PositiveElectrodeCoatingGridPoints"]
-        if include_current_collectors
-            ne_ccval = simulation_settings["NegativeElectrodeCurrentCollectorGridPoints"]
-            pe_ccval = simulation_settings["PositiveElectrodeCurrentCollectorGridPoints"]
-            out = [ne_ccval, neval, sepval, peval, pe_ccval]
-        else
-            out = [neval, sepval, peval]
-        end
-        return out
-    end
+	function get_grid_settings_vals()
+		neval = simulation_settings["NegativeElectrodeCoatingGridPoints"]
+		sepval = simulation_settings["SeparatorGridPoints"]
+		peval = simulation_settings["PositiveElectrodeCoatingGridPoints"]
+		if include_current_collectors
+			ne_ccval = simulation_settings["NegativeElectrodeCurrentCollectorGridPoints"]
+			pe_ccval = simulation_settings["PositiveElectrodeCurrentCollectorGridPoints"]
+			out = [ne_ccval, neval, sepval, peval, pe_ccval]
+		else
+			out = [neval, sepval, peval]
+		end
+		return out
+	end
 
-    vals = Dict(
-        "thickness" => get_cell_parameter_vals("Thickness"),
-        "N" => Int.(get_grid_settings_vals()),
-    )
+	vals = Dict(
+		"thickness" => get_cell_parameter_vals("Thickness"),
+		"N" => Int.(get_grid_settings_vals()),
+	)
 
-    if include_current_collectors
+	if include_current_collectors
 
-        components = [
-            "NegativeCurrentCollector",
-            "NegativeElectrode",
-            "Separator",
-            "PositiveElectrode",
-            "PositiveCurrentCollector",
-        ]
+		components = [
+			"NegativeElectrodeCurrentCollector",
+			"NegativeElectrodeActiveMaterial",
+			"Separator",
+			"PositiveElectrodeActiveMaterial",
+			"PositiveElectrodeCurrentCollector",
+		]
 
-        elyte_comp_start = 2
+		elyte_comp_start = 2
 
-    else
+	else
 
-        components = [
-            "NegativeElectrode",
-            "Separator",
-            "PositiveElectrode",
-        ]
+		components = [
+			"NegativeElectrodeActiveMaterial",
+			"Separator",
+			"PositiveElectrodeActiveMaterial",
+		]
 
-        elyte_comp_start = 1
+		elyte_comp_start = 1
 
-    end
+	end
 
-    ns = vals["N"]
-    xs = vals["thickness"]
 
-    L = inverse_rle(xs ./ ns, ns)
+	ns = vals["N"]
+	xs = vals["thickness"]
 
-    mesh = CartesianMesh((sum(ns), 1, 1), (L, faceArea, 1.0))
+	L = inverse_rle(xs ./ ns, ns)
 
-    uParentGrid = UnstructuredMesh(mesh)
-    parentGrid = convert_to_mrst_grid(uParentGrid)
+	mesh = CartesianMesh((sum(ns), 1, 1), (L, faceArea, 1.0))
 
-    cinds = vcat(1, 1 .+ cumsum(ns))
+	uParentGrid = UnstructuredMesh(mesh)
+	parentGrid = convert_to_mrst_grid(uParentGrid)
 
-    uParentGrid = tpfv_geometry(uParentGrid)
+	cinds = vcat(1, 1 .+ cumsum(ns))
 
-    ## setup the grid for each component
-    for (icomponent, component) in enumerate(components)
-        allinds = collect((1:sum(ns)))
-        inds = cinds[icomponent]:(cinds[icomponent + 1] - 1)
-        G, maps... = remove_cells(parentGrid, setdiff!(allinds, inds))
-        grids[component] = G
-        global_maps[component] = maps
-    end
+	uParentGrid = tpfv_geometry(uParentGrid)
 
-    ## setup for the eletrolyte
-    allinds = collect((1:sum(ns)))
-    inds = cinds[elyte_comp_start]:(cinds[elyte_comp_start + 3] - 1)
-    G, maps... = remove_cells(parentGrid, setdiff!(allinds, inds))
+	## setup the grid for each component
+	for (icomponent, component) in enumerate(components)
+		allinds = collect((1:sum(ns)))
+		inds = cinds[icomponent]:(cinds[icomponent+1]-1)
+		G, maps = remove_cells(parentGrid, setdiff!(allinds, inds))
+		grids[component] = G
+		global_maps[component] = maps
+	end
 
-    grids["Electrolyte"] = G
-    global_maps["Electrolyte"] = maps
+	## setup for the eletrolyte
+	allinds = collect((1:sum(ns)))
+	inds = cinds[elyte_comp_start]:(cinds[elyte_comp_start+3]-1)
+	G, maps = remove_cells(parentGrid, setdiff!(allinds, inds))
 
-    push!(components, "Electrolyte")
+	grids["Electrolyte"] = G
+	global_maps["Electrolyte"] = maps
 
-    couplings = setup_couplings(components, grids, global_maps)
+	push!(components, "Electrolyte")
 
-    grids, couplings = convert_geometry(grids, couplings; include_current_collectors = include_current_collectors)
+	couplings = setup_couplings(components, grids, global_maps)
 
-    # Add external coupling to the coupling structure.
-    # Function can be used both with and without current collector.
-    if include_current_collectors
-        boundaryComponents = Dict(
-            "left" => "NegativeCurrentCollector",
-            "right" => "PositiveCurrentCollector",
-        )
-    else
-        boundaryComponents = Dict(
-            "left" => "NegativeElectrode",
-            "right" => "PositiveElectrode",
-        )
-    end
+	grids, couplings = convert_geometry(model, grids, couplings; include_current_collectors = include_current_collectors)
 
-    # Get x-coordinate of the boundary faces
-    function getcoord(grid, i)
-        centroid, = compute_centroid_and_measure(grid, BoundaryFaces(), i)
-        return centroid[1]
-    end
+	# Add external coupling to the coupling structure.
+	# Function can be used both with and without current collector.
+	if include_current_collectors
+		boundaryComponents = Dict("left" => "NegativeElectrodeCurrentCollector",
+			"right" => "PositiveElectrodeCurrentCollector")
+	else
+		boundaryComponents = Dict("left" => "NegativeElectrodeActiveMaterial",
+			"right" => "PositiveElectrodeActiveMaterial")
+	end
 
-    component = boundaryComponents["left"]
-    grid = grids[component]
+	# Get x-coordinate of the boundary faces
+	function getcoord(grid, i)
+		centroid, = compute_centroid_and_measure(grid, BoundaryFaces(), i)
+		return centroid[1]
+	end
 
-    nf = number_of_boundary_faces(grid)
+	component = boundaryComponents["left"]
+	grid = grids[component]
 
-    bcfaceind = argmin(i -> getcoord(grid, i), 1:nf)
+	nf = number_of_boundary_faces(grid)
 
-    couplings[component]["External"] = Dict("cells" => [1], "boundaryfaces" => [bcfaceind])
+	bcfaceind = argmin(i -> getcoord(grid, i), 1:nf)
 
-    component = boundaryComponents["right"]
-    grid = grids[component]
+	couplings[component]["External"] = Dict("cells" => [1], "boundaryfaces" => [bcfaceind])
 
-    nf = number_of_boundary_faces(grid)
-    nc = number_of_cells(grid)
+	component = boundaryComponents["right"]
+	grid = grids[component]
 
-    bcfaceind = argmax(i -> getcoord(grid, i), 1:nf)
+	nf = number_of_boundary_faces(grid)
+	nc = number_of_cells(grid)
 
-    couplings[component]["External"] = Dict("cells" => [nc], "boundaryfaces" => [bcfaceind])
+	bcfaceind = argmax(i -> getcoord(grid, i), 1:nf)
 
-    return grids, couplings
+	couplings[component]["External"] = Dict("cells" => [nc], "boundaryfaces" => [bcfaceind])
+
+	return grids, couplings, global_maps
 
 end

@@ -99,7 +99,7 @@ I = [state[:Control][:Current][1] for state in states]
 grids = sim.grids
 couplings = sim.couplings
 
-components = ["NegativeElectrode", "PositiveElectrode", "NegativeCurrentCollector", "PositiveCurrentCollector"]
+components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeCurrentCollector", "PositiveCurrentCollector"]
 colors = [:gray, :green, :blue, :black]
 
 for (i, component) in enumerate(components)

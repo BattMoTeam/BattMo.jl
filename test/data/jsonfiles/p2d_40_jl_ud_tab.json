@@ -26,8 +26,8 @@
                "guestStoichiometry0": 0.0279,
                "chargeTransferCoefficient": 0.5,
                "openCircuitPotential": {
-                  "type": "function",
-                  "data_x": [
+                  "functionFormat": "tabulated",
+                  "dataX": [
                      0.031296231,
                      0.034999017,
                      0.038701797999999996,
@@ -265,7 +265,7 @@
                      0.897744037,
                      0.901446801
                   ],
-                  "data_y": [
+                  "dataY": [
                      1.0828806999999998,
                      0.99593794,
                      0.90023398,
@@ -503,7 +503,7 @@
                      0.08709427,
                      0.085032836
                   ],
-                  "argumentlist": [
+                  "argumentList": [
                      "theta"
                   ]
                }
@@ -560,8 +560,8 @@
                "guestStoichiometry0": 0.9084,
                "chargeTransferCoefficient": 0.5,
                "openCircuitPotential": {
-                  "type": "function",
-                  "data_x": [
+                  "functionFormat": "tabulated",
+                  "dataX": [
                      0.256747889,
                      0.25950522,
                      0.262262564,
@@ -804,7 +804,7 @@
                      0.980944296,
                      1.0
                   ],
-                  "data_y": [
+                  "dataY": [
                      4.2935653,
                      4.2768621,
                      4.264701799999999,
@@ -1047,7 +1047,7 @@
                      3.531859995,
                      3.523021669
                   ],
-                  "argumentlist": [
+                  "argumentList": [
                      "theta"
                   ]
                }
@@ -1096,8 +1096,8 @@
       "thermalConductivity": 0.099,
       "density": 1200,
       "ionicConductivity": {
-         "type": "function",
-         "data_x": [
+         "functionFormat": "tabulated",
+         "dataX": [
             99.07773386,
             248.7483531,
             497.4967062,
@@ -1106,7 +1106,7 @@
             1250.065876,
             1498.8142289999998
          ],
-         "data_y": [
+         "dataY": [
             0.370625,
             0.745625,
             1.1075,
@@ -1115,13 +1115,13 @@
             1.31375,
             1.13375
          ],
-         "argumentlist": [
+         "argumentList": [
             "c"
          ]
       },
       "diffusionCoefficient": {
-         "type": "function",
-         "data_x": [
+         "functionFormat": "tabulated",
+         "dataX": [
             92.79485713,
             245.9595365,
             496.709608,
@@ -1130,7 +1130,7 @@
             1246.447251,
             1499.8990939999999
          ],
-         "data_y": [
+         "dataY": [
             3.7900000000000004e-10,
             3.71e-10,
             3.46e-10,
@@ -1139,7 +1139,7 @@
             2.97e-10,
             2.47e-10
          ],
-         "argumentlist": [
+         "argumentList": [
             "c"
          ]
       },
@@ -1157,7 +1157,7 @@
    "G": [],
    "SOC": 0.99,
    "initT": 298.15,
-   "use_thermal": true,
+   "use_thermal": false,
    "include_current_collectors": false,
    "Control": {
       "controlPolicy": "CCCV",

@@ -10,6 +10,16 @@ using Jutul: si_unit, plot_primitives, physical_representation
 
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
+@inline function _sci_tick(v::Real; digits::Int = 1)
+	if v == 0
+		return "0"
+	end
+	e = floor(Int, log10(abs(v)))
+	m = v / (10.0^e)
+	mr = round(m; digits = digits)
+	return string(mr, "e", e)
+end
+
 function BattMo.check_plotting_availability_impl()
     return true
 end
@@ -792,5 +802,239 @@ function collapse_profile_to_x(x_raw, data)
     return (x_vals, profile', "x-position  /  μm")
 end
 
+function BattMo.plot_thermal_source_contributions_impl(time, source_parts;
+	total_source = nothing,
+	include_residual = true,
+	normalize = false,
+	new_window = true,
+)
+
+	nt = length(time)
+	if length(source_parts) != nt
+		error("length(source_parts) must match length(time). Got $(length(source_parts)) and $nt.")
+	end
+	time_h = time ./ 3600
+
+	labels = Symbol[]
+	for step_sources in source_parts
+		for k in keys(step_sources)
+			if !(k in labels)
+				push!(labels, k)
+			end
+		end
+	end
+
+	# Enforce a stable legend/source ordering.
+	preferred_order = [
+		"OhmicCurrentCollector (pos)",
+		"OhmicCurrentCollector (neg)",
+		"OhmicActiveMaterial (pos)",
+		"OhmicActiveMaterial (neg)",
+		"OhmicElectrolyte (elyte)",
+		"ReactionReversible (pos)",
+		"ReactionReversible (neg)",
+		"ReactionIrreversible (pos)",
+		"ReactionIrreversible (neg)",
+		"DiffusionElectrolyte (elyte)",
+	]
+	ordered_labels = Symbol[]
+	for name in preferred_order
+		l = Symbol(name)
+		if l in labels
+			push!(ordered_labels, l)
+		end
+	end
+	for l in labels
+		if !(l in ordered_labels)
+			push!(ordered_labels, l)
+		end
+	end
+	labels = ordered_labels
+
+	pretty_label_map = Dict(
+		Symbol("OhmicCurrentCollector (pos)") => "Ohmic current collector (pos)",
+		Symbol("OhmicCurrentCollector (neg)") => "Ohmic current collector (neg)",
+		Symbol("OhmicActiveMaterial (pos)") => "Ohmic active material (pos)",
+		Symbol("OhmicActiveMaterial (neg)") => "Ohmic active material (neg)",
+		Symbol("OhmicElectrolyte (elyte)") => "Ohmic (elyte)",
+		Symbol("ReactionReversible (pos)") => "Reaction reversible (pos)",
+		Symbol("ReactionReversible (neg)") => "Reaction reversible (neg)",
+		Symbol("ReactionIrreversible (pos)") => "Reaction irreversible (pos)",
+		Symbol("ReactionIrreversible (neg)") => "Reaction irreversible (neg)",
+		Symbol("DiffusionElectrolyte (elyte)") => "Diffusion (elyte)",
+	)
+	pretty_label(label::Symbol) = get(pretty_label_map, label, String(label))
+
+	contributions = Dict{Symbol, Vector{Float64}}()
+	for label in labels
+		contributions[label] = zeros(Float64, nt)
+	end
+
+	for it in 1:nt
+		step_sources = source_parts[it]
+		for label in labels
+			if haskey(step_sources, label)
+				val = step_sources[label]
+				mask = .!isnan.(val)
+				contributions[label][it] = any(mask) ? sum(val[mask]) : 0.0
+			end
+		end
+	end
+
+	total_trace = nothing
+	if !isnothing(total_source)
+		if length(total_source) != nt
+			error("length(total_source) must match length(time). Got $(length(total_source)) and $nt.")
+		end
+		total_trace = zeros(Float64, nt)
+		for it in 1:nt
+			step_total = total_source[it]
+			total_trace[it] = step_total isa Number ? Float64(step_total) : sum(step_total)
+		end
+
+		if include_residual
+			reconstructed = zeros(Float64, nt)
+			for label in labels
+				reconstructed .+= contributions[label]
+			end
+			contributions[:Residual] = total_trace .- reconstructed
+			push!(labels, :Residual)
+		end
+	end
+
+	if normalize
+		if isnothing(total_trace)
+			total_trace = zeros(Float64, nt)
+			for label in labels
+				total_trace .+= contributions[label]
+			end
+		end
+		for label in labels
+			contributions[label] = [abs(total_trace[i]) > 0 ? 100 * contributions[label][i] / total_trace[i] : 0.0 for i in 1:nt]
+		end
+	end
+
+	if isnothing(total_trace)
+		total_trace = zeros(Float64, nt)
+		for label in labels
+			total_trace .+= contributions[label]
+		end
+	end
+
+	# Assign deterministic unique colors for all final visible source labels
+	# (after optional residual insertion).
+	fixed_colors = Dict{Symbol, Any}(
+		Symbol("OhmicCurrentCollector (pos)") => Makie.RGBf(0.86, 0.37, 0.34),
+		Symbol("OhmicCurrentCollector (neg)") => Makie.RGBf(0.95, 0.62, 0.29),
+		Symbol("OhmicActiveMaterial (pos)") => Makie.RGBf(0.99, 0.82, 0.32),
+		Symbol("OhmicActiveMaterial (neg)") => Makie.RGBf(0.63, 0.79, 0.36),
+		Symbol("OhmicElectrolyte (elyte)") => Makie.RGBf(0.27, 0.73, 0.58),
+		Symbol("ReactionReversible (pos)") => Makie.RGBf(0.30, 0.67, 0.88),
+		Symbol("ReactionReversible (neg)") => Makie.RGBf(0.35, 0.49, 0.89),
+		Symbol("ReactionIrreversible (pos)") => Makie.RGBf(0.55, 0.41, 0.82),
+		Symbol("ReactionIrreversible (neg)") => Makie.RGBf(0.86, 0.44, 0.67),
+		Symbol("DiffusionElectrolyte (elyte)") => Makie.RGBf(0.62, 0.54, 0.47),
+		:Residual => Makie.RGBf(0.45, 0.45, 0.45),
+	)
+	fallback_palette = Makie.to_colormap(Makie.cgrad(:tab20, max(length(labels), 1), categorical = true))
+	label_colors = Dict{Symbol, Any}()
+	for (i, label) in enumerate(labels)
+		label_colors[label] = get(fixed_colors, label, fallback_palette[i])
+	end
+
+	# Accumulate each contribution in time (trapezoidal rule).
+	accumulated = Dict{Symbol, Vector{Float64}}()
+	for label in labels
+		p = contributions[label]
+		e = zeros(Float64, nt)
+		for i in 2:nt
+			dt = time[i] - time[i-1]
+			e[i] = e[i-1] + 0.5 * (p[i] + p[i-1]) * dt
+		end
+		accumulated[label] = e
+	end
+
+	total_accumulated = zeros(Float64, nt)
+	for i in 2:nt
+		dt = time[i] - time[i-1]
+		total_accumulated[i] = total_accumulated[i-1] + 0.5 * (total_trace[i] + total_trace[i-1]) * dt
+	end
+
+	fig = Figure(size = (1400, 850))
+
+	top_ylabel = normalize ? "Heat production  /  %" : "Heat production  /  W"
+	ax_total = Axis(fig[1, 1],
+		title = "Total heat production",
+		xlabel = "Time  /  h",
+		ylabel = top_ylabel,
+		titlesize = 30,
+		xlabelsize = 24,
+		ylabelsize = 24,
+		xticklabelsize = 20,
+		yticklabelsize = 20,
+		ytickformat = values -> [_sci_tick(v; digits = 1) for v in values])
+
+	# Stacked signed areas for instantaneous source contributions.
+	cum_pos = zeros(Float64, nt)
+	cum_neg = zeros(Float64, nt)
+	for label in labels
+		v = contributions[label]
+		y1 = similar(v)
+		y2 = similar(v)
+		for i in eachindex(v)
+			if v[i] >= 0
+				y1[i] = cum_pos[i]
+				y2[i] = cum_pos[i] + v[i]
+				cum_pos[i] = y2[i]
+			else
+				y1[i] = cum_neg[i]
+				y2[i] = cum_neg[i] + v[i]
+				cum_neg[i] = y2[i]
+			end
+		end
+		band!(ax_total, time_h, y1, y2, label = pretty_label(label), color = label_colors[label], alpha = 0.65)
+	end
+	lines!(ax_total, time_h, total_trace, color = :black, linewidth = 4, linestyle = :dash, label = "Total")
+	Legend(fig[1, 2], ax_total, tellheight = false, labelsize = 18)
+
+	bottom_ylabel = normalize ? "Accumulated contribution  /  %-s" : "Accumulated heat  /  J"
+	ax_acc = Axis(fig[2, 1],
+		title = "Accumulation of individual heat sources",
+		xlabel = "Time  /  h",
+		ylabel = bottom_ylabel,
+		titlesize = 30,
+		xlabelsize = 24,
+		ylabelsize = 24,
+		xticklabelsize = 20,
+		yticklabelsize = 20)
+
+	# Stacked signed areas for accumulated source contributions.
+	cum_acc_pos = zeros(Float64, nt)
+	cum_acc_neg = zeros(Float64, nt)
+	for label in labels
+		v = accumulated[label]
+		y1 = similar(v)
+		y2 = similar(v)
+		for i in eachindex(v)
+			if v[i] >= 0
+				y1[i] = cum_acc_pos[i]
+				y2[i] = cum_acc_pos[i] + v[i]
+				cum_acc_pos[i] = y2[i]
+			else
+				y1[i] = cum_acc_neg[i]
+				y2[i] = cum_acc_neg[i] + v[i]
+				cum_acc_neg[i] = y2[i]
+			end
+		end
+		band!(ax_acc, time_h, y1, y2, label = pretty_label(label), color = label_colors[label], alpha = 0.65)
+	end
+	lines!(ax_acc, time_h, total_accumulated, color = :black, linewidth = 4, linestyle = :dash, label = "Accumulated/total")
+	Legend(fig[2, 2], ax_acc, tellheight = false, labelsize = 18)
+
+	if new_window
+		BattMo.independent_figure(fig)
+	end
+	return fig
+end
 
 end # module

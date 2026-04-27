@@ -1,7 +1,7 @@
 {
   "Control": {
     "controlPolicy": "cc_discharge",
-    "DRate": 1,
+    "DRate": 1.0,
     "rampupTime": 0.1,
     "upperCutoffVoltage": 4.1,
     "lowerCutoffVoltage": 2.4,
@@ -9,7 +9,7 @@
   },
   "TimeStepping": {
     "useRampup": true,
-    "timeStepDuration": 50,
+    "timeStepDuration": 50.0,
     "numberOfRampupSteps": 5
   }
 }

@@ -57,7 +57,7 @@ grids = sim.grids
 couplings = sim.couplings
 nothing #hide
 
-components = ["NegativeElectrode", "PositiveElectrode", "NegativeCurrentCollector", "PositiveCurrentCollector"]
+components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeCurrentCollector", "PositiveCurrentCollector"]
 colors = [:gray, :green, :dodgerblue, :black]
 nothing #hide
 
