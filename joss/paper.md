@@ -43,7 +43,9 @@ bibliography: paper.bib
 
 
 # Summary
+This paper introduces BattMo.jl, an open-source Julia framework for continuum-scale simulation of electrochemical devices. Using a finite-volume approach, BattMo.jl supports pseudo-2-dimensional (P2D) models for fast screening on a reduced-order mesh, as well as more comprehensive pseudo-four-dimensional (P4D) models that incorporate the 3D design of realistic geometries, including cylindrical cells and pouch cells. 
 
+The toolbox combines high-performance solvers, built-in libraries of battery designs and cycling protocols, calculation of cell KPI's, quick plotting tools, and an intuitive programmatic and graphical interface. It further includes an adjoint-based optimization framework for parameter estimation and model calibration, enabling close integration of modelling with experimental workflows. The [BattMoTeam](https://batterymodel.com/our-team/) collaborates closely with the [SINTEF Battery Lab](https://www.sintef.no/en/all-laboratories/sintef-battery-lab/), gaining valuable input from experienced battery researchers and helping to bridge the gap between academic modelling and industrial innovation. This partnership helps ensure that the toolbox remains relevant and effective in real-world applications, driving innovation and advancing the field of energy storage technology.
 
 
 # Statement of need
@@ -60,11 +62,24 @@ For this purpose, BattMo.jl puts great value to the usability and accessability 
 
 
 # State of the field
-Recently, a variety of open-source battery modelling codes have been released including PyBaMM [@sulzer2021python], cideMOD [@CiriaAylagas2022], LIONSIMBA [@torchio2016lionsimba], PETLion [@Berliner_2021], and MPET [@mpet_github], among others. These open-source modelling frameworks help the battery community to run simulations in a validated model environment, instead of relying on homemade code that risk poor reproducibility of results. Yet there remains a clear need for tools that (i) address both Li-ion and other chemistries, (ii) support full 3D cell simulations, and (iv) combine computational efficiency with broad accessibility.
+In recent years, a variety of open-source battery modelling codes have been released including PyBaMM [@sulzer2021python], cideMOD [@CiriaAylagas2022], LIONSIMBA [@torchio2016lionsimba], PETLion [@Berliner_2021], and MPET [@mpet_github], among others. These open-source modelling frameworks help the battery community to run simulations in a validated model environment, instead of relying on homemade code that risk poor reproducibility of results. Yet there remains a clear need for tools that (i) support full 3D cell simulations, and (ii) combine computational efficiency with broad accessibility. BattMo.jl was developed instead of contributing to already existing tools, as BattMo's first implementation was already existing within MATLAB. For the purpose of BattMo being available in a non-propietary language and for exploring simulation efficiency, BattMo was also implemented within Julia.
 
-Following show a comparison of results for a standard P2D lithium ion simulation between similar softwares and their simulation run times. To get the true run time durations from the Julia packages, the second simulation is measured after pre-compilation has been done.
+Being able to do fully 3D simulations can be very valuable for cell design as it provides information on the process at certain locations in the cell that would have been overlooked with a 1D simulation. Figure \ref{fig:cylindrical} shows results from a 3D constant discharge simulation of a cylindrical cell. It shows the lithium concentration in the electrolyte at the end of the discharge. At the beginning and ending of the roll we can we can see an imbalance in lithium concentration. These electrolyte depletions and oversaturations may influence the performance of the cell and would have been overlooked in simplified models, underlining the importance of 3-dimensional modelling.
+
+![P4D cylindrical cell simulation results showing the electrolyte concentration in the 3D geometry at the end of discharge. \label{fig:cylindrical}](./assets/elyte_conc.png "P4D results")
+
+
+Computational efficiency is also a valuable part of the, especially when simulation long term behaviour. When implenting BattMo in Julia, a big focus was put on achieving very low simulation times. Following show a comparison of results for a standard P2D lithium ion simulation between similar softwares and their simulation run times. To get the true run time durations from the Julia packages, the second simulation is measured after pre-compilation has been done.
 
 # Software design
+
+The following principles have been kept in mind while designing the software: user-friendliness, data interoperability, using standards within the battery field, and performance. 
+
+The architecture is designed to enhance the user experience and provide a gentler learning curve by organizing core workflows and input parameters into well-defined steps and categories. By making simulation and solver settings optional, users can initially focus on creating the virtual representation of the cell and defining cycling protocols. Later, they can adjust the settings to personalize configurations as they become more familliar with the software. Furthermore, effort has been put into making all the input parameters and output quantities consistent in how they are provided, adjusted, and retrieved to make the overall workflow less confusing. 
+
+For interoperability, all input parameters to a BattMo.jl model can be provided formated into a json file. This makes the input format language independent. Furthermore, in order to adhere to standardized terminology, all input and output parameters, and units are specified according to the EMMO and BattINFO ontology definitions. the tool includes a function to print information on each input or output quantity and programatic object and provides with this its ontology name and iri to the ontology documentation.
+
+The development has BattMo.jl has focused on performance. 
 
 
 
@@ -77,6 +92,12 @@ AI was used during development of the BattMo.jl code. AI has not been used durin
 Within this paper, AI was only used to check spelling.
 
 All code that was generated or modified by AI has been validated and tested by the authors. AI generated and modified text has been proofread by the authors.
+
+
+
+
+
+
 
 -----
 # Summary
