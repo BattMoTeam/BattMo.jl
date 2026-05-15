@@ -388,7 +388,9 @@ function setup_thermal_post_ministep_hook(input, base_hook = missing; info_level
 		end
 		# Next: Copy over the temperature
 		for (submodel_key, cells) in pairs(tcellmaps)
-			sim.storage.parameters[submodel_key] .= thermal_sim.storage.state.Temperature[cells]
+			sub_T = sim.storage[submodel_key].parameters.Temperature
+			sub_T .= Jutul.value(thermal_sim.storage.state.Temperature[cells])
+			# println("Updated $submodel_key: $(sum(sub_T)/length(sub_T))")
 		end
 		if !ismissing(base_hook)
 			done, report = base_hook(done, report, sim, dt, forces, max_iter, cfg)
