@@ -344,16 +344,22 @@ function setup_thermal_model(input, grids)
 
 end
 
-function setup_thermal_state0(thermal_model, global_maps, parameters)
-	nc = number_of_cells(thermal_model.domain)
-	T0 = zeros(nc)
+function temperature_cell_maps(global_maps, parameters)
+	out = Dict{Symbol, Vector{Int}}()
 	for (k, v) in pairs(parameters)
 		if haskey(v, :Temperature)
-			cells = global_maps[String(k)].cellmap
-			for (i, c) in enumerate(cells)
-				T0[c] = v[:Temperature][i]
-			end
+			out[k] = global_maps[String(k)].cellmap
 		end
+	end
+	return out
+end
+
+function setup_thermal_state0(thermal_model, tcellmaps, parameters)
+	nc = number_of_cells(thermal_model.domain)
+	T0 = zeros(nc)
+	for (k, cells) in pairs(tcellmaps)
+		subT = parameters[k][:Temperature]
+		T0[cells] .= subT
 	end
 	return setup_state(thermal_model, Temperature = T0)
 end
@@ -361,10 +367,10 @@ end
 function setup_thermal_post_ministep_hook(input, base_hook = missing; info_level = -1, kwarg...)
 	s = Simulation(input)
 	thermal_model, thermal_parameters = BattMo.setup_thermal_model(input, s.grids)
-	nc = number_of_cells(thermal_model.domain)
 	maps = s.global_maps
 
-	thermal_state0 = setup_thermal_state0(thermal_model, maps, s.parameters)
+	tcellmaps = temperature_cell_maps(maps, s.parameters)
+	thermal_state0 = setup_thermal_state0(thermal_model, tcellmaps, s.parameters)
 
 	thermal_sim = Simulator(thermal_model;
 		state0     = thermal_state0,
@@ -373,15 +379,17 @@ function setup_thermal_post_ministep_hook(input, base_hook = missing; info_level
 	)
 	thermal_cfg = simulator_config(thermal_sim; info_level = info_level, kwarg...)
 
-	# done, report = post_hook(done, report, sim, dt, forces, max_iter, cfg)
 	function thermal_post_hook(done, report, sim, dt, forces, max_iter, cfg)
 		if done
 			state = sim.storage.state0
-			src, stepsources = BattMo.get_energy_source_by_type!(thermal_model, model, state, maps)
+			src, stepsources = BattMo.get_energy_source_by_type!(thermal_model, s.model, state, maps)
 			tforce = (value = src, )
 			Jutul.solve_timestep!(thermal_sim, dt, tforce, thermal_cfg[:max_nonlinear_iterations], thermal_cfg)
 		end
 		# Next: Copy over the temperature
+		for (submodel_key, cells) in pairs(tcellmaps)
+			sim.storage.parameters[submodel_key] .= thermal_sim.storage.state.Temperature[cells]
+		end
 		if !ismissing(base_hook)
 			done, report = base_hook(done, report, sim, dt, forces, max_iter, cfg)
 		end

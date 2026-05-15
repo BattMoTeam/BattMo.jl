@@ -139,6 +139,6 @@ display(GLMakie.Screen(), f2)
 
 BattMo.plot_thermal_source_contributions(t, sources; total_source = total_sources)
 ##
+thook = BattMo.setup_thermal_post_ministep_hook(input)
 s = Simulation(input);
-##
-BattMo.setup_thermal_post_ministep_hook(input)
+solve(s, post_ministep_hook = thook)
