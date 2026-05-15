@@ -358,19 +358,35 @@ function setup_thermal_state0(thermal_model, global_maps, parameters)
 	return setup_state(thermal_model, Temperature = T0)
 end
 
-function setup_thermal_post_ministep_hook(input)
+function setup_thermal_post_ministep_hook(input, base_hook = missing; info_level = -1, kwarg...)
 	s = Simulation(input)
 	thermal_model, thermal_parameters = BattMo.setup_thermal_model(input, s.grids)
 	nc = number_of_cells(thermal_model.domain)
+	maps = s.global_maps
 
-	thermal_state0 = setup_thermal_state0(thermal_model, s.global_maps, s.parameters)
+	thermal_state0 = setup_thermal_state0(thermal_model, maps, s.parameters)
 
 	thermal_sim = Simulator(thermal_model;
 		state0     = thermal_state0,
 		parameters = thermal_parameters,
 		copy_state = true
 	)
+	thermal_cfg = simulator_config(thermal_sim; info_level = info_level, kwarg...)
 
+	# done, report = post_hook(done, report, sim, dt, forces, max_iter, cfg)
+	function thermal_post_hook(done, report, sim, dt, forces, max_iter, cfg)
+		if done
+			state = sim.storage.state0
+			src, stepsources = BattMo.get_energy_source_by_type!(thermal_model, model, state, maps)
+			tforce = (value = src, )
+			Jutul.solve_timestep!(thermal_sim, dt, tforce, thermal_cfg[:max_nonlinear_iterations], thermal_cfg)
+		end
+		# Next: Copy over the temperature
+		if !ismissing(base_hook)
+			done, report = base_hook(done, report, sim, dt, forces, max_iter, cfg)
+		end
+		return (done, report)
+	end
 	# src, stepsources = BattMo.get_energy_source_by_type!(thermal_model, model, state, maps)
 end
 
