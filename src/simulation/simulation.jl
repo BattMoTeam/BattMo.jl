@@ -144,6 +144,27 @@ struct Simulation <: AbstractSimulation
 	end
 end
 
+function Simulation(simulation_input::FullSimulationInput)
+    input = extract_input_sets(simulation_input)
+
+    base_model = input.base_model
+    model = get_model(base_model, input.model_settings)
+
+    sim = Simulation(model, input.cell_parameters, input.cycling_protocol; simulation_settings = input.simulation_settings)
+	return sim
+end
+
+function Simulation(input::NamedTuple)
+	haskey(input, :cell_parameters) || error("Input must include CellParameters")
+	haskey(input, :cycling_protocol) || error("Input must include CyclingProtocol")
+	haskey(input, :model_settings) || error("Input must include ModelSettings")
+	haskey(input, :simulation_settings) || error("Input must include SimulationSettings")
+
+	# TODO: Why is not BaseModel included in the required keys? Should it be?
+	model = get_model("LithiumIonBattery", input.model_settings)
+
+	return Simulation(model, input.cell_parameters, input.cycling_protocol; simulation_settings = input.simulation_settings)
+end
 
 function simulation_configuration(model, input)
 

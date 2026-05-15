@@ -32,12 +32,7 @@ plot_dashboard(output)
 function run_simulation(simulation_input::FullSimulationInput; accept_invalid = false, logger = nothing, kwargs...)
 
     input = extract_input_sets(simulation_input)
-
-    base_model = input.base_model
-    model = get_model(base_model, input.model_settings)
-
-    sim = Simulation(model, input.cell_parameters, input.cycling_protocol; simulation_settings = input.simulation_settings)
-
+    sim = Simulation(simulation_input)
     output = solve(sim; accept_invalid, solver_settings = input.solver_settings, logger = logger, kwargs...)
     return output
 

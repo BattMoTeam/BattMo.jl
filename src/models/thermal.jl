@@ -344,6 +344,36 @@ function setup_thermal_model(input, grids)
 
 end
 
+function setup_thermal_state0(thermal_model, global_maps, parameters)
+	nc = number_of_cells(thermal_model.domain)
+	T0 = zeros(nc)
+	for (k, v) in pairs(parameters)
+		if haskey(v, :Temperature)
+			cells = global_maps[String(k)].cellmap
+			for (i, c) in enumerate(cells)
+				T0[c] = v[:Temperature][i]
+			end
+		end
+	end
+	return setup_state(thermal_model, Temperature = T0)
+end
+
+function setup_thermal_post_ministep_hook(input)
+	s = Simulation(input)
+	thermal_model, thermal_parameters = BattMo.setup_thermal_model(input, s.grids)
+	nc = number_of_cells(thermal_model.domain)
+
+	thermal_state0 = setup_thermal_state0(thermal_model, s.global_maps, s.parameters)
+
+	thermal_sim = Simulator(thermal_model;
+		state0     = thermal_state0,
+		parameters = thermal_parameters,
+		copy_state = true
+	)
+
+	# src, stepsources = BattMo.get_energy_source_by_type!(thermal_model, model, state, maps)
+end
+
 
 
 ###########################################

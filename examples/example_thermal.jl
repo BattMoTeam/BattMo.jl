@@ -138,3 +138,7 @@ display(GLMakie.Screen(), f2)
 # Plot source term contributions
 
 BattMo.plot_thermal_source_contributions(t, sources; total_source = total_sources)
+##
+s = Simulation(input);
+##
+BattMo.setup_thermal_post_ministep_hook(input)
