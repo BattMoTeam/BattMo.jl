@@ -364,13 +364,21 @@ function setup_thermal_state0(thermal_model, tcellmaps, parameters)
 	return setup_state(thermal_model, Temperature = T0)
 end
 
-function setup_thermal_post_ministep_hook(input, base_hook = missing; info_level = -1, kwarg...)
+function setup_thermal_post_ministep_hook(input, base_hook = missing; Temperature = missing, info_level = -1, kwarg...)
 	s = Simulation(input)
 	thermal_model, thermal_parameters = BattMo.setup_thermal_model(input, s.grids)
 	maps = s.global_maps
 
 	tcellmaps = temperature_cell_maps(maps, s.parameters)
-	thermal_state0 = setup_thermal_state0(thermal_model, tcellmaps, s.parameters)
+	if ismissing(Temperature)
+		# We copy it from parameters of the simulation
+		thermal_state0 = setup_thermal_state0(thermal_model, tcellmaps, s.parameters)
+	else
+		# We set it up as requested (possibly a bit inconsistent with what the
+		# model will be initialized with). The thermal model will overwrite the
+		# parameters during the simulation.
+		thermal_state0 = setup_state(thermal_model, Temperature = Temperature)
+	end
 
 	thermal_sim = Simulator(thermal_model;
 		state0     = thermal_state0,
