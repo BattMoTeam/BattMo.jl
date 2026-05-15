@@ -140,5 +140,22 @@ display(GLMakie.Screen(), f2)
 BattMo.plot_thermal_source_contributions(t, sources; total_source = total_sources)
 ##
 thook = BattMo.setup_thermal_post_ministep_hook(input, Temperature = 298.0)
+# TODO: Why does the thermal model pop up here as well?
 s = Simulation(input);
-result_sequential = solve(s, post_ministep_hook = thook)
+for k in [:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial, :Electrolyte]
+	push!(s.simulator.model.models[k].output_variables, :Temperature)
+end
+##
+result_sequential = solve(s, post_ministep_hook = thook);
+##
+tstates = result_sequential.jutul_output.states
+elyte_temp = map(s -> maximum(s[:Electrolyte][:Temperature]), tstates)
+pam_temp = map(s -> maximum(s[:PositiveElectrodeActiveMaterial][:Temperature]), tstates)
+nam_temp = map(s -> maximum(s[:NegativeElectrodeActiveMaterial][:Temperature]), tstates)
+
+fig, ax, plt = lines(T, label = "Maximum temperature (decoupled)")
+lines!(ax, elyte_temp, label = "Electrolyte temperature (coupled)")
+lines!(ax, pam_temp, label = "Positive electrode temperature (coupled)")
+lines!(ax, nam_temp, label = "Negative electrode temperature (coupled)")
+axislegend()
+fig
