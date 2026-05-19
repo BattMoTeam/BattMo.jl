@@ -1,48 +1,27 @@
 using Jutul, BattMo, GLMakie, Statistics
 
 # ## Setup input parameters
-fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/lithium_ion_battery_nmc_graphite.json")
-inputparams_material = load_advanced_dict_input(fn)
+cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+model_settings = load_model_settings(; from_default_set = "p4d_pouch")
 
-fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
-inputparams_geometry = load_advanced_dict_input(fn)
+model_settings["ThermalModel"] = "Decoupled"
 
-inputparams = merge_input_params([inputparams_material, inputparams_geometry])
+model = LithiumIonBattery(; model_settings)
 
-# Add control parameters
-fn = string(dirname(pathof(BattMo)), "/../examples/Experimental/jsoninputs/cc_discharge_control.json")
-inputparams_control = load_advanced_dict_input(fn)
-inputparams_control["Control"]["lowerCutoffVoltage"] = 3.6
+output = Simulation(model, cell_parameters, cycling_protocol);
 
-inputparams = merge_input_params(inputparams_control, inputparams; warn = true)
 
-# Add thermal parameters
-fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/simple_thermal.json")
-inputparams_thermal = load_advanced_dict_input(fn)
+grids     = output.simulation.grids
+maps      = output.simulation.global_maps
+timesteps = output.simulation.time_steps[1:length(states)]
 
-inputparams = merge_input_params(inputparams_thermal, inputparams; warn = true)
+time_series = output.time_series
+jutul_states = output.states
 
-# Add Thermal Model
-inputparams["use_thermal"] = true
-
-# Add thermal parameters
-# inputparams["ThermalModel"]["externalHeatTransferCoefficient"] = 1e20
-# inputparams["ThermalModel"]["source"]                          = 1e4
-# inputparams["ThermalModel"]["conductivity"]                    = 12
-
-output = run_simulation(inputparams; accept_invalid = true);
-
-model      = output.model
-multimodel = model.multimodel
-states     = output.jutul_output.states
-parameters = output.simulation.parameters
-grids      = output.simulation.grids
-maps       = output.simulation.global_maps
-timesteps  = output.simulation.time_steps[1:length(states)]
-
-t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:ElectricPotential][1] for state in states]
-I = [state[:Control][:Current][1] for state in states]
+t = time_series["Time"]
+E = time_series["Voltage"]
+I = time_series["Current"]
 
 f = Figure(size = (1000, 400))
 
@@ -68,46 +47,14 @@ scatterlines!(ax,
 
 display(GLMakie.Screen(), f)
 
-input = (
-	model_settings      = output.simulation.model.settings,
-	cell_parameters     = output.simulation.cell_parameters,
-	cycling_protocol    = output.simulation.cycling_protocol,
-	simulation_settings = output.simulation.settings,
-)
-
-input.cell_parameters["ThermalModel"]["EffectiveVolumetricHeatCapacity"] = parameters[:ThermalModel][:EffectiveVolumetricHeatCapacity]
-input.cell_parameters["ThermalModel"]["EffectiveThermalConductivity"] = parameters[:ThermalModel][:EffectiveThermalConductivity]
-thermal_model, thermal_parameters = BattMo.setup_thermal_model(input, grids)
-
-forces = []
-sources = []
-for (i, state) in enumerate(states)
-	state = BattMo.get_state_with_secondary_variables(multimodel, state, parameters)
-	src, stepsources = BattMo.get_energy_source_by_type!(thermal_model, model, state, maps)
-	push!(forces, (value = src,))
-	push!(sources, stepsources)
-end
-
-total_sources = [f.value for f in forces]
-fsrc = BattMo.plot_thermal_source_contributions(t, sources; total_source = total_sources)
-display(GLMakie.Screen(), fsrc)
-
-nc = number_of_cells(thermal_model.domain)
-T0 = 298*ones(nc)
-
-thermal_state0 = setup_state(thermal_model, Dict(:Temperature => T0))
-
-thermal_sim = Simulator(thermal_model;
-	state0     = thermal_state0,
-	parameters = thermal_parameters,
-	copy_state = true)
-thermal_states, = simulate(thermal_sim, timesteps; info_level = -1, forces = forces)
+thermal_model = sim.decoupled_thermal.model
+thermal_states = [state[:ThermalModel] for state in jutul_states]
 
 plot_interactive(thermal_model, thermal_states)
 
 # Plot maximum temperature in the cell over time
 
-T = [maximum(state[:Temperature]) for state in thermal_states]
+T = [maximum(state, dims = 1) for state in output.states["ThermalModel"]["Temperature"]]
 
 f2 = Figure(size = (1000, 400))
 
@@ -134,10 +81,6 @@ scatterlines!(ax,
 display(GLMakie.Screen(), f2)
 
 
-#########################################################
-# Plot source term contributions
-
-BattMo.plot_thermal_source_contributions(t, sources; total_source = total_sources)
 ##
 thook = BattMo.setup_thermal_post_ministep_hook(input, Temperature = 298.0)
 # TODO: Why does the thermal model pop up here as well?

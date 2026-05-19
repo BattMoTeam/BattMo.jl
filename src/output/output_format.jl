@@ -826,6 +826,19 @@ function output_state_path(key::String)
 		end
 	end
 
+	thermal_model_prefixes = [
+		("ThermalModelTemperature", ["ThermalModel", "Temperature"]),
+		("ThermalModelEffectiveVolumetricHeatCapacity", ["ThermalModel", "EffectiveVolumetricHeatCapacity"]),
+		("ThermalModelEffectiveThermalConductivity", ["ThermalModel", "EffectiveThermalConductivity"]),
+		("ThermalModelEnergy", ["ThermalModel", "Energy"]),
+	]
+	for (prefix, path_prefix) in thermal_model_prefixes
+		if startswith(key, prefix)
+			suffix = key[(length(prefix)+1):end]
+			return vcat(path_prefix, [suffix])
+		end
+	end
+
 	if startswith(key, "Electrolyte")
 		suffix = key[(length("Electrolyte")+1):end]
 		return ["Electrolyte", suffix]
@@ -889,6 +902,10 @@ function extract_spatial_data(states::Vector)
 		"NormalizedSEIThickness" => [:NegativeElectrodeActiveMaterial, :NormalizedSEIThickness],
 		"SEIVoltageDrop" => [:NegativeElectrodeActiveMaterial, :SEIVoltageDrop],
 		"NormalizedSEIVoltageDrop" => [:NegativeElectrodeActiveMaterial, :NormalizedSEIVoltageDrop],
+		"ThermalModelTemperature" => [:ThermalModel, :Temperature],
+		"ThermalModelEffectiveVolumetricHeatCapacity" => [:ThermalModel, :EffectiveVolumetricHeatCapacity],
+		"ThermalModelEffectiveThermalConductivity" => [:ThermalModel, :EffectiveThermalConductivity],
+		"ThermalModelEnergy" => [:ThermalModel, :Energy],
 	)
 
 	output_data = Dict{String, Any}()

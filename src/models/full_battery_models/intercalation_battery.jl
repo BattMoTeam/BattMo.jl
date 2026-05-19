@@ -163,14 +163,19 @@ function setup_submodels(model::IntercalationBattery, input, grids, couplings; g
 		"Separator" => model_sep)
 
 
-	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
+	if haskey(model.settings, "ThermalModel")
+
 		setup_effective_thermal_conductivities!(input, battery_models)
-		model_thermal, _ = setup_thermal_model(model, battery_models, input, grids, global_maps)
+
+		if model.settings["ThermalModel"] == "Coupled"
+
+			model_thermal, _ = setup_thermal_model(model, battery_models, input, grids, global_maps)
+		end
 	end
 
 	model_control = setup_control_model(input, model_neam, model_peam; kwargs...)
 
-	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
+	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Coupled"
 		submodels = (model_neam = model_neam,
 			model_peam = model_peam,
 			model_necc = model_necc,

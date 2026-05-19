@@ -58,6 +58,7 @@ struct Simulation <: AbstractSimulation
 	parameters::Any
 	simulator::Any
 	global_maps::Any
+	decoupled_thermal::Any
 
 
 	function Simulation(
@@ -113,7 +114,14 @@ struct Simulation <: AbstractSimulation
 				time_steps = sim_cfg.time_steps
 				global_maps = sim_cfg.global_maps
 
-				return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator, global_maps)
+				if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Decoupled"
+					thermal_simulation = sim_cfg.thermal_simulation
+
+				else
+					thermal_simulation = nothing
+				end
+
+				return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator, global_maps, thermal_simulation)
 			catch e
 				if is_valid == false
 					error(
@@ -144,27 +152,6 @@ struct Simulation <: AbstractSimulation
 	end
 end
 
-function Simulation(simulation_input::FullSimulationInput)
-    input = extract_input_sets(simulation_input)
-
-    base_model = input.base_model
-    model = get_model(base_model, input.model_settings)
-
-    sim = Simulation(model, input.cell_parameters, input.cycling_protocol; simulation_settings = input.simulation_settings)
-	return sim
-end
-
-function Simulation(input::NamedTuple)
-	haskey(input, :cell_parameters) || error("Input must include CellParameters")
-	haskey(input, :cycling_protocol) || error("Input must include CyclingProtocol")
-	haskey(input, :model_settings) || error("Input must include ModelSettings")
-	haskey(input, :simulation_settings) || error("Input must include SimulationSettings")
-
-	# TODO: Why is not BaseModel included in the required keys? Should it be?
-	model = get_model("LithiumIonBattery", input.model_settings)
-
-	return Simulation(model, input.cell_parameters, input.cycling_protocol; simulation_settings = input.simulation_settings)
-end
 
 function simulation_configuration(model, input)
 
@@ -194,17 +181,71 @@ function simulation_configuration(model, input)
 	# Setup time steps
 	time_steps = setup_timesteps(input)
 
-	return (
-		model = model,
-		grids = grids,
-		couplings = couplings,
-		parameters = parameters,
+	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Decoupled"
+
+		thermal_simulation = decoupled_thermal_configuration(model, battery_models, input, grids, global_maps)
+
+		return (
+			model = model,
+			grids = grids,
+			couplings = couplings,
+			parameters = parameters,
+			initial_state = initial_state,
+			forces = forces,
+			simulator = simulator,
+			time_steps = time_steps,
+			global_maps = global_maps,
+			thermal_simulation = thermal_simulation,
+		)
+
+
+	else
+
+		return (
+			model = model,
+			grids = grids,
+			couplings = couplings,
+			parameters = parameters,
+			initial_state = initial_state,
+			forces = forces,
+			simulator = simulator,
+			time_steps = time_steps,
+			global_maps = global_maps,
+		)
+	end
+
+end
+
+function decoupled_thermal_configuration(model, battery_models, input, grids, global_maps)
+
+	model_thermal, thermal_parameters = setup_thermal_model(model, battery_models, input, grids, global_maps)
+
+	forces = []
+	sources = []
+	for (i, state) in enumerate(states)
+		state = BattMo.get_state_with_secondary_variables(multimodel, state, parameters)
+		src, stepsources = BattMo.get_energy_source_by_type!(thermal_model, model, state, maps)
+		push!(forces, (value = src,))
+		push!(sources, stepsources)
+	end
+
+	nc = number_of_cells(thermal_model.domain)
+	T0 = input.cycling_protocol["InitialTemperature"] * ones(nc)
+
+	thermal_state0 = setup_state(thermal_model, Dict(:Temperature => T0))
+
+	thermal_sim = Simulator(thermal_model;
+		state0     = thermal_state0,
+		parameters = thermal_parameters,
+		copy_state = true)
+
+	thermal_config = (forces = forces,
+		sources = sources,
 		initial_state = initial_state,
-		forces = forces,
-		simulator = simulator,
-		time_steps = time_steps,
-		global_maps = global_maps,
-	)
+		model = thermal_model,
+		simulator = thermal_sim)
+
+	return thermal_config
 
 end
 
@@ -360,12 +401,30 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 	# Perform simulation
 	jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
 
+	# perfom decoupled thermal simulation if needed
+
+	if haskey(model_settings, "ThermalModel") && model_settings["ThermalModel"] == "Decoupled"
+		thermal_sim = sim.thermal_simulation
+
+		thermal_simulator = thermal_sim.simulator
+		thermal_forces = thermal_sim.forces
+		decoupled_thermal_states = simulate(thermal_sim, timesteps; info_level = -1, forces = thermal_forces)
+
+		# Add decoupled thermal states to the jutul_states
+		for i in eachindex(jutul_states)
+			jutul_states[i][:ThermalModel] = decoupled_thermal_states[i]
+		end
+
+	end
+
+
 	jutul_output = (
 		states = jutul_states,
 		reports = jutul_reports,
 		solver_configuration = cfg,
 		multimodel = model.multimodel,
 	)
+
 
 	input = FullSimulationInput(
 		Dict(
@@ -391,6 +450,8 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 		jutul_output_for_ts = jutul_output
 	end
 
+
+
 	time_series = get_output_time_series(jutul_output_for_ts)
 	states = get_output_states(jutul_output, grids, input)
 	metrics = get_output_metrics(jutul_output)
@@ -406,6 +467,7 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 	)
 
 end
+
 
 function overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
 	settings = kwarg_dict(; kwargs...)  # Convert kwargs to Dict
