@@ -211,20 +211,23 @@ function effective_separator_thermal_conductivity(separatorparams)
 	return (vf^bg) * separatorparams["ThermalConductivity"]
 end
 
-function setup_thermal_model(model, submodels, input, grids, global_maps)
+function setup_thermal_model(model, input, grids, global_maps)
+	submodels = model.multimodel.models
+
+	@show typeof(submodels)
 
 	cell_parameters = input.cell_parameters
 	thermal_parameters = cell_parameters["ThermalModel"]
 	maps = global_maps
 
-	ne = "NegativeElectrode"
-	pe = "PositiveElectrode"
-	elyte = "Electrolyte"
-	sep = "Separator"
-	am = "ActiveMaterial"
-	bd = "Binder"
-	ad = "ConductiveAdditive"
-	cc = "CurrentCollector"
+	ne = :NegativeElectrode
+	pe = :PositiveElectrode
+	elyte = :Electrolyte
+	sep = :Separator
+	am = :ActiveMaterial
+	bd = :Binder
+	ad = :ConductiveAdditive
+	cc = :CurrentCollector
 
 	eldes = [ne, pe] # Electrode domains
 
@@ -242,7 +245,7 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 		if haskey(model.settings, "CurrentCollectors")
 
 			cc_map = maps[string(elde, cc)][:cellmap]
-			ccmodel = submodels[string(elde, cc)]
+			ccmodel = submodels[Symbol(elde, cc)]
 			ccparams = cell_parameters[string(elde)]["CurrentCollector"]
 			cc_volumetric_heat_capacity = effective_current_collector_heat_capacity(ccmodel, ccparams)
 			cc_thermal_conductivity = effective_current_collector_thermal_conductivity(ccparams)
@@ -253,7 +256,7 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 
 		# Active material (coating)
 		am_map = maps[string(elde, am)].cellmap
-		ammodel = submodels[string(elde, am)]
+		ammodel = submodels[Symbol(elde, am)]
 		amparams = cell_parameters[string(elde)]
 		am_volumetric_heat_capacity = compute_effective_heat_capacity(ammodel.system.params, amparams)
 		am_thermal_conductivity = compute_effective_thermal_conductivity(ammodel.system.params, amparams)
@@ -267,7 +270,7 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 
 	# Electrolyte
 	elyte_map = maps[string(elyte)].cellmap
-	elytemodel = submodels[string(elyte)]
+	elytemodel = submodels[Symbol(elyte)]
 	elyte_volumetric_heat_capacity = effective_electrolyte_heat_capacity(elytemodel, cell_parameters[string(elyte)])
 	elyte_thermal_conductivity = effective_electrolyte_thermal_conductivity(elytemodel, cell_parameters[string(elyte)], cell_parameters[string(sep)])
 	volumetric_heat_capacity[elyte_map] .+= elyte_volumetric_heat_capacity
@@ -288,13 +291,13 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
 	# sensitivities)
 
 	prm                                   = JutulStorage()
-	prm[:BoundaryTemperature]             = thermal_parameters["ExternalTemperature"]
+	prm[:BoundaryTemperature]             = input.cycling_protocol["ExternalTemperature"]
 	prm[:ExternalHeatTransferCoefficient] = thermal_parameters["ExternalHeatTransferCoefficient"]
 	prm[:EffectiveVolumetricHeatCapacity] = volumetric_heat_capacity
 	prm[:EffectiveThermalConductivity]    = thermal_conductivity
 
 	prm_dict                                   = Dict{Symbol, Any}()
-	prm_dict[:BoundaryTemperature]             = thermal_parameters["ExternalTemperature"]
+	prm_dict[:BoundaryTemperature]             = input.cycling_protocol["ExternalTemperature"]
 	prm_dict[:ExternalHeatTransferCoefficient] = thermal_parameters["ExternalHeatTransferCoefficient"]
 	prm_dict[:EffectiveVolumetricHeatCapacity] = volumetric_heat_capacity
 	prm_dict[:EffectiveThermalConductivity]    = thermal_conductivity
@@ -364,9 +367,10 @@ function setup_thermal_state0(thermal_model, tcellmaps, parameters)
 	return setup_state(thermal_model, Temperature = T0)
 end
 
-function setup_thermal_post_ministep_hook(input, base_hook = missing; Temperature = missing, info_level = -1, kwarg...)
-	s = Simulation(input)
-	thermal_model, thermal_parameters = BattMo.setup_thermal_model(input, s.grids)
+function setup_thermal_post_ministep_hook(model, input, base_hook = missing; Temperature = missing, info_level = -1, kwarg...)
+	model = deepcopy(model)
+	s = Simulation(model, input.cell_parameters, input.cycling_protocol; simulation_settings = input.simulation_settings)
+	thermal_model, thermal_parameters = BattMo.setup_thermal_model(model, input, s.grids, s.global_maps)
 	maps = s.global_maps
 
 	tcellmaps = temperature_cell_maps(maps, s.parameters)
@@ -383,7 +387,7 @@ function setup_thermal_post_ministep_hook(input, base_hook = missing; Temperatur
 	thermal_sim = Simulator(thermal_model;
 		state0     = thermal_state0,
 		parameters = thermal_parameters,
-		copy_state = true
+		copy_state = true,
 	)
 	thermal_cfg = simulator_config(thermal_sim; info_level = info_level, kwarg...)
 
@@ -391,7 +395,7 @@ function setup_thermal_post_ministep_hook(input, base_hook = missing; Temperatur
 		if done
 			state = sim.storage.state0
 			src, stepsources = BattMo.get_energy_source_by_type!(thermal_model, s.model, state, maps)
-			tforce = (value = src, )
+			tforce = (value = src,)
 			Jutul.solve_timestep!(thermal_sim, dt, tforce, thermal_cfg[:max_nonlinear_iterations], thermal_cfg)
 		end
 		# Next: Copy over the temperature

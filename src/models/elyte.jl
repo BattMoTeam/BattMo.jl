@@ -99,7 +99,7 @@ function Jutul.select_minimum_output_variables!(
 	model::SimulationModel,
 )
 
-	for k in [:Charge, :Mass, :ElectronicConductivity, :Diffusivity]
+	for k in [:Charge, :Mass, :ElectronicConductivity, :Diffusivity, :Temperature]
 		push!(out, k)
 	end
 

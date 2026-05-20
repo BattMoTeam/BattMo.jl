@@ -119,6 +119,7 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 
 	if haskey(params, "use_thermal") && params["use_thermal"] == true
 		model_settings["ThermalModel"] = "Sequential"
+		model_settings["TemperatureDependence"] = "Arrhenius"
 	end
 
 	####################################
@@ -307,8 +308,6 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 		thermal_model = Dict(
 			"Capacity" => params["ThermalModel"]["capacity"],
 			"Conductivity" => params["ThermalModel"]["conductivity"],
-			"ExternalTemperature" => params["ThermalModel"]["externalTemperature"],
-			"ExternalHeatTransferCoefficient" => params["ThermalModel"]["externalHeatTransferCoefficient"],
 		)
 		# Optional switch for boundary heat-transfer closure in thermal-only model.
 		if haskey(params["ThermalModel"], "useBoundarySeriesResistance")
@@ -324,6 +323,7 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 
 
 		cell_parameters["ThermalModel"] = thermal["ThermalModel"]
+		cell_parameters["Cell"]["ExternalHeatTransferCoefficient"] = params["ThermalModel"]["externalHeatTransferCoefficient"]
 		cell_parameters["NegativeElectrode"]["ActiveMaterial"]["IncludeEntropyChange"] = params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["includeEntropyChange"]
 		cell_parameters["NegativeElectrode"]["ActiveMaterial"]["EntropyChange"] = ne_entropy
 		cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReferenceTemperature"] = params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["referenceTemperature"]
@@ -470,13 +470,17 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 		"LowerVoltageLimit" => params["Control"]["lowerCutoffVoltage"],
 		"UpperVoltageLimit" => params["Control"]["upperCutoffVoltage"],
 		"InitialTemperature" => params["initT"],
-		"InitialControl" => init_prot,
-	)
+		"InitialControl" => init_prot)
 
 	if cycling_protocol["Protocol"] == "CCCV"
 		cycling_protocol["CRate"] = params["Control"]["CRate"]
 		cycling_protocol["CurrentChangeLimit"] = params["Control"]["dIdtLimit"]
 		cycling_protocol["VoltageChangeLimit"] = params["Control"]["dEdtLimit"]
+	end
+
+	if haskey(model_settings, "ThermalModel")
+		cycling_protocol["ExternalTemperature"] = params["ThermalModel"]["externalTemperature"]
+
 	end
 
 	return (

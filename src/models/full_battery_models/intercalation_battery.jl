@@ -30,7 +30,7 @@ function setup_multimodel(model::IntercalationBattery, submodels, input; use_gro
 		end
 	else
 
-		if haskey(model.settings, "ThermalModel")
+		if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Coupled"
 			models = (
 				NegativeElectrodeCurrentCollector = submodels.model_necc,
 				NegativeElectrodeActiveMaterial = submodels.model_neam,
@@ -581,6 +581,7 @@ function compute_effective_thermal_conductivity(comodel, coinputparams)
 	for icomp in eachindex(compnames)
 		compname = compnames[icomp]
 		component_volume_fraction = volume_fractions[icomp]
+		@show compname
 		thermal_conductivity += component_volume_fraction * coinputparams[compname]["ThermalConductivity"]
 	end
 
@@ -736,7 +737,7 @@ function set_parameters(
 		parameters[:PositiveElectrodeCurrentCollector] = setup_parameters(multimodel[:PositiveElectrodeCurrentCollector], prm_pecc)
 	end
 
-	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
+	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Coupled"
 		prm_thermal = Dict{Symbol, Any}()
 		thermal_sys = multimodel[:ThermalModel].system.params
 		prm_thermal[:BoundaryTemperature] = thermal_sys[:BoundaryTemperature]
@@ -1162,7 +1163,7 @@ function setup_initial_state(input, model::IntercalationBattery)
 		initState[:PositiveElectrodeCurrentCollector] = setup_current_collector(:PositiveElectrodeCurrentCollector, posOCP - negOCP, multimodel)
 	end
 
-	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
+	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Coupled"
 		nc = count_entities(multimodel[:ThermalModel].data_domain, Cells())
 		initState[:ThermalModel] = Dict(:Temperature => fill(T, nc))
 	end

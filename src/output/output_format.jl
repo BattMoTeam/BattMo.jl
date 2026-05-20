@@ -826,18 +826,6 @@ function output_state_path(key::String)
 		end
 	end
 
-	thermal_model_prefixes = [
-		("ThermalModelTemperature", ["ThermalModel", "Temperature"]),
-		("ThermalModelEffectiveVolumetricHeatCapacity", ["ThermalModel", "EffectiveVolumetricHeatCapacity"]),
-		("ThermalModelEffectiveThermalConductivity", ["ThermalModel", "EffectiveThermalConductivity"]),
-		("ThermalModelEnergy", ["ThermalModel", "Energy"]),
-	]
-	for (prefix, path_prefix) in thermal_model_prefixes
-		if startswith(key, prefix)
-			suffix = key[(length(prefix)+1):end]
-			return vcat(path_prefix, [suffix])
-		end
-	end
 
 	if startswith(key, "Electrolyte")
 		suffix = key[(length("Electrolyte")+1):end]
@@ -845,6 +833,9 @@ function output_state_path(key::String)
 	elseif startswith(key, "Separator")
 		suffix = key[(length("Separator")+1):end]
 		return ["Separator", suffix]
+	elseif startswith(key, "ThermalModel")
+		suffix = key[(length("ThermalModel")+1):end]
+		return ["ThermalModel", suffix]
 	else
 		return [key]
 	end

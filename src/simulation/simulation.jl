@@ -12,7 +12,10 @@ abstract type AbstractSimulation end
 
 
 """
-	Simulation(model::ModelConfigured, cell_parameters::CellParameters, cycling_protocol::CyclingProtocol; simulation_settings::SimulationSettings = get_default_simulation_settings(model))
+	Simulation(model::ModelConfigured,
+				   cell_parameters::CellParameters,
+				   cycling_protocol::CyclingProtocol;
+				   simulation_settings::SimulationSettings = get_default_simulation_settings(model))
 
 Constructs a `Simulation` object that sets up and validates all necessary components for simulating a battery model.
 
@@ -45,7 +48,6 @@ A `Simulation` struct instance that includes:
 
 """
 struct Simulation <: AbstractSimulation
-	is_valid::Bool
 	model::ModelConfigured
 	cell_parameters::CellParameters
 	cycling_protocol::CyclingProtocol
@@ -57,9 +59,11 @@ struct Simulation <: AbstractSimulation
 	couplings::Any
 	parameters::Any
 	simulator::Any
+	output_all_secondary_variables::Bool
+	is_valid::Bool
+	validate::Bool
 	global_maps::Any
 	decoupled_thermal::Any
-
 
 	function Simulation(
 		model::M,
@@ -70,63 +74,59 @@ struct Simulation <: AbstractSimulation
 		initial_state = nothing,
 		output_all_secondary_variables::Bool = false,
 		hook = nothing,
+		validate::Bool = true,
 		kwargs...,
 	) where {M <: ModelConfigured}
 
-		return if model.is_valid
+		model_settings = model.settings
 
-			# Here will come a validation function
-			model_settings = model.settings
+		if validate
+			model_is_valid = model.is_valid
+
+			if !model_is_valid
+				error(
+					"""
+					Oops! Your Model object is not valid. 🛑
+
+					TIP: Validation happens when instantiating the Model object.
+					Check the warnings to see exactly where things went wrong. 🔍
+
+					""",
+				)
+			end
+
 			cell_parameters_is_valid = validate_parameter_set(cell_parameters, model_settings)
 			cycling_protocol_is_valid = validate_parameter_set(cycling_protocol, model_settings)
 			simulation_settings_is_valid = validate_parameter_set(simulation_settings, model_settings)
 
-			if cell_parameters_is_valid && cycling_protocol_is_valid && simulation_settings_is_valid
-				is_valid = true
-			else
-				is_valid = false
-			end
+			is_valid = model_is_valid &&
+					   cell_parameters_is_valid &&
+					   cycling_protocol_is_valid &&
+					   simulation_settings_is_valid
+		else
+			is_valid = true
+		end
 
-			# Combine the parameter sets and settings
-			input = (
-				model_settings = model_settings,
-				cell_parameters = cell_parameters,
-				cycling_protocol = cycling_protocol,
-				simulation_settings = simulation_settings,
-				time_steps = time_steps,
-				initial_state = initial_state,
-				output_all_secondary_variables = output_all_secondary_variables,
-			)
+		input = (
+			model_settings = model_settings,
+			cell_parameters = cell_parameters,
+			cycling_protocol = cycling_protocol,
+			simulation_settings = simulation_settings,
+			time_steps = time_steps,
+			initial_state = initial_state,
+			output_all_secondary_variables = output_all_secondary_variables,
+		)
 
+		if validate
 			try
-				# Run configuration with all warnings and errors silenced
 				sim_cfg = Logging.with_logger(Logging.NullLogger()) do
 					simulation_configuration(model, input)
 				end
-
-				model = sim_cfg.model
-				grids = sim_cfg.grids
-				couplings = sim_cfg.couplings
-				parameters = sim_cfg.parameters
-				initial_state = sim_cfg.initial_state
-				forces = sim_cfg.forces
-				simulator = sim_cfg.simulator
-				time_steps = sim_cfg.time_steps
-				global_maps = sim_cfg.global_maps
-
-				if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Decoupled"
-					thermal_simulation = sim_cfg.thermal_simulation
-
-				else
-					thermal_simulation = nothing
-				end
-
-				return new{}(is_valid, model, cell_parameters, cycling_protocol, simulation_settings, time_steps, forces, initial_state, grids, couplings, parameters, simulator, global_maps, thermal_simulation)
 			catch e
-				if is_valid == false
+				if !is_valid
 					error(
 						"""
-						Oops! Your Simulation object cannot be configured because some of you input is not valid. 🛑
+						Oops! Your Simulation object cannot be configured because some of your input is not valid. 🛑
 
 						Check the warnings to see where things went wrong. 🔍
 
@@ -136,19 +136,36 @@ struct Simulation <: AbstractSimulation
 					rethrow(e)
 				end
 			end
-
 		else
-			error(
-				"""
-				Oops! Your Model object is not valid. 🛑
-
-				TIP: Validation happens when instantiating the Model object. 
-				Check the warnings to see exactly where things went wrong. 🔍
-
-				""",
-			)
+			sim_cfg = simulation_configuration(model, input)
 		end
 
+		if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Decoupled"
+			thermal_simulation = sim_cfg.thermal_simulation
+
+		else
+			thermal_simulation = nothing
+		end
+
+
+		return new(
+			sim_cfg.model,
+			cell_parameters,
+			cycling_protocol,
+			simulation_settings,
+			sim_cfg.time_steps,
+			sim_cfg.forces,
+			sim_cfg.initial_state,
+			sim_cfg.grids,
+			sim_cfg.couplings,
+			sim_cfg.parameters,
+			sim_cfg.simulator,
+			output_all_secondary_variables,
+			is_valid,
+			validate,
+			sim_cfg.global_maps,
+			thermal_simulation,
+		)
 	end
 end
 
@@ -183,7 +200,7 @@ function simulation_configuration(model, input)
 
 	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Decoupled"
 
-		thermal_simulation = decoupled_thermal_configuration(model, battery_models, input, grids, global_maps)
+		thermal_model, thermal_parameters = setup_thermal_model(model, input, grids, global_maps)
 
 		return (
 			model = model,
@@ -195,7 +212,10 @@ function simulation_configuration(model, input)
 			simulator = simulator,
 			time_steps = time_steps,
 			global_maps = global_maps,
-			thermal_simulation = thermal_simulation,
+			thermal_simulation = (
+				model = thermal_model,
+				parameters = thermal_parameters,
+			),
 		)
 
 
@@ -216,21 +236,19 @@ function simulation_configuration(model, input)
 
 end
 
-function decoupled_thermal_configuration(model, battery_models, input, grids, global_maps)
+function solve_decoupled_thermal_model(model, cycling_protocol, thermal_parameters, parameters, thermal_model, jutul_states, maps, timesteps)
 
-	model_thermal, thermal_parameters = setup_thermal_model(model, battery_models, input, grids, global_maps)
-
-	forces = []
+	thermal_forces = []
 	sources = []
-	for (i, state) in enumerate(states)
-		state = BattMo.get_state_with_secondary_variables(multimodel, state, parameters)
+	for (i, state) in enumerate(jutul_states)
+		state = BattMo.get_state_with_secondary_variables(model.multimodel, state, parameters)
 		src, stepsources = BattMo.get_energy_source_by_type!(thermal_model, model, state, maps)
-		push!(forces, (value = src,))
+		push!(thermal_forces, (value = src,))
 		push!(sources, stepsources)
 	end
 
 	nc = number_of_cells(thermal_model.domain)
-	T0 = input.cycling_protocol["InitialTemperature"] * ones(nc)
+	T0 = cycling_protocol["InitialTemperature"] * ones(nc)
 
 	thermal_state0 = setup_state(thermal_model, Dict(:Temperature => T0))
 
@@ -239,13 +257,10 @@ function decoupled_thermal_configuration(model, battery_models, input, grids, gl
 		parameters = thermal_parameters,
 		copy_state = true)
 
-	thermal_config = (forces = forces,
-		sources = sources,
-		initial_state = initial_state,
-		model = thermal_model,
-		simulator = thermal_sim)
 
-	return thermal_config
+	decoupled_thermal_states = simulate(thermal_sim, timesteps[1:length(jutul_states)]; info_level = -1, forces = thermal_forces)
+
+	return decoupled_thermal_states
 
 end
 
@@ -255,7 +270,13 @@ end
 #########
 
 """
-	solve(problem::Simulation; accept_invalid = false, hook = nothing, info_level = 0, end_report = info_level > -1, include_initial_state = false, kwargs...)
+	solve(problem::Simulation;
+			  accept_invalid = false,
+			  hook = nothing,
+			  info_level = 0,
+			  end_report = info_level > -1,
+			  include_initial_state = false,
+			  kwargs...)
 
 Solves a battery `Simulation` problem by executing the simulation workflow defined in `solve_simulation`.
 
@@ -291,49 +312,61 @@ result = solve(sim; info_level = 1)
 result = solve(sim; include_initial_state = true)
 ```
 """
-function solve(problem::Simulation; accept_invalid = false, solver_settings = get_default_solver_settings(problem.model), logger = nothing, include_initial_state = false, kwargs...)
+function solve(
+	problem::Simulation;
+	accept_invalid::Bool = false,
+	solver_settings = get_default_solver_settings(problem.model),
+	logger = nothing,
+	include_initial_state = false,
+	kwargs...,
+)
 
+	validate = problem.validate
 
-	# Note: Typically function_to_solve is run_battery
-	return if accept_invalid == true
-		output = solve_simulation(problem; solver_settings, logger, include_initial_state, kwargs...)
-	else
-		if problem.is_valid == true
-			output = solve_simulation(problem; solver_settings, logger, include_initial_state, kwargs...)
-
-			return output
-		else
-
-			error(
-				"""
-				Oops! Your Simulation object is not valid. 🛑
-
-				TIP: Validation happens when instantiating the Simulation object. 
-				Check the warnings to see exactly where things went wrong. 🔍
-
-				If you’re confident you know what you're doing, you can bypass the validation result 
-				by setting the flag "accept_invalid = true": 
-
-					solve(sim; accept_invalid = true)
-
-				But proceed with caution! 😎 
-				""",
-			)
-		end
+	if accept_invalid && !validate
+		error("If accept_invalid = true, validation must be enabled")
 	end
+
+	if validate && !problem.is_valid && !accept_invalid
+		error(
+			"""
+			Your Simulation object is not valid.
+
+			TIP: Validation happens when instantiating the Simulation object.
+			Check the warnings to see exactly where things went wrong.
+
+			If you are confident you know what you are doing, you can bypass this
+			validation result when solving:
+
+				solve(sim; accept_invalid = true)
+
+			Note that `accept_invalid = true` only applies when validation is enabled.
+			""",
+		)
+	end
+
+	return solve_simulation(
+		problem;
+		solver_settings,
+		logger,
+		include_initial_state,
+		validate,
+		accept_invalid,
+		kwargs...,
+	)
 
 end
 
-
 """
-	solve_simulation(sim::Simulation; hook = nothing, use_p2d = true, kwargs...)
+	solve_simulation(sim::Simulation;
+							  hook = nothing,
+							  kwargs...)
 
 Executes the simulation workflow for a battery `Simulation` object by advancing the system state over the defined time steps using the configured solver and model.
 
 # Arguments
 - `sim::Simulation`: A `Simulation` instance containing all preconfigured simulation components including model, state, solver, time steps, and settings.
 - `hook` (optional): A user-supplied callback function to be invoked *before* the simulation begins. Useful for modifying or logging internal simulation structures (e.g., for debugging, monitoring, or visualization).
-- `use_p2d::Bool` (optional): Currently unused placeholder; included for compatibility or future extensions. Default is `true`.
 - `kwargs...`: Additional keyword arguments passed to the lower-level solver configuration.
 
 # Behavior
@@ -359,7 +392,15 @@ A named tuple with the following fields:
 result = solve_simulation(sim)
 ```
 """
-function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, logger = nothing, include_initial_state = false, kwargs...)
+function solve_simulation(
+	sim::Union{Simulation, NamedTuple};
+	solver_settings,
+	logger = nothing,
+	include_initial_state = false,
+	validate::Bool = true,
+	accept_invalid::Bool = false,
+	kwargs...,
+)
 
 	simulator = sim.simulator
 	model = sim.model
@@ -372,17 +413,21 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 	simulation_settings = sim.settings
 	cell_parameters = sim.cell_parameters
 	cycling_protocol = sim.cycling_protocol
+	global_maps = sim.global_maps
 
 
-	# setup solver configuration
+	# Setup solver configuration
 	cfg = solver_configuration(
 		simulator,
 		model.multimodel,
 		parameters;
 		solver_settings,
+		validate,
+		accept_invalid,
 		logger,
 		kwargs...,
 	)
+
 
 	# Setup hook if given
 	hook = get(kwargs, :hook, nothing)
@@ -390,30 +435,50 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 		hook(
 			simulator,
 			model.multimodel,
-			initial_state,
+			state0,
 			forces,
-			time_steps,
+			timesteps,
 			cfg,
 		)
 	end
 
-
 	# Perform simulation
-	jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
+	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
+
+		input = (
+			model_settings = model.settings,
+			cell_parameters = cell_parameters,
+			cycling_protocol = cycling_protocol,
+			simulation_settings = simulation_settings,
+		)
+
+		thook = BattMo.setup_thermal_post_ministep_hook(model, input, Temperature = cycling_protocol["InitialTemperature"])
+
+		jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, post_ministep_hook = thook, kwargs...)
+
+	else
+
+		jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
+
+	end
 
 	# perfom decoupled thermal simulation if needed
 
-	if haskey(model_settings, "ThermalModel") && model_settings["ThermalModel"] == "Decoupled"
-		thermal_sim = sim.thermal_simulation
+	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Decoupled"
+		thermal_sim = sim.decoupled_thermal
 
-		thermal_simulator = thermal_sim.simulator
-		thermal_forces = thermal_sim.forces
-		decoupled_thermal_states = simulate(thermal_sim, timesteps; info_level = -1, forces = thermal_forces)
+		thermal_parameters = thermal_sim.parameters
+		thermal_model = thermal_sim.model
+
+		decoupled_thermal_states = solve_decoupled_thermal_model(model, cycling_protocol, thermal_parameters, parameters, thermal_model, jutul_states, global_maps, timesteps)
+
 
 		# Add decoupled thermal states to the jutul_states
 		for i in eachindex(jutul_states)
-			jutul_states[i][:ThermalModel] = decoupled_thermal_states[i]
+			jutul_states[i][:ThermalModel] = decoupled_thermal_states[i][:state]
+			jutul_reports[i][:ThermalModel] = decoupled_thermal_states[i][:report]
 		end
+
 
 	end
 
@@ -437,8 +502,7 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 		),
 	)
 
-	# For time series computation, optionally include the initial
-	# state as the first data point
+	# Optionally include the initial state as the first data point
 	if include_initial_state
 		jutul_output_for_ts = (
 			states = vcat([deepcopy(state0)], jutul_states),
@@ -449,8 +513,6 @@ function solve_simulation(sim::Union{Simulation, NamedTuple}; solver_settings, l
 	else
 		jutul_output_for_ts = jutul_output
 	end
-
-
 
 	time_series = get_output_time_series(jutul_output_for_ts)
 	states = get_output_states(jutul_output, grids, input)
@@ -500,7 +562,6 @@ function overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
 								solver_settings[dict_key][key] = "UserDefined"
 								timestep_selectors = value
 							end
-
 
 						elseif key == :Relaxation
 							if isa(value, String)
@@ -592,13 +653,13 @@ end
 ######################################
 
 """
-	setup_config(sim::JutulSimulator,
-					  model::MultiModel,
-					  parameters;
-					  inputparams::AdvancedDictInput,
-					  extra_timing::Bool,
-					  use_model_scaling,
-					  kwargs...)
+		setup_configuration(sim::JutulSimulator,
+							model::MultiModel,
+							parameters;
+							inputparams::AdvancedDictInput,
+							extra_timing::Bool,
+							use_model_scaling,
+							kwargs...)
 
 Sets up the config object used during simulation. In this current version this
 setup is the same for json and mat files. The specific setup values should
@@ -611,16 +672,37 @@ function solver_configuration(
 	use_model_scaling::Bool = true,
 	solver_settings,
 	logger = nothing,
+	validate::Bool = true,
+	accept_invalid::Bool = false,
 	kwargs...,
 )
 
-	# Overwrite solver settings with kwargs
+	solver_settings = deepcopy(solver_settings)
+
 	overwritten_settings = overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
 	solver_settings = overwritten_settings.solver_settings
 
-	# Validate solver settings
-	solver_settings_is_valid = validate_parameter_set(solver_settings)
+	if validate
+		solver_settings_is_valid = validate_parameter_set(solver_settings)
 
+		if !solver_settings_is_valid && !accept_invalid
+			error(
+				"""
+				Your SolverSettings are not valid.
+
+				TIP: Solver settings are validated when calling `solve`.
+				Check the warnings to see exactly where things went wrong.
+
+				If you are confident you know what you are doing, you can bypass this
+				validation result when solving:
+
+					solve(sim; accept_invalid = true)
+
+				Note that `accept_invalid = true` only applies when validation is enabled.
+				""",
+			)
+		end
+	end
 
 	non_linear_solver = solver_settings["NonLinearSolver"]
 	linear_solver_dict = solver_settings["LinearSolver"]
@@ -628,22 +710,25 @@ function solver_configuration(
 	verbose = solver_settings["Verbose"]
 
 	relaxation = non_linear_solver["Relaxation"]
-	timestep_selector = non_linear_solver["TimeStepSelectors"]
 	if relaxation == "NoRelaxation"
 		relax = NoRelaxation()
-	else
+	elseif relaxation == "SimpleRelaxation"
 		relax = SimpleRelaxation()
+	else
+		error("Relaxation method $(relaxation) not recognized. Only 'NoRelaxation' and 'SimpleRelaxation' are currently implemented.")
 	end
 
+	timestep_selector = non_linear_solver["TimeStepSelectors"]
 	if timestep_selector == "TimestepSelector"
 		timesel = [TimestepSelector()]
+	else
+		error("Timestep selector $(timestep_selector) not recognized. Only 'TimestepSelector' is currently implemented.")
 	end
 
 	if linear_solver_dict["Method"] == "UserDefined"
 		linear_solver = overwritten_settings.linear_solver
 	else
 		linear_solver = battery_linsolve(linear_solver_dict)
-
 	end
 
 	cfg = simulator_config(
@@ -763,9 +848,7 @@ function solver_configuration(
 
 		cfg[:post_ministep_hook] = post_hook
 
-
 	end
-
 
 	return cfg
 
@@ -908,7 +991,7 @@ function setup_timesteps(
 	kwargs...,
 )
 	"""
-		Method setting up the timesteps from a json file object. 
+		Method for setting up the timesteps from a json file object.
 	"""
 	if hasproperty(input, :time_steps) && !isnothing(input.time_steps)
 		return input.time_steps
@@ -951,7 +1034,6 @@ function setup_timesteps(
 
 			totalTime = ncycles * 2 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
-
 			dt = simulation_settings["TimeStepDuration"]
 			n = Int64(floor(totalTime / dt))
 
@@ -971,7 +1053,6 @@ function setup_timesteps(
 		dt = simulation_settings["TimeStepDuration"]
 		n = Int64(floor(totalTime / dt))
 
-
 		timesteps = repeat([dt], n)
 
 	elseif protocol == "Function"
@@ -990,7 +1071,7 @@ function setup_timesteps(
 
 	else
 
-		error("Control policy $controlPolicy not recognized")
+		error("Protocol $protocol not recognized")
 
 	end
 
@@ -1003,20 +1084,25 @@ function compute_rampup_timesteps(time::Real, dt::Real, n::Integer = 8)
 	ind = collect(range(n, 1, step = -1))
 	dt_init = [dt / 2^k for k in ind]
 	cs_time = cumsum(dt_init)
+
 	if any(cs_time .> time)
 		dt_init = dt_init[cs_time .< time]
 	end
+
 	dt_left = time .- sum(dt_init)
 
 	# Even steps
 	dt_rem = dt * ones(floor(Int64, dt_left / dt))
+
 	# Final ministep if present
 	dt_final = time - sum(dt_init) - sum(dt_rem)
+
 	# Less than to account for rounding errors leading to a very small
 	# negative time-step.
 	if dt_final <= 0
 		dt_final = []
 	end
+
 	# Combined timesteps
 	dT = [dt_init; dt_rem; dt_final]
 
@@ -1028,11 +1114,15 @@ end
 ####################
 
 function currentFun(t::Real, inputI::Real, tup::Real = 0.1)
+
 	t, inputI, tup, val = promote(t, inputI, tup, 0.0)
+
 	if t <= tup
 		val = sineup(0.0, inputI, 0.0, tup, t)
 	else
 		val = inputI
 	end
+
 	return val
+
 end

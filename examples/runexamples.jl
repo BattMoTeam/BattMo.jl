@@ -2,6 +2,7 @@
 # folder, and catch any errors that occur
 
 failed = String[]
+succeeded = String[]
 
 topfiles = [
     f for f in readdir(pwd(); join = false)
@@ -19,11 +20,15 @@ for file in files
     try
         println("Including $file")
         include(file)
+        push!(succeeded, file)
     catch err
         push!(failed, file)
         @warn "Failed to include $file" exception = (err, catch_backtrace())
     end
 end
+
+println("Succeeded files:")
+foreach(println, succeeded)
 
 println("Failed files:")
 foreach(println, failed)

@@ -25,6 +25,7 @@ function Jutul.select_minimum_output_variables!(
 	out,
 	system::CurrentCollector, model::SimulationModel,
 )
+	push!(out, :ElectricPotential)
 	return push!(out, :Charge)
 end
 
