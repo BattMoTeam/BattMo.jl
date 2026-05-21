@@ -3,6 +3,9 @@
   "SOC": 0.99,
   "initT": 298.15,
   "use_thermal": true,
+  "TimeStepping": {
+    "timeStepDuration": 100
+  },
   "NegativeElectrode": {
     "Coating": {
       "effectiveDensity": 1900,
@@ -23,14 +26,21 @@
           "guestStoichiometry0": 0.1429,
           "chargeTransferCoefficient": 0.5,
           "openCircuitPotential": {
-            "type": "function",
-            "functionname": "computeOCP_Graphite_Torchio",
-            "argumentlist": [
-              "concentration",
-              "temperature",
-              "cmax"
+            "functionFormat": "named function",
+            "functionName": "computeOCP_Graphite_Torchio",
+            "argumentList": [
+              "stoichiometry"
             ]
-          }
+          },
+          "includeEntropyChange": true,
+          "entropyChange": {
+            "functionFormat": "named function",
+            "functionName": "computeEntropyChange_Graphite_Torchio",
+            "argumentList": [
+              "stoichiometry"
+            ]
+          },
+          "referenceTemperature": 298.15
         },
         "diffusionModelType": "full",
         "SolidDiffusion": {
@@ -77,20 +87,27 @@
           "volumetricSurfaceArea": 885000,
           "density": 4650,
           "numberOfElectronsTransferred": 1,
-          "activationEnergyOfReaction": 5000,
+          "activationEnergyOfReaction": 37480,
           "reactionRateConstant": 2.33E-11,
           "guestStoichiometry100": 0.4955,
           "guestStoichiometry0": 0.99174,
           "chargeTransferCoefficient": 0.5,
           "openCircuitPotential": {
-            "type": "function",
-            "functionname": "computeOCP_NMC111",
-            "argumentlist": [
-              "concentration",
-              "temperature",
-              "cmax"
+            "functionFormat": "named function",
+            "functionName": "computeOCP_LCO",
+            "argumentList": [
+              "stoichiometry"
             ]
-          }
+          },
+          "includeEntropyChange": true,
+          "entropyChange": {
+            "functionFormat": "named function",
+            "functionName": "computeEntropyChange_LCO",
+            "argumentList": [
+              "stoichiometry"
+            ]
+          },
+          "referenceTemperature": 298.15
         },
         "diffusionModelType": "full",
         "SolidDiffusion": {
@@ -126,20 +143,20 @@
     "specificHeatCapacity": 2055,
     "thermalConductivity": 0.6,
     "density": 1200,
-    "initialConcentration": 999.99999999999977,
-    "nominalEthyleneCarbonateConcentration": 999.99999999999977,
+    "initialConcentration": 1000,
+    "nominalEthyleneCarbonateConcentration": 1000,
     "ionicConductivity": {
-      "type": "function",
-      "functionname": "computeElectrolyteConductivity_default",
-      "argumentlist": [
+      "functionFormat": "named function",
+      "functionName": "computeElectrolyteConductivity_default",
+      "argumentList": [
         "concentration",
         "temperature"
       ]
     },
     "diffusionCoefficient": {
-      "type": "function",
-      "functionname": "computeDiffusionCoefficient_default",
-      "argumentlist": [
+      "functionFormat": "named function",
+      "functionName": "computeDiffusionCoefficient_default",
+      "argumentList": [
         "concentration",
         "temperature"
       ]
@@ -159,7 +176,7 @@
     "bruggemanCoefficient": 1.5
   },
   "ThermalModel": {
-    "externalHeatTransferCoefficient": 1000,
+    "externalHeatTransferCoefficient": 1000.0,
     "externalTemperature": 298.15
   }
 }

@@ -4,89 +4,89 @@ case = "4680"
 
 if case == "4680"
 
-    # Load geometry parameters
-    inputparams = load_advanced_dict_input(
-        joinpath(
-            pkgdir(BattMo),
-            "examples",
-            "Experimental",
-            "jsoninputs",
-            "4680-geometry.json"
-        )
-    )
+	# Load geometry parameters
+	inputparams = load_advanced_dict_input(
+		joinpath(
+			pkgdir(BattMo),
+			"examples",
+			"Experimental",
+			"jsoninputs",
+			"4680-geometry.json",
+		),
+	)
 
-    # inputparams["Geometry"]["numberOfDiscretizationCellsVertical"]    = 2
-    # inputparams["NegativeElectrode"]["CurrentCollector"]["thickness"] = 60e-6
-    # inputparams["PositiveElectrode"]["CurrentCollector"]["thickness"] = 60e-6
-    # inputparams["Geometry"]["numberOfDiscretizationCellsAngular"]     = 30
+	# inputparams["Geometry"]["numberOfDiscretizationCellsVertical"]    = 2
+	# inputparams["NegativeElectrode"]["CurrentCollector"]["thickness"] = 60e-6
+	# inputparams["PositiveElectrode"]["CurrentCollector"]["thickness"] = 60e-6
+	# inputparams["Geometry"]["numberOfDiscretizationCellsAngular"]     = 30
 
-    grids, couplings = jelly_roll_grid(inputparams)
+	grids, couplings = jelly_roll_grid(inputparams)
 
 elseif case == "pouch"
 
-    # Load geometry parameters
-    inputparams = load_advanced_dict_input(
-        joinpath(
-            pkgdir(BattMo),
-            "examples",
-            "Experimental",
-            "jsoninputs",
-            "geometry-3d-demo.json"
-        )
-    )
+	# Load geometry parameters
+	inputparams = load_advanced_dict_input(
+		joinpath(
+			pkgdir(BattMo),
+			"examples",
+			"Experimental",
+			"jsoninputs",
+			"geometry-3d-demo.json",
+		),
+	)
 
-    grids, couplings = pouch_grid(inputparams)
+	grids, couplings = pouch_grid(inputparams)
 
 else
 
-    error("case not recognized")
+	error("case not recognized")
 
 end
 
 
 let ax, components, colors
 
-    components = [
-        "NegativeElectrode",
-        "PositiveElectrode",
-        "NegativeCurrentCollector",
-        "PositiveCurrentCollector",
-    ]
+	components = [
+		"NegativeElectrodeActiveMaterial",
+		"PositiveElectrodeActiveMaterial",
+		"NegativeElectrodeCurrentCollector",
+		"PositiveElectrodeCurrentCollector",
+	]
 
-    colors = [
-        :gray,
-        :green,
-        :blue,
-        :black,
-    ]
+	colors = [
+		:gray,
+		:green,
+		:blue,
+		:black,
+	]
 
-    for (i, component) in enumerate(components)
-        if i == 1
-            global fig
-            fig, ax = plot_mesh(
-                grids[component],
-                color = colors[i]
-            )
-        else
-            plot_mesh!(
-                ax,
-                grids[component],
-                color = colors[i]
-            )
-        end
-    end
+	for (i, component) in enumerate(components)
+		if i == 1
+			global fig
+			fig, ax = plot_mesh(
+				grids[component],
+				color = colors[i],
+			)
+		else
+			plot_mesh!(
+				ax,
+				grids[component],
+				color = colors[i],
+			)
+		end
+	end
 
-    components = [
-        "NegativeCurrentCollector",
-        "PositiveCurrentCollector",
-    ]
+	components = [
+		"NegativeElectrodeCurrentCollector",
+		"PositiveElectrodeCurrentCollector",
+	]
 
-    for component in components
-        plot_mesh!(
-            ax, grids[component],
-            boundaryfaces = couplings[component]["External"]["boundaryfaces"],
-            color = :red
-        )
-    end
+	for component in components
+		plot_mesh!(
+			ax, grids[component],
+			boundaryfaces = couplings[component]["External"]["boundaryfaces"],
+			color = :red,
+		)
+	end
 
 end

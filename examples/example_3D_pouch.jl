@@ -57,26 +57,26 @@ grids = sim.grids
 couplings = sim.couplings
 nothing #hide
 
-components = ["NegativeElectrode", "PositiveElectrode", "NegativeCurrentCollector", "PositiveCurrentCollector"]
+components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
 colors = [:gray, :green, :dodgerblue, :black]
 nothing #hide
 
 # ## Plot the component meshes
 
 for (i, component) in enumerate(components)
-    if i == 1
-        global fig_mesh, ax_mesh = plot_mesh(
-            grids[component];
-            color = colors[i],
-            label = component
-        )
-    else
-        plot_mesh!(
-            ax_mesh, grids[component];
-            color = colors[i],
-            label = component
-        )
-    end
+	if i == 1
+		global fig_mesh, ax_mesh = plot_mesh(
+			grids[component];
+			color = colors[i],
+			label = component,
+		)
+	else
+		plot_mesh!(
+			ax_mesh, grids[component];
+			color = colors[i],
+			label = component,
+		)
+	end
 end
 
 Legend(fig_mesh[1, 2], [PolyElement(color = c) for c in colors], components)
@@ -92,27 +92,27 @@ fig_mesh
 # We plot those in red on top of the mesh edges.
 
 for (i, component) in enumerate(components)
-    if i == 1
-        global fig_edges, ax_edges = plot_mesh_edges(
-            grids[component];
-            color = colors[i],
-            label = component
-        )
-    else
-        plot_mesh_edges!(
-            ax_edges, grids[component];
-            color = colors[i],
-            label = component
-        )
-    end
+	if i == 1
+		global fig_edges, ax_edges = plot_mesh_edges(
+			grids[component];
+			color = colors[i],
+			label = component,
+		)
+	else
+		plot_mesh_edges!(
+			ax_edges, grids[component];
+			color = colors[i],
+			label = component,
+		)
+	end
 end
 
-for component in ["NegativeCurrentCollector", "PositiveCurrentCollector"]
-    plot_mesh!(
-        ax_edges, grids[component];
-        boundaryfaces = couplings[component]["External"]["boundaryfaces"],
-        color = :red
-    )
+for component in ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
+	plot_mesh!(
+		ax_edges, grids[component];
+		boundaryfaces = couplings[component]["External"]["boundaryfaces"],
+		color = :red,
+	)
 end
 
 Legend(fig_edges[1, 2], [PolyElement(color = c) for c in colors], components)
@@ -134,9 +134,9 @@ nothing #hide
 
 # Potential in the negative current collector
 fig_phi, ax_phi = plot_cell_data(
-    output.states["NegativeElectrode"]["CurrentCollector"]["Position"],
-    output.states["NegativeElectrode"]["CurrentCollector"]["Potential"][end, :];
-    colormap = :viridis,
+	output.states["NegativeElectrode"]["CurrentCollector"]["Position"],
+	output.states["NegativeElectrode"]["CurrentCollector"]["Potential"][end, :];
+	colormap = :viridis,
 )
 ax_phi.aspect = :data
 ax_phi.title = "Negative current collector potential"
@@ -145,9 +145,9 @@ fig_phi
 
 # Surface concentration in the positive electrode active material
 fig_cs, ax_cs = plot_cell_data(
-    output.states["PositiveElectrode"]["ActiveMaterial"]["Position"],
-    output.states["PositiveElectrode"]["ActiveMaterial"]["SurfaceConcentration"][end, :];
-    colormap = :plasma,
+	output.states["PositiveElectrode"]["ActiveMaterial"]["Position"],
+	output.states["PositiveElectrode"]["ActiveMaterial"]["SurfaceConcentration"][end, :];
+	colormap = :plasma,
 )
 ax_cs.aspect = :data
 ax_cs.title = "Positive electrode surface concentration"
@@ -156,9 +156,9 @@ fig_cs
 
 # Mesh edges can be overlaid on top of a cell-data plot.
 plot_mesh_edges!(
-    ax_cs, output.states["PositiveElectrode"]["ActiveMaterial"]["Position"];
-    color = :black,
-    linewidth = 0.5
+	ax_cs, output.states["PositiveElectrode"]["ActiveMaterial"]["Position"];
+	color = :black,
+	linewidth = 0.5,
 )
 display(GLMakie.Screen(), fig_cs) # hide
 fig_cs
@@ -175,27 +175,27 @@ couplings = sim.couplings
 nothing #hide
 
 for (i, component) in enumerate(components)
-    if i == 1
-        global fig_edges_d, ax_edges_d = plot_mesh(
-            grids[component];
-            color = colors[i],
-            label = component
-        )
-    else
-        plot_mesh!(
-            ax_edges_d, grids[component];
-            color = colors[i],
-            label = component
-        )
-    end
+	if i == 1
+		global fig_edges_d, ax_edges_d = plot_mesh(
+			grids[component];
+			color = colors[i],
+			label = component,
+		)
+	else
+		plot_mesh!(
+			ax_edges_d, grids[component];
+			color = colors[i],
+			label = component,
+		)
+	end
 end
 
 for component in ["NegativeCurrentCollector", "PositiveCurrentCollector"]
-    plot_mesh!(
-        ax_edges_d, grids[component];
-        boundaryfaces = couplings[component]["External"]["boundaryfaces"],
-        color = :red
-    )
+	plot_mesh!(
+		ax_edges_d, grids[component];
+		boundaryfaces = couplings[component]["External"]["boundaryfaces"],
+		color = :red,
+	)
 end
 
 Legend(fig_edges_d[1, 2], [PolyElement(color = c) for c in colors], components)
@@ -213,27 +213,27 @@ couplings = sim.couplings
 nothing #hide
 
 for (i, component) in enumerate(components)
-    if i == 1
-        global fig_edges_m, ax_edges_m = plot_mesh(
-            grids[component];
-            color = colors[i],
-            label = component
-        )
-    else
-        plot_mesh!(
-            ax_edges_m, grids[component];
-            color = colors[i],
-            label = component
-        )
-    end
+	if i == 1
+		global fig_edges_m, ax_edges_m = plot_mesh(
+			grids[component];
+			color = colors[i],
+			label = component,
+		)
+	else
+		plot_mesh!(
+			ax_edges_m, grids[component];
+			color = colors[i],
+			label = component,
+		)
+	end
 end
 
 for component in ["NegativeCurrentCollector", "PositiveCurrentCollector"]
-    plot_mesh!(
-        ax_edges_m, grids[component];
-        boundaryfaces = couplings[component]["External"]["boundaryfaces"],
-        color = :red
-    )
+	plot_mesh!(
+		ax_edges_m, grids[component];
+		boundaryfaces = couplings[component]["External"]["boundaryfaces"],
+		color = :red,
+	)
 end
 
 Legend(fig_edges_m[1, 2], [PolyElement(color = c) for c in colors], components)

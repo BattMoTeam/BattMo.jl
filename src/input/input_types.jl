@@ -35,12 +35,12 @@ Extends `Base.getindex` to enable dictionary-like access to subtypes of `Abstrac
 The value associated with `key`. If the key is not found, an error is thrown.
 """
 function Base.getindex(ps::AbstractInput, key::String)
-    value = get(ps.all, key, nothing)
-    if value === nothing
-        error("Parameter not found: $key")
-    else
-        return value
-    end
+	value = get(ps.all, key, nothing)
+	if value === nothing
+		error("Parameter not found: $key")
+	else
+		return value
+	end
 end
 
 
@@ -55,7 +55,7 @@ Extends `Base.setindex!` to allow setting values in the parameter set.
 - `key ::String` : The key to assign the value to.
 """
 function Base.setindex!(ps::AbstractInput, value, key::String)
-    return ps.all[key] = value
+	return ps.all[key] = value
 end
 
 """
@@ -72,7 +72,7 @@ Extends `Base.get` to retrieve values from the parameter set with a default fall
 The value associated with `key` or `default` if the key is not found.
 """
 function Base.get(ps::AbstractInput, key, default = nothing)
-    return get(ps.all, key, default)
+	return get(ps.all, key, default)
 end
 
 
@@ -80,29 +80,29 @@ end
 New method extending Base.keys to enable listing all keys in the ParameterSet
 """
 function Base.keys(ps::AbstractInput)
-    return keys(ps.all)
+	return keys(ps.all)
 end
 
 """
 New method extending Base.haskey to check if key exists
 """
 function Base.haskey(ps::AbstractInput, key::String)
-    return haskey(ps.all, key)
+	return haskey(ps.all, key)
 end
 
 """
 New method extending Base.push! to insert a new parameter-value pair
 """
 function Base.push!(ps::AbstractInput, pair::Pair{String, Any})
-    push!(ps.all, pair)
-    return ps
+	push!(ps.all, pair)
+	return ps
 end
 
 """
 New method extending Base.delete! to remove a parameter-value pair
 """
 function Base.delete!(ps::AbstractInput, key::String)
-    return delete!(ps.all, key)
+	return delete!(ps.all, key)
 end
 
 """
@@ -110,31 +110,31 @@ New method extending Base.iterate to enable iteration in for loops
 """
 # Extend Base.iterate() - Enable iteration (for loops)
 function Base.iterate(ps::AbstractInput, state = nothing)
-    return iterate(ps.all, state)
+	return iterate(ps.all, state)
 end
 
 function Base.show(io::IO, dict::Dict)
-    return pretty_print_dict(io, dict, 0)
+	return pretty_print_dict(io, dict, 0)
 end
 
 function pretty_print_dict(io::IO, dict::Dict, indent_level::Int)
-    indent = "    "^indent_level
-    println(io, indent * "{")
-    for (i, (k, v)) in enumerate(dict)
-        key_str = repr(k)
-        print(io, indent * "    " * key_str * " => ")
-        if isa(v, Dict)
-            pretty_print_dict(io, v, indent_level + 1)
-            println(io)  # Ensure newline after nested dict
-        else
-            println(io, repr(v))
-        end
-    end
-    return print(io, indent * "}")
+	indent = "    "^indent_level
+	println(io, indent * "{")
+	for (i, (k, v)) in enumerate(dict)
+		key_str = repr(k)
+		print(io, indent * "    " * key_str * " => ")
+		if isa(v, Dict)
+			pretty_print_dict(io, v, indent_level + 1)
+			println(io)  # Ensure newline after nested dict
+		else
+			println(io, repr(v))
+		end
+	end
+	return print(io, indent * "}")
 end
 
 function Base.show(io::IO, ob::AbstractInput)
-    return pretty_print_dict(io, ob.all, 0)
+	return pretty_print_dict(io, ob.all, 0)
 end
 
 
@@ -162,36 +162,36 @@ Searches for a parameter key in the nested dictionary structure and returns matc
 A list of matching parameter key paths if found, otherwise `nothing`.
 """
 function search_parameter(ps::ParameterSet, query::String)
-    search_matches = []
-    dicts_to_search = [(ps.all, [])]
+	search_matches = []
+	dicts_to_search = [(ps.all, [])]
 
-    while !isempty(dicts_to_search)
-        dict, key_path = pop!(dicts_to_search)
+	while !isempty(dicts_to_search)
+		dict, key_path = pop!(dicts_to_search)
 
-        for (key, value) in dict
-            if occursin(lowercase(query), lowercase(key))
-                formatted_key_path = join(["[ \"$(s)\" ]" for s in vcat(key_path, key)], "")
-                if !(value isa Dict)
-                    push!(search_matches, formatted_key_path * " => " * string(value))
-                end
-            end
-            if value isa Dict
-                push!(dicts_to_search, (value, vcat(key_path, key)))
-            end
-        end
-    end
+		for (key, value) in dict
+			if occursin(lowercase(query), lowercase(key))
+				formatted_key_path = join(["[ \"$(s)\" ]" for s in vcat(key_path, key)], "")
+				if !(value isa Dict)
+					push!(search_matches, formatted_key_path * " => " * string(value))
+				end
+			end
+			if value isa Dict
+				push!(dicts_to_search, (value, vcat(key_path, key)))
+			end
+		end
+	end
 
-    return if isempty(search_matches)
-        println("No matches found.")
+	return if isempty(search_matches)
+		println("No matches found.")
 
-    else
-        println("")
-        println("Parameters")
-        println("------------------")
+	else
+		println("")
+		println("Parameters")
+		println("------------------")
 
-        foreach(println, search_matches)
+		foreach(println, search_matches)
 
-    end
+	end
 end
 
 
@@ -200,59 +200,59 @@ end
 
 "Cell parameter set type that represents the cell parameters"
 struct CellParameters <: ParameterSet
-    all::Dict
-    source_path::Union{String, Nothing}
-    function CellParameters(all::Dict; source_path::Union{String, Nothing} = nothing)
-        return new{}(all, source_path)
-    end
+	all::Dict
+	source_path::Union{String, Nothing}
+	function CellParameters(all::Dict; source_path::Union{String, Nothing} = nothing)
+		return new{}(all, source_path)
+	end
 
 end
 
 "Parameter set type that represents the cycling protocol related parameters"
 struct CyclingProtocol <: ParameterSet
-    all::Dict{String, Any}
-    source_path::Union{String, Nothing}
-    function CyclingProtocol(all::Dict; source_path::Union{String, Nothing} = nothing)
-        return new(to_string_any(all), source_path)
-    end
+	all::Dict{String, Any}
+	source_path::Union{String, Nothing}
+	function CyclingProtocol(all::Dict; source_path::Union{String, Nothing} = nothing)
+		return new(to_string_any(all), source_path)
+	end
 end
 
 "Parameter set type that represents the model related settings"
 struct ModelSettings <: ParameterSet
-    all::Dict{String, Any}
-    source_path::Union{String, Nothing}
-    function ModelSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
-        return new(to_string_any(all), source_path)
-    end
+	all::Dict{String, Any}
+	source_path::Union{String, Nothing}
+	function ModelSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
+		return new(to_string_any(all), source_path)
+	end
 end
 
 
 "Parameter set type that represents the simulation related settings"
 struct SimulationSettings <: ParameterSet
-    all::Dict{String, Any}
-    source_path::Union{String, Nothing}
-    function SimulationSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
-        return new(to_string_any(all), source_path)
-    end
+	all::Dict{String, Any}
+	source_path::Union{String, Nothing}
+	function SimulationSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
+		return new(to_string_any(all), source_path)
+	end
 end
 
 
 "Parameter set type that represents the simulation related settings"
 struct SolverSettings <: ParameterSet
-    all::Dict{String, Any}
-    source_path::Union{String, Nothing}
-    function SolverSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
-        return new(to_string_any(all), source_path)
-    end
+	all::Dict{String, Any}
+	source_path::Union{String, Nothing}
+	function SolverSettings(all::Dict; source_path::Union{String, Nothing} = nothing)
+		return new(to_string_any(all), source_path)
+	end
 end
 
 "Parameter set type that includes all other parameter set types"
 struct FullSimulationInput <: ParameterSet
-    all::Dict{String, Any}
-    source_path::Union{String, Nothing}
-    function FullSimulationInput(all::Dict; source_path::Union{String, Nothing} = nothing)
-        return new(to_string_any(all), source_path)
-    end
+	all::Dict{String, Any}
+	source_path::Union{String, Nothing}
+	function FullSimulationInput(all::Dict; source_path::Union{String, Nothing} = nothing)
+		return new(to_string_any(all), source_path)
+	end
 end
 
 
@@ -277,11 +277,11 @@ Represents a validated and backend-formatted set of input parameters for a BattM
 - `data ::Dict{String, Any}` : A dictionary storing the input parameters for BattMo.
 """
 struct AdvancedDictInput <: AdditionaInputFormats
-    all::Dict{String, Any}
-    source_path::Union{String, Nothing}
-    function AdvancedDictInput(all::Dict; source_path::Union{String, Nothing} = nothing)
-        return new(to_string_any(all), source_path)
-    end
+	all::Dict{String, Any}
+	source_path::Union{String, Nothing}
+	function AdvancedDictInput(all::Dict; source_path::Union{String, Nothing} = nothing)
+		return new(to_string_any(all), source_path)
+	end
 end
 
 
@@ -294,7 +294,7 @@ Represents input parameters derived from MATLAB-generated files, formatted for B
 - `data ::Dict{String, Any}` : A dictionary storing MATLAB-extracted input parameters.
 """
 struct MatlabInput <: AdditionaInputFormats
-    all::Dict{String, Any}
+	all::Dict{String, Any}
 end
 
 
@@ -302,20 +302,20 @@ const InputGeometryParams = AdvancedDictInput
 
 function recursive_merge_dict(d1, d2; warn = false)
 
-    if isa(d1, Dict) && isa(d2, Dict)
+	if isa(d1, Dict) && isa(d2, Dict)
 
-        combiner(d1, d2) = recursive_merge_dict(d1, d2; warn = warn)
-        return mergewith(combiner, d1, d2)
+		combiner(d1, d2) = recursive_merge_dict(d1, d2; warn = warn)
+		return mergewith(combiner, d1, d2)
 
-    else
+	else
 
-        if (d1 != d2) && warn
-            println("Some variables have distinct values, we use the value give by the first one")
-        end
+		if (d1 != d2) && warn
+			println("Some variables have distinct values ($d1 and $d2), we use the value give by the first one")
+		end
 
-        return d1
+		return d1
 
-    end
+	end
 end
 
 """ 
@@ -332,29 +332,29 @@ A `AdditionaInputFormats` structure whose field are the composition of the two i
 """
 function merge_input_params(inputparams1::T, inputparams2::T; warn = false) where {T <: AdditionaInputFormats}
 
-    dict1 = inputparams1.all
-    dict2 = inputparams2.all
+	dict1 = inputparams1.all
+	dict2 = inputparams2.all
 
-    combiner(d1, d2) = recursive_merge_dict(d1, d2; warn = warn)
-    dict = mergewith!(combiner, dict1, dict2)
+	combiner(d1, d2) = recursive_merge_dict(d1, d2; warn = warn)
+	dict = mergewith!(combiner, dict1, dict2)
 
-    return T(dict)
+	return T(dict)
 
 end
 
 function merge_input_params(inputparams_list::Vector{T}; warn = false) where {T <: AdditionaInputFormats}
 
-    if length(inputparams_list) == 0
-        return nothing
-    end
+	if length(inputparams_list) == 0
+		return nothing
+	end
 
-    inputparams = inputparams_list[1]
+	inputparams = inputparams_list[1]
 
-    for i in 2:length(inputparams_list)
-        inputparams = merge_input_params(inputparams, inputparams_list[i], warn = warn)
-    end
+	for i in 2:length(inputparams_list)
+		inputparams = merge_input_params(inputparams, inputparams_list[i], warn = warn)
+	end
 
-    return inputparams
+	return inputparams
 
 end
 
@@ -366,29 +366,29 @@ Recursively retrieves the value of a field in the input parameters.
 """
 function get_input_params(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}) where {T <: AdditionaInputFormats}
 
-    fieldname = fieldnamelist[1]
+	fieldname = fieldnamelist[1]
 
-    return if length(fieldnamelist) == 1
+	return if length(fieldnamelist) == 1
 
-        if isa(inputparams, Union{T, Dict} where {T <: AdditionaInputFormats}) && haskey(inputparams, fieldname)
-            return inputparams[fieldname]
-        else
-            return missing
-        end
+		if isa(inputparams, Union{T, Dict} where {T <: AdditionaInputFormats}) && haskey(inputparams, fieldname)
+			return inputparams[fieldname]
+		else
+			return missing
+		end
 
-    else
+	else
 
-        if isa(inputparams, Union{T, Dict} where {T <: AdditionaInputFormats}) && haskey(inputparams, fieldname) && isa(inputparams[fieldname], Union{T, Dict} where {T <: AdditionaInputFormats})
+		if isa(inputparams, Union{T, Dict} where {T <: AdditionaInputFormats}) && haskey(inputparams, fieldname) && isa(inputparams[fieldname], Union{T, Dict} where {T <: AdditionaInputFormats})
 
-            return get_input_params(inputparams[fieldname], fieldnamelist[2:end])
+			return get_input_params(inputparams[fieldname], fieldnamelist[2:end])
 
-        else
+		else
 
-            return missing
+			return missing
 
-        end
+		end
 
-    end
+	end
 
 end
 
@@ -407,85 +407,85 @@ end
 	"""
 function set_input_params!(inputparams::Union{T, Dict{String, K}}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {K, T <: AdditionaInputFormats}
 
-    @assert(handleMismatch in (:error, :warn, :ignore), "handleMismatch must be one of :error, :warn, or :ignore")
+	@assert(handleMismatch in (:error, :warn, :ignore), "handleMismatch must be one of :error, :warn, or :ignore")
 
-    fieldname = fieldnamelist[1]
+	fieldname = fieldnamelist[1]
 
-    return if length(fieldnamelist) > 1
+	return if length(fieldnamelist) > 1
 
-        if !haskey(inputparams, fieldname)
+		if !haskey(inputparams, fieldname)
 
-            inputparams[fieldname] = Dict{String, Any}()
+			inputparams[fieldname] = Dict{String, Any}()
 
-        end
+		end
 
-        if isa(inputparams[fieldname], Dict)
+		if isa(inputparams[fieldname], Dict)
 
-            set_input_params!(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch)
+			set_input_params!(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch)
 
-        elseif handleMismatch in (:warn, :ignore)
+		elseif handleMismatch in (:warn, :ignore)
 
-            if handleMismatch == :warn
-                println("Warning: Field $fieldname was not a dictionary and we overwrite the value.")
-            end
+			if handleMismatch == :warn
+				println("Warning: Field $fieldname was not a dictionary and we overwrite the value.")
+			end
 
-            inputparams[fieldname] = Dict{String, Any}()
-            set_input_params!(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch)
+			inputparams[fieldname] = Dict{String, Any}()
+			set_input_params!(inputparams[fieldname], fieldnamelist[2:end], value; handleMismatch)
 
-        else
-            handleMismatch == :error
+		else
+			handleMismatch == :error
 
-            error("Mismatch for $fieldname")
+			error("Mismatch for $fieldname")
 
-        end
+		end
 
-    else
+	else
 
-        # We set the value
-        if haskey(inputparams, fieldname)
+		# We set the value
+		if haskey(inputparams, fieldname)
 
-            if inputparams[fieldname] != value
+			if inputparams[fieldname] != value
 
-                if handleMismatch in (:warn, :ignore)
-                    println("Warning: Field $fieldname was not equal to the value and we overwrite it.")
-                    inputparams[fieldname] = value
-                elseif handleMismatch == :error
-                    error("Mismatch for $fieldname")
-                end
+				if handleMismatch in (:warn, :ignore)
+					println("Warning: Field $fieldname was not equal to the value and we overwrite it.")
+					inputparams[fieldname] = value
+				elseif handleMismatch == :error
+					error("Mismatch for $fieldname")
+				end
 
-            end
+			end
 
-        else
+		else
 
-            inputparams[fieldname] = value
+			inputparams[fieldname] = value
 
-        end
+		end
 
-    end
+	end
 
 end
 
 function set_default_input_params!(inputparams::Union{T, Dict}, fieldnamelist::Vector{String}, value; handleMismatch = :error) where {T <: AdditionaInputFormats}
 
-    current_value = get_input_params(inputparams, fieldnamelist)
+	current_value = get_input_params(inputparams, fieldnamelist)
 
-    return if ismissing(current_value)
+	return if ismissing(current_value)
 
-        set_input_params!(inputparams, fieldnamelist, value; handleMismatch)
+		set_input_params!(inputparams, fieldnamelist, value; handleMismatch)
 
-    end
+	end
 
 end
 
 
 function to_string_any(d::Dict)
-    d_any = Dict{String, Any}()
-    for (k, v) in d
-        if v isa Dict
-            d_any[k] = to_string_any(v)   # recurse
-        else
-            d_any[k] = v
-        end
-    end
-    return d_any
+	d_any = Dict{String, Any}()
+	for (k, v) in d
+		if v isa Dict
+			d_any[k] = to_string_any(v)   # recurse
+		else
+			d_any[k] = v
+		end
+	end
+	return d_any
 end

@@ -11,7 +11,7 @@
 | `"ButlerVolmer"`                  | "Standard", "Chayambuka"                  | [See the Sodium ion section](../user_guide/sodium_ion_model.md)       |   
 | `"CurrentCollectors"`             | "Standard"                                | -                                                                     |
 | `"SEIModel"`                      | "Bolay"                                   | [See the SEI section](../user_guide/sei_model.md)                     |
-| `"TemperatureDependence"`         | "Arrhenius"                               | [See the temperature dependence section](../user_guide/arrhenius.md)  |
+| `"ThermalModel"`         | "Decoupled", "Sequential"                               | [See the temperature dependence section](../user_guide/arrhenius.md)  |
 | `"PotentialFlowDiscretization"`   | "GeneralAD", "TwoPointDiscretization"     | -                                                                     |
 
 ## How to select sub-models

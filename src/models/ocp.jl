@@ -4,65 +4,63 @@ con = Constants()
 const FARADAY_CONSTANT = con.F
 
 const coeff1_graphite = Polynomial(
-    [
-        +0.005269056,
-        +3.299265709,
-        -91.79325798,
-        +1004.911008,
-        -5812.278127,
-        +19329.7549,
-        -37147.8947,
-        +38379.18127,
-        -16515.05308,
-    ]
+	[
+	+0.005269056,
+	+3.299265709,
+	-91.79325798,
+	+1004.911008,
+	-5812.278127,
+	+19329.7549,
+	-37147.8947,
+	+38379.18127,
+	-16515.05308,
+]
 );
 
 const coeff2_graphite = Polynomial(
-    [
-        1,
-        -48.09287227,
-        +1017.234804,
-        -10481.80419,
-        +59431.3,
-        -195881.6488,
-        +374577.3152,
-        -385821.1607,
-        +165705.8597,
-    ]
+	[
+	1,
+	-48.09287227,
+	+1017.234804,
+	-10481.80419,
+	+59431.3,
+	-195881.6488,
+	+374577.3152,
+	-385821.1607,
+	+165705.8597,
+]
 );
 
 
 function computeOCP_Graphite_Torchio(c, T, refT, cmax)
-    """Compute OCP for GenericGraphite as function of temperature and concentration"""
-    theta = c ./ cmax
-    refT = 298.15
-    refOCP = (
-        0.7222
-            + 0.1387 * theta
-            + 0.029 * theta^0.5
-            - 0.0172 / theta
-            + 0.0019 / theta^1.5
-            + 0.2808 * exp(0.9 - 15.0 * theta)
-            - 0.7984 * exp(0.4465 * theta - 0.4108)
-    )
-
-    dUdT = 1.0e-3 * coeff1_graphite(theta) / coeff2_graphite(theta)
-
-    ocp = refOCP + (T - refT) * dUdT
-
-    return ocp
-
+	"""Compute OCP for GenericGraphite as function of temperature and concentration"""
+	theta = c / cmax
+	return (0.7222
+			+ 0.1387 * theta
+			+ 0.0290 * theta^0.5
+			-
+			0.0172 / theta
+			+ 0.0019 / theta^1.5
+			+ 0.2808 * exp(0.9 - 15.0 * theta)
+			-
+			0.7984 * exp(0.4465 * theta - 0.4108)
+	)
 end
 
+function computeEntropyChange_Graphite_Torchio(c, cmax)
+	"""Compute Entropy Change for GenericGraphite as function of temperature and concentration"""
+	theta = c / cmax
+	return 1e-3 * coeff1_graphite(theta) / coeff2_graphite(theta)
+end
 
 function compute_reaction_rate_constant_graphite(c, T, refT, cmax)
 
-    refT = 298.15
-    k0 = 5.031e-11
-    Eak = 5000
-    val = k0 .* exp(-Eak ./ FARADAY_CONSTANT .* (1.0 ./ T - 1 / refT))
+	refT = 298.15
+	k0 = 5.031e-11
+	Eak = 5000
+	val = k0 .* exp(-Eak ./ FARADAY_CONSTANT .* (1.0 ./ T - 1 / refT))
 
-    return val
+	return val
 
 end
 
@@ -70,95 +68,124 @@ end
 ## Define OCP for Graphite-SiOx (chen_2020) using polynomials
 
 function computeOCP_Graphite_SiOx_chen_2020(c, T, refT, cmax)
-    x = c ./ cmax
+	x = c ./ cmax
 
-    ocp = 1.9793 * exp(-39.3631 * x) + 0.2482 - 0.0909 * tanh(29.8538 * (x - 0.1234)) - 0.04478 * tanh(14.9159 * (x - 0.2769)) - 0.0205 * tanh(30.4444 * (x - 0.6103))
+	ocp = 1.9793 * exp(-39.3631 * x) + 0.2482 - 0.0909 * tanh(29.8538 * (x - 0.1234)) - 0.04478 * tanh(14.9159 * (x - 0.2769)) - 0.0205 * tanh(30.4444 * (x - 0.6103))
 
 
-    return ocp
+	return ocp
 end
 
 ## Define OCP for NMC811 (chen_2020) using polynomials
 
 function computeOCP_NMC811_chen_2020(c, T, refT, cmax)
-    x = c ./ cmax
+	x = c ./ cmax
 
-    ocp = -0.809 * x + 4.4875 - 0.0428 * tanh(18.5138 * (x - 0.5542)) - 17.7326 * tanh(15.789 * (x - 0.3117)) + 17.5842 * tanh(15.9308 * (x - 0.312))
+	ocp = -0.809 * x + 4.4875 - 0.0428 * tanh(18.5138 * (x - 0.5542)) - 17.7326 * tanh(15.789 * (x - 0.3117)) + 17.5842 * tanh(15.9308 * (x - 0.312))
 
 
-    return ocp
+	return ocp
 end
 
 
 ## Define OCP and entropy change (dUdT) for NMC111 using polynomials
 
-const coeff1_refOCP_nmc111 = Polynomial(
-    [
-        -4.656,
-        0,
-        +88.669,
-        0,
-        -401.119,
-        0,
-        +342.909,
-        0,
-        -462.471,
-        0,
-        +433.434,
-    ]
-);
+const coeff1_refOCP_lco = Polynomial([
+	-4.656,
+	0,
+	+88.669,
+	0,
+	-401.119,
+	0,
+	+342.909,
+	0,
+	-462.471,
+	0,
+	+433.434,
+]);
 
-const coeff2_refOCP_nmc111 = Polynomial(
-    [
-        -1,
-        0,
-        +18.933,
-        0,
-        -79.532,
-        0,
-        +37.311,
-        0,
-        -73.083,
-        0,
-        +95.96,
-    ]
-)
+const coeff2_refOCP_lco = Polynomial([
+	-1,
+	0,
+	+18.933,
+	0,
+	-79.532,
+	0,
+	+37.311,
+	0,
+	-73.083,
+	0,
+	+95.960,
+])
 
 const coeff1_dUdT_nmc111 = Polynomial(
-    [
-        0.199521039,
-        -0.928373822,
-        +1.364550689000003,
-        -0.611544893999998,
-    ]
+	[
+	0.199521039,
+	-0.928373822,
+	+1.364550689000003,
+	-0.611544893999998,
+]
 );
 
 const coeff2_dUdT_nmc111 = Polynomial(
-    [
-        1,
-        -5.661479886999997,
-        +11.47636191,
-        -9.82431213599998,
-        +3.048755063,
-    ]
+	[
+	1,
+	-5.661479886999997,
+	+11.47636191,
+	-9.82431213599998,
+	+3.048755063,
+]
 )
 
 
 function computeOCP_LFP_Gerver2011(c, T, refT, cmax)
 
-    ocp = 3.41285712e+0 - 1.49721852e-2 * c / cmax + 3.54866018e+14 * exp(-3.95729493e+2 * c / cmax) - 1.45998465e+0 * exp(-1.10108622e+2 * (1 - c / cmax))
-    return ocp
+	ocp = 3.41285712e+0 - 1.49721852e-2 * c / cmax + 3.54866018e+14 * exp(-3.95729493e+2 * c / cmax) - 1.45998465e+0 * exp(-1.10108622e+2 * (1 - c / cmax))
+	return ocp
+end
+
+
+function computeOCP_LCO(c, T, refT, cmax)
+
+	# From Ramadass et al. 2004 (10.1149/1.1634273), same rational form as MATLAB BattMo.
+	theta = c / cmax
+	return coeff1_refOCP_lco(theta) / coeff2_refOCP_lco(theta)
+
 end
 
 function computeOCP_NMC111(c, T, refT, cmax)
 
-    """Compute OCP for GenericNMC111 as function of temperature and concentration"""
-    refT = 298.15
-    theta = c / cmax
-    refOCP = coeff1_refOCP_nmc111(theta) / coeff2_refOCP_nmc111(theta)
-    dUdT = -1.0e-3 * coeff1_dUdT_nmc111(theta) / coeff2_dUdT_nmc111(theta)
-    ocp = refOCP + (T - refT) * dUdT
-
-    return ocp
+	# From Ramadass et al. 2004 (10.1149/1.1634273), same rational form as MATLAB BattMo.
+	theta = c / cmax
+	return coeff1_refOCP_lco(theta) / coeff2_refOCP_lco(theta)
 
 end
+
+
+function computeEntropyChange_NMC111(c, cmax)
+	theta = c / cmax
+
+	"""Compute Entropy Change for GenericNMC111 as function of temperature and concentration"""
+	return -1e-3 * coeff1_dUdT_nmc111(theta) / coeff2_dUdT_nmc111(theta)
+
+end
+
+function computeEntropyChange_LCO(c, cmax)
+	# From PyBaMM / Scott Moura fastDFN parameterization for LCO.
+	theta = c / cmax
+	stretch = 1.062
+	theta = stretch * theta
+	c_s_max = 51217.9257309275
+
+	dUdT =
+		0.07645 * (-54.4806 / c_s_max) * (1.0 / cosh(30.834 - 54.4806 * theta))^2 +
+		2.1581 * (-50.294 / c_s_max) * (1.0 / cosh(52.294 - 50.294 * theta))^2 +
+		0.14169 * (19.854 / c_s_max) * (1.0 / cosh(11.0923 - 19.8543 * theta))^2 -
+		0.2051 * (5.4888 / c_s_max) * (1.0 / cosh(1.4684 - 5.4888 * theta))^2 -
+		(0.2531 / 0.1316 / c_s_max) * (1.0 / cosh((-theta + 0.56478) / 0.1316))^2 -
+		(0.02167 / 0.006 / c_s_max) * (1.0 / cosh((theta - 0.525) / 0.006))^2
+
+	return dUdT
+end
+
+

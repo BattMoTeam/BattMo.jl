@@ -203,11 +203,17 @@ include("input/schemas/get_json_from_schema.jl")
 
 include("utils/physical_constants.jl")
 
-include("models/battmo_types.jl")
+include("grid/geometries/1d.jl")
+include("grid/geometries/pouch.jl")
+include("grid/geometries/jelly_roll.jl")
+
 include("models/full_battery_models/battery.jl")
+include("models/battmo_types.jl")
 include("models/full_battery_models/intercalation_battery.jl")
 include("models/full_battery_models/lithium_ion.jl")
 include("models/full_battery_models/sodium_ion.jl")
+
+include("utils/handy_functions.jl")
 
 include("input/loader.jl")
 include("input/defaults.jl")
@@ -225,6 +231,7 @@ include("input/defaults/cell_parameters/function_parameters_xu_2015.jl")
 include("models/thermal.jl")
 include("models/temperature_dependence.jl")
 include("models/elyte.jl")
+include("models/separator.jl")
 include("models/current_collector.jl")
 include("models/ocp.jl")
 include("models/activematerial.jl")
@@ -232,6 +239,8 @@ include("models/sei_layer.jl")
 include("models/current_and_voltage_boundary.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")
+
+include("utils/assembly.jl")
 
 include("simulation/simulation.jl")
 include("simulation/simulation_utils.jl")
@@ -256,9 +265,7 @@ include("grid/tensor_tools.jl")
 include("grid/remove_cells.jl") #Trenger StatsBase
 include("grid/grid_conversion.jl")
 include("grid/grid_utils.jl")
-include("grid/geometries/1d.jl")
-include("grid/geometries/pouch.jl")
-include("grid/geometries/jelly_roll.jl")
+
 
 include("solver/solver_as_preconditioner_system.jl")
 include("solver/precondgenneral.jl")
@@ -270,20 +277,20 @@ include("tools/print_info.jl")
 
 # Precompilation of solver. Run a small battery simulation to precompile everything.
 @compile_workload begin
-    function workload_fn()
-        model_settings = load_model_settings(; from_default_set = "p2d")
-        cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
-        cycling_protocol = load_cycling_protocol(; from_default_set = "cccv")
-        simulation_settings = load_simulation_settings(; from_default_set = "p2d")
-        model_setup = LithiumIonBattery(; model_settings)
-        sim = Simulation(model_setup, cell_parameters, cycling_protocol)
-        output = solve(sim, info_level = -1)
-    end
-    try
-        redirect_stdout(workload_fn, devnull)
-    catch e
-        @warn "Precompilation failed with exception" e
-    end
+	function workload_fn()
+		model_settings = load_model_settings(; from_default_set = "p2d")
+		cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+		cycling_protocol = load_cycling_protocol(; from_default_set = "cccv")
+		simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+		model_setup = LithiumIonBattery(; model_settings)
+		sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+		output = solve(sim, info_level = -1)
+	end
+	try
+		redirect_stdout(workload_fn, devnull)
+	catch e
+		@warn "Precompilation failed with exception" e
+	end
 end
 
 end # module
