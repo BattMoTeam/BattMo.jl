@@ -112,9 +112,8 @@ The figure contains two panels:
 - `new_window=true`: Open in independent plotting window when available.
 """
 function plot_thermal_source_contributions(arg...; kwarg...)
-	check_plotting_availability()
-	plot_thermal_source_contributions_impl(arg...; kwarg...)
+    check_plotting_availability()
+    return plot_thermal_source_contributions_impl(arg...; kwarg...)
 end
 
 function plot_thermal_source_contributions_impl end
-

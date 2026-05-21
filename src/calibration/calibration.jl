@@ -74,7 +74,7 @@ mutable struct VoltageCalibration <: AbstractCalibration
     history::Any
     """
     	VoltageCalibration(t, v, sim)
-
+    
     Set up calibration for a voltage calibration problem for given time vector
     `t` and voltage vector `v` and a `Simulation` instance `sim`
     """
