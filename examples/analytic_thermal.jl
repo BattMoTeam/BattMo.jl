@@ -1,14 +1,13 @@
-
 using GLMakie
 
 # ---------------------------------------------------------
 # PARAMETERS
 # ---------------------------------------------------------
 
-h = 1e20          # Very large convection coefficient (external heat transfer coefficient) → fixed temperature at x = 0
+h = 1.0e20          # Very large convection coefficient (external heat transfer coefficient) → fixed temperature at x = 0
 alpha = 12            # Thermal conductivity
 Text = 298           # Boundary temperature at x = 0 (K)
-source = 1e4          # Volumetric heat generation term
+source = 1.0e4          # Volumetric heat generation term
 
 # ---------------------------------------------------------
 # SOLVE FOR CONSTANTS A AND B IN THE ANALYTIC SOLUTION
@@ -20,13 +19,13 @@ source = 1e4          # Volumetric heat generation term
 # ---------------------------------------------------------
 
 M = [
-	1              h;
-	(1 + h/alpha)  -h
+    1              h;
+    (1 + h / alpha)  -h
 ]
 
 b = [
-	h * Text;
-	-source + h * (-source/(2*alpha) - Text)
+    h * Text;
+    -source + h * (-source / (2 * alpha) - Text)
 ]
 
 coeffs = M \ b
@@ -36,7 +35,7 @@ A, B = coeffs
 # TEMPERATURE FUNCTION
 # ---------------------------------------------------------
 
-temp(x) = -source/(2*alpha) * x^2 - (A/alpha) * x + B
+temp(x) = -source / (2 * alpha) * x^2 - (A / alpha) * x + B
 
 # ---------------------------------------------------------
 # EVALUATE TEMPERATURE FIELD
@@ -51,23 +50,24 @@ ys = temp.(xs)
 
 fig = Figure(size = (1000, 400))
 
-ax = Axis(fig[1, 1],
-	xlabel = "Position x",
-	ylabel = "Temperature T(x)",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
+ax = Axis(
+    fig[1, 1],
+    xlabel = "Position x",
+    ylabel = "Temperature T(x)",
+    xlabelsize = 25,
+    ylabelsize = 25,
+    xticklabelsize = 25,
+    yticklabelsize = 25,
 )
 
 scatterlines!(
-	ax,
-	xs,
-	ys;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :green,
+    ax,
+    xs,
+    ys;
+    linewidth = 4,
+    markersize = 10,
+    marker = :cross,
+    markercolor = :green,
 )
 
 display(GLMakie.Screen(), fig)

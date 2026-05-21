@@ -1,7 +1,6 @@
 using Jutul, BattMo, GLMakie, Statistics
 
 
-
 ##
 
 
@@ -26,39 +25,38 @@ inputparams["use_thermal"] = true
 # Adjust input parameters to match the MATLAB simulation
 
 function getnested(d, keys::Tuple)
-	for k in keys
-		d = d[k]
-	end
-	return d
+    for k in keys
+        d = d[k]
+    end
+    return d
 end
 
 function setnested!(d, keys::Tuple, value)
-	lastkey = last(keys)
-	parent = getnested(d, keys[1:(end-1)])
-	parent[lastkey] = value
+    lastkey = last(keys)
+    parent = getnested(d, keys[1:(end - 1)])
+    return parent[lastkey] = value
 end
 
 
 locations = [
-	("NegativeElectrode", "Coating", "ActiveMaterial", "specificHeatCapacity"),
-	("PositiveElectrode", "Coating", "ActiveMaterial", "specificHeatCapacity"),
-	("NegativeElectrode", "CurrentCollector", "specificHeatCapacity"),
-	("PositiveElectrode", "CurrentCollector", "specificHeatCapacity"),
-	("Electrolyte", "specificHeatCapacity"),
+    ("NegativeElectrode", "Coating", "ActiveMaterial", "specificHeatCapacity"),
+    ("PositiveElectrode", "Coating", "ActiveMaterial", "specificHeatCapacity"),
+    ("NegativeElectrode", "CurrentCollector", "specificHeatCapacity"),
+    ("PositiveElectrode", "CurrentCollector", "specificHeatCapacity"),
+    ("Electrolyte", "specificHeatCapacity"),
 ]
 
 for loc in locations
-	oldval = getnested(inputparams.all, loc)
-	setnested!(inputparams.all, loc, oldval * 5e-2)
+    oldval = getnested(inputparams.all, loc)
+    setnested!(inputparams.all, loc, oldval * 5.0e-2)
 end
-
 
 
 inputparams["Control"]["lowerCutoffVoltage"] = 3.6
 # inputparams["Geometry"]["Nh"] = 16  # needs to be electrode Nh + 2 * tab Nh from MATLAB geometry
 # inputparams["Geometry"]["height"] = 2e-2 + 2*1e-3# needs to be electrode height + 2 * tab height from MATLAB geometry
-inputparams["PositiveElectrode"]["CurrentCollector"]["thickness"] = 80e-6 # in order to match the MATLAB geometry.
-inputparams["NegativeElectrode"]["CurrentCollector"]["thickness"] = 100e-6# in order to match the MATLAB geometry.
+inputparams["PositiveElectrode"]["CurrentCollector"]["thickness"] = 80.0e-6 # in order to match the MATLAB geometry.
+inputparams["NegativeElectrode"]["CurrentCollector"]["thickness"] = 100.0e-6 # in order to match the MATLAB geometry.
 
 
 # Run simulation

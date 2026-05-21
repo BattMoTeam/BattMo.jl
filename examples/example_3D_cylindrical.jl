@@ -72,18 +72,18 @@ nothing #hide
 # We plot the components
 
 for (i, component) in enumerate(components)
-	if i == 1
-		global fig, ax = plot_mesh(
-			grids[component],
-			color = colors[i],
-		)
-	else
-		plot_mesh!(
-			ax,
-			grids[component],
-			color = colors[i],
-		)
-	end
+    if i == 1
+        global fig, ax = plot_mesh(
+            grids[component],
+            color = colors[i],
+        )
+    else
+        plot_mesh!(
+            ax,
+            grids[component],
+            color = colors[i],
+        )
+    end
 end
 fig #hide
 
@@ -95,16 +95,16 @@ fig #hide
 # in red.
 
 components = [
-	"NegativeElectrodeCurrentCollector",
-	"PositiveElectrodeCurrentCollector",
+    "NegativeElectrodeCurrentCollector",
+    "PositiveElectrodeCurrentCollector",
 ]
 
 for component in components
-	plot_mesh!(
-		ax, grids[component];
-		boundaryfaces = couplings[component]["External"]["boundaryfaces"],
-		color = :red,
-	)
+    plot_mesh!(
+        ax, grids[component];
+        boundaryfaces = couplings[component]["External"]["boundaryfaces"],
+        color = :red,
+    )
 end
 
 # fig #hide

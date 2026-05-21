@@ -41,24 +41,26 @@ I = time_series["Current"];
 
 f = Figure(size = (1000, 400))
 
-ax = Axis(f[1, 1],
-	title = "Voltage",
-	xlabel = "Time / h",
-	ylabel = "Voltage / V",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
+ax = Axis(
+    f[1, 1],
+    title = "Voltage",
+    xlabel = "Time / h",
+    ylabel = "Voltage / V",
+    xlabelsize = 25,
+    ylabelsize = 25,
+    xticklabelsize = 25,
+    yticklabelsize = 25,
 )
 
-scatterlines!(ax,
-	t ./ 3600,
-	E;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-	label = "Julia",
+scatterlines!(
+    ax,
+    t ./ 3600,
+    E;
+    linewidth = 4,
+    markersize = 10,
+    marker = :cross,
+    markercolor = :black,
+    label = "Julia",
 )
 
 display(GLMakie.Screen(), f)
@@ -71,31 +73,32 @@ plot_interactive_3d(output)
 # thermal_states = [state[:ThermalModel] for state in jutul_states];
 
 
-
 # Plot maximum temperature in the cell over time
 
 T = vec(maximum(output.states["ThermalModel"]["Temperature"], dims = 2))
 
 f2 = Figure(size = (1000, 400))
 
-ax = Axis(f2[1, 1],
-	title = "Maximum temperature in the cell",
-	xlabel = "Time / h",
-	ylabel = "Temperature / K",
-	xlabelsize = 25,
-	ylabelsize = 25,
-	xticklabelsize = 25,
-	yticklabelsize = 25,
+ax = Axis(
+    f2[1, 1],
+    title = "Maximum temperature in the cell",
+    xlabel = "Time / h",
+    ylabel = "Temperature / K",
+    xlabelsize = 25,
+    ylabelsize = 25,
+    xticklabelsize = 25,
+    yticklabelsize = 25,
 )
 
-scatterlines!(ax,
-	t ./ 3600, # convert time to hours
-	T;
-	linewidth = 4,
-	markersize = 10,
-	marker = :cross,
-	markercolor = :black,
-	# label = "Julia",
+scatterlines!(
+    ax,
+    t ./ 3600, # convert time to hours
+    T;
+    linewidth = 4,
+    markersize = 10,
+    marker = :cross,
+    markercolor = :black,
+    # label = "Julia",
 )
 
 display(GLMakie.Screen(), f2)
