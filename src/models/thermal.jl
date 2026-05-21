@@ -74,7 +74,7 @@ function Jutul.select_parameters!(S,
 	S[:EffectiveThermalConductivity] = EffectiveThermalConductivity()
 	S[:EffectiveVolumetricHeatCapacity] = EffectiveVolumetricHeatCapacity()
 	S[:BoundaryTemperature] = BoundaryTemperature() # BoundaryTemperature is declared below
-	S[:ExternalHeatTransferCoefficient] = ExternalHeatTransferCoefficient() # ExternalHeatTransferCoefficient is declared below
+	S[:SurfaceHeatTransferCoefficient] = SurfaceHeatTransferCoefficient() # SurfaceHeatTransferCoefficient is declared below
 
 end
 
@@ -127,8 +127,8 @@ end
 struct BoundaryTemperature <: ScalarVariable end
 Jutul.associated_entity(::BoundaryTemperature) = BoundaryFaces()
 
-struct ExternalHeatTransferCoefficient <: ScalarVariable end
-Jutul.associated_entity(::ExternalHeatTransferCoefficient) = BoundaryFaces()
+struct SurfaceHeatTransferCoefficient <: ScalarVariable end
+Jutul.associated_entity(::SurfaceHeatTransferCoefficient) = BoundaryFaces()
 
 function apply_bc_to_equation!(storage, parameters, model::ThermalModel, eq::ConservationLaw{:Energy}, eq_s)
 
@@ -153,7 +153,7 @@ function apply_boundary_temperature!(acc, state, parameters, model::ThermalModel
 		T = state[:Temperature]
 		BoundaryT = state[:BoundaryTemperature]
 		conductivity = state[:EffectiveThermalConductivity]
-		extcoef = state[:ExternalHeatTransferCoefficient]
+		extcoef = state[:SurfaceHeatTransferCoefficient]
 
 		if dolegacy
 			T_hf = model.domain.representation.boundary_hfT
@@ -211,13 +211,12 @@ function effective_separator_thermal_conductivity(separatorparams)
 	return (vf^bg) * separatorparams["ThermalConductivity"]
 end
 
-function setup_thermal_model(model, input, grids, global_maps)
-	submodels = model.multimodel.models
+function setup_thermal_model(model, submodels, input, grids, global_maps)
 
 	@show typeof(submodels)
 
 	cell_parameters = input.cell_parameters
-	thermal_parameters = cell_parameters["ThermalModel"]
+
 	maps = global_maps
 
 	ne = :NegativeElectrode
@@ -291,14 +290,14 @@ function setup_thermal_model(model, input, grids, global_maps)
 	# sensitivities)
 
 	prm                                   = JutulStorage()
-	prm[:BoundaryTemperature]             = input.cycling_protocol["ExternalTemperature"]
-	prm[:ExternalHeatTransferCoefficient] = thermal_parameters["ExternalHeatTransferCoefficient"]
+	prm[:BoundaryTemperature]             = input.cycling_protocol["AmbientTemperature"]
+	prm[:SurfaceHeatTransferCoefficient]  = cell_parameters["Cell"]["SurfaceHeatTransferCoefficient"]
 	prm[:EffectiveVolumetricHeatCapacity] = volumetric_heat_capacity
 	prm[:EffectiveThermalConductivity]    = thermal_conductivity
 
 	prm_dict                                   = Dict{Symbol, Any}()
-	prm_dict[:BoundaryTemperature]             = input.cycling_protocol["ExternalTemperature"]
-	prm_dict[:ExternalHeatTransferCoefficient] = thermal_parameters["ExternalHeatTransferCoefficient"]
+	prm_dict[:BoundaryTemperature]             = input.cycling_protocol["AmbientTemperature"]
+	prm_dict[:SurfaceHeatTransferCoefficient]  = cell_parameters["Cell"]["SurfaceHeatTransferCoefficient"]
 	prm_dict[:EffectiveVolumetricHeatCapacity] = volumetric_heat_capacity
 	prm_dict[:EffectiveThermalConductivity]    = thermal_conductivity
 
@@ -311,7 +310,7 @@ function setup_thermal_model(model, input, grids, global_maps)
 	parameters = setup_parameters(model, prm_dict)
 
 	# parameters[:Source]                   .= parameters[:Source].*parameters[:Volume]
-	parameters[:ExternalHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:ExternalHeatTransferCoefficient]
+	parameters[:SurfaceHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:SurfaceHeatTransferCoefficient]
 
 	return model, parameters
 
@@ -329,7 +328,7 @@ function setup_thermal_model(input, grids)
 	# sensitivities)
 
 	prm                                   = Dict{Symbol, Any}()
-	prm[:BoundaryTemperature]             = thermal_parameters["ExternalTemperature"]
+	prm[:BoundaryTemperature]             = input.cycling_protocol["ExternalTemperature"]
 	prm[:ExternalHeatTransferCoefficient] = thermal_parameters["ExternalHeatTransferCoefficient"]
 
 	prm[:EffectiveVolumetricHeatCapacity] = thermal_parameters["EffectiveVolumetricHeatCapacity"]
@@ -341,7 +340,7 @@ function setup_thermal_model(input, grids)
 	parameters = setup_parameters(model, prm)
 
 	# parameters[:Source]                   .= parameters[:Source].*parameters[:Volume]
-	parameters[:ExternalHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:ExternalHeatTransferCoefficient]
+	parameters[:SurfaceHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:SurfaceHeatTransferCoefficient]
 
 	return model, parameters
 
@@ -370,7 +369,9 @@ end
 function setup_thermal_post_ministep_hook(model, input, base_hook = missing; Temperature = missing, info_level = -1, kwarg...)
 	model = deepcopy(model)
 	s = Simulation(model, input.cell_parameters, input.cycling_protocol; simulation_settings = input.simulation_settings)
-	thermal_model, thermal_parameters = BattMo.setup_thermal_model(model, input, s.grids, s.global_maps)
+	# thermal_model, thermal_parameters = setup_thermal_model(input, s.grids)
+	submodels = model.multimodel.models
+	thermal_model, thermal_parameters = BattMo.setup_thermal_model(model, submodels, input, s.grids, s.global_maps)
 	maps = s.global_maps
 
 	tcellmaps = temperature_cell_maps(maps, s.parameters)
@@ -448,15 +449,15 @@ end
 # 	prm[:EffectiveVolumetricHeatCapacity]                        = inputparams["ThermalModel"]["capacity"]
 # 	prm[:EffectiveThermalConductivity]                    = inputparams["ThermalModel"]["conductivity"]
 # 	prm[:BoundaryTemperature]             = inputparams["ThermalModel"]["externalTemperature"]
-# 	prm[:ExternalHeatTransferCoefficient] = inputparams["ThermalModel"]["externalHeatTransferCoefficient"]
+# 	prm[:SurfaceHeatTransferCoefficient] = inputparams["ThermalModel"]["externalHeatTransferCoefficient"]
 
 # 	parameters = setup_parameters(model, prm)
 
-# 	parameters[:ExternalHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:ExternalHeatTransferCoefficient]
+# 	parameters[:SurfaceHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:SurfaceHeatTransferCoefficient]
 
 # 	vertfaces = [findBoundary(grid, 1, true); findBoundary(grid, 1, false)]
 # 	vertfaces = append!(vertfaces, [findBoundary(grid, 2, true); findBoundary(grid, 2, false)])
-# 	parameters[:ExternalHeatTransferCoefficient][vertfaces] .= 0
+# 	parameters[:SurfaceHeatTransferCoefficient][vertfaces] .= 0
 
 # 	return model, parameters
 
@@ -485,12 +486,12 @@ end
 # 	prm[:EffectiveVolumetricHeatCapacity]                        = inputparams["ThermalModel"]["capacity"]
 # 	prm[:EffectiveThermalConductivity]                    = inputparams["ThermalModel"]["conductivity"]
 # 	prm[:BoundaryTemperature]             = inputparams["ThermalModel"]["externalTemperature"]
-# 	prm[:ExternalHeatTransferCoefficient] = inputparams["ThermalModel"]["externalHeatTransferCoefficient"]
+# 	prm[:SurfaceHeatTransferCoefficient] = inputparams["ThermalModel"]["externalHeatTransferCoefficient"]
 
 # 	parameters = setup_parameters(model, prm)
 
 # 	# parameters[:Source]                   .= parameters[:Source].*parameters[:Volume]
-# 	parameters[:ExternalHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:ExternalHeatTransferCoefficient]
+# 	parameters[:SurfaceHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:SurfaceHeatTransferCoefficient]
 
 # 	return model, parameters
 

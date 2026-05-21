@@ -106,7 +106,7 @@ function maybe_apply_matlab_boundary_override!(thermal_model, thermal_parameters
 	end
 	rep[:boundary_neighbors] .= Int.(round.(nb))
 	rep[:boundary_areas] .= Float64.(ba)
-	thermal_parameters[:ExternalHeatTransferCoefficient] .= h_nominal .* rep[:boundary_areas]
+	thermal_parameters[:SurfaceHeatTransferCoefficient] .= h_nominal .* rep[:boundary_areas]
 	println("Applied MATLAB boundary overrides (neighbors + areas).")
 	return true
 end
@@ -365,7 +365,7 @@ thermal_states_matgrid = run_thermal_case(thermal_model, thermal_state0, thermal
 thermal_states_matgrid_baseline = nothing
 if abs(h_correction_factor - 1.0) > 1e-12
 	thermal_parameters_baseline = deepcopy(thermal_parameters)
-	thermal_parameters_baseline[:ExternalHeatTransferCoefficient] ./= h_correction_factor
+	thermal_parameters_baseline[:SurfaceHeatTransferCoefficient] ./= h_correction_factor
 	thermal_states_matgrid_baseline = run_thermal_case(thermal_model, thermal_state0, thermal_parameters_baseline, dt_matlab, forces_matlab_grid)
 end
 
@@ -474,7 +474,7 @@ function boundary_cooling_geometry_diagnostics(thermal_model, thermal_parameters
 	rep = thermal_model.domain.representation
 	bcells = rep[:boundary_neighbors]
 	bareas = rep[:boundary_areas]
-	extcoef = thermal_parameters[:ExternalHeatTransferCoefficient] # already h*A [W/K]
+	extcoef = thermal_parameters[:SurfaceHeatTransferCoefficient] # already h*A [W/K]
 	nc = number_of_cells(thermal_model.domain)
 
 	cell_region = fill("other", nc)
@@ -695,7 +695,7 @@ function run_isolation_case(;
 	thermal_model_c.system.params[:use_boundary_series_resistance] = use_boundary_series_resistance_case
 
 	# Scale h from the nominal external coefficient for this test case.
-	thermal_parameters_c[:ExternalHeatTransferCoefficient] .*= (h_correction_factor_case / h_correction_factor)
+	thermal_parameters_c[:SurfaceHeatTransferCoefficient] .*= (h_correction_factor_case / h_correction_factor)
 	h_nominal_case = external_h_nominal * h_correction_factor_case
 
 	nc_c = number_of_cells(thermal_model_c.domain)

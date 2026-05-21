@@ -172,6 +172,10 @@ end
 
 function simulation_configuration(model, input)
 
+	if haskey(model.settings, "ThermalModel")
+		model.settings["TemperatureDependence"] = "Arrhenius"
+	end
+
 	# Setup grids and couplings
 	grids, couplings, global_maps = setup_grids_and_couplings(model, input)
 
@@ -200,7 +204,10 @@ function simulation_configuration(model, input)
 
 	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Decoupled"
 
-		thermal_model, thermal_parameters = setup_thermal_model(model, input, grids, global_maps)
+		submodels = model.multimodel.models
+
+		thermal_model, thermal_parameters = setup_thermal_model(model, submodels, input, grids, global_maps)
+		# thermal_model, thermal_parameters = setup_thermal_model(input, grids)
 
 		return (
 			model = model,
@@ -257,6 +264,7 @@ function solve_decoupled_thermal_model(model, cycling_protocol, thermal_paramete
 		parameters = thermal_parameters,
 		copy_state = true)
 
+	@show size(jutul_states)
 
 	decoupled_thermal_states = simulate(thermal_sim, timesteps[1:length(jutul_states)]; info_level = -1, forces = thermal_forces)
 
@@ -457,11 +465,12 @@ function solve_simulation(
 		jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, post_ministep_hook = thook, kwargs...)
 
 	else
-
+		@show size(timesteps)
 		jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
-
+		@show size(jutul_states)
 	end
 
+	@show size(jutul_states)
 	# perfom decoupled thermal simulation if needed
 
 	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Decoupled"

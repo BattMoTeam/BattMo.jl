@@ -323,7 +323,7 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 
 
 		cell_parameters["ThermalModel"] = thermal["ThermalModel"]
-		cell_parameters["Cell"]["ExternalHeatTransferCoefficient"] = params["ThermalModel"]["externalHeatTransferCoefficient"]
+		cell_parameters["Cell"]["SurfaceHeatTransferCoefficient"] = params["ThermalModel"]["externalHeatTransferCoefficient"]
 		cell_parameters["NegativeElectrode"]["ActiveMaterial"]["IncludeEntropyChange"] = params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["includeEntropyChange"]
 		cell_parameters["NegativeElectrode"]["ActiveMaterial"]["EntropyChange"] = ne_entropy
 		cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReferenceTemperature"] = params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["referenceTemperature"]
@@ -479,7 +479,7 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
 	end
 
 	if haskey(model_settings, "ThermalModel")
-		cycling_protocol["ExternalTemperature"] = params["ThermalModel"]["externalTemperature"]
+		cycling_protocol["AmbientTemperature"] = params["ThermalModel"]["externalTemperature"]
 
 	end
 

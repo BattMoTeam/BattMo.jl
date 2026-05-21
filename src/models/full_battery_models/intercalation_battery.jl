@@ -459,7 +459,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 	end
 
 	if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
-		am_params[:reference_temperature] = inputparams_active_material["ReferenceTemperature"]
+		am_params[:reference_temperature] = 298.15
 
 		if !haskey(inputparams_active_material, "IncludeEntropyChange")
 			am_params[:include_entropy_change] = true
@@ -581,7 +581,7 @@ function compute_effective_thermal_conductivity(comodel, coinputparams)
 	for icomp in eachindex(compnames)
 		compname = compnames[icomp]
 		component_volume_fraction = volume_fractions[icomp]
-		@show compname
+
 		thermal_conductivity += component_volume_fraction * coinputparams[compname]["ThermalConductivity"]
 	end
 
@@ -741,7 +741,7 @@ function set_parameters(
 		prm_thermal = Dict{Symbol, Any}()
 		thermal_sys = multimodel[:ThermalModel].system.params
 		prm_thermal[:BoundaryTemperature] = thermal_sys[:BoundaryTemperature]
-		prm_thermal[:ExternalHeatTransferCoefficient] = thermal_sys[:ExternalHeatTransferCoefficient]
+		prm_thermal[:SurfaceHeatTransferCoefficient] = thermal_sys[:SurfaceHeatTransferCoefficient]
 		prm_thermal[:EffectiveVolumetricHeatCapacity] = thermal_sys[:EffectiveVolumetricHeatCapacity]
 		prm_thermal[:EffectiveThermalConductivity] = thermal_sys[:EffectiveThermalConductivity]
 		parameters[:ThermalModel] = setup_parameters(multimodel[:ThermalModel], prm_thermal)

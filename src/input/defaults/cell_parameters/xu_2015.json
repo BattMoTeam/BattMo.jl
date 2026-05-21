@@ -19,25 +19,29 @@
         "NominalVoltage": 3.2,
         "NominalCapacity": 16.5,
         "ElectrodeWidth": 67e-3,
-        "ElectrodeLength": 105e-3,
+        "ElectrodeLength": 100e-3,
         "NumberOfLayersInParallel": 1,
         "DoubleCoatedElectrodes": false,
         "TabsOnSameSide": true,
-        "TabLength": 10e-3,
+        "TabLength": 7e-3,
         "TabWidth": 15e-3,
-        "ElectrodeGeometricSurfaceArea": 0.6683250000000001,
-        "ExternalHeatTransferCoefficient": 1000.0
+        "ElectrodeGeometricSurfaceArea": 0.006683250000000001,
+        "SurfaceHeatTransferCoefficient": 1000.0
     },
     "Electrolyte": {
         "Description": "1.5 mol/l LiPF6 dissolved in a mixture of ethylene carbonate (EC):  dimethyl carbonate (DMC) (1:1)",
         "TransferenceNumber": 0.2594,
-        "DiffusionCoefficient": "8.794*10^(-11)*(c/1000)^2 - 3.972*10^(-10)*(c/1000) + 4.862*10^(-10)",
-        "IonicConductivity": "0.1297*(c/1000)^3 - 2.51*(c/1000)^(1.5) + 3.329*(c/1000)",
-        "Density": 1210,
+        "DiffusionCoefficient": {
+            "FunctionName": "computeDiffusionCoefficient_xu_2015"
+        },
+        "IonicConductivity": {
+            "FunctionName": "computeElectrolyteConductivity_xu_2015"
+        },
+        "Density": 1200,
         "ChargeNumber": 1,
         "Concentration": 1500.0,
-        "SpecificHeatCapacity": 1518.0,
-        "ThermalConductivity": 0.099
+        "SpecificHeatCapacity": 2055.0,
+        "ThermalConductivity": 0.6
     },
     "PositiveElectrode": {
         "ActiveMaterial": {
@@ -54,7 +58,7 @@
                 "FilePath": "function_parameters_Xu2015.jl"
             },
             "EntropyChange": {
-                "X": [
+                "x": [
                     9.51362e-3,
                     1.47563e-2,
                     1.88127e-2,
@@ -84,7 +88,7 @@
                     9.84685e-1,
                     9.89111e-1
                 ],
-                "Y": [
+                "y": [
                     -4.04346e-4,
                     -2.98844e-4,
                     -2.07750e-4,
@@ -122,8 +126,8 @@
             "Density": 3450,
             "ElectronicConductivity": 0.01,
             "ChargeTransferCoefficient": 0.5,
-            "SpecificHeatCapacity": 1348.0,
-            "ThermalConductivity": 1.48
+            "SpecificHeatCapacity": 700,
+            "ThermalConductivity": 2.1
         },
         "Coating": {
             "BruggemanCoefficient": 1.5,
@@ -135,16 +139,16 @@
             "Density": 1950.0,
             "MassFraction": 0.17201227903038002,
             "ElectronicConductivity": 100.0,
-            "SpecificHeatCapacity": 300.0,
-            "ThermalConductivity": 0.5
+            "SpecificHeatCapacity": 700.0,
+            "ThermalConductivity": 2.1
         },
         "Binder": {
             "Description": "CMC",
             "Density": 1600.0,
             "MassFraction": 0.0927278501111464,
             "ElectronicConductivity": 100.0,
-            "SpecificHeatCapacity": 1400.0,
-            "ThermalConductivity": 0.06
+            "SpecificHeatCapacity": 700.0,
+            "ThermalConductivity": 2.1
         },
         "CurrentCollector": {
             "Description": "Aluminum",
@@ -152,26 +156,26 @@
             "Density": 2700,
             "ElectronicConductivity": 3.83e7,
             "TabPositionFraction": 0.22,
-            "ThermalConductivity": 160,
-            "SpecificHeatCapacity": 903.0
+            "ThermalConductivity": 170,
+            "SpecificHeatCapacity": 875.0
         }
     },
     "Separator": {
-        "Density": 779,
+        "Density": 946,
         "BruggemanCoefficient": 1.5,
         "Thickness": 20e-6,
         "Porosity": 0.4,
-        "SpecificHeatCapacity": 1692,
+        "SpecificHeatCapacity": 1978,
         "ThermalConductivity": 0.334
     },
     "NegativeElectrode": {
         "ActiveMaterial": {
             "Description": "Graphite",
             "NumberOfElectronsTransfered": 1,
-            "StoichiometricCoefficientAtSOC0": 0.0279,
+            "StoichiometricCoefficientAtSOC0": 0.001,
             "ReactionRateConstant": 1.764e-11,
             "MassFraction": 0.8476399123680541,
-            "StoichiometricCoefficientAtSOC100": 0.9014,
+            "StoichiometricCoefficientAtSOC100": 0.518738110000000,
             "ActivationEnergyOfReaction": 4000,
             "ActivationEnergyOfDiffusion": 4000,
             "OpenCircuitPotential": {
@@ -179,7 +183,7 @@
                 "FilePath": "function_parameters_Xu2015.jl"
             },
             "EntropyChange": {
-                "X": [
+                "x": [
                     0.01049,
                     0.03146,
                     0.05244,
@@ -199,7 +203,7 @@
                     0.7199,
                     0.76
                 ],
-                "Y": [
+                "y": [
                     3.00e-04,
                     2.47e-04,
                     1.95e-04,
@@ -224,10 +228,10 @@
             "VolumetricSurfaceArea": 142373,
             "DiffusionCoefficient": 3.9e-14,
             "ParticleRadius": 14.75e-6,
-            "Density": 2660,
-            "ElectronicConductivity": 215.0,
+            "Density": 1852,
+            "ElectronicConductivity": 2.0,
             "ChargeTransferCoefficient": 0.5,
-            "SpecificHeatCapacity": 1435.0,
+            "SpecificHeatCapacity": 632.0,
             "ThermalConductivity": 1.04
         },
         "Coating": {
@@ -240,16 +244,16 @@
             "Density": 1950.0,
             "MassFraction": 0.11651065524795857,
             "ElectronicConductivity": 100.0,
-            "SpecificHeatCapacity": 300.0,
-            "ThermalConductivity": 0.5
+            "SpecificHeatCapacity": 632.0,
+            "ThermalConductivity": 1.04
         },
         "Binder": {
             "Description": "PVDF",
             "Density": 1800.0,
             "MassFraction": 0.03584943238398725,
             "ElectronicConductivity": 100.0,
-            "SpecificHeatCapacity": 1400.0,
-            "ThermalConductivity": 0.165
+            "SpecificHeatCapacity": 632.0,
+            "ThermalConductivity": 1.04
         },
         "CurrentCollector": {
             "Description": "Copper",

@@ -122,9 +122,9 @@ function get_cell_parameters_meta_data()
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_cd2cd0de_e0cc_4ef1_b27e_2e88db027bac",
 			"description" => "The heigh of a cylindrical cell.",
 		),
-		"SurfaceCoefficientOfHeatTransfer" => Dict(
+		"SurfaceHeatTransferCoefficient" => Dict(
 			"type" => Real,
-			"min_value" => 1.0,
+			"min_value" => 0.01,
 			"max_value" => 5000,
 			"unit" => "W·m⁻²·K⁻¹",
 			"unit_name" => "emmo:WattPerSquareMetreKelvin",
@@ -132,6 +132,15 @@ function get_cell_parameters_meta_data()
 			"context_type" => "SurfaceCoefficientOfHeatTransfer",
 			"context_type_iri" => "https://w3id.org/emmo#EMMO_0b3295fa_f4bf_4f83_a603_9d98c03da5bb",
 			"description" => "Rate at which heat is exchanged between a cell’s surface and its surrounding environment",
+		),
+		"ThermalConductivity" => Dict(
+			"context_type" => ["ThermalConductivity"],
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_thermal_conductivity",
+			"description" => "The thermal conductivity of a material, representing its ability to conduct heat under given intercalant stoichiometry and temperature.",
+			"type" => Real,
+			"unit" => "W/(m·K)",
+			"unit_name" => "emmo:WattPerMeterKelvin",
+			"unit_iri" => "https://w3id.org/emmo#WattPerMeterKelvin",
 		),
 		"ChargeTransferCoefficient" => Dict(
 			"type" => Real,
@@ -400,6 +409,16 @@ function get_cell_parameters_meta_data()
 			"unit" => "V",
 			"unit_name" => "emmo:Volt",
 			"unit_iri" => "https://w3id.org/emmo#Volt",
+			"documentation" => "https://battmo.org/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
+		),
+		"EntropyChange" => Dict(
+			"context_type" => ["EntropyChange", "Expression"],
+			"context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_entropy_change",
+			"description" => "The entropy change of the active material derived from the open-circuit potential, representing the temperature dependence of the electrochemical potential (dU/dT).",
+			"type" => [String, Dict{String, Vector}, Real],
+			"unit" => "V/K",
+			"unit_name" => "emmo:VoltPerKelvin",
+			"unit_iri" => "https://w3id.org/emmo#VoltPerKelvin",
 			"documentation" => "https://battmo.org/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
 		),
 		"HeatTransferCoefficient" => Dict(

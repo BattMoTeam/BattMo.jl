@@ -149,6 +149,8 @@ end
 	#                                           polyval(cnst(end:-1:1,3),c) .* T.^2).^2;
 	# From cideMOD
 
+	# c = c/1000
+
 	conductivity = c * 1.0e-4 * 1.2544 * (-8.2488 + 0.053248 * T - 2.987e-5 * (T^2) + 0.26235e-3 * c - 9.3063e-6 * c * T + 8.069e-9 * c * T^2 + 2.2002e-7 * c^2 - 1.765e-10 * T * c^2)
 	return conductivity
 end
@@ -192,7 +194,7 @@ end
 
 	# Diffusion coefficient, [m^2 s^-1]
 	#Removed 10⁻⁴ otherwise the same
-	D = 10^((cnst[1, 1] + cnst[1, 2] / (T - Tgi[1] - Tgi[2] * c * 1.0e-3) + cnst[2, 1] * c * 1.0e-3))
+	D = 1.0e-4*10^((cnst[1, 1] + cnst[1, 2] / (T - Tgi[1] - Tgi[2] * c * 1.0e-3) + cnst[2, 1] * c * 1.0e-3))
 	return D
 end
 
