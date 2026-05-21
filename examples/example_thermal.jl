@@ -14,8 +14,11 @@ cycling_protocol["InitialTemperature"] = 298.15
 cycling_protocol["AmbientTemperature"] = 298.15
 cycling_protocol["LowerVoltageLimit"] = 2.5
 cycling_protocol["UpperVoltageLimit"] = 3.6
+cycling_protocol["DRate"] = 1
 
-simulation_settings["TimeStepDuration"] = 20
+simulation_settings["TimeStepDuration"] = 50
+
+cell_parameters["Cell"]["SurfaceHeatTransferCoefficient"] = 3
 
 ##
 # Decoupled thermal simulation
@@ -25,7 +28,7 @@ model = LithiumIonBattery(; model_settings)
 
 sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
 
-output = solve(sim);
+output = solve(sim; accept_invalid = true);
 
 
 ##
@@ -113,7 +116,7 @@ s = Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
 # 	push!(s.simulator.model.models[k].output_variables, :Temperature)
 # end
 ##
-result_sequential = solve(s);
+result_sequential = solve(s; accept_invalid = true);
 
 
 ##

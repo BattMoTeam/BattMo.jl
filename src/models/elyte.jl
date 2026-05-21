@@ -194,7 +194,7 @@ end
 
 	# Diffusion coefficient, [m^2 s^-1]
 	#Removed 10⁻⁴ otherwise the same
-	D = 1.0e-4*10^((cnst[1, 1] + cnst[1, 2] / (T - Tgi[1] - Tgi[2] * c * 1.0e-3) + cnst[2, 1] * c * 1.0e-3))
+	D = 10^((cnst[1, 1] + cnst[1, 2] / (T - Tgi[1] - Tgi[2] * c * 1.0e-3) + cnst[2, 1] * c * 1.0e-3))
 	return D
 end
 
