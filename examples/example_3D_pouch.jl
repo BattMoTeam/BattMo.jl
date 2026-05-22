@@ -6,7 +6,7 @@
 # - plot different output fields on the component meshes
 # - launch the interactive 3D output viewer
 
-using BattMo, GLMakie, Jutul
+using BattMo, WGLMakie, Jutul
 
 # ## Load default parameter sets
 
@@ -83,7 +83,7 @@ Legend(fig_mesh[1, 2], [PolyElement(color = c) for c in colors], components)
 ax_mesh.aspect = :data
 ax_mesh.azimuth[] = 5.2
 ax_mesh.elevation[] = 0.45
-display(GLMakie.Screen(), fig_mesh) # hide
+
 fig_mesh
 
 # ## Plot mesh edges and highlight the tabs
@@ -119,7 +119,6 @@ Legend(fig_edges[1, 2], [PolyElement(color = c) for c in colors], components)
 ax_edges.aspect = :data
 ax_edges.azimuth[] = 5.2
 ax_edges.elevation[] = 0.45
-display(GLMakie.Screen(), fig_edges) # hide
 fig_edges
 
 # ## Run the simulation
@@ -140,7 +139,7 @@ fig_phi, ax_phi = plot_cell_data(
 )
 ax_phi.aspect = :data
 ax_phi.title = "Negative current collector potential"
-display(GLMakie.Screen(), fig_phi) # hide
+
 fig_phi
 
 # Surface concentration in the positive electrode active material
@@ -151,7 +150,7 @@ fig_cs, ax_cs = plot_cell_data(
 )
 ax_cs.aspect = :data
 ax_cs.title = "Positive electrode surface concentration"
-display(GLMakie.Screen(), fig_cs) # hide
+
 fig_cs
 
 # Mesh edges can be overlaid on top of a cell-data plot.
@@ -160,7 +159,7 @@ plot_mesh_edges!(
     color = :black,
     linewidth = 0.5,
 )
-display(GLMakie.Screen(), fig_cs) # hide
+
 fig_cs
 
 # ## Double coated electrodes and Multi-layer pouch geometry
@@ -201,7 +200,7 @@ end
 Legend(fig_edges_d[1, 2], [PolyElement(color = c) for c in colors], components)
 ax_edges_d.azimuth[] = 5.2
 ax_edges_d.elevation[] = 0.45
-display(GLMakie.Screen(), fig_edges_d) # hide
+
 fig_edges_d
 
 # Let's plot the mesh for a multi-layer pouch cell.
@@ -239,7 +238,7 @@ end
 Legend(fig_edges_m[1, 2], [PolyElement(color = c) for c in colors], components)
 ax_edges_m.azimuth[] = 5.2
 ax_edges_m.elevation[] = 0.45
-display(GLMakie.Screen(), fig_edges_m) # hide
+
 fig_edges_m
 
 
