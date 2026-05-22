@@ -18,7 +18,7 @@ cycling_protocol["DRate"] = 1
 
 simulation_settings["TimeStepDuration"] = 50
 
-cell_parameters["Cell"]["SurfaceHeatTransferCoefficient"] = 3
+cell_parameters["Cell"]["SurfaceHeatTransferCoefficient"] = 3.0
 
 ##
 # Decoupled thermal simulation

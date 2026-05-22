@@ -249,6 +249,17 @@ end
 
 Jutul.minimum_value(::VolumeFraction) = eps(Float64)
 
+struct HalfFaceTransmissibility <: Jutul.JutulVariables end
+Jutul.associated_entity(::HalfFaceTransmissibility) = Faces()
+Jutul.values_per_entity(model, ::HalfFaceTransmissibility) = 2
+
+function Jutul.default_parameter_values(d::DataDomain, model, ::HalfFaceTransmissibility, symb)
+    ht = d[:halftransfaces, Faces()]
+    @assert size(ht, 1) == 2
+    @assert size(ht, 2) == number_of_faces(d)
+    return ht
+end
+
 mutable struct VariablePrecond # mutable needed?
     precond::Any
     var::Any

@@ -98,7 +98,7 @@ end
 
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Energy, <:Any}, state, model::ThermalModel, dt, flow_disc) where {T}
 
-    htrans_cell, htrans_other = setup_half_trans(model, face, c, other, face_sign)
+    htrans_cell, htrans_other = get_half_trans(state, face, c, other, face_sign)
 
     j = - half_face_two_point_kgrad(c, other, htrans_cell, htrans_other, state.Temperature, state.EffectiveThermalConductivity)
 
@@ -315,7 +315,7 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
     parameters = setup_parameters(model, prm_dict)
 
     # parameters[:Source]                   .= parameters[:Source].*parameters[:Volume]
-    parameters[:SurfaceHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:SurfaceHeatTransferCoefficient]
+    parameters[:SurfaceHeatTransferCoefficient] = model.domain.representation[:boundary_areas] .* parameters[:SurfaceHeatTransferCoefficient]
 
     return model, parameters
 

@@ -279,7 +279,7 @@ end
 
 function compute_flux(::Val{:Charge}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
 
-    htrans_cell, htrans_other = setup_half_trans(model, face, cell, other_cell, face_sign)
+    htrans_cell, htrans_other = get_half_trans(state, face, cell, other_cell, face_sign)
 
     j = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.ElectronicConductivity)
     jchem = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectrolyteConcentration, state.ChemCoef)
@@ -316,7 +316,7 @@ diffFlux
 """
 function compute_flux(::Val{:Diffusion}, model::ElectrolyteModel, state, cell, other_cell, face, face_sign)
 
-    htrans_cell, htrans_other = setup_half_trans(model, face, cell, other_cell, face_sign)
+    htrans_cell, htrans_other = get_half_trans(state, face, cell, other_cell, face_sign)
     diffFlux = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectrolyteConcentration, state.Diffusivity)
 
     return diffFlux
@@ -329,7 +329,7 @@ function compute_flux(::Val{:Mass}, model::ElectrolyteModel, state, cell, other_
     z = 1.0
     F = FARADAY_CONSTANT
 
-    htrans_cell, htrans_other = setup_half_trans(model, face, cell, other_cell, face_sign)
+    htrans_cell, htrans_other = get_half_trans(state, face, cell, other_cell, face_sign)
 
     diffFlux = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectrolyteConcentration, state.Diffusivity)
     j = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.ElectronicConductivity)
