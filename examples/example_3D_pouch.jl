@@ -6,7 +6,7 @@
 # - plot different output fields on the component meshes
 # - launch the interactive 3D output viewer
 
-using BattMo, WGLMakie, Jutul
+using BattMo, GLMakie, Jutul
 
 # ## Load default parameter sets
 
