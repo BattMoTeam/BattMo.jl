@@ -333,8 +333,8 @@ function setup_thermal_model(input, grids)
     # sensitivities)
 
     prm = Dict{Symbol, Any}()
-    prm[:BoundaryTemperature] = input.cycling_protocol["ExternalTemperature"]
-    prm[:ExternalHeatTransferCoefficient] = thermal_parameters["ExternalHeatTransferCoefficient"]
+    prm[:BoundaryTemperature] = input.cycling_protocol["AmbientTemperature"]
+    prm[:SurfaceHeatTransferCoefficient] = thermal_parameters["SurfaceHeatTransferCoefficient"]
 
     prm[:EffectiveVolumetricHeatCapacity] = thermal_parameters["EffectiveVolumetricHeatCapacity"]
 
