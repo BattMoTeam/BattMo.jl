@@ -694,10 +694,10 @@ function get_output_states(
 
         available_quantities = Dict{String, Any}(
             "Time" => time,
-            "NegativeElectrodeActiveMaterialPosition" => BattMoPosition(grids["NegativeElectrode"], "NegativeElectrode"),
-            "PositiveElectrodeActiveMaterialPosition" => BattMoPosition(grids["PositiveElectrode"], "PositiveElectrode"),
-            "NegativeElectrodeCurrentCollectorPosition" => BattMoPosition(grids["NegativeCurrentCollector"], "NegativeCurrentCollector"),
-            "PositiveElectrodeCurrentCollectorPosition" => BattMoPosition(grids["PositiveCurrentCollector"], "PositiveCurrentCollector"),
+            "NegativeElectrodeActiveMaterialPosition" => BattMoPosition(grids["NegativeElectrodeActiveMaterial"], "NegativeElectrodeActiveMaterial"),
+            "PositiveElectrodeActiveMaterialPosition" => BattMoPosition(grids["PositiveElectrodeActiveMaterial"], "PositiveElectrodeActiveMaterial"),
+            "NegativeElectrodeCurrentCollectorPosition" => BattMoPosition(grids["NegativeElectrodeCurrentCollector"], "NegativeElectrodeCurrentCollector"),
+            "PositiveElectrodeCurrentCollectorPosition" => BattMoPosition(grids["PositiveElectrodeCurrentCollector"], "PositiveElectrodeCurrentCollector"),
             "ElectrolytePosition" => BattMoPosition(grids["Electrolyte"], "Electrolyte"),
             "SeparatorPosition" => BattMoPosition(grids["Separator"], "Separator"),
             "NegativeElectrodeActiveMaterialRadius" => r_ne,
@@ -725,17 +725,17 @@ function get_component_positions_1d(grids)
     component_positions = Dict{String, Any}()
 
     component_map = Dict(
-        "NegativeElectrodeActiveMaterialPosition" => "NegativeElectrode",
-        "PositiveElectrodeActiveMaterialPosition" => "PositiveElectrode",
+        "NegativeElectrodeActiveMaterialPosition" => "NegativeElectrodeActiveMaterial",
+        "PositiveElectrodeActiveMaterialPosition" => "PositiveElectrodeActiveMaterial",
         "ElectrolytePosition" => "Electrolyte",
         "SeparatorPosition" => "Separator",
     )
 
-    if haskey(grids, "NegativeCurrentCollector")
-        component_map["NegativeElectrodeCurrentCollectorPosition"] = "NegativeCurrentCollector"
+    if haskey(grids, "NegativeElectrodeCurrentCollector")
+        component_map["NegativeElectrodeCurrentCollectorPosition"] = "NegativeElectrodeCurrentCollector"
     end
-    if haskey(grids, "PositiveCurrentCollector")
-        component_map["PositiveElectrodeCurrentCollectorPosition"] = "PositiveCurrentCollector"
+    if haskey(grids, "PositiveElectrodeCurrentCollector")
+        component_map["PositiveElectrodeCurrentCollectorPosition"] = "PositiveElectrodeCurrentCollector"
     end
 
     for (output_name, grid_name) in component_map
@@ -826,12 +826,16 @@ function output_state_path(key::String)
         end
     end
 
+
     if startswith(key, "Electrolyte")
         suffix = key[(length("Electrolyte") + 1):end]
         return ["Electrolyte", suffix]
     elseif startswith(key, "Separator")
         suffix = key[(length("Separator") + 1):end]
         return ["Separator", suffix]
+    elseif startswith(key, "ThermalModel")
+        suffix = key[(length("ThermalModel") + 1):end]
+        return ["ThermalModel", suffix]
     else
         return [key]
     end
@@ -889,6 +893,10 @@ function extract_spatial_data(states::Vector)
         "NormalizedSEIThickness" => [:NegativeElectrodeActiveMaterial, :NormalizedSEIThickness],
         "SEIVoltageDrop" => [:NegativeElectrodeActiveMaterial, :SEIVoltageDrop],
         "NormalizedSEIVoltageDrop" => [:NegativeElectrodeActiveMaterial, :NormalizedSEIVoltageDrop],
+        "ThermalModelTemperature" => [:ThermalModel, :Temperature],
+        "ThermalModelEffectiveVolumetricHeatCapacity" => [:ThermalModel, :EffectiveVolumetricHeatCapacity],
+        "ThermalModelEffectiveThermalConductivity" => [:ThermalModel, :EffectiveThermalConductivity],
+        "ThermalModelEnergy" => [:ThermalModel, :Energy],
     )
 
     output_data = Dict{String, Any}()
@@ -962,7 +970,14 @@ end
 function get_padded_states(jutul_output::NamedTuple)
     multimodel = jutul_output.multimodel
     states = jutul_output[:states]
-    model_keys = keys(multimodel.models)
+    supported_model_keys = (
+        :NegativeElectrodeCurrentCollector,
+        :NegativeElectrodeActiveMaterial,
+        :Electrolyte,
+        :PositiveElectrodeActiveMaterial,
+        :PositiveElectrodeCurrentCollector,
+    )
+    model_keys = [k for k in supported_model_keys if haskey(multimodel.models, k)]
 
     n = length(model_keys)
     ncells = Dict{Symbol, Any}()
@@ -985,11 +1000,9 @@ function get_padded_states(jutul_output::NamedTuple)
 
     # Setup some dicts
     padded_state = Dict{Symbol, Any}()
-    start_idx = Dict{Symbol, Any}()
-    end_idx = Dict{Symbol, Any}()
+    start_idx = Dict{Symbol, Int}()
+    end_idx = Dict{Symbol, Int}()
     for k in model_keys
-        start_idx[k] = Dict{Symbol, Any}()
-        end_idx[k] = Dict{Symbol, Any}()
         padded_state[k] = Dict{Symbol, Any}()
     end
 

@@ -135,6 +135,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
                     "TabWidth" => create_property(parameter_meta, "TabWidth"),
                     "Height" => create_property(parameter_meta, "Height"),
                     "ElectrodeGeometricSurfaceArea" => create_property(parameter_meta, "ElectrodeGeometricSurfaceArea"),
+                    "SurfaceHeatTransferCoefficient" => create_property(parameter_meta, "SurfaceHeatTransferCoefficient"),
                 ),
                 "required" => [],
             ),
@@ -147,7 +148,6 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
                             "BruggemanCoefficient" => create_property(parameter_meta, "BruggemanCoefficient"),
                             "EffectiveDensity" => create_property(parameter_meta, "EffectiveDensity"),
                             "Thickness" => create_property(parameter_meta, "Thickness"),
-                            "SurfaceCoefficientOfHeatTransfer" => create_property(parameter_meta, "SurfaceCoefficientOfHeatTransfer"),
                         ),
                         "required" => ["BruggemanCoefficient", "EffectiveDensity", "Thickness"],
                     ),
@@ -158,19 +158,20 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
                             "Density" => create_property(parameter_meta, "Density"),
                             "VolumetricSurfaceArea" => create_property(parameter_meta, "VolumetricSurfaceArea"),
                             "ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
-                            "SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
-                            "ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
                             "DiffusionCoefficient" => create_property(parameter_meta, "DiffusionCoefficient"),
                             "ParticleRadius" => create_property(parameter_meta, "ParticleRadius"),
                             "MaximumConcentration" => create_property(parameter_meta, "MaximumConcentration"),
                             "StoichiometricCoefficientAtSOC0" => create_property(parameter_meta, "StoichiometricCoefficientAtSOC0"),
                             "StoichiometricCoefficientAtSOC100" => create_property(parameter_meta, "StoichiometricCoefficientAtSOC100"),
                             "OpenCircuitPotential" => create_property(parameter_meta, "OpenCircuitPotential"),
+                            "EntropyChange" => create_property(parameter_meta, "EntropyChange"),
                             "NumberOfElectronsTransfered" => create_property(parameter_meta, "NumberOfElectronsTransfered"),
                             "ActivationEnergyOfReaction" => create_property(parameter_meta, "ActivationEnergyOfReaction"),
                             "ActivationEnergyOfDiffusion" => create_property(parameter_meta, "ActivationEnergyOfDiffusion"),
                             "ReactionRateConstant" => create_property(parameter_meta, "ReactionRateConstant"),
                             "ChargeTransferCoefficient" => create_property(parameter_meta, "ChargeTransferCoefficient"),
+                            "SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
+                            "ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
                         ),
                         "required" => [
                             "MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
@@ -223,6 +224,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
                             "TabLength" => create_property(parameter_meta, "TabLength"),
                             "TabFractions" => create_property(parameter_meta, "TabFractions"),
                             "TabPositionFraction" => create_property(parameter_meta, "TabPositionFraction"),
+                            "SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
+                            "ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
                         ),
                         "required" => ["Density", "Thickness", "ElectronicConductivity"],
                     ),
@@ -237,8 +240,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
                         "properties" => Dict(
                             "BruggemanCoefficient" => create_property(parameter_meta, "BruggemanCoefficient"),
                             "EffectiveDensity" => create_property(parameter_meta, "EffectiveDensity"),
-                            "Thickness" => create_property(parameter_meta, "Thickness"),
-                            "SurfaceCoefficientOfHeatTransfer" => create_property(parameter_meta, "SurfaceCoefficientOfHeatTransfer"),
+                            "Thickness" => create_property(parameter_meta, "Thickness")
                         ),
                         "required" => ["BruggemanCoefficient", "EffectiveDensity", "Thickness"],
                     ),
@@ -249,19 +251,20 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
                             "Density" => create_property(parameter_meta, "Density"),
                             "VolumetricSurfaceArea" => create_property(parameter_meta, "VolumetricSurfaceArea"),
                             "ElectronicConductivity" => create_property(parameter_meta, "ElectronicConductivity"),
-                            "SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
-                            "ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
                             "DiffusionCoefficient" => create_property(parameter_meta, "DiffusionCoefficient"),
                             "ParticleRadius" => create_property(parameter_meta, "ParticleRadius"),
                             "MaximumConcentration" => create_property(parameter_meta, "MaximumConcentration"),
                             "StoichiometricCoefficientAtSOC0" => create_property(parameter_meta, "StoichiometricCoefficientAtSOC0"),
                             "StoichiometricCoefficientAtSOC100" => create_property(parameter_meta, "StoichiometricCoefficientAtSOC100"),
                             "OpenCircuitPotential" => create_property(parameter_meta, "OpenCircuitPotential"),
+                            "EntropyChange" => create_property(parameter_meta, "EntropyChange"),
                             "NumberOfElectronsTransfered" => create_property(parameter_meta, "NumberOfElectronsTransfered"),
                             "ActivationEnergyOfReaction" => create_property(parameter_meta, "ActivationEnergyOfReaction"),
                             "ActivationEnergyOfDiffusion" => create_property(parameter_meta, "ActivationEnergyOfDiffusion"),
                             "ReactionRateConstant" => create_property(parameter_meta, "ReactionRateConstant"),
                             "ChargeTransferCoefficient" => create_property(parameter_meta, "ChargeTransferCoefficient"),
+                            "SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
+                            "ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
                         ),
                         "required" => [
                             "MassFraction", "Density", "VolumetricSurfaceArea", "ElectronicConductivity", "DiffusionCoefficient",
@@ -301,6 +304,8 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
                             "TabLength" => create_property(parameter_meta, "TabLength"),
                             "TabFractions" => create_property(parameter_meta, "TabFractions"),
                             "TabPositionFraction" => create_property(parameter_meta, "TabPositionFraction"),
+                            "SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
+                            "ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
                         ),
                         "required" => ["Density", "Thickness", "ElectronicConductivity"],
                     ),
@@ -323,13 +328,15 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
                 "type" => "object",
                 "properties" => Dict(
                     "SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
-                    "ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
+                    "EffectiveThermalConductivity" => create_property(parameter_meta, "EffectiveThermalConductivity"),
                     "Density" => create_property(parameter_meta, "Density"),
                     "Concentration" => create_property(parameter_meta, "Concentration"),
                     "IonicConductivity" => create_property(parameter_meta, "IonicConductivity"),
                     "DiffusionCoefficient" => create_property(parameter_meta, "DiffusionCoefficient"),
                     "ChargeNumber" => create_property(parameter_meta, "ChargeNumber"),
                     "TransferenceNumber" => create_property(parameter_meta, "TransferenceNumber"),
+                    "SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
+                    "ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
                 ),
                 "required" => ["Concentration", "Density", "DiffusionCoefficient", "IonicConductivity", "ChargeNumber", "TransferenceNumber"],
             ),
@@ -405,7 +412,35 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
         push!(ne_required, "Interphase")
     end
 
+    thermal_model = get(model_settings, "ThermalModel", nothing)
     temperature_dependence = get(model_settings, "TemperatureDependence", nothing)
+
+    if thermal_model == "Decoupled" || thermal_model == "Sequential"
+        push!(cell_required, "SurfaceHeatTransferCoefficient")
+        push!(ne_am_required, "EntropyChange")
+        push!(pe_am_required, "EntropyChange")
+        push!(ne_am_required, "SpecificHeatCapacity")
+        push!(pe_am_required, "SpecificHeatCapacity")
+        push!(ne_am_required, "ThermalConductivity")
+        push!(pe_am_required, "ThermalConductivity")
+        push!(ne_cc_required, "SpecificHeatCapacity")
+        push!(pe_cc_required, "SpecificHeatCapacity")
+        push!(ne_cc_required, "ThermalConductivity")
+        push!(pe_cc_required, "ThermalConductivity")
+        push!(ne_ca_required, "SpecificHeatCapacity")
+        push!(pe_ca_required, "SpecificHeatCapacity")
+        push!(ne_ca_required, "ThermalConductivity")
+        push!(pe_ca_required, "ThermalConductivity")
+        push!(ne_b_required, "SpecificHeatCapacity")
+        push!(pe_b_required, "SpecificHeatCapacity")
+        push!(ne_b_required, "ThermalConductivity")
+        push!(pe_b_required, "ThermalConductivity")
+        push!(sep_required, "SpecificHeatCapacity")
+        push!(elyte_required, "SpecificHeatCapacity")
+        push!(sep_required, "ThermalConductivity")
+        push!(elyte_required, "ThermalConductivity")
+
+    end
 
     if temperature_dependence == "Arrhenius"
         push!(ne_am_required, "ActivationEnergyOfReaction")
@@ -547,6 +582,13 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
         ],
     )
     required = schema["required"]
+    thermal_model = get(model_settings, "ThermalModel", nothing)
+
+    if thermal_model == "Decoupled" || thermal_model == "Sequential"
+        push!(required, "InitialTemperature")
+        push!(required, "AmbientTemperature")
+    end
+
     temperature_dependence = get(model_settings, "TemperatureDependence", nothing)
 
     if temperature_dependence == "Arrhenius"
@@ -741,6 +783,7 @@ function get_schema_model_settings()
             "TransportInSolid" => create_property(parameter_meta, "TransportInSolid"),
             "ButlerVolmer" => create_property(parameter_meta, "ButlerVolmer"),
             "PotentialFlowDiscretization" => create_property(parameter_meta, "PotentialFlowDiscretization"),
+            "ThermalModel" => create_property(parameter_meta, "ThermalModel"),
             "TemperatureDependence" => create_property(parameter_meta, "TemperatureDependence"),
         ),
         "required" => [

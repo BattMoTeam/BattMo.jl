@@ -1,30 +1,59 @@
 abstract type IntercalationBattery <: Battery end
 
-
 function setup_multimodel(model::IntercalationBattery, submodels, input; use_groups = false)
 
     if !haskey(model.settings, "CurrentCollectors")
         groups = nothing
 
-        multimodel = MultiModel(
-            (
+        if haskey(model.settings, "ThermalModel")
+            multimodel = MultiModel(
+                (
+                    NegativeElectrodeActiveMaterial = submodels.model_neam,
+                    Electrolyte = submodels.model_elyte,
+                    PositiveElectrodeActiveMaterial = submodels.model_peam,
+                    ThermalModel = submodels.model_thermal,
+                    Control = submodels.model_control,
+                ),
+                Val(:IntercalationBattery);
+                groups = groups
+            )
+
+        else
+            multimodel = MultiModel(
+                (
+                    NegativeElectrodeActiveMaterial = submodels.model_neam,
+                    Electrolyte = submodels.model_elyte,
+                    PositiveElectrodeActiveMaterial = submodels.model_peam,
+                    Control = submodels.model_control,
+                ),
+                Val(:IntercalationBattery);
+                groups = groups
+            )
+        end
+    else
+
+        if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Coupled"
+            models = (
+                NegativeElectrodeCurrentCollector = submodels.model_necc,
                 NegativeElectrodeActiveMaterial = submodels.model_neam,
                 Electrolyte = submodels.model_elyte,
                 PositiveElectrodeActiveMaterial = submodels.model_peam,
+                PositiveElectrodeCurrentCollector = submodels.model_pecc,
+                ThermalModel = submodels.model_thermal,
                 Control = submodels.model_control,
-            ),
-            Val(:IntercalationBattery);
-            groups = groups,
-        )
-    else
-        models = (
-            NegativeElectrodeCurrentCollector = submodels.model_necc,
-            NegativeElectrodeActiveMaterial = submodels.model_neam,
-            Electrolyte = submodels.model_elyte,
-            PositiveElectrodeActiveMaterial = submodels.model_peam,
-            PositiveElectrodeCurrentCollector = submodels.model_pecc,
-            Control = submodels.model_control,
-        )
+            )
+
+        else
+            models = (
+                NegativeElectrodeCurrentCollector = submodels.model_necc,
+                NegativeElectrodeActiveMaterial = submodels.model_neam,
+                Electrolyte = submodels.model_elyte,
+                PositiveElectrodeActiveMaterial = submodels.model_peam,
+                PositiveElectrodeCurrentCollector = submodels.model_pecc,
+                Control = submodels.model_control,
+            )
+        end
+
         if use_groups
             groups = ones(Int64, length(models))
             # Should be Control
@@ -49,12 +78,72 @@ function setup_multimodel(model::IntercalationBattery, submodels, input; use_gro
 
 end
 
-function setup_submodels(model::IntercalationBattery, input, grids, couplings; kwargs...)
+function setup_volume_fractions!(model_neam, model_peam, model_elyte, grids, coupling)
+    Nelyte = number_of_cells(grids["Electrolyte"])
+
+    names = (
+        (:NegativeElectrodeActiveMaterial, "NegativeElectrodeActiveMaterial", model_neam),
+        (:PositiveElectrodeActiveMaterial, "PositiveElectrodeActiveMaterial", model_peam),
+    )
+
+    vfracs = map(x -> x[3].system[:volume_fraction], names)
+    separator_porosity = model_elyte.system[:separator_porosity]
+
+    T = Base.promote_type(map(typeof, vfracs)..., typeof(separator_porosity))
+
+    vfelyte = zeros(T, Nelyte)
+    vfseparator = zeros(T, Nelyte)
+
+    for (i, (_, stringName, ammodel)) in enumerate(names)
+        ncell = number_of_cells(grids[stringName])
+        vf = vfracs[i]
+        ammodel.domain.representation[:volumeFraction] = vf * ones(ncell)
+        elytecells = coupling[stringName]["cells"]
+        vfelyte[elytecells] .= 1 - vf
+    end
+
+    elytecells = coupling["Separator"]["cells"]
+
+    vfelyte[elytecells] .= separator_porosity * ones()
+    vfseparator[elytecells] .= (1 - separator_porosity)
+
+    model_elyte.domain.representation[:volumeFraction] = vfelyte
+    model_elyte.domain.representation[:separator_volume_fraction] = vfseparator
+
+    return nothing
+end
+
+function setup_effective_thermal_conductivities!(input, battery_models)
+    cell_parameters = input.cell_parameters
+
+    for elde in ("NegativeElectrode", "PositiveElectrode")
+        am_key = string(elde, "ActiveMaterial")
+        ammodel = battery_models[am_key]
+        ammodel.domain.representation[:effective_thermal_conductivity] = compute_effective_thermal_conductivity(ammodel.system.params, cell_parameters[elde])
+    end
+
+    elytemodel = battery_models["Electrolyte"]
+    vf = elytemodel.domain.representation[:volumeFraction]
+    bg = cell_parameters["Separator"]["BruggemanCoefficient"]
+    elytemodel.domain.representation[:effective_thermal_conductivity] = (vf .^ bg) .* cell_parameters["Electrolyte"]["ThermalConductivity"]
+
+    if haskey(battery_models, "NegativeElectrodeCurrentCollector") && !isnothing(battery_models["NegativeElectrodeCurrentCollector"])
+        battery_models["NegativeElectrodeCurrentCollector"].domain.representation[:effective_thermal_conductivity] = cell_parameters["NegativeElectrode"]["CurrentCollector"]["ThermalConductivity"]
+    end
+
+    if haskey(battery_models, "PositiveElectrodeCurrentCollector") && !isnothing(battery_models["PositiveElectrodeCurrentCollector"])
+        battery_models["PositiveElectrodeCurrentCollector"].domain.representation[:effective_thermal_conductivity] = cell_parameters["PositiveElectrode"]["CurrentCollector"]["ThermalConductivity"]
+    end
+
+    return nothing
+end
+
+function setup_submodels(model::IntercalationBattery, input, grids, couplings; global_maps = nothing, kwargs...)
 
     if haskey(model.settings, "CurrentCollectors")
         include_cc = true
-        model_necc = setup_ne_current_collector(input, grids, couplings)
-        model_pecc = setup_pe_current_collector(input, grids, couplings)
+        model_necc = setup_ne_current_collector(model, input, grids, couplings)
+        model_pecc = setup_pe_current_collector(model, input, grids, couplings)
     else
         include_cc = false
         model_necc = nothing
@@ -65,19 +154,51 @@ function setup_submodels(model::IntercalationBattery, input, grids, couplings; k
     model_peam = setup_active_material(model, :PositiveElectrodeActiveMaterial, input, grids, couplings)
 
     model_elyte = setup_electrolyte(model, input, grids)
+    model_sep = setup_separator(model, input, grids)
+    setup_volume_fractions!(model_neam, model_peam, model_elyte, grids, couplings["Electrolyte"])
+
+    battery_models = Dict(
+        "NegativeElectrodeActiveMaterial" => model_neam,
+        "PositiveElectrodeActiveMaterial" => model_peam,
+        "NegativeElectrodeCurrentCollector" => model_necc,
+        "PositiveElectrodeCurrentCollector" => model_pecc,
+        "Electrolyte" => model_elyte,
+        "Separator" => model_sep
+    )
+
+
+    if haskey(model.settings, "ThermalModel")
+
+        setup_effective_thermal_conductivities!(input, battery_models)
+
+        if model.settings["ThermalModel"] == "Coupled"
+
+            model_thermal, _ = setup_thermal_model(model, battery_models, input, grids, global_maps)
+        end
+    end
 
     model_control = setup_control_model(input, model_neam, model_peam; kwargs...)
 
-
-    submodels = (
-        model_neam = model_neam,
-        model_peam = model_peam,
-        model_necc = model_necc,
-        model_pecc = model_pecc,
-        model_elyte = model_elyte,
-        model_control = model_control,
-    )
-
+    if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Coupled"
+        submodels = (
+            model_neam = model_neam,
+            model_peam = model_peam,
+            model_necc = model_necc,
+            model_pecc = model_pecc,
+            model_elyte = model_elyte,
+            model_thermal = model_thermal,
+            model_control = model_control,
+        )
+    else
+        submodels = (
+            model_neam = model_neam,
+            model_peam = model_peam,
+            model_necc = model_necc,
+            model_pecc = model_pecc,
+            model_elyte = model_elyte,
+            model_control = model_control,
+        )
+    end
     return submodels
 
 end
@@ -158,40 +279,13 @@ end
 
 function setup_volume_fractions!(model::IntercalationBattery, grids, coupling)
     multimodel = model.multimodel
-    Nelyte = number_of_cells(grids["Electrolyte"])
-
-    names = [:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial]
-    stringNames = Dict(
-        :NegativeElectrodeActiveMaterial => "NegativeElectrode",
-        :PositiveElectrodeActiveMaterial => "PositiveElectrode",
+    return setup_volume_fractions!(
+        multimodel[:NegativeElectrodeActiveMaterial],
+        multimodel[:PositiveElectrodeActiveMaterial],
+        multimodel[:Electrolyte],
+        grids,
+        coupling,
     )
-
-    vfracs = map(name -> multimodel[name].system[:volume_fraction], names)
-    separator_porosity = multimodel[:Electrolyte].system[:separator_porosity]
-
-    T = Base.promote_type(map(typeof, vfracs)..., typeof(separator_porosity))
-
-    vfelyte = zeros(T, Nelyte)
-    vfseparator = zeros(T, Nelyte)
-
-    for (i, name) in enumerate(names)
-        stringName = stringNames[name]
-        ncell = number_of_cells(grids[stringName])
-        ammodel = multimodel[name]
-        vf = vfracs[i]
-        ammodel.domain.representation[:volumeFraction] = vf * ones(ncell)
-        elytecells = coupling[stringName]["cells"]
-        vfelyte[elytecells] .= 1 - vf
-    end
-
-    elytecells = coupling["Separator"]["cells"]
-
-    vfelyte[elytecells] .= separator_porosity * ones()
-    vfseparator[elytecells] .= (1 - separator_porosity)
-
-    multimodel[:Electrolyte].domain.representation[:volumeFraction] = vfelyte
-    return multimodel[:Electrolyte].domain.representation[:separator_volume_fraction] = vfseparator
-
 end
 
 function normalize_path(path::AbstractString)
@@ -213,67 +307,21 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
     params[:separator_density] = cell_parameters["Separator"]["Density"]
 
     # setup diffusion coefficient function
-    if isa(inputparams_elyte["DiffusionCoefficient"], Real)
+    if haskey(inputparams_elyte, "DiffusionCoefficient")
 
-        params[:diffusivity_constant] = inputparams_elyte["DiffusionCoefficient"]
-    elseif isa(inputparams_elyte["DiffusionCoefficient"], String)
+        func, func_type = setup_function(base_path, inputparams_elyte["DiffusionCoefficient"], "Electrolyte", "DiffusionCoefficient")
 
-        exp = setup_diffusivity_evaluation_expression_from_string(inputparams_elyte["DiffusionCoefficient"])
-        params[:diffusivity_func] = @RuntimeGeneratedFunction(exp)
-
-    elseif haskey(inputparams_elyte["DiffusionCoefficient"], "FunctionName")
-
-        funcname = inputparams_elyte["DiffusionCoefficient"]["FunctionName"]
-        if haskey(inputparams_elyte["DiffusionCoefficient"], "FilePath")
-            rawpath = inputparams_elyte["DiffusionCoefficient"]["FilePath"]
-            funcpath = joinpath(base_path, normalize_path(rawpath))
-        else
-            funcpath = nothing
-        end
-
-        fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-        params[:diffusivity_func] = fcn
-
-    else
-        data_x = inputparams_elyte["DiffusionCoefficient"]["x"]
-        data_y = inputparams_elyte["DiffusionCoefficient"]["y"]
-
-        interpolation = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-        params[:diffusivity_data] = true
-        params[:diffusivity_func] = interpolation
+        params[:diffusion_coefficient_func] = func
+        params[:diffusion_coefficient_func_type] = func_type
 
     end
-
     # setup conductivity function
-    if isa(inputparams_elyte["IonicConductivity"], Real)
+    if haskey(inputparams_elyte, "IonicConductivity")
 
-        params[:conductivity_constant] = inputparams_elyte["IonicConductivity"]
-    elseif isa(inputparams_elyte["IonicConductivity"], String)
+        func, func_type = setup_function(base_path, inputparams_elyte["IonicConductivity"], "Electrolyte", "IonicConductivity")
 
-        exp = setup_conductivity_evaluation_expression_from_string(inputparams_elyte["IonicConductivity"])
-        params[:conductivity_func] = @RuntimeGeneratedFunction(exp)
-
-    elseif haskey(inputparams_elyte["IonicConductivity"], "FunctionName")
-
-        funcname = inputparams_elyte["IonicConductivity"]["FunctionName"]
-
-        if haskey(inputparams_elyte["IonicConductivity"], "FilePath")
-            rawpath = inputparams_elyte["IonicConductivity"]["FilePath"]
-            funcpath = joinpath(base_path, normalize_path(rawpath))
-        else
-            funcpath = nothing
-        end
-
-        fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-        params[:conductivity_func] = fcn
-
-    else
-        data_x = inputparams_elyte["IonicConductivity"]["x"]
-        data_y = inputparams_elyte["IonicConductivity"]["y"]
-
-        interpolation = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-        params[:conductivity_data] = true
-        params[:conductivity_func] = interpolation
+        params[:ionic_conductivity_func] = func
+        params[:ionic_conductivity_func_type] = func_type
 
     end
 
@@ -284,9 +332,28 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
     return model_elyte
 end
 
-function setup_ne_current_collector(input, grids, couplings)
-    grid = grids["NegativeCurrentCollector"]
-    coupling = couplings["NegativeCurrentCollector"]
+function setup_separator(model::IntercalationBattery, input, grids)
+    params = JutulStorage()
+
+    cell_parameters = input.cell_parameters
+    inputparams_sep = cell_parameters["Separator"]
+    base_path = isnothing(cell_parameters.source_path) ? "" : dirname(cell_parameters.source_path)
+
+    params[:separator_porosity] = cell_parameters["Separator"]["Porosity"]
+    params[:bruggeman] = cell_parameters["Separator"]["BruggemanCoefficient"]
+    params[:density] = cell_parameters["Separator"]["Density"]
+
+    separator = Separator(params)
+
+    model_separator = setup_component(grids["Separator"], separator, general_ad = true)
+
+    return model_separator
+end
+
+
+function setup_ne_current_collector(model, input, grids, couplings)
+    grid = grids["NegativeElectrodeCurrentCollector"]
+    coupling = couplings["NegativeElectrodeCurrentCollector"]
 
     boundary = coupling["External"]
     necc_params = JutulStorage()
@@ -303,8 +370,8 @@ function setup_ne_current_collector(input, grids, couplings)
     return model_necc
 end
 
-function setup_pe_current_collector(input, grids, couplings)
-    grid = grids["PositiveCurrentCollector"]
+function setup_pe_current_collector(model, input, grids, couplings)
+    grid = grids["PositiveElectrodeCurrentCollector"]
     pecc_params = JutulStorage()
     pecc_params[:density] = input.cell_parameters["PositiveElectrode"]["CurrentCollector"]["Density"]
 
@@ -375,81 +442,52 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
     am_params[:setting_temperature_dependence] = get(model.settings, "TemperatureDependence", nothing)
     am_params[:setting_butler_volmer] = get(model.settings, "ButlerVolmer", nothing)
 
+    am_params[:reference_temperature] = 298.15
 
     if am_params[:setting_temperature_dependence] == "Arrhenius"
         am_params[:activation_energy_of_diffusion] = inputparams_active_material["ActivationEnergyOfDiffusion"]
         am_params[:activation_energy_of_reaction] = inputparams_active_material["ActivationEnergyOfReaction"]
     end
 
-    if isa(inputparams_active_material["ReactionRateConstant"], Real)
-        am_params[:ecd_funcconstant] = true
-        am_params[:reaction_rate_constant_func] = inputparams_active_material["ReactionRateConstant"]
+    if haskey(inputparams_active_material, "ReactionRateConstant")
+        func, func_type = setup_function(base_path, inputparams_active_material["ReactionRateConstant"], "ActiveMaterial", "ReactionRateConstant")
 
-    elseif isa(inputparams_active_material["ReactionRateConstant"], String)
+        am_params[:reaction_rate_constant_func] = func
+        am_params[:reaction_rate_constant_func_type] = func_type
 
-        am_params[:ecd_funcexp] = true
-        ocp_exp = inputparams_active_material["ReactionRateConstant"]
-        exp = setup_reaction_rate_constant_evaluation_expression_from_string(ocp_exp)
-
-        f_generated = @RuntimeGeneratedFunction(exp)
-        am_params[:reaction_rate_constant_func] = f_generated
-
-    elseif haskey(inputparams_active_material["ReactionRateConstant"], "FunctionName")
-
-        funcname = inputparams_active_material["ReactionRateConstant"]["FunctionName"]
-
-        if haskey(inputparams_active_material["ReactionRateConstant"], "FilePath")
-            rawpath = inputparams_active_material["ReactionRateConstant"]["FilePath"]
-            funcpath = joinpath(base_path, normalize_path(rawpath))
-        else
-            funcpath = nothing
-        end
-
-        fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-        am_params[:reaction_rate_constant_func] = fcn
-
-    else
-        am_params[:ecd_funcdata] = true
-        data_x = inputparams_active_material["ReactionRateConstant"]["x"]
-        data_y = inputparams_active_material["ReactionRateConstant"]["y"]
-
-        interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-        am_params[:reaction_rate_constant_func] = interpolation_object
     end
 
-    if isa(inputparams_active_material["OpenCircuitPotential"], Real)
-        am_params[:ocp_funcconstant] = true
-        am_params[:ocp_func] = inputparams_active_material["OpenCircuitPotential"]
+    if haskey(inputparams_active_material, "OpenCircuitPotential")
 
-    elseif isa(inputparams_active_material["OpenCircuitPotential"], String)
+        func, func_type = setup_function(base_path, inputparams_active_material["OpenCircuitPotential"], "ActiveMaterial", "OpenCircuitPotential")
 
-        am_params[:ocp_funcexp] = true
-        ocp_exp = inputparams_active_material["OpenCircuitPotential"]
-        exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
-        f_generated = @RuntimeGeneratedFunction(exp)
-        am_params[:ocp_func] = f_generated
+        am_params[:ocp_func] = func
+        am_params[:ocp_func_type] = func_type
 
-    elseif haskey(inputparams_active_material["OpenCircuitPotential"], "FunctionName")
+    end
 
-        funcname = inputparams_active_material["OpenCircuitPotential"]["FunctionName"]
+    if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
+        am_params[:reference_temperature] = 298.15
 
-        if haskey(inputparams_active_material["OpenCircuitPotential"], "FilePath")
-            rawpath = inputparams_active_material["OpenCircuitPotential"]["FilePath"]
-            funcpath = joinpath(base_path, normalize_path(rawpath))
+        if !haskey(inputparams_active_material, "IncludeEntropyChange")
+            am_params[:include_entropy_change] = true
         else
-            funcpath = nothing
+            am_params[:include_entropy_change] = inputparams_active_material["IncludeEntropyChange"]
         end
 
-        fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-        am_params[:ocp_func] = fcn
+        if am_params[:include_entropy_change]
+
+            func, func_type = setup_function(base_path, inputparams_active_material["EntropyChange"], "ActiveMaterial", "EntropyChange")
+
+            am_params[:entropy_change_func] = func
+            am_params[:entropy_change_func_type] = func_type
+
+        end
 
     else
-        am_params[:ocp_funcdata] = true
-        data_x = inputparams_active_material["OpenCircuitPotential"]["x"]
-        data_y = inputparams_active_material["OpenCircuitPotential"]["y"]
 
-        interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-        am_params[:ocp_func] = interpolation_object
+        am_params[:include_entropy_change] = false
+
     end
 
     refT = 298.15
@@ -468,44 +506,23 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
         rp = inputparams_active_material["ParticleRadius"]
         N = Int64(input.simulation_settings[stringName * "ParticleGridPoints"])
 
-        if isa(inputparams_active_material["DiffusionCoefficient"], Real)
-            am_params[:diff_funcconstant] = true
-            am_params[:diff_func] = inputparams_active_material["DiffusionCoefficient"]
-            D = am_params[:diff_func]
+        if haskey(inputparams_active_material, "DiffusionCoefficient")
 
-        elseif isa(inputparams_active_material["DiffusionCoefficient"], String)
+            func, func_type = setup_function(base_path, inputparams_active_material["DiffusionCoefficient"], "ActiveMaterial", "DiffusionCoefficient")
 
-            am_params[:diff_funcexp] = true
-            diff_exp = inputparams_active_material["DiffusionCoefficient"]
-            exp = setup_electrode_diff_evaluation_expression_from_string(diff_exp)
+            am_params[:diffusion_coefficient_func] = func
+            am_params[:diffusion_coefficient_func_type] = func_type
 
-            f_generated = @RuntimeGeneratedFunction(exp)
-            am_params[:diff_func] = f_generated
-            D = am_params[:diff_func](c, T, refT, cmax)
-        elseif haskey(inputparams_active_material["DiffusionCoefficient"], "FunctionName")
-
-            funcname = inputparams_active_material["DiffusionCoefficient"]["FunctionName"]
-
-            if haskey(inputparams_active_material["DiffusionCoefficient"], "FilePath")
-                rawpath = inputparams_active_material["DiffusionCoefficient"]["FilePath"]
-                funcpath = joinpath(base_path, normalize_path(rawpath))
+            if func_type == :interpolator
+                D = am_params[:diffusion_coefficient_func](c / cmax)
+            elseif func_type == :expression || func_type == :function
+                D = am_params[:diffusion_coefficient_func](c, T, refT, cmax)
+            elseif func_type == :constant
+                D = am_params[:diffusion_coefficient_func]
             else
-                funcpath = nothing
+                error("Unrecognized function type for diffusion coefficient function: $func_type")
             end
 
-            fcn = setup_function_from_function_name(funcname; file_path = funcpath)
-
-            am_params[:diff_func] = fcn
-            D = am_params[:diff_func](c, T, refT, cmax)
-
-        else
-            am_params[:diff_funcdata] = true
-            data_x = inputparams_active_material["DiffusionCoefficient"]["x"]
-            data_y = inputparams_active_material["DiffusionCoefficient"]["y"]
-
-            interpolation_object = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-            am_params[:diff_func] = interpolation_object
-            D = am_params[:diff_func](c / cmax)
         end
 
         if haskey(model.settings, "SEIModel") && model.settings["SEIModel"] == "Bolay" && haskey(inputparams_electrode, "Interphase")
@@ -532,8 +549,8 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
         sys_am = ActiveMaterialNoParticleDiffusion(am_params)
     end
 
-    grid = grids[stringName]
-    coupling = couplings[stringName]
+    grid = grids["$(stringName)ActiveMaterial"]
+    coupling = couplings["$(stringName)ActiveMaterial"]
 
     boundary = nothing
     if !haskey(model.settings, "CurrentCollectors") && name == :NegativeElectrodeActiveMaterial
@@ -555,7 +572,62 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 
 end
 
-function compute_effective_conductivity(comodel, coinputparams)
+function compute_effective_thermal_conductivity(comodel, coinputparams)
+
+    # Compute effective thermal conductivity for the coating
+
+    am = "ActiveMaterial"
+    bd = "Binder"
+    ad = "ConductiveAdditive"
+
+    compnames = [am, bd, ad]
+
+    thermal_conductivity = 0.0
+
+    volume_fractions = comodel[:volume_fractions]
+
+    for icomp in eachindex(compnames)
+        compname = compnames[icomp]
+        component_volume_fraction = volume_fractions[icomp]
+
+        thermal_conductivity += component_volume_fraction * coinputparams[compname]["ThermalConductivity"]
+    end
+
+    coating_volume_fraction = comodel[:volume_fraction]
+    bg = coinputparams["Coating"]["BruggemanCoefficient"]
+
+    effective_thermal_conductivity = (coating_volume_fraction^bg) * thermal_conductivity
+
+    return effective_thermal_conductivity
+
+end
+
+function compute_effective_heat_capacity(comodel, coinputparams)
+
+    # Compute volumetric heat capacity for the porous coating.
+    # effective_density is the bulk coating density [kg/m^3], so multiplying it by the
+    # mixture specific heat [J/kg/K] yields a volumetric quantity [J/m^3/K].
+
+    am = "ActiveMaterial"
+    bd = "Binder"
+    ad = "ConductiveAdditive"
+
+    compnames = [am, bd, ad]
+
+    specific_heat_capacity = 0.0
+
+    for icomp in eachindex(compnames)
+        compname = compnames[icomp]
+        specific_heat_capacity += coinputparams[compname]["MassFraction"] * coinputparams[compname]["SpecificHeatCapacity"]
+    end
+
+    effective_heat_capacity = comodel[:volume_fraction] * comodel[:effective_density] * specific_heat_capacity
+
+    return effective_heat_capacity
+
+end
+
+function compute_effective_electronic_conductivity(comodel, coinputparams)
 
     # Compute effective conductivity for the coating
 
@@ -603,7 +675,8 @@ function set_parameters(
 
         prm_necc = Dict{Symbol, Any}()
         inputparams_necc = cell_parameters["NegativeElectrode"]["CurrentCollector"]
-        prm_necc[:Conductivity] = inputparams_necc["ElectronicConductivity"]
+        prm_necc[:ElectronicConductivity] = inputparams_necc["ElectronicConductivity"]
+
         parameters[:NegativeElectrodeCurrentCollector] = setup_parameters(multimodel[:NegativeElectrodeCurrentCollector], prm_necc)
 
     end
@@ -615,7 +688,7 @@ function set_parameters(
     prm_neam = Dict{Symbol, Any}()
     inputparams_neam = cell_parameters["NegativeElectrode"]["ActiveMaterial"]
 
-    prm_neam[:Conductivity] = compute_effective_conductivity(multimodel[:NegativeElectrodeActiveMaterial], cell_parameters["NegativeElectrode"])
+    prm_neam[:ElectronicConductivity] = compute_effective_electronic_conductivity(multimodel[:NegativeElectrodeActiveMaterial], cell_parameters["NegativeElectrode"])
     prm_neam[:Temperature] = T
 
     if discretisation_type(multimodel[:NegativeElectrodeActiveMaterial]) == :P2Ddiscretization
@@ -624,6 +697,7 @@ function set_parameters(
         @assert discretisation_type(multimodel[:NegativeElectrodeActiveMaterial]) == :NoParticleDiffusion
         prm_neam[:Diffusivity] = inputparams_neam["DiffusionCoefficient"]
     end
+
 
     parameters[:NegativeElectrodeActiveMaterial] = setup_parameters(multimodel[:NegativeElectrodeActiveMaterial], prm_neam)
 
@@ -645,14 +719,13 @@ function set_parameters(
     prm_peam = Dict{Symbol, Any}()
     inputparams_peam = cell_parameters["PositiveElectrode"]["ActiveMaterial"]
 
-    prm_peam[:Conductivity] = compute_effective_conductivity(multimodel[:PositiveElectrodeActiveMaterial], cell_parameters["PositiveElectrode"])
+    prm_peam[:ElectronicConductivity] = compute_effective_electronic_conductivity(multimodel[:PositiveElectrodeActiveMaterial], cell_parameters["PositiveElectrode"])
     prm_peam[:Temperature] = T
-
 
     if discretisation_type(multimodel[:PositiveElectrodeActiveMaterial]) == :P2Ddiscretization
         # nothing to do
     else
-        @assert discretisation_type(multimodel[:NegativeElectrodeActiveMaterial]) == :NoParticleDiffusion
+        @assert discretisation_type(multimodel[:PositiveElectrodeActiveMaterial]) == :NoParticleDiffusion
         prm_peam[:Diffusivity] = inputparams_peam["DiffusionCoefficient"]
     end
 
@@ -666,9 +739,20 @@ function set_parameters(
 
         prm_pecc = Dict{Symbol, Any}()
         inputparams_pecc = cell_parameters["PositiveElectrode"]["CurrentCollector"]
-        prm_pecc[:Conductivity] = inputparams_pecc["ElectronicConductivity"]
+        prm_pecc[:ElectronicConductivity] = inputparams_pecc["ElectronicConductivity"]
+
 
         parameters[:PositiveElectrodeCurrentCollector] = setup_parameters(multimodel[:PositiveElectrodeCurrentCollector], prm_pecc)
+    end
+
+    if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Coupled"
+        prm_thermal = Dict{Symbol, Any}()
+        thermal_sys = multimodel[:ThermalModel].system.params
+        prm_thermal[:BoundaryTemperature] = thermal_sys[:BoundaryTemperature]
+        prm_thermal[:SurfaceHeatTransferCoefficient] = thermal_sys[:SurfaceHeatTransferCoefficient]
+        prm_thermal[:EffectiveVolumetricHeatCapacity] = thermal_sys[:EffectiveVolumetricHeatCapacity]
+        prm_thermal[:EffectiveThermalConductivity] = thermal_sys[:EffectiveThermalConductivity]
+        parameters[:ThermalModel] = setup_parameters(multimodel[:ThermalModel], prm_thermal)
     end
 
     ###########
@@ -760,18 +844,18 @@ function setup_coupling_cross_terms!(
     multimodel = model.multimodel
 
     stringNames = Dict(
-        :NegativeElectrodeCurrentCollector => "NegativeCurrentCollector",
-        :NegativeElectrodeActiveMaterial => "NegativeElectrode",
-        :PositiveElectrodeActiveMaterial => "PositiveElectrode",
-        :PositiveElectrodeCurrentCollector => "PositiveCurrentCollector",
+        :NegativeElectrodeCurrentCollector => "NegativeElectrodeCurrentCollector",
+        :NegativeElectrodeActiveMaterial => "NegativeElectrodeActiveMaterial",
+        :PositiveElectrodeActiveMaterial => "PositiveElectrodeActiveMaterial",
+        :PositiveElectrodeCurrentCollector => "PositiveElectrodeCurrentCollector"
     )
 
     #################################
     # Setup coupling NeAm <-> Elyte #
     #################################
 
-    srange = collect(couplings["NegativeElectrode"]["Electrolyte"]["cells"])
-    trange = collect(couplings["Electrolyte"]["NegativeElectrode"]["cells"]) # electrolyte (negative side)
+    srange = collect(couplings["NegativeElectrodeActiveMaterial"]["Electrolyte"]["cells"])
+    trange = collect(couplings["Electrolyte"]["NegativeElectrodeActiveMaterial"]["cells"]) # electrolyte (negative side)
 
     if discretisation_type(multimodel[:NegativeElectrodeActiveMaterial]) == :P2Ddiscretization
 
@@ -810,8 +894,8 @@ function setup_coupling_cross_terms!(
     # setup coupling Elyte <-> PeAm #
     #################################
 
-    srange = collect(couplings["PositiveElectrode"]["Electrolyte"]["cells"])
-    trange = collect(couplings["Electrolyte"]["PositiveElectrode"]["cells"])
+    srange = collect(couplings["PositiveElectrodeActiveMaterial"]["Electrolyte"]["cells"])
+    trange = collect(couplings["Electrolyte"]["PositiveElectrodeActiveMaterial"]["cells"])
 
     if discretisation_type(multimodel[:PositiveElectrodeActiveMaterial]) == :P2Ddiscretization
 
@@ -847,11 +931,11 @@ function setup_coupling_cross_terms!(
 
         #Ncc  = geomparams[:NegativeElectrodeCurrentCollector][:N]
 
-        srange_cells = collect(couplings["NegativeCurrentCollector"]["NegativeElectrode"]["cells"])
-        trange_cells = collect(couplings["NegativeElectrode"]["NegativeCurrentCollector"]["cells"])
+        srange_cells = collect(couplings["NegativeElectrodeCurrentCollector"]["NegativeElectrodeActiveMaterial"]["cells"])
+        trange_cells = collect(couplings["NegativeElectrodeActiveMaterial"]["NegativeElectrodeCurrentCollector"]["cells"])
 
-        srange_faces = collect(couplings["NegativeCurrentCollector"]["NegativeElectrode"]["faces"])
-        trange_faces = collect(couplings["NegativeElectrode"]["NegativeCurrentCollector"]["faces"])
+        srange_faces = collect(couplings["NegativeElectrodeCurrentCollector"]["NegativeElectrodeActiveMaterial"]["faces"])
+        trange_faces = collect(couplings["NegativeElectrodeActiveMaterial"]["NegativeElectrodeCurrentCollector"]["faces"])
 
         msource = multimodel[:NegativeElectrodeCurrentCollector]
         mtarget = multimodel[:NegativeElectrodeActiveMaterial]
@@ -873,7 +957,7 @@ function setup_coupling_cross_terms!(
             couplingfaces,
             couplingcells,
             psource, ptarget,
-            :Conductivity,
+            :ElectronicConductivity
         )
         @assert size(trans, 1) == size(srange_cells, 1)
         ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
@@ -889,11 +973,11 @@ function setup_coupling_cross_terms!(
 
         #Npam  = geomparams[:PositiveElectrodeActiveMaterial][:N]
 
-        srange_cells = collect(couplings["PositiveCurrentCollector"]["PositiveElectrode"]["cells"])
-        trange_cells = collect(couplings["PositiveElectrode"]["PositiveCurrentCollector"]["cells"])
+        srange_cells = collect(couplings["PositiveElectrodeCurrentCollector"]["PositiveElectrodeActiveMaterial"]["cells"])
+        trange_cells = collect(couplings["PositiveElectrodeActiveMaterial"]["PositiveElectrodeCurrentCollector"]["cells"])
 
-        srange_faces = collect(couplings["PositiveCurrentCollector"]["PositiveElectrode"]["faces"])
-        trange_faces = collect(couplings["PositiveElectrode"]["PositiveCurrentCollector"]["faces"])
+        srange_faces = collect(couplings["PositiveElectrodeCurrentCollector"]["PositiveElectrodeActiveMaterial"]["faces"])
+        trange_faces = collect(couplings["PositiveElectrodeActiveMaterial"]["PositiveElectrodeCurrentCollector"]["faces"])
 
         msource = multimodel[:PositiveElectrodeCurrentCollector]
         mtarget = multimodel[:PositiveElectrodeActiveMaterial]
@@ -916,7 +1000,7 @@ function setup_coupling_cross_terms!(
             couplingfaces,
             couplingcells,
             psource, ptarget,
-            :Conductivity,
+            :ElectronicConductivity
         )
         @assert size(trans, 1) == size(srange_cells, 1)
         ct = TPFAInterfaceFluxCT(trange_cells, srange_cells, trans)
@@ -950,7 +1034,7 @@ function setup_coupling_cross_terms!(
     # Here the indexing in BoundaryFaces in used
     couplingfaces = couplings[stringControlComp]["External"]["boundaryfaces"]
     couplingcells = trange
-    trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :Conductivity)
+    trans = getHalfTrans(msource, couplingfaces, couplingcells, mparameters, :ElectronicConductivity)
 
     ct = TPFAInterfaceFluxCT(trange, srange, trans)
     ct_pair = setup_cross_term(ct, target = controlComp, source = :Control, equation = :charge_conservation)
@@ -1021,14 +1105,28 @@ function setup_initial_state(input, model::IntercalationBattery)
             init[:NormalizedSEIVoltageDrop] = zeros(nc)
         end
 
-        if haskey(multimodel[name].system.params, :ocp_funcexp)
+        if multimodel[name].system.params[:ocp_func_type] == :interpolator
+            OCP = multimodel[name].system[:ocp_func](c / cmax)
+        elseif multimodel[name].system.params[:ocp_func_type] == :function || multimodel[name].system.params[:ocp_func_type] == :expression
             OCP = multimodel[name].system[:ocp_func](c, T, refT, cmax)
-        elseif haskey(multimodel[name].system.params, :ocp_funcdata)
-            OCP = multimodel[name].system[:ocp_func](theta)
-        elseif haskey(multimodel[name].system.params, :ocp_constant)
-            OCP = multimodel[name].system[:ocp_constant]
+        elseif multimodel[name].system.params[:ocp_func_type] == :constant
+            OCP = multimodel[name].system[:ocp_func]
         else
-            OCP = multimodel[name].system[:ocp_func](c, T, refT, cmax)
+            error("not cover")
+        end
+
+        if multimodel[name].system.params[:include_entropy_change]
+            if multimodel[name].system.params[:entropy_change_func_type] == :interpolator
+                entropyChange = multimodel[name].system[:entropy_change_func](c / cmax)
+            elseif multimodel[name].system.params[:entropy_change_func_type] == :function || multimodel[name].system.params[:entropy_change_func_type] == :expression
+                entropyChange = multimodel[name].system[:entropy_change_func](c, cmax)
+            elseif multimodel[name].system.params[:entropychange_func_type] == :constant
+                entropyChange = multimodel[name].system[:entropy_change_func]
+            else
+                error("not cover")
+            end
+            refT = multimodel[name].system.params[:reference_temperature]
+            OCP = OCP + (T - refT)
         end
 
         return (init, nc, OCP)
@@ -1075,6 +1173,11 @@ function setup_initial_state(input, model::IntercalationBattery)
         initState[:NegativeElectrodeCurrentCollector] = setup_current_collector(:NegativeElectrodeCurrentCollector, 0, multimodel)
         # Setup positive current collector
         initState[:PositiveElectrodeCurrentCollector] = setup_current_collector(:PositiveElectrodeCurrentCollector, posOCP - negOCP, multimodel)
+    end
+
+    if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Coupled"
+        nc = count_entities(multimodel[:ThermalModel].data_domain, Cells())
+        initState[:ThermalModel] = Dict(:Temperature => fill(T, nc))
     end
 
     init = Dict()

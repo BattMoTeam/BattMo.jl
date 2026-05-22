@@ -4,7 +4,7 @@ export jelly_roll_grid
 # jelly roll grid setup #
 #########################
 
-function jelly_roll_grid(input)
+function jelly_roll_grid(model, input)
 
     cell_parameters = input.cell_parameters
     simulation_settings = input.simulation_settings
@@ -62,25 +62,25 @@ function jelly_roll_grid(input)
     depths = [0; cumsum(repeat([height / nz], nz))]
 
     components = [
-        "PositiveCurrentCollector",
-        "PositiveElectrode",
+        "PositiveElectrodeCurrentCollector",
+        "PositiveElectrodeActiveMaterial",
         "Separator",
         "Electrolyte",
-        "NegativeElectrode",
-        "NegativeCurrentCollector",
+        "NegativeElectrodeActiveMaterial",
+        "NegativeElectrodeCurrentCollector",
     ]
 
     component_indices = Dict()
-    component_indices["PositiveElectrode"] = [1, 3]
-    component_indices["PositiveCurrentCollector"] = [2]
+    component_indices["PositiveElectrodeActiveMaterial"] = [1, 3]
+    component_indices["PositiveElectrodeCurrentCollector"] = [2]
     component_indices["Separator"] = [4, 8]
-    component_indices["NegativeElectrode"] = [5, 7]
-    component_indices["NegativeCurrentCollector"] = [6]
+    component_indices["NegativeElectrodeActiveMaterial"] = [5, 7]
+    component_indices["NegativeElectrodeCurrentCollector"] = [6]
     component_indices["Electrolyte"] = reduce(
         vcat, [
-            component_indices["PositiveElectrode"],
+            component_indices["PositiveElectrodeActiveMaterial"],
             component_indices["Separator"],
-            component_indices["NegativeElectrode"],
+            component_indices["NegativeElectrodeActiveMaterial"],
         ]
     )
     spacingtags = Dict()
@@ -106,12 +106,12 @@ function jelly_roll_grid(input)
     parentGrid = convert_to_mrst_grid(uParentGrid)
 
     components = [
-        "PositiveCurrentCollector",
-        "PositiveElectrode",
+        "PositiveElectrodeCurrentCollector",
+        "PositiveElectrodeActiveMaterial",
         "Separator",
         "Electrolyte",
-        "NegativeElectrode",
-        "NegativeCurrentCollector",
+        "NegativeElectrodeActiveMaterial",
+        "NegativeElectrodeCurrentCollector",
     ]
 
     grids = Dict()
@@ -122,32 +122,32 @@ function jelly_roll_grid(input)
     for component in components
         allinds = collect(1:parentGrid["cells"]["num"])
         inds = findall(x -> x in spacingtags[component], tags[:spacing])
-        G, maps... = remove_cells(parentGrid, setdiff!(allinds, inds))
+        G, maps = remove_cells(parentGrid, setdiff!(allinds, inds))
         grids[component] = G
         global_maps[component] = maps
     end
 
     couplings = setup_couplings(components, grids, global_maps)
 
-    grids, couplings = convert_geometry(grids, couplings)
+    grids, couplings = convert_geometry(model, grids, couplings)
 
-    components = ["NegativeCurrentCollector", "PositiveCurrentCollector"]
+    components = ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
 
     for component in components
         couplings[component]["External"] = setup_tab_couplings(grids, input, component)
     end
 
-    return grids, couplings
+    return grids, couplings, global_maps
 
 end
 
-""" returns the coupling cells and faces for the tabs for the given component ("NegativeCurrentCollector" or "PositiveCurrentCollector")"""
+""" returns the coupling cells and faces for the tabs for the given component ("NegativeElectrodeCurrentCollector" or "PositiveElectrodeCurrentCollector")"""
 function setup_tab_couplings(grids, input, component)
 
     cell_parameters = input.cell_parameters
     simulation_settings = input.simulation_settings
 
-    if component == "NegativeCurrentCollector"
+    if component == "NegativeElectrodeCurrentCollector"
         ip_component = "NegativeElectrode"
     else
         ip_component = "PositiveElectrode"
@@ -238,9 +238,9 @@ function setup_tab_couplings(grids, input, component)
 
         # We collect all the top (bottom) faces in the vector horzfaces
         ns = geo.boundary_normals
-        if component == "NegativeCurrentCollector"
+        if component == "NegativeElectrodeCurrentCollector"
             horzfaces = findall(n -> abs(n[1]) + abs(n[2]) < 0.01 * n[3], eachslice(ns, dims = 2))
-        elseif component == "PositiveCurrentCollector"
+        elseif component == "PositiveElectrodeCurrentCollector"
             horzfaces = findall(n -> abs(n[1]) + abs(n[2]) < -0.01 * n[3], eachslice(ns, dims = 2))
         end
 
@@ -288,7 +288,7 @@ function setup_tab_couplings(grids, input, component)
             if (
                     (abs(N[1]) + abs(N[2]) < 0.01 * abs(Nz))
                         &&
-                        (((Nz > 0) && (component == "NegativeCurrentCollector"))) || ((Nz < 0) && (component == "PositiveCurrentCollector"))
+                        (((Nz > 0) && (component == "NegativeElectrodeCurrentCollector"))) || ((Nz < 0) && (component == "PositiveElectrodeCurrentCollector"))
                 )
                 push!(bc_faces, bf)
                 push!(bc_cells, g.boundary_faces.neighbors[bf])

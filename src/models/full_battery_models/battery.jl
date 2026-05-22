@@ -12,10 +12,10 @@ abstract type ModelConfigured end
 abstract type Battery <: ModelConfigured end
 
 
-function setup_model!(model::M, input, grids, couplings; kwargs...) where {M <: Battery}
+function setup_model!(model::M, input, grids, couplings; global_maps = nothing, kwargs...) where {M <: Battery}
 
     # setup the submodels and also return a coupling structure which is used to setup later the cross-terms
-    submodels = setup_submodels(model, input, grids, couplings; kwargs...)
+    submodels = setup_submodels(model, input, grids, couplings; global_maps = global_maps, kwargs...)
 
     # Combine sub models into MultiModel
     model = setup_multimodel(model, submodels, input)
@@ -53,22 +53,22 @@ function setup_grids_and_couplings(model::M, input) where {M <: Battery}
 
     if case_type == "P2D"
 
-        grids, couplings = one_dimensional_grid(input)
+        grids, couplings, global_maps = one_dimensional_grid(model, input)
 
     elseif case_type == "P4D Pouch"
 
-        grids, couplings = pouch_grid(input)
+        grids, couplings, global_maps = pouch_grid(model, input)
 
     elseif case_type == "P4D Cylindrical"
 
-        grids, couplings = jelly_roll_grid(input)
+        grids, couplings, global_maps = jelly_roll_grid(model, input)
 
     else
         error("geometry case type not recognized")
 
     end
 
-    return grids, couplings
+    return grids, couplings, global_maps
 
 end
 
@@ -77,12 +77,12 @@ function setup_component(
         sys;
         flow_discretization::String = "GeneralAD",
         dirichletBoundary = nothing,
-        kwargs...
+        kwargs...,
     )
 
     domain = DataDomain(grid)
 
-    # opertors only use geometry not property
+    # operators only use geometry not property
     k = ones(number_of_cells(grid))
 
     T = compute_face_trans(domain, k)
@@ -91,7 +91,7 @@ function setup_component(
 
     domain[:trans, Faces()] = T
     domain[:halfTrans, HalfFaces()] = T_hf
-    domain[:halftransfaces, Faces()] = setupHalfTransFaces(domain)
+    domain[:halftransfaces, Faces()] = setup_half_trans_faces(domain)
     domain[:bcTrans, BoundaryFaces()] = T_b
 
     if !isnothing(dirichletBoundary)
@@ -133,7 +133,7 @@ function getTrans(
         model2::Dict{String, Any},
         faces,
         cells,
-        quantity::String
+        quantity::String,
     )
     """ setup transmissibility for coupling between models at boundaries"""
 
@@ -153,7 +153,7 @@ function getTrans(
         bccells,
         parameters1,
         parameters2,
-        quantity
+        quantity,
     )
     """ setup transmissibility for coupling between models at boundaries."""
 
@@ -179,7 +179,7 @@ function getHalfTrans(
         bcfaces,
         bccells,
         parameters,
-        quantity
+        quantity,
     )
     """ recover half transmissibilities for boundary faces and  weight them by the coefficient sent as quantity for the corresponding given cells. Note the indexing in BoundaryFaces is used"""
 

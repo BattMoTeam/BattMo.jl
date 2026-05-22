@@ -122,9 +122,9 @@ function get_cell_parameters_meta_data()
             "context_type_iri" => "https://w3id.org/emmo#EMMO_cd2cd0de_e0cc_4ef1_b27e_2e88db027bac",
             "description" => "The heigh of a cylindrical cell.",
         ),
-        "SurfaceCoefficientOfHeatTransfer" => Dict(
+        "SurfaceHeatTransferCoefficient" => Dict(
             "type" => Real,
-            "min_value" => 1.0,
+            "min_value" => 0.01,
             "max_value" => 5000,
             "unit" => "W·m⁻²·K⁻¹",
             "unit_name" => "emmo:WattPerSquareMetreKelvin",
@@ -132,6 +132,15 @@ function get_cell_parameters_meta_data()
             "context_type" => "SurfaceCoefficientOfHeatTransfer",
             "context_type_iri" => "https://w3id.org/emmo#EMMO_0b3295fa_f4bf_4f83_a603_9d98c03da5bb",
             "description" => "Rate at which heat is exchanged between a cell’s surface and its surrounding environment",
+        ),
+        "ThermalConductivity" => Dict(
+            "context_type" => ["ThermalConductivity"],
+            "context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_thermal_conductivity",
+            "description" => "The thermal conductivity of a material, representing its ability to conduct heat under given intercalant stoichiometry and temperature.",
+            "type" => Real,
+            "unit" => "W/(m·K)",
+            "unit_name" => "emmo:WattPerMeterKelvin",
+            "unit_iri" => "https://w3id.org/emmo#WattPerMeterKelvin",
         ),
         "ChargeTransferCoefficient" => Dict(
             "type" => Real,
@@ -254,7 +263,7 @@ function get_cell_parameters_meta_data()
         "ElectrodeGeometricSurfaceArea" => Dict(
             "context_type" => "ElectrodeGeometricSurfaceArea",
             "context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_fa7790d6_07bb_4b0f_9965_55966828f5f3",
-            "max_value" => 2.0,
+            "max_value" => 50.0,
             "min_value" => 1.0e-4,
             "description" => "Face (or plate) area of an electrode. Electrode cross-sectional area.",
             "type" => Real,
@@ -288,15 +297,15 @@ function get_cell_parameters_meta_data()
             "context_type" => "SpecificHeatCapacity",
             "context_type_iri" => "https://w3id.org/emmo#EMMO_b4f4ed28_d24c_4a00_9583_62ab839abeca",
             "max_value" => 2.0e4,
-            "min_value" => 1.0e2,
+            "min_value" => 1.0,
             "description" => "Heat capacity of the material per unit of mass.",
             "type" => Real,
             "unit" => "J·kg⁻¹·K⁻¹",
             "unit_name" => "emmo:JoulePerKiloGramKelvin",
             "unit_iri" => "https://w3id.org/emmo#JoulePerKiloGramKelvin",
         ),
-        "ThermalConductivity" => Dict(
-            "context_type" => "ThermalConductivity",
+        "EffectiveThermalConductivity" => Dict(
+            "context_type" => "EffectiveThermalConductivity",
             "context_type_iri" => "https://w3id.org/emmo#EMMO_8dd40ec6_2c5a_43f3_bf64_cadcd447a1c1",
             "max_value" => 1.0e4,
             "min_value" => 1.0e-2,
@@ -400,6 +409,16 @@ function get_cell_parameters_meta_data()
             "unit" => "V",
             "unit_name" => "emmo:Volt",
             "unit_iri" => "https://w3id.org/emmo#Volt",
+            "documentation" => "https://battmo.org/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
+        ),
+        "EntropyChange" => Dict(
+            "context_type" => ["EntropyChange", "Expression"],
+            "context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_entropy_change",
+            "description" => "The entropy change of the active material derived from the open-circuit potential, representing the temperature dependence of the electrochemical potential (dU/dT).",
+            "type" => [String, Dict{String, Vector}, Real],
+            "unit" => "V/K",
+            "unit_name" => "emmo:VoltPerKelvin",
+            "unit_iri" => "https://w3id.org/emmo#VoltPerKelvin",
             "documentation" => "https://battmo.org/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
         ),
         "HeatTransferCoefficient" => Dict(

@@ -20,7 +20,7 @@ function prepare_hidden_screen(fig; resolution = (1200, 800))
             renderloop = _ -> nothing,
             start_renderloop = false,
             resolution = resolution,
-        ), fig
+        ), fig,
     )
     return screen
 end
@@ -65,7 +65,7 @@ function save_p4d_pouch_geometry()
 
     sim = Simulation(LithiumIonBattery(; model_settings), cell_parameters, cycling_protocol; simulation_settings)
 
-    components = ["NegativeElectrode", "PositiveElectrode", "NegativeCurrentCollector", "PositiveCurrentCollector"]
+    components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeCurrentCollector", "PositiveCurrentCollector"]
     colors = [:gray, :green, :dodgerblue, :black]
 
     for (i, component) in enumerate(components)
@@ -73,13 +73,13 @@ function save_p4d_pouch_geometry()
             global fig_mesh, ax_mesh = plot_mesh(
                 sim.grids[component];
                 color = colors[i],
-                label = component
+                label = component,
             )
         else
             plot_mesh!(
                 ax_mesh, sim.grids[component];
                 color = colors[i],
-                label = component
+                label = component,
             )
         end
     end
@@ -88,7 +88,7 @@ function save_p4d_pouch_geometry()
         plot_mesh_edges!(
             ax_mesh, sim.grids[component];
             color = (:white, 0.6),
-            linewidth = 0.75
+            linewidth = 0.75,
         )
     end
 
@@ -121,7 +121,7 @@ function save_p4d_cylindrical_geometry()
 
     sim = Simulation(LithiumIonBattery(; model_settings), cell_parameters, cycling_protocol; simulation_settings)
 
-    components = ["NegativeElectrode", "PositiveElectrode", "NegativeCurrentCollector", "PositiveCurrentCollector"]
+    components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeCurrentCollector", "PositiveCurrentCollector"]
     colors = [:gray, :green, :dodgerblue, :black]
 
     for (i, component) in enumerate(components)
@@ -129,13 +129,13 @@ function save_p4d_cylindrical_geometry()
             global fig_edges, ax_edges = plot_mesh_edges(
                 sim.grids[component];
                 color = colors[i],
-                label = component
+                label = component,
             )
         else
             plot_mesh_edges!(
                 ax_edges, sim.grids[component];
                 color = colors[i],
-                label = component
+                label = component,
             )
         end
     end
@@ -144,7 +144,7 @@ function save_p4d_cylindrical_geometry()
         plot_mesh!(
             ax_edges, sim.grids[component];
             boundaryfaces = sim.couplings[component]["External"]["boundaryfaces"],
-            color = :red
+            color = :red,
         )
     end
 

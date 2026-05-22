@@ -4,7 +4,7 @@ export one_dimensional_grid
 # one dimensional grid setup #
 ##############################
 
-function one_dimensional_grid(input)
+function one_dimensional_grid(model, input)
 
     grids = Dict()
     global_maps = Dict()
@@ -52,11 +52,11 @@ function one_dimensional_grid(input)
     if include_current_collectors
 
         components = [
-            "NegativeCurrentCollector",
-            "NegativeElectrode",
+            "NegativeElectrodeCurrentCollector",
+            "NegativeElectrodeActiveMaterial",
             "Separator",
-            "PositiveElectrode",
-            "PositiveCurrentCollector",
+            "PositiveElectrodeActiveMaterial",
+            "PositiveElectrodeCurrentCollector",
         ]
 
         elyte_comp_start = 2
@@ -64,14 +64,15 @@ function one_dimensional_grid(input)
     else
 
         components = [
-            "NegativeElectrode",
+            "NegativeElectrodeActiveMaterial",
             "Separator",
-            "PositiveElectrode",
+            "PositiveElectrodeActiveMaterial",
         ]
 
         elyte_comp_start = 1
 
     end
+
 
     ns = vals["N"]
     xs = vals["thickness"]
@@ -91,7 +92,7 @@ function one_dimensional_grid(input)
     for (icomponent, component) in enumerate(components)
         allinds = collect((1:sum(ns)))
         inds = cinds[icomponent]:(cinds[icomponent + 1] - 1)
-        G, maps... = remove_cells(parentGrid, setdiff!(allinds, inds))
+        G, maps = remove_cells(parentGrid, setdiff!(allinds, inds))
         grids[component] = G
         global_maps[component] = maps
     end
@@ -99,7 +100,7 @@ function one_dimensional_grid(input)
     ## setup for the eletrolyte
     allinds = collect((1:sum(ns)))
     inds = cinds[elyte_comp_start]:(cinds[elyte_comp_start + 3] - 1)
-    G, maps... = remove_cells(parentGrid, setdiff!(allinds, inds))
+    G, maps = remove_cells(parentGrid, setdiff!(allinds, inds))
 
     grids["Electrolyte"] = G
     global_maps["Electrolyte"] = maps
@@ -108,19 +109,19 @@ function one_dimensional_grid(input)
 
     couplings = setup_couplings(components, grids, global_maps)
 
-    grids, couplings = convert_geometry(grids, couplings; include_current_collectors = include_current_collectors)
+    grids, couplings = convert_geometry(model, grids, couplings; include_current_collectors = include_current_collectors)
 
     # Add external coupling to the coupling structure.
     # Function can be used both with and without current collector.
     if include_current_collectors
         boundaryComponents = Dict(
-            "left" => "NegativeCurrentCollector",
-            "right" => "PositiveCurrentCollector",
+            "left" => "NegativeElectrodeCurrentCollector",
+            "right" => "PositiveElectrodeCurrentCollector"
         )
     else
         boundaryComponents = Dict(
-            "left" => "NegativeElectrode",
-            "right" => "PositiveElectrode",
+            "left" => "NegativeElectrodeActiveMaterial",
+            "right" => "PositiveElectrodeActiveMaterial"
         )
     end
 
@@ -149,6 +150,6 @@ function one_dimensional_grid(input)
 
     couplings[component]["External"] = Dict("cells" => [nc], "boundaryfaces" => [bcfaceind])
 
-    return grids, couplings
+    return grids, couplings, global_maps
 
 end

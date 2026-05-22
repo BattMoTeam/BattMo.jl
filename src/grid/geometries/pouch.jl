@@ -18,7 +18,7 @@ Returns:
 - `grids`: component grids for NegativeCurrentCollector, NegativeElectrode, Separator, PositiveElectrode, PositiveCurrentCollector, Electrolyte
 - `couplings`: coupling information between components
 """
-function pouch_grid(input)
+function pouch_grid(model, input)
     # --------------------------------------------------------
     # 1) Read inputs
     # --------------------------------------------------------
@@ -383,8 +383,8 @@ function pouch_grid(input)
     # --------------------------------------------------------
     # 10) Build sub-grids and couplings
     # --------------------------------------------------------
-    grids, couplings = setup_pouch_cell_geometry(global_grid, z_thickness_per_segment, extra_ne, double_coated)
-    grids, couplings = convert_geometry(grids, couplings)
+    grids, couplings, global_maps = setup_pouch_cell_geometry(global_grid, z_thickness_per_segment, extra_ne, double_coated)
+    grids, couplings = convert_geometry(model, grids, couplings)
 
     external_side_is_high =
     if tabs_on_same_side
@@ -396,13 +396,13 @@ function pouch_grid(input)
     external_components =
     if tabs_on_same_side
         [
-            ("NegativeCurrentCollector", external_side_is_high),
-            ("PositiveCurrentCollector", external_side_is_high),
+            ("NegativeElectrodeCurrentCollector", external_side_is_high),
+            ("PositiveElectrodeCurrentCollector", external_side_is_high),
         ]
     else
         [
-            ("NegativeCurrentCollector", false),
-            ("PositiveCurrentCollector", true),
+            ("NegativeElectrodeCurrentCollector", false),
+            ("PositiveElectrodeCurrentCollector", true),
         ]
     end
 
@@ -413,7 +413,21 @@ function pouch_grid(input)
         couplings[component]["External"] = Dict("cells" => neighbors[boundary_faces], "boundaryfaces" => boundary_faces)
     end
 
-    return grids, couplings
+    if haskey(input.model_settings, "ThermalModel")
+        # Setup thermal model
+
+        grids["ThermalModel"] = grids["Global"]
+
+        grid = grids["ThermalModel"]
+
+        nf = number_of_boundary_faces(grid)
+        bcfaces = collect(1:nf)
+        bccells = grid.boundary_faces.neighbors
+
+        couplings["ThermalModel"] = Dict("External" => Dict("cells" => bccells, "boundaryfaces" => bcfaces))
+    end
+
+    return grids, couplings, global_maps
 end
 
 
@@ -712,11 +726,11 @@ function setup_pouch_cell_geometry(H_mother, paramsz, extra_ne, double_coated)
     global_maps = Dict{String, Any}()
 
     components = [
-        "NegativeCurrentCollector",
-        "NegativeElectrode",
+        "NegativeElectrodeCurrentCollector",
+        "NegativeElectrodeActiveMaterial",
         "Separator",
-        "PositiveElectrode",
-        "PositiveCurrentCollector",
+        "PositiveElectrodeActiveMaterial",
+        "PositiveElectrodeCurrentCollector",
     ]
 
     # Mother grid
@@ -730,14 +744,14 @@ function setup_pouch_cell_geometry(H_mother, paramsz, extra_ne, double_coated)
     allinds = 1:nglobal
     for (i, comp) in enumerate(components)
         keep = grouped_tags[i]
-        G, maps... = remove_cells(H_mother, setdiff(allinds, keep))
+        G, maps = remove_cells(H_mother, setdiff(allinds, keep))
         grids[comp] = G
         global_maps[comp] = maps
     end
 
     # Electrolyte = NE + SEP + PE
     electrolyte_cells = vcat(grouped_tags[2], grouped_tags[3], grouped_tags[4])
-    G_elec, maps_elec... = remove_cells(H_mother, setdiff(allinds, electrolyte_cells))
+    G_elec, maps_elec = remove_cells(H_mother, setdiff(allinds, electrolyte_cells))
     grids["Electrolyte"] = G_elec
     global_maps["Electrolyte"] = maps_elec
 
@@ -746,5 +760,6 @@ function setup_pouch_cell_geometry(H_mother, paramsz, extra_ne, double_coated)
     # Couplings from intersections
     couplings = setup_couplings(components, grids, global_maps)
 
-    return grids, couplings
+    return grids, couplings, global_maps
+
 end

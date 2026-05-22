@@ -26,12 +26,12 @@ using Test
 
         Cc = map(x -> x[:Control][:Current][1], jutul_states)
         Voltage = map(x -> x[:Control][:ElectricPotential][1], jutul_states)
-        @test length(jutul_states) == 142
+        @test length(jutul_states) == 137
         @test Cc[2] ≈ 0.03316973899191637 atol = 1.0e-2
         for i in 3:length(Cc)
-            @test Cc[i] ≈ 0.09085401794790987 atol = 1.0e-2
+            @test Cc[i] ≈ 0.0777484732354029 atol = 1.0e-2
         end
-        @test Voltage[1] ≈ 3.3506683313852914 atol = 1.0e-2
+        @test Voltage[1] ≈ 3.313298711689642 atol = 1.0e-2
         cc_pos = output.states["NegativeElectrode"]["CurrentCollector"]["Position"]
         cc_phi = output.states["NegativeElectrode"]["CurrentCollector"]["Potential"]
         @test output.states isa Dict{String, Any}
@@ -40,7 +40,7 @@ using Test
         @test size(cc_phi, 2) == Jutul.number_of_cells(cc_pos.mesh)
         @test all(isfinite, cc_phi[end, :])
         @test size(cc_phi[end, :], 1) == Jutul.number_of_cells(cc_pos.mesh)
-        @test Jutul.physical_representation(cc_pos) === Jutul.physical_representation(sim.grids["NegativeCurrentCollector"])
+        @test Jutul.physical_representation(cc_pos) === Jutul.physical_representation(sim.grids["NegativeElectrodeCurrentCollector"])
         true
 
     end

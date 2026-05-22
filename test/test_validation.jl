@@ -11,7 +11,7 @@ using Test
 
     # Make Chen 2020 invalid according to the schema:
     # ElectrodeGeometricSurfaceArea maximum is 2.0
-    area = 20.0
+    area = 100.0
 
     @testset "validation enabled allows construction but highlights input" begin
         println("Tests with validation enabled and user-provided input:")

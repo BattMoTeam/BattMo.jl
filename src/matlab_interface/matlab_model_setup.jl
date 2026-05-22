@@ -31,9 +31,9 @@ end
 
 function setup_timesteps(inputparams::MatlabInput)
     """
-        Method setting up the timesteps from a mat file object. If use_state_ref is true
-        the simulation will use the same timesteps as the pre-run matlab simulation.
-    	"""
+    Method setting up the timesteps from a mat file object. If use_state_ref is true
+    the simulation will use the same timesteps as the pre-run matlab simulation.
+    """
 
     if inputparams["use_state_ref"]
 
@@ -71,7 +71,7 @@ function setup_coupling_cross_terms!(
         inputparams::MatlabInput,
         model::MultiModel,
         parameters::Dict{Symbol, <:Any},
-        couplings
+        couplings,
     )
 
     exported_all = inputparams.all
@@ -151,10 +151,10 @@ function setup_coupling_cross_terms!(
         ################################################
 
         srange = Int64.(
-            exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:, 1]
+            exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:, 1],
         )
         trange = Int64.(
-            exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:, 2]
+            exported_all["model"]["NegativeElectrode"]["couplingTerm"]["couplingcells"][:, 2],
         )
 
         msource = exported_all["model"]["NegativeElectrode"]["CurrentCollector"]
@@ -176,10 +176,10 @@ function setup_coupling_cross_terms!(
         ################################################
 
         srange = Int64.(
-            exported_all["model"]["PositiveElectrode"]["couplingTerm"]["couplingcells"][:, 1]
+            exported_all["model"]["PositiveElectrode"]["couplingTerm"]["couplingcells"][:, 1],
         )
         trange = Int64.(
-            exported_all["model"]["PositiveElectrode"]["couplingTerm"]["couplingcells"][:, 2]
+            exported_all["model"]["PositiveElectrode"]["couplingTerm"]["couplingcells"][:, 2],
         )
         msource = exported_all["model"]["PositiveElectrode"]["CurrentCollector"]
         ct = exported_all["model"]["PositiveElectrode"]["couplingTerm"]
@@ -294,7 +294,7 @@ function get_simulation_input(inputparams::MatlabInput)
         :inputparams => inputparams,
         :model => model,
         :couplings => couplings,
-        :timesteps => timesteps
+        :timesteps => timesteps,
     )
 
     return output
@@ -336,7 +336,7 @@ function setup_submodels(inputparams::MatlabInput)
             obj::Dict,
             sys,
             general_ad::Bool,
-            dirichletBoundary = nothing
+            dirichletBoundary = nothing,
         )
 
         domain, data_domain = exported_model_to_domain(obj; dirichletBoundary = dirichletBoundary, general_ad = general_ad)
@@ -364,6 +364,8 @@ function setup_submodels(inputparams::MatlabInput)
         inputparams_sd = inputparams[stringName]["Coating"]["ActiveMaterial"]["SolidDiffusion"]
 
         am_params = JutulStorage()
+
+        am_params[:include_entropy_change] = false
 
         am_params[:volume_fraction] = inputparams_co["volumeFraction"]
         am_params[:volume_fractions] = inputparams_co["volumeFractions"]
@@ -520,7 +522,7 @@ function setup_submodels(inputparams::MatlabInput)
             ctrl["dIdtLimit"],
             ctrl["dEdtLimit"],
             ctrl["initialControl"],
-            ctrl["numberOfCycles"]
+            ctrl["numberOfCycles"],
         )
 
     else

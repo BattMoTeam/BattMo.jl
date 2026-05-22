@@ -13,7 +13,7 @@ function Jutul.update_cross_term_in_entity!(
         ct::TPFAInterfaceFluxCT,
         eq,
         dt,
-        ldisc = local_discretization(ct, ind)
+        ldisc = local_discretization(ct, ind),
     )
 
     trans = ct.trans[ind]
@@ -38,7 +38,7 @@ function Jutul.update_cross_term_in_entity!(
         ct::AccumulatorInterfaceFluxCT,
         eq,
         dt,
-        ldisc = local_discretization(ct, ind)
+        ldisc = local_discretization(ct, ind),
     )
     trans = ct.trans
     ind_t = ct.target_cell
@@ -95,7 +95,7 @@ function reaction_rate_coefficient(
         R0,
         c_e,
         c_a,
-        activematerial
+        activematerial,
     )
 
     F = FARADAY_CONSTANT
@@ -150,7 +150,7 @@ function reaction_rate_coefficient_chayambuka(
         c_a,
         activematerial,
         c_av,
-        c_av_e
+        c_av_e,
     )
 
     F = FARADAY_CONSTANT
@@ -176,7 +176,7 @@ function reaction_rate_chayambuka(
         electrolyte,
         c_a,
         c_av,
-        c_av_e
+        c_av_e,
     )
 
     F = FARADAY_CONSTANT
@@ -251,7 +251,7 @@ function Jutul.update_cross_term_in_entity!(
             electrolyte,
             c_a,
             c_av,
-            c_av_e
+            c_av_e,
         )
     elseif activematerial.params[:setting_butler_volmer] == "Standard"
         R = reaction_rate(
@@ -261,7 +261,7 @@ function Jutul.update_cross_term_in_entity!(
             T,
             c_e,
             activematerial,
-            electrolyte
+            electrolyte,
         )
     else
         error("Unknown setting_butler_volmer: $(activematerial.params[:setting_butler_volmer])")
@@ -333,7 +333,7 @@ function Jutul.update_cross_term_in_entity!(
             electrolyte,
             c_a,
             c_av,
-            c_av_e
+            c_av_e,
         )
     else
         R = reaction_rate(
@@ -343,7 +343,7 @@ function Jutul.update_cross_term_in_entity!(
             T,
             c_e,
             activematerial,
-            electrolyte
+            electrolyte,
         )
     end
 
@@ -403,7 +403,7 @@ function source_electric_material(
             electrolyte,
             c_a,
             c_av,
-            c_av_e
+            c_av_e,
         )
     else
         R = reaction_rate(
@@ -413,7 +413,7 @@ function source_electric_material(
             T,
             c_e,
             activematerial,
-            electrolyte
+            electrolyte,
         )
     end
 
@@ -442,7 +442,7 @@ function Jutul.update_cross_term_in_entity!(
         ct::ButlerVolmerInterfaceFluxCT,
         eq,
         dt,
-        ldisc = local_discretization(ct, ind)
+        ldisc = local_discretization(ct, ind),
     )
 
     activematerial = model_s.system

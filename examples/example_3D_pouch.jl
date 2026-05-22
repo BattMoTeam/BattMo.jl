@@ -57,7 +57,7 @@ grids = sim.grids
 couplings = sim.couplings
 nothing #hide
 
-components = ["NegativeElectrode", "PositiveElectrode", "NegativeCurrentCollector", "PositiveCurrentCollector"]
+components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
 colors = [:gray, :green, :dodgerblue, :black]
 nothing #hide
 
@@ -68,13 +68,13 @@ for (i, component) in enumerate(components)
         global fig_mesh, ax_mesh = plot_mesh(
             grids[component];
             color = colors[i],
-            label = component
+            label = component,
         )
     else
         plot_mesh!(
             ax_mesh, grids[component];
             color = colors[i],
-            label = component
+            label = component,
         )
     end
 end
@@ -96,22 +96,22 @@ for (i, component) in enumerate(components)
         global fig_edges, ax_edges = plot_mesh_edges(
             grids[component];
             color = colors[i],
-            label = component
+            label = component,
         )
     else
         plot_mesh_edges!(
             ax_edges, grids[component];
             color = colors[i],
-            label = component
+            label = component,
         )
     end
 end
 
-for component in ["NegativeCurrentCollector", "PositiveCurrentCollector"]
+for component in ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
     plot_mesh!(
         ax_edges, grids[component];
         boundaryfaces = couplings[component]["External"]["boundaryfaces"],
-        color = :red
+        color = :red,
     )
 end
 
@@ -158,7 +158,7 @@ fig_cs
 plot_mesh_edges!(
     ax_cs, output.states["PositiveElectrode"]["ActiveMaterial"]["Position"];
     color = :black,
-    linewidth = 0.5
+    linewidth = 0.5,
 )
 display(GLMakie.Screen(), fig_cs) # hide
 fig_cs
@@ -179,22 +179,22 @@ for (i, component) in enumerate(components)
         global fig_edges_d, ax_edges_d = plot_mesh(
             grids[component];
             color = colors[i],
-            label = component
+            label = component,
         )
     else
         plot_mesh!(
             ax_edges_d, grids[component];
             color = colors[i],
-            label = component
+            label = component,
         )
     end
 end
 
-for component in ["NegativeCurrentCollector", "PositiveCurrentCollector"]
+for component in ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
     plot_mesh!(
         ax_edges_d, grids[component];
         boundaryfaces = couplings[component]["External"]["boundaryfaces"],
-        color = :red
+        color = :red,
     )
 end
 
@@ -217,22 +217,22 @@ for (i, component) in enumerate(components)
         global fig_edges_m, ax_edges_m = plot_mesh(
             grids[component];
             color = colors[i],
-            label = component
+            label = component,
         )
     else
         plot_mesh!(
             ax_edges_m, grids[component];
             color = colors[i],
-            label = component
+            label = component,
         )
     end
 end
 
-for component in ["NegativeCurrentCollector", "PositiveCurrentCollector"]
+for component in ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
     plot_mesh!(
         ax_edges_m, grids[component];
         boundaryfaces = couplings[component]["External"]["boundaryfaces"],
-        color = :red
+        color = :red,
     )
 end
 

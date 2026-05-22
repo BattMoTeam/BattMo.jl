@@ -16,8 +16,8 @@ export
 function find_coupling(maps1, maps2, modelname = "placeholder")
     Coupling = Dict()
     Coupling["model"] = modelname
-    Coupling["cells"] = find_common(maps1[1], maps2[1])
-    Coupling["faces"] = find_common(maps1[2], maps2[2])
+    Coupling["cells"] = find_common(maps1[:cellmap], maps2[:cellmap])
+    Coupling["faces"] = find_common(maps1[:facemap], maps2[:facemap])
     return Coupling
 end
 
@@ -100,22 +100,22 @@ Convert MRST-format grids (raw dictionaries) to Jutul UnstructuredMesh format.
 Handles external face couplings by mapping MRST face indices to Jutul boundary face indices.
 Works for single-layer and multilayer pouch cells because grids are already aggregated by component.
 """
-function convert_geometry(grids, couplings; include_current_collectors = true)
+function convert_geometry(model, grids, couplings; include_current_collectors = true)
 
     if include_current_collectors
         components = [
-            "NegativeCurrentCollector",
-            "NegativeElectrode",
+            "NegativeElectrodeCurrentCollector",
+            "NegativeElectrodeActiveMaterial",
             "Separator",
-            "PositiveElectrode",
-            "PositiveCurrentCollector",
+            "PositiveElectrodeActiveMaterial",
+            "PositiveElectrodeCurrentCollector",
             "Electrolyte",
         ]
     else
         components = [
-            "NegativeElectrode",
+            "NegativeElectrodeActiveMaterial",
             "Separator",
-            "PositiveElectrode",
+            "PositiveElectrodeActiveMaterial",
             "Electrolyte",
         ]
     end
@@ -190,11 +190,11 @@ function get_grids(model::MultiModel{:IntercalationBattery})
 
     components = [:NegativeElectrodeCurrentCollector, :NegativeElectrodeActiveMaterial, :Electrolyte, :PositiveElectrodeActiveMaterial, :PositiveElectrodeCurrentCollector]
     names = [
-        "NegativeCurrentCollector",
-        "NegativeElectrode",
+        "NegativeElectrodeCurrentCollector",
+        "NegativeElectrodeActiveMaterial",
         "Electrolyte",
-        "PositiveElectrode",
-        "PositiveCurrentCollector",
+        "PositiveElectrodeActiveMaterial",
+        "PositiveElectrodeCurrentCollector",
     ]
 
     if !has_cc

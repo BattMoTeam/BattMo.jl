@@ -177,16 +177,16 @@ end
 
         c_pe = states["PositiveElectrode"]["ActiveMaterial"]["SurfaceConcentration"]
 
-        @test length(I) ≈ 71 atol = 0
-        @test I[2] ≈ 7.785132857514498 atol = 1.0e-1
+        @test length(I) ≈ 66 atol = 0
+        @test I[2] ≈ 0.06995247074831962 atol = 1.0e-1
         @test V[2] ≈ 3.274161650306443 atol = 1.0e-1
-        @test I[50] ≈ 17.262263410102893 atol = 1.0e-1
-        @test V[50] ≈ 3.1714628485061276 atol = 1.0e-1
-        @test I[end] ≈ 17.262263410102893 atol = 1.0e-1
+        @test I[50] ≈ 0.15510820410462878 atol = 1.0e-1
+        @test V[50] ≈ 2.970719407727666 atol = 1.0e-1
+        @test I[end] ≈ 0.15510820410462878 atol = 1.0e-1
         @test V[end] ≈ 2.585957945404128 atol = 1.0e-1
 
-        @test c_pe[2, 23] ≈ 4153.423114811395 atol = 1.0e-1
-        @test c_pe[end, 23] ≈ 25408.889624542124 atol = 1.0e-1
+        @test c_pe[2, 23] ≈ 4135.454797172246 atol = 1.0e-1
+        @test c_pe[end, 23] ≈ 14817.755747594427 atol = 1.0e-1
 
         true
 

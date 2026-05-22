@@ -13,9 +13,9 @@ abstract type AbstractSimulation end
 
 """
 	Simulation(model::ModelConfigured,
-                   cell_parameters::CellParameters,
-                   cycling_protocol::CyclingProtocol;
-                   simulation_settings::SimulationSettings = get_default_simulation_settings(model))
+				   cell_parameters::CellParameters,
+				   cycling_protocol::CyclingProtocol;
+				   simulation_settings::SimulationSettings = get_default_simulation_settings(model))
 
 Constructs a `Simulation` object that sets up and validates all necessary components for simulating a battery model.
 
@@ -62,6 +62,8 @@ struct Simulation <: AbstractSimulation
     output_all_secondary_variables::Bool
     is_valid::Bool
     validate::Bool
+    global_maps::Any
+    decoupled_thermal::Any
 
     function Simulation(
             model::M,
@@ -89,7 +91,7 @@ struct Simulation <: AbstractSimulation
                     TIP: Validation happens when instantiating the Model object.
                     Check the warnings to see exactly where things went wrong. 🔍
 
-                    """
+                    """,
                 )
             end
 
@@ -138,6 +140,14 @@ struct Simulation <: AbstractSimulation
             sim_cfg = simulation_configuration(model, input)
         end
 
+        if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Decoupled"
+            thermal_simulation = sim_cfg.thermal_simulation
+
+        else
+            thermal_simulation = nothing
+        end
+
+
         return new(
             sim_cfg.model,
             cell_parameters,
@@ -153,6 +163,8 @@ struct Simulation <: AbstractSimulation
             output_all_secondary_variables,
             is_valid,
             validate,
+            sim_cfg.global_maps,
+            thermal_simulation,
         )
     end
 end
@@ -160,11 +172,15 @@ end
 
 function simulation_configuration(model, input)
 
+    if haskey(model.settings, "ThermalModel")
+        model.settings["TemperatureDependence"] = "Arrhenius"
+    end
+
     # Setup grids and couplings
-    grids, couplings = setup_grids_and_couplings(model, input)
+    grids, couplings, global_maps = setup_grids_and_couplings(model, input)
 
     # Setup simulation
-    model, parameters = setup_model!(model, input, grids, couplings)
+    model, parameters = setup_model!(model, input, grids, couplings; global_maps)
 
     # Setup initial state
     initial_state = setup_initial_state(input, model)
@@ -186,16 +202,73 @@ function simulation_configuration(model, input)
     # Setup time steps
     time_steps = setup_timesteps(input)
 
-    return (
-        model = model,
-        grids = grids,
-        couplings = couplings,
-        parameters = parameters,
-        initial_state = initial_state,
-        forces = forces,
-        simulator = simulator,
-        time_steps = time_steps,
+    if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Decoupled"
+
+        submodels = model.multimodel.models
+
+        thermal_model, thermal_parameters = setup_thermal_model(model, submodels, input, grids, global_maps)
+        # thermal_model, thermal_parameters = setup_thermal_model(input, grids)
+
+        return (
+            model = model,
+            grids = grids,
+            couplings = couplings,
+            parameters = parameters,
+            initial_state = initial_state,
+            forces = forces,
+            simulator = simulator,
+            time_steps = time_steps,
+            global_maps = global_maps,
+            thermal_simulation = (
+                model = thermal_model,
+                parameters = thermal_parameters,
+            ),
+        )
+
+
+    else
+
+        return (
+            model = model,
+            grids = grids,
+            couplings = couplings,
+            parameters = parameters,
+            initial_state = initial_state,
+            forces = forces,
+            simulator = simulator,
+            time_steps = time_steps,
+            global_maps = global_maps,
+        )
+    end
+
+end
+
+function solve_decoupled_thermal_model(model, cycling_protocol, thermal_parameters, parameters, thermal_model, jutul_states, maps, timesteps)
+
+    thermal_forces = []
+    sources = []
+    for (i, state) in enumerate(jutul_states)
+        state = BattMo.get_state_with_secondary_variables(model.multimodel, state, parameters)
+        src, stepsources = BattMo.get_energy_source_by_type!(thermal_model, model, state, maps)
+        push!(thermal_forces, (value = src,))
+        push!(sources, stepsources)
+    end
+
+    nc = number_of_cells(thermal_model.domain)
+    T0 = cycling_protocol["InitialTemperature"] * ones(nc)
+
+    thermal_state0 = setup_state(thermal_model, Dict(:Temperature => T0))
+
+    thermal_sim = Simulator(
+        thermal_model;
+        state0 = thermal_state0,
+        parameters = thermal_parameters,
+        copy_state = true,
     )
+
+    decoupled_thermal_states = simulate(thermal_sim, timesteps[1:length(jutul_states)]; info_level = -1, forces = thermal_forces)
+
+    return decoupled_thermal_states
 
 end
 
@@ -206,12 +279,12 @@ end
 
 """
 	solve(problem::Simulation;
-              accept_invalid = false,
-              hook = nothing,
-              info_level = 0,
-              end_report = info_level > -1,
-              include_initial_state = false,
-              kwargs...)
+			  accept_invalid = false,
+			  hook = nothing,
+			  info_level = 0,
+			  end_report = info_level > -1,
+			  include_initial_state = false,
+			  kwargs...)
 
 Solves a battery `Simulation` problem by executing the simulation workflow defined in `solve_simulation`.
 
@@ -253,7 +326,7 @@ function solve(
         solver_settings = get_default_solver_settings(problem.model),
         logger = nothing,
         include_initial_state = false,
-        kwargs...
+        kwargs...,
     )
 
     validate = problem.validate
@@ -273,7 +346,7 @@ function solve(
             If you are confident you know what you are doing, you can bypass this
             validation result when solving:
 
-                solve(sim; accept_invalid = true)
+            	solve(sim; accept_invalid = true)
 
             Note that `accept_invalid = true` only applies when validation is enabled.
             """,
@@ -294,8 +367,8 @@ end
 
 """
 	solve_simulation(sim::Simulation;
-                              hook = nothing,
-                              kwargs...)
+							  hook = nothing,
+							  kwargs...)
 
 Executes the simulation workflow for a battery `Simulation` object by advancing the system state over the defined time steps using the configured solver and model.
 
@@ -334,7 +407,7 @@ function solve_simulation(
         include_initial_state = false,
         validate::Bool = true,
         accept_invalid::Bool = false,
-        kwargs...
+        kwargs...,
     )
 
     simulator = sim.simulator
@@ -348,6 +421,8 @@ function solve_simulation(
     simulation_settings = sim.settings
     cell_parameters = sim.cell_parameters
     cycling_protocol = sim.cycling_protocol
+    global_maps = sim.global_maps
+
 
     # Setup solver configuration
     cfg = solver_configuration(
@@ -360,6 +435,7 @@ function solve_simulation(
         logger,
         kwargs...,
     )
+
 
     # Setup hook if given
     hook = get(kwargs, :hook, nothing)
@@ -375,7 +451,45 @@ function solve_simulation(
     end
 
     # Perform simulation
-    jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
+    if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
+
+        input = (
+            model_settings = model.settings,
+            cell_parameters = cell_parameters,
+            cycling_protocol = cycling_protocol,
+            simulation_settings = simulation_settings,
+        )
+
+        thook = BattMo.setup_thermal_post_ministep_hook(model, input, Temperature = cycling_protocol["InitialTemperature"])
+
+        jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, post_ministep_hook = thook, kwargs...)
+
+    else
+
+        jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
+
+    end
+
+    # perfom decoupled thermal simulation if needed
+
+    if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Decoupled"
+        thermal_sim = sim.decoupled_thermal
+
+        thermal_parameters = thermal_sim.parameters
+        thermal_model = thermal_sim.model
+
+        decoupled_thermal_states = solve_decoupled_thermal_model(model, cycling_protocol, thermal_parameters, parameters, thermal_model, jutul_states, global_maps, timesteps)
+
+
+        # Add decoupled thermal states to the jutul_states
+        for i in eachindex(jutul_states)
+            jutul_states[i][:ThermalModel] = decoupled_thermal_states[i][:state]
+            jutul_reports[i][:ThermalModel] = decoupled_thermal_states[i][:report]
+        end
+
+
+    end
+
 
     jutul_output = (
         states = jutul_states,
@@ -383,6 +497,7 @@ function solve_simulation(
         solver_configuration = cfg,
         multimodel = model.multimodel,
     )
+
 
     input = FullSimulationInput(
         Dict(
@@ -422,6 +537,7 @@ function solve_simulation(
     )
 
 end
+
 
 function overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
     settings = kwarg_dict(; kwargs...)  # Convert kwargs to Dict
@@ -532,18 +648,26 @@ function kwarg_dict(; kwargs...)
     return kwarg_dict
 end
 
+function process_solver_settings_kwargs(solver_settings; kwargs...)
+
+
+    # Validate solver settings
+    solver_settings_is_valid = validate_parameter_set(solver_settings)
+    return solver_settings_is_valid
+end
+
 ######################################
 # Setup solver configuration options #
 ######################################
 
 """
-        setup_configuration(sim::JutulSimulator,
-                            model::MultiModel,
-                            parameters;
-                            inputparams::AdvancedDictInput,
-                            extra_timing::Bool,
-                            use_model_scaling,
-                            kwargs...)
+		setup_configuration(sim::JutulSimulator,
+							model::MultiModel,
+							parameters;
+							inputparams::AdvancedDictInput,
+							extra_timing::Bool,
+							use_model_scaling,
+							kwargs...)
 
 Sets up the config object used during simulation. In this current version this
 setup is the same for json and mat files. The specific setup values should
@@ -558,7 +682,7 @@ function solver_configuration(
         logger = nothing,
         validate::Bool = true,
         accept_invalid::Bool = false,
-        kwargs...
+        kwargs...,
     )
 
     solver_settings = deepcopy(solver_settings)
@@ -580,7 +704,7 @@ function solver_configuration(
                 If you are confident you know what you are doing, you can bypass this
                 validation result when solving:
 
-                    solve(sim; accept_invalid = true)
+                	solve(sim; accept_invalid = true)
 
                 Note that `accept_invalid = true` only applies when validation is enabled.
                 """,
@@ -827,7 +951,7 @@ function get_scalings(model, parameters)
 
             # We use the same scaling as for the coating multiplied by the conductivity ration
             cc = cc_mapping[elde]
-            coef = parameters[cc][:Conductivity] / parameters[elde][:Conductivity]
+            coef = parameters[cc][:ElectronicConductivity] / parameters[elde][:ElectronicConductivity]
 
             scaling = (model_label = cc, equation_label = :charge_conservation, value = F * coef[1] * volRefs[elde] * RvolRef)
             push!(scalings, scaling)

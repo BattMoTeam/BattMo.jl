@@ -6,16 +6,18 @@ export BCCurrent
 export TPFAInterfaceFluxCT, ButlerVolmerActmatToElyteCT, ButlerVolmerElyteToActmatCT, ButlerVolmerInterfaceFluxCT
 export BoundaryDirichletFaces
 
+struct BoundaryDirichletFaces <: Jutul.JutulEntity end
+
 abstract type BattMoSystem <: JutulSystem end
 # Alias for a general electro-chemical model
-
-const BattMoModel = SimulationModel{<:Any, <:BattMoSystem, <:Any, <:Any}
-
-struct BoundaryDirichletFaces <: JutulEntity end
 
 function Base.getindex(system::BattMoSystem, key::Symbol)
     return system.params[key]
 end
+
+const BattMoModel = SimulationModel{<:Any, <:BattMoSystem, <:Any, <:Any}
+
+const BatteryModel = MultiModel{<:Battery}
 
 abstract type BattMoGrid <: JutulMesh end
 
@@ -39,7 +41,7 @@ struct BruggemanCoefficient <: ScalarVariable end
 
 Jutul.default_value(model, ::BruggemanCoefficient) = 1.5
 
-struct Conductivity <: ScalarVariable end
+struct ElectronicConductivity <: ScalarVariable end
 struct Diffusivity <: ScalarVariable end
 
 # Jutul.variable_scale(::Diffusivity) = 1e-10
@@ -98,7 +100,7 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
             N_hT,
             cf,  # cell-face pairs
             cf_hT,  # value of the half-transmissibility for the corresponding cell-face pair
-            vf
+            vf,
         )
 
         nc = length(volumes)
@@ -141,7 +143,7 @@ struct MinimalTpfaGrid{V, N, NT, B, BT, M} <: BattMoGrid
             cf_hT,
             P,
             S,
-            vf
+            vf,
         )
 
     end

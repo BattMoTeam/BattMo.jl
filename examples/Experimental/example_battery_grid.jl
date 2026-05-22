@@ -64,7 +64,7 @@ function makeGeometry(case, include_cc)
 
     if include_cc
         bcomponents = ["NegativeElectrode", "PositiveElectrode"]
-        newnames = ["NegativeCurrentCollector", "PositiveCurrentCollector"]
+        newnames = ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
         for (ind, component) in enumerate(bcomponents)
             cc = init.object[component]["CurrentCollector"]
             Nloc = cc["N"]
@@ -75,9 +75,9 @@ function makeGeometry(case, include_cc)
         end
 
         Npcc = init.object["PositiveElectrode"]["CurrentCollector"]["N"]
-        coupling_control = Dict("PositiveCurrentCollector" => Dict("cells" => Npcc, "faces" => 2))
+        coupling_control = Dict("PositiveElectrodeCurrentCollector" => Dict("cells" => Npcc, "faces" => 2))
         geometry["Couplings"]["Control"] = coupling_control
-        geometry["Boundary"] = Dict("NegativeCurrentCollector" => Dict("cells" => 1, "faces" => 1))
+        geometry["Boundary"] = Dict("NegativeElectrodeCurrentCollector" => Dict("cells" => 1, "faces" => 1))
     else
         coupling_control = Dict("PositiveElectrode" => Dict("cells" => Nam, "faces" => 2))
 
@@ -125,7 +125,7 @@ p1 = Plots.plot(
     markersize = 1,
     linewidth = 4,
     xtickfont = font(pointsize = 15),
-    ytickfont = font(pointsize = 15)
+    ytickfont = font(pointsize = 15),
 )
 
 
@@ -141,7 +141,7 @@ p2 = Plots.plot(
     markersize = 1,
     linewidth = 4,
     xtickfont = font(pointsize = 15),
-    ytickfont = font(pointsize = 15)
+    ytickfont = font(pointsize = 15),
 )
 
 
@@ -170,7 +170,7 @@ p1 = Plots.plot(
     markersize = 1,
     linewidth = 4,
     xtickfont = font(pointsize = 15),
-    ytickfont = font(pointsize = 15)
+    ytickfont = font(pointsize = 15),
 )
 
 
@@ -186,7 +186,7 @@ p2 = Plots.plot(
     markersize = 1,
     linewidth = 4,
     xtickfont = font(pointsize = 15),
-    ytickfont = font(pointsize = 15)
+    ytickfont = font(pointsize = 15),
 )
 
 

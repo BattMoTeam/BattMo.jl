@@ -24,7 +24,7 @@ names = [
 end
 
 function getinput(name)
-    return load_advanced_dict_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
+    return load_advanced_dict_input(joinpath(pkgdir(BattMo), "test", "data", "jsonfiles", name))
 end
 
 geometries = [
@@ -40,6 +40,7 @@ geometries = [
 
                 inputparams_geometry = getinput(geometry)
                 inputparams_material = getinput("lithium_ion_battery_nmc_graphite.json")
+                inputparams_material["use_thermal"] = false
                 inputparams_control = getinput("cc_discharge_control.json")
 
                 inputparams = merge_input_params(

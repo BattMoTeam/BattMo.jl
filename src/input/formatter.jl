@@ -117,6 +117,10 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
         model_settings["RampUp"] = "Sinusoidal"
     end
 
+    if haskey(params, "use_thermal") && params["use_thermal"] == true
+        model_settings["ThermalModel"] = "Sequential"
+        model_settings["TemperatureDependence"] = "Arrhenius"
+    end
 
     ####################################
     # SimulationSettings
@@ -160,80 +164,32 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
     ###########################################
     # CellParameters
 
-    ne_ocp_ = params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"]
-
-    if haskey(ne_ocp_, "function")
-        ne_ocp = ne_ocp_["function"]
-    elseif haskey(ne_ocp_, "functionname")
-        ne_ocp = Dict(
-            "FunctionName" => ne_ocp_["functionname"],
-        )
-    elseif haskey(ne_ocp_, "data_x")
-        ne_ocp = Dict(
-            "x" => ne_ocp_["data_x"],
-            "y" => ne_ocp_["data_y"],
-        )
-    else
-        ne_ocp = ne_ocp_
-
-    end
-
-    pe_ocp_ = params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"]
-
-    if haskey(pe_ocp_, "function")
-        pe_ocp = pe_ocp_["function"]
-    elseif haskey(ne_ocp_, "functionname")
-        pe_ocp = Dict(
-            "FunctionName" => pe_ocp_["functionname"],
-        )
-    elseif haskey(pe_ocp_, "data_x")
-        pe_ocp = Dict(
-            "x" => pe_ocp_["data_x"],
-            "y" => pe_ocp_["data_y"],
-        )
-    else
-        pe_ocp = pe_ocp_
+    function convert_functional_parameters(funcparams_)
+        return if funcparams_["functionFormat"] == "string expression"
+            funcparams = funcparams_["expression"]["formula"]
+        elseif funcparams_["functionFormat"] == "named function"
+            funcparams = Dict(
+                "FunctionName" => funcparams_["functionName"],
+            )
+        elseif funcparams_["functionFormat"] == "tabulated"
+            funcparams = Dict(
+                "x" => funcparams_["dataX"],
+                "y" => funcparams_["dataY"],
+            )
+        else
+            funcparams = funcparams_
+        end
 
     end
 
-    cond_ = params["Electrolyte"]["ionicConductivity"]
-
-    if haskey(cond_, "function")
-        cond = cond_["function"]
-    elseif haskey(cond_, "functionname")
-        cond = Dict(
-            "FunctionName" => cond_["functionname"],
-        )
-    elseif haskey(cond_, "data_x")
-        cond = Dict(
-            "x" => cond_["data_x"],
-            "y" => cond_["data_y"],
-        )
-    else
-        cond = cond_
-
-    end
-
-    diff_ = params["Electrolyte"]["diffusionCoefficient"]
-
-    if haskey(diff_, "function")
-        diff = diff_["function"]
-    elseif haskey(diff_, "functionname")
-        diff = Dict(
-            "FunctionName" => diff_["functionname"],
-        )
-    elseif haskey(diff_, "data_x")
-        diff = Dict(
-            "x" => diff_["data_x"],
-            "y" => diff_["data_y"],
-        )
-    else
-        diff = diff_
-
-    end
+    cond = convert_functional_parameters(params["Electrolyte"]["ionicConductivity"])
+    diff = convert_functional_parameters(params["Electrolyte"]["diffusionCoefficient"])
+    ne_ocp = convert_functional_parameters(params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"])
+    pe_ocp = convert_functional_parameters(params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["openCircuitPotential"])
 
     cell_parameters = Dict(
-        "Cell" => Dict(),
+        "Cell" => Dict(
+        ),
         "NegativeElectrode" => Dict(
             "Coating" => Dict(
                 "BruggemanCoefficient" => params["NegativeElectrode"]["Coating"]["bruggemanCoefficient"],
@@ -256,17 +212,23 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
                 "ActivationEnergyOfReaction" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["activationEnergyOfReaction"],
                 "ReactionRateConstant" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["reactionRateConstant"],
                 "ChargeTransferCoefficient" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["chargeTransferCoefficient"],
+                "SpecificHeatCapacity" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["specificHeatCapacity"],
+                "ThermalConductivity" => params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["thermalConductivity"],
             ),
             "ConductiveAdditive" => Dict(
                 "Density" => params["NegativeElectrode"]["Coating"]["ConductingAdditive"]["density"],
                 "MassFraction" => params["NegativeElectrode"]["Coating"]["ConductingAdditive"]["massFraction"],
                 "ElectronicConductivity" => params["NegativeElectrode"]["Coating"]["ConductingAdditive"]["electronicConductivity"],
+                "SpecificHeatCapacity" => params["NegativeElectrode"]["Coating"]["ConductingAdditive"]["specificHeatCapacity"],
+                "ThermalConductivity" => params["NegativeElectrode"]["Coating"]["ConductingAdditive"]["thermalConductivity"],
             ),
             "Binder" => Dict(
                 "Density" => params["NegativeElectrode"]["Coating"]["Binder"]["density"],
                 "MassFraction" => params["NegativeElectrode"]["Coating"]["Binder"]["massFraction"],
                 "ElectronicConductivity" => params["NegativeElectrode"]["Coating"]["Binder"]["electronicConductivity"],
-            ),
+                "SpecificHeatCapacity" => params["NegativeElectrode"]["Coating"]["Binder"]["specificHeatCapacity"],
+                "ThermalConductivity" => params["NegativeElectrode"]["Coating"]["Binder"]["thermalConductivity"],
+            )
         ),
         "PositiveElectrode" => Dict(
             "Coating" => Dict(
@@ -290,23 +252,31 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
                 "ActivationEnergyOfReaction" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["activationEnergyOfReaction"],
                 "ReactionRateConstant" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["reactionRateConstant"],
                 "ChargeTransferCoefficient" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["chargeTransferCoefficient"],
+                "SpecificHeatCapacity" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["specificHeatCapacity"],
+                "ThermalConductivity" => params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["thermalConductivity"],
             ),
             "ConductiveAdditive" => Dict(
                 "Density" => params["PositiveElectrode"]["Coating"]["ConductingAdditive"]["density"],
                 "MassFraction" => params["PositiveElectrode"]["Coating"]["ConductingAdditive"]["massFraction"],
                 "ElectronicConductivity" => params["PositiveElectrode"]["Coating"]["ConductingAdditive"]["electronicConductivity"],
+                "SpecificHeatCapacity" => params["PositiveElectrode"]["Coating"]["ConductingAdditive"]["specificHeatCapacity"],
+                "ThermalConductivity" => params["PositiveElectrode"]["Coating"]["ConductingAdditive"]["thermalConductivity"],
             ),
             "Binder" => Dict(
                 "Density" => params["PositiveElectrode"]["Coating"]["Binder"]["density"],
                 "MassFraction" => params["PositiveElectrode"]["Coating"]["Binder"]["massFraction"],
                 "ElectronicConductivity" => params["PositiveElectrode"]["Coating"]["Binder"]["electronicConductivity"],
-            ),
+                "SpecificHeatCapacity" => params["PositiveElectrode"]["Coating"]["Binder"]["specificHeatCapacity"],
+                "ThermalConductivity" => params["PositiveElectrode"]["Coating"]["Binder"]["thermalConductivity"],
+            )
         ),
         "Separator" => Dict(
             "Porosity" => params["Separator"]["porosity"],
             "Density" => params["Separator"]["density"],
             "BruggemanCoefficient" => params["Separator"]["bruggemanCoefficient"],
             "Thickness" => params["Separator"]["thickness"],
+            "SpecificHeatCapacity" => params["Separator"]["specificHeatCapacity"],
+            "ThermalConductivity" => params["Separator"]["thermalConductivity"],
         ),
         "Electrolyte" => Dict(
             "Density" => params["Electrolyte"]["density"],
@@ -315,6 +285,8 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
             "TransferenceNumber" => params["Electrolyte"]["species"]["transferenceNumber"],
             "IonicConductivity" => cond,
             "DiffusionCoefficient" => diff,
+            "SpecificHeatCapacity" => params["Electrolyte"]["specificHeatCapacity"],
+            "ThermalConductivity" => params["Electrolyte"]["thermalConductivity"],
         ),
     )
 
@@ -332,6 +304,35 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
         )
 
         cell_parameters["NegativeElectrode"]["Interphase"] = inter["Interphase"]
+    end
+
+    if haskey(model_settings, "ThermalModel")
+        thermal_model = Dict(
+            "Capacity" => params["ThermalModel"]["capacity"],
+            "Conductivity" => params["ThermalModel"]["conductivity"],
+        )
+        # Optional switch for boundary heat-transfer closure in thermal-only model.
+        if haskey(params["ThermalModel"], "useBoundarySeriesResistance")
+            thermal_model["UseBoundarySeriesResistance"] = params["ThermalModel"]["useBoundarySeriesResistance"]
+        elseif haskey(params["ThermalModel"], "UseBoundarySeriesResistance")
+            thermal_model["UseBoundarySeriesResistance"] = params["ThermalModel"]["UseBoundarySeriesResistance"]
+        end
+
+        thermal = Dict("ThermalModel" => thermal_model)
+
+        ne_entropy = convert_functional_parameters(params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["entropyChange"])
+        pe_entropy = convert_functional_parameters(params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["entropyChange"])
+
+
+        cell_parameters["ThermalModel"] = thermal["ThermalModel"]
+        cell_parameters["Cell"]["SurfaceHeatTransferCoefficient"] = params["ThermalModel"]["externalHeatTransferCoefficient"]
+        cell_parameters["NegativeElectrode"]["ActiveMaterial"]["IncludeEntropyChange"] = params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["includeEntropyChange"]
+        cell_parameters["NegativeElectrode"]["ActiveMaterial"]["EntropyChange"] = ne_entropy
+        cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReferenceTemperature"] = params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["referenceTemperature"]
+
+        cell_parameters["PositiveElectrode"]["ActiveMaterial"]["IncludeEntropyChange"] = params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["includeEntropyChange"]
+        cell_parameters["PositiveElectrode"]["ActiveMaterial"]["EntropyChange"] = pe_entropy
+        cell_parameters["PositiveElectrode"]["ActiveMaterial"]["ReferenceTemperature"] = params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["referenceTemperature"]
     end
 
     if model_settings["ModelFramework"] == "P2D"
@@ -370,6 +371,13 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
                 ),
             )
 
+            if haskey(model_settings, "ThermalModel")
+                pos_cc["CurrentCollector"]["SpecificHeatCapacity"] = params["PositiveElectrode"]["CurrentCollector"]["specificHeatCapacity"]
+                pos_cc["CurrentCollector"]["ThermalConductivity"] = params["PositiveElectrode"]["CurrentCollector"]["thermalConductivity"]
+                neg_cc["CurrentCollector"]["SpecificHeatCapacity"] = params["NegativeElectrode"]["CurrentCollector"]["specificHeatCapacity"]
+                neg_cc["CurrentCollector"]["ThermalConductivity"] = params["NegativeElectrode"]["CurrentCollector"]["thermalConductivity"]
+            end
+
             cell_parameters["NegativeElectrode"]["CurrentCollector"] = neg_cc["CurrentCollector"]
             cell_parameters["PositiveElectrode"]["CurrentCollector"] = pos_cc["CurrentCollector"]
 
@@ -402,12 +410,13 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
         end
 
     elseif model_settings["ModelFramework"] == "P4D Cylindrical"
+
         cell_parameters["Cell"]["Height"] = params["Geometry"]["height"]
         cell_parameters["Cell"]["InnerRadius"] = params["Geometry"]["innerRadius"]
         cell_parameters["Cell"]["OuterRadius"] = params["Geometry"]["outerRadius"]
 
-
         if haskey(model_settings, "CurrentCollectors")
+
             pos_cc = Dict(
                 "CurrentCollector" => Dict(
                     "Thickness" => params["PositiveElectrode"]["CurrentCollector"]["thickness"],
@@ -427,6 +436,13 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
                     "ElectronicConductivity" => params["NegativeElectrode"]["CurrentCollector"]["electronicConductivity"],
                 ),
             )
+
+            if haskey(model_settings, "ThermalModel")
+                pos_cc["CurrentCollector"]["SpecificHeatCapacity"] = params["PositiveElectrode"]["CurrentCollector"]["specificHeatCapacity"]
+                pos_cc["CurrentCollector"]["ThermalConductivity"] = params["PositiveElectrode"]["CurrentCollector"]["thermalConductivity"]
+                neg_cc["CurrentCollector"]["SpecificHeatCapacity"] = params["NegativeElectrode"]["CurrentCollector"]["specificHeatCapacity"]
+                neg_cc["CurrentCollector"]["ThermalConductivity"] = params["NegativeElectrode"]["CurrentCollector"]["thermalConductivity"]
+            end
 
             cell_parameters["NegativeElectrode"]["CurrentCollector"] = neg_cc["CurrentCollector"]
             cell_parameters["PositiveElectrode"]["CurrentCollector"] = pos_cc["CurrentCollector"]
@@ -456,13 +472,18 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
         "LowerVoltageLimit" => params["Control"]["lowerCutoffVoltage"],
         "UpperVoltageLimit" => params["Control"]["upperCutoffVoltage"],
         "InitialTemperature" => params["initT"],
-        "InitialControl" => init_prot,
+        "InitialControl" => init_prot
     )
 
     if cycling_protocol["Protocol"] == "CCCV"
         cycling_protocol["CRate"] = params["Control"]["CRate"]
         cycling_protocol["CurrentChangeLimit"] = params["Control"]["dIdtLimit"]
         cycling_protocol["VoltageChangeLimit"] = params["Control"]["dEdtLimit"]
+    end
+
+    if haskey(model_settings, "ThermalModel")
+        cycling_protocol["AmbientTemperature"] = params["ThermalModel"]["externalTemperature"]
+
     end
 
     return (
@@ -563,7 +584,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
         if haskey(ne_ocp_value, "FunctionName")
             ne_ocp = Dict(
                 "type" => "function",
-                "functionname" => ne_ocp_value["FunctionName"],
+                "functionName" => ne_ocp_value["FunctionName"],
                 "functionpath" => isnothing(get_key_value(ne_ocp_value, "FilePath")) ? nothing : normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(ne_ocp_value, "FilePath"))),
             )
         else
@@ -594,7 +615,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
         if haskey(pe_ocp_value, "FunctionName")
             pe_ocp = Dict(
                 "type" => "function",
-                "functionname" => pe_ocp_value["FunctionName"],
+                "functionName" => pe_ocp_value["FunctionName"],
                 "functionpath" => isnothing(get_key_value(pe_ocp_value, "FilePath")) ? nothing : normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(pe_ocp_value, "FilePath"))),
             )
         else
@@ -623,7 +644,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
         if haskey(diff_value, "FunctionName")
             diff = Dict(
                 "type" => "function",
-                "functionname" => diff_value["FunctionName"],
+                "functionName" => diff_value["FunctionName"],
                 "functionpath" => isnothing(get_key_value(diff_value, "FilePath")) ? nothing : normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(diff_value, "FilePath"))),
             )
         else
@@ -652,7 +673,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
         if haskey(cond_value, "FunctionName")
             cond = Dict(
                 "type" => "function",
-                "functionname" => cond_value["FunctionName"],
+                "functionName" => cond_value["FunctionName"],
                 "functionpath" => isnothing(get_key_value(cond_value, "FilePath")) ? nothing : normpath(joinpath(dirname(cell_parameters.source_path), get_key_value(cond_value, "FilePath"))),
             )
         else
