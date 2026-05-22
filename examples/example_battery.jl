@@ -18,71 +18,77 @@ if do_json
 
     fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
     inputparams = readBattMoJsonInputFile(fn)
-    config_kwargs = (info_level = 0, )
-    function hook(simulator,
-                  model,
-                  state0,
-                  forces,
-                  timesteps,
-                  cfg)
+    config_kwargs = (info_level = 0,)
+    function hook(
+            simulator,
+            model,
+            state0,
+            forces,
+            timesteps,
+            cfg
+        )
     end
-    output = run_battery(inputparams;
-                         hook = hook,
-                         config_kwargs = config_kwargs,
-                         extra_timing = false);
+    output = run_battery(
+        inputparams;
+        hook = hook,
+        config_kwargs = config_kwargs,
+        extra_timing = false
+    )
 
     states = output[:states]
-    
+
     t = [state[:Control][:ControllerCV].time for state in states]
     E = [state[:Control][:Phi][1] for state in states]
     I = [state[:Control][:Current][1] for state in states]
-    
+
 else
-    
+
     fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/", name, ".mat")
     inputparams = readBattMoMatlabInputFile(fn)
     inputparams.dict["use_state_ref"] = true
     config_kwargs = (info_level = 0,)
 
-function hook(
-        simulator,
-        model,
-        state0,
-        forces,
-        timesteps,
-        cfg
+    function hook(
+            simulator,
+            model,
+            state0,
+            forces,
+            timesteps,
+            cfg
+        )
+
+        names = [
+            :Electrolyte,
+            :NegativeElectrodeActiveMaterial,
+            :Control,
+            :PositiveElectrodeActiveMaterial,
+        ]
+
+        if inputparams["model"]["include_current_collectors"]
+            names = append!(names, [:PositiveElectrodeCurrentCollector, :NegativeElectrodeCurrentCollector])
+        end
+
+        for name in names
+            cfg[:tolerances][name][:default] = 1.0e-8
+        end
+
+        return
+    end
+    nothing # hide
+
+    # ## We run the simulation and retrieve the output
+    output = run_battery(
+        inputparams;
+        hook = hook,
+        max_step = nothing
     )
+    states = output[:states]
 
-    names = [
-        :Electrolyte,
-        :NegativeElectrodeActiveMaterial,
-        :Control,
-        :PositiveElectrodeActiveMaterial,
-    ]
+    t = [state[:Control][:Controller].time for state in states]
+    E = [state[:Control][:ElectricPotential][1] for state in states]
+    I = [state[:Control][:Current][1] for state in states]
 
-    if inputparams["model"]["include_current_collectors"]
-        names = append!(names, [:PositiveElectrodeCurrentCollector, :NegativeElectrodeCurrentCollector])
-    end
-
-    for name in names
-        cfg[:tolerances][name][:default] = 1.0e-8
-    end
-
-    return
 end
-nothing # hide
-
-# ## We run the simulation and retrieve the output
-output = run_battery(
-    inputparams;
-    hook = hook,
-    max_step = nothing
-);
-states = output[:states]
-
-t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:ElectricPotential][1] for state in states]
-I = [state[:Control][:Current][1] for state in states]
 
 nsteps = size(states, 1)
 nothing # hide

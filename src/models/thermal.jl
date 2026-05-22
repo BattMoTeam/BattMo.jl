@@ -51,7 +51,7 @@ end
         Temperature,
         Volume,
         EffectiveVolumetricHeatCapacity,
-        ix
+        ix,
     )
     for i in ix
         @inbounds acc[i] = Temperature[i] * Volume[i] * EffectiveVolumetricHeatCapacity[i]
@@ -73,7 +73,7 @@ end
 function Jutul.select_parameters!(
         S,
         system::ThermalSystem,
-        model::SimulationModel
+        model::SimulationModel,
     )
 
     S[:EffectiveThermalConductivity] = EffectiveThermalConductivity()
@@ -118,7 +118,7 @@ end
 function Jutul.select_equations!(
         eqs,
         system::ThermalSystem,
-        model::SimulationModel
+        model::SimulationModel,
     )
 
     disc = model.domain.discretizations.flow
@@ -220,8 +220,6 @@ function effective_separator_thermal_conductivity(separatorparams)
 end
 
 function setup_thermal_model(model, submodels, input, grids, global_maps)
-
-    @show typeof(submodels)
 
     cell_parameters = input.cell_parameters
 

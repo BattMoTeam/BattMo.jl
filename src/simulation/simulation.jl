@@ -87,10 +87,10 @@ struct Simulation <: AbstractSimulation
                 error(
                     """
                     Oops! Your Model object is not valid. 🛑
-                    
+
                     TIP: Validation happens when instantiating the Model object.
                     Check the warnings to see exactly where things went wrong. 🔍
-                    
+
                     """,
                 )
             end
@@ -127,9 +127,9 @@ struct Simulation <: AbstractSimulation
                     error(
                         """
                         Oops! Your Simulation object cannot be configured because some of your input is not valid. 🛑
-                        
+
                         Check the warnings to see where things went wrong. 🔍
-                        
+
                         """,
                     )
                 else
@@ -263,10 +263,8 @@ function solve_decoupled_thermal_model(model, cycling_protocol, thermal_paramete
         thermal_model;
         state0 = thermal_state0,
         parameters = thermal_parameters,
-        copy_state = true
+        copy_state = true,
     )
-
-    @show size(jutul_states)
 
     decoupled_thermal_states = simulate(thermal_sim, timesteps[1:length(jutul_states)]; info_level = -1, forces = thermal_forces)
 
@@ -341,15 +339,15 @@ function solve(
         error(
             """
             Your Simulation object is not valid.
-            
+
             TIP: Validation happens when instantiating the Simulation object.
             Check the warnings to see exactly where things went wrong.
-            
+
             If you are confident you know what you are doing, you can bypass this
             validation result when solving:
-            
+
             	solve(sim; accept_invalid = true)
-            
+
             Note that `accept_invalid = true` only applies when validation is enabled.
             """,
         )
@@ -467,12 +465,11 @@ function solve_simulation(
         jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, post_ministep_hook = thook, kwargs...)
 
     else
-        @show size(timesteps)
+
         jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
-        @show size(jutul_states)
+
     end
 
-    @show size(jutul_states)
     # perfom decoupled thermal simulation if needed
 
     if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Decoupled"
@@ -700,15 +697,15 @@ function solver_configuration(
             error(
                 """
                 Your SolverSettings are not valid.
-                
+
                 TIP: Solver settings are validated when calling `solve`.
                 Check the warnings to see exactly where things went wrong.
-                
+
                 If you are confident you know what you are doing, you can bypass this
                 validation result when solving:
-                
+
                 	solve(sim; accept_invalid = true)
-                
+
                 Note that `accept_invalid = true` only applies when validation is enabled.
                 """,
             )

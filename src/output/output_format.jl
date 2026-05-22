@@ -725,17 +725,17 @@ function get_component_positions_1d(grids)
     component_positions = Dict{String, Any}()
 
     component_map = Dict(
-        "NegativeElectrodeActiveMaterialPosition" => "NegativeElectrode",
-        "PositiveElectrodeActiveMaterialPosition" => "PositiveElectrode",
+        "NegativeElectrodeActiveMaterialPosition" => "NegativeElectrodeActiveMaterial",
+        "PositiveElectrodeActiveMaterialPosition" => "PositiveElectrodeActiveMaterial",
         "ElectrolytePosition" => "Electrolyte",
         "SeparatorPosition" => "Separator",
     )
 
-    if haskey(grids, "NegativeCurrentCollector")
-        component_map["NegativeElectrodeCurrentCollectorPosition"] = "NegativeCurrentCollector"
+    if haskey(grids, "NegativeElectrodeCurrentCollector")
+        component_map["NegativeElectrodeCurrentCollectorPosition"] = "NegativeElectrodeCurrentCollector"
     end
-    if haskey(grids, "PositiveCurrentCollector")
-        component_map["PositiveElectrodeCurrentCollectorPosition"] = "PositiveCurrentCollector"
+    if haskey(grids, "PositiveElectrodeCurrentCollector")
+        component_map["PositiveElectrodeCurrentCollectorPosition"] = "PositiveElectrodeCurrentCollector"
     end
 
     for (output_name, grid_name) in component_map

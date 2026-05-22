@@ -190,7 +190,7 @@ for (i, component) in enumerate(components)
     end
 end
 
-for component in ["NegativeCurrentCollector", "PositiveCurrentCollector"]
+for component in ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
     plot_mesh!(
         ax_edges_d, grids[component];
         boundaryfaces = couplings[component]["External"]["boundaryfaces"],
@@ -228,7 +228,7 @@ for (i, component) in enumerate(components)
     end
 end
 
-for component in ["NegativeCurrentCollector", "PositiveCurrentCollector"]
+for component in ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
     plot_mesh!(
         ax_edges_m, grids[component];
         boundaryfaces = couplings[component]["External"]["boundaryfaces"],
