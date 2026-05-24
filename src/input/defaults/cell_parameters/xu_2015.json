@@ -26,7 +26,7 @@
         "TabLength": 7e-3,
         "TabWidth": 15e-3,
         "ElectrodeGeometricSurfaceArea": 0.006683250000000001,
-        "SurfaceHeatTransferCoefficient": 2.0
+        "SurfaceHeatTransferCoefficient": 1.0
     },
     "Electrolyte": {
         "Description": "1.5 mol/l LiPF6 dissolved in a mixture of ethylene carbonate (EC):  dimethyl carbonate (DMC) (1:1)",
@@ -174,7 +174,7 @@
             "NumberOfElectronsTransfered": 1,
             "StoichiometricCoefficientAtSOC0": 0.001,
             "ReactionRateConstant": 1.764e-11,
-            "MassFraction": 0.8476399123680541,
+            "MassFraction": 0.95,
             "StoichiometricCoefficientAtSOC100": 0.518738110000000,
             "ActivationEnergyOfReaction": 4000,
             "ActivationEnergyOfDiffusion": 4000,
@@ -242,7 +242,7 @@
         "ConductiveAdditive": {
             "Description": "Unknown",
             "Density": 1950.0,
-            "MassFraction": 0.11651065524795857,
+            "MassFraction": 0.03,
             "ElectronicConductivity": 100.0,
             "SpecificHeatCapacity": 632.0,
             "ThermalConductivity": 1.04
@@ -250,7 +250,7 @@
         "Binder": {
             "Description": "PVDF",
             "Density": 1800.0,
-            "MassFraction": 0.03584943238398725,
+            "MassFraction": 0.02,
             "ElectronicConductivity": 100.0,
             "SpecificHeatCapacity": 632.0,
             "ThermalConductivity": 1.04
