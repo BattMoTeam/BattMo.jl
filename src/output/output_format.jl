@@ -885,6 +885,7 @@ function extract_spatial_data(states::Vector)
         "ElectrolyteMass" => [:Electrolyte, :Mass],
         "ElectrolyteDiffusivity" => [:Electrolyte, :Diffusivity],
         "ElectrolyteConductivity" => [:Electrolyte, :Conductivity],
+        "ElectrolyteTemperature" => [:Electrolyte, :Temperature],
         "NegativeElectrodeInterphaseThickness" => [:NegativeElectrodeActiveMaterial, :SEIThickness],
         "NegativeElectrodeInterphaseNormalizedThickness" => [:NegativeElectrodeActiveMaterial, :NormalizedSEIThickness],
         "NegativeElectrodeInterphaseVoltageDrop" => [:NegativeElectrodeActiveMaterial, :SEIVoltageDrop],
