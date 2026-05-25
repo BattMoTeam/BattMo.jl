@@ -149,6 +149,16 @@ using Jutul: initialize_primary_variable_ad!, initialize_variable_ad!
 using Jutul: get_neighborship, get_simulator_storage, get_simulator_model
 using Jutul: get_submodel_offsets, submodels_symbols
 
+import Jutul: setup_state!
+
+function Jutul.setup_state!(state, model::JutulModel, init_values::NamedTuple; T = float_type(model.context))
+    init_dict = Dict{Symbol, Any}()
+    for (k, v) in pairs(init_values)
+        init_dict[k] = v
+    end
+    return setup_state!(state, model, init_dict; T = T)
+end
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🔍 Solver, Convergence & Preconditioning

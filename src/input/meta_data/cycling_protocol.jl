@@ -5,10 +5,10 @@ function get_cycling_protocol_meta_data()
     meta_data = Dict(
         "Protocol" => Dict(
             "type" => String,
-            "options" => ["CC", "CCCV", "Function", "InputCurrentSeries"],
+            "options" => ["CC", "CCCV", "Function", "InputCurrentSeries", "CombinedProtocol"],
             "context_type" => "Protocol",
             "context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_d3e2d213_d078_4b9a_8beb_62f063e57d69",
-            "description" => """Type of cycling procedure used to cycle a cell. For instance: Constant Current ("CC"), Constant Current - Constant Voltage ("CCCV"), a custom function ("Function"), or a prescribed current time series ("InputCurrentSeries").""",
+            "description" => """Type of cycling procedure used to cycle a cell. For instance: Constant Current ("CC"), Constant Current - Constant Voltage ("CCCV"), a custom function ("Function"), a prescribed current time series ("InputCurrentSeries"), or a combined list of protocol steps ("CombinedProtocol").""",
         ),
         "FunctionName" => Dict(
             "type" => String,
@@ -171,6 +171,10 @@ function get_cycling_protocol_meta_data()
             "type" => Vector,
             "description" => "Current values for the InputCurrentSeries protocol",
             "unit" => "A",
+        ),
+        "ProtocolSteps" => Dict(
+            "type" => Vector,
+            "description" => "A sequence of protocol steps, optionally grouped by cycle, for the CombinedProtocol format.",
         ),
     )
 

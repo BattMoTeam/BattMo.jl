@@ -87,10 +87,10 @@ struct Simulation <: AbstractSimulation
                 error(
                     """
                     Oops! Your Model object is not valid. 🛑
-
+                    
                     TIP: Validation happens when instantiating the Model object.
                     Check the warnings to see exactly where things went wrong. 🔍
-
+                    
                     """,
                 )
             end
@@ -127,9 +127,9 @@ struct Simulation <: AbstractSimulation
                     error(
                         """
                         Oops! Your Simulation object cannot be configured because some of your input is not valid. 🛑
-
+                        
                         Check the warnings to see where things went wrong. 🔍
-
+                        
                         """,
                     )
                 else
@@ -169,8 +169,157 @@ struct Simulation <: AbstractSimulation
     end
 end
 
+is_combined_protocol(cycling_protocol::CyclingProtocol) = get(cycling_protocol, "Protocol", nothing) == "CombinedProtocol"
+
+function flatten_combined_protocol_steps(cycling_protocol::CyclingProtocol)
+    protocol_steps = Dict{String, Any}[]
+
+    for cycle in cycling_protocol["ProtocolSteps"]
+        cycle_name = get(cycle, "CycleName", nothing)
+        steps = haskey(cycle, "Steps") ? cycle["Steps"] : [cycle]
+
+        for step in steps
+            step_data = to_string_any(deepcopy(step))
+            if !isnothing(cycle_name) && !haskey(step_data, "CycleName")
+                step_data["CycleName"] = cycle_name
+            end
+            push!(protocol_steps, step_data)
+        end
+    end
+
+    return protocol_steps
+end
+
+function resolve_combined_protocol_step(cycling_protocol::CyclingProtocol, step::Dict{String, Any})
+    protocol = step["Protocol"]
+    initial_temperature = Float64(get(step, "InitialTemperature", cycling_protocol["InitialTemperature"]))
+    ambient_temperature = Float64(get(step, "AmbientTemperature", initial_temperature))
+
+    step_protocol = Dict{String, Any}(
+        "Protocol" => protocol,
+        "InitialStateOfCharge" => Float64(get(step, "InitialStateOfCharge", cycling_protocol["InitialStateOfCharge"])),
+        "InitialTemperature" => initial_temperature,
+        "AmbientTemperature" => ambient_temperature,
+    )
+
+    if protocol == "CC"
+        step_protocol["TotalNumberOfCycles"] = Int(get(step, "TotalNumberOfCycles", 0))
+        step_protocol["InitialControl"] = step["InitialControl"]
+        step_protocol["LowerVoltageLimit"] = Float64(get(step, "LowerVoltageLimit", cycling_protocol["LowerVoltageLimit"]))
+        step_protocol["UpperVoltageLimit"] = Float64(get(step, "UpperVoltageLimit", cycling_protocol["UpperVoltageLimit"]))
+
+        if step_protocol["InitialControl"] == "charging"
+            step_protocol["CRate"] = Float64(step["CRate"])
+        else
+            step_protocol["DRate"] = Float64(step["DRate"])
+        end
+    elseif protocol == "InputCurrentSeries"
+        step_protocol["Times"] = Float64.(step["Times"])
+        step_protocol["Currents"] = Float64.(step["Currents"])
+        step_protocol["LowerVoltageLimit"] = Float64(get(step, "LowerVoltageLimit", cycling_protocol["LowerVoltageLimit"]))
+        step_protocol["UpperVoltageLimit"] = Float64(get(step, "UpperVoltageLimit", cycling_protocol["UpperVoltageLimit"]))
+    elseif protocol == "CCCV"
+        step_protocol["TotalNumberOfCycles"] = Int(get(step, "TotalNumberOfCycles", 0))
+        step_protocol["InitialControl"] = step["InitialControl"]
+        step_protocol["CRate"] = Float64(step["CRate"])
+        step_protocol["DRate"] = Float64(step["DRate"])
+        step_protocol["LowerVoltageLimit"] = Float64(get(step, "LowerVoltageLimit", cycling_protocol["LowerVoltageLimit"]))
+        step_protocol["UpperVoltageLimit"] = Float64(get(step, "UpperVoltageLimit", cycling_protocol["UpperVoltageLimit"]))
+        step_protocol["CurrentChangeLimit"] = Float64(step["CurrentChangeLimit"])
+        step_protocol["VoltageChangeLimit"] = Float64(step["VoltageChangeLimit"])
+    elseif protocol == "Function"
+        step_protocol["FunctionName"] = step["FunctionName"]
+        step_protocol["TotalTime"] = Float64(step["TotalTime"])
+        if haskey(step, "FilePath")
+            step_protocol["FilePath"] = step["FilePath"]
+        end
+    else
+        error("Protocol $protocol not recognized in CombinedProtocol.")
+    end
+
+    return CyclingProtocol(step_protocol; source_path = cycling_protocol.source_path)
+end
+
+function merge_combined_protocol_time_series(segment_outputs, step_specs; include_initial_state = false)
+    merged = Dict{String, Any}(
+        "Time" => Float64[],
+        "Voltage" => Float64[],
+        "Current" => Float64[],
+        "AmbientTemperature" => Float64[],
+        "StepName" => String[],
+        "CycleName" => String[],
+    )
+
+    time_offset = 0.0
+
+    for (index, (step, output)) in enumerate(zip(step_specs, segment_outputs))
+        ts = output.time_series
+        local_time = Float64.(ts["Time"])
+        local_voltage = Float64.(ts["Voltage"])
+        local_current = Float64.(ts["Current"])
+
+        start_index = index == 1 ? (include_initial_state ? 1 : 2) : 2
+        if start_index > length(local_time)
+            continue
+        end
+
+        append!(merged["Time"], local_time[start_index:end] .+ time_offset)
+        append!(merged["Voltage"], local_voltage[start_index:end])
+        append!(merged["Current"], local_current[start_index:end])
+        append!(merged["AmbientTemperature"], fill(step["AmbientTemperature"], length(local_time[start_index:end])))
+        append!(merged["StepName"], fill(get(step, "Name", "step_$(index)"), length(local_time[start_index:end])))
+        append!(merged["CycleName"], fill(get(step, "CycleName", "cycle"), length(local_time[start_index:end])))
+
+        time_offset += local_time[end]
+    end
+
+    return merged
+end
+
+function offset_combined_protocol_state_times!(states, time_offset)
+    for state in states
+        controller = state[:Control][:Controller]
+        if hasproperty(controller, :time)
+            setfield!(controller, :time, getfield(controller, :time) + time_offset)
+        end
+    end
+    return states
+end
+
+function merge_combined_protocol_jutul_output(segment_outputs, multimodel)
+    merged_states = Any[]
+    merged_reports = Any[]
+    time_offset = 0.0
+
+    for output in segment_outputs
+        segment_states = deepcopy(output.jutul_output.states)
+        offset_combined_protocol_state_times!(segment_states, time_offset)
+
+        append!(merged_states, segment_states)
+        append!(merged_reports, output.jutul_output.reports)
+
+        if !isempty(segment_states)
+            time_offset = segment_states[end][:Control][:Controller].time
+        end
+    end
+
+    return (
+        states = merged_states,
+        reports = merged_reports,
+        solver_configuration = segment_outputs[end].jutul_output.solver_configuration,
+        multimodel = multimodel,
+    )
+end
+
 
 function simulation_configuration(model, input)
+
+    if is_combined_protocol(input.cycling_protocol)
+        step_specs = flatten_combined_protocol_steps(input.cycling_protocol)
+        isempty(step_specs) && error("CombinedProtocol must contain at least one step.")
+        first_step_protocol = resolve_combined_protocol_step(input.cycling_protocol, first(step_specs))
+        input = (; input..., cycling_protocol = first_step_protocol)
+    end
 
     if haskey(model.settings, "ThermalModel")
         model.settings["TemperatureDependence"] = "Arrhenius"
@@ -184,6 +333,17 @@ function simulation_configuration(model, input)
 
     # Setup initial state
     initial_state = setup_initial_state(input, model)
+
+    # If an explicit initial state is provided for a new InputCurrentSeries simulation,
+    # rebase the control time to zero when the protocol times start at zero.
+    if input.initial_state !== nothing && get(input.cycling_protocol, "Protocol", "") == "InputCurrentSeries"
+        times = get(input.cycling_protocol, "Times", nothing)
+        if isa(times, AbstractVector{<:Real}) && !isempty(times) && times[1] == 0.0
+            if haskey(initial_state, :Control) && haskey(initial_state[:Control], :Controller)
+                initial_state[:Control][:Controller].time = 0.0
+            end
+        end
+    end
 
     # Setup forces
     forces = setup_forces(model.multimodel)
@@ -339,15 +499,15 @@ function solve(
         error(
             """
             Your Simulation object is not valid.
-
+            
             TIP: Validation happens when instantiating the Simulation object.
             Check the warnings to see exactly where things went wrong.
-
+            
             If you are confident you know what you are doing, you can bypass this
             validation result when solving:
-
+            
             	solve(sim; accept_invalid = true)
-
+            
             Note that `accept_invalid = true` only applies when validation is enabled.
             """,
         )
@@ -423,6 +583,18 @@ function solve_simulation(
     cycling_protocol = sim.cycling_protocol
     global_maps = sim.global_maps
 
+    if is_combined_protocol(cycling_protocol)
+        return solve_combined_protocol(
+            sim;
+            solver_settings,
+            logger,
+            include_initial_state,
+            validate,
+            accept_invalid,
+            kwargs...,
+        )
+    end
+
 
     # Setup solver configuration
     cfg = solver_configuration(
@@ -460,7 +632,7 @@ function solve_simulation(
             simulation_settings = simulation_settings,
         )
 
-        thook = BattMo.setup_thermal_post_ministep_hook(model, input, Temperature = cycling_protocol["InitialTemperature"])
+        thook = BattMo.setup_thermal_post_ministep_hook(model, input; initial_state = state0)
 
         jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, post_ministep_hook = thook, kwargs...)
 
@@ -536,6 +708,73 @@ function solve_simulation(
         sim,
     )
 
+end
+
+function solve_combined_protocol(
+        sim::Simulation;
+        solver_settings,
+        logger = nothing,
+        include_initial_state = false,
+        validate::Bool = true,
+        accept_invalid::Bool = false,
+        kwargs...,
+    )
+    step_specs = flatten_combined_protocol_steps(sim.cycling_protocol)
+    isempty(step_specs) && error("CombinedProtocol must contain at least one step.")
+
+    segment_outputs = Any[]
+    initial_state = sim.initial_state
+
+    for step_spec in step_specs
+        step_protocol = resolve_combined_protocol_step(sim.cycling_protocol, step_spec)
+        step_sim = Simulation(
+            deepcopy(sim.model),
+            sim.cell_parameters,
+            step_protocol;
+            simulation_settings = sim.settings,
+            initial_state = initial_state,
+            output_all_secondary_variables = true,
+            validate = validate,
+        )
+
+        step_output = solve(
+            step_sim;
+            solver_settings,
+            logger,
+            include_initial_state = true,
+            accept_invalid,
+            kwargs...,
+        )
+
+        push!(segment_outputs, step_output)
+        initial_state = step_output.jutul_output.states[end]
+    end
+
+    merged_jutul_output = merge_combined_protocol_jutul_output(segment_outputs, sim.model.multimodel)
+    time_series = merge_combined_protocol_time_series(segment_outputs, step_specs; include_initial_state)
+
+    input = FullSimulationInput(
+        Dict(
+            "BaseModel" => string(nameof(typeof(sim.model))),
+            "ModelSettings" => sim.model.settings.all,
+            "CellParameters" => sim.cell_parameters.all,
+            "CyclingProtocol" => sim.cycling_protocol.all,
+            "SimulationSettings" => sim.settings.all,
+        ),
+    )
+
+    states = get_output_states(merged_jutul_output, sim.grids, input)
+    metrics = Dict{String, Any}()
+
+    return SimulationOutput(
+        time_series,
+        states,
+        metrics,
+        input,
+        merged_jutul_output,
+        sim.model,
+        sim,
+    )
 end
 
 
@@ -697,15 +936,15 @@ function solver_configuration(
             error(
                 """
                 Your SolverSettings are not valid.
-
+                
                 TIP: Solver settings are validated when calling `solve`.
                 Check the warnings to see exactly where things went wrong.
-
+                
                 If you are confident you know what you are doing, you can bypass this
                 validation result when solving:
-
+                
                 	solve(sim; accept_invalid = true)
-
+                
                 Note that `accept_invalid = true` only applies when validation is enabled.
                 """,
             )

@@ -1060,17 +1060,8 @@ function setup_initial_state(input, model::IntercalationBattery)
         # Reset controller
         if haskey(state, :Control)
             ctrl = state[:Control]
-            if haskey(ctrl, :Controller)
-                controller = ctrl[:Controller]
-                for fd in fieldnames(typeof(controller))
-                    value = getfield(controller, fd)
-                    if !isa(value, String)
-                        value = zero(value)
-                    end
-                    setfield!(controller, fd, value)
-                end
-            end
             ctrl[:Current] = [getInitCurrent(model.multimodel[:Control])]
+            # BattMo.setup_initial_controller!(ctrl, model.multimodel[:Control].system.policy)
         end
 
         return state

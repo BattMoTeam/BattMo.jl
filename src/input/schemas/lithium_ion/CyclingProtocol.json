@@ -9,7 +9,8 @@
                 "CC",
                 "cccv",
                 "Function",
-                "InputCurrentSeries"
+                "InputCurrentSeries",
+                "CombinedProtocol"
             ],
             "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('cccv'), a custom Function, or a prescribed current time series ('InputCurrentSeries')."
         },
@@ -136,6 +137,12 @@
             "minItems": 1,
             "description": "Current values corresponding to each time point in the InputCurrentSeries protocol, in amperes. Positive values indicate discharge; negative values indicate charge.",
             "unit": "A"
+        },
+        "ProtocolSteps": {
+            "type": "array",
+            "items": { "type": "object" },
+            "minItems": 1,
+            "description": "A sequence of protocol steps, optionally grouped by cycle, for the CombinedProtocol format."
         }
     },
     "required": [
@@ -273,6 +280,20 @@
                     "Currents",
                     "LowerVoltageLimit",
                     "UpperVoltageLimit"
+                ]
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "Protocol": {
+                        "const": "CombinedProtocol"
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "ProtocolSteps"
                 ]
             }
         }

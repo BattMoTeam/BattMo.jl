@@ -361,17 +361,41 @@ function temperature_cell_maps(global_maps, parameters)
     return out
 end
 
-function setup_thermal_state0(thermal_model, tcellmaps, parameters)
+function setup_thermal_state0(thermal_model, tcellmaps, parameters, initial_state = nothing)
     nc = number_of_cells(thermal_model.domain)
+
+    if !isnothing(initial_state)
+        if haskey(initial_state, :ThermalModel) && haskey(initial_state[:ThermalModel], :Temperature)
+            return setup_state(thermal_model, Temperature = initial_state[:ThermalModel][:Temperature])
+        end
+
+        T0 = zeros(nc)
+        found_temperature = false
+        for (k, cells) in pairs(tcellmaps)
+            if haskey(initial_state, k) && haskey(initial_state[k], :Temperature)
+                T0[cells] .= initial_state[k][:Temperature]
+                found_temperature = true
+            else
+                subT = parameters[k][:Temperature]
+                T0[cells] .= subT
+            end
+        end
+
+        if found_temperature
+            return setup_state(thermal_model, Temperature = T0)
+        end
+    end
+
     T0 = zeros(nc)
     for (k, cells) in pairs(tcellmaps)
         subT = parameters[k][:Temperature]
         T0[cells] .= subT
     end
+
     return setup_state(thermal_model, Temperature = T0)
 end
 
-function setup_thermal_post_ministep_hook(model, input, base_hook = missing; Temperature = missing, info_level = -1, kwarg...)
+function setup_thermal_post_ministep_hook(model, input, base_hook = missing; Temperature = missing, initial_state = nothing, info_level = -1, kwarg...)
     model = deepcopy(model)
     s = Simulation(model, input.cell_parameters, input.cycling_protocol; simulation_settings = input.simulation_settings)
     # thermal_model, thermal_parameters = setup_thermal_model(input, s.grids)
@@ -382,7 +406,7 @@ function setup_thermal_post_ministep_hook(model, input, base_hook = missing; Tem
     tcellmaps = temperature_cell_maps(maps, s.parameters)
     if ismissing(Temperature)
         # We copy it from parameters of the simulation
-        thermal_state0 = setup_thermal_state0(thermal_model, tcellmaps, s.parameters)
+        thermal_state0 = setup_thermal_state0(thermal_model, tcellmaps, s.parameters, initial_state)
     else
         # We set it up as requested (possibly a bit inconsistent with what the
         # model will be initialized with). The thermal model will overwrite the
@@ -401,6 +425,7 @@ function setup_thermal_post_ministep_hook(model, input, base_hook = missing; Tem
     return function thermal_post_hook(done, report, sim, dt, forces, max_iter, cfg)
         if done
             state = sim.storage.state0
+            state = BattMo.get_state_with_secondary_variables(model.multimodel, state, s.parameters)
             src, stepsources = BattMo.get_energy_source_by_type!(thermal_model, s.model, state, maps)
             tforce = (value = src,)
             Jutul.solve_timestep!(thermal_sim, dt, tforce, thermal_cfg[:max_nonlinear_iterations], thermal_cfg)

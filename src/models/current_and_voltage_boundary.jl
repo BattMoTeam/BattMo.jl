@@ -159,10 +159,12 @@ mutable struct InputCurrentPolicy{R} <: AbstractPolicy
         )
         @assert length(times) == length(currents) "times and currents must have the same length"
         @assert length(times) >= 1 "times and currents must be non-empty"
-        @assert issorted(times, lt = <) "times must be strictly increasing"
-        T = promote_type(eltype(times), eltype(currents), typeof(lowerCutoffVoltage), typeof(upperCutoffVoltage))
-        current_function = get_1d_interpolator(times, currents, cap_endpoints = true)
-        return new{T}(convert(Vector{T}, times), current_function, T(lowerCutoffVoltage), T(upperCutoffVoltage))
+        numeric_times = Float64.(times)
+        numeric_currents = Float64.(currents)
+        @assert issorted(numeric_times, lt = <) "times must be strictly increasing"
+        T = promote_type(eltype(numeric_times), eltype(numeric_currents), typeof(lowerCutoffVoltage), typeof(upperCutoffVoltage))
+        current_function = get_1d_interpolator(numeric_times, numeric_currents, cap_endpoints = true)
+        return new{T}(convert(Vector{T}, numeric_times), current_function, T(lowerCutoffVoltage), T(upperCutoffVoltage))
     end
 end
 
@@ -869,6 +871,24 @@ function Jutul.update_values!(old::InputCurrentController, new::InputCurrentCont
 
 end
 
+function copy_shared_controller_fields!(old::Controller, new::Controller)
+
+    for field in fieldnames(typeof(old))
+        if hasfield(typeof(new), field)
+            setfield!(old, field, getfield(new, field))
+        end
+    end
+
+    return old
+
+end
+
+function Jutul.update_values!(old::Controller, new::Controller)
+
+    return copy_shared_controller_fields!(old, new)
+
+end
+
 """
 In addition to update the values in all primary variables, we need also to update the values in the controller. We do that by specializing the method perform_step_solve_impl!
 """
@@ -894,7 +914,7 @@ function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{Cu
         storage,
         model,
     )
-    return copyController!(storage.state[:Controller], storage.state0[:Controller])
+    return Jutul.update_values!(storage.state[:Controller], storage.state0[:Controller])
 end
 
 function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{CCPolicy{T1}}, T3, T4}) where {T1, T3, T4}
@@ -908,7 +928,7 @@ function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{Cu
         storage,
         model,
     )
-    return copyController!(storage.state[:Controller], storage.state0[:Controller])
+    return Jutul.update_values!(storage.state[:Controller], storage.state0[:Controller])
 end
 
 function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{InputCurrentPolicy{T1}}, T3, T4}) where {T1, T3, T4}
@@ -922,7 +942,7 @@ function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{Cu
         storage,
         model,
     )
-    return copyController!(storage.state[:Controller], storage.state0[:Controller])
+    return Jutul.update_values!(storage.state[:Controller], storage.state0[:Controller])
 
 end
 

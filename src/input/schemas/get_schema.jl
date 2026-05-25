@@ -473,11 +473,15 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
             "InitialControl" => create_property(parameter_meta, "InitialControl"),
             "CurrentChangeLimit" => create_property(parameter_meta, "CurrentChangeLimit"),
             "VoltageChangeLimit" => create_property(parameter_meta, "VoltageChangeLimit"),
-            "AmbientTemperature" => create_property(parameter_meta, "AmbientTemperature"),
-            "InitialTemperature" => create_property(parameter_meta, "InitialTemperature"),
-            "Times" => create_property(parameter_meta, "Times"),
-            "Currents" => create_property(parameter_meta, "Currents"),
-        ),
+              "AmbientTemperature" => create_property(parameter_meta, "AmbientTemperature"),
+              "InitialTemperature" => create_property(parameter_meta, "InitialTemperature"),
+              "Times" => create_property(parameter_meta, "Times"),
+              "Currents" => create_property(parameter_meta, "Currents"),
+              "ProtocolSteps" => Dict(
+                  "type" => "array",
+                  "minItems" => 1,
+              ),
+          ),
         "required" => ["Protocol"],
         "allOf" => [
             Dict(
@@ -567,20 +571,30 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
                     ],
                 ),
             ),
-            Dict(
-                "if" => Dict("properties" => Dict("Protocol" => Dict("const" => "InputCurrentSeries"))),
-                "then" => Dict(
-                    "required" => [
-                        "InitialStateOfCharge",
+              Dict(
+                  "if" => Dict("properties" => Dict("Protocol" => Dict("const" => "InputCurrentSeries"))),
+                  "then" => Dict(
+                      "required" => [
+                          "InitialStateOfCharge",
                         "Times",
                         "Currents",
                         "LowerVoltageLimit",
-                        "UpperVoltageLimit",
-                    ],
-                ),
-            ),
-        ],
-    )
+                          "UpperVoltageLimit",
+                      ],
+                  ),
+              ),
+              Dict(
+                  "if" => Dict("properties" => Dict("Protocol" => Dict("const" => "CombinedProtocol"))),
+                  "then" => Dict(
+                      "required" => [
+                          "InitialStateOfCharge",
+                          "InitialTemperature",
+                          "ProtocolSteps",
+                      ],
+                  ),
+              ),
+          ],
+      )
     required = schema["required"]
     thermal_model = get(model_settings, "ThermalModel", nothing)
 

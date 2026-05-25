@@ -10,8 +10,8 @@ simulation_settings = load_simulation_settings(; from_default_set = "p4d_pouch")
 
 model_settings["ThermalModel"] = "Decoupled"
 
-cycling_protocol["InitialTemperature"] = 298.15
-cycling_protocol["AmbientTemperature"] = 298.15
+cycling_protocol["InitialTemperature"] = 35 + 273.15
+cycling_protocol["AmbientTemperature"] = 45 + 273.15
 cycling_protocol["LowerVoltageLimit"] = 2.5
 cycling_protocol["UpperVoltageLimit"] = 3.6
 cycling_protocol["DRate"] = 1
@@ -123,10 +123,10 @@ result_sequential = solve(s; accept_invalid = true);
 
 
 ##
-tstates = result_sequential.jutul_output.states
-elyte_temp = map(s -> maximum(s[:Electrolyte][:Temperature]), tstates)
-pam_temp = map(s -> maximum(s[:PositiveElectrodeActiveMaterial][:Temperature]), tstates)
-nam_temp = map(s -> maximum(s[:NegativeElectrodeActiveMaterial][:Temperature]), tstates)
+tstates = result_sequential.states
+elyte_temp = vec(maximum(tstates["Electrolyte"]["Temperature"], dims = 2))
+pam_temp = vec(maximum(tstates["PositiveElectrode"]["ActiveMaterial"]["Temperature"], dims = 2))
+nam_temp = vec(maximum(tstates["NegativeElectrode"]["ActiveMaterial"]["Temperature"], dims = 2))
 
 fig, ax, plt = lines(T, label = "Maximum temperature (decoupled)")
 lines!(ax, elyte_temp, label = "Electrolyte temperature (coupled)")

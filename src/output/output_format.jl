@@ -562,6 +562,15 @@ function get_output_metrics(
     )
     states = jutul_output[:states]
 
+    if isempty(states)
+        available_quantities = Dict()
+        if isnothing(metrics)
+            return available_quantities
+        else
+            return Dict(q => get(available_quantities, q, error("Metric \"$q\" is not available. Available metrics are: $(join(keys(available_quantities), ", "))")) for q in metrics)
+        end
+    end
+
     controller = states[1][:Control][:Controller]
 
     if isa(controller, FunctionController) || isa(controller, InputCurrentController)
@@ -666,6 +675,12 @@ function get_output_states(
         input::FullSimulationInput;
         quantities::Union{Nothing, Vector{String}} = nothing,
     )
+    states = jutul_output[:states]
+    if isempty(states)
+        time = extract_output_times(jutul_output)
+        return nest_output_states(Dict("Time" => time))
+    end
+
     # Get time and coordinates
     time = extract_output_times(jutul_output)
     r_coords = get_r_coords(input)
@@ -885,6 +900,7 @@ function extract_spatial_data(states::Vector)
         "ElectrolyteMass" => [:Electrolyte, :Mass],
         "ElectrolyteDiffusivity" => [:Electrolyte, :Diffusivity],
         "ElectrolyteConductivity" => [:Electrolyte, :Conductivity],
+        "ElectrolyteTemperature" => [:Electrolyte, :Temperature],
         "NegativeElectrodeInterphaseThickness" => [:NegativeElectrodeActiveMaterial, :SEIThickness],
         "NegativeElectrodeInterphaseNormalizedThickness" => [:NegativeElectrodeActiveMaterial, :NormalizedSEIThickness],
         "NegativeElectrodeInterphaseVoltageDrop" => [:NegativeElectrodeActiveMaterial, :SEIVoltageDrop],
@@ -1066,11 +1082,12 @@ function extract_time_series_data(jutul_output::NamedTuple)
 
     states = jutul_output[:states]
 
+    if isempty(states)
+        return (voltage = Float64[], current = Float64[])
+    end
 
     E = [state[:Control][:ElectricPotential][1] for state in states]
     I = [state[:Control][:Current][1] for state in states]
-
-    #time_series_data = Dict{String, Vector{Float64}}("voltage" => E, "current" => I)
 
     return (voltage = E, current = I)
 
@@ -1080,9 +1097,14 @@ end
 function extract_output_times(jutul_output::NamedTuple)
 
     states = jutul_output[:states]
+
+    if isempty(states)
+        return Float64[]
+    end
+
     t = [state[:Control][:Controller].time for state in states]
 
-    return (time = t)
+    return t
 
 end
 
