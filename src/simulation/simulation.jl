@@ -457,13 +457,8 @@ function solve_simulation(
     end
 
 
-    # jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, post_ministep_hook = thook, kwargs...)
-
-    # else
-
     jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
 
-    # end
 
     # perfom decoupled thermal simulation if needed
 
