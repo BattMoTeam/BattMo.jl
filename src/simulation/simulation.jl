@@ -87,10 +87,10 @@ struct Simulation <: AbstractSimulation
                 error(
                     """
                     Oops! Your Model object is not valid. 🛑
-                    
+
                     TIP: Validation happens when instantiating the Model object.
                     Check the warnings to see exactly where things went wrong. 🔍
-                    
+
                     """,
                 )
             end
@@ -127,9 +127,9 @@ struct Simulation <: AbstractSimulation
                     error(
                         """
                         Oops! Your Simulation object cannot be configured because some of your input is not valid. 🛑
-                        
+
                         Check the warnings to see where things went wrong. 🔍
-                        
+
                         """,
                     )
                 else
@@ -339,15 +339,15 @@ function solve(
         error(
             """
             Your Simulation object is not valid.
-            
+
             TIP: Validation happens when instantiating the Simulation object.
             Check the warnings to see exactly where things went wrong.
-            
+
             If you are confident you know what you are doing, you can bypass this
             validation result when solving:
-            
+
             	solve(sim; accept_invalid = true)
-            
+
             Note that `accept_invalid = true` only applies when validation is enabled.
             """,
         )
@@ -689,15 +689,15 @@ function solver_configuration(
             error(
                 """
                 Your SolverSettings are not valid.
-                
+
                 TIP: Solver settings are validated when calling `solve`.
                 Check the warnings to see exactly where things went wrong.
-                
+
                 If you are confident you know what you are doing, you can bypass this
                 validation result when solving:
-                
+
                 	solve(sim; accept_invalid = true)
-                
+
                 Note that `accept_invalid = true` only applies when validation is enabled.
                 """,
             )
