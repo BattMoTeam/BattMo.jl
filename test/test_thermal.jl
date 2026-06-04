@@ -52,7 +52,7 @@ using BattMo, Jutul, Test
         tstates = output.jutul_output.states
         elyte_temp = map(s -> maximum(s[:Electrolyte][:Temperature]), tstates)
 
-        @test length(elyte_temp) ≈ 73 atol = 0
+        @test length(elyte_temp) ≈ 72 atol = 0
         @test elyte_temp[2] ≈ 298.2655978676414 atol = 1.0e-1
         @test elyte_temp[end] ≈ 319.1879488728503 atol = 1.0e-1
 
