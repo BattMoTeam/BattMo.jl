@@ -338,7 +338,7 @@ function solve_and_differentiate_for_calibration(
         gradient = true,
     )
     case = setup_battmo_case(x)
-    states, dt = simulate_battmo_case_for_calibration(vc.model, case, solver_settings)
+    states, dt = simulate_battmo_case_for_calibration(vc, case, solver_settings)
     # Evaluate the objective function
     f = evaluate_calibration_objective(vc, objective, case, states, dt)
     # Solve adjoints
