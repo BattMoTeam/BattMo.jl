@@ -52,9 +52,9 @@ function compute_discharge_capacity(jutul_output::NamedTuple; cycle_number = not
 
             error(
                 """Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
-                
+
                 				compute_discharge_capacity(output; cycle_number = 1)
-                
+
                 """
             )
 
@@ -128,9 +128,9 @@ function compute_charge_capacity(jutul_output::NamedTuple; cycle_number = nothin
 
             error(
                 """Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
-                
+
                 				compute_charge_capacity(output; cycle_number = 1)
-                
+
                 """
             )
 
@@ -186,9 +186,9 @@ function compute_round_trip_efficiency(jutul_output::NamedTuple; cycle_number = 
 
             error(
                 """Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
-                
+
                 				compute_round_trip_efficiency(output; cycle_number = 1)
-                
+
                 """
             )
 
@@ -210,9 +210,9 @@ function compute_discharge_energy(jutul_output::NamedTuple; cycle_number = nothi
 
             error(
                 """Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
-                
+
                 				compute_discharge_energy(output; cycle_number = 1)
-                
+
                 """
             )
 
@@ -278,9 +278,9 @@ function compute_charge_energy(jutul_output::NamedTuple; cycle_number = nothing)
 
             error(
                 """Your states contain data for multiple cycles. Please provide the cycle number from which you'd like to compute the capacity:
-                
+
                 				compute_discharge_energy(output; cycle_number = 1)
-                
+
                 """
             )
 

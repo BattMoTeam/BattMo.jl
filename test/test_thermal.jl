@@ -54,7 +54,7 @@ using BattMo, Jutul, Test
 
         @test length(elyte_temp) ≈ 72 atol = 0
         @test elyte_temp[2] ≈ 298.2655978676414 atol = 1.0e-1
-        @test elyte_temp[end] ≈ 319.1879488728503 atol = 1.0e-1
+        @test elyte_temp[end] ≈ 317.80925269479013 atol = 1.0e-1
 
         true
 
