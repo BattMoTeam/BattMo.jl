@@ -424,12 +424,12 @@ function simulate_battmo_case_for_calibration(
     if ismissing(config)
         config = solver_configuration(
             simulator,
-            vc.model,
+            vc.sim.model,
             (
-                model_settings = vc.model.settings,
-                cell_parameters = vc.cell_parameters,
-                cycling_protocol = vc.cycling_protocol,
-                simulation_settings = vc.settings,
+                model_settings = vc.sim.model.settings,
+                cell_parameters = vc.sim.cell_parameters,
+                cycling_protocol = vc.sim.cycling_protocol,
+                simulation_settings = vc.sim.settings,
             ),
             case.parameters;
             solver_settings = solver_settings,
