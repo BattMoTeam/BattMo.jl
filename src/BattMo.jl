@@ -245,6 +245,7 @@ include("utils/assembly.jl")
 include("simulation/simulation.jl")
 include("simulation/simulation_utils.jl")
 include("simulation/simulation_wrappers.jl")
+include("simulation/impedance.jl")
 
 include("matlab_interface/matlab_model_setup.jl")
 

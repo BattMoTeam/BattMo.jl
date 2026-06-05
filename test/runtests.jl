@@ -5,6 +5,7 @@ using Test
 include("test_voltage_breakdown.jl")
 include("test_input_current_series.jl")
 include("test_initial_state.jl")
+include("test_impedance.jl")
 include("test_sei.jl")
 include("test_loader.jl")
 # include("test_matlab_input.jl")
