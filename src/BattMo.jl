@@ -214,6 +214,7 @@ include("models/full_battery_models/lithium_ion.jl")
 include("models/full_battery_models/sodium_ion.jl")
 
 include("utils/handy_functions.jl")
+include("utils/curve_analysis.jl")
 
 include("input/loader.jl")
 include("input/defaults.jl")
@@ -272,6 +273,7 @@ include("solver/precondgenneral.jl")
 include("solver/sparse_utils.jl")
 include("calibration/calibration.jl")
 include("calibration/calibration_utils.jl")
+include("calibration/equilibrium_calibration.jl")
 
 include("tools/print_info.jl")
 
