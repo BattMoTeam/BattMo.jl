@@ -36,6 +36,7 @@ using LBFGSB: lbfgsb
 using Jutul: solve_adjoint_sensitivities, optimization_config, setup_parameter_optimization
 using Jutul: devectorize_variables!
 using Optim: Optim
+using ForwardDiff
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🧮 Mathematical & Computational Tools
