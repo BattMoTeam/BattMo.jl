@@ -46,9 +46,9 @@ calibration = EquilibriumCalibration(
     np_ratio = 1.1,
     lower_cutoff_voltage = minimum(voltage),
 )
-print_info(calibration)
+print_calibration_overview(calibration; use_acronyms = true)
 calibrated_parameters = solve(calibration; max_it = 100)
-print_info(calibration)
+print_calibration_overview(calibration; use_acronyms = true)
 
 # ## Compare the fitted equilibrium voltage with the measurements
 x0, = BattMo.equilibrium_calibration_vector(calibration)
@@ -57,15 +57,15 @@ initial_voltage = [equilibrium_voltage(calibration, t, x0) for t in time]
 calibrated_voltage = [equilibrium_voltage(calibration, t, x_calibrated) for t in time]
 initial_rmse = BattMo.rmse(time, voltage, initial_voltage)
 calibrated_rmse = BattMo.rmse(time, voltage, calibrated_voltage)
-println("Initial RMSE: $(initial_rmse/si_unit("milli")) mV")
-println("Calibrated RMSE: $(calibrated_rmse/si_unit("milli")) mV")
+println("Initial RMSE: $(initial_rmse / si_unit("milli")) mV")
+println("Calibrated RMSE: $(calibrated_rmse / si_unit("milli")) mV")
 
 fig = Figure()
 ax = Axis(
     fig[1, 1],
     xlabel = "Capacity / mAh",
     ylabel = "Voltage / V",
-    title = "Calibrated RMSE: $(round(calibrated_rmse/si_unit("milli"), digits = 4)) mV",
+    title = "Calibrated RMSE: $(round(calibrated_rmse / si_unit("milli"), digits = 4)) mV",
 )
 lines!(ax, capacity, voltage, label = "Chayambuka 0.05C", color = :black, linestyle = :dash)
 lines!(ax, capacity, initial_voltage, label = "Initial equilibrium curve")
@@ -74,13 +74,12 @@ axislegend(ax)
 display(GLMakie.Screen(), fig)
 
 
-
 fig = Figure()
 ax = Axis(
     fig[1, 1],
     xlabel = "Time  /  hour",
     ylabel = "Voltage / V",
-    title = "Calibrated RMSE: $(round(calibrated_rmse/si_unit("milli"), digits = 4)) mV",
+    title = "Calibrated RMSE: $(round(calibrated_rmse / si_unit("milli"), digits = 4)) mV",
 )
 lines!(ax, time / si_unit("hour"), voltage, label = "Chayambuka 0.05C", color = :black, linestyle = :dash)
 lines!(ax, time / si_unit("hour"), initial_voltage, label = "Initial equilibrium curve")

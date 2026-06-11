@@ -1,10 +1,30 @@
 export EquilibriumCalibration, equilibrium_calibration_vector, equilibrium_voltage
+using ForwardDiff
 
 const EQUILIBRIUM_CALIBRATION_PARAMETERS = (
     ["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"],
     ["NegativeElectrode", "ActiveMaterial", "MaximumConcentration"],
     ["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"],
     ["PositiveElectrode", "ActiveMaterial", "MaximumConcentration"],
+)
+
+const EQUILIBRIUM_CALIBRATION_ACRONYMS = Dict(
+    "ActiveMaterial" => "am",
+    "Binder" => "bd",
+    "ConductiveAdditive" => "ca",
+    "CurrentCollector" => "cc",
+    "Coating" => "co",
+    "Control" => "ctrl",
+    "Electrolyte" => "elyte",
+    "Geometry" => "geom",
+    "Interface" => "itf",
+    "Interphase" => "itp",
+    "NegativeElectrode" => "ne",
+    "OpenCircuitPotential" => "ocp",
+    "PositiveElectrode" => "pe",
+    "SolidDiffusion" => "sd",
+    "Separator" => "sep",
+    "TimeStepping" => "ts",
 )
 
 """
@@ -250,7 +270,7 @@ function solve(
     return ec.calibrated_cell_parameters
 end
 
-function print_calibration_overview(ec::EquilibriumCalibration)
+function print_calibration_overview(ec::EquilibriumCalibration; use_acronyms = false)
     x0, lb, ub = equilibrium_calibration_vector(ec)
     optimized = if ismissing(ec.calibrated_cell_parameters)
         fill(missing, length(x0))
@@ -260,12 +280,22 @@ function print_calibration_overview(ec::EquilibriumCalibration)
     header = ["Parameter", "Initial value", "Bounds", "Optimized value"]
     table = Matrix{Any}(undef, length(x0), length(header))
     for i in eachindex(x0)
+        parameter = EQUILIBRIUM_CALIBRATION_PARAMETERS[i]
+        if use_acronyms
+            parameter = [get(EQUILIBRIUM_CALIBRATION_ACRONYMS, part, part) for part in parameter]
+        end
         table[i, :] = [
-            join(EQUILIBRIUM_CALIBRATION_PARAMETERS[i], "."),
+            join(parameter, "."),
             x0[i],
             "$(lb[i]) - $(ub[i])",
             optimized[i],
         ]
     end
-    return Jutul.PrettyTables.pretty_table(table; header = header, title = "Equilibrium calibration parameters")
+
+    try
+        return Jutul.PrettyTables.pretty_table(table; header = header, title = "Equilibrium calibration parameters")
+    catch
+        return Jutul.PrettyTables.pretty_table(table; column_labels = header, title = "Equilibrium calibration parameters")
+    end
+
 end
