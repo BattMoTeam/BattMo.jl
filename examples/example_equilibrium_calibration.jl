@@ -35,11 +35,11 @@ voltage = voltage_raw
 # Convert capacity in mAh to time using the 0.05C discharge current.
 cell_parameters = load_cell_parameters(; from_default_set = "chayambuka_2022")
 current = 0.05 * cell_parameters["Cell"]["NominalCapacity"]
-time = (capacity .- first(capacity)) .* si_unit("milli") * si_unit("hour") ./ current
+t = (capacity .- first(capacity)) .* si_unit("milli") * si_unit("hour") ./ current
 
 # ## Set up and solve the equilibrium calibration
 calibration = EquilibriumCalibration(
-    time,
+    t,
     voltage,
     current,
     cell_parameters;
@@ -51,12 +51,12 @@ calibrated_parameters = solve(calibration; max_it = 100)
 print_calibration_overview(calibration; use_acronyms = true)
 
 # ## Compare the fitted equilibrium voltage with the measurements
-x0, = BattMo.equilibrium_calibration_vector(calibration)
-x_calibrated = equilibrium_calibration_vector(calibration, calibrated_parameters)
-initial_voltage = [equilibrium_voltage(calibration, t, x0) for t in time]
-calibrated_voltage = [equilibrium_voltage(calibration, t, x_calibrated) for t in time]
-initial_rmse = BattMo.rmse(time, voltage, initial_voltage)
-calibrated_rmse = BattMo.rmse(time, voltage, calibrated_voltage)
+x0, = equilibrium_calibration_parameters(calibration)
+x_calibrated = equilibrium_calibration_parameters(calibration, calibrated_parameters)
+initial_voltage = [equilibrium_voltage(calibration, tk, x0) for tk in t]
+calibrated_voltage = [equilibrium_voltage(calibration, tk, x_calibrated) for tk in t]
+initial_rmse = rmse(t, voltage, t, initial_voltage)
+calibrated_rmse = rmse(t, voltage, t, calibrated_voltage)
 println("Initial RMSE: $(initial_rmse / si_unit("milli")) mV")
 println("Calibrated RMSE: $(calibrated_rmse / si_unit("milli")) mV")
 
@@ -81,8 +81,8 @@ ax = Axis(
     ylabel = "Voltage / V",
     title = "Calibrated RMSE: $(round(calibrated_rmse / si_unit("milli"), digits = 4)) mV",
 )
-lines!(ax, time / si_unit("hour"), voltage, label = "Chayambuka 0.05C", color = :black, linestyle = :dash)
-lines!(ax, time / si_unit("hour"), initial_voltage, label = "Initial equilibrium curve")
-lines!(ax, time / si_unit("hour"), calibrated_voltage, label = "Calibrated equilibrium curve", color = :firebrick)
+lines!(ax, t / si_unit("hour"), voltage, label = "Chayambuka 0.05C", color = :black, linestyle = :dash)
+lines!(ax, t / si_unit("hour"), initial_voltage, label = "Initial equilibrium curve")
+lines!(ax, t / si_unit("hour"), calibrated_voltage, label = "Calibrated equilibrium curve", color = :firebrick)
 axislegend(ax)
 display(GLMakie.Screen(), fig)

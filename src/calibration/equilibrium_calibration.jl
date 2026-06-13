@@ -1,4 +1,4 @@
-export EquilibriumCalibration, equilibrium_calibration_vector, equilibrium_voltage
+export EquilibriumCalibration, equilibrium_calibration_parameters, equilibrium_voltage
 using ForwardDiff
 
 const EQUILIBRIUM_CALIBRATION_PARAMETERS = (
@@ -130,7 +130,7 @@ function equilibrium_active_material_volume(cell_parameters, electrode)
     return coating_volume * coating["EffectiveDensity"] * am["MassFraction"] / am["Density"]
 end
 
-function equilibrium_calibration_vector(ec::EquilibriumCalibration)
+function equilibrium_calibration_parameters(ec::EquilibriumCalibration)
     x0 = Float64[]
     lb = Float64[]
     ub = Float64[]
@@ -144,12 +144,12 @@ function equilibrium_calibration_vector(ec::EquilibriumCalibration)
 end
 
 """
-    equilibrium_calibration_vector(ec, cell_parameters)
+    equilibrium_calibration_parameters(ec, cell_parameters)
 
 Extract the four equilibrium calibration parameters from a Julia
 `CellParameters` object.
 """
-function equilibrium_calibration_vector(ec::EquilibriumCalibration, cell_parameters::CellParameters)
+function equilibrium_calibration_parameters(ec::EquilibriumCalibration, cell_parameters::CellParameters)
     return [get_nested_json_value(cell_parameters, key) for key in EQUILIBRIUM_CALIBRATION_PARAMETERS]
 end
 
@@ -189,7 +189,8 @@ end
 
 function equilibrium_calibration_objective(ec::EquilibriumCalibration, x)
     voltage = [equilibrium_voltage(ec, t, x) for t in ec.t]
-    return rmse(ec.t, ec.v, voltage)
+    e = voltage .- ec.v
+    return sqrt(trapz(ec.t, abs2.(e)))
 end
 
 function equilibrium_calibration_objective_and_gradient(ec::EquilibriumCalibration, x)
@@ -253,7 +254,7 @@ function solve(
         print = 1,
         kwarg...,
     )
-    x0, lb, ub = equilibrium_calibration_vector(ec)
+    x0, lb, ub = equilibrium_calibration_parameters(ec)
     objective(x) = equilibrium_calibration_objective_and_gradient(ec, x)
     jutul_message("Calibration", "Starting equilibrium calibration.", color = :green)
     value, x, history = Jutul.LBFGS.box_bfgs(
@@ -271,7 +272,7 @@ function solve(
 end
 
 function print_calibration_overview(ec::EquilibriumCalibration; use_acronyms = false)
-    x0, lb, ub = equilibrium_calibration_vector(ec)
+    x0, lb, ub = equilibrium_calibration_parameters(ec)
     optimized = if ismissing(ec.calibrated_cell_parameters)
         fill(missing, length(x0))
     else
