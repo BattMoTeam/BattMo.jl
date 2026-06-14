@@ -17,16 +17,20 @@ using CSV
     current = 0.05 * cell_parameters["Cell"]["NominalCapacity"]
     time = (capacity .- first(capacity)) .* 3.6 ./ current
     calibration = EquilibriumCalibration(time, voltage, current, cell_parameters)
+    X0 = copy(calibration.X0)
 
-    x0, = BattMo.equilibrium_calibration_vector(calibration)
-    initial_voltage = [equilibrium_voltage(calibration, t, x0) for t in time]
-    initial_rmse = BattMo.rmse(time, voltage, initial_voltage)
-    calibrated_parameters = solve(calibration; max_it = 2, print = 0)
-    x = equilibrium_calibration_vector(calibration, calibrated_parameters)
-    calibrated_voltage = [equilibrium_voltage(calibration, t, x) for t in time]
-    calibrated_rmse = BattMo.rmse(time, voltage, calibrated_voltage)
+    initial_voltage = [equilibrium_voltage(calibration, t, calibration.X0) for t in time]
+    initial_rmse = BattMo.rmse(time, voltage, time, initial_voltage)
+    x_calibrated = solve(calibration; max_it = 2, print = 0)
+    calibrated_voltage = [equilibrium_voltage(calibration, t, x_calibrated) for t in time]
+    calibrated_rmse = BattMo.rmse(time, voltage, time, calibrated_voltage)
 
     @test !isempty(calibration.history)
-    @test all(isfinite, x)
+    @test length(calibration.X0) == 4
+    @test calibration.X0 == X0
+    @test length(calibration.bounds.lower) == 4
+    @test length(calibration.bounds.upper) == 4
+    @test calibration.X_calibrated == x_calibrated
+    @test all(isfinite, x_calibrated)
     @test calibrated_rmse <= initial_rmse
 end
