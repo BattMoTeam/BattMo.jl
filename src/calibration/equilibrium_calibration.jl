@@ -1,4 +1,4 @@
-export EquilibriumCalibration, equilibrium_calibration_parameters, equilibrium_voltage
+export EquilibriumCalibration, equilibrium_voltage, export_calibration_parameters
 using ForwardDiff
 
 const EQUILIBRIUM_CALIBRATION_PARAMETERS = (
@@ -36,6 +36,9 @@ The calibrated Julia parameters are `StoichiometricCoefficientAtSOC100` and
 `MaximumConcentration` for each electrode. `MaximumConcentration` is used as
 the Julia representation of the MATLAB setup's total active-material amount,
 with electrode geometry and volume fractions held fixed.
+
+The initial calibration vector is stored in `calibration.X0` with ordering
+`[theta100_ne, cmax_ne, theta100_pe, cmax_pe]`.
 """
 mutable struct EquilibriumCalibration <: AbstractCalibration
     "Time values for the low-rate discharge data [s]."
@@ -52,10 +55,12 @@ mutable struct EquilibriumCalibration <: AbstractCalibration
     lower_cutoff_voltage::Float64
     "Target negative-to-positive electrode capacity ratio."
     np_ratio::Float64
-    "Bounds and initial values for the four calibration parameters."
-    parameter_targets::Dict{Vector{String}, Any}
-    "Cell parameters obtained after calibration."
-    calibrated_cell_parameters::Any
+    "Initial values of the four calibration parameters."
+    X0::Vector{Float64}
+    "Lower and upper bounds for the four calibration parameters."
+    bounds::NamedTuple
+    "Most recently calibrated parameter vector."
+    X_calibrated::Any
     "Optimization history returned by Jutul's BFGS solver."
     history::Any
     ocp_functions::NamedTuple
@@ -82,11 +87,15 @@ function EquilibriumCalibration(
     all(diff(t_sorted) .> 0) || throw(ArgumentError("Time values must be unique."))
 
     parameters = deepcopy(cell_parameters)
-    targets = Dict{Vector{String}, Any}()
+    X0 = Float64[]
+    lower = Float64[]
+    upper = Float64[]
     for (i, key) in enumerate(EQUILIBRIUM_CALIBRATION_PARAMETERS)
         v0 = get_nested_json_value(parameters, key)
         bounds = isodd(i) ? stoichiometry_bounds : concentration_factors .* v0
-        targets[key] = (v0 = v0, vmin = first(bounds), vmax = last(bounds))
+        push!(X0, v0)
+        push!(lower, first(bounds))
+        push!(upper, last(bounds))
     end
 
     ocp_functions = (
@@ -106,7 +115,8 @@ function EquilibriumCalibration(
         Float64(temperature),
         Float64(lower_cutoff_voltage),
         Float64(np_ratio),
-        targets,
+        X0,
+        (lower = lower, upper = upper),
         missing,
         missing,
         ocp_functions,
@@ -125,32 +135,14 @@ function equilibrium_active_material_volume(cell_parameters, electrode)
     electrode_parameters = cell_parameters[electrode]
     am = electrode_parameters["ActiveMaterial"]
     coating = electrode_parameters["Coating"]
-    area = cell_parameters["Cell"]["ElectrodeGeometricSurfaceArea"]
+    cell = cell_parameters["Cell"]
+    if haskey(cell, "ElectrodeGeometricSurfaceArea")
+        area = cell["ElectrodeGeometricSurfaceArea"]
+    else
+        throw(ArgumentError("Only 1D geometry is currently supported for equilibrium calibration."))
+    end
     coating_volume = area * coating["Thickness"]
     return coating_volume * coating["EffectiveDensity"] * am["MassFraction"] / am["Density"]
-end
-
-function equilibrium_calibration_parameters(ec::EquilibriumCalibration)
-    x0 = Float64[]
-    lb = Float64[]
-    ub = Float64[]
-    for key in EQUILIBRIUM_CALIBRATION_PARAMETERS
-        target = ec.parameter_targets[key]
-        push!(x0, target.v0)
-        push!(lb, target.vmin)
-        push!(ub, target.vmax)
-    end
-    return (x0, lb, ub)
-end
-
-"""
-    equilibrium_calibration_parameters(ec, cell_parameters)
-
-Extract the four equilibrium calibration parameters from a Julia
-`CellParameters` object.
-"""
-function equilibrium_calibration_parameters(ec::EquilibriumCalibration, cell_parameters::CellParameters)
-    return [get_nested_json_value(cell_parameters, key) for key in EQUILIBRIUM_CALIBRATION_PARAMETERS]
 end
 
 function evaluate_equilibrium_ocp(ocp, theta, cmax, temperature)
@@ -220,32 +212,52 @@ function find_equilibrium_cutoff_time(ec::EquilibriumCalibration, x)
     return t_high
 end
 
-function calibrated_equilibrium_parameters(ec::EquilibriumCalibration, x)
-    output = deepcopy(ec.cell_parameters)
-    for (key, value) in zip(EQUILIBRIUM_CALIBRATION_PARAMETERS, x)
-        set_nested_json_value!(output, key, value)
-    end
+"""
+    export_calibration_parameters(ec, x_calibrated)
 
-    cutoff_time = find_equilibrium_cutoff_time(ec, x)
-    theta = equilibrium_stoichiometries(ec, cutoff_time, x)
+Export the calibrated and derived equilibrium parameters as a minimal nested
+dictionary. The result can overwrite the corresponding values in an existing
+parameter dictionary with
+`merge_dict(parameters, exported; type = "overwrite")`.
+"""
+function export_calibration_parameters(ec::EquilibriumCalibration, x_calibrated)
+    length(x_calibrated) == length(EQUILIBRIUM_CALIBRATION_PARAMETERS) ||
+        throw(ArgumentError("Expected four calibrated equilibrium parameters."))
+
+    cutoff_time = find_equilibrium_cutoff_time(ec, x_calibrated)
+    theta = equilibrium_stoichiometries(ec, cutoff_time, x_calibrated)
     pe_theta0 = clamp(theta.positive, 0.0, 1.0)
-    ne_total_amount = ec.active_volumes.negative * x[2]
-    pe_total_amount = ec.active_volumes.positive * x[4]
-    ne_n = output["NegativeElectrode"]["ActiveMaterial"]["NumberOfElectronsTransfered"]
-    pe_n = output["PositiveElectrode"]["ActiveMaterial"]["NumberOfElectronsTransfered"]
+    ne_total_amount = ec.active_volumes.negative * x_calibrated[2]
+    pe_total_amount = ec.active_volumes.positive * x_calibrated[4]
+    ne_n = ec.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["NumberOfElectronsTransfered"]
+    pe_n = ec.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["NumberOfElectronsTransfered"]
     amount_ratio = pe_n * pe_total_amount / (ne_n * ne_total_amount)
-    ne_theta0 = x[1] - ec.np_ratio * amount_ratio * (pe_theta0 - x[3])
+    ne_theta0 = x_calibrated[1] - ec.np_ratio * amount_ratio * (pe_theta0 - x_calibrated[3])
     ne_theta0 = clamp(ne_theta0, 0.0, 1.0)
 
-    output["NegativeElectrode"]["ActiveMaterial"]["StoichiometricCoefficientAtSOC0"] = ne_theta0
-    output["PositiveElectrode"]["ActiveMaterial"]["StoichiometricCoefficientAtSOC0"] = pe_theta0
-    return output
+    return Dict(
+        "NegativeElectrode" => Dict(
+            "ActiveMaterial" => Dict(
+                "StoichiometricCoefficientAtSOC100" => x_calibrated[1],
+                "StoichiometricCoefficientAtSOC0" => ne_theta0,
+                "MaximumConcentration" => x_calibrated[2],
+            ),
+        ),
+        "PositiveElectrode" => Dict(
+            "ActiveMaterial" => Dict(
+                "StoichiometricCoefficientAtSOC100" => x_calibrated[3],
+                "StoichiometricCoefficientAtSOC0" => pe_theta0,
+                "MaximumConcentration" => x_calibrated[4],
+            ),
+        ),
+    )
 end
 
 """
     solve(ec::EquilibriumCalibration; kwargs...)
 
-Calibrate the equilibrium discharge curve with `Jutul.LBFGS.box_bfgs`.
+Calibrate the equilibrium discharge curve with `Jutul.LBFGS.box_bfgs` and
+return the calibrated parameter vector.
 """
 function solve(
         ec::EquilibriumCalibration;
@@ -254,41 +266,39 @@ function solve(
         print = 1,
         kwarg...,
     )
-    x0, lb, ub = equilibrium_calibration_parameters(ec)
     objective(x) = equilibrium_calibration_objective_and_gradient(ec, x)
     jutul_message("Calibration", "Starting equilibrium calibration.", color = :green)
     value, x, history = Jutul.LBFGS.box_bfgs(
-        x0, objective, lb, ub;
+        copy(ec.X0), objective, ec.bounds.lower, ec.bounds.upper;
         maximize = false,
         grad_tol = grad_tol,
         obj_change_tol = obj_change_tol,
         print = print,
         kwarg...,
     )
-    ec.calibrated_cell_parameters = calibrated_equilibrium_parameters(ec, x)
+    ec.X_calibrated = copy(x)
     ec.history = history
     jutul_message("Calibration", "Equilibrium calibration finished with RMSE $value V.", color = :green)
-    return ec.calibrated_cell_parameters
+    return x
 end
 
 function print_calibration_overview(ec::EquilibriumCalibration; use_acronyms = false)
-    x0, lb, ub = equilibrium_calibration_parameters(ec)
-    optimized = if ismissing(ec.calibrated_cell_parameters)
-        fill(missing, length(x0))
+    optimized = if ismissing(ec.X_calibrated)
+        fill(missing, length(ec.X0))
     else
-        [get_nested_json_value(ec.calibrated_cell_parameters, key) for key in EQUILIBRIUM_CALIBRATION_PARAMETERS]
+        ec.X_calibrated
     end
     header = ["Parameter", "Initial value", "Bounds", "Optimized value"]
-    table = Matrix{Any}(undef, length(x0), length(header))
-    for i in eachindex(x0)
+    table = Matrix{Any}(undef, length(ec.X0), length(header))
+    for i in eachindex(ec.X0)
         parameter = EQUILIBRIUM_CALIBRATION_PARAMETERS[i]
         if use_acronyms
             parameter = [get(EQUILIBRIUM_CALIBRATION_ACRONYMS, part, part) for part in parameter]
         end
         table[i, :] = [
             join(parameter, "."),
-            x0[i],
-            "$(lb[i]) - $(ub[i])",
+            ec.X0[i],
+            "$(ec.bounds.lower[i]) - $(ec.bounds.upper[i])",
             optimized[i],
         ]
     end
