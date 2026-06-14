@@ -275,6 +275,7 @@ include("solver/sparse_utils.jl")
 include("calibration/calibration.jl")
 include("calibration/calibration_utils.jl")
 include("calibration/equilibrium_calibration.jl")
+include("calibration/sequential_calibration.jl")
 
 include("tools/print_info.jl")
 
