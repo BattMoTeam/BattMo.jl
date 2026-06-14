@@ -12,7 +12,53 @@ function merge_input(base::P, new::P; type = "fill", key_path = nothing) where {
     return P(merged_dict)
 end
 
-function merge_dict(base::D, new::D; type = "fill", key_path = nothing) where {D <: AbstractDict}
+"""
+    merge_dict(base, new; type = "fill", key_path = nothing)
+
+Recursively merge `new` into a deep copy of `base`.
+
+The supported merge types are:
+- `"fill"`: add missing values and replace existing values that are `0` or
+  `nothing`. Other existing values are preserved.
+- `"overwrite"`: recursively replace existing values with values from `new`.
+- `"replace"`: replace the entire subtree selected by `key_path`. The
+  replacement must exist at the same key in `new`.
+
+`base` and `new` are not modified.
+
+# Examples
+
+Fill missing or empty values:
+
+```julia
+base = Dict("x" => 1, "y" => 0)
+new = Dict("x" => 9, "y" => 2, "z" => 3)
+
+merged = merge_dict(base, new; type = "fill")
+merged == Dict("x" => 1, "y" => 2, "z" => 3)
+```
+
+Recursively overwrite only the values supplied by `new`:
+
+```julia
+base = Dict("A" => Dict("x" => 1, "y" => 2))
+new = Dict("A" => Dict("x" => 9))
+
+merged = merge_dict(base, new; type = "overwrite")
+merged == Dict("A" => Dict("x" => 9, "y" => 2))
+```
+
+Replace an entire subtree:
+
+```julia
+base = Dict("A" => Dict("x" => 1, "y" => 2), "B" => 3)
+new = Dict("A" => Dict("x" => 9))
+
+merged = merge_dict(base, new; type = "replace", key_path = "A")
+merged == Dict("A" => Dict("x" => 9), "B" => 3)
+```
+"""
+function merge_dict(base::AbstractDict, new::AbstractDict; type = "fill", key_path = nothing)
     merged = deepcopy(base)
 
     if type == "replace"
@@ -39,6 +85,14 @@ function merge_dict(base::D, new::D; type = "fill", key_path = nothing) where {D
             end
         end
 
+    elseif type == "overwrite"
+        for (k, v) in new
+            if haskey(merged, k) && v isa AbstractDict && merged[k] isa AbstractDict
+                merged[k] = merge_dict(merged[k], v; type = "overwrite")
+            else
+                merged[k] = deepcopy(v)
+            end
+        end
     elseif type == "fill"
         for (k, v) in new
             if haskey(merged, k)
@@ -52,7 +106,7 @@ function merge_dict(base::D, new::D; type = "fill", key_path = nothing) where {D
             end
         end
     else
-        error("Unknown merge type: $type. Use 'fill' or 'replace'.")
+        error("Unknown merge type: $type. Use 'fill', 'overwrite', or 'replace'.")
     end
 
     return merged
