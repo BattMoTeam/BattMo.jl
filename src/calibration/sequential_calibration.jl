@@ -110,9 +110,23 @@ function set_sequential_parameter!(cell_parameters, parameter, value)
     return cell_parameters
 end
 
+function sequential_parameter_uses_log_scale(parameter)
+    name = parameter.shortname
+    return endswith(name, "_vsa") || endswith(name, "_D") || endswith(name, "_j0")
+end
+
+function scale_sequential_parameter(parameter, value)
+    return sequential_parameter_uses_log_scale(parameter) ? log10(value) : value
+end
+
+function unscale_sequential_parameter(parameter, value)
+    return sequential_parameter_uses_log_scale(parameter) ? 10.0^value : value
+end
+
 function setup_sequential_calibration_case(X, sim, parameters; stepix = missing)
     for (parameter, value) in zip(parameters, X)
-        set_sequential_parameter!(sim.cell_parameters, parameter, value)
+        physical_value = unscale_sequential_parameter(parameter, value)
+        set_sequential_parameter!(sim.cell_parameters, parameter, physical_value)
     end
 
     input = (
@@ -146,15 +160,20 @@ end
 function setup_sequential_problem(sim, t, voltage, shortnames)
     parameters = select_sequential_parameters(shortnames)
     calibration = VoltageCalibration(t, voltage, sim)
-    x0 = [sequential_parameter_value(calibration.sim.cell_parameters, p) for p in parameters]
-    lower = [p.bounds[1] for p in parameters]
-    upper = [p.bounds[2] for p in parameters]
-    for i in eachindex(x0)
-        lower[i] <= x0[i] <= upper[i] || throw(ArgumentError(
-            "Initial value $(x0[i]) for $(parameters[i].shortname) is outside " *
-                "the bounds [$(lower[i]), $(upper[i])].",
+    physical_x0 = Float64[
+        sequential_parameter_value(calibration.sim.cell_parameters, p) for p in parameters
+    ]
+    physical_lower = [p.bounds[1] for p in parameters]
+    physical_upper = [p.bounds[2] for p in parameters]
+    for i in eachindex(physical_x0)
+        physical_lower[i] <= physical_x0[i] <= physical_upper[i] || throw(ArgumentError(
+            "Initial value $(physical_x0[i]) for $(parameters[i].shortname) is outside " *
+                "the bounds [$(physical_lower[i]), $(physical_upper[i])].",
         ))
     end
+    x0 = [scale_sequential_parameter(p, x) for (p, x) in zip(parameters, physical_x0)]
+    lower = [scale_sequential_parameter(p, x) for (p, x) in zip(parameters, physical_lower)]
+    upper = [scale_sequential_parameter(p, x) for (p, x) in zip(parameters, physical_upper)]
     objective = setup_calibration_objective(calibration)
     setup_case(X, step_info = missing) =
         setup_sequential_calibration_case(X, calibration.sim, parameters)
@@ -218,15 +237,33 @@ function calibrate_sequential_group(
     )
     problem = setup_sequential_problem(sim, t, voltage, shortnames)
     adjoint_cache = Dict()
-    objective_gradient(x) = solve_and_differentiate_for_calibration(
-        x,
-        problem.setup_case,
-        problem.calibration,
-        problem.objective,
-        solver_settings;
-        adj_cache = adjoint_cache,
-        backend_arg,
-    )
+    initial_objective = Ref{Union{Nothing, Float64}}(nothing)
+    function objective_gradient(x)
+        try
+            value, gradient = solve_and_differentiate_for_calibration(
+                x,
+                problem.setup_case,
+                problem.calibration,
+                problem.objective,
+                solver_settings;
+                adj_cache = adjoint_cache,
+                backend_arg,
+            )
+            initial_objective[] === nothing && (initial_objective[] = value)
+            return value, gradient
+        catch error
+            error isa InterruptException && rethrow()
+            if initial_objective[] === nothing
+                rethrow()
+            end
+            jutul_message(
+                "Sequential calibration",
+                "Trial simulation failed: $(sprint(showerror, error)). Returning a penalty.",
+                color = :yellow,
+            )
+            return 100.0 * initial_objective[], fill(1.0e16, length(x))
+        end
+    end
     value, x, history = Jutul.LBFGS.box_bfgs(
         copy(problem.x0),
         objective_gradient,
@@ -241,7 +278,8 @@ function calibrate_sequential_group(
 
     calibrated = deepcopy(sim.cell_parameters)
     for (parameter, parameter_value) in zip(problem.parameters, x)
-        set_sequential_parameter!(calibrated, parameter, parameter_value)
+        physical_value = unscale_sequential_parameter(parameter, parameter_value)
+        set_sequential_parameter!(calibrated, parameter, physical_value)
     end
     return (; value, x, history, cell_parameters = calibrated, initial = problem.x0)
 end
