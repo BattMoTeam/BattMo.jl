@@ -12,6 +12,7 @@ struct SequentialCalibrationParameter
     shortname::String
     paths::Vector{Vector{String}}
     bounds::Tuple{Float64, Float64}
+    scaling::Symbol
 end
 
 struct SequentialParameterGroup
@@ -29,40 +30,40 @@ function sequential_parameter_catalog()
 
     return Dict(
         "ne_j0" => SequentialCalibrationParameter(
-            "ne_j0", [[ne, am, "ReactionRateConstant"]], (1.0e-13, 1.0e-6),
+            "ne_j0", [[ne, am, "ReactionRateConstant"]], (1.0e-13, 1.0e-6), :log,
         ),
         "pe_j0" => SequentialCalibrationParameter(
-            "pe_j0", [[pe, am, "ReactionRateConstant"]], (1.0e-13, 1.0e-9),
+            "pe_j0", [[pe, am, "ReactionRateConstant"]], (1.0e-13, 1.0e-9), :log,
         ),
         "ne_vsa" => SequentialCalibrationParameter(
-            "ne_vsa", [[ne, am, "VolumetricSurfaceArea"]], (1.0e5, 1.0e7),
+            "ne_vsa", [[ne, am, "VolumetricSurfaceArea"]], (1.0e5, 1.0e7), :log,
         ),
         "pe_vsa" => SequentialCalibrationParameter(
-            "pe_vsa", [[pe, am, "VolumetricSurfaceArea"]], (1.0e4, 1.0e10),
+            "pe_vsa", [[pe, am, "VolumetricSurfaceArea"]], (1.0e4, 1.0e10), :log,
         ),
         "ne_bg" => SequentialCalibrationParameter(
-            "ne_bg", [[ne, co, "BruggemanCoefficient"]], (1.0e-10, 10.0),
+            "ne_bg", [[ne, co, "BruggemanCoefficient"]], (1.0e-10, 10.0), :linear,
         ),
         "pe_bg" => SequentialCalibrationParameter(
-            "pe_bg", [[pe, co, "BruggemanCoefficient"]], (1.0e-10, 10.0),
+            "pe_bg", [[pe, co, "BruggemanCoefficient"]], (1.0e-10, 10.0), :linear,
         ),
         "ne_D" => SequentialCalibrationParameter(
-            "ne_D", [[ne, am, "DiffusionCoefficient"]], (1.0e-15, 1.0e-9),
+            "ne_D", [[ne, am, "DiffusionCoefficient"]], (1.0e-15, 1.0e-9), :log,
         ),
         "pe_D" => SequentialCalibrationParameter(
-            "pe_D", [[pe, am, "DiffusionCoefficient"]], (1.0e-15, 1.0e-8),
+            "pe_D", [[pe, am, "DiffusionCoefficient"]], (1.0e-15, 1.0e-8), :log,
         ),
         "elyte_bg" => SequentialCalibrationParameter(
-            "elyte_bg", [["Electrolyte", "BruggemanCoefficient"]], (1.0e-10, 10.0),
+            "elyte_bg", [["Electrolyte", "BruggemanCoefficient"]], (1.0e-10, 10.0), :linear,
         ),
         "elyte_bg_ne" => SequentialCalibrationParameter(
-            "elyte_bg_ne", [[ne, co, "BruggemanCoefficient"]], (1.0e-10, 10.0),
+            "elyte_bg_ne", [[ne, co, "BruggemanCoefficient"]], (1.0e-10, 10.0), :linear,
         ),
         "elyte_bg_pe" => SequentialCalibrationParameter(
-            "elyte_bg_pe", [[pe, co, "BruggemanCoefficient"]], (1.0e-10, 10.0),
+            "elyte_bg_pe", [[pe, co, "BruggemanCoefficient"]], (1.0e-10, 10.0), :linear,
         ),
         "elyte_bg_sep" => SequentialCalibrationParameter(
-            "elyte_bg_sep", [["Separator", "BruggemanCoefficient"]], (1.0e-10, 10.0),
+            "elyte_bg_sep", [["Separator", "BruggemanCoefficient"]], (1.0e-10, 10.0), :linear,
         ),
     )
 end
@@ -110,17 +111,22 @@ function set_sequential_parameter!(cell_parameters, parameter, value)
     return cell_parameters
 end
 
-function sequential_parameter_uses_log_scale(parameter)
-    name = parameter.shortname
-    return endswith(name, "_vsa") || endswith(name, "_D") || endswith(name, "_j0")
-end
-
 function scale_sequential_parameter(parameter, value)
-    return sequential_parameter_uses_log_scale(parameter) ? log10(value) : value
+    if parameter.scaling == :log
+        return log10(value)
+    elseif parameter.scaling == :linear
+        return value
+    end
+    throw(ArgumentError("Unsupported scaling $(parameter.scaling) for $(parameter.shortname)."))
 end
 
 function unscale_sequential_parameter(parameter, value)
-    return sequential_parameter_uses_log_scale(parameter) ? 10.0^value : value
+    if parameter.scaling == :log
+        return 10.0^value
+    elseif parameter.scaling == :linear
+        return value
+    end
+    throw(ArgumentError("Unsupported scaling $(parameter.scaling) for $(parameter.shortname)."))
 end
 
 function setup_sequential_calibration_case(X, sim, parameters; stepix = missing)
@@ -189,6 +195,7 @@ short-name parameters at their current values.
 function evaluate_sequential_sensitivities(
         sim, t, voltage, shortnames;
         solver_settings = get_default_solver_settings(sim.model),
+        validate_solver_settings = true,
         backend_arg = (
             use_sparsity = false,
             di_sparse = true,
@@ -204,6 +211,7 @@ function evaluate_sequential_sensitivities(
         problem.objective,
         solver_settings;
         backend_arg,
+        validate_solver_settings,
     )
     gradient = physical_gradient .* (problem.upper .- problem.lower)
     return (;
@@ -224,6 +232,7 @@ Optimize one sequential parameter group with Jutul's bounded BFGS solver.
 function calibrate_sequential_group(
         sim, t, voltage, shortnames;
         solver_settings = get_default_solver_settings(sim.model),
+        validate_solver_settings = true,
         grad_tol = 1.0e-10,
         obj_change_tol = 1.0e-10,
         maxit = 100,
@@ -237,33 +246,16 @@ function calibrate_sequential_group(
     )
     problem = setup_sequential_problem(sim, t, voltage, shortnames)
     adjoint_cache = Dict()
-    initial_objective = Ref{Union{Nothing, Float64}}(nothing)
-    function objective_gradient(x)
-        try
-            value, gradient = solve_and_differentiate_for_calibration(
-                x,
-                problem.setup_case,
-                problem.calibration,
-                problem.objective,
-                solver_settings;
-                adj_cache = adjoint_cache,
-                backend_arg,
-            )
-            initial_objective[] === nothing && (initial_objective[] = value)
-            return value, gradient
-        catch error
-            error isa InterruptException && rethrow()
-            if initial_objective[] === nothing
-                rethrow()
-            end
-            jutul_message(
-                "Sequential calibration",
-                "Trial simulation failed: $(sprint(showerror, error)). Returning a penalty.",
-                color = :yellow,
-            )
-            return 100.0 * initial_objective[], fill(1.0e16, length(x))
-        end
-    end
+    objective_gradient(x) = solve_and_differentiate_for_calibration(
+        x,
+        problem.setup_case,
+        problem.calibration,
+        problem.objective,
+        solver_settings;
+        adj_cache = adjoint_cache,
+        backend_arg,
+        validate_solver_settings,
+    )
     value, x, history = Jutul.LBFGS.box_bfgs(
         copy(problem.x0),
         objective_gradient,
