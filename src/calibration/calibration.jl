@@ -336,9 +336,14 @@ function solve_and_differentiate_for_calibration(
         adj_cache = Dict(),
         backend_arg = NamedTuple(),
         gradient = true,
+        validate_solver_settings = true,
     )
     case = setup_battmo_case(x)
-    states, dt = simulate_battmo_case_for_calibration(case, solver_settings)
+    states, dt = simulate_battmo_case_for_calibration(
+        case,
+        solver_settings;
+        validate_solver_settings,
+    )
     # Evaluate the objective function
     f = evaluate_calibration_objective(vc, objective, case, states, dt)
     # Solve adjoints
@@ -415,6 +420,7 @@ function simulate_battmo_case_for_calibration(
         case, solver_settings;
         simulator = missing,
         config = missing,
+        validate_solver_settings = true,
     )
 
     if ismissing(simulator)
@@ -428,6 +434,7 @@ function simulate_battmo_case_for_calibration(
             case.parameters;
             solver_settings = solver_settings,
             info_level = -1,
+            validate = validate_solver_settings,
         )
     end
     result = Jutul.simulate!(
