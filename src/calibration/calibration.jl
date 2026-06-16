@@ -338,7 +338,7 @@ function solve_and_differentiate_for_calibration(
         gradient = true,
     )
     case = setup_battmo_case(x)
-    states, dt = simulate_battmo_case_for_calibration(case, solver_settings)
+    states, dt = simulate_battmo_case_for_calibration(vc, case, solver_settings)
     # Evaluate the objective function
     f = evaluate_calibration_objective(vc, objective, case, states, dt)
     # Solve adjoints
@@ -412,7 +412,7 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing;
 end
 
 function simulate_battmo_case_for_calibration(
-        case, solver_settings;
+        vc, case, solver_settings;
         simulator = missing,
         config = missing,
     )
@@ -424,7 +424,13 @@ function simulate_battmo_case_for_calibration(
     if ismissing(config)
         config = solver_configuration(
             simulator,
-            case.model,
+            vc.sim.model,
+            (
+                model_settings = vc.sim.model.settings,
+                cell_parameters = vc.sim.cell_parameters,
+                cycling_protocol = vc.sim.cycling_protocol,
+                simulation_settings = vc.sim.settings,
+            ),
             case.parameters;
             solver_settings = solver_settings,
             info_level = -1,

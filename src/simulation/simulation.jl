@@ -427,7 +427,13 @@ function solve_simulation(
     # Setup solver configuration
     cfg = solver_configuration(
         simulator,
-        model.multimodel,
+        model,
+        (
+            model_settings = model.settings,
+            cell_parameters = cell_parameters,
+            cycling_protocol = cycling_protocol,
+            simulation_settings = simulation_settings,
+        ),
         parameters;
         solver_settings,
         validate,
@@ -450,25 +456,9 @@ function solve_simulation(
         )
     end
 
-    # Perform simulation
-    if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
 
-        input = (
-            model_settings = model.settings,
-            cell_parameters = cell_parameters,
-            cycling_protocol = cycling_protocol,
-            simulation_settings = simulation_settings,
-        )
+    jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
 
-        thook = BattMo.setup_thermal_post_ministep_hook(model, input, Temperature = cycling_protocol["InitialTemperature"])
-
-        jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, post_ministep_hook = thook, kwargs...)
-
-    else
-
-        jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
-
-    end
 
     # perfom decoupled thermal simulation if needed
 
@@ -675,7 +665,8 @@ probably be given as inputs in future versions of BattMo.jl
 """
 function solver_configuration(
         sim::JutulSimulator,
-        model::MultiModel,
+        model::Battery,
+        input,
         parameters;
         use_model_scaling::Bool = true,
         solver_settings,
@@ -685,6 +676,7 @@ function solver_configuration(
         kwargs...,
     )
 
+    multimodel = model.multimodel
     solver_settings = deepcopy(solver_settings)
 
     overwritten_settings = overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
@@ -783,7 +775,7 @@ function solver_configuration(
     end
 
     if use_model_scaling
-        scalings = get_scalings(model, parameters)
+        scalings = get_scalings(multimodel, parameters)
         tol_default = 1.0e-5
         for scaling in scalings
             model_label = scaling[:model_label]
@@ -792,26 +784,27 @@ function solver_configuration(
             cfg[:tolerances][model_label][equation_label] = value * tol_default
         end
     else
-        for key in submodels_symbols(model)
+        for key in submodels_symbols(multimodel)
             cfg[:tolerances][key][:default] = 1.0e-5
         end
     end
 
-    if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy
-        if model[:Control].system.policy isa CyclingCVPolicy
+    if multimodel[:Control].system.policy isa CyclingCVPolicy || multimodel[:Control].system.policy isa CCPolicy
+        if multimodel[:Control].system.policy isa CyclingCVPolicy
 
             cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
 
-        elseif model[:Control].system.policy isa CCPolicy && model[:Control].system.policy.numberOfCycles > 0
+        elseif multimodel[:Control].system.policy isa CCPolicy && multimodel[:Control].system.policy.numberOfCycles > 0
             cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
         end
 
         function post_hook(done, report, sim, dt, forces, max_iter, cfg)
 
+
             s = get_simulator_storage(sim)
             m = get_simulator_model(sim)
 
-            if model[:Control].system.policy isa CyclingCVPolicy
+            if multimodel[:Control].system.policy isa CyclingCVPolicy
 
                 if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
                     report[:stopnow] = true
@@ -819,21 +812,21 @@ function solver_configuration(
                     report[:stopnow] = false
                 end
 
-            elseif model[:Control].system.policy isa CCPolicy
+            elseif multimodel[:Control].system.policy isa CCPolicy
 
-                if m[:Control].system.policy.numberOfCycles == 0
+                if multimodel[:Control].system.policy.numberOfCycles == 0
 
-                    if m[:Control].system.policy.initialControl == "charging"
+                    if multimodel[:Control].system.policy.initialControl == "charging"
 
-                        if s.state.Control.ElectricPotential[1] >= m[:Control].system.policy.upperCutoffVoltage
+                        if s.state.Control.ElectricPotential[1] >= multimodel[:Control].system.policy.upperCutoffVoltage
                             report[:stopnow] = true
                         else
                             report[:stopnow] = false
                         end
 
-                    elseif m[:Control].system.policy.initialControl == "discharging"
+                    elseif multimodel[:Control].system.policy.initialControl == "discharging"
 
-                        if s.state.Control.ElectricPotential[1] <= m[:Control].system.policy.lowerCutoffVoltage
+                        if s.state.Control.ElectricPotential[1] <= multimodel[:Control].system.policy.lowerCutoffVoltage
                             report[:stopnow] = true
 
                         else
@@ -842,7 +835,7 @@ function solver_configuration(
                         end
                     end
                 else
-                    if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
+                    if s.state.Control.Controller.numberOfCycles >= multimodel[:Control].system.policy.numberOfCycles
                         report[:stopnow] = true
                     else
                         report[:stopnow] = false
@@ -851,6 +844,13 @@ function solver_configuration(
             end
 
             return (done, report)
+
+        end
+
+        # Perform thermal simulation
+        if haskey(input.model_settings, "ThermalModel") && input.model_settings["ThermalModel"] == "Sequential"
+
+            post_hook = BattMo.setup_thermal_post_ministep_hook(model, input, post_hook; Temperature = input.cycling_protocol["InitialTemperature"])
 
         end
 
