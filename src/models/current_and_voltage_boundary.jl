@@ -85,6 +85,8 @@ mutable struct SequencePolicy{R} <: AbstractPolicy
     steps::Vector{AbstractSequenceStep}
     ImaxDischarge::R
     ImaxCharge::R
+    use_ramp_up::Bool
+    rampup_time::R
 end
 
 ## A policy is used to compute the next control from the current control and state
@@ -445,9 +447,15 @@ mutable struct SequenceController{R} <: Controller
     numberOfCycles::Int
     dEdt::Union{R, Missing}
     dIdt::Union{R, Missing}
+    ramp_start_time::R
+    ramp_duration::R
+    ramp_start_target::R
+    ramp_end_target::R
+    ramp_target_is_voltage::Bool
+    ramp_active::Bool
 end
 
-SequenceController() = SequenceController(1, 0.0, 0.0, 0.0, false, missing, 0, missing, missing)
+SequenceController() = SequenceController(1, 0.0, 0.0, 0.0, false, missing, 0, missing, missing, 0.0, 0.0, 0.0, 0.0, false, false)
 
 @inline function Jutul.numerical_type(x::SequenceController{R}) where {R}
     return R
@@ -607,7 +615,13 @@ function copyController!(cv_copy::SequenceController, cv::SequenceController)
     cv_copy.ctrlType = cv.ctrlType
     cv_copy.numberOfCycles = cv.numberOfCycles
     cv_copy.dEdt = cv.dEdt
-    return cv_copy.dIdt = cv.dIdt
+    cv_copy.dIdt = cv.dIdt
+    cv_copy.ramp_start_time = cv.ramp_start_time
+    cv_copy.ramp_duration = cv.ramp_duration
+    cv_copy.ramp_start_target = cv.ramp_start_target
+    cv_copy.ramp_end_target = cv.ramp_end_target
+    cv_copy.ramp_target_is_voltage = cv.ramp_target_is_voltage
+    return cv_copy.ramp_active = cv.ramp_active
 
 end
 
@@ -782,11 +796,79 @@ function sequence_complete(policy::SequencePolicy, controller::SequenceControlle
     return controller.step_index > length(policy.steps)
 end
 
+function sequence_nominal_target(policy::RestPolicy, controller::SequenceController)
+    return (target = 0.0, target_is_voltage = false)
+end
+
+function sequence_nominal_target(policy::CCPolicy, controller::SequenceController)
+    if controller.ctrlType == "discharging"
+        target = policy.ImaxDischarge
+    elseif controller.ctrlType == "charging"
+        target = -policy.ImaxCharge
+    else
+        error("ctrlType $(controller.ctrlType) not recognized")
+    end
+    return (target = target, target_is_voltage = false)
+end
+
+function sequence_nominal_target(policy::CyclingCVPolicy, controller::SequenceController)
+    if controller.ctrlType == cc_discharge1
+        target = policy.ImaxDischarge
+        target_is_voltage = false
+    elseif controller.ctrlType == cc_discharge2
+        target = 0.0
+        target_is_voltage = false
+    elseif controller.ctrlType == cc_charge1
+        target = -policy.ImaxCharge
+        target_is_voltage = false
+    elseif controller.ctrlType == cv_charge2
+        target = policy.upperCutoffVoltage
+        target_is_voltage = true
+    else
+        error("ctrlType $(controller.ctrlType) not recognized")
+    end
+    return (target = target, target_is_voltage = target_is_voltage)
+end
+
 function advance_sequence_step!(controller::SequenceController, policy::SequencePolicy)
+    previous_target = controller.target
+    previous_target_is_voltage = controller.target_is_voltage
+
     controller.step_index += 1
     controller.step_start_time = controller.time
     if !sequence_complete(policy, controller)
         initialize_sequence_step_controller!(controller, active_sequence_policy(policy, controller))
+        nominal = sequence_nominal_target(active_sequence_policy(policy, controller), controller)
+        if policy.use_ramp_up && policy.rampup_time > 0 && previous_target_is_voltage == nominal.target_is_voltage && previous_target != nominal.target
+            controller.ramp_start_time = controller.time
+            controller.ramp_duration = policy.rampup_time
+            controller.ramp_start_target = previous_target
+            controller.ramp_end_target = nominal.target
+            controller.ramp_target_is_voltage = nominal.target_is_voltage
+            controller.ramp_active = true
+            controller.target = previous_target
+            controller.target_is_voltage = previous_target_is_voltage
+        else
+            controller.ramp_active = false
+        end
+    else
+        controller.ramp_active = false
+    end
+    return controller
+end
+
+function apply_sequence_transition_ramp!(controller::SequenceController)
+    if controller.ramp_active
+        elapsed = controller.time - controller.ramp_start_time
+        if elapsed < controller.ramp_duration
+            delta = controller.ramp_end_target - controller.ramp_start_target
+            controller.target = controller.ramp_start_target + currentFun(elapsed, delta, controller.ramp_duration)
+            controller.target_is_voltage = controller.ramp_target_is_voltage
+        else
+            controller.target = controller.ramp_end_target
+            controller.target_is_voltage = controller.ramp_target_is_voltage
+            controller.ramp_active = false
+        end
     end
     return controller
 end
@@ -1755,7 +1837,8 @@ function update_values_in_controller!(state, policy::SequencePolicy)
     if sequence_complete(policy, controller)
         return nothing
     end
-    return update_sequence_values_in_controller!(state, active_sequence_policy(policy, controller))
+    update_sequence_values_in_controller!(state, active_sequence_policy(policy, controller))
+    return apply_sequence_transition_ramp!(controller)
 end
 
 #############################
@@ -2052,7 +2135,7 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
         target_is_voltage = false
 
         target, time = promote(target, time)
-        state[:Controller] = SequenceController(1, time, target, time, target_is_voltage, missing, 0, missing, missing)
+        state[:Controller] = SequenceController(1, time, target, time, target_is_voltage, missing, 0, missing, missing, time, 0.0, target, target, target_is_voltage, false)
         initialize_sequence_step_controller!(state[:Controller], active_sequence_policy(policy, state[:Controller]))
 
     end

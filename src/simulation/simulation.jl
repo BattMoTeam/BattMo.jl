@@ -1093,24 +1093,31 @@ function setup_timesteps(
 
         totalTime = cycling_protocol["Duration"]
         dt = simulation_settings["TimeStepDuration"]
-        n = Int64(floor(totalTime / dt))
-        timesteps = repeat([dt], n)
-        dt_final = totalTime - sum(timesteps)
-        if dt_final > 0
-            push!(timesteps, dt_final)
+        if haskey(input.model_settings, "RampUp")
+            nr = simulation_settings["RampUpSteps"]
+            timesteps = compute_rampup_timesteps(totalTime, dt, nr)
+        else
+            n = Int64(floor(totalTime / dt))
+            timesteps = repeat([dt], n)
+            dt_final = totalTime - sum(timesteps)
+            if dt_final > 0
+                push!(timesteps, dt_final)
+            end
         end
 
     elseif protocol == "Sequence"
 
         timesteps = Float64[]
         for step in cycling_protocol["Steps"]
-            step_protocol = CyclingProtocol(merge(
-                Dict(
-                    "InitialStateOfCharge" => get(cycling_protocol, "InitialStateOfCharge", 0.5),
-                    "TotalNumberOfCycles" => get(step, "TotalNumberOfCycles", step["Protocol"] == "CCCV" ? 1 : 0),
-                ),
-                step,
-            ))
+            step_protocol = CyclingProtocol(
+                merge(
+                    Dict(
+                        "InitialStateOfCharge" => get(cycling_protocol, "InitialStateOfCharge", 0.5),
+                        "TotalNumberOfCycles" => get(step, "TotalNumberOfCycles", step["Protocol"] == "CCCV" ? 1 : 0),
+                    ),
+                    step,
+                )
+            )
             append!(timesteps, setup_timesteps((cycling_protocol = step_protocol, simulation_settings = simulation_settings, model_settings = input.model_settings)))
         end
 

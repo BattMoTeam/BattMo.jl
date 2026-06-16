@@ -337,7 +337,8 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
             end
         end
 
-        policy = SequencePolicy(steps, ImaxDischarge, ImaxCharge)
+        rampup_time = use_ramp_up ? Float64(input.simulation_settings["RampUpTime"]) : zero(ImaxDischarge)
+        policy = SequencePolicy(steps, ImaxDischarge, ImaxCharge, use_ramp_up, rampup_time)
 
     else
 
