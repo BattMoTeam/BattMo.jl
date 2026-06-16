@@ -797,12 +797,14 @@ function solver_configuration(
         end
     end
 
-    if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy
+    if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy || model[:Control].system.policy isa RestPolicy || model[:Control].system.policy isa SequencePolicy
         if model[:Control].system.policy isa CyclingCVPolicy
 
             cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
 
         elseif model[:Control].system.policy isa CCPolicy && model[:Control].system.policy.numberOfCycles > 0
+            cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+        elseif model[:Control].system.policy isa SequencePolicy
             cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
         end
 
@@ -848,6 +850,11 @@ function solver_configuration(
                         report[:stopnow] = false
                     end
                 end
+            elseif model[:Control].system.policy isa RestPolicy
+                report[:stopnow] = s.state.Control.Controller.time >= m[:Control].system.policy.duration
+
+            elseif model[:Control].system.policy isa SequencePolicy
+                report[:stopnow] = sequence_complete(m[:Control].system.policy, s.state.Control.Controller)
             end
 
             return (done, report)
@@ -1076,6 +1083,31 @@ function setup_timesteps(
         series_times = Float64.(cycling_protocol["Times"])
         timesteps = diff(series_times)
         timesteps = timesteps[timesteps .> 0.0]
+
+    elseif protocol == "Rest"
+
+        totalTime = cycling_protocol["Duration"]
+        dt = simulation_settings["TimeStepDuration"]
+        n = Int64(floor(totalTime / dt))
+        timesteps = repeat([dt], n)
+        dt_final = totalTime - sum(timesteps)
+        if dt_final > 0
+            push!(timesteps, dt_final)
+        end
+
+    elseif protocol == "Sequence"
+
+        timesteps = Float64[]
+        for step in cycling_protocol["Steps"]
+            step_protocol = CyclingProtocol(merge(
+                Dict(
+                    "InitialStateOfCharge" => get(cycling_protocol, "InitialStateOfCharge", 0.5),
+                    "TotalNumberOfCycles" => get(step, "TotalNumberOfCycles", step["Protocol"] == "CCCV" ? 1 : 0),
+                ),
+                step,
+            ))
+            append!(timesteps, setup_timesteps((cycling_protocol = step_protocol, simulation_settings = simulation_settings, model_settings = input.model_settings)))
+        end
 
     else
 

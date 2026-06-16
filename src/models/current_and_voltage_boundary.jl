@@ -7,7 +7,9 @@ export
     SimpleCVPolicy,
     CyclingCVPolicy,
     OperationalMode,
-    InputCurrentPolicy
+    InputCurrentPolicy,
+    RestPolicy,
+    SequencePolicy
 
 ################################
 # Define the operational modes #
@@ -68,6 +70,22 @@ Jutul.number_of_cells(::CurrentAndVoltageDomain) = 1
 ####################################
 # Types for the different policies #
 ####################################
+
+abstract type AbstractSequenceStep end
+
+struct PolicyStep{P <: AbstractPolicy} <: AbstractSequenceStep
+    policy::P
+end
+
+mutable struct RestPolicy{R} <: AbstractPolicy
+    duration::R
+end
+
+mutable struct SequencePolicy{R} <: AbstractPolicy
+    steps::Vector{AbstractSequenceStep}
+    ImaxDischarge::R
+    ImaxCharge::R
+end
 
 ## A policy is used to compute the next control from the current control and state
 
@@ -280,6 +298,15 @@ function Jutul.select_parameters!(
     return S[:ImaxCharge] = ImaxCharge()
 end
 
+function Jutul.select_parameters!(
+        S,
+        system::CurrentAndVoltageSystem{SequencePolicy{R}},
+        model::SimulationModel,
+    ) where {R}
+    S[:ImaxDischarge] = ImaxDischarge()
+    return S[:ImaxCharge] = ImaxCharge()
+end
+
 
 ###########################################################################################################
 # Definition of the controller and some basic utility functions. The controller will be part of the state #
@@ -388,6 +415,41 @@ end
 InputCurrentController() = InputCurrentController(0.0, 0.0, false)
 
 @inline function Jutul.numerical_type(x::InputCurrentController{R}) where {R}
+    return R
+end
+
+## RestController
+
+mutable struct RestController{R} <: Controller
+    target::R
+    time::R
+    target_is_voltage::Bool
+    ctrlType::OperationalMode
+end
+
+RestController() = RestController(0.0, 0.0, false, rest)
+
+@inline function Jutul.numerical_type(x::RestController{R}) where {R}
+    return R
+end
+
+## SequenceController
+
+mutable struct SequenceController{R} <: Controller
+    step_index::Int
+    step_start_time::R
+    target::R
+    time::R
+    target_is_voltage::Bool
+    ctrlType::Any
+    numberOfCycles::Int
+    dEdt::Union{R, Missing}
+    dIdt::Union{R, Missing}
+end
+
+SequenceController() = SequenceController(1, 0.0, 0.0, 0.0, false, missing, 0, missing, missing)
+
+@inline function Jutul.numerical_type(x::SequenceController{R}) where {R}
     return R
 end
 
@@ -510,6 +572,53 @@ function Base.copy(cv::InputCurrentController)
     return cv_copy
 
 end
+
+"""
+Function to create (deep) copy of rest controller
+"""
+function copyController!(cv_copy::RestController, cv::RestController)
+
+    cv_copy.target = cv.target
+    cv_copy.time = cv.time
+    cv_copy.target_is_voltage = cv.target_is_voltage
+    return cv_copy.ctrlType = cv.ctrlType
+
+end
+
+function Base.copy(cv::RestController)
+
+    cv_copy = RestController()
+    copyController!(cv_copy, cv)
+
+    return cv_copy
+
+end
+
+"""
+Function to create (deep) copy of sequence controller
+"""
+function copyController!(cv_copy::SequenceController, cv::SequenceController)
+
+    cv_copy.step_index = cv.step_index
+    cv_copy.step_start_time = cv.step_start_time
+    cv_copy.target = cv.target
+    cv_copy.time = cv.time
+    cv_copy.target_is_voltage = cv.target_is_voltage
+    cv_copy.ctrlType = cv.ctrlType
+    cv_copy.numberOfCycles = cv.numberOfCycles
+    cv_copy.dEdt = cv.dEdt
+    return cv_copy.dIdt = cv.dIdt
+
+end
+
+function Base.copy(cv::SequenceController)
+
+    cv_copy = SequenceController()
+    copyController!(cv_copy, cv)
+
+    return cv_copy
+
+end
 """
 We add the controller in the output
 """
@@ -586,10 +695,100 @@ function getInitCurrent(policy::InputCurrentPolicy)
     return policy.current_function(policy.times[1])
 end
 
+function getInitCurrent(policy::RestPolicy)
+    return zero(policy.duration)
+end
+
+function getInitCurrent(policy::SequencePolicy)
+    return getInitCurrent(sequence_step_policy(policy.steps[1]))
+end
+
 function getInitCurrent(model::CurrentAndVoltageModel)
 
     return getInitCurrent(model.system.policy)
 
+end
+
+sequence_step_policy(step::PolicyStep) = step.policy
+sequence_step_policy(policy::AbstractPolicy) = policy
+
+function active_sequence_policy(policy::SequencePolicy, controller::SequenceController)
+    return sequence_step_policy(policy.steps[controller.step_index])
+end
+
+function initialize_sequence_step_controller!(controller::SequenceController, step_policy::RestPolicy)
+    controller.target = 0.0
+    controller.target_is_voltage = false
+    controller.ctrlType = rest
+    controller.numberOfCycles = 0
+    controller.dEdt = missing
+    return controller.dIdt = missing
+end
+
+function initialize_sequence_step_controller!(controller::SequenceController, step_policy::CCPolicy)
+    if step_policy.initialControl == "discharging"
+        controller.ctrlType = "discharging"
+        controller.target = step_policy.ImaxDischarge
+    elseif step_policy.initialControl == "charging"
+        controller.ctrlType = "charging"
+        controller.target = -step_policy.ImaxCharge
+    else
+        error("Initial control $(step_policy.initialControl) is not recognized")
+    end
+    controller.target_is_voltage = false
+    controller.numberOfCycles = 0
+    controller.dEdt = missing
+    return controller.dIdt = missing
+end
+
+function initialize_sequence_step_controller!(controller::SequenceController, step_policy::CyclingCVPolicy)
+    if step_policy.initialControl == discharging
+        controller.ctrlType = cc_discharge1
+    elseif step_policy.initialControl == charging
+        controller.ctrlType = cc_charge1
+    else
+        error("Initial control $(step_policy.initialControl) is not recognized")
+    end
+    controller.target = 0.0
+    controller.target_is_voltage = false
+    controller.numberOfCycles = 0
+    controller.dEdt = missing
+    return controller.dIdt = missing
+end
+
+function sequence_step_complete(policy::RestPolicy, controller, state)
+    return controller.time - controller.step_start_time >= policy.duration
+end
+
+function sequence_step_complete(policy::CCPolicy, controller, state)
+    if policy.numberOfCycles == 0
+        if policy.initialControl == "charging"
+            return state.ElectricPotential[1] >= policy.upperCutoffVoltage
+        elseif policy.initialControl == "discharging"
+            return state.ElectricPotential[1] <= policy.lowerCutoffVoltage
+        else
+            error("Initial control $(policy.initialControl) is not recognized")
+        end
+    else
+        return controller.numberOfCycles >= policy.numberOfCycles
+    end
+end
+
+function sequence_step_complete(policy::CyclingCVPolicy, controller, state)
+    return controller.numberOfCycles >= policy.numberOfCycles
+end
+
+function sequence_complete(policy::SequencePolicy, controller::SequenceController)
+    return controller.step_index > length(policy.steps)
+end
+
+function advance_sequence_step!(controller::SequenceController, policy::SequencePolicy)
+    controller.step_index += 1
+    controller.step_start_time = controller.time
+    if !sequence_complete(policy, controller)
+        initialize_sequence_step_controller!(controller, active_sequence_policy(policy, controller))
+    end
+    return controller
 end
 
 
@@ -691,6 +890,14 @@ function setup_initial_control_policy!(policy::InputCurrentPolicy, input, parame
     # Nothing additional needs to be set up from parameters.
 end
 
+function setup_initial_control_policy!(policy::RestPolicy, input, parameters)
+    return nothing
+end
+
+function setup_initial_control_policy!(policy::SequencePolicy, input, parameters)
+    return nothing
+end
+
 ###################################
 # Special primary variable update #
 ###################################
@@ -716,6 +923,28 @@ function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, mode
     minval = minimum_value(p)
     scale = variable_scale(p)
     return @inbounds for i in 1:nu
+        a_i = active[i]
+        v[a_i] = update_value(v[a_i], w * dx[i], abs_max, rel_max, minval, maxval, scale)
+    end
+
+end
+
+function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, model::P, dx, w) where {P <: CurrentAndVoltageModel{<:SequencePolicy}}
+
+    entity = associated_entity(p)
+    active = active_entities(model.domain, entity, for_variables = true)
+    v = state[state_symbol]
+
+    ImaxDischarge = model.system.policy.ImaxDischarge
+    ImaxCharge = model.system.policy.ImaxCharge
+    Imax = max(ImaxCharge, ImaxDischarge)
+
+    abs_max = 0.2 * Imax
+    rel_max = relative_increment_limit(p)
+    maxval = maximum_value(p)
+    minval = minimum_value(p)
+    scale = variable_scale(p)
+    return @inbounds for i in eachindex(active)
         a_i = active[i]
         v[a_i] = update_value(v[a_i], w * dx[i], abs_max, rel_max, minval, maxval, scale)
     end
@@ -807,7 +1036,16 @@ function check_constraints(model, storage)
     ctrlType = state[:Controller].ctrlType
     ctrlType0 = state0[:Controller].ctrlType
 
-    if policy isa CyclingCVPolicy
+    if policy isa SequencePolicy
+        if sequence_complete(policy, controller)
+            return true
+        end
+        policy = active_sequence_policy(policy, controller)
+    end
+
+    if policy isa RestPolicy
+        return true
+    elseif policy isa CyclingCVPolicy
         nextCtrlType = getNextCtrlTypecccv(ctrlType0)
     elseif policy isa CCPolicy
         if ctrlType == "discharging"
@@ -869,6 +1107,18 @@ function Jutul.update_values!(old::InputCurrentController, new::InputCurrentCont
 
 end
 
+function Jutul.update_values!(old::RestController, new::RestController)
+
+    return copyController!(old, new)
+
+end
+
+function Jutul.update_values!(old::SequenceController, new::SequenceController)
+
+    return copyController!(old, new)
+
+end
+
 """
 In addition to update the values in all primary variables, we need also to update the values in the controller. We do that by specializing the method perform_step_solve_impl!
 """
@@ -912,6 +1162,36 @@ function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{Cu
 end
 
 function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{InputCurrentPolicy{T1}}, T3, T4}) where {T1, T3, T4}
+
+    invoke(
+        reset_state_to_previous_state!,
+        Tuple{
+            typeof(storage),
+            SimulationModel,
+        },
+        storage,
+        model,
+    )
+    return copyController!(storage.state[:Controller], storage.state0[:Controller])
+
+end
+
+function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{RestPolicy{T1}}, T3, T4}) where {T1, T3, T4}
+
+    invoke(
+        reset_state_to_previous_state!,
+        Tuple{
+            typeof(storage),
+            SimulationModel,
+        },
+        storage,
+        model,
+    )
+    return copyController!(storage.state[:Controller], storage.state0[:Controller])
+
+end
+
+function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{SequencePolicy{T1}}, T3, T4}) where {T1, T3, T4}
 
     invoke(
         reset_state_to_previous_state!,
@@ -1118,6 +1398,22 @@ function update_control_type_in_controller!(state, state0, policy::CCPolicy, dt)
 
     end
 
+end
+
+function update_control_type_in_controller!(state, state0, policy::RestPolicy, dt)
+    controller = state.Controller
+    controller.time = state0.Controller.time + dt
+    controller.target_is_voltage = false
+    return controller.ctrlType = rest
+end
+
+function update_control_type_in_controller!(state, state0, policy::SequencePolicy, dt)
+    controller = state.Controller
+    if sequence_complete(policy, controller)
+        return nothing
+    end
+    step_policy = active_sequence_policy(policy, controller)
+    return update_control_type_in_controller!(state, state0, step_policy, dt)
 end
 
 
@@ -1375,6 +1671,93 @@ function update_values_in_controller!(state, policy::InputCurrentPolicy)
 
 end
 
+function update_sequence_values_in_controller!(state, policy::RestPolicy)
+    return update_values_in_controller!(state, policy)
+end
+
+function update_sequence_values_in_controller!(state, policy::CCPolicy)
+    controller = state.Controller
+    ctrlType = controller.ctrlType
+    cf = policy.current_function
+
+    if controller.numberOfCycles == 0 && controller.ctrlType == policy.initialControl && !ismissing(cf)
+        local_time = controller.time - controller.step_start_time
+        I_t = cf isa Real ? cf : cf(local_time)
+
+        if ctrlType == "discharging"
+            target = I_t
+        elseif ctrlType == "charging"
+            target = -I_t
+        else
+            error("ctrlType $ctrlType not recognized")
+        end
+    else
+        if ctrlType == "discharging"
+            target = policy.ImaxDischarge
+        elseif ctrlType == "charging"
+            target = -policy.ImaxCharge
+        else
+            error("ctrlType $ctrlType not recognized")
+        end
+    end
+
+    controller.target_is_voltage = false
+    return controller.target = target
+end
+
+function update_sequence_values_in_controller!(state, policy::CyclingCVPolicy)
+    controller = state[:Controller]
+    ctrlType = controller.ctrlType
+    cf = policy.current_function
+
+    if ctrlType == cc_discharge1
+        if controller.numberOfCycles == 0 && controller.ctrlType == policy.initialControl && !ismissing(cf)
+            local_time = controller.time - controller.step_start_time
+            target = cf isa Real ? cf : cf(local_time)
+        else
+            target = policy.ImaxDischarge
+        end
+        target_is_voltage = false
+
+    elseif ctrlType == cc_discharge2
+        target = 0.0
+        target_is_voltage = false
+
+    elseif ctrlType == cc_charge1
+        if controller.numberOfCycles == 0 && controller.ctrlType == policy.initialControl && !ismissing(cf)
+            local_time = controller.time - controller.step_start_time
+            target = -(cf isa Real ? cf : cf(local_time))
+        else
+            target = -policy.ImaxCharge
+        end
+        target_is_voltage = false
+
+    elseif ctrlType == cv_charge2
+        target = policy.upperCutoffVoltage
+        target_is_voltage = true
+
+    else
+        error("ctrlType $ctrlType not recognized")
+    end
+
+    controller.target_is_voltage = target_is_voltage
+    return controller.target = target
+end
+
+function update_values_in_controller!(state, policy::RestPolicy)
+    controller = state.Controller
+    controller.target_is_voltage = false
+    return controller.target = 0.0
+end
+
+function update_values_in_controller!(state, policy::SequencePolicy)
+    controller = state[:Controller]
+    if sequence_complete(policy, controller)
+        return nothing
+    end
+    return update_sequence_values_in_controller!(state, active_sequence_policy(policy, controller))
+end
+
 #############################
 # Assembly of the equations #
 #############################
@@ -1497,6 +1880,63 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
 
         copyController!(storage.state0[:Controller], ctrl)
 
+    elseif policy isa RestPolicy
+
+        copyController!(storage.state0[:Controller], ctrl)
+
+    elseif policy isa SequencePolicy
+
+        if sequence_complete(policy, ctrl)
+            return copyController!(storage.state0[:Controller], ctrl)
+        end
+
+        step_policy = active_sequence_policy(policy, ctrl)
+
+        if step_policy isa CyclingCVPolicy
+            initctrl = step_policy.initialControl
+
+            ctrlType = ctrl.ctrlType
+            ctrlType0 = storage.state0[:Controller].ctrlType
+            ncycles = storage.state0[:Controller].numberOfCycles
+
+            if initctrl == charging
+                if (ctrlType0 == cc_discharge1 || ctrlType0 == cc_discharge2) && (ctrlType == cc_charge1 || ctrlType == cv_charge2)
+                    ncycles = ncycles + 1
+                end
+            elseif initctrl == discharging
+                if (ctrlType0 == cc_charge1 || ctrlType0 == cv_charge2) && (ctrlType == cc_discharge1 || ctrlType == cc_discharge2)
+                    ncycles = ncycles + 1
+                end
+            end
+
+            ctrl.numberOfCycles = ncycles
+
+        elseif step_policy isa CCPolicy && step_policy.numberOfCycles > 0
+            initctrl = step_policy.initialControl
+
+            ctrlType = ctrl.ctrlType
+            ctrlType0 = storage.state0[:Controller].ctrlType
+            ncycles = storage.state0[:Controller].numberOfCycles
+
+            if initctrl == "charging"
+                if ctrlType0 == "discharging" && ctrlType == "charging"
+                    ncycles = ncycles + 1
+                end
+            elseif initctrl == "discharging"
+                if ctrlType0 == "charging" && ctrlType == "discharging"
+                    ncycles = ncycles + 1
+                end
+            end
+
+            ctrl.numberOfCycles = ncycles
+        end
+
+        if sequence_step_complete(step_policy, ctrl, storage.state)
+            advance_sequence_step!(ctrl, policy)
+        end
+
+        copyController!(storage.state0[:Controller], ctrl)
+
     else
 
         error("Policy $(typeof(policy)) not recognized")
@@ -1595,6 +2035,25 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
 
         target, time = promote(target, time)
         state[:Controller] = InputCurrentController(target, time, target_is_voltage)
+
+    elseif policy isa RestPolicy
+
+        time = 0.0
+        target = 0.0
+        target_is_voltage = false
+
+        target, time = promote(target, time)
+        state[:Controller] = RestController(target, time, target_is_voltage, rest)
+
+    elseif policy isa SequencePolicy
+
+        time = 0.0
+        target = 0.0
+        target_is_voltage = false
+
+        target, time = promote(target, time)
+        state[:Controller] = SequenceController(1, time, target, time, target_is_voltage, missing, 0, missing, missing)
+        initialize_sequence_step_controller!(state[:Controller], active_sequence_policy(policy, state[:Controller]))
 
     end
 

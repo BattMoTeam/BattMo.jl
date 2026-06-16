@@ -564,7 +564,7 @@ function get_output_metrics(
 
     controller = states[1][:Control][:Controller]
 
-    if isa(controller, FunctionController) || isa(controller, InputCurrentController)
+    if isa(controller, FunctionController) || isa(controller, InputCurrentController) || isa(controller, RestController)
         available_quantities = Dict()
     else
         cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : nothing

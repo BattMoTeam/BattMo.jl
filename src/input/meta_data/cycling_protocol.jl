@@ -5,10 +5,10 @@ function get_cycling_protocol_meta_data()
     meta_data = Dict(
         "Protocol" => Dict(
             "type" => String,
-            "options" => ["CC", "CCCV", "Function", "InputCurrentSeries"],
+            "options" => ["CC", "CCCV", "Function", "InputCurrentSeries", "Rest", "Sequence"],
             "context_type" => "Protocol",
             "context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_d3e2d213_d078_4b9a_8beb_62f063e57d69",
-            "description" => """Type of cycling procedure used to cycle a cell. For instance: Constant Current ("CC"), Constant Current - Constant Voltage ("CCCV"), a custom function ("Function"), or a prescribed current time series ("InputCurrentSeries").""",
+            "description" => """Type of cycling procedure used to cycle a cell. For instance: Constant Current ("CC"), Constant Current - Constant Voltage ("CCCV"), a custom function ("Function"), a prescribed current time series ("InputCurrentSeries"), a rest step ("Rest"), or a sequence of supported steps ("Sequence").""",
         ),
         "FunctionName" => Dict(
             "type" => String,
@@ -171,6 +171,17 @@ function get_cycling_protocol_meta_data()
             "type" => Vector,
             "description" => "Current values for the InputCurrentSeries protocol",
             "unit" => "A",
+        ),
+        "Duration" => Dict(
+            "type" => Real,
+            "min_value" => 0.0,
+            "max_value" => 1.0e9,
+            "description" => "Duration of a rest protocol or rest sequence step.",
+            "unit" => "s",
+        ),
+        "Steps" => Dict(
+            "type" => Vector,
+            "description" => "Ordered list of cycling protocol steps used by the Sequence protocol.",
         ),
     )
 
