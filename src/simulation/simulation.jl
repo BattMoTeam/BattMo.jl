@@ -1066,9 +1066,14 @@ function setup_timesteps(
         totalTime = ncycles * 2.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
         dt = simulation_settings["TimeStepDuration"]
-        n = Int64(floor(totalTime / dt))
 
-        timesteps = repeat([dt], n)
+        if haskey(input.model_settings, "RampUp")
+            nr = simulation_settings["RampUpSteps"]
+            timesteps = compute_rampup_timesteps(totalTime, dt, nr)
+        else
+            n = Int64(floor(totalTime / dt))
+            timesteps = repeat([dt], n)
+        end
 
     elseif protocol == "Function"
 
