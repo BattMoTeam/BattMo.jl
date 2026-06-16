@@ -1021,13 +1021,13 @@ function setup_timesteps(
         if cycling_protocol["TotalNumberOfCycles"] == 0
 
             if cycling_protocol["InitialControl"] == "discharging"
-                CRate = cycling_protocol["DRate"]
+                rate = cycling_protocol["DRate"]
             else
-                CRate = cycling_protocol["CRate"]
+                rate = cycling_protocol["CRate"]
             end
 
             con = Constants()
-            totalTime = 1.1 * con.hour / CRate
+            totalTime = 1.1 * con.hour / rate
 
             dt = simulation_settings["TimeStepDuration"]
 
