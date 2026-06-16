@@ -124,7 +124,8 @@ function setup_effective_thermal_conductivities!(input, battery_models)
 
     elytemodel = battery_models["Electrolyte"]
     vf = elytemodel.domain.representation[:volumeFraction]
-    bg = cell_parameters["Separator"]["BruggemanCoefficient"]
+    #bg = cell_parameters["Separator"]["BruggemanCoefficient"]
+    bg = cell_parameters["Electrolyte"]["BruggemanCoefficient"]
     elytemodel.domain.representation[:effective_thermal_conductivity] = (vf .^ bg) .* cell_parameters["Electrolyte"]["ThermalConductivity"]
 
     if haskey(battery_models, "NegativeElectrodeCurrentCollector") && !isnothing(battery_models["NegativeElectrodeCurrentCollector"])
@@ -302,7 +303,8 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
     params[:transference] = inputparams_elyte["TransferenceNumber"]
     params[:charge] = inputparams_elyte["ChargeNumber"]
     params[:separator_porosity] = cell_parameters["Separator"]["Porosity"]
-    params[:bruggeman] = cell_parameters["Separator"]["BruggemanCoefficient"]
+    #params[:bruggeman] = cell_parameters["Separator"]["BruggemanCoefficient"]
+    params[:bruggeman] = cell_parameters["Electrolyte"]["BruggemanCoefficient"]
     params[:electrolyte_density] = inputparams_elyte["Density"]
     params[:separator_density] = cell_parameters["Separator"]["Density"]
 
@@ -707,7 +709,8 @@ function set_parameters(
 
     prm_elyte = Dict{Symbol, Any}()
     prm_elyte[:Temperature] = T
-    prm_elyte[:BruggemanCoefficient] = cell_parameters["Separator"]["BruggemanCoefficient"]
+    # prm_elyte[:BruggemanCoefficient] = cell_parameters["Separator"]["BruggemanCoefficient"]
+    prm_elyte[:BruggemanCoefficient] = cell_parameters["Electrolyte"]["BruggemanCoefficient"]
 
 
     parameters[:Electrolyte] = setup_parameters(multimodel[:Electrolyte], prm_elyte)
