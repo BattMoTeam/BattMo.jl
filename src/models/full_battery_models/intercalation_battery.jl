@@ -321,6 +321,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
                     ImaxDischarge = Idis,
                     ImaxCharge = Ichg,
                     use_ramp_up = use_ramp_up,
+                    rampup_time = use_ramp_up ? Float64(input.simulation_settings["RampUpTime"]) : zero(Idis),
                 )
                 if use_ramp_up
                     Imax = step["InitialControl"] == "charging" ? Ichg : Idis

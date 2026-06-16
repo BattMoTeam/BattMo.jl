@@ -2,9 +2,36 @@ export Simulation
 export solve
 export setup_config
 
+struct ControlRampTimestepSelector <: Jutul.AbstractTimestepSelector
+    timestep::Float64
+end
+
+Jutul.pick_first_timestep(::ControlRampTimestepSelector, sim, config, dT, forces) = Inf
+Jutul.pick_cut_timestep(::ControlRampTimestepSelector, sim, config, dt, dT, forces, reports, cut_count) = dt
+Jutul.valid_timestep(::ControlRampTimestepSelector, dt) = dt
+
+function Jutul.pick_next_timestep(sel::ControlRampTimestepSelector, sim, config, dt_prev, dT, forces, reports, current_reports, step_index, new_step)
+    controller = Jutul.get_simulator_storage(sim).state.Control.Controller
+    if hasfield(typeof(controller), :ramp_active) && controller.ramp_active
+        remaining = controller.ramp_start_time + controller.ramp_duration - controller.time
+        if remaining > 0
+            return min(sel.timestep, remaining)
+        end
+    end
+    return dT
+end
+
+function control_rampup_time(policy)
+    if policy isa Union{CyclingCVPolicy, SequencePolicy}
+        return policy.rampup_time
+    else
+        return 0.0
+    end
+end
+
 
 """
-	abstract type AbstractSimulation
+		abstract type AbstractSimulation
 
 Abstract type for Simulation structs. Subtypes of `AbstractSimulation` represent specific simulation configurations.
 """
@@ -430,6 +457,8 @@ function solve_simulation(
         model.multimodel,
         parameters;
         solver_settings,
+        rampup_steps = get(simulation_settings, "RampUpSteps", nothing),
+        rampup_reference_timestep = get(simulation_settings, "TimeStepDuration", nothing),
         validate,
         accept_invalid,
         logger,
@@ -679,6 +708,8 @@ function solver_configuration(
         parameters;
         use_model_scaling::Bool = true,
         solver_settings,
+        rampup_steps = nothing,
+        rampup_reference_timestep = nothing,
         logger = nothing,
         validate::Bool = true,
         accept_invalid::Bool = false,
@@ -728,9 +759,15 @@ function solver_configuration(
 
     timestep_selector = non_linear_solver["TimeStepSelectors"]
     if timestep_selector == "TimestepSelector"
-        timesel = [TimestepSelector()]
+        timesel = Jutul.AbstractTimestepSelector[TimestepSelector()]
     else
         error("Timestep selector $(timestep_selector) not recognized. Only 'TimestepSelector' is currently implemented.")
+    end
+
+    control_ramp_time = control_rampup_time(model[:Control].system.policy)
+    if !isnothing(rampup_steps) && rampup_steps > 0 && control_ramp_time > 0
+        ramp_dt = Float64(control_ramp_time) / rampup_steps
+        push!(timesel, ControlRampTimestepSelector(ramp_dt))
     end
 
     if linear_solver_dict["Method"] == "UserDefined"
@@ -773,6 +810,12 @@ function solver_configuration(
         report_level = output["ReportLevel"],
         output_substates = output["OutputSubstrates"],
     )
+
+    if !isnothing(rampup_reference_timestep) && !isnothing(rampup_steps) && rampup_steps > 0 && control_ramp_time > 0
+        ramp_dt = Float64(control_ramp_time) / rampup_steps
+        ramp_decrease = ramp_dt / Float64(rampup_reference_timestep)
+        cfg[:timestep_max_decrease] = min(cfg[:timestep_max_decrease], ramp_decrease)
+    end
 
     if !isempty(non_linear_solver["Tolerances"])
         cfg[:tolerances] = non_linear_solver["Tolerances"]

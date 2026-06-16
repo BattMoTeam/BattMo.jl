@@ -200,6 +200,7 @@ mutable struct CyclingCVPolicy{R, I} <: AbstractPolicy
     numberOfCycles::I
     tolerances::Any
     use_ramp_up::Bool
+    rampup_time::R
     current_function::Any
 
 end
@@ -214,6 +215,7 @@ function CyclingCVPolicy(
         ImaxDischarge = 0 * lowerCutoffVoltage,
         ImaxCharge = 0 * lowerCutoffVoltage,
         use_ramp_up::Bool,
+        rampup_time = zero(lowerCutoffVoltage),
         current_function = missing,
     )
 
@@ -243,6 +245,7 @@ function CyclingCVPolicy(
         numberOfCycles,
         tolerances,
         use_ramp_up,
+        rampup_time,
         current_function,
     )
 end
@@ -310,9 +313,9 @@ function Jutul.select_parameters!(
 end
 
 
-###########################################################################################################
-# Definition of the controller and some basic utility functions. The controller will be part of the state #
-###########################################################################################################
+#######################################
+# Types for the different controllers #
+#######################################
 
 ## A controller provides the information to exert the current control
 
@@ -360,6 +363,12 @@ mutable struct CcCvController{R, I <: Integer} <: Controller
     numberOfCycles::I
     dEdt::Union{R, Missing}
     dIdt::Union{R, Missing}
+    ramp_start_time::R
+    ramp_duration::R
+    ramp_start_target::R
+    ramp_end_target::R
+    ramp_target_is_voltage::Bool
+    ramp_active::Bool
 
 end
 
@@ -367,7 +376,7 @@ function CcCvController()
 
     maincontroller = SimpleControllerCV()
 
-    return CcCvController(maincontroller, 0, missing, missing)
+    return CcCvController(maincontroller, 0, missing, missing, 0.0, 0.0, 0.0, 0.0, false, false)
 
 end
 
@@ -462,6 +471,10 @@ SequenceController() = SequenceController(1, 0.0, 0.0, 0.0, false, missing, 0, m
 end
 
 
+##############################################
+# Copy helpers for the different controllers #
+##############################################
+
 """
 Function to create (deep) copy of simple controller
 """
@@ -505,7 +518,15 @@ Function to create (deep) copy of CC-CV controller
 function copyController!(cv_copy::CcCvController, cv::CcCvController)
 
     copyController!(cv_copy.maincontroller, cv.maincontroller)
-    return cv_copy.numberOfCycles = cv.numberOfCycles
+    cv_copy.numberOfCycles = cv.numberOfCycles
+    cv_copy.dEdt = cv.dEdt
+    cv_copy.dIdt = cv.dIdt
+    cv_copy.ramp_start_time = cv.ramp_start_time
+    cv_copy.ramp_duration = cv.ramp_duration
+    cv_copy.ramp_start_target = cv.ramp_start_target
+    cv_copy.ramp_end_target = cv.ramp_end_target
+    cv_copy.ramp_target_is_voltage = cv.ramp_target_is_voltage
+    return cv_copy.ramp_active = cv.ramp_active
 
 end
 
@@ -633,6 +654,11 @@ function Base.copy(cv::SequenceController)
     return cv_copy
 
 end
+
+#################################################
+# Minimum output variables for the control model #
+#################################################
+
 """
 We add the controller in the output
 """
@@ -725,6 +751,10 @@ end
 
 sequence_step_policy(step::PolicyStep) = step.policy
 sequence_step_policy(policy::AbstractPolicy) = policy
+
+#####################################
+# Helpers for sequence policy steps #
+#####################################
 
 function active_sequence_policy(policy::SequencePolicy, controller::SequenceController)
     return sequence_step_policy(policy.steps[controller.step_index])
@@ -957,6 +987,7 @@ function setup_initial_control_policy!(policy::CyclingCVPolicy, input, parameter
         cFun(time) = currentFun(time, Imax, tup)
 
         policy.current_function = cFun
+        policy.rampup_time = tup
     end
 
 
@@ -1128,6 +1159,9 @@ function check_constraints(model, storage)
     if policy isa RestPolicy
         return true
     elseif policy isa CyclingCVPolicy
+        if controller.ramp_active
+            return true
+        end
         nextCtrlType = getNextCtrlTypecccv(ctrlType0)
     elseif policy isa CCPolicy
         if ctrlType == "discharging"
@@ -1331,9 +1365,64 @@ function update_control_type_in_controller!(state, state0, policy::SimpleCVPolic
 
 end
 
+#####################################
+# Helpers for CCCV transition ramps #
+#####################################
+
+function cccv_nominal_target(policy::CyclingCVPolicy, ctrlType)
+    if ctrlType == cc_discharge1
+        target = policy.ImaxDischarge
+        target_is_voltage = false
+    elseif ctrlType == cc_discharge2
+        target = 0.0
+        target_is_voltage = false
+    elseif ctrlType == cc_charge1
+        target = -policy.ImaxCharge
+        target_is_voltage = false
+    elseif ctrlType == cv_charge2
+        target = policy.upperCutoffVoltage
+        target_is_voltage = true
+    else
+        error("ctrlType $ctrlType not recognized")
+    end
+    return (target = target, target_is_voltage = target_is_voltage)
+end
+
+function start_cccv_transition_ramp!(controller, policy::CyclingCVPolicy, ctrlType, E, I)
+    nominal = cccv_nominal_target(policy, ctrlType)
+    controller.ramp_start_time = controller.time
+    controller.ramp_duration = policy.rampup_time
+    controller.ramp_start_target = nominal.target_is_voltage ? E : I
+    controller.ramp_end_target = nominal.target
+    controller.ramp_target_is_voltage = nominal.target_is_voltage
+    controller.ramp_active = policy.use_ramp_up && policy.rampup_time > 0 && controller.ramp_start_target != controller.ramp_end_target
+    return controller
+end
+
+function apply_cccv_transition_ramp!(controller)
+    if controller.ramp_active
+        elapsed = controller.time - controller.ramp_start_time
+        if elapsed < controller.ramp_duration
+            delta = controller.ramp_end_target - controller.ramp_start_target
+            controller.target = controller.ramp_start_target + currentFun(elapsed, delta, controller.ramp_duration)
+            controller.target_is_voltage = controller.ramp_target_is_voltage
+        else
+            controller.target = controller.ramp_end_target
+            controller.target_is_voltage = controller.ramp_target_is_voltage
+            controller.ramp_active = false
+        end
+    end
+    return controller
+end
+
 """
 Implementation of the cycling CC-CV policy
 """
+
+##################################################
+# Control-type updates for the different policies #
+##################################################
+
 function update_control_type_in_controller!(state, state0, policy::CyclingCVPolicy, dt)
 
     E = only(value(state[:ElectricPotential]))
@@ -1348,6 +1437,10 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
     controller.dEdt = (E - E0) / dt
 
     ctrlType0 = state0.Controller.ctrlType
+
+    if state0.Controller.ramp_active
+        return controller.ctrlType = ctrlType0
+    end
 
     nextCtrlType = getNextCtrlTypecccv(ctrlType0)
 
@@ -1398,6 +1491,10 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
 
         end
 
+    end
+
+    if ctrlType != ctrlType0 && !controller.ramp_active
+        start_cccv_transition_ramp!(controller, policy, ctrlType, E, I)
     end
 
     return controller.ctrlType = ctrlType
@@ -1499,9 +1596,9 @@ function update_control_type_in_controller!(state, state0, policy::SequencePolic
 end
 
 
-#############################################################
-# Functions to update the values in the controller in state #
-#############################################################
+##################################################
+# Control-type update for input-current policies #
+##################################################
 
 """
 Implementation of the InputCurrentPolicy.
@@ -1559,6 +1656,10 @@ end
 
 # Once the controller has been assigned the given control, we adjust the target value which is used in the equation
 # assembly
+
+###################################################
+# Target-value updates for the different policies #
+###################################################
 
 function update_values_in_controller!(state, policy::CCPolicy)
 
@@ -1726,7 +1827,8 @@ function update_values_in_controller!(state, policy::CyclingCVPolicy)
 
 
     controller.target_is_voltage = target_is_voltage
-    return controller.target = target
+    controller.target = target
+    return apply_cccv_transition_ramp!(controller)
 
 end
 
@@ -1752,6 +1854,10 @@ function update_values_in_controller!(state, policy::InputCurrentPolicy)
     end
 
 end
+
+#############################################
+# Target-value updates for sequence steps   #
+#############################################
 
 function update_sequence_values_in_controller!(state, policy::RestPolicy)
     return update_values_in_controller!(state, policy)
