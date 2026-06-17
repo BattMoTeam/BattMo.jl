@@ -2,9 +2,36 @@ export Simulation
 export solve
 export setup_config
 
+struct ControlRampTimestepSelector <: Jutul.AbstractTimestepSelector
+    timestep::Float64
+end
+
+Jutul.pick_first_timestep(::ControlRampTimestepSelector, sim, config, dT, forces) = Inf
+Jutul.pick_cut_timestep(::ControlRampTimestepSelector, sim, config, dt, dT, forces, reports, cut_count) = dt
+Jutul.valid_timestep(::ControlRampTimestepSelector, dt) = dt
+
+function Jutul.pick_next_timestep(sel::ControlRampTimestepSelector, sim, config, dt_prev, dT, forces, reports, current_reports, step_index, new_step)
+    controller = Jutul.get_simulator_storage(sim).state.Control.Controller
+    if hasfield(typeof(controller), :ramp_active) && controller.ramp_active
+        remaining = controller.ramp_start_time + controller.ramp_duration - controller.time
+        if remaining > 0
+            return min(sel.timestep, remaining)
+        end
+    end
+    return dT
+end
+
+function control_rampup_time(policy)
+    if policy isa Union{CyclingCVPolicy, SequencePolicy}
+        return policy.rampup_time
+    else
+        return 0.0
+    end
+end
+
 
 """
-	abstract type AbstractSimulation
+		abstract type AbstractSimulation
 
 Abstract type for Simulation structs. Subtypes of `AbstractSimulation` represent specific simulation configurations.
 """
@@ -436,6 +463,8 @@ function solve_simulation(
         ),
         parameters;
         solver_settings,
+        rampup_steps = get(simulation_settings, "RampUpSteps", nothing),
+        rampup_reference_timestep = get(simulation_settings, "TimeStepDuration", nothing),
         validate,
         accept_invalid,
         logger,
@@ -670,6 +699,8 @@ function solver_configuration(
         parameters;
         use_model_scaling::Bool = true,
         solver_settings,
+        rampup_steps = nothing,
+        rampup_reference_timestep = nothing,
         logger = nothing,
         validate::Bool = true,
         accept_invalid::Bool = false,
@@ -720,9 +751,15 @@ function solver_configuration(
 
     timestep_selector = non_linear_solver["TimeStepSelectors"]
     if timestep_selector == "TimestepSelector"
-        timesel = [TimestepSelector()]
+        timesel = Jutul.AbstractTimestepSelector[TimestepSelector()]
     else
         error("Timestep selector $(timestep_selector) not recognized. Only 'TimestepSelector' is currently implemented.")
+    end
+
+    control_ramp_time = control_rampup_time(multimodel[:Control].system.policy)
+    if !isnothing(rampup_steps) && rampup_steps > 0 && control_ramp_time > 0
+        ramp_dt = Float64(control_ramp_time) / rampup_steps
+        push!(timesel, ControlRampTimestepSelector(ramp_dt))
     end
 
     if linear_solver_dict["Method"] == "UserDefined"
@@ -766,6 +803,12 @@ function solver_configuration(
         output_substates = output["OutputSubstrates"],
     )
 
+    if !isnothing(rampup_reference_timestep) && !isnothing(rampup_steps) && rampup_steps > 0 && control_ramp_time > 0
+        ramp_dt = Float64(control_ramp_time) / rampup_steps
+        ramp_decrease = ramp_dt / Float64(rampup_reference_timestep)
+        cfg[:timestep_max_decrease] = min(cfg[:timestep_max_decrease], ramp_decrease)
+    end
+
     if !isempty(non_linear_solver["Tolerances"])
         cfg[:tolerances] = non_linear_solver["Tolerances"]
     end
@@ -789,12 +832,12 @@ function solver_configuration(
         end
     end
 
-    if multimodel[:Control].system.policy isa CyclingCVPolicy || multimodel[:Control].system.policy isa CCPolicy
+    if multimodel[:Control].system.policy isa CyclingCVPolicy || multimodel[:Control].system.policy isa CCPolicy || multimodel[:Control].system.policy isa RestPolicy || multimodel[:Control].system.policy isa SequencePolicy
         if multimodel[:Control].system.policy isa CyclingCVPolicy
-
             cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
-
         elseif multimodel[:Control].system.policy isa CCPolicy && multimodel[:Control].system.policy.numberOfCycles > 0
+            cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+        elseif multimodel[:Control].system.policy isa SequencePolicy
             cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
         end
 
@@ -841,6 +884,11 @@ function solver_configuration(
                         report[:stopnow] = false
                     end
                 end
+            elseif multimodel[:Control].system.policy isa RestPolicy
+                report[:stopnow] = s.state.Control.Controller.time >= m[:Control].system.policy.duration
+
+            elseif multimodel[:Control].system.policy isa SequencePolicy
+                report[:stopnow] = sequence_complete(m[:Control].system.policy, s.state.Control.Controller)
             end
 
             return (done, report)
@@ -1014,13 +1062,13 @@ function setup_timesteps(
         if cycling_protocol["TotalNumberOfCycles"] == 0
 
             if cycling_protocol["InitialControl"] == "discharging"
-                CRate = cycling_protocol["DRate"]
+                rate = cycling_protocol["DRate"]
             else
-                CRate = cycling_protocol["CRate"]
+                rate = cycling_protocol["CRate"]
             end
 
             con = Constants()
-            totalTime = 1.1 * con.hour / CRate
+            totalTime = 1.1 * con.hour / rate
 
             dt = simulation_settings["TimeStepDuration"]
 
@@ -1059,9 +1107,14 @@ function setup_timesteps(
         totalTime = ncycles * 2.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
         dt = simulation_settings["TimeStepDuration"]
-        n = Int64(floor(totalTime / dt))
 
-        timesteps = repeat([dt], n)
+        if haskey(input.model_settings, "RampUp")
+            nr = simulation_settings["RampUpSteps"]
+            timesteps = compute_rampup_timesteps(totalTime, dt, nr)
+        else
+            n = Int64(floor(totalTime / dt))
+            timesteps = repeat([dt], n)
+        end
 
     elseif protocol == "Function"
 
@@ -1076,6 +1129,38 @@ function setup_timesteps(
         series_times = Float64.(cycling_protocol["Times"])
         timesteps = diff(series_times)
         timesteps = timesteps[timesteps .> 0.0]
+
+    elseif protocol == "Rest"
+
+        totalTime = cycling_protocol["Duration"]
+        dt = simulation_settings["TimeStepDuration"]
+        if haskey(input.model_settings, "RampUp")
+            nr = simulation_settings["RampUpSteps"]
+            timesteps = compute_rampup_timesteps(totalTime, dt, nr)
+        else
+            n = Int64(floor(totalTime / dt))
+            timesteps = repeat([dt], n)
+            dt_final = totalTime - sum(timesteps)
+            if dt_final > 0
+                push!(timesteps, dt_final)
+            end
+        end
+
+    elseif protocol == "Sequence"
+
+        timesteps = Float64[]
+        for step in cycling_protocol["Steps"]
+            step_protocol = CyclingProtocol(
+                merge(
+                    Dict(
+                        "InitialStateOfCharge" => get(cycling_protocol, "InitialStateOfCharge", 0.5),
+                        "TotalNumberOfCycles" => get(step, "TotalNumberOfCycles", step["Protocol"] == "CCCV" ? 1 : 0),
+                    ),
+                    step,
+                )
+            )
+            append!(timesteps, setup_timesteps((cycling_protocol = step_protocol, simulation_settings = simulation_settings, model_settings = input.model_settings)))
+        end
 
     else
 
@@ -1115,22 +1200,4 @@ function compute_rampup_timesteps(time::Real, dt::Real, n::Integer = 8)
     dT = [dt_init; dt_rem; dt_final]
 
     return dT
-end
-
-####################
-# Current function #
-####################
-
-function currentFun(t::Real, inputI::Real, tup::Real = 0.1)
-
-    t, inputI, tup, val = promote(t, inputI, tup, 0.0)
-
-    if t <= tup
-        val = sineup(0.0, inputI, 0.0, tup, t)
-    else
-        val = inputI
-    end
-
-    return val
-
 end

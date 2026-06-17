@@ -477,6 +477,8 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
             "InitialTemperature" => create_property(parameter_meta, "InitialTemperature"),
             "Times" => create_property(parameter_meta, "Times"),
             "Currents" => create_property(parameter_meta, "Currents"),
+            "Duration" => create_property(parameter_meta, "Duration"),
+            "Steps" => create_property(parameter_meta, "Steps"),
         ),
         "required" => ["Protocol"],
         "allOf" => [
@@ -576,6 +578,24 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
                         "Currents",
                         "LowerVoltageLimit",
                         "UpperVoltageLimit",
+                    ],
+                ),
+            ),
+            Dict(
+                "if" => Dict("properties" => Dict("Protocol" => Dict("const" => "Rest"))),
+                "then" => Dict(
+                    "required" => [
+                        "InitialStateOfCharge",
+                        "Duration",
+                    ],
+                ),
+            ),
+            Dict(
+                "if" => Dict("properties" => Dict("Protocol" => Dict("const" => "Sequence"))),
+                "then" => Dict(
+                    "required" => [
+                        "InitialStateOfCharge",
+                        "Steps",
                     ],
                 ),
             ),

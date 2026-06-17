@@ -125,9 +125,11 @@
         "CC",
         "CCCV",
         "Function",
-        "InputCurrentSeries"
+        "InputCurrentSeries",
+        "Rest",
+        "Sequence"
       ],
-      "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('CCCV'), or a prescribed current time series ('InputCurrentSeries')."
+      "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('CCCV'), a custom Function, a prescribed current time series ('InputCurrentSeries'), a rest step ('Rest'), or an ordered sequence of supported steps ('Sequence')."
     },
     "FunctionName": {
       "type": "string",

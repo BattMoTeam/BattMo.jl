@@ -7,7 +7,9 @@ export
     SimpleCVPolicy,
     CyclingCVPolicy,
     OperationalMode,
-    InputCurrentPolicy
+    InputCurrentPolicy,
+    RestPolicy,
+    SequencePolicy
 
 ################################
 # Define the operational modes #
@@ -16,19 +18,17 @@ export
 @enum OperationalMode cc_discharge1 cc_discharge2 cc_charge1 cv_charge2 rest discharge charging discharging none
 
 function getSymbol(ctrlType::OperationalMode)
-
     if ctrlType == cc_discharge1
-        symb = :cc_discharge1
+        return :cc_discharge1
     elseif ctrlType == cc_discharge2
-        symb = :cc_discharge2
+        return :cc_discharge2
     elseif ctrlType == cc_charge1
-        symb = :cc_charge1
+        return :cc_charge1
     elseif ctrlType == cv_charge2
-        symb = :cv_charge2
+        return :cv_charge2
+    else
+        error("Unsupported CCCV control type: $ctrlType")
     end
-
-    return symb
-
 end
 
 #############################################
@@ -68,6 +68,55 @@ Jutul.number_of_cells(::CurrentAndVoltageDomain) = 1
 ####################################
 # Types for the different policies #
 ####################################
+
+abstract type AbstractSequenceStep end
+
+struct PolicyStep{P <: AbstractPolicy} <: AbstractSequenceStep
+    policy::P
+end
+
+mutable struct RestPolicy{R} <: AbstractPolicy
+    duration::R
+end
+
+mutable struct SequencePolicy{R} <: AbstractPolicy
+    steps::Vector{AbstractSequenceStep}
+    ImaxDischarge::R
+    ImaxCharge::R
+    use_ramp_up::Bool
+    rampup_time::R
+end
+
+function SequencePolicy(
+        steps::Vector{AbstractSequenceStep},
+        ImaxDischarge::R,
+        ImaxCharge::R,
+        use_ramp_up::Bool,
+        rampup_time::R,
+    ) where {R <: Real}
+    return SequencePolicy{R}(steps, ImaxDischarge, ImaxCharge, use_ramp_up, rampup_time)
+end
+
+function SequencePolicy(
+        steps::AbstractVector,
+        ImaxDischarge::Real,
+        ImaxCharge::Real,
+        use_ramp_up::Bool,
+        rampup_time::Real,
+    )
+    normalized_steps = AbstractSequenceStep[]
+    for step in steps
+        if step isa AbstractSequenceStep
+            push!(normalized_steps, step)
+        elseif step isa AbstractPolicy
+            push!(normalized_steps, PolicyStep(step))
+        else
+            error("Sequence step $(typeof(step)) must be an AbstractPolicy or AbstractSequenceStep")
+        end
+    end
+    T = promote_type(typeof(ImaxDischarge), typeof(ImaxCharge), typeof(rampup_time))
+    return SequencePolicy{T}(normalized_steps, T(ImaxDischarge), T(ImaxCharge), use_ramp_up, T(rampup_time))
+end
 
 ## A policy is used to compute the next control from the current control and state
 
@@ -115,10 +164,6 @@ mutable struct SimpleCVPolicy{R} <: AbstractPolicy
     end
 end
 
-""" No policy means that the control is kept fixed throughout the simulation
-"""
-struct NoPolicy <: AbstractPolicy end
-
 
 """
 Function Policy
@@ -128,7 +173,7 @@ struct FunctionPolicy <: AbstractPolicy
 
     function FunctionPolicy(function_name::String; file_path::Union{Nothing, String} = nothing)
         current_function = setup_function_from_function_name(function_name; file_path = file_path)
-        return new{}(current_function)
+        return new(current_function)
     end
 
 end
@@ -180,6 +225,7 @@ mutable struct CyclingCVPolicy{R, I} <: AbstractPolicy
     numberOfCycles::I
     tolerances::Any
     use_ramp_up::Bool
+    rampup_time::R
     current_function::Any
 
 end
@@ -194,6 +240,7 @@ function CyclingCVPolicy(
         ImaxDischarge = 0 * lowerCutoffVoltage,
         ImaxCharge = 0 * lowerCutoffVoltage,
         use_ramp_up::Bool,
+        rampup_time = zero(lowerCutoffVoltage),
         current_function = missing,
     )
 
@@ -223,6 +270,7 @@ function CyclingCVPolicy(
         numberOfCycles,
         tolerances,
         use_ramp_up,
+        rampup_time,
         current_function,
     )
 end
@@ -280,10 +328,19 @@ function Jutul.select_parameters!(
     return S[:ImaxCharge] = ImaxCharge()
 end
 
+function Jutul.select_parameters!(
+        S,
+        system::CurrentAndVoltageSystem{SequencePolicy{R}},
+        model::SimulationModel,
+    ) where {R}
+    S[:ImaxDischarge] = ImaxDischarge()
+    return S[:ImaxCharge] = ImaxCharge()
+end
 
-###########################################################################################################
-# Definition of the controller and some basic utility functions. The controller will be part of the state #
-###########################################################################################################
+
+#######################################
+# Types for the different controllers #
+#######################################
 
 ## A controller provides the information to exert the current control
 
@@ -331,6 +388,12 @@ mutable struct CcCvController{R, I <: Integer} <: Controller
     numberOfCycles::I
     dEdt::Union{R, Missing}
     dIdt::Union{R, Missing}
+    ramp_start_time::R
+    ramp_duration::R
+    ramp_start_target::R # target value at beginning of ramp (actual current or actual voltage)
+    ramp_end_target::R # target the controller should reach at the end of the ramp (eg ImaxDischarge, lowerCutoffVoltage etc)
+    ramp_target_is_voltage::Bool # current or voltage
+    ramp_active::Bool # to keep track if the controller is in the transition
 
 end
 
@@ -338,7 +401,7 @@ function CcCvController()
 
     maincontroller = SimpleControllerCV()
 
-    return CcCvController(maincontroller, 0, missing, missing)
+    return CcCvController(maincontroller, 0, missing, missing, 0.0, 0.0, 0.0, 0.0, false, false)
 
 end
 
@@ -361,7 +424,7 @@ function Base.setproperty!(c::CcCvController, f::Symbol, v)
     end
 end
 
-@inline function Jutul.numerical_type(x::CCController{R, I}) where {R, I}
+@inline function Jutul.numerical_type(x::CCController{I, R}) where {I, R}
     return R
 end
 
@@ -391,125 +454,119 @@ InputCurrentController() = InputCurrentController(0.0, 0.0, false)
     return R
 end
 
+## RestController
 
-"""
-Function to create (deep) copy of simple controller
-"""
-function copyController!(cv_copy::CCController, cv::CCController)
+mutable struct RestController{R} <: Controller
+    target::R
+    time::R
+    target_is_voltage::Bool
+    ctrlType::OperationalMode
+end
 
-    cv_copy.numberOfCycles = cv.numberOfCycles
-    cv_copy.target = cv.target
-    cv_copy.time = cv.time
-    cv_copy.target_is_voltage = cv.target_is_voltage
-    return cv_copy.ctrlType = cv.ctrlType
+RestController() = RestController(0.0, 0.0, false, rest)
 
+@inline function Jutul.numerical_type(x::RestController{R}) where {R}
+    return R
+end
+
+## SequenceController
+
+mutable struct SequenceController{R} <: Controller
+    # Keep data for all the controllers to get a concrete controller for Jutul
+    step_index::Int
+    step_start_time::R
+    target::R
+    time::R
+    target_is_voltage::Bool
+    ctrlType::Any
+    numberOfCycles::Int
+    dEdt::Union{R, Missing}
+    dIdt::Union{R, Missing}
+    ramp_start_time::R
+    ramp_duration::R
+    ramp_start_target::R
+    ramp_end_target::R
+    ramp_target_is_voltage::Bool
+    ramp_active::Bool
+end
+
+# Construct a sequence controller initialized at the first step with no active ramp.
+SequenceController() = SequenceController(1, 0.0, 0.0, 0.0, false, missing, 0, missing, missing, 0.0, 0.0, 0.0, 0.0, false, false)
+
+# Return the numeric scalar type used by the sequence controller.
+@inline function Jutul.numerical_type(x::SequenceController{R}) where {R}
+    return R
 end
 
 
-"""
-Function to create (deep) copy of function controller
-"""
-function copyController!(cv_copy::FunctionController, cv::FunctionController)
+##############################################
+# Copy helpers for the different controllers #
+##############################################
 
-    cv_copy.target = cv.target
-    cv_copy.time = cv.time
-    return cv_copy.target_is_voltage = cv.target_is_voltage
-
+function copyController!(dst::T, src::T) where {T <: Controller}
+    for field in fieldnames(T)
+        setfield!(dst, field, getfield(src, field))
+    end
+    return dst
 end
 
-"""
-Function to create (deep) copy of simple controller
-"""
-function copyController!(cv_copy::SimpleControllerCV, cv::SimpleControllerCV)
-
-    cv_copy.target = cv.target
-    cv_copy.time = cv.time
-    cv_copy.target_is_voltage = cv.target_is_voltage
-    return cv_copy.ctrlType = cv.ctrlType
-
+function copy_controller_field(dst_value, src_value)
+    if dst_value isa Bool && src_value isa Bool
+        return src_value
+    elseif dst_value isa Number && src_value isa Number
+        return zero(dst_value) + src_value
+    else
+        return src_value
+    end
 end
 
-"""
-Function to create (deep) copy of CC-CV controller
-"""
-function copyController!(cv_copy::CcCvController, cv::CcCvController)
-
-    copyController!(cv_copy.maincontroller, cv.maincontroller)
-    return cv_copy.numberOfCycles = cv.numberOfCycles
-
+function copyController!(dst::T, src::S) where {T <: Controller, S <: Controller}
+    # Adjoint tracing may copy CCController{..., Float64} into CCController{..., Dual}.
+    fieldnames(T) == fieldnames(S) || error("Cannot copy controller $(S) into $(T)")
+    for field in fieldnames(T)
+        setfield!(dst, field, copy_controller_field(getfield(dst, field), getfield(src, field)))
+    end
+    return dst
 end
 
-"""
-Overload function to copy simple controller
-"""
-function Base.copy(cv::FunctionController)
-
-    cv_copy = FunctionController()
-    copyController!(cv_copy, cv)
-
-    return cv_copy
-
+function copyController!(dst::CcCvController, src::CcCvController)
+    # Need its own copyController since it contains a nested mutable controller
+    copyController!(dst.maincontroller, src.maincontroller)
+    dst.numberOfCycles = src.numberOfCycles
+    dst.dEdt = src.dEdt
+    dst.dIdt = src.dIdt
+    dst.ramp_start_time = src.ramp_start_time
+    dst.ramp_duration = src.ramp_duration
+    dst.ramp_start_target = src.ramp_start_target
+    dst.ramp_end_target = src.ramp_end_target
+    dst.ramp_target_is_voltage = src.ramp_target_is_voltage
+    dst.ramp_active = src.ramp_active
+    return dst
 end
 
-
-"""
-Overload function to copy simple controller
-"""
-function Base.copy(cv::CCController)
-
-    cv_copy = CCController()
-    copyController!(cv_copy, cv)
-
-    return cv_copy
-
+function Base.copy(c::T) where {T <: Controller}
+    return T((getfield(c, field) for field in fieldnames(T))...)
 end
 
-"""
-Overload function to copy simple controller
-"""
-function Base.copy(cv::SimpleControllerCV)
-
-    cv_copy = SimpleControllerCV()
-    copyController!(cv_copy, cv)
-
-    return cv_copy
-
+function Base.copy(c::CcCvController{R, I}) where {R, I}
+    return CcCvController(
+        copy(c.maincontroller),
+        c.numberOfCycles,
+        c.dEdt,
+        c.dIdt,
+        c.ramp_start_time,
+        c.ramp_duration,
+        c.ramp_start_target,
+        c.ramp_end_target,
+        c.ramp_target_is_voltage,
+        c.ramp_active,
+    )
 end
 
-"""
-Overload function to copy CC-CV controller
-"""
-function Base.copy(cv::CcCvController)
+#################################################
+# Minimum output variables for the control model #
+#################################################
 
-    cv_copy = CcCvController()
-    copyController!(cv_copy, cv)
-
-    return cv_copy
-
-end
-
-"""
-Function to create (deep) copy of input current controller
-"""
-function copyController!(cv_copy::InputCurrentController, cv::InputCurrentController)
-
-    cv_copy.target = cv.target
-    cv_copy.time = cv.time
-    return cv_copy.target_is_voltage = cv.target_is_voltage
-
-end
-
-"""
-Overload function to copy input current controller
-"""
-function Base.copy(cv::InputCurrentController)
-
-    cv_copy = InputCurrentController()
-    copyController!(cv_copy, cv)
-
-    return cv_copy
-
-end
 """
 We add the controller in the output
 """
@@ -586,16 +643,196 @@ function getInitCurrent(policy::InputCurrentPolicy)
     return policy.current_function(policy.times[1])
 end
 
+function getInitCurrent(policy::RestPolicy)
+    return zero(policy.duration)
+end
+
+# Return the initial current prescribed by the first step in a sequence.
+function getInitCurrent(policy::SequencePolicy)
+    return getInitCurrent(sequence_step_policy(policy.steps[1]))
+end
+
 function getInitCurrent(model::CurrentAndVoltageModel)
 
     return getInitCurrent(model.system.policy)
 
 end
 
+# Unwrap a policy step to get the policy that should control the active step.
+sequence_step_policy(step::PolicyStep) = step.policy
+# Allow already-unwrapped policies to be used as sequence steps.
+sequence_step_policy(policy::AbstractPolicy) = policy
+
+#####################################
+# Helpers for sequence policy steps #
+#####################################
+
+# Return the policy object for the currently active sequence step.
+function active_sequence_policy(policy::SequencePolicy, controller::SequenceController)
+    return sequence_step_policy(policy.steps[controller.step_index])
+end
+
+# Initialize the shared sequence controller fields for a rest step.
+function initialize_sequence_step_controller!(controller::SequenceController, step_policy::RestPolicy)
+    controller.target = 0.0
+    controller.target_is_voltage = false
+    controller.ctrlType = rest
+    controller.numberOfCycles = 0
+    controller.dEdt = missing
+    return controller.dIdt = missing
+end
+
+# Initialize the shared sequence controller fields for a CC step.
+function initialize_sequence_step_controller!(controller::SequenceController, step_policy::CCPolicy)
+    if step_policy.initialControl == "discharging"
+        controller.ctrlType = "discharging"
+        controller.target = step_policy.ImaxDischarge
+    elseif step_policy.initialControl == "charging"
+        controller.ctrlType = "charging"
+        controller.target = -step_policy.ImaxCharge
+    else
+        error("Initial control $(step_policy.initialControl) is not recognized")
+    end
+    controller.target_is_voltage = false
+    controller.numberOfCycles = 0
+    controller.dEdt = missing
+    return controller.dIdt = missing
+end
+
+# Initialize the shared sequence controller fields for a CCCV step.
+function initialize_sequence_step_controller!(controller::SequenceController, step_policy::CyclingCVPolicy)
+    if step_policy.initialControl == discharging
+        controller.ctrlType = cc_discharge1
+    elseif step_policy.initialControl == charging
+        controller.ctrlType = cc_charge1
+    else
+        error("Initial control $(step_policy.initialControl) is not recognized")
+    end
+    controller.target = 0.0
+    controller.target_is_voltage = false
+    controller.numberOfCycles = 0
+    controller.dEdt = missing
+    return controller.dIdt = missing
+end
+
+# A rest step is complete once its step-local duration has elapsed.
+function sequence_step_complete(policy::RestPolicy, controller, state)
+    return controller.time - controller.step_start_time >= policy.duration
+end
+
+# A CC step is complete when its voltage limit or cycle count condition is reached.
+function sequence_step_complete(policy::CCPolicy, controller, state)
+    if policy.numberOfCycles == 0
+        if policy.initialControl == "charging"
+            return state.ElectricPotential[1] >= policy.upperCutoffVoltage
+        elseif policy.initialControl == "discharging"
+            return state.ElectricPotential[1] <= policy.lowerCutoffVoltage
+        else
+            error("Initial control $(policy.initialControl) is not recognized")
+        end
+    else
+        return controller.numberOfCycles >= policy.numberOfCycles
+    end
+end
+
+# A CCCV step is complete when its requested cycle count has been reached.
+function sequence_step_complete(policy::CyclingCVPolicy, controller, state)
+    return controller.numberOfCycles >= policy.numberOfCycles
+end
+
+# A sequence is complete when the active step index has advanced past the final step.
+function sequence_complete(policy::SequencePolicy, controller::SequenceController)
+    return controller.step_index > length(policy.steps)
+end
+
+# The nominal target for a rest step is zero current.
+function sequence_nominal_target(policy::RestPolicy, controller::SequenceController)
+    return (target = 0.0, target_is_voltage = false)
+end
+
+# The nominal target for a CC step is the current setpoint for the active direction.
+function sequence_nominal_target(policy::CCPolicy, controller::SequenceController)
+    if controller.ctrlType == "discharging"
+        target = policy.ImaxDischarge
+    elseif controller.ctrlType == "charging"
+        target = -policy.ImaxCharge
+    else
+        error("ctrlType $(controller.ctrlType) not recognized")
+    end
+    return (target = target, target_is_voltage = false)
+end
+
+# The nominal target for a CCCV step is the current or voltage setpoint for its active mode.
+function sequence_nominal_target(policy::CyclingCVPolicy, controller::SequenceController)
+    if controller.ctrlType == cc_discharge1
+        target = policy.ImaxDischarge
+        target_is_voltage = false
+    elseif controller.ctrlType == cc_discharge2
+        target = 0.0
+        target_is_voltage = false
+    elseif controller.ctrlType == cc_charge1
+        target = -policy.ImaxCharge
+        target_is_voltage = false
+    elseif controller.ctrlType == cv_charge2
+        target = policy.upperCutoffVoltage
+        target_is_voltage = true
+    else
+        error("ctrlType $(controller.ctrlType) not recognized")
+    end
+    return (target = target, target_is_voltage = target_is_voltage)
+end
+
+# Advance to the next sequence step and start a transition ramp when requested.
+function advance_sequence_step!(controller::SequenceController, policy::SequencePolicy)
+    previous_target = controller.target
+    previous_target_is_voltage = controller.target_is_voltage
+
+    controller.step_index += 1
+    controller.step_start_time = controller.time
+    if !sequence_complete(policy, controller)
+        initialize_sequence_step_controller!(controller, active_sequence_policy(policy, controller))
+        nominal = sequence_nominal_target(active_sequence_policy(policy, controller), controller)
+        if policy.use_ramp_up && policy.rampup_time > 0 && previous_target_is_voltage == nominal.target_is_voltage && previous_target != nominal.target
+            controller.ramp_start_time = controller.time
+            controller.ramp_duration = policy.rampup_time
+            controller.ramp_start_target = previous_target
+            controller.ramp_end_target = nominal.target
+            controller.ramp_target_is_voltage = nominal.target_is_voltage
+            controller.ramp_active = true
+            controller.target = previous_target
+            controller.target_is_voltage = previous_target_is_voltage
+        else
+            controller.ramp_active = false
+        end
+    else
+        controller.ramp_active = false
+    end
+    return controller
+end
+
+# Apply an active sequence transition ramp to the controller target.
+function apply_sequence_transition_ramp!(controller::SequenceController)
+    if controller.ramp_active
+        elapsed = controller.time - controller.ramp_start_time
+        if elapsed < controller.ramp_duration
+            delta = controller.ramp_end_target - controller.ramp_start_target
+            controller.target = controller.ramp_start_target + currentFun(elapsed, delta, controller.ramp_duration)
+            controller.target_is_voltage = controller.ramp_target_is_voltage
+        else
+            controller.target = controller.ramp_end_target
+            controller.target_is_voltage = controller.ramp_target_is_voltage
+            controller.ramp_active = false
+        end
+    end
+    return controller
+end
+
 
 ######################################################
 # Setup the initial policy from the input parameters #
 ######################################################
+
+setup_initial_control_policy!(policy::AbstractPolicy, input, parameters) = nothing
 
 function setup_initial_control_policy!(policy::CCPolicy, input, parameters)
 
@@ -624,7 +861,8 @@ function setup_initial_control_policy!(policy::CCPolicy, input, parameters)
 
     if haskey(cycling_protocol, "UpperVoltageLimit")
         policy.upperCutoffVoltage = cycling_protocol["UpperVoltageLimit"]
-    elseif haskey(cycling_protocol, "LowerVoltageLimit")
+    end
+    if haskey(cycling_protocol, "LowerVoltageLimit")
         policy.lowerCutoffVoltage = cycling_protocol["LowerVoltageLimit"]
     end
     policy.ImaxCharge = only(parameters[:Control][:ImaxCharge])
@@ -632,10 +870,6 @@ function setup_initial_control_policy!(policy::CCPolicy, input, parameters)
 
 end
 
-
-function setup_initial_control_policy!(policy::FunctionPolicy, input, parameters)
-
-end
 
 function setup_initial_control_policy!(policy::SimpleCVPolicy, input, parameters)
 
@@ -676,6 +910,7 @@ function setup_initial_control_policy!(policy::CyclingCVPolicy, input, parameter
         cFun(time) = currentFun(time, Imax, tup)
 
         policy.current_function = cFun
+        policy.rampup_time = tup
     end
 
 
@@ -689,6 +924,15 @@ end
 function setup_initial_control_policy!(policy::InputCurrentPolicy, input, parameters)
     # The policy already contains the full time series and voltage limits.
     # Nothing additional needs to be set up from parameters.
+end
+
+function setup_initial_control_policy!(policy::RestPolicy, input, parameters)
+    return nothing
+end
+
+# Sequence steps are fully configured before setup, so no additional initial policy data is needed.
+function setup_initial_control_policy!(policy::SequencePolicy, input, parameters)
+    return nothing
 end
 
 ###################################
@@ -722,6 +966,29 @@ function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, mode
 
 end
 
+# Bound sequence current updates by the largest current used by any step in the sequence.
+function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, model::P, dx, w) where {P <: CurrentAndVoltageModel{<:SequencePolicy}}
+
+    entity = associated_entity(p)
+    active = active_entities(model.domain, entity, for_variables = true)
+    v = state[state_symbol]
+
+    ImaxDischarge = model.system.policy.ImaxDischarge
+    ImaxCharge = model.system.policy.ImaxCharge
+    Imax = max(ImaxCharge, ImaxDischarge)
+
+    abs_max = 0.2 * Imax
+    rel_max = relative_increment_limit(p)
+    maxval = maximum_value(p)
+    minval = minimum_value(p)
+    scale = variable_scale(p)
+    return @inbounds for i in eachindex(active)
+        a_i = active[i]
+        v[a_i] = update_value(v[a_i], w * dx[i], abs_max, rel_max, minval, maxval, scale)
+    end
+
+end
+
 #######################################
 # Helper functions for control switch #
 #######################################
@@ -746,10 +1013,7 @@ function setupRegionSwitchFlags(policy::Union{CyclingCVPolicy, CCPolicy}, state,
 
     end
 
-
     E = only(state.ElectricPotential)
-    I = only(state.Current)
-
 
     if ctrlType == cc_discharge1 || ctrlType == "discharging"
 
@@ -807,7 +1071,19 @@ function check_constraints(model, storage)
     ctrlType = state[:Controller].ctrlType
     ctrlType0 = state0[:Controller].ctrlType
 
-    if policy isa CyclingCVPolicy
+    if policy isa SequencePolicy
+        if sequence_complete(policy, controller)
+            return true
+        end
+        policy = active_sequence_policy(policy, controller)
+    end
+
+    if policy isa RestPolicy
+        return true
+    elseif policy isa CyclingCVPolicy
+        if controller.ramp_active
+            return true
+        end
         nextCtrlType = getNextCtrlTypecccv(ctrlType0)
     elseif policy isa CCPolicy
         if ctrlType == "discharging"
@@ -869,6 +1145,19 @@ function Jutul.update_values!(old::InputCurrentController, new::InputCurrentCont
 
 end
 
+function Jutul.update_values!(old::RestController, new::RestController)
+
+    return copyController!(old, new)
+
+end
+
+# Copy the sequence controller when Jutul updates controller values.
+function Jutul.update_values!(old::SequenceController, new::SequenceController)
+
+    return copyController!(old, new)
+
+end
+
 """
 In addition to update the values in all primary variables, we need also to update the values in the controller. We do that by specializing the method perform_step_solve_impl!
 """
@@ -883,7 +1172,10 @@ end
 """
 We need to add the specific treatment of the controller variables
 """
-function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{CyclingCVPolicy{T1, T2}}, T3, T4}) where {T1, T2, T3, T4}
+function Jutul.reset_state_to_previous_state!(
+        storage,
+        model::SimulationModel{CurrentAndVoltageDomain, <:CurrentAndVoltageSystem, T3, T4},
+    ) where {T3, T4}
 
     invoke(
         reset_state_to_previous_state!,
@@ -895,35 +1187,6 @@ function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{Cu
         model,
     )
     return copyController!(storage.state[:Controller], storage.state0[:Controller])
-end
-
-function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{CCPolicy{T1}}, T3, T4}) where {T1, T3, T4}
-
-    invoke(
-        reset_state_to_previous_state!,
-        Tuple{
-            typeof(storage),
-            SimulationModel,
-        },
-        storage,
-        model,
-    )
-    return copyController!(storage.state[:Controller], storage.state0[:Controller])
-end
-
-function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{InputCurrentPolicy{T1}}, T3, T4}) where {T1, T3, T4}
-
-    invoke(
-        reset_state_to_previous_state!,
-        Tuple{
-            typeof(storage),
-            SimulationModel,
-        },
-        storage,
-        model,
-    )
-    return copyController!(storage.state[:Controller], storage.state0[:Controller])
-
 end
 
 
@@ -969,9 +1232,64 @@ function update_control_type_in_controller!(state, state0, policy::SimpleCVPolic
 
 end
 
+#####################################
+# Helpers for CCCV transition ramps #
+#####################################
+
+function cccv_nominal_target(policy::CyclingCVPolicy, ctrlType)
+    if ctrlType == cc_discharge1
+        target = policy.ImaxDischarge
+        target_is_voltage = false
+    elseif ctrlType == cc_discharge2
+        target = 0.0
+        target_is_voltage = false
+    elseif ctrlType == cc_charge1
+        target = -policy.ImaxCharge
+        target_is_voltage = false
+    elseif ctrlType == cv_charge2
+        target = policy.upperCutoffVoltage
+        target_is_voltage = true
+    else
+        error("ctrlType $ctrlType not recognized")
+    end
+    return (target = target, target_is_voltage = target_is_voltage)
+end
+
+function start_cccv_transition_ramp!(controller, policy::CyclingCVPolicy, ctrlType, E, I)
+    nominal = cccv_nominal_target(policy, ctrlType)
+    controller.ramp_start_time = controller.time
+    controller.ramp_duration = policy.rampup_time
+    controller.ramp_start_target = nominal.target_is_voltage ? E : I
+    controller.ramp_end_target = nominal.target
+    controller.ramp_target_is_voltage = nominal.target_is_voltage
+    controller.ramp_active = policy.use_ramp_up && policy.rampup_time > 0 && controller.ramp_start_target != controller.ramp_end_target
+    return controller
+end
+
+function apply_cccv_transition_ramp!(controller)
+    if controller.ramp_active
+        elapsed = controller.time - controller.ramp_start_time
+        if elapsed < controller.ramp_duration
+            delta = controller.ramp_end_target - controller.ramp_start_target
+            controller.target = controller.ramp_start_target + currentFun(elapsed, delta, controller.ramp_duration)
+            controller.target_is_voltage = controller.ramp_target_is_voltage
+        else
+            controller.target = controller.ramp_end_target
+            controller.target_is_voltage = controller.ramp_target_is_voltage
+            controller.ramp_active = false
+        end
+    end
+    return controller
+end
+
 """
 Implementation of the cycling CC-CV policy
 """
+
+##################################################
+# Control-type updates for the different policies #
+##################################################
+
 function update_control_type_in_controller!(state, state0, policy::CyclingCVPolicy, dt)
 
     E = only(value(state[:ElectricPotential]))
@@ -986,6 +1304,10 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
     controller.dEdt = (E - E0) / dt
 
     ctrlType0 = state0.Controller.ctrlType
+
+    if state0.Controller.ramp_active
+        return controller.ctrlType = ctrlType0
+    end
 
     nextCtrlType = getNextCtrlTypecccv(ctrlType0)
 
@@ -1036,6 +1358,10 @@ function update_control_type_in_controller!(state, state0, policy::CyclingCVPoli
 
         end
 
+    end
+
+    if ctrlType != ctrlType0 && !controller.ramp_active
+        start_cccv_transition_ramp!(controller, policy, ctrlType, E, I)
     end
 
     return controller.ctrlType = ctrlType
@@ -1120,10 +1446,27 @@ function update_control_type_in_controller!(state, state0, policy::CCPolicy, dt)
 
 end
 
+function update_control_type_in_controller!(state, state0, policy::RestPolicy, dt)
+    controller = state.Controller
+    controller.time = state0.Controller.time + dt
+    controller.target_is_voltage = false
+    return controller.ctrlType = rest
+end
 
-#############################################################
-# Functions to update the values in the controller in state #
-#############################################################
+# Delegate sequence control-type updates to the currently active step policy.
+function update_control_type_in_controller!(state, state0, policy::SequencePolicy, dt)
+    controller = state.Controller
+    if sequence_complete(policy, controller)
+        return nothing
+    end
+    step_policy = active_sequence_policy(policy, controller)
+    return update_control_type_in_controller!(state, state0, step_policy, dt)
+end
+
+
+##################################################
+# Control-type update for input-current policies #
+##################################################
 
 """
 Implementation of the InputCurrentPolicy.
@@ -1181,6 +1524,10 @@ end
 
 # Once the controller has been assigned the given control, we adjust the target value which is used in the equation
 # assembly
+
+###################################################
+# Target-value updates for the different policies #
+###################################################
 
 function update_values_in_controller!(state, policy::CCPolicy)
 
@@ -1348,7 +1695,8 @@ function update_values_in_controller!(state, policy::CyclingCVPolicy)
 
 
     controller.target_is_voltage = target_is_voltage
-    return controller.target = target
+    controller.target = target
+    return apply_cccv_transition_ramp!(controller)
 
 end
 
@@ -1373,6 +1721,102 @@ function update_values_in_controller!(state, policy::InputCurrentPolicy)
         controller.target = I_target
     end
 
+end
+
+#############################################
+# Target-value updates for sequence steps   #
+#############################################
+
+# Update a sequence rest step target using the standalone rest target logic.
+function update_sequence_values_in_controller!(state, policy::RestPolicy)
+    return update_values_in_controller!(state, policy)
+end
+
+# Update a sequence CC step target using step-local time for any ramp function.
+function update_sequence_values_in_controller!(state, policy::CCPolicy)
+    controller = state.Controller
+    ctrlType = controller.ctrlType
+    cf = policy.current_function
+
+    if controller.numberOfCycles == 0 && controller.ctrlType == policy.initialControl && !ismissing(cf)
+        local_time = controller.time - controller.step_start_time
+        I_t = cf isa Real ? cf : cf(local_time)
+
+        if ctrlType == "discharging"
+            target = I_t
+        elseif ctrlType == "charging"
+            target = -I_t
+        else
+            error("ctrlType $ctrlType not recognized")
+        end
+    else
+        if ctrlType == "discharging"
+            target = policy.ImaxDischarge
+        elseif ctrlType == "charging"
+            target = -policy.ImaxCharge
+        else
+            error("ctrlType $ctrlType not recognized")
+        end
+    end
+
+    controller.target_is_voltage = false
+    return controller.target = target
+end
+
+# Update a sequence CCCV step target using step-local time for any ramp function.
+function update_sequence_values_in_controller!(state, policy::CyclingCVPolicy)
+    controller = state[:Controller]
+    ctrlType = controller.ctrlType
+    cf = policy.current_function
+
+    if ctrlType == cc_discharge1
+        if controller.numberOfCycles == 0 && controller.ctrlType == policy.initialControl && !ismissing(cf)
+            local_time = controller.time - controller.step_start_time
+            target = cf isa Real ? cf : cf(local_time)
+        else
+            target = policy.ImaxDischarge
+        end
+        target_is_voltage = false
+
+    elseif ctrlType == cc_discharge2
+        target = 0.0
+        target_is_voltage = false
+
+    elseif ctrlType == cc_charge1
+        if controller.numberOfCycles == 0 && controller.ctrlType == policy.initialControl && !ismissing(cf)
+            local_time = controller.time - controller.step_start_time
+            target = -(cf isa Real ? cf : cf(local_time))
+        else
+            target = -policy.ImaxCharge
+        end
+        target_is_voltage = false
+
+    elseif ctrlType == cv_charge2
+        target = policy.upperCutoffVoltage
+        target_is_voltage = true
+
+    else
+        error("ctrlType $ctrlType not recognized")
+    end
+
+    controller.target_is_voltage = target_is_voltage
+    return controller.target = target
+end
+
+function update_values_in_controller!(state, policy::RestPolicy)
+    controller = state.Controller
+    controller.target_is_voltage = false
+    return controller.target = 0.0
+end
+
+# Update the active sequence step target and apply any sequence transition ramp.
+function update_values_in_controller!(state, policy::SequencePolicy)
+    controller = state[:Controller]
+    if sequence_complete(policy, controller)
+        return nothing
+    end
+    update_sequence_values_in_controller!(state, active_sequence_policy(policy, controller))
+    return apply_sequence_transition_ramp!(controller)
 end
 
 #############################
@@ -1404,7 +1848,6 @@ end
 
 function Jutul.update_equation_in_entity!(v, i, state, state0, eq::CurrentEquation, model, dt, ldisc = local_discretization(eq, i))
 
-    # Sign is strange here due to cross term?
     I = only(state.Current)
     phi = only(state.ElectricPotential)
 
@@ -1417,92 +1860,90 @@ end
 # Function to update the controller part in state after convergence #
 #####################################################################
 
-""" Update after convergence. Here, we copy the controller to state0 and count the total number of cycles in case of CyclingCVPolicy
-"""
+function update_cycle_count!(ctrl, ctrl0, initialControl::OperationalMode)
+    ctrlType = ctrl.ctrlType
+    ctrlType0 = ctrl0.ctrlType
+    ncycles = ctrl0.numberOfCycles
+
+    if initialControl == charging
+        if (ctrlType0 == cc_discharge1 || ctrlType0 == cc_discharge2) && (ctrlType == cc_charge1 || ctrlType == cv_charge2)
+            ncycles += 1
+        end
+    elseif initialControl == discharging
+        if (ctrlType0 == cc_charge1 || ctrlType0 == cv_charge2) && (ctrlType == cc_discharge1 || ctrlType == cc_discharge2)
+            ncycles += 1
+        end
+    else
+        error("Initial control $initialControl is not recognized")
+    end
+
+    ctrl.numberOfCycles = ncycles
+    return ctrl
+end
+
+function update_cycle_count!(ctrl, ctrl0, initialControl::String)
+    ctrlType = ctrl.ctrlType
+    ctrlType0 = ctrl0.ctrlType
+    ncycles = ctrl0.numberOfCycles
+
+    if initialControl == "charging"
+        if ctrlType0 == "discharging" && ctrlType == "charging"
+            ncycles += 1
+        end
+    elseif initialControl == "discharging"
+        if ctrlType0 == "charging" && ctrlType == "discharging"
+            ncycles += 1
+        end
+    else
+        error("Initial control $initialControl is not recognized")
+    end
+
+    ctrl.numberOfCycles = ncycles
+    return ctrl
+end
+
+""" Update after convergence. Copy the controller to state0 and update cycle counts. """
 function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces; time = NaN)
 
     ctrl = storage.state[:Controller]
-
+    ctrl0 = storage.state0[:Controller]
     policy = model.system.policy
 
-    return if policy isa CyclingCVPolicy
+    if policy isa CyclingCVPolicy
+        update_cycle_count!(ctrl, ctrl0, policy.initialControl)
+        return copyController!(ctrl0, ctrl)
 
-        initctrl = policy.initialControl
-
-        ctrlType = ctrl.ctrlType
-
-        ctrlType0 = storage.state0[:Controller].ctrlType
-        ncycles = storage.state0[:Controller].numberOfCycles
-
-        copyController!(storage.state0[:Controller], ctrl)
-
-        if initctrl == charging
-
-            if (ctrlType0 == cc_discharge1 || ctrlType0 == cc_discharge2) && (ctrlType == cc_charge1 || ctrlType == cv_charge2)
-                ncycles = ncycles + 1
-            end
-
-        elseif initctrl == discharging
-
-            if (ctrlType0 == cc_charge1 || ctrlType0 == cv_charge2) && (ctrlType == cc_discharge1 || ctrlType == cc_discharge2)
-                ncycles = ncycles + 1
-            end
-
-        end
-
-        ctrl.numberOfCycles = ncycles
-
-    elseif policy isa SimpleCVPolicy
-
-        copyController!(storage.state0[:Controller], ctrl)
-
-    elseif policy isa FunctionPolicy
-
-        copyController!(storage.state0[:Controller], ctrl)
+    elseif policy isa SimpleCVPolicy || policy isa FunctionPolicy || policy isa InputCurrentPolicy || policy isa RestPolicy
+        return copyController!(ctrl0, ctrl)
 
     elseif policy isa CCPolicy
+        if policy.numberOfCycles > 0
+            update_cycle_count!(ctrl, ctrl0, policy.initialControl)
+        end
+        return copyController!(ctrl0, ctrl)
 
-        if policy.numberOfCycles == 0
-            copyController!(storage.state0[:Controller], ctrl)
-
-        else
-
-            initctrl = policy.initialControl
-
-            ctrlType = ctrl.ctrlType
-
-            ctrlType0 = storage.state0[:Controller].ctrlType
-            ncycles = storage.state0[:Controller].numberOfCycles
-
-            copyController!(storage.state0[:Controller], ctrl)
-
-            if initctrl == "charging"
-
-                if ctrlType0 == "discharging" && ctrlType == "charging"
-                    ncycles = ncycles + 1
-                end
-
-            elseif initctrl == "discharging"
-
-                if ctrlType0 == "charging" && ctrlType == "discharging"
-                    ncycles = ncycles + 1
-                end
-
-            end
-
-            ctrl.numberOfCycles = ncycles
+    elseif policy isa SequencePolicy
+        if sequence_complete(policy, ctrl)
+            return copyController!(ctrl0, ctrl)
         end
 
-    elseif policy isa InputCurrentPolicy
+        step_policy = active_sequence_policy(policy, ctrl)
 
-        copyController!(storage.state0[:Controller], ctrl)
+        if step_policy isa CyclingCVPolicy
+            update_cycle_count!(ctrl, ctrl0, step_policy.initialControl)
+        elseif step_policy isa CCPolicy && step_policy.numberOfCycles > 0
+            update_cycle_count!(ctrl, ctrl0, step_policy.initialControl)
+        end
+
+        if sequence_step_complete(step_policy, ctrl, storage.state)
+            advance_sequence_step!(ctrl, policy)
+        end
+
+        return copyController!(ctrl0, ctrl)
 
     else
-
         error("Policy $(typeof(policy)) not recognized")
-
     end
-
 end
 
 ########################################################################
@@ -1596,6 +2037,25 @@ function Jutul.initialize_extra_state_fields!(state, ::Any, model::CurrentAndVol
         target, time = promote(target, time)
         state[:Controller] = InputCurrentController(target, time, target_is_voltage)
 
+    elseif policy isa RestPolicy
+
+        time = 0.0
+        target = 0.0
+        target_is_voltage = false
+
+        target, time = promote(target, time)
+        state[:Controller] = RestController(target, time, target_is_voltage, rest)
+
+    elseif policy isa SequencePolicy
+
+        time = 0.0
+        target = 0.0
+        target_is_voltage = false
+
+        target, time = promote(target, time)
+        state[:Controller] = SequenceController(1, time, target, time, target_is_voltage, missing, 0, missing, missing, time, 0.0, target, target, target_is_voltage, false)
+        initialize_sequence_step_controller!(state[:Controller], active_sequence_policy(policy, state[:Controller]))
+
     end
 
 end
@@ -1636,9 +2096,20 @@ end
 # Helper function to compute control value #
 ############################################
 
-"""
-sineup rampup function
-"""
+function currentFun(t::Real, inputI::Real, tup::Real = 0.1)
+
+    t, inputI, tup, val = promote(t, inputI, tup, 0.0)
+
+    if t <= tup
+        val = sineup(0.0, inputI, 0.0, tup, t)
+    else
+        val = inputI
+    end
+
+    return val
+
+end
+
 function sineup(y1, y2, x1, x2, x)
     #SINEUP Creates a sine ramp function
     #
