@@ -756,7 +756,7 @@ function solver_configuration(
         error("Timestep selector $(timestep_selector) not recognized. Only 'TimestepSelector' is currently implemented.")
     end
 
-    control_ramp_time = control_rampup_time(model[:Control].system.policy)
+    control_ramp_time = control_rampup_time(multimodel[:Control].system.policy)
     if !isnothing(rampup_steps) && rampup_steps > 0 && control_ramp_time > 0
         ramp_dt = Float64(control_ramp_time) / rampup_steps
         push!(timesel, ControlRampTimestepSelector(ramp_dt))
@@ -832,12 +832,12 @@ function solver_configuration(
         end
     end
 
-    if model[:Control].system.policy isa CyclingCVPolicy || model[:Control].system.policy isa CCPolicy || model[:Control].system.policy isa RestPolicy || model[:Control].system.policy isa SequencePolicy
-        if model[:Control].system.policy isa CyclingCVPolicy
+    if multimodel[:Control].system.policy isa CyclingCVPolicy || multimodel[:Control].system.policy isa CCPolicy || multimodel[:Control].system.policy isa RestPolicy || multimodel[:Control].system.policy isa SequencePolicy
+        if multimodel[:Control].system.policy isa CyclingCVPolicy
             cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
         elseif multimodel[:Control].system.policy isa CCPolicy && multimodel[:Control].system.policy.numberOfCycles > 0
             cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
-        elseif model[:Control].system.policy isa SequencePolicy
+        elseif multimodel[:Control].system.policy isa SequencePolicy
             cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
         end
 
@@ -884,10 +884,10 @@ function solver_configuration(
                         report[:stopnow] = false
                     end
                 end
-            elseif model[:Control].system.policy isa RestPolicy
+            elseif multimodel[:Control].system.policy isa RestPolicy
                 report[:stopnow] = s.state.Control.Controller.time >= m[:Control].system.policy.duration
 
-            elseif model[:Control].system.policy isa SequencePolicy
+            elseif multimodel[:Control].system.policy isa SequencePolicy
                 report[:stopnow] = sequence_complete(m[:Control].system.policy, s.state.Control.Controller)
             end
 
