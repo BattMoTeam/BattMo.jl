@@ -159,19 +159,21 @@ function print_calibration_overview(vc::AbstractCalibration)
     function print_table(subkeys, t)
         opt_cell = vc.calibrated_cell_parameters
         is_optimized = !ismissing(opt_cell)
+
         header = ["Name", "Initial value", "Bounds"]
         if is_optimized
             push!(header, "Optimized value")
             push!(header, "Change")
         end
+
         tab = Matrix{Any}(undef, length(subkeys), length(header))
-        # widths = zeros(Int, size(tab, 2))
-        # widths[1] = 40
+
         for (i, k) in enumerate(subkeys)
             v0 = pt[k].v0
             tab[i, 1] = join(k[2:end], ".")
             tab[i, 2] = v0
             tab[i, 3] = "$(pt[k].vmin) - $(pt[k].vmax)"
+
             if is_optimized
                 v = value(get_nested_json_value(opt_cell, k))
                 perc = round(100 * (v - v0) / max(v0, 1.0e-20), digits = 2)
@@ -179,21 +181,28 @@ function print_calibration_overview(vc::AbstractCalibration)
                 tab[i, 5] = "$perc%"
             end
         end
-        # TODO: Do this properly instead of via Jutul's import...
-        return Jutul.PrettyTables.pretty_table(tab, header = header, title = t)
+
+        return Jutul.PrettyTables.pretty_table(
+            tab;
+            column_labels = header,
+            title = t
+        )
     end
 
     pt = vc.parameter_targets
     pkeys = keys(pt)
+
     outer_keys = String[]
     for k in pkeys
         push!(outer_keys, first(k))
     end
     outer_keys = unique!(outer_keys)
+
     for outer_key in outer_keys
         subkeys = filter(x -> x[1] == outer_key, pkeys)
         print_table(subkeys, "$outer_key: Active calibration parameters")
     end
+
     return
 end
 
@@ -339,11 +348,8 @@ function solve_and_differentiate_for_calibration(
         validate_solver_settings = true,
     )
     case = setup_battmo_case(x)
-    states, dt = simulate_battmo_case_for_calibration(
-        case,
-        solver_settings;
-        validate_solver_settings,
-    )
+    states, dt = simulate_battmo_case_for_calibration(vc, case, solver_settings)
+
     # Evaluate the objective function
     f = evaluate_calibration_objective(vc, objective, case, states, dt)
     # Solve adjoints
@@ -417,7 +423,7 @@ function setup_battmo_case_for_calibration(X, sim, x_setup, step_info = missing;
 end
 
 function simulate_battmo_case_for_calibration(
-        case, solver_settings;
+        vc, case, solver_settings;
         simulator = missing,
         config = missing,
         validate_solver_settings = true,
@@ -430,7 +436,13 @@ function simulate_battmo_case_for_calibration(
     if ismissing(config)
         config = solver_configuration(
             simulator,
-            case.model,
+            vc.sim.model,
+            (
+                model_settings = vc.sim.model.settings,
+                cell_parameters = vc.sim.cell_parameters,
+                cycling_protocol = vc.sim.cycling_protocol,
+                simulation_settings = vc.sim.settings,
+            ),
             case.parameters;
             solver_settings = solver_settings,
             info_level = -1,
