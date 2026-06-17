@@ -7,7 +7,6 @@
             "type": "string",
             "enum": [
                 "CC",
-                "cccv",
                 "CCCV",
                 "Function",
                 "InputCurrentSeries",
