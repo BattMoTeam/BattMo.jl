@@ -2284,9 +2284,20 @@ end
 # Helper function to compute control value #
 ############################################
 
-"""
-sineup rampup function
-"""
+function currentFun(t::Real, inputI::Real, tup::Real = 0.1)
+
+    t, inputI, tup, val = promote(t, inputI, tup, 0.0)
+
+    if t <= tup
+        val = sineup(0.0, inputI, 0.0, tup, t)
+    else
+        val = inputI
+    end
+
+    return val
+
+end
+
 function sineup(y1, y2, x1, x2, x)
     #SINEUP Creates a sine ramp function
     #
