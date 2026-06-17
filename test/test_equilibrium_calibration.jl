@@ -5,9 +5,9 @@ using CSV
 
 @testset "Equilibrium calibration" begin
     data_path = joinpath(dirname(pathof(BattMo)), "..", "examples", "example_data", "Chayambuka_voltage_005C.csv")
-    data = CSV.read(data_path, DataFrame; header = false)
-    capacity = Float64.(data[:, 1])
-    voltage = Float64.(data[:, 2])
+    data = CSV.File(data_path; header = false)
+    capacity = [Float64(row.Column1) for row in data]
+    voltage = [Float64(row.Column2) for row in data]
     order = sortperm(capacity)
     # Downsample the measured curve for a coarse-grid machinery test.
     capacity = capacity[order][1:16:end]
