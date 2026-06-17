@@ -74,6 +74,26 @@
             "unit_name": "emmo:AreaPerTimeUnit",
             "unit_iri": "https://w3id.org/emmo#EMMO_10f703b5_8b2a_4c5a_a734_f0cfb29622ad",
             "documentation": "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input"
+        },
+        "BruggemanCoefficient": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 5.0,
+            "description": "Exponent relating the tortuosity and porosity of porous media.",
+            "context_type": "BruggemanCoefficient",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_5c34b3b5_c9c4_477d_809a_3f682f995aa9",
+            "unit": "1",
+            "unit_name": "emmo:UnitOne",
+            "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
         }
-    }
+    },
+    "required": [
+        "Density",
+        "Concentration",
+        "ChargeNumber",
+        "TransferenceNumber",
+        "IonicConductivity",
+        "DiffusionCoefficient",
+        "BruggemanCoefficient"
+    ]
 }
