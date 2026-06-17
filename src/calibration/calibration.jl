@@ -74,7 +74,7 @@ mutable struct VoltageCalibration <: AbstractCalibration
     history::Any
     """
     	VoltageCalibration(t, v, sim)
-
+    
     Set up calibration for a voltage calibration problem for given time vector
     `t` and voltage vector `v` and a `Simulation` instance `sim`
     """
@@ -159,19 +159,21 @@ function print_calibration_overview(vc::AbstractCalibration)
     function print_table(subkeys, t)
         opt_cell = vc.calibrated_cell_parameters
         is_optimized = !ismissing(opt_cell)
+
         header = ["Name", "Initial value", "Bounds"]
         if is_optimized
             push!(header, "Optimized value")
             push!(header, "Change")
         end
+
         tab = Matrix{Any}(undef, length(subkeys), length(header))
-        # widths = zeros(Int, size(tab, 2))
-        # widths[1] = 40
+
         for (i, k) in enumerate(subkeys)
             v0 = pt[k].v0
             tab[i, 1] = join(k[2:end], ".")
             tab[i, 2] = v0
             tab[i, 3] = "$(pt[k].vmin) - $(pt[k].vmax)"
+
             if is_optimized
                 v = value(get_nested_json_value(opt_cell, k))
                 perc = round(100 * (v - v0) / max(v0, 1.0e-20), digits = 2)
@@ -179,21 +181,28 @@ function print_calibration_overview(vc::AbstractCalibration)
                 tab[i, 5] = "$perc%"
             end
         end
-        # TODO: Do this properly instead of via Jutul's import...
-        return Jutul.PrettyTables.pretty_table(tab, header = header, title = t)
+
+        return Jutul.PrettyTables.pretty_table(
+            tab;
+            column_labels = header,
+            title = t
+        )
     end
 
     pt = vc.parameter_targets
     pkeys = keys(pt)
+
     outer_keys = String[]
     for k in pkeys
         push!(outer_keys, first(k))
     end
     outer_keys = unique!(outer_keys)
+
     for outer_key in outer_keys
         subkeys = filter(x -> x[1] == outer_key, pkeys)
         print_table(subkeys, "$outer_key: Active calibration parameters")
     end
+
     return
 end
 
