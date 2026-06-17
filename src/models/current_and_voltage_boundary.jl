@@ -390,10 +390,10 @@ mutable struct CcCvController{R, I <: Integer} <: Controller
     dIdt::Union{R, Missing}
     ramp_start_time::R
     ramp_duration::R
-    ramp_start_target::R
-    ramp_end_target::R
-    ramp_target_is_voltage::Bool
-    ramp_active::Bool
+    ramp_start_target::R # target value at beginning of ramp (actual current or actual voltage)
+    ramp_end_target::R # target the controller should reach at the end of the ramp (eg ImaxDischarge, lowerCutoffVoltage etc)
+    ramp_target_is_voltage::Bool # current or voltage
+    ramp_active::Bool # to keep track if the controller is in the transition
 
 end
 
@@ -472,6 +472,7 @@ end
 ## SequenceController
 
 mutable struct SequenceController{R} <: Controller
+    # Keep data for all the controllers to get a concrete controller for Jutul
     step_index::Int
     step_start_time::R
     target::R
@@ -529,7 +530,7 @@ function copyController!(dst::T, src::S) where {T <: Controller, S <: Controller
 end
 
 function copyController!(dst::CcCvController, src::CcCvController)
-# Need its own copyController since it contains a nested mutable controller
+    # Need its own copyController since it contains a nested mutable controller
     copyController!(dst.maincontroller, src.maincontroller)
     dst.numberOfCycles = src.numberOfCycles
     dst.dEdt = src.dEdt
@@ -1860,46 +1861,46 @@ end
 #####################################################################
 
 function update_cycle_count!(ctrl, ctrl0, initialControl::OperationalMode)
-        ctrlType = ctrl.ctrlType
+    ctrlType = ctrl.ctrlType
     ctrlType0 = ctrl0.ctrlType
     ncycles = ctrl0.numberOfCycles
 
     if initialControl == charging
-            if (ctrlType0 == cc_discharge1 || ctrlType0 == cc_discharge2) && (ctrlType == cc_charge1 || ctrlType == cv_charge2)
+        if (ctrlType0 == cc_discharge1 || ctrlType0 == cc_discharge2) && (ctrlType == cc_charge1 || ctrlType == cv_charge2)
             ncycles += 1
-            end
+        end
     elseif initialControl == discharging
-            if (ctrlType0 == cc_charge1 || ctrlType0 == cv_charge2) && (ctrlType == cc_discharge1 || ctrlType == cc_discharge2)
+        if (ctrlType0 == cc_charge1 || ctrlType0 == cv_charge2) && (ctrlType == cc_discharge1 || ctrlType == cc_discharge2)
             ncycles += 1
-            end
+        end
     else
         error("Initial control $initialControl is not recognized")
-        end
+    end
 
-        ctrl.numberOfCycles = ncycles
+    ctrl.numberOfCycles = ncycles
     return ctrl
 end
 
 function update_cycle_count!(ctrl, ctrl0, initialControl::String)
-            ctrlType = ctrl.ctrlType
+    ctrlType = ctrl.ctrlType
     ctrlType0 = ctrl0.ctrlType
     ncycles = ctrl0.numberOfCycles
 
     if initialControl == "charging"
-                if ctrlType0 == "discharging" && ctrlType == "charging"
+        if ctrlType0 == "discharging" && ctrlType == "charging"
             ncycles += 1
-                end
+        end
     elseif initialControl == "discharging"
-                if ctrlType0 == "charging" && ctrlType == "discharging"
+        if ctrlType0 == "charging" && ctrlType == "discharging"
             ncycles += 1
-                end
+        end
     else
         error("Initial control $initialControl is not recognized")
-            end
+    end
 
-            ctrl.numberOfCycles = ncycles
+    ctrl.numberOfCycles = ncycles
     return ctrl
-        end
+end
 
 """ Update after convergence. Copy the controller to state0 and update cycle counts. """
 function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, model::CurrentAndVoltageModel, dt, forces; time = NaN)
