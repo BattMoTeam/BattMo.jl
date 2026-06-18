@@ -381,8 +381,11 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
     params[:transference] = inputparams_elyte["TransferenceNumber"]
     params[:charge] = inputparams_elyte["ChargeNumber"]
     params[:separator_porosity] = cell_parameters["Separator"]["Porosity"]
-    #params[:bruggeman] = cell_parameters["Separator"]["BruggemanCoefficient"]
-    params[:bruggeman] = cell_parameters["Electrolyte"]["BruggemanCoefficient"]
+    if haskey(cell_parameters["Separator"], "BruggemanCoefficient")
+        params[:bruggeman] = cell_parameters["Separator"]["BruggemanCoefficient"]
+    else
+        params[:bruggeman] = cell_parameters["Electrolyte"]["BruggemanCoefficient"]
+    end
     params[:electrolyte_density] = inputparams_elyte["Density"]
     params[:separator_density] = cell_parameters["Separator"]["Density"]
 
@@ -787,8 +790,11 @@ function set_parameters(
 
     prm_elyte = Dict{Symbol, Any}()
     prm_elyte[:Temperature] = T
-    # prm_elyte[:BruggemanCoefficient] = cell_parameters["Separator"]["BruggemanCoefficient"]
-    prm_elyte[:BruggemanCoefficient] = cell_parameters["Electrolyte"]["BruggemanCoefficient"]
+    if haskey(cell_parameters["Separator"], "BruggemanCoefficient")
+        prm_elyte[:BruggemanCoefficient] = cell_parameters["Separator"]["BruggemanCoefficient"]
+    else
+        prm_elyte[:BruggemanCoefficient] = cell_parameters["Electrolyte"]["BruggemanCoefficient"]
+    end
 
 
     parameters[:Electrolyte] = setup_parameters(multimodel[:Electrolyte], prm_elyte)
