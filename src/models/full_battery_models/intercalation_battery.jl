@@ -1166,23 +1166,14 @@ end
 function setup_initial_state(input, model::IntercalationBattery)
 
     if hasproperty(input, :initial_state) && !isnothing(input.initial_state)
+        # Copy to keep the physical state
         state = deepcopy(input.initial_state)
 
         # Reset controller
-        if haskey(state, :Control)
-            ctrl = state[:Control]
-            if haskey(ctrl, :Controller)
-                controller = ctrl[:Controller]
-                for fd in fieldnames(typeof(controller))
-                    value = getfield(controller, fd)
-                    if !isa(value, String)
-                        value = zero(value)
-                    end
-                    setfield!(controller, fd, value)
-                end
-            end
-            ctrl[:Current] = [getInitCurrent(model.multimodel[:Control])]
-        end
+        fresh_input = merge(input, (; initial_state = nothing))
+        fresh_state = setup_initial_state(fresh_input, model)
+
+        state[:Control] = fresh_state[:Control]
 
         return state
     end
