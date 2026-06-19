@@ -240,7 +240,7 @@ function CyclingCVPolicy(
         numberOfCycles;
         ImaxDischarge = 0 * lowerCutoffVoltage,
         ImaxCharge = 0 * lowerCutoffVoltage,
-        use_ramp_up::Bool,
+        use_ramp_up::Bool = false,
         rampup_time = zero(lowerCutoffVoltage),
         current_function = missing,
         cv_current_cutoff = missing,
