@@ -472,6 +472,7 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
             "UpperVoltageLimit" => create_property(parameter_meta, "UpperVoltageLimit"),
             "InitialControl" => create_property(parameter_meta, "InitialControl"),
             "CurrentChangeLimit" => create_property(parameter_meta, "CurrentChangeLimit"),
+            "CVCurrentCutoff" => create_property(parameter_meta, "CVCurrentCutoff"),
             "VoltageChangeLimit" => create_property(parameter_meta, "VoltageChangeLimit"),
             "AmbientTemperature" => create_property(parameter_meta, "AmbientTemperature"),
             "InitialTemperature" => create_property(parameter_meta, "InitialTemperature"),

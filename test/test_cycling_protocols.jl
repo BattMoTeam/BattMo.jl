@@ -50,6 +50,41 @@ using Test
     @test 4.0 < controller.target < 4.01
 end
 
+@testset "CCCV CVCurrentCutoff" begin
+    policy = BattMo.CyclingCVPolicy(
+        3.0,
+        4.0,
+        1.0e-4,
+        1.0e-4,
+        "charging",
+        1;
+        ImaxDischarge = 1.0,
+        ImaxCharge = 1.0,
+        cv_current_cutoff = 0.05,
+    )
+
+    controller = BattMo.CcCvController()
+    controller.ctrlType = BattMo.cv_charge2
+    controller.dIdt = 1.0
+
+    before_state = (
+        Controller = controller,
+        ElectricPotential = [4.0],
+        Current = [-0.06],
+    )
+    before_flags = BattMo.setupRegionSwitchFlags(policy, before_state, BattMo.cv_charge2)
+    @test before_flags.beforeSwitchRegion
+    @test !before_flags.afterSwitchRegion
+
+    after_state = (
+        Controller = controller,
+        ElectricPotential = [4.0],
+        Current = [-0.04],
+    )
+    after_flags = BattMo.setupRegionSwitchFlags(policy, after_state, BattMo.cv_charge2)
+    @test !after_flags.beforeSwitchRegion
+    @test after_flags.afterSwitchRegion
+end
 @testset "Crate" begin
 
     @test begin

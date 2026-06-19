@@ -239,6 +239,11 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 
     elseif protocol == "CCCV"
 
+        cv_current_cutoff = get(cycling_protocol, "CVCurrentCutoff", missing)
+        if isnothing(cv_current_cutoff)
+            cv_current_cutoff = missing
+        end
+
         policy = CyclingCVPolicy(
             cycling_protocol["LowerVoltageLimit"],
             cycling_protocol["UpperVoltageLimit"],
@@ -247,6 +252,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
             cycling_protocol["InitialControl"],
             cycling_protocol["TotalNumberOfCycles"];
             use_ramp_up = use_ramp_up,
+            cv_current_cutoff = cv_current_cutoff,
         )
 
     elseif protocol == "Function"
@@ -311,6 +317,11 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
                 ImaxDischarge = max(ImaxDischarge, Idis)
                 ImaxCharge = max(ImaxCharge, Ichg)
 
+                cv_current_cutoff = get(step, "CVCurrentCutoff", missing)
+                if isnothing(cv_current_cutoff)
+                    cv_current_cutoff = missing
+                end
+
                 step_policy = CyclingCVPolicy(
                     step["LowerVoltageLimit"],
                     step["UpperVoltageLimit"],
@@ -322,6 +333,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
                     ImaxCharge = Ichg,
                     use_ramp_up = use_ramp_up,
                     rampup_time = use_ramp_up ? Float64(input.simulation_settings["RampUpTime"]) : zero(Idis),
+                    cv_current_cutoff = cv_current_cutoff,
                 )
                 if use_ramp_up
                     Imax = step["InitialControl"] == "charging" ? Ichg : Idis

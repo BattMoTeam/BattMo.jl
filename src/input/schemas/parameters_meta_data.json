@@ -581,6 +581,14 @@
       "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_71f10616_15eb_4dc4_bc8d_ffaac3838af2",
       "unit": "A·s⁻¹"
     },
+    "CVCurrentCutoff": {
+      "type": "number",
+      "minimum": 0.0,
+      "description": "Absolute current cutoff used to leave a constant-voltage charge step.",
+      "unit": "A",
+      "unit_name": "emmo:Ampere",
+      "unit_iri": "https://w3id.org/emmo#Ampere"
+    },
     "VoltageChangeLimit": {
       "type": "number",
       "minimum": 0.0001,

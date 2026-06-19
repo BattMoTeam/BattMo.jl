@@ -221,6 +221,7 @@ mutable struct CyclingCVPolicy{R, I} <: AbstractPolicy
     upperCutoffVoltage::R
     dIdtLimit::R
     dEdtLimit::R
+    cvCurrentCutoff::Union{R, Missing}
     initialControl::OperationalMode
     numberOfCycles::I
     tolerances::Any
@@ -242,6 +243,7 @@ function CyclingCVPolicy(
         use_ramp_up::Bool,
         rampup_time = zero(lowerCutoffVoltage),
         current_function = missing,
+        cv_current_cutoff = missing,
     )
 
     if initialControl == "charging"
@@ -250,6 +252,10 @@ function CyclingCVPolicy(
         initialControl = discharging
     else
         error("InitialControl $initialControl not recognized")
+    end
+
+    if isnothing(cv_current_cutoff)
+        cv_current_cutoff = missing
     end
 
     tolerances = (
@@ -266,6 +272,7 @@ function CyclingCVPolicy(
         upperCutoffVoltage,
         dIdtLimit,
         dEdtLimit,
+        cv_current_cutoff,
         initialControl,
         numberOfCycles,
         tolerances,
@@ -1038,13 +1045,19 @@ function setupRegionSwitchFlags(policy::Union{CyclingCVPolicy, CCPolicy}, state,
 
     elseif ctrlType == cv_charge2
 
-        dIdt = state.Controller.dIdt
-        if !ismissing(dIdt)
-            before = abs(dIdt) > dIdtMin * (1 + tol)
-            after = abs(dIdt) < dIdtMin * (1 - tol)
+        if !ismissing(policy.cvCurrentCutoff)
+            I = abs(only(state.Current))
+            before = I > policy.cvCurrentCutoff
+            after = I < policy.cvCurrentCutoff
         else
-            before = false
-            after = false
+            dIdt = state.Controller.dIdt
+            if !ismissing(dIdt)
+                before = abs(dIdt) > dIdtMin * (1 + tol)
+                after = abs(dIdt) < dIdtMin * (1 - tol)
+            else
+                before = false
+                after = false
+            end
         end
 
     else

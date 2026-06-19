@@ -152,6 +152,14 @@ function get_cycling_protocol_meta_data()
             "type" => Real,
             "unit" => "A·s⁻¹",
         ),
+        "CVCurrentCutoff" => Dict(
+            "min_value" => 0.0,
+            "description" => "Absolute current cutoff used to leave a constant-voltage charge step.",
+            "type" => Real,
+            "unit" => "A",
+            "unit_name" => "emmo:Ampere",
+            "unit_iri" => "https://w3id.org/emmo#Ampere",
+        ),
         "VoltageChangeLimit" => Dict(
             "max_value" => 0.1,
             "min_value" => 0.0001,
