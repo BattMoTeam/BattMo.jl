@@ -1,9 +1,6 @@
 using BattMo
 using Test
 
-trapz(x, y) = sum((y[1:(end - 1)] .+ y[2:end]) .* diff(x)) / 2
-rmse(x, y0, y1) = sqrt(trapz(x, (y1 .- y0) .^ 2) / (x[end] - x[1]))
-
 @testset "Restart from saved state reproduces full discharge-charge simulation" begin
     # Parameters
     rate = 1.0
@@ -130,6 +127,6 @@ rmse(x, y0, y1) = sqrt(trapz(x, (y1 .- y0) .^ 2) / (x[end] - x[1]))
         @test t_merge ≈ t_ref atol = 1.0e-14 rtol = 0.0
         @test I_merge ≈ output_ref.time_series["Current"] atol = 1.0e-7 rtol = 0.0
         @test maximum(abs.(E_merge .- E_ref)) <= 1.0e-6
-        @test rmse(t_ref, E_ref, E_merge) <= 1.0e-4
+        @test BattMo.rmse(t_ref, E_ref, t_merge, E_merge) <= 1.0e-4
     end
 end
