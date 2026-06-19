@@ -85,6 +85,33 @@ end
     @test !after_flags.beforeSwitchRegion
     @test after_flags.afterSwitchRegion
 end
+
+@testset "CC without ramp-up keeps one small initial timestep" begin
+    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    model_settings = load_model_settings(; from_default_set = "p2d")
+    delete!(model_settings, "RampUp")
+    simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+    simulation_settings["TimeStepDuration"] = 50.0
+
+    model = LithiumIonBattery(; model_settings)
+    cycling_protocol = CyclingProtocol(
+        Dict(
+            "Protocol" => "CC",
+            "InitialStateOfCharge" => 0.5,
+            "InitialControl" => "discharging",
+            "DRate" => 0.1,
+            "TotalNumberOfCycles" => 0,
+            "LowerVoltageLimit" => 3.9,
+            "UpperVoltageLimit" => 4.1,
+        )
+    )
+
+    sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
+
+    @test sim.time_steps[1] == simulation_settings["TimeStepDuration"] / 2
+    @test sim.time_steps[2] == simulation_settings["TimeStepDuration"]
+end
+
 @testset "Crate" begin
 
     @test begin
