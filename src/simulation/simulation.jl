@@ -311,6 +311,7 @@ end
 			  info_level = 0,
 			  end_report = info_level > -1,
 			  include_initial_state = false,
+			  output_ministeps = false,
 			  kwargs...)
 
 Solves a battery `Simulation` problem by executing the simulation workflow defined in `solve_simulation`.
@@ -325,6 +326,9 @@ Solves a battery `Simulation` problem by executing the simulation workflow defin
   prepended to the output time series (`Time`, `Voltage`, `Current`, capacity, etc.).
   This eliminates the gap between the initial condition and the first solver output,
   improving plots and RMSE comparisons when restarting from a saved state.  Default is `false`.
+- `output_ministeps::Bool` (optional): If `true`, the returned BattMo output is sampled at
+  every accepted solver ministep instead of only at report timesteps. The output format is
+  unchanged; time-dependent arrays simply contain more time points. Default is `false`.
 - `kwargs...`: Additional keyword arguments forwarded to `solve_simulation`.
 
 # Behavior
@@ -353,6 +357,7 @@ function solve(
         solver_settings = get_default_solver_settings(problem.model),
         logger = nothing,
         include_initial_state = false,
+        output_ministeps::Bool = false,
         kwargs...,
     )
 
@@ -385,6 +390,7 @@ function solve(
         solver_settings,
         logger,
         include_initial_state,
+        output_ministeps,
         validate,
         accept_invalid,
         kwargs...,
@@ -432,6 +438,7 @@ function solve_simulation(
         solver_settings,
         logger = nothing,
         include_initial_state = false,
+        output_ministeps::Bool = false,
         validate::Bool = true,
         accept_invalid::Bool = false,
         kwargs...,
@@ -471,6 +478,12 @@ function solve_simulation(
         kwargs...,
     )
 
+    # Jutul stores accepted ministep states using its internal output_substates option.
+    output_ministeps = output_ministeps || cfg[:output_substates]
+    if output_ministeps
+        cfg[:output_substates] = true
+    end
+
 
     # Setup hook if given
     hook = get(kwargs, :hook, nothing)
@@ -488,6 +501,11 @@ function solve_simulation(
 
     jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
 
+    output_states = jutul_states
+    if output_ministeps
+        output_states, _, _ = Jutul.expand_to_ministeps(jutul_states, jutul_reports[eachindex(jutul_states)])
+    end
+
 
     # perfom decoupled thermal simulation if needed
 
@@ -497,13 +515,20 @@ function solve_simulation(
         thermal_parameters = thermal_sim.parameters
         thermal_model = thermal_sim.model
 
-        decoupled_thermal_states = solve_decoupled_thermal_model(model, cycling_protocol, thermal_parameters, parameters, thermal_model, jutul_states, global_maps, timesteps)
+        thermal_timesteps = if output_ministeps
+            diff(vcat(0.0, [state[:Control][:Controller].time for state in output_states]))
+        else
+            timesteps
+        end
+        decoupled_thermal_states = solve_decoupled_thermal_model(model, cycling_protocol, thermal_parameters, parameters, thermal_model, output_states, global_maps, thermal_timesteps)
 
 
-        # Add decoupled thermal states to the jutul_states
-        for i in eachindex(jutul_states)
-            jutul_states[i][:ThermalModel] = decoupled_thermal_states[i][:state]
-            jutul_reports[i][:ThermalModel] = decoupled_thermal_states[i][:report]
+        # Add decoupled thermal states to the output states
+        for i in eachindex(output_states)
+            output_states[i][:ThermalModel] = decoupled_thermal_states[i][:state]
+            if !output_ministeps
+                jutul_reports[i][:ThermalModel] = decoupled_thermal_states[i][:report]
+            end
         end
 
 
@@ -511,7 +536,7 @@ function solve_simulation(
 
 
     jutul_output = (
-        states = jutul_states,
+        states = output_states,
         reports = jutul_reports,
         solver_configuration = cfg,
         multimodel = model.multimodel,
@@ -660,7 +685,7 @@ function kwarg_dict(; kwargs...)
             "OutputReports" => get(kwargs, :output_reports, nothing),
             "InMemoryReports" => get(kwargs, :in_memory_reports, nothing),
             "ReportLevel" => get(kwargs, :report_level, nothing),
-            "OutputSubstrates" => get(kwargs, :output_substates, nothing),
+            "OutputMinisteps" => get(kwargs, :output_ministeps, nothing),
         ),
     )
 
@@ -739,6 +764,7 @@ function solver_configuration(
     linear_solver_dict = solver_settings["LinearSolver"]
     output = solver_settings["Output"]
     verbose = solver_settings["Verbose"]
+    output_ministeps = get(output, "OutputMinisteps", false)
 
     relaxation = non_linear_solver["Relaxation"]
     if relaxation == "NoRelaxation"
@@ -800,7 +826,7 @@ function solver_configuration(
         output_path = output["OutputPath"] == "" ? nothing : output["OutputPath"],
         in_memory_reports = output["InMemoryReports"],
         report_level = output["ReportLevel"],
-        output_substates = output["OutputSubstrates"],
+        output_substates = output_ministeps,
     )
 
     if !isnothing(rampup_reference_timestep) && !isnothing(rampup_steps) && rampup_steps > 0 && control_ramp_time > 0
@@ -1074,11 +1100,19 @@ function setup_timesteps(
 
             if haskey(input.model_settings, "RampUp")
                 nr = simulation_settings["RampUpSteps"]
+                timesteps = compute_rampup_timesteps(totalTime, dt, nr)
             else
-                nr = 1
+                # Set to false to use only regular dt steps for no-ramp CC.
+                use_initial_half_step = true
+                timesteps = use_initial_half_step ? [dt / 2] : Float64[]
+                remaining_time = totalTime - sum(timesteps)
+                n = Int64(floor(remaining_time / dt))
+                append!(timesteps, repeat([dt], n))
+                dt_final = totalTime - sum(timesteps)
+                if dt_final > 0
+                    push!(timesteps, dt_final)
+                end
             end
-
-            timesteps = compute_rampup_timesteps(totalTime, dt, nr)
 
         else
 

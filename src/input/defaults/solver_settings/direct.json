@@ -38,6 +38,6 @@
         "OutputPath": "",
         "InMemoryReports": 10,
         "ReportLevel": 0,
-        "OutputSubstrates": false
+        "OutputMinisteps": false
     }
 }

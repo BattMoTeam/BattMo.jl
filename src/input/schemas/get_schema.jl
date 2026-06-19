@@ -756,7 +756,7 @@ function get_schema_solver_settings()
                     "OutputPath" => create_property(parameter_meta, "OutputPath"),
                     "InMemoryReports" => create_property(parameter_meta, "InMemoryReports"),
                     "ReportLevel" => create_property(parameter_meta, "ReportLevel"),
-                    "OutputSubstrates" => create_property(parameter_meta, "OutputSubstrates"),
+                    "OutputMinisteps" => create_property(parameter_meta, "OutputMinisteps"),
                 ),
             ),
         ),
