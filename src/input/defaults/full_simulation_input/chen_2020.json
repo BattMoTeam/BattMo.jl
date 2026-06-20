@@ -203,7 +203,7 @@
             "OutputPath": "",
             "InMemoryReports": 10,
             "ReportLevel": 0,
-            "OutputMinisteps": false
+            "OutputSubstates": false
         }
     }
 }

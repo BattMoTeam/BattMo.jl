@@ -311,7 +311,7 @@ end
 			  info_level = 0,
 			  end_report = info_level > -1,
 			  include_initial_state = false,
-			  output_ministeps = false,
+			  output_substates = false,
 			  kwargs...)
 
 Solves a battery `Simulation` problem by executing the simulation workflow defined in `solve_simulation`.
@@ -326,8 +326,8 @@ Solves a battery `Simulation` problem by executing the simulation workflow defin
   prepended to the output time series (`Time`, `Voltage`, `Current`, capacity, etc.).
   This eliminates the gap between the initial condition and the first solver output,
   improving plots and RMSE comparisons when restarting from a saved state.  Default is `false`.
-- `output_ministeps::Bool` (optional): If `true`, the returned BattMo output is sampled at
-  every accepted solver ministep instead of only at report timesteps. The output format is
+- `output_substates::Bool` (optional): If `true`, the returned BattMo output is sampled at
+  every accepted solver substate instead of only at report timesteps. The output format is
   unchanged; time-dependent arrays simply contain more time points. Default is `false`.
 - `kwargs...`: Additional keyword arguments forwarded to `solve_simulation`.
 
@@ -357,7 +357,7 @@ function solve(
         solver_settings = get_default_solver_settings(problem.model),
         logger = nothing,
         include_initial_state = false,
-        output_ministeps::Bool = false,
+        output_substates::Bool = false,
         kwargs...,
     )
 
@@ -390,7 +390,7 @@ function solve(
         solver_settings,
         logger,
         include_initial_state,
-        output_ministeps,
+        output_substates,
         validate,
         accept_invalid,
         kwargs...,
@@ -438,7 +438,7 @@ function solve_simulation(
         solver_settings,
         logger = nothing,
         include_initial_state = false,
-        output_ministeps::Bool = false,
+        output_substates::Bool = false,
         validate::Bool = true,
         accept_invalid::Bool = false,
         kwargs...,
@@ -478,9 +478,9 @@ function solve_simulation(
         kwargs...,
     )
 
-    # Jutul stores accepted ministep states using its internal output_substates option.
-    output_ministeps = output_ministeps || cfg[:output_substates]
-    if output_ministeps
+    # Jutul stores accepted solver substates when output_substates is enabled.
+    output_substates = output_substates || cfg[:output_substates]
+    if output_substates
         cfg[:output_substates] = true
     end
 
@@ -502,7 +502,7 @@ function solve_simulation(
     jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
 
     output_states = jutul_states
-    if output_ministeps
+    if output_substates
         output_states, _, _ = Jutul.expand_to_ministeps(jutul_states, jutul_reports[eachindex(jutul_states)])
     end
 
@@ -515,7 +515,7 @@ function solve_simulation(
         thermal_parameters = thermal_sim.parameters
         thermal_model = thermal_sim.model
 
-        thermal_timesteps = if output_ministeps
+        thermal_timesteps = if output_substates
             diff(vcat(0.0, [state[:Control][:Controller].time for state in output_states]))
         else
             timesteps
@@ -526,7 +526,7 @@ function solve_simulation(
         # Add decoupled thermal states to the output states
         for i in eachindex(output_states)
             output_states[i][:ThermalModel] = decoupled_thermal_states[i][:state]
-            if !output_ministeps
+            if !output_substates
                 jutul_reports[i][:ThermalModel] = decoupled_thermal_states[i][:report]
             end
         end
@@ -685,7 +685,7 @@ function kwarg_dict(; kwargs...)
             "OutputReports" => get(kwargs, :output_reports, nothing),
             "InMemoryReports" => get(kwargs, :in_memory_reports, nothing),
             "ReportLevel" => get(kwargs, :report_level, nothing),
-            "OutputMinisteps" => get(kwargs, :output_ministeps, nothing),
+            "OutputSubstates" => get(kwargs, :output_substates, nothing),
         ),
     )
 
@@ -764,7 +764,7 @@ function solver_configuration(
     linear_solver_dict = solver_settings["LinearSolver"]
     output = solver_settings["Output"]
     verbose = solver_settings["Verbose"]
-    output_ministeps = get(output, "OutputMinisteps", false)
+    output_substates_setting = get(output, "OutputSubstates", false)
 
     relaxation = non_linear_solver["Relaxation"]
     if relaxation == "NoRelaxation"
@@ -826,7 +826,7 @@ function solver_configuration(
         output_path = output["OutputPath"] == "" ? nothing : output["OutputPath"],
         in_memory_reports = output["InMemoryReports"],
         report_level = output["ReportLevel"],
-        output_substates = output_ministeps,
+        output_substates = output_substates_setting,
     )
 
     if !isnothing(rampup_reference_timestep) && !isnothing(rampup_steps) && rampup_steps > 0 && control_ramp_time > 0

@@ -266,11 +266,11 @@ function get_solver_settings_meta_data()
             "category" => "SolverSettings",
             "description" => "Level of information stored in reports when written to disk.",
         ),
-        "OutputMinisteps" => Dict(
+        "OutputSubstates" => Dict(
             "type" => Bool,
-            "variable_name" => "output_ministeps",
+            "variable_name" => "output_substates",
             "category" => "SolverSettings",
-            "description" => "Return output at every accepted solver ministep instead of only at report timesteps.",
+            "description" => "Return output at every accepted solver substate instead of only at report timesteps.",
         ),
     )
     return meta_data

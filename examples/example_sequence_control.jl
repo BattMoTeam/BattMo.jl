@@ -59,13 +59,13 @@ function run_sequence_case(use_rampup::Bool)
 
     model = LithiumIonBattery(; model_settings = model_settings)
     sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
-    output = solve(sim; info_level = -1, output_ministeps = false)
-    ministep_output = solve(sim; info_level = -1, output_ministeps = true)
+    output = solve(sim; info_level = -1, output_substates = false)
+    substate_output = solve(sim; info_level = -1, output_substates = true)
 
     return (
         label = label,
         output = output,
-        ministep_output = ministep_output,
+        substate_output = substate_output,
     )
 end
 
@@ -94,17 +94,17 @@ if doplot
     end
 
     report_colors = [:dodgerblue3, :darkorange2]
-    ministep_colors = [:seagreen4, :purple3]
+    substate_colors = [:seagreen4, :purple3]
 
     ax_voltage = Axis(
         fig[1, 1],
-        title = "Voltage: report output and ministep output",
+        title = "Voltage: report output and substate output",
         xlabel = "Time / h",
         ylabel = "Voltage / V",
     )
     ax_current = Axis(
         fig[2, 1],
-        title = "Current: report output and ministep output",
+        title = "Current: report output and substate output",
         xlabel = "Time / h",
         ylabel = "Current / A",
     )
@@ -119,9 +119,9 @@ if doplot
     for (case_index, result) in enumerate(results)
         label = result.label
         output = result.output
-        ministep_output = result.ministep_output
+        substate_output = result.substate_output
         report_color = report_colors[case_index]
-        ministep_color = ministep_colors[case_index]
+        substate_color = substate_colors[case_index]
 
         scatter!(
             ax_voltage,
@@ -149,15 +149,15 @@ if doplot
             linewidth = 3.0,
         )
 
-        # output_ministeps=true shows accepted solver ministeps, including adaptive
+        # output_substates=true shows accepted solver substates, including adaptive
         # timestep cuts from convergence and control transitions, not only ramp-up steps.
-        time = ministep_output.time_series["Time"]
+        time = substate_output.time_series["Time"]
         scatterlines!(
             ax_voltage,
             time ./ hour,
-            ministep_output.time_series["Voltage"],
-            label = "$label: ministeps",
-            color = ministep_color,
+            substate_output.time_series["Voltage"],
+            label = "$label: substates",
+            color = substate_color,
             linewidth = 3.0,
             markersize = 8,
             marker = :circle,
@@ -165,20 +165,20 @@ if doplot
         scatterlines!(
             ax_current,
             time ./ hour,
-            ministep_output.time_series["Current"],
-            label = "$label: ministeps",
-            color = ministep_color,
+            substate_output.time_series["Current"],
+            label = "$label: substates",
+            color = substate_color,
             linewidth = 3.0,
             markersize = 8,
             marker = :circle,
         )
-        ministep_timestep_time, ministep_timestep_vals = t_pw_const(time)
+        substate_timestep_time, substate_timestep_vals = t_pw_const(time)
         lines!(
             ax_timestep,
-            ministep_timestep_time ./ hour,
-            ministep_timestep_vals ./ min,
-            label = "$label: ministeps",
-            color = ministep_color,
+            substate_timestep_time ./ hour,
+            substate_timestep_vals ./ min,
+            label = "$label: substates",
+            color = substate_color,
             linewidth = 3.0,
         )
     end
@@ -235,9 +235,9 @@ if doplot
     end
 
     plot_voltage_current!(fig_cases[1, 1], results[1].output, "W rampup: output")
-    plot_voltage_current!(fig_cases[1, 2], results[1].ministep_output, "W rampup: ministeps")
+    plot_voltage_current!(fig_cases[1, 2], results[1].substate_output, "W rampup: substates")
     plot_voltage_current!(fig_cases[2, 1], results[2].output, "WO rampup: output")
-    plot_voltage_current!(fig_cases[2, 2], results[2].ministep_output, "WO rampup: ministeps")
+    plot_voltage_current!(fig_cases[2, 2], results[2].substate_output, "WO rampup: substates")
 
     screen1 = GLMakie.Screen()
     screen2 = GLMakie.Screen()
