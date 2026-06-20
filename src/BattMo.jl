@@ -214,6 +214,7 @@ include("models/full_battery_models/lithium_ion.jl")
 include("models/full_battery_models/sodium_ion.jl")
 
 include("utils/handy_functions.jl")
+include("utils/curve_analysis.jl")
 
 include("input/loader.jl")
 include("input/defaults.jl")

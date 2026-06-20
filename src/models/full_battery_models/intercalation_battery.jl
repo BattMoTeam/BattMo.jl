@@ -212,6 +212,9 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 
     protocol = cycling_protocol["Protocol"]
 
+    cap = min(computeElectrodeCapacity(model_neam, :NegativeElectrodeActiveMaterial), computeElectrodeCapacity(model_peam, :PositiveElectrodeActiveMaterial))
+    con = Constants()
+
     if protocol == "CC"
 
         initial_control = cycling_protocol["InitialControl"]
@@ -222,7 +225,6 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
         CRate = get(cycling_protocol, "CRate", 0.0)
 
         # Capacity goes into actual realized rates, so check the type for AD/promotion
-        cap = min(computeElectrodeCapacity(model_neam, :NegativeElectrodeActiveMaterial), computeElectrodeCapacity(model_peam, :PositiveElectrodeActiveMaterial))
         T_i = promote_type(typeof(DRate), typeof(CRate), typeof(cap), T)
 
         policy = CCPolicy(
@@ -237,6 +239,11 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 
     elseif protocol == "CCCV"
 
+        cv_current_cutoff = get(cycling_protocol, "CVCurrentCutoff", missing)
+        if isnothing(cv_current_cutoff)
+            cv_current_cutoff = missing
+        end
+
         policy = CyclingCVPolicy(
             cycling_protocol["LowerVoltageLimit"],
             cycling_protocol["UpperVoltageLimit"],
@@ -245,6 +252,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
             cycling_protocol["InitialControl"],
             cycling_protocol["TotalNumberOfCycles"];
             use_ramp_up = use_ramp_up,
+            cv_current_cutoff = cv_current_cutoff,
         )
 
     elseif protocol == "Function"
@@ -262,6 +270,88 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
         upper_v = cycling_protocol["UpperVoltageLimit"]
 
         policy = InputCurrentPolicy(times, currents, lower_v, upper_v)
+
+    elseif protocol == "Rest"
+
+        policy = RestPolicy(cycling_protocol["Duration"])
+
+    elseif protocol == "Sequence"
+
+        steps = AbstractSequenceStep[]
+        ImaxDischarge = zero(cap / con.hour)
+        ImaxCharge = zero(cap / con.hour)
+
+        for step in cycling_protocol["Steps"]
+            step_protocol = step["Protocol"]
+
+            if step_protocol == "CC"
+                DRate = get(step, "DRate", 0.0)
+                CRate = get(step, "CRate", 0.0)
+                Idis = (cap / con.hour) * DRate
+                Ichg = (cap / con.hour) * CRate
+                ImaxDischarge = max(ImaxDischarge, Idis)
+                ImaxCharge = max(ImaxCharge, Ichg)
+
+                step_policy = CCPolicy(
+                    get(step, "TotalNumberOfCycles", 0),
+                    step["InitialControl"],
+                    step["LowerVoltageLimit"],
+                    step["UpperVoltageLimit"],
+                    use_ramp_up;
+                    ImaxDischarge = Idis,
+                    ImaxCharge = Ichg,
+                    T = promote_type(typeof(Idis), typeof(Ichg), typeof(step["LowerVoltageLimit"]), typeof(step["UpperVoltageLimit"])),
+                )
+                if use_ramp_up
+                    Imax = step["InitialControl"] == "charging" ? Ichg : Idis
+                    tup = Float64(input.simulation_settings["RampUpTime"])
+                    step_policy.current_function = time -> currentFun(time, Imax, tup)
+                end
+                push!(steps, PolicyStep(step_policy))
+
+            elseif step_protocol == "CCCV"
+                DRate = step["DRate"]
+                CRate = step["CRate"]
+                Idis = (cap / con.hour) * DRate
+                Ichg = (cap / con.hour) * CRate
+                ImaxDischarge = max(ImaxDischarge, Idis)
+                ImaxCharge = max(ImaxCharge, Ichg)
+
+                cv_current_cutoff = get(step, "CVCurrentCutoff", missing)
+                if isnothing(cv_current_cutoff)
+                    cv_current_cutoff = missing
+                end
+
+                step_policy = CyclingCVPolicy(
+                    step["LowerVoltageLimit"],
+                    step["UpperVoltageLimit"],
+                    step["CurrentChangeLimit"],
+                    step["VoltageChangeLimit"],
+                    step["InitialControl"],
+                    get(step, "TotalNumberOfCycles", 1);
+                    ImaxDischarge = Idis,
+                    ImaxCharge = Ichg,
+                    use_ramp_up = use_ramp_up,
+                    rampup_time = use_ramp_up ? Float64(input.simulation_settings["RampUpTime"]) : zero(Idis),
+                    cv_current_cutoff = cv_current_cutoff,
+                )
+                if use_ramp_up
+                    Imax = step["InitialControl"] == "charging" ? Ichg : Idis
+                    tup = Float64(input.simulation_settings["RampUpTime"])
+                    step_policy.current_function = time -> currentFun(time, Imax, tup)
+                end
+                push!(steps, PolicyStep(step_policy))
+
+            elseif step_protocol == "Rest"
+                push!(steps, PolicyStep(RestPolicy(step["Duration"])))
+
+            else
+                error("Sequence step protocol $step_protocol not recognized.")
+            end
+        end
+
+        rampup_time = use_ramp_up ? Float64(input.simulation_settings["RampUpTime"]) : zero(ImaxDischarge)
+        policy = SequencePolicy(steps, ImaxDischarge, ImaxCharge, use_ramp_up, rampup_time)
 
     else
 
@@ -822,6 +912,30 @@ function set_parameters(
 
         parameters[:Control] = setup_parameters(multimodel[:Control])
 
+    elseif protocol == "Rest"
+
+        parameters[:Control] = setup_parameters(multimodel[:Control])
+
+    elseif protocol == "Sequence"
+
+        cap = computeCellCapacity(multimodel)
+        con = Constants()
+
+        ImaxDischarge = 0.0
+        ImaxCharge = 0.0
+
+        for step in cycling_protocol["Steps"]
+            if step["Protocol"] == "CC" || step["Protocol"] == "CCCV"
+                ImaxDischarge = max(ImaxDischarge, (cap / con.hour) * get(step, "DRate", 0.0))
+                ImaxCharge = max(ImaxCharge, (cap / con.hour) * get(step, "CRate", 0.0))
+            end
+        end
+
+        prm_control[:ImaxDischarge] = ImaxDischarge
+        prm_control[:ImaxCharge] = ImaxCharge
+
+        parameters[:Control] = setup_parameters(multimodel[:Control], prm_control)
+
     else
         error("control policy $controlPolicy not recognized")
     end
@@ -1055,25 +1169,18 @@ end
 function setup_initial_state(input, model::IntercalationBattery)
 
     if hasproperty(input, :initial_state) && !isnothing(input.initial_state)
+        # Copy to keep the physical state
         state = deepcopy(input.initial_state)
 
-        # Reset controller
-        if haskey(state, :Control)
-            ctrl = state[:Control]
-            if haskey(ctrl, :Controller)
-                controller = ctrl[:Controller]
-                for fd in fieldnames(typeof(controller))
-                    value = getfield(controller, fd)
-                    if !isa(value, String)
-                        value = zero(value)
-                    end
-                    setfield!(controller, fd, value)
-                end
-            end
-            ctrl[:Current] = [getInitCurrent(model.multimodel[:Control])]
-        end
+        # Reset control
+        fresh_input = merge(input, (; initial_state = nothing))
+        fresh_state = setup_initial_state(fresh_input, model)
+
+        state[:Control][:Controller] = deepcopy(fresh_state[:Control][:Controller])
+        state[:Control][:Current] = deepcopy(fresh_state[:Control][:Current])
 
         return state
+
     end
 
     multimodel = model.multimodel

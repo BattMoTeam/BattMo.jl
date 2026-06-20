@@ -7,11 +7,13 @@
             "type": "string",
             "enum": [
                 "CC",
-                "cccv",
+                "CCCV",
                 "Function",
-                "InputCurrentSeries"
+                "InputCurrentSeries",
+                "Rest",
+                "Sequence"
             ],
-            "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('cccv'), a custom Function, or a prescribed current time series ('InputCurrentSeries')."
+            "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('CCCV'), a custom Function, a prescribed current time series ('InputCurrentSeries'), a rest step ('Rest'), or an ordered sequence of supported steps ('Sequence')."
         },
         "TotalTime": {
             "type": "number",
@@ -105,6 +107,14 @@
             "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_71f10616_15eb_4dc4_bc8d_ffaac3838af2",
             "unit": "A·s⁻¹"
         },
+        "CVCurrentCutoff": {
+            "type": "number",
+            "minimum": 0.0,
+            "description": "Absolute current cutoff used to leave a constant-voltage charge step.",
+            "unit": "A",
+            "unit_name": "emmo:Ampere",
+            "unit_iri": "https://w3id.org/emmo#Ampere"
+        },
         "VoltageChangeLimit": {
             "type": "number",
             "minimum": 0.0001,
@@ -136,6 +146,21 @@
             "minItems": 1,
             "description": "Current values corresponding to each time point in the InputCurrentSeries protocol, in amperes. Positive values indicate discharge; negative values indicate charge.",
             "unit": "A"
+        },
+        "Duration": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1000000000.0,
+            "description": "Duration of a rest protocol or rest sequence step, in seconds.",
+            "unit": "s"
+        },
+        "Steps": {
+            "type": "array",
+            "items": {
+                "type": "object"
+            },
+            "minItems": 1,
+            "description": "Ordered list of cycling protocol steps used by the Sequence protocol."
         }
     },
     "required": [
@@ -273,6 +298,34 @@
                     "Currents",
                     "LowerVoltageLimit",
                     "UpperVoltageLimit"
+                ]
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "Protocol": {
+                        "const": "Rest"
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "Duration"
+                ]
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "Protocol": {
+                        "const": "Sequence"
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "Steps"
                 ]
             }
         }
