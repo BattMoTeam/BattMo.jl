@@ -499,11 +499,11 @@ function solve_simulation(
     end
 
 
-    jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
+    tmp_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
 
-    output_states = jutul_states
+    output_states = tmp_states
     if output_substates
-        output_states, _, _ = Jutul.expand_to_ministeps(jutul_states, jutul_reports[eachindex(jutul_states)])
+        output_states, _, _ = Jutul.expand_to_ministeps(tmp_states, jutul_reports[eachindex(tmp_states)])
     end
 
 
@@ -557,7 +557,7 @@ function solve_simulation(
     # Optionally include the initial state as the first data point
     if include_initial_state
         jutul_output_for_ts = (
-            states = vcat([deepcopy(state0)], jutul_states),
+            states = vcat([deepcopy(state0)], output_states),
             reports = jutul_reports,
             solver_configuration = cfg,
             multimodel = model.multimodel,
