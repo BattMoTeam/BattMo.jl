@@ -483,6 +483,8 @@ mutable struct SequenceController{R} <: Controller
     step_index::Int
     step_start_time::R
     target::R
+    # Global elapsed controller time. step_start_time tracks the start of the
+    # active sequence step, so local step time is time - step_start_time.
     time::R
     target_is_voltage::Bool
     ctrlType::Any
