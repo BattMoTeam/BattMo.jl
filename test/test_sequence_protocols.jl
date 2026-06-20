@@ -93,6 +93,77 @@ end
     end
 end
 
+@testset "Sequence Rest advances when convergence is checked before solve" begin
+    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    model_settings = load_model_settings(; from_default_set = "p2d")
+    simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+    simulation_settings["TimeStepDuration"] = 50.0
+    simulation_settings["RampUpSteps"] = 5
+
+    solver_settings = load_solver_settings(; from_default_set = "direct")
+    solver_settings["NonLinearSolver"]["CheckBeforeSolve"] = true
+    solver_settings["NonLinearSolver"]["AlwaysUpdateSecondary"] = true
+
+    model = LithiumIonBattery(; model_settings)
+    cycling_protocol = CyclingProtocol(
+        Dict(
+            "Protocol" => "Sequence",
+            "InitialStateOfCharge" => 0.99,
+            "Steps" => [
+                Dict(
+                    "Protocol" => "CC",
+                    "InitialControl" => "discharging",
+                    "DRate" => 0.1,
+                    "TotalNumberOfCycles" => 0,
+                    "LowerVoltageLimit" => 4.0,
+                    "UpperVoltageLimit" => 4.2,
+                ),
+                Dict("Protocol" => "Rest", "Duration" => 600.0),
+                Dict(
+                    "Protocol" => "CC",
+                    "InitialControl" => "charging",
+                    "CRate" => 0.1,
+                    "TotalNumberOfCycles" => 0,
+                    "LowerVoltageLimit" => 3.0,
+                    "UpperVoltageLimit" => 4.1,
+                ),
+            ],
+        )
+    )
+
+    output = solve(
+        Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
+        solver_settings,
+        info_level = -1,
+        output_substates = true,
+    )
+
+    controllers = control_controller(output)
+    step_index = sequence_step_index(output)
+    report_time = cumsum(report_timesteps(output.jutul_output.reports; ministeps = true))
+
+    # Motivation: during a rest step, CheckBeforeSolve can accept a timestep
+    # without solving because the system is already converged. The sequence
+    # controller must still update global time on that accepted timestep;
+    # otherwise the rest duration is never reached and later steps are skipped.
+    @test 3 in step_index
+    @test issorted([controller.time for controller in controllers])
+    @test controllers[end].time > cycling_protocol["Steps"][2]["Duration"]
+
+    rest = findall(==(2), step_index)
+    charge = findall(==(3), step_index)
+    @test !isempty(rest)
+    @test !isempty(charge)
+    if !isempty(rest) && !isempty(charge)
+        rest_start = controllers[rest[1]].step_start_time
+        rest_duration = cycling_protocol["Steps"][2]["Duration"]
+        # The final stored rest state can be the state immediately before the
+        # transition. The first charge state records the global time at which
+        # the rest step completed in step_start_time.
+        @test isapprox(controllers[charge[1]].step_start_time, rest_start + rest_duration; atol = 1.0e-12, rtol = 0.0)
+    end
+end
+
 @testset "Sequence protocol with CC and Rest steps" begin
     cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
     model_settings = load_model_settings(; from_default_set = "p2d")
