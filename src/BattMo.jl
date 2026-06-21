@@ -36,6 +36,7 @@ using LBFGSB: lbfgsb
 using Jutul: solve_adjoint_sensitivities, optimization_config, setup_parameter_optimization
 using Jutul: devectorize_variables!
 using Optim: Optim
+using ForwardDiff
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🧮 Mathematical & Computational Tools
@@ -273,6 +274,8 @@ include("solver/precondgenneral.jl")
 include("solver/sparse_utils.jl")
 include("calibration/calibration.jl")
 include("calibration/calibration_utils.jl")
+include("calibration/equilibrium_calibration.jl")
+include("calibration/sequential_calibration.jl")
 
 include("tools/print_info.jl")
 
