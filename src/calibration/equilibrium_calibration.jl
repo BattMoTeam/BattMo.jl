@@ -11,26 +11,29 @@ const EQUILIBRIUM_CALIBRATION_PARAMETERS = (
 const EQUILIBRIUM_CALIBRATION_ACRONYMS = Dict(
     "ActiveMaterial" => "am",
     "Binder" => "bd",
-    "ConductiveAdditive" => "ca",
-    "CurrentCollector" => "cc",
     "Coating" => "co",
+    "ConductiveAdditive" => "ca",
     "Control" => "ctrl",
+    "CurrentCollector" => "cc",
     "Electrolyte" => "elyte",
     "Geometry" => "geom",
     "Interface" => "itf",
     "Interphase" => "itp",
+    "MaximumConcentration" => "cmax",
     "NegativeElectrode" => "ne",
     "OpenCircuitPotential" => "ocp",
     "PositiveElectrode" => "pe",
-    "SolidDiffusion" => "sd",
     "Separator" => "sep",
+    "SolidDiffusion" => "sd",
+    "StoichiometricCoefficientAtSOC0" => "theta0",
+    "StoichiometricCoefficientAtSOC100" => "theta100",
     "TimeStepping" => "ts",
 )
 
 """
     EquilibriumCalibration(t, v, current, cell_parameters; kwargs...)
 
-Set up equilibrium calibration against a low-rate discharge curve.
+Set up equilibrium calibration against a low-rate constant-current curve.
 
 The calibrated Julia parameters are `StoichiometricCoefficientAtSOC100` and
 `MaximumConcentration` for each electrode. `MaximumConcentration` is used as
@@ -41,18 +44,18 @@ The initial calibration vector is stored in `calibration.X0` with ordering
 `[theta100_ne, cmax_ne, theta100_pe, cmax_pe]`.
 """
 mutable struct EquilibriumCalibration <: AbstractCalibration
-    "Time values for the low-rate discharge data [s]."
+    "Time values for the low-rate constant-current data [s]."
     t::Vector{Float64}
     "Measured cell voltage [V]."
     v::Vector{Float64}
-    "Applied discharge current [A]."
+    "Applied signed current [A]. Positive current is discharge, negative current is charge."
     current::Float64
     "Cell parameters used as the calibration starting point."
     cell_parameters::CellParameters
     "Temperature used to evaluate the electrode OCP functions [K]."
     temperature::Float64
-    "Voltage defining the end of discharge [V]."
-    lower_cutoff_voltage::Float64
+    "Voltage defining the end of the calibration curve [V]."
+    cutoff_voltage::Float64
     "Target negative-to-positive electrode capacity ratio."
     np_ratio::Float64
     "Initial values of the four calibration parameters."
@@ -70,14 +73,15 @@ end
 function EquilibriumCalibration(
         t, v, current, cell_parameters::CellParameters;
         temperature = 298.15,
-        lower_cutoff_voltage = minimum(v),
+        cutoff_voltage = minimum(v),
         np_ratio = 1.1,
         stoichiometry_bounds = (0.0, 1.0),
         concentration_factors = (0.1, 10.0),
     )
     length(t) == length(v) || throw(ArgumentError("Time and voltage data must have equal length."))
     length(t) >= 2 || throw(ArgumentError("At least two calibration points are required."))
-    current > 0 || throw(ArgumentError("Equilibrium calibration expects a positive discharge current."))
+    isa(current, Number) || throw(ArgumentError("Current must be a scalar."))
+    !iszero(current) || throw(ArgumentError("Equilibrium calibration expects a nonzero signed current."))
     np_ratio > 0 || throw(ArgumentError("The N/P ratio must be positive."))
 
     order = sortperm(t)
@@ -113,7 +117,7 @@ function EquilibriumCalibration(
         Float64(current),
         parameters,
         Float64(temperature),
-        Float64(lower_cutoff_voltage),
+        Float64(cutoff_voltage),
         Float64(np_ratio),
         X0,
         (lower = lower, upper = upper),
@@ -159,8 +163,10 @@ function equilibrium_stoichiometries(ec::EquilibriumCalibration, t, x)
     pe_total_amount = ec.active_volumes.positive * pe_cmax
     ne_n = ec.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["NumberOfElectronsTransfered"]
     pe_n = ec.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["NumberOfElectronsTransfered"]
-    ne_theta = ne_theta100 - t * ec.current / (ne_n * FARADAY_CONSTANT * ne_total_amount)
-    pe_theta = pe_theta100 + t * ec.current / (pe_n * FARADAY_CONSTANT * pe_total_amount)
+    current_sign = sign(ec.current)
+    transferred_charge = t * abs(ec.current)
+    ne_theta = ne_theta100 - current_sign * transferred_charge / (ne_n * FARADAY_CONSTANT * ne_total_amount)
+    pe_theta = pe_theta100 + current_sign * transferred_charge / (pe_n * FARADAY_CONSTANT * pe_total_amount)
     return (negative = ne_theta, positive = pe_theta)
 end
 
@@ -194,16 +200,18 @@ function find_equilibrium_cutoff_time(ec::EquilibriumCalibration, x)
     t_low = zero(eltype(x))
     t_high = max(ec.t[end], one(eltype(x)))
     voltage(t) = equilibrium_voltage(ec, t, x)
+    is_discharge = ec.current > 0
+    cutoff_reached(t) = is_discharge ? voltage(t) <= ec.cutoff_voltage : voltage(t) >= ec.cutoff_voltage
     for _ in 1:20
-        voltage(t_high) <= ec.lower_cutoff_voltage && break
+        cutoff_reached(t_high) && break
         t_high *= 1.5
     end
-    if voltage(t_high) > ec.lower_cutoff_voltage
+    if !cutoff_reached(t_high)
         return ec.t[end]
     end
     for _ in 1:60
         t_mid = (t_low + t_high) / 2
-        if voltage(t_mid) > ec.lower_cutoff_voltage
+        if !cutoff_reached(t_mid)
             t_low = t_mid
         else
             t_high = t_mid
@@ -278,7 +286,7 @@ function solve(
     )
     ec.X_calibrated = copy(x)
     ec.history = history
-    jutul_message("Calibration", "Equilibrium calibration finished with RMSE $value V.", color = :green)
+    jutul_message("Calibration", "Equilibrium calibration finished with (unweighted) RMSE $value V.", color = :green)
     return x
 end
 
