@@ -19,6 +19,8 @@ using CSV
     calibration = EquilibriumCalibration(time, voltage, current, cell_parameters)
     X0 = copy(calibration.X0)
 
+    @test_throws ArgumentError EquilibriumCalibration(time, voltage, 0.0, cell_parameters)
+
     initial_voltage = [equilibrium_voltage(calibration, t, calibration.X0) for t in time]
     initial_rmse = BattMo.rmse(time, voltage, time, initial_voltage)
     x_calibrated = solve(calibration; max_it = 2, print = 0)
@@ -33,4 +35,13 @@ using CSV
     @test calibration.X_calibrated == x_calibrated
     @test all(isfinite, x_calibrated)
     @test calibrated_rmse <= initial_rmse
+
+    charge_calibration = EquilibriumCalibration(time, voltage, -current, cell_parameters)
+    discharge_theta = BattMo.equilibrium_stoichiometries(calibration, time[2], calibration.X0)
+    charge_theta = BattMo.equilibrium_stoichiometries(charge_calibration, time[2], charge_calibration.X0)
+
+    @test discharge_theta.negative < calibration.X0[1]
+    @test discharge_theta.positive > calibration.X0[3]
+    @test charge_theta.negative > charge_calibration.X0[1]
+    @test charge_theta.positive < charge_calibration.X0[3]
 end
