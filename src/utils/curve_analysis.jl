@@ -1,4 +1,4 @@
-export trapz, rmse, compute_dqdv
+export trapz, cumtrapz, rmse, compute_dqdv
 
 """
     trapz(x, y)
@@ -6,17 +6,31 @@ export trapz, rmse, compute_dqdv
 Integrate `y` with respect to `x` using the trapezoidal rule.
 """
 function trapz(x, y)
+    return last(cumtrapz(x, y))
+end
+
+"""
+    cumtrapz(x, y)
+
+Cumulatively integrate `y` with respect to `x` using the trapezoidal rule.
+The returned vector has the same length as `x` and `y`, with zero as the
+first value.
+"""
+function cumtrapz(x, y)
     length(x) == length(y) || throw(DimensionMismatch("x and y must have the same number of elements"))
 
     length(x) >= 2 || throw(ArgumentError("x must contain at least two points"))
 
-    s = zero((x[2] - x[1]) * (y[1] + y[2]))
+    s = zero((x[2] - x[1]) * (y[1] + y[2]) / 2)
+    cumulative = Vector{typeof(s)}(undef, length(x))
+    cumulative[1] = s
 
     @inbounds for i in 1:(length(x) - 1)
-        s += (x[i + 1] - x[i]) * (y[i] + y[i + 1])
+        s += (x[i + 1] - x[i]) * (y[i] + y[i + 1]) / 2
+        cumulative[i + 1] = s
     end
 
-    return s / 2
+    return cumulative
 end
 
 
