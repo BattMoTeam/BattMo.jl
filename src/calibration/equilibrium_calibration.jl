@@ -63,7 +63,7 @@ mutable struct EquilibriumCalibration <: AbstractCalibration
     "Lower and upper bounds for the four calibration parameters."
     bounds::NamedTuple
     "Most recently calibrated parameter vector."
-    X_calibrated::Any
+    Xopt::Any
     "Optimization history returned by Jutul's BFGS solver."
     history::Any
     ocp_functions::NamedTuple
@@ -157,57 +157,57 @@ function evaluate_equilibrium_ocp(ocp, theta, cmax, temperature)
     end
 end
 
-function equilibrium_stoichiometries(ec::EquilibriumCalibration, t, x)
+function equilibrium_stoichiometries(eqc::EquilibriumCalibration, t, x)
     ne_theta100, ne_cmax, pe_theta100, pe_cmax = x
-    ne_total_amount = ec.active_volumes.negative * ne_cmax
-    pe_total_amount = ec.active_volumes.positive * pe_cmax
-    ne_n = ec.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["NumberOfElectronsTransfered"]
-    pe_n = ec.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["NumberOfElectronsTransfered"]
-    current_sign = sign(ec.current)
-    transferred_charge = t * abs(ec.current)
+    ne_total_amount = eqc.active_volumes.negative * ne_cmax
+    pe_total_amount = eqc.active_volumes.positive * pe_cmax
+    ne_n = eqc.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["NumberOfElectronsTransfered"]
+    pe_n = eqc.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["NumberOfElectronsTransfered"]
+    current_sign = sign(eqc.current)
+    transferred_charge = t * abs(eqc.current)
     ne_theta = ne_theta100 - current_sign * transferred_charge / (ne_n * FARADAY_CONSTANT * ne_total_amount)
     pe_theta = pe_theta100 + current_sign * transferred_charge / (pe_n * FARADAY_CONSTANT * pe_total_amount)
     return (negative = ne_theta, positive = pe_theta)
 end
 
 """
-    equilibrium_voltage(ec, t, x)
+    equilibrium_voltage(eqc, t, x)
 
 Evaluate the equilibrium full-cell voltage at time `t` for calibration vector
 `x = [theta100_ne, cmax_ne, theta100_pe, cmax_pe]`.
 """
-function equilibrium_voltage(ec::EquilibriumCalibration, t, x)
-    theta = equilibrium_stoichiometries(ec, t, x)
+function equilibrium_voltage(eqc::EquilibriumCalibration, t, x)
+    theta = equilibrium_stoichiometries(eqc, t, x)
     ne_theta = clamp(theta.negative, zero(theta.negative), one(theta.negative))
     pe_theta = clamp(theta.positive, zero(theta.positive), one(theta.positive))
-    ne_ocp = evaluate_equilibrium_ocp(ec.ocp_functions.negative, ne_theta, x[2], ec.temperature)
-    pe_ocp = evaluate_equilibrium_ocp(ec.ocp_functions.positive, pe_theta, x[4], ec.temperature)
+    ne_ocp = evaluate_equilibrium_ocp(eqc.ocp_functions.negative, ne_theta, x[2], eqc.temperature)
+    pe_ocp = evaluate_equilibrium_ocp(eqc.ocp_functions.positive, pe_theta, x[4], eqc.temperature)
     return pe_ocp - ne_ocp
 end
 
-function equilibrium_calibration_objective(ec::EquilibriumCalibration, x)
-    voltage = [equilibrium_voltage(ec, t, x) for t in ec.t]
-    e = voltage .- ec.v
-    return sqrt(trapz(ec.t, abs2.(e)))
+function equilibrium_calibration_objective(eqc::EquilibriumCalibration, x)
+    voltage = [equilibrium_voltage(eqc, t, x) for t in eqc.t]
+    e = voltage .- eqc.v
+    return sqrt(trapz(eqc.t, abs2.(e)))
 end
 
-function equilibrium_calibration_objective_and_gradient(ec::EquilibriumCalibration, x)
-    objective(z) = equilibrium_calibration_objective(ec, z)
+function equilibrium_calibration_objective_and_gradient(eqc::EquilibriumCalibration, x)
+    objective(z) = equilibrium_calibration_objective(eqc, z)
     return (objective(x), ForwardDiff.gradient(objective, x))
 end
 
-function find_equilibrium_cutoff_time(ec::EquilibriumCalibration, x)
+function find_equilibrium_cutoff_time(eqc::EquilibriumCalibration, x)
     t_low = zero(eltype(x))
-    t_high = max(ec.t[end], one(eltype(x)))
-    voltage(t) = equilibrium_voltage(ec, t, x)
-    is_discharge = ec.current > 0
-    cutoff_reached(t) = is_discharge ? voltage(t) <= ec.cutoff_voltage : voltage(t) >= ec.cutoff_voltage
+    t_high = max(eqc.t[end], one(eltype(x)))
+    voltage(t) = equilibrium_voltage(eqc, t, x)
+    is_discharge = eqc.current > 0
+    cutoff_reached(t) = is_discharge ? voltage(t) <= eqc.cutoff_voltage : voltage(t) >= eqc.cutoff_voltage
     for _ in 1:20
         cutoff_reached(t_high) && break
         t_high *= 1.5
     end
     if !cutoff_reached(t_high)
-        return ec.t[end]
+        return eqc.t[end]
     end
     for _ in 1:60
         t_mid = (t_low + t_high) / 2
@@ -221,26 +221,26 @@ function find_equilibrium_cutoff_time(ec::EquilibriumCalibration, x)
 end
 
 """
-    export_calibration_parameters(ec, x_calibrated)
+    export_calibration_parameters(eqc, x_calibrated)
 
 Export the calibrated and derived equilibrium parameters as a minimal nested
 dictionary. The result can overwrite the corresponding values in an existing
 parameter dictionary with
 `merge_dict(parameters, exported; type = "overwrite")`.
 """
-function export_calibration_parameters(ec::EquilibriumCalibration, x_calibrated)
+function export_calibration_parameters(eqc::EquilibriumCalibration, x_calibrated)
     length(x_calibrated) == length(EQUILIBRIUM_CALIBRATION_PARAMETERS) ||
         throw(ArgumentError("Expected four calibrated equilibrium parameters."))
 
-    cutoff_time = find_equilibrium_cutoff_time(ec, x_calibrated)
-    theta = equilibrium_stoichiometries(ec, cutoff_time, x_calibrated)
+    cutoff_time = find_equilibrium_cutoff_time(eqc, x_calibrated)
+    theta = equilibrium_stoichiometries(eqc, cutoff_time, x_calibrated)
     pe_theta0 = clamp(theta.positive, 0.0, 1.0)
-    ne_total_amount = ec.active_volumes.negative * x_calibrated[2]
-    pe_total_amount = ec.active_volumes.positive * x_calibrated[4]
-    ne_n = ec.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["NumberOfElectronsTransfered"]
-    pe_n = ec.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["NumberOfElectronsTransfered"]
+    ne_total_amount = eqc.active_volumes.negative * x_calibrated[2]
+    pe_total_amount = eqc.active_volumes.positive * x_calibrated[4]
+    ne_n = eqc.cell_parameters["NegativeElectrode"]["ActiveMaterial"]["NumberOfElectronsTransfered"]
+    pe_n = eqc.cell_parameters["PositiveElectrode"]["ActiveMaterial"]["NumberOfElectronsTransfered"]
     amount_ratio = pe_n * pe_total_amount / (ne_n * ne_total_amount)
-    ne_theta0 = x_calibrated[1] - ec.np_ratio * amount_ratio * (pe_theta0 - x_calibrated[3])
+    ne_theta0 = x_calibrated[1] - eqc.np_ratio * amount_ratio * (pe_theta0 - x_calibrated[3])
     ne_theta0 = clamp(ne_theta0, 0.0, 1.0)
 
     return Dict(
@@ -262,51 +262,51 @@ function export_calibration_parameters(ec::EquilibriumCalibration, x_calibrated)
 end
 
 """
-    solve(ec::EquilibriumCalibration; kwargs...)
+    solve(eqc::EquilibriumCalibration; kwargs...)
 
 Calibrate the equilibrium discharge curve with `Jutul.LBFGS.box_bfgs` and
 return the calibrated parameter vector.
 """
 function solve(
-        ec::EquilibriumCalibration;
+        eqc::EquilibriumCalibration;
         grad_tol = 1.0e-6,
         obj_change_tol = 1.0e-8,
         print = 1,
         kwarg...,
     )
-    objective(x) = equilibrium_calibration_objective_and_gradient(ec, x)
+    objective(x) = equilibrium_calibration_objective_and_gradient(eqc, x)
     jutul_message("Calibration", "Starting equilibrium calibration.", color = :green)
     value, x, history = Jutul.LBFGS.box_bfgs(
-        copy(ec.X0), objective, ec.bounds.lower, ec.bounds.upper;
+        copy(eqc.X0), objective, eqc.bounds.lower, eqc.bounds.upper;
         maximize = false,
         grad_tol = grad_tol,
         obj_change_tol = obj_change_tol,
         print = print,
         kwarg...,
     )
-    ec.X_calibrated = copy(x)
-    ec.history = history
+    eqc.Xopt = copy(x)
+    eqc.history = history
     jutul_message("Calibration", "Equilibrium calibration finished with (unweighted) RMSE $value V.", color = :green)
     return x
 end
 
-function print_calibration_overview(ec::EquilibriumCalibration; use_acronyms = false)
-    optimized = if ismissing(ec.X_calibrated)
-        fill(missing, length(ec.X0))
+function print_calibration_overview(eqc::EquilibriumCalibration; use_acronyms = false)
+    optimized = if ismissing(eqc.Xopt)
+        fill(missing, length(eqc.X0))
     else
-        ec.X_calibrated
+        eqc.Xopt
     end
     header = ["Parameter", "Initial value", "Bounds", "Optimized value"]
-    table = Matrix{Any}(undef, length(ec.X0), length(header))
-    for i in eachindex(ec.X0)
+    table = Matrix{Any}(undef, length(eqc.X0), length(header))
+    for i in eachindex(eqc.X0)
         parameter = EQUILIBRIUM_CALIBRATION_PARAMETERS[i]
         if use_acronyms
             parameter = [get(EQUILIBRIUM_CALIBRATION_ACRONYMS, part, part) for part in parameter]
         end
         table[i, :] = [
             join(parameter, "."),
-            ec.X0[i],
-            "$(ec.bounds.lower[i]) - $(ec.bounds.upper[i])",
+            eqc.X0[i],
+            "$(eqc.bounds.lower[i]) - $(eqc.bounds.upper[i])",
             optimized[i],
         ]
     end

@@ -32,7 +32,7 @@ using CSV
     @test calibration.X0 == X0
     @test length(calibration.bounds.lower) == 4
     @test length(calibration.bounds.upper) == 4
-    @test calibration.X_calibrated == x_calibrated
+    @test calibration.Xopt == x_calibrated
     @test all(isfinite, x_calibrated)
     @test calibrated_rmse <= initial_rmse
 
