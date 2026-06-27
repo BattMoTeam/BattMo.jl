@@ -264,7 +264,7 @@ end
 """
     solve(eqc::EquilibriumCalibration; kwargs...)
 
-Calibrate the equilibrium discharge curve with `Jutul.LBFGS.box_bfgs` and
+Calibrate the equilibrium discharge curve with `Jutul.LBFGS.optimize_bound_constrained` and
 return the calibrated parameter vector.
 """
 function solve(
@@ -276,14 +276,38 @@ function solve(
     )
     objective(x) = equilibrium_calibration_objective_and_gradient(eqc, x)
     jutul_message("Calibration", "Starting equilibrium calibration.", color = :green)
-    value, x, history = Jutul.LBFGS.box_bfgs(
-        copy(eqc.X0), objective, eqc.bounds.lower, eqc.bounds.upper;
+    optimizer_kwargs = Dict{Symbol, Any}(kwarg)
+    if haskey(optimizer_kwargs, :line_searchmax_it)
+        if !haskey(optimizer_kwargs, :ls_max_it)
+            optimizer_kwargs[:ls_max_it] = optimizer_kwargs[:line_searchmax_it]
+        end
+        delete!(optimizer_kwargs, :line_searchmax_it)
+    end
+    lower = eqc.bounds.lower
+    upper = eqc.bounds.upper
+    dx_du = upper .- lower
+    x_to_u(x) = (x .- lower) ./ dx_du
+    u_to_x(u) = u .* dx_du .+ lower
+    function unit_objective(u)
+        value, gradient = objective(u_to_x(u))
+        return value, gradient .* dx_du
+    end
+    optimize = () -> Jutul.LBFGS.optimize_bound_constrained(
+        x_to_u(eqc.X0), unit_objective, zeros(length(eqc.X0)), ones(length(eqc.X0));
         maximize = false,
         grad_tol = grad_tol,
+        grad_rel_tol = -Inf,
         obj_change_tol = obj_change_tol,
-        print = print,
-        kwarg...,
+        obj_change_tol_rel = -Inf,
+        obj_rel_tol = -Inf,
+        optimizer_kwargs...,
     )
+    value, u, history = if print > 0
+        optimize()
+    else
+        redirect_stdout(optimize, devnull)
+    end
+    x = u_to_x(u)
     eqc.Xopt = copy(x)
     eqc.history = history
     jutul_message("Calibration", "Equilibrium calibration finished with (unweighted) RMSE $value V.", color = :green)

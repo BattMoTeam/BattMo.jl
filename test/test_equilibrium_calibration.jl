@@ -28,6 +28,7 @@ using CSV
     calibrated_rmse = BattMo.rmse(time, voltage, time, calibrated_voltage)
 
     @test !isempty(calibration.history)
+    @test hasproperty(first(calibration.history), :ls_info)
     @test length(calibration.X0) == 4
     @test calibration.X0 == X0
     @test length(calibration.bounds.lower) == 4
