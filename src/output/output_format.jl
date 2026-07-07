@@ -38,6 +38,19 @@ function get_output_time_series(jutul_output::NamedTuple; quantities::Union{Noth
 
     states = jutul_output[:states]
 
+    if isempty(states)
+        error(
+            """
+            Simulation produced no valid states -- the solver could not complete a single timestep.
+            This typically means the initial condition already violates the cycling protocol's voltage
+            limits (e.g. InitialStateOfCharge maps to an open-circuit voltage outside
+            LowerVoltageLimit/UpperVoltageLimit given the electrode stoichiometric-window/OCV-balance
+            parameters), so the controller stops immediately and nothing gets stored. Check those
+            parameters rather than treating this as an unrelated tool/output error.
+            """
+        )
+    end
+
     # Extract data
     voltage, current = extract_time_series_data(jutul_output)
     time = extract_output_times(jutul_output)

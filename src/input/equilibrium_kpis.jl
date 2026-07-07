@@ -47,6 +47,17 @@ end
 # Cell Mass calculations
 #########################################
 
+function _cell_layer_multipliers(params::CellParameters)
+    n_layers = get(params["Cell"], "NumberOfLayersInParallel", 1)
+    double_coated = get(params["Cell"], "DoubleCoatedElectrodes", false)
+    coating_multiplier = double_coated ? 2 : 1
+    extra_ne = n_layers > 1
+    if haskey(params["Cell"], "CloseOffWithNegativeElectrode")
+        extra_ne = params["Cell"]["CloseOffWithNegativeElectrode"]
+    end
+    return n_layers, coating_multiplier, extra_ne
+end
+
 function compute_electrode_coating_mass(params::CellParameters, electrode::String)
 
     if !(electrode in ["PositiveElectrode", "NegativeElectrode"])
@@ -56,8 +67,10 @@ function compute_electrode_coating_mass(params::CellParameters, electrode::Strin
     effective_density = params[electrode]["Coating"]["EffectiveDensity"]
     area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
     thickness = params[electrode]["Coating"]["Thickness"]
+    n_layers, coating_multiplier, extra_ne = _cell_layer_multipliers(params)
+    count = electrode == "NegativeElectrode" ? coating_multiplier * (n_layers + (extra_ne ? 1 : 0)) : coating_multiplier * n_layers
 
-    return effective_density * area * thickness
+    return effective_density * area * thickness * count
 end
 
 
@@ -87,7 +100,9 @@ function compute_separator_mass(params::CellParameters)
     density = params["Separator"]["Density"]
     thickness = params["Separator"]["Thickness"]
     porosity = params["Separator"]["Porosity"]
-    return thickness * area * (1 - porosity) * density
+    n_layers, coating_multiplier, extra_ne = _cell_layer_multipliers(params)
+    n_sep = coating_multiplier == 2 ? 2 * n_layers - 1 + (extra_ne ? 1 : 0) : n_layers
+    return thickness * area * (1 - porosity) * density * n_sep
 end
 
 
@@ -100,7 +115,9 @@ function compute_current_collector_mass(params::CellParameters, electrode::Strin
     area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
     thickness = params[electrode]["CurrentCollector"]["Thickness"]
     density = params[electrode]["CurrentCollector"]["Density"]
-    return area * thickness * density
+    n_layers, _, extra_ne = _cell_layer_multipliers(params)
+    count = electrode == "NegativeElectrode" ? n_layers + (extra_ne ? 1 : 0) : n_layers
+    return area * thickness * density * count
 end
 
 
@@ -111,21 +128,23 @@ function compute_electrolyte_mass(params::CellParameters)
 
     electrolyte_density = params["Electrolyte"]["Density"]
     cell_area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
+    n_layers, coating_multiplier, extra_ne = _cell_layer_multipliers(params)
+    n_sep = coating_multiplier == 2 ? 2 * n_layers - 1 + (extra_ne ? 1 : 0) : n_layers
 
     #separator (sep)
     sep_porosity = params["Separator"]["Porosity"]
-    sep_volume = cell_area * params["Separator"]["Thickness"]
+    sep_volume = cell_area * params["Separator"]["Thickness"] * n_sep
 
     #positive electrode (pe)
     pe_theoretical_density = compute_electrode_theoretical_density(params, "PositiveElectrode")
     pe_effective_density = params["PositiveElectrode"]["Coating"]["EffectiveDensity"]
-    pe_volume = cell_area * params["PositiveElectrode"]["Coating"]["Thickness"]
+    pe_volume = cell_area * params["PositiveElectrode"]["Coating"]["Thickness"] * coating_multiplier * n_layers
     pe_porosity = 1.0 - (pe_effective_density / pe_theoretical_density)
 
     #negative electrode (ne)
     ne_theoretical_density = compute_electrode_theoretical_density(params, "NegativeElectrode")
     ne_effective_density = params["NegativeElectrode"]["Coating"]["EffectiveDensity"]
-    ne_volume = cell_area * params["NegativeElectrode"]["Coating"]["Thickness"]
+    ne_volume = cell_area * params["NegativeElectrode"]["Coating"]["Thickness"] * coating_multiplier * (n_layers + (extra_ne ? 1 : 0))
     ne_porosity = 1.0 - (ne_effective_density / ne_theoretical_density)
 
     component_volumes = [pe_volume, ne_volume, sep_volume]
@@ -221,17 +240,17 @@ function compute_cell_volume(params::CellParameters)
 
     if case == "Pouch"
 
-        ne_thickness = params["NegativeElectrode"]["Coating"]["Thickness"]
-        pe_thickness = params["PositiveElectrode"]["Coating"]["Thickness"]
-        sep_thickness = params["Separator"]["Thickness"]
-        thickness = ne_thickness + pe_thickness + sep_thickness
+        n_layers, coating_multiplier = _cell_layer_multipliers(params)
+        ne_thickness = params["NegativeElectrode"]["Coating"]["Thickness"] * coating_multiplier
+        pe_thickness = params["PositiveElectrode"]["Coating"]["Thickness"] * coating_multiplier
+        sep_thickness = params["Separator"]["Thickness"] * coating_multiplier
+        layer_thickness = ne_thickness + pe_thickness + sep_thickness
 
         if haskey(params["NegativeElectrode"], "CurrentCollector")
             ne_cc_thickness = params["NegativeElectrode"]["CurrentCollector"]["Thickness"]
             pe_cc_thickness = params["PositiveElectrode"]["CurrentCollector"]["Thickness"]
-            thickness = thickness + ne_cc_thickness + pe_cc_thickness
+            layer_thickness = layer_thickness + ne_cc_thickness + pe_cc_thickness
         else
-
             println("Volume calculated without taking into account current collectors.")
         end
         if haskey(params["Cell"], "ElectrodeGeometricSurfaceArea")
@@ -242,7 +261,7 @@ function compute_cell_volume(params::CellParameters)
             area = length * width
         end
 
-        volume = area * thickness
+        volume = area * layer_thickness * n_layers
 
     elseif case == "Cylindrical"
         if haskey(params["Cell"], "Height") && haskey(params["Cell"], "OuterRadius")
@@ -288,10 +307,10 @@ function compute_electrode_mass_loading(params::CellParameters, electrode::Strin
         error("Electrode must be either PositiveElectrode or NegativeElectrode, not $electrode. Check for typos.")
     end
 
-    electrode_mass = compute_electrode_coating_mass(params, electrode)
-    active_material_mass = electrode_mass * params[electrode]["ActiveMaterial"]["MassFraction"]
-    electrode_area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
-    return active_material_mass / electrode_area
+    effective_density = params[electrode]["Coating"]["EffectiveDensity"]
+    thickness = params[electrode]["Coating"]["Thickness"]
+    mass_fraction = params[electrode]["ActiveMaterial"]["MassFraction"]
+    return effective_density * thickness * mass_fraction
 end
 
 function compute_electrode_maximum_capacity(params::CellParameters, electrode::String)
