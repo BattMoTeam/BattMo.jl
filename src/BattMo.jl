@@ -227,6 +227,7 @@ include("input/calculator.jl")
 
 include("input/defaults/cell_parameters/function_parameters_chayambuka_2022.jl")
 include("input/defaults/cell_parameters/function_parameters_xu_2015.jl")
+include("input/bpx.jl")
 
 include("models/thermal.jl")
 include("models/temperature_dependence.jl")

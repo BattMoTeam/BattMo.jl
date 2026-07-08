@@ -33,12 +33,13 @@ end
 
 
 """
-	load_cell_parameters(; from_file_path::String = nothing, from_default_set::String = nothing, from_model_template::ModelConfigured = nothing)
+	load_cell_parameters(; from_file_path::String = nothing, from_bpx_file_path::String = nothing, from_default_set::String = nothing, from_model_template::ModelConfigured = nothing)
 
-Reads and loads cell parameters either from a JSON file, a default set, or a model template.
+Reads and loads cell parameters either from a JSON file, a BPX file, a default set, or a model template.
 
 # Arguments
 - `from_file_path ::String` : (Optional) Path to the JSON file containing cell parameters.
+- `from_bpx_file_path ::String` : (Optional) Path to a BPX-formatted JSON file containing cell parameters.
 - `from_default_set ::String` : (Optional) The name of the default set to load cell parameters from.
 - `from_model_template ::ModelConfigured` : (Optional) A `ModelConfigured` instance used to load an empty set of cell parameters required for the concerning model.
 
@@ -47,9 +48,17 @@ An instance of `CellParameters`.
 
 # Errors
 Throws an `ArgumentError` if none of the arguments are provided.
+
+# Example
+```julia
+cell_parameters = load_cell_parameters(from_bpx_file_path = "bpx_input.json")
+```
 """
-function load_cell_parameters(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing, from_model_template::Union{ModelConfigured, Nothing} = nothing, empty = true)
-    if !isnothing(from_file_path)
+function load_cell_parameters(; from_file_path::Union{String, Nothing} = nothing, from_bpx_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing, from_model_template::Union{ModelConfigured, Nothing} = nothing, empty = true)
+    if !isnothing(from_bpx_file_path)
+        cell_parameters_data = BPX.load_from_bpx_file(from_bpx_file_path)
+        return CellParameters(cell_parameters_data; source_path = from_bpx_file_path)
+    elseif !isnothing(from_file_path)
 
         cell_parameters_data = JSON.parsefile(from_file_path)
         return CellParameters(cell_parameters_data; source_path = from_file_path)
@@ -62,7 +71,7 @@ function load_cell_parameters(; from_file_path::Union{String, Nothing} = nothing
         cell_parameters_data = get_empty_cell_parameter_set(from_model_template)
         return CellParameters(cell_parameters_data; source_path = nothing)
     else
-        throw(ArgumentError("Either 'from_file_path', 'from_default_set', or 'from_model_template' must be provided."))
+        throw(ArgumentError("Either 'from_file_path', 'from_bpx_file_path', 'from_default_set', or 'from_model_template' must be provided."))
     end
 
 end
