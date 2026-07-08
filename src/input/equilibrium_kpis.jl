@@ -101,7 +101,7 @@ function compute_separator_mass(params::CellParameters)
     thickness = params["Separator"]["Thickness"]
     porosity = params["Separator"]["Porosity"]
     n_layers, coating_multiplier, extra_ne = _cell_layer_multipliers(params)
-    n_sep = coating_multiplier == 2 ? 2 * n_layers - 1 + (extra_ne ? 1 : 0) : n_layers
+    n_sep = coating_multiplier == 2 ? 2 * n_layers - 1 + (extra_ne ? 1 : 0) : n_layers + (extra_ne ? 1 : 0)
     return thickness * area * (1 - porosity) * density * n_sep
 end
 
@@ -129,7 +129,7 @@ function compute_electrolyte_mass(params::CellParameters)
     electrolyte_density = params["Electrolyte"]["Density"]
     cell_area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
     n_layers, coating_multiplier, extra_ne = _cell_layer_multipliers(params)
-    n_sep = coating_multiplier == 2 ? 2 * n_layers - 1 + (extra_ne ? 1 : 0) : n_layers
+    n_sep = coating_multiplier == 2 ? 2 * n_layers - 1 + (extra_ne ? 1 : 0) : n_layers + (extra_ne ? 1 : 0)
 
     #separator (sep)
     sep_porosity = params["Separator"]["Porosity"]
@@ -188,10 +188,9 @@ function compute_cell_mass(params::CellParameters; print_breakdown::Bool = false
             Separator                            | $(round(masses["mass_separator"], digits = 5)) |    $(round(composition["separator"], digits = 1))
             """
         )
-
     end
 
-    return total_cell_mass
+    return masses["total_cell_mass"]
 end
 
 function compute_cell_mass_composition(params::CellParameters)
@@ -240,19 +239,24 @@ function compute_cell_volume(params::CellParameters)
 
     if case == "Pouch"
 
-        n_layers, coating_multiplier = _cell_layer_multipliers(params)
-        ne_thickness = params["NegativeElectrode"]["Coating"]["Thickness"] * coating_multiplier
-        pe_thickness = params["PositiveElectrode"]["Coating"]["Thickness"] * coating_multiplier
-        sep_thickness = params["Separator"]["Thickness"] * coating_multiplier
-        layer_thickness = ne_thickness + pe_thickness + sep_thickness
+        n_layers, coating_multiplier, extra_ne = _cell_layer_multipliers(params)
+        n_ne_coatings = coating_multiplier * (n_layers + (extra_ne ? 1 : 0))
+        n_pe_coatings = coating_multiplier * n_layers
+        n_sep = coating_multiplier == 2 ? 2 * n_layers - 1 + (extra_ne ? 1 : 0) : n_layers
+
+        total_thickness =
+            params["NegativeElectrode"]["Coating"]["Thickness"] * n_ne_coatings +
+            params["PositiveElectrode"]["Coating"]["Thickness"] * n_pe_coatings +
+            params["Separator"]["Thickness"] * n_sep
 
         if haskey(params["NegativeElectrode"], "CurrentCollector")
-            ne_cc_thickness = params["NegativeElectrode"]["CurrentCollector"]["Thickness"]
-            pe_cc_thickness = params["PositiveElectrode"]["CurrentCollector"]["Thickness"]
-            layer_thickness = layer_thickness + ne_cc_thickness + pe_cc_thickness
+            n_ne_cc = n_layers + (extra_ne ? 1 : 0)
+            total_thickness += params["NegativeElectrode"]["CurrentCollector"]["Thickness"] * n_ne_cc
+            total_thickness += params["PositiveElectrode"]["CurrentCollector"]["Thickness"] * n_layers
         else
             println("Volume calculated without taking into account current collectors.")
         end
+
         if haskey(params["Cell"], "ElectrodeGeometricSurfaceArea")
             area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
         else
@@ -261,7 +265,7 @@ function compute_cell_volume(params::CellParameters)
             area = length * width
         end
 
-        volume = area * layer_thickness * n_layers
+        volume = area * total_thickness
 
     elseif case == "Cylindrical"
         if haskey(params["Cell"], "Height") && haskey(params["Cell"], "OuterRadius")
@@ -336,13 +340,19 @@ end
 function compute_np_ratio(params::CellParameters)
     pe_maximum_capacity = compute_electrode_maximum_capacity(params, "PositiveElectrode")
     ne_maximum_capacity = compute_electrode_maximum_capacity(params, "NegativeElectrode")
-    return ne_maximum_capacity / pe_maximum_capacity
+    n_layers, _, extra_ne = _cell_layer_multipliers(params)
+    # Only 2N of the 2(N+1) NE coating faces are paired with a PE face;
+    # the 2 outer faces of the closing NE sheet do not face a PE electrode.
+    ne_paired_capacity = (extra_ne && n_layers > 0) ? ne_maximum_capacity * n_layers / (n_layers + 1) : ne_maximum_capacity
+    return ne_paired_capacity / pe_maximum_capacity
 end
 
 function compute_cell_theoretical_capacity(params::CellParameters)
     pe_maximum_capacity = compute_electrode_maximum_capacity(params, "PositiveElectrode")
     ne_maximum_capacity = compute_electrode_maximum_capacity(params, "NegativeElectrode")
-    return min(pe_maximum_capacity, ne_maximum_capacity)
+    n_layers, _, extra_ne = _cell_layer_multipliers(params)
+    ne_paired_capacity = (extra_ne && n_layers > 0) ? ne_maximum_capacity * n_layers / (n_layers + 1) : ne_maximum_capacity
+    return min(pe_maximum_capacity, ne_paired_capacity)
 end
 
 """
