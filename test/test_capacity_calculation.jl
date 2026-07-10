@@ -9,7 +9,9 @@ using Test
         cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
         cycling_protocol = load_cycling_protocol(; from_default_set = "cccv")
 
-        model_setup = LithiumIonBattery()
+        ms = load_model_settings(; from_default_set = "p2d")
+        delete!(ms, "RampUp")
+        model_setup = LithiumIonBattery(; model_settings = ms)
 
         sim = Simulation(model_setup, cell_parameters, cycling_protocol)
 

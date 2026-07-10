@@ -2,9 +2,36 @@ export Simulation
 export solve
 export setup_config
 
+struct ControlRampTimestepSelector <: Jutul.AbstractTimestepSelector
+    timestep::Float64
+end
+
+Jutul.pick_first_timestep(::ControlRampTimestepSelector, sim, config, dT, forces) = Inf
+Jutul.pick_cut_timestep(::ControlRampTimestepSelector, sim, config, dt, dT, forces, reports, cut_count) = dt
+Jutul.valid_timestep(::ControlRampTimestepSelector, dt) = dt
+
+function Jutul.pick_next_timestep(sel::ControlRampTimestepSelector, sim, config, dt_prev, dT, forces, reports, current_reports, step_index, new_step)
+    controller = Jutul.get_simulator_storage(sim).state.Control.Controller
+    if hasfield(typeof(controller), :ramp_active) && controller.ramp_active
+        remaining = controller.ramp_start_time + controller.ramp_duration - controller.time
+        if remaining > 0
+            return min(sel.timestep, remaining)
+        end
+    end
+    return dT
+end
+
+function control_rampup_time(policy)
+    if policy isa Union{CyclingCVPolicy, SequencePolicy}
+        return policy.rampup_time
+    else
+        return 0.0
+    end
+end
+
 
 """
-	abstract type AbstractSimulation
+		abstract type AbstractSimulation
 
 Abstract type for Simulation structs. Subtypes of `AbstractSimulation` represent specific simulation configurations.
 """
@@ -284,6 +311,7 @@ end
 			  info_level = 0,
 			  end_report = info_level > -1,
 			  include_initial_state = false,
+			  output_substates = false,
 			  kwargs...)
 
 Solves a battery `Simulation` problem by executing the simulation workflow defined in `solve_simulation`.
@@ -298,6 +326,9 @@ Solves a battery `Simulation` problem by executing the simulation workflow defin
   prepended to the output time series (`Time`, `Voltage`, `Current`, capacity, etc.).
   This eliminates the gap between the initial condition and the first solver output,
   improving plots and RMSE comparisons when restarting from a saved state.  Default is `false`.
+- `output_substates::Bool` (optional): If `true`, the returned BattMo output is sampled at
+  every accepted solver substate instead of only at report timesteps. The output format is
+  unchanged; time-dependent arrays simply contain more time points. Default is `false`.
 - `kwargs...`: Additional keyword arguments forwarded to `solve_simulation`.
 
 # Behavior
@@ -326,6 +357,7 @@ function solve(
         solver_settings = get_default_solver_settings(problem.model),
         logger = nothing,
         include_initial_state = false,
+        output_substates::Bool = false,
         kwargs...,
     )
 
@@ -358,6 +390,7 @@ function solve(
         solver_settings,
         logger,
         include_initial_state,
+        output_substates,
         validate,
         accept_invalid,
         kwargs...,
@@ -405,6 +438,7 @@ function solve_simulation(
         solver_settings,
         logger = nothing,
         include_initial_state = false,
+        output_substates::Bool = false,
         validate::Bool = true,
         accept_invalid::Bool = false,
         kwargs...,
@@ -436,11 +470,19 @@ function solve_simulation(
         ),
         parameters;
         solver_settings,
+        rampup_steps = get(simulation_settings, "RampUpSteps", nothing),
+        rampup_reference_timestep = get(simulation_settings, "TimeStepDuration", nothing),
         validate,
         accept_invalid,
         logger,
         kwargs...,
     )
+
+    # Jutul stores accepted solver substates when output_substates is enabled.
+    output_substates = output_substates || cfg[:output_substates]
+    if output_substates
+        cfg[:output_substates] = true
+    end
 
 
     # Setup hook if given
@@ -457,7 +499,12 @@ function solve_simulation(
     end
 
 
-    jutul_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
+    tmp_states, jutul_reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg, kwargs...)
+
+    output_states = tmp_states
+    if output_substates
+        output_states, _, _ = Jutul.expand_to_ministeps(tmp_states, jutul_reports[eachindex(tmp_states)])
+    end
 
 
     # perfom decoupled thermal simulation if needed
@@ -468,13 +515,20 @@ function solve_simulation(
         thermal_parameters = thermal_sim.parameters
         thermal_model = thermal_sim.model
 
-        decoupled_thermal_states = solve_decoupled_thermal_model(model, cycling_protocol, thermal_parameters, parameters, thermal_model, jutul_states, global_maps, timesteps)
+        thermal_timesteps = if output_substates
+            diff(vcat(0.0, [state[:Control][:Controller].time for state in output_states]))
+        else
+            timesteps
+        end
+        decoupled_thermal_states = solve_decoupled_thermal_model(model, cycling_protocol, thermal_parameters, parameters, thermal_model, output_states, global_maps, thermal_timesteps)
 
 
-        # Add decoupled thermal states to the jutul_states
-        for i in eachindex(jutul_states)
-            jutul_states[i][:ThermalModel] = decoupled_thermal_states[i][:state]
-            jutul_reports[i][:ThermalModel] = decoupled_thermal_states[i][:report]
+        # Add decoupled thermal states to the output states
+        for i in eachindex(output_states)
+            output_states[i][:ThermalModel] = decoupled_thermal_states[i][:state]
+            if !output_substates
+                jutul_reports[i][:ThermalModel] = decoupled_thermal_states[i][:report]
+            end
         end
 
 
@@ -482,7 +536,7 @@ function solve_simulation(
 
 
     jutul_output = (
-        states = jutul_states,
+        states = output_states,
         reports = jutul_reports,
         solver_configuration = cfg,
         multimodel = model.multimodel,
@@ -503,7 +557,7 @@ function solve_simulation(
     # Optionally include the initial state as the first data point
     if include_initial_state
         jutul_output_for_ts = (
-            states = vcat([deepcopy(state0)], jutul_states),
+            states = vcat([deepcopy(state0)], output_states),
             reports = jutul_reports,
             solver_configuration = cfg,
             multimodel = model.multimodel,
@@ -631,7 +685,7 @@ function kwarg_dict(; kwargs...)
             "OutputReports" => get(kwargs, :output_reports, nothing),
             "InMemoryReports" => get(kwargs, :in_memory_reports, nothing),
             "ReportLevel" => get(kwargs, :report_level, nothing),
-            "OutputSubstrates" => get(kwargs, :output_substates, nothing),
+            "OutputSubstates" => get(kwargs, :output_substates, nothing),
         ),
     )
 
@@ -670,6 +724,8 @@ function solver_configuration(
         parameters;
         use_model_scaling::Bool = true,
         solver_settings,
+        rampup_steps = nothing,
+        rampup_reference_timestep = nothing,
         logger = nothing,
         validate::Bool = true,
         accept_invalid::Bool = false,
@@ -708,6 +764,7 @@ function solver_configuration(
     linear_solver_dict = solver_settings["LinearSolver"]
     output = solver_settings["Output"]
     verbose = solver_settings["Verbose"]
+    output_substates_setting = get(output, "OutputSubstates", false)
 
     relaxation = non_linear_solver["Relaxation"]
     if relaxation == "NoRelaxation"
@@ -720,9 +777,15 @@ function solver_configuration(
 
     timestep_selector = non_linear_solver["TimeStepSelectors"]
     if timestep_selector == "TimestepSelector"
-        timesel = [TimestepSelector()]
+        timesel = Jutul.AbstractTimestepSelector[TimestepSelector()]
     else
         error("Timestep selector $(timestep_selector) not recognized. Only 'TimestepSelector' is currently implemented.")
+    end
+
+    control_ramp_time = control_rampup_time(multimodel[:Control].system.policy)
+    if !isnothing(rampup_steps) && rampup_steps > 0 && control_ramp_time > 0
+        ramp_dt = Float64(control_ramp_time) / rampup_steps
+        push!(timesel, ControlRampTimestepSelector(ramp_dt))
     end
 
     if linear_solver_dict["Method"] == "UserDefined"
@@ -763,8 +826,14 @@ function solver_configuration(
         output_path = output["OutputPath"] == "" ? nothing : output["OutputPath"],
         in_memory_reports = output["InMemoryReports"],
         report_level = output["ReportLevel"],
-        output_substates = output["OutputSubstrates"],
+        output_substates = output_substates_setting,
     )
+
+    if !isnothing(rampup_reference_timestep) && !isnothing(rampup_steps) && rampup_steps > 0 && control_ramp_time > 0
+        ramp_dt = Float64(control_ramp_time) / rampup_steps
+        ramp_decrease = ramp_dt / Float64(rampup_reference_timestep)
+        cfg[:timestep_max_decrease] = min(cfg[:timestep_max_decrease], ramp_decrease)
+    end
 
     if !isempty(non_linear_solver["Tolerances"])
         cfg[:tolerances] = non_linear_solver["Tolerances"]
@@ -789,12 +858,12 @@ function solver_configuration(
         end
     end
 
-    if multimodel[:Control].system.policy isa CyclingCVPolicy || multimodel[:Control].system.policy isa CCPolicy
+    if multimodel[:Control].system.policy isa CyclingCVPolicy || multimodel[:Control].system.policy isa CCPolicy || multimodel[:Control].system.policy isa RestPolicy || multimodel[:Control].system.policy isa SequencePolicy
         if multimodel[:Control].system.policy isa CyclingCVPolicy
-
             cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
-
         elseif multimodel[:Control].system.policy isa CCPolicy && multimodel[:Control].system.policy.numberOfCycles > 0
+            cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+        elseif multimodel[:Control].system.policy isa SequencePolicy
             cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
         end
 
@@ -841,6 +910,11 @@ function solver_configuration(
                         report[:stopnow] = false
                     end
                 end
+            elseif multimodel[:Control].system.policy isa RestPolicy
+                report[:stopnow] = s.state.Control.Controller.time >= m[:Control].system.policy.duration
+
+            elseif multimodel[:Control].system.policy isa SequencePolicy
+                report[:stopnow] = sequence_complete(m[:Control].system.policy, s.state.Control.Controller)
             end
 
             return (done, report)
@@ -1014,23 +1088,31 @@ function setup_timesteps(
         if cycling_protocol["TotalNumberOfCycles"] == 0
 
             if cycling_protocol["InitialControl"] == "discharging"
-                CRate = cycling_protocol["DRate"]
+                rate = cycling_protocol["DRate"]
             else
-                CRate = cycling_protocol["CRate"]
+                rate = cycling_protocol["CRate"]
             end
 
             con = Constants()
-            totalTime = 1.1 * con.hour / CRate
+            totalTime = 1.1 * con.hour / rate
 
             dt = simulation_settings["TimeStepDuration"]
 
             if haskey(input.model_settings, "RampUp")
                 nr = simulation_settings["RampUpSteps"]
+                timesteps = compute_rampup_timesteps(totalTime, dt, nr)
             else
-                nr = 1
+                # Set to false to use only regular dt steps for no-ramp CC.
+                use_initial_half_step = true
+                timesteps = use_initial_half_step ? [dt / 2] : Float64[]
+                remaining_time = totalTime - sum(timesteps)
+                n = Int64(floor(remaining_time / dt))
+                append!(timesteps, repeat([dt], n))
+                dt_final = totalTime - sum(timesteps)
+                if dt_final > 0
+                    push!(timesteps, dt_final)
+                end
             end
-
-            timesteps = compute_rampup_timesteps(totalTime, dt, nr)
 
         else
 
@@ -1059,9 +1141,14 @@ function setup_timesteps(
         totalTime = ncycles * 2.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
         dt = simulation_settings["TimeStepDuration"]
-        n = Int64(floor(totalTime / dt))
 
-        timesteps = repeat([dt], n)
+        if haskey(input.model_settings, "RampUp")
+            nr = simulation_settings["RampUpSteps"]
+            timesteps = compute_rampup_timesteps(totalTime, dt, nr)
+        else
+            n = Int64(floor(totalTime / dt))
+            timesteps = repeat([dt], n)
+        end
 
     elseif protocol == "Function"
 
@@ -1076,6 +1163,38 @@ function setup_timesteps(
         series_times = Float64.(cycling_protocol["Times"])
         timesteps = diff(series_times)
         timesteps = timesteps[timesteps .> 0.0]
+
+    elseif protocol == "Rest"
+
+        totalTime = cycling_protocol["Duration"]
+        dt = simulation_settings["TimeStepDuration"]
+        if haskey(input.model_settings, "RampUp")
+            nr = simulation_settings["RampUpSteps"]
+            timesteps = compute_rampup_timesteps(totalTime, dt, nr)
+        else
+            n = Int64(floor(totalTime / dt))
+            timesteps = repeat([dt], n)
+            dt_final = totalTime - sum(timesteps)
+            if dt_final > 0
+                push!(timesteps, dt_final)
+            end
+        end
+
+    elseif protocol == "Sequence"
+
+        timesteps = Float64[]
+        for step in cycling_protocol["Steps"]
+            step_protocol = CyclingProtocol(
+                merge(
+                    Dict(
+                        "InitialStateOfCharge" => get(cycling_protocol, "InitialStateOfCharge", 0.5),
+                        "TotalNumberOfCycles" => get(step, "TotalNumberOfCycles", step["Protocol"] == "CCCV" ? 1 : 0),
+                    ),
+                    step,
+                )
+            )
+            append!(timesteps, setup_timesteps((cycling_protocol = step_protocol, simulation_settings = simulation_settings, model_settings = input.model_settings)))
+        end
 
     else
 
@@ -1115,22 +1234,4 @@ function compute_rampup_timesteps(time::Real, dt::Real, n::Integer = 8)
     dT = [dt_init; dt_rem; dt_final]
 
     return dT
-end
-
-####################
-# Current function #
-####################
-
-function currentFun(t::Real, inputI::Real, tup::Real = 0.1)
-
-    t, inputI, tup, val = promote(t, inputI, tup, 0.0)
-
-    if t <= tup
-        val = sineup(0.0, inputI, 0.0, tup, t)
-    else
-        val = inputI
-    end
-
-    return val
-
 end

@@ -125,9 +125,11 @@
         "CC",
         "CCCV",
         "Function",
-        "InputCurrentSeries"
+        "InputCurrentSeries",
+        "Rest",
+        "Sequence"
       ],
-      "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('CCCV'), or a prescribed current time series ('InputCurrentSeries')."
+      "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('CCCV'), a custom Function, a prescribed current time series ('InputCurrentSeries'), a rest step ('Rest'), or an ordered sequence of supported steps ('Sequence')."
     },
     "FunctionName": {
       "type": "string",
@@ -578,6 +580,14 @@
       "description": "A control limit placed on the rate of change of the electric current (dI/dt) in a constant-voltage step.",
       "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_71f10616_15eb_4dc4_bc8d_ffaac3838af2",
       "unit": "A·s⁻¹"
+    },
+    "CVCurrentCutoff": {
+      "type": "number",
+      "minimum": 0.0,
+      "description": "Absolute current cutoff used to leave a constant-voltage charge step.",
+      "unit": "A",
+      "unit_name": "emmo:Ampere",
+      "unit_iri": "https://w3id.org/emmo#Ampere"
     },
     "VoltageChangeLimit": {
       "type": "number",
