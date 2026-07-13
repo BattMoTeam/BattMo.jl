@@ -334,25 +334,31 @@ function compute_electrode_maximum_capacity(params::CellParameters, electrode::S
     active_material_mass = electrode_mass * mass_fraction
     faraday_constant_Ah = FARADAY_CONSTANT / 3600.0
 
-    return stoichiometric_range * (max_concentration / density) * active_material_mass * faraday_constant_Ah
+    capacity = stoichiometric_range * (max_concentration / density) * active_material_mass * faraday_constant_Ah
+
+    if electrode == "NegativeElectrode"
+        n_layers, _, extra_ne = _cell_layer_multipliers(params)
+        # compute_electrode_coating_mass counts all 2(N+1) NE faces, but the 2 outer
+        # faces of the closing NE sheet have no PE electrode opposite them and cannot
+        # contribute to usable cell capacity. Scale down to the N paired NE sheets.
+        if extra_ne && n_layers > 0
+            capacity *= n_layers / (n_layers + 1)
+        end
+    end
+
+    return capacity
 end
 
 function compute_np_ratio(params::CellParameters)
     pe_maximum_capacity = compute_electrode_maximum_capacity(params, "PositiveElectrode")
     ne_maximum_capacity = compute_electrode_maximum_capacity(params, "NegativeElectrode")
-    n_layers, _, extra_ne = _cell_layer_multipliers(params)
-    # Only 2N of the 2(N+1) NE coating faces are paired with a PE face;
-    # the 2 outer faces of the closing NE sheet do not face a PE electrode.
-    ne_paired_capacity = (extra_ne && n_layers > 0) ? ne_maximum_capacity * n_layers / (n_layers + 1) : ne_maximum_capacity
-    return ne_paired_capacity / pe_maximum_capacity
+    return ne_maximum_capacity / pe_maximum_capacity
 end
 
 function compute_cell_theoretical_capacity(params::CellParameters)
     pe_maximum_capacity = compute_electrode_maximum_capacity(params, "PositiveElectrode")
     ne_maximum_capacity = compute_electrode_maximum_capacity(params, "NegativeElectrode")
-    n_layers, _, extra_ne = _cell_layer_multipliers(params)
-    ne_paired_capacity = (extra_ne && n_layers > 0) ? ne_maximum_capacity * n_layers / (n_layers + 1) : ne_maximum_capacity
-    return min(pe_maximum_capacity, ne_paired_capacity)
+    return min(pe_maximum_capacity, ne_maximum_capacity)
 end
 
 """
