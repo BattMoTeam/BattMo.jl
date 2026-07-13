@@ -1,76 +1,40 @@
-using BattMo
+# # Loading cell parameters from a BPX file
+#
+# This example demonstrates how to use the `from_bpx_file_path` argument of
+# `load_cell_parameters` to load battery parameters from a BPX
+# (Battery Parameter eXchange, https://bpxstandard.com) formatted JSON file.
 
-# Example: Loading cell parameters from a BPX-formatted JSON file
-# This example demonstrates how to use the `from_bpx_file_path` argument
-# of `load_cell_parameters` to load battery parameters from a BPX file.
+using BattMo, GLMakie
 
-# Define paths
-bpX_file = joinpath(dirname(pathof(BattMo)), "../test/data/jsonfiles/nmc_pouch_cell_BPX.json")
+# We load the BPX parameterisation of an NMC111|graphite 12.5 Ah pouch cell.
 
-println("========================================")
-println("BPX File Loading Example")
-println("========================================")
-println("BPX file path: $bpX_file")
-println()
+bpx_file_path = joinpath(dirname(pathof(BattMo)), "..", "test", "data", "jsonfiles", "nmc_pouch_cell_BPX.json")
 
-# Step 1: Load cell parameters from the BPX file
-println("Step 1: Loading cell parameters from BPX file...")
-cell_parameters = load_cell_parameters(from_bpx_file_path = bpX_file)
-println("Cell parameters loaded successfully.")
-println("Cell nominal capacity: $(cell_parameters["cell_nominal_capacity"]) A·h")
-println("Lower voltage cutoff: $(cell_parameters["cell_lower_voltage_cutoff"]) V")
-println("Upper voltage cutoff: $(cell_parameters["cell_upper_voltage_cutoff"]) V")
-println("Negative electrode minimum stoichiometry: $(cell_parameters["negative_electrode_minimum_stoichiometry"])")
-println("Negative electrode maximum stoichiometry: $(cell_parameters["negative_electrode_maximum_stoichiometry"])")
-println()
+cell_parameters = load_cell_parameters(; from_bpx_file_path = bpx_file_path)
 
-# Step 2: Set up a simple battery model and cycling protocol
-println("Step 2: Setting up simulation...")
+# The BPX parameters are converted to the BattMo cell parameter format, so they can be
+# inspected and modified in the usual way.
+
+println("Cell nominal capacity: ", cell_parameters["Cell"]["NominalCapacity"], " Ah")
+println("Negative electrode stoichiometry at SOC 0: ", cell_parameters["NegativeElectrode"]["ActiveMaterial"]["StoichiometricCoefficientAtSOC0"])
+println("Negative electrode stoichiometry at SOC 100: ", cell_parameters["NegativeElectrode"]["ActiveMaterial"]["StoichiometricCoefficientAtSOC100"])
+
+# BPX operating conditions such as the voltage cut-offs belong to the cycling protocol in
+# BattMo. Here we set up a 1C constant current discharge using the voltage window from the
+# BPX file (2.7 V - 4.2 V).
+
+cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+cycling_protocol["DRate"] = 1.0
+cycling_protocol["LowerVoltageLimit"] = 2.7
+cycling_protocol["UpperVoltageLimit"] = 4.2
+
+# We select the default Lithium-Ion Battery Model (P2D) and run the simulation.
+
 model = LithiumIonBattery()
 
-rate = 1.0  # C-rate for discharge
-discharge_duration = 3600  # 1 hour at 1C in seconds
-
-# Define the negative electrode entropic coefficient as a function (BPX stores it as a string)
-neg_entropic_coef_str = "(-0.1112 * x + 0.02914 + 0.3561 * exp(-((x - 0.08309) ^ 2) / 0.004616)) / 1000"
-println("Negative electrode entropic coefficient formula: $neg_entropic_coef_str")
-
-# Create a simple current cycling protocol (BPX uses flat keys, not nested)
-current = rate * cell_parameters["cell_nominal_capacity"]
-protocol_dict = Dict(
-    "Protocol" => "InputCurrent",
-    "Current" => current,
-    "LowerVoltageLimit" => cell_parameters["cell_lower_voltage_cutoff"],
-    "UpperVoltageLimit" => cell_parameters["cell_upper_voltage_cutoff"],
-)
-
-cycling_protocol = CyclingProtocol(protocol_dict)
-
-# Create and run the simulation
-println("Step 3: Running battery simulation...")
 sim = Simulation(model, cell_parameters, cycling_protocol)
-output = solve(sim; info_level = 1, include_initial_state = true)
+output = solve(sim)
 
-# Step 4: Display results
-println()
-println("Step 4: Simulation Results")
-println("========================================")
-println("Simulation completed successfully.")
-println("Total simulation time: $(round(output.time[end] / 3600, digits = 2)) hours")
-println("Final voltage: $(round(output.time_series["Voltage"][end], digits = 4)) V")
-println("Number of time steps: $(length(output.time_series["Voltage"]))")
-println()
+# Finally we plot the results.
 
-# Save the output to a JSON file for further analysis
-output_file = joinpath(@__DIR__, "../test/data/jsonfiles/bpx_example_output.json")
-output_data = Dict(
-    "time" => output.time_series["Time"],
-    "voltage" => output.time_series["Voltage"],
-    "current" => output.time_series["Current"],
-)
-JSON.print(output_file, output_data, 2)
-println("Output saved to: $output_file")
-println()
-println("========================================")
-println("Example complete!")
-println("========================================")
+plot_dashboard(output; plot_type = "simple")
