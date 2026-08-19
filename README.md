@@ -118,6 +118,14 @@ plot_3D_results(output)
 
 Please report bugs, issues or suggest enhancements by filing an issue. To contribute code to BattMo, please create a pull request. You're also most welcome to email the developers at battmo@sintef.no if you have questions.
 
+The code should be formatted using Runic.jl. You can run this with
+```
+julia -e 'using Pkg; Pkg.add("Runic")'
+julia -e 'using Runic; exit(Runic.main(["--inplace", "."]))'
+```
+See the documentation [[https://github.com/fredrikekre/Runic.jl]] for details and how to integrate Runic with your editor.
+
+
 ## Acknowledgements
 
 BattMo has received funding from the European Union’s Horizon 2020 innovation program under grant agreement numbers:

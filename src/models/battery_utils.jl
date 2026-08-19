@@ -8,7 +8,7 @@ export
         ElectrolyteConcentration,
         Volume,
         VolumeFraction,
-        ix
+        ix,
     )
     for i in ix
         @inbounds acc[i] = ElectrolyteConcentration[i] * Volume[i] * VolumeFraction[i]
@@ -20,7 +20,7 @@ end
         tv::Charge,
         model,
         ElectricPotential,
-        ix
+        ix,
     )
     for i in ix
         @inbounds acc[i] = 0.0
@@ -75,18 +75,17 @@ end
 
 end
 
-function setupHalfTrans(model, face, cell, other_cell, face_sign)
-
-    htrans = model.domain.representation[:halftransfaces][:, face]
+function get_half_trans(state, face, cell, other_cell, face_sign)
+    htrans = state.HalfFaceTransmissibility
+    l = htrans[1, face]
+    r = htrans[2, face]
     if face_sign > 0
-        htrans_cell = htrans[1]
-        htrans_other = htrans[2]
+        out = (l, r)
     else
-        htrans_cell = htrans[2]
-        htrans_other = htrans[1]
+        out = (r, l)
     end
 
-    return (htrans_cell, htrans_other)
+    return out
 
 end
 
@@ -101,9 +100,9 @@ end
 
 end
 
-function computeFlux(::Val{:Mass}, model, state, cell, other_cell, face, face_sign)
+function compute_flux(::Val{:Mass}, model, state, cell, other_cell, face, face_sign)
 
-    htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
+    htrans_cell, htrans_other = get_half_trans(state, face, cell, other_cell, face_sign)
     q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectrolyteConcentration, state.Diffusivity)
 
     return q
@@ -111,15 +110,15 @@ end
 
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Mass, <:Any}, state, model, dt, flow_disc) where {T}
 
-    q = computeFlux(Val(:Mass), model, state, c, other, face, face_sign)
+    q = compute_flux(Val(:Mass), model, state, c, other, face, face_sign)
 
     return T(q)
 end
 
-function computeFlux(::Val{:Charge}, model, state, cell, other_cell, face, face_sign)
+function compute_flux(::Val{:Charge}, model, state, cell, other_cell, face, face_sign)
 
-    htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
-    q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.Conductivity)
+    htrans_cell, htrans_other = get_half_trans(state, face, cell, other_cell, face_sign)
+    q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.ElectricPotential, state.ElectronicConductivity)
 
     return q
 
@@ -127,15 +126,15 @@ end
 
 function Jutul.face_flux!(::T, c, other, face, face_sign, eq::ConservationLaw{:Charge, <:Any}, state, model, dt, flow_disc) where {T}
 
-    q = computeFlux(Val(:Charge), model, state, c, other, face, face_sign)
+    q = compute_flux(Val(:Charge), model, state, c, other, face, face_sign)
     return T(q)
 
 end
 
 function Jutul.face_flux!(::T, cell, other_cell, face, face_sign, eq::ConservationLaw{:Energy, <:Any}, state, model, dt, flow_disc) where {T}
 
-    htrans_cell, htrans_other = setupHalfTrans(model, face, cell, other_cell, face_sign)
-    q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Temperature, state.Conductivity)
+    htrans_cell, htrans_other = get_half_trans(state, face, cell, other_cell, face_sign)
+    q = -half_face_two_point_kgrad(cell, other_cell, htrans_cell, htrans_other, state.Temperature, state.ElectronicConductivity)
 
     return T(q)
 
@@ -172,14 +171,16 @@ end
 ####################
 
 function Jutul.select_parameters!(prm, D::MinimalTpfaGrid, model::BattMoModel)
-
+    prm[:HalfFaceTransmissibility] = HalfFaceTransmissibility()
     prm[:Volume] = Volume()
-    return prm[:VolumeFraction] = VolumeFraction()
-
+    prm[:VolumeFraction] = VolumeFraction()
+    return prm
 end
 
 function Jutul.select_parameters!(prm, d::DataDomain, model::BattMoModel)
-    return prm[:Volume] = Volume()
+    prm[:HalfFaceTransmissibility] = HalfFaceTransmissibility()
+    prm[:Volume] = Volume()
+    return prm
 end
 
 
@@ -223,7 +224,7 @@ function apply_boundary_potential!(acc, state, parameters, model::BattMoModel, e
 
             ElectricPotential = state[:ElectricPotential]
             BoundaryVoltage = state[:BoundaryVoltage]
-            conductivity = state[:Conductivity]
+            conductivity = state[:ElectronicConductivity]
 
             for (ht, c, i) in zip(bcdirhalftrans, bcdircells, bcdirinds)
                 @inbounds acc[c] += conductivity[c] * ht * (ElectricPotential[c] - value(BoundaryVoltage[i]))
@@ -236,7 +237,7 @@ end
 
 apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw) = nothing
 
-function setupHalfTransFaces(domain)
+function setup_half_trans_faces(domain)
 
     g = domain.representation
     neighbors = get_neighborship(g)

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="320" viewBox="0 0 920 320">
+  <rect width="100%" height="100%" fill="#F8FAFC"/>
+  <rect x="12" y="12" width="896" height="296" rx="18" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="2"/>
+  <text x="460" y="42" text-anchor="middle" font-size="24" font-family="Helvetica, Arial, sans-serif" font-weight="700" fill="#111827">P2D Through-Thickness Geometry</text>
+  <text x="460" y="68" text-anchor="middle" font-size="14" font-family="Helvetica, Arial, sans-serif" fill="#4B5563">Component-wise 1D positions along the cell thickness</text>
+  <line x1="70.0" y1="164" x2="423.7072104879826" y2="164" stroke="#6B7280" stroke-width="14" stroke-linecap="round" opacity="0.9"/>
+  <circle cx="70.0" cy="164" r="4.5" fill="#FFFFFF" stroke="#6B7280" stroke-width="2"/>
+  <circle cx="109.30080116533141" cy="164" r="4.5" fill="#FFFFFF" stroke="#6B7280" stroke-width="2"/>
+  <circle cx="148.60160233066276" cy="164" r="4.5" fill="#FFFFFF" stroke="#6B7280" stroke-width="2"/>
+  <circle cx="187.90240349599415" cy="164" r="4.5" fill="#FFFFFF" stroke="#6B7280" stroke-width="2"/>
+  <circle cx="227.20320466132563" cy="164" r="4.5" fill="#FFFFFF" stroke="#6B7280" stroke-width="2"/>
+  <circle cx="266.5040058266569" cy="164" r="4.5" fill="#FFFFFF" stroke="#6B7280" stroke-width="2"/>
+  <circle cx="305.80480699198836" cy="164" r="4.5" fill="#FFFFFF" stroke="#6B7280" stroke-width="2"/>
+  <circle cx="345.10560815731975" cy="164" r="4.5" fill="#FFFFFF" stroke="#6B7280" stroke-width="2"/>
+  <circle cx="384.40640932265103" cy="164" r="4.5" fill="#FFFFFF" stroke="#6B7280" stroke-width="2"/>
+  <circle cx="423.7072104879826" cy="164" r="4.5" fill="#FFFFFF" stroke="#6B7280" stroke-width="2"/>
+  <text x="70" y="152" font-size="13" font-family="Helvetica, Arial, sans-serif" fill="#374151">Negative electrode</text>
+  <line x1="452.5831512503037" y1="198" x2="489.4853119689245" y2="198" stroke="#D97706" stroke-width="14" stroke-linecap="round" opacity="0.9"/>
+  <circle cx="452.5831512503037" cy="198" r="4.5" fill="#FFFFFF" stroke="#D97706" stroke-width="2"/>
+  <circle cx="471.0342316096139" cy="198" r="4.5" fill="#FFFFFF" stroke="#D97706" stroke-width="2"/>
+  <circle cx="489.4853119689245" cy="198" r="4.5" fill="#FFFFFF" stroke="#D97706" stroke-width="2"/>
+  <text x="70" y="186" font-size="13" font-family="Helvetica, Arial, sans-serif" fill="#374151">Separator</text>
+  <line x1="516.1471230881283" y1="232" x2="830.0" y2="232" stroke="#2E8B57" stroke-width="14" stroke-linecap="round" opacity="0.9"/>
+  <circle cx="516.1471230881283" cy="232" r="4.5" fill="#FFFFFF" stroke="#2E8B57" stroke-width="2"/>
+  <circle cx="551.0196649672253" cy="232" r="4.5" fill="#FFFFFF" stroke="#2E8B57" stroke-width="2"/>
+  <circle cx="585.8922068463221" cy="232" r="4.5" fill="#FFFFFF" stroke="#2E8B57" stroke-width="2"/>
+  <circle cx="620.7647487254189" cy="232" r="4.5" fill="#FFFFFF" stroke="#2E8B57" stroke-width="2"/>
+  <circle cx="655.6372906045159" cy="232" r="4.5" fill="#FFFFFF" stroke="#2E8B57" stroke-width="2"/>
+  <circle cx="690.5098324836127" cy="232" r="4.5" fill="#FFFFFF" stroke="#2E8B57" stroke-width="2"/>
+  <circle cx="725.3823743627095" cy="232" r="4.5" fill="#FFFFFF" stroke="#2E8B57" stroke-width="2"/>
+  <circle cx="760.2549162418061" cy="232" r="4.5" fill="#FFFFFF" stroke="#2E8B57" stroke-width="2"/>
+  <circle cx="795.1274581209032" cy="232" r="4.5" fill="#FFFFFF" stroke="#2E8B57" stroke-width="2"/>
+  <circle cx="830.0" cy="232" r="4.5" fill="#FFFFFF" stroke="#2E8B57" stroke-width="2"/>
+  <text x="70" y="220" font-size="13" font-family="Helvetica, Arial, sans-serif" fill="#374151">Positive electrode</text>
+  <line x1="70" y1="270" x2="830" y2="270" stroke="#9CA3AF" stroke-width="2"/>
+  <text x="450" y="300" text-anchor="middle" font-size="13" font-family="Helvetica, Arial, sans-serif" fill="#4B5563">Position / m</text>
+</svg>

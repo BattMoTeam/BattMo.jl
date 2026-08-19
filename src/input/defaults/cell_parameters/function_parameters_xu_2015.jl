@@ -72,6 +72,8 @@ function open_circuit_potential_graphite_Xu_2015(c, T, refT, cmax)
     itp_dUdT = get_1d_interpolator(x2, y2, cap_endpoints = false)
     dUdT = itp_dUdT(theta)
 
+    dUdT = 0.0
+
     ocp = refOCP + (T - refT) * dUdT
 
     return ocp
@@ -159,6 +161,7 @@ function open_circuit_potential_lfp_Xu_2015(c, T, refT, cmax)
 
     itp_dUdT = get_1d_interpolator(x2, y2, cap_endpoints = false)
     dUdT = itp_dUdT(theta)
+    dUdT = 0.0
 
     ocp = refOCP + (T - refT) * dUdT
 

@@ -1,4 +1,4 @@
-using BattMo, MAT, Test
+using BattMo, MAT, Test, Jutul
 
 @testset "matlab test" begin
 

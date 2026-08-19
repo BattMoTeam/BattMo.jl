@@ -16,7 +16,13 @@ function remove_cells(G_raw::AbstractDict, cells)
         nodemap = collect(1:Int(G_raw["nodes"]["num"]))
         facemap = collect(1:Int(G_raw["faces"]["num"]))
 
-        return G_raw, cellmap, facemap, nodemap
+        maps = (
+            cellmap = cellmap,
+            facemap = facemap,
+            nodemap = nodemap,
+        )
+
+        return G_raw, maps
     end
 
     G = deepcopy(G_raw)
@@ -113,5 +119,11 @@ function remove_cells(G_raw::AbstractDict, cells)
     facemap = findall(!iszero, facemap)
     nodemap = findall(!iszero, nodemap)
 
-    return G, cellmap, facemap, nodemap
+    maps = (
+        cellmap = cellmap,
+        facemap = facemap,
+        nodemap = nodemap,
+    )
+
+    return G, maps
 end

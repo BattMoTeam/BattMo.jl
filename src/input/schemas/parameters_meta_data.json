@@ -227,12 +227,12 @@
       "unit_name": "emmo:JoulePerKiloGramKelvin",
       "unit_iri": "https://w3id.org/emmo#JoulePerKiloGramKelvin"
     },
-    "ThermalConductivity": {
+    "EffectiveThermalConductivity": {
       "type": "number",
       "minimum": 0.01,
       "maximum": 10000.0,
       "description": "Material property characterizing its ability to transmit heat through a surface element.",
-      "context_type": "ThermalConductivity",
+      "context_type": "EffectiveThermalConductivity",
       "context_type_iri": "https://w3id.org/emmo#EMMO_8dd40ec6_2c5a_43f3_bf64_cadcd447a1c1",
       "unit": "W·m⁻¹·K⁻¹",
       "unit_name": "emmo:WattPerMetreKelvin",

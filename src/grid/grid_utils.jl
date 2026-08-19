@@ -16,8 +16,8 @@ export
 function find_coupling(maps1, maps2, modelname = "placeholder")
     Coupling = Dict()
     Coupling["model"] = modelname
-    Coupling["cells"] = find_common(maps1[1], maps2[1])
-    Coupling["faces"] = find_common(maps1[2], maps2[2])
+    Coupling["cells"] = find_common(maps1[:cellmap], maps2[:cellmap])
+    Coupling["faces"] = find_common(maps1[:facemap], maps2[:facemap])
     return Coupling
 end
 
@@ -94,89 +94,94 @@ function setup_couplings(components, grids, global_maps)
 
 end
 
+
 """
- Convert the grids given in MRST format (given as dictionnaries, also called raw grids) to Jutul format (UnstructuredMesh)
- In particular, for the external face couplings, we need to recover the coupling face indices in the boundary face indexing (jutul mesh structure holds a different indexing for the boundary faces)
+Convert MRST-format grids (raw dictionaries) to Jutul UnstructuredMesh format.
+Handles external face couplings by mapping MRST face indices to Jutul boundary face indices.
+Works for single-layer and multilayer pouch cells because grids are already aggregated by component.
 """
-function convert_geometry(grids, couplings; include_current_collectors = true)
+function convert_geometry(model, grids, couplings; include_current_collectors = true)
 
     if include_current_collectors
         components = [
-            "NegativeCurrentCollector",
-            "NegativeElectrode",
+            "NegativeElectrodeCurrentCollector",
+            "NegativeElectrodeActiveMaterial",
             "Separator",
-            "PositiveElectrode",
-            "PositiveCurrentCollector",
+            "PositiveElectrodeActiveMaterial",
+            "PositiveElectrodeCurrentCollector",
             "Electrolyte",
         ]
     else
         components = [
-            "NegativeElectrode",
+            "NegativeElectrodeActiveMaterial",
             "Separator",
-            "PositiveElectrode",
+            "PositiveElectrodeActiveMaterial",
             "Electrolyte",
         ]
     end
 
-    ugrids = Dict()
-
+    # Convert each MRST grid to Jutul UnstructuredMesh
+    ugrids = Dict{String, Any}()
     for component in components
         ugrids[component] = UnstructuredMesh(grids[component])
     end
 
+    # Deep copy couplings for modification
     ucouplings = deepcopy(couplings)
 
+    # Map MRST face indices to Jutul boundary face indices
     for component in components
-
         component_couplings = ucouplings[component]
-
         grid = grids[component]
         ugrid = ugrids[component]
 
         for (other_component, coupling) in component_couplings
+            if isempty(coupling)
+                continue
+            end
 
-            if !isempty(coupling)
+            # Only process if coupling has faces
+            if get(coupling, "face_type", false)
+                faces = coupling["faces"]
+                cells = coupling["cells"]
 
-                if coupling["face_type"]
+                for fi in eachindex(faces)
+                    face = faces[fi]
+                    cell = cells[fi]
 
-                    faces = coupling["faces"]
-                    cells = coupling["cells"]
+                    # Candidate boundary faces for this cell
+                    candidates = ugrid.boundary_faces.cells_to_faces[cell]
 
-                    for fi in eachindex(faces)
+                    # MRST raw face nodes
+                    rawfaces = grid["faces"]
+                    lnodePos = rawfaces["nodePos"][face:(face + 1)]
+                    lnodes = Set(rawfaces["nodes"][lnodePos[1]:(lnodePos[2] - 1)])
 
-                        face = faces[fi]
-                        cell = cells[fi]
-
-                        candidates = ugrid.boundary_faces.cells_to_faces[cell]
-                        rface = face
-                        rawfaces = grid["faces"]
-                        lnodePos = rawfaces["nodePos"][rface:(rface + 1)]
-                        lnodes = Set(rawfaces["nodes"][lnodePos[1]:(lnodePos[2] - 1)])
-                        count = 0
-
-                        for lfi in eachindex(candidates)
-                            fnodes = Set(ugrid.boundary_faces.faces_to_nodes[candidates[lfi]])
-                            if fnodes == lnodes
-                                faces[fi] = candidates[lfi]
-                                count += 1
-                            end
+                    # Find matching boundary face in Jutul mesh
+                    count = 0
+                    for lfi in candidates
+                        fnodes = Set(ugrid.boundary_faces.faces_to_nodes[lfi])
+                        if fnodes == lnodes
+                            faces[fi] = lfi
+                            count += 1
                         end
-                        @assert count == 1
                     end
-                else
-                    @assert isempty(coupling["faces"])
+                    @assert count == 1 "Boundary face mapping failed for component $component"
                 end
+            else
+                @assert isempty(coupling["faces"]) "Coupling without face_type should have no faces"
             end
         end
     end
 
+    # Convert global grid if present
     if haskey(grids, "Global")
         ugrids["Global"] = UnstructuredMesh(grids["Global"])
     end
 
     return ugrids, ucouplings
-
 end
+
 
 """ retrieve the grids from a model"""
 function get_grids(model::MultiModel{:IntercalationBattery})
@@ -185,11 +190,11 @@ function get_grids(model::MultiModel{:IntercalationBattery})
 
     components = [:NegativeElectrodeCurrentCollector, :NegativeElectrodeActiveMaterial, :Electrolyte, :PositiveElectrodeActiveMaterial, :PositiveElectrodeCurrentCollector]
     names = [
-        "NegativeCurrentCollector",
-        "NegativeElectrode",
+        "NegativeElectrodeCurrentCollector",
+        "NegativeElectrodeActiveMaterial",
         "Electrolyte",
-        "PositiveElectrode",
-        "PositiveCurrentCollector",
+        "PositiveElectrodeActiveMaterial",
+        "PositiveElectrodeCurrentCollector",
     ]
 
     if !has_cc

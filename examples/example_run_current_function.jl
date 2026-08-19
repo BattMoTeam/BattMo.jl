@@ -17,9 +17,9 @@ power_func = get_1d_interpolator(t, P, cap_endpoints = false)
 
 function current_function(time, voltage)
 
-	factor = 4000 # Tot account for the fact that we're simulating a single cell instead of a battery pack
+    factor = 4000 # Tot account for the fact that we're simulating a single cell instead of a battery pack
 
-	return power_func(time) / voltage / factor
+    return power_func(time) / voltage / factor
 end
 
 @eval Main const current_function = $current_function

@@ -53,54 +53,54 @@ x_ne = (ne_transfered_charge .- min_ne_charge) ./ (max_ne_charge - min_ne_charge
 
 function calc_ne_ocp(c, T, refT, cmax)
 
-	ocp = get_1d_interpolator(x_ne, ne_ocp)
-	return ocp(c / cmax)
+    ocp = get_1d_interpolator(x_ne, ne_ocp)
+    return ocp(c / cmax)
 end
 
 
 function calc_pe_ocp(c, T, refT, cmax)
 
-	ocp = get_1d_interpolator(x_pe, pe_ocp)
-	return ocp(c / cmax)
+    ocp = get_1d_interpolator(x_pe, pe_ocp)
+    return ocp(c / cmax)
 end
 
 
 function calc_elyte_cond(c, T)
 
-	cond = get_1d_interpolator(c_elyte, cond_elyte)
-	return cond(c)
+    cond = get_1d_interpolator(c_elyte, cond_elyte)
+    return cond(c)
 end
 
 
 function calc_elyte_diff(c, T)
 
-	diff = get_1d_interpolator(c_elyte_diff, diff_elyte)
-	return diff(c)
+    diff = get_1d_interpolator(c_elyte_diff, diff_elyte)
+    return diff(c)
 end
 
 
 function calc_pe_D_test(c, T, refT, cmax)
 
-	diff = get_1d_interpolator(c_pe_D, pe_D)
-	return diff(c)
+    diff = get_1d_interpolator(c_pe_D, pe_D)
+    return diff(c)
 end
 
 function calc_ne_D_test(c, T, refT, cmax)
 
-	diff = get_1d_interpolator(c_ne_D, ne_D)
-	return diff(c)
+    diff = get_1d_interpolator(c_ne_D, ne_D)
+    return diff(c)
 end
 
 
 function calc_ne_k_test(c, T, refT, cmax)
 
-	diff = get_1d_interpolator(c_ne_k, ne_k)
-	return diff(c)
+    diff = get_1d_interpolator(c_ne_k, ne_k)
+    return diff(c)
 end
 
 
 function calc_pe_k_test(c, T, refT, cmax)
 
-	diff = get_1d_interpolator(c_pe_k, pe_k)
-	return diff(c)
+    diff = get_1d_interpolator(c_pe_k, pe_k)
+    return diff(c)
 end

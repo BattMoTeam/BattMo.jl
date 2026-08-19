@@ -28,7 +28,7 @@ hero:
       link: /examples/example_cycle
     - theme: alt
       text: About
-      link: https://batterymodel.com/
+      link: https://battmo.org/
 
 features:
   - icon: 🔋

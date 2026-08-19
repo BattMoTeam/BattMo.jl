@@ -14,15 +14,18 @@ function CurrentCollector(params::CurrentCollectorParameters, scalings = Dict())
     return CurrentCollector{typeof(params), typeof(scalings)}(params, scalings)
 end
 
-
 function CurrentCollector()
     return CurrentCollector(Dict())
 end
+
+const CurrentCollectorModel = SimulationModel{O, S} where {O <: JutulDomain, S <: CurrentCollector}
+
 
 function Jutul.select_minimum_output_variables!(
         out,
         system::CurrentCollector, model::SimulationModel,
     )
+    push!(out, :ElectricPotential)
     return push!(out, :Charge)
 end
 
@@ -43,10 +46,10 @@ end
 function Jutul.select_parameters!(
         S,
         system::CurrentCollector,
-        model::SimulationModel
+        model::SimulationModel,
     )
 
-    S[:Conductivity] = Conductivity()
+    S[:ElectronicConductivity] = ElectronicConductivity()
     return if hasentity(model.data_domain, BoundaryDirichletFaces())
         if count_active_entities(model.data_domain, BoundaryDirichletFaces()) > 0
             S[:BoundaryVoltage] = BoundaryPotential(:ElectricPotential)
@@ -58,7 +61,7 @@ end
 function Jutul.select_equations!(
         eqs,
         system::CurrentCollector,
-        model::SimulationModel
+        model::SimulationModel,
     )
     disc = model.domain.discretizations.flow
 

@@ -40,9 +40,9 @@ struct ActiveMaterial{label, D, T, Di} <: AbstractActiveMaterial{label} where {D
     # - effective_density::Real
     #
     # If SEI layer is present, we have the following in addition
-    # - SEIlengthInitial
-    # - SEIvoltageDropRef
-    # - SEIlengthRef
+    # - SEIThicknessInitial
+    # - SEIVoltageDropRef
+    # - SEIThicknessRef
     # - SEIstoichiometryCoefficient
     # - SEImolarVolume
     # - SEIelectronicDiffusionCoefficient
@@ -59,6 +59,7 @@ const ActiveMaterialP2D{label, D, T, Di} = ActiveMaterial{label, D, T, Di}
 const ActiveMaterialNoParticleDiffusion{T} = ActiveMaterial{nothing, NoParticleDiffusion, T}
 
 struct OpenCircuitPotential <: ScalarVariable end
+struct EntropyChange <: ScalarVariable end # entropy change
 struct DiffusionCoefficient <: ScalarVariable end
 struct ReactionRateConstant <: ScalarVariable end
 struct ParticleConcentration <: VectorVariables end # particle concentrations in p2d model
@@ -185,14 +186,14 @@ end
 
 function Jutul.degrees_of_freedom_per_entity(
         model::ActiveMaterialModel,
-        ::ParticleConcentration
+        ::ParticleConcentration,
     )
     return solid_diffusion_discretization_number(model.system)
 end
 
 function Jutul.degrees_of_freedom_per_entity(
         model::ActiveMaterialModel,
-        ::SolidDiffFlux
+        ::SolidDiffFlux,
     )
     return solid_diffusion_discretization_number(model.system) - 1
 end
@@ -200,11 +201,11 @@ end
 function Jutul.select_parameters!(
         S,
         system::ActiveMaterialP2D,
-        model::SimulationModel
+        model::SimulationModel,
     )
 
     S[:Temperature] = Temperature()
-    S[:Conductivity] = Conductivity()
+    S[:ElectronicConductivity] = ElectronicConductivity()
     S[:VolumeFraction] = VolumeFraction()
 
     return if Jutul.hasentity(model.data_domain, BoundaryDirichletFaces())
@@ -220,6 +221,7 @@ function Jutul.select_secondary_variables!(
     )
     S[:Charge] = Charge()
     S[:OpenCircuitPotential] = OpenCircuitPotential()
+    S[:EntropyChange] = EntropyChange()
     S[:ReactionRateConstant] = ReactionRateConstant()
     S[:SolidDiffFlux] = SolidDiffFlux()
     return S[:DiffusionCoefficient] = DiffusionCoefficient()
@@ -252,12 +254,13 @@ end
 function Jutul.select_minimum_output_variables!(
         out,
         system::ActiveMaterialP2D,
-        model::SimulationModel
+        model::SimulationModel,
     )
     push!(out, :Charge)
     push!(out, :OpenCircuitPotential)
     push!(out, :Temperature)
     push!(out, :ReactionRateConstant)
+    push!(out, :ElectricPotential)
     return push!(out, :DiffusionCoefficient)
 
 end
@@ -274,40 +277,93 @@ end
             model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
             Temperature,
             SurfaceConcentration,
+            EntropyChange,
             ix,
         ) where {label, D, T, Di}
 
         ocp_func = model.system.params[:ocp_func]
+        function_type = model.system.params[:ocp_func_type]
 
         cmax = model.system.params[:maximum_concentration]
-        refT = 298.15
-
-        if Jutul.haskey(model.system.params, :ocp_funcexp)
-            theta0 = model.system.params[:theta0]
-            theta100 = model.system.params[:theta100]
-        end
-
+        refT = model.system.params[:reference_temperature]
 
         for cell in ix
 
-            if Jutul.haskey(model.system.params, :ocp_funcexp)
-
-                @inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax)
-
-            elseif Jutul.haskey(model.system.params, :ocp_funcdata)
+            if function_type == :interpolator
 
                 @inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell] / cmax)
 
-            elseif Jutul.haskey(model.system.params, :ocp_funcconstant)
-                @inbounds OpenCircuitPotential[cell] = ocp_func
-            else
+            elseif function_type == :expression || function_type == :function
 
                 @inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax)
 
+            elseif function_type == :constant
+
+                @inbounds OpenCircuitPotential[cell] = ocp_func
+
+            else
+                error("Open Circuit Potential function type not recognized")
+
             end
+
+        end
+
+        if model.system.params[:include_entropy_change]
+
+            for cell in ix
+
+                @inbounds OpenCircuitPotential[cell] += EntropyChange[cell] * (Temperature[cell] - refT)
+
+            end
+
+        end
+
+    end
+)
+
+@jutul_secondary(
+    function update_entropychange!(
+            EntropyChange,
+            tv::EntropyChange,
+            model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
+            SurfaceConcentration,
+            ix
+        ) where {label, D, T, Di}
+
+
+        if !model.system.params[:include_entropy_change]
+            return
+        end
+
+        entropy_change_function = model.system.params[:entropy_change_func]
+        function_type = model.system.params[:entropy_change_func_type]
+        cmax = model.system.params[:maximum_concentration]
+
+        for cell in ix
+
+            if function_type == :interpolator
+
+                @inbounds EntropyChange[cell] = entropy_change_function(SurfaceConcentration[cell] / cmax)
+
+            elseif function_type == :expression || function_type == :function
+
+                @inbounds EntropyChange[cell] = entropy_change_function(SurfaceConcentration[cell], cmax)
+
+            elseif function_type == :constant
+
+                @inbounds EntropyChange[cell] = entropy_change_function
+
+            else
+
+                error("number of arguments not implemented")
+
+            end
+
+
         end
     end
 )
+
 
 @jutul_secondary(
     function update_diffusion_coefficient!(
@@ -319,7 +375,8 @@ end
             ix,
         ) where {label, D, T, Di}
 
-        diff_func = model.system.params[:diff_func]
+        diffusion_coefficient_function = model.system.params[:diffusion_coefficient_func]
+        function_type = model.system.params[:diffusion_coefficient_func_type]
 
         cmax = model.system.params[:maximum_concentration]
         temperature_dependence_model = Symbol(model.system.params[:setting_temperature_dependence])
@@ -337,20 +394,20 @@ end
 
         for cell in ix
 
-            if Jutul.haskey(model.system.params, :diff_funcexp)
+            if function_type == :expression || function_type == :function
 
-                @inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Ea, temperature_dependence_model)
+                @inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Ea, temperature_dependence_model)
 
-            elseif Jutul.haskey(model.system.params, :diff_funcdata)
+            elseif function_type == :interpolator
 
-                @inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func(SurfaceConcentration[cell] / cmax), Ea, temperature_dependence_model)
+                @inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function(SurfaceConcentration[cell] / cmax), Ea, temperature_dependence_model)
 
-            elseif Jutul.haskey(model.system.params, :diff_funcconstant)
-                @inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func, Ea, temperature_dependence_model)
+            elseif function_type == :constant
+
+                @inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function, Ea, temperature_dependence_model)
+
             else
-
-                @inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diff_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Ea, temperature_dependence_model)
-
+                error("Diffusion Coefficient function type not recognized")
             end
         end
     end
@@ -365,7 +422,10 @@ end
             Temperature,
             ix
         ) where {label, D, T, Di}
-        rate_func = model.system.params[:reaction_rate_constant_func]
+
+        reaction_rate_function = model.system.params[:reaction_rate_constant_func]
+        function_type = model.system.params[:reaction_rate_constant_func_type]
+
 
         Ea = hasproperty(model.system.params, :activation_energy_of_reaction) ? model.system.params[:activation_energy_of_reaction] : 0.0
 
@@ -376,22 +436,20 @@ end
 
         for cell in ix
 
+            if function_type == :expression || function_type == :function
 
-            if Jutul.haskey(model.system.params, :ecd_funcexp)
+                @inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Ea, temperature_dependence_model)
 
-                @inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Ea, temperature_dependence_model)
+            elseif function_type == :interpolator
 
-            elseif Jutul.haskey(model.system.params, :ecd_funcdata)
+                @inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function(SurfaceConcentration[cell] / cmax), Ea, temperature_dependence_model)
 
-                @inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func(SurfaceConcentration[cell] / cmax), Ea, temperature_dependence_model)
+            elseif function_type == :constant
 
-            elseif Jutul.haskey(model.system.params, :ecd_funcconstant)
+                @inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function, Ea, temperature_dependence_model)
 
-                @inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func, Ea, temperature_dependence_model)
             else
-
-                @inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], rate_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Ea, temperature_dependence_model)
-
+                error("Reaction Rate Constant function type not recognized")
             end
         end
     end
@@ -403,7 +461,7 @@ end
             tv::SolidDiffFlux,
             model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
             ParticleConcentration,
-            ix
+            ix,
         ) where {label, D, T, Di}
         s = model.system
         for cell in ix
@@ -449,7 +507,7 @@ function Jutul.update_equation_in_entity!(
         eq::SolidMassCons,
         model,
         dt,
-        ldisc = Nothing
+        ldisc = Nothing,
     )
 
     disc = model.system.discretization
@@ -486,7 +544,7 @@ function Jutul.update_equation_in_entity!(
         eq::SolidDiffusionBc,
         model,
         dt,
-        ldisc = Nothing
+        ldisc = Nothing,
     )
 
     disc = model.system.discretization
@@ -533,11 +591,11 @@ end
 function Jutul.select_parameters!(
         S,
         system::ActiveMaterialNoParticleDiffusion,
-        model::SimulationModel
+        model::SimulationModel,
     )
 
     S[:Temperature] = Temperature()
-    S[:Conductivity] = Conductivity()
+    S[:ElectronicConductivity] = ElectronicConductivity()
     S[:Diffusivity] = Diffusivity()
     S[:VolumeFraction] = VolumeFraction()
 

@@ -81,7 +81,7 @@ plot_dashboard(output; plot_type = "simple")
 
 # We recover the SEI length from the `state` output
 
-seilength = output.states["SEIThickness"]
+seilength = output.states["NegativeElectrode"]["Interphase"]["Thickness"]
 
 # We can plot it using the plot_ouput function
 
@@ -90,8 +90,8 @@ ne_index = sim.settings["NegativeElectrodeCoatingGridPoints"]
 plot_output(
     output,
     [
-        "SEIThickness vs Time at Position index $ne_index",
+        "NegativeElectrodeInterphaseThickness vs Time at Position index $ne_index",
         "Voltage vs Time",
     ],
-    layout = (2, 1)
+    layout = (2, 1),
 )

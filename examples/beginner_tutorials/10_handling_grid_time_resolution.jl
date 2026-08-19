@@ -107,7 +107,7 @@ println(
     "Current grid resolution in positive electrode coating and separator: ",
     simulation_settings["PositiveElectrodeCoatingGridPoints"],
     " and ",
-    simulation_settings["NegativeElectrodeCoatingGridPoints"]
+    simulation_settings["NegativeElectrodeCoatingGridPoints"],
 )
 
 simulation_settings["PositiveElectrodeCoatingGridPoints"] = 20 # Increase the number of grid points in the positive electrode coating to 20
