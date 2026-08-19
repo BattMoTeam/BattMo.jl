@@ -6,7 +6,7 @@ using Test
 
     @test begin
 
-        name = "chen_2020"
+        name = "LG_INR_21700_M50"
         cell_parameters = load_cell_parameters(; from_default_set = name)
         cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 

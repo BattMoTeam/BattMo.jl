@@ -14,7 +14,7 @@
 using BattMo, GLMakie
 
 # Load cell parameters as before
-cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
 nothing # hide
 
 # To demonstrate changing time resolution we will use a drive cycle to setup a current function.

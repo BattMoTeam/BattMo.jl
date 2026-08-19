@@ -2,7 +2,7 @@ using BattMo, Test, Jutul
 import BattMo: VoltageCalibration, free_calibration_parameter!, freeze_calibration_parameter!, print_calibration_overview
 
 function test_adjoints()
-    cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
+    cell_parameters = load_cell_parameters(; from_default_set = "LP2770120_graphite_LFP_prismatic")
     cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
     solver_settings = load_solver_settings(; from_default_set = "direct")
 

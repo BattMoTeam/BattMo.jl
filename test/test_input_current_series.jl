@@ -5,7 +5,7 @@ using Test
 
     @test begin
 
-        cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+        cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
         model_settings = load_model_settings(; from_default_set = "p2d")
         simulation_settings = load_simulation_settings(; from_default_set = "p2d")
 

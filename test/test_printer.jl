@@ -8,7 +8,7 @@ using Test
         ############################
         # cc_discharge
 
-        cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+        cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
         cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
         model_setup = LithiumIonBattery()
@@ -16,7 +16,7 @@ using Test
         sim = Simulation(model_setup, cell_parameters, cycling_protocol)
         output = solve(sim)
 
-        full_input = load_full_simulation_input(from_default_set = "chen_2020")
+        full_input = load_full_simulation_input(from_default_set = "LG_INR_21700_M50")
         quick_cell_check(cell_parameters)
         print_default_input_sets()
         print_submodels()

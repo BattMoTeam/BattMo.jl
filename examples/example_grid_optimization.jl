@@ -11,7 +11,7 @@ time_profiles = Dict{Int, Vector{Float64}}()
 rel_errors = Dict{Int, Float64}()
 
 # Load base inputs
-cell_parameters = load_cell_parameters(; from_default_set = "chayambuka_2022")
+cell_parameters = load_cell_parameters(; from_default_set = "HC_NVPF_electrodes")
 base_simulation_settings = load_simulation_settings(; from_default_set = "p2d")
 cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 

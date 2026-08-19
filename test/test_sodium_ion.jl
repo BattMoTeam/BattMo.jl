@@ -2,13 +2,13 @@ using BattMo
 using Test
 
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
-include(joinpath(battmo_base, "src/input/defaults/cell_parameters/function_parameters_chayambuka_2022.jl"))
+include(joinpath(battmo_base, "src/input/defaults/cell_parameters/function_parameters_HC_NVPF_electrodes.jl"))
 
 @testset "sodium" begin
 
     @test begin
 
-        file_path_cell = parameter_file_path("cell_parameters", "chayambuka_2022.json")
+        file_path_cell = parameter_file_path("cell_parameters", "HC_NVPF_electrodes.json")
         file_path_model = parameter_file_path("model_settings", "p2d.json")
         file_path_cycling = parameter_file_path("cycling_protocols", "cc_discharge.json")
         file_path_simulation = parameter_file_path("simulation_settings", "p2d.json")

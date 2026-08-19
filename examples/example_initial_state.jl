@@ -13,7 +13,7 @@ rmse(x, y0, y1) = sqrt(trapz(x, (y1 .- y0) .^ 2) / (x[end] - x[1]))
 
 # Setup cell model and parameters
 model = LithiumIonBattery()
-cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
 
 # Step 0: full discharge--charge cycle as reference
 con = Constants()

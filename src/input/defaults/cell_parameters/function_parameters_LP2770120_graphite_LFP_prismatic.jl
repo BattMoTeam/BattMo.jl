@@ -1,3 +1,6 @@
+# Parameters in this file are based on the following references:
+# Xu et al., "A high energy density lithium-ion battery using a LiFePO4 cathode and a graphite anode", Energy 2015, 86, 356-365
+
 using Jutul: get_1d_interpolator
 
 function open_circuit_potential_graphite_Xu_2015(c, T, refT, cmax)

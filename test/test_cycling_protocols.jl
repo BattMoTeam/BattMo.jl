@@ -8,7 +8,7 @@ using Test
         ############################
         # cc_discharge
 
-        cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+        cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
         cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
         model_settings = load_model_settings(; from_default_set = "p2d")
         simulation_settings = load_simulation_settings(; from_default_set = "p2d")
@@ -131,7 +131,7 @@ end
         ############################
         # cc_discharge
 
-        cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+        cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
         cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
         model_settings = load_model_settings(; from_default_set = "p2d")
         simulation_settings = load_simulation_settings(; from_default_set = "p2d")
@@ -163,7 +163,7 @@ end
         @test c_pe[end, 23] ≈ 57329.88050522005 atol = 1.0e-1
 
 
-        cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
+        cell_parameters = load_cell_parameters(; from_default_set = "LP2770120_graphite_LFP_prismatic")
 
 
         sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)

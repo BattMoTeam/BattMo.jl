@@ -42,7 +42,7 @@ end
 
 @testset "Injected Python callable is found in BattMo" begin
     pyimport("sys").path.append(joinpath(dirname(@__FILE__), "data", "python_files"))
-    mod = pyimport("function_parameters_xu_2015")
+    mod = pyimport("function_parameters_LP2770120_graphite_LFP_prismatic")
 
     @eval BattMo electrolyte_conductivity_Xu_2015_py = $(mod.electrolyte_conductivity_Xu_2015_py)
 
@@ -67,7 +67,7 @@ end
         pyimport("sys").path.append(joinpath(dirname(@__FILE__), "data", "python_files"))
 
         # Import module with python input functions
-        mod = pyimport("function_parameters_xu_2015")
+        mod = pyimport("function_parameters_LP2770120_graphite_LFP_prismatic")
 
         electrolyte_conductivity_Xu_2015_py = mod.electrolyte_conductivity_Xu_2015_py
         electrolyte_diffusivity_Xu_2015_py = mod.electrolyte_diffusivity_Xu_2015_py
@@ -75,7 +75,7 @@ end
         @eval BattMo electrolyte_conductivity_Xu_2015_py = $electrolyte_conductivity_Xu_2015_py
         @eval BattMo electrolyte_diffusivity_Xu_2015_py = $electrolyte_diffusivity_Xu_2015_py
 
-        cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
+        cell_parameters = load_cell_parameters(; from_default_set = "LP2770120_graphite_LFP_prismatic")
         cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
         cell_parameters["Electrolyte"]["IonicConductivity"] = Dict("FunctionName" => "electrolyte_conductivity_Xu_2015_py")
