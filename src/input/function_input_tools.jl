@@ -1,5 +1,52 @@
 export setup_function_from_function_name
 
+function setup_function(base_path, parameter_value, component, parameter_name)
+
+    if isa(parameter_value, Real)
+        # This is a constant function, so we return a function that ignores its arguments and returns the constant value
+
+        func = parameter_value
+        func_type = :constant
+
+    elseif isa(parameter_value, String)
+        # This is a string expression, so we parse it and create a RuntimeGeneratedFunction
+        exp = setup_evaluation_expression_from_string(parameter_value, component, parameter_name)
+        func = @RuntimeGeneratedFunction(exp)
+        func_type = :expression
+
+    elseif isa(parameter_value, Dict)
+
+        if haskey(parameter_value, "FunctionName")
+            # This is a function defined by the user, so we check if it has a FunctionName key and set it up accordingly
+            function_name = parameter_value["FunctionName"]
+
+            if haskey(parameter_value, "FilePath")
+                raw_path = parameter_value["FilePath"]
+                function_path = joinpath(base_path, normalize_path(raw_path))
+            else
+                function_path = nothing
+            end
+
+            func = setup_function_from_function_name(function_name; file_path = function_path)
+            func_type = :function
+
+        elseif haskey(parameter_value, "x") && haskey(parameter_value, "y")
+            # This is tabulated data, so we create an interpolating function
+            data_x = parameter_value["x"]
+            data_y = parameter_value["y"]
+
+            func = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
+            func_type = :interpolator
+        else
+            error("Dictionary input for parameter function must have either a 'FunctionName' key or 'x' and 'y' keys for tabulated data.")
+        end
+    else
+        error("Unsupported type for parameter function. Must be either a Real, String, or Dict.")
+    end
+
+    return func, func_type
+
+end
 
 function setup_function_from_function_name(function_name::String; file_path::Union{String, Nothing} = nothing)
     symb = Symbol(function_name)

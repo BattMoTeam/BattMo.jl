@@ -65,7 +65,15 @@ function compute_electrode_coating_mass(params::CellParameters, electrode::Strin
     end
 
     effective_density = params[electrode]["Coating"]["EffectiveDensity"]
-    area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
+
+    if haskey(params["Cell"], "ElectrodeGeometricSurfaceArea")
+        area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
+    elseif haskey(params["Cell"], "ElectrodeLength") && haskey(params["Cell"], "ElectrodeWidth")
+        area = params["Cell"]["ElectrodeLength"] * params["Cell"]["ElectrodeWidth"]
+    else
+        error("Cell parameters must contain either 'ElectrodeGeometricSurfaceArea' or both 'ElectrodeLength' and 'ElectrodeWidth' to compute electrode coating mass.")
+    end
+
     thickness = params[electrode]["Coating"]["Thickness"]
     n_layers, coating_multiplier, extra_ne = _cell_layer_multipliers(params)
     count = electrode == "NegativeElectrode" ? coating_multiplier * (n_layers + (extra_ne ? 1 : 0)) : coating_multiplier * n_layers
