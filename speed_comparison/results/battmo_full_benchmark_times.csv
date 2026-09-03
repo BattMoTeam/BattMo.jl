@@ -1,0 +1,11 @@
+rep,build_solve_time_s,tool,battmo_version
+1,0.2839999198913574,BattMo.jl build+solve (default dt=50s),0.2.9
+2,0.2690000534057617,BattMo.jl build+solve (default dt=50s),0.2.9
+3,0.26399993896484375,BattMo.jl build+solve (default dt=50s),0.2.9
+4,0.6570000648498535,BattMo.jl build+solve (default dt=50s),0.2.9
+5,0.25500011444091797,BattMo.jl build+solve (default dt=50s),0.2.9
+1,0.1640000343322754,BattMo.jl build+solve (adapted dt=100s),0.2.9
+2,0.17400002479553223,BattMo.jl build+solve (adapted dt=100s),0.2.9
+3,0.15400004386901855,BattMo.jl build+solve (adapted dt=100s),0.2.9
+4,0.1529998779296875,BattMo.jl build+solve (adapted dt=100s),0.2.9
+5,0.16300010681152344,BattMo.jl build+solve (adapted dt=100s),0.2.9
