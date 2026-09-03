@@ -69,27 +69,29 @@ Being able to do fully 3D simulations can be very valuable for cell design as it
 ![P4D cylindrical cell simulation results showing the electrolyte concentration in the 3D geometry at the end of discharge. \label{fig:cylindrical}](./assets/elyte_conc.png "P4D results")
 
 
-Computational efficiency is also a valuable part of the, especially when simulation long term behaviour. When implenting BattMo in Julia, a big focus was put on achieving very low simulation times. Following show a comparison of results for a standard P2D lithium ion simulation between similar softwares and their simulation run times. To get the true run time durations from the Julia packages, the second simulation is measured after pre-compilation has been done.
+Computational efficiency is a key consideration, particularly when simulating long-term battery behavior. During the implementation of BattMo in Julia, substantial emphasis was placed on minimizing computational overhead and achieving fast simulation times. As a result, a simple P2D constant-current discharge simulation could be executed in approximately 0.5 seconds, compared to several seconds for the corresponding implementation in MATLAB.
 
 # Software design
 
-The following principles have been kept in mind while designing the software: user-friendliness, data interoperability, using standards within the battery field, and performance. 
+The design of the software was guided by four overarching principles: usability, interoperability, compliance with battery-domain standards, and computational efficiency. These principles informed the development of the software architecture, data structures, and user interface, ensuring a framework that is both accessible to users and suitable for high-performance battery modeling applications.
 
-The architecture is designed to enhance the user experience and provide a gentler learning curve by organizing core workflows and input parameters into well-defined steps and categories. By making simulation and solver settings optional, users can initially focus on creating the virtual representation of the cell and defining cycling protocols. Later, they can adjust the settings to personalize configurations as they become more familliar with the software. Furthermore, effort has been put into making all the input parameters and output quantities consistent in how they are provided, adjusted, and retrieved to make the overall workflow less confusing. 
+The software architecture is designed to improve usability and reduce the learning curve by organizing core workflows and input parameters into clearly defined steps and categories. By making simulation and solver settings optional, users can initially focus on constructing the virtual cell representation and defining cycling protocols, while more advanced configuration options can be introduced progressively as familiarity with the software increases. In addition, considerable effort has been devoted to ensuring consistency in the specification, modification, and retrieval of input parameters and output quantities, thereby simplifying the overall workflow.
 
-For interoperability, all input parameters to a BattMo.jl model can be provided formated into a json file. This makes the input format language independent. Furthermore, in order to adhere to standardized terminology, all input and output parameters, and units are specified according to the EMMO and BattINFO ontology definitions. the tool includes a function to print information on each input or output quantity and programatic object and provides with this its ontology name and iri to the ontology documentation.
+The same design philosophy has been applied to the user-facing programming interface. The software objects are structured to interact in a logical and intuitive manner. For example, a simulation object depends on a model object that defines the underlying mathematical framework and associated assumptions. Similarly, a calibration object is built upon a simulation object, which provides the complete simulation setup required as the basis for parameter estimation. Both simulation and calibration objects can be executed through a common solve function, which dispatches to the appropriate method depending on the object type supplied. This approach results in a coherent and consistent user API, improving both usability and extensibility.
+
+To facilitate interoperability, all input parameters for a BattMo.jl model can be provided through JSON-formatted files, making the input specification independent of the programming language used. Furthermore, to ensure compliance with standardized terminology and data structures, all model inputs, outputs, and associated units are defined according to the EMMO and BattINFO ontologies. The framework also provides functionality for inspecting input parameters, output quantities, and programmatic objects. For each entity, the corresponding ontology term and its Internationalized Resource Identifier (IRI) are available, allowing users to directly access the relevant ontology documentation. This ontology-driven approach promotes consistency, transparency, and interoperability across different modeling tools and workflows.
 
 The development has BattMo.jl has focused on performance. 
 
 
 
 # Research impact statement
-
+BattMo.jl has already impacted the battery research field in several ways: the graphical user interface build upon BattMo.jl has been used in lectures to show students the behaviour of a battery cell in an intuative way, developers of BattMo.jl have recieved positive feedback during multiple workshop sessions that have been organized to give people an introduction to BattMo.jl and how to incorporate it in their daily battery research, and BattMo has seen an increase in followers on LinkedIn. The toolbox BattMo has been used in several publications, BattMo specifically, has been used for hybrid optimization and neural network approaches. The BattMo team is working towards building a larger community.
 
 # AI usage disclosure
 AI was used during development of the BattMo.jl code. AI has not been used during the development of the core PXD model within BattMo.jl, but it has been used for the generation of some of the functionalities and features on top of the core model, like for example some of the quick plotting functionalities and additional geometry meshes. It has been used during the generation of a few parts of the documentation, testing scripts, and github workflows. Furthermore, has AI sporadically been used for debugging purposes.
 
-Within this paper, AI was only used to check spelling.
+Within this paper, AI was only used to check spelling and improve sentences.
 
 All code that was generated or modified by AI has been validated and tested by the authors. AI generated and modified text has been proofread by the authors.
 
