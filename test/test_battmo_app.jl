@@ -31,7 +31,13 @@ function runP2DBatt(json_file)
     # states, reports = simulate(state0, simulator, timesteps; forces = forces, config = cfg)
 
     model_setup = LithiumIonBattery(; model_settings)
-    sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
+    sim = Simulation(
+        model_setup,
+        cell_parameters,
+        cycling_protocol;
+        simulation_settings,
+        time_steps = [1.0],
+    )
     output = solve(sim; accept_invalid = true)
 
     states = output.jutul_output.states

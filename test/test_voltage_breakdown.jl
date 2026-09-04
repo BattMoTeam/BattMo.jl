@@ -9,7 +9,7 @@ using Test
         cycling_protocol["DRate"] = 0.2
 
         simulation_settings = load_simulation_settings(; from_default_set = "p2d")
-        simulation_settings["TimeStepDuration"] = 300
+        simulation_settings["TimeStepDuration"] = 1000
 
         model_setup = LithiumIonBattery()
         sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)

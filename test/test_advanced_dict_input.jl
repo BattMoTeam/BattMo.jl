@@ -15,6 +15,7 @@ names = [
             @test begin
                 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
                 inputparams = load_advanced_dict_input(fn)
+                inputparams["TimeStepping"]["timeStepDuration"] = 1.0
 
                 output = run_simulation(inputparams; accept_invalid = true, error_on_incomplete = true)
                 true
@@ -59,7 +60,13 @@ geometries = [
                 solver_settings["NonLinearSolver"]["ErrorOnIncomplete"] = true
 
                 model_setup = LithiumIonBattery(; model_settings)
-                sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
+                sim = Simulation(
+                    model_setup,
+                    cell_parameters,
+                    cycling_protocol;
+                    simulation_settings,
+                    time_steps = [1.0],
+                )
                 output = solve(
                     sim;
                     accept_invalid = true,

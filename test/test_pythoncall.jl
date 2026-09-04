@@ -82,7 +82,7 @@ end
         cell_parameters["Electrolyte"]["DiffusionCoefficient"] = Dict("FunctionName" => "electrolyte_diffusivity_Xu_2015_py")
 
         model_setup = LithiumIonBattery()
-        sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+        sim = Simulation(model_setup, cell_parameters, cycling_protocol; time_steps = [1.0])
         output = solve(sim)
         true
 
