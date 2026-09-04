@@ -1,15 +1,14 @@
 ##################################################################################
 # An example of a user defined current function using WLTP data from
 
-using CSV
-using DataFrames
-using Jutul
+using DelimitedFiles: readdlm
+using Jutul: get_1d_interpolator
 
 path = joinpath(@__DIR__, "../example_data/wltp.csv")
-df = CSV.read(path, DataFrame)
+data, _ = readdlm(path, ',', Float64; header = true)
 
-t = df[:, 1]
-P = df[:, 2]
+t = data[:, 1]
+P = data[:, 2]
 
 power_func = get_1d_interpolator(t, P, cap_endpoints = false)
 

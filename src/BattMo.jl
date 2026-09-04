@@ -13,8 +13,7 @@ using RuntimeGeneratedFunctions                   # Code generation
 using JSON: JSON                                  # JSON parsing
 using MAT: matread
 using Markdown: parse
-using CSV                                   # CSV reading & writing
-using DataFrames
+using DelimitedFiles: readdlm
 
 # Internally exported JSONSchema functions and types
 using JSONSchema: Schema, SingleIssue
