@@ -30,7 +30,7 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - uses: julia-actions/cache@v1
+      - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
 
       - name: Run tests
@@ -47,7 +47,7 @@ jobs:
         with:
           version: "1"
           arch: x64
-      - uses: julia-actions/cache@v1
+      - uses: julia-actions/cache@v3
 
       - name: Run tests with coverage
         run: julia --project=. -e 'using Pkg; Pkg.test("BattMo"; coverage=true)'
@@ -88,7 +88,7 @@ jobs:
         with:
           version: "1"
       - name: Julia cache
-        uses: julia-actions/cache@v1
+        uses: julia-actions/cache@v3
       - name: BuildPkg
         uses: julia-actions/julia-buildpkg@v1
       - name: Deploy docs
