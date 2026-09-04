@@ -10,7 +10,7 @@ using Test
 
         # We instantiate a Lithium-ion battery model with default model settings
         model_setup = LithiumIonBattery(; model_settings)
-        file_path_cell = parameter_file_path("cell_parameters", "chen_2020.json")
+        file_path_cell = parameter_file_path("cell_parameters", "LG_INR_21700_M50.json")
         file_path_cycling = parameter_file_path("cycling_protocols", "cc_discharge.json")
         file_path_model = parameter_file_path("model_settings", "p2d.json")
         file_path_simulation = parameter_file_path("simulation_settings", "p2d.json")
@@ -21,7 +21,7 @@ using Test
         cyling_settings = load_cycling_protocol(; from_file_path = file_path_cycling)
 
         model_settings = load_model_settings(; from_default_set = "p2d")
-        cell_parameter_set = load_cell_parameters(; from_default_set = "chen_2020")
+        cell_parameter_set = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
         simulation_settings = load_simulation_settings(; from_default_set = "p2d")
         cyling_settings = load_cycling_protocol(; from_default_set = "cccv")
 
@@ -41,8 +41,8 @@ end
 @testset "paths" begin
     @test isa(parameter_file_path(), String)
     @test isdir(parameter_file_path())
-    @test isfile(parameter_file_path("cell_parameters", "chen_2020"))
-    @test parameter_file_path("cell_parameters", "chen_2020") |> splitext |> last == ".json"
+    @test isfile(parameter_file_path("cell_parameters", "LG_INR_21700_M50"))
+    @test parameter_file_path("cell_parameters", "LG_INR_21700_M50") |> splitext |> last == ".json"
     @test_throws "File not found at" parameter_file_path("cell_parameters", "BadName")
     @test isa(parameter_file_path("cell_parameters", "BadName", check = false), String)
 end

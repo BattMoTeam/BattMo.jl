@@ -3,7 +3,7 @@
 using BattMo, GLMakie
 
 # We use the setup provided in the [p2d_40.json](https://github.com/BattMoTeam/BattMo.jl/blob/main/test/data/jsonfiles/p2d_40.json#L152) file. In particular, see the data under the `Control` key.
-file_path_cell = parameter_file_path("cell_parameters", "chen_2020.json")
+file_path_cell = parameter_file_path("cell_parameters", "LG_INR_21700_M50.json")
 file_path_cycling = parameter_file_path("cycling_protocols", "cccv.json")
 
 

@@ -1,4 +1,3 @@
-using BattMo
 using Test
 
 @testset "current function" begin
@@ -6,7 +5,7 @@ using Test
     @test begin
         include("../examples/example_functions/current_function.jl")
         model_setup = LithiumIonBattery()
-        cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+        cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
         simulation_settings = load_simulation_settings(; from_default_set = "p2d")
         simulation_settings["TimeStepDuration"] = 1
 
@@ -28,9 +27,9 @@ end
 @testset "cell functions" begin
 
     @test begin
-        include("./data/julia_files/function_parameters_Xu2015.jl")
+        include("./data/julia_files/function_parameters_LP2770120_graphite_LFP_prismatic.jl")
         model_setup = LithiumIonBattery()
-        cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
+        cell_parameters = load_cell_parameters(; from_default_set = "LP2770120_graphite_LFP_prismatic")
 
         cell_parameters["NegativeElectrode"]["ActiveMaterial"]["OpenCircuitPotential"]["FunctionName"] = "open_circuit_potential_graphite_Xu_2015_test"
         cell_parameters["PositiveElectrode"]["ActiveMaterial"]["OpenCircuitPotential"]["FunctionName"] = "open_circuit_potential_lfp_Xu_2015_test"
@@ -47,9 +46,9 @@ end
         model_settings = load_model_settings(; from_default_set = "p2d")
         model_settings["ButlerVolmer"] = "Chayambuka"
         model_setup = SodiumIonBattery(; model_settings)
-        cell_parameters = load_cell_parameters(; from_default_set = "chayambuka_2022")
+        cell_parameters = load_cell_parameters(; from_default_set = "HC_NVPF_electrodes")
 
-        file_path = "../../../../test/data/julia_files/function_parameters_chayambuka_2022.jl"
+        file_path = "../../../../test/data/julia_files/function_parameters_HC_NVPF_electrodes.jl"
         cell_parameters["NegativeElectrode"]["ActiveMaterial"]["DiffusionCoefficient"]["FunctionName"] = "calc_ne_D_test"
         cell_parameters["NegativeElectrode"]["ActiveMaterial"]["DiffusionCoefficient"]["FilePath"] = file_path
         cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"]["FunctionName"] = "calc_ne_k_test"
@@ -76,7 +75,7 @@ end
     @test begin
 
         model_setup = LithiumIonBattery()
-        cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+        cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
 
         cell_parameters["NegativeElectrode"]["ActiveMaterial"]["OpenCircuitPotential"] = "1.9793 * exp(-39.3631*(c/cmax)) + 0.2482 - 0.0909 * tanh(29.8538*((c/cmax) - 0.1234)) - 0.04478 * tanh(14.9159*((c/cmax) - 0.2769)) - 0.0205 * tanh(30.4444*((c/cmax) - 0.6103))"
         cell_parameters["PositiveElectrode"]["ActiveMaterial"]["OpenCircuitPotential"] = "-0.8090 * (c/cmax) + 4.4875 - 0.0428 * tanh(18.5138*((c/cmax) - 0.5542)) - 17.7326 * tanh(15.7890*((c/cmax) - 0.3117)) + 17.5842 * tanh(15.9308*((c/cmax) - 0.3120))"

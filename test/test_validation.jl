@@ -2,7 +2,7 @@ using BattMo
 using Test
 
 @testset "simulation validation flags and accept_invalid" begin
-    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
     cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
     simulation_settings = load_simulation_settings(; from_default_set = "p2d")
 
@@ -18,7 +18,7 @@ using Test
 
         validate = true
 
-        invalid_cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+        invalid_cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
         invalid_cell_parameters["Cell"]["ElectrodeGeometricSurfaceArea"] = area
 
         sim = Simulation(
@@ -46,7 +46,7 @@ using Test
 
         validate = true
 
-        valid_cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+        valid_cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
 
         sim = Simulation(
             LithiumIonBattery(validate = validate),
@@ -69,7 +69,7 @@ using Test
 
         validate = false
 
-        cell_parameters_no_validation = load_cell_parameters(; from_default_set = "chen_2020")
+        cell_parameters_no_validation = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
         cell_parameters_no_validation["Cell"]["ElectrodeGeometricSurfaceArea"] = area
 
         sim_no_validation = Simulation(

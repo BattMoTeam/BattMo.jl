@@ -1,8 +1,8 @@
 {
     "Metadata": {
-        "Title": "Chen2020",
+        "Title": "LG INR 21700 M50 Silicon/Graphite NMC811 Cylindrical Cell Parameters",
         "Source": "https://doi.org/10.1149/1945-7111/ab9050",
-        "Description": "Parameter set of a cylindrical 21700 commercial cell (LGM50), for an electrochemical pseudo-two-dimensional (P2D) model, after calibration. SEI parameters are from Bolay2022: https://doi.org/10.1016/j.powera.2022.100083 .",
+        "Description": "Parameter set of a cylindrical 21700 commercial cell (LGM50), for an electrochemical pseudo-two-dimensional (P2D) model, after calibration. Parameters taken from Chen et al. SEI parameters are from Bolay2022: https://doi.org/10.1016/j.powera.2022.100083 .",
         "Models": {
             "ModelFramework": "P2D",
             "TransportInSolid": "FullDiffusion",

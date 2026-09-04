@@ -1,6 +1,6 @@
 {
     "Metadata": {
-        "Title": "chayambuka_2022",
+        "Title": "HC-NVPF Sodium-ion cell parameters",
         "Source": [
             "https://doi.org/10.1016/j.electacta.2021.139726",
             "https://doi.org/10.1016/j.electacta.2021.139764"
@@ -33,7 +33,7 @@
             "ElectronicConductivity": 256,
             "DiffusionCoefficient": {
                 "FunctionName": "calc_ne_D",
-                "FilePath": "function_parameters_chayambuka_2022.jl"
+                "FilePath": "function_parameters_HC_NVPF_electrodes.jl"
             },
             "ParticleRadius": 3.48e-6,
             "MaximumConcentration": 14540,
@@ -41,12 +41,12 @@
             "StoichiometricCoefficientAtSOC100": 1.0,
             "OpenCircuitPotential": {
                 "FunctionName": "calc_ne_ocp",
-                "FilePath": "function_parameters_chayambuka_2022.jl"
+                "FilePath": "function_parameters_HC_NVPF_electrodes.jl"
             },
             "NumberOfElectronsTransfered": 1,
             "ReactionRateConstant": {
                 "FunctionName": "calc_ne_k",
-                "FilePath": "function_parameters_chayambuka_2022.jl"
+                "FilePath": "function_parameters_HC_NVPF_electrodes.jl"
             },
             "ChargeTransferCoefficient": 0.5
         },
@@ -78,7 +78,7 @@
             "ElectronicConductivity": 50,
             "DiffusionCoefficient": {
                 "FunctionName": "calc_pe_D",
-                "FilePath": "function_parameters_chayambuka_2022.jl"
+                "FilePath": "function_parameters_HC_NVPF_electrodes.jl"
             },
             "ParticleRadius": 0.59e-6,
             "MaximumConcentration": 15320,
@@ -86,12 +86,12 @@
             "StoichiometricCoefficientAtSOC100": 0.25,
             "OpenCircuitPotential": {
                 "FunctionName": "calc_pe_ocp",
-                "FilePath": "function_parameters_chayambuka_2022.jl"
+                "FilePath": "function_parameters_HC_NVPF_electrodes.jl"
             },
             "NumberOfElectronsTransfered": 1,
             "ReactionRateConstant": {
                 "FunctionName": "calc_pe_k",
-                "FilePath": "function_parameters_chayambuka_2022.jl"
+                "FilePath": "function_parameters_HC_NVPF_electrodes.jl"
             },
             "ChargeTransferCoefficient": 0.5
         },

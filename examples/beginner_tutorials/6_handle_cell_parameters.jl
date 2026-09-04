@@ -9,7 +9,7 @@
 
 using BattMo
 
-cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
 cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 nothing # hide
 
@@ -82,7 +82,7 @@ fig
 
 # Let’s reload the original parameters and simulate again to compare:
 
-cell_parameters_2 = load_cell_parameters(; from_default_set = "chen_2020")
+cell_parameters_2 = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
 sim2 = Simulation(model, cell_parameters_2, cycling_protocol);
 output2 = solve(sim2)
 nothing # hide

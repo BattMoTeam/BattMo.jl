@@ -47,7 +47,7 @@ end
 
 function save_p4d_pouch_geometry()
     println("Generating geometry_p4d_pouch.png")
-    cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
+    cell_parameters = load_cell_parameters(; from_default_set = "LP2770120_graphite_LFP_prismatic")
     cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
     model_settings = load_model_settings(; from_default_set = "p4d_pouch")
     simulation_settings = load_simulation_settings(; from_default_set = "p4d_pouch")
@@ -103,7 +103,7 @@ end
 
 function save_p4d_cylindrical_geometry()
     println("Generating geometry_p4d_cylindrical.png")
-    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
     cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
     model_settings = load_model_settings(; from_default_set = "p4d_cylindrical")
     simulation_settings = load_simulation_settings(; from_default_set = "p4d_cylindrical")

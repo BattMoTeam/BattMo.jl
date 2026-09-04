@@ -12,7 +12,7 @@ df_2 = CSV.read(string(data_path, "Xu_2015_voltageCurve_2C.csv"), DataFrame)
 
 dfs = [df_05, df_1, df_2]
 
-cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
+cell_parameters = load_cell_parameters(; from_default_set = "LP2770120_graphite_LFP_prismatic")
 cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 model_setup = LithiumIonBattery()

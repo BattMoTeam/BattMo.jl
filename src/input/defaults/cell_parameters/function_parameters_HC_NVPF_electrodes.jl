@@ -1,3 +1,7 @@
+# Parameters in this file are based on the following references:
+# Chayambuka et al., "A high energy density sodium-ion battery using a hierarchical hard carbon anode and a Na3V2(PO4)2F3 cathode", Journal of Power Sources 2022, 512, 229987
+
+
 using CSV, DataFrames, Jutul
 
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))

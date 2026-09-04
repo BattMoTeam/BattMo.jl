@@ -7,7 +7,7 @@ using Test
 
     @test begin
 
-        file_path_cell = parameter_file_path("cell_parameters", "xu_2015.json")
+        file_path_cell = parameter_file_path("cell_parameters", "LP2770120_graphite_LFP_prismatic.json")
         file_path_model = parameter_file_path("model_settings", "p4d_pouch.json")
         file_path_cycling = parameter_file_path("cycling_protocols", "cc_discharge.json")
         file_path_simulation = parameter_file_path("simulation_settings", "p4d_pouch.json")

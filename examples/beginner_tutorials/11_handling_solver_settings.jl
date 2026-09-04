@@ -24,7 +24,7 @@ nothing # hide
 
 # Lets setup a simple simulation to demonstrate the solver settings.
 
-cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
 cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 model = LithiumIonBattery()

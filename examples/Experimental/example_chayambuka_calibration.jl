@@ -6,7 +6,7 @@ using GLMakie, StatsBase, Loess
 
 
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
-include(joinpath(battmo_base, "src/input/defaults/cell_parameters/function_parameters_chayambuka_2022.jl"))
+include(joinpath(battmo_base, "src/input/defaults/cell_parameters/function_parameters_HC_NVPF_electrodes.jl"))
 
 ######### Load Experimental Data #########
 
@@ -44,7 +44,7 @@ df_14 = smooth_df(df_14)
 
 ######### Load Simulation Data #########
 
-cell_parameters = load_cell_parameters(; from_default_set = "chayambuka_2022")
+cell_parameters = load_cell_parameters(; from_default_set = "HC_NVPF_electrodes")
 cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 model_settings = load_model_settings(; from_default_set = "p2d")
 simulation_settings = load_simulation_settings(; from_default_set = "p2d")

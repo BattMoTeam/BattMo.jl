@@ -6,7 +6,7 @@ using Test
 
     @test begin
 
-        file_path_cell = parameter_file_path("cell_parameters", "chen_2020.json")
+        file_path_cell = parameter_file_path("cell_parameters", "LG_INR_21700_M50.json")
         file_path_model = parameter_file_path("model_settings", "p2d.json")
         file_path_cycling = parameter_file_path("cycling_protocols", "cccv.json")
         file_path_simulation = parameter_file_path("simulation_settings", "p2d.json")

@@ -45,7 +45,7 @@ model = LithiumIonBattery(; model_settings);
 
 # We get a warning that a validation issue has been encountered. For now we ignore it:
 
-cell_parameters_sei = load_cell_parameters(; from_default_set = "chen_2020")
+cell_parameters_sei = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
 cccv_protocol = load_cycling_protocol(; from_default_set = "cccv")
 
 try  # hide

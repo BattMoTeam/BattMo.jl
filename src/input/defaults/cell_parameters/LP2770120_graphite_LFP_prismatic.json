@@ -1,8 +1,8 @@
 {
     "Metadata": {
-        "Title": "Xu2015",
+        "Title": "LP2770120 LiFePO4/graphite cell parameters",
         "Source": "https://doi.org/10.1016/j.energy.2014.11.073",
-        "Description": "Parameter set of a commercial Type LP2770120 prismatic LiFePO4/graphite cell, for an electrochemical pseudo-two-dimensional (P2D) model.",
+        "Description": "Parameter set of a commercial Type LP2770120 prismatic LiFePO4/graphite cell, for an electrochemical pseudo-two-dimensional (P2D) model. Parameters taken from Xu et al. 2015.",
         "Models": {
             "ModelFramework": [
                 "P2D",
@@ -55,7 +55,7 @@
             "ActivationEnergyOfDiffusion": 20000,
             "OpenCircuitPotential": {
                 "FunctionName": "open_circuit_potential_lfp_Xu_2015",
-                "FilePath": "function_parameters_Xu2015.jl"
+                "FilePath": "function_parameters_LP2770120_graphite_LFP_prismatic.jl"
             },
             "EntropyChange": {
                 "x": [
@@ -180,7 +180,7 @@
             "ActivationEnergyOfDiffusion": 4000,
             "OpenCircuitPotential": {
                 "FunctionName": "open_circuit_potential_graphite_Xu_2015",
-                "FilePath": "function_parameters_Xu2015.jl"
+                "FilePath": "function_parameters_LP2770120_graphite_LFP_prismatic.jl"
             },
             "EntropyChange": {
                 "x": [

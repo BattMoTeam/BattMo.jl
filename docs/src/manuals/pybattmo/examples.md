@@ -14,7 +14,7 @@ import pandas as pd
 import numpy as np
 
 # Load parameter sets
-cell_parameters = load_cell_parameters(from_default_set="chen_2020")
+cell_parameters = load_cell_parameters(from_default_set="LG_INR_21700_M50")
 cycling_protocol = load_cycling_protocol(from_default_set="cc_discharge")
 
 # Have a quick look into what kind of cell we're dealing with
@@ -40,7 +40,7 @@ fig.show()
 from battmo import *
 
 # Load parameter sets and settings
-cell_parameters = load_cell_parameters(from_default_set="chen_2020")
+cell_parameters = load_cell_parameters(from_default_set="LG_INR_21700_M50")
 cycling_protocol = load_cycling_protocol(from_default_set="cc_discharge")
 model_settings = load_model_settings(from_default_set="p4d_cylindrical")
 simulation_settings = load_simulation_settings(from_default_set="p4d_cylindrical")
@@ -80,7 +80,7 @@ exdata = os.path.join(battmo_base, "examples", "example_data")
 df_05 = pd.read_csv(os.path.join(exdata, "Xu_2015_voltageCurve_05C.csv"), names=["Time", "Voltage"])
 
 # ## Load cell parameters and cycling protocol
-cell_parameters = load_cell_parameters(from_default_set="xu_2015")
+cell_parameters = load_cell_parameters(from_default_set="LP2770120_graphite_LFP_prismatic")
 cycling_protocol = load_cycling_protocol(from_default_set="cc_discharge")
 
 cycling_protocol["LowerVoltageLimit"] = 2.25
@@ -177,7 +177,7 @@ fig.show()
 ```python
 from battmo import *
 
-simulation_input = load_full_simulation_input(from_default_set="chen_2020")
+simulation_input = load_full_simulation_input(from_default_set="LG_INR_21700_M50")
 
 output = run_simulation(simulation_input)
 

@@ -10,7 +10,7 @@ using BattMo, GLMakie, Printf
 
 # Load cell and model setup
 
-cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
 cc_discharge_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
 # Load default model

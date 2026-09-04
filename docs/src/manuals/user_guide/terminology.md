@@ -27,7 +27,7 @@ These parameters characterize the intrinsic properties of a battery cell, such a
       "SurfaceCoefficientOfHeatTransfer": 1000
     }}}
 ```
-All parameter values should be given in **SI units**. An examples of a cell parameter set can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/6b3316286e4345f0468d465296c49d68292eb1f7/src/input/defaults/cell_parameters/chen_2020.json).
+All parameter values should be given in **SI units**. An examples of a cell parameter set can be found [here](https://github.com/BattMoTeam/BattMo.jl/blob/6b3316286e4345f0468d465296c49d68292eb1f7/src/input/defaults/cell_parameters/LG_INR_21700_M50.json).
 
 ### Cycling Parameters
 These parameters define the operational conditions of the battery during a simulation, such as:

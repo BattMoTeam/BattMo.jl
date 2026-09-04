@@ -28,7 +28,7 @@ using Statistics
 ### Load model with Arrhenius temperature dependence
 
 ````@example arrhenius
-cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+cell_parameters = load_cell_parameters(; from_default_set = "LG_INR_21700_M50")
 cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 model_settings = load_model_settings(; from_default_set = "p2d")
 
