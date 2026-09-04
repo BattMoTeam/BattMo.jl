@@ -33,6 +33,22 @@ jobs:
       - uses: julia-actions/cache@v1
       - uses: julia-actions/julia-buildpkg@v1
 
+      - name: Run tests
+        run: julia --project=. -e 'using Pkg; Pkg.test("BattMo")'
+
+  coverage:
+    name: Coverage
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: "1"
+          arch: x64
+      - uses: julia-actions/cache@v1
+
       - name: Run tests with coverage
         run: julia --project=. -e 'using Pkg; Pkg.test("BattMo"; coverage=true)'
 
