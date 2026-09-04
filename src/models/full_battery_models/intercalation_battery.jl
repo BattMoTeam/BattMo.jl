@@ -207,6 +207,14 @@ function setup_submodels(model::IntercalationBattery, input, grids, couplings; g
 
 end
 
+function get_sequence_rate_capacity(cycling_protocol, default_capacity, con)
+    if haskey(cycling_protocol, "RateCapacity")
+        return cycling_protocol["RateCapacity"] * con.hour
+    else
+        return default_capacity
+    end
+end
+
 function setup_control_model(input, model_neam, model_peam; T = Float64)
 
     cycling_protocol = input.cycling_protocol
@@ -281,6 +289,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
 
     elseif protocol == "Sequence"
 
+        cap = get_sequence_rate_capacity(cycling_protocol, cap, con)
         steps = AbstractSequenceStep[]
         ImaxDischarge = zero(cap / con.hour)
         ImaxCharge = zero(cap / con.hour)
@@ -928,8 +937,8 @@ function set_parameters(
 
     elseif protocol == "Sequence"
 
-        cap = computeCellCapacity(multimodel)
         con = Constants()
+        cap = get_sequence_rate_capacity(cycling_protocol, computeCellCapacity(multimodel), con)
 
         ImaxDischarge = 0.0
         ImaxCharge = 0.0

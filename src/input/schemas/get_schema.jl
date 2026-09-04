@@ -468,6 +468,7 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
             "TotalNumberOfCycles" => create_property(parameter_meta, "TotalNumberOfCycles"),
             "CRate" => create_property(parameter_meta, "CRate"),
             "DRate" => create_property(parameter_meta, "DRate"),
+            "RateCapacity" => create_property(parameter_meta, "RateCapacity"),
             "LowerVoltageLimit" => create_property(parameter_meta, "LowerVoltageLimit"),
             "UpperVoltageLimit" => create_property(parameter_meta, "UpperVoltageLimit"),
             "InitialControl" => create_property(parameter_meta, "InitialControl"),

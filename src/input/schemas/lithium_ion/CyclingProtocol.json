@@ -77,6 +77,17 @@
             "unit_name": "emmo:UnitOne",
             "unit_iri": "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978"
         },
+        "RateCapacity": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 100.0,
+            "description": "Capacity used to convert C-rates to currents in a Sequence protocol. If omitted, the model-computed cell capacity is used.",
+            "context_type": "NominalCapacity",
+            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_8abde9d0_84f6_4b4f_a87e_86028a397100",
+            "unit": "Ah",
+            "unit_name": "emmo:AmpereHour",
+            "unit_iri": "https://w3id.org/emmo#AmpereHour"
+        },
         "LowerVoltageLimit": {
             "type": "number",
             "minimum": 0.0,

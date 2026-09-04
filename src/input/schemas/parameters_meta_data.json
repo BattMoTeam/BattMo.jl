@@ -388,6 +388,18 @@
       "unit_iri": "https://w3id.org/emmo#AmpereHour",
       "is_shown_to_user": false
     },
+    "RateCapacity": {
+      "type": "number",
+      "minimum": 0.01,
+      "maximum": 100.0,
+      "description": "Capacity used to convert C-rates to currents in a Sequence protocol. If omitted, the model-computed cell capacity is used.",
+      "context_type": "NominalCapacity",
+      "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_8abde9d0_84f6_4b4f_a87e_86028a397100",
+      "unit": "Ah",
+      "unit_name": "emmo:AmpereHour",
+      "unit_iri": "https://w3id.org/emmo#AmpereHour",
+      "is_shown_to_user": false
+    },
     "DeviceSurfaceArea": {
       "type": "number",
       "minimum": 0.0001,

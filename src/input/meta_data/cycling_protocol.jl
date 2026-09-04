@@ -122,6 +122,17 @@ function get_cycling_protocol_meta_data()
             "unit_name" => "emmo:UnitOne",
             "unit_iri" => "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978",
         ),
+        "RateCapacity" => Dict(
+            "context_type" => "NominalCapacity",
+            "context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_8abde9d0_84f6_4b4f_a87e_86028a397100",
+            "max_value" => 100.0,
+            "min_value" => 0.01,
+            "description" => "Capacity used to convert C-rates to currents in a Sequence protocol. If omitted, the model-computed cell capacity is used.",
+            "type" => Real,
+            "unit" => "Ah",
+            "unit_name" => "emmo:AmpereHour",
+            "unit_iri" => "https://w3id.org/emmo#AmpereHour",
+        ),
         "LowerVoltageLimit" => Dict(
             "context_type" => "LowerVoltageLimit",
             "context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_534dd59c_904c_45d9_8550_ae9d2eb6bbc9",
