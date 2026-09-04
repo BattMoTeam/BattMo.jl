@@ -434,6 +434,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
     am_params[:effective_density] = eff_dens
 
     am_params[:n_charge_carriers] = inputparams_active_material["NumberOfElectronsTransfered"]
+    am_params[:charge_transfer_coefficient] = inputparams_active_material["ChargeTransferCoefficient"]
     am_params[:maximum_concentration] = inputparams_active_material["MaximumConcentration"]
     am_params[:volumetric_surface_area] = inputparams_active_material["VolumetricSurfaceArea"]
     am_params[:theta0] = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
