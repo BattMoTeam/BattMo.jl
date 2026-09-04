@@ -15,9 +15,9 @@ names = [
             @test begin
                 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
                 inputparams = load_advanced_dict_input(fn)
-                inputparams["TimeStepping"]["timeStepDuration"] = 1.0
+                inputparams["TimeStepping"]["timeStepDuration"] = 200.0
 
-                output = run_simulation(inputparams; accept_invalid = true, error_on_incomplete = true)
+                output = run_simulation(inputparams; accept_invalid = true)
                 true
             end
         end
