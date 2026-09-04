@@ -496,7 +496,7 @@ function BattMo.plot_output_impl(
 end
 
 
-function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = true)
+function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = true, titlestr = "")
 
     time_series = output.time_series
     t = time_series["Time"] / si_unit("hour")
@@ -507,7 +507,10 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
         fig = Figure(size = (1200, 1000))
         grid = fig[1, 1] = GridLayout()
 
-        Label(grid[0, 1:3], "Simple Dashboard", fontsize = 24, halign = :center)
+        if isempty(titlestr)
+            titlestr = "Simple Dashboard"
+        end
+        Label(grid[0, 1:3], titlestr, fontsize = 24, halign = :center)
 
         ax_current = Axis(grid[1, 1:3], title = "Current  /  A")
         ax_current.xlabel = "Time  /  h"
@@ -540,7 +543,10 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
         fig = Figure(size = (1200, 1000))
         grid = fig[1, 1] = GridLayout()
 
-        Label(grid[0, 1:3], "Line Dashboard", fontsize = 24, halign = :center)
+        if isempty(titlestr)
+            titlestr = "Line Dashboard"
+        end
+        Label(grid[0, 1:3], titlestr, fontsize = 24, halign = :center)
 
         ax_current = Axis(grid[1, 1:3], title = "Current  /  A")
         ax_current.xlabel = "Time  /  h"
@@ -608,7 +614,10 @@ function BattMo.plot_dashboard_impl(output; plot_type = "simple", new_window = t
         fig = Figure(size = (1200, 1000))
         grid = fig[1, 1] = GridLayout()
 
-        Label(grid[0, 1:3], "Contour Dashboard", fontsize = 24, halign = :center)
+        if isempty(titlestr)
+            titlestr = "Contour Dashboard"
+        end
+        Label(grid[0, 1:3], titlestr, fontsize = 24, halign = :center)
 
         ax_current = Axis(grid[1, 1:3], title = "Current  /  A")
         ax_current.xlabel = "Time  /  h"
