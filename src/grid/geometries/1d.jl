@@ -77,7 +77,7 @@ function one_dimensional_grid(model, input)
     ns = vals["N"]
     xs = vals["thickness"]
 
-    L = inverse_rle(xs ./ ns, ns)
+    L = _expand_run_lengths(xs ./ ns, ns)
 
     mesh = CartesianMesh((sum(ns), 1, 1), (L, faceArea, 1.0))
 

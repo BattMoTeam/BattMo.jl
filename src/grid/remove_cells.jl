@@ -57,7 +57,7 @@ function remove_cells(G_raw::AbstractDict, cells)
         numFaces = diff(G["cells"]["facePos"], dims = 1)
     end
 
-    RLdecode = inverse_rle(ind, numFaces[:])
+    RLdecode = _expand_run_lengths(ind, numFaces[:])
     RemoveIndices = 0 .== RLdecode
     G["cells"]["faces"] = G["cells"]["faces"][RemoveIndices, :]
 
@@ -85,7 +85,7 @@ function remove_cells(G_raw::AbstractDict, cells)
             numNodes = diff(G["faces"]["nodePos"], dims = 1)
         end
 
-        RLdecode = inverse_rle(ind, numNodes[:])
+        RLdecode = _expand_run_lengths(ind, numNodes[:])
         RemoveIndices = 0 .== RLdecode
         G["faces"]["nodes"] = G["faces"]["nodes"][RemoveIndices, :]
     end
