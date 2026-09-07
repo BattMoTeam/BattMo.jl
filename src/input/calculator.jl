@@ -78,38 +78,39 @@ function infer_binder_additive_by_np_ratio!(
         target_np_ratio,
         verbose = true,
     )
-    # Objective: squared error between simulated and target N/P ratio
-    function objective(x)
-        x_ne, x_pe = clamp.(x, 0.0, 1.0)
-
+    function update_fractions!(candidate_input, x)
+        x_ne, x_pe = x
         ne_rem = ne_vf - ne_am_vf
         pe_rem = pe_vf - pe_am_vf
 
-        ne_b_vf = x_ne * ne_rem
-        ne_add_vf = (1 - x_ne) * ne_rem
-        pe_b_vf = x_pe * pe_rem
-        pe_add_vf = (1 - x_pe) * pe_rem
-
-        # Update mass fractions and densities
         calculate_mass_fractions_and_effective_density_from_volume_fractions!(
-            input, pe_vf, ne_vf, ne_am_vf, pe_am_vf;
-            ne_b_vf = ne_b_vf, pe_b_vf = pe_b_vf,
-            ne_add_vf = ne_add_vf, pe_add_vf = pe_add_vf,
+            candidate_input, pe_vf, ne_vf, ne_am_vf, pe_am_vf;
+            ne_b_vf = x_ne * ne_rem,
+            pe_b_vf = x_pe * pe_rem,
+            ne_add_vf = (1 - x_ne) * ne_rem,
+            pe_add_vf = (1 - x_pe) * pe_rem,
         )
-
-        np_ratio_calc = compute_np_ratio(input)
-        loss = (np_ratio_calc - target_np_ratio)^2
-
-        if verbose
-            println("x_ne=$(round(x_ne, digits = 3)), x_pe=$(round(x_pe, digits = 3)), N/P=$(round(np_ratio_calc, digits = 3)), loss=$(round(loss, digits = 5))")
-        end
-
-        return loss
+        return candidate_input
     end
 
-    # Two-variable bounded optimization
-    res = Optim.optimize(objective, [0.0, 0.0], [1.0, 1.0], [0.5, 0.5], Fminbox(BFGS()))
-    x_opt = Optim.minimizer(res)
+    function objective(x)
+        candidate_input = update_fractions!(deepcopy(input), x)
+        return (compute_np_ratio(candidate_input) - target_np_ratio)^2
+    end
+
+    function objective_and_gradient(x)
+        return objective(x), ForwardDiff.gradient(objective, x)
+    end
+
+    objective_value, x_opt, _ = unit_box_bfgs(
+        [0.5, 0.5],
+        objective_and_gradient;
+        step_init = 1.0,
+        grad_tol = 1.0e-8,
+        obj_change_tol = 1.0e-12,
+        max_it = 100,
+        print = verbose ? 1 : 0,
+    )
     x_ne_opt, x_pe_opt = x_opt
 
     # Compute final fractions
@@ -120,12 +121,7 @@ function infer_binder_additive_by_np_ratio!(
     pe_b_vf = x_pe_opt * pe_rem
     pe_add_vf = (1 - x_pe_opt) * pe_rem
 
-    # Recalculate with optimal fractions
-    calculate_mass_fractions_and_effective_density_from_volume_fractions!(
-        input, pe_vf, ne_vf, ne_am_vf, pe_am_vf;
-        ne_b_vf = ne_b_vf, pe_b_vf = pe_b_vf,
-        ne_add_vf = ne_add_vf, pe_add_vf = pe_add_vf,
-    )
+    update_fractions!(input, x_opt)
 
     np_ratio_final = compute_np_ratio(input)
 
@@ -137,6 +133,6 @@ function infer_binder_additive_by_np_ratio!(
             "pe_b_vf" => pe_b_vf,
             "pe_add_vf" => pe_add_vf,
             "N/P_final" => np_ratio_final,
-            "objective_value" => Optim.minimum(res),
+            "objective_value" => objective_value,
         )
 end

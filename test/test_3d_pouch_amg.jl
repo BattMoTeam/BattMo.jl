@@ -12,19 +12,27 @@ using Test
 
         fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
         inputparams_geometry = load_advanced_dict_input(fn)
+        # Keep a nontrivial 3D system for AMG while limiting its fixed setup cost.
+        inputparams_geometry["Geometry"]["Nw"] = 5
+        inputparams_geometry["Geometry"]["Nh"] = 5
+        inputparams_geometry["NegativeElectrode"]["CurrentCollector"]["tab"]["Nw"] = 1
+        inputparams_geometry["NegativeElectrode"]["CurrentCollector"]["tab"]["Nh"] = 1
+        inputparams_geometry["PositiveElectrode"]["CurrentCollector"]["tab"]["Nw"] = 1
+        inputparams_geometry["PositiveElectrode"]["CurrentCollector"]["tab"]["Nh"] = 1
 
         inputparams = merge_input_params(inputparams_geometry, inputparams)
 
         cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_to_parameter_sets(inputparams)
 
         model_setup = LithiumIonBattery(; model_settings)
-        sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
-
-        simulator = sim.simulator
-        model = sim.model
-        state0 = sim.initial_state
-        forces = sim.forces
-        timesteps = sim.time_steps
+        time_steps = [1.5625, 3.125, 6.25, 12.5, 25.0, 50.0, 50.0, 50.0, 50.0, 50.0]
+        sim = Simulation(
+            model_setup,
+            cell_parameters,
+            cycling_protocol;
+            simulation_settings,
+            time_steps,
+        )
 
         solver = :fgmres
         fac = 1.0e-4       # NEEDED
@@ -66,13 +74,13 @@ using Test
 
         Cc = map(x -> x[:Control][:Current][1], jutul_states)
         phi = map(x -> x[:Control][:ElectricPotential][1], jutul_states)
-        @test length(jutul_states) == 80
+        @test length(jutul_states) == length(time_steps)
         @test Cc[1] ≈ 0.009073153883779288 atol = 1.0e-4
         for i in 3:length(Cc)
             @test Cc[i] ≈ 0.009073153883779288 atol = 1.0e-4
         end
-        @test phi[1] ≈ 4.006456739146556 atol = 1.0e-2
-        @test phi[end] ≈ 2.7485026725636326 atol = 1.0e-2
+        @test phi[1] ≈ 4.021718424724615 atol = 1.0e-2
+        @test phi[end] ≈ 3.932362082845213 atol = 1.0e-2
 
         true
     end

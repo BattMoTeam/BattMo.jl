@@ -4,6 +4,17 @@ using Test
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 include(joinpath(battmo_base, "src/input/defaults/cell_parameters/function_parameters_chayambuka_2022.jl"))
 
+@testset "Chayambuka data tables" begin
+    @test size(data_pe_ocp, 1) == 27
+    @test size(data_ne_ocp, 1) == 54
+    @test size(data_pe_D, 1) == 142
+    @test size(data_ne_D, 1) == 163
+    @test size(data_pe_k, 1) == 140
+    @test size(data_ne_k, 1) == 163
+    @test size(data_elyte_cond, 1) == 128
+    @test size(data_elyte_diff, 1) == 136
+end
+
 @testset "sodium" begin
 
     @test begin

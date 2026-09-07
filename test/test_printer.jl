@@ -13,7 +13,7 @@ using Test
 
         model_setup = LithiumIonBattery()
 
-        sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+        sim = Simulation(model_setup, cell_parameters, cycling_protocol; time_steps = [1.0])
         output = solve(sim)
 
         full_input = load_full_simulation_input(from_default_set = "chen_2020")

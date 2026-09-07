@@ -1,48 +1,47 @@
 using BattMo
 using Test
 
-@testset "loader" begin
+@testset "parameter file paths" begin
+    default_parameter_path = parameter_file_path()
+    cell_parameter_path = parameter_file_path("cell_parameters", "chen_2020")
 
-    @test begin
-
-        model_settings = load_model_settings(; from_default_set = "p2d")
-
-
-        # We instantiate a Lithium-ion battery model with default model settings
-        model_setup = LithiumIonBattery(; model_settings)
-        file_path_cell = parameter_file_path("cell_parameters", "chen_2020.json")
-        file_path_cycling = parameter_file_path("cycling_protocols", "cc_discharge.json")
-        file_path_model = parameter_file_path("model_settings", "p2d.json")
-        file_path_simulation = parameter_file_path("simulation_settings", "p2d.json")
-
-        model_settings = load_model_settings(; from_file_path = file_path_model)
-        cell_parameter_set = load_cell_parameters(; from_file_path = file_path_cell)
-        simulation_settings = load_simulation_settings(; from_file_path = file_path_simulation)
-        cyling_settings = load_cycling_protocol(; from_file_path = file_path_cycling)
-
-        model_settings = load_model_settings(; from_default_set = "p2d")
-        cell_parameter_set = load_cell_parameters(; from_default_set = "chen_2020")
-        simulation_settings = load_simulation_settings(; from_default_set = "p2d")
-        cyling_settings = load_cycling_protocol(; from_default_set = "cccv")
-
-
-        cell_parameter_set = load_cell_parameters(; from_model_template = model_setup)
-        simulation_settings = load_simulation_settings(; from_model_template = model_setup)
-        simulation_settings = load_simulation_settings(; from_model_template = model_setup, empty = true)
-        @test simulation_settings["TimeStepDuration"] == 0
-        simulation_settings = load_solver_settings(; from_model_template = model_setup)
-
-        true
-
-    end
-
+    @test default_parameter_path isa String
+    @test isdir(default_parameter_path)
+    @test isfile(cell_parameter_path)
+    @test splitext(cell_parameter_path) |> last == ".json"
+    @test_throws "File not found at" parameter_file_path("cell_parameters", "BadName")
+    @test parameter_file_path("cell_parameters", "BadName"; check = false) isa String
 end
 
-@testset "paths" begin
-    @test isa(parameter_file_path(), String)
-    @test isdir(parameter_file_path())
-    @test isfile(parameter_file_path("cell_parameters", "chen_2020"))
-    @test parameter_file_path("cell_parameters", "chen_2020") |> splitext |> last == ".json"
-    @test_throws "File not found at" parameter_file_path("cell_parameters", "BadName")
-    @test isa(parameter_file_path("cell_parameters", "BadName", check = false), String)
+@testset "load parameter sets from files" begin
+    cell_parameter_path = parameter_file_path("cell_parameters", "chen_2020.json")
+    cycling_protocol_path = parameter_file_path("cycling_protocols", "cc_discharge.json")
+    model_settings_path = parameter_file_path("model_settings", "p2d.json")
+    simulation_settings_path = parameter_file_path("simulation_settings", "p2d.json")
+
+    @test load_cell_parameters(; from_file_path = cell_parameter_path) isa CellParameters
+    @test load_cycling_protocol(; from_file_path = cycling_protocol_path) isa CyclingProtocol
+    @test load_model_settings(; from_file_path = model_settings_path) isa ModelSettings
+    @test load_simulation_settings(; from_file_path = simulation_settings_path) isa SimulationSettings
+end
+
+@testset "load bundled parameter sets" begin
+    @test load_cell_parameters(; from_default_set = "chen_2020") isa CellParameters
+    @test load_cycling_protocol(; from_default_set = "cccv") isa CyclingProtocol
+    @test load_model_settings(; from_default_set = "p2d") isa ModelSettings
+    @test load_simulation_settings(; from_default_set = "p2d") isa SimulationSettings
+end
+
+@testset "load parameter sets from model template" begin
+    model_settings = load_model_settings(; from_default_set = "p2d")
+    model_setup = LithiumIonBattery(; model_settings)
+
+    @test load_cell_parameters(; from_model_template = model_setup) isa CellParameters
+    @test load_simulation_settings(; from_model_template = model_setup) isa SimulationSettings
+    @test load_solver_settings(; from_model_template = model_setup) isa SolverSettings
+
+    empty_simulation_settings = load_simulation_settings(
+        ; from_model_template = model_setup, empty = true
+    )
+    @test empty_simulation_settings["TimeStepDuration"] == 0
 end

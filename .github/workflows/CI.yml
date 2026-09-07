@@ -30,17 +30,31 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - uses: julia-actions/cache@v1
+      - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
+
+      - name: Run tests
+        run: julia --project=. -e 'using Pkg; Pkg.test("BattMo")'
+
+  coverage:
+    name: Coverage
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: "1"
+          arch: x64
+      - uses: julia-actions/cache@v3
 
       - name: Run tests with coverage
         run: julia --project=. -e 'using Pkg; Pkg.test("BattMo"; coverage=true)'
 
       - name: Coverage threshold
         run: |
-          julia --project=. -e '
-            include("test/coverage/report_coverage.jl")
-          '
+          julia --project=test/coverage -e 'using Pkg; Pkg.instantiate(); include("test/coverage/report_coverage.jl")'
       - uses: julia-actions/julia-processcoverage@v1
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -74,7 +88,7 @@ jobs:
         with:
           version: "1"
       - name: Julia cache
-        uses: julia-actions/cache@v1
+        uses: julia-actions/cache@v3
       - name: BuildPkg
         uses: julia-actions/julia-buildpkg@v1
       - name: Deploy docs
