@@ -2,16 +2,15 @@ using BattMo, GLMakie
 
 ### Create wltp function to calculate Current (WLTP data from https://github.com/JRCSTU/wltp)
 
-using CSV
-using DataFrames
-using Jutul
+using DelimitedFiles: readdlm
+using Jutul: get_1d_interpolator
 
 battmo_path = normpath(joinpath(pathof(BattMo), "..", ".."))
 data_path = joinpath(battmo_path, "examples", "example_data", "wltp.csv")
-df = CSV.read(data_path, DataFrame)
+data, _ = readdlm(data_path, ',', Float64; header = true)
 
-t = df[:, 1]
-P = df[:, 2]
+t = data[:, 1]
+P = data[:, 2]
 
 power_func = get_1d_interpolator(t, P, cap_endpoints = false)
 

@@ -205,7 +205,9 @@ end
 @jutul_secondary(
     function update_dmudc!(dmudc, dmudc_def::DmuDc, model, Temperature, ElectrolyteConcentration, ix)
         R = GAS_CONSTANT
-        @tullio dmudc[i] = R * (Temperature[i] / ElectrolyteConcentration[i])
+        for i in ix
+            @inbounds dmudc[i] = R * (Temperature[i] / ElectrolyteConcentration[i])
+        end
     end
 )
 

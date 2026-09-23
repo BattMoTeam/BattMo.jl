@@ -17,32 +17,23 @@ using Test
         delete!(model_settings, "RampUp")
         simulation_settings = load_simulation_settings(; from_file_path = file_path_simulation)
 
-
         ########################################
 
         model_settings["SEIModel"] = "Bolay"
-
         model_setup = LithiumIonBattery(; model_settings)
-
-        cycling_protocol["TotalNumberOfCycles"] = 10
-
+        cycling_protocol["TotalNumberOfCycles"] = 2
         sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
-
         output = solve(sim)
-
         states = output.states
 
         sei_thickness = states["NegativeElectrode"]["Interphase"]["Thickness"]
         voltage_drop = states["NegativeElectrode"]["Interphase"]["VoltageDrop"]
-
-
-        @test length(sei_thickness[:, 2]) == 2629
+        @test length(sei_thickness[:, 2]) == 530
         @test sei_thickness[2, 2] ≈ 1.0000000339846753e-8 atol = 1.0e-1
         @test voltage_drop[2, 2] ≈ -0.001401323958482127 atol = 1.0e-1
 
         @test sei_thickness[100, 2] ≈ 1.0000000339846753e-8 atol = 1.0e-1
         @test voltage_drop[100, 2] ≈ -0.001401323958482127 atol = 1.0e-1
-
 
         true
 

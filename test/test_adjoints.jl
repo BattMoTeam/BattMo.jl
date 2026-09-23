@@ -12,7 +12,8 @@ function test_adjoints()
     model_setup = LithiumIonBattery()
 
     cycling_protocol["DRate"] = 0.5
-    sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+    time_steps = fill(50.0, 10)
+    sim = Simulation(model_setup, cell_parameters, cycling_protocol; time_steps)
 
     output0 = solve(sim, info_level = -1)
     t0 = output0.time_series["Time"]
@@ -20,9 +21,9 @@ function test_adjoints()
 
     vc0 = VoltageCalibration(t0, V0, sim)
     obj0 = BattMo.setup_calibration_objective(vc0)
-    dt = report_timesteps(output0.jutul_output.reports)[1:(end - 1)]
     multimodel = sim.model.multimodel
     jutul_states = output0.jutul_output.states
+    dt = report_timesteps(output0.jutul_output.reports)[1:length(jutul_states)]
     forces = sim.forces
     prm = sim.parameters
     state0 = sim.initial_state

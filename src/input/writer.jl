@@ -38,7 +38,7 @@ function write_to_json_file(
 
     return try
         open(file_path, "w") do io
-            JSON.print(io, json_data, 4)
+            JSON.json(io, data.all; pretty = 4)
         end
 
         println("Data successfully written to $file_path")

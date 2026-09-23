@@ -61,7 +61,7 @@ function update_json_input(;
     json_data = Dict{String, Any}()
 
     open(file_path, "r") do io
-        json_data = JSON.parse(io)
+        json_data = JSON.parse(io; dicttype = Dict{String, Any})
     end
 
 
@@ -144,9 +144,16 @@ function update_json_input(;
     else
         error("ValueError: The y_name: '$y_name'is not recognized by the 'update_json_input' function. Please enter 'openCircuitPotential', 'ionicConductivity' or 'diffusionCoefficient'.")
     end
+    if new_file_path !== nothing
+        open(new_file_path, "w") do io
+            JSON.json(io, json_data; pretty = 4)
+        end
+    else
 
-    output_path = new_file_path === nothing ? file_path : new_file_path
-    write_to_json_file(output_path, json_data)
+        open(file_path, "w") do io
+            JSON.json(io, json_data; pretty = 4)
+        end
+    end
 
     return expression
 

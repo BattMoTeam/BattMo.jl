@@ -26,6 +26,7 @@ struct ActiveMaterial{label, D, T, Di} <: AbstractActiveMaterial{label} where {D
     params::T
     # At the moment the following keys are include
     # - diffusion_coef_func::F where {F <: Function}
+    # - charge_transfer_coefficient::Real
     # - maximum_concentration::Real
     # - n_charge_carriers::Integer
     # - ocp_func::F where {F <: Function}
