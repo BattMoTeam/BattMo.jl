@@ -88,21 +88,21 @@ mutable struct SequencePolicy{R} <: AbstractPolicy
 end
 
 function SequencePolicy(
-        steps::Vector{AbstractSequenceStep},
-        ImaxDischarge::R,
-        ImaxCharge::R,
-        use_ramp_up::Bool,
-        rampup_time::R,
+    steps::Vector{AbstractSequenceStep},
+    ImaxDischarge::R,
+    ImaxCharge::R,
+    use_ramp_up::Bool,
+    rampup_time::R,
     ) where {R <: Real}
     return SequencePolicy{R}(steps, ImaxDischarge, ImaxCharge, use_ramp_up, rampup_time)
 end
 
 function SequencePolicy(
-        steps::AbstractVector,
-        ImaxDischarge::Real,
-        ImaxCharge::Real,
-        use_ramp_up::Bool,
-        rampup_time::Real,
+    steps::AbstractVector,
+    ImaxDischarge::Real,
+    ImaxCharge::Real,
+    use_ramp_up::Bool,
+    rampup_time::Real,
     )
     normalized_steps = AbstractSequenceStep[]
     for step in steps
@@ -133,19 +133,19 @@ mutable struct CCPolicy{R} <: AbstractPolicy
     current_function::Union{Missing, Any}
     tolerances::Dict{String, Real}
     function CCPolicy(
-            numberOfCycles::Int,
-            initialControl::String,
-            lowerCutoffVoltage::Real,
-            upperCutoffVoltage::Real,
-            use_ramp_up::Bool;
-            current_function = missing,
-            ImaxDischarge::Real = 0.0,
-            ImaxCharge::Real = 0.0,
-            T = missing,
-            tolerances = Dict(
-                "discharging" => 1.0e-4,
-                "charging" => 1.0e-4,
-            ),
+        numberOfCycles::Int,
+        initialControl::String,
+        lowerCutoffVoltage::Real,
+        upperCutoffVoltage::Real,
+        use_ramp_up::Bool;
+        current_function = missing,
+        ImaxDischarge::Real = 0.0,
+        ImaxCharge::Real = 0.0,
+        T = missing,
+        tolerances = Dict(
+            "discharging" => 1.0e-4,
+            "charging" => 1.0e-4,
+        ),
         )
         T = promote_type(T, typeof(lowerCutoffVoltage), typeof(upperCutoffVoltage), typeof(ImaxDischarge), typeof(ImaxCharge))
         return new{T}(numberOfCycles, initialControl, ImaxDischarge, ImaxCharge, lowerCutoffVoltage, upperCutoffVoltage, use_ramp_up, current_function, tolerances)
@@ -197,10 +197,10 @@ mutable struct InputCurrentPolicy{R} <: AbstractPolicy
     upperCutoffVoltage::R
 
     function InputCurrentPolicy(
-            times::AbstractVector,
-            currents::AbstractVector,
-            lowerCutoffVoltage::Real,
-            upperCutoffVoltage::Real,
+        times::AbstractVector,
+        currents::AbstractVector,
+        lowerCutoffVoltage::Real,
+        upperCutoffVoltage::Real,
         )
         @assert length(times) == length(currents) "times and currents must have the same length"
         @assert length(times) >= 1 "times and currents must be non-empty"
@@ -232,18 +232,18 @@ mutable struct CyclingCVPolicy{R, I} <: AbstractPolicy
 end
 
 function CyclingCVPolicy(
-        lowerCutoffVoltage,
-        upperCutoffVoltage,
-        dIdtLimit,
-        dEdtLimit,
-        initialControl::String,
-        numberOfCycles;
-        ImaxDischarge = 0 * lowerCutoffVoltage,
-        ImaxCharge = 0 * lowerCutoffVoltage,
-        use_ramp_up::Bool = false,
-        rampup_time = zero(lowerCutoffVoltage),
-        current_function = missing,
-        cv_current_cutoff = missing,
+    lowerCutoffVoltage,
+    upperCutoffVoltage,
+    dIdtLimit,
+    dEdtLimit,
+    initialControl::String,
+    numberOfCycles;
+    ImaxDischarge = 0 * lowerCutoffVoltage,
+    ImaxCharge = 0 * lowerCutoffVoltage,
+    use_ramp_up::Bool = false,
+    rampup_time = zero(lowerCutoffVoltage),
+    current_function = missing,
+    cv_current_cutoff = missing,
     )
 
     if initialControl == "charging"
@@ -309,36 +309,36 @@ end
 #########################
 
 function Jutul.select_parameters!(
-        S,
-        system::CurrentAndVoltageSystem{CCPolicy{R}},
-        model::SimulationModel,
+    S,
+    system::CurrentAndVoltageSystem{CCPolicy{R}},
+    model::SimulationModel,
     ) where {R}
     S[:ImaxDischarge] = ImaxDischarge()
     return S[:ImaxCharge] = ImaxCharge()
 end
 
 function Jutul.select_parameters!(
-        S,
-        system::CurrentAndVoltageSystem{SimpleCVPolicy{R}},
-        model::SimulationModel,
+    S,
+    system::CurrentAndVoltageSystem{SimpleCVPolicy{R}},
+    model::SimulationModel,
     ) where {R}
     return S[:ImaxDischarge] = ImaxDischarge()
 
 end
 
 function Jutul.select_parameters!(
-        S,
-        system::CurrentAndVoltageSystem{CyclingCVPolicy{R, I}},
-        model::SimulationModel,
+    S,
+    system::CurrentAndVoltageSystem{CyclingCVPolicy{R, I}},
+    model::SimulationModel,
     ) where {R, I}
     S[:ImaxDischarge] = ImaxDischarge()
     return S[:ImaxCharge] = ImaxCharge()
 end
 
 function Jutul.select_parameters!(
-        S,
-        system::CurrentAndVoltageSystem{SequencePolicy{R}},
-        model::SimulationModel,
+    S,
+    system::CurrentAndVoltageSystem{SequencePolicy{R}},
+    model::SimulationModel,
     ) where {R}
     S[:ImaxDischarge] = ImaxDischarge()
     return S[:ImaxCharge] = ImaxCharge()
@@ -580,9 +580,9 @@ end
 We add the controller in the output
 """
 function Jutul.select_minimum_output_variables!(
-        outputs,
-        system::CurrentAndVoltageSystem{R},
-        model::SimulationModel,
+    outputs,
+    system::CurrentAndVoltageSystem{R},
+    model::SimulationModel,
     ) where {R}
 
     return push!(outputs, :Controller)
@@ -1049,8 +1049,9 @@ function setupRegionSwitchFlags(policy::Union{CyclingCVPolicy, CCPolicy}, state,
 
         if !ismissing(policy.cvCurrentCutoff)
             I = abs(only(state.Current))
-            before = I > policy.cvCurrentCutoff
-            after = I < policy.cvCurrentCutoff
+            current_relative_tolerance = 0.01
+            before = I > policy.cvCurrentCutoff * (1 + current_relative_tolerance)
+            after = I < policy.cvCurrentCutoff * (1 - current_relative_tolerance)
         else
             dIdt = state.Controller.dIdt
             if !ismissing(dIdt)
@@ -1188,8 +1189,8 @@ end
 We need to add the specific treatment of the controller variables
 """
 function Jutul.reset_state_to_previous_state!(
-        storage,
-        model::SimulationModel{CurrentAndVoltageDomain, <:CurrentAndVoltageSystem, T3, T4},
+    storage,
+    model::SimulationModel{CurrentAndVoltageDomain, <:CurrentAndVoltageSystem, T3, T4},
     ) where {T3, T4}
 
     invoke(
