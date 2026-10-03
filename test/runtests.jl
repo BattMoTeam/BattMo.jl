@@ -1,6 +1,9 @@
 using BattMo
 using Test
 
+println("test_merge_dict.jl")
+include("test_merge_dict.jl")
+
 println("test_3d_pouch_amg.jl")
 include("test_3d_pouch_amg.jl")
 println("test_3d_pouch.jl")
