@@ -1,9 +1,6 @@
 using BattMo
 using Test
 
-println("test_merge_dict.jl")
-include("test_merge_dict.jl")
-
 println("test_3d_pouch_amg.jl")
 include("test_3d_pouch_amg.jl")
 println("test_3d_pouch.jl")
@@ -30,6 +27,8 @@ println("test_input_current_series.jl")
 include("test_input_current_series.jl")
 # println("test_matlab_input.jl")
 # include("test_matlab_input.jl")
+println("test_merge_dict.jl")
+include("test_merge_dict.jl")
 println("test_printer.jl")
 include("test_printer.jl")
 println("test_pythoncall.jl")
