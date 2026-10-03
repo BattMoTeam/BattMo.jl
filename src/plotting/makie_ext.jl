@@ -32,4 +32,4 @@ end
 
 function check_plotting_availability_impl
 
-    end
+end
