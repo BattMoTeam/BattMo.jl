@@ -31,7 +31,7 @@
         },
         "ElectronicDiffusionCoefficient": {
             "type": "number",
-            "minimum": 1e-16,
+            "minimum": 0.0,
             "maximum": 1000.0,
             "description": "Diffusion coefficient of electrons in a solid.",
             "unit": "m\u00b2\u00b7s\u207b\u00b9"
@@ -39,8 +39,9 @@
         "StoichiometricCoefficient": {
             "type": "number",
             "minimum": 0.0,
+            "exclusiveMinimum": 0.0,
             "maximum": 10.0,
-            "description": "Ratio of the concentration of an intercalant (e.g. Li+) at a given moment, to its maximum possible concentration within a solid host material.",
+            "description": "Moles of lithium consumed per mole of SEI product; strictly positive.",
             "unit": "-"
         },
         "InterstitialConcentration": {
@@ -60,8 +61,9 @@
         "InitialPotentialDrop": {
             "type": "number",
             "minimum": 0,
+            "exclusiveMinimum": 0.0,
             "maximum": 1,
-            "description": "Electric potential difference across the SEI layer or electrode interface at the beginning of the simulation.",
+            "description": "Positive voltage scale for NormalizedSEIVoltageDrop, not the initial physical film drop.",
             "unit": "V"
         }
     }

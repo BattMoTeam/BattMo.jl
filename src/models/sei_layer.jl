@@ -3,7 +3,7 @@
 ##################
 
 # Create a type for the model with SEI layer. It will be used to specialize the function
-SEImodel = SimulationModel{O, S, F, C} where {
+const SEImodel = SimulationModel{O, S, F, C} where {
     O <: JutulDomain,
     S <: BattMo.ActiveMaterialP2D{:sei, D, T} where {D, T},
     F <: JutulFormulation,
@@ -18,6 +18,9 @@ struct NormalizedSEIThickness <: ScalarVariable end
 struct NormalizedSEIVoltageDrop <: ScalarVariable end
 struct SEIThickness <: ScalarVariable end
 struct SEIVoltageDrop <: ScalarVariable end
+
+# The growth law divides by thickness. This floor is far below the normalized BOL value 1.
+Jutul.minimum_value(::NormalizedSEIThickness) = 1.0e-12
 
 
 ###################################################
@@ -154,7 +157,7 @@ end
 ##############################
 
 @jutul_secondary(
-    function update_vocp!(
+    function update_sei_thickness!(
             SEIThickness,
             tv::SEIThickness,
             model::SEImodel,
@@ -171,7 +174,7 @@ end
 )
 
 @jutul_secondary(
-    function update_vocp!(
+    function update_sei_voltage_drop!(
             SEIVoltageDrop,
             tv::SEIVoltageDrop,
             model::SEImodel,
@@ -187,299 +190,140 @@ end
 )
 
 
-###################################
-# setup update of the cross terms #
-###################################
+"""
+    sei_molar_flux(params, thickness, temperature, solid_potential, electrolyte_potential, voltage_drop)
 
-function Jutul.update_cross_term_in_entity!(
-        out,
-        ind,
-        state_t,
-        state0_t,
-        state_s,
-        state0_s,
-        model_t,
-        model_s::SEImodel,
-        ct::ButlerVolmerActmatToElyteCT,
-        eq,
-        dt,
-        ldisc = local_discretization(ct, ind),
+Irreversible Bolay lithium consumption flux in mol/(m^2 s), positive into the SEI.
+The stoichiometric coefficient belongs in the thickness balance, not in this flux or its
+current `-F*N`. The migration approximation is clipped at zero to prevent SEI dissolution.
+"""
+function sei_molar_flux(
+        params, thickness, temperature, solid_potential, electrolyte_potential, voltage_drop,
     )
-
-    activematerial = model_s.system
-    electrolyte = model_t.system
-
-    n = activematerial.params[:n_charge_carriers]
-    vsa = activematerial.params[:volumetric_surface_area]
-
-    ind_t = ct.target_cells[ind]
-    ind_s = ct.source_cells[ind]
-
-    phi_a = state_s.ElectricPotential[ind_s]
-    seiU = state_s.SEIVoltageDrop[ind_s]
-    ocp = state_s.OpenCircuitPotential[ind_s]
-    R0 = state_s.ReactionRateConstant[ind_s]
-    c_a_surf = state_s.SurfaceConcentration[ind_s]
-    c_a = state_s.ParticleConcentration[ind_s]
-    T = state_s.Temperature[ind_s]
-
-    vols = state_t.Volume[ind_t]
-    phi_e = state_t.ElectricPotential[ind_t]
-    c_e = state_t.ElectrolyteConcentration[ind_t]
-    c_av = mean(c_a)
-    c_av_e = mean(state_t.ElectrolyteConcentration)
-
-    # overpotential include SEI voltage drop
-    eta = phi_a - phi_e - ocp - seiU
-
-    if activematerial.params[:setting_butler_volmer] == "Chayambuka"
-        R = reaction_rate_chayambuka(
-            eta,
-            c_a_surf,
-            R0,
-            T,
-            c_e,
-            activematerial,
-            electrolyte,
-            c_a,
-            c_av,
-            c_av_e,
-        )
-    else
-        R = reaction_rate(
-            eta,
-            c_a_surf,
-            R0,
-            T,
-            c_e,
-            activematerial,
-            electrolyte,
-        )
-    end
-
-    cs = conserved_symbol(eq)
-
-    if cs == :Mass
-        v = 1.0 * vols * vsa * R
-    else
-        @assert cs == :Charge
-        v = 1.0 * vols * vsa * R * n * FARADAY_CONSTANT
-    end
-    return out[] = -v
-
+    thermal_factor = FARADAY_CONSTANT / (GAS_CONSTANT * temperature)
+    overpotential = solid_potential - electrolyte_potential - voltage_drop
+    prefactor = params[:ElectronicDiffusionCoefficient] * params[:InterstitialConcentration]
+    flux = prefactor / thickness * exp(-thermal_factor * overpotential) *
+        (1 - thermal_factor * voltage_drop / 2)
+    return max(flux, zero(flux))
 end
 
-
-function Jutul.update_cross_term_in_entity!(
-        out,
-        ind,
-        state_t,
-        state0_t,
-        state_s,
-        state0_s,
-        model_t::SEImodel,
-        model_s,
-        ct::ButlerVolmerElyteToActmatCT,
-        eq,
-        dt,
-        ldisc = local_discretization(ct, ind),
+"""Evaluate intercalation with the SEI voltage drop, consistently for both coupling directions."""
+function sei_intercalation_rate(
+        electrode_state, electrolyte_state, active_material, electrolyte,
+        electrode_cell, electrolyte_cell,
     )
-
-    electrolyte = model_s.system
-    activematerial = model_t.system
-
-    n = activematerial.params[:n_charge_carriers]
-    vsa = activematerial.params[:volumetric_surface_area]
-
-    ind_t = ct.target_cells[ind]
-    ind_s = ct.source_cells[ind]
-
-    phi_e = state_s.ElectricPotential[ind_s]
-    c_e = state_s.ElectrolyteConcentration[ind_s]
-
-    vols = state_t.Volume[ind_t]
-    c_a_surf = state_t.SurfaceConcentration[ind_t]
-    c_a = state_t.ParticleConcentration[ind_t]
-    phi_a = state_t.ElectricPotential[ind_t]
-    seiU = state_t.SEIVoltageDrop[ind_t]
-    ocp = state_t.OpenCircuitPotential[ind_t]
-    R0 = state_t.ReactionRateConstant[ind_t]
-    T = state_t.Temperature[ind_t]
-    c_av = mean(c_a)
-    c_av_e = mean(state_s.ElectrolyteConcentration)
-
-    # overpotential include SEI voltage drop
-    eta = phi_a - phi_e - ocp - seiU
-
-    if activematerial.params[:setting_butler_volmer] == "Chayambuka"
-        R = reaction_rate_chayambuka(
-            eta,
-            c_a_surf,
-            R0,
-            T,
-            c_e,
-            activematerial,
-            electrolyte,
-            c_a,
-            c_av,
-            c_av_e,
+    overpotential = electrode_state.ElectricPotential[electrode_cell] -
+        electrolyte_state.ElectricPotential[electrolyte_cell] -
+        electrode_state.OpenCircuitPotential[electrode_cell] -
+        electrode_state.SEIVoltageDrop[electrode_cell]
+    surface_concentration = electrode_state.SurfaceConcentration[electrode_cell]
+    rate_constant = electrode_state.ReactionRateConstant[electrode_cell]
+    temperature = electrode_state.Temperature[electrode_cell]
+    electrolyte_concentration = electrolyte_state.ElectrolyteConcentration[electrolyte_cell]
+    if active_material.params[:setting_butler_volmer] == "Chayambuka"
+        concentration = electrode_state.ParticleConcentration[electrode_cell]
+        return reaction_rate_chayambuka(
+            overpotential, surface_concentration, rate_constant, temperature,
+            electrolyte_concentration, active_material, electrolyte, concentration,
+            mean(concentration), mean(electrolyte_state.ElectrolyteConcentration),
         )
     else
-        R = reaction_rate(
-            eta,
-            c_a_surf,
-            R0,
-            T,
-            c_e,
-            activematerial,
-            electrolyte,
+        return reaction_rate(
+            overpotential, surface_concentration, rate_constant, temperature,
+            electrolyte_concentration, active_material, electrolyte,
         )
     end
-
-    return if eq isa SolidDiffusionBc
-
-        rp = activematerial.discretization[:rp] # particle radius
-        vf = state_t.VolumeFraction[ind_t]
-        avf = activematerial.params.volume_fractions[1]
-
-        v = vsa * R * (4 * pi * rp^3) / (3 * vf * avf)
-
-        out[] = -v
-
-    else
-
-        cs = conserved_symbol(eq)
-        @assert cs == :Charge
-        v = 1.0 * vols * vsa * R * n * FARADAY_CONSTANT
-
-        out[] = v
-
-    end
-
 end
 
-#################################################
-# update the equations that are specific to SEI #
-#################################################
-
 function Jutul.update_cross_term_in_entity!(
-        out,
-        ind,
-        state_t,
-        state0_t,
-        state_s,
-        state0_s,
-        model_t::SEImodel,
-        model_s,
-        ct::ButlerVolmerElyteToActmatCT,
-        eq::SEIMassConservation,
-        dt,
+        out, ind, state_t, state0_t, state_s, state0_s, model_t, model_s::SEImodel,
+        ct::ButlerVolmerActmatToElyteCT, eq, dt,
         ldisc = local_discretization(ct, ind),
     )
+    ind_t = ct.target_cells[ind]
+    ind_s = ct.source_cells[ind]
+    params = model_s.system.params
+    rate = sei_intercalation_rate(
+        state_s, state_t, model_s.system, model_t.system, ind_s, ind_t,
+    )
+    consumption = sei_molar_flux(
+        params, state_s.SEIThickness[ind_s], state_s.Temperature[ind_s],
+        state_s.ElectricPotential[ind_s], state_t.ElectricPotential[ind_t],
+        state_s.SEIVoltageDrop[ind_s],
+    )
+    # Use the electrode interface area in both directions of the coupling.
+    area = state_s.Volume[ind_s] * params[:volumetric_surface_area]
+    conserved = conserved_symbol(eq)
+    if conserved == :Mass
+        return out[] = -area * (rate - consumption)
+    else
+        @assert conserved == :Charge
+        return out[] = -area * FARADAY_CONSTANT * (params[:n_charge_carriers] * rate - consumption)
+    end
+end
 
-    F = FARADAY_CONSTANT
-    R = GAS_CONSTANT
+function Jutul.update_cross_term_in_entity!(
+        out, ind, state_t, state0_t, state_s, state0_s, model_t::SEImodel, model_s,
+        ct::ButlerVolmerElyteToActmatCT, eq, dt,
+        ldisc = local_discretization(ct, ind),
+    )
+    ind_t = ct.target_cells[ind]
+    ind_s = ct.source_cells[ind]
+    active_material = model_t.system
+    params = active_material.params
+    rate = sei_intercalation_rate(
+        state_t, state_s, active_material, model_s.system, ind_t, ind_s,
+    )
+    if eq isa SolidDiffusionBc
+        # Only intercalation crosses the particle boundary; SEI consumes electrolyte lithium.
+        radius = active_material.discretization[:rp]
+        active_fraction = state_t.VolumeFraction[ind_t] * params[:volume_fractions][1]
+        particle_volume = 4 * pi * radius^3 / 3
+        return out[] = -params[:volumetric_surface_area] * rate * particle_volume / active_fraction
+    else
+        @assert conserved_symbol(eq) == :Charge
+        consumption = sei_molar_flux(
+            params, state_t.SEIThickness[ind_t], state_t.Temperature[ind_t],
+            state_t.ElectricPotential[ind_t], state_s.ElectricPotential[ind_s],
+            state_t.SEIVoltageDrop[ind_t],
+        )
+        area = state_t.Volume[ind_t] * params[:volumetric_surface_area]
+        return out[] = area * FARADAY_CONSTANT * (params[:n_charge_carriers] * rate - consumption)
+    end
+end
 
+function Jutul.update_cross_term_in_entity!(
+        out, ind, state_t, state0_t, state_s, state0_s, model_t::SEImodel, model_s,
+        ct::ButlerVolmerElyteToActmatCT, eq::SEIMassConservation, dt,
+        ldisc = local_discretization(ct, ind),
+    )
+    ind_t = ct.target_cells[ind]
+    ind_s = ct.source_cells[ind]
     params = model_t.system.params
-
-    s = params[:StoichiometricCoefficient]
-    V = params[:MolarVolume]
-    De = params[:ElectronicDiffusionCoefficient]
-    ce0 = params[:InterstitialConcentration]
-    Lref = params[:InitialThickness]
-
-    ind_t = ct.target_cells[ind]
-    ind_s = ct.source_cells[ind]
-
-    L0 = state0_t.SEIThickness[ind_t]
-
-    L = state_t.SEIThickness[ind_t]
-    T = state_t.Temperature[ind_t]
-    phi_a = state_t.ElectricPotential[ind_t]
-    Usei = state_t.SEIVoltageDrop[ind_t]
-    L = state_t.SEIThickness[ind_t]
-
-    phi_e = state_s.ElectricPotential[ind_s]
-
-    # compute SEI flux (called N)
-    eta = phi_a - phi_e - Usei
-
-    N = De * ce0 / L * exp(-(F / (R * T)) * eta) * (1 - (F / (2 * R * T)) * Usei)
-
-    # Evolution equation for the SEI length
-    return out[] = (s / V) * (L - L0) / dt - N
-
+    thickness = state_t.SEIThickness[ind_t]
+    previous_thickness = state0_t.SEIThickness[ind_t]
+    consumption = sei_molar_flux(
+        params, thickness, state_t.Temperature[ind_t],
+        state_t.ElectricPotential[ind_t], state_s.ElectricPotential[ind_s],
+        state_t.SEIVoltageDrop[ind_t],
+    )
+    return out[] = params[:StoichiometricCoefficient] / params[:MolarVolume] *
+        (thickness - previous_thickness) / dt - consumption
 end
 
 function Jutul.update_cross_term_in_entity!(
-        out,
-        ind,
-        state_t,
-        state0_t,
-        state_s,
-        state0_s,
-        model_t::SEImodel,
-        model_s,
-        ct::ButlerVolmerElyteToActmatCT,
-        eq::SEIVoltageDropEquation,
-        dt,
+        out, ind, state_t, state0_t, state_s, state0_s, model_t::SEImodel, model_s,
+        ct::ButlerVolmerElyteToActmatCT, eq::SEIVoltageDropEquation, dt,
         ldisc = local_discretization(ct, ind),
     )
-
-    F = FARADAY_CONSTANT
-
-    electrolyte = model_s.system
-    activematerial = model_t.system
-    params = activematerial.params
-
-    k = params[:IonicConductivity]
-
     ind_t = ct.target_cells[ind]
     ind_s = ct.source_cells[ind]
-
-    phi_a = state_t.ElectricPotential[ind_t]
-    seiU = state_t.SEIVoltageDrop[ind_t]
-    ocp = state_t.OpenCircuitPotential[ind_t]
-    R0 = state_t.ReactionRateConstant[ind_t]
-    c_a_surf = state_t.SurfaceConcentration[ind_t]
-    c_a = state_t.ParticleConcentration[ind_t]
-    T = state_t.Temperature[ind_t]
-    L = state_t.SEIThickness[ind_t]
-
-    phi_e = state_s.ElectricPotential[ind_s]
-    c_e = state_s.ElectrolyteConcentration[ind_s]
-    c_av = mean(c_a)
-    c_av_e = mean(state_s.ElectrolyteConcentration)
-
-    # Overpotential definition  includes SEI voltage drop
-    eta = phi_a - phi_e - ocp - seiU
-
-    if activematerial.params[:setting_butler_volmer] == "Chayambuka"
-        R = reaction_rate_chayambuka(
-            eta,
-            c_a_surf,
-            R0,
-            T,
-            c_e,
-            activematerial,
-            electrolyte,
-            c_a,
-            c_av,
-            c_av_e,
-        )
-    else
-        R = reaction_rate(
-            eta,
-            c_a_surf,
-            R0,
-            T,
-            c_e,
-            activematerial,
-            electrolyte,
-        )
-    end
-
-    # Definition of the SEI voltage drop is implicit (because reaction rate R depends on seiU) and is given as follow
-    return out[] = seiU - F * R * L / k
-
+    rate = sei_intercalation_rate(
+        state_t, state_s, model_t.system, model_s.system, ind_t, ind_s,
+    )
+    thickness = state_t.SEIThickness[ind_t]
+    conductivity = model_t.system.params[:IonicConductivity]
+    # The ionic film drop is driven by intercalation, not the total electronic current.
+    return out[] = state_t.SEIVoltageDrop[ind_t] - FARADAY_CONSTANT * rate * thickness / conductivity
 end

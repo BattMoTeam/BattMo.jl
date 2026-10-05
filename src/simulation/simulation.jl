@@ -766,10 +766,6 @@ function solver_configuration(
         output_substates = output["OutputSubstrates"],
     )
 
-    if !isempty(non_linear_solver["Tolerances"])
-        cfg[:tolerances] = non_linear_solver["Tolerances"]
-    end
-
     if !isnothing(logger)
         cfg[:post_iteration_hook] = logger
     end
@@ -786,6 +782,19 @@ function solver_configuration(
     else
         for key in submodels_symbols(multimodel)
             cfg[:tolerances][key][:default] = 1.0e-5
+        end
+    end
+
+    # Explicit tolerances must override model defaults, including small SEI flux tolerances.
+    for (name, tolerances) in non_linear_solver["Tolerances"]
+        model_name = Symbol(name)
+        if tolerances isa AbstractDict
+            model_tolerances = get!(cfg[:tolerances], model_name, Dict{Symbol, Any}())
+            for (equation, tolerance) in tolerances
+                model_tolerances[Symbol(equation)] = tolerance
+            end
+        else
+            cfg[:tolerances][model_name] = tolerances
         end
     end
 
@@ -982,7 +991,13 @@ function get_scalings(model, parameters)
             De = model[elde].system[:ElectronicDiffusionCoefficient]
             ce = model[elde].system[:InterstitialConcentration]
 
-            scaling = (model_label = elde, equation_label = :sei_mass_cons, value = De * ce / L)
+            sei_flux_scale = De * ce / L
+            if iszero(sei_flux_scale)
+                # A finite numerical reference for zero growth: the initial film inventory per hour.
+                params = model[elde].system.params
+                sei_flux_scale = params[:StoichiometricCoefficient] * L / (params[:MolarVolume] * 3600)
+            end
+            scaling = (model_label = elde, equation_label = :sei_mass_cons, value = sei_flux_scale)
             push!(scalings, scaling)
 
         end

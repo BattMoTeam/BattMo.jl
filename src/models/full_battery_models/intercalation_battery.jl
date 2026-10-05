@@ -538,8 +538,14 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
                 "IonicConductivity",
             ]
             for fd in fds
-                am_params[Symbol(fd)] = inputparams_electrode["Interphase"][fd]
-
+                value = inputparams_electrode["Interphase"][fd]
+                nonnegative = fd in ("ElectronicDiffusionCoefficient", "InterstitialConcentration")
+                valid = value isa Real && isfinite(value) && (nonnegative ? value >= 0 : value > 0)
+                if !valid
+                    bound = nonnegative ? "nonnegative" : "positive"
+                    throw(ArgumentError("$(stringName).Interphase.$fd must be finite and $bound."))
+                end
+                am_params[Symbol(fd)] = value
             end
         else
             label = nothing

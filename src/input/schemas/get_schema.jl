@@ -4,6 +4,7 @@ function julia_to_json_schema_type!(dict, meta::Dict)
     return if meta["type"] == Real
         dict["type"] = "number"  # JSON schema type for Real numbers (includes both integer and float)
         dict["minimum"] = get(meta, "min_value", nothing)  # Enforce min value if present
+        dict["exclusiveMinimum"] = get(meta, "exclusive_min_value", nothing)
         dict["maximum"] = get(meta, "max_value", nothing)  # Enforce max value if present
         dict["description"] = get(meta, "description", "")  # Optional documentation
         dict["unit"] = get(meta, "unit", "")  # Optional unit annotation

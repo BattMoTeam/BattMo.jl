@@ -1,10 +1,72 @@
 export
+    compute_lithium_inventory,
     compute_round_trip_efficiency,
     compute_discharge_capacity,
     compute_charge_capacity,
     compute_charge_energy,
     compute_discharge_energy,
     compute_capacity
+
+"""
+    compute_lithium_inventory(sim::Simulation, state; baseline_state)
+
+Compute lithium inventories in mol from a raw Jutul P2D state and fixed simulation geometry.
+Particle concentrations are averaged with radial shell volumes. `sei_added` counts only
+growth since the explicitly supplied BOL `baseline_state`, which must be retained across
+restarts with the same mesh and SEI normalization. `total = mobile + sei_added` is conserved
+in a closed cell. `sei_loss_ah` is the inventory loss in Ah, not the delivered RPT capacity.
+For example, use `output.jutul_output.states[end]` and the original `sim.initial_state`.
+"""
+function compute_lithium_inventory(sim::Simulation, state; baseline_state)
+    model = sim.model.multimodel
+    electrode_names = (:NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial)
+    negative, positive = map(electrode_names) do name
+        system = model[name].system
+        discretisation_type(system) == :P2Ddiscretization ||
+            throw(ArgumentError("Lithium inventory requires P2D particle concentrations."))
+        shell_volumes = system.discretization[:vols]
+        particle_volume = sum(shell_volumes)
+        concentrations = state[name][:ParticleConcentration]
+        parameters = sim.parameters[name]
+        volumes = parameters[:Volume]
+        solid_fractions = parameters[:VolumeFraction]
+        active_fraction = system.params[:volume_fractions][1]
+        sum(eachindex(volumes)) do cell
+            average_concentration = sum(
+                shell_volumes[shell] * concentrations[shell, cell]
+                    for shell in eachindex(shell_volumes)
+            ) / particle_volume
+            volumes[cell] * solid_fractions[cell] * active_fraction * average_concentration
+        end
+    end
+    electrolyte_parameters = sim.parameters[:Electrolyte]
+    electrolyte = sum(
+        electrolyte_parameters[:Volume][cell] * electrolyte_parameters[:VolumeFraction][cell] *
+            state[:Electrolyte][:ElectrolyteConcentration][cell]
+            for cell in eachindex(electrolyte_parameters[:Volume])
+    )
+    mobile = negative + positive + electrolyte
+    sei_added = zero(mobile)
+    name = :NegativeElectrodeActiveMaterial
+    if model[name] isa SEImodel
+        params = model[name].system.params
+        thickness = state[name][:NormalizedSEIThickness]
+        baseline_thickness = baseline_state[name][:NormalizedSEIThickness]
+        length(thickness) == length(baseline_thickness) ||
+            throw(DimensionMismatch("The BOL state must use the same electrode mesh."))
+        area = sim.parameters[name][:Volume] .* params[:volumetric_surface_area]
+        conversion = params[:InitialThickness] * params[:StoichiometricCoefficient] / params[:MolarVolume]
+        sei_added = sum(
+            area[cell] * conversion * (thickness[cell] - baseline_thickness[cell])
+                for cell in eachindex(thickness)
+        )
+    end
+    return (;
+        negative, positive, electrolyte, sei_added, mobile,
+        total = mobile + sei_added,
+        sei_loss_ah = FARADAY_CONSTANT * sei_added / 3600,
+    )
+end
 
 
 function compute_capacity(output::SimulationOutput, type)
