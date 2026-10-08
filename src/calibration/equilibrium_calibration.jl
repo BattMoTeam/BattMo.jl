@@ -300,10 +300,10 @@ function print_calibration_overview(eqc::EquilibriumCalibration; use_acronyms = 
         "PositiveElectrode" => "pe",
         "StoichiometricCoefficientAtSOC100" => "theta100",
     )
-    optimized = if ismissing(eqc.Xopt)
-        fill(missing, length(eqc.X0))
+    if ismissing(eqc.Xopt)
+        optimized = fill(missing, length(eqc.X0))
     else
-        eqc.Xopt
+        optimized = eqc.Xopt
     end
     header = ["Parameter", "Initial value", "Bounds", "Optimized value"]
     table = Matrix{Any}(undef, length(eqc.X0), length(header))
