@@ -318,18 +318,30 @@ function print_calibration_overview(eqc::EquilibriumCalibration; use_acronyms = 
     else
         optimized = eqc.Xopt
     end
-    header = ["Parameter", "Initial value", "Bounds", "Optimized value"]
+    header = ["Parameter", "Initial value", "Bounds", "Optimized value", "Box limit hit"]
     table = Matrix{Any}(undef, length(eqc.X0), length(header))
     for i in eachindex(eqc.X0)
         parameter = EQUILIBRIUM_CALIBRATION_PARAMETERS[i]
         if use_acronyms
             parameter = [get(acronyms, part, part) for part in parameter]
         end
+        lower_bound = eqc.bounds.lower[i]
+        upper_bound = eqc.bounds.upper[i]
+        limit_hit = ""
+        if !ismissing(optimized[i])
+            # Match the unit-box scaling used by the optimizer, allowing for roundoff.
+            bound_tolerance = 1.0e-8 * (upper_bound - lower_bound)
+            if isapprox(optimized[i], lower_bound; atol = bound_tolerance, rtol = 0.0) ||
+                    isapprox(optimized[i], upper_bound; atol = bound_tolerance, rtol = 0.0)
+                limit_hit = "*"
+            end
+        end
         table[i, :] = [
             join(parameter, "."),
             eqc.X0[i],
-            "$(eqc.bounds.lower[i]) - $(eqc.bounds.upper[i])",
+            "$lower_bound - $upper_bound",
             optimized[i],
+            limit_hit,
         ]
     end
 
