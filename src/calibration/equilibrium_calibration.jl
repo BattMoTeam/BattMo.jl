@@ -280,10 +280,10 @@ function solve(
         obj_rel_tol = -Inf,
         optimizer_kwargs...,
     )
-    value, u, history = if print > 0
-        optimize()
+    if print > 0
+        value, u, history = optimize()
     else
-        redirect_stdout(optimize, devnull)
+        value, u, history = redirect_stdout(optimize, devnull)
     end
     x = u_to_x(u)
     eqc.Xopt = copy(x)
