@@ -8,28 +8,6 @@ const EQUILIBRIUM_CALIBRATION_PARAMETERS = (
     ["PositiveElectrode", "ActiveMaterial", "MaximumConcentration"],
 )
 
-const EQUILIBRIUM_CALIBRATION_ACRONYMS = Dict(
-    "ActiveMaterial" => "am",
-    "Binder" => "bd",
-    "Coating" => "co",
-    "ConductiveAdditive" => "ca",
-    "Control" => "ctrl",
-    "CurrentCollector" => "cc",
-    "Electrolyte" => "elyte",
-    "Geometry" => "geom",
-    "Interface" => "itf",
-    "Interphase" => "itp",
-    "MaximumConcentration" => "cmax",
-    "NegativeElectrode" => "ne",
-    "OpenCircuitPotential" => "ocp",
-    "PositiveElectrode" => "pe",
-    "Separator" => "sep",
-    "SolidDiffusion" => "sd",
-    "StoichiometricCoefficientAtSOC0" => "theta0",
-    "StoichiometricCoefficientAtSOC100" => "theta100",
-    "TimeStepping" => "ts",
-)
-
 """
     EquilibriumCalibration(t, v, current, cell_parameters; kwargs...)
 
@@ -315,6 +293,13 @@ function solve(
 end
 
 function print_calibration_overview(eqc::EquilibriumCalibration; use_acronyms = false)
+    acronyms = Dict(
+        "ActiveMaterial" => "am",
+        "MaximumConcentration" => "cmax",
+        "NegativeElectrode" => "ne",
+        "PositiveElectrode" => "pe",
+        "StoichiometricCoefficientAtSOC100" => "theta100",
+    )
     optimized = if ismissing(eqc.Xopt)
         fill(missing, length(eqc.X0))
     else
@@ -325,7 +310,7 @@ function print_calibration_overview(eqc::EquilibriumCalibration; use_acronyms = 
     for i in eachindex(eqc.X0)
         parameter = EQUILIBRIUM_CALIBRATION_PARAMETERS[i]
         if use_acronyms
-            parameter = [get(EQUILIBRIUM_CALIBRATION_ACRONYMS, part, part) for part in parameter]
+            parameter = [get(acronyms, part, part) for part in parameter]
         end
         table[i, :] = [
             join(parameter, "."),
