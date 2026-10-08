@@ -305,7 +305,7 @@ function solve(
     return x
 end
 
-function print_calibration_overview(eqc::EquilibriumCalibration; use_acronyms = false)
+function print_calibration_overview(eqc::EquilibriumCalibration; use_acronyms = true)
     acronyms = Dict(
         "ActiveMaterial" => "am",
         "MaximumConcentration" => "cmax",
@@ -318,7 +318,7 @@ function print_calibration_overview(eqc::EquilibriumCalibration; use_acronyms = 
     else
         optimized = eqc.Xopt
     end
-    header = ["Parameter", "Initial value", "Bounds", "Optimized value", "Box limit hit"]
+    header = ["Parameter", "Bounds", "Initial value", "Optimized value", "Box limit hit"]
     table = Matrix{Any}(undef, length(eqc.X0), length(header))
     for i in eachindex(eqc.X0)
         parameter = EQUILIBRIUM_CALIBRATION_PARAMETERS[i]
@@ -338,17 +338,13 @@ function print_calibration_overview(eqc::EquilibriumCalibration; use_acronyms = 
         end
         table[i, :] = [
             join(parameter, "."),
-            eqc.X0[i],
             "$lower_bound - $upper_bound",
+            eqc.X0[i],
             optimized[i],
             limit_hit,
         ]
     end
 
-    try
-        return Jutul.PrettyTables.pretty_table(table; header = header, title = "Equilibrium calibration parameters")
-    catch
-        return Jutul.PrettyTables.pretty_table(table; column_labels = header, title = "Equilibrium calibration parameters")
-    end
+    return Jutul.PrettyTables.pretty_table(table; column_labels = header, title = "Equilibrium calibration parameters")
 
 end

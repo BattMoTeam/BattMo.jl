@@ -51,4 +51,6 @@ using DelimitedFiles
     @test discharge_theta.positive > calibration.X0[3]
     @test charge_theta.negative > charge_calibration.X0[1]
     @test charge_theta.positive < charge_calibration.X0[3]
+
+    BattMo.print_calibration_overview(calibration)
 end
