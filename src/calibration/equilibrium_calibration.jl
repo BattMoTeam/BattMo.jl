@@ -56,17 +56,29 @@ function EquilibriumCalibration(
         stoichiometry_bounds = (0.0, 1.0),
         concentration_factors = (0.1, 10.0),
     )
-    length(t) == length(v) || throw(ArgumentError("Time and voltage data must have equal length."))
-    length(t) >= 2 || throw(ArgumentError("At least two calibration points are required."))
-    isa(current, Number) || throw(ArgumentError("Current must be a scalar."))
-    !iszero(current) || throw(ArgumentError("Equilibrium calibration expects a nonzero signed current."))
-    np_ratio > 0 || throw(ArgumentError("The N/P ratio must be positive."))
+    if length(t) != length(v)
+        throw(ArgumentError("Time and voltage data must have equal length."))
+    end
+    if length(t) < 2
+        throw(ArgumentError("At least two calibration points are required."))
+    end
+    if !isa(current, Number)
+        throw(ArgumentError("Current must be a scalar."))
+    end
+    if iszero(current)
+        throw(ArgumentError("Equilibrium calibration expects a nonzero signed current."))
+    end
+    if !(np_ratio > 0)
+        throw(ArgumentError("The N/P ratio must be positive."))
+    end
 
     order = sortperm(t)
     t_sorted = Float64.(t[order])
     v_sorted = Float64.(v[order])
     t_sorted .-= first(t_sorted)
-    all(diff(t_sorted) .> 0) || throw(ArgumentError("Time values must be unique."))
+    if !all(diff(t_sorted) .> 0)
+        throw(ArgumentError("Time values must be unique."))
+    end
 
     parameters = deepcopy(cell_parameters)
     X0 = Float64[]
@@ -207,8 +219,9 @@ parameter dictionary with
 `merge_dict(parameters, exported; type = "overwrite")`.
 """
 function export_calibration_parameters(eqc::EquilibriumCalibration, x_calibrated)
-    length(x_calibrated) == length(EQUILIBRIUM_CALIBRATION_PARAMETERS) ||
+    if length(x_calibrated) != length(EQUILIBRIUM_CALIBRATION_PARAMETERS)
         throw(ArgumentError("Expected four calibrated equilibrium parameters."))
+    end
 
     cutoff_time = find_equilibrium_cutoff_time(eqc, x_calibrated)
     theta = equilibrium_stoichiometries(eqc, cutoff_time, x_calibrated)
