@@ -393,8 +393,11 @@ function compute_equilibrium_energy(params::CellParameters; Npts::Int = 1000)
     socs = range(0.0, 1.0, length = Npts)
     Vvals = [Vcell(s) for s in socs]
 
-    dSOC = step(socs)
-    integral = sum((Vvals[i] + Vvals[i + 1]) / 2 * dSOC for i in 1:(Npts - 1))
+    if length(socs) < 2
+        integral = zero(C)
+    else
+        integral = trapz(socs, Vvals)
+    end
 
     E_Wh = integral * C
 
