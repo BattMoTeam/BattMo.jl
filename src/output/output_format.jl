@@ -548,6 +548,8 @@ Computes key performance metrics from a battery simulation output, either global
   - `ChargeEnergy` (Wh)
   - `RoundTripEfficiency` (%)
 - Constructs and returns a dictionary of requested metrics (or all metrics by default).
+- Returns an empty dictionary when no states were accepted or the controller has no cycle metrics.
+  Explicitly requesting an unavailable metric still raises an error.
 
 # Returns
 A `NamedTuple` where each field is a vector containing the computed metric values (one value per cycle, or globally if no cycles are detected). Possible fields include:
@@ -575,10 +577,9 @@ function get_output_metrics(
     )
     states = jutul_output[:states]
 
-    controller = states[1][:Control][:Controller]
-
-    if isa(controller, FunctionController) || isa(controller, InputCurrentController)
-        available_quantities = Dict()
+    if isempty(states) || first(states)[:Control][:Controller] isa Union{FunctionController, InputCurrentController}
+        # A failed first timestep must still allow returning an incomplete SimulationOutput.
+        available_quantities = Dict{String, Any}()
     else
         cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : nothing
 
@@ -628,7 +629,17 @@ function get_output_metrics(
     if isnothing(metrics)
         return available_quantities
     else
-        return Dict(q => get(available_quantities, q, error("Metric \"$q\" is not available. Available metrics are: $(join(keys(available_quantities), ", "))")))
+        for quantity in metrics
+            if !haskey(available_quantities, quantity)
+                if isempty(available_quantities)
+                    available_names = "none"
+                else
+                    available_names = join(sort!(collect(keys(available_quantities))), ", ")
+                end
+                error("Metric \"$quantity\" is not available. Available metrics are: $available_names")
+            end
+        end
+        return Dict(quantity => available_quantities[quantity] for quantity in metrics)
     end
 end
 
