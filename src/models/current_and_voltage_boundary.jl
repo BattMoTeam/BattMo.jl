@@ -139,6 +139,8 @@ Input current series policy.
 Applies a prescribed current time series (times in seconds, currents in amperes).
 The `times` vector must be strictly increasing. A Jutul linear interpolator
 (`get_1d_interpolator`) is used to evaluate the current at any simulation time.
+Each solver timestep applies its interval-average current, preserving the prescribed
+charge when the timestep is large or is subdivided by the nonlinear solver.
 Voltage limits are enforced: if the voltage response exceeds `upperCutoffVoltage` or
 falls below `lowerCutoffVoltage`, the controller switches to constant-voltage control
 at the respective limit. The lengths of `times` and `currents` must match.
@@ -148,6 +150,7 @@ Voltage limits may be set to `±Inf` if they should not be enforced.
 mutable struct InputCurrentPolicy{R} <: AbstractPolicy
     times::Vector{R}
     current_function::Any      # get_1d_interpolator(times, currents) – callable as f(t)
+    cumulative_charge::Vector{R}
     lowerCutoffVoltage::R
     upperCutoffVoltage::R
 
@@ -161,8 +164,17 @@ mutable struct InputCurrentPolicy{R} <: AbstractPolicy
         @assert length(times) >= 1 "times and currents must be non-empty"
         @assert issorted(times, lt = <) "times must be strictly increasing"
         T = promote_type(eltype(times), eltype(currents), typeof(lowerCutoffVoltage), typeof(upperCutoffVoltage))
+        T = promote_type(T, typeof(zero(T) / 2))
         current_function = get_1d_interpolator(times, currents, cap_endpoints = true)
-        return new{T}(convert(Vector{T}, times), current_function, T(lowerCutoffVoltage), T(upperCutoffVoltage))
+        if length(times) > 1
+            cumulative_charge = convert(Vector{T}, cumtrapz(times, currents))
+        else
+            cumulative_charge = zeros(T, length(times))
+        end
+        return new{T}(
+            convert(Vector{T}, times), current_function, cumulative_charge,
+            T(lowerCutoffVoltage), T(upperCutoffVoltage),
+        )
     end
 end
 
@@ -934,6 +946,42 @@ function update_controller!(state, state0, policy::AbstractPolicy, dt)
 
 end
 
+"""
+    average_input_current(policy, start_time, end_time)
+
+Average the piecewise-linear input over an actual solver timestep, including any
+profile knots inside it. Integrating this current with backward Euler preserves
+the prescribed charge even after adaptive timestep cuts.
+"""
+function average_input_current(policy::InputCurrentPolicy, start_time, end_time)
+    start_current = policy.current_function(start_time)
+    end_current = policy.current_function(end_time)
+    first_interior = searchsortedlast(policy.times, start_time) + 1
+    last_interior = searchsortedfirst(policy.times, end_time) - 1
+
+    # Normal timesteps and their cut substeps stay within one linear segment.
+    if first_interior > last_interior || start_time == end_time
+        return (start_current + end_current) / 2
+    end
+
+    # Reuse the integrated profile; only the two partial endpoint segments need work.
+    first_time = policy.times[first_interior]
+    last_time = policy.times[last_interior]
+    first_current = policy.current_function(first_time)
+    last_current = policy.current_function(last_time)
+    charge = (first_time - start_time) * (start_current + first_current) / 2
+    charge += policy.cumulative_charge[last_interior] - policy.cumulative_charge[first_interior]
+    charge += (end_time - last_time) * (last_current + end_current) / 2
+    return charge / (end_time - start_time)
+end
+
+function update_controller!(state, state0, policy::InputCurrentPolicy, dt)
+    start_time = state0.Controller.time
+    target_current = average_input_current(policy, start_time, start_time + dt)
+    update_control_type_in_controller!(state, state0, policy, dt, target_current)
+    return update_values_in_controller!(state, policy, target_current)
+end
+
 
 ##################################
 # Implementation of the policies #
@@ -1128,12 +1176,11 @@ end
 """
 Implementation of the InputCurrentPolicy.
 
-The prescribed current is evaluated by calling the Jutul linear interpolator
-(`policy.current_function`) at the current simulation time.
+The prescribed current is averaged over the actual solver timestep.
 If the resulting voltage response would violate the voltage limits, constant-voltage
 control is applied at the respective limit instead, preventing voltage spikes.
 """
-function update_control_type_in_controller!(state, state0, policy::InputCurrentPolicy, dt)
+function update_control_type_in_controller!(state, state0, policy::InputCurrentPolicy, dt, target_current)
 
     # Relative tolerance for voltage hysteresis: if the voltage is within this fraction
     # of the limit, we remain in CV mode to avoid oscillating between CC and CV control
@@ -1145,16 +1192,13 @@ function update_control_type_in_controller!(state, state0, policy::InputCurrentP
     controller.time = state0.Controller.time + dt
 
     E = only(value(state[:ElectricPotential]))
-    t = controller.time
-
-    I_target = policy.current_function(t)
 
     # Determine which voltage limit is relevant based on the sign of the prescribed current,
     # then check whether the voltage has crossed that limit.
-    if I_target > 0
+    if target_current > 0
         # Discharging: enforce lower voltage limit
         target_is_voltage = (E <= policy.lowerCutoffVoltage)
-    elseif I_target < 0
+    elseif target_current < 0
         # Charging: enforce upper voltage limit
         target_is_voltage = (E >= policy.upperCutoffVoltage)
     else
@@ -1168,9 +1212,9 @@ function update_control_type_in_controller!(state, state0, policy::InputCurrentP
     if state0.Controller.target_is_voltage && !target_is_voltage
         # We were in CV mode; only switch back to CC if the prescribed current
         # would not immediately violate the limit again.
-        if I_target > 0 && E <= policy.lowerCutoffVoltage * (1 + const_voltage_hysteresis_tol)
+        if target_current > 0 && E <= policy.lowerCutoffVoltage * (1 + const_voltage_hysteresis_tol)
             target_is_voltage = true
-        elseif I_target < 0 && E >= policy.upperCutoffVoltage * (1 - const_voltage_hysteresis_tol)
+        elseif target_current < 0 && E >= policy.upperCutoffVoltage * (1 - const_voltage_hysteresis_tol)
             target_is_voltage = true
         end
     end
@@ -1352,16 +1396,13 @@ function update_values_in_controller!(state, policy::CyclingCVPolicy)
 
 end
 
-function update_values_in_controller!(state, policy::InputCurrentPolicy)
+function update_values_in_controller!(state, policy::InputCurrentPolicy, target_current)
 
     controller = state.Controller
-    t = controller.time
 
-    I_target = policy.current_function(t)
-
-    return if controller.target_is_voltage
+    if controller.target_is_voltage
         # In voltage-control mode: use the appropriate voltage limit
-        if I_target >= 0
+        if target_current >= 0
             # Discharging hit the lower limit
             controller.target = policy.lowerCutoffVoltage
         else
@@ -1369,9 +1410,10 @@ function update_values_in_controller!(state, policy::InputCurrentPolicy)
             controller.target = policy.upperCutoffVoltage
         end
     else
-        # In current-control mode: use the interpolated time-series current
-        controller.target = I_target
+        # Apply the same average used to select CC/CV control.
+        controller.target = target_current
     end
+    return controller.target
 
 end
 
