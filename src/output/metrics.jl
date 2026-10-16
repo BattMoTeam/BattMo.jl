@@ -69,6 +69,15 @@ function compute_lithium_inventory(sim::Simulation, state; baseline_state)
 end
 
 
+"""
+    compute_capacity(output, type)
+
+Return cumulative throughput (`"Cumulative"`) or net charging capacity (`"Net"`) in Ah.
+For `InputCurrentSeries`, stored currents represent solver intervals, so use endpoint
+integration from the protocol's zero time. The first interval is included even when
+the initial state is omitted; an included initial state contributes zero capacity.
+Other controller policies retain trapezoidal integration between the stored states.
+"""
 function compute_capacity(output::SimulationOutput, type)
     return compute_capacity(output.jutul_output, type)
 end
@@ -83,6 +92,12 @@ function compute_capacity(jutul_output::NamedTuple, type)
         I = .-[state[:Control][:Current][1] for state in states]
     else
         error("The type $type is not recognized. The following types are accepted: Cumulative, Net")
+    end
+
+    if !isempty(states) && first(states)[:Control][:Controller] isa InputCurrentController
+        # Input-current protocols reset controller time to zero, including reused initial states.
+        intervals = [first(t); diff(t)]
+        return cumsum(intervals .* I) ./ Jutul.si_unit("hour")
     end
 
     capacity_array = Float64[]
