@@ -991,12 +991,12 @@ function get_scalings(model, parameters)
             De = model[elde].system[:ElectronicDiffusionCoefficient]
             ce = model[elde].system[:InterstitialConcentration]
 
-            sei_flux_scale = De * ce / L
-            if iszero(sei_flux_scale)
-                # A finite numerical reference for zero growth: the initial film inventory per hour.
-                params = model[elde].system.params
-                sei_flux_scale = params[:StoichiometricCoefficient] * L / (params[:MolarVolume] * 3600)
-            end
+            # Keep the tolerance finite as growth decreases: thickness differences have a roundoff floor.
+            # Use the initial film inventory per hour as the minimum flux reference, including at K = 0.
+            params = model[elde].system.params
+            hour = Jutul.si_unit("hour")
+            film_inventory_rate = params[:StoichiometricCoefficient] * L / (params[:MolarVolume] * hour)
+            sei_flux_scale = max(De * ce / L, film_inventory_rate)
             scaling = (model_label = elde, equation_label = :sei_mass_cons, value = sei_flux_scale)
             push!(scalings, scaling)
 

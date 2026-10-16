@@ -121,6 +121,29 @@ end
     @test maximum(abs, output.time_series["Current"]) <= 1.0e-12
     @test final.sei_loss_ah ≈ BattMo.FARADAY_CONSTANT * final.sei_added / 3600 rtol = 1.0e-14
 
+    @testset "SEI scaling has a continuous floor at zero growth" begin
+        params = sim.model.multimodel[:NegativeElectrodeActiveMaterial].system.params
+        hour = Jutul.si_unit("hour")
+        initial_thickness = params[:InitialThickness]
+        inventory_rate = params[:StoichiometricCoefficient] * initial_thickness / (params[:MolarVolume] * hour)
+        crossover_concentration = inventory_rate * initial_thickness / params[:ElectronicDiffusionCoefficient]
+        reference_scales = filter(
+            scaling -> scaling.equation_label != :sei_mass_cons,
+            BattMo.get_scalings(sim.model.multimodel, sim.parameters),
+        )
+        # Cover zero, small positive growth, the crossover, and the original large-flux scaling.
+        for (fraction, expected_scale) in (
+                (0.0, inventory_rate), (1.0e-6, inventory_rate),
+                (1.0, inventory_rate), (10.0, 10 * inventory_rate),
+            )
+            scaled_sim = sei_simulation(; concentration = fraction * crossover_concentration)
+            scales = BattMo.get_scalings(scaled_sim.model.multimodel, scaled_sim.parameters)
+            sei_scale = only(filter(scaling -> scaling.equation_label == :sei_mass_cons, scales)).value
+            @test sei_scale ≈ expected_scale rtol = 1.0e-14 atol = 0.0
+            @test filter(scaling -> scaling.equation_label != :sei_mass_cons, scales) == reference_scales
+        end
+    end
+
     @testset "Cycling conservation" begin
         for current in (-2.5, 2.5)
             cycling_sim = sei_simulation(; current, concentration = 0.5)
