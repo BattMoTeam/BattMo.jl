@@ -233,6 +233,8 @@ The decomposition is based on interface values and reconstructs:
 `Voltage ≈ OCV_avg + η_conc,solid,pos + η_conc,solid,neg + η_pos + η_neg + Δϕ_e,conc + Δϕ_e,ohm + Δϕ_s,pos + Δϕ_s,neg (+ η_SEI) + Residual`
 
 where each term is returned as a time series.
+`OCV_avg` uses shell-volume-weighted concentrations in the separator-adjacent particles,
+not concentrations averaged across the entire electrodes.
 """
 function compute_voltage_breakdown(output::SimulationOutput)
 
@@ -324,6 +326,16 @@ function compute_voltage_breakdown(output::SimulationOutput)
     ne_system = output.model.multimodel[:NegativeElectrodeActiveMaterial].system
     pe_system = output.model.multimodel[:PositiveElectrodeActiveMaterial].system
 
+    has_particle_profiles = !isnothing(c_n_part) && !isnothing(c_p_part) &&
+        ndims(c_n_part) == 3 && ndims(c_p_part) == 3
+    if has_particle_profiles
+        # Use the same spherical shell volumes as the particle mass balance.
+        negative_shell_volumes = ne_system.discretization[:vols]
+        positive_shell_volumes = pe_system.discretization[:vols]
+        negative_shell_weights = negative_shell_volumes ./ sum(negative_shell_volumes)
+        positive_shell_weights = positive_shell_volumes ./ sum(positive_shell_volumes)
+    end
+
     ne_params = ne_system.params
     pe_params = pe_system.params
 
@@ -406,11 +418,11 @@ function compute_voltage_breakdown(output::SimulationOutput)
         eta_n_total = phi_n_sep - phi_e_n - U_n
         eta_p_total = phi_p_sep - phi_e_p - U_p
 
-        if !isnothing(c_n_part) && !isnothing(c_p_part) && ndims(c_n_part) == 3 && ndims(c_p_part) == 3
-            cn_profile = vec(c_n_part[i, ne_sep_idx, :])
-            cp_profile = vec(c_p_part[i, pe_sep_idx, :])
-            cn_avg = mean_finite(cn_profile)
-            cp_avg = mean_finite(cp_profile)
+        if has_particle_profiles
+            cn_profile = @view c_n_part[i, ne_sep_idx, :]
+            cp_profile = @view c_p_part[i, pe_sep_idx, :]
+            cn_avg = LinearAlgebra.dot(negative_shell_weights, cn_profile)
+            cp_avg = LinearAlgebra.dot(positive_shell_weights, cp_profile)
 
             Tn_loc = isnothing(T_n) ? 298.15 : T_n[i, ne_sep_idx]
             Tp_loc = isnothing(T_p) ? 298.15 : T_p[i, pe_sep_idx]
