@@ -631,7 +631,7 @@ function kwarg_dict(; kwargs...)
             "OutputReports" => get(kwargs, :output_reports, nothing),
             "InMemoryReports" => get(kwargs, :in_memory_reports, nothing),
             "ReportLevel" => get(kwargs, :report_level, nothing),
-            "OutputSubstrates" => get(kwargs, :output_substates, nothing),
+            "OutputSubstates" => get(kwargs, :output_substates, nothing),
         ),
     )
 
@@ -763,7 +763,7 @@ function solver_configuration(
         output_path = output["OutputPath"] == "" ? nothing : output["OutputPath"],
         in_memory_reports = output["InMemoryReports"],
         report_level = output["ReportLevel"],
-        output_substates = output["OutputSubstrates"],
+        output_substates = output["OutputSubstates"],
     )
 
     if !isnothing(logger)
