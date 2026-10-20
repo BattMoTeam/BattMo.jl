@@ -8,6 +8,44 @@ export
     compute_capacity
 
 """
+    expand_report_states(states)
+
+Expand saved `:substates` recursively into chronological accepted solver states.
+Return `(; states, report_indices)`, where `report_indices` selects the original report
+endpoints from the expanded states. An included initial state is retained. Equal-time
+endpoints are included once, retaining the parent report state. Input states are not
+modified or copied.
+"""
+function expand_report_states(states::AbstractVector)
+    accepted_states = AbstractDict[]
+    report_indices = Int[]
+
+    function append_state!(state)
+        for substate in get(state, :substates, ())
+            append_state!(substate)
+        end
+        time = state[:Control][:Controller].time
+        if !isempty(accepted_states)
+            previous_time = last(accepted_states)[:Control][:Controller].time
+            time >= previous_time ||
+                throw(ArgumentError("Saved states and substates must be chronological."))
+            if time == previous_time
+                accepted_states[end] = state
+                return
+            end
+        end
+        push!(accepted_states, state)
+        return
+    end
+
+    for state in states
+        append_state!(state)
+        push!(report_indices, length(accepted_states))
+    end
+    return (; states = accepted_states, report_indices)
+end
+
+"""
     compute_lithium_inventory(sim::Simulation, state; baseline_state)
 
 Compute lithium inventories in mol from a raw Jutul P2D state and fixed simulation geometry.
@@ -77,13 +115,16 @@ For `InputCurrentSeries`, stored currents represent solver intervals, so use end
 integration from the protocol's zero time. The first interval is included even when
 the initial state is omitted; an included initial state contributes zero capacity.
 Other controller policies retain trapezoidal integration between the stored states.
+Adaptive substates contribute to the integral; returned values remain on the original
+report grid.
 """
 function compute_capacity(output::SimulationOutput, type)
     return compute_capacity(output.jutul_output, type)
 end
 
 function compute_capacity(jutul_output::NamedTuple, type)
-    states = jutul_output[:states]
+    expanded = expand_report_states(jutul_output[:states])
+    states = expanded.states
     t = [state[:Control][:Controller].time for state in states]
 
     if type == "Cumulative"
@@ -97,7 +138,8 @@ function compute_capacity(jutul_output::NamedTuple, type)
     if !isempty(states) && first(states)[:Control][:Controller] isa InputCurrentController
         # Input-current protocols reset controller time to zero, including reused initial states.
         intervals = [first(t); diff(t)]
-        return cumsum(intervals .* I) ./ Jutul.si_unit("hour")
+        capacity_array = cumsum(intervals .* I) ./ Jutul.si_unit("hour")
+        return capacity_array[expanded.report_indices]
     end
 
     capacity_array = Float64[]
@@ -112,7 +154,7 @@ function compute_capacity(jutul_output::NamedTuple, type)
 
     end
 
-    return capacity_array
+    return capacity_array[expanded.report_indices]
 
 end
 

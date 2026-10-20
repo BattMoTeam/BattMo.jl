@@ -34,6 +34,58 @@ using Test
     @test BattMo.compute_capacity((; states), "Net") ≈ [0.0, -7.0, -5.5] ./ hour atol = 1.0e-12 rtol = 0
 end
 
+@testset "Capacity includes adaptive substates on the report grid" begin
+    function saved_current_state(time, current; voltage_control = false)
+        target = voltage_control ? 4.2 : current
+        return Dict{Symbol, Any}(
+            :Control => Dict{Symbol, Any}(
+                :Controller => BattMo.InputCurrentController(target, time, voltage_control),
+                :Current => [current],
+            ),
+        )
+    end
+
+    initial_state = saved_current_state(0.0, 9.0)
+    first_substate = saved_current_state(1.0, -4.0; voltage_control = true)
+    first_substate[:substates] = [saved_current_state(0.5, -2.0)]
+    first_report = saved_current_state(2.0, 2.0)
+    # Some output includes the report endpoint among its saved substates.
+    first_report[:substates] = [first_substate, deepcopy(first_report)]
+    last_report = saved_current_state(4.0, 3.0)
+    last_report[:substates] = [saved_current_state(3.0, -1.0; voltage_control = true)]
+    states = [initial_state, first_report, last_report]
+    original_states = repr(states)
+    hour = Jutul.si_unit("hour")
+
+    # Each endpoint current applies only to its accepted interval, including CV intervals.
+    for (type, expected) in (("Cumulative", [0.0, 5.0, 9.0]), ("Net", [0.0, 1.0, -1.0]))
+        @test BattMo.compute_capacity((; states), type) ≈ expected ./ hour atol = 1.0e-12 rtol = 0
+        @test BattMo.compute_capacity((; states = states[2:end]), type) ≈
+            expected[2:end] ./ hour atol = 1.0e-12 rtol = 0
+    end
+    expanded = BattMo.expand_report_states(states)
+    @test [state[:Control][:Controller].time for state in expanded.states] ==
+        [0.0, 0.5, 1.0, 2.0, 3.0, 4.0]
+    @test expanded.report_indices == [1, 4, 6]
+    @test all(expanded.states[index] === state for (index, state) in zip(expanded.report_indices, states))
+    @test BattMo.expand_report_states(states[2:end]).report_indices == [3, 5]
+    @test repr(states) == original_states
+    @test_throws ArgumentError BattMo.expand_report_states(reverse(states))
+    @test isempty(BattMo.expand_report_states(empty(states)).states)
+    @test isempty(BattMo.expand_report_states(empty(states)).report_indices)
+    @test isempty(BattMo.compute_capacity((; states = empty(states)), "Net"))
+
+    # Other policies keep trapezoidal integration, now including accepted substates.
+    for state in [expanded.states; first_report[:substates][end]]
+        controller = state[:Control][:Controller]
+        state[:Control][:Controller] =
+            BattMo.FunctionController(controller.target, controller.time, controller.target_is_voltage)
+    end
+    @test BattMo.compute_capacity((; states), "Cumulative") ≈
+        [0.0, 7.25, 10.75] ./ hour atol = 1.0e-12 rtol = 0
+    @test BattMo.compute_capacity((; states), "Net") ≈ [0.0, 0.75, -0.75] ./ hour atol = 1.0e-12 rtol = 0
+end
+
 @testset "Input current preserves timestep charge" begin
     times = [0.0, 2.0, 6.0, 10.0]
     currents = [-8.0, -8.0, -2.0, 0.0]
