@@ -1063,24 +1063,38 @@ function setup_initial_state(input, model::IntercalationBattery)
 
     if hasproperty(input, :initial_state) && !isnothing(input.initial_state)
         state = deepcopy(input.initial_state)
+        # A report endpoint may contain earlier adaptive substeps. They belong to the
+        # previous run and must not precede the reset clock in the new initial state.
+        pop!(state, :substates, nothing)
 
-        # Reset controller
+        # Restart the protocol clock. Input-current continuation also needs the
+        # previous CC/CV mode because voltage-limit hysteresis depends on it.
         if haskey(state, :Control)
             ctrl = state[:Control]
             if haskey(ctrl, :Controller)
                 controller = ctrl[:Controller]
-                for fd in fieldnames(typeof(controller))
-                    value = getfield(controller, fd)
-                    if !isa(value, String)
-                        value = zero(value)
+                if controller isa InputCurrentController
+                    controller.time = zero(controller.time)
+                else
+                    for fd in fieldnames(typeof(controller))
+                        value = getfield(controller, fd)
+                        if !isa(value, String)
+                            value = zero(value)
+                        end
+                        setfield!(controller, fd, value)
                     end
-                    setfield!(controller, fd, value)
                 end
             end
             ctrl[:Current] = [getInitCurrent(model.multimodel[:Control])]
         end
 
-        return state
+        # Ordinary output omits secondary fields needed by the simulator. Allocate
+        # them through the normal initializer, retaining the saved controller mode.
+        initialized_state = setup_state(model.multimodel, state)
+        if haskey(state, :Control) && haskey(state[:Control], :Controller)
+            initialized_state[:Control][:Controller] = state[:Control][:Controller]
+        end
+        return initialized_state
     end
 
     multimodel = model.multimodel
