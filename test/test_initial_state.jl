@@ -1,132 +1,138 @@
-using BattMo
-using Test
+module InitialStateTests
 
-@testset "Restart from saved state reproduces full discharge-charge simulation" begin
-    # Parameters
-    rate = 1.0
-    initial_soc = 1.0
-    upper_cutoff = 4.1
-    lower_cutoff = 3.5
+using BattMo, Test
+import Serialization
 
-    HOUR = 3600.0
-    discharge_duration = HOUR / rate
-    charge_duration = HOUR / rate
-    t_total = discharge_duration + charge_duration
+"""Simulate an inclusive input-sample range, restarting its clock and optionally restoring a state."""
+function restart_simulation(output_ref, indices; initial_state = nothing)
+    protocol = deepcopy(output_ref.input["CyclingProtocol"])
+    protocol["Times"] = protocol["Times"][indices] .- protocol["Times"][first(indices)]
 
-    N = 11
-    t_discharge = collect(range(0.0, discharge_duration; length = N))
-    t_charge = collect(range(discharge_duration, t_total; length = N))
-    t_ref = vcat(t_discharge, t_charge[2:end]) # drop duplicate join point
+    # Simulate using the raw input. Do not use output_ref.time_series["Current"]:
+    # those are solved interval averages, possibly modified by voltage limits.
+    protocol["Currents"] = output_ref.input["CyclingProtocol"]["Currents"][indices]
 
-    # Setup cell model and parameters
-    model = LithiumIonBattery()
-    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    reference = output_ref.simulation
 
-    I_app = rate * cell_parameters["Cell"]["NominalCapacity"]
-    I_tmp = vcat(fill(I_app, N), fill(-I_app, N - 1))
-
-    ref_protocol = CyclingProtocol(
-        Dict(
-            "Protocol" => "InputCurrentSeries",
-            "Times" => t_ref,
-            "Currents" => I_tmp,
-            "LowerVoltageLimit" => lower_cutoff,
-            "UpperVoltageLimit" => upper_cutoff,
-            "InitialStateOfCharge" => initial_soc,
-        )
+    return Simulation(
+        LithiumIonBattery(; model_settings = deepcopy(reference.model.settings)),
+        reference.cell_parameters, CyclingProtocol(protocol);
+        simulation_settings = reference.settings, initial_state,
     )
+end
 
-    sim_ref = Simulation(model, cell_parameters, ref_protocol)
+@testset "Restart from ordinary saved output at 50% SOC" begin
+    @testset "SEI = $sei" for sei in (false, true)
+        negative = :NegativeElectrodeActiveMaterial
+        positive = :PositiveElectrodeActiveMaterial
+        cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
 
-    @testset "include_initial_state" begin
-        output_ref_with_initial =
-            solve(sim_ref; info_level = 0, include_initial_state = true)
-        output_ref_without_initial =
-            solve(sim_ref; info_level = 0, include_initial_state = false)
+        # Make SEI growth measurable before the first restart during charging.
+        cell_parameters["NegativeElectrode"]["Interphase"]["InterstitialConcentration"] = 1.5
+        model_settings = load_model_settings(; from_default_set = "p2d")
+        delete!(model_settings, "RampUp")
+        if sei
+            model_settings["SEIModel"] = "Bolay"
+        end
+        settings = load_simulation_settings(; from_default_set = "p2d")
+        for electrode in ("NegativeElectrode", "PositiveElectrode")
+            settings[electrode * "CoatingGridPoints"] = 2
+            settings[electrode * "ParticleGridPoints"] = 4
+        end
+        settings["SeparatorGridPoints"] = 2
 
-        @test output_ref_with_initial.time_series["Time"] ≈ t_ref atol = 1.0e-14 rtol = 0.0
-        @test length(output_ref_without_initial.time_series["Time"]) == length(t_ref) - 1
-        @test output_ref_without_initial.time_series["Time"] ≈ t_ref[2:end] atol = 1.0e-14 rtol = 0.0
+        # Charge, rest, discharge, rest; negative current charges the cell.
+        time_ref = collect(0.0:30.0:480.0)
+        current_ref = 2.5 .* [0, -1, -1, -1, -1, -1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0]
+        protocol = CyclingProtocol(
+            Dict(
+                "Protocol" => "InputCurrentSeries",
+                "Times" => time_ref, "Currents" => current_ref,
+                "LowerVoltageLimit" => 2.0, "UpperVoltageLimit" => 4.3,
+                "InitialStateOfCharge" => 0.5,
+            )
+        )
+        sim_ref = Simulation(
+            LithiumIonBattery(; model_settings), cell_parameters, protocol;
+            simulation_settings = settings,
+        )
 
-        # The no-initial-state output should match the full output with the first sample removed
-        @test output_ref_without_initial.time_series["Current"] ≈
-            output_ref_with_initial.time_series["Current"][2:end] atol = 1.0e-12 rtol = 0.0
-        @test output_ref_without_initial.time_series["Voltage"] ≈
-            output_ref_with_initial.time_series["Voltage"][2:end] atol = 1.0e-12 rtol = 0.0
+        # Resolve the small SEI growth and keep substeps identical across restarts.
+        solver_settings = load_solver_settings(; from_default_set = "direct")
+        tolerances = Dict(string(name) => Dict("default" => 1.0e-10) for name in keys(sim_ref.model.multimodel.models))
+        for scaling in BattMo.get_scalings(sim_ref.model.multimodel, sim_ref.parameters)
+            tolerances[string(scaling.model_label)][string(scaling.equation_label)] = scaling.value * 1.0e-10
+        end
+        solver_settings["NonLinearSolver"]["Tolerances"] = tolerances
+        solve_options = (;
+            solver_settings, info_level = -1, max_timestep = 10.0,
+            always_update_secondary = true, output_substates = true, error_on_incomplete = true,
+        )
+        output_ref = solve(sim_ref; solve_options..., include_initial_state = true)
+
+        @testset "include_initial_state" begin
+            output_without_initial = solve(sim_ref; solve_options..., include_initial_state = false)
+            @test output_ref.time_series["Time"] ≈ time_ref atol = 1.0e-12 rtol = 0.0
+            for name in ("Time", "Current", "Voltage")
+                @test output_without_initial.time_series[name] ≈
+                    output_ref.time_series[name][2:end] atol = 1.0e-12 rtol = 0.0
+            end
+        end
+
+        state_fields = [
+            (negative, :ParticleConcentration, 1.0e-6),
+            (negative, :SurfaceConcentration, 1.0e-6),
+            (positive, :ParticleConcentration, 1.0e-6),
+            (positive, :SurfaceConcentration, 1.0e-6),
+            (:Electrolyte, :ElectrolyteConcentration, 1.0e-7),
+        ]
+        if sei
+            append!(
+                state_fields, [
+                    (negative, :NormalizedSEIThickness, 1.0e-10),
+                    (negative, :NormalizedSEIVoltageDrop, 1.0e-10),
+                    (negative, :SEIThickness, 1.0e-18),
+                    (negative, :SEIVoltageDrop, 1.0e-8),
+                ]
+            )
+        end
+        restart_state = nothing
+        boundaries = [1, 4, 12, length(time_ref)]
+
+        mktempdir() do directory
+            for chunk in 1:(length(boundaries) - 1)
+                indices = boundaries[chunk]:boundaries[chunk + 1]
+                simulation = restart_simulation(output_ref, indices; initial_state = restart_state)
+                output = solve(simulation; solve_options..., include_initial_state = true)
+
+                # Save the raw endpoint, including substeps, without repairing it in the test.
+                endpoint = last(output.jutul_output.states)
+                checkpoint_path = joinpath(directory, "restart.jls")
+                Serialization.serialize(checkpoint_path, endpoint)
+                restart_state = Serialization.deserialize(checkpoint_path)
+            end
+        end
+
+        # Compare only the final result of the uninterrupted and restarted runs.
+        reference = last(output_ref.jutul_output.states)
+        restarted = restart_state
+        final_time = restarted[:Control][:Controller].time + time_ref[boundaries[end - 1]]
+        @test final_time ≈ last(time_ref) atol = 1.0e-12 rtol = 0.0
+        @test restarted[:Control][:Current] ≈ reference[:Control][:Current] atol = 1.0e-7 rtol = 0.0
+        @test restarted[:Control][:ElectricPotential] ≈ reference[:Control][:ElectricPotential] atol = 1.0e-6 rtol = 0.0
+        for (component, field, tolerance) in state_fields
+            @test restarted[component][field] ≈ reference[component][field] atol = tolerance rtol = 1.0e-6
+        end
+        if sei
+            # Retain the original baseline when comparing cumulative SEI growth.
+            baseline_state = sim_ref.initial_state
+            initial_inventory = compute_lithium_inventory(sim_ref, baseline_state; baseline_state)
+            ref_inventory = compute_lithium_inventory(sim_ref, reference; baseline_state)
+            split_inventory = compute_lithium_inventory(sim_ref, restarted; baseline_state)
+            @test ref_inventory.sei_loss_ah > 1.0e-6
+            @test split_inventory.sei_added ≈ ref_inventory.sei_added rtol = 1.0e-6 atol = 1.0e-10 * initial_inventory.mobile
+        end
     end
+end
 
-    # Reference output used for splitting
-    output_ref = solve(sim_ref; info_level = 0, include_initial_state = true)
-
-    # Step 1: discharge only using the current from the reference simulation
-    I_discharge = output_ref.time_series["Current"][1:N]
-
-    discharge_protocol = CyclingProtocol(
-        Dict(
-            "Protocol" => "InputCurrentSeries",
-            "Times" => t_discharge,
-            "Currents" => I_discharge,
-            "LowerVoltageLimit" => lower_cutoff,
-            "UpperVoltageLimit" => upper_cutoff,
-            "InitialStateOfCharge" => initial_soc,
-        )
-    )
-
-    sim_discharge = Simulation(
-        model,
-        cell_parameters,
-        discharge_protocol;
-        output_all_secondary_variables = true,
-    )
-    output_discharge = solve(sim_discharge; info_level = 0, include_initial_state = true)
-
-    @test output_discharge.time_series["Time"] ≈ t_discharge atol = 1.0e-14 rtol = 0.0
-
-    end_state = output_discharge.jutul_output.states[end]
-    @test abs(end_state[:Control][:Controller].time - output_ref.time_series["Time"][N]) < 1.0e-14
-
-    # Step 2: charge using the discharge end state as initial state
-    I_charge = output_ref.time_series["Current"][N:end]
-
-    charge_protocol = CyclingProtocol(
-        Dict(
-            "Protocol" => "InputCurrentSeries",
-            "Times" => t_charge .- t_charge[1],
-            "Currents" => I_charge,
-            "LowerVoltageLimit" => 0.0,
-            "UpperVoltageLimit" => upper_cutoff,
-            "InitialStateOfCharge" => initial_soc,
-        )
-    )
-
-    sim_charge = Simulation(
-        model,
-        cell_parameters,
-        charge_protocol;
-        initial_state = end_state,
-    )
-    output_charge = solve(sim_charge; info_level = 0, include_initial_state = true)
-
-    @test output_charge.time_series["Time"] ≈ (t_charge .- t_charge[1]) atol = 1.0e-14 rtol = 0.0
-
-    @testset "split discharge + charge matches full simulation" begin
-        E_ref = output_ref.time_series["Voltage"]
-        E_discharge = output_discharge.time_series["Voltage"]
-        E_charge = output_charge.time_series["Voltage"]
-
-        t_merge = vcat(
-            output_discharge.time_series["Time"],
-            output_charge.time_series["Time"][2:end] .+ t_discharge[end],
-        )
-        I_merge = vcat(
-            output_discharge.time_series["Current"],
-            output_charge.time_series["Current"][2:end],
-        )
-        E_merge = vcat(E_discharge, E_charge[2:end]) # drop duplicate join point
-
-        @test t_merge ≈ t_ref atol = 1.0e-14 rtol = 0.0
-        @test I_merge ≈ output_ref.time_series["Current"] atol = 1.0e-7 rtol = 0.0
-        @test maximum(abs.(E_merge .- E_ref)) <= 1.0e-6
-        @test BattMo.rmse(t_ref, E_ref, t_ref, E_merge) <= 1.0e-4
-    end
 end
