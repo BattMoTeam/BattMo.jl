@@ -26,7 +26,7 @@ Constructs a `Simulation` object that sets up and validates all necessary compon
 - `simulation_settings::SimulationSettings` (optional): Configuration settings controlling solver behavior, time stepping, etc. If not provided, default settings are generated based on the model.
 - `time_steps` (optional): A pre-computed array of time steps to use for the simulation. If `nothing` (default), time steps are computed from the cycling protocol and simulation settings.
 - `state0` (optional): A pre-computed initial state to use for the simulation. If `nothing` (default), the initial state is computed from the model and cycling protocol.
-- `output_all_secondary_variables::Bool` (optional): If `true`, all secondary variables (e.g. `SolidDiffFlux`, `DmuDc`, `ChemCoef`) are included in the simulation output states. This makes the output states directly usable as `initial_state` for subsequent simulations. Default is `false`.
+- `output_all_secondary_variables::Bool` (optional): If `true`, include all secondary variables (e.g. `SolidDiffFlux`, `DmuDc`, `ChemCoef`) in output states. Default is `false`; missing secondary fields are initialized when an output state is reused as `initial_state` in a subsequent simulation.
 
 # Behavior
 - Validates `model`, `cell_parameters`, `cycling_protocol`, and `simulation_settings`.
