@@ -378,6 +378,8 @@ end
             push!(time_outputs, refinement_output)
             push!(time_losses, inventory.sei_added)
         end
+        # Averaging preserves charge, but different timesteps apply different currents
+        # on ramps; this voltage comparison includes that forcing difference.
         time_voltage_error = maximum(
             abs.(
                 time_outputs[2].time_series["Voltage"] - time_outputs[3].time_series["Voltage"][1:2:end],

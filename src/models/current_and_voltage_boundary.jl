@@ -139,13 +139,18 @@ Input current series policy.
 Applies a prescribed current time series (times in seconds, currents in amperes).
 The `times` vector must be strictly increasing. A Jutul linear interpolator
 (`get_1d_interpolator`) is used to evaluate the current at any simulation time.
-Each solver timestep applies its interval-average current, preserving the prescribed
-charge when the timestep is large or is subdivided by the nonlinear solver.
+
+Each accepted timestep applies the average of the piecewise-linear input:
+`I_average * dt = integral(I_input(t), t_start..t_end)`.
+This preserves accumulated signed charge to numerical precision, including adaptive
+substeps, while current control is active. Intervals spanning a sign change need not
+preserve separate charge/discharge totals.
+
 Voltage limits are enforced: if the voltage response exceeds `upperCutoffVoltage` or
 falls below `lowerCutoffVoltage`, the controller switches to constant-voltage control
-at the respective limit. The lengths of `times` and `currents` must match.
-
-Voltage limits may be set to `±Inf` if they should not be enforced.
+at the respective limit. The lengths of `times` and `currents` must match. Voltage
+limits may be set to `±Inf` if they should not be enforced.
+Voltage control can change the delivered charge.
 """
 mutable struct InputCurrentPolicy{R} <: AbstractPolicy
     times::Vector{R}
@@ -949,9 +954,9 @@ end
 """
     average_input_current(policy, start_time, end_time)
 
-Average the piecewise-linear input over an actual solver timestep, including any
-profile knots inside it. Integrating this current with backward Euler preserves
-the prescribed charge even after adaptive timestep cuts.
+Average the piecewise-linear input over the actual solver interval, including interior
+knots. For positive `dt = end_time - start_time`, the returned value satisfies
+`I_average * dt = integral(I_input(t), start_time..end_time)` to numerical precision.
 """
 function average_input_current(policy::InputCurrentPolicy, start_time, end_time)
     start_current = policy.current_function(start_time)
