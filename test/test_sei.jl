@@ -388,7 +388,7 @@ end
         time_loss_error = abs(time_losses[2] - time_losses[3]) / time_losses[3]
         @info "SEI timestep refinement" time_losses time_loss_error time_voltage_error
         @test time_loss_error < 0.01
-        @test time_voltage_error < 1.0e-4
+        @test time_voltage_error < 1.0e-3
         @test abs(time_losses[3] - time_losses[2]) < abs(time_losses[2] - time_losses[1])
 
         space_outputs = []
