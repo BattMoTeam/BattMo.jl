@@ -1,7 +1,8 @@
 # Solid Electrolyte Interphase (SEI)
 
-The negative-electrode P2D SEI model follows
-[Bolay et al.](https://doi.org/10.1016/j.powera.2022.100083). It couples film growth to
+The negative-electrode P2D SEI model follows Bolay et al. [bolay2022](@cite). Its flux
+describes electron transport through the film by diffusing neutral lithium interstitials,
+the mechanism of [single2018, vonkolzenberg2020](@cite). It couples film growth to
 irreversible lithium consumption and charge conservation. Particle geometry, reactive
 surface area, and phase volume fractions remain fixed; solvent depletion and porosity
 changes are not represented.
@@ -64,6 +65,16 @@ a porous outer layer, so the growth rate does not depend on `L`. The film thickn
 still evolves and sets the film resistance and the lithium inventory. Lithium loss
 determines only `De*ce0/L_p`: fix `L_p`, for example at `InitialThickness`, and fit the
 growth prefactor. The SEI mass-equation tolerance then scales with `De*ce0/L_p`.
+
+The fixed layer follows the layered picture of the SEI: a heterogeneous film
+[peled1997](@cite) with a dense inorganic inner layer and a porous outer layer that
+lithium crosses easily [lu2011, shi2012](@cite). Continuum growth models reproduce such a
+dual-layer morphology [single2016](@cite). In the interstitial theory, growth that does
+not depend on the film thickness is the reaction-limited regime [vonkolzenberg2020](@cite).
+Capacity-fade models with a kinetically limited solvent-reduction side reaction behave the
+same way [ramadass2004, safari2009](@cite). The option suits data in which lithium loss
+grows nearly linearly with exposure; cycling data often deviate from the `t^0.5` growth of
+the default law [attia2020, keil2020](@cite).
 
 ## Film resistance and inputs
 
