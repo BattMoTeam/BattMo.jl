@@ -996,7 +996,7 @@ function get_scalings(model, parameters)
             params = model[elde].system.params
             hour = Jutul.si_unit("hour")
             film_inventory_rate = params[:StoichiometricCoefficient] * L / (params[:MolarVolume] * hour)
-            sei_flux_scale = max(De * ce / L, film_inventory_rate)
+            sei_flux_scale = max(De * ce / sei_limiting_thickness(params, L), film_inventory_rate)
             scaling = (model_label = elde, equation_label = :sei_mass_cons, value = sei_flux_scale)
             push!(scalings, scaling)
 

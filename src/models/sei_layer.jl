@@ -191,11 +191,28 @@ end
 
 
 """
+    sei_limiting_thickness(params, thickness)
+
+Return the thickness that limits electron transport in the SEI growth flux: the optional
+fixed `PassivatingThickness` when it is set, otherwise the current film `thickness`.
+"""
+function sei_limiting_thickness(params, thickness)
+    if haskey(params, :PassivatingThickness)
+        return params[:PassivatingThickness]
+    else
+        return thickness
+    end
+end
+
+"""
     sei_molar_flux(params, thickness, temperature, solid_potential, electrolyte_potential, voltage_drop)
 
 Irreversible Bolay lithium consumption flux in mol/(m^2 s), positive into the SEI.
-The stoichiometric coefficient belongs in the thickness balance, not in this flux or its
-current `-F*N`. The migration approximation is clipped at zero to prevent SEI dissolution.
+The prefactor is divided by the film `thickness`, or by the fixed `PassivatingThickness`
+when that optional parameter is set; see `sei_limiting_thickness`. The film still grows
+in both cases. The stoichiometric coefficient belongs in the thickness balance, not in
+this flux or its current `-F*N`. The migration approximation is clipped at zero to
+prevent SEI dissolution.
 """
 function sei_molar_flux(
         params, thickness, temperature, solid_potential, electrolyte_potential, voltage_drop,
@@ -203,7 +220,7 @@ function sei_molar_flux(
     thermal_factor = FARADAY_CONSTANT / (GAS_CONSTANT * temperature)
     overpotential = solid_potential - electrolyte_potential - voltage_drop
     prefactor = params[:ElectronicDiffusionCoefficient] * params[:InterstitialConcentration]
-    flux = prefactor / thickness * exp(-thermal_factor * overpotential) *
+    flux = prefactor / sei_limiting_thickness(params, thickness) * exp(-thermal_factor * overpotential) *
         (1 - thermal_factor * voltage_drop / 2)
     return max(flux, zero(flux))
 end

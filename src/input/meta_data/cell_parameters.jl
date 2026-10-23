@@ -209,6 +209,17 @@ function get_cell_parameters_meta_data()
             "context_type_iri" => "https://w3id.org/emmo#EMMO_43003c86_9d15_433b_9789_ee2940920656",
             "description" => "Thickness of the SEI layer at the start of the simulation. See https://doi.org/10.1016/j.powera.2022.100083.",
         ),
+        "PassivatingThickness" => Dict(
+            "type" => Real,
+            "min_value" => 1.0e-9,
+            "max_value" => 1.0e-2,
+            "unit" => "m",
+            "unit_name" => "emmo:Metre",
+            "unit_iri" => "https://w3id.org/emmo#Metre",
+            "context_type" => "PassivatingThickness",
+            "context_type_iri" => nothing,
+            "description" => "Optional fixed thickness of the passivating SEI layer that limits electron transport. When given, the growth flux uses it instead of the film thickness, so growth does not slow down as the film thickens. The film thickness still sets the film resistance and the lithium inventory.",
+        ),
         "InitialPotentialDrop" => Dict(
             "type" => Real,
             "min_value" => 0,

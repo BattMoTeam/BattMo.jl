@@ -190,6 +190,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
                             "InterstitialConcentration" => create_property(parameter_meta, "InterstitialConcentration"),
                             "InitialThickness" => create_property(parameter_meta, "InitialThickness"),
                             "InitialPotentialDrop" => create_property(parameter_meta, "InitialPotentialDrop"),
+                            "PassivatingThickness" => create_property(parameter_meta, "PassivatingThickness"),
                         ),
                         "required" => ["MolarVolume", "IonicConductivity", "ElectronicDiffusionCoefficient", "StoichiometricCoefficient", "InterstitialConcentration", "InitialThickness", "InitialPotentialDrop"],
                     ),

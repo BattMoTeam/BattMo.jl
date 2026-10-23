@@ -366,6 +366,93 @@ end
         @test properties["InitialPotentialDrop"]["exclusiveMinimum"] == 0.0
     end
 
+    @testset "Fixed passivating thickness" begin
+        negative_name = :NegativeElectrodeActiveMaterial
+        params = sim.model.multimodel[negative_name].system.params
+        thickness = params[:InitialThickness]
+        passivating = Dict("PassivatingThickness" => thickness)
+        fixed_sim = sei_simulation(; interphase_overrides = passivating)
+        fixed_params = fixed_sim.model.multimodel[negative_name].system.params
+
+        # Without the parameter, the film thickness limits growth exactly as before.
+        @test !haskey(params, :PassivatingThickness)
+        @test BattMo.sei_limiting_thickness(params, 3 * thickness) == 3 * thickness
+        @test BattMo.sei_limiting_thickness(fixed_params, 3 * thickness) == thickness
+
+        # With it, the flux at any film thickness is the default flux at the passivating thickness.
+        flux(p, film, drop) = BattMo.sei_molar_flux(p, film, 298.15, 0.1, 0.0, drop)
+        @test flux(fixed_params, 3 * thickness, 0.0) == flux(params, thickness, 0.0)
+        @test isfinite(@inferred BattMo.sei_molar_flux(fixed_params, 3 * thickness, 298.15, 0.1, 0.0, 0.0))
+        @test ForwardDiff.derivative(film -> flux(fixed_params, film, 0.0), 3 * thickness) == 0.0
+        threshold = 2 * BattMo.GAS_CONSTANT * 298.15 / BattMo.FARADAY_CONSTANT
+        reference_flux = flux(fixed_params, thickness, 0.0)
+        for drop in (0.5 * threshold, 1.5 * threshold)
+            # Normalized potentials and flux; the second drop lies beyond the growth switch.
+            normalized_flux(x) = BattMo.sei_molar_flux(
+                fixed_params, 3 * thickness, 298.15, 0.1 * x[1], 0.1 * x[2], drop * x[3],
+            ) / reference_flux
+            x = [1.0, 0.0, 1.0]
+            derivatives = ForwardDiff.gradient(normalized_flux, x)
+            for h in (1.0e-5, 1.0e-6)
+                finite_difference = map(eachindex(x)) do i
+                    plus = copy(x)
+                    minus = copy(x)
+                    plus[i] += h
+                    minus[i] -= h
+                    (normalized_flux(plus) - normalized_flux(minus)) / (2 * h)
+                end
+                @test derivatives ≈ finite_difference rtol = 1.0e-5 atol = 1.0e-8
+            end
+        end
+
+        # The SEI mass tolerance scales with De*ce0/L_p above the film-inventory floor.
+        hour = Jutul.si_unit("hour")
+        inventory_rate = params[:StoichiometricCoefficient] * thickness / (params[:MolarVolume] * hour)
+        crossover = inventory_rate * thickness / params[:ElectronicDiffusionCoefficient]
+        scale_sim = sei_simulation(;
+            concentration = 20 * crossover, interphase_overrides = Dict("PassivatingThickness" => 2 * thickness),
+        )
+        scales = BattMo.get_scalings(scale_sim.model.multimodel, scale_sim.parameters)
+        @test only(filter(s -> s.equation_label == :sei_mass_cons, scales)).value ≈ 10 * inventory_rate rtol = 1.0e-14 atol = 0.0
+
+        # Conservation and independent accounting hold. At a nearly fixed state, growth stays
+        # linear in time, while the default law slows down as the film thickens.
+        fixed_output = solve_sei(fixed_sim)
+        fixed_final = check_sei_conservation(fixed_sim, fixed_output)
+        @test fixed_final.sei_added > final.sei_added
+        function second_half_growth_ratio(states)
+            mean_thickness(state) = sum(state[negative_name][:SEIThickness]) / length(state[negative_name][:SEIThickness])
+            middle = mean_thickness(states[length(states) ÷ 2])
+            return (mean_thickness(states[end]) - middle) / (middle - thickness)
+        end
+        @test 0.98 <= second_half_growth_ratio(fixed_output.jutul_output.states) <= 1.02
+        @test second_half_growth_ratio(output.jutul_output.states) < 0.8
+
+        # Restarting preserves the fixed-layer growth.
+        first_sim = sei_simulation(; duration = 300.0, interphase_overrides = passivating)
+        first_output = solve_sei(first_sim)
+        second_sim = sei_simulation(;
+            duration = 300.0, interphase_overrides = passivating, initial_state = first_output.jutul_output.states[end],
+        )
+        second_output = solve_sei(second_sim)
+        check_sei_conservation(second_sim, second_output; baseline_state = fixed_sim.initial_state)
+        @test isapprox(
+            second_output.jutul_output.states[end][negative_name][:SEIThickness],
+            fixed_output.jutul_output.states[end][negative_name][:SEIThickness]; rtol = 1.0e-6, atol = 1.0e-18,
+        )
+
+        # Invalid values are rejected, and the generated schema treats the parameter as optional.
+        for value in (0.0, -1.0e-9, NaN, Inf)
+            @test_throws ArgumentError sei_simulation(;
+                interphase_overrides = Dict("PassivatingThickness" => value), validate = false,
+            )
+        end
+        schema = get_schema_cell_parameters(fixed_sim.model.settings)
+        interphase_schema = schema["properties"]["NegativeElectrode"]["properties"]["Interphase"]
+        @test interphase_schema["properties"]["PassivatingThickness"]["minimum"] == 1.0e-9
+        @test !("PassivatingThickness" in interphase_schema["required"])
+    end
+
     @testset "Timestep and spatial refinement" begin
         # A C/20 waveform represents the low-rate RPT regime; C/2 is covered above.
         currents = [0.0, -0.25, -0.25, 0.0, 0.25, 0.25, 0.0]

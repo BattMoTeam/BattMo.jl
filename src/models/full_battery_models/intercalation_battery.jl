@@ -547,6 +547,13 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
                 end
                 am_params[Symbol(fd)] = value
             end
+            # Optional: a fixed thickness limiting electron transport in the growth flux.
+            if haskey(inputparams_electrode["Interphase"], "PassivatingThickness")
+                value = inputparams_electrode["Interphase"]["PassivatingThickness"]
+                value isa Real && isfinite(value) && value > 0 ||
+                    throw(ArgumentError("$(stringName).Interphase.PassivatingThickness must be finite and positive."))
+                am_params[:PassivatingThickness] = value
+            end
         else
             label = nothing
         end
