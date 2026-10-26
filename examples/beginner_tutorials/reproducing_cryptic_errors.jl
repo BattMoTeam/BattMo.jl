@@ -1,4 +1,3 @@
-
 using BattMo
 
 cell_path = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/cell_parameters/", "cell_parameter_set_chen2020_calibrated.json")

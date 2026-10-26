@@ -2,17 +2,14 @@
 
 ---
 
-<p align="center">
-  <a href="https://battmoteam.github.io/BattMo.jl/dev/">
-    <img src="https://img.shields.io/badge/docs-dev-blue.svg" alt="Documentation">
-  </a>
-  <a href="https://github.com/battmoteam/BattMo.jl/actions/workflows/CI.yml?query=branch%3Amain">
-    <img src="https://github.com/battmoteam/BattMo.jl/actions/workflows/CI.yml/badge.svg?branch=main" alt="Build Status">
-  </a>
-  <a href="https://doi.org/10.5281/zenodo.17313586">
-    <img src="https://zenodo.org/badge/478088752.svg" alt="DOI">
-  </a>
-</p>
+<div align="center">
+
+[![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://battmoteam.github.io/BattMo.jl/dev/)
+[![Build Status](https://github.com/battmoteam/BattMo.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/battmoteam/BattMo.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![DOI](https://zenodo.org/badge/478088752.svg)](https://doi.org/10.5281/zenodo.17313586)
+
+</div>
+
 
 # BattMo.jl
 
@@ -116,6 +113,18 @@ plot_3D_results(output)
 ```
 
 ![3D plot](docs/src/assets/3d_plot.png)
+
+## Contributing
+
+Please report bugs, issues or suggest enhancements by filing an issue. To contribute code to BattMo, please create a pull request. You're also most welcome to email the developers at battmo@sintef.no if you have questions.
+
+The code should be formatted using Runic.jl. You can run this with
+```
+julia -e 'using Pkg; Pkg.add("Runic")'
+julia -e 'using Runic; exit(Runic.main(["--inplace", "."]))'
+```
+See the documentation [[https://github.com/fredrikekre/Runic.jl]] for details and how to integrate Runic with your editor.
+
 
 ## Acknowledgements
 

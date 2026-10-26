@@ -25,23 +25,22 @@ nothing # hide
 # For illustration, we create a Dictionary storing the values of the computations.
 
 cell_kpis_from_set = Dict(
-	"Positive Electrode Coating Mass" => compute_electrode_coating_mass(cell_parameters, "PositiveElectrode"),
-	"Negative Electrode Coating Mass" => compute_electrode_coating_mass(cell_parameters, "NegativeElectrode"),
-	"Separator Mass" => compute_separator_mass(cell_parameters),
-	"Positive Electrode Current Collector Mass" => compute_current_collector_mass(cell_parameters, "PositiveElectrode"),
-	"Negative Electrode Current Collector Mass" => compute_current_collector_mass(cell_parameters, "NegativeElectrode"),
-	"Electrolyte Mass" => compute_electrolyte_mass(cell_parameters),
-	"Cell Mass" => compute_cell_mass(cell_parameters),
-	"Cell Volume" => compute_cell_volume(cell_parameters),
-	"Positive Electrode Mass Loading" => compute_electrode_mass_loading(cell_parameters, "PositiveElectrode"),
-	"Negative Electrode Mass Loading" => compute_electrode_mass_loading(cell_parameters, "NegativeElectrode"),
-	"Cell Theoretical Capacity" => compute_cell_theoretical_capacity(cell_parameters),
-	"Cell N:P Ratio" => compute_np_ratio(cell_parameters),
+    "Positive Electrode Coating Mass" => compute_electrode_coating_mass(cell_parameters, "PositiveElectrode"),
+    "Negative Electrode Coating Mass" => compute_electrode_coating_mass(cell_parameters, "NegativeElectrode"),
+    "Separator Mass" => compute_separator_mass(cell_parameters),
+    "Positive Electrode Current Collector Mass" => compute_current_collector_mass(cell_parameters, "PositiveElectrode"),
+    "Negative Electrode Current Collector Mass" => compute_current_collector_mass(cell_parameters, "NegativeElectrode"),
+    "Electrolyte Mass" => compute_electrolyte_mass(cell_parameters),
+    "Cell Mass" => compute_cell_mass(cell_parameters),
+    "Cell Volume" => compute_cell_volume(cell_parameters),
+    "Positive Electrode Mass Loading" => compute_electrode_mass_loading(cell_parameters, "PositiveElectrode"),
+    "Negative Electrode Mass Loading" => compute_electrode_mass_loading(cell_parameters, "NegativeElectrode"),
+    "Cell Theoretical Capacity" => compute_cell_theoretical_capacity(cell_parameters),
+    "Cell N:P Ratio" => compute_np_ratio(cell_parameters),
 )
 
 
-
-# The functions to compute the cell mass and cell volume also offer an option to print the breakdown of masses without returning the total mass. The breakdown can be useful to 
+# The functions to compute the cell mass and cell volume also offer an option to print the breakdown of masses without returning the total mass. The breakdown can be useful to
 # verify the parameters are sensible, and to calculate a Bill of Materials (BOM)
 compute_cell_mass(cell_parameters; print_breakdown = true);
 
@@ -49,10 +48,10 @@ compute_cell_mass(cell_parameters; print_breakdown = true);
 # Once we run a simulation we can access additional cell KPIs such as energy density, specific energy, mean power output, etc.
 
 cell_kpis_from_output = Dict(
-	"Discharge capacity" => compute_discharge_capacity(output),
-	"Discharge energy" => compute_discharge_energy(output),
-	"Energy density" => compute_discharge_energy(output) / compute_cell_volume(cell_parameters),
-	"Specific energy" => compute_discharge_energy(output) / compute_cell_mass(cell_parameters),
+    "Discharge capacity" => compute_discharge_capacity(output),
+    "Discharge energy" => compute_discharge_energy(output),
+    "Energy density" => compute_discharge_energy(output) / compute_cell_volume(cell_parameters),
+    "Specific energy" => compute_discharge_energy(output) / compute_cell_mass(cell_parameters),
 )
 
 
@@ -67,28 +66,28 @@ cycling_protocol = load_cycling_protocol(; from_default_set = "cccv")
 sim = Simulation(model, cell_parameters, cycling_protocol)
 
 output = solve(sim)
-nothing # hide 
+nothing # hide
 
 # As our data represents multiple cycles now, we can choose for which cycle we'd like to compute the KPI.
 
 cell_kpis_from_output_cycle_0 = Dict(
-	"Discharge capacity" => compute_discharge_capacity(output; cycle_number = 0),
-	"Discharge energy" => compute_discharge_energy(output; cycle_number = 0),
-	"Energy density" => compute_discharge_energy(output; cycle_number = 0) / compute_cell_volume(cell_parameters),
-	"Specific energy" => compute_discharge_energy(output; cycle_number = 0) / compute_cell_mass(cell_parameters),
-	"Charge capacity" => compute_charge_capacity(output; cycle_number = 0),
-	"Charge energy" => compute_charge_energy(output; cycle_number = 0),
-	"Round trip efficiency" => compute_round_trip_efficiency(output; cycle_number = 0),
+    "Discharge capacity" => compute_discharge_capacity(output; cycle_number = 0),
+    "Discharge energy" => compute_discharge_energy(output; cycle_number = 0),
+    "Energy density" => compute_discharge_energy(output; cycle_number = 0) / compute_cell_volume(cell_parameters),
+    "Specific energy" => compute_discharge_energy(output; cycle_number = 0) / compute_cell_mass(cell_parameters),
+    "Charge capacity" => compute_charge_capacity(output; cycle_number = 0),
+    "Charge energy" => compute_charge_energy(output; cycle_number = 0),
+    "Round trip efficiency" => compute_round_trip_efficiency(output; cycle_number = 0),
 )
 
 # Or from the second cycle:
 
 cell_kpis_from_output_cycle_1 = Dict(
-	"Discharge capacity" => compute_discharge_capacity(output; cycle_number = 1),
-	"Discharge energy" => compute_discharge_energy(output; cycle_number = 1),
-	"Energy density" => compute_discharge_energy(output; cycle_number = 1) / compute_cell_volume(cell_parameters),
-	"Specific energy" => compute_discharge_energy(output; cycle_number = 1) / compute_cell_mass(cell_parameters),
-	"Charge capacity" => compute_charge_capacity(output; cycle_number = 1),
-	"Charge energy" => compute_charge_energy(output; cycle_number = 1),
-	"Round trip efficiency" => compute_round_trip_efficiency(output; cycle_number = 1),
+    "Discharge capacity" => compute_discharge_capacity(output; cycle_number = 1),
+    "Discharge energy" => compute_discharge_energy(output; cycle_number = 1),
+    "Energy density" => compute_discharge_energy(output; cycle_number = 1) / compute_cell_volume(cell_parameters),
+    "Specific energy" => compute_discharge_energy(output; cycle_number = 1) / compute_cell_mass(cell_parameters),
+    "Charge capacity" => compute_charge_capacity(output; cycle_number = 1),
+    "Charge energy" => compute_charge_energy(output; cycle_number = 1),
+    "Round trip efficiency" => compute_round_trip_efficiency(output; cycle_number = 1),
 )

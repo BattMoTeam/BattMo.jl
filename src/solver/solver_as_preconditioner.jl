@@ -1,9 +1,9 @@
 mutable struct SolverAsPreconditioner <: Jutul.JutulPreconditioner
-    A#::LinearSolver
-    b#::LinearizedSystem should not be used
+    A #::LinearSolver
+    b #::LinearizedSystem should not be used
     prec
     function SolverAsPreconditioner(solver)
-        new(solver,nothing, nothing)
+        return new(solver, nothing, nothing)
     end
 
 end
@@ -12,18 +12,18 @@ end
 #     solver.sys = Jutul.LinearizedSystem(A, nothing)
 #     Jutul.update_preconditioner!(solver.prec,A,b, context, executor)
 # end
-function Jutul.update_preconditioner!(solver::SolverAsPreconditioner,A, b, context, executor)
-     #update_preconditioner!(solver.prec,A,b, context, executor)
+function Jutul.update_preconditioner!(solver::SolverAsPreconditioner, A, b, context, executor)
+    #update_preconditioner!(solver.prec,A,b, context, executor)
     solver.A = A #Jutul.LinearizedSystem(A, nothing)
     solver.b = b
-     #recorder = Jutul.ProgressRecorder()
-    Jutul.update_preconditioner!(solver.prec, solver.A, solver.b, context, executor)
+    #recorder = Jutul.ProgressRecorder()
+    return Jutul.update_preconditioner!(solver.prec, solver.A, solver.b, context, executor)
 end
 
-function Jutul.apply!(x, solverasprec::SolverAsPreconditioner, y, args...;kwargs...)
+function Jutul.apply!(x, solverasprec::SolverAsPreconditioner, y, args...; kwargs...)
     solver = solverasprec.solver
     sys = solverasprec.sys
-    Jutul.linear_solve!(A,b,solver, args...)#;dx = x, r = y, kwargs...)
+    return Jutul.linear_solve!(A, b, solver, args...) #;dx = x, r = y, kwargs...)
 end
 #function Jutul.operator_nrows(perc::SolverAsPreconditioner)
 #    return size(prec.sys.jac,1);

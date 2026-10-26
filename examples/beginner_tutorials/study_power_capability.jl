@@ -20,11 +20,11 @@ d_rates = [0.05, 0.1, 0.2, 0.5, 1.0, 2.0]
 thicknesses = range(8.0e-5, 11.0e-5, length = 9)
 
 function compute_discharge_capacity(output::NamedTuple)
-	t = [state[:Control][:Controller].time for state in output[:states]]
-	I = [state[:Control][:Current][1] for state in output[:states]]
-	diff_t = diff(t)
-	insert!(diff_t, 1, t[1])
-	return sum(diff_t .* I) / 3600
+    t = [state[:Control][:Controller].time for state in output[:states]]
+    I = [state[:Control][:Current][1] for state in output[:states]]
+    diff_t = diff(t)
+    insert!(diff_t, 1, t[1])
+    return sum(diff_t .* I) / 3600
 end
 
 # Now we loop through both DRates and thicknesses to run a simulation for each combination. For each simulation, we will calculate the discharge capacity, and store it for
@@ -33,24 +33,24 @@ power_rates = []
 
 for thickness in thicknesses
 
-	capacities = []
-	cell_parameters["NegativeElectrode"]["Coating"]["Thickness"] = thickness
+    capacities = []
+    cell_parameters["NegativeElectrode"]["Coating"]["Thickness"] = thickness
 
-	for d_rate in d_rates
+    for d_rate in d_rates
 
-		cc_discharge_protocol["DRate"] = d_rate
-		sim = Simulation(model, cell_parameters, cc_discharge_protocol)
-		print("###### Simulation of thickness $thickness | d_rate $d_rate #########")
-		output = solve(sim; end_report = false)
+        cc_discharge_protocol["DRate"] = d_rate
+        sim = Simulation(model, cell_parameters, cc_discharge_protocol)
+        print("###### Simulation of thickness $thickness | d_rate $d_rate #########")
+        output = solve(sim; end_report = false)
 
-		if length(output[:states]) > 0 #if simulation is successful
-			discharge_capacity = compute_discharge_capacity(output)
-			push!(capacities, discharge_capacity)
-		else
-			push!(capacities, 0.0)
-		end
-	end
-	push!(power_rates, (thickness = thickness, d_rates = d_rates, capacities = capacities))
+        if length(output.jutul_output.states) > 0 #if simulation is successful
+            discharge_capacity = compute_discharge_capacity(output.jutul_output)
+            push!(capacities, discharge_capacity)
+        else
+            push!(capacities, 0.0)
+        end
+    end
+    push!(power_rates, (thickness = thickness, d_rates = d_rates, capacities = capacities))
 end
 nothing # hide
 #%%
@@ -62,8 +62,8 @@ ax = Axis(fig[1, 1], title = "Power capability vs Thickness of Negative Electrod
 
 for experiment in power_rates
 
-	label_str = @sprintf("%.1e", experiment.thickness)
-	lines!(ax, experiment.d_rates, experiment.capacities, label = label_str)
+    label_str = @sprintf("%.1e", experiment.thickness)
+    lines!(ax, experiment.d_rates, experiment.capacities, label = label_str)
 end
 
 fig[1, 2] = Legend(fig, ax, "Thicknesses", framevisible = false)

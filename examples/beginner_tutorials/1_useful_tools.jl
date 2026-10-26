@@ -1,6 +1,6 @@
 # # Useful Tools in BattMo
 
-# Before we dive into how to set up and run simulations, it's helpful to get familiar with some of the built-in tools provided by **BattMo**. 
+# Before we dive into how to set up and run simulations, it's helpful to get familiar with some of the built-in tools provided by **BattMo**.
 # These utilities can save time and improve your workflow, and we'll be using most of them throughout the tutorials.
 
 
@@ -8,13 +8,13 @@ using BattMo
 
 # ## Saving Default Parameter Sets Locally
 
-# BattMo includes several default parameter sets that you can use as a starting point. 
+# BattMo includes several default parameter sets that you can use as a starting point.
 # If you want to explore or customize them, you can easily save them to your local disk using:
 
 path = pwd()
 folder_name = "default_parameter_sets"
 generate_default_parameter_files(path, folder_name)
-nothing # hide 
+nothing # hide
 
 # This will create a folder in your current working directory containing the default parameter files.
 
@@ -63,7 +63,7 @@ print_submodels()
 # You can use the following function to save your ParameterSet object to a JSON file:
 
 file_path = "path_to_json_file/file.json"
-parameter_set = CellParameters(Dict("NegativeElectrode" => Dict("Coating" => Dict("Thickness" => 100e-6))))
+parameter_set = CellParameters(Dict("NegativeElectrode" => Dict("Coating" => Dict("Thickness" => 100.0e-6))))
 
 write_to_json_file(file_path, parameter_set)
 nothing # hide
@@ -82,4 +82,3 @@ quick_cell_check(cell_parameters)
 # If there are functional parameters present within the parameter set, like the OCP or electrolyte diffusion coefficient, you can easily plot those parameters against a realistic x-quantity range:
 
 plot_cell_curves(cell_parameters)
-

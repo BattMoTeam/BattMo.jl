@@ -8,9 +8,10 @@
             "enum": [
                 "CC",
                 "cccv",
-                "Function"
+                "Function",
+                "InputCurrentSeries"
             ],
-            "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('cccv'), or a custom Function."
+            "description": "Type of cycling procedure used to cycle a cell. E.g., Constant Current ('CC'), Constant Current - Constant Voltage ('cccv'), a custom Function, or a prescribed current time series ('InputCurrentSeries')."
         },
         "TotalTime": {
             "type": "number",
@@ -121,6 +122,20 @@
         "FilePath": {
             "type": "string",
             "description": "The path to the file the contains the parameter function."
+        },
+        "Times": {
+            "type": "array",
+            "items": { "type": "number", "minimum": 0.0 },
+            "minItems": 1,
+            "description": "Time points for the InputCurrentSeries protocol, in seconds.",
+            "unit": "s"
+        },
+        "Currents": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 1,
+            "description": "Current values corresponding to each time point in the InputCurrentSeries protocol, in amperes. Positive values indicate discharge; negative values indicate charge.",
+            "unit": "A"
         }
     },
     "required": [
@@ -241,6 +256,23 @@
                 "required": [
                     "FunctionName",
                     "TotalTime"
+                ]
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "Protocol": {
+                        "const": "InputCurrentSeries"
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "Times",
+                    "Currents",
+                    "LowerVoltageLimit",
+                    "UpperVoltageLimit"
                 ]
             }
         }

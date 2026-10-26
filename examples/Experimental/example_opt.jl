@@ -8,11 +8,11 @@ init = load_advanced_dict_input(fn)
 
 states, cell_, reports, _, extra = run_battery(init, use_p2d = true, config_kwargs = (info_level = 1,), max_step = nothing, general_ad = true);
 
-prm       = extra[:parameters]
-model     = extra[:model]
-state0    = extra[:state0]
-forces    = extra[:forces]
-sim_cfg   = extra[:cfg]
+prm = extra[:parameters]
+model = extra[:model]
+state0 = extra[:state0]
+forces = extra[:forces]
+sim_cfg = extra[:cfg]
 timesteps = extra[:timesteps]
 
 ## Compute sensitivities
@@ -21,12 +21,14 @@ timesteps = extra[:timesteps]
 # initial voltage for battery)
 v_target = 4.2
 function voltage_objective(model, state, dt, step_no, forces)
-	return dt * max(v_target - state[:Control][:ElectricPotential][1], 0)^2
+    return dt * max(v_target - state[:Control][:ElectricPotential][1], 0)^2
 end
 
 G = voltage_objective
-dG = solve_adjoint_sensitivities(model, states, reports, G,
-	forces = forces, state0 = state0, parameters = prm)
+dG = solve_adjoint_sensitivities(
+    model, states, reports, G,
+    forces = forces, state0 = state0, parameters = prm
+)
 
 sim_cfg[:info_level] = -1
 sim_cfg[:end_report] = false
@@ -70,7 +72,7 @@ using GLMakie
 fig = Figure()
 ys = log10
 ax1 = Axis(fig[1, 1], yscale = ys, title = "Objective evaluations", xlabel = "Iterations", ylabel = "Objective")
-GLMakie.plot!(ax1, opt_setup[:data][:obj_hist][2:end] .+ 1e-12)
+GLMakie.plot!(ax1, opt_setup[:data][:obj_hist][2:end] .+ 1.0e-12)
 fig
 
 fig = Figure()
@@ -88,9 +90,9 @@ rel_change = final_x ./ x0
 changed_param = deepcopy(prm)
 devectorize_variables!(changed_param, model, final_x, data[:mapper], config = data[:config])
 for (mk, mv) in changed_param
-	for (k, v) in mv
-		@. v = v / prm[mk][k]
-	end
+    for (k, v) in mv
+        @. v = v / prm[mk][k]
+    end
 end
 
 ## Plot difference in the main objective input

@@ -1,4 +1,3 @@
-
 ## Load packages and set up helper functions
 using BattMo, Jutul
 using CSV
@@ -18,24 +17,24 @@ df_14 = CSV.read(joinpath(exdata, "Chayambuka_V_14C.csv"), DataFrame)
 
 # --- Smoothing functions ---
 function moving_average(data::AbstractVector, window::Int = 5)
-	[mean(data[max(1, i-window+1):i]) for i in 1:length(data)]
+    return [mean(data[max(1, i - window + 1):i]) for i in 1:length(data)]
 end
 
 function loess_smooth(x, y; span = 0.3)
-	model = loess(x, y; span = span)
-	Loess.predict(model, x)
+    model = loess(x, y; span = span)
+    return Loess.predict(model, x)
 end
 
 function sort_df_by_x(df)
-	sort(df, by = r -> r[1])  # sort by first column
+    return sort(df, by = r -> r[1])  # sort by first column
 end
 
 function smooth_df(df; window = 5, span = 0.3)
-	df = sort_df_by_x(df)
-	x, y = df[:, 1], df[:, 2]
-	df[:, :smooth_ma] = moving_average(y, window)      # <- use df[:, :symbol]
-	df[:, :smooth_loess] = loess_smooth(x, y; span = span)
-	return df
+    df = sort_df_by_x(df)
+    x, y = df[:, 1], df[:, 2]
+    df[:, :smooth_ma] = moving_average(y, window)      # <- use df[:, :symbol]
+    df[:, :smooth_loess] = loess_smooth(x, y; span = span)
+    return df
 end
 
 df_01 = smooth_df(df_01)
@@ -127,28 +126,40 @@ fig
 calibration_06 = VoltageCalibration(t_exp_01, V_exp_01, sim)
 
 # calibrate "StoichiometricCoefficientAtSOC100" at both electrodes
-free_calibration_parameter!(calibration_06,
-	["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
-	lower_bound = 0.6, upper_bound = 1.0)
-free_calibration_parameter!(calibration_06,
-	["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
-	lower_bound = 0.0, upper_bound = 0.4)
+free_calibration_parameter!(
+    calibration_06,
+    ["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
+    lower_bound = 0.6, upper_bound = 1.0
+)
+free_calibration_parameter!(
+    calibration_06,
+    ["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
+    lower_bound = 0.0, upper_bound = 0.4
+)
 
 # calibrate "StoichiometricCoefficientAtSOC0" at both electrodes
-free_calibration_parameter!(calibration_06,
-	["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
-	lower_bound = 0.0, upper_bound = 0.4)
-free_calibration_parameter!(calibration_06,
-	["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
-	lower_bound = 0.6, upper_bound = 1.0)
+free_calibration_parameter!(
+    calibration_06,
+    ["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
+    lower_bound = 0.0, upper_bound = 0.4
+)
+free_calibration_parameter!(
+    calibration_06,
+    ["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
+    lower_bound = 0.6, upper_bound = 1.0
+)
 
 #  calibrate "MaximumConcentration" of both electrodes
-free_calibration_parameter!(calibration_06,
-	["NegativeElectrode", "ActiveMaterial", "MaximumConcentration"];
-	lower_bound = 10000.0, upper_bound = 3e4)
-free_calibration_parameter!(calibration_06,
-	["PositiveElectrode", "ActiveMaterial", "MaximumConcentration"];
-	lower_bound = 10000.0, upper_bound = 3e4)
+free_calibration_parameter!(
+    calibration_06,
+    ["NegativeElectrode", "ActiveMaterial", "MaximumConcentration"];
+    lower_bound = 10000.0, upper_bound = 3.0e4
+)
+free_calibration_parameter!(
+    calibration_06,
+    ["PositiveElectrode", "ActiveMaterial", "MaximumConcentration"];
+    lower_bound = 10000.0, upper_bound = 3.0e4
+)
 
 print_calibration_overview(calibration_06)
 

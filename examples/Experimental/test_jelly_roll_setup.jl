@@ -17,11 +17,11 @@ inputparams = merge_input_params([inputparams_geometry, inputparams_material, in
 output = get_simulation_input(deepcopy(inputparams))
 
 simulator = output[:simulator]
-model     = output[:model]
-state0    = output[:state0]
-forces    = output[:forces]
+model = output[:model]
+state0 = output[:state0]
+forces = output[:forces]
 timesteps = output[:timesteps]
-cfg       = output[:cfg]
+cfg = output[:cfg]
 
 cfg[:info_level] = 10
 

@@ -18,7 +18,7 @@ cycling_protocol["TotalNumberOfCycles"] = 10
 sim = Simulation(model, cell_parameters, cycling_protocol);
 
 
-output = solve(sim;)
+output = solve(sim)
 
 nothing # hide
 
@@ -28,8 +28,7 @@ plot_dashboard(output, plot_type = "simple")
 
 # Or plot specific variables
 plot_output(output, ["DischargeCapacity vs CycleIndex"])
-plot_output(output, ["Capacity vs Time"])
+plot_output(output, ["CumulativeCapacity vs Time"])
 
 # We can check in the overview which variables are available and can be plotted against each other
 print_info(output)
-

@@ -13,22 +13,21 @@
 
 # ## Load packages and set up helper functions
 using BattMo, Jutul
-using CSV
-using DataFrames
+using DelimitedFiles: readdlm
 using GLMakie
 
-function get_tV(x::DataFrame)
-	return (x[:, 1], x[:, 2])
+function get_time_and_voltage(data::AbstractMatrix)
+    return (data[:, 1], data[:, 2])
 end
 
 # ## Load the experimental data and set up a base case
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 exdata = joinpath(battmo_base, "examples", "example_data")
-df_05 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_05C.csv"), DataFrame)
-df_1 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_1C.csv"), DataFrame)
-df_2 = CSV.read(joinpath(exdata, "Xu_2015_voltageCurve_2C.csv"), DataFrame)
+data_05, _ = readdlm(joinpath(exdata, "Xu_2015_voltageCurve_05C.csv"), ',', Float64; header = true)
+data_1, _ = readdlm(joinpath(exdata, "Xu_2015_voltageCurve_1C.csv"), ',', Float64; header = true)
+data_2, _ = readdlm(joinpath(exdata, "Xu_2015_voltageCurve_2C.csv"), ',', Float64; header = true)
 
-dfs = [df_05, df_1, df_2]
+experimental_data = [data_05, data_1, data_2]
 
 cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
 cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
@@ -42,8 +41,8 @@ output0 = solve(sim)
 
 t0 = output0.time_series["Time"]
 V0 = output0.time_series["Voltage"]
-t_exp_05, V_exp_05 = get_tV(df_05)
-t_exp_1, V_exp_1 = get_tV(df_1)
+t_exp_05, V_exp_05 = get_time_and_voltage(data_05)
+t_exp_1, V_exp_1 = get_time_and_voltage(data_1)
 
 fig = Figure()
 ax = Axis(fig[1, 1], title = "CRate = 0.5", xlabel = "Time / s", ylabel = "Voltage / V")
@@ -67,28 +66,40 @@ fig
 # setup before calibration starts.
 vc05 = VoltageCalibration(t_exp_05, V_exp_05, sim)
 
-free_calibration_parameter!(vc05,
-	["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
-	lower_bound = 0.0, upper_bound = 1.0)
-free_calibration_parameter!(vc05,
-	["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
-	lower_bound = 0.0, upper_bound = 1.0);
+free_calibration_parameter!(
+    vc05,
+    ["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
+    lower_bound = 0.0, upper_bound = 1.0
+)
+free_calibration_parameter!(
+    vc05,
+    ["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC100"];
+    lower_bound = 0.0, upper_bound = 1.0
+);
 
 # "StoichiometricCoefficientAtSOC0" at both electrodes
-free_calibration_parameter!(vc05,
-	["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
-	lower_bound = 0.0, upper_bound = 1.0)
-free_calibration_parameter!(vc05,
-	["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
-	lower_bound = 0.0, upper_bound = 1.0);
+free_calibration_parameter!(
+    vc05,
+    ["NegativeElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
+    lower_bound = 0.0, upper_bound = 1.0
+)
+free_calibration_parameter!(
+    vc05,
+    ["PositiveElectrode", "ActiveMaterial", "StoichiometricCoefficientAtSOC0"];
+    lower_bound = 0.0, upper_bound = 1.0
+);
 
 #  "MaximumConcentration" of both electrodes
-free_calibration_parameter!(vc05,
-	["NegativeElectrode", "ActiveMaterial", "MaximumConcentration"];
-	lower_bound = 10000.0, upper_bound = 1e5)
-free_calibration_parameter!(vc05,
-	["PositiveElectrode", "ActiveMaterial", "MaximumConcentration"];
-	lower_bound = 10000.0, upper_bound = 1e5)
+free_calibration_parameter!(
+    vc05,
+    ["NegativeElectrode", "ActiveMaterial", "MaximumConcentration"];
+    lower_bound = 10000.0, upper_bound = 1.0e5
+)
+free_calibration_parameter!(
+    vc05,
+    ["PositiveElectrode", "ActiveMaterial", "MaximumConcentration"];
+    lower_bound = 10000.0, upper_bound = 1.0e5
+)
 
 print_info(vc05)
 # ### Solve the first calibration problem
@@ -123,7 +134,7 @@ fig
 # The calibration this time around starts from the parameters calibrated in the
 # first step, so we use the `cell_parameters_calibrated` from the first `solve`
 # call when defining the new object:
-t_exp_2, V_exp_2 = get_tV(df_2)
+t_exp_2, V_exp_2 = get_time_and_voltage(data_2)
 
 cycling_protocol2 = deepcopy(cycling_protocol)
 cycling_protocol2["DRate"] = 2.0
@@ -139,19 +150,27 @@ V2_0 = output2_0.time_series["Voltage"]
 
 vc2 = VoltageCalibration(t_exp_2, V_exp_2, sim2)
 
-free_calibration_parameter!(vc2,
-	["NegativeElectrode", "ActiveMaterial", "ReactionRateConstant"];
-	lower_bound = 1e-16, upper_bound = 1e-10)
-free_calibration_parameter!(vc2,
-	["PositiveElectrode", "ActiveMaterial", "ReactionRateConstant"];
-	lower_bound = 1e-16, upper_bound = 1e-10)
+free_calibration_parameter!(
+    vc2,
+    ["NegativeElectrode", "ActiveMaterial", "ReactionRateConstant"];
+    lower_bound = 1.0e-16, upper_bound = 1.0e-10
+)
+free_calibration_parameter!(
+    vc2,
+    ["PositiveElectrode", "ActiveMaterial", "ReactionRateConstant"];
+    lower_bound = 1.0e-16, upper_bound = 1.0e-10
+)
 
-free_calibration_parameter!(vc2,
-	["NegativeElectrode", "ActiveMaterial", "DiffusionCoefficient"];
-	lower_bound = 1e-16, upper_bound = 1e-12)
-free_calibration_parameter!(vc2,
-	["PositiveElectrode", "ActiveMaterial", "DiffusionCoefficient"];
-	lower_bound = 1e-16, upper_bound = 1e-12)
+free_calibration_parameter!(
+    vc2,
+    ["NegativeElectrode", "ActiveMaterial", "DiffusionCoefficient"];
+    lower_bound = 1.0e-16, upper_bound = 1.0e-12
+)
+free_calibration_parameter!(
+    vc2,
+    ["PositiveElectrode", "ActiveMaterial", "DiffusionCoefficient"];
+    lower_bound = 1.0e-16, upper_bound = 1.0e-12
+)
 print_info(vc2)
 
 # ### Solve the second calibration problem
@@ -190,16 +209,16 @@ outputs_base = []
 outputs_calibrated = []
 
 for CRate in CRates
-	cycling_protocol["DRate"] = CRate
-	simuc = Simulation(model, cell_parameters, cycling_protocol)
+    cycling_protocol["DRate"] = CRate
+    simuc = Simulation(model, cell_parameters, cycling_protocol)
 
-	output = solve(simuc, info_level = -1)
-	push!(outputs_base, (CRate = CRate, output = output))
+    output = solve(simuc, info_level = -1)
+    push!(outputs_base, (CRate = CRate, output = output))
 
-	simc = Simulation(model, cell_parameters_calibrated2, cycling_protocol)
-	output_c = solve(simc, info_level = -1)
+    simc = Simulation(model, cell_parameters_calibrated2, cycling_protocol)
+    output_c = solve(simc, info_level = -1)
 
-	push!(outputs_calibrated, (CRate = CRate, output = output_c))
+    push!(outputs_calibrated, (CRate = CRate, output = output_c))
 end
 
 colors = Makie.wong_colors()
@@ -208,22 +227,22 @@ fig = Figure(size = (1200, 600))
 ax = Axis(fig[1, 1], ylabel = "Voltage / V", xlabel = "Time / s", title = "Discharge curve")
 
 for (i, data) in enumerate(outputs_base)
-	t_i = data.output.time_series["Time"]
-	V_i = data.output.time_series["Voltage"]
-	lines!(ax, t_i, V_i, label = "Simulation (initial) $(round(data.CRate, digits = 2))", color = colors[i])
+    t_i = data.output.time_series["Time"]
+    V_i = data.output.time_series["Voltage"]
+    lines!(ax, t_i, V_i, label = "Simulation (initial) $(round(data.CRate, digits = 2))", color = colors[i])
 end
 
 for (i, data) in enumerate(outputs_calibrated)
-	t_i = data.output.time_series["Time"]
-	V_i = data.output.time_series["Voltage"]
-	lines!(ax, t_i, V_i, label = "Simulation (calibrated) $(round(data.CRate, digits = 2))", color = colors[i], linestyle = :dash)
+    t_i = data.output.time_series["Time"]
+    V_i = data.output.time_series["Voltage"]
+    lines!(ax, t_i, V_i, label = "Simulation (calibrated) $(round(data.CRate, digits = 2))", color = colors[i], linestyle = :dash)
 end
 
-for (i, df) in enumerate(dfs)
-	t_i = df[:, 1]
-	V_i = df[:, 2]
-	label = "Experimental $(round(CRates[i], digits = 2))"
-	lines!(ax, t_i, V_i, linestyle = :dot, label = label, color = colors[i])
+for (i, data) in enumerate(experimental_data)
+    t_i = data[:, 1]
+    V_i = data[:, 2]
+    label = "Experimental $(round(CRates[i], digits = 2))"
+    lines!(ax, t_i, V_i, linestyle = :dot, label = label, color = colors[i])
 end
 
 fig[1, 2] = Legend(fig, ax, "C rate", framevisible = false)
