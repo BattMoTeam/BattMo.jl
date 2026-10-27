@@ -123,9 +123,10 @@ function reaction_rate(
     F = FARADAY_CONSTANT
 
     n = activematerial.params[:n_charge_carriers]
+    alpha = activematerial.params[:charge_transfer_coefficient]
 
     j0 = reaction_rate_coefficient(R0, c_e, c_a, activematerial)
-    R = butler_volmer_equation(j0, 0.5, n, eta, T)
+    R = butler_volmer_equation(j0, alpha, n, eta, T)
 
     return R / (n * F)
 
@@ -183,7 +184,7 @@ function reaction_rate_chayambuka(
 
     n = activematerial.params[:n_charge_carriers]
     cmax = activematerial.params[:maximum_concentration]
-    alpha = 0.5
+    alpha = activematerial.params[:charge_transfer_coefficient]
     j0 = reaction_rate_coefficient_chayambuka(R0, c_e, c_a, activematerial, c_av, c_av_e)
     R = butler_volmer_equation_chayambuka(j0, alpha, n, eta, T, cmax, c_a_surf, c_e, c_a, c_av, c_av_e)
 

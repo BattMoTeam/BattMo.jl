@@ -373,6 +373,7 @@ function setup_submodels(inputparams::MatlabInput)
         # Interface
 
         am_params[:n_charge_carriers] = inputparams_itf["numberOfElectronsTransferred"]
+        am_params[:charge_transfer_coefficient] = inputparams_itf["chargeTransferCoefficient"]
         am_params[:maximum_concentration] = inputparams_itf["saturationConcentration"]
         am_params[:volumetric_surface_area] = inputparams_itf["volumetricSurfaceArea"]
         am_params[:setting_butler_volmer] = "Standard"

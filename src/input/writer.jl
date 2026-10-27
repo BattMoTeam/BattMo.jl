@@ -28,7 +28,7 @@ write_to_json_file("output/config.json", sim_input)
 function write_to_json_file(file_path::String, data::AbstractInput)
     return try
         open(file_path, "w") do io
-            JSON.print(io, data.all, 4)
+            JSON.json(io, data.all; pretty = 4)
         end
         println("Data successfully written to $file_path")
     catch e
