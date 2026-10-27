@@ -328,11 +328,10 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
         cell_parameters["Cell"]["SurfaceHeatTransferCoefficient"] = params["ThermalModel"]["externalHeatTransferCoefficient"]
         cell_parameters["NegativeElectrode"]["ActiveMaterial"]["IncludeEntropyChange"] = params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["includeEntropyChange"]
         cell_parameters["NegativeElectrode"]["ActiveMaterial"]["EntropyChange"] = ne_entropy
-        cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReferenceTemperature"] = params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["referenceTemperature"]
+        cell_parameters["Cell"]["ReferenceTemperature"] = params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["referenceTemperature"]
 
         cell_parameters["PositiveElectrode"]["ActiveMaterial"]["IncludeEntropyChange"] = params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["includeEntropyChange"]
         cell_parameters["PositiveElectrode"]["ActiveMaterial"]["EntropyChange"] = pe_entropy
-        cell_parameters["PositiveElectrode"]["ActiveMaterial"]["ReferenceTemperature"] = params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["referenceTemperature"]
     end
 
     if model_settings["ModelFramework"] == "P2D"

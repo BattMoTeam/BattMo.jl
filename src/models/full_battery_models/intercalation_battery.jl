@@ -5,7 +5,7 @@ function setup_multimodel(model::IntercalationBattery, submodels, input; use_gro
     if !haskey(model.settings, "CurrentCollectors")
         groups = nothing
 
-        if haskey(model.settings, "ThermalModel")
+        if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Coupled"
             multimodel = MultiModel(
                 (
                     NegativeElectrodeActiveMaterial = submodels.model_neam,
@@ -443,7 +443,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
     am_params[:setting_temperature_dependence] = get(model.settings, "TemperatureDependence", nothing)
     am_params[:setting_butler_volmer] = get(model.settings, "ButlerVolmer", nothing)
 
-    am_params[:reference_temperature] = 298.15
+    am_params[:reference_temperature] = get(cell_parameters["Cell"], "ReferenceTemperature", DEFAULT_REFERENCE_TEMPERATURE)
 
     if am_params[:setting_temperature_dependence] == "Arrhenius"
         am_params[:activation_energy_of_diffusion] = inputparams_active_material["ActivationEnergyOfDiffusion"]
@@ -468,7 +468,6 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
     end
 
     if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
-        am_params[:reference_temperature] = 298.15
 
         if !haskey(inputparams_active_material, "IncludeEntropyChange")
             am_params[:include_entropy_change] = true
@@ -491,7 +490,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 
     end
 
-    refT = 298.15
+    refT = am_params[:reference_temperature]
     T = get(input.cycling_protocol, "InitialTemperature", refT)
     SOC_init = input.cycling_protocol["InitialStateOfCharge"]
 
@@ -665,7 +664,7 @@ function set_parameters(
 
     parameters = Dict{Symbol, Any}()
 
-    refT = 298.15
+    refT = get(cell_parameters["Cell"], "ReferenceTemperature", DEFAULT_REFERENCE_TEMPERATURE)
     T = get(cycling_protocol, "InitialTemperature", refT)
 
     if haskey(model.settings, "CurrentCollectors")
@@ -1081,7 +1080,7 @@ function setup_initial_state(input, model::IntercalationBattery)
 
     include_cc = haskey(model.settings, "CurrentCollectors")
 
-    refT = 298.15
+    refT = get(input.cell_parameters["Cell"], "ReferenceTemperature", DEFAULT_REFERENCE_TEMPERATURE)
     T = get(input.cycling_protocol, "InitialTemperature", refT)
     SOC_init = input.cycling_protocol["InitialStateOfCharge"]
 
@@ -1091,7 +1090,7 @@ function setup_initial_state(input, model::IntercalationBattery)
         theta100 = multimodel[name].system[:theta100]
         cmax = multimodel[name].system[:maximum_concentration]
         N = multimodel[name].system.discretization[:N]
-        refT = 298.15
+        refT = multimodel[name].system.params[:reference_temperature]
 
         theta = SOC_init * (theta100 - theta0) + theta0
         c = theta * cmax
@@ -1121,13 +1120,12 @@ function setup_initial_state(input, model::IntercalationBattery)
                 entropyChange = multimodel[name].system[:entropy_change_func](c / cmax)
             elseif multimodel[name].system.params[:entropy_change_func_type] == :function || multimodel[name].system.params[:entropy_change_func_type] == :expression
                 entropyChange = multimodel[name].system[:entropy_change_func](c, cmax)
-            elseif multimodel[name].system.params[:entropychange_func_type] == :constant
+            elseif multimodel[name].system.params[:entropy_change_func_type] == :constant
                 entropyChange = multimodel[name].system[:entropy_change_func]
             else
                 error("not cover")
             end
-            refT = multimodel[name].system.params[:reference_temperature]
-            OCP = OCP + (T - refT)
+            OCP = OCP + entropyChange * (T - refT)
         end
 
         return (init, nc, OCP)
