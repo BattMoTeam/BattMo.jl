@@ -1,21 +1,18 @@
 """
     BPX parser
 
-Functions to parse BPX (Battery Parameter eXchange, https://bpxstandard.com) formatted
+Functions to parse BPX (Battery Parameter eXchange, https://bpxstandard.com, version 1.1.1) formatted
 JSON files and convert them into the cell parameter format defined by the BattMo cell
 parameter schema (see `get_schema_cell_parameters`).
 
 The parser is used by `load_cell_parameters` through the `from_bpx_file_path` keyword.
 
 # Conversion notes
-- BPX keys carry their unit in brackets (e.g. `"Thickness [m]"`). Parameters are looked
-  up by their base name, the unit is parsed from the bracket and the value is converted
-  to the unit expected by the BattMo schema (see `get_cell_parameters_meta_data`). Common
-  unit variants (e.g. `um`, `mS.cm-1`, `mol.L-1`, `mA.h`, `g.cm-3`, `degC`) are
-  recognized; an error is raised for units that cannot be converted. Keys without a unit
-  bracket are assumed to use the standard BPX (SI-based) unit. For function strings and
-  tabulated data the output values are scaled; the function argument is always assumed to
-  be in SI units.
+- BPX parameter names include their unit (e.g. `"Thickness [m]"`), and the standard
+  allows only the names listed in its parameter table, so every parameter has a fixed
+  unit. These units match the BattMo cell parameter schema and the values are used
+  without unit conversion. Keys with other units are not BPX compliant: they are
+  reported by the schema validation and ignored.
 - BattMo parameters that cannot be determined from the BPX input, because the BPX key is
   missing or an input to a derived quantity is missing, are set to `0.0` and reported in
   a warning. They must be set manually before running a simulation; the parameter set
@@ -47,176 +44,56 @@ The parser is used by `load_cell_parameters` through the `from_bpx_file_path` ke
   `ChargeNumber = 1` are set accordingly.
 - BPX does not provide component densities (only a lumped cell density), nor separate
   binder/conductive additive data. The lumped cell density is used as density for the
-  active materials, separator and electrolyte, the coating effective density is chosen
-  such that the solid volume fraction equals `1 - porosity`, and the binder and
-  conductive additive are added as zero-mass placeholders.
-- Operating-condition keys (voltage cut-offs, temperatures) belong to the BattMo
-  `CyclingProtocol` and are not part of the cell parameters; the `Validation` section
-  of a BPX file is ignored.
+  active materials, separator and electrolyte, and the coating effective density is
+  chosen such that the solid volume fraction equals `1 - porosity`.
+- BPX defines the active material volume fraction of an electrode as
+  `surface_area_per_unit_volume * particle_radius / 3`, which sets the electrode
+  capacity. The active material mass fraction is chosen to reproduce it; the remaining
+  solid is lumped into the binder and the conductive additive is a zero-mass
+  placeholder. All three get the same intrinsic electronic conductivity.
+- The initial electrolyte concentration is read from `State` → `Initial conditions`.
+- Operating-condition keys (voltage cut-offs, temperatures, initial state-of-charge,
+  thermal environment) belong to the BattMo `CyclingProtocol` and are not part of the
+  cell parameters. A non-zero degradation state is not supported and the `Validation`
+  section of a BPX file is ignored.
+
+# Schema validation and BPX versions
+The input is validated against the JSON schema of the official BPX package
+(https://github.com/FaradayInstitution/BPX, MIT license, copyright (c) 2022 University
+of Oxford), bundled in `src/input/bpx_schema/` together with its license; see the
+README there for its provenance and how to update it for a new BPX release. Legacy
+BPX v0.x inputs are first converted to the v1.x layout (`migrate_legacy_bpx`, adapted
+from the same package), so the conversion to BattMo only handles the v1.x layout.
+Schema violations are reported as a warning, or raised as an error with `strict = true`.
 """
 module BPX
 
 using JSON
+using JSONSchema
 
 export load_from_bpx_file, parse_bpx_to_cell_parameters
 
 const GAS_CONSTANT = 8.31446261815324 # J mol⁻¹ K⁻¹
 const DEFAULT_REFERENCE_TEMPERATURE = 298.15 # K
 
+# Version of the BPX package the bundled schema was generated from (see
+# src/input/bpx_schema/README.md)
+const BPX_SCHEMA_VERSION = v"1.1.1"
+const BPX_SCHEMA_PATH = joinpath(@__DIR__, "bpx_schema", "bpx_schema.json")
+
 # Cell-level BPX parameters that map onto the BattMo cycling protocol instead of the
 # cell parameters
 const PROTOCOL_LEVEL_CELL_PARAMETERS = [
-    "Lower voltage cut-off",
-    "Upper voltage cut-off",
-    "Ambient temperature",
-    "Initial temperature",
+    "Lower voltage cut-off [V]",
+    "Upper voltage cut-off [V]",
 ]
-
-# ============================================================================
-# Unit handling
-# ============================================================================
-
-"""
-    normalize_unit(unit)
-
-Normalize a unit string to a canonical component form so that equivalent spellings
-compare equal: `µ` → `u`, `°` → `deg`, `·`/`*` → `.`, slash notation converted to
-negative exponents (`W/(m.K)` → `K-1.m-1.W`) and components sorted alphabetically.
-"""
-function normalize_unit(unit::AbstractString)
-    stripped = replace(
-        unit,
-        " " => "",
-        "µ" => "u",
-        "μ" => "u",
-        "·" => ".",
-        "*" => ".",
-        "°" => "deg",
-        "^" => "",
-    )
-
-    components = String[]
-    for (i, part) in enumerate(split(stripped, "/"))
-        part = strip(part, ['(', ')'])
-        add_unit_components!(components, part, i == 1 ? 1 : -1)
-    end
-
-    return join(sort(components), ".")
-end
-
-function add_unit_components!(components, unit_part, exponent_sign)
-    for component in split(unit_part, ".")
-        (component == "" || component == "1") && continue
-        m = match(r"^([A-Za-z%]+)(-?\d+)?$", component)
-        if isnothing(m)
-            push!(components, String(component))
-            continue
-        end
-        symbol = m.captures[1]
-        exponent = isnothing(m.captures[2]) ? 1 : parse(Int, m.captures[2])
-        exponent *= exponent_sign
-        push!(components, exponent == 1 ? String(symbol) : symbol * string(exponent))
-    end
-    return components
-end
-
-# Conversion table from recognized units to the canonical (SI-based) units expected by
-# the BattMo cell parameter schema. Maps a normalized unit string to
-# (canonical unit, multiplicative factor, additive offset).
-const UNIT_FACTORS = let
-    table = Dict{String, Tuple{String, Float64, Float64}}()
-
-    register!(canonical, units) = for (unit, factor) in units
-        table[normalize_unit(unit)] = (canonical, factor, 0.0)
-    end
-
-    # Dimensionless
-    register!("1", ["1" => 1.0, "-" => 1.0, "%" => 1.0e-2])
-    # Length
-    register!("m", ["m" => 1.0, "dm" => 1.0e-1, "cm" => 1.0e-2, "mm" => 1.0e-3, "um" => 1.0e-6, "nm" => 1.0e-9])
-    # Area
-    register!("m2", ["m2" => 1.0, "dm2" => 1.0e-2, "cm2" => 1.0e-4, "mm2" => 1.0e-6])
-    # Inverse length (surface area per unit volume)
-    register!("m-1", ["m-1" => 1.0, "cm-1" => 1.0e2, "mm-1" => 1.0e3, "m2.m-3" => 1.0])
-    # Diffusivity
-    register!("m2.s-1", ["m2.s-1" => 1.0, "cm2.s-1" => 1.0e-4, "mm2.s-1" => 1.0e-6])
-    # Ionic / electronic conductivity
-    register!("S.m-1", ["S.m-1" => 1.0, "S.cm-1" => 1.0e2, "mS.m-1" => 1.0e-3, "mS.cm-1" => 1.0e-1, "uS.cm-1" => 1.0e-4])
-    # Concentration
-    register!("mol.m-3", ["mol.m-3" => 1.0, "kmol.m-3" => 1.0e3, "mol.L-1" => 1.0e3, "mol.dm-3" => 1.0e3, "mmol.L-1" => 1.0, "mol.cm-3" => 1.0e6, "mmol.cm-3" => 1.0e3])
-    # Charge capacity
-    register!("A.h", ["A.h" => 1.0, "Ah" => 1.0, "mA.h" => 1.0e-3, "mAh" => 1.0e-3, "A.s" => 1.0 / 3600])
-    # Voltage
-    register!("V", ["V" => 1.0, "mV" => 1.0e-3, "uV" => 1.0e-6])
-    # Entropic change coefficient
-    register!("V.K-1", ["V.K-1" => 1.0, "mV.K-1" => 1.0e-3, "uV.K-1" => 1.0e-6])
-    # Molar energy (activation energies)
-    register!("J.mol-1", ["J.mol-1" => 1.0, "kJ.mol-1" => 1.0e3])
-    # Density
-    register!("kg.m-3", ["kg.m-3" => 1.0, "g.m-3" => 1.0e-3, "g.cm-3" => 1.0e3, "mg.cm-3" => 1.0, "g.L-1" => 1.0, "kg.L-1" => 1.0e3, "g.mL-1" => 1.0e3])
-    # Specific heat capacity
-    register!("J.K-1.kg-1", ["J.K-1.kg-1" => 1.0, "kJ.K-1.kg-1" => 1.0e3, "J.K-1.g-1" => 1.0e3, "mJ.K-1.kg-1" => 1.0e-3])
-    # Thermal conductivity
-    register!("W.m-1.K-1", ["W.m-1.K-1" => 1.0, "mW.m-1.K-1" => 1.0e-3, "W.cm-1.K-1" => 1.0e2, "kW.m-1.K-1" => 1.0e3])
-    # Reaction rate constant (BPX convention)
-    register!("mol.m-2.s-1", ["mol.m-2.s-1" => 1.0, "mmol.m-2.s-1" => 1.0e-3, "umol.m-2.s-1" => 1.0e-6, "mol.cm-2.s-1" => 1.0e4, "umol.cm-2.s-1" => 1.0e-2])
-    # Temperature (offset units are only supported for scalar values)
-    table[normalize_unit("K")] = ("K", 1.0, 0.0)
-    table[normalize_unit("degC")] = ("K", 1.0, 273.15)
-
-    table
-end
-
-"""
-    unit_conversion(unit, canonical_unit, key, section_name)
-
-Return the `(factor, offset)` pair that converts a value in `unit` to `canonical_unit`.
-Raise an error when the unit is not recognized or is not convertible to
-`canonical_unit`.
-"""
-function unit_conversion(unit::AbstractString, canonical_unit::String, key::String, section_name::String)
-    entry = get(UNIT_FACTORS, normalize_unit(unit), nothing)
-    if isnothing(entry)
-        error("The unit \"$unit\" of BPX key \"$key\" in section \"$section_name\" is not recognized; expected a unit convertible to \"$canonical_unit\".")
-    elseif entry[1] != canonical_unit
-        error("Cannot convert the unit \"$unit\" of BPX key \"$key\" in section \"$section_name\" to \"$canonical_unit\".")
-    end
-    return entry[2], entry[3]
-end
-
-"""
-    apply_unit_conversion(value, factor, offset, key, section_name)
-
-Apply a unit conversion to a BPX parameter value. Scalars are rescaled directly,
-function strings are wrapped as `(expression) * factor` and tabulated data has its
-output (`y`) values rescaled. Offset units (e.g. `degC`) are only supported for
-scalar values.
-"""
-function apply_unit_conversion(value, factor, offset, key::String, section_name::String)
-    if factor == 1.0 && offset == 0.0
-        return value
-    end
-    if isa(value, Real)
-        return value * factor + offset
-    elseif offset != 0.0
-        error("The unit of BPX key \"$key\" in section \"$section_name\" requires an offset conversion, which is only supported for scalar values.")
-    elseif isa(value, AbstractString)
-        return "(" * value * ") * $factor"
-    elseif isa(value, AbstractDict) && haskey(value, "y")
-        converted = copy(value)
-        converted["y"] = [y * factor for y in value["y"]]
-        return converted
-    else
-        error("Cannot apply a unit conversion to the value of BPX key \"$key\" in section \"$section_name\" (type $(typeof(value))).")
-    end
-end
 
 # ============================================================================
 # Section access
 # ============================================================================
 
-# Wrapper around a BPX section that allows unit-aware lookup by parameter base name
-# and keeps track of which keys have been used, so that unmapped keys can be reported.
+# Wrapper around a BPX section that keeps track of which keys have been used, so that
+# unmapped keys can be reported.
 struct BPXSection
     name::String
     data::AbstractDict
@@ -226,50 +103,20 @@ end
 BPXSection(name::String, data::AbstractDict) = BPXSection(name, data, Set{String}())
 
 """
-    find_entry(section, parameter_name)
+    get_parameter(section, key)
 
-Find a parameter in a BPX section by its base name, i.e. the key name without the
-unit bracket. Return `(key, value, unit)` where `unit` is the bracket content or
-`nothing`, or `nothing` when the parameter is absent.
+Return the value of the BPX parameter `key`, the full BPX name including its unit (e.g.
+`"Thickness [m]"`), or `nothing` when it is absent. The BPX standard fixes the unit of
+every parameter, and the units of the BPX names used here match the units of the
+BattMo cell parameter schema, so no unit conversion is needed.
 """
-function find_entry(section::BPXSection, parameter_name::String)
-    found = nothing
-    for (key, value) in section.data
-        m = match(r"^(.*?)\s*\[(.+?)\]\s*$", key)
-        base_name = isnothing(m) ? strip(key) : strip(m.captures[1])
-        if base_name == parameter_name
-            if !isnothing(found)
-                error("BPX section \"$(section.name)\" contains multiple entries for \"$parameter_name\".")
-            end
-            unit = isnothing(m) ? nothing : String(m.captures[2])
-            found = (key, value, unit)
-        end
-    end
-    if isnothing(found)
-        return nothing
-    end
-    push!(section.used_keys, found[1])
-    return found
+function get_parameter(section::BPXSection, key::String)
+    haskey(section.data, key) || return nothing
+    push!(section.used_keys, key)
+    return section.data[key]
 end
 
-"""
-    get_quantity(section, parameter_name, canonical_unit)
-
-Look up a parameter by base name and convert its value to `canonical_unit` (the unit
-expected by the BattMo schema; `"1"` for dimensionless parameters). Keys without a
-unit bracket are assumed to already use the canonical unit. Return `nothing` when the
-parameter is absent.
-"""
-function get_quantity(section::BPXSection, parameter_name::String, canonical_unit::String)
-    entry = find_entry(section, parameter_name)
-    isnothing(entry) && return nothing
-    key, value, unit = entry
-    isnothing(unit) && return value
-    factor, offset = unit_conversion(unit, canonical_unit, key, section.name)
-    return apply_unit_conversion(value, factor, offset, key, section.name)
-end
-
-has_parameter(section::BPXSection, parameter_name::String) = !isnothing(find_entry(section, parameter_name))
+has_parameter(section::BPXSection, key::String) = haskey(section.data, key)
 
 function report_ignored_keys(section::BPXSection)
     ignored = sort(collect(setdiff(keys(section.data), section.used_keys)))
@@ -394,17 +241,35 @@ function add_lumped_thermal_parameters!(component::AbstractDict, lumped)
     return component
 end
 
-# BPX does not describe the binder and conductive additive separately, so they are
-# included as zero-mass placeholders (the same convention as the default parameter
-# sets) and all coating mass is assigned to the active material.
-function placeholder_inert_component(lumped)
+# BPX does not describe the binder and conductive additive separately. The solid that
+# is not active material is lumped into the binder; the conductive additive is a
+# zero-mass placeholder. Both get the same intrinsic conductivity as the active
+# material, so that the volume-weighted coating conductivity equals that value.
+function inert_component(description, mass_fraction, electronic_conductivity, lumped)
     component = Dict{String, Any}(
-        "Description" => "Not provided by BPX; zero-mass placeholder.",
+        "Description" => description,
         "Density" => lumped.density,
-        "MassFraction" => 0.0,
-        "ElectronicConductivity" => 100.0,
+        "MassFraction" => mass_fraction,
+        "ElectronicConductivity" => electronic_conductivity,
     )
     return add_lumped_thermal_parameters!(component, lumped)
+end
+
+"""
+    compute_active_mass_fraction(surface_area, radius, porosity, section_name)
+
+Return the active material fraction of the solid coating volume. BPX defines the active
+material volume fraction as `surface_area * radius / 3` (spherical particles), which is
+in general smaller than the solid volume fraction `1 - porosity`. Since all coating
+components share the lumped BPX density, the volume fraction equals the mass fraction.
+"""
+function compute_active_mass_fraction(surface_area, radius, porosity, section_name::String)
+    active_volume_fraction = surface_area * radius / 3
+    solid_volume_fraction = 1 - porosity
+    if active_volume_fraction > solid_volume_fraction * (1 + 1.0e-6)
+        @warn "BPX section \"$section_name\" has an active material volume fraction (surface area per unit volume * particle radius / 3 = $active_volume_fraction) larger than the solid volume fraction (1 - porosity = $solid_volume_fraction). The active material fraction of the solid is capped at 1."
+    end
+    return min(active_volume_fraction / solid_volume_fraction, 1.0)
 end
 
 # ============================================================================
@@ -447,13 +312,13 @@ end
 function convert_cell(section::BPXSection, header::AbstractDict)
     cell = Dict{String, Any}()
 
-    electrode_area = get_quantity(section, "Electrode area", "m2")
-    number_of_pairs = get_quantity(section, "Number of electrode pairs connected in parallel to make a cell", "1")
+    electrode_area = get_parameter(section, "Electrode area [m2]")
+    number_of_pairs = get_parameter(section, "Number of electrode pairs connected in parallel to make a cell")
 
     cell["ElectrodeGeometricSurfaceArea"] = derive(*, electrode_area, number_of_pairs)
     cell["NumberOfLayersInParallel"] = derive(pairs -> round(Int, pairs), number_of_pairs)
-    cell["NominalCapacity"] = get_quantity(section, "Nominal cell capacity", "A.h")
-    cell["DeviceSurfaceArea"] = get_quantity(section, "External surface area", "m2")
+    cell["NominalCapacity"] = get_parameter(section, "Nominal cell capacity [A.h]")
+    cell["DeviceSurfaceArea"] = get_parameter(section, "External surface area [m2]")
 
     case = infer_case(header)
     if !isnothing(case)
@@ -468,16 +333,55 @@ function convert_cell(section::BPXSection, header::AbstractDict)
     return cell
 end
 
-function convert_electrolyte(section::BPXSection, lumped, reference_temperature)
-    conductivity_activation_energy = get_quantity(section, "Conductivity activation energy", "J.mol-1")
-    diffusivity_activation_energy = get_quantity(section, "Diffusivity activation energy", "J.mol-1")
+collect_numbers(value::Real) = [value]
+collect_numbers(value::AbstractDict) = reduce(vcat, (collect_numbers(v) for v in values(value)); init = Real[])
+collect_numbers(value) = Real[]
 
-    conductivity = convert_bpx_function(get_quantity(section, "Conductivity", "S.m-1"), "c")
-    diffusivity = convert_bpx_function(get_quantity(section, "Diffusivity", "m2.s-1"), "c")
+"""
+    convert_state(state)
+
+Process the BPX `State` section (BPX ≥ 1.0). Return the initial electrolyte concentration
+(or `nothing`) and report the remaining state entries, which describe operating
+conditions (initial SOC and temperature, thermal environment) that belong to the
+BattMo `CyclingProtocol`, or a degradation state that is not supported.
+"""
+function convert_state(state::AbstractDict)
+    initial_conditions = get(state, "Initial conditions", Dict{String, Any}())
+    initial_conditions_section = BPXSection("State.Initial conditions", isa(initial_conditions, AbstractDict) ? initial_conditions : Dict{String, Any}())
+    concentration = get_parameter(initial_conditions_section, "Initial electrolyte concentration [mol.m-3]")
+
+    protocol_keys = sort(collect(setdiff(keys(initial_conditions_section.data), initial_conditions_section.used_keys)))
+    thermal_environment = get(state, "Thermal environment", nothing)
+    if isa(thermal_environment, AbstractDict)
+        append!(protocol_keys, sort(collect(keys(thermal_environment))))
+    end
+    if !isempty(protocol_keys)
+        @info "The BPX state entries $(join(protocol_keys, ", ")) describe operating conditions and are not part of the BattMo cell parameters. Set the corresponding values in the CyclingProtocol instead."
+    end
+
+    degradation = get(state, "Degradation", nothing)
+    if any(!iszero, collect_numbers(degradation))
+        @warn "The BPX file specifies a non-zero degradation state (LAM/LLI), which is not supported. The parameters of the reference (unaged) cell are used."
+    end
+
+    other_keys = setdiff(keys(state), ["Initial conditions", "Thermal environment", "Degradation"])
+    if !isempty(other_keys)
+        @warn "The following BPX state entries are not recognized and were ignored: $(join(sort(collect(other_keys)), ", "))."
+    end
+
+    return concentration
+end
+
+function convert_electrolyte(section::BPXSection, initial_concentration, lumped, reference_temperature)
+    conductivity_activation_energy = get_parameter(section, "Conductivity activation energy [J.mol-1]")
+    diffusivity_activation_energy = get_parameter(section, "Diffusivity activation energy [J.mol-1]")
+
+    conductivity = convert_bpx_function(get_parameter(section, "Conductivity [S.m-1]"), "c")
+    diffusivity = convert_bpx_function(get_parameter(section, "Diffusivity [m2.s-1]"), "c")
 
     electrolyte = Dict{String, Any}(
-        "Concentration" => get_quantity(section, "Initial concentration", "mol.m-3"),
-        "TransferenceNumber" => get_quantity(section, "Cation transference number", "1"),
+        "Concentration" => initial_concentration,
+        "TransferenceNumber" => get_parameter(section, "Cation transference number"),
         "ChargeNumber" => 1,
         "Density" => lumped.density,
         "IonicConductivity" => apply_arrhenius(conductivity, conductivity_activation_energy, reference_temperature),
@@ -491,15 +395,15 @@ function convert_electrolyte(section::BPXSection, lumped, reference_temperature)
 end
 
 function convert_electrode(section::BPXSection, polarity::Symbol, electrolyte_reference_concentration, lumped)
-    porosity = get_quantity(section, "Porosity", "1")
-    transport_efficiency = get_quantity(section, "Transport efficiency", "1")
+    porosity = get_parameter(section, "Porosity")
+    transport_efficiency = get_parameter(section, "Transport efficiency")
     bruggeman = compute_bruggeman_coefficient(porosity, transport_efficiency, section.name)
     solid_volume_fraction = derive(p -> 1.0 - p, porosity)
 
-    maximum_concentration = get_quantity(section, "Maximum concentration", "mol.m-3")
+    maximum_concentration = get_parameter(section, "Maximum concentration [mol.m-3]")
 
-    minimum_stoichiometry = get_quantity(section, "Minimum stoichiometry", "1")
-    maximum_stoichiometry = get_quantity(section, "Maximum stoichiometry", "1")
+    minimum_stoichiometry = get_parameter(section, "Minimum stoichiometry")
+    maximum_stoichiometry = get_parameter(section, "Maximum stoichiometry")
     if polarity == :negative
         # The negative electrode is delithiated at SOC 0
         theta0 = minimum_stoichiometry
@@ -510,48 +414,62 @@ function convert_electrode(section::BPXSection, polarity::Symbol, electrolyte_re
         theta100 = minimum_stoichiometry
     end
 
-    reaction_rate_constant = get_quantity(section, "Reaction rate constant", "mol.m-2.s-1")
+    reaction_rate_constant = get_parameter(section, "Reaction rate constant [mol.m-2.s-1]")
+
+    surface_area = get_parameter(section, "Surface area per unit volume [m-1]")
+    particle_radius = get_parameter(section, "Particle radius [m]")
+    active_mass_fraction = derive(
+        (b, r, p) -> compute_active_mass_fraction(b, r, p, section.name),
+        surface_area, particle_radius, porosity,
+    )
 
     active_material = Dict{String, Any}(
-        "MassFraction" => 1.0,
+        "MassFraction" => active_mass_fraction,
         "Density" => lumped.density,
-        "VolumetricSurfaceArea" => get_quantity(section, "Surface area per unit volume", "m-1"),
-        "DiffusionCoefficient" => convert_bpx_function(get_quantity(section, "Diffusivity", "m2.s-1"), "(c / cmax)"),
-        "ParticleRadius" => get_quantity(section, "Particle radius", "m"),
+        "VolumetricSurfaceArea" => surface_area,
+        "DiffusionCoefficient" => convert_bpx_function(get_parameter(section, "Diffusivity [m2.s-1]"), "(c / cmax)"),
+        "ParticleRadius" => particle_radius,
         "MaximumConcentration" => maximum_concentration,
         "StoichiometricCoefficientAtSOC0" => theta0,
         "StoichiometricCoefficientAtSOC100" => theta100,
-        "OpenCircuitPotential" => convert_bpx_function(get_quantity(section, "OCP", "V"), "(c / cmax)"),
-        "EntropyChange" => convert_bpx_function(get_quantity(section, "Entropic change coefficient", "V.K-1"), "(c / cmax)"),
+        "OpenCircuitPotential" => convert_bpx_function(get_parameter(section, "OCP [V]"), "(c / cmax)"),
+        "EntropyChange" => convert_bpx_function(get_parameter(section, "Entropic change coefficient [V.K-1]"), "(c / cmax)"),
         "NumberOfElectronsTransfered" => 1,
         "ChargeTransferCoefficient" => 0.5,
         "ReactionRateConstant" => derive(
             (k, cmax, c_e_ref) -> k / (cmax * sqrt(c_e_ref)),
             reaction_rate_constant, maximum_concentration, electrolyte_reference_concentration,
         ),
-        "ActivationEnergyOfDiffusion" => get_quantity(section, "Diffusivity activation energy", "J.mol-1"),
-        "ActivationEnergyOfReaction" => get_quantity(section, "Reaction rate constant activation energy", "J.mol-1"),
+        "ActivationEnergyOfDiffusion" => get_parameter(section, "Diffusivity activation energy [J.mol-1]"),
+        "ActivationEnergyOfReaction" => get_parameter(section, "Reaction rate constant activation energy [J.mol-1]"),
     )
 
     # BPX gives the effective electronic conductivity of the porous coating, while
     # BattMo expects the intrinsic material conductivity
-    effective_conductivity = get_quantity(section, "Conductivity", "S.m-1")
-    active_material["ElectronicConductivity"] = derive(
+    effective_conductivity = get_parameter(section, "Conductivity [S.m-1]")
+    intrinsic_conductivity = derive(
         (kappa, vf, b) -> kappa / vf^b,
         effective_conductivity, solid_volume_fraction, bruggeman,
     )
+    active_material["ElectronicConductivity"] = intrinsic_conductivity
 
     add_lumped_thermal_parameters!(active_material, lumped)
 
     electrode = Dict{String, Any}(
         "Coating" => Dict{String, Any}(
-            "Thickness" => get_quantity(section, "Thickness", "m"),
+            "Thickness" => get_parameter(section, "Thickness [m]"),
             "BruggemanCoefficient" => bruggeman,
             "EffectiveDensity" => derive(*, lumped.density, solid_volume_fraction),
         ),
         "ActiveMaterial" => active_material,
-        "Binder" => placeholder_inert_component(lumped),
-        "ConductiveAdditive" => placeholder_inert_component(lumped),
+        "Binder" => inert_component(
+            "Not provided by BPX; lumps all inactive solid (binder and conductive additive).",
+            derive(f -> 1.0 - f, active_mass_fraction), intrinsic_conductivity, lumped,
+        ),
+        "ConductiveAdditive" => inert_component(
+            "Not provided by BPX; zero-mass placeholder.",
+            0.0, intrinsic_conductivity, lumped,
+        ),
     )
 
     report_ignored_keys(section)
@@ -560,11 +478,11 @@ function convert_electrode(section::BPXSection, polarity::Symbol, electrolyte_re
 end
 
 function convert_separator(section::BPXSection, lumped)
-    porosity = get_quantity(section, "Porosity", "1")
-    transport_efficiency = get_quantity(section, "Transport efficiency", "1")
+    porosity = get_parameter(section, "Porosity")
+    transport_efficiency = get_parameter(section, "Transport efficiency")
 
     separator = Dict{String, Any}(
-        "Thickness" => get_quantity(section, "Thickness", "m"),
+        "Thickness" => get_parameter(section, "Thickness [m]"),
         "Porosity" => porosity,
         "BruggemanCoefficient" => compute_bruggeman_coefficient(porosity, transport_efficiency, section.name),
         "Density" => lumped.density,
@@ -577,17 +495,157 @@ function convert_separator(section::BPXSection, lumped)
 end
 
 # ============================================================================
+# Schema validation and legacy migration
+# ============================================================================
+
+"""
+    bpx_version(bpx_data) -> VersionNumber
+
+Return the BPX version from `Header.BPX`, which may be a string (`"1.1.0"`) or, in
+older files, a number (`0.1`).
+"""
+function bpx_version(bpx_data::AbstractDict)
+    header = get(bpx_data, "Header", nothing)
+    version = isa(header, AbstractDict) ? get(header, "BPX", nothing) : nothing
+    if isa(version, Real) && !isa(version, Bool)
+        version = string(version)
+    end
+    parsed = isa(version, AbstractString) ? tryparse(VersionNumber, strip(version)) : nothing
+    isnothing(parsed) && error("Invalid BPX input: the \"Header\" → \"BPX\" version field is missing or malformed ($(repr(version))).")
+    return parsed
+end
+
+"""
+    migrate_legacy_bpx(bpx_data) -> Dict
+
+Return a copy of a legacy BPX v0.x input repacked into the v1.x layout: the initial and
+ambient temperatures and the initial electrolyte concentration move from
+`Parameterisation` to a new `State` section, with initial state-of-charge 1.
+
+Adapted from `bpx/_migrations.py` of the BPX package
+(https://github.com/FaradayInstitution/BPX, MIT license, copyright (c) 2022 University
+of Oxford; see `src/input/bpx_schema/LICENSE`). Unlike the original, the lumped
+`Thermal conductivity`, which has no v1.x counterpart but is used by BattMo, is kept
+in the `User-defined` section instead of being dropped.
+"""
+function migrate_legacy_bpx(bpx_data::AbstractDict)
+    data = deepcopy(bpx_data)
+    parameterisation = get!(data, "Parameterisation", Dict{String, Any}())
+    cell = get(parameterisation, "Cell", Dict{String, Any}())
+    electrolyte = get(parameterisation, "Electrolyte", Dict{String, Any}())
+
+    pop_value!(dict, key) = haskey(dict, key) ? pop!(dict, key) : nothing
+    first_not_nothing(values...; default) = something(values..., default)
+
+    ambient_temperature = pop_value!(cell, "Ambient temperature [K]")
+    reference_temperature = get(cell, "Reference temperature [K]", nothing)
+    initial_temperature = pop_value!(cell, "Initial temperature [K]")
+    ambient_temperature = first_not_nothing(ambient_temperature, reference_temperature; default = DEFAULT_REFERENCE_TEMPERATURE)
+    initial_temperature = first_not_nothing(initial_temperature, ambient_temperature; default = DEFAULT_REFERENCE_TEMPERATURE)
+
+    thermal_conductivity = pop_value!(cell, "Thermal conductivity [W.m-1.K-1]")
+    if !isnothing(thermal_conductivity)
+        user_defined = get!(parameterisation, "User-defined", Dict{String, Any}())
+        user_defined["Thermal conductivity [W.m-1.K-1]"] = thermal_conductivity
+    end
+
+    initial_conditions = Dict{String, Any}(
+        "Initial state-of-charge" => 1,
+        "Initial temperature [K]" => initial_temperature,
+    )
+    initial_concentration = pop_value!(electrolyte, "Initial concentration [mol.m-3]")
+    if !isnothing(initial_concentration)
+        initial_conditions["Initial electrolyte concentration [mol.m-3]"] = initial_concentration
+    end
+
+    data["State"] = Dict{String, Any}(
+        "Initial conditions" => initial_conditions,
+        "Thermal environment" => Dict{String, Any}("Ambient temperature [K]" => ambient_temperature),
+    )
+    data["Header"]["BPX"] = string(BPX_SCHEMA_VERSION)
+
+    return data
+end
+
+# The BPX schema accepts the "Parameterisation" of any model type (anyOf), which gives
+# uninformative validation messages. The schema is therefore specialised to the
+# Parameterisation definition matching the declared model.
+const PARAMETERISATION_DEFINITIONS = Dict(
+    "DFN" => "Parameterisation",
+    "SPMe" => "Parameterisation",
+    "SPM" => "ParameterisationSPM",
+    "Partial" => "ParameterisationPartial",
+)
+
+const SCHEMA_CACHE = Dict{Any, JSONSchema.Schema}()
+
+function bpx_schema(model)
+    return get!(SCHEMA_CACHE, model) do
+        schema = JSON.parsefile(BPX_SCHEMA_PATH)
+        definition = get(PARAMETERISATION_DEFINITIONS, model, nothing)
+        if !isnothing(definition)
+            schema["properties"]["Parameterisation"] = Dict{String, Any}("\$ref" => "#/\$defs/$definition")
+        end
+        JSONSchema.Schema(schema)
+    end
+end
+
+"""
+    validate_bpx(bpx_data; strict = false)
+
+Validate a BPX input (in the v1.x layout) against the bundled BPX schema. A violation
+is reported as a warning, or raised as an error when `strict` is true. Only the schema
+is checked; the additional consistency checks of the Python BPX package (e.g. OCP
+values at the stoichiometry limits versus the voltage cut-offs) are not performed.
+"""
+function validate_bpx(bpx_data::AbstractDict; strict::Bool = false)
+    header = get(bpx_data, "Header", nothing)
+    model = isa(header, AbstractDict) ? get(header, "Model", nothing) : nothing
+    issue = JSONSchema.validate(bpx_schema(model), bpx_data)
+    isnothing(issue) && return true
+
+    message = "The BPX input does not conform to the BPX $(BPX_SCHEMA_VERSION) schema (first violation shown):\n$(sprint(show, issue))"
+    if strict
+        error(message)
+    end
+    @warn message * "\nThe conversion continues; parameters that cannot be determined are reported below."
+    return false
+end
+
+"""
+    prepare_bpx_input(bpx_data; validate = true, strict = false) -> AbstractDict
+
+Bring a BPX input into the v1.x layout (converting legacy v0.x inputs) and validate it.
+"""
+function prepare_bpx_input(bpx_data::AbstractDict; validate::Bool = true, strict::Bool = false)
+    version = bpx_version(bpx_data)
+    if version.major < 1
+        @info "The input uses the legacy BPX $version format; it is converted to the BPX $(BPX_SCHEMA_VERSION) layout."
+        bpx_data = migrate_legacy_bpx(bpx_data)
+    elseif (version.major, version.minor) > (BPX_SCHEMA_VERSION.major, BPX_SCHEMA_VERSION.minor)
+        @warn "The input uses BPX $version, which is newer than the BPX $(BPX_SCHEMA_VERSION) schema supported by BattMo. New parameters may be reported as unknown or ignored."
+    end
+    if validate
+        validate_bpx(bpx_data; strict)
+    end
+    return bpx_data
+end
+
+# ============================================================================
 # Public API
 # ============================================================================
 
 """
-    parse_bpx_to_cell_parameters(bpx_data::AbstractDict) -> Dict{String, Any}
+    parse_bpx_to_cell_parameters(bpx_data::AbstractDict; validate = true, strict = false) -> Dict{String, Any}
 
-Convert already-parsed BPX data to the format expected by `CellParameters`.
-See the module docstring for the conversion conventions.
+Convert already-parsed BPX data to the format expected by `CellParameters`. Legacy
+BPX v0.x inputs are converted to the v1.x layout first. With `validate`, the input is
+checked against the bundled BPX schema; violations give a warning, or an error when
+`strict` is true. See the module docstring for the conversion conventions.
 """
-function parse_bpx_to_cell_parameters(bpx_data::AbstractDict)::Dict{String, Any}
+function parse_bpx_to_cell_parameters(bpx_data::AbstractDict; validate::Bool = true, strict::Bool = false)::Dict{String, Any}
     haskey(bpx_data, "Parameterisation") || error("The input is not BPX formatted: the top-level \"Parameterisation\" section is missing.")
+    bpx_data = prepare_bpx_input(bpx_data; validate, strict)
     parameterisation = bpx_data["Parameterisation"]
 
     header = get(bpx_data, "Header", Dict{String, Any}())
@@ -607,23 +665,26 @@ function parse_bpx_to_cell_parameters(bpx_data::AbstractDict)::Dict{String, Any}
     negative_electrode_section = section("Negative electrode")
     positive_electrode_section = section("Positive electrode")
     separator_section = section("Separator")
+    user_defined_section = section("User-defined")
 
-    density = get_quantity(cell_section, "Density", "kg.m-3")
+    density = get_parameter(cell_section, "Density [kg.m-3]")
     if !isnothing(density)
         @warn "BPX only provides a lumped cell density, which is used as density for the active materials, separator and electrolyte. Volume fractions and the simulated electrochemistry are unaffected, but gravimetric quantities are only approximate."
     end
 
     lumped = (
         density = density,
-        specific_heat_capacity = get_quantity(cell_section, "Specific heat capacity", "J.K-1.kg-1"),
-        thermal_conductivity = get_quantity(cell_section, "Thermal conductivity", "W.m-1.K-1"),
+        specific_heat_capacity = get_parameter(cell_section, "Specific heat capacity [J.K-1.kg-1]"),
+        # Not a BPX v1.x parameter; kept in "User-defined" when converting legacy files
+        thermal_conductivity = get_parameter(user_defined_section, "Thermal conductivity [W.m-1.K-1]"),
     )
 
-    reference_temperature = get_quantity(cell_section, "Reference temperature", "K")
+    reference_temperature = get_parameter(cell_section, "Reference temperature [K]")
     if isnothing(reference_temperature)
         reference_temperature = DEFAULT_REFERENCE_TEMPERATURE
     end
-    electrolyte_reference_concentration = get_quantity(electrolyte_section, "Initial concentration", "mol.m-3")
+    state = get(bpx_data, "State", Dict{String, Any}())
+    electrolyte_reference_concentration = isa(state, AbstractDict) ? convert_state(state) : nothing
 
     cell_parameters = Dict{String, Any}(
         "Metadata" => convert_metadata(header),
@@ -631,10 +692,11 @@ function parse_bpx_to_cell_parameters(bpx_data::AbstractDict)::Dict{String, Any}
         "NegativeElectrode" => convert_electrode(negative_electrode_section, :negative, electrolyte_reference_concentration, lumped),
         "PositiveElectrode" => convert_electrode(positive_electrode_section, :positive, electrolyte_reference_concentration, lumped),
         "Separator" => convert_separator(separator_section, lumped),
-        "Electrolyte" => convert_electrolyte(electrolyte_section, lumped, reference_temperature),
+        "Electrolyte" => convert_electrolyte(electrolyte_section, electrolyte_reference_concentration, lumped, reference_temperature),
     )
 
     report_ignored_keys(cell_section)
+    report_ignored_keys(user_defined_section)
 
     zeroed_parameters = String[]
     fill_missing_with_zero!(cell_parameters, "", zeroed_parameters)
@@ -647,18 +709,19 @@ function parse_bpx_to_cell_parameters(bpx_data::AbstractDict)::Dict{String, Any}
 end
 
 """
-    load_from_bpx_file(file_path::String) -> Dict{String, Any}
+    load_from_bpx_file(file_path::String; validate = true, strict = false) -> Dict{String, Any}
 
 Load a BPX (Battery Parameter eXchange) JSON file and convert it to the cell
-parameter format expected by `CellParameters`.
+parameter format expected by `CellParameters`. See `parse_bpx_to_cell_parameters`
+for the keyword arguments.
 
 # Example
 ```julia
 cell_parameters = load_cell_parameters(; from_bpx_file_path = "path/to/bpx_input.json")
 ```
 """
-function load_from_bpx_file(file_path::String)::Dict{String, Any}
-    return parse_bpx_to_cell_parameters(JSON.parsefile(file_path))
+function load_from_bpx_file(file_path::String; kwargs...)::Dict{String, Any}
+    return parse_bpx_to_cell_parameters(JSON.parsefile(file_path); kwargs...)
 end
 
 end # module BPX
