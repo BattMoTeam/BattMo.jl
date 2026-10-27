@@ -381,7 +381,7 @@ end
 
         cmax = model.system.params[:maximum_concentration]
         temperature_dependence_model = Symbol(model.system.params[:setting_temperature_dependence])
-        refT = 298.15
+        refT = model.system.params[:reference_temperature]
 
         Ea = haskey(model.system.params, :activation_energy_of_diffusion) ?
             model.system.params[:activation_energy_of_diffusion] :
@@ -397,15 +397,15 @@ end
 
             if function_type == :expression || function_type == :function
 
-                @inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Ea, temperature_dependence_model)
+                @inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Ea, temperature_dependence_model, refT)
 
             elseif function_type == :interpolator
 
-                @inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function(SurfaceConcentration[cell] / cmax), Ea, temperature_dependence_model)
+                @inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function(SurfaceConcentration[cell] / cmax), Ea, temperature_dependence_model, refT)
 
             elseif function_type == :constant
 
-                @inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function, Ea, temperature_dependence_model)
+                @inbounds DiffusionCoefficient[cell] = temperature_dependent(Temperature[cell], diffusion_coefficient_function, Ea, temperature_dependence_model, refT)
 
             else
                 error("Diffusion Coefficient function type not recognized")
@@ -432,22 +432,22 @@ end
 
         cmax = model.system.params[:maximum_concentration]
         temperature_dependence_model = Symbol(model.system.params[:setting_temperature_dependence])
-        refT = 298.15
+        refT = model.system.params[:reference_temperature]
 
 
         for cell in ix
 
             if function_type == :expression || function_type == :function
 
-                @inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Ea, temperature_dependence_model)
+                @inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function(SurfaceConcentration[cell], Temperature[cell], refT, cmax), Ea, temperature_dependence_model, refT)
 
             elseif function_type == :interpolator
 
-                @inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function(SurfaceConcentration[cell] / cmax), Ea, temperature_dependence_model)
+                @inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function(SurfaceConcentration[cell] / cmax), Ea, temperature_dependence_model, refT)
 
             elseif function_type == :constant
 
-                @inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function, Ea, temperature_dependence_model)
+                @inbounds ReactionRateConstant[cell] = temperature_dependent(Temperature[cell], reaction_rate_function, Ea, temperature_dependence_model, refT)
 
             else
                 error("Reaction Rate Constant function type not recognized")
@@ -669,7 +669,7 @@ end
         ocp_func = model.system.params[:ocp_func]
 
         cmax = model.system.params[:maximum_concentration]
-        refT = 298.15
+        refT = model.system.params[:reference_temperature]
 
         if Jutul.haskey(model.system.params, :ocp_funcexp)
             theta0 = model.system.params[:theta0]
@@ -705,7 +705,6 @@ end
             ix,
         ) where {T}
         rate_func = model.system.params[:reaction_rate_constant_func]
-        refT = 298.15
         for i in ix
             @inbounds ReactionRateConstant[i] = rate_func(SurfaceConcentration[i], Temperature[i])
         end

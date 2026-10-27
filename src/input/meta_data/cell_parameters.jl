@@ -122,6 +122,16 @@ function get_cell_parameters_meta_data()
             "context_type_iri" => "https://w3id.org/emmo#EMMO_cd2cd0de_e0cc_4ef1_b27e_2e88db027bac",
             "description" => "The heigh of a cylindrical cell.",
         ),
+        "ReferenceTemperature" => Dict(
+            "type" => Real,
+            "min_value" => 238.15,
+            "max_value" => 373.15,
+            "unit" => "K",
+            "unit_name" => "emmo:Kelvin",
+            "unit_iri" => "https://w3id.org/emmo#Kelvin",
+            "context_type" => "ReferenceTemperature",
+            "description" => "Temperature at which the temperature dependent parameters (open circuit potential, diffusion coefficients, reaction rate constants) are given. Used as refT in functional parameters and in the Arrhenius and entropy change corrections. Defaults to 298.15 K.",
+        ),
         "SurfaceHeatTransferCoefficient" => Dict(
             "type" => Real,
             "min_value" => 0.01,
