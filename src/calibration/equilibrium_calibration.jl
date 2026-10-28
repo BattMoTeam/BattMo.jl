@@ -131,7 +131,7 @@ function equilibrium_active_material_volume(cell_parameters, electrode)
     coating = electrode_parameters["Coating"]
     cell = cell_parameters["Cell"]
     if haskey(cell, "ElectrodeGeometricSurfaceArea")
-        area = cell["ElectrodeGeometricSurfaceArea"]
+        area = compute_total_electrode_area(cell_parameters)
     else
         throw(ArgumentError("Only 1D geometry is currently supported for equilibrium calibration."))
     end
