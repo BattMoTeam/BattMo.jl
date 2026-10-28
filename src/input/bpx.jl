@@ -1660,11 +1660,12 @@ function export_lumped_thermal!(cell::AbstractDict, parameters::TrackedParameter
         add!(report, :notes, "Cell: the lumped thermal parameters (density, specific heat capacity, volume) are not exported, because the densities or specific heat capacities of the components are incomplete.")
     end
 
-    conductivities = unique(filter(!isnothing, [battmo_value(parameters, path...) for path in (
-        ("Electrolyte", "ThermalConductivity"), ("Separator", "ThermalConductivity"),
-        ("NegativeElectrode", "ActiveMaterial", "ThermalConductivity"), ("NegativeElectrode", "Binder", "ThermalConductivity"), ("NegativeElectrode", "ConductiveAdditive", "ThermalConductivity"),
-        ("PositiveElectrode", "ActiveMaterial", "ThermalConductivity"), ("PositiveElectrode", "Binder", "ThermalConductivity"), ("PositiveElectrode", "ConductiveAdditive", "ThermalConductivity"),
-    )]))
+    paths = Tuple{Vararg{String}}[("Electrolyte",), ("Separator",)]
+    for name in ("NegativeElectrode", "PositiveElectrode"), component in ("ActiveMaterial", "Binder", "ConductiveAdditive")
+        push!(paths, (name, component))
+    end
+    values = [battmo_value(parameters, path..., "ThermalConductivity") for path in paths]
+    conductivities = unique(filter(!isnothing, values))
     return length(conductivities) == 1 ? only(conductivities) : nothing
 end
 

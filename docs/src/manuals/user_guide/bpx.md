@@ -210,7 +210,7 @@ The BPX reference temperature sets `Cell.ReferenceTemperature`, which BattMo use
 ```math
 U(\theta, T) = U_\mathrm{ref}(\theta) + (T - T_\mathrm{ref}) \frac{\mathrm{d}U}{\mathrm{d}T}(\theta),
 ```
-as in BPX. See [Temperature dependence](@ref) for the BattMo model.
+as in BPX. See [Temperature dependence](arrhenius.md) for the BattMo model.
 
 ### Tabulated data
 
