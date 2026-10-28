@@ -346,6 +346,8 @@ function compute_voltage_breakdown(output::SimulationOutput)
             A_geo = w * l
         end
     end
+    # The cell current is shared by all electrode pairs.
+    A_geo *= compute_number_of_electrode_pairs(cell_params)
     L_n = get(cell_params["NegativeElectrode"]["Coating"], "Thickness", NaN)
     L_p = get(cell_params["PositiveElectrode"]["Coating"], "Thickness", NaN)
 

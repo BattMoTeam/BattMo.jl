@@ -924,7 +924,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
         ),
         "Geometry" => Dict(
             "case" => geom_case,
-            "faceArea" => get_key_value(cell, "ElectrodeGeometricSurfaceArea"),
+            "faceArea" => isnothing(get_key_value(cell, "ElectrodeGeometricSurfaceArea")) ? nothing : compute_total_electrode_area(cell_parameters),
             "width" => get_key_value(cell, "ElectrodeWidth"),
             "height" => isnothing(get_key_value(cell, "ElectrodeLength")) ? get_key_value(cell, "Height") : get_key_value(cell, "ElectrodeLength"),
             "innerRadius" => get_key_value(cell, "InnerRadius"),

@@ -47,6 +47,47 @@ end
     end
 end
 
+@testset "ElectrodeGeometricSurfaceArea is the per-layer area" begin
+    cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+    model_setup = LithiumIonBattery()
+
+    function capacities(cell_parameters)
+        sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+        simulated = computeCellCapacity(sim.model.multimodel) / 3600
+        return simulated, compute_cell_theoretical_capacity(cell_parameters)
+    end
+
+    reference = load_cell_parameters(; from_default_set = "chen_2020")
+    area = reference["Cell"]["ElectrodeGeometricSurfaceArea"]
+    @test compute_number_of_electrode_pairs(reference) == 1
+    @test compute_total_electrode_area(reference) ≈ area
+    simulated_ref, kpi_ref = capacities(reference)
+
+    # (NumberOfLayersInParallel, DoubleCoatedElectrodes, CloseOffWithNegativeElectrode, number of electrode pairs)
+    cases = [
+        (34, false, false, 34),
+        (17, true, true, 34),   # 2 * 17 - 1 pairs inside the stack, plus one facing the closing negative electrode
+        (17, true, false, 33),  # the outer positive electrode coating does not face a negative electrode
+        (1, true, false, 1),    # both outer coatings of a single double coated layer are unpaired
+    ]
+    for (n_layers, double_coated, close_off, n_pairs) in cases
+        cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+        cell_parameters["Cell"]["ElectrodeGeometricSurfaceArea"] = area / n_pairs
+        cell_parameters["Cell"]["NumberOfLayersInParallel"] = n_layers
+        cell_parameters["Cell"]["DoubleCoatedElectrodes"] = double_coated
+        cell_parameters["Cell"]["CloseOffWithNegativeElectrode"] = close_off
+        @test compute_number_of_electrode_pairs(cell_parameters) == n_pairs
+        @test compute_total_electrode_area(cell_parameters) ≈ area
+
+        simulated, kpi = capacities(cell_parameters)
+        @test simulated ≈ simulated_ref rtol = 1.0e-10
+        if !double_coated
+            # Only without unpaired outer coatings is all the coating mass in the KPIs active in the simulation.
+            @test kpi ≈ kpi_ref rtol = 1.0e-10
+        end
+    end
+end
+
 @testset "Chayambuka data tables" begin
     @test size(BattMo.data_pe_ocp, 1) == 27
     @test size(BattMo.data_ne_ocp, 1) == 54

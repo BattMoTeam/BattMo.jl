@@ -28,7 +28,7 @@ The boundary conditions are:
 \bigg\vert_{x=L^n + L^p} = 0.
 ```
 
-Here is ``i_{app}`` the electrical current at the terminals of the cell, ``L^{tot} = L^n + L^s + L^p`` where ``L^n`` is the thickness of the negative electrode, ``L^s`` is the thickness of the separator and ``L^p`` is the thickness of the positive electrode. ``A`` is the surface area of the current collector or electrode.
+Here is ``i_{app}`` the electrical current at the terminals of the cell, ``L^{tot} = L^n + L^s + L^p`` where ``L^n`` is the thickness of the negative electrode, ``L^s`` is the thickness of the separator and ``L^p`` is the thickness of the positive electrode. ``A`` is the total electrode area of the cell, i.e. ``A = N_{pairs} A_{layer}``, where ``A_{layer}`` is the area of a single electrode layer (`ElectrodeGeometricSurfaceArea`) and ``N_{pairs}`` is the number of facing electrode pairs (separators): `NumberOfLayersInParallel` for single coated electrodes, and 2 `NumberOfLayersInParallel` − 1 for `DoubleCoatedElectrodes`, plus one if `CloseOffWithNegativeElectrode`.
 
 The initial values are:
 
@@ -171,7 +171,7 @@ This table lists all required parameters from the DFN model used in BattMo.
 | ``k^n_s0``                  |                        | ``k^p_s0``                   | Reaction rate constant                                      | ReactionRateConstant              |
 | ``E^n_a``                   |                        | ``E^p_a``                    | Activation energy of the reaction                                          | ActivationEnergyOfReaction               |
 | ``\alpha^n``                          |                        | ``\alpha^p``                           | Charge transfer coefficient                                 | ChargeTransferCoefficient             |
-| ``A``                          |                        |  ``A``                          | Electrode surface area                                      | ElectrodeGeometricSurfaceArea                 |
+| ``A_{layer}``                  |                        |  ``A_{layer}``                  | Electrode surface area of a single layer                    | ElectrodeGeometricSurfaceArea                 |
 | ``T``                          |  ``T``                      | ``T``                           | Temperature                                                 | InitialTemperature                |
 | ``t_+``                          |  ``t_+``                      |  ``t_+``                          | Transference number                                         | TransferenceNumber            |
 | ``z_+``                          | ``z_+``                       | ``z_+``                           | Charge number of positive ion                               | ChargeNumber            |
