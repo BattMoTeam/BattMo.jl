@@ -13,6 +13,8 @@ export
     compute_np_ratio,
     compute_cell_theoretical_capacity,
     compute_cell_volume,
+    compute_number_of_electrode_pairs,
+    compute_total_electrode_area,
     get_equilibrium_kpis,
     compute_equilibrium_energy
 
@@ -47,7 +49,7 @@ end
 # Cell Mass calculations
 #########################################
 
-function _cell_layer_multipliers(params::CellParameters)
+function _cell_layer_multipliers(params)
     n_layers = get(params["Cell"], "NumberOfLayersInParallel", 1)
     double_coated = get(params["Cell"], "DoubleCoatedElectrodes", false)
     coating_multiplier = double_coated ? 2 : 1
@@ -56,6 +58,29 @@ function _cell_layer_multipliers(params::CellParameters)
         extra_ne = params["Cell"]["CloseOffWithNegativeElectrode"]
     end
     return n_layers, coating_multiplier, extra_ne
+end
+
+"""
+	compute_number_of_electrode_pairs(params)
+
+Number of facing positive/negative electrode coating pairs in the cell, which equals the number of separators.
+For single coated electrodes this is `NumberOfLayersInParallel`. For double coated electrodes it is
+`2 * NumberOfLayersInParallel - 1`, plus one if the stack is closed off with an extra negative electrode
+(`CloseOffWithNegativeElectrode`), since the outer coatings of the stack do not face a counter electrode.
+"""
+function compute_number_of_electrode_pairs(params)
+    n_layers, coating_multiplier, extra_ne = _cell_layer_multipliers(params)
+    return coating_multiplier == 2 ? 2 * n_layers - 1 + (extra_ne ? 1 : 0) : n_layers
+end
+
+"""
+	compute_total_electrode_area(params)
+
+Total electrode area of the cell. `ElectrodeGeometricSurfaceArea` is the area of a single electrode
+layer (plate), so the total area is that area times the number of electrode pairs.
+"""
+function compute_total_electrode_area(params)
+    return params["Cell"]["ElectrodeGeometricSurfaceArea"] * compute_number_of_electrode_pairs(params)
 end
 
 function compute_electrode_coating_mass(params::CellParameters, electrode::String)
@@ -100,8 +125,7 @@ function compute_separator_mass(params::CellParameters)
     density = params["Separator"]["Density"]
     thickness = params["Separator"]["Thickness"]
     porosity = params["Separator"]["Porosity"]
-    n_layers, coating_multiplier, extra_ne = _cell_layer_multipliers(params)
-    n_sep = coating_multiplier == 2 ? 2 * n_layers - 1 + (extra_ne ? 1 : 0) : n_layers
+    n_sep = compute_number_of_electrode_pairs(params)
     return thickness * area * (1 - porosity) * density * n_sep
 end
 
@@ -129,7 +153,7 @@ function compute_electrolyte_mass(params::CellParameters)
     electrolyte_density = params["Electrolyte"]["Density"]
     cell_area = params["Cell"]["ElectrodeGeometricSurfaceArea"]
     n_layers, coating_multiplier, extra_ne = _cell_layer_multipliers(params)
-    n_sep = coating_multiplier == 2 ? 2 * n_layers - 1 + (extra_ne ? 1 : 0) : n_layers
+    n_sep = compute_number_of_electrode_pairs(params)
 
     #separator (sep)
     sep_porosity = params["Separator"]["Porosity"]

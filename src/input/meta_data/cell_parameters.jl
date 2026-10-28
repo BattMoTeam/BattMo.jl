@@ -275,7 +275,7 @@ function get_cell_parameters_meta_data()
             "context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_fa7790d6_07bb_4b0f_9965_55966828f5f3",
             "max_value" => 50.0,
             "min_value" => 1.0e-4,
-            "description" => "Face (or plate) area of an electrode. Electrode cross-sectional area.",
+            "description" => "Face (or plate) area of a single electrode layer. For cells with several layers, the total electrode area is this area times the number of facing electrode pairs (NumberOfLayersInParallel for single coated electrodes, 2 * NumberOfLayersInParallel - 1 for DoubleCoatedElectrodes, plus one if CloseOffWithNegativeElectrode).",
             "type" => Real,
             "unit" => "m²",
             "unit_name" => "emmo:Metre",
