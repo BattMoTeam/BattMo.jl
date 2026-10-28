@@ -42,6 +42,7 @@ Reads and loads cell parameters either from a JSON file, a BPX file, a default s
 - `from_bpx_file_path ::String` : (Optional) Path to a BPX-formatted JSON file containing cell parameters.
 - `from_default_set ::String` : (Optional) The name of the default set to load cell parameters from.
 - `from_model_template ::ModelConfigured` : (Optional) A `ModelConfigured` instance used to load an empty set of cell parameters required for the concerning model.
+- `bpx_options ::NamedTuple` : (Optional) Keyword arguments for the BPX import (`validate`, `strict`, `cell_case`), see `BattMo.BPX.parse_bpx_to_cell_parameters`.
 
 # Returns
 An instance of `CellParameters`.
@@ -52,11 +53,12 @@ Throws an `ArgumentError` if none of the arguments are provided.
 # Example
 ```julia
 cell_parameters = load_cell_parameters(from_bpx_file_path = "bpx_input.json")
+cell_parameters = load_cell_parameters(from_bpx_file_path = "bpx_input.json", bpx_options = (strict = true, cell_case = "Pouch"))
 ```
 """
-function load_cell_parameters(; from_file_path::Union{String, Nothing} = nothing, from_bpx_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing, from_model_template::Union{ModelConfigured, Nothing} = nothing, empty = true)
+function load_cell_parameters(; from_file_path::Union{String, Nothing} = nothing, from_bpx_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing, from_model_template::Union{ModelConfigured, Nothing} = nothing, empty = true, bpx_options::NamedTuple = NamedTuple())
     if !isnothing(from_bpx_file_path)
-        cell_parameters_data = BPX.load_from_bpx_file(from_bpx_file_path)
+        cell_parameters_data = BPX.load_from_bpx_file(from_bpx_file_path; bpx_options...)
         return CellParameters(cell_parameters_data; source_path = from_bpx_file_path)
     elseif !isnothing(from_file_path)
 
