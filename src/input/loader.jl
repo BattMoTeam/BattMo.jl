@@ -80,22 +80,33 @@ end
 
 
 """
-	load_cycling_protocol(; from_file_path::String = nothing, from_default_set::String = nothing)
+	load_cycling_protocol(; from_file_path::String = nothing, from_bpx_file_path::String = nothing, from_default_set::String = nothing)
 
-Reads and loads cycling protocol either from a JSON file or a default set.
+Reads and loads cycling protocol either from a JSON file, the operating conditions of a BPX file, or a default set.
 
 # Arguments
 - `from_file_path ::String` : (Optional) Path to the JSON file containing cycling protocol.
+- `from_bpx_file_path ::String` : (Optional) Path to a BPX-formatted JSON file. Its voltage cut-offs, initial state and temperatures are used for a constant current discharge with `DRate = 1`, or for the current of one of its validation experiments.
 - `from_default_set ::String` : (Optional) The name of the default set to load cycling protocol from.
+- `bpx_options ::NamedTuple` : (Optional) Keyword arguments for the BPX import (`experiment`, `validate`, `strict`), see `BattMo.BPX.parse_bpx_to_cycling_protocol`.
 
 # Returns
 An instance of `CyclingProtocol`.
 
 # Errors
-Throws an `ArgumentError` if neither `from_file_path` nor `from_default_set` is provided.
+Throws an `ArgumentError` if none of the arguments are provided.
+
+# Example
+```julia
+cycling_protocol = load_cycling_protocol(from_bpx_file_path = "bpx_input.json")
+cycling_protocol = load_cycling_protocol(from_bpx_file_path = "bpx_input.json", bpx_options = (experiment = "1C discharge",))
+```
 """
-function load_cycling_protocol(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing)
-    if !isnothing(from_file_path)
+function load_cycling_protocol(; from_file_path::Union{String, Nothing} = nothing, from_bpx_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing, bpx_options::NamedTuple = NamedTuple())
+    if !isnothing(from_bpx_file_path)
+        cycling_protocol_instance = BPX.load_cycling_protocol_from_bpx_file(from_bpx_file_path; bpx_options...)
+        return CyclingProtocol(cycling_protocol_instance; source_path = from_bpx_file_path)
+    elseif !isnothing(from_file_path)
 
         cycling_protocol_instance = JSON.parsefile(from_file_path; dicttype = Dict{String, Any})
         return CyclingProtocol(cycling_protocol_instance; source_path = from_file_path)
@@ -104,7 +115,7 @@ function load_cycling_protocol(; from_file_path::Union{String, Nothing} = nothin
         file_path = parameter_file_path("cycling_protocols", from_default_set)
         return load_cycling_protocol(; from_file_path = file_path)
     else
-        throw(ArgumentError("Either 'from_file_path' or 'from_default_set' must be provided."))
+        throw(ArgumentError("Either 'from_file_path', 'from_bpx_file_path' or 'from_default_set' must be provided."))
     end
 
 end
@@ -182,23 +193,34 @@ function load_solver_settings(; from_file_path::Union{String, Nothing} = nothing
 end
 
 """
-	load_full_simulation_input(; from_file_path::String = nothing, from_default_set::String = nothing)
+	load_full_simulation_input(; from_file_path::String = nothing, from_bpx_file_path::String = nothing, from_default_set::String = nothing)
 
-Reads and loads a full simulation input either from a JSON file or a default set. A full simulation input should contain
+Reads and loads a full simulation input either from a JSON file, a BPX file, or a default set. A full simulation input should contain
 cell parameters, cycling protocol, model settings, the base model, simulation settings, and optionally solver settings.
 
 # Arguments
 - `from_file_path ::String` : (Optional) Path to the JSON file containing the full simulation input.
+- `from_bpx_file_path ::String` : (Optional) Path to a BPX-formatted JSON file. The cell parameters and cycling protocol are converted from the BPX file (see `load_cell_parameters` and `load_cycling_protocol`); the model, simulation and solver settings are the BattMo P2D defaults.
 - `from_default_set ::String` : (Optional) The name of the default set to load the full simulation input from.
+- `bpx_options ::NamedTuple` : (Optional) Keyword arguments for the BPX import (`experiment`, `validate`, `strict`, `cell_case`), see `BattMo.BPX.parse_bpx_to_full_simulation_input`.
 
 # Returns
 An instance of `FullSimulationInput`.
 
 # Errors
 Throws an `ArgumentError` if none of the arguments are provided.
+
+# Example
+```julia
+simulation_input = load_full_simulation_input(from_bpx_file_path = "bpx_input.json", bpx_options = (experiment = "1C discharge",))
+output = run_simulation(simulation_input)
+```
 """
-function load_full_simulation_input(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing)
-    if !isnothing(from_file_path)
+function load_full_simulation_input(; from_file_path::Union{String, Nothing} = nothing, from_bpx_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing, bpx_options::NamedTuple = NamedTuple())
+    if !isnothing(from_bpx_file_path)
+        full_simulation_instance = BPX.load_full_simulation_input_from_bpx_file(from_bpx_file_path; bpx_options...)
+        return FullSimulationInput(full_simulation_instance; source_path = from_bpx_file_path)
+    elseif !isnothing(from_file_path)
         # Assuming JSON and CyclingProtocol are correctly defined
         full_simulation_instance = JSON.parsefile(from_file_path; dicttype = Dict{String, Any})
         return FullSimulationInput(full_simulation_instance; source_path = from_file_path)
@@ -207,7 +229,7 @@ function load_full_simulation_input(; from_file_path::Union{String, Nothing} = n
         file_path = parameter_file_path("full_simulation_input", from_default_set)
         return load_full_simulation_input(; from_file_path = file_path)
     else
-        throw(ArgumentError("Either 'from_file_path' or 'from_default_set' must be provided."))
+        throw(ArgumentError("Either 'from_file_path', 'from_bpx_file_path' or 'from_default_set' must be provided."))
     end
 
 end

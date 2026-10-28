@@ -2,7 +2,7 @@
 
 [BPX (Battery Parameter eXchange)](https://bpxstandard.com) is an open standard for exchanging the parameters of physics-based lithium-ion battery models. A BPX file is a JSON file that contains the parameters of a Doyle-Fuller-Newman (DFN) model, or of one of its reduced forms (SPMe, SPM), together with the operating conditions of the cell and, optionally, measured validation data.
 
-BattMo can read BPX files into [`CellParameters`](@ref) and write BattMo cell parameters to BPX files. This page describes how to use the BPX support, how the parameters are converted between the BPX and BattMo models, and which parts of the BPX standard are not, or only approximately, supported.
+BattMo can read BPX files into [`CellParameters`](@ref), a [`CyclingProtocol`](@ref) or a complete [`FullSimulationInput`](@ref), and write BattMo cell parameters to BPX files. This page describes how to use the BPX support, how the parameters are converted between the BPX and BattMo models, and which parts of the BPX standard are not, or only approximately, supported.
 
 BattMo supports BPX version 1.1.1. Files in the older 0.x format are converted to the 1.x layout when they are read.
 
@@ -16,30 +16,42 @@ cell_parameters = load_cell_parameters(; from_bpx_file_path = "nmc_pouch_cell_BP
 
 The converted parameters are an ordinary [`CellParameters`](@ref) instance, which you can inspect and modify, and use in a [`Simulation`](@ref).
 
-The BPX operating conditions (voltage cut-offs, initial state-of-charge and temperatures) are not cell parameters in BattMo; they belong to the [`CyclingProtocol`](@ref). The conversion lists them with the protocol entries they correspond to (see [The conversion report](@ref bpx_report)), so that you can set them:
+The BPX operating conditions (voltage cut-offs, initial state-of-charge and temperatures) are not cell parameters in BattMo; they belong to the [`CyclingProtocol`](@ref) (see [Operating conditions](@ref bpx_protocol)). `load_cycling_protocol` reads them from the BPX file:
 
 ```julia
-cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
-cycling_protocol["LowerVoltageLimit"] = 2.7      # BPX "Lower voltage cut-off [V]"
-cycling_protocol["UpperVoltageLimit"] = 4.2      # BPX "Upper voltage cut-off [V]"
-cycling_protocol["InitialStateOfCharge"] = 1.0   # BPX "Initial state-of-charge"
+cycling_protocol = load_cycling_protocol(; from_bpx_file_path = "nmc_pouch_cell_BPX.json")
 
 sim = Simulation(LithiumIonBattery(), cell_parameters, cycling_protocol)
 output = solve(sim)
 ```
 
+BPX does not define a cycling experiment, so this protocol is a constant current discharge with `DRate = 1`, which you can change. With the `experiment` option, the current of one of the experiments in the `Validation` section of the file is used instead, so that the simulation can be compared with the validation data (see [Validation experiments](@ref bpx_validation_experiments)).
+
+`load_full_simulation_input` reads the cell parameters and the cycling protocol at once, and adds the default BattMo P2D model, simulation and solver settings. The findings of both conversions are reported together:
+
+```julia
+simulation_input = load_full_simulation_input(;
+    from_bpx_file_path = "nmc_pouch_cell_BPX.json",
+    bpx_options = (experiment = "1C discharge",),
+)
+output = run_simulation(simulation_input)
+```
+
 !!! note "C-rates"
-    The current of a `DRate` or `CRate` protocol is relative to the theoretical capacity that BattMo computes from the cell parameters, not to the BPX `"Nominal cell capacity [A.h]"`. For the NMC example cell, the theoretical capacity is 13.19 Ah while the nominal capacity is 12.5 Ah. To reproduce a BPX experiment at a given current, set the rate to the current divided by the theoretical capacity.
+    The current of a `DRate` or `CRate` protocol is relative to the theoretical capacity that BattMo computes from the cell parameters (`compute_cell_theoretical_capacity`), not to the BPX `"Nominal cell capacity [A.h]"`. For the NMC example cell, the theoretical capacity is 13.19 Ah while the nominal capacity is 12.5 Ah. For a given current, set the rate to the current divided by the theoretical capacity, or use the `experiment` option, which prescribes the current in ampere.
+
+The [BPX example](@ref "Simulating a BPX parameter set and comparing with its validation data") simulates the validation experiments of the NMC example cell and compares them with the data.
 
 ### Options
 
-The BPX import takes the following options. With [`load_cell_parameters`](@ref) they are passed as a named tuple `bpx_options`; they are keyword arguments of `BattMo.BPX.load_from_bpx_file` and `BattMo.BPX.parse_bpx_to_cell_parameters`.
+The BPX import takes the following options. With [`load_cell_parameters`](@ref), [`load_cycling_protocol`](@ref) and [`load_full_simulation_input`](@ref) they are passed as a named tuple `bpx_options`; they are keyword arguments of the corresponding functions of the `BattMo.BPX` module (see [Functions](@ref bpx_functions)).
 
-| Option | Default | Description |
-|:--|:--|:--|
-| `validate` | `true` | Check the file against the BPX schema and for internal consistency. |
-| `strict` | `false` | Raise an error, instead of a warning, when the file does not conform to the BPX schema. Inconsistent data (see [Validation](@ref bpx_validation)) only gives a warning, as in the Python BPX package. |
-| `cell_case` | `nothing` | The cell format (`Cell.Case`, e.g. `"Pouch"` or `"Cylindrical"`). BPX does not specify it, so by default it is inferred from the title and description of the file. |
+| Option | Default | Used by | Description |
+|:--|:--|:--|:--|
+| `validate` | `true` | all | Check the file against the BPX schema and for internal consistency. |
+| `strict` | `false` | all | Raise an error, instead of a warning, when the file does not conform to the BPX schema. Inconsistent data (see [Validation](@ref bpx_validation)) only gives a warning, as in the Python BPX package. |
+| `cell_case` | `nothing` | cell parameters, full input | The cell format (`Cell.Case`, e.g. `"Pouch"` or `"Cylindrical"`). BPX does not specify it, so by default it is inferred from the title and description of the file. |
+| `experiment` | `nothing` | cycling protocol, full input | The name of an experiment in the `Validation` section (e.g. `"1C discharge"`) whose current is used for the cycling protocol. By default, a constant current discharge with `DRate = 1` is set up. |
 
 ```julia
 cell_parameters = load_cell_parameters(;
@@ -75,8 +87,9 @@ Every import and export collects its findings and reports them in two messages:
   | Differences between the BPX and BattMo models | The BattMo model differs from the BPX model, e.g. the thermal model, so that simulations do not reproduce BPX. |
   | Keys that are not part of the BPX standard | Ignored keys (reported as schema violations when the file is validated). |
   | Parameters that could not be determined | BattMo parameters for which the BPX data is missing. They are set to `0.0` and must be set before simulating; the validation of the simulation input flags the ones the selected model needs. |
+  | Operating conditions that the BPX input does not give | Cycling protocol entries set to a default value, e.g. the constant current discharge with `DRate = 1`, or an initial state of charge that the file does not give. |
 
-- **An info message** with the documented choices of the conversion: the [approximations](@ref bpx_approximations) made, parameters without a counterpart, the operating conditions with their [`CyclingProtocol`](@ref) entries, and notes (e.g. that a legacy file was converted, or that the cell format was inferred).
+- **An info message** with the documented choices of the conversion: the [approximations](@ref bpx_approximations) made, parameters without a counterpart, the operating conditions with their [`CyclingProtocol`](@ref) entries (when reading cell parameters only), and notes (e.g. that a legacy file was converted, that the cell format was inferred, or which validation experiment the cycling protocol uses).
 
 For example, reading the NMC pouch cell example of the BPX standard gives a warning that the voltage given by its OCPs at the stoichiometry limits (4.2018 V) exceeds its upper cut-off voltage (4.2 V), and that thermal simulations do not reproduce the BPX thermal model.
 
@@ -105,7 +118,8 @@ As the Python BPX package does, BattMo checks that
   ```
   with the OCPs at the reference temperature;
 - the initial state-of-charge lies between 0 and 1;
-- the active material volume fraction ``b R / 3`` does not exceed the solid volume fraction ``1 - \varepsilon`` of an electrode (see below).
+- the active material volume fraction ``b R / 3`` does not exceed the solid volume fraction ``1 - \varepsilon`` of an electrode (see below);
+- the sign of the current of each validation experiment matches the BPX convention, in which a positive current charges the cell. For experiments that only charge or only discharge, the current must match the change of the voltage (a discharge lowers the voltage by more than 10 mV, a charge raises it) and, when the name of the experiment contains "discharge" or "charge", the type of experiment. Experiments that both charge and discharge are not checked.
 
 These findings are warnings, also in strict mode.
 
@@ -121,7 +135,8 @@ A file that declares a BPX version newer than 1.1.1 is read with the 1.1.1 schem
 
 | BPX | BattMo | Conversion |
 |:--|:--|:--|
-| `Electrode area [m2]` ``A``, `Number of electrode pairs connected in parallel to make a cell` ``N_\mathrm{p}`` | `Cell.ElectrodeGeometricSurfaceArea` | ``A N_\mathrm{p}``, with `NumberOfLayersInParallel = 1` and `DoubleCoatedElectrodes = false` (see [Approximations](@ref bpx_approximations)) |
+| `Electrode area [m2]` ``A`` | `Cell.ElectrodeGeometricSurfaceArea` | unchanged (area of a single electrode layer) |
+| `Number of electrode pairs connected in parallel to make a cell` ``N_\mathrm{p}`` | `Cell.NumberOfLayersInParallel` | unchanged, with `DoubleCoatedElectrodes = false`, so that the total electrode area used by the simulation is ``A N_\mathrm{p}`` (see [Approximations](@ref bpx_approximations)) |
 | `Nominal cell capacity [A.h]` | `Cell.NominalCapacity` | unchanged |
 | `External surface area [m2]` | `Cell.DeviceSurfaceArea` | unchanged (not used by the BattMo thermal model) |
 | `Reference temperature [K]` | `Cell.ReferenceTemperature` | unchanged; 298.15 K when absent |
@@ -211,15 +226,29 @@ BPX tables (`{"x": [...], "y": [...]}`) are passed to BattMo unchanged: BattMo e
 | `State` → `Initial conditions` → `Initial temperature [K]` | `InitialTemperature` |
 | `State` → `Thermal environment` → `Ambient temperature [K]` | `AmbientTemperature` |
 
-These values are listed in the conversion report; they are not set automatically.
+`load_cycling_protocol` and `load_full_simulation_input` set these entries. Values that the file does not give are set to a default and reported: the initial state of charge to 1 for a protocol that starts with a discharge and 0 for one that starts with a charge, the initial temperature to the temperature at the start of the validation experiment or to 298.15 K, and the ambient temperature to the initial temperature. When only the cell parameters are read, the values are listed in the conversion report.
+
+BPX does not define a cycling experiment. Without the `experiment` option, the protocol is a constant current discharge (`"Protocol" = "CC"`) with `DRate = 1`.
+
+### [Validation experiments](@id bpx_validation_experiments)
+
+The `Validation` section of a BPX file contains experiments with the time, current, voltage and, optionally, temperature. With `experiment`, the current of that experiment is prescribed with the `InputCurrentSeries` protocol:
+
+| BPX experiment | `CyclingProtocol` |
+|:--|:--|
+| `Time [s]` | `Times`, shifted to start at 0 s; the simulation uses these times as time steps |
+| `Current [A]` | `Currents`, with the opposite sign: BPX uses a positive current for charging, BattMo for discharging |
+| `Temperature [K]` | `InitialTemperature`, only when `State` does not give it |
+
+The voltage cut-offs of the file still apply. The voltage and temperature data are not used by the conversion; the [BPX example](@ref "Simulating a BPX parameter set and comparing with its validation data") shows how to compare a simulation with them.
 
 ## [Approximations](@id bpx_approximations)
 
-The following choices are reported in the info message of every import. They do not change the simulated electrochemistry.
+The following choices do not change the simulated electrochemistry. The component densities and the inactive solid are reported in the info message of every import.
 
 - **Component densities.** BPX gives one lumped density for the whole cell. It is used as the density of all components (active material, inactive solid, electrolyte and separator), so cell masses and gravimetric quantities, such as the specific energy, are approximate.
 - **Inactive solid.** BPX does not describe the binder and conductive additive. The solid that is not active material is lumped into the binder and the conductive additive has zero mass.
-- **Electrode pairs.** BPX describes the cell as ``N_\mathrm{p}`` electrode pairs of area ``A``, each with one negative coating, a separator and one positive coating, so that the current density is ``I / (A N_\mathrm{p})``. The BattMo P2D model uses `ElectrodeGeometricSurfaceArea` as the total electrode area, so it is set to ``A N_\mathrm{p}`` with one, single-coated layer. The cell mass computations then count every BPX coating once. The number of pairs itself is not kept.
+- **Electrode pairs.** BPX describes the cell as ``N_\mathrm{p}`` electrode pairs of area ``A``, each with one negative coating, a separator and one positive coating, so that the current density is ``I / (A N_\mathrm{p})``. They are imported as ``N_\mathrm{p}`` single coated layers (`DoubleCoatedElectrodes = false`), which gives the same total electrode area ``A N_\mathrm{p}`` and the same coating, separator and electrolyte volumes. BPX does not say whether the real cell uses double coated electrodes, so the number of current collectors implied by the layer layout may differ from the real cell; current collectors are not part of BPX.
 
 ## Differences between the BPX and BattMo models
 
@@ -250,15 +279,15 @@ BPX files for the SPMe or SPM model are converted as they are, but BattMo simula
 | Blended electrodes (`"Particle"` node with several particle types) | Error: BattMo models a single active material per electrode. |
 | OCP hysteresis (`OCP (lithiation) [V]`, `OCP (delithiation) [V]`, `OCP hysteresis decay constant`, initial hysteresis states) | Reported and ignored; the equilibrium `OCP [V]` is used. |
 | Degradation state (`LAM`, `LLI`) | A non-zero degradation state is reported and ignored; the parameters of the unaged reference cell are used. |
-| `Validation` data | Not used. |
+| `Validation` data | The current of an experiment can be used for the cycling protocol (`experiment` option); the voltage and temperature data are not used. |
 | `User-defined` parameters | Reported and not interpreted, except the lumped thermal conductivity of converted 0.x files. |
 
 ## [Export](@id bpx_export)
 
 The export applies the inverse of the conversions above. In addition:
 
-- The electrode area is exported as the area of a single electrode pair (``N_\mathrm{p} = 1``) with ``A`` = `Cell.ElectrodeGeometricSurfaceArea`, which is equivalent for the DFN model. A parameter set with `NumberOfLayersInParallel > 1` is reported, since the meaning of its area must be checked.
-- The lumped density and specific heat capacity are computed from the coatings, electrolyte and separator, and the volume from the stack thickness; current collectors and casing are not included.
+- ``A`` is `Cell.ElectrodeGeometricSurfaceArea` and ``N_\mathrm{p}`` is the number of facing electrode pairs (`compute_number_of_electrode_pairs`): `NumberOfLayersInParallel` for single coated electrodes, and ``2 N_\mathrm{layers} - 1`` for double coated electrodes, plus one if the stack is closed off with a negative electrode. The coating layout itself is not exported.
+- The lumped density and specific heat capacity are computed from the coatings, electrolyte and separator, and the volume ``A N_\mathrm{p} L`` from the stack thickness ``L``; current collectors and casing are not included.
 - Electrode functions of `c` and `cmax` are rewritten as functions of the stoichiometry `x`; electrolyte functions with an Arrhenius factor written by the import are split again into a function and an activation energy.
 
 The following cannot be represented in BPX and is reported:
@@ -274,18 +303,20 @@ The following cannot be represented in BPX and is reported:
 The following parts of the BPX standard are not supported, or could be supported better:
 
 - **Thermal model.** The lumped BPX thermal model could be reproduced in a 1D simulation by scaling the component densities by ``\mathcal{V} / (A N_\mathrm{p} L)`` and setting `SurfaceHeatTransferCoefficient` to ``h_\mathrm{ext} \mathcal{A}`` divided by the cooled area of the simulation grid.
-- **Operating conditions.** A cycling protocol could be loaded directly from the BPX operating conditions instead of listing them.
-- **Validation data.** The measured curves in the `Validation` section could be loaded for comparison with simulations and for calibration.
+- **Validation data.** The voltage curves of the `Validation` section could be used directly for calibration, and the experiments could be split into constant current and rest steps instead of a sampled current series.
 - **Degradation state.** LAM and LLI could be supported by scaling the surface area per unit volume and recomputing the stoichiometry limits from the voltage cut-offs (BPX equations 16–17).
 - **Blended electrodes and OCP hysteresis** require extensions of the BattMo models.
-- **Electrode area and layers.** For parameter sets with several layers, the BattMo P2D model and the cell mass computations interpret `ElectrodeGeometricSurfaceArea` differently (total area and area per layer). BPX imports avoid this by using a single layer, but the number of electrode pairs is then not kept.
 - **Updating to new BPX versions** requires regenerating the bundled schema (see `src/input/bpx_schema/README.md`) and, when new parameters are introduced, extending the conversion.
 
-## Functions
+## [Functions](@id bpx_functions)
 
 ```@docs
 write_bpx
 BattMo.BPX.load_from_bpx_file
 BattMo.BPX.parse_bpx_to_cell_parameters
+BattMo.BPX.load_cycling_protocol_from_bpx_file
+BattMo.BPX.parse_bpx_to_cycling_protocol
+BattMo.BPX.load_full_simulation_input_from_bpx_file
+BattMo.BPX.parse_bpx_to_full_simulation_input
 BattMo.BPX.convert_to_bpx
 ```

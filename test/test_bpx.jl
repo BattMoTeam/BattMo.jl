@@ -30,10 +30,11 @@ end
 
         cell = cell_parameters["Cell"]
         @test cell["NominalCapacity"] == 12.5
-        # The 34 electrode pairs are represented by a single layer of the total area
-        @test cell["ElectrodeGeometricSurfaceArea"] ≈ 0.016808 * 34
-        @test cell["NumberOfLayersInParallel"] == 1
+        # The 34 electrode pairs are 34 single coated layers of the BPX electrode area
+        @test cell["ElectrodeGeometricSurfaceArea"] == 0.016808
+        @test cell["NumberOfLayersInParallel"] == 34
         @test cell["DoubleCoatedElectrodes"] == false
+        @test BattMo.compute_total_electrode_area(cell_parameters) ≈ 0.016808 * 34
         @test cell["Case"] == "Pouch"
         @test cell["ReferenceTemperature"] == 298.15
 
@@ -109,7 +110,6 @@ end
         @test occursin("lumped heat balance", warning) && occursin("57.4 % of the cell volume", warning)
         # Documented approximations and the operating conditions are information
         @test occursin("lumped cell density (1847 kg.m-3)", info)
-        @test occursin("34 electrode pairs", info)
         @test occursin("Lower voltage cut-off [V] = 2.7 → CyclingProtocol[\"LowerVoltageLimit\"]", info)
         @test occursin("Initial state-of-charge = 1 → CyclingProtocol[\"InitialStateOfCharge\"]", info)
         @test occursin("Volume [m3]: volume of the BPX lumped thermal model", info)
@@ -342,8 +342,9 @@ end
         @test !occursin("exp(17100", parameterisation["Electrolyte"]["Conductivity [S.m-1]"])
         @test occursin("**", parameterisation["Electrolyte"]["Conductivity [S.m-1]"])
         @test occursin(r"\bx\b", ne["OCP [V]"]) && !occursin("cmax", ne["OCP [V]"])
-        @test parameterisation["Cell"]["Electrode area [m2]"] ≈ 0.016808 * 34
-        @test parameterisation["Cell"]["Number of electrode pairs connected in parallel to make a cell"] == 1
+        @test parameterisation["Cell"]["Electrode area [m2]"] == 0.016808
+        @test parameterisation["Cell"]["Number of electrode pairs connected in parallel to make a cell"] === 34
+        @test parameterisation["Cell"]["Volume [m3]"] ≈ 0.016808 * 34 * (ne["Thickness [m]"] + parameterisation["Separator"]["Thickness [m]"] + parameterisation["Positive electrode"]["Thickness [m]"])
         @test parameterisation["Cell"]["Density [kg.m-3]"] ≈ 1847
         @test parameterisation["Cell"]["Upper voltage cut-off [V]"] == 4.2
         @test bpx["State"]["Initial conditions"]["Initial electrolyte concentration [mol.m-3]"] == 1000
@@ -372,6 +373,17 @@ end
         @test occursin(r"\bx\b", chen_bpx["Parameterisation"]["Negative electrode"]["OCP [V]"])
         @test occursin("NegativeElectrode.CurrentCollector.Thickness: not exported", messages)
         @test occursin("differs from the one BPX derives from surface area × radius / 3", messages)
+
+        # Double coated electrodes are exported as the number of facing electrode pairs
+        double_coated = deepcopy(cell_parameters.all)
+        double_coated["Cell"]["NumberOfLayersInParallel"] = 17
+        double_coated["Cell"]["DoubleCoatedElectrodes"] = true
+        exported = BPX.convert_to_bpx(double_coated; cycling_protocol)
+        # by default the stack is closed off with an extra negative electrode
+        @test exported["Parameterisation"]["Cell"]["Number of electrode pairs connected in parallel to make a cell"] == 34
+        double_coated["Cell"]["CloseOffWithNegativeElectrode"] = false
+        exported = BPX.convert_to_bpx(double_coated; cycling_protocol)
+        @test exported["Parameterisation"]["Cell"]["Number of electrode pairs connected in parallel to make a cell"] == 33
     end
 
     @testset "simulation reproduces the BPX validation data" begin
@@ -382,16 +394,14 @@ end
         current = -validation["Current [A]"][end]
 
         cell_parameters = load_cell_parameters(; from_bpx_file_path = nmc_file_path)
-        cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
-        cycling_protocol["LowerVoltageLimit"] = 2.7
-        cycling_protocol["UpperVoltageLimit"] = 4.2
-        cycling_protocol["InitialStateOfCharge"] = 1.0
+        cycling_protocol = load_cycling_protocol(; from_bpx_file_path = nmc_file_path)
 
         # The DRate is relative to the theoretical cell capacity, which must equal the
         # capacity implied by the BPX parameters
         sim = Simulation(LithiumIonBattery(), cell_parameters, cycling_protocol)
         capacity = BattMo.computeCellCapacity(sim.model.multimodel) / 3600
         @test capacity ≈ 13.19 atol = 0.01
+        @test compute_cell_theoretical_capacity(cell_parameters) ≈ capacity rtol = 1.0e-4
         cycling_protocol["DRate"] = current / capacity
 
         output = solve(Simulation(LithiumIonBattery(), cell_parameters, cycling_protocol); info_level = -1)
@@ -408,6 +418,105 @@ end
         mask = t_ref .<= t[end]
         error = interpolate.(t_ref[mask]) .- v_ref[mask]
         @test sqrt(sum(error .^ 2) / length(error)) < 0.025
+    end
+
+    @testset "cycling protocol from BPX" begin
+        # Without experiment: a 1C (DRate) discharge in the BPX voltage window
+        logs, protocol = Test.collect_test_logs() do
+            load_cycling_protocol(; from_bpx_file_path = nmc_file_path)
+        end
+        @test isa(protocol, CyclingProtocol)
+        @test protocol["Protocol"] == "CC"
+        @test protocol["InitialControl"] == "discharging"
+        @test protocol["DRate"] == 1.0
+        @test protocol["LowerVoltageLimit"] == 2.7
+        @test protocol["UpperVoltageLimit"] == 4.2
+        @test protocol["InitialStateOfCharge"] == 1
+        @test protocol["InitialTemperature"] == 298.15
+        @test protocol["AmbientTemperature"] == 298.15
+        warning = only(filter(l -> l.level == Base.CoreLogging.Warn, logs)).message
+        @test occursin("DRate = 1.0 is set up", warning)
+        @test occursin("\"1C discharge\", \"C/20 discharge\"", warning)
+
+        # With experiment: the measured current, with the BattMo sign convention
+        protocol = load_cycling_protocol(; from_bpx_file_path = nmc_file_path, bpx_options = (experiment = "1C discharge",))
+        @test protocol["Protocol"] == "InputCurrentSeries"
+        @test length(protocol["Times"]) == 38
+        @test all(==(12.5), protocol["Currents"])
+
+        @test_throws "no validation experiment \"2C\"" load_cycling_protocol(; from_bpx_file_path = nmc_file_path, bpx_options = (experiment = "2C",))
+
+        # Missing operating conditions are set to defaults and reported
+        bpx = nmc_v1()
+        delete!(bpx, "State")
+        delete!(bpx["Validation"]["1C discharge"], "Temperature [K]")
+        logs, converted = Test.collect_test_logs() do
+            BPX.parse_bpx_to_cycling_protocol(bpx; experiment = "1C discharge")
+        end
+        warning = only(filter(l -> l.level == Base.CoreLogging.Warn, logs)).message
+        @test converted["InitialStateOfCharge"] == 1.0
+        @test converted["InitialTemperature"] == 298.15
+        @test occursin("the initial state of charge is not given", warning)
+        @test occursin("the ambient temperature is not given", warning)
+    end
+
+    @testset "sign of the validation current" begin
+        sign_messages(bpx) = filter(m -> occursin("Validation →", m), BPX.entries(BPX.check_consistency!(BPX.ConversionReport("test"), bpx), :consistency))
+
+        # The NMC discharges have a negative (discharging) current and a falling voltage
+        @test isempty(sign_messages(nmc_v1()))
+
+        # A reversed current contradicts the falling voltage and the name of the experiment
+        bpx = nmc_v1()
+        experiment = bpx["Validation"]["1C discharge"]
+        experiment["Current [A]"] = -experiment["Current [A]"]
+        messages = sign_messages(bpx)
+        @test length(messages) == 2
+        @test any(m -> occursin("probably reversed", m) && occursin("voltage falls", m), messages)
+        @test any(m -> occursin("the name of the experiment says discharge", m), messages)
+
+        # A charge with a positive current and a rising voltage is consistent
+        bpx = nmc_v1()
+        bpx["Validation"] = Dict("Charge" => Dict("Time [s]" => [0, 10], "Current [A]" => [1.0, 1.0], "Voltage [V]" => [3.5, 3.6]))
+        @test isempty(sign_messages(bpx))
+        # ... and is converted to a negative (charging) BattMo current
+        protocol = BPX.parse_bpx_to_cycling_protocol(bpx; experiment = "Charge", validate = false)
+        @test protocol["Currents"] == [-1.0, -1.0]
+        @test protocol["UpperVoltageLimit"] == 4.2
+
+        # Experiments that both charge and discharge are not checked
+        bpx["Validation"]["Charge"]["Current [A]"] = [1.0, -1.0]
+        @test isempty(sign_messages(bpx))
+    end
+
+    @testset "full simulation input from BPX" begin
+        input = load_full_simulation_input(; from_bpx_file_path = nmc_file_path, bpx_options = (experiment = "C/20 discharge", cell_case = "Pouch"))
+        @test isa(input, FullSimulationInput)
+        @test input["BaseModel"] == "LithiumIonBattery"
+        @test input["CellParameters"]["Cell"]["Case"] == "Pouch"
+        @test input["CyclingProtocol"]["Protocol"] == "InputCurrentSeries"
+
+        output = run_simulation(input; info_level = -1)
+        t = output.time_series["Time"]
+        v = output.time_series["Voltage"]
+        current = output.time_series["Current"]
+
+        validation = BattMo.JSON.parsefile(nmc_file_path)["Validation"]["C/20 discharge"]
+        t_ref = Float64.(validation["Time [s]"])
+        v_ref = Float64.(validation["Voltage [V]"])
+        i_ref = Float64.(validation["Current [A]"])
+
+        # The simulated current has the opposite sign of the BPX current (BattMo:
+        # positive for discharging, BPX: positive for charging) and the same magnitude
+        @test all(sign.(current) .== -sign(i_ref[1]))
+        @test all(isapprox.(current, -i_ref[1]; rtol = 1.0e-6))
+        # ... so the cell discharges, like in the validation data
+        @test v[end] < v[1]
+
+        # Voltage error within the simulated time span
+        mask = t[1] .<= t_ref .<= t[end]
+        v_sim = [v[findfirst(x -> isapprox(x, tt), t)] for tt in t_ref[mask]]
+        @test sqrt(sum((v_sim .- v_ref[mask]) .^ 2) / count(mask)) < 0.025
     end
 
     @testset "converted parameters validate and simulate" begin

@@ -49,6 +49,7 @@ function build_battmo_docs(
         "3D Pouch example" => "example_3D_pouch",
         "3D cylindrical" => "example_3D_cylindrical",
         "Calibration example" => "example_calibration",
+        "BPX parameter set" => "example_bpx",
         "SEI layer growth" => "example_sei",
         "DFN sodiun ion " => "example_chayambuka",
         "Headless UI " => "example_headless",

@@ -31,6 +31,8 @@ using JSON
 using JSONSchema
 
 export load_from_bpx_file, parse_bpx_to_cell_parameters, convert_to_bpx, write_bpx
+export load_cycling_protocol_from_bpx_file, parse_bpx_to_cycling_protocol
+export load_full_simulation_input_from_bpx_file, parse_bpx_to_full_simulation_input
 
 const BattMoModule = parentmodule(@__MODULE__)
 
@@ -75,13 +77,14 @@ const WARNING_CATEGORIES = [
     :model_differences => "Differences between the BPX and BattMo models",
     :unknown_keys => "Keys that are not part of the BPX standard (ignored)",
     :zero_filled => "Parameters that could not be determined and were set to 0.0 (set them before simulating)",
+    :assumed => "Operating conditions that the BPX input does not give (default values used, check them)",
 ]
 
 # Categories reported as info: documented choices of the conversion
 const INFO_CATEGORIES = [
     :approximations => "Approximations made in the conversion",
     :unused => "Parameters without a counterpart (not converted)",
-    :protocol => "Operating conditions, which belong to the BattMo CyclingProtocol",
+    :protocol => "Operating conditions, which belong to the BattMo CyclingProtocol (load them with `load_cycling_protocol(; from_bpx_file_path)`)",
     :notes => "Notes",
 ]
 
@@ -716,6 +719,15 @@ function check_consistency!(report::ConversionReport, bpx_data::AbstractDict)
     if isa(soc, Real) && !(0 <= soc <= 1)
         add!(report, :consistency, "State → Initial conditions → Initial state-of-charge: $soc lies outside [0, 1].")
     end
+
+    for (name, data) in validation_experiments(bpx_data)
+        isa(data, AbstractDict) || continue
+        current = get(data, "Current [A]", nothing)
+        voltage = get(data, "Voltage [V]", nothing)
+        if isa(current, AbstractVector) && isa(voltage, AbstractVector) && !isempty(voltage) && all(x -> isa(x, Real), current) && all(x -> isa(x, Real), voltage)
+            check_current_sign!(report, name, data, -Float64.(current))
+        end
+    end
     return report
 end
 
@@ -763,16 +775,13 @@ function convert_cell(section::BPXSection, header::AbstractDict, reference_tempe
     number_of_pairs = get_parameter(section, "Number of electrode pairs connected in parallel to make a cell")
 
     # BPX: the cell consists of N_p electrode pairs of area A in parallel, each with one
-    # negative coating, separator and positive coating (i_app = I / (A N_p)). The BattMo
-    # P2D model uses ElectrodeGeometricSurfaceArea as the total area, so the pairs are
-    # represented as a single layer of area A N_p; this also keeps the cell mass
-    # computations, which multiply the area by the number of coatings, consistent.
-    cell["ElectrodeGeometricSurfaceArea"] = derive(*, electrode_area, number_of_pairs)
-    cell["NumberOfLayersInParallel"] = 1
+    # negative coating, separator and positive coating (i_app = I / (A N_p)). In BattMo,
+    # ElectrodeGeometricSurfaceArea is the area of one layer and the number of electrode
+    # pairs of single coated electrodes is NumberOfLayersInParallel, which gives the same
+    # total area A N_p.
+    cell["ElectrodeGeometricSurfaceArea"] = electrode_area
+    cell["NumberOfLayersInParallel"] = number_of_pairs
     cell["DoubleCoatedElectrodes"] = false
-    if !isnothing(electrode_area) && !isnothing(number_of_pairs) && number_of_pairs != 1
-        add!(report, :approximations, "Cell: the $number_of_pairs electrode pairs of area $electrode_area m2 are represented by one layer of area $(electrode_area * number_of_pairs) m2 (ElectrodeGeometricSurfaceArea, with NumberOfLayersInParallel = 1), the total area used by the BattMo P2D model. This is equivalent for the P2D model; the number of pairs is not kept.")
-    end
     cell["NominalCapacity"] = get_parameter(section, "Nominal cell capacity [A.h]")
     cell["ReferenceTemperature"] = reference_temperature
     cell["DeviceSurfaceArea"] = get_parameter(section, "External surface area [m2]")
@@ -984,12 +993,13 @@ function report_thermal_model!(report::ConversionReport, cell_section::BPXSectio
     all(isnothing, thermal) && return report
 
     area = cell_parameters["Cell"]["ElectrodeGeometricSurfaceArea"]
+    number_of_pairs = cell_parameters["Cell"]["NumberOfLayersInParallel"]
     thicknesses = (
         cell_parameters["NegativeElectrode"]["Coating"]["Thickness"],
         cell_parameters["Separator"]["Thickness"],
         cell_parameters["PositiveElectrode"]["Coating"]["Thickness"],
     )
-    stack_volume = derive((a, l...) -> a * sum(l), area, thicknesses...)
+    stack_volume = derive((a, n, l...) -> a * n * sum(l), area, number_of_pairs, thicknesses...)
 
     message = "Thermal model: BPX uses a lumped heat balance for the whole cell, with heat capacity density × specific heat capacity × cell volume"
     message *= isnothing(volume) ? "" : " (cell volume $volume m3)"
@@ -1016,13 +1026,7 @@ function report_thermal_model!(report::ConversionReport, cell_section::BPXSectio
 end
 
 function report_protocol_parameters!(report::ConversionReport, bpx_data::AbstractDict)
-    cell = get(get(bpx_data, "Parameterisation", Dict()), "Cell", Dict())
-    state = get(bpx_data, "State", Dict())
-    sections = Dict(
-        "Cell" => cell,
-        "Initial conditions" => get(state, "Initial conditions", Dict()),
-        "Thermal environment" => get(state, "Thermal environment", Dict()),
-    )
+    sections = operating_condition_sections(bpx_data)
     for (section, key, protocol_key) in PROTOCOL_PARAMETERS
         data = sections[section]
         if haskey(data, key)
@@ -1037,35 +1041,14 @@ end
 # ============================================================================
 
 """
-    parse_bpx_to_cell_parameters(bpx_data::AbstractDict; validate = true, strict = false, cell_case = nothing) -> Dict{String, Any}
+    prepare_import(bpx_data, report; validate, strict) -> Dict
 
-Convert already-parsed BPX data to the format expected by `CellParameters`.
-
-Legacy BPX v0.x inputs are converted to the v1.x layout first. With `validate`, the
-input is checked against the bundled BPX schema and for internal consistency. All
-findings of the conversion are emitted as one warning and one info message; with
-`strict`, violations of the BPX standard (schema) raise an error instead.
-`cell_case` sets `Cell.Case` (e.g. `"Pouch"`), which is otherwise inferred from the
-header text. Blended electrodes are not supported and raise an error.
+Bring a BPX input to the v1.x layout and, with `validate`, check it against the schema
+and for internal consistency. With `strict`, schema violations raise an error.
 """
-function parse_bpx_to_cell_parameters(
-        bpx_data::AbstractDict;
-        validate::Bool = true,
-        strict::Bool = false,
-        cell_case::Union{Nothing, AbstractString} = nothing,
-    )::Dict{String, Any}
+function prepare_import(bpx_data::AbstractDict, report::ConversionReport; validate::Bool, strict::Bool)
     haskey(bpx_data, "Parameterisation") || error("The input is not BPX formatted: the top-level \"Parameterisation\" section is missing.")
-
-    report = ConversionReport("import")
     bpx_data = prepare_bpx_input(bpx_data, report)
-    parameterisation = bpx_data["Parameterisation"]
-
-    for electrode in ("Negative electrode", "Positive electrode")
-        if haskey(get(parameterisation, electrode, Dict()), "Particle")
-            error("BPX import: the \"$electrode\" is a blended electrode (\"Particle\" node with several particle types). BattMo models a single active material per electrode, so blended electrodes cannot be converted.")
-        end
-    end
-
     if validate
         for issue in schema_issues(bpx_data)
             add!(report, :schema, issue)
@@ -1074,6 +1057,22 @@ function parse_bpx_to_cell_parameters(
         check_consistency!(report, bpx_data)
     end
     raise_if_strict(report, strict)
+    return bpx_data
+end
+
+"""
+    convert_cell_parameters(bpx_data, report; cell_case) -> Dict
+
+Convert a prepared BPX input (see `prepare_import`) to BattMo cell parameters.
+"""
+function convert_cell_parameters(bpx_data::AbstractDict, report::ConversionReport; cell_case = nothing)
+    parameterisation = bpx_data["Parameterisation"]
+
+    for electrode in ("Negative electrode", "Positive electrode")
+        if haskey(get(parameterisation, electrode, Dict()), "Particle")
+            error("BPX import: the \"$electrode\" is a blended electrode (\"Particle\" node with several particle types). BattMo models a single active material per electrode, so blended electrodes cannot be converted.")
+        end
+    end
 
     header = get(bpx_data, "Header", Dict{String, Any}())
 
@@ -1127,7 +1126,6 @@ function parse_bpx_to_cell_parameters(
     )
 
     report_thermal_model!(report, cell_section, cell_parameters, lumped, heat_transfer_coefficient)
-    report_protocol_parameters!(report, bpx_data)
     report_unconverted_keys!(report, cell_section)
     report_unconverted_keys!(report, user_defined_section)
 
@@ -1137,8 +1135,35 @@ function parse_bpx_to_cell_parameters(
         add!(report, :zero_filled, path)
     end
 
-    emit_report(report)
+    return cell_parameters
+end
 
+"""
+    parse_bpx_to_cell_parameters(bpx_data::AbstractDict; validate = true, strict = false, cell_case = nothing) -> Dict{String, Any}
+
+Convert already-parsed BPX data to the format expected by `CellParameters`.
+
+Legacy BPX v0.x inputs are converted to the v1.x layout first. With `validate`, the
+input is checked against the bundled BPX schema and for internal consistency. All
+findings of the conversion are emitted as one warning and one info message; with
+`strict`, violations of the BPX standard (schema) raise an error instead.
+`cell_case` sets `Cell.Case` (e.g. `"Pouch"`), which is otherwise inferred from the
+header text. Blended electrodes are not supported and raise an error.
+
+The operating conditions of the BPX input are listed in the report; use
+`parse_bpx_to_cycling_protocol` to convert them to a cycling protocol.
+"""
+function parse_bpx_to_cell_parameters(
+        bpx_data::AbstractDict;
+        validate::Bool = true,
+        strict::Bool = false,
+        cell_case::Union{Nothing, AbstractString} = nothing,
+    )::Dict{String, Any}
+    report = ConversionReport("import")
+    bpx_data = prepare_import(bpx_data, report; validate, strict)
+    cell_parameters = convert_cell_parameters(bpx_data, report; cell_case)
+    report_protocol_parameters!(report, bpx_data)
+    emit_report(report)
     return cell_parameters
 end
 
@@ -1156,6 +1181,238 @@ cell_parameters = load_cell_parameters(; from_bpx_file_path = "path/to/bpx_input
 """
 function load_from_bpx_file(file_path::String; kwargs...)::Dict{String, Any}
     return parse_bpx_to_cell_parameters(JSON.parsefile(file_path); kwargs...)
+end
+
+# ============================================================================
+# Import: cycling protocol and full simulation input
+# ============================================================================
+
+function operating_condition_sections(bpx_data::AbstractDict)
+    state = get(bpx_data, "State", nothing)
+    state = isa(state, AbstractDict) ? state : Dict{String, Any}()
+    return Dict(
+        "Cell" => get(get(bpx_data, "Parameterisation", Dict()), "Cell", Dict()),
+        "Initial conditions" => get(state, "Initial conditions", Dict()),
+        "Thermal environment" => get(state, "Thermal environment", Dict()),
+    )
+end
+
+function validation_experiments(bpx_data::AbstractDict)
+    validation = get(bpx_data, "Validation", nothing)
+    return isa(validation, AbstractDict) ? validation : Dict{String, Any}()
+end
+
+# Voltage change below which the direction of a validation experiment is not checked
+const VOLTAGE_TREND_TOLERANCE = 1.0e-2 # V
+
+"""
+    check_current_sign!(report, name, data, currents)
+
+Check that the sign of the current of a validation experiment matches the BPX convention
+(positive for charging). `currents` is the current in the BattMo convention (positive
+for discharging). For experiments that only charge or only discharge, the current must
+match the change of the voltage and, when the name says so, the type of experiment.
+"""
+function check_current_sign!(report::ConversionReport, name::AbstractString, data::AbstractDict, currents::AbstractVector)
+    nonzero = filter(!iszero, currents)
+    # Experiments with rests between charge and discharge steps, or without current, are not checked
+    (isempty(nonzero) || !(all(>(0), nonzero) || all(<(0), nonzero))) && return report
+    discharging = nonzero[1] > 0
+    direction = discharging ? "discharge" : "charge"
+    bpx_sign = discharging ? "negative" : "positive"
+
+    voltages = Float64.(data["Voltage [V]"])
+    change = voltages[end] - voltages[1]
+    if abs(change) > VOLTAGE_TREND_TOLERANCE && (change < 0) != discharging
+        add!(report, :consistency, "Validation → $name: the current is $bpx_sign, which is a $direction in the BPX convention (positive current for charging), but the voltage $(change > 0 ? "rises" : "falls") from $(voltages[1]) V to $(voltages[end]) V. The sign of the current is probably reversed; the simulation then $(discharging ? "discharges" : "charges") the cell.")
+    end
+
+    lowercase_name = lowercase(name)
+    named_discharge = occursin("discharg", lowercase_name)
+    named_charge = !named_discharge && occursin("charg", lowercase_name)
+    if (named_discharge && !discharging) || (named_charge && discharging)
+        add!(report, :consistency, "Validation → $name: the current is $bpx_sign, which is a $direction in the BPX convention (positive current for charging), but the name of the experiment says $(named_discharge ? "discharge" : "charge").")
+    end
+    return report
+end
+
+"""
+    convert_cycling_protocol(bpx_data, report; experiment) -> Dict
+
+Convert the operating conditions of a prepared BPX input (see `prepare_import`) to a
+BattMo cycling protocol. Without `experiment`, a constant current discharge with
+`DRate = 1` is set up; with `experiment`, the current of that validation experiment is
+prescribed with the `InputCurrentSeries` protocol.
+"""
+function convert_cycling_protocol(bpx_data::AbstractDict, report::ConversionReport; experiment = nothing)
+    protocol = Dict{String, Any}()
+
+    sections = operating_condition_sections(bpx_data)
+    for (section, key, protocol_key) in PROTOCOL_PARAMETERS
+        value = get(sections[section], key, nothing)
+        isa(value, Real) && (protocol[protocol_key] = value)
+    end
+
+    experiments = validation_experiments(bpx_data)
+    available = isempty(experiments) ? "the input has no validation experiments" :
+        "validation experiments: " * join(("\"$name\"" for name in sort(collect(keys(experiments)))), ", ")
+
+    if isnothing(experiment)
+        protocol["Protocol"] = "CC"
+        protocol["InitialControl"] = "discharging"
+        protocol["TotalNumberOfCycles"] = 0
+        protocol["DRate"] = 1.0
+        discharging = true
+        description = "Constant current discharge within the voltage window of the BPX parameter set."
+        add!(report, :assumed, "CyclingProtocol: BPX does not define a cycling protocol, so a constant current discharge with DRate = 1.0 is set up. The DRate is relative to the theoretical cell capacity computed by BattMo, not to the BPX nominal capacity. Set DRate, or pass `experiment` to use the current of a validation experiment ($available).")
+    else
+        haskey(experiments, experiment) || throw(ArgumentError("BPX import: there is no validation experiment \"$experiment\" ($available)."))
+        data = experiments[experiment]
+        times = Float64.(data["Time [s]"])
+        # BPX uses a positive current for charging, BattMo for discharging
+        currents = -Float64.(data["Current [A]"])
+        if !issorted(times, lt = <)
+            throw(ArgumentError("BPX import: the times of the validation experiment \"$experiment\" are not strictly increasing, which the InputCurrentSeries protocol requires."))
+        end
+        if times[1] != 0
+            add!(report, :notes, "CyclingProtocol: the times of the validation experiment \"$experiment\" start at $(times[1]) s and are shifted to start at 0 s.")
+            times .-= times[1]
+        end
+        check_current_sign!(report, experiment, data, currents)
+        protocol["Protocol"] = "InputCurrentSeries"
+        protocol["Times"] = times
+        protocol["Currents"] = currents
+        first_current = findfirst(!iszero, currents)
+        discharging = isnothing(first_current) || currents[first_current] > 0
+        description = "Current of the BPX validation experiment \"$experiment\"."
+        add!(report, :notes, "CyclingProtocol: the current of the validation experiment \"$experiment\" ($(length(times)) points over $(times[end]) s) is prescribed with the InputCurrentSeries protocol, which uses the time steps of the data. The sign of the current is reversed, since BPX uses a positive current for charging and BattMo for discharging.")
+        if !haskey(protocol, "InitialTemperature") && haskey(data, "Temperature [K]")
+            protocol["InitialTemperature"] = Float64(data["Temperature [K]"][1])
+            add!(report, :assumed, "CyclingProtocol: the initial temperature is not given; InitialTemperature = $(protocol["InitialTemperature"]) K is taken from the start of the validation experiment \"$experiment\".")
+        end
+    end
+
+    if !haskey(protocol, "InitialStateOfCharge")
+        protocol["InitialStateOfCharge"] = discharging ? 1.0 : 0.0
+        add!(report, :assumed, "CyclingProtocol: the initial state of charge is not given; InitialStateOfCharge = $(protocol["InitialStateOfCharge"]) is used, since the protocol starts with $(discharging ? "a discharge" : "a charge").")
+    end
+    if !haskey(protocol, "InitialTemperature")
+        protocol["InitialTemperature"] = DEFAULT_REFERENCE_TEMPERATURE
+        add!(report, :assumed, "CyclingProtocol: the initial temperature is not given; InitialTemperature = $DEFAULT_REFERENCE_TEMPERATURE K is used.")
+    end
+    if !haskey(protocol, "AmbientTemperature")
+        protocol["AmbientTemperature"] = protocol["InitialTemperature"]
+        add!(report, :assumed, "CyclingProtocol: the ambient temperature is not given; AmbientTemperature = InitialTemperature = $(protocol["AmbientTemperature"]) K is used.")
+    end
+
+    title = get(get(bpx_data, "Header", Dict()), "Title", nothing)
+    protocol["Metadata"] = Dict{String, Any}(
+        "Title" => isa(title, AbstractString) ? title : "BPX cycling protocol",
+        "Description" => description,
+        "Source" => "Converted from BPX",
+    )
+    return protocol
+end
+
+"""
+    parse_bpx_to_cycling_protocol(bpx_data::AbstractDict; experiment = nothing, validate = true, strict = false) -> Dict{String, Any}
+
+Convert the operating conditions of already-parsed BPX data to the format expected by
+`CyclingProtocol`.
+
+The voltage cut-offs, initial state of charge, initial temperature and ambient
+temperature are taken from the BPX input; values that the input does not give are set
+to defaults and reported. BPX does not define a cycling experiment, so
+
+- without `experiment`, a constant current discharge with `DRate = 1` is set up (the
+  DRate is relative to the theoretical capacity computed by BattMo);
+- with `experiment`, the name of an experiment in the BPX `Validation` section (e.g.
+  `"1C discharge"`), its measured current is prescribed with the `InputCurrentSeries`
+  protocol, so that the simulation can be compared with the validation data.
+
+`validate` and `strict` are as for `parse_bpx_to_cell_parameters`.
+"""
+function parse_bpx_to_cycling_protocol(
+        bpx_data::AbstractDict;
+        experiment::Union{Nothing, AbstractString} = nothing,
+        validate::Bool = true,
+        strict::Bool = false,
+    )::Dict{String, Any}
+    report = ConversionReport("import of the cycling protocol")
+    bpx_data = prepare_import(bpx_data, report; validate, strict)
+    protocol = convert_cycling_protocol(bpx_data, report; experiment)
+    emit_report(report)
+    return protocol
+end
+
+"""
+    load_cycling_protocol_from_bpx_file(file_path::String; experiment = nothing, validate = true, strict = false) -> Dict{String, Any}
+
+Load a BPX JSON file and convert its operating conditions to the format expected by
+`CyclingProtocol`. See `parse_bpx_to_cycling_protocol` for the keyword arguments.
+
+# Example
+```julia
+cycling_protocol = load_cycling_protocol(; from_bpx_file_path = "path/to/bpx_input.json", bpx_options = (experiment = "1C discharge",))
+```
+"""
+function load_cycling_protocol_from_bpx_file(file_path::String; kwargs...)::Dict{String, Any}
+    return parse_bpx_to_cycling_protocol(JSON.parsefile(file_path); kwargs...)
+end
+
+"""
+    parse_bpx_to_full_simulation_input(bpx_data::AbstractDict; experiment = nothing, validate = true, strict = false, cell_case = nothing) -> Dict{String, Any}
+
+Convert already-parsed BPX data to the format expected by `FullSimulationInput`: the
+cell parameters (`parse_bpx_to_cell_parameters`) and the cycling protocol
+(`parse_bpx_to_cycling_protocol`), together with the default BattMo P2D model,
+simulation and solver settings. The findings of both conversions are emitted in one
+report. The keyword arguments are those of the two conversions.
+"""
+function parse_bpx_to_full_simulation_input(
+        bpx_data::AbstractDict;
+        experiment::Union{Nothing, AbstractString} = nothing,
+        validate::Bool = true,
+        strict::Bool = false,
+        cell_case::Union{Nothing, AbstractString} = nothing,
+    )::Dict{String, Any}
+    report = ConversionReport("import")
+    bpx_data = prepare_import(bpx_data, report; validate, strict)
+    cell_parameters = convert_cell_parameters(bpx_data, report; cell_case)
+    cycling_protocol = convert_cycling_protocol(bpx_data, report; experiment)
+
+    model = get(get(bpx_data, "Header", Dict()), "Model", "DFN")
+    add!(report, :notes, "The model, simulation and solver settings are the BattMo defaults for the P2D (DFN) model" * (model == "DFN" ? "." : ", also for this $model parameter set."))
+    emit_report(report)
+
+    return Dict{String, Any}(
+        "Metadata" => Dict{String, Any}(
+            "Title" => get(cell_parameters["Metadata"], "Title", "BPX parameter set"),
+            "Description" => "Simulation input converted from a BPX parameter set.",
+        ),
+        "BaseModel" => "LithiumIonBattery",
+        "ModelSettings" => BattMoModule.load_model_settings(; from_default_set = "p2d").all,
+        "CellParameters" => cell_parameters,
+        "CyclingProtocol" => cycling_protocol,
+        "SimulationSettings" => BattMoModule.load_simulation_settings(; from_default_set = "p2d").all,
+        "SolverSettings" => BattMoModule.load_solver_settings(; from_default_set = "default").all,
+    )
+end
+
+"""
+    load_full_simulation_input_from_bpx_file(file_path::String; experiment = nothing, validate = true, strict = false, cell_case = nothing) -> Dict{String, Any}
+
+Load a BPX JSON file and convert it to the format expected by `FullSimulationInput`.
+See `parse_bpx_to_full_simulation_input` for the keyword arguments.
+
+# Example
+```julia
+simulation_input = load_full_simulation_input(; from_bpx_file_path = "path/to/bpx_input.json", bpx_options = (experiment = "1C discharge",))
+output = run_simulation(simulation_input)
+```
+"""
+function load_full_simulation_input_from_bpx_file(file_path::String; kwargs...)::Dict{String, Any}
+    return parse_bpx_to_full_simulation_input(JSON.parsefile(file_path); kwargs...)
 end
 
 # ============================================================================
@@ -1194,7 +1451,7 @@ end
 
 # BattMo parameters that are fixed by the BPX model or that only describe the parameter
 # set; they are checked separately or not exported.
-const EXPORT_IGNORED_PARAMETERS = r"(^Metadata\.|\.Description$|\.ChargeNumber$|\.NumberOfElectronsTransfered$|\.ChargeTransferCoefficient$|^Cell\.Case$|^Cell\.NumberOfLayersInParallel$|^Cell\.DoubleCoatedElectrodes$)"
+const EXPORT_IGNORED_PARAMETERS = r"(^Metadata\.|\.Description$|\.ChargeNumber$|\.NumberOfElectronsTransfered$|\.ChargeTransferCoefficient$|^Cell\.Case$)"
 
 const ARRHENIUS_PATTERN = r"^(.*) \* exp\(([-+0-9.eE]+) / [-+0-9.eE]+ \* \(1\.0 / ([-+0-9.eE]+) - 1\.0 / T\)\)$"
 
@@ -1390,7 +1647,7 @@ function export_lumped_thermal!(cell::AbstractDict, parameters::TrackedParameter
         cell["Density [kg.m-3]"] = mass / thickness
         cell["Specific heat capacity [J.K-1.kg-1]"] = heat_capacity / mass
         if haskey(cell, "Electrode area [m2]")
-            cell["Volume [m3]"] = cell["Electrode area [m2]"] * thickness
+            cell["Volume [m3]"] = cell["Electrode area [m2]"] * cell["Number of electrode pairs connected in parallel to make a cell"] * thickness
         end
         for path in ("Electrolyte.Density", "Electrolyte.SpecificHeatCapacity", "Separator.Density", "Separator.SpecificHeatCapacity")
             push!(parameters.used, path)
@@ -1445,12 +1702,16 @@ function convert_to_bpx(cell_parameters; cycling_protocol = nothing, validate::B
     cell = Dict{String, Any}()
     area = battmo_value(parameters, "Cell", "ElectrodeGeometricSurfaceArea")
     add_value!(cell, "Electrode area [m2]", area)
-    cell["Number of electrode pairs connected in parallel to make a cell"] = 1
-    layers = get(data["Cell"], "NumberOfLayersInParallel", 1)
-    if layers != 1
-        add!(report, :model_differences, "Cell: NumberOfLayersInParallel = $layers. The BattMo P2D model uses ElectrodeGeometricSurfaceArea as the total electrode area, which is exported as the area of a single BPX electrode pair. Check that this matches the meaning of the area in this parameter set.")
-    else
-        add!(report, :notes, "Cell: ElectrodeGeometricSurfaceArea is exported as \"Electrode area [m2]\" of a single electrode pair (N_p = 1), which is equivalent to N_p pairs of area A / N_p.")
+    # BPX counts facing negative/positive coating pairs, i.e. separators, which is what
+    # BattMo uses to compute the total electrode area.
+    number_of_pairs = BattMoModule.compute_number_of_electrode_pairs(data)
+    isinteger(number_of_pairs) && (number_of_pairs = Int(number_of_pairs))
+    cell["Number of electrode pairs connected in parallel to make a cell"] = number_of_pairs
+    for key in ("NumberOfLayersInParallel", "DoubleCoatedElectrodes", "CloseOffWithNegativeElectrode")
+        haskey(data["Cell"], key) && push!(parameters.used, "Cell.$key")
+    end
+    if get(data["Cell"], "DoubleCoatedElectrodes", false) == true
+        add!(report, :notes, "Cell: the double coated electrodes ($(get(data["Cell"], "NumberOfLayersInParallel", 1)) layers) form $number_of_pairs facing electrode pairs, exported as \"Number of electrode pairs connected in parallel to make a cell\". BPX does not describe the electrode coating layout; current collectors are not exported.")
     end
     add_value!(cell, "Nominal cell capacity [A.h]", battmo_value(parameters, "Cell", "NominalCapacity"))
     add_value!(cell, "External surface area [m2]", battmo_value(parameters, "Cell", "DeviceSurfaceArea"))
