@@ -179,10 +179,12 @@ When a time step is cut, the controller is reset together with the primary varia
 """
 function Jutul.reset_state_to_previous_state!(storage, model::SimulationModel{ExternalCircuitDomain, <:ExternalCircuitSystem, T3, T4}) where {T3, T4}
 
-    invoke(reset_state_to_previous_state!,
+    invoke(
+        reset_state_to_previous_state!,
         Tuple{typeof(storage), SimulationModel},
         storage,
-        model)
+        model
+    )
 
     return copy_controller!(storage.state[:Controller], storage.state0[:Controller])
 end

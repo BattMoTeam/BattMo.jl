@@ -16,48 +16,48 @@ model_setup = LithiumIonBattery()
 # current has dropped below C/20 or after one hour.
 
 cycling_protocol = CyclingProtocol(
-	Dict(
-		"Protocol" => "Generic",
-		"InitialStateOfCharge" => 0.99,
-		"InitialTemperature" => 298.15,
-		"TotalTime" => 200000,
-		"ControlSteps" => [
-			Dict(
-				"ControlType" => "Cycle",
-				"NumberOfCycles" => 3,
-				"ControlSteps" => [
-					Dict(
-						"ControlType" => "Current",
-						"CRate" => 1.0,
-						"Direction" => "discharging",
-						"Termination" => Dict("Quantity" => "Voltage", "Value" => 3.0, "Comparison" => "below"),
-					),
-					Dict(
-						"ControlType" => "Rest",
-						"Termination" => Dict("Quantity" => "Time", "Value" => 1800),
-					),
-					Dict(
-						"ControlType" => "Current",
-						"CRate" => 0.5,
-						"Direction" => "charging",
-						"Termination" => Dict("Quantity" => "Voltage", "Value" => 4.1, "Comparison" => "above"),
-					),
-					Dict(
-						"ControlType" => "Voltage",
-						"Value" => 4.1,
-						"Termination" => [
-							Dict("Quantity" => "CRate", "Value" => 0.05, "Comparison" => "absolute value below"),
-							Dict("Quantity" => "Time", "Value" => 3600),
-						],
-					),
-				],
-			),
-			Dict(
-				"ControlType" => "Rest",
-				"Termination" => Dict("Quantity" => "Time", "Value" => 3600),
-			),
-		],
-	),
+    Dict(
+        "Protocol" => "Generic",
+        "InitialStateOfCharge" => 0.99,
+        "InitialTemperature" => 298.15,
+        "TotalTime" => 200000,
+        "ControlSteps" => [
+            Dict(
+                "ControlType" => "Cycle",
+                "NumberOfCycles" => 3,
+                "ControlSteps" => [
+                    Dict(
+                        "ControlType" => "Current",
+                        "CRate" => 1.0,
+                        "Direction" => "discharging",
+                        "Termination" => Dict("Quantity" => "Voltage", "Value" => 3.0, "Comparison" => "below"),
+                    ),
+                    Dict(
+                        "ControlType" => "Rest",
+                        "Termination" => Dict("Quantity" => "Time", "Value" => 1800),
+                    ),
+                    Dict(
+                        "ControlType" => "Current",
+                        "CRate" => 0.5,
+                        "Direction" => "charging",
+                        "Termination" => Dict("Quantity" => "Voltage", "Value" => 4.1, "Comparison" => "above"),
+                    ),
+                    Dict(
+                        "ControlType" => "Voltage",
+                        "Value" => 4.1,
+                        "Termination" => [
+                            Dict("Quantity" => "CRate", "Value" => 0.05, "Comparison" => "absolute value below"),
+                            Dict("Quantity" => "Time", "Value" => 3600),
+                        ],
+                    ),
+                ],
+            ),
+            Dict(
+                "ControlType" => "Rest",
+                "Termination" => Dict("Quantity" => "Time", "Value" => 3600),
+            ),
+        ],
+    ),
 )
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
@@ -69,12 +69,12 @@ plot_dashboard(output)
 # before the simulation is set up, which can be inspected with `experiment_to_control_steps`.
 
 experiment = [
-	"Discharge at 1 C until 3.0 V",
-	"Rest for 30 minutes",
-	"Charge at 0.5 C until 4.1 V",
-	"Hold at 4.1 V until 0.05 C or until 1 hour",
-	"Repeat 2 times",
-	"Rest for 1 hour",
+    "Discharge at 1 C until 3.0 V",
+    "Rest for 30 minutes",
+    "Charge at 0.5 C until 4.1 V",
+    "Hold at 4.1 V until 0.05 C or until 1 hour",
+    "Repeat 2 times",
+    "Rest for 1 hour",
 ]
 
 control_steps = experiment_to_control_steps(experiment)

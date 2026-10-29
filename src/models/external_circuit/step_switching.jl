@@ -14,12 +14,12 @@ Update the controller: first the control step, then the target of the control eq
 """
 function update_controller!(state, state0, protocol::ControlProtocol, dt)
 
-	update_control_step!(state, state0, protocol, dt)
+    update_control_step!(state, state0, protocol, dt)
 
-	# Only current steps given as C-rates set this flag
-	state.Controller.target_is_c_rate = false
+    # Only current steps given as C-rates set this flag
+    state.Controller.target_is_c_rate = false
 
-	return update_control_target!(state, state0, state.Controller.step)
+    return update_control_target!(state, state0, state.Controller.step)
 
 end
 
@@ -35,85 +35,85 @@ happens within the termination region.
 """
 function update_control_step!(state, state0, protocol::ControlProtocol, dt)
 
-	controller = state[:Controller]
-	controller0 = state0[:Controller]
+    controller = state[:Controller]
+    controller0 = state0[:Controller]
 
-	voltage = only(value(state[:ElectricPotential]))
-	current = only(value(state[:Current]))
-	voltage_0 = only(value(state0[:ElectricPotential]))
-	current_0 = only(value(state0[:Current]))
+    voltage = only(value(state[:ElectricPotential]))
+    current = only(value(state[:Current]))
+    voltage_0 = only(value(state0[:ElectricPotential]))
+    current_0 = only(value(state0[:Current]))
 
-	controller.time = controller0.time + dt
-	controller.state_of_charge = compute_state_of_charge(controller0.state_of_charge, dt, protocol.rated_capacity, current)
-	controller.dIdt = dt > 0 ? (abs(current) - abs(current_0)) / dt : 0.0
-	controller.dEdt = dt > 0 ? (voltage - voltage_0) / dt : 0.0
-	controller.current = current
-	controller.voltage = voltage
+    controller.time = controller0.time + dt
+    controller.state_of_charge = compute_state_of_charge(controller0.state_of_charge, dt, protocol.rated_capacity, current)
+    controller.dIdt = dt > 0 ? (abs(current) - abs(current_0)) / dt : 0.0
+    controller.dEdt = dt > 0 ? (voltage - voltage_0) / dt : 0.0
+    controller.current = current
+    controller.voltage = voltage
 
-	switch = false
+    switch = false
 
-	if !experiment_is_finished(protocol, controller0)
+    if !experiment_is_finished(protocol, controller0)
 
-		termination = controller0.step.termination
+        termination = controller0.step.termination
 
-		if is_last_control_step(protocol, controller0)
-			# Nothing follows the last control step, so there is no need to end it within its termination region. It
-			# ends as soon as the state is past the termination region, and the simulation stops. Once ended within a
-			# time step, it is not resumed.
-			switch = controller.step_count != controller0.step_count ||
-				get_status_on_termination_region(termination, state).after_termination_region
+        if is_last_control_step(protocol, controller0)
+            # Nothing follows the last control step, so there is no need to end it within its termination region. It
+            # ends as soon as the state is past the termination region, and the simulation stops. Once ended within a
+            # time step, it is not resumed.
+            switch = controller.step_count != controller0.step_count ||
+                get_status_on_termination_region(termination, state).after_termination_region
 
-		elseif !get_status_on_termination_region(termination, state0).before_termination_region
-			# We entered the termination region in the previous time step. We consider switching control.
-			if controller.step_count == controller0.step_count
-				# The control has not changed in this time step. We switch if we are past the termination region.
-				switch = get_status_on_termination_region(termination, state).after_termination_region
-			else
-				# The control has already been switched in a previous Newton iteration. We do not switch back to avoid
-				# oscillations. We are anyway within the given tolerance for the control.
-				switch = true
-			end
-		end
-	end
+        elseif !get_status_on_termination_region(termination, state0).before_termination_region
+            # We entered the termination region in the previous time step. We consider switching control.
+            if controller.step_count == controller0.step_count
+                # The control has not changed in this time step. We switch if we are past the termination region.
+                switch = get_status_on_termination_region(termination, state).after_termination_region
+            else
+                # The control has already been switched in a previous Newton iteration. We do not switch back to avoid
+                # oscillations. We are anyway within the given tolerance for the control.
+                switch = true
+            end
+        end
+    end
 
-	set_control_step!(controller, controller0, protocol, switch ? controller0.step_count + 1 : controller0.step_count)
+    set_control_step!(controller, controller0, protocol, switch ? controller0.step_count + 1 : controller0.step_count)
 
-	return nothing
+    return nothing
 end
 
 
 function set_control_step!(controller, controller0, protocol::ControlProtocol, step_count)
 
-	number_of_steps = length(protocol.steps)
+    number_of_steps = length(protocol.steps)
 
-	if step_count == controller0.step_count
-		# The control step is kept
-		controller.step = controller0.step
-		controller.step_index = controller0.step_index
-		controller.cycle_count = controller0.cycle_count
-		controller.step_start_time = controller0.step_start_time
+    if step_count == controller0.step_count
+        # The control step is kept
+        controller.step = controller0.step
+        controller.step_index = controller0.step_index
+        controller.cycle_count = controller0.cycle_count
+        controller.step_start_time = controller0.step_start_time
 
-	elseif step_count < number_of_steps
-		# Switch to the next control step
-		index = step_count + 1
-		controller.step = protocol.steps[index]
-		controller.step_index = protocol.step_indices[index]
-		controller.cycle_count = protocol.cycle_counts[index]
-		controller.step_start_time = controller0.time
+    elseif step_count < number_of_steps
+        # Switch to the next control step
+        index = step_count + 1
+        controller.step = protocol.steps[index]
+        controller.step_index = protocol.step_indices[index]
+        controller.cycle_count = protocol.cycle_counts[index]
+        controller.step_start_time = controller0.time
 
-	else
-		# The last control step has terminated. We keep its control for this time step and flag the end of the
-		# experiment by setting step_count past the last step. The simulation is stopped by the post-ministep hook set
-		# up in solver_configuration.
-		controller.step = controller0.step
-		controller.step_index = controller0.step_index
-		controller.cycle_count = protocol.final_cycle_count
-		controller.step_start_time = controller0.step_start_time
-	end
+    else
+        # The last control step has terminated. We keep its control for this time step and flag the end of the
+        # experiment by setting step_count past the last step. The simulation is stopped by the post-ministep hook set
+        # up in solver_configuration.
+        controller.step = controller0.step
+        controller.step_index = controller0.step_index
+        controller.cycle_count = protocol.final_cycle_count
+        controller.step_start_time = controller0.step_start_time
+    end
 
-	controller.step_count = step_count
+    controller.step_count = step_count
 
-	return controller
+    return controller
 end
 
 
@@ -121,22 +121,22 @@ end
 Coulomb counting of the state of charge, with the rated capacity in Ah. The current is positive for discharge.
 """
 function compute_state_of_charge(
-	previous_state_of_charge::Real,
-	dt::Real,
-	rated_capacity::Real,
-	current::Real;
-	η_chg::Real = 1.0,
-	η_dis::Real = 1.0,
-)
+        previous_state_of_charge::Real,
+        dt::Real,
+        rated_capacity::Real,
+        current::Real;
+        η_chg::Real = 1.0,
+        η_dis::Real = 1.0,
+    )
 
-	# Choose efficiency based on the sign convention: I>0 discharge, I<0 charge
-	η = current >= 0 ? η_dis : η_chg
+    # Choose efficiency based on the sign convention: I>0 discharge, I<0 charge
+    η = current >= 0 ? η_dis : η_chg
 
-	# Coulomb counting update; 3600 converts Ah to As
-	soc_next = previous_state_of_charge - (η * current * dt) / (3600.0 * rated_capacity)
+    # Coulomb counting update; 3600 converts Ah to As
+    soc_next = previous_state_of_charge - (η * current * dt) / (3600.0 * rated_capacity)
 
-	# Clamp to physical bounds
-	return clamp(soc_next, 0.0, 1.0)
+    # Clamp to physical bounds
+    return clamp(soc_next, 0.0, 1.0)
 end
 
 
@@ -149,25 +149,25 @@ In this way, the switches happen within the termination regions. This function i
 """
 function check_constraints(model, storage)
 
-	protocol = model[:Control].system.protocol
+    protocol = model[:Control].system.protocol
 
-	state = storage.state[:Control]
-	controller = state[:Controller]
-	controller0 = storage.state0[:Control][:Controller]
+    state = storage.state[:Control]
+    controller = state[:Controller]
+    controller0 = storage.state0[:Control][:Controller]
 
-	if controller.step_count == controller0.step_count
-		if is_last_control_step(protocol, controller)
-			# The last control step ends as soon as the state is past its termination region, see update_control_step!,
-			# so the time step is not cut for it
-			return true
-		end
-		# The control has not switched: the state should not be past the termination region of the step
-		return !get_constraint_status(controller.step.termination, state).after_termination_region
-	elseif !experiment_is_finished(protocol, controller)
-		# The control has switched: the state should be before the termination region of the new step
-		return get_constraint_status(controller.step.termination, state).before_termination_region
-	else
-		return true
-	end
+    if controller.step_count == controller0.step_count
+        if is_last_control_step(protocol, controller)
+            # The last control step ends as soon as the state is past its termination region, see update_control_step!,
+            # so the time step is not cut for it
+            return true
+        end
+        # The control has not switched: the state should not be past the termination region of the step
+        return !get_constraint_status(controller.step.termination, state).after_termination_region
+    elseif !experiment_is_finished(protocol, controller)
+        # The control has switched: the state should be before the termination region of the new step
+        return get_constraint_status(controller.step.termination, state).before_termination_region
+    else
+        return true
+    end
 
 end

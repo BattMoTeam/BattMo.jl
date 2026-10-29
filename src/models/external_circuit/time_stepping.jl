@@ -18,17 +18,17 @@ Jutul takes the minimum of the time steps proposed by the selectors and then cla
 decrease of the time step. The limit is therefore also applied in `valid_timestep`, which is called after the clamping.
 """
 mutable struct ControlStepTimestepSelector <: Jutul.AbstractTimestepSelector
-	maximum_timestep::Float64 # limit for the next time step, Inf if there is none
+    maximum_timestep::Float64 # limit for the next time step, Inf if there is none
 end
 
 ControlStepTimestepSelector() = ControlStepTimestepSelector(Inf)
 
 function Jutul.pick_first_timestep(sel::ControlStepTimestepSelector, sim, config, dT, forces)
-	return update_maximum_timestep!(sel, sim)
+    return update_maximum_timestep!(sel, sim)
 end
 
 function Jutul.pick_next_timestep(sel::ControlStepTimestepSelector, sim, config, dt_prev, dT, forces, reports, current_reports, step_index, new_step)
-	return update_maximum_timestep!(sel, sim)
+    return update_maximum_timestep!(sel, sim)
 end
 
 Jutul.valid_timestep(sel::ControlStepTimestepSelector, dt) = min(dt, sel.maximum_timestep)
@@ -36,13 +36,13 @@ Jutul.valid_timestep(sel::ControlStepTimestepSelector, dt) = min(dt, sel.maximum
 
 function update_maximum_timestep!(sel::ControlStepTimestepSelector, sim)
 
-	storage = get_simulator_storage(sim)
-	protocol = get_simulator_model(sim)[:Control].system.protocol
-	controller = storage.state0[:Control][:Controller]
+    storage = get_simulator_storage(sim)
+    protocol = get_simulator_model(sim)[:Control].system.protocol
+    controller = storage.state0[:Control][:Controller]
 
-	sel.maximum_timestep = time_to_next_breakpoint(protocol, controller, storage.state0[:Control])
+    sel.maximum_timestep = time_to_next_breakpoint(protocol, controller, storage.state0[:Control])
 
-	return sel.maximum_timestep
+    return sel.maximum_timestep
 end
 
 
@@ -53,19 +53,19 @@ step (starting now) are also taken into account.
 """
 function time_to_next_breakpoint(protocol::ControlProtocol, controller, state)
 
-	if experiment_is_finished(protocol, controller)
-		return Inf
-	end
+    if experiment_is_finished(protocol, controller)
+        return Inf
+    end
 
-	step = controller.step
-	time_in_step = value(controller.time - controller.step_start_time)
+    step = controller.step
+    time_in_step = value(controller.time - controller.step_start_time)
 
-	dt = next_breakpoint(step, time_in_step) - time_in_step
+    dt = next_breakpoint(step, time_in_step) - time_in_step
 
-	next_index = controller.step_count + 2
-	if next_index <= length(protocol.steps) && !get_status_on_termination_region(step.termination, state).before_termination_region
-		dt = min(dt, next_breakpoint(protocol.steps[next_index], 0.0))
-	end
+    next_index = controller.step_count + 2
+    if next_index <= length(protocol.steps) && !get_status_on_termination_region(step.termination, state).before_termination_region
+        dt = min(dt, next_breakpoint(protocol.steps[next_index], 0.0))
+    end
 
-	return dt
+    return dt
 end

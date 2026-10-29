@@ -1,23 +1,23 @@
 using BattMo, GLMakie, Jutul
 
 cycling_protocol = CyclingProtocol(
-	Dict(
-		"Protocol" => "Experiment",
-		"TotalTime" => 18000000,
-		"InitialStateOfCharge" => 0.99,
-		# "Capacity" => 5,
-		"Experiment" =>
-			[
-				"Rest for 1 hour",
-				"Charge at 5 W for 4 hour or until 3.5 V",
-				# "Charge at 0.5 C until 4.0 V or until 1 hour",
-				# "Hold at 4.0 V until 1e-4 A/s",
-				# "Discharge at 1 A until 3.4 V",
-				# "Discharge at 2 W until 3.0 V",
-				# "Rest until 1e-4 V/s",
-				# "Charge at 1/20 C for 30 minutes",
-			],
-	),
+    Dict(
+        "Protocol" => "Experiment",
+        "TotalTime" => 18000000,
+        "InitialStateOfCharge" => 0.99,
+        # "Capacity" => 5,
+        "Experiment" =>
+            [
+            "Rest for 1 hour",
+            "Charge at 5 W for 4 hour or until 3.5 V",
+            # "Charge at 0.5 C until 4.0 V or until 1 hour",
+            # "Hold at 4.0 V until 1e-4 A/s",
+            # "Discharge at 1 A until 3.4 V",
+            # "Discharge at 2 W until 3.0 V",
+            # "Rest until 1e-4 V/s",
+            # "Charge at 1/20 C for 30 minutes",
+        ],
+    ),
 )
 
 cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
@@ -76,4 +76,3 @@ f
 
 # DataInspector(f)
 # f
-

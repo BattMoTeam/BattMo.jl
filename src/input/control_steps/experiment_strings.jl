@@ -30,64 +30,66 @@ entries of the sub-list.
 """
 function experiment_to_control_steps(experiment_list)
 
-	if experiment_list isa AbstractString
-		experiment_list = [experiment_list]
-	end
+    if experiment_list isa AbstractString
+        experiment_list = [experiment_list]
+    end
 
-	control_steps = Vector{Dict{String, Any}}()
+    control_steps = Vector{Dict{String, Any}}()
 
-	# The direction of the last charge or discharge step is used to choose the comparison of rest and hold terminations
-	last_direction = Ref{Union{Nothing, String}}(nothing)
+    # The direction of the last charge or discharge step is used to choose the comparison of rest and hold terminations
+    last_direction = Ref{Union{Nothing, String}}(nothing)
 
-	add_experiment_control_steps!(control_steps, experiment_list, last_direction)
+    add_experiment_control_steps!(control_steps, experiment_list, last_direction)
 
-	return control_steps
+    return control_steps
 end
 
 
 function add_experiment_control_steps!(control_steps, experiment_list, last_direction)
 
-	for entry in experiment_list
+    for entry in experiment_list
 
-		if entry isa AbstractString
+        if entry isa AbstractString
 
-			if containsi(entry, "Repeat")
+            if containsi(entry, "Repeat")
 
-				number_of_repeats = Base.parse(Int, match(r"\d+", entry).match)
+                number_of_repeats = Base.parse(Int, match(r"\d+", entry).match)
 
-				if isempty(control_steps)
-					error("\"$entry\" has no previous experiment steps to repeat.")
-				end
+                if isempty(control_steps)
+                    error("\"$entry\" has no previous experiment steps to repeat.")
+                end
 
-				repeated_steps = copy(control_steps)
-				empty!(control_steps)
-				push!(control_steps, Dict{String, Any}(
-					"ControlType" => "Cycle",
-					"NumberOfCycles" => number_of_repeats + 1,
-					"ControlSteps" => repeated_steps,
-				))
+                repeated_steps = copy(control_steps)
+                empty!(control_steps)
+                push!(
+                    control_steps, Dict{String, Any}(
+                        "ControlType" => "Cycle",
+                        "NumberOfCycles" => number_of_repeats + 1,
+                        "ControlSteps" => repeated_steps,
+                    )
+                )
 
-			elseif containsi(entry, "Increase cycle count")
+            elseif containsi(entry, "Increase cycle count")
 
-				error("\"Increase cycle count\" is not supported. Use \"Repeat N times\" instead, each repetition is counted as a cycle.")
+                error("\"Increase cycle count\" is not supported. Use \"Repeat N times\" instead, each repetition is counted as a cycle.")
 
-			else
-				push!(control_steps, parse_experiment_step(entry, last_direction))
-			end
+            else
+                push!(control_steps, parse_experiment_step(entry, last_direction))
+            end
 
-		elseif entry isa AbstractVector
+        elseif entry isa AbstractVector
 
-			# A sub-list: a repeat inside the sub-list only repeats the entries of the sub-list
-			sub_steps = Vector{Dict{String, Any}}()
-			add_experiment_control_steps!(sub_steps, entry, last_direction)
-			append!(control_steps, sub_steps)
+            # A sub-list: a repeat inside the sub-list only repeats the entries of the sub-list
+            sub_steps = Vector{Dict{String, Any}}()
+            add_experiment_control_steps!(sub_steps, entry, last_direction)
+            append!(control_steps, sub_steps)
 
-		else
-			error("Experiment step must be a String or a Vector, got $(typeof(entry)).")
-		end
-	end
+        else
+            error("Experiment step must be a String or a Vector, got $(typeof(entry)).")
+        end
+    end
 
-	return control_steps
+    return control_steps
 end
 
 
@@ -98,65 +100,65 @@ Convert one experiment string into a control step dictionary.
 """
 function parse_experiment_step(step::AbstractString, last_direction)
 
-	parts = split(step)
+    parts = split(step)
 
-	if containsi(parts[1], "Rest")
+    if containsi(parts[1], "Rest")
 
-		termination = parse_terminations(step, parts, 2, "Rest", last_direction[])
+        termination = parse_terminations(step, parts, 2, "Rest", last_direction[])
 
-		return Dict{String, Any}("ControlType" => "Rest", "Termination" => termination)
+        return Dict{String, Any}("ControlType" => "Rest", "Termination" => termination)
 
-	elseif containsi(parts[1], "Discharge") || containsi(parts[1], "Charge")
+    elseif containsi(parts[1], "Discharge") || containsi(parts[1], "Charge")
 
-		check_word(step, parts, 2, "at")
+        check_word(step, parts, 2, "at")
 
-		direction = containsi(parts[1], "Discharge") ? "discharging" : "charging"
-		value = parse_number_or_fraction(parts[3])
-		unit = parts[4]
+        direction = containsi(parts[1], "Discharge") ? "discharging" : "charging"
+        value = parse_number_or_fraction(parts[3])
+        unit = parts[4]
 
-		control_step = Dict{String, Any}("Direction" => direction)
+        control_step = Dict{String, Any}("Direction" => direction)
 
-		if unit == "C"
-			control_step["ControlType"] = "Current"
-			control_step["CRate"] = value
-		elseif unit in ["A", "mA"]
-			control_step["ControlType"] = "Current"
-			control_step["Value"] = convert_to_A(value, unit)
-		elseif unit in ["W", "mW"]
-			control_step["ControlType"] = "Power"
-			control_step["Value"] = convert_to_W(value, unit)
-		else
-			error("Unit $unit in \"$step\" not recognized. A charge or discharge is controlled in A, mA, C, W or mW.")
-		end
+        if unit == "C"
+            control_step["ControlType"] = "Current"
+            control_step["CRate"] = value
+        elseif unit in ["A", "mA"]
+            control_step["ControlType"] = "Current"
+            control_step["Value"] = convert_to_A(value, unit)
+        elseif unit in ["W", "mW"]
+            control_step["ControlType"] = "Power"
+            control_step["Value"] = convert_to_W(value, unit)
+        else
+            error("Unit $unit in \"$step\" not recognized. A charge or discharge is controlled in A, mA, C, W or mW.")
+        end
 
-		control_step["Termination"] = parse_terminations(step, parts, 5, direction, last_direction[])
+        control_step["Termination"] = parse_terminations(step, parts, 5, direction, last_direction[])
 
-		last_direction[] = direction
+        last_direction[] = direction
 
-		return control_step
+        return control_step
 
-	elseif containsi(parts[1], "Hold")
+    elseif containsi(parts[1], "Hold")
 
-		check_word(step, parts, 2, "at")
+        check_word(step, parts, 2, "at")
 
-		value = parse_number_or_fraction(parts[3])
-		unit = parts[4]
+        value = parse_number_or_fraction(parts[3])
+        unit = parts[4]
 
-		if unit in ["V", "mV"]
-			voltage = convert_to_V(value, unit)
-		elseif containsi(unit, "SOC")
-			error("Holding at a state of charge (\"$step\") is not supported. Use a voltage hold instead.")
-		else
-			error("Unit $unit in \"$step\" not recognized. A hold is controlled in V or mV.")
-		end
+        if unit in ["V", "mV"]
+            voltage = convert_to_V(value, unit)
+        elseif containsi(unit, "SOC")
+            error("Holding at a state of charge (\"$step\") is not supported. Use a voltage hold instead.")
+        else
+            error("Unit $unit in \"$step\" not recognized. A hold is controlled in V or mV.")
+        end
 
-		termination = parse_terminations(step, parts, 5, "Hold", last_direction[])
+        termination = parse_terminations(step, parts, 5, "Hold", last_direction[])
 
-		return Dict{String, Any}("ControlType" => "Voltage", "Value" => voltage, "Termination" => termination)
+        return Dict{String, Any}("ControlType" => "Voltage", "Value" => voltage, "Termination" => termination)
 
-	else
-		error("Unknown control step: \"$step\"")
-	end
+    else
+        error("Unknown control step: \"$step\"")
+    end
 
 end
 
@@ -168,45 +170,45 @@ with "or".
 """
 function parse_terminations(step, parts, start, step_type, last_direction)
 
-	terminations = Dict{String, Any}[]
+    terminations = Dict{String, Any}[]
 
-	index = start
-	while true
+    index = start
+    while true
 
-		if length(parts) < index + 2 || !(parts[index] in ["for", "until"])
-			error("The termination of \"$step\" does not have the correct structure. Expected for example \"until 4.0 V\" or \"for 1 hour\".")
-		end
+        if length(parts) < index + 2 || !(parts[index] in ["for", "until"])
+            error("The termination of \"$step\" does not have the correct structure. Expected for example \"until 4.0 V\" or \"for 1 hour\".")
+        end
 
-		value = parse_number_or_fraction(parts[index + 1])
-		unit = parts[index + 2]
+        value = parse_number_or_fraction(parts[index + 1])
+        unit = parts[index + 2]
 
-		push!(terminations, parse_termination(value, unit, step_type, last_direction))
+        push!(terminations, parse_termination(value, unit, step_type, last_direction))
 
-		index += 3
+        index += 3
 
-		if index > length(parts)
-			break
-		end
+        if index > length(parts)
+            break
+        end
 
-		check_word(step, parts, index, "or")
-		index += 1
-	end
+        check_word(step, parts, index, "or")
+        index += 1
+    end
 
-	return length(terminations) == 1 ? terminations[1] : terminations
+    return length(terminations) == 1 ? terminations[1] : terminations
 end
 
 
 function parse_termination(value, unit, step_type, last_direction)
 
-	quantity, value = unit_to_termination_quantity(value, unit)
+    quantity, value = unit_to_termination_quantity(value, unit)
 
-	termination = Dict{String, Any}("Quantity" => quantity, "Value" => value)
+    termination = Dict{String, Any}("Quantity" => quantity, "Value" => value)
 
-	if quantity != "Time"
-		termination["Comparison"] = default_comparison(quantity, step_type, last_direction)
-	end
+    if quantity != "Time"
+        termination["Comparison"] = default_comparison(quantity, step_type, last_direction)
+    end
 
-	return termination
+    return termination
 end
 
 
@@ -217,143 +219,143 @@ previous charge or discharge. Currents and change rates decay in absolute value.
 """
 function default_comparison(quantity, step_type, last_direction)
 
-	if quantity in ["Current", "CRate", "VoltageChange", "CurrentChange"]
-		return "absolute value below"
-	end
+    if quantity in ["Current", "CRate", "VoltageChange", "CurrentChange"]
+        return "absolute value below"
+    end
 
-	if step_type in ["charging", "discharging"]
-		direction = step_type
-	elseif step_type == "Rest" && quantity == "Voltage"
-		direction = isnothing(last_direction) ? nothing : get_opposite_direction(last_direction)
-	else
-		direction = last_direction
-	end
+    if step_type in ["charging", "discharging"]
+        direction = step_type
+    elseif step_type == "Rest" && quantity == "Voltage"
+        direction = isnothing(last_direction) ? nothing : get_opposite_direction(last_direction)
+    else
+        direction = last_direction
+    end
 
-	return direction == "charging" ? "above" : "below"
+    return direction == "charging" ? "above" : "below"
 end
 
 
 function unit_to_termination_quantity(value, unit)
 
-	if any(tu -> lowercase(unit) == lowercase(tu), time_units())
-		return "Time", convert_to_seconds(value, unit)
-	elseif occursin("/", unit)
-		if startswith(unit, "V") || startswith(unit, "mV")
-			return "VoltageChange", convert_to_V_s(value, unit)
-		elseif startswith(unit, "A") || startswith(unit, "mA")
-			return "CurrentChange", convert_to_A_s(value, unit)
-		end
-	elseif unit in ["V", "mV"]
-		return "Voltage", convert_to_V(value, unit)
-	elseif unit in ["A", "mA"]
-		return "Current", convert_to_A(value, unit)
-	elseif unit == "C"
-		return "CRate", value
-	elseif containsi(unit, "SOC")
-		return "StateOfCharge", value
-	end
+    if any(tu -> lowercase(unit) == lowercase(tu), time_units())
+        return "Time", convert_to_seconds(value, unit)
+    elseif occursin("/", unit)
+        if startswith(unit, "V") || startswith(unit, "mV")
+            return "VoltageChange", convert_to_V_s(value, unit)
+        elseif startswith(unit, "A") || startswith(unit, "mA")
+            return "CurrentChange", convert_to_A_s(value, unit)
+        end
+    elseif unit in ["V", "mV"]
+        return "Voltage", convert_to_V(value, unit)
+    elseif unit in ["A", "mA"]
+        return "Current", convert_to_A(value, unit)
+    elseif unit == "C"
+        return "CRate", value
+    elseif containsi(unit, "SOC")
+        return "StateOfCharge", value
+    end
 
-	error("Unknown termination unit: $unit")
+    error("Unknown termination unit: $unit")
 end
 
 
 function check_word(step, parts, index, word)
-	if length(parts) < index || parts[index] != word
-		error("Expected \"$word\" at position $index in \"$step\".")
-	end
+    return if length(parts) < index || parts[index] != word
+        error("Expected \"$word\" at position $index in \"$step\".")
+    end
 end
 
 
 function parse_number_or_fraction(s::AbstractString)::Float64
-	s = strip(s)
-	if occursin('/', s)
-		a, b = split(s, '/'; limit = 2)
-		return Base.parse(Float64, strip(a)) / Base.parse(Float64, strip(b))
-	else
-		return Base.parse(Float64, s)  # handles "0.5", "1e-3", etc.
-	end
+    s = strip(s)
+    if occursin('/', s)
+        a, b = split(s, '/'; limit = 2)
+        return Base.parse(Float64, strip(a)) / Base.parse(Float64, strip(b))
+    else
+        return Base.parse(Float64, s)  # handles "0.5", "1e-3", etc.
+    end
 end
 
 
 function time_units()
-	return ["s", "second", "seconds", "min", "minute", "minutes", "mins", "h", "hour", "hours"]
+    return ["s", "second", "seconds", "min", "minute", "minutes", "mins", "h", "hour", "hours"]
 end
 
 function convert_to_seconds(value::Float64, unit::AbstractString)
-	unit_lower = lowercase(unit)
-	if unit_lower in ["s", "second", "seconds"]
-		return value
-	elseif unit_lower in ["min", "minute", "minutes", "mins"]
-		return value * 60
-	elseif unit_lower in ["h", "hour", "hours"]
-		return value * 3600
-	else
-		error("Unknown unit: $unit")
-	end
+    unit_lower = lowercase(unit)
+    if unit_lower in ["s", "second", "seconds"]
+        return value
+    elseif unit_lower in ["min", "minute", "minutes", "mins"]
+        return value * 60
+    elseif unit_lower in ["h", "hour", "hours"]
+        return value * 3600
+    else
+        error("Unknown unit: $unit")
+    end
 end
 
 function convert_to_V(value::Float64, unit::AbstractString)
-	if unit == "V"
-		return value
-	elseif unit == "mV"
-		return value * 1e-3
-	else
-		error("Unknown unit: $unit")
-	end
+    if unit == "V"
+        return value
+    elseif unit == "mV"
+        return value * 1.0e-3
+    else
+        error("Unknown unit: $unit")
+    end
 end
 
 function convert_to_A(value::Float64, unit::AbstractString)
-	if unit == "A"
-		return value
-	elseif unit == "mA"
-		return value * 1e-3
-	else
-		error("Unknown unit: $unit")
-	end
+    if unit == "A"
+        return value
+    elseif unit == "mA"
+        return value * 1.0e-3
+    else
+        error("Unknown unit: $unit")
+    end
 end
 
 function convert_to_W(value::Float64, unit::AbstractString)
-	if unit == "W"
-		return value
-	elseif unit == "mW"
-		return value * 1e-3
-	else
-		error("Unknown unit: $unit")
-	end
+    if unit == "W"
+        return value
+    elseif unit == "mW"
+        return value * 1.0e-3
+    else
+        error("Unknown unit: $unit")
+    end
 end
 
 
 function convert_to_V_s(value::Float64, unit::AbstractString)
-	parts = split(strip(unit), '/')
-	if length(parts) != 2
-		error("Invalid unit format for voltage change: $unit")
-	end
+    parts = split(strip(unit), '/')
+    if length(parts) != 2
+        error("Invalid unit format for voltage change: $unit")
+    end
 
-	voltage_in_volts = convert_to_V(1.0, parts[1])  # scale factor for voltage
-	time_in_seconds = convert_to_seconds(1.0, parts[2]) # scale factor for time
+    voltage_in_volts = convert_to_V(1.0, parts[1])  # scale factor for voltage
+    time_in_seconds = convert_to_seconds(1.0, parts[2]) # scale factor for time
 
-	return value * voltage_in_volts / time_in_seconds
+    return value * voltage_in_volts / time_in_seconds
 end
 
 
 function convert_to_A_s(value::Float64, unit::AbstractString)
-	parts = split(strip(unit), '/')
-	if length(parts) != 2
-		error("Invalid unit format for current change: $unit")
-	end
+    parts = split(strip(unit), '/')
+    if length(parts) != 2
+        error("Invalid unit format for current change: $unit")
+    end
 
-	current_in_amperes = convert_to_A(1.0, parts[1])  # scale factor for current
-	time_in_seconds = convert_to_seconds(1.0, parts[2]) # scale factor for time
+    current_in_amperes = convert_to_A(1.0, parts[1])  # scale factor for current
+    time_in_seconds = convert_to_seconds(1.0, parts[2]) # scale factor for time
 
-	return value * current_in_amperes / time_in_seconds
+    return value * current_in_amperes / time_in_seconds
 end
 
 
 function get_opposite_direction(direction)
-	return isequal(direction, "charging") ? "discharging" : "charging"
+    return isequal(direction, "charging") ? "discharging" : "charging"
 end
 
 
 function containsi(a::AbstractString, b::AbstractString)
-	return occursin(Regex(b, "i"), a)
+    return occursin(Regex(b, "i"), a)
 end
