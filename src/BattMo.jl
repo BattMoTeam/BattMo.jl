@@ -139,6 +139,7 @@ using Jutul: update_half_face_flux!
 using Jutul: SimulationModel, MultiModel
 using Jutul: JutulSimulator, Simulator
 using Jutul: JutulSystem, JutulFormulation, JutulContext, DefaultContext
+using Jutul: AbstractTerminationCriterion
 
 using Jutul: simulate, simulator_config, simulator_config!
 using Jutul: setup_forces, setup_state, setup_state!, setup_parameters
@@ -221,6 +222,8 @@ include("input/function_input_tools.jl")
 include("input/formatter.jl")
 include("input/merger.jl")
 include("input/validator.jl")
+include("input/control_steps/experiment_strings.jl")
+include("input/control_steps/protocol_conversion.jl")
 include("input/equilibrium_kpis.jl")
 include("input/calculator.jl")
 
@@ -235,7 +238,13 @@ include("models/current_collector.jl")
 include("models/ocp.jl")
 include("models/activematerial.jl")
 include("models/sei_layer.jl")
-include("models/current_and_voltage_boundary.jl")
+include("models/external_circuit/terminations.jl")
+include("models/external_circuit/control_steps.jl")
+include("models/external_circuit/protocol.jl")
+include("models/external_circuit/controller.jl")
+include("models/external_circuit/external_circuit.jl")
+include("models/external_circuit/step_switching.jl")
+include("models/external_circuit/time_stepping.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")
 

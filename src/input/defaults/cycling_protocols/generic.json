@@ -1,0 +1,29 @@
+{
+    "Protocol": "Generic",
+    "InitialStateOfCharge": 0.01,
+    "InitialTemperature": 298.15,
+    "TotalTime": 100000,
+    "ControlSteps": [
+        {
+            "ControlType": "Current",
+            "Value": 1.0,
+            "Direction": "charging",
+            "Termination": {"Quantity": "Voltage", "Value": 4.0, "Comparison": "above"}
+        },
+        {
+            "ControlType": "Voltage",
+            "Value": 4.0,
+            "Termination": {"Quantity": "CurrentChange", "Value": 1e-4, "Comparison": "absolute value below"}
+        },
+        {
+            "ControlType": "Current",
+            "Value": 1.0,
+            "Direction": "discharging",
+            "Termination": {"Quantity": "Voltage", "Value": 3.0, "Comparison": "below"}
+        },
+        {
+            "ControlType": "Rest",
+            "Termination": {"Quantity": "Time", "Value": 4000}
+        }
+    ]
+}

@@ -720,7 +720,8 @@ function solver_configuration(
 
     timestep_selector = non_linear_solver["TimeStepSelectors"]
     if timestep_selector == "TimestepSelector"
-        timesel = [TimestepSelector()]
+        # The second selector makes the time stepping land on the breakpoints of the control steps
+        timesel = [TimestepSelector(), ControlStepTimestepSelector()]
     else
         error("Timestep selector $(timestep_selector) not recognized. Only 'TimestepSelector' is currently implemented.")
     end
@@ -789,74 +790,30 @@ function solver_configuration(
         end
     end
 
-    if multimodel[:Control].system.policy isa CyclingCVPolicy || multimodel[:Control].system.policy isa CCPolicy
-        if multimodel[:Control].system.policy isa CyclingCVPolicy
+    # The converged states are checked against the termination of the control steps, see check_constraints
+    cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
 
-            cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+    function post_hook(done, report, sim, dt, forces, max_iter, cfg)
 
-        elseif multimodel[:Control].system.policy isa CCPolicy && multimodel[:Control].system.policy.numberOfCycles > 0
-            cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
-        end
+        s = get_simulator_storage(sim)
+        m = get_simulator_model(sim)
 
-        function post_hook(done, report, sim, dt, forces, max_iter, cfg)
+        # The simulation stops once the last control step has terminated. Jutul does not store the state of the time
+        # step in which the simulation is stopped, so the output ends with the last state before the termination.
+        report[:stopnow] = experiment_is_finished(m[:Control].system.protocol, s.state.Control.Controller)
 
-
-            s = get_simulator_storage(sim)
-            m = get_simulator_model(sim)
-
-            if multimodel[:Control].system.policy isa CyclingCVPolicy
-
-                if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-                    report[:stopnow] = true
-                else
-                    report[:stopnow] = false
-                end
-
-            elseif multimodel[:Control].system.policy isa CCPolicy
-
-                if multimodel[:Control].system.policy.numberOfCycles == 0
-
-                    if multimodel[:Control].system.policy.initialControl == "charging"
-
-                        if s.state.Control.ElectricPotential[1] >= multimodel[:Control].system.policy.upperCutoffVoltage
-                            report[:stopnow] = true
-                        else
-                            report[:stopnow] = false
-                        end
-
-                    elseif multimodel[:Control].system.policy.initialControl == "discharging"
-
-                        if s.state.Control.ElectricPotential[1] <= multimodel[:Control].system.policy.lowerCutoffVoltage
-                            report[:stopnow] = true
-
-                        else
-
-                            report[:stopnow] = false
-                        end
-                    end
-                else
-                    if s.state.Control.Controller.numberOfCycles >= multimodel[:Control].system.policy.numberOfCycles
-                        report[:stopnow] = true
-                    else
-                        report[:stopnow] = false
-                    end
-                end
-            end
-
-            return (done, report)
-
-        end
-
-        # Perform thermal simulation
-        if haskey(input.model_settings, "ThermalModel") && input.model_settings["ThermalModel"] == "Sequential"
-
-            post_hook = BattMo.setup_thermal_post_ministep_hook(model, input, post_hook; Temperature = input.cycling_protocol["InitialTemperature"])
-
-        end
-
-        cfg[:post_ministep_hook] = post_hook
+        return (done, report)
 
     end
+
+    # Perform thermal simulation
+    if haskey(input.model_settings, "ThermalModel") && input.model_settings["ThermalModel"] == "Sequential"
+
+        post_hook = BattMo.setup_thermal_post_ministep_hook(model, input, post_hook; Temperature = input.cycling_protocol["InitialTemperature"])
+
+    end
+
+    cfg[:post_ministep_hook] = post_hook
 
     return cfg
 
@@ -1022,15 +979,7 @@ function setup_timesteps(
             con = Constants()
             totalTime = 1.1 * con.hour / CRate
 
-            dt = simulation_settings["TimeStepDuration"]
-
-            if haskey(input.model_settings, "RampUp")
-                nr = simulation_settings["RampUpSteps"]
-            else
-                nr = 1
-            end
-
-            timesteps = compute_rampup_timesteps(totalTime, dt, nr)
+            timesteps = setup_uniform_timesteps(input, totalTime)
 
         else
 
@@ -1042,10 +991,7 @@ function setup_timesteps(
 
             totalTime = ncycles * 2 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
-            dt = simulation_settings["TimeStepDuration"]
-            n = Int64(floor(totalTime / dt))
-
-            timesteps = repeat([dt], n)
+            timesteps = setup_uniform_timesteps(input, totalTime; split_first_step = false)
         end
 
     elseif protocol == "CCCV"
@@ -1058,10 +1004,7 @@ function setup_timesteps(
 
         totalTime = ncycles * 2.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
-        dt = simulation_settings["TimeStepDuration"]
-        n = Int64(floor(totalTime / dt))
-
-        timesteps = repeat([dt], n)
+        timesteps = setup_uniform_timesteps(input, totalTime; split_first_step = false)
 
     elseif protocol == "Function"
 
@@ -1077,13 +1020,37 @@ function setup_timesteps(
         timesteps = diff(series_times)
         timesteps = timesteps[timesteps .> 0.0]
 
+    elseif protocol == "Experiment" || protocol == "Generic"
+
+        timesteps = setup_uniform_timesteps(input, cycling_protocol["TotalTime"])
+
     else
 
-        error("Protocol $protocol not recognized")
+        error("Control policy $protocol not recognized")
 
     end
 
     return timesteps
+
+end
+
+"""
+Time steps of size TimeStepDuration covering totalTime. When the model uses a current ramp up, the first time step is
+refined into RampUpSteps time steps so that the ramp up is resolved. Without ramp up, the time steps are uniform, or,
+with `split_first_step = true`, the first time step is split in two.
+"""
+function setup_uniform_timesteps(input, totalTime; split_first_step = true)
+
+    simulation_settings = input.simulation_settings
+    dt = simulation_settings["TimeStepDuration"]
+
+    if haskey(input.model_settings, "RampUp")
+        return compute_rampup_timesteps(totalTime, dt, Int(simulation_settings["RampUpSteps"]))
+    elseif split_first_step
+        return compute_rampup_timesteps(totalTime, dt, 1)
+    else
+        return repeat([dt], Int64(floor(totalTime / dt)))
+    end
 
 end
 
@@ -1115,22 +1082,4 @@ function compute_rampup_timesteps(time::Real, dt::Real, n::Integer = 8)
     dT = [dt_init; dt_rem; dt_final]
 
     return dT
-end
-
-####################
-# Current function #
-####################
-
-function currentFun(t::Real, inputI::Real, tup::Real = 0.1)
-
-    t, inputI, tup, val = promote(t, inputI, tup, 0.0)
-
-    if t <= tup
-        val = sineup(0.0, inputI, 0.0, tup, t)
-    else
-        val = inputI
-    end
-
-    return val
-
 end

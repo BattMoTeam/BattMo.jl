@@ -5,10 +5,20 @@ function get_cycling_protocol_meta_data()
     meta_data = Dict(
         "Protocol" => Dict(
             "type" => String,
-            "options" => ["CC", "CCCV", "Function", "InputCurrentSeries"],
+            "options" => ["CC", "CCCV", "Experiment", "Generic", "Function", "InputCurrentSeries"],
             "context_type" => "Protocol",
             "context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_d3e2d213_d078_4b9a_8beb_62f063e57d69",
-            "description" => """Type of cycling procedure used to cycle a cell. For instance: Constant Current ("CC"), Constant Current - Constant Voltage ("CCCV"), a custom function ("Function"), or a prescribed current time series ("InputCurrentSeries").""",
+            "description" => """Type of cycling procedure used to cycle a cell. For instance: Constant Current ("CC"), Constant Current - Constant Voltage ("CCCV"), a list of experiment strings ("Experiment"), a list of generic control steps ("Generic"), a custom function ("Function"), or a prescribed current time series ("InputCurrentSeries").""",
+        ),
+        "ControlSteps" => Dict(
+            "type" => Vector,
+            "description" => """List of generic control steps ("Current", "Voltage", "Power", "Rest" or "Cycle"), each with a termination. See `get_schema_control_steps()` for the structure.""",
+        ),
+        "Capacity" => Dict(
+            "type" => Real,
+            "min_value" => 0.0,
+            "unit" => "Ah",
+            "description" => """Capacity used by the "Experiment" and "Generic" protocols to convert C-rates to currents and to compute the state of charge. Defaults to the theoretical cell capacity.""",
         ),
         "FunctionName" => Dict(
             "type" => String,
@@ -161,6 +171,10 @@ function get_cycling_protocol_meta_data()
             "unit" => "V·s⁻¹",
             "unit_name" => "emmo:VoltPerSecond",
             "unit_iri" => "https://w3id.org/emmo#VoltPerSecond",
+        ),
+        "Experiment" => Dict(
+            "description" => "A set of control step policies that form a virtual experiment.",
+            "type" => Vector{String},
         ),
         "Times" => Dict(
             "type" => Vector,

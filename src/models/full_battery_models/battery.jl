@@ -30,7 +30,6 @@ function setup_model!(model::M, input, grids, couplings; global_maps = nothing, 
     # setup the cross terms which couples the submodels.
     setup_coupling_cross_terms!(model, parameters, couplings)
 
-    setup_initial_control_policy!(model.multimodel[:Control].system.policy, input, parameters)
     #model.context = DefaultContext()
 
     output = (

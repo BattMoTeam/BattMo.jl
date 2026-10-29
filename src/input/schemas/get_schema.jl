@@ -1,4 +1,5 @@
 export get_schema_cell_parameters, get_schema_cycling_protocol, get_schema_simulation_settings, get_schema_model_settings
+export get_schema_control_steps
 
 function julia_to_json_schema_type!(dict, meta::Dict)
     return if meta["type"] == Real
@@ -64,7 +65,7 @@ function julia_to_json_schema_type!(dict, meta::Dict)
 
         # Functions aren't directly representable in JSON, treating as string (function name or identifier)
 
-    elseif meta["type"] == Vector
+    elseif meta["type"] == Vector || meta["type"] == Vector{String}
         dict["type"] = "array"  # JSON schema type for arrays (Vector in Julia)
     elseif meta["type"] == Nothing
         dict["type"] = "null"
@@ -454,15 +455,156 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
 end
 
 
+"""
+	get_control_steps_schema_definitions()
+
+Schema definitions of the generic control steps. A control step is one of
+
+- "Current": constant current, given in A ("Value") or as a C-rate ("CRate"), with a "Direction"
+- "Voltage": constant voltage, given in V ("Value")
+- "Power": constant power, given in W ("Value"), with a "Direction"
+- "Rest": zero current
+- "CurrentFunction": the current is given by the Julia function "FunctionName" of the time since the start of the
+  step and the voltage (optionally defined in the file "FilePath")
+- "CurrentSeries": the current is interpolated from the time series "Times" (relative to the start of the step) and
+  "Currents". When the voltage reaches the optional "LowerVoltageLimit" during discharge or "UpperVoltageLimit" during
+  charge, the step switches to voltage control at the limit.
+- "Cycle": the list of "ControlSteps" repeated "NumberOfCycles" times
+
+The currents are positive for discharge. Each step except "Cycle" has a "Termination", which is a termination
+condition or a list of termination conditions (the step terminates as soon as one of them is fulfilled). Only the last
+step can be given without termination, it then lasts until the end of the simulation. A termination condition gives
+the "Quantity" that is monitored, the target "Value" (in SI units, time in seconds) and the "Comparison" that decides
+when the target is reached. The comparison is not needed for a time termination. The optional "Tolerance" sets the
+width of the termination region, relative to the target value (in seconds for a time termination).
+"""
+function get_control_steps_schema_definitions()
+
+    direction = Dict("type" => "string", "enum" => ["charging", "discharging"])
+
+    termination = Dict(
+        "type" => "object",
+        "properties" => Dict(
+            "Quantity" => Dict(
+                "type" => "string",
+                "enum" => ["Time", "Voltage", "Current", "CRate", "VoltageChange", "CurrentChange", "StateOfCharge"],
+            ),
+            "Value" => Dict("type" => "number"),
+            "Comparison" => Dict(
+                "type" => "string",
+                "enum" => ["above", "below", "absolute value above", "absolute value below"],
+            ),
+            "Tolerance" => Dict("type" => "number", "minimum" => 0),
+        ),
+        "required" => ["Quantity", "Value"],
+        "additionalProperties" => false,
+        "allOf" => [
+            Dict(
+                "if" => Dict("properties" => Dict("Quantity" => Dict("not" => Dict("const" => "Time")))),
+                "then" => Dict("required" => ["Comparison"]),
+            ),
+        ],
+    )
+
+    control_step = Dict(
+        "type" => "object",
+        "properties" => Dict(
+            "ControlType" => Dict(
+                "type" => "string",
+                "enum" => ["Current", "Voltage", "Power", "Rest", "CurrentFunction", "CurrentSeries", "Cycle"],
+            ),
+            "Value" => Dict("type" => "number", "minimum" => 0),
+            "CRate" => Dict("type" => "number", "minimum" => 0),
+            "Direction" => direction,
+            "FunctionName" => Dict("type" => "string"),
+            "FilePath" => Dict("type" => "string"),
+            "Times" => Dict("type" => "array", "minItems" => 1, "items" => Dict("type" => "number")),
+            "Currents" => Dict("type" => "array", "minItems" => 1, "items" => Dict("type" => "number")),
+            "LowerVoltageLimit" => Dict("type" => "number"),
+            "UpperVoltageLimit" => Dict("type" => "number"),
+            "Termination" => Dict(
+                "oneOf" => [
+                    Dict("\$ref" => "#/definitions/Termination"),
+                    Dict("type" => "array", "minItems" => 1, "items" => Dict("\$ref" => "#/definitions/Termination")),
+                ],
+            ),
+            "NumberOfCycles" => Dict("type" => "integer", "minimum" => 1),
+            "ControlSteps" => Dict("\$ref" => "#/definitions/ControlSteps"),
+        ),
+        "required" => ["ControlType"],
+        "additionalProperties" => false,
+        "allOf" => [
+            Dict(
+                "if" => Dict("properties" => Dict("ControlType" => Dict("const" => "Current"))),
+                "then" => Dict(
+                    "required" => ["Direction"],
+                    "oneOf" => [Dict("required" => ["Value"]), Dict("required" => ["CRate"])],
+                ),
+            ),
+            Dict(
+                "if" => Dict("properties" => Dict("ControlType" => Dict("const" => "Voltage"))),
+                "then" => Dict("required" => ["Value"]),
+            ),
+            Dict(
+                "if" => Dict("properties" => Dict("ControlType" => Dict("const" => "Power"))),
+                "then" => Dict("required" => ["Value", "Direction"]),
+            ),
+            Dict(
+                "if" => Dict("properties" => Dict("ControlType" => Dict("const" => "CurrentFunction"))),
+                "then" => Dict("required" => ["FunctionName"]),
+            ),
+            Dict(
+                "if" => Dict("properties" => Dict("ControlType" => Dict("const" => "CurrentSeries"))),
+                "then" => Dict("required" => ["Times", "Currents"]),
+            ),
+            Dict(
+                "if" => Dict("properties" => Dict("ControlType" => Dict("const" => "Cycle"))),
+                "then" => Dict("required" => ["NumberOfCycles", "ControlSteps"]),
+            ),
+        ],
+    )
+
+    return Dict(
+        "ControlSteps" => Dict(
+            "type" => "array",
+            "minItems" => 1,
+            "items" => Dict("\$ref" => "#/definitions/ControlStep"),
+        ),
+        "ControlStep" => control_step,
+        "Termination" => termination,
+    )
+end
+
+
+"""
+	get_schema_control_steps()
+
+Schema for a list of generic control steps, see `get_control_steps_schema_definitions`.
+"""
+function get_schema_control_steps()
+    return Dict(
+        "\$schema" => "http://json-schema.org/draft-07/schema#",
+        "definitions" => get_control_steps_schema_definitions(),
+        "type" => "array",
+        "minItems" => 1,
+        "items" => Dict("\$ref" => "#/definitions/ControlStep"),
+    )
+end
+
+
 function get_schema_cycling_protocol(model_settings::ModelSettings)
 
     # Retrieve meta-data for validation
     parameter_meta = get_cycling_protocol_meta_data()
     schema = Dict(
         "\$schema" => "http://json-schema.org/draft-07/schema#",
+        "definitions" => get_control_steps_schema_definitions(),
         "type" => "object",
         "properties" => Dict(
             "Protocol" => create_property(parameter_meta, "Protocol"),
+            "Experiment" => create_property(parameter_meta, "Experiment"),
+            "ControlSteps" => Dict("\$ref" => "#/definitions/ControlSteps"),
+            "Capacity" => create_property(parameter_meta, "Capacity"),
             "InitialStateOfCharge" => create_property(parameter_meta, "InitialStateOfCharge"),
             "FunctionName" => create_property(parameter_meta, "FunctionName"),
             "TotalTime" => create_property(parameter_meta, "TotalTime"),
@@ -565,6 +707,26 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
                         "DRate",
                         "UpperVoltageLimit",
                         "LowerVoltageLimit",
+                    ],
+                ),
+            ),
+            Dict(
+                "if" => Dict("properties" => Dict("Protocol" => Dict("const" => "Experiment"))),
+                "then" => Dict(
+                    "required" => [
+                        "InitialStateOfCharge",
+                        "Experiment",
+                        "TotalTime",
+                    ],
+                ),
+            ),
+            Dict(
+                "if" => Dict("properties" => Dict("Protocol" => Dict("const" => "Generic"))),
+                "then" => Dict(
+                    "required" => [
+                        "InitialStateOfCharge",
+                        "ControlSteps",
+                        "TotalTime",
                     ],
                 ),
             ),

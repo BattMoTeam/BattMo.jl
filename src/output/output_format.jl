@@ -56,7 +56,7 @@ function get_output_time_series(jutul_output::NamedTuple; quantities::Union{Noth
     time = extract_output_times(jutul_output)
     cumulative_capacity = compute_capacity(jutul_output, "Cumulative")
     net_capacity = compute_capacity(jutul_output, "Net")
-    cycle_number = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : nothing
+    cycle_number = [state[:Control][:Controller].cycle_count for state in states]
 
     # Available data mapping
     data_map = Dict(
@@ -577,54 +577,61 @@ function get_output_metrics(
     )
     states = jutul_output[:states]
 
-    controller = states[1][:Control][:Controller]
+    cycle_array = [state[:Control][:Controller].cycle_count for state in states]
 
-    if isa(controller, FunctionController) || isa(controller, InputCurrentController)
-        available_quantities = Dict()
+    # Metric storage
+    discharge_cap = Float64[]
+    charge_cap = Float64[]
+    discharge_energy = Float64[]
+    charge_energy = Float64[]
+    round_trip_efficiency = Float64[]
+
+    # Identify the complete cycles. The last cycle is complete if the simulation reached the last control step of the
+    # protocol. Otherwise the simulation was stopped before (for example at TotalTime) and the last cycle is excluded.
+    unique_cycles = Int.(unique(cycle_array))
+    last_controller = states[end][:Control][:Controller]
+    protocol = last_controller.protocol
+    last_cycle_complete = is_last_control_step(protocol, last_controller) || experiment_is_finished(protocol, last_controller)
+
+    # A protocol that ends with a "Cycle" step has cycles, even if it has only one
+    has_cycles = length(unique_cycles) > 1 || protocol.final_cycle_count > last(protocol.cycle_counts)
+
+    if !has_cycles
+        cycles_reduced = Int[] # No cycles, the metrics are computed globally
+    elseif last_cycle_complete
+        cycles_reduced = unique_cycles
     else
-        cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : nothing
-
-        # Metric storage
-        discharge_cap = Float64[]
-        charge_cap = Float64[]
-        discharge_energy = Float64[]
-        charge_energy = Float64[]
-        round_trip_efficiency = Float64[]
-
-        # Identify unique non-zero cycles
-        unique_cycles = unique(cycle_array)
-        cycles_reduced = Int.(unique_cycles[1:(end - 1)]) # Exclude last cycle index because it is incomplete
-
-
-        if isempty(cycles_reduced)
-            # Compute globally
-            push!(discharge_cap, compute_discharge_capacity(jutul_output))
-            push!(charge_cap, compute_charge_capacity(jutul_output))
-            push!(discharge_energy, compute_discharge_energy(jutul_output))
-            push!(charge_energy, compute_charge_energy(jutul_output))
-            push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output))
-        else
-            # Compute per unique cycle (avoids duplicate pushes)
-            for cycle in cycles_reduced
-                push!(discharge_cap, compute_discharge_capacity(jutul_output; cycle_number = cycle))
-                push!(charge_cap, compute_charge_capacity(jutul_output; cycle_number = cycle))
-                push!(discharge_energy, compute_discharge_energy(jutul_output; cycle_number = cycle))
-                push!(charge_energy, compute_charge_energy(jutul_output; cycle_number = cycle))
-                push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output; cycle_number = cycle))
-            end
-        end
-
-        # Dictionary of all available quantities
-        available_quantities = Dict(
-            "CycleIndex" => cycles_reduced,
-            "DischargeCapacity" => discharge_cap,
-            "ChargeCapacity" => charge_cap,
-            "DischargeEnergy" => discharge_energy,
-            "ChargeEnergy" => charge_energy,
-            "RoundTripEfficiency" => round_trip_efficiency,
-        )
-
+        cycles_reduced = unique_cycles[1:(end - 1)]
     end
+
+
+    if isempty(cycles_reduced)
+        # Compute globally
+        push!(discharge_cap, compute_discharge_capacity(jutul_output))
+        push!(charge_cap, compute_charge_capacity(jutul_output))
+        push!(discharge_energy, compute_discharge_energy(jutul_output))
+        push!(charge_energy, compute_charge_energy(jutul_output))
+        push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output))
+    else
+        # Compute per unique cycle (avoids duplicate pushes)
+        for cycle in cycles_reduced
+            push!(discharge_cap, compute_discharge_capacity(jutul_output; cycle_number = cycle))
+            push!(charge_cap, compute_charge_capacity(jutul_output; cycle_number = cycle))
+            push!(discharge_energy, compute_discharge_energy(jutul_output; cycle_number = cycle))
+            push!(charge_energy, compute_charge_energy(jutul_output; cycle_number = cycle))
+            push!(round_trip_efficiency, compute_round_trip_efficiency(jutul_output; cycle_number = cycle))
+        end
+    end
+
+    # Dictionary of all available quantities
+    available_quantities = Dict(
+        "CycleIndex" => cycles_reduced,
+        "DischargeCapacity" => discharge_cap,
+        "ChargeCapacity" => charge_cap,
+        "DischargeEnergy" => discharge_energy,
+        "ChargeEnergy" => charge_energy,
+        "RoundTripEfficiency" => round_trip_efficiency,
+    )
 
     # Return only requested metrics or all
     if isnothing(metrics)
@@ -1002,7 +1009,7 @@ function get_padded_states(jutul_output::NamedTuple)
     total_number_of_cells = 0
     for (i, k) in enumerate(model_keys)
         pp = physical_representation(multimodel[k].data_domain)
-        if pp isa CurrentAndVoltageDomain
+        if pp isa ExternalCircuitDomain
             keep = false
         else
             gg = multimodel[k].domain.representation

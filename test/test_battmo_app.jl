@@ -120,36 +120,28 @@ function setup_config(
         i
     )
 
-    if model[:Control].system.policy isa CyclingCVPolicy
+    cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> BattMo.check_constraints(model, storage)
 
-        cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> BattMo.check_constraints(model, storage)
+    function post_hook(done, report, sim, dt, forces, max_iter, cfg)
 
-        function post_hook(done, report, sim, dt, forces, max_iter, cfg)
+        s = Jutul.get_simulator_storage(sim)
+        m = Jutul.get_simulator_model(sim)
 
-            s = Jutul.get_simulator_storage(sim)
-            m = Jutul.get_simulator_model(sim)
+        report[:stopnow] = BattMo.experiment_is_finished(m[:Control].system.protocol, s.state.Control.Controller)
 
-            if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-                report[:stopnow] = true
-            else
-                report[:stopnow] = false
-            end
-
-            if done
-                i += 1
-                total_time = sum(timesteps)
-                dt_tot += dt
-                fraction = dt / total_time
-                fraction_tot += fraction
-            end
-
-            return (done, report)
-
+        if done
+            i += 1
+            total_time = sum(timesteps)
+            dt_tot += dt
+            fraction = dt / total_time
+            fraction_tot += fraction
         end
 
-        cfg[:post_ministep_hook] = post_hook
+        return (done, report)
 
     end
+
+    cfg[:post_ministep_hook] = post_hook
 
     return cfg
 

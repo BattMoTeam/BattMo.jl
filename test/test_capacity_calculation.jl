@@ -20,19 +20,20 @@ using Test
         discharge_capacity = output.metrics["DischargeCapacity"]
         charge_capacity = output.metrics["ChargeCapacity"]
 
-        @test length(cumulative_capacity) ≈ 785 atol = 1
-        @test length(net_capacity) ≈ 785 atol = 1
-        @test cumulative_capacity[5] ≈ 0.2828012113052541 atol = 1.0e-1
-        @test cumulative_capacity[end - 5] ≈ 23.041417830290328 atol = 1.0e-1
-        @test net_capacity[5] ≈ 0.2828012113052541 atol = 1.0e-1
-        @test net_capacity[end - 5] ≈ 0.5587215315225628 atol = 1.0e-1
+        # The CCCV protocol uses the current ramp up of the default model settings, which refines the first time step
+        @test length(cumulative_capacity) ≈ 790 atol = 1
+        @test length(net_capacity) ≈ 790 atol = 1
+        @test cumulative_capacity[5] ≈ 0.060563677082886805 atol = 1.0e-2
+        @test cumulative_capacity[end - 5] ≈ 23.108119914501906 atol = 1.0e-1
+        @test net_capacity[5] ≈ 0.060563677082886805 atol = 1.0e-2
+        @test net_capacity[end - 5] ≈ 0.6254236157341587 atol = 1.0e-1
 
         @test length(discharge_capacity) ≈ 3 atol = 1
         @test length(charge_capacity) ≈ 3 atol = 1
         @test discharge_capacity[1] ≈ 3.6764157469683036 atol = 1.0e-1
         @test discharge_capacity[2] ≈ 3.6764157469683036 atol = 1.0e-1
-        @test charge_capacity[1] ≈ 4.237077101465274 atol = 1.0e-1
-        @test charge_capacity[2] ≈ 3.6936471729205147 atol = 1.0e-1
+        @test charge_capacity[1] ≈ 4.308165734095956 atol = 1.0e-1
+        @test charge_capacity[2] ≈ 3.692554997719367 atol = 1.0e-1
 
 
         true

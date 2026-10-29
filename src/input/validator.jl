@@ -137,6 +137,10 @@ function validate_parameter_set(parameters::CyclingProtocol, model_settings::Mod
     # Validate the JSON data
     result = validate(schema_obj, parameters.all)
 
+    if get(parameters.all, "Protocol", nothing) == "Experiment" && haskey(parameters.all, "Experiment")
+        append!(result.issues, validate_experiment(parameters.all["Experiment"]))
+    end
+
     log_schema_issues(result.issues, "CyclingProtocol")
 
     if !isempty(result.issues)
@@ -149,6 +153,45 @@ function validate_parameter_set(parameters::CyclingProtocol, model_settings::Mod
 
     return is_valid
 
+end
+
+
+"""
+	validate_control_steps(control_steps)
+
+Validate a list of control steps against the control step schema. Throws an error listing the issues if the control
+steps are not valid.
+"""
+function validate_control_steps(control_steps)
+
+    result = validate(Schema(get_schema_control_steps()), control_steps)
+
+    if !isempty(result.issues)
+        log_schema_issues(result.issues, "ControlSteps")
+        error("The control steps are not valid. See the issues listed above.")
+    end
+
+    return nothing
+end
+
+
+"""
+Validate experiment strings by converting them to control steps and validating these against the control step schema.
+Returns the issues found, with paths relative to the cycling protocol.
+"""
+function validate_experiment(experiment)
+
+    control_steps = try
+        experiment_to_control_steps(experiment)
+    catch e
+        # Malformed strings can also give for example parse or bounds errors
+        return [SingleIssue(experiment, "[Experiment]", "experiment", sprint(showerror, e))]
+    end
+
+    result = validate(Schema(get_schema_control_steps()), control_steps)
+
+    # The paths refer to the control steps that the experiment strings were converted to
+    return [SingleIssue(issue.x, "[Experiment → ControlSteps]" * issue.path, issue.reason, issue.val) for issue in result.issues]
 end
 
 
@@ -185,6 +228,7 @@ function log_schema_issues(issues::Vector{SingleIssue}, set_name::String)
                 issue.reason == "type" ? "Expected type: $(issue.val)" :
                 issue.reason == "enum" ? "Value must be one of: $(join(issue.val, ", "))" :
                 issue.reason == "const" ? "Value must be exactly: $(issue.val)" :
+                issue.reason == "experiment" ? "Experiment string could not be converted: $(issue.val)" :
                 "Schema violation: $(issue.reason)"
 
             println(rpad("🛠  Issue:", label_width), msg, "\n")

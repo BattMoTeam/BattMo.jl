@@ -47,7 +47,7 @@ function compute_discharge_capacity(jutul_output::NamedTuple; cycle_number = not
     states = jutul_output[:states]
     state_end = states[end]
 
-    if hasproperty(state_end[:Control][:Controller], :numberOfCycles) && state_end[:Control][:Controller].numberOfCycles > 0
+    if state_end[:Control][:Controller].cycle_count > 0
         if isnothing(cycle_number)
 
             error(
@@ -65,7 +65,7 @@ end
 
 # Helper function to get valid (non-singleton) cycle numbers
 function get_valid_cycles(states)
-    cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
+    cycle_array = [state[:Control][:Controller].cycle_count for state in states]
     cycle_counts = Dict{Int, Int}()
 
     for cycle in cycle_array
@@ -82,9 +82,9 @@ function compute_discharge_capacity(states; cycle_number = nothing)
     t = [state[:Control][:Controller].time for state in states]
     I = [state[:Control][:Current][1] for state in states]
 
-    valid_cycles, cycle_array = get_valid_cycles(states)
-
     if !isnothing(cycle_number)
+        valid_cycles, cycle_array = get_valid_cycles(states)
+
         if cycle_number ∉ valid_cycles
             return 0.0  # Skip singleton cycle
         end
@@ -123,7 +123,7 @@ end
 function compute_charge_capacity(jutul_output::NamedTuple; cycle_number = nothing)
     states = jutul_output[:states]
 
-    if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
+    if states[end][:Control][:Controller].cycle_count > 0
         if isnothing(cycle_number)
 
             error(
@@ -146,9 +146,9 @@ function compute_charge_capacity(states; cycle_number = nothing)
     I = [state[:Control][:Current][1] for state in states]
 
     if !isnothing(cycle_number)
-        cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
+        cycle_array = [state[:Control][:Controller].cycle_count for state in states]
 
-        total_number_of_cycles = states[end][:Control][:Controller].numberOfCycles
+        total_number_of_cycles = states[end][:Control][:Controller].cycle_count
 
         cycle_index = findall(x -> x == cycle_number, cycle_array)
 
@@ -181,7 +181,7 @@ end
 
 function compute_round_trip_efficiency(jutul_output::NamedTuple; cycle_number = nothing)
     states = jutul_output[:states]
-    if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
+    if states[end][:Control][:Controller].cycle_count > 0
         if isnothing(cycle_number)
 
             error(
@@ -205,7 +205,7 @@ end
 function compute_discharge_energy(jutul_output::NamedTuple; cycle_number = nothing)
     states = jutul_output[:states]
 
-    if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
+    if states[end][:Control][:Controller].cycle_count > 0
         if isnothing(cycle_number)
 
             error(
@@ -229,9 +229,9 @@ function compute_discharge_energy(states; cycle_number = nothing)
     I = [state[:Control][:Current][1] for state in states]
 
     if !isnothing(cycle_number)
-        cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
+        cycle_array = [state[:Control][:Controller].cycle_count for state in states]
 
-        total_number_of_cycles = states[end][:Control][:Controller].numberOfCycles
+        total_number_of_cycles = states[end][:Control][:Controller].cycle_count
 
         cycle_index = findall(x -> x == cycle_number, cycle_array)
 
@@ -273,7 +273,7 @@ end
 function compute_charge_energy(jutul_output::NamedTuple; cycle_number = nothing)
     states = jutul_output[:states]
 
-    if hasproperty(states[end][:Control][:Controller], :numberOfCycles) && states[end][:Control][:Controller].numberOfCycles > 0
+    if states[end][:Control][:Controller].cycle_count > 0
         if isnothing(cycle_number)
 
             error(
@@ -297,9 +297,9 @@ function compute_charge_energy(states; cycle_number = nothing)
     I = [state[:Control][:Current][1] for state in states]
 
     if !isnothing(cycle_number)
-        cycle_array = [state[:Control][:Controller].numberOfCycles for state in states]
+        cycle_array = [state[:Control][:Controller].cycle_count for state in states]
 
-        total_number_of_cycles = states[end][:Control][:Controller].numberOfCycles
+        total_number_of_cycles = states[end][:Control][:Controller].cycle_count
 
         cycle_index = findall(x -> x == cycle_number, cycle_array)
 
