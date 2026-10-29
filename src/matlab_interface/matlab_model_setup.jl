@@ -1,9 +1,9 @@
 ################################################
-# control policy setup (Matlab input specific) #
+# Control protocol setup (Matlab input specific) #
 ################################################
 
 """
-Set up the generic protocol from the Matlab control input. The Matlab control is converted to control steps:
+Set up the control protocol from the Matlab control input. The Matlab control is converted to control steps:
 
 - "CCDischarge": constant current discharge until the lower cutoff voltage, followed by a constant voltage hold at the
   cutoff voltage until the end of the simulation.
@@ -12,7 +12,7 @@ Set up the generic protocol from the Matlab control input. The Matlab control is
 The Matlab input does not give the capacity and the initial state of charge, so that C-rates and state of charge
 terminations cannot be used.
 """
-function setup_matlab_control_policy(ctrl)
+function setup_matlab_control_protocol(ctrl)
 
     control_policy = ctrl["controlPolicy"]
 
@@ -54,7 +54,7 @@ function setup_matlab_control_policy(ctrl)
 
     end
 
-    return GenericProtocol(control_steps, NaN; capacity = NaN, use_ramp_up = use_ramp_up, ramp_up_time = ramp_up_time)
+    return ControlProtocol(control_steps, NaN; capacity = NaN, use_ramp_up = use_ramp_up, ramp_up_time = ramp_up_time)
 
 end
 
@@ -347,7 +347,6 @@ function setup_model!(inputparams::MatlabInput)
     # setup the cross terms which couples the submodels.
     setup_coupling_cross_terms!(inputparams, model, parameters, couplings)
 
-    setup_initial_control_policy!(model[:Control].system.policy, inputparams, parameters)
 
     output = (
         model = model,
@@ -535,10 +534,10 @@ function setup_submodels(inputparams::MatlabInput)
     # Setup control model #
     #######################
 
-    policy = setup_matlab_control_policy(inputparams["Control"])
+    protocol = setup_matlab_control_protocol(inputparams["Control"])
 
-    sys_control = CurrentAndVoltageSystem(policy)
-    domain_control = CurrentAndVoltageDomain()
+    sys_control = ExternalCircuitSystem(protocol)
+    domain_control = ExternalCircuitDomain()
     model_control = SimulationModel(domain_control, sys_control, context = DefaultContext())
 
     if !include_cc

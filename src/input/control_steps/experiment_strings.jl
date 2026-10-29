@@ -11,7 +11,7 @@
 #
 # This script converts a list of experiment strings into the json control step structure that is described by the
 # control step schema (see get_schema_control_steps). The control steps are then validated and turned into a
-# GenericProtocol, in the same way as control steps given directly in json.
+# ControlProtocol, in the same way as control steps given directly in json.
 #
 # "Repeat N times" repeats all the previous entries of the list (or of the sub-list it belongs to) N more times. It is
 # converted into a "Cycle" control step.
@@ -346,6 +346,11 @@ function convert_to_A_s(value::Float64, unit::AbstractString)
 	time_in_seconds = convert_to_seconds(1.0, parts[2]) # scale factor for time
 
 	return value * current_in_amperes / time_in_seconds
+end
+
+
+function get_opposite_direction(direction)
+	return isequal(direction, "charging") ? "discharging" : "charging"
 end
 
 

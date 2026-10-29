@@ -9,8 +9,10 @@
 #	- CurrentFunctionStep: the current is given by a function of time and voltage
 #	- CurrentSeriesStep: the current is interpolated from a time series, with voltage limits
 #
-# The control steps are set up from their json description, see setup_control_step in generic_protocol.jl
+# The control steps are set up from their json description, see setup_control_step in protocol.jl
 #######################################################################################################################
+
+export sineup
 
 ##################################################
 # Define the abstract type
@@ -23,8 +25,8 @@ abstract type AbstractControlStep end
 
 """
 Constant current, given in A or, if `is_c_rate` is true, as a C-rate. A C-rate is converted to a current with the
-capacity parameter of the control model, see the control equation. If `use_ramp_up` is true, the current is ramped up
-at the beginning of the simulation.
+capacity parameter of the external circuit model, see the control equation. If `use_ramp_up` is true, the current is
+ramped up at the beginning of the simulation.
 """
 struct CurrentStep{R} <: AbstractControlStep
 	value::R
@@ -39,30 +41,28 @@ function CurrentStep(value, direction, termination; is_c_rate = false, use_ramp_
 	return CurrentStep(value, is_c_rate, direction, termination, use_ramp_up, Float64(ramp_up_time))
 end
 
+"""
+Constant voltage, given in V.
+"""
 struct VoltageStep{R} <: AbstractControlStep
 	value::R
 	termination::AbstractTerminationCriterion
-	voltage_function::Function
-
-	function VoltageStep(value, termination, voltage_function = setup_voltage_function(value))
-		return new{typeof(value)}(value, termination, voltage_function)
-	end
 end
 
-mutable struct RestStep{R} <: AbstractControlStep
-	value::R
+"""
+Zero current.
+"""
+struct RestStep <: AbstractControlStep
 	termination::AbstractTerminationCriterion
 end
 
+"""
+Constant power, given in W.
+"""
 struct PowerStep{R} <: AbstractControlStep
-	value::Union{Nothing, R}
-	direction::Union{Nothing, String}
+	value::R
+	direction::String
 	termination::AbstractTerminationCriterion
-	power_function::Function
-
-	function PowerStep(value, direction, termination, voltage_function = setup_power_function(value))
-		return new{typeof(value)}(value, direction, termination, voltage_function)
-	end
 end
 
 """
@@ -80,24 +80,25 @@ positive for discharge. When the voltage reaches the lower limit during discharg
 the step switches to voltage control at the limit.
 """
 struct CurrentSeriesStep{R} <: AbstractControlStep
+	times::Vector{R}
 	current_function::Any # interpolator, callable as current_function(time)
 	lower_voltage_limit::R
 	upper_voltage_limit::R
 	termination::AbstractTerminationCriterion
 end
 
-function CurrentSeriesStep(times::AbstractVector, currents::AbstractVector, lower_voltage_limit, upper_voltage_limit, termination)
+function setup_current_series_step(times::AbstractVector, currents::AbstractVector, lower_voltage_limit, upper_voltage_limit, termination)
 
 	@assert length(times) == length(currents) "Times and Currents must have the same length"
 	@assert length(times) >= 1 "Times and Currents must be non-empty"
 	@assert issorted(times, lt = <) "Times must be strictly increasing"
 
 	R = promote_type(eltype(times), eltype(currents), typeof(lower_voltage_limit), typeof(upper_voltage_limit))
-	current_function = get_1d_interpolator(convert(Vector{R}, times), convert(Vector{R}, currents), cap_endpoints = true)
+	times = convert(Vector{R}, times)
+	current_function = get_1d_interpolator(times, convert(Vector{R}, currents), cap_endpoints = true)
 
-	return CurrentSeriesStep{R}(current_function, R(lower_voltage_limit), R(upper_voltage_limit), termination)
+	return CurrentSeriesStep{R}(times, current_function, R(lower_voltage_limit), R(upper_voltage_limit), termination)
 end
-
 
 
 ###########################################################################
@@ -116,44 +117,82 @@ function get_current_value(step::CurrentStep, time::Real)
 	return adjust_current_sign(value, step.direction)
 end
 
+"""
+The currents are positive for discharge and negative for charge.
+"""
+function adjust_current_sign(I, direction)
+	if direction == "discharging"
+		return I
+	elseif direction == "charging"
+		return -I
+	else
+		error("The direction $direction is not recognized.")
+	end
+end
 
-###########################################################################
-# Setup the voltage function that determines the voltage for a VoltageStep
+"""
+sineup rampup function
+"""
+function sineup(y1, y2, x1, x2, x)
+	#SINEUP Creates a sine ramp function
+	#
+	#   res = sineup(y1, y2, x1, x2, x) creates a sine ramp
+	#   starting at value y1 at point x1 and ramping to value y2 at
+	#   point x2 over the vector x.
+	y1, y2, x1, x2, x = promote(y1, y2, x1, x2, x)
+	T = typeof(x)
 
-function setup_voltage_function(voltage)
+	dy = y1 - y2
+	dx = abs(x1 - x2)
 
-	voltage_function(time) = voltage
+	res = zero(T)
 
-	return voltage_function
+	if (x >= x1) && (x <= x2)
+		res = dy / 2.0 .* cos(pi .* (x - x1) ./ dx) + y1 - (dy / 2)
+	end
+
+	if (x > x2)
+		res .+= y2
+	end
+
+	if (x < x1)
+		res .+= y1
+	end
+
+	return res
 
 end
 
-
-###########################################################################
-# Setup the power function that determines the power for a PowerStep
-
-function setup_power_function(power)
-
-	power_function(time) = power
-
-	return power_function
-
-end
 
 ##################################################
-# Get initial current values. The capacity (in Ah) is used for C-rates.
+# Initial current values. The capacity (in Ah) is used for C-rates.
 
-function get_initial_current(step::CurrentStep, capacity)
+function initial_current(step::CurrentStep, capacity)
 	value = get_current_value(step, 0.0)
 	return step.is_c_rate ? value * capacity : value
 end
 
 # For power, voltage and function control, the current is not known before solving. Zero is used as initial guess.
 
-get_initial_current(step::AbstractControlStep, capacity) = 0.0
+initial_current(step::AbstractControlStep, capacity) = 0.0
 
-function get_initial_current(step::CurrentSeriesStep, capacity)
+function initial_current(step::CurrentSeriesStep, capacity)
 	return step.current_function(0.0)
+end
+
+
+##################################################
+# Breakpoints: times (relative to the start of the step) that the time stepping should land on exactly, see
+# time_stepping.jl. Returns the first breakpoint after `time_in_step`, or Inf if there is none.
+
+function next_breakpoint(step::AbstractControlStep, time_in_step)
+	return next_breakpoint(step.termination, time_in_step)
+end
+
+function next_breakpoint(step::CurrentSeriesStep, time_in_step)
+	index = findfirst(t -> t > time_in_step + BREAKPOINT_TOLERANCE, step.times)
+	series_breakpoint = isnothing(index) ? Inf : step.times[index]
+	return min(series_breakpoint, next_breakpoint(step.termination, time_in_step))
 end
 
 
@@ -165,12 +204,12 @@ maximum_current(step::CurrentStep, capacity) = step.is_c_rate ? abs(step.value *
 
 
 ##################################################
-# Update the controller
+# Control target
 #
 # Given the control step, the target value of the control equation is set in the controller, together with whether
 # the target is a voltage or a current.
 
-function update_values_in_controller!(state, state0, step::PowerStep)
+function update_control_target!(state, state0, step::PowerStep)
 
 	power = step.value
 	voltage = state.Controller.voltage
@@ -182,7 +221,7 @@ function update_values_in_controller!(state, state0, step::PowerStep)
 
 end
 
-function update_values_in_controller!(state, state0, step::CurrentStep)
+function update_control_target!(state, state0, step::CurrentStep)
 
 	# The ramp up is applied with respect to the simulation time, so that only a current step at the beginning of
 	# the simulation is ramped up
@@ -192,17 +231,17 @@ function update_values_in_controller!(state, state0, step::CurrentStep)
 
 end
 
-function update_values_in_controller!(state, state0, step::VoltageStep)
+function update_control_target!(state, state0, step::VoltageStep)
 	state.Controller.target = step.value
 	state.Controller.target_is_voltage = true
 end
 
-function update_values_in_controller!(state, state0, step::RestStep)
-	state.Controller.target = step.value
+function update_control_target!(state, state0, step::RestStep)
+	state.Controller.target = 0.0
 	state.Controller.target_is_voltage = false
 end
 
-function update_values_in_controller!(state, state0, step::CurrentFunctionStep)
+function update_control_target!(state, state0, step::CurrentFunctionStep)
 
 	controller = state.Controller
 	time = controller.time - controller.step_start_time
@@ -212,7 +251,7 @@ function update_values_in_controller!(state, state0, step::CurrentFunctionStep)
 
 end
 
-function update_values_in_controller!(state, state0, step::CurrentSeriesStep)
+function update_control_target!(state, state0, step::CurrentSeriesStep)
 
 	# Relative tolerance for voltage hysteresis: if the voltage is within this fraction of the limit, we remain in
 	# voltage control to avoid oscillating between current and voltage control during the Newton iterations.

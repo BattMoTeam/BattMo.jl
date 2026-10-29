@@ -586,9 +586,23 @@ function get_output_metrics(
     charge_energy = Float64[]
     round_trip_efficiency = Float64[]
 
-    # Identify unique non-zero cycles
-    unique_cycles = unique(cycle_array)
-    cycles_reduced = Int.(unique_cycles[1:(end - 1)]) # Exclude last cycle index because it is incomplete
+    # Identify the complete cycles. The last cycle is complete if the simulation reached the last control step of the
+    # protocol. Otherwise the simulation was stopped before (for example at TotalTime) and the last cycle is excluded.
+    unique_cycles = Int.(unique(cycle_array))
+    last_controller = states[end][:Control][:Controller]
+    protocol = last_controller.protocol
+    last_cycle_complete = is_last_control_step(protocol, last_controller) || experiment_is_finished(protocol, last_controller)
+
+    # A protocol that ends with a "Cycle" step has cycles, even if it has only one
+    has_cycles = length(unique_cycles) > 1 || protocol.final_cycle_count > last(protocol.cycle_counts)
+
+    if !has_cycles
+        cycles_reduced = Int[] # No cycles, the metrics are computed globally
+    elseif last_cycle_complete
+        cycles_reduced = unique_cycles
+    else
+        cycles_reduced = unique_cycles[1:(end - 1)]
+    end
 
 
     if isempty(cycles_reduced)
@@ -995,7 +1009,7 @@ function get_padded_states(jutul_output::NamedTuple)
     total_number_of_cells = 0
     for (i, k) in enumerate(model_keys)
         pp = physical_representation(multimodel[k].data_domain)
-        if pp isa CurrentAndVoltageDomain
+        if pp isa ExternalCircuitDomain
             keep = false
         else
             gg = multimodel[k].domain.representation

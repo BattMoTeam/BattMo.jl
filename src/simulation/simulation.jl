@@ -720,7 +720,8 @@ function solver_configuration(
 
     timestep_selector = non_linear_solver["TimeStepSelectors"]
     if timestep_selector == "TimestepSelector"
-        timesel = [TimestepSelector()]
+        # The second selector makes the time stepping land on the breakpoints of the control steps
+        timesel = [TimestepSelector(), ControlStepTimestepSelector()]
     else
         error("Timestep selector $(timestep_selector) not recognized. Only 'TimestepSelector' is currently implemented.")
     end
@@ -797,11 +798,9 @@ function solver_configuration(
         s = get_simulator_storage(sim)
         m = get_simulator_model(sim)
 
-        # The simulation stops once the last control step has terminated. Jutul does not store the state of a time step
-        # in which the simulation is stopped, and this hook is called before the state is copied to state0. We
-        # therefore stop in the time step following the one in which the experiment finished, so that the final state
-        # is part of the output.
-        report[:stopnow] = experiment_is_finished(m[:Control].system.policy, s.state0.Control.Controller)
+        # The simulation stops once the last control step has terminated. Jutul does not store the state of the time
+        # step in which the simulation is stopped, so the output ends with the last state before the termination.
+        report[:stopnow] = experiment_is_finished(m[:Control].system.protocol, s.state.Control.Controller)
 
         return (done, report)
 
@@ -980,15 +979,7 @@ function setup_timesteps(
             con = Constants()
             totalTime = 1.1 * con.hour / CRate
 
-            dt = simulation_settings["TimeStepDuration"]
-
-            if haskey(input.model_settings, "RampUp")
-                nr = simulation_settings["RampUpSteps"]
-            else
-                nr = 1
-            end
-
-            timesteps = compute_rampup_timesteps(totalTime, dt, nr)
+            timesteps = setup_uniform_timesteps(input, totalTime)
 
         else
 
@@ -1000,10 +991,7 @@ function setup_timesteps(
 
             totalTime = ncycles * 2 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
-            dt = simulation_settings["TimeStepDuration"]
-            n = Int64(floor(totalTime / dt))
-
-            timesteps = repeat([dt], n)
+            timesteps = setup_uniform_timesteps(input, totalTime; split_first_step = false)
         end
 
     elseif protocol == "CCCV"
@@ -1016,10 +1004,7 @@ function setup_timesteps(
 
         totalTime = ncycles * 2.5 * (1 * con.hour / CRate + 1 * con.hour / DRate)
 
-        dt = simulation_settings["TimeStepDuration"]
-        n = Int64(floor(totalTime / dt))
-
-        timesteps = repeat([dt], n)
+        timesteps = setup_uniform_timesteps(input, totalTime; split_first_step = false)
 
     elseif protocol == "Function"
 
@@ -1036,14 +1021,9 @@ function setup_timesteps(
         timesteps = timesteps[timesteps .> 0.0]
 
     elseif protocol == "Experiment" || protocol == "Generic"
-        totalTime = cycling_protocol["TotalTime"]
-        dt = simulation_settings["TimeStepDuration"]
-        if haskey(input.model_settings, "RampUp")
-            nr = simulation_settings["RampUpSteps"]
-        else
-            nr = 1
-        end
-        timesteps = compute_rampup_timesteps(totalTime, dt, Int(nr))
+
+        timesteps = setup_uniform_timesteps(input, cycling_protocol["TotalTime"])
+
     else
 
         error("Control policy $protocol not recognized")
@@ -1051,6 +1031,26 @@ function setup_timesteps(
     end
 
     return timesteps
+
+end
+
+"""
+Time steps of size TimeStepDuration covering totalTime. When the model uses a current ramp up, the first time step is
+refined into RampUpSteps time steps so that the ramp up is resolved. Without ramp up, the time steps are uniform, or,
+with `split_first_step = true`, the first time step is split in two.
+"""
+function setup_uniform_timesteps(input, totalTime; split_first_step = true)
+
+    simulation_settings = input.simulation_settings
+    dt = simulation_settings["TimeStepDuration"]
+
+    if haskey(input.model_settings, "RampUp")
+        return compute_rampup_timesteps(totalTime, dt, Int(simulation_settings["RampUpSteps"]))
+    elseif split_first_step
+        return compute_rampup_timesteps(totalTime, dt, 1)
+    else
+        return repeat([dt], Int64(floor(totalTime / dt)))
+    end
 
 end
 

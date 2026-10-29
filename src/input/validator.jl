@@ -157,6 +157,25 @@ end
 
 
 """
+	validate_control_steps(control_steps)
+
+Validate a list of control steps against the control step schema. Throws an error listing the issues if the control
+steps are not valid.
+"""
+function validate_control_steps(control_steps)
+
+    result = validate(Schema(get_schema_control_steps()), control_steps)
+
+    if !isempty(result.issues)
+        log_schema_issues(result.issues, "ControlSteps")
+        error("The control steps are not valid. See the issues listed above.")
+    end
+
+    return nothing
+end
+
+
+"""
 Validate experiment strings by converting them to control steps and validating these against the control step schema.
 Returns the issues found, with paths relative to the cycling protocol.
 """

@@ -144,21 +144,21 @@ using Test
 
 		# Only the last step can be given without termination
 		rest = Dict("ControlType" => "Rest", "Termination" => Dict("Quantity" => "Time", "Value" => 10.0))
-		@test BattMo.GenericProtocol([rest, Dict("ControlType" => "Rest")], 0.5; capacity = 1.0) isa BattMo.GenericProtocol
-		@test_throws ErrorException BattMo.GenericProtocol([Dict("ControlType" => "Rest"), rest], 0.5; capacity = 1.0)
+		@test BattMo.ControlProtocol([rest, Dict("ControlType" => "Rest")], 0.5; capacity = 1.0) isa BattMo.ControlProtocol
+		@test_throws ErrorException BattMo.ControlProtocol([Dict("ControlType" => "Rest"), rest], 0.5; capacity = 1.0)
 
 		# The Matlab control input is converted to control steps as well
 		matlab_cccv = Dict("controlPolicy" => "CCCV", "ImaxDischarge" => 5.0, "ImaxCharge" => 5.0, "lowerCutoffVoltage" => 3.0,
 			"upperCutoffVoltage" => 4.1, "dEdtLimit" => 1e-4, "dIdtLimit" => 1e-4, "initialControl" => "charging", "numberOfCycles" => 2.0)
-		policy = BattMo.setup_matlab_control_policy(matlab_cccv)
-		@test length(policy.steps) == 8
-		@test policy.steps[1] isa BattMo.CurrentStep && policy.steps[2] isa BattMo.VoltageStep
-		@test policy.final_cycle_count == 2
+		protocol = BattMo.setup_matlab_control_protocol(matlab_cccv)
+		@test length(protocol.steps) == 8
+		@test protocol.steps[1] isa BattMo.CurrentStep && protocol.steps[2] isa BattMo.VoltageStep
+		@test protocol.final_cycle_count == 2
 
 		matlab_cc = Dict("controlPolicy" => "CCDischarge", "Imax" => 5.0, "lowerCutoffVoltage" => 3.0, "rampupTime" => 10.0)
-		policy = BattMo.setup_matlab_control_policy(matlab_cc)
-		@test policy.steps[1] isa BattMo.CurrentStep && policy.steps[2] isa BattMo.VoltageStep
-		@test policy.steps[2].termination isa BattMo.NoTermination
+		protocol = BattMo.setup_matlab_control_protocol(matlab_cc)
+		@test protocol.steps[1] isa BattMo.CurrentStep && protocol.steps[2] isa BattMo.VoltageStep
+		@test protocol.steps[2].termination isa BattMo.NoTermination
 
 	end
 
@@ -274,6 +274,53 @@ using Test
 		number_of_discharges = count(k -> I[k] > 1.0 && I[k - 1] < 1.0, 2:length(I))
 		@test number_of_discharges == 3
 		@test output.time_series["Time"][end] < 20000
+
+	end
+
+	@testset "Time stepping on control step breakpoints" begin
+
+		# Breakpoints of the control steps, relative to the start of the step
+		series = BattMo.setup_current_series_step([0.0, 7.0, 14.0], [1.0, 2.0, 3.0], -Inf, Inf, BattMo.NoTermination())
+		@test BattMo.next_breakpoint(series, 0.0) == 7.0
+		@test BattMo.next_breakpoint(series, 7.0) == 14.0
+		@test BattMo.next_breakpoint(series, 14.0) == Inf
+		rest = BattMo.RestStep(BattMo.AnyTermination([BattMo.TimeTermination(30.0, 1e-3), BattMo.VoltageTermination(3.0, "below", 1e-3)]))
+		@test BattMo.next_breakpoint(rest, 10.0) == 30.0
+		@test BattMo.next_breakpoint(rest, 30.0) == Inf
+
+		# A rest of 125 s followed by a current series inside a Generic protocol, with 50 s report steps: the time
+		# steps land on the end of the rest and on every point of the series
+		cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+		simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+		simulation_settings["TimeStepDuration"] = 50
+		solver_settings = load_solver_settings(; from_default_set = "direct")
+		solver_settings["Output"]["OutputSubstates"] = true
+
+		series_times = collect(0.0:7.0:70.0)
+		cycling_protocol = CyclingProtocol(Dict(
+			"Protocol" => "Generic",
+			"InitialStateOfCharge" => 0.9,
+			"InitialTemperature" => 298.15,
+			"TotalTime" => 400,
+			"ControlSteps" => [
+				Dict("ControlType" => "Rest", "Termination" => Dict("Quantity" => "Time", "Value" => 125)),
+				Dict("ControlType" => "CurrentSeries", "Times" => series_times, "Currents" => [isodd(i) ? 2.0 : 6.0 for i in eachindex(series_times)],
+					"Termination" => Dict("Quantity" => "Time", "Value" => 70)),
+				Dict("ControlType" => "Rest"),
+			],
+		))
+		sim = Simulation(LithiumIonBattery(), cell_parameters, cycling_protocol; simulation_settings)
+		output = solve(sim; solver_settings, info_level = -1)
+
+		times = Float64[]
+		for state in output.jutul_output.states
+			append!(times, [substate[:Control][:Controller].time for substate in get(state, :substates, [])])
+			push!(times, state[:Control][:Controller].time)
+		end
+		@test all(b -> any(t -> abs(t - b) < 1e-6, times), [125.0; 125.0 .+ series_times[2:end]])
+
+		series_state = first(s for s in output.jutul_output.states if s[:Control][:Controller].step_count == 1)
+		@test series_state[:Control][:Controller].step_start_time ≈ 125.0 atol = 1e-9
 
 	end
 

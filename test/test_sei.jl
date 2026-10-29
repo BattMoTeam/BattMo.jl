@@ -28,7 +28,8 @@ using Test
         sei_thickness = states["NegativeElectrode"]["Interphase"]["Thickness"]
         voltage_drop = states["NegativeElectrode"]["Interphase"]["VoltageDrop"]
 
-        @test length(sei_thickness[:, 2]) == 530
+        # 533 states: the CCCV protocol uses the current ramp up of the model settings, which refines the first time step
+        @test length(sei_thickness[:, 2]) == 533
         @test sei_thickness[2, 2] ≈ 1.0000000339846753e-8 atol = 1.0e-1
         @test voltage_drop[2, 2] ≈ -0.001401323958482127 atol = 1.0e-1
 

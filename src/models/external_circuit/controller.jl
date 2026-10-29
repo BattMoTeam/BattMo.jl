@@ -1,16 +1,14 @@
 #######################################################################################################################
 # Controller
 #
-# This script defines the controller that regulates the state of the external circuit during a simulation.
-# It is a state object
+# The controller is the state of the external circuit control during a simulation: the current control step, the
+# quantities monitored by the terminations and the target of the control equation. It is attached to the state of the
+# external circuit model.
 #######################################################################################################################
 
 
-##################################################
-# Define the controller type
-
-mutable struct GenericController{R <: Real, I <: Int} <: Controller
-	protocol::GenericProtocol
+mutable struct ExternalCircuitController{R <: Real, I <: Int}
+	protocol::ControlProtocol
 	step::AbstractControlStep
 	step_count::I              # global index of the current control step, starting at zero
 	step_index::I              # index of the current control step within its cycle, starting at zero
@@ -27,8 +25,8 @@ mutable struct GenericController{R <: Real, I <: Int} <: Controller
 	dEdt::R
 end
 
-function GenericController(
-	protocol::GenericProtocol,
+function ExternalCircuitController(
+	protocol::ControlProtocol,
 	step::AbstractControlStep,
 	step_count::Int,
 	step_index::Int,
@@ -46,7 +44,7 @@ function GenericController(
 	T = Float64,
 )
 	T = promote_type(T, typeof(time), typeof(step_start_time), typeof(current), typeof(voltage), typeof(state_of_charge), typeof(target), typeof(dEdt), typeof(dIdt))
-	GenericController{T, typeof(step_index)}(protocol, step, step_count, step_index, cycle_count, time, step_start_time, current, voltage, state_of_charge, target, target_is_voltage, target_is_c_rate, dIdt, dEdt)
+	ExternalCircuitController{T, typeof(step_index)}(protocol, step, step_count, step_index, cycle_count, time, step_start_time, current, voltage, state_of_charge, target, target_is_voltage, target_is_c_rate, dIdt, dEdt)
 end
 
 
@@ -55,23 +53,20 @@ end
 
 Controller at the start of a simulation, in the first control step of the protocol.
 """
-function initial_controller(protocol::GenericProtocol; T = Float64)
-	return GenericController(protocol, protocol.steps[1], 0, protocol.step_indices[1], protocol.cycle_counts[1], 0.0, 0.0, 0.0, protocol.initial_state_of_charge; T = T)
+function initial_controller(protocol::ControlProtocol; T = Float64)
+	return ExternalCircuitController(protocol, protocol.steps[1], 0, protocol.step_indices[1], protocol.cycle_counts[1], 0.0, 0.0, 0.0, protocol.initial_state_of_charge; T = T)
 end
 
 
-@inline function Jutul.numerical_type(x::GenericController{R, I}) where {R, I}
+@inline function Jutul.numerical_type(x::ExternalCircuitController{R, I}) where {R, I}
 	return R
 end
 
 
 ########################################################################
-# Define some function for quick copying of the controller instance
+# Copy of the controller
 
-"""
-Function to create (deep) copy of generic controller
-"""
-function copyController!(cv_copy::GenericController, cv::GenericController)
+function copy_controller!(cv_copy::ExternalCircuitController, cv::ExternalCircuitController)
 
 	cv_copy.protocol = cv.protocol
 	cv_copy.step = cv.step
@@ -92,22 +87,12 @@ function copyController!(cv_copy::GenericController, cv::GenericController)
 	return cv_copy
 end
 
-
-"""
-Overload function to copy GenericController
-"""
-function Base.copy(cv::GenericController)
-	return GenericController(cv.protocol, cv.step, cv.step_count, cv.step_index, cv.cycle_count, cv.time, cv.current, cv.voltage, cv.state_of_charge;
+function Base.copy(cv::ExternalCircuitController)
+	return ExternalCircuitController(cv.protocol, cv.step, cv.step_count, cv.step_index, cv.cycle_count, cv.time, cv.current, cv.voltage, cv.state_of_charge;
 		step_start_time = cv.step_start_time, target = cv.target, target_is_voltage = cv.target_is_voltage, target_is_c_rate = cv.target_is_c_rate,
 		dIdt = cv.dIdt, dEdt = cv.dEdt)
 end
 
-
-##################################################
-# Update controller values
-
-function Jutul.update_values!(old::GenericController, new::GenericController)
-
-	copyController!(old, new)
-
+function Jutul.update_values!(old::ExternalCircuitController, new::ExternalCircuitController)
+	return copy_controller!(old, new)
 end

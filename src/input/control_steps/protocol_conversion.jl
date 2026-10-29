@@ -1,10 +1,11 @@
 #######################################################################################################################
 # Protocol conversion
 #
-# All cycling protocols are run by the generic protocol. This script converts each cycling protocol to the json control
-# step structure described by the control step schema (see get_schema_control_steps):
+# All cycling protocols are run by the control protocol of the external circuit model (see
+# models/external_circuit/protocol.jl). This script converts each cycling protocol to the json control step structure
+# described by the control step schema (see get_schema_control_steps):
 #	- "Generic": the control steps are given directly
-#	- "Experiment": experiment strings, see experiment.jl
+#	- "Experiment": experiment strings, see experiment_strings.jl
 #	- "CC": constant current, possibly cycling between charge and discharge
 #	- "CCCV": cycles of constant current discharge, rest, constant current charge and constant voltage hold
 #	- "Function": the current is given by a function of time and voltage
@@ -20,11 +21,6 @@ export cycling_protocol_to_control_steps
 Convert a cycling protocol to a list of control steps following the control step schema.
 """
 function cycling_protocol_to_control_steps(cycling_protocol)
-	return get_control_steps(cycling_protocol)
-end
-
-
-function get_control_steps(cycling_protocol)
 
 	protocol = cycling_protocol["Protocol"]
 

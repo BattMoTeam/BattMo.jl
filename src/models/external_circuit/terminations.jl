@@ -1,7 +1,7 @@
 #############################################################################################################################################################
-# Termination Criterion
+# Terminations
 #
-# A termination criterion is an instance describing when a control step or simulation should terminate.
+# A termination criterion describes when a control step terminates.
 #
 # This script defines termination types:
 #	- TimeTermination: the control step terminates when the time spent in the step reaches `end_time`
@@ -12,8 +12,6 @@
 #	- StateOfChargeTermination: the control step terminates when the state of charge reaches `end_state_of_charge`
 #	- AnyTermination: the control step terminates when one of its conditions has terminated
 #	- NoTermination: the control step never terminates, it lasts until the end of the simulation
-#	- CycleCountTermination: the simulation terminates when the global cycle_count reaches `end_cycle_count`
-#	- ControlStepCountTermination: the simulation terminates when the global step_count reaches `end_control_step_count`
 #
 # Except for the time termination, each termination has a comparison, which is one of
 #	"above", "below", "absolute value above", "absolute value below"
@@ -49,7 +47,7 @@ struct NoTermination <: AbstractTerminationCriterion end
 
 A termination criterion that stops a control step when the voltage reaches `end_voltage`.
 """
-mutable struct VoltageTermination{R} <: AbstractTerminationCriterion
+struct VoltageTermination{R} <: AbstractTerminationCriterion
 	end_voltage::R
 	comparison::String
 	tolerance::R
@@ -61,7 +59,7 @@ end
 
 A termination criterion that stops a control step when the voltage change rate reaches `end_voltage_change`.
 """
-mutable struct VoltageChangeTermination{R} <: AbstractTerminationCriterion
+struct VoltageChangeTermination{R} <: AbstractTerminationCriterion
 	end_voltage_change::R
 	comparison::String
 	tolerance::R
@@ -73,7 +71,7 @@ end
 
 A termination criterion that stops a control step when the current reaches `end_current`.
 """
-mutable struct CurrentTermination{R} <: AbstractTerminationCriterion
+struct CurrentTermination{R} <: AbstractTerminationCriterion
 	end_current::R
 	comparison::String
 	tolerance::R
@@ -85,7 +83,7 @@ end
 
 A termination criterion that stops a control step when the current change rate reaches `end_current_change`.
 """
-mutable struct CurrentChangeTermination{R} <: AbstractTerminationCriterion
+struct CurrentChangeTermination{R} <: AbstractTerminationCriterion
 	end_current_change::R
 	comparison::String
 	tolerance::R
@@ -97,7 +95,7 @@ end
 
 A termination criterion that stops a control step when the state of charge reaches `end_state_of_charge`.
 """
-mutable struct StateOfChargeTermination{R} <: AbstractTerminationCriterion
+struct StateOfChargeTermination{R} <: AbstractTerminationCriterion
 	end_state_of_charge::R
 	comparison::String
 	tolerance::R
@@ -109,28 +107,8 @@ end
 
 A termination criterion that stops a control step when one of the conditions has terminated.
 """
-mutable struct AnyTermination <: AbstractTerminationCriterion
+struct AnyTermination <: AbstractTerminationCriterion
 	conditions::Vector{AbstractTerminationCriterion}
-end
-
-
-"""
-	CycleCountTermination(end_cycle_count)
-
-A termination criterion that stops time-stepping when the global cycle_count reaches `end_cycle_count`.
-"""
-struct CycleCountTermination{R} <: AbstractTerminationCriterion
-	end_cycle_count::R
-end
-
-
-"""
-	ControlStepCountTermination(end_control_step_count)
-
-A termination criterion that stops time-stepping when the global step_count reaches `end_control_step_count`.
-"""
-struct ControlStepCountTermination{R} <: AbstractTerminationCriterion
-	end_control_step_count::R
 end
 
 
@@ -205,6 +183,9 @@ function default_termination_tolerance(quantity)
 	end
 end
 
+
+#############################################################
+# Status of a state with respect to a termination
 
 """
 The get_status_on_termination_region function detects from the current state and control, if we are in the termination region. The functions return two flags :
@@ -281,7 +262,7 @@ end
 """
 Status used in the in-step constraint check (see check_constraints). Time conditions are treated as never reached
 there, because cutting the time step to end a step within the small time tolerance would require many time step
-cuts. A step with a time termination therefore ends at the end of the time step in which its duration is reached.
+cuts. The time stepping lands on the end of a time termination instead, see time_stepping.jl.
 """
 get_constraint_status(T::AbstractTerminationCriterion, state) = get_status_on_termination_region(T, state)
 
@@ -292,20 +273,18 @@ function get_constraint_status(T::AnyTermination, state)
 end
 
 
+#############################################################
+# Breakpoints of the terminations, see next_breakpoint in control_steps.jl
 
-##############################################################
-# Define termination criterion for the end of the simulation
+# Breakpoints closer than this (in seconds) to the current time are considered reached
+const BREAKPOINT_TOLERANCE = 1.0e-6
 
-function Jutul.timestepping_is_done(C::CycleCountTermination, simulator, states, substates, reports, solve_recorder)
+next_breakpoint(T::AbstractTerminationCriterion, time_in_step) = Inf
 
-	s = get_simulator_storage(simulator)
-
-	return s.state.Control.Controller.cycle_count >= C.end_cycle_count
+function next_breakpoint(T::TimeTermination, time_in_step)
+	return T.end_time > time_in_step + BREAKPOINT_TOLERANCE ? T.end_time : Inf
 end
 
-
-function Jutul.timestepping_is_done(C::ControlStepCountTermination, simulator, states, substates, reports, solve_recorder)
-
-	s = get_simulator_storage(simulator)
-	return s.state.Control.Controller.step_count + 1 > C.end_control_step_count
+function next_breakpoint(T::AnyTermination, time_in_step)
+	return minimum(next_breakpoint(condition, time_in_step) for condition in T.conditions)
 end

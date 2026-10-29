@@ -73,8 +73,9 @@ using Test
 
         I_1 = time_series["Current"]
 
-        @test I_1[2] ≈ -5.090421803494574 atol = 1.0e-1
-        @test I_1[50] ≈ 5.090421803494574 atol = 1.0e-1
+        # The first states resolve the current ramp up, index 6 is the first state after it
+        @test I_1[6] ≈ -5.090421803494574 atol = 1.0e-1
+        @test maximum(I_1) ≈ 5.090421803494574 atol = 1.0e-1
 
         cycling_protocol["CRate"] = 2
         cycling_protocol["DRate"] = 2
@@ -84,8 +85,8 @@ using Test
 
         I_2 = time_series["Current"]
 
-        @test I_2[2] ≈ I_1[2] * 2 atol = 1.0e-2
-        @test I_2[50] ≈ I_1[50] * 2 atol = 1.0e-2
+        @test I_2[6] ≈ I_1[6] * 2 atol = 1.0e-2
+        @test maximum(I_2) ≈ maximum(I_1) * 2 atol = 1.0e-2
 
 
         ############################
@@ -103,8 +104,9 @@ using Test
         I_1 = time_series["Current"]
 
 
-        @test I_1[2] ≈ -5.090421803494574 atol = 1.0e-1
-        @test I_1[765] ≈ 5.090421803494574 atol = 1.0e-1
+        # The first states resolve the current ramp up, index 6 is the first state after it
+        @test I_1[6] ≈ -5.090421803494574 atol = 1.0e-1
+        @test maximum(I_1) ≈ 5.090421803494574 atol = 1.0e-1
 
         cycling_protocol["CRate"] = 2
         cycling_protocol["DRate"] = 2
@@ -114,8 +116,8 @@ using Test
 
         I_2 = time_series["Current"]
 
-        @test I_2[2] ≈ I_1[2] * 2 atol = 1.0e-2
-        @test I_2[200] ≈ I_1[765] * 2 atol = 1.0e-2
+        @test I_2[6] ≈ I_1[6] * 2 atol = 1.0e-2
+        @test maximum(I_2) ≈ maximum(I_1) * 2 atol = 1.0e-2
 
         true
 

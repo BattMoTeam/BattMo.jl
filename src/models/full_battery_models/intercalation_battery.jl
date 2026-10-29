@@ -209,11 +209,11 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
     # electrode area is computed from the grid, and so that its dependency on the parameters is kept in AD/adjoints.
     capacity = min(computeElectrodeCapacity(model_neam, :NegativeElectrodeActiveMaterial), computeElectrodeCapacity(model_peam, :PositiveElectrodeActiveMaterial)) / 3600
 
-    # All cycling protocols are converted to generic control steps, see models/experiment/protocol_conversion.jl
-    policy = GenericProtocol(input.cycling_protocol, input; capacity = capacity, T = T)
+    # All cycling protocols are converted to generic control steps, see input/control_steps/protocol_conversion.jl
+    protocol = ControlProtocol(input.cycling_protocol, input; capacity = capacity, T = T)
 
-    sys_control = CurrentAndVoltageSystem(policy)
-    domain_control = CurrentAndVoltageDomain()
+    sys_control = ExternalCircuitSystem(protocol)
+    domain_control = ExternalCircuitDomain()
     model_control = SimulationModel(domain_control, sys_control)
 
     return model_control
@@ -946,9 +946,9 @@ function setup_initial_state(input, model::IntercalationBattery)
         if haskey(state, :Control)
             ctrl = state[:Control]
             if haskey(ctrl, :Controller)
-                ctrl[:Controller] = initial_controller(model.multimodel[:Control].system.policy)
+                ctrl[:Controller] = initial_controller(model.multimodel[:Control].system.protocol)
             end
-            ctrl[:Current] = [getInitCurrent(model.multimodel[:Control])]
+            ctrl[:Current] = [initial_current(model.multimodel[:Control])]
         end
 
         return state
@@ -1059,7 +1059,7 @@ function setup_initial_state(input, model::IntercalationBattery)
 
     init = Dict()
     init[:ElectricPotential] = posOCP - negOCP
-    init[:Current] = getInitCurrent(multimodel[:Control])
+    init[:Current] = initial_current(multimodel[:Control])
 
     initState[:Control] = init
 

@@ -127,7 +127,7 @@ function setup_config(
         s = Jutul.get_simulator_storage(sim)
         m = Jutul.get_simulator_model(sim)
 
-        report[:stopnow] = BattMo.experiment_is_finished(m[:Control].system.policy, s.state0.Control.Controller)
+        report[:stopnow] = BattMo.experiment_is_finished(m[:Control].system.protocol, s.state.Control.Controller)
 
         if done
             i += 1
