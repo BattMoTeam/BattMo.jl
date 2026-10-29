@@ -789,7 +789,7 @@ function solver_configuration(
         end
     end
 
-    if multimodel[:Control].system.policy isa CyclingCVPolicy || multimodel[:Control].system.policy isa CCPolicy
+    if multimodel[:Control].system.policy isa CyclingCVPolicy || multimodel[:Control].system.policy isa CCPolicy || multimodel[:Control].system.policy isa GenericProtocol
         if multimodel[:Control].system.policy isa CyclingCVPolicy
 
             cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
@@ -841,6 +841,12 @@ function solver_configuration(
                         report[:stopnow] = false
                     end
                 end
+
+            elseif multimodel[:Control].system.policy isa GenericProtocol
+
+                # The controller sets step_count past the last step once the last control step has terminated
+                report[:stopnow] = s.state.Control.Controller.step_count >= length(m[:Control].system.policy.steps)
+
             end
 
             return (done, report)
@@ -1077,10 +1083,9 @@ function setup_timesteps(
         timesteps = diff(series_times)
         timesteps = timesteps[timesteps .> 0.0]
 
-    elseif protocol == "Experiment"
+    elseif protocol == "Experiment" || protocol == "Generic"
         totalTime = cycling_protocol["TotalTime"]
         dt = simulation_settings["TimeStepDuration"]
-        n = totalTime / dt
         if haskey(input.model_settings, "RampUp")
             nr = simulation_settings["RampUpSteps"]
         else

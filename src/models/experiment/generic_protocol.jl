@@ -5,6 +5,12 @@
 #
 # This script defines cycling protocol types:
 #	- GenericProtocol: a protocol that can contain any combination and order of control steps
+#
+# The basis of the generic protocol is the json control step structure, described by the control step schema (see
+# get_schema_control_steps). The control steps are given either directly (Protocol "Generic", field "ControlSteps")
+# or as experiment strings (Protocol "Experiment", field "Experiment") which are first converted to control steps.
+# The control steps are validated against the schema, the "Cycle" steps are unfolded, and each step is then turned
+# into an AbstractControlStep instance.
 #######################################################################################################################
 
 
@@ -15,54 +21,18 @@ GenericProtocol
 struct GenericProtocol{V, R} <: AbstractPolicy where V <: Vector{Int}
 	steps::Vector{AbstractControlStep}
 	step_indices::V
-	step_counts::V
 	cycle_counts::V
-	maximum_current::R
 	rated_capacity::R
 	initial_state_of_charge::R
 end
 
-function GenericProtocol_(cycling_protocol::Experiment;
-	use_ramp_up = true,
-	ramp_up_time = 0.1,
-	capacity = nothing,
-	T = Float64)
 
-	experiment_list = cycling_protocol["Experiment"]
+"""
+	GenericProtocol(cycling_protocol, input; T = Float64)
 
-	if isa(experiment_list, String)
-		experiment_list = [experiment_list]
-	end
-
-	stepper = Stepper([], 0, 0, 0, [], [], [])
-
-	for (idx, step) in enumerate(experiment_list)
-		stepper = update_stepper!(stepper, step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time; T = T)
-	end
-
-	# Get maximum current value of all steps
-
-	current_values = []
-	for step in stepper.steps
-
-		if step isa CurrentStep || step isa RestStep
-			push!(current_values, step.value)
-		end
-
-	end
-
-	if isempty(current_values)
-		error("No current values found.")
-	else
-		maximum_current = maximum(current_values)
-	end
-
-	T = promote_type(T, typeof(maximum_current), typeof(capacity))
-
-	return GenericProtocol{typeof(stepper.step_indices), T}(stepper.steps, stepper.step_indices, stepper.step_counts, stepper.cycle_counts, maximum_current, capacity, cycling_protocol["InitialStateOfCharge"])
-end
-
-function GenericProtocol(cycling_protocol::Experiment, input; T = Float64)
+Set up the generic protocol from a cycling protocol with Protocol "Generic" or "Experiment".
+"""
+function GenericProtocol(cycling_protocol::CyclingProtocol, input; T = Float64)
 
 	use_ramp_up = haskey(input.model_settings, "RampUp")
 
@@ -74,7 +44,153 @@ function GenericProtocol(cycling_protocol::Experiment, input; T = Float64)
 		capacity = compute_cell_theoretical_capacity(input.cell_parameters)
 	end
 
-	return GenericProtocol_(cycling_protocol; use_ramp_up = use_ramp_up, ramp_up_time = ramp_up_time, capacity = capacity, T = T)
+	control_steps = get_control_steps(cycling_protocol)
+
+	return GenericProtocol(control_steps, cycling_protocol["InitialStateOfCharge"];
+		capacity = capacity, use_ramp_up = use_ramp_up, ramp_up_time = ramp_up_time, T = T)
+end
+
+
+"""
+	GenericProtocol(control_steps, initial_state_of_charge; capacity, use_ramp_up = true, ramp_up_time = 100, T = Float64)
+
+Set up the generic protocol from a list of control steps following the control step schema. The capacity (in Ah) is
+used to convert C-rates to currents and to compute the state of charge.
+"""
+function GenericProtocol(control_steps::AbstractVector, initial_state_of_charge;
+	capacity,
+	use_ramp_up = true,
+	ramp_up_time = 100,
+	T = Float64)
+
+	validate_control_steps(control_steps)
+
+	unfolded_steps = unfold_control_steps(control_steps)
+
+	steps = AbstractControlStep[setup_control_step(s.step, capacity, use_ramp_up, ramp_up_time) for s in unfolded_steps]
+	step_indices = Int[s.step_index for s in unfolded_steps]
+	cycle_counts = Int[s.cycle_count for s in unfolded_steps]
+
+	R = promote_type(T, typeof(capacity), typeof(initial_state_of_charge))
+
+	return GenericProtocol{Vector{Int}, R}(steps, step_indices, cycle_counts, capacity, initial_state_of_charge)
+end
+
+
+"""
+Get the list of control steps from a cycling protocol. Experiment strings are converted to control steps.
+"""
+function get_control_steps(cycling_protocol)
+
+	protocol = cycling_protocol["Protocol"]
+
+	if protocol == "Generic"
+		return cycling_protocol["ControlSteps"]
+	elseif protocol == "Experiment"
+		return experiment_to_control_steps(cycling_protocol["Experiment"])
+	else
+		error("Protocol $protocol cannot be converted to control steps.")
+	end
+
+end
+
+
+"""
+	validate_control_steps(control_steps)
+
+Validate a list of control steps against the control step schema. Throws an error listing the issues if the control
+steps are not valid.
+"""
+function validate_control_steps(control_steps)
+
+	schema = Schema(get_schema_control_steps())
+	result = validate(schema, control_steps)
+
+	if !isempty(result.issues)
+		log_schema_issues(result.issues, "ControlSteps")
+		error("The control steps are not valid. See the issues listed above.")
+	end
+
+	return nothing
+end
+
+
+"""
+	unfold_control_steps(control_steps)
+
+Unfold the "Cycle" control steps into a flat list. Each entry of the returned list is a named tuple with the control
+step dictionary, its index within the current cycle and the cycle count. Each repetition of an outermost "Cycle" step
+starts a new cycle.
+"""
+function unfold_control_steps(control_steps)
+
+	unfolded = NamedTuple{(:step, :step_index, :cycle_count), Tuple{Any, Int, Int}}[]
+	counter = (step_index = Ref(0), cycle_count = Ref(0))
+
+	unfold_control_steps!(unfolded, control_steps, counter, true)
+
+	return unfolded
+end
+
+function unfold_control_steps!(unfolded, control_steps, counter, outermost)
+
+	for step in control_steps
+
+		if step["ControlType"] == "Cycle"
+
+			for _ in 1:step["NumberOfCycles"]
+				outermost && start_new_cycle!(unfolded, counter)
+				unfold_control_steps!(unfolded, step["ControlSteps"], counter, false)
+			end
+
+			# Steps following an outermost cycle belong to a new cycle
+			outermost && start_new_cycle!(unfolded, counter)
+
+		else
+			push!(unfolded, (step = step, step_index = counter.step_index[], cycle_count = counter.cycle_count[]))
+			counter.step_index[] += 1
+		end
+	end
+
+	return unfolded
+end
+
+
+function start_new_cycle!(unfolded, counter)
+	# Only start a new cycle if the current one already contains steps, so that no cycle number is skipped
+	if !isempty(unfolded) && last(unfolded).cycle_count == counter.cycle_count[]
+		counter.cycle_count[] += 1
+		counter.step_index[] = 0
+	end
+end
+
+
+"""
+	setup_control_step(step, capacity, use_ramp_up, ramp_up_time)
+
+Create a control step instance from its json description.
+"""
+function setup_control_step(step::AbstractDict, capacity, use_ramp_up, ramp_up_time)
+
+	control_type = step["ControlType"]
+	termination = setup_termination(step["Termination"], capacity)
+
+	# json integers are converted to floats
+	value = haskey(step, "Value") ? float(step["Value"]) : nothing
+
+	if control_type == "Current"
+		current = haskey(step, "CRate") ? step["CRate"] * capacity : value
+		return CurrentStep(current, step["Direction"], termination, use_ramp_up; ramp_up_time)
+	elseif control_type == "Voltage"
+		return VoltageStep(value, termination)
+	elseif control_type == "Power"
+		return PowerStep(value, step["Direction"], termination)
+	elseif control_type == "Rest"
+		return RestStep(0.0, termination)
+	else
+		error("Control type $control_type not recognized.")
+	end
+
 end
 
 
@@ -125,7 +241,7 @@ function setup_initial_control_policy!(policy::GenericProtocol, input, parameter
 end
 
 function getInitCurrent(policy::GenericProtocol)
-	return policy.maximum_current
+	return get_initial_current(policy.steps[1])
 end
 
 
@@ -134,7 +250,6 @@ Implementation of the generic control protocol
 """
 function update_control_step_in_controller!(state, state0, protocol::GenericProtocol, dt)
 	control_steps = protocol.steps
-	step_counts = protocol.step_counts
 	cycle_counts = protocol.cycle_counts
 	step_indices = protocol.step_indices
 
@@ -218,10 +333,13 @@ function update_control_step_in_controller!(state, state0, protocol::GenericProt
 					adjust_time_based_termination_target!(control_step.termination, state0.Controller.time)
 
 				else
-					step_count = step_counts[1]
-					cycle_count = cycle_counts[1]
-					step_index = step_indices[1]
-					control_step = control_steps[1]
+					# The last control step has terminated. We keep its control for this time step and flag the end of
+					# the experiment by setting step_count past the last step. The simulation is stopped by the
+					# post-ministep hook set up in solver_configuration.
+					step_count = number_of_control_steps
+					step_index = previous_step_index
+					cycle_count = previous_cycle_count
+					control_step = previous_control_step
 				end
 
 			else
@@ -249,10 +367,11 @@ function update_control_step_in_controller!(state, state0, protocol::GenericProt
 				adjust_time_based_termination_target!(control_step.termination, state0.Controller.time)
 
 			else
-				step_count = step_counts[1]
-				step_index = step_indices[1]
-				cycle_count = cycle_counts[1]
-				control_step = control_steps[1]
+				# The last control step has terminated (see above)
+				step_count = number_of_control_steps
+				step_index = previous_step_index
+				cycle_count = previous_cycle_count
+				control_step = previous_control_step
 			end
 		end
 
@@ -274,7 +393,7 @@ We need to add the specific treatment of the controller variables for GenericPro
 """
 function Jutul.reset_state_to_previous_state!(
 	storage,
-	model::SimulationModel{CurrentAndVoltageDomain, CurrentAndVoltageSystem{GenericProtocol}, T3, T4},
+	model::SimulationModel{CurrentAndVoltageDomain, <:CurrentAndVoltageSystem{<:GenericProtocol}, T3, T4},
 ) where {T3, T4}
 
 	invoke(reset_state_to_previous_state!,

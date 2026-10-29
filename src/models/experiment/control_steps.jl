@@ -6,7 +6,8 @@
 #	- VoltageStep: voltage controlled control step
 #	- RestStep: control step where the current is set to zero
 #	- PowerStep: power controlled control step
-#	- StateOfChargeStep: SOC controlled control step
+#
+# The control steps are set up from their json description, see setup_control_step in generic_protocol.jl
 #######################################################################################################################
 
 ##################################################
@@ -54,12 +55,6 @@ struct PowerStep{R} <: AbstractControlStep
 		return new{typeof(value)}(value, direction, termination, voltage_function)
 	end
 end
-
-mutable struct StateOfChargeStep{R} <: AbstractControlStep
-	value::R
-	termination::AbstractTerminationCriterion
-end
-
 
 
 ###########################################################################
@@ -169,16 +164,14 @@ function get_initial_current(step::CurrentStep)
 	return step.current_function(0.0)
 end
 
+# For power and voltage control, the current is not known before solving. Zero is used as initial guess.
+
 function get_initial_current(step::PowerStep)
-	error("Power control cannot be the first control step")
+	return 0.0
 end
 
 function get_initial_current(step::VoltageStep)
-	error("Voltage control cannot be the first control step")
-end
-
-function get_initial_current(step::StateOfChargeStep)
-	error("State of charge control cannot be the first control step")
+	return 0.0
 end
 
 function get_initial_current(step::RestStep)
@@ -197,15 +190,6 @@ function update_values_in_controller!(state, step::PowerStep)
 	current = power/voltage
 
 	state.Controller.target = adjust_current_sign(current, step.direction)
-
-end
-
-function update_values_in_controller!(state, step::StateOfChargeStep)
-
-	state_of_charge = step.value
-	voltage = state.Controller.voltage
-
-	state.Controller.target = voltage
 
 end
 

@@ -591,8 +591,8 @@ function get_output_metrics(
         charge_energy = Float64[]
         round_trip_efficiency = Float64[]
 
-        # Identify unique non-zero cycles
-        unique_cycles = unique(cycle_array)
+        # Identify unique non-zero cycles. Controllers without cycle counting get the metrics computed globally.
+        unique_cycles = isnothing(cycle_array) ? Int[] : unique(cycle_array)
         cycles_reduced = Int.(unique_cycles[1:(end - 1)]) # Exclude last cycle index because it is incomplete
 
 

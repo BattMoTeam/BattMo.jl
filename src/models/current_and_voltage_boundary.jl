@@ -1411,8 +1411,6 @@ function Jutul.update_equation_in_entity!(v, i, state, state0, eq::ControlEquati
             v[] = I - ctrl.target
         elseif ctrl.step isa PowerStep
             v[] = I - ctrl.target
-        elseif ctrl.step isa StateOfChargeStep
-            v[] = phi - ctrl.target
         else
             error("Step $(ctrl.step) does not have an update equation.")
         end

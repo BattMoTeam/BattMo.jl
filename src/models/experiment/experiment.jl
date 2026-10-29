@@ -1,195 +1,266 @@
 #######################################################################################################################
-# Policies
+# Experiment strings
 #
-# A policy is a specific type of control
+# The experiment API lets the user describe a cycling protocol with strings such as
 #
-# This script defines policies:
-#	- ConstantCurrent: a constant current control
-#	- ConstantCurrentConstantVoltage: a constant current constant voltage control
-# 	- Experiment: a flexible experiment-like control
+#	"Charge at 1 A until 4.0 V"
+#	"Hold at 4.0 V until 1e-4 A/s"
+#	"Discharge at 0.5 C until 3.0 V or until 2 hours"
+#	"Rest for 30 minutes"
+#	"Repeat 2 times"
 #
-# These policy types are defined to create different user APIs for the generic control. The user can use the flexible 
-# experiment strings API or the specific policy ConstantCurrent or ConstantCurrentConstantVoltage API
+# This script converts a list of experiment strings into the json control step structure that is described by the
+# control step schema (see get_schema_control_steps). The control steps are then validated and turned into a
+# GenericProtocol, in the same way as control steps given directly in json.
+#
+# "Repeat N times" repeats all the previous entries of the list (or of the sub-list it belongs to) N more times. It is
+# converted into a "Cycle" control step.
 #
 #######################################################################################################################
 
-
-abstract type AbstractProtocol end
-
-
-##################################################
-# Define the different policy types
-
-struct Experiment <: AbstractProtocol
-	all::AbstractDict
-end
-
-
-#################################################################################
-# Define extensions for commonly used base functions for the AbstractProtocol type
-
-function Base.getindex(ps::AbstractProtocol, key::String)
-	value = get(ps.all, key, nothing)
-	if value === nothing
-		error("Parameter not found: $key")
-	else
-		return value
-	end
-end
-
-function Base.setindex!(ps::AbstractProtocol, value, key::String)
-	ps.all[key] = value
-end
-
-function Base.haskey(ps::AbstractProtocol, key::String)
-	return haskey(ps.all, key)
-end
-
-
-
-#################################################################################
-# Functions and types used to parse the experiment cycling protocol
-
-mutable struct Stepper
-	steps::Vector{AbstractControlStep}
-	step_count::Int
-	step_index::Int
-	cycle_count::Int
-	step_counts::Vector{Int}
-	step_indices::Vector{Int}
-	cycle_counts::Vector{Int}
-end
+export experiment_to_control_steps
 
 
 """
-Add a parsed step to the lists and update indices.
-"""
-function add_step!(stepper, step_instance)
-	if !isnothing(step_instance)
-		push!(stepper.steps, step_instance)
-		push!(stepper.step_indices, stepper.step_index)
-		push!(stepper.step_counts, stepper.step_count)
-		push!(stepper.cycle_counts, stepper.cycle_count)
-		stepper.step_index += 1
-		stepper.step_count += 1
-	end
-	return stepper
-end
+	experiment_to_control_steps(experiment_list)
 
+Convert a list of experiment strings into a list of control steps following the control step schema. An entry of the
+list can itself be a list of experiment strings, in which case a "Repeat" within that sub-list only repeats the
+entries of the sub-list.
 """
-Handle repeats for a given list of previous steps.
-"""
-function handle_repeats!(stepper, previous_steps, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10, T = Float64)
-	if depth > max_depth
-		error("Exceeded maximum repeat depth to prevent infinite recursion.")
+function experiment_to_control_steps(experiment_list)
+
+	if experiment_list isa AbstractString
+		experiment_list = [experiment_list]
 	end
 
-	for _ in 1:number_of_repeats
-		for (idx, prev_step) in enumerate(previous_steps)
-			stepper = update_stepper!(stepper, prev_step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth+1, max_depth = max_depth, T = T)
-		end
-	end
-	return stepper
+	control_steps = Vector{Dict{String, Any}}()
+
+	# The direction of the last charge or discharge step is used to choose the comparison of rest and hold terminations
+	last_direction = Ref{Union{Nothing, String}}(nothing)
+
+	add_experiment_control_steps!(control_steps, experiment_list, last_direction)
+
+	return control_steps
 end
 
 
-"""
-Process a single step (String or Vector).
-"""
+function add_experiment_control_steps!(control_steps, experiment_list, last_direction)
 
-function update_stepper!(stepper, step, idx, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = 1, max_depth = 10, T = Float64)
-	if step isa String
-		step_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(step, capacity, use_ramp_up; ramp_up_time, T = T)
-		stepper = add_step!(stepper, step_instance)
-		if increase_cycle_count
-			stepper.cycle_count += 1
-			stepper.step_index = 0
-		end
-		if !isnothing(number_of_repeats)
-			previous_strings = experiment_list[1:(idx-1)]
-			stepper = handle_repeats!(stepper, previous_strings, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth, max_depth = max_depth)
-		end
+	for entry in experiment_list
 
-	elseif step isa Vector
-		for (idx_sub, sub_step) in enumerate(step)
-			sub_instance, increase_cycle_count, number_of_repeats = parse_experiment_step(sub_step, capacity, use_ramp_up; ramp_up_time, T = T)
-			stepper = add_step!(stepper, sub_instance)
-			if increase_cycle_count
-				stepper.cycle_count += 1
-				stepper.step_index = 0
+		if entry isa AbstractString
 
+			if containsi(entry, "Repeat")
+
+				number_of_repeats = Base.parse(Int, match(r"\d+", entry).match)
+
+				if isempty(control_steps)
+					error("\"$entry\" has no previous experiment steps to repeat.")
+				end
+
+				repeated_steps = copy(control_steps)
+				empty!(control_steps)
+				push!(control_steps, Dict{String, Any}(
+					"ControlType" => "Cycle",
+					"NumberOfCycles" => number_of_repeats + 1,
+					"ControlSteps" => repeated_steps,
+				))
+
+			elseif containsi(entry, "Increase cycle count")
+
+				error("\"Increase cycle count\" is not supported. Use \"Repeat N times\" instead, each repetition is counted as a cycle.")
+
+			else
+				push!(control_steps, parse_experiment_step(entry, last_direction))
 			end
-			if !isnothing(number_of_repeats)
-				previous_strings = step[1:(idx_sub-1)]
-				stepper = handle_repeats!(stepper, previous_strings, number_of_repeats, experiment_list, capacity, use_ramp_up, ramp_up_time; depth = depth, max_depth = max_depth, T = T)
-			end
+
+		elseif entry isa AbstractVector
+
+			# A sub-list: a repeat inside the sub-list only repeats the entries of the sub-list
+			sub_steps = Vector{Dict{String, Any}}()
+			add_experiment_control_steps!(sub_steps, entry, last_direction)
+			append!(control_steps, sub_steps)
+
+		else
+			error("Experiment step must be a String or a Vector, got $(typeof(entry)).")
 		end
-	else
-		error("Experiment step must be a String or Vector.")
 	end
 
-	return stepper
+	return control_steps
 end
 
-function parse_experiment_step(step::String, capacity, use_ramp_up::Bool; ramp_up_time = 0.1, T = Float64)
-	increase_cycle_count = false
-	number_of_repeats = nothing
-	step_instance = nothing
 
-	if containsi(step, "Rest")
-		step_processed = process_values(step, capacity)
+"""
+	parse_experiment_step(step, last_direction)
 
-		T = promote_type(T, typeof(step_processed[:termination][:target]))
+Convert one experiment string into a control step dictionary.
+"""
+function parse_experiment_step(step::AbstractString, last_direction)
 
-		termination = get_termination_instance(step_processed[:termination][:type], step_processed[:termination][:target])
+	parts = split(step)
 
-		step_instance = RestStep(zero(Float64), termination)
+	if containsi(parts[1], "Rest")
 
-	elseif containsi(step, "Discharge") || containsi(step, "Charge")
-		step_processed = process_values(step, capacity)
+		termination = parse_terminations(step, parts, 2, "Rest", last_direction[])
 
-		control_type = step_processed[:control][:type]
+		return Dict{String, Any}("ControlType" => "Rest", "Termination" => termination)
 
-		T = promote_type(T, typeof(step_processed[:termination][:target]), typeof(step_processed[:control][:target]))
+	elseif containsi(parts[1], "Discharge") || containsi(parts[1], "Charge")
 
-		termination = get_termination_instance(step_processed[:termination][:type], step_processed[:termination][:target]; direction = step_processed[:control][:direction])
+		check_word(step, parts, 2, "at")
 
-		if control_type == "Current"
-			step_instance = CurrentStep(step_processed[:control][:target], step_processed[:control][:direction], termination, use_ramp_up; ramp_up_time)
-		elseif control_type == "Power"
-			step_instance = PowerStep(step_processed[:control][:target], step_processed[:control][:direction], termination)
+		direction = containsi(parts[1], "Discharge") ? "discharging" : "charging"
+		value = parse_number_or_fraction(parts[3])
+		unit = parts[4]
+
+		control_step = Dict{String, Any}("Direction" => direction)
+
+		if unit == "C"
+			control_step["ControlType"] = "Current"
+			control_step["CRate"] = value
+		elseif unit in ["A", "mA"]
+			control_step["ControlType"] = "Current"
+			control_step["Value"] = convert_to_A(value, unit)
+		elseif unit in ["W", "mW"]
+			control_step["ControlType"] = "Power"
+			control_step["Value"] = convert_to_W(value, unit)
 		else
-			error("Quantity $control_type is not recognized as control step for a charge or discharge.")
+			error("Unit $unit in \"$step\" not recognized. A charge or discharge is controlled in A, mA, C, W or mW.")
 		end
 
-	elseif containsi(step, "Hold")
-		step_processed = process_values(step, capacity)
+		control_step["Termination"] = parse_terminations(step, parts, 5, direction, last_direction[])
 
-		T = promote_type(T, typeof(step_processed[:termination][:target]), typeof(step_processed[:control][:target]))
+		last_direction[] = direction
 
-		termination = get_termination_instance(step_processed[:termination][:type], step_processed[:termination][:target])
+		return control_step
 
-		control_type = step_processed[:control][:type]
-		if control_type == "Voltage"
-			step_instance = VoltageStep(step_processed[:control][:target], termination)
-		elseif control_type == "StateOfCharge"
-			step_instance = StateOfChargeStep(step_processed[:control][:target], termination)
+	elseif containsi(parts[1], "Hold")
+
+		check_word(step, parts, 2, "at")
+
+		value = parse_number_or_fraction(parts[3])
+		unit = parts[4]
+
+		if unit in ["V", "mV"]
+			voltage = convert_to_V(value, unit)
+		elseif containsi(unit, "SOC")
+			error("Holding at a state of charge (\"$step\") is not supported. Use a voltage hold instead.")
 		else
-			error("Quantity $control_type is not recognized as control step for a charge or discharge.")
+			error("Unit $unit in \"$step\" not recognized. A hold is controlled in V or mV.")
 		end
 
+		termination = parse_terminations(step, parts, 5, "Hold", last_direction[])
 
-	elseif containsi(step, "Increase cycle count")
-		increase_cycle_count = true
+		return Dict{String, Any}("ControlType" => "Voltage", "Value" => voltage, "Termination" => termination)
 
-	elseif containsi(step, "Repeat")
-		number_of_repeats = Base.parse(Int, match(r"\d+", step).match)
 	else
-		error("Unknown control step: $step")
+		error("Unknown control step: \"$step\"")
 	end
 
-	return step_instance, increase_cycle_count, number_of_repeats
+end
 
+
+"""
+Parse the termination part of an experiment string starting at index `start`, for instance "until 4.0 V" or
+"until 4.0 V or until 1 hour". Returns a termination dictionary, or a list of them when the conditions are combined
+with "or".
+"""
+function parse_terminations(step, parts, start, step_type, last_direction)
+
+	terminations = Dict{String, Any}[]
+
+	index = start
+	while true
+
+		if length(parts) < index + 2 || !(parts[index] in ["for", "until"])
+			error("The termination of \"$step\" does not have the correct structure. Expected for example \"until 4.0 V\" or \"for 1 hour\".")
+		end
+
+		value = parse_number_or_fraction(parts[index + 1])
+		unit = parts[index + 2]
+
+		push!(terminations, parse_termination(value, unit, step_type, last_direction))
+
+		index += 3
+
+		if index > length(parts)
+			break
+		end
+
+		check_word(step, parts, index, "or")
+		index += 1
+	end
+
+	return length(terminations) == 1 ? terminations[1] : terminations
+end
+
+
+function parse_termination(value, unit, step_type, last_direction)
+
+	quantity, value = unit_to_termination_quantity(value, unit)
+
+	termination = Dict{String, Any}("Quantity" => quantity, "Value" => value)
+
+	if quantity != "Time"
+		termination["Comparison"] = default_comparison(quantity, step_type, last_direction)
+	end
+
+	return termination
+end
+
+
+"""
+Default comparison for a termination of an experiment string. During a charge, the voltage and state of charge
+increase. During a discharge, they decrease. During a rest the voltage relaxes in the direction opposite to the
+previous charge or discharge. Currents and change rates decay in absolute value.
+"""
+function default_comparison(quantity, step_type, last_direction)
+
+	if quantity in ["Current", "CRate", "VoltageChange", "CurrentChange"]
+		return "absolute value below"
+	end
+
+	if step_type in ["charging", "discharging"]
+		direction = step_type
+	elseif step_type == "Rest" && quantity == "Voltage"
+		direction = isnothing(last_direction) ? nothing : get_opposite_direction(last_direction)
+	else
+		direction = last_direction
+	end
+
+	return direction == "charging" ? "above" : "below"
+end
+
+
+function unit_to_termination_quantity(value, unit)
+
+	if any(tu -> lowercase(unit) == lowercase(tu), time_units())
+		return "Time", convert_to_seconds(value, unit)
+	elseif occursin("/", unit)
+		if startswith(unit, "V") || startswith(unit, "mV")
+			return "VoltageChange", convert_to_V_s(value, unit)
+		elseif startswith(unit, "A") || startswith(unit, "mA")
+			return "CurrentChange", convert_to_A_s(value, unit)
+		end
+	elseif unit in ["V", "mV"]
+		return "Voltage", convert_to_V(value, unit)
+	elseif unit in ["A", "mA"]
+		return "Current", convert_to_A(value, unit)
+	elseif unit == "C"
+		return "CRate", value
+	elseif containsi(unit, "SOC")
+		return "StateOfCharge", value
+	end
+
+	error("Unknown termination unit: $unit")
+end
+
+
+function check_word(step, parts, index, word)
+	if length(parts) < index || parts[index] != word
+		error("Expected \"$word\" at position $index in \"$step\".")
+	end
 end
 
 
@@ -204,159 +275,11 @@ function parse_number_or_fraction(s::AbstractString)::Float64
 end
 
 
-
-function process_values(str::AbstractString, capacity)
-	# Split the string into parts by spaces
-	parts = split(str)
-
-	if parts[2] == "at"
-		control_target = parse_number_or_fraction(parts[3])
-		control_unit = parts[4]
-
-		control_direction = type_to_direction(parts[1])
-		control_target, control_type = type_to_unit(control_target, control_unit; capacity)
-
-
-		if parts[5] in ["for", "until"]
-			if length(parts) <= 7
-				termination_target = parse_number_or_fraction(parts[6])
-				termination_unit = parts[7]
-
-				termination_target, termination_type = type_to_unit(termination_target, termination_unit; capacity)
-
-			elseif length(parts) > 7 && parts[8] == "or"
-
-				termination_target = parse_number_or_fraction(parts[6])
-				termination_unit = parts[7]
-
-				termination_target, termination_type = type_to_unit(termination_target, termination_unit; capacity)
-
-				if parts[9] in ["for", "until"]
-
-					termination_target_2 = parse_number_or_fraction(parts[10])
-					termination_unit_2 = parts[11]
-					termination_target_2, termination_type_2 = type_to_unit(termination_target_2, termination_unit_2; capacity)
-
-					termination_target = Vector{Float64}([termination_target, termination_target_2])
-					termination_type = [termination_type, termination_type_2]
-
-				else
-					error("Conditional termination does not recognize $(parts[6])")
-				end
-			else
-				error("The conditional termination does not have the correct structure.")
-
-			end
-		else
-			error("$(parts[5]) in experiment string not recognized.")
-		end
-
-	elseif parts[2] in ["for", "until"]
-		control_type = nothing
-		control_target = nothing
-		control_direction = nothing
-
-		if length(parts) <= 4
-			termination_target = parse_number_or_fraction(parts[3])
-			termination_unit = parts[4]
-
-			termination_target, termination_type = type_to_unit(termination_target, termination_unit)
-
-		elseif length(parts) > 4 && parts[5] == "or"
-
-			termination_target = parse_number_or_fraction(parts[3])
-			termination_unit = parts[4]
-
-			termination_target, termination_type = type_to_unit(termination_target, termination_unit)
-
-
-			if parts[6] in ["for", "until"]
-
-				termination_target_2 = parse_number_or_fraction(parts[7])
-				termination_unit_2 = parts[8]
-
-				termination_target_2, termination_type_2 = type_to_unit(termination_target_2, termination_unit_2)
-
-				termination_target = Vector{Float64}([termination_target, termination_target_2])
-				termination_type = [termination_type, termination_type_2]
-			else
-				error("Conditional termination does not recognize $(parts[6])")
-			end
-		else
-			error("The conditional termination does not have the correct structure.")
-
-		end
-	else
-		error("$(parts[2]) in experiment string not recognized.")
-	end
-
-	step_dict = Dict(
-		:control => Dict(
-			:type=>control_type,
-			:target => control_target,
-			:direction => control_direction,
-		),
-		:termination => Dict(
-			:type => termination_type,
-			:target => termination_target,
-		))
-
-
-
-	return step_dict
-end
-
-
-function type_to_direction(value::AbstractString)
-
-	if value == "Charge"
-		direction = "charging"
-	elseif value == "Discharge"
-		direction = "discharging"
-	else
-		direction = nothing
-	end
-	return direction
-end
-
-function type_to_unit(value::Float64, unit::AbstractString; capacity = nothing)
-	if containsi(unit, "V")
-		if containsi(unit, "V/")
-			quantity = "VoltageChange"
-			return convert_to_V_s(value, unit), quantity
-		else
-			quantity = "Voltage"
-			return convert_to_V(value, unit), quantity
-		end
-	elseif containsi(unit, "A")
-		if containsi(unit, "A/")
-			quantity = "CurrentChange"
-			return convert_to_A_s(value, unit), quantity
-		else
-			quantity = "Current"
-			return convert_to_A(value, unit), quantity
-		end
-	elseif any(tu -> lowercase(unit) == lowercase(tu), time_units())
-		return convert_to_seconds(value, unit), "Time"
-	elseif containsi(unit, "C")
-		if containsi(unit, "SOC")
-			return value, "StateOfCharge"
-		else
-			return convert_to_A(value, unit; capacity), "Current"
-		end
-	elseif containsi(unit, "W")
-		return convert_to_W(value, unit), "Power"
-	else
-		error("Unknown unit: $unit")
-	end
-end
-
 function time_units()
 	return ["s", "second", "seconds", "min", "minute", "minutes", "mins", "h", "hour", "hours"]
 end
 
 function convert_to_seconds(value::Float64, unit::AbstractString)
-	@assert isa(value, Number)
 	unit_lower = lowercase(unit)
 	if unit_lower in ["s", "second", "seconds"]
 		return value
@@ -370,38 +293,26 @@ function convert_to_seconds(value::Float64, unit::AbstractString)
 end
 
 function convert_to_V(value::Float64, unit::AbstractString)
-	@assert isa(value, Number)
-	unit_part = unit
-
-	if unit_part == "V"
+	if unit == "V"
 		return value
-	elseif unit_part == "mV"
+	elseif unit == "mV"
 		return value * 1e-3
 	else
 		error("Unknown unit: $unit")
 	end
 end
 
-function convert_to_A(value::Float64, unit::AbstractString; capacity = nothing)
-	@assert isa(value, Number)
-	unit_part = unit
-	if unit_part == "A"
+function convert_to_A(value::Float64, unit::AbstractString)
+	if unit == "A"
 		return value
-	elseif unit_part == "mA"
+	elseif unit == "mA"
 		return value * 1e-3
-	elseif unit_part == "C"
-		con = Constants()
-
-		value = capacity * value
-
-		return value
 	else
 		error("Unknown unit: $unit")
 	end
 end
 
 function convert_to_W(value::Float64, unit::AbstractString)
-	@assert isa(value, Number)
 	if unit == "W"
 		return value
 	elseif unit == "mW"
@@ -413,40 +324,26 @@ end
 
 
 function convert_to_V_s(value::Float64, unit::AbstractString)
-	@assert isa(value, Number)
-	unit = strip(unit)
-
-	parts = split(unit, '/')
+	parts = split(strip(unit), '/')
 	if length(parts) != 2
 		error("Invalid unit format for voltage change: $unit")
 	end
 
-	voltage_unit = parts[1]
-	time_unit = parts[2]
-
-	# Use existing conversion functions
-	voltage_in_volts = convert_to_V(1.0, voltage_unit)  # scale factor for voltage
-	time_in_seconds = convert_to_seconds(1.0, time_unit) # scale factor for time
+	voltage_in_volts = convert_to_V(1.0, parts[1])  # scale factor for voltage
+	time_in_seconds = convert_to_seconds(1.0, parts[2]) # scale factor for time
 
 	return value * voltage_in_volts / time_in_seconds
 end
 
 
 function convert_to_A_s(value::Float64, unit::AbstractString)
-	@assert isa(value, Number)
-	unit = strip(unit)
-
-	parts = split(unit, '/')
+	parts = split(strip(unit), '/')
 	if length(parts) != 2
 		error("Invalid unit format for current change: $unit")
 	end
 
-	current_unit = parts[1]
-	time_unit = parts[2]
-
-	# Use existing conversion functions
-	current_in_amperes = convert_to_A(1.0, current_unit)  # scale factor for current
-	time_in_seconds = convert_to_seconds(1.0, time_unit) # scale factor for time
+	current_in_amperes = convert_to_A(1.0, parts[1])  # scale factor for current
+	time_in_seconds = convert_to_seconds(1.0, parts[2]) # scale factor for time
 
 	return value * current_in_amperes / time_in_seconds
 end

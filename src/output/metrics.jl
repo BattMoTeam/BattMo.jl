@@ -82,9 +82,9 @@ function compute_discharge_capacity(states; cycle_number = nothing)
     t = [state[:Control][:Controller].time for state in states]
     I = [state[:Control][:Current][1] for state in states]
 
-    valid_cycles, cycle_array = get_valid_cycles(states)
-
     if !isnothing(cycle_number)
+        valid_cycles, cycle_array = get_valid_cycles(states)
+
         if cycle_number ∉ valid_cycles
             return 0.0  # Skip singleton cycle
         end

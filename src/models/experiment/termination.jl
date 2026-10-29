@@ -4,14 +4,19 @@
 # A termination criterion is an instance describing when a control step or simulation should terminate.
 #
 # This script defines termination types:
-#	- TimeTermination: the control step or simulation will terminate when the time reaches `end_time`
-#	- VoltageTermination: the control step or simulation will terminate when the voltage reaches `end_voltage`
-#	- VoltageChangeTermination: the control step or simulation will terminate when the voltage changes reaches `end_voltage_change`
-#	- CurrentTermination: the control step or simulation will terminate when the current reaches `end_current`
-#	- CurrentChangeTermination: the control step or simulation will terminate when the current change reaches `end_current_change`
-#	- ConditionalTermination: the control step or simulation will terminate when one of the conditions has terminated
-#	- CycleCountTermination: the control step or simulation will terminate when the global cycle_index reaches `end_cycle_index`
-#	- ControlStepCountTermination: the control step or simulation will terminate when the global control_step_count reaches `end_control_step_count`
+#	- TimeTermination: the control step terminates when the time spent in the step reaches `end_time`
+#	- VoltageTermination: the control step terminates when the voltage reaches `end_voltage`
+#	- VoltageChangeTermination: the control step terminates when the voltage change rate reaches `end_voltage_change`
+#	- CurrentTermination: the control step terminates when the current reaches `end_current`
+#	- CurrentChangeTermination: the control step terminates when the current change rate reaches `end_current_change`
+#	- StateOfChargeTermination: the control step terminates when the state of charge reaches `end_state_of_charge`
+#	- AnyTermination: the control step terminates when one of its conditions has terminated
+#	- CycleCountTermination: the simulation terminates when the global cycle_count reaches `end_cycle_count`
+#	- ControlStepCountTermination: the simulation terminates when the global step_count reaches `end_control_step_count`
+#
+# Except for the time termination, each termination has a comparison, which is one of
+#	"above", "below", "absolute value above", "absolute value below"
+# and an absolute tolerance defining the width of the termination region around the target.
 #
 #############################################################################################################################################################
 
@@ -20,9 +25,10 @@
 # Define the termination types
 
 """
-	TimeTermination(end_time, tolerance)
+	TimeTermination(end_time, end_time_adjusted, tolerance)
 
-A termination criterion that stops a control step or time-stepping when the time reaches `end_time`.
+A termination criterion that stops a control step when the time spent in the step reaches `end_time`.
+`end_time_adjusted` is the corresponding absolute simulation time, which is set when the step starts.
 """
 mutable struct TimeTermination{R} <: AbstractTerminationCriterion
 	end_time::R
@@ -32,81 +38,79 @@ end
 
 
 """
-	VoltageTermination(end_voltage,direction. tolerance)
+	VoltageTermination(end_voltage, comparison, tolerance)
 
-A termination criterion that stops a control step or time-stepping when the voltage reaches `end_voltage`.
+A termination criterion that stops a control step when the voltage reaches `end_voltage`.
 """
 mutable struct VoltageTermination{R} <: AbstractTerminationCriterion
 	end_voltage::R
-	direction::String
+	comparison::String
 	tolerance::R
-
 end
 
 
 """
-	VoltageChangeTermination(end_voltage_change,tolerance)
+	VoltageChangeTermination(end_voltage_change, comparison, tolerance)
 
-A termination criterion that stops a control step or time-stepping when the voltage changes reaches `end_voltage_change`.
+A termination criterion that stops a control step when the voltage change rate reaches `end_voltage_change`.
 """
 mutable struct VoltageChangeTermination{R} <: AbstractTerminationCriterion
 	end_voltage_change::R
+	comparison::String
 	tolerance::R
 end
 
 
 """
-	CurrentTermination(end_current,direction,tolerance)
+	CurrentTermination(end_current, comparison, tolerance)
 
-A termination criterion that stops a control step or time-stepping when the current reaches `end_current`.
+A termination criterion that stops a control step when the current reaches `end_current`.
 """
 mutable struct CurrentTermination{R} <: AbstractTerminationCriterion
 	end_current::R
-	direction::String
+	comparison::String
 	tolerance::R
-
 end
 
-"""
-	CurrentChangeTermination(end_current_change, tolerance)
 
-A termination criterion that stops a control step or time-stepping when the current change reaches `end_current_change`.
+"""
+	CurrentChangeTermination(end_current_change, comparison, tolerance)
+
+A termination criterion that stops a control step when the current change rate reaches `end_current_change`.
 """
 mutable struct CurrentChangeTermination{R} <: AbstractTerminationCriterion
 	end_current_change::R
+	comparison::String
 	tolerance::R
-
 end
 
 
 """
-	StateOfChargeTermination(end_state_of_charge, tolerance)
+	StateOfChargeTermination(end_state_of_charge, comparison, tolerance)
 
-A termination criterion that stops a control step or time-stepping when the state of charge reaches `end_state_of_charge`.
+A termination criterion that stops a control step when the state of charge reaches `end_state_of_charge`.
 """
 mutable struct StateOfChargeTermination{R} <: AbstractTerminationCriterion
 	end_state_of_charge::R
-	direction::AbstractString
+	comparison::String
 	tolerance::R
-
 end
 
 
 """
-	ConditionalTermination(condition_1, condition_2)
+	AnyTermination(conditions)
 
-A termination criterion that stops a control step or time-stepping when one of the conditions has terminated.
+A termination criterion that stops a control step when one of the conditions has terminated.
 """
-mutable struct ConditionalTermination <: AbstractTerminationCriterion
-	condition_1::AbstractTerminationCriterion
-	condition_2::AbstractTerminationCriterion
+mutable struct AnyTermination <: AbstractTerminationCriterion
+	conditions::Vector{AbstractTerminationCriterion}
 end
 
 
 """
-	CycleCountTermination(end_cycle_index)
+	CycleCountTermination(end_cycle_count)
 
-A termination criterion that stops time-stepping when the global cycle_index reaches `end_cycle_index`.
+A termination criterion that stops time-stepping when the global cycle_count reaches `end_cycle_count`.
 """
 struct CycleCountTermination{R} <: AbstractTerminationCriterion
 	end_cycle_count::R
@@ -114,9 +118,9 @@ end
 
 
 """
-	ControlStepCountTermination(end_control_step_index)
+	ControlStepCountTermination(end_control_step_count)
 
-A termination criterion that stops time-stepping when the global control_step_count reaches `end_control_step_count`.
+A termination criterion that stops time-stepping when the global step_count reaches `end_control_step_count`.
 """
 struct ControlStepCountTermination{R} <: AbstractTerminationCriterion
 	end_control_step_count::R
@@ -124,56 +128,66 @@ end
 
 
 #############################################################
-# Define termination criterion for the end of a control step
+# Setup the termination criteria from the json input
 
+"""
+	setup_termination(termination, capacity)
 
-function get_termination_instance(quantity::Vector{String}, target; direction = "discharging")
+Create a termination criterion from its json description (see the `Termination` definition in the control step schema).
+A list of terminations gives an `AnyTermination`. The capacity (in Ah) is used to convert `CRate` terminations to currents.
+"""
+function setup_termination(termination::AbstractVector, capacity)
 
-	termination_1 = get_termination_instance(quantity[1], target[1]; direction)
-	termination_2 = get_termination_instance(quantity[2], target[2]; direction)
-	termination = ConditionalTermination(termination_1, termination_2)
-	return termination
+	conditions = AbstractTerminationCriterion[setup_termination(t, capacity) for t in termination]
 
-end
-
-function get_termination_instance(quantity::AbstractString, target; direction = "discharging")
-
-
-	if quantity == "Voltage"
-		return VoltageTermination(target, direction, 1e-3)
-	elseif quantity == "VoltageChange"
-		return VoltageChangeTermination(target, 1e-1)
-	elseif quantity == "Current"
-		return CurrentTermination(target, direction, 1e-4)
-	elseif quantity == "CurrentChange"
-		return CurrentChangeTermination(target, 1e-1)
-	elseif quantity == "Time"
-		return TimeTermination(target, target, 1e-3)
-	elseif quantity == "StateOfCharge"
-		return StateOfChargeTermination(target, direction, 1e-3)
+	if length(conditions) == 1
+		return conditions[1]
 	else
-		error("Unknown quantity: $quantity")
+		return AnyTermination(conditions)
 	end
 
 end
 
-function adjust_time_based_termination_target!(termination::TimeTermination, time)
-	promote(typeof(time), typeof(termination.end_time))
+function setup_termination(termination::AbstractDict, capacity)
 
+	quantity = termination["Quantity"]
+	value = float(termination["Value"]) # json integers are converted to floats
+	comparison = get(termination, "Comparison", "above")
+
+	# The tolerances are relative to the target value
+	if quantity == "Time"
+		return TimeTermination(value, value, 1e-3)
+	elseif quantity == "Voltage"
+		return VoltageTermination(value, comparison, 1e-3 * abs(value))
+	elseif quantity == "VoltageChange"
+		return VoltageChangeTermination(value, comparison, 1e-1 * abs(value))
+	elseif quantity == "Current"
+		return CurrentTermination(value, comparison, 1e-4 * abs(value))
+	elseif quantity == "CRate"
+		current = value * capacity
+		return CurrentTermination(current, comparison, 1e-4 * abs(current))
+	elseif quantity == "CurrentChange"
+		return CurrentChangeTermination(value, comparison, 1e-1 * abs(value))
+	elseif quantity == "StateOfCharge"
+		return StateOfChargeTermination(value, comparison, 1e-3 * abs(value))
+	else
+		error("Unknown termination quantity: $quantity")
+	end
+
+end
+
+
+function adjust_time_based_termination_target!(termination::TimeTermination, time)
 	termination.end_time_adjusted = time + termination.end_time
 end
 
-function adjust_time_based_termination_target!(termination::ConditionalTermination, time)
-
-	if termination.condition_1 isa TimeTermination
-		adjust_time_based_termination_target!(termination.condition_1, time)
-	end
-	if termination.condition_2 isa TimeTermination
-		adjust_time_based_termination_target!(termination.condition_2, time)
+function adjust_time_based_termination_target!(termination::AnyTermination, time)
+	for condition in termination.conditions
+		adjust_time_based_termination_target!(condition, time)
 	end
 end
 
-function adjust_time_based_termination_target!(termination::T, time) where T <: Union{VoltageTermination, VoltageChangeTermination, CurrentTermination, CurrentChangeTermination, StateOfChargeTermination}
+function adjust_time_based_termination_target!(termination::AbstractTerminationCriterion, time)
 end
 
 
@@ -182,137 +196,62 @@ The get_status_on_termination_region function detects from the current state and
 - before_termination_region : the state is before the termination region for the current control
 - after_termination_region : the state is after the termination region for the current control
 """
-function get_status_on_termination_region(T::VoltageTermination, state)
-	target = T.end_voltage
-	tol = T.tolerance
+function get_status_on_termination_region(value, target, comparison::AbstractString, tolerance)
 
-	E = only(state.Controller.voltage)
+	if comparison == "absolute value above" || comparison == "absolute value below"
+		value = abs(value)
+	end
 
-	before = false
-	after = false
-
-	if isnothing(T.direction) || T.direction == "discharging"
-		before = E > target * (1 + tol)
-		after  = E < target * (1 - tol)
-	elseif T.direction == "charging"
-		before = E < target * (1 - tol)
-		after  = E > target * (1 + tol)
+	if comparison == "above" || comparison == "absolute value above"
+		before = value < target - tolerance
+		after  = value > target + tolerance
+	elseif comparison == "below" || comparison == "absolute value below"
+		before = value > target + tolerance
+		after  = value < target - tolerance
+	else
+		error("Termination comparison $comparison not recognized.")
 	end
 
 	return (before_termination_region = before, after_termination_region = after)
+end
+
+function get_status_on_termination_region(T::VoltageTermination, state)
+	E = only(state.Controller.voltage)
+	return get_status_on_termination_region(E, T.end_voltage, T.comparison, T.tolerance)
 end
 
 function get_status_on_termination_region(T::VoltageChangeTermination, state)
-	target = T.end_voltage_change
-	tol = T.tolerance #1e-1
-
 	dEdt = state.Controller.dEdt
-
-	before = false
-	after = false
-
-	before = abs(dEdt) > target * (1 + tol)
-	after  = abs(dEdt) < target * (1 - tol)
-
-	return (before_termination_region = before, after_termination_region = after)
+	return get_status_on_termination_region(dEdt, T.end_voltage_change, T.comparison, T.tolerance)
 end
 
-
 function get_status_on_termination_region(T::CurrentTermination, state)
-	target = T.end_current
-	tol = T.tolerance #1e-4
-
 	current = only(state.Controller.current)
-
-	before = false
-	after = false
-
-	if isnothing(T.direction) || T.direction == "discharging"
-		before = abs(current) > target * (1 + tol)
-		after  = abs(current) < target * (1 - tol)
-
-	elseif T.direction == "charging"
-		before = abs(current) < target * (1 - tol)
-		after  = abs(current) > target * (1 + tol)
-	end
-
-
-
-	return (before_termination_region = before, after_termination_region = after)
+	return get_status_on_termination_region(current, T.end_current, T.comparison, T.tolerance)
 end
 
 function get_status_on_termination_region(T::CurrentChangeTermination, state)
-	target = T.end_current_change
-	tol = T.tolerance #1e-1
-
 	dIdt = state.Controller.dIdt
+	return get_status_on_termination_region(dIdt, T.end_current_change, T.comparison, T.tolerance)
+end
 
-	before = false
-	after = false
-
-	before = abs(dIdt) > target * (1 + tol)
-	after = abs(dIdt) < target * (1 - tol)
-
-	return (before_termination_region = before, after_termination_region = after)
+function get_status_on_termination_region(T::StateOfChargeTermination, state)
+	state_of_charge = only(state.Controller.state_of_charge)
+	return get_status_on_termination_region(state_of_charge, T.end_state_of_charge, T.comparison, T.tolerance)
 end
 
 function get_status_on_termination_region(T::TimeTermination, state)
 	t = state.Controller.time
-
-	target = T.end_time_adjusted
-	tol = T.tolerance #1e-1
-
-	before = false
-	after = false
-
-	before = t < target - tol
-	after  = t > target + tol
-
-	return (before_termination_region = before, after_termination_region = after)
+	return get_status_on_termination_region(t, T.end_time_adjusted, "above", T.tolerance)
 end
 
-"""
-The get_status_on_termination_region function detects from the current state and control, if we are in the termination region. The functions return two flags :
-- before_termination_region : the state is before the termination region for the current control
-- after_termination_region : the state is after the termination region for the current control
-"""
-function get_status_on_termination_region(T::StateOfChargeTermination, state)
-	target = T.end_state_of_charge
-	tol = T.tolerance
+function get_status_on_termination_region(T::AnyTermination, state)
 
-	state_of_charge = only(state.Controller.state_of_charge)
+	statuses = [get_status_on_termination_region(condition, state) for condition in T.conditions]
 
-	before = false
-	after = false
-
-	if isnothing(T.direction) || T.direction == "discharging"
-		before = state_of_charge > target * (1 + tol)
-		after  = state_of_charge < target * (1 - tol)
-	elseif T.direction == "charging"
-		before = state_of_charge < target * (1 - tol)
-		after  = state_of_charge > target * (1 + tol)
-	end
-
-	return (before_termination_region = before, after_termination_region = after)
-end
-
-function get_status_on_termination_region(T::ConditionalTermination, state)
-	condition_1 = T.condition_1
-	condition_2 = T.condition_2
-
-	before_1, after_1 = get_status_on_termination_region(condition_1, state)
-	before_2, after_2 = get_status_on_termination_region(condition_2, state)
-
-	before = true
-	after = false
-
-	if before_1 == false || before_2 == false
-		before = false
-	end
-
-	if after_1 || after_2
-		after = true
-	end
+	# We are before the termination region only if all conditions are, and after it as soon as one condition is
+	before = all(status.before_termination_region for status in statuses)
+	after = any(status.after_termination_region for status in statuses)
 
 	return (before_termination_region = before, after_termination_region = after)
 end
@@ -326,7 +265,7 @@ function Jutul.timestepping_is_done(C::CycleCountTermination, simulator, states,
 
 	s = get_simulator_storage(simulator)
 
-	return s.state.Control.Controller.numberOfCycles >= C.end_cycle_count
+	return s.state.Control.Controller.cycle_count >= C.end_cycle_count
 end
 
 
@@ -334,22 +273,4 @@ function Jutul.timestepping_is_done(C::ControlStepCountTermination, simulator, s
 
 	s = get_simulator_storage(simulator)
 	return s.state.Control.Controller.step_count + 1 > C.end_control_step_count
-end
-
-
-function Jutul.timestepping_is_done(C::VoltageTermination, simulator, states, substates, reports, solve_recorder)
-
-	s = get_simulator_storage(simulator)
-	m = get_simulator_model(simulator)
-
-
-	if m[:Control].system.protocol.initialControl == "charging"
-
-		terminate = s.state.Control.ElectricPotential[1] >= C.end_voltage
-	elseif m[:Control].system.protocol.initialControl == "discharging"
-
-		terminate = s.state.Control.ElectricPotential[1] <= C.end_voltage
-
-	end
-	return terminate
 end
