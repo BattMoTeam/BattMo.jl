@@ -1,4 +1,4 @@
-export plot_dashboard, plot_output, plot_cell_curves
+export plot_dashboard, plot_output, plot_cell_curves, plot_thermal_source_contributions
 
 
 #####################################################################################################
@@ -25,8 +25,8 @@ reaction rate constant, conductivity) and plots their dependence on concentratio
 - The layout and axes are auto-scaled based on the number and type of parameters.
 """
 function plot_cell_curves(arg...; kwarg...)
-	check_plotting_availability()
-	return plot_cell_curves_impl(arg...; kwarg...)
+    check_plotting_availability()
+    return plot_cell_curves_impl(arg...; kwarg...)
 end
 
 function plot_cell_curves_impl end
@@ -58,8 +58,8 @@ fig = BattMo.plot_output(output,
 ```
 """
 function plot_output(arg...; kwarg...)
-	check_plotting_availability()
-	return plot_output_impl(arg...; kwarg...)
+    check_plotting_availability()
+    return plot_output_impl(arg...; kwarg...)
 end
 
 function plot_output_impl end
@@ -86,8 +86,34 @@ fig = BattMo.plot_dashboard(output; plot_type="line")
 ```
 """
 function plot_dashboard(arg...; kwarg...)
-	check_plotting_availability()
-	return plot_dashboard_impl(arg...; kwarg...)
+    check_plotting_availability()
+    return plot_dashboard_impl(arg...; kwarg...)
 end
 
 function plot_dashboard_impl end
+
+"""
+	BattMo.plot_thermal_source_contributions(time, source_parts; total_source=nothing, include_residual=true, normalize=false, new_window=true)
+
+Plot thermal source-term contributions over time from the post-processed thermal source decomposition.
+The figure contains two panels:
+- Total heat production versus time.
+- Accumulated (time-integrated) contribution of each individual source.
+
+# Arguments
+- `time`: Time vector.
+- `source_parts`: Vector of dictionaries as returned by `get_energy_source!` (second return value) for each time step.
+
+# Keywords
+- `total_source=nothing`: Optional vector of total source fields (one per time step). If provided with `include_residual=true`,
+  a residual contribution is plotted as `total - sum(source_parts)`.
+- `include_residual=true`: Include residual line when `total_source` is provided.
+- `normalize=false`: Plot percentage contribution of total source instead of absolute power.
+- `new_window=true`: Open in independent plotting window when available.
+"""
+function plot_thermal_source_contributions(arg...; kwarg...)
+    check_plotting_availability()
+    return plot_thermal_source_contributions_impl(arg...; kwarg...)
+end
+
+function plot_thermal_source_contributions_impl end

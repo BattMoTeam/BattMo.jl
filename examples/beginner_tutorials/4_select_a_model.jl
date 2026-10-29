@@ -49,9 +49,9 @@ cell_parameters_sei = load_cell_parameters(; from_default_set = "chen_2020")
 cccv_protocol = load_cycling_protocol(; from_default_set = "cccv")
 
 try  # hide
-	sim = Simulation(model, cell_parameters_sei, cccv_protocol)
+    sim = Simulation(model, cell_parameters_sei, cccv_protocol)
 catch err # hide
-	showerror(stderr, err) # hide
+    showerror(stderr, err) # hide
 end  # hide
 
 # As expected, this results in an error because we didn't specify the SEI model correctly.
@@ -88,10 +88,10 @@ seilength = output.states["NegativeElectrode"]["Interphase"]["Thickness"]
 ne_index = sim.settings["NegativeElectrodeCoatingGridPoints"]
 
 plot_output(
-	output,
-	[
-		"NegativeElectrodeInterphaseThickness vs Time at Position index $ne_index",
-		"Voltage vs Time",
-	],
-	layout = (2, 1),
+    output,
+    [
+        "NegativeElectrodeInterphaseThickness vs Time at Position index $ne_index",
+        "Voltage vs Time",
+    ],
+    layout = (2, 1),
 )

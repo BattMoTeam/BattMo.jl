@@ -6,59 +6,89 @@ using Jutul, BattMo, GLMakie
 
 # We load the matlab input file
 name = "p2d_40"
-fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/", name, ".mat")
-inputparams = load_matlab_battmo_input(fn)
-nothing # hide
+# name = "p2d_40_jl_ud_func"
+# name = "p2d_40_no_cc"
+# name = "p2d_40_cccv"
+# name = "p2d_40_jl_chen2020"
+# name = "3d_demo_case"
 
-# We want to compare the solution obtained in julia with the solution computed in Matlab. We set the option to load the
-# reference states computed in matlab, which are included in the matlab input file.
-inputparams["use_state_ref"] = true
-nothing # hide
+do_json = true
 
-# We prepare a hook that will be used by the simulator. In this hook, we modify the tolerance for the current
-# collector. This is necessary because the very high conductivity of the current collector introduces round-off error
-# **when** the current collectors are used in a P**2**D model. We should in fact use effective conductivities for the
-# current collector for one-dimensional model.
+if do_json
 
-function hook(
-        simulator,
-        model,
-        state0,
-        forces,
-        timesteps,
-        cfg
+    fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
+    inputparams = readBattMoJsonInputFile(fn)
+    config_kwargs = (info_level = 0,)
+    function hook(
+            simulator,
+            model,
+            state0,
+            forces,
+            timesteps,
+            cfg
+        )
+    end
+    output = run_battery(
+        inputparams;
+        hook = hook,
+        config_kwargs = config_kwargs,
+        extra_timing = false
     )
 
-    names = [
-        :Electrolyte,
-        :NegativeElectrodeActiveMaterial,
-        :Control,
-        :PositiveElectrodeActiveMaterial,
-    ]
+    states = output[:states]
 
-    if inputparams["model"]["include_current_collectors"]
-        names = append!(names, [:PositiveElectrodeCurrentCollector, :NegativeElectrodeCurrentCollector])
+    t = [state[:Control][:ControllerCV].time for state in states]
+    E = [state[:Control][:Phi][1] for state in states]
+    I = [state[:Control][:Current][1] for state in states]
+
+else
+
+    fn = string(dirname(pathof(BattMo)), "/../test/data/matlab_files/", name, ".mat")
+    inputparams = readBattMoMatlabInputFile(fn)
+    inputparams.dict["use_state_ref"] = true
+    config_kwargs = (info_level = 0,)
+
+    function hook(
+            simulator,
+            model,
+            state0,
+            forces,
+            timesteps,
+            cfg
+        )
+
+        names = [
+            :Electrolyte,
+            :NegativeElectrodeActiveMaterial,
+            :Control,
+            :PositiveElectrodeActiveMaterial,
+        ]
+
+        if inputparams["model"]["include_current_collectors"]
+            names = append!(names, [:PositiveElectrodeCurrentCollector, :NegativeElectrodeCurrentCollector])
+        end
+
+        for name in names
+            cfg[:tolerances][name][:default] = 1.0e-8
+        end
+
+        return
     end
+    nothing # hide
 
-    for name in names
-        cfg[:tolerances][name][:default] = 1.0e-8
-    end
+    # ## We run the simulation and retrieve the output
+    output = run_battery(
+        inputparams;
+        hook = hook,
+        max_step = nothing
+    )
+    states = output[:states]
 
-    return
+    t = [state[:Control][:Controller].time for state in states]
+    E = [state[:Control][:ElectricPotential][1] for state in states]
+    I = [state[:Control][:Current][1] for state in states]
+
 end
-nothing # hide
-
-# ## We run the simulation and retrieve the output
-output = run_battery(
-    inputparams;
-    hook = hook,
-    max_step = nothing
-);
-states = output[:states]
-
-t = [state[:Control][:Controller].time for state in states]
-E = [state[:Control][:ElectricPotential][1] for state in states]
-I = [state[:Control][:Current][1] for state in states]
 
 nsteps = size(states, 1)
 nothing # hide

@@ -16,7 +16,13 @@ function remove_cells(G_raw::AbstractDict, cells)
         nodemap = collect(1:Int(G_raw["nodes"]["num"]))
         facemap = collect(1:Int(G_raw["faces"]["num"]))
 
-        return G_raw, cellmap, facemap, nodemap
+        maps = (
+            cellmap = cellmap,
+            facemap = facemap,
+            nodemap = nodemap,
+        )
+
+        return G_raw, maps
     end
 
     G = deepcopy(G_raw)
@@ -51,7 +57,7 @@ function remove_cells(G_raw::AbstractDict, cells)
         numFaces = diff(G["cells"]["facePos"], dims = 1)
     end
 
-    RLdecode = inverse_rle(ind, numFaces[:])
+    RLdecode = _expand_run_lengths(ind, numFaces[:])
     RemoveIndices = 0 .== RLdecode
     G["cells"]["faces"] = G["cells"]["faces"][RemoveIndices, :]
 
@@ -79,7 +85,7 @@ function remove_cells(G_raw::AbstractDict, cells)
             numNodes = diff(G["faces"]["nodePos"], dims = 1)
         end
 
-        RLdecode = inverse_rle(ind, numNodes[:])
+        RLdecode = _expand_run_lengths(ind, numNodes[:])
         RemoveIndices = 0 .== RLdecode
         G["faces"]["nodes"] = G["faces"]["nodes"][RemoveIndices, :]
     end
@@ -113,5 +119,11 @@ function remove_cells(G_raw::AbstractDict, cells)
     facemap = findall(!iszero, facemap)
     nodemap = findall(!iszero, nodemap)
 
-    return G, cellmap, facemap, nodemap
+    maps = (
+        cellmap = cellmap,
+        facemap = facemap,
+        nodemap = nodemap,
+    )
+
+    return G, maps
 end

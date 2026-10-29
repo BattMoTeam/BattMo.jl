@@ -11,8 +11,8 @@ if case == "4680"
             "examples",
             "Experimental",
             "jsoninputs",
-            "4680-geometry.json"
-        )
+            "4680-geometry.json",
+        ),
     )
 
     # inputparams["Geometry"]["numberOfDiscretizationCellsVertical"]    = 2
@@ -31,8 +31,8 @@ elseif case == "pouch"
             "examples",
             "Experimental",
             "jsoninputs",
-            "geometry-3d-demo.json"
-        )
+            "geometry-3d-demo.json",
+        ),
     )
 
     grids, couplings = pouch_grid(inputparams)
@@ -47,10 +47,10 @@ end
 let ax, components, colors
 
     components = [
-        "NegativeElectrode",
-        "PositiveElectrode",
-        "NegativeCurrentCollector",
-        "PositiveCurrentCollector",
+        "NegativeElectrodeActiveMaterial",
+        "PositiveElectrodeActiveMaterial",
+        "NegativeElectrodeCurrentCollector",
+        "PositiveElectrodeCurrentCollector",
     ]
 
     colors = [
@@ -65,27 +65,27 @@ let ax, components, colors
             global fig
             fig, ax = plot_mesh(
                 grids[component],
-                color = colors[i]
+                color = colors[i],
             )
         else
             plot_mesh!(
                 ax,
                 grids[component],
-                color = colors[i]
+                color = colors[i],
             )
         end
     end
 
     components = [
-        "NegativeCurrentCollector",
-        "PositiveCurrentCollector",
+        "NegativeElectrodeCurrentCollector",
+        "PositiveElectrodeCurrentCollector",
     ]
 
     for component in components
         plot_mesh!(
             ax, grids[component],
             boundaryfaces = couplings[component]["External"]["boundaryfaces"],
-            color = :red
+            color = :red,
         )
     end
 

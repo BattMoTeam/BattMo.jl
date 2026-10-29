@@ -266,7 +266,7 @@ function get_solver_settings_meta_data()
             "category" => "SolverSettings",
             "description" => "Level of information stored in reports when written to disk.",
         ),
-        "OutputSubstrates" => Dict(
+        "OutputSubstates" => Dict(
             "type" => Bool,
             "variable_name" => "output_substates",
             "category" => "SolverSettings",

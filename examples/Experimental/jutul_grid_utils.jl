@@ -102,8 +102,8 @@ function setup_geometry(H_mother, paramsz)
     global_maps = Dict()
 
     components = [
-        "NegativeCurrentCollector", "NegativeElectrode", "Separator",
-        "PositiveElectrode", "PositiveCurrentCollector",
+        "NegativeElectrodeCurrentCollector", "NegativeElectrodeActiveMaterial", "Separator",
+        "PositiveElectrodeActiveMaterial", "PositiveElectrodeCurrentCollector",
     ] #"Electrolyte"]
 
     tags = find_tags(UnstructuredMesh(H_mother), paramsz)
@@ -113,12 +113,12 @@ function setup_geometry(H_mother, paramsz)
     tags = find_tags(grids["Global"], paramsz)
     allinds = 1:nglobal
     for (ind, component) in enumerate(components)
-        G, maps... = remove_cells(H_mother, setdiff(allinds, tags[ind]))
+        G, maps = remove_cells(H_mother, setdiff(allinds, tags[ind]))
         grids[component] = G #UnstructuredMesh(G)
         global_maps[component] = maps
     end
     begin
-        G, maps... = remove_cells(H_mother, setdiff(allinds, vcat(tags[2:4]...)))
+        G, maps = remove_cells(H_mother, setdiff(allinds, vcat(tags[2:4]...)))
         grids["Electrolyte"] = G #UnstructuredMesh(G)
         global_maps["Electrolyte"] = maps
     end
@@ -226,8 +226,8 @@ end
 
 function convert_geometry(grids)
     components = [
-        "NegativeCurrentCollector", "NegativeElectrode", "Separator",
-        "PositiveElectrode", "PositiveCurrentCollector", "Electrolyte",
+        "NegativeElectrodeCurrentCollector", "NegativeElectrodeActiveMaterial", "Separator",
+        "PositiveElectrodeActiveMaterial", "PositiveElectrodeCurrentCollector", "Electrolyte",
     ]
     ugrids = Dict()
     for (ind, component) in enumerate(components)

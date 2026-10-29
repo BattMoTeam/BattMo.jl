@@ -108,7 +108,7 @@ function run_simulation(simulation_input::MatlabInput; solver_settings::Union{So
         :couplings => couplings,
         :grids => grids,
         :timesteps => timesteps,
-        :cfg => cfg
+        :cfg => cfg,
     )
     extra[:timesteps] = timesteps
 

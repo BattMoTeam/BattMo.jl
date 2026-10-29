@@ -399,6 +399,18 @@ function get_output_variables_meta_data()
             "context_type" => "Temperature",
             "context_type_iri" => nothing,
         ),
+        "ElectrolyteTemperature" => Dict(
+            "type" => Vector{Real},
+            "case" => "states",
+            "shape" => "(nTime, nPosition)",
+            "description" => "Temperature within the electrolyte.",
+            "isdefault" => false,
+            "unit" => "T",
+            "unit_name" => "emmo:Temperature",
+            "unit_iri" => "https://w3id.org/emmo#EMMO_5ebd5e01_0ed3_49a2_a30d_cd05cbe72978",
+            "context_type" => "Temperature",
+            "context_type_iri" => nothing,
+        ),
         "NegativeElectrodeActiveMaterialReactionRateConstant" => Dict(
             "type" => Vector{Real},
             "case" => "states",

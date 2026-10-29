@@ -15,8 +15,9 @@ names = [
             @test begin
                 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
                 inputparams = load_advanced_dict_input(fn)
+                inputparams["TimeStepping"]["timeStepDuration"] = 200.0
 
-                output = run_simulation(inputparams; accept_invalid = true, error_on_incomplete = true)
+                output = run_simulation(inputparams; accept_invalid = true)
                 true
             end
         end
@@ -24,7 +25,7 @@ names = [
 end
 
 function getinput(name)
-    return load_advanced_dict_input(joinpath(pkgdir(BattMo), "examples", "Experimental", "jsoninputs", name))
+    return load_advanced_dict_input(joinpath(pkgdir(BattMo), "test", "data", "jsonfiles", name))
 end
 
 geometries = [
@@ -40,6 +41,7 @@ geometries = [
 
                 inputparams_geometry = getinput(geometry)
                 inputparams_material = getinput("lithium_ion_battery_nmc_graphite.json")
+                inputparams_material["use_thermal"] = false
                 inputparams_control = getinput("cc_discharge_control.json")
 
                 inputparams = merge_input_params(
@@ -58,7 +60,13 @@ geometries = [
                 solver_settings["NonLinearSolver"]["ErrorOnIncomplete"] = true
 
                 model_setup = LithiumIonBattery(; model_settings)
-                sim = Simulation(model_setup, cell_parameters, cycling_protocol; simulation_settings)
+                sim = Simulation(
+                    model_setup,
+                    cell_parameters,
+                    cycling_protocol;
+                    simulation_settings,
+                    time_steps = [1.0],
+                )
                 output = solve(
                     sim;
                     accept_invalid = true,

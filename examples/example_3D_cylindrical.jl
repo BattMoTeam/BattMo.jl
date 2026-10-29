@@ -65,7 +65,7 @@ nothing #hide
 
 # Define a list of the component to iterate over in the ploting routin below
 
-components = ["NegativeElectrode", "PositiveElectrode", "NegativeCurrentCollector", "PositiveCurrentCollector"]
+components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
 colors = [:gray, :green, :blue, :black]
 nothing #hide
 
@@ -75,13 +75,13 @@ for (i, component) in enumerate(components)
     if i == 1
         global fig, ax = plot_mesh(
             grids[component],
-            color = colors[i]
+            color = colors[i],
         )
     else
         plot_mesh!(
             ax,
             grids[component],
-            color = colors[i]
+            color = colors[i],
         )
     end
 end
@@ -95,15 +95,15 @@ fig #hide
 # in red.
 
 components = [
-    "NegativeCurrentCollector",
-    "PositiveCurrentCollector",
+    "NegativeElectrodeCurrentCollector",
+    "PositiveElectrodeCurrentCollector",
 ]
 
 for component in components
     plot_mesh!(
         ax, grids[component];
         boundaryfaces = couplings[component]["External"]["boundaryfaces"],
-        color = :red
+        color = :red,
     )
 end
 

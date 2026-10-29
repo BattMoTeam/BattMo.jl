@@ -1,18 +1,31 @@
-using CSV, DataFrames, Jutul
+using DelimitedFiles: readdlm
+using Jutul: get_1d_interpolator
 
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
-exdata = joinpath(battmo_base, "examples", "example_data")
-defaultdata = joinpath(battmo_base, "src", "input", "defaults", "cell_parameters", "data", "sodium_ion")
+defaultdata = joinpath(
+    battmo_base, "src", "input", "defaults", "cell_parameters", "data", "sodium_ion"
+)
 
+"""Read a two-column Chayambuka data table, which is headerless by default."""
+function read_chayambuka_data(file_name::AbstractString; header::Bool = false)
+    file_path = joinpath(defaultdata, file_name)
+    data = if header
+        first(readdlm(file_path, ',', Float64; header = true))
+    else
+        readdlm(file_path, ',', Float64)
+    end
+    size(data, 2) == 2 || error("Expected two columns in Chayambuka data file: $file_name")
+    return data
+end
 
-data_pe_ocp = CSV.read(joinpath(defaultdata, "chayambuka_pe_ocp.csv"), DataFrame)
-data_ne_ocp = CSV.read(joinpath(defaultdata, "chayambuka_ne_ocp.csv"), DataFrame)
-data_pe_D = CSV.read(joinpath(defaultdata, "chayambuka_pe_D.csv"), DataFrame)
-data_ne_D = CSV.read(joinpath(defaultdata, "chayambuka_ne_D.csv"), DataFrame)
-data_pe_k = CSV.read(joinpath(defaultdata, "chayambuka_pe_k.csv"), DataFrame)
-data_ne_k = CSV.read(joinpath(defaultdata, "chayambuka_ne_k.csv"), DataFrame)
-data_elyte_cond = CSV.read(joinpath(defaultdata, "chayambuka_elyte_sigma.csv"), DataFrame)
-data_elyte_diff = CSV.read(joinpath(defaultdata, "chayambuka_elyte_D.csv"), DataFrame)
+data_pe_ocp = read_chayambuka_data("chayambuka_pe_ocp.csv"; header = true)
+data_ne_ocp = read_chayambuka_data("chayambuka_ne_ocp.csv")
+data_pe_D = read_chayambuka_data("chayambuka_pe_D.csv")
+data_ne_D = read_chayambuka_data("chayambuka_ne_D.csv")
+data_pe_k = read_chayambuka_data("chayambuka_pe_k.csv")
+data_ne_k = read_chayambuka_data("chayambuka_ne_k.csv")
+data_elyte_cond = read_chayambuka_data("chayambuka_elyte_sigma.csv")
+data_elyte_diff = read_chayambuka_data("chayambuka_elyte_D.csv")
 
 pe_ocp = data_pe_ocp[:, 2]
 x_pe = data_pe_ocp[:, 1] # stoich -

@@ -45,9 +45,6 @@ cycling_protocol_25 = deepcopy(cycling_protocol)
 cycling_protocol_10["InitialTemperature"] = 10 + kelvin
 cycling_protocol_25["InitialTemperature"] = 25 + kelvin
 
-@show typeof(cell_parameters_R["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"])
-@show cell_parameters_R["NegativeElectrode"]["ActiveMaterial"]["ReactionRateConstant"]
-
 solve_R = true
 solve_F = false
 
@@ -149,7 +146,7 @@ if solve_R == true
         # marker = :cross,
         # markercolor = :black,
         markersize = 1,
-        label = "R_25K"
+        label = "R_25K",
     )
 end
 
@@ -162,7 +159,7 @@ if solve_F == true
         # marker = :cross,
         # markercolor = :black,
         markersize = 1,
-        label = "F_10K"
+        label = "F_10K",
     )
 
     scatterlines!(
@@ -173,7 +170,7 @@ if solve_F == true
         # marker = :cross,
         # markercolor = :black,
         markersize = 1,
-        label = "F_25K"
+        label = "F_25K",
     )
 end
 axislegend()
