@@ -242,6 +242,7 @@ include("models/experiment/control_steps.jl")
 include("models/experiment/experiment.jl")
 include("models/experiment/generic_protocol.jl")
 include("models/experiment/generic_controller.jl")
+include("models/experiment/protocol_conversion.jl")
 include("models/experiment/utils.jl")
 include("models/battery_cross_terms.jl") # Works now
 include("models/battery_utils.jl")

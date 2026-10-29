@@ -11,6 +11,7 @@
 #	- CurrentChangeTermination: the control step terminates when the current change rate reaches `end_current_change`
 #	- StateOfChargeTermination: the control step terminates when the state of charge reaches `end_state_of_charge`
 #	- AnyTermination: the control step terminates when one of its conditions has terminated
+#	- NoTermination: the control step never terminates, it lasts until the end of the simulation
 #	- CycleCountTermination: the simulation terminates when the global cycle_count reaches `end_cycle_count`
 #	- ControlStepCountTermination: the simulation terminates when the global step_count reaches `end_control_step_count`
 #
@@ -25,16 +26,22 @@
 # Define the termination types
 
 """
-	TimeTermination(end_time, end_time_adjusted, tolerance)
+	TimeTermination(end_time, tolerance)
 
 A termination criterion that stops a control step when the time spent in the step reaches `end_time`.
-`end_time_adjusted` is the corresponding absolute simulation time, which is set when the step starts.
 """
-mutable struct TimeTermination{R} <: AbstractTerminationCriterion
+struct TimeTermination{R} <: AbstractTerminationCriterion
 	end_time::R
-	end_time_adjusted::R
 	tolerance::R
 end
+
+
+"""
+	NoTermination()
+
+The control step never terminates. It lasts until the end of the simulation.
+"""
+struct NoTermination <: AbstractTerminationCriterion end
 
 
 """
@@ -154,40 +161,48 @@ function setup_termination(termination::AbstractDict, capacity)
 	value = float(termination["Value"]) # json integers are converted to floats
 	comparison = get(termination, "Comparison", "above")
 
-	# The tolerances are relative to the target value
+	# The tolerance is relative to the target value. The width of the termination region matters for the in-step
+	# constraint check (see check_constraints): the time step is cut until the switch happens within the region.
+	tolerance = get(termination, "Tolerance", default_termination_tolerance(quantity))
+
 	if quantity == "Time"
-		return TimeTermination(value, value, 1e-3)
+		return TimeTermination(value, tolerance)
 	elseif quantity == "Voltage"
-		return VoltageTermination(value, comparison, 1e-3 * abs(value))
+		return VoltageTermination(value, comparison, tolerance * abs(value))
 	elseif quantity == "VoltageChange"
-		return VoltageChangeTermination(value, comparison, 1e-1 * abs(value))
+		return VoltageChangeTermination(value, comparison, tolerance * abs(value))
 	elseif quantity == "Current"
-		return CurrentTermination(value, comparison, 1e-4 * abs(value))
+		return CurrentTermination(value, comparison, tolerance * abs(value))
 	elseif quantity == "CRate"
 		current = value * capacity
-		return CurrentTermination(current, comparison, 1e-4 * abs(current))
+		return CurrentTermination(current, comparison, tolerance * abs(current))
 	elseif quantity == "CurrentChange"
-		return CurrentChangeTermination(value, comparison, 1e-1 * abs(value))
+		return CurrentChangeTermination(value, comparison, tolerance * abs(value))
 	elseif quantity == "StateOfCharge"
-		return StateOfChargeTermination(value, comparison, 1e-3 * abs(value))
+		return StateOfChargeTermination(value, comparison, tolerance * abs(value))
 	else
 		error("Unknown termination quantity: $quantity")
 	end
 
 end
 
+setup_termination(::Nothing, capacity) = NoTermination()
 
-function adjust_time_based_termination_target!(termination::TimeTermination, time)
-	termination.end_time_adjusted = time + termination.end_time
-end
 
-function adjust_time_based_termination_target!(termination::AnyTermination, time)
-	for condition in termination.conditions
-		adjust_time_based_termination_target!(condition, time)
+"""
+Default relative tolerance of a termination. The time tolerance is absolute, in seconds. The change rates are noisy,
+so a wide termination region is used for them.
+"""
+function default_termination_tolerance(quantity)
+	if quantity == "Time"
+		return 1e-3
+	elseif quantity in ["VoltageChange", "CurrentChange"]
+		return 0.9
+	elseif quantity in ["Current", "CRate"]
+		return 1e-4
+	else
+		return 1e-3
 	end
-end
-
-function adjust_time_based_termination_target!(termination::AbstractTerminationCriterion, time)
 end
 
 
@@ -241,19 +256,39 @@ function get_status_on_termination_region(T::StateOfChargeTermination, state)
 end
 
 function get_status_on_termination_region(T::TimeTermination, state)
-	t = state.Controller.time
-	return get_status_on_termination_region(t, T.end_time_adjusted, "above", T.tolerance)
+	controller = state.Controller
+	time_in_step = controller.time - controller.step_start_time
+	return get_status_on_termination_region(time_in_step, T.end_time, "above", T.tolerance)
+end
+
+function get_status_on_termination_region(T::NoTermination, state)
+	return (before_termination_region = true, after_termination_region = false)
 end
 
 function get_status_on_termination_region(T::AnyTermination, state)
+	return combine_termination_statuses([get_status_on_termination_region(condition, state) for condition in T.conditions])
+end
 
-	statuses = [get_status_on_termination_region(condition, state) for condition in T.conditions]
-
+function combine_termination_statuses(statuses)
 	# We are before the termination region only if all conditions are, and after it as soon as one condition is
 	before = all(status.before_termination_region for status in statuses)
 	after = any(status.after_termination_region for status in statuses)
 
 	return (before_termination_region = before, after_termination_region = after)
+end
+
+
+"""
+Status used in the in-step constraint check (see check_constraints). Time conditions are treated as never reached
+there, because cutting the time step to end a step within the small time tolerance would require many time step
+cuts. A step with a time termination therefore ends at the end of the time step in which its duration is reached.
+"""
+get_constraint_status(T::AbstractTerminationCriterion, state) = get_status_on_termination_region(T, state)
+
+get_constraint_status(T::TimeTermination, state) = get_status_on_termination_region(NoTermination(), state)
+
+function get_constraint_status(T::AnyTermination, state)
+	return combine_termination_statuses([get_constraint_status(condition, state) for condition in T.conditions])
 end
 
 

@@ -1,37 +1,35 @@
 #######################################################################################################################
 # Controller
 #
-# This script defines the controllers that regulate the state of the external circuit during a simulation.
+# This script defines the controller that regulates the state of the external circuit during a simulation.
 # It is a state object
 #######################################################################################################################
 
 
 ##################################################
-# Define the abstract type
-
-# abstract type Controller end
-
-
-##################################################
-# Define the different controller types
+# Define the controller type
 
 mutable struct GenericController{R <: Real, I <: Int} <: Controller
 	protocol::GenericProtocol
 	step::AbstractControlStep
-	step_count::I
-	step_index::I
-	cycle_count::I
+	step_count::I              # global index of the current control step, starting at zero
+	step_index::I              # index of the current control step within its cycle, starting at zero
+	cycle_count::I             # number of the current cycle, starting at zero
 	time::R
+	step_start_time::R         # time at which the current control step started
 	current::R
 	voltage::R
 	state_of_charge::R
-	target::R
+	target::R                  # target value of the control equation
+	target_is_voltage::Bool    # whether the target is a voltage or a current
+	target_is_c_rate::Bool     # whether a current target is given as a C-rate, see the control equation
 	dIdt::R
 	dEdt::R
 end
+
 function GenericController(
 	protocol::GenericProtocol,
-	step::Union{Nothing, AbstractControlStep},
+	step::AbstractControlStep,
 	step_count::Int,
 	step_index::Int,
 	cycle_count::Int,
@@ -39,15 +37,27 @@ function GenericController(
 	current::Real,
 	voltage::Real,
 	state_of_charge::Real;
+	step_start_time::Real = 0.0,
 	target::Real = 0.0,
+	target_is_voltage::Bool = false,
+	target_is_c_rate::Bool = false,
 	dEdt::Real = 0.0,
 	dIdt::Real = 0.0,
 	T = Float64,
 )
-	T = promote_type(T, typeof(time), typeof(current), typeof(voltage), typeof(state_of_charge), typeof(target), typeof(dEdt), typeof(dIdt))
-	GenericController{T, typeof(step_index)}(protocol, step, step_count, step_index, cycle_count, time, current, voltage, state_of_charge, target, dIdt, dEdt)
+	T = promote_type(T, typeof(time), typeof(step_start_time), typeof(current), typeof(voltage), typeof(state_of_charge), typeof(target), typeof(dEdt), typeof(dIdt))
+	GenericController{T, typeof(step_index)}(protocol, step, step_count, step_index, cycle_count, time, step_start_time, current, voltage, state_of_charge, target, target_is_voltage, target_is_c_rate, dIdt, dEdt)
 end
 
+
+"""
+	initial_controller(protocol; T = Float64)
+
+Controller at the start of a simulation, in the first control step of the protocol.
+"""
+function initial_controller(protocol::GenericProtocol; T = Float64)
+	return GenericController(protocol, protocol.steps[1], 0, protocol.step_indices[1], protocol.cycle_counts[1], 0.0, 0.0, 0.0, protocol.initial_state_of_charge; T = T)
+end
 
 
 @inline function Jutul.numerical_type(x::GenericController{R, I}) where {R, I}
@@ -69,13 +79,17 @@ function copyController!(cv_copy::GenericController, cv::GenericController)
 	cv_copy.step_index = cv.step_index
 	cv_copy.cycle_count = cv.cycle_count
 	cv_copy.time = cv.time
+	cv_copy.step_start_time = cv.step_start_time
 	cv_copy.current = cv.current
 	cv_copy.voltage = cv.voltage
 	cv_copy.state_of_charge = cv.state_of_charge
 	cv_copy.target = cv.target
+	cv_copy.target_is_voltage = cv.target_is_voltage
+	cv_copy.target_is_c_rate = cv.target_is_c_rate
 	cv_copy.dEdt = cv.dEdt
 	cv_copy.dIdt = cv.dIdt
 
+	return cv_copy
 end
 
 
@@ -83,13 +97,10 @@ end
 Overload function to copy GenericController
 """
 function Base.copy(cv::GenericController)
-	# Construct using the known type parameter S
-	cv_copy = GenericController(cv.protocol, cv.step, cv.step_count, cv.step_index, cv.cycle_count, cv.time, cv.current, cv.voltage, cv.state_of_charge; target = cv.target, dIdt = cv.dIdt, dEdt = cv.dEdt)
-
-	return cv_copy
+	return GenericController(cv.protocol, cv.step, cv.step_count, cv.step_index, cv.cycle_count, cv.time, cv.current, cv.voltage, cv.state_of_charge;
+		step_start_time = cv.step_start_time, target = cv.target, target_is_voltage = cv.target_is_voltage, target_is_c_rate = cv.target_is_c_rate,
+		dIdt = cv.dIdt, dEdt = cv.dEdt)
 end
-
-
 
 
 ##################################################
@@ -100,4 +111,3 @@ function Jutul.update_values!(old::GenericController, new::GenericController)
 	copyController!(old, new)
 
 end
-

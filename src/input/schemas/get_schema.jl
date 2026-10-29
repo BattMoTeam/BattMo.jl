@@ -464,12 +464,19 @@ Schema definitions of the generic control steps. A control step is one of
 - "Voltage": constant voltage, given in V ("Value")
 - "Power": constant power, given in W ("Value"), with a "Direction"
 - "Rest": zero current
+- "CurrentFunction": the current is given by the Julia function "FunctionName" of the time since the start of the
+  step and the voltage (optionally defined in the file "FilePath")
+- "CurrentSeries": the current is interpolated from the time series "Times" (relative to the start of the step) and
+  "Currents". When the voltage reaches the optional "LowerVoltageLimit" during discharge or "UpperVoltageLimit" during
+  charge, the step switches to voltage control at the limit.
 - "Cycle": the list of "ControlSteps" repeated "NumberOfCycles" times
 
-Each step except "Cycle" has a "Termination", which is a termination condition or a list of termination conditions
-(the step terminates as soon as one of them is fulfilled). A termination condition gives the "Quantity" that is
-monitored, the target "Value" (in SI units, time in seconds) and the "Comparison" that decides when the target is
-reached. The comparison is not needed for a time termination.
+The currents are positive for discharge. Each step except "Cycle" has a "Termination", which is a termination
+condition or a list of termination conditions (the step terminates as soon as one of them is fulfilled). Only the last
+step can be given without termination, it then lasts until the end of the simulation. A termination condition gives
+the "Quantity" that is monitored, the target "Value" (in SI units, time in seconds) and the "Comparison" that decides
+when the target is reached. The comparison is not needed for a time termination. The optional "Tolerance" sets the
+width of the termination region, relative to the target value (in seconds for a time termination).
 """
 function get_control_steps_schema_definitions()
 
@@ -487,6 +494,7 @@ function get_control_steps_schema_definitions()
                 "type" => "string",
                 "enum" => ["above", "below", "absolute value above", "absolute value below"],
             ),
+            "Tolerance" => Dict("type" => "number", "minimum" => 0),
         ),
         "required" => ["Quantity", "Value"],
         "additionalProperties" => false,
@@ -501,10 +509,19 @@ function get_control_steps_schema_definitions()
     control_step = Dict(
         "type" => "object",
         "properties" => Dict(
-            "ControlType" => Dict("type" => "string", "enum" => ["Current", "Voltage", "Power", "Rest", "Cycle"]),
+            "ControlType" => Dict(
+                "type" => "string",
+                "enum" => ["Current", "Voltage", "Power", "Rest", "CurrentFunction", "CurrentSeries", "Cycle"],
+            ),
             "Value" => Dict("type" => "number", "minimum" => 0),
             "CRate" => Dict("type" => "number", "minimum" => 0),
             "Direction" => direction,
+            "FunctionName" => Dict("type" => "string"),
+            "FilePath" => Dict("type" => "string"),
+            "Times" => Dict("type" => "array", "minItems" => 1, "items" => Dict("type" => "number")),
+            "Currents" => Dict("type" => "array", "minItems" => 1, "items" => Dict("type" => "number")),
+            "LowerVoltageLimit" => Dict("type" => "number"),
+            "UpperVoltageLimit" => Dict("type" => "number"),
             "Termination" => Dict(
                 "oneOf" => [
                     Dict("\$ref" => "#/definitions/Termination"),
@@ -520,21 +537,25 @@ function get_control_steps_schema_definitions()
             Dict(
                 "if" => Dict("properties" => Dict("ControlType" => Dict("const" => "Current"))),
                 "then" => Dict(
-                    "required" => ["Direction", "Termination"],
+                    "required" => ["Direction"],
                     "oneOf" => [Dict("required" => ["Value"]), Dict("required" => ["CRate"])],
                 ),
             ),
             Dict(
                 "if" => Dict("properties" => Dict("ControlType" => Dict("const" => "Voltage"))),
-                "then" => Dict("required" => ["Value", "Termination"]),
+                "then" => Dict("required" => ["Value"]),
             ),
             Dict(
                 "if" => Dict("properties" => Dict("ControlType" => Dict("const" => "Power"))),
-                "then" => Dict("required" => ["Value", "Direction", "Termination"]),
+                "then" => Dict("required" => ["Value", "Direction"]),
             ),
             Dict(
-                "if" => Dict("properties" => Dict("ControlType" => Dict("const" => "Rest"))),
-                "then" => Dict("required" => ["Termination"]),
+                "if" => Dict("properties" => Dict("ControlType" => Dict("const" => "CurrentFunction"))),
+                "then" => Dict("required" => ["FunctionName"]),
+            ),
+            Dict(
+                "if" => Dict("properties" => Dict("ControlType" => Dict("const" => "CurrentSeries"))),
+                "then" => Dict("required" => ["Times", "Currents"]),
             ),
             Dict(
                 "if" => Dict("properties" => Dict("ControlType" => Dict("const" => "Cycle"))),

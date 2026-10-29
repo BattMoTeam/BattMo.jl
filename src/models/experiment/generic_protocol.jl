@@ -6,11 +6,11 @@
 # This script defines cycling protocol types:
 #	- GenericProtocol: a protocol that can contain any combination and order of control steps
 #
-# The basis of the generic protocol is the json control step structure, described by the control step schema (see
-# get_schema_control_steps). The control steps are given either directly (Protocol "Generic", field "ControlSteps")
-# or as experiment strings (Protocol "Experiment", field "Experiment") which are first converted to control steps.
-# The control steps are validated against the schema, the "Cycle" steps are unfolded, and each step is then turned
-# into an AbstractControlStep instance.
+# The generic protocol is the single control framework of BattMo. Its basis is the json control step structure,
+# described by the control step schema (see get_schema_control_steps). Every cycling protocol ("CC", "CCCV",
+# "Function", "InputCurrentSeries", "Experiment" and "Generic") is first converted to control steps (see
+# protocol_conversion.jl). The control steps are validated against the schema, the "Cycle" steps are unfolded, and
+# each step is then turned into an AbstractControlStep instance.
 #######################################################################################################################
 
 
@@ -22,25 +22,30 @@ struct GenericProtocol{V, R} <: AbstractPolicy where V <: Vector{Int}
 	steps::Vector{AbstractControlStep}
 	step_indices::V
 	cycle_counts::V
+	final_cycle_count::Int  # cycle count once the last control step has terminated
+	maximum_current::R      # used to limit the Newton updates of the current, zero if unknown
 	rated_capacity::R
 	initial_state_of_charge::R
 end
 
 
 """
-	GenericProtocol(cycling_protocol, input; T = Float64)
+	GenericProtocol(cycling_protocol, input; capacity = nothing, T = Float64)
 
-Set up the generic protocol from a cycling protocol with Protocol "Generic" or "Experiment".
+Set up the generic protocol from a cycling protocol. The capacity (in Ah) is used for the C-rates and the state of
+charge. A "Capacity" given in the cycling protocol takes precedence. If no capacity is given, the theoretical cell
+capacity is computed from the cell parameters.
 """
-function GenericProtocol(cycling_protocol::CyclingProtocol, input; T = Float64)
+function GenericProtocol(cycling_protocol::CyclingProtocol, input; capacity = nothing, T = Float64)
 
-	use_ramp_up = haskey(input.model_settings, "RampUp")
+	# The CCCV protocol has never used a current ramp up, and we keep it like that so that the results are unchanged
+	use_ramp_up = haskey(input.model_settings, "RampUp") && cycling_protocol["Protocol"] != "CCCV"
 
 	ramp_up_time = haskey(input.simulation_settings, "RampUpTime") ? input.simulation_settings["RampUpTime"] : 100
 
 	if haskey(cycling_protocol, "Capacity")
 		capacity = cycling_protocol["Capacity"]
-	else
+	elseif isnothing(capacity)
 		capacity = compute_cell_theoretical_capacity(input.cell_parameters)
 	end
 
@@ -67,31 +72,25 @@ function GenericProtocol(control_steps::AbstractVector, initial_state_of_charge;
 
 	unfolded_steps = unfold_control_steps(control_steps)
 
+	for s in unfolded_steps[1:(end - 1)]
+		if !haskey(s.step, "Termination")
+			error("Only the last control step can be given without termination, since it then lasts until the end of the simulation.")
+		end
+	end
+
 	steps = AbstractControlStep[setup_control_step(s.step, capacity, use_ramp_up, ramp_up_time) for s in unfolded_steps]
 	step_indices = Int[s.step_index for s in unfolded_steps]
 	cycle_counts = Int[s.cycle_count for s in unfolded_steps]
 
-	R = promote_type(T, typeof(capacity), typeof(initial_state_of_charge))
+	# Once the experiment is done, the cycle count is increased if the experiment ends with a cycle, in the same way
+	# as when a new cycle starts.
+	final_cycle_count = last(cycle_counts) + (last(control_steps)["ControlType"] == "Cycle" ? 1 : 0)
 
-	return GenericProtocol{Vector{Int}, R}(steps, step_indices, cycle_counts, capacity, initial_state_of_charge)
-end
+	maximum_current_value = maximum(maximum_current(step, capacity) for step in steps)
 
+	R = promote_type(T, typeof(capacity), typeof(initial_state_of_charge), typeof(maximum_current_value))
 
-"""
-Get the list of control steps from a cycling protocol. Experiment strings are converted to control steps.
-"""
-function get_control_steps(cycling_protocol)
-
-	protocol = cycling_protocol["Protocol"]
-
-	if protocol == "Generic"
-		return cycling_protocol["ControlSteps"]
-	elseif protocol == "Experiment"
-		return experiment_to_control_steps(cycling_protocol["Experiment"])
-	else
-		error("Protocol $protocol cannot be converted to control steps.")
-	end
-
+	return GenericProtocol{Vector{Int}, R}(steps, step_indices, cycle_counts, final_cycle_count, maximum_current_value, capacity, initial_state_of_charge)
 end
 
 
@@ -173,20 +172,29 @@ Create a control step instance from its json description.
 function setup_control_step(step::AbstractDict, capacity, use_ramp_up, ramp_up_time)
 
 	control_type = step["ControlType"]
-	termination = setup_termination(step["Termination"], capacity)
+	termination = setup_termination(get(step, "Termination", nothing), capacity)
 
 	# json integers are converted to floats
 	value = haskey(step, "Value") ? float(step["Value"]) : nothing
 
 	if control_type == "Current"
-		current = haskey(step, "CRate") ? step["CRate"] * capacity : value
-		return CurrentStep(current, step["Direction"], termination, use_ramp_up; ramp_up_time)
+		if haskey(step, "CRate")
+			return CurrentStep(float(step["CRate"]), step["Direction"], termination; is_c_rate = true, use_ramp_up, ramp_up_time)
+		else
+			return CurrentStep(value, step["Direction"], termination; use_ramp_up, ramp_up_time)
+		end
 	elseif control_type == "Voltage"
 		return VoltageStep(value, termination)
 	elseif control_type == "Power"
 		return PowerStep(value, step["Direction"], termination)
 	elseif control_type == "Rest"
 		return RestStep(0.0, termination)
+	elseif control_type == "CurrentFunction"
+		current_function = setup_function_from_function_name(step["FunctionName"]; file_path = get(step, "FilePath", nothing))
+		return CurrentFunctionStep(current_function, termination)
+	elseif control_type == "CurrentSeries"
+		return CurrentSeriesStep(float.(step["Times"]), float.(step["Currents"]),
+			float(get(step, "LowerVoltageLimit", -Inf)), float(get(step, "UpperVoltageLimit", Inf)), termination)
 	else
 		error("Control type $control_type not recognized.")
 	end
@@ -194,200 +202,154 @@ function setup_control_step(step::AbstractDict, capacity, use_ramp_up, ramp_up_t
 end
 
 
-
-function add_experiment_strings!(experiment_list, cycling_protocol, direction, policy)
-
-	if direction == "charging"
-		if haskey(cycling_protocol, "CRate")
-			rate = "$(cycling_protocol["CRate"]) C"
-		elseif haskey(cycling_protocol, "MaximumCurrent")
-			rate = "$(cycling_protocol["MaximumCurrent"]) A"
-		else
-			error("Both CRate and MaximumCurrent not specified in cycling protocol.")
-		end
-		push!(experiment_list, "Charge at $rate until $(cycling_protocol["UpperVoltageLimit"]) V")
-
-		if policy == "CCCV"
-
-			push!(experiment_list, "Hold at $(cycling_protocol["UpperVoltageLimit"]) V until $(cycling_protocol["CurrentChangeLimit"]) A/s")
-		end
-
-	elseif direction == "discharging"
-		if haskey(cycling_protocol, "DRate")
-			rate = "$(cycling_protocol["DRate"]) C"
-		elseif haskey(cycling_protocol, "MaximumCurrent")
-			rate = "$(cycling_protocol["MaximumCurrent"]) A"
-		else
-			error("Both DRate and MaximumCurrent not specified in cycling protocol.")
-		end
-		push!(experiment_list, "Discharge at $rate until $(cycling_protocol["LowerVoltageLimit"]) V")
-		if policy == "CCCV"
-
-			push!(experiment_list, "Rest until $(cycling_protocol["VoltageChangeLimit"]) V/s")
-
-		end
-
-	else
-		error("direction $direction not recognized.")
-	end
-	return experiment_list
-
-end
-
-
-
 function setup_initial_control_policy!(policy::GenericProtocol, input, parameters)
 
 end
 
 function getInitCurrent(policy::GenericProtocol)
-	return get_initial_current(policy.steps[1])
+	return get_initial_current(policy.steps[1], policy.rated_capacity)
 end
 
 
 """
-Implementation of the generic control protocol
+	experiment_is_finished(protocol, controller)
+
+The experiment is finished when the last control step has terminated.
+"""
+function experiment_is_finished(protocol::GenericProtocol, controller)
+	return controller.step_count >= length(protocol.steps)
+end
+
+
+"""
+Update the controller: first the control step, then the target of the control equation.
+"""
+function update_controller!(state, state0, protocol::GenericProtocol, dt)
+
+	update_control_step_in_controller!(state, state0, protocol, dt)
+
+	# Only current steps given as C-rates set this flag
+	state.Controller.target_is_c_rate = false
+
+	return update_values_in_controller!(state, state0, state.Controller.step)
+
+end
+
+
+"""
+Implementation of the generic control protocol. This function is called at each Newton iteration. It updates the
+quantities monitored by the terminations and decides if the control switches to the next control step.
+
+The control only switches if the previous converged state has already entered the termination region of the control
+step. Within a time step, a switch is not reverted, to avoid oscillations. The in-step constraint check (see
+check_constraints) cuts the time step when a converged state has gone past the termination region, so that the switch
+happens within the termination region.
 """
 function update_control_step_in_controller!(state, state0, protocol::GenericProtocol, dt)
-	control_steps = protocol.steps
-	cycle_counts = protocol.cycle_counts
-	step_indices = protocol.step_indices
 
-	number_of_control_steps = length(protocol.steps)
-
-	# --- Helpers: mapping between controller.step_count (zero-based) and control_steps (1-based) ---
-
-	# Map controller.step_count (which in your logs is 0 for the first step)
-	# to 1-based index used for control_steps array
-	stepcount_to_index(step_count::Integer) = clamp(step_count + 1, 1, number_of_control_steps)   # stepnum 0 -> index 1
-	index_to_stepcount(index::Integer) = clamp(index - 1, 0, number_of_control_steps - 1)      # index 1 -> stepnum 0
-
-	# --- Extract scalars safely ---
-	voltage_values = value(state[:ElectricPotential])
-	current_values = value(state[:Current])
-	voltage_0_values = value(state0[:ElectricPotential])
-	current_0_values = value(state0[:Current])
-
-	@assert length(voltage_values) == 1 "Expected scalar ElectricPotential"
-	@assert length(current_values) == 1 "Expected scalar Current"
-	@assert length(voltage_0_values) == 1 "Expected scalar ElectricPotential (state0)"
-	@assert length(current_0_values) == 1 "Expected scalar Current (state0)"
-
-	voltage = first(voltage_values)
-	current = first(current_values)
-	voltage_0 = first(voltage_0_values)
-	current_0 = first(current_0_values)
-
-	# --- Time and derivatives ---
 	controller = state[:Controller]
+	controller0 = state0[:Controller]
 
-	controller.time = state0.Controller.time + dt
-	controller.state_of_charge = compute_state_of_charge(state0.Controller.state_of_charge, dt, protocol.rated_capacity, current)
+	voltage = only(value(state[:ElectricPotential]))
+	current = only(value(state[:Current]))
+	voltage_0 = only(value(state0[:ElectricPotential]))
+	current_0 = only(value(state0[:Current]))
+
+	controller.time = controller0.time + dt
+	controller.state_of_charge = compute_state_of_charge(controller0.state_of_charge, dt, protocol.rated_capacity, current)
 	controller.dIdt = dt > 0 ? (abs(current) - abs(current_0)) / dt : 0.0
 	controller.dEdt = dt > 0 ? (voltage - voltage_0) / dt : 0.0
 	controller.current = current
 	controller.voltage = voltage
 
-	# --- Determine previous/ current indices and types (clearly mapped) ---
-	previous_step_count = state0.Controller.step_count                # e.g. 0 for first step
-	previous_step_index = state0.Controller.step_index                # e.g. 0 for first step
-	previous_cycle_count = state0.Controller.cycle_count                # e.g. 0 for first cycle
-	previous_index = stepcount_to_index(previous_step_count)                     # 1-based index into control_steps
-	previous_control_step = state0.Controller.step
+	switch = false
 
-	# Compute region switch flags for previous states
-	# status_previous = setupRegionSwitchFlags(previous_control_step, state0, controller)
-	status_previous = get_status_on_termination_region(previous_control_step.termination, state0)
+	if !experiment_is_finished(protocol, controller0)
 
+		termination = controller0.step.termination
 
-	if status_previous.before_termination_region
-		# We have not entered the switching region in the time step. We are not going to change control.
-
-		step_count = previous_step_count
-		step_index = previous_step_index
-		cycle_count = previous_cycle_count
-		control_step = previous_control_step
-
-	else
-		# We entered the switch region in the previous time step. We consider switching control
-
-		# If controller hasn't already changed this Newton iteration, decide
-		if controller.step_count == state0.Controller.step_count
-			# The control has not changed from previous time step and we want to determine if we should change it.
-			# status_current = setupRegionSwitchFlags(previous_control_step, state, controller)
-			status = get_status_on_termination_region(previous_control_step.termination, state)
-
-			if status.after_termination_region
-				# Attempt to move forward one stepnum
-				step_count = previous_step_count + 1   # still zero-based
-				index = previous_index + 1
-
-
-				if index <= number_of_control_steps && step_count <= (number_of_control_steps - 1)
-					# 	# Copy the policy step so we can mutate termination without altering original policy
-					cycle_count = cycle_counts[index]
-					step_index = step_indices[index]
-					control_step = control_steps[index]
-
-					# Adjust time-based termination (if needed)
-					adjust_time_based_termination_target!(control_step.termination, state0.Controller.time)
-
-				else
-					# The last control step has terminated. We keep its control for this time step and flag the end of
-					# the experiment by setting step_count past the last step. The simulation is stopped by the
-					# post-ministep hook set up in solver_configuration.
-					step_count = number_of_control_steps
-					step_index = previous_step_index
-					cycle_count = previous_cycle_count
-					control_step = previous_control_step
-				end
-
+		if !get_status_on_termination_region(termination, state0).before_termination_region
+			# We entered the termination region in the previous time step. We consider switching control.
+			if controller.step_count == controller0.step_count
+				# The control has not changed in this time step. We switch if we are past the termination region.
+				switch = get_status_on_termination_region(termination, state).after_termination_region
 			else
-				step_count = previous_step_count
-				step_index = previous_step_index
-				cycle_count = previous_cycle_count
-				control_step = previous_control_step
-
-			end
-
-		else
-			# controller already advanced this iteration: We do not switch back to avoid oscillation. We are anyway within the given tolerance for the
-			# control so that we keep the control as it is.
-
-			step_count = previous_step_count + 1   # still zero-based
-			index = previous_index + 1
-
-			if index <= number_of_control_steps && step_count <= (number_of_control_steps - 1)
-				# 	# Copy the policy step so we can mutate termination without altering original policy
-				cycle_count = cycle_counts[index]
-				step_index = step_indices[index]
-				control_step = control_steps[index]
-
-				# Adjust time-based termination (if needed)
-				adjust_time_based_termination_target!(control_step.termination, state0.Controller.time)
-
-			else
-				# The last control step has terminated (see above)
-				step_count = number_of_control_steps
-				step_index = previous_step_index
-				cycle_count = previous_cycle_count
-				control_step = previous_control_step
+				# The control has already been switched in a previous Newton iteration. We do not switch back to avoid
+				# oscillations. We are anyway within the given tolerance for the control.
+				switch = true
 			end
 		end
-
 	end
 
-	# --- Finalize: clamp stepnum and set controller fields ---
-	# Ensure we stay within valid [0, nsteps-1] for stepnum convention
-	# step_number = clamp(step_number, 0, max(0, nsteps - 1))
-
-	controller.step_count = step_count
-	controller.step_index = step_index
-	controller.cycle_count = cycle_count
-	controller.step = control_step
+	set_control_step!(controller, controller0, protocol, switch ? controller0.step_count + 1 : controller0.step_count)
 
 	return nothing
 end
+
+
+function set_control_step!(controller, controller0, protocol::GenericProtocol, step_count)
+
+	number_of_steps = length(protocol.steps)
+
+	if step_count == controller0.step_count
+		# The control step is kept
+		controller.step = controller0.step
+		controller.step_index = controller0.step_index
+		controller.cycle_count = controller0.cycle_count
+		controller.step_start_time = controller0.step_start_time
+
+	elseif step_count < number_of_steps
+		# Switch to the next control step
+		index = step_count + 1
+		controller.step = protocol.steps[index]
+		controller.step_index = protocol.step_indices[index]
+		controller.cycle_count = protocol.cycle_counts[index]
+		controller.step_start_time = controller0.time
+
+	else
+		# The last control step has terminated. We keep its control for this time step and flag the end of the
+		# experiment by setting step_count past the last step. The simulation is stopped by the post-ministep hook set
+		# up in solver_configuration.
+		controller.step = controller0.step
+		controller.step_index = controller0.step_index
+		controller.cycle_count = protocol.final_cycle_count
+		controller.step_start_time = controller0.step_start_time
+	end
+
+	controller.step_count = step_count
+
+	return controller
+end
+
+
+"""
+When a time step has converged, the converged state may not fulfill the requirements of the control: it can be past
+the termination region of the control step, meaning that the control should have switched, or the control has switched
+but the state is not before the termination region of the new step. In these cases, check_constraints returns false
+and the Newton iterations continue. If the control cannot switch in this time step, the time step is eventually cut.
+In this way, the switches happen within the termination regions. This function is used as global convergence check.
+"""
+function check_constraints(model, storage)
+
+	protocol = model[:Control].system.policy
+
+	state = storage.state[:Control]
+	controller = state[:Controller]
+	controller0 = storage.state0[:Control][:Controller]
+
+	if controller.step_count == controller0.step_count
+		# The control has not switched: the state should not be past the termination region of the step
+		return !get_constraint_status(controller.step.termination, state).after_termination_region
+	elseif !experiment_is_finished(protocol, controller)
+		# The control has switched: the state should be before the termination region of the new step
+		return get_constraint_status(controller.step.termination, state).before_termination_region
+	else
+		return true
+	end
+
+end
+
+
 """
 We need to add the specific treatment of the controller variables for GenericProtocol
 """
@@ -402,4 +364,31 @@ function Jutul.reset_state_to_previous_state!(
 		model)
 
 	copyController!(storage.state[:Controller], storage.state0[:Controller])
+end
+
+
+"""
+We limit the Newton updates of the current to a fraction of the maximum current of the protocol, to avoid
+convergence problems at control switches.
+"""
+function Jutul.update_primary_variable!(state, p::CurrentVar, state_symbol, model::CurrentAndVoltageModel{<:GenericProtocol}, dx, w)
+
+	entity = associated_entity(p)
+	active = active_entities(model.domain, entity, for_variables = true)
+	v = state[state_symbol]
+
+	maximum_current = model.system.policy.maximum_current
+
+	abs_max = maximum_current > 0 ? 0.2 * maximum_current : absolute_increment_limit(p)
+	rel_max = relative_increment_limit(p)
+	maxval = maximum_value(p)
+	minval = minimum_value(p)
+	scale = variable_scale(p)
+
+	@inbounds for i in eachindex(active)
+		a_i = active[i]
+		v[a_i] = update_value(v[a_i], w * dx[i], abs_max, rel_max, minval, maxval, scale)
+	end
+
+	return v
 end

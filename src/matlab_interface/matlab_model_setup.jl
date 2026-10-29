@@ -2,25 +2,59 @@
 # control policy setup (Matlab input specific) #
 ################################################
 
-function setup_initial_control_policy!(policy::SimpleCVPolicy, inputparams::MatlabInput, parameters)
+"""
+Set up the generic protocol from the Matlab control input. The Matlab control is converted to control steps:
 
-    Imax = Float64(inputparams["model"]["Control"]["Imax"])
-    tup = Float64(inputparams["model"]["Control"]["rampupTime"])
+- "CCDischarge": constant current discharge until the lower cutoff voltage, followed by a constant voltage hold at the
+  cutoff voltage until the end of the simulation.
+- "CCCV": the same control steps as for the CCCV cycling protocol, with the currents given by the Matlab input.
 
-    cFun(time) = currentFun(time, Imax, tup)
+The Matlab input does not give the capacity and the initial state of charge, so that C-rates and state of charge
+terminations cannot be used.
+"""
+function setup_matlab_control_policy(ctrl)
 
-    policy.current_function = cFun
-    policy.Imax = Imax
-    return policy.voltage = Float64(inputparams["model"]["Control"]["lowerCutoffVoltage"])
+    control_policy = ctrl["controlPolicy"]
 
-end
+    voltage_termination(voltage, comparison) = Dict{String, Any}("Quantity" => "Voltage", "Value" => voltage, "Comparison" => comparison, "Tolerance" => CC_VOLTAGE_TOLERANCE)
 
+    if control_policy == "CCDischarge"
 
-function setup_initial_control_policy!(policy::CyclingCVPolicy, inputparams::MatlabInput, parameters)
+        lower_voltage = ctrl["lowerCutoffVoltage"]
 
-    error("not updated, use inputparams to get values")
-    policy.ImaxDischarge = only(parameters[:Control][:ImaxDischarge])
-    return policy.ImaxCharge = only(parameters[:Control][:ImaxCharge])
+        control_steps = [
+            Dict{String, Any}("ControlType" => "Current", "Value" => ctrl["Imax"], "Direction" => "discharging", "Termination" => voltage_termination(lower_voltage, "below")),
+            Dict{String, Any}("ControlType" => "Voltage", "Value" => lower_voltage),
+        ]
+
+        use_ramp_up = true
+        ramp_up_time = ctrl["rampupTime"]
+
+    elseif control_policy == "CCCV"
+
+        discharge_steps = [
+            Dict{String, Any}("ControlType" => "Current", "Value" => ctrl["ImaxDischarge"], "Direction" => "discharging", "Termination" => voltage_termination(ctrl["lowerCutoffVoltage"], "below")),
+            Dict{String, Any}("ControlType" => "Rest", "Termination" => Dict{String, Any}("Quantity" => "VoltageChange", "Value" => ctrl["dEdtLimit"], "Comparison" => "absolute value below")),
+        ]
+        charge_steps = [
+            Dict{String, Any}("ControlType" => "Current", "Value" => ctrl["ImaxCharge"], "Direction" => "charging", "Termination" => voltage_termination(ctrl["upperCutoffVoltage"], "above")),
+            Dict{String, Any}("ControlType" => "Voltage", "Value" => ctrl["upperCutoffVoltage"], "Termination" => Dict{String, Any}("Quantity" => "CurrentChange", "Value" => ctrl["dIdtLimit"], "Comparison" => "absolute value below")),
+        ]
+
+        cycle_steps = ctrl["initialControl"] == "discharging" ? [discharge_steps; charge_steps] : [charge_steps; discharge_steps]
+
+        control_steps = [Dict{String, Any}("ControlType" => "Cycle", "NumberOfCycles" => Int(ctrl["numberOfCycles"]), "ControlSteps" => cycle_steps)]
+
+        use_ramp_up = false
+        ramp_up_time = 0.0
+
+    else
+
+        error("controlPolicy $control_policy not recognized.")
+
+    end
+
+    return GenericProtocol(control_steps, NaN; capacity = NaN, use_ramp_up = use_ramp_up, ramp_up_time = ramp_up_time)
 
 end
 
@@ -501,36 +535,7 @@ function setup_submodels(inputparams::MatlabInput)
     # Setup control model #
     #######################
 
-    controlPolicy = inputparams["Control"]["controlPolicy"]
-
-    if controlPolicy == "CCDischarge"
-
-        minE = inputparams["Control"]["lowerCutoffVoltage"]
-        inputI = inputparams["Control"]["Imax"]
-        dtup = inputparams["Control"]["rampupTime"]
-
-        cFun(time) = currentFun(time, inputI, dtup)
-
-        policy = SimpleCVPolicy(current_function = cFun, voltage = minE)
-
-    elseif controlPolicy == "CCCV"
-
-        ctrl = inputparams["Control"]
-
-        policy = CyclingCVPolicy(
-            ctrl["lowerCutoffVoltage"],
-            ctrl["upperCutoffVoltage"],
-            ctrl["dIdtLimit"],
-            ctrl["dEdtLimit"],
-            ctrl["initialControl"],
-            ctrl["numberOfCycles"],
-        )
-
-    else
-
-        error("controlPolicy $controlPolicy not recognized.")
-
-    end
+    policy = setup_matlab_control_policy(inputparams["Control"])
 
     sys_control = CurrentAndVoltageSystem(policy)
     domain_control = CurrentAndVoltageDomain()

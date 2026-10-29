@@ -789,80 +789,32 @@ function solver_configuration(
         end
     end
 
-    if multimodel[:Control].system.policy isa CyclingCVPolicy || multimodel[:Control].system.policy isa CCPolicy || multimodel[:Control].system.policy isa GenericProtocol
-        if multimodel[:Control].system.policy isa CyclingCVPolicy
+    # The converged states are checked against the termination of the control steps, see check_constraints
+    cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
 
-            cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
+    function post_hook(done, report, sim, dt, forces, max_iter, cfg)
 
-        elseif multimodel[:Control].system.policy isa CCPolicy && multimodel[:Control].system.policy.numberOfCycles > 0
-            cfg[:tolerances][:global_convergence_check_function] = (model, storage) -> check_constraints(model, storage)
-        end
+        s = get_simulator_storage(sim)
+        m = get_simulator_model(sim)
 
-        function post_hook(done, report, sim, dt, forces, max_iter, cfg)
+        # The simulation stops once the last control step has terminated. Jutul does not store the state of a time step
+        # in which the simulation is stopped, and this hook is called before the state is copied to state0. We
+        # therefore stop in the time step following the one in which the experiment finished, so that the final state
+        # is part of the output.
+        report[:stopnow] = experiment_is_finished(m[:Control].system.policy, s.state0.Control.Controller)
 
-
-            s = get_simulator_storage(sim)
-            m = get_simulator_model(sim)
-
-            if multimodel[:Control].system.policy isa CyclingCVPolicy
-
-                if s.state.Control.Controller.numberOfCycles >= m[:Control].system.policy.numberOfCycles
-                    report[:stopnow] = true
-                else
-                    report[:stopnow] = false
-                end
-
-            elseif multimodel[:Control].system.policy isa CCPolicy
-
-                if multimodel[:Control].system.policy.numberOfCycles == 0
-
-                    if multimodel[:Control].system.policy.initialControl == "charging"
-
-                        if s.state.Control.ElectricPotential[1] >= multimodel[:Control].system.policy.upperCutoffVoltage
-                            report[:stopnow] = true
-                        else
-                            report[:stopnow] = false
-                        end
-
-                    elseif multimodel[:Control].system.policy.initialControl == "discharging"
-
-                        if s.state.Control.ElectricPotential[1] <= multimodel[:Control].system.policy.lowerCutoffVoltage
-                            report[:stopnow] = true
-
-                        else
-
-                            report[:stopnow] = false
-                        end
-                    end
-                else
-                    if s.state.Control.Controller.numberOfCycles >= multimodel[:Control].system.policy.numberOfCycles
-                        report[:stopnow] = true
-                    else
-                        report[:stopnow] = false
-                    end
-                end
-
-            elseif multimodel[:Control].system.policy isa GenericProtocol
-
-                # The controller sets step_count past the last step once the last control step has terminated
-                report[:stopnow] = s.state.Control.Controller.step_count >= length(m[:Control].system.policy.steps)
-
-            end
-
-            return (done, report)
-
-        end
-
-        # Perform thermal simulation
-        if haskey(input.model_settings, "ThermalModel") && input.model_settings["ThermalModel"] == "Sequential"
-
-            post_hook = BattMo.setup_thermal_post_ministep_hook(model, input, post_hook; Temperature = input.cycling_protocol["InitialTemperature"])
-
-        end
-
-        cfg[:post_ministep_hook] = post_hook
+        return (done, report)
 
     end
+
+    # Perform thermal simulation
+    if haskey(input.model_settings, "ThermalModel") && input.model_settings["ThermalModel"] == "Sequential"
+
+        post_hook = BattMo.setup_thermal_post_ministep_hook(model, input, post_hook; Temperature = input.cycling_protocol["InitialTemperature"])
+
+    end
+
+    cfg[:post_ministep_hook] = post_hook
 
     return cfg
 
@@ -1130,22 +1082,4 @@ function compute_rampup_timesteps(time::Real, dt::Real, n::Integer = 8)
     dT = [dt_init; dt_rem; dt_final]
 
     return dT
-end
-
-####################
-# Current function #
-####################
-
-function currentFun(t::Real, inputI::Real, tup::Real = 0.1)
-
-    t, inputI, tup, val = promote(t, inputI, tup, 0.0)
-
-    if t <= tup
-        val = sineup(0.0, inputI, 0.0, tup, t)
-    else
-        val = inputI
-    end
-
-    return val
-
 end

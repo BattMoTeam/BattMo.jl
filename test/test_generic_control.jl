@@ -87,8 +87,78 @@ using Test
 			Dict("ControlType" => "Rest", "Termination" => Dict("Quantity" => "Time", "Value" => 10.0)),
 		])])
 		@test !is_valid([Dict("ControlType" => "Cycle", "NumberOfCycles" => 2, "ControlSteps" => [
-			Dict("ControlType" => "Rest"),
+			Dict("ControlType" => "Rest", "Duration" => 10.0),
 		])])
+
+		# The new step types and the termination tolerance
+		@test is_valid([Dict("ControlType" => "CurrentFunction", "FunctionName" => "f", "FilePath" => "f.jl")])
+		@test !is_valid([Dict("ControlType" => "CurrentFunction")])
+		@test is_valid([Dict("ControlType" => "CurrentSeries", "Times" => [0.0, 1.0], "Currents" => [1.0, 1.0], "LowerVoltageLimit" => 3.0)])
+		@test !is_valid([Dict("ControlType" => "CurrentSeries", "Times" => [0.0, 1.0])])
+		@test is_valid([Dict("ControlType" => "Rest", "Termination" => Dict("Quantity" => "Voltage", "Value" => 3.0, "Comparison" => "above", "Tolerance" => 1e-4))])
+		@test !is_valid([Dict("ControlType" => "Rest", "Termination" => Dict("Quantity" => "Voltage", "Value" => 3.0, "Comparison" => "above", "Tolerance" => -1.0))])
+
+	end
+
+	@testset "Protocol conversion" begin
+
+		schema = BattMo.Schema(get_schema_control_steps())
+		is_valid(steps) = isempty(BattMo.validate(schema, steps).issues)
+
+		# Single constant current discharge until the lower voltage limit
+		steps = cycling_protocol_to_control_steps(load_cycling_protocol(; from_default_set = "cc_discharge"))
+		@test is_valid(steps)
+		@test length(steps) == 1
+		@test steps[1]["ControlType"] == "Current"
+		@test steps[1]["Direction"] == "discharging"
+		@test steps[1]["CRate"] == 0.5
+		@test steps[1]["Termination"]["Value"] == 2.4
+		@test steps[1]["Termination"]["Comparison"] == "below"
+
+		# Constant current cycles, starting with the initial control
+		steps = cycling_protocol_to_control_steps(load_cycling_protocol(; from_default_set = "cc_cycling"))
+		@test is_valid(steps)
+		@test steps[1]["ControlType"] == "Cycle"
+		@test steps[1]["NumberOfCycles"] == 3
+		@test [s["Direction"] for s in steps[1]["ControlSteps"]] == ["charging", "discharging"]
+
+		# CC-CV cycles
+		steps = cycling_protocol_to_control_steps(load_cycling_protocol(; from_default_set = "cccv"))
+		@test is_valid(steps)
+		@test steps[1]["NumberOfCycles"] == 3
+		@test [s["ControlType"] for s in steps[1]["ControlSteps"]] == ["Current", "Voltage", "Current", "Rest"]
+		@test steps[1]["ControlSteps"][2]["Termination"]["Quantity"] == "CurrentChange"
+		@test steps[1]["ControlSteps"][4]["Termination"]["Quantity"] == "VoltageChange"
+
+		# Function and current series protocols have a single step without termination
+		steps = cycling_protocol_to_control_steps(load_cycling_protocol(; from_default_set = "user_defined_current_function"))
+		@test is_valid(steps)
+		@test steps == [Dict("ControlType" => "CurrentFunction", "FunctionName" => "current_function")]
+
+		series = CyclingProtocol(Dict("Protocol" => "InputCurrentSeries", "Times" => [0.0, 10.0], "Currents" => [1.0, 2.0],
+			"LowerVoltageLimit" => 2.5, "UpperVoltageLimit" => 4.2, "InitialStateOfCharge" => 0.5))
+		steps = cycling_protocol_to_control_steps(series)
+		@test is_valid(steps)
+		@test steps[1]["ControlType"] == "CurrentSeries"
+		@test !haskey(steps[1], "Termination")
+
+		# Only the last step can be given without termination
+		rest = Dict("ControlType" => "Rest", "Termination" => Dict("Quantity" => "Time", "Value" => 10.0))
+		@test BattMo.GenericProtocol([rest, Dict("ControlType" => "Rest")], 0.5; capacity = 1.0) isa BattMo.GenericProtocol
+		@test_throws ErrorException BattMo.GenericProtocol([Dict("ControlType" => "Rest"), rest], 0.5; capacity = 1.0)
+
+		# The Matlab control input is converted to control steps as well
+		matlab_cccv = Dict("controlPolicy" => "CCCV", "ImaxDischarge" => 5.0, "ImaxCharge" => 5.0, "lowerCutoffVoltage" => 3.0,
+			"upperCutoffVoltage" => 4.1, "dEdtLimit" => 1e-4, "dIdtLimit" => 1e-4, "initialControl" => "charging", "numberOfCycles" => 2.0)
+		policy = BattMo.setup_matlab_control_policy(matlab_cccv)
+		@test length(policy.steps) == 8
+		@test policy.steps[1] isa BattMo.CurrentStep && policy.steps[2] isa BattMo.VoltageStep
+		@test policy.final_cycle_count == 2
+
+		matlab_cc = Dict("controlPolicy" => "CCDischarge", "Imax" => 5.0, "lowerCutoffVoltage" => 3.0, "rampupTime" => 10.0)
+		policy = BattMo.setup_matlab_control_policy(matlab_cc)
+		@test policy.steps[1] isa BattMo.CurrentStep && policy.steps[2] isa BattMo.VoltageStep
+		@test policy.steps[2].termination isa BattMo.NoTermination
 
 	end
 
