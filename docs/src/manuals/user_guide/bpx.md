@@ -81,12 +81,13 @@ Every import and export collects its findings and reports them in two messages:
 
   | Category | Meaning |
   |:--|:--|
-  | Violations of the BPX standard | The data does not conform to the BPX schema, or a function string uses operations that BPX does not allow. All violations are listed, with their location in the file. |
+  | Violations of the BPX standard | The data does not conform to the BPX schema, or a file with a 1.x version uses the 0.x layout (see [BPX versions](@ref bpx_versions)). All violations are listed, with their location in the file. A function string that is not a BPX expression is an error (see [Function strings](@ref bpx_function_strings)). |
   | Inconsistencies within the BPX data | The data conforms to the schema but is not self-consistent (see [Validation](@ref bpx_validation)). |
   | BPX features that BattMo does not support | Parts of the parameter set that are ignored, e.g. OCP hysteresis or a degradation state. |
   | Differences between the BPX and BattMo models | The BattMo model differs from the BPX model, e.g. the thermal model, so that simulations do not reproduce BPX. |
   | Keys that are not part of the BPX standard | Ignored keys (reported as schema violations when the file is validated). |
-  | Parameters that could not be determined | BattMo parameters for which the BPX data is missing. They are set to `0.0` and must be set before simulating; the validation of the simulation input flags the ones the selected model needs. |
+  | Parameters that could not be determined | BattMo parameters for which the BPX data is missing. They are set to `0.0` and must be set before simulating; the validation of the simulation input flags the ones the selected model needs. Missing specific heat capacities, thermal conductivities and activation energies, which only thermal simulations or the Arrhenius temperature dependence use, are left unset instead and listed in the info message. |
+  | Parameters set to placeholder values | Without a lumped cell density, all components get a density of 1000 kg.m-3, which BattMo needs to compute the coating volume fractions. The simulated electrochemistry does not depend on it; masses are not meaningful. |
   | Operating conditions that the BPX input does not give | Cycling protocol entries set to a default value, e.g. the constant current discharge with `DRate = 1`, or an initial state of charge that the file does not give. |
 
 - **An info message** with the documented choices of the conversion: the [approximations](@ref bpx_approximations) made, parameters without a counterpart, the operating conditions with their [`CyclingProtocol`](@ref) entries (when reading cell parameters only), and notes (e.g. that a legacy file was converted, that the cell format was inferred, or which validation experiment the cycling protocol uses).
@@ -103,9 +104,9 @@ The schema fixes the name of every parameter, and every name includes its unit (
 
 For the declared model (`"DFN"`, `"SPMe"`, `"SPM"` or `"Partial"`), the schema checks that all required parameters are present, that no other parameters are given, and that every value has the right type: a number, a function string, or a table with `"x"` and `"y"` arrays.
 
-### Function strings
+### [Function strings](@id bpx_function_strings)
 
-BPX functions are strings in Python syntax with the independent variable `x` and the operations `*`, `/`, `-`, `+`, `**`, `exp` and `tanh`. BattMo checks that function strings only use these operations; other operations are reported as violations. For the checks below, function strings are evaluated by BattMo itself, which only evaluates these operations, so a BPX file cannot run code.
+BPX functions are strings in Python syntax with the independent variable `x` and the operations `*`, `/`, `-`, `+`, `**`, `exp` and `tanh`. BattMo evaluates the converted function strings of a simulation as Julia code, so a function string that uses anything else is an error, also without `strict`: a BPX file cannot run code. For the checks below, function strings are evaluated by BattMo itself, which only evaluates these operations.
 
 ### Consistency checks
 
@@ -123,9 +124,11 @@ As the Python BPX package does, BattMo checks that
 
 These findings are warnings, also in strict mode.
 
-### BPX versions
+### [BPX versions](@id bpx_versions)
 
 BPX 1.0 moved the initial conditions and the ambient temperature from the `"Parameterisation"` section to a new `"State"` section. Files in the 0.x format, recognized by their `Header.BPX` version, are converted to the 1.x layout before they are validated and converted, in the same way as the Python BPX package does (BattMo's conversion is adapted from it). The only difference is that the lumped thermal conductivity of 0.x files, which BPX 1.x no longer has, is kept in the `"User-defined"` section, because BattMo uses it.
+
+Some files declare BPX 1.0 but use the 0.x layout: they have no `"State"` section, and the initial temperatures, the ambient temperature or the initial electrolyte concentration are in `"Parameterisation"`. They are converted in the same way and reported as a violation of the standard, so they are rejected in strict mode.
 
 A file that declares a BPX version newer than 1.1.1 is read with the 1.1.1 schema: parameters introduced in later versions are reported and ignored.
 
@@ -140,7 +143,7 @@ A file that declares a BPX version newer than 1.1.1 is read with the 1.1.1 schem
 | `Nominal cell capacity [A.h]` | `Cell.NominalCapacity` | unchanged |
 | `External surface area [m2]` | `Cell.DeviceSurfaceArea` | unchanged (not used by the BattMo thermal model) |
 | `Reference temperature [K]` | `Cell.ReferenceTemperature` | unchanged; 298.15 K when absent |
-| `Density [kg.m-3]` | `Density` of every component | lumped density used for all components |
+| `Density [kg.m-3]` | `Density` of every component | lumped density used for all components; 1000 kg.m-3 when absent |
 | `Specific heat capacity [J.K-1.kg-1]` | `SpecificHeatCapacity` of every component | unchanged |
 | `Volume [m3]` | – | not used (see [Thermal model](@ref bpx_thermal)) |
 | `Lower/Upper voltage cut-off [V]` | `CyclingProtocol` | reported, see [Operating conditions](@ref bpx_protocol) |
@@ -162,8 +165,8 @@ For the negative (``k = \mathrm{n}``) and positive (``k = \mathrm{p}``) electrod
 | `Minimum/Maximum stoichiometry` | `StoichiometricCoefficientAtSOC0/SOC100` | negative electrode: minimum at SOC 0, maximum at SOC 100; positive electrode: maximum at SOC 0, minimum at SOC 100 |
 | `OCP [V]`, `Entropic change coefficient [V.K-1]`, `Diffusivity [m2.s-1]` | `OpenCircuitPotential`, `EntropyChange`, `DiffusionCoefficient` | function strings: `x` → `(c / cmax)`, `**` → `^`; numbers and tables unchanged |
 | `Reaction rate constant [mol.m-2.s-1]` ``K`` | `ActiveMaterial.ReactionRateConstant` ``k_0`` | ``k_0 = K / (c^\mathrm{max} \sqrt{c_\mathrm{e0}})`` |
-| `Diffusivity activation energy [J.mol-1]` | `ActivationEnergyOfDiffusion` | unchanged |
-| `Reaction rate constant activation energy [J.mol-1]` | `ActivationEnergyOfReaction` | unchanged |
+| `Diffusivity activation energy [J.mol-1]` | `ActivationEnergyOfDiffusion` | unchanged; left unset when 0, which the BattMo schema does not accept |
+| `Reaction rate constant activation energy [J.mol-1]` | `ActivationEnergyOfReaction` | unchanged; left unset when 0, which the BattMo schema does not accept |
 | – | `NumberOfElectronsTransfered`, `ChargeTransferCoefficient` | 1 and 0.5: BPX assumes a single-electron reaction with symmetric Butler-Volmer kinetics |
 
 **Exchange current density.** BPX writes the exchange current density as
@@ -211,6 +214,8 @@ The BPX reference temperature sets `Cell.ReferenceTemperature`, which BattMo use
 U(\theta, T) = U_\mathrm{ref}(\theta) + (T - T_\mathrm{ref}) \frac{\mathrm{d}U}{\mathrm{d}T}(\theta),
 ```
 as in BPX. See [Temperature dependence](arrhenius.md) for the BattMo model.
+
+Unlike in BPX, these relations are not always applied in BattMo. The electrode activation energies are only used with the Arrhenius temperature dependence (`ModelSettings["TemperatureDependence"] = "Arrhenius"`, which a thermal model turns on), and the entropic change coefficients only with the sequential thermal model (`ModelSettings["ThermalModel"] = "Sequential"`), which requires a P4D model. An isothermal simulation with the default model settings away from the reference temperature therefore uses the electrode parameters at the reference temperature, while the electrolyte functions, which carry their activation energies, are evaluated at the simulated temperature. To simulate a BPX parameter set away from its reference temperature, turn on the Arrhenius temperature dependence.
 
 ### Tabulated data
 

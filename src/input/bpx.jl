@@ -39,6 +39,9 @@ const BattMoModule = parentmodule(@__MODULE__)
 const GAS_CONSTANT = 8.31446261815324 # J mol⁻¹ K⁻¹
 const DEFAULT_REFERENCE_TEMPERATURE = 298.15 # K
 
+# Density of all components when the BPX input gives no lumped cell density
+const PLACEHOLDER_DENSITY = 1000.0 # kg m⁻³
+
 # Version of the BPX package the bundled schema was generated from (see
 # src/input/bpx_schema/README.md)
 const BPX_SCHEMA_VERSION = v"1.1.1"
@@ -77,6 +80,7 @@ const WARNING_CATEGORIES = [
     :model_differences => "Differences between the BPX and BattMo models",
     :unknown_keys => "Keys that are not part of the BPX standard (ignored)",
     :zero_filled => "Parameters that could not be determined and were set to 0.0 (set them before simulating)",
+    :placeholders => "Parameters that BPX does not give and that were set to placeholder values (check them)",
     :assumed => "Operating conditions that the BPX input does not give (default values used, check them)",
 ]
 
@@ -84,6 +88,7 @@ const WARNING_CATEGORIES = [
 const INFO_CATEGORIES = [
     :approximations => "Approximations made in the conversion",
     :unused => "Parameters without a counterpart (not converted)",
+    :omitted => "Parameters that could not be determined and that only thermal simulations or the Arrhenius temperature dependence use (left unset; set them for such simulations)",
     :protocol => "Operating conditions, which belong to the BattMo CyclingProtocol (load them with `load_cycling_protocol(; from_bpx_file_path)`)",
     :notes => "Notes",
 ]
@@ -274,7 +279,10 @@ const PARAMETERISATION_DEFINITIONS = Dict(
 Return all violations of the bundled BPX schema in a BPX input in the v1.x layout.
 """
 function schema_issues(bpx_data::AbstractDict)
-    schema = deepcopy(bpx_schema_data())
+    # Shallow copies, so that the sub-schemas keep their identity and the compiled leaf
+    # schemas in LEAF_SCHEMA_CACHE are reused across imports
+    schema = Dict{String, Any}(bpx_schema_data())
+    schema["properties"] = Dict{String, Any}(schema["properties"])
     definitions = schema["\$defs"]
     header = get(bpx_data, "Header", nothing)
     model = isa(header, AbstractDict) ? get(header, "Model", nothing) : nothing
@@ -377,16 +385,47 @@ function migrate_legacy_bpx(bpx_data::AbstractDict)
     return data
 end
 
+# Parameters of the legacy layout that BPX 1.x moved to "State" or removed: (section, key)
+const LEGACY_LAYOUT_PARAMETERS = [
+    ("Cell", "Initial temperature [K]"),
+    ("Cell", "Ambient temperature [K]"),
+    ("Cell", "Thermal conductivity [W.m-1.K-1]"),
+    ("Electrolyte", "Initial concentration [mol.m-3]"),
+]
+
+"""
+    has_legacy_layout(bpx_data) -> Bool
+
+Whether a BPX input uses the legacy v0.x layout: no `State` section, and initial
+conditions or the lumped thermal conductivity in `Parameterisation`. Some files with a
+BPX 1.0 version field use this layout.
+"""
+function has_legacy_layout(bpx_data::AbstractDict)
+    haskey(bpx_data, "State") && return false
+    parameterisation = get(bpx_data, "Parameterisation", nothing)
+    isa(parameterisation, AbstractDict) || return false
+    return any(LEGACY_LAYOUT_PARAMETERS) do (section, key)
+        data = get(parameterisation, section, nothing)
+        return isa(data, AbstractDict) && haskey(data, key)
+    end
+end
+
+const LEGACY_MIGRATION_DESCRIPTION = "initial conditions and ambient temperature moved to \"State\"; the lumped thermal conductivity, which BPX 1.x no longer has, moved to \"User-defined\""
+
 """
     prepare_bpx_input(bpx_data, report) -> Dict
 
-Return a copy of a BPX input in the v1.x layout: legacy v0.x inputs are converted and a
-numeric version field is written as a string, as the BPX package does.
+Return a copy of a BPX input in the v1.x layout: inputs in the legacy v0.x layout are
+converted, also when their version field says 1.x, and a numeric version field is
+written as a string, as the BPX package does.
 """
 function prepare_bpx_input(bpx_data::AbstractDict, report::ConversionReport)
     version = bpx_version(bpx_data)
     if version.major < 1
-        add!(report, :notes, "The input uses the legacy BPX $version format and was converted to the BPX $(BPX_SCHEMA_VERSION) layout (initial conditions and ambient temperature moved to \"State\"; the lumped thermal conductivity, which BPX 1.x no longer has, moved to \"User-defined\").")
+        add!(report, :notes, "The input uses the legacy BPX $version format and was converted to the BPX $(BPX_SCHEMA_VERSION) layout ($LEGACY_MIGRATION_DESCRIPTION).")
+        return migrate_legacy_bpx(bpx_data)
+    elseif has_legacy_layout(bpx_data)
+        add!(report, :schema, "Header → BPX: the input declares BPX $version but uses the legacy BPX 0.x layout (no \"State\" section). It was converted to the BPX $(BPX_SCHEMA_VERSION) layout ($LEGACY_MIGRATION_DESCRIPTION).")
         return migrate_legacy_bpx(bpx_data)
     end
     data = deepcopy(bpx_data)
@@ -499,20 +538,22 @@ end
 
 Convert a BPX FloatFunctionTable value (constant, function string or tabulated data) to
 its BattMo counterpart, with `variable` replacing the BPX variable `x` in function
-strings. Function strings that do not follow the BPX syntax are reported. Missing
-values (`nothing`) are passed through so they can be zero-filled later.
+strings. BattMo evaluates function strings as Julia code, so a function string that
+does not follow the BPX syntax raises an error, also without `strict`. Missing values
+(`nothing`) are passed through so they can be zero-filled later.
 """
 function convert_bpx_function(value, variable::String, report::ConversionReport, place::String)
     if isnothing(value) || isa(value, Real)
         return value
     elseif isa(value, AbstractString)
         _, issue = parse_bpx_expression(value)
-        isnothing(issue) || add!(report, :schema, "$place: the function string $issue. It is passed to BattMo unchanged.")
+        isnothing(issue) || error("BPX import: $place: the function string $issue. BattMo evaluates function strings as code, so only BPX expressions of x are accepted.")
         return convert_bpx_expression(value, variable)
     elseif isa(value, AbstractDict) && haskey(value, "x") && haskey(value, "y")
         # Tabulated data is given versus the same variable BattMo evaluates the
-        # interpolator at, so it can be passed through unchanged.
-        return value
+        # interpolator at. It is copied to a Dict of numbers, the type BattMo expects,
+        # since a parsed JSON file gives other dictionary and array types.
+        return Dict{String, Any}("x" => Float64.(collect(value["x"])), "y" => Float64.(collect(value["y"])))
     else
         add!(report, :schema, "$place: unsupported value of type $(typeof(value)); expected a number, a function string or a table with \"x\" and \"y\".")
         return nothing
@@ -597,21 +638,32 @@ missing so that the result is zero-filled and reported.
 """
 derive(f, inputs...) = any(isnothing, inputs) ? nothing : f(inputs...)
 
+# BattMo parameters that only the thermal model or the Arrhenius temperature dependence
+# use. When they cannot be determined, they are left unset instead of being zero-filled:
+# isothermal simulations do not need them, and simulations that do need them then fail
+# validation instead of running with zero values.
+const OPTIONAL_PARAMETERS = Set(["SpecificHeatCapacity", "ThermalConductivity", "ActivationEnergyOfDiffusion", "ActivationEnergyOfReaction"])
+
 """
-    fill_missing_with_zero!(parameters, prefix, zeroed_parameters)
+    fill_missing_with_zero!(parameters, prefix, zeroed_parameters, omitted_parameters)
 
 Recursively replace `nothing` values, which mark BattMo parameters that could not be
-determined from the BPX input, by `0.0` and record their paths in
-`zeroed_parameters`.
+determined from the BPX input, by `0.0` and record their paths in `zeroed_parameters`.
+Missing parameters in `OPTIONAL_PARAMETERS` are removed instead and recorded in
+`omitted_parameters`.
 """
-function fill_missing_with_zero!(parameters::AbstractDict, prefix::String, zeroed_parameters::Vector{String})
-    for (key, value) in parameters
+function fill_missing_with_zero!(parameters::AbstractDict, prefix::String, zeroed_parameters::Vector{String}, omitted_parameters::Vector{String})
+    for key in collect(keys(parameters))
+        value = parameters[key]
         path = prefix == "" ? key : prefix * "." * key
-        if isnothing(value)
+        if isnothing(value) && key in OPTIONAL_PARAMETERS
+            delete!(parameters, key)
+            push!(omitted_parameters, path)
+        elseif isnothing(value)
             parameters[key] = 0.0
             push!(zeroed_parameters, path)
         elseif isa(value, AbstractDict) && !(haskey(value, "x") && haskey(value, "y"))
-            fill_missing_with_zero!(value, path, zeroed_parameters)
+            fill_missing_with_zero!(value, path, zeroed_parameters, omitted_parameters)
         end
     end
     return parameters
@@ -869,6 +921,22 @@ function convert_electrolyte(section::BPXSection, initial_concentration, lumped,
     return electrolyte
 end
 
+"""
+    convert_activation_energy(section, key, report)
+
+Return the electrode activation energy `key`. A zero activation energy (a temperature
+independent parameter) is returned as `nothing`, so that it is left unset, since the
+BattMo schema only accepts activation energies of at least 1000 J.mol-1.
+"""
+function convert_activation_energy(section::BPXSection, key::String, report::ConversionReport)
+    energy = get_parameter(section, key)
+    if isa(energy, Real) && iszero(energy)
+        add!(report, :model_differences, "$(location(section.name, key)) = 0 (temperature independent): the BattMo schema only accepts activation energies of at least 1000 J.mol-1, so it is left unset. Simulations with the Arrhenius temperature dependence or a thermal model need a value.")
+        return nothing
+    end
+    return energy
+end
+
 function convert_electrode(section::BPXSection, polarity::Symbol, electrolyte_reference_concentration, lumped, report::ConversionReport)
     porosity = get_parameter(section, "Porosity")
     transport_efficiency = get_parameter(section, "Transport efficiency")
@@ -920,8 +988,8 @@ function convert_electrode(section::BPXSection, polarity::Symbol, electrolyte_re
             (k, cmax, c_e_ref) -> k / (cmax * sqrt(c_e_ref)),
             reaction_rate_constant, maximum_concentration, electrolyte_reference_concentration,
         ),
-        "ActivationEnergyOfDiffusion" => get_parameter(section, "Diffusivity activation energy [J.mol-1]"),
-        "ActivationEnergyOfReaction" => get_parameter(section, "Reaction rate constant activation energy [J.mol-1]"),
+        "ActivationEnergyOfDiffusion" => convert_activation_energy(section, "Diffusivity activation energy [J.mol-1]", report),
+        "ActivationEnergyOfReaction" => convert_activation_energy(section, "Reaction rate constant activation energy [J.mol-1]", report),
     )
 
     hysteresis_keys = filter(key -> has_parameter(section, key), HYSTERESIS_PARAMETERS)
@@ -1096,6 +1164,11 @@ function convert_cell_parameters(bpx_data::AbstractDict, report::ConversionRepor
     density = get_parameter(cell_section, "Density [kg.m-3]")
     if !isnothing(density)
         add!(report, :approximations, "BPX only gives a lumped cell density ($density kg.m-3), which is used as the density of every component (active material, inactive solid, electrolyte and separator). The simulated electrochemistry is unaffected; masses and gravimetric quantities are approximate.")
+    else
+        # BattMo computes the coating volume fractions from the component densities, which
+        # a zero density would make undefined
+        density = PLACEHOLDER_DENSITY
+        add!(report, :placeholders, "Parameterisation → Cell → Density [kg.m-3] is not given, so every component (active material, inactive solid, electrolyte and separator) gets the density $PLACEHOLDER_DENSITY kg.m-3. BattMo needs it to compute the coating volume fractions, which do not depend on its value, so the simulated electrochemistry is unaffected; masses and gravimetric quantities are not meaningful.")
     end
 
     lumped = (
@@ -1130,9 +1203,13 @@ function convert_cell_parameters(bpx_data::AbstractDict, report::ConversionRepor
     report_unconverted_keys!(report, user_defined_section)
 
     zeroed_parameters = String[]
-    fill_missing_with_zero!(cell_parameters, "", zeroed_parameters)
+    omitted_parameters = String[]
+    fill_missing_with_zero!(cell_parameters, "", zeroed_parameters, omitted_parameters)
     for path in sort(zeroed_parameters)
         add!(report, :zero_filled, path)
+    end
+    for path in sort(omitted_parameters)
+        add!(report, :omitted, path)
     end
 
     return cell_parameters

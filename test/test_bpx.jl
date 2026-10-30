@@ -187,7 +187,7 @@ end
 
         bpx = nmc_v1()
         bpx["Parameterisation"]["Positive electrode"]["OCP [V]"] = "4.2 - sin(x)"
-        @test_logs (:warn, r"Positive electrode → OCP \[V\]: the function string uses `sin`") match_mode = :any BPX.parse_bpx_to_cell_parameters(bpx)
+        @test_throws "Positive electrode → OCP [V]: the function string uses `sin`" BPX.parse_bpx_to_cell_parameters(bpx)
     end
 
     @testset "missing BPX parameters are zero-filled" begin
@@ -210,15 +210,19 @@ end
         @test ne_converted["ActiveMaterial"]["ParticleRadius"] == 0.0
         @test ne_converted["ActiveMaterial"]["OpenCircuitPotential"] == 0.0
         @test ne_converted["ActiveMaterial"]["EntropyChange"] == 0.0
-        @test ne_converted["ActiveMaterial"]["SpecificHeatCapacity"] == 0.0
+        # Parameters that only thermal simulations use are left unset
+        @test !haskey(ne_converted["ActiveMaterial"], "SpecificHeatCapacity")
 
         # Derived parameters with missing inputs are zero-filled as well
         @test ne_converted["Coating"]["BruggemanCoefficient"] == 0.0
         @test ne_converted["ActiveMaterial"]["ElectronicConductivity"] == 0.0
-        @test ne_converted["ActiveMaterial"]["Density"] == 0.0
-        @test ne_converted["Coating"]["EffectiveDensity"] == 0.0
-        @test converted["Separator"]["Density"] == 0.0
-        @test converted["PositiveElectrode"]["ActiveMaterial"]["Density"] == 0.0
+
+        # Without a cell density, all components get a placeholder density, so that the
+        # coating volume fractions are defined
+        @test ne_converted["ActiveMaterial"]["Density"] == BPX.PLACEHOLDER_DENSITY
+        @test ne_converted["Coating"]["EffectiveDensity"] ≈ BPX.PLACEHOLDER_DENSITY * (1 - 0.253991)
+        @test converted["Separator"]["Density"] == BPX.PLACEHOLDER_DENSITY
+        @test converted["PositiveElectrode"]["ActiveMaterial"]["Density"] == BPX.PLACEHOLDER_DENSITY
 
         # Parameters that are present stay converted
         @test ne_converted["Coating"]["Thickness"] ≈ 5.62e-5

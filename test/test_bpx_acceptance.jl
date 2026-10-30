@@ -56,17 +56,57 @@ end
 
 as_curve(output) = (time = output.time_series["Time"], voltage = output.time_series["Voltage"], current = output.time_series["Current"])
 
-# Constant current discharge of a BPX file at `current` (A) within its voltage cut-offs
-function bpx_discharge(path; current, simulation_settings = load_simulation_settings(; from_default_set = "p2d"))
+# BattMo applies the electrode activation energies only with the Arrhenius temperature
+# dependence, and the entropic change coefficients only with the sequential thermal model
+# (which also turns on the Arrhenius temperature dependence and needs a P4D model)
+function bpx_model_settings(default_set = "p2d"; arrhenius = false, thermal = false)
+    model_settings = load_model_settings(; from_default_set = default_set)
+    arrhenius && (model_settings["TemperatureDependence"] = "Arrhenius")
+    thermal && (model_settings["ThermalModel"] = "Sequential")
+    return model_settings
+end
+
+# BPX does not give the BattMo heat transfer coefficient. The largest one the BattMo schema
+# allows keeps the cell close to its initial temperature.
+const SURFACE_HEAT_TRANSFER_COEFFICIENT = 5000.0 # W.m-2.K-1
+
+# BPX does not describe the pouch geometry and the current collectors that a P4D pouch
+# model needs. They are taken from the xu_2015 pouch cell (a single layer).
+const POUCH_GEOMETRY_KEYS = ("ElectrodeWidth", "ElectrodeLength", "TabsOnSameSide", "TabLength", "TabWidth", "ElectrodeGeometricSurfaceArea", "NumberOfLayersInParallel")
+
+function set_pouch_geometry!(cell_parameters)
+    pouch = load_cell_parameters(; from_default_set = "xu_2015")
+    for key in POUCH_GEOMETRY_KEYS
+        cell_parameters["Cell"][key] = pouch["Cell"][key]
+    end
+    for electrode in ("NegativeElectrode", "PositiveElectrode")
+        cell_parameters[electrode]["CurrentCollector"] = deepcopy(pouch[electrode]["CurrentCollector"])
+    end
+    return cell_parameters
+end
+
+# Constant current discharge of a BPX file within its voltage cut-offs, at `current` (A)
+# or at `drate`
+function bpx_discharge(path; current = nothing, drate = nothing, model_settings = bpx_model_settings(), simulation_settings = load_simulation_settings(; from_default_set = "p2d"))
     cell_parameters, cycling_protocol = quietly() do
         load_cell_parameters(; from_bpx_file_path = path), load_cycling_protocol(; from_bpx_file_path = path)
     end
-    cycling_protocol["DRate"] = current / compute_cell_theoretical_capacity(cell_parameters)
-    sim = Simulation(LithiumIonBattery(), cell_parameters, cycling_protocol; simulation_settings)
+    if model_settings["ModelFramework"] == "P4D Pouch"
+        set_pouch_geometry!(cell_parameters)
+    end
+    if haskey(model_settings, "ThermalModel")
+        cell_parameters["Cell"]["SurfaceHeatTransferCoefficient"] = SURFACE_HEAT_TRANSFER_COEFFICIENT
+    end
+    cycling_protocol["DRate"] = isnothing(current) ? drate : current / compute_cell_theoretical_capacity(cell_parameters)
+    sim = Simulation(LithiumIonBattery(; model_settings), cell_parameters, cycling_protocol; simulation_settings)
     return as_curve(solve(sim; info_level = -1, include_initial_state = true))
 end
 
-bpx_full_input_discharge(path) = as_curve(run_simulation(quietly(() -> load_full_simulation_input(; from_bpx_file_path = path)); info_level = -1))
+function bpx_full_input_discharge(path; model_settings = Dict{String, Any}())
+    input = quietly(() -> load_full_simulation_input(; from_bpx_file_path = path))
+    merge!(input["ModelSettings"], model_settings)
+    return as_curve(run_simulation(input; info_level = -1))
+end
 
 function interpolate_linear(t, v, tq)
     k = clamp(searchsortedlast(t, tq), 1, length(t) - 1)
@@ -208,8 +248,12 @@ without_metadata(cell_parameters) = Dict(k => v for (k, v) in cell_parameters.al
         @test max_voltage_difference(strings, tables) < 2.0e-3
         @test tables.time[end] ≈ strings.time[end] rtol = 5.0e-3
 
-        full_input = bpx_full_input_discharge(tabulated_path)
-        @test full_input.voltage[end] ≈ 2.7 atol = 0.05
+        # The output ends one time step before the voltage cut-off, so the full simulation
+        # inputs are compared with each other rather than with the cut-off
+        full_input_strings = bpx_full_input_discharge(path)
+        full_input_tables = bpx_full_input_discharge(tabulated_path)
+        @test max_voltage_difference(full_input_strings, full_input_tables) < 2.0e-3
+        @test full_input_tables.time[end] ≈ full_input_strings.time[end] rtol = 5.0e-3
     end
 
     @testset "the transport efficiency of every region reaches the electrolyte" begin
@@ -246,16 +290,18 @@ without_metadata(cell_parameters) = Dict(k => v for (k, v) in cell_parameters.al
         end
         path, halved_path = write_bpx_json(data), write_bpx_json(halved)
 
-        @testset "Simulation with the default model" begin
-            a = bpx_discharge(path; current = 12.5)
-            b = bpx_discharge(halved_path; current = 12.5)
+        @testset "Simulation with the Arrhenius temperature dependence" begin
+            model_settings = bpx_model_settings(; arrhenius = true)
+            a = bpx_discharge(path; current = 12.5, model_settings)
+            b = bpx_discharge(halved_path; current = 12.5, model_settings)
             @test max_voltage_difference(a, b) < 0.5e-3
             @test a.time[end] ≈ b.time[end] rtol = 2.0e-3
         end
 
-        @testset "load_full_simulation_input" begin
-            a = bpx_full_input_discharge(path)
-            b = bpx_full_input_discharge(halved_path)
+        @testset "load_full_simulation_input with the Arrhenius temperature dependence" begin
+            model_settings = Dict{String, Any}("TemperatureDependence" => "Arrhenius")
+            a = bpx_full_input_discharge(path; model_settings)
+            b = bpx_full_input_discharge(halved_path; model_settings)
             @test max_voltage_difference(a, b) < 0.5e-3
             @test a.time[end] ≈ b.time[end] rtol = 2.0e-3
         end
@@ -280,9 +326,15 @@ without_metadata(cell_parameters) = Dict(k => v for (k, v) in cell_parameters.al
             plain["Parameterisation"][electrode]["Entropic change coefficient [V.K-1]"] = 0.0
         end
 
-        given = bpx_discharge(write_bpx_json(data); current = 12.5)
-        with_folded_term = bpx_discharge(write_bpx_json(folded); current = 12.5)
-        without_term = bpx_discharge(write_bpx_json(plain); current = 12.5)
+        # The OCP with the entropic term folded in stays at T, while the sequential thermal
+        # model, which BattMo only supports in P4D, applies the term at the simulated
+        # temperature, which stays close to T
+        model_settings = bpx_model_settings("p4d_pouch"; thermal = true)
+        simulation_settings = load_simulation_settings(; from_default_set = "p4d_pouch")
+        discharge(data) = bpx_discharge(write_bpx_json(data); drate = 1.0, model_settings, simulation_settings)
+        given = discharge(data)
+        with_folded_term = discharge(folded)
+        without_term = discharge(plain)
         @test max_voltage_difference(with_folded_term, without_term) > 5.0e-3
         @test max_voltage_difference(given, with_folded_term) < 0.5e-3
     end
