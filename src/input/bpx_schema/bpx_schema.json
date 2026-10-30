@@ -1,0 +1,2225 @@
+{
+  "$defs": {
+    "Cell": {
+      "additionalProperties": false,
+      "description": "Cell-level parameters that are not specific to any individual component (electrode,\nseparator, or electrolyte).",
+      "properties": {
+        "Electrode area [m2]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Electrode cross-sectional area",
+          "examples": [
+            0.0168
+          ],
+          "title": "Electrode Area [M2]"
+        },
+        "External surface area [m2]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "External surface area of cell",
+          "examples": [
+            0.0378
+          ],
+          "title": "External Surface Area [M2]"
+        },
+        "Volume [m3]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "Volume of the cell",
+          "examples": [
+            0.000127
+          ],
+          "title": "Volume [M3]"
+        },
+        "Number of electrode pairs connected in parallel to make a cell": {
+          "description": "Number of electrode pairs connected in parallel to make a cell",
+          "examples": [
+            1
+          ],
+          "title": "Number Of Electrode Pairs Connected In Parallel To Make A Cell",
+          "type": "integer"
+        },
+        "Lower voltage cut-off [V]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Minimum allowed voltage",
+          "examples": [
+            2.0
+          ],
+          "title": "Lower Voltage Cut-Off [V]"
+        },
+        "Upper voltage cut-off [V]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Maximum allowed voltage",
+          "examples": [
+            4.4
+          ],
+          "title": "Upper Voltage Cut-Off [V]"
+        },
+        "Nominal cell capacity [A.h]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Nominal cell capacity. Used to convert between current and C-rate.",
+          "examples": [
+            5.0
+          ],
+          "title": "Nominal Cell Capacity [A.H]"
+        },
+        "Reference temperature [K]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "Reference temperature for the Arrhenius temperature dependence",
+          "examples": [
+            298.15
+          ],
+          "title": "Reference Temperature [K]"
+        },
+        "Density [kg.m-3]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "Density (lumped)",
+          "examples": [
+            1000.0
+          ],
+          "title": "Density [Kg.M-3]"
+        },
+        "Specific heat capacity [J.K-1.kg-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "Specific heat capacity (lumped)",
+          "examples": [
+            1000.0
+          ],
+          "title": "Specific Heat Capacity [J.K-1.Kg-1]"
+        }
+      },
+      "required": [
+        "Electrode area [m2]",
+        "Number of electrode pairs connected in parallel to make a cell",
+        "Lower voltage cut-off [V]",
+        "Upper voltage cut-off [V]",
+        "Nominal cell capacity [A.h]"
+      ],
+      "title": "Cell",
+      "type": "object"
+    },
+    "Contact": {
+      "additionalProperties": false,
+      "description": "Class for parameters that are common to electrode and separator components.",
+      "properties": {
+        "Thickness [m]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Contact thickness",
+          "examples": [
+            8.52e-05
+          ],
+          "title": "Thickness [M]"
+        },
+        "Porosity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Electrolyte volume fraction (porosity)",
+          "examples": [
+            0.47
+          ],
+          "title": "Porosity"
+        },
+        "Transport efficiency": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Transport efficiency / inverse MacMullin number",
+          "examples": [
+            0.3222
+          ],
+          "title": "Transport Efficiency"
+        }
+      },
+      "required": [
+        "Thickness [m]",
+        "Porosity",
+        "Transport efficiency"
+      ],
+      "title": "Contact",
+      "type": "object"
+    },
+    "Degradation": {
+      "additionalProperties": false,
+      "properties": {
+        "LLI": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Lli"
+        },
+        "LAM: Positive electrode": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              },
+              "type": "object"
+            }
+          ],
+          "material_check": "positive_electrode",
+          "title": "Lam: Positive Electrode"
+        },
+        "LAM: Negative electrode": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              },
+              "type": "object"
+            }
+          ],
+          "material_check": "negative_electrode",
+          "title": "Lam: Negative Electrode"
+        }
+      },
+      "required": [
+        "LLI",
+        "LAM: Positive electrode",
+        "LAM: Negative electrode"
+      ],
+      "title": "Degradation",
+      "type": "object"
+    },
+    "ElectrodeBlended": {
+      "additionalProperties": false,
+      "description": "Class for electrode composed of a blend of active materials.",
+      "properties": {
+        "Thickness [m]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Contact thickness",
+          "examples": [
+            8.52e-05
+          ],
+          "title": "Thickness [M]"
+        },
+        "Porosity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Electrolyte volume fraction (porosity)",
+          "examples": [
+            0.47
+          ],
+          "title": "Porosity"
+        },
+        "Transport efficiency": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Transport efficiency / inverse MacMullin number",
+          "examples": [
+            0.3222
+          ],
+          "title": "Transport Efficiency"
+        },
+        "Conductivity [S.m-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Effective electronic conductivity of the porous electrode matrix (constant)",
+          "examples": [
+            0.18
+          ],
+          "title": "Conductivity [S.M-1]"
+        },
+        "Particle": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Particle"
+          },
+          "title": "Particle",
+          "type": "object"
+        }
+      },
+      "required": [
+        "Thickness [m]",
+        "Porosity",
+        "Transport efficiency",
+        "Conductivity [S.m-1]",
+        "Particle"
+      ],
+      "title": "ElectrodeBlended",
+      "type": "object"
+    },
+    "ElectrodeBlendedSPM": {
+      "additionalProperties": false,
+      "description": "Class for electrode composed of a blend of active materials, for use with Single\nParticle type models.",
+      "properties": {
+        "Thickness [m]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Contact thickness",
+          "examples": [
+            8.52e-05
+          ],
+          "title": "Thickness [M]"
+        },
+        "Particle": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Particle"
+          },
+          "title": "Particle",
+          "type": "object"
+        }
+      },
+      "required": [
+        "Thickness [m]",
+        "Particle"
+      ],
+      "title": "ElectrodeBlendedSPM",
+      "type": "object"
+    },
+    "ElectrodeSingle": {
+      "additionalProperties": false,
+      "description": "Class for electrode composed of a single active material.",
+      "properties": {
+        "Minimum stoichiometry": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Minimum stoichiometry",
+          "examples": [
+            0.1
+          ],
+          "title": "Minimum Stoichiometry"
+        },
+        "Maximum stoichiometry": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Maximum stoichiometry",
+          "examples": [
+            0.9
+          ],
+          "title": "Maximum Stoichiometry"
+        },
+        "Maximum concentration [mol.m-3]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Maximum concentration of lithium ions in particles",
+          "examples": [
+            63104.0
+          ],
+          "title": "Maximum Concentration [Mol.M-3]"
+        },
+        "Particle radius [m]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Particle radius",
+          "examples": [
+            5.86e-06
+          ],
+          "title": "Particle Radius [M]"
+        },
+        "Surface area per unit volume [m-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Particle surface area per unit of volume",
+          "examples": [
+            382184
+          ],
+          "title": "Surface Area Per Unit Volume [M-1]"
+        },
+        "Diffusivity [m2.s-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "description": "Lithium ion diffusivity in particle (constant or function of stoichiometry)",
+          "examples": [
+            "3.3e-14"
+          ],
+          "title": "Diffusivity [M2.S-1]"
+        },
+        "Diffusivity activation energy [J.mol-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "Activation energy for diffusivity in particles",
+          "examples": [
+            17800
+          ],
+          "title": "Diffusivity Activation Energy [J.Mol-1]"
+        },
+        "OCP [V]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "description": "Open-circuit potential (OCP) at the reference temperature, function of particle stoichiometry",
+          "examples": [
+            {
+              "x": [
+                0,
+                0.1,
+                1
+              ],
+              "y": [
+                1.72,
+                1.2,
+                0.06
+              ]
+            }
+          ],
+          "title": "Ocp [V]"
+        },
+        "OCP (delithiation) [V]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "default": null,
+          "description": "Open-circuit potential (OCP) of the delithiation branch at the reference temperature, function of particle stoichiometry",
+          "examples": [
+            {
+              "x": [
+                0,
+                0.1,
+                1
+              ],
+              "y": [
+                1.72,
+                1.2,
+                0.06
+              ]
+            }
+          ],
+          "title": "Ocp (Delithiation) [V]"
+        },
+        "OCP (lithiation) [V]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "default": null,
+          "description": "Open-circuit potential (OCP) of the lithiation branch at the reference temperature, function of particle stoichiometry",
+          "examples": [
+            {
+              "x": [
+                0,
+                0.1,
+                1
+              ],
+              "y": [
+                1.72,
+                1.2,
+                0.06
+              ]
+            }
+          ],
+          "title": "Ocp (Lithiation) [V]"
+        },
+        "OCP hysteresis decay constant": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "OCP hysteresis decay constant in a single-state hysteresis model",
+          "examples": [
+            0.01
+          ],
+          "title": "Ocp Hysteresis Decay Constant"
+        },
+        "Entropic change coefficient [V.K-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "default": null,
+          "description": "Entropic change coefficient, function of particle stoichiometry",
+          "examples": [
+            {
+              "x": [
+                0,
+                0.1,
+                1
+              ],
+              "y": [
+                -9e-18,
+                -9e-15,
+                -1e-05
+              ]
+            }
+          ],
+          "title": "Entropic Change Coefficient [V.K-1]"
+        },
+        "Reaction rate constant [mol.m-2.s-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Normalised reaction rate K (see notes)",
+          "examples": [
+            1e-10
+          ],
+          "title": "Reaction Rate Constant [Mol.M-2.S-1]"
+        },
+        "Reaction rate constant activation energy [J.mol-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "Activation energy of reaction rate constant in particles",
+          "examples": [
+            27010
+          ],
+          "title": "Reaction Rate Constant Activation Energy [J.Mol-1]"
+        },
+        "Thickness [m]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Contact thickness",
+          "examples": [
+            8.52e-05
+          ],
+          "title": "Thickness [M]"
+        },
+        "Porosity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Electrolyte volume fraction (porosity)",
+          "examples": [
+            0.47
+          ],
+          "title": "Porosity"
+        },
+        "Transport efficiency": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Transport efficiency / inverse MacMullin number",
+          "examples": [
+            0.3222
+          ],
+          "title": "Transport Efficiency"
+        },
+        "Conductivity [S.m-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Effective electronic conductivity of the porous electrode matrix (constant)",
+          "examples": [
+            0.18
+          ],
+          "title": "Conductivity [S.M-1]"
+        }
+      },
+      "required": [
+        "Minimum stoichiometry",
+        "Maximum stoichiometry",
+        "Maximum concentration [mol.m-3]",
+        "Particle radius [m]",
+        "Surface area per unit volume [m-1]",
+        "Diffusivity [m2.s-1]",
+        "OCP [V]",
+        "Reaction rate constant [mol.m-2.s-1]",
+        "Thickness [m]",
+        "Porosity",
+        "Transport efficiency",
+        "Conductivity [S.m-1]"
+      ],
+      "title": "ElectrodeSingle",
+      "type": "object"
+    },
+    "ElectrodeSingleSPM": {
+      "additionalProperties": false,
+      "description": "Class for electrode composed of a single active material, for use with Single\nParticle type models.",
+      "properties": {
+        "Minimum stoichiometry": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Minimum stoichiometry",
+          "examples": [
+            0.1
+          ],
+          "title": "Minimum Stoichiometry"
+        },
+        "Maximum stoichiometry": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Maximum stoichiometry",
+          "examples": [
+            0.9
+          ],
+          "title": "Maximum Stoichiometry"
+        },
+        "Maximum concentration [mol.m-3]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Maximum concentration of lithium ions in particles",
+          "examples": [
+            63104.0
+          ],
+          "title": "Maximum Concentration [Mol.M-3]"
+        },
+        "Particle radius [m]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Particle radius",
+          "examples": [
+            5.86e-06
+          ],
+          "title": "Particle Radius [M]"
+        },
+        "Surface area per unit volume [m-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Particle surface area per unit of volume",
+          "examples": [
+            382184
+          ],
+          "title": "Surface Area Per Unit Volume [M-1]"
+        },
+        "Diffusivity [m2.s-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "description": "Lithium ion diffusivity in particle (constant or function of stoichiometry)",
+          "examples": [
+            "3.3e-14"
+          ],
+          "title": "Diffusivity [M2.S-1]"
+        },
+        "Diffusivity activation energy [J.mol-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "Activation energy for diffusivity in particles",
+          "examples": [
+            17800
+          ],
+          "title": "Diffusivity Activation Energy [J.Mol-1]"
+        },
+        "OCP [V]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "description": "Open-circuit potential (OCP) at the reference temperature, function of particle stoichiometry",
+          "examples": [
+            {
+              "x": [
+                0,
+                0.1,
+                1
+              ],
+              "y": [
+                1.72,
+                1.2,
+                0.06
+              ]
+            }
+          ],
+          "title": "Ocp [V]"
+        },
+        "OCP (delithiation) [V]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "default": null,
+          "description": "Open-circuit potential (OCP) of the delithiation branch at the reference temperature, function of particle stoichiometry",
+          "examples": [
+            {
+              "x": [
+                0,
+                0.1,
+                1
+              ],
+              "y": [
+                1.72,
+                1.2,
+                0.06
+              ]
+            }
+          ],
+          "title": "Ocp (Delithiation) [V]"
+        },
+        "OCP (lithiation) [V]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "default": null,
+          "description": "Open-circuit potential (OCP) of the lithiation branch at the reference temperature, function of particle stoichiometry",
+          "examples": [
+            {
+              "x": [
+                0,
+                0.1,
+                1
+              ],
+              "y": [
+                1.72,
+                1.2,
+                0.06
+              ]
+            }
+          ],
+          "title": "Ocp (Lithiation) [V]"
+        },
+        "OCP hysteresis decay constant": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "OCP hysteresis decay constant in a single-state hysteresis model",
+          "examples": [
+            0.01
+          ],
+          "title": "Ocp Hysteresis Decay Constant"
+        },
+        "Entropic change coefficient [V.K-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "default": null,
+          "description": "Entropic change coefficient, function of particle stoichiometry",
+          "examples": [
+            {
+              "x": [
+                0,
+                0.1,
+                1
+              ],
+              "y": [
+                -9e-18,
+                -9e-15,
+                -1e-05
+              ]
+            }
+          ],
+          "title": "Entropic Change Coefficient [V.K-1]"
+        },
+        "Reaction rate constant [mol.m-2.s-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Normalised reaction rate K (see notes)",
+          "examples": [
+            1e-10
+          ],
+          "title": "Reaction Rate Constant [Mol.M-2.S-1]"
+        },
+        "Reaction rate constant activation energy [J.mol-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "Activation energy of reaction rate constant in particles",
+          "examples": [
+            27010
+          ],
+          "title": "Reaction Rate Constant Activation Energy [J.Mol-1]"
+        },
+        "Thickness [m]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Contact thickness",
+          "examples": [
+            8.52e-05
+          ],
+          "title": "Thickness [M]"
+        }
+      },
+      "required": [
+        "Minimum stoichiometry",
+        "Maximum stoichiometry",
+        "Maximum concentration [mol.m-3]",
+        "Particle radius [m]",
+        "Surface area per unit volume [m-1]",
+        "Diffusivity [m2.s-1]",
+        "OCP [V]",
+        "Reaction rate constant [mol.m-2.s-1]",
+        "Thickness [m]"
+      ],
+      "title": "ElectrodeSingleSPM",
+      "type": "object"
+    },
+    "Electrolyte": {
+      "additionalProperties": false,
+      "description": "Electrolyte parameters.",
+      "properties": {
+        "Cation transference number": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Cation transference number",
+          "examples": [
+            0.259
+          ],
+          "title": "Cation Transference Number"
+        },
+        "Diffusivity [m2.s-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "description": "Lithium ion diffusivity in electrolyte (constant or function of concentration)",
+          "examples": [
+            "8.794e-7 * x * x - 3.972e-6 * x + 4.862e-6"
+          ],
+          "title": "Diffusivity [M2.S-1]"
+        },
+        "Diffusivity activation energy [J.mol-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "Activation energy for diffusivity in electrolyte",
+          "examples": [
+            17100
+          ],
+          "title": "Diffusivity Activation Energy [J.Mol-1]"
+        },
+        "Conductivity [S.m-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "description": "Electrolyte conductivity (constant or function of concentration)",
+          "examples": [
+            1.0
+          ],
+          "title": "Conductivity [S.M-1]"
+        },
+        "Conductivity activation energy [J.mol-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "Activation energy for conductivity in electrolyte",
+          "examples": [
+            17100
+          ],
+          "title": "Conductivity Activation Energy [J.Mol-1]"
+        }
+      },
+      "required": [
+        "Cation transference number",
+        "Diffusivity [m2.s-1]",
+        "Conductivity [S.m-1]"
+      ],
+      "title": "Electrolyte",
+      "type": "object"
+    },
+    "Experiment": {
+      "additionalProperties": false,
+      "description": "A class to store experimental data (time, current, voltage, temperature).",
+      "properties": {
+        "Time [s]": {
+          "description": "Time in seconds (list of FloatInts)",
+          "examples": [
+            [
+              0,
+              0.1,
+              0.2,
+              0.3,
+              0.4
+            ]
+          ],
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "title": "Time [S]",
+          "type": "array"
+        },
+        "Current [A]": {
+          "description": "Current vs time",
+          "examples": [
+            [
+              -5,
+              -5,
+              -5,
+              -5,
+              -5
+            ]
+          ],
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "title": "Current [A]",
+          "type": "array"
+        },
+        "Voltage [V]": {
+          "description": "Voltage vs time",
+          "examples": [
+            [
+              4.2,
+              4.1,
+              4.0,
+              3.9,
+              3.8
+            ]
+          ],
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "title": "Voltage [V]",
+          "type": "array"
+        },
+        "Temperature [K]": {
+          "default": null,
+          "description": "Temperature vs time",
+          "examples": [
+            [
+              298,
+              298,
+              298,
+              298,
+              298
+            ]
+          ],
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "title": "Temperature [K]",
+          "type": "array"
+        }
+      },
+      "required": [
+        "Time [s]",
+        "Current [A]",
+        "Voltage [V]"
+      ],
+      "title": "Experiment",
+      "type": "object"
+    },
+    "Header": {
+      "additionalProperties": false,
+      "description": "The header of a BPX file. Contains metadata about the file (e.g. BPX version,\ntitle, description).",
+      "properties": {
+        "BPX": {
+          "description": "BPX format version",
+          "examples": [
+            "1.0.0"
+          ],
+          "pattern": "^\\d+\\.\\d+(?:\\.\\d+)?$",
+          "title": "Bpx",
+          "type": "string"
+        },
+        "Title": {
+          "default": null,
+          "description": "LGM50 battery parametrisation",
+          "examples": [
+            "Parameterisation example"
+          ],
+          "title": "Title",
+          "type": "string"
+        },
+        "Description": {
+          "default": null,
+          "description": "May contain additional cell description such as form factor",
+          "examples": [
+            "Pouch cell (191mm x 88mm x 7.6mm)"
+          ],
+          "title": "Description",
+          "type": "string"
+        },
+        "References": {
+          "default": null,
+          "description": "May contain any references",
+          "examples": [
+            "Chang-Hui Chen et al 2020 J. Electrochem. Soc. 167 080534"
+          ],
+          "title": "References",
+          "type": "string"
+        },
+        "Model": {
+          "description": "Model type (\"SPM\", \"SPMe\", \"DFN\", \"Partial\")",
+          "enum": [
+            "SPM",
+            "SPMe",
+            "DFN",
+            "Partial"
+          ],
+          "examples": [
+            "DFN"
+          ],
+          "title": "Model",
+          "type": "string"
+        }
+      },
+      "required": [
+        "BPX",
+        "Model"
+      ],
+      "title": "Header",
+      "type": "object"
+    },
+    "InitialConditions": {
+      "additionalProperties": false,
+      "properties": {
+        "Initial state-of-charge": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Initial state of charge of the battery (between 0 and 1)",
+          "examples": [
+            0.5
+          ],
+          "title": "Initial State-Of-Charge"
+        },
+        "Initial temperature [K]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "examples": [
+            298.15
+          ],
+          "title": "Initial Temperature [K]"
+        },
+        "Initial electrolyte concentration [mol.m-3]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Initial / rest lithium ion concentration in the electrolyte",
+          "examples": [
+            1000
+          ],
+          "title": "Initial Electrolyte Concentration [Mol.M-3]"
+        },
+        "Initial hysteresis state: Positive electrode": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Initial hysteresis state for positive electrode",
+          "examples": [
+            1.0,
+            {
+              "Primary": 1.0,
+              "Secondary": 5.0
+            }
+          ],
+          "material_check": "positive_electrode",
+          "title": "Initial Hysteresis State: Positive Electrode"
+        },
+        "Initial hysteresis state: Negative electrode": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Initial hysteresis state for negative electrode",
+          "examples": [
+            1.0,
+            {
+              "Primary": 1.0,
+              "Secondary": 5.0
+            }
+          ],
+          "material_check": "negative_electrode",
+          "title": "Initial Hysteresis State: Negative Electrode"
+        }
+      },
+      "title": "InitialConditions",
+      "type": "object"
+    },
+    "InterpolatedTable": {
+      "description": "A table of values that can be interpolated to give a function. The table is defined\nby two lists of floats, x and y. The function is defined by interpolation.",
+      "properties": {
+        "x": {
+          "items": {
+            "type": "number"
+          },
+          "title": "X",
+          "type": "array"
+        },
+        "y": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Y",
+          "type": "array"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "InterpolatedTable",
+      "type": "object"
+    },
+    "Parameterisation": {
+      "additionalProperties": false,
+      "description": "A class to store parameterisation data for a cell. Consists of parameters for the\ncell, electrolyte, negative electrode, positive electrode, and separator.",
+      "properties": {
+        "Cell": {
+          "$ref": "#/$defs/Cell"
+        },
+        "Electrolyte": {
+          "$ref": "#/$defs/Electrolyte"
+        },
+        "Negative electrode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ElectrodeSingle"
+            },
+            {
+              "$ref": "#/$defs/ElectrodeBlended"
+            }
+          ],
+          "title": "Negative Electrode"
+        },
+        "Positive electrode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ElectrodeSingle"
+            },
+            {
+              "$ref": "#/$defs/ElectrodeBlended"
+            }
+          ],
+          "title": "Positive Electrode"
+        },
+        "Separator": {
+          "$ref": "#/$defs/Contact"
+        },
+        "User-defined": {
+          "$ref": "#/$defs/UserDefined",
+          "default": null
+        }
+      },
+      "required": [
+        "Cell",
+        "Electrolyte",
+        "Negative electrode",
+        "Positive electrode",
+        "Separator"
+      ],
+      "title": "Parameterisation",
+      "type": "object"
+    },
+    "ParameterisationPartial": {
+      "additionalProperties": false,
+      "description": "A class to store parameterisation data for a cell. Consists of parameters for the\ncell, electrolyte, negative electrode, positive electrode, and separator.\nAll parameter groups are optional to allow for partial parameterisations; as such either\nSPM or full models can be represented (but not within the same instance).",
+      "properties": {
+        "Cell": {
+          "$ref": "#/$defs/Cell",
+          "default": null
+        },
+        "Electrolyte": {
+          "$ref": "#/$defs/Electrolyte",
+          "default": null
+        },
+        "Negative electrode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ElectrodeSingle"
+            },
+            {
+              "$ref": "#/$defs/ElectrodeBlended"
+            },
+            {
+              "$ref": "#/$defs/ElectrodeSingleSPM"
+            },
+            {
+              "$ref": "#/$defs/ElectrodeBlendedSPM"
+            }
+          ],
+          "default": null,
+          "title": "Negative Electrode"
+        },
+        "Positive electrode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ElectrodeSingle"
+            },
+            {
+              "$ref": "#/$defs/ElectrodeBlended"
+            },
+            {
+              "$ref": "#/$defs/ElectrodeSingleSPM"
+            },
+            {
+              "$ref": "#/$defs/ElectrodeBlendedSPM"
+            }
+          ],
+          "default": null,
+          "title": "Positive Electrode"
+        },
+        "Separator": {
+          "$ref": "#/$defs/Contact",
+          "default": null
+        },
+        "User-defined": {
+          "$ref": "#/$defs/UserDefined",
+          "default": null
+        }
+      },
+      "title": "ParameterisationPartial",
+      "type": "object"
+    },
+    "ParameterisationSPM": {
+      "additionalProperties": false,
+      "description": "A class to store parameterisation data for a cell. Consists of parameters for the\ncell, electrolyte, negative electrode, and positive electrode. This class stores the\nparameters needed for Single Particle type models.",
+      "properties": {
+        "Cell": {
+          "$ref": "#/$defs/Cell"
+        },
+        "Negative electrode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ElectrodeSingleSPM"
+            },
+            {
+              "$ref": "#/$defs/ElectrodeBlendedSPM"
+            }
+          ],
+          "title": "Negative Electrode"
+        },
+        "Positive electrode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ElectrodeSingleSPM"
+            },
+            {
+              "$ref": "#/$defs/ElectrodeBlendedSPM"
+            }
+          ],
+          "title": "Positive Electrode"
+        },
+        "User-defined": {
+          "$ref": "#/$defs/UserDefined",
+          "default": null
+        }
+      },
+      "required": [
+        "Cell",
+        "Negative electrode",
+        "Positive electrode"
+      ],
+      "title": "ParameterisationSPM",
+      "type": "object"
+    },
+    "Particle": {
+      "additionalProperties": false,
+      "description": "Class for particle parameters.",
+      "properties": {
+        "Minimum stoichiometry": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Minimum stoichiometry",
+          "examples": [
+            0.1
+          ],
+          "title": "Minimum Stoichiometry"
+        },
+        "Maximum stoichiometry": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Maximum stoichiometry",
+          "examples": [
+            0.9
+          ],
+          "title": "Maximum Stoichiometry"
+        },
+        "Maximum concentration [mol.m-3]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Maximum concentration of lithium ions in particles",
+          "examples": [
+            63104.0
+          ],
+          "title": "Maximum Concentration [Mol.M-3]"
+        },
+        "Particle radius [m]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Particle radius",
+          "examples": [
+            5.86e-06
+          ],
+          "title": "Particle Radius [M]"
+        },
+        "Surface area per unit volume [m-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Particle surface area per unit of volume",
+          "examples": [
+            382184
+          ],
+          "title": "Surface Area Per Unit Volume [M-1]"
+        },
+        "Diffusivity [m2.s-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "description": "Lithium ion diffusivity in particle (constant or function of stoichiometry)",
+          "examples": [
+            "3.3e-14"
+          ],
+          "title": "Diffusivity [M2.S-1]"
+        },
+        "Diffusivity activation energy [J.mol-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "Activation energy for diffusivity in particles",
+          "examples": [
+            17800
+          ],
+          "title": "Diffusivity Activation Energy [J.Mol-1]"
+        },
+        "OCP [V]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "description": "Open-circuit potential (OCP) at the reference temperature, function of particle stoichiometry",
+          "examples": [
+            {
+              "x": [
+                0,
+                0.1,
+                1
+              ],
+              "y": [
+                1.72,
+                1.2,
+                0.06
+              ]
+            }
+          ],
+          "title": "Ocp [V]"
+        },
+        "OCP (delithiation) [V]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "default": null,
+          "description": "Open-circuit potential (OCP) of the delithiation branch at the reference temperature, function of particle stoichiometry",
+          "examples": [
+            {
+              "x": [
+                0,
+                0.1,
+                1
+              ],
+              "y": [
+                1.72,
+                1.2,
+                0.06
+              ]
+            }
+          ],
+          "title": "Ocp (Delithiation) [V]"
+        },
+        "OCP (lithiation) [V]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "default": null,
+          "description": "Open-circuit potential (OCP) of the lithiation branch at the reference temperature, function of particle stoichiometry",
+          "examples": [
+            {
+              "x": [
+                0,
+                0.1,
+                1
+              ],
+              "y": [
+                1.72,
+                1.2,
+                0.06
+              ]
+            }
+          ],
+          "title": "Ocp (Lithiation) [V]"
+        },
+        "OCP hysteresis decay constant": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "OCP hysteresis decay constant in a single-state hysteresis model",
+          "examples": [
+            0.01
+          ],
+          "title": "Ocp Hysteresis Decay Constant"
+        },
+        "Entropic change coefficient [V.K-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "examples": [
+                "1 + x",
+                "1.9793 * exp(-39.3631 * x)",
+                "2 * x**2"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/InterpolatedTable"
+            }
+          ],
+          "default": null,
+          "description": "Entropic change coefficient, function of particle stoichiometry",
+          "examples": [
+            {
+              "x": [
+                0,
+                0.1,
+                1
+              ],
+              "y": [
+                -9e-18,
+                -9e-15,
+                -1e-05
+              ]
+            }
+          ],
+          "title": "Entropic Change Coefficient [V.K-1]"
+        },
+        "Reaction rate constant [mol.m-2.s-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Normalised reaction rate K (see notes)",
+          "examples": [
+            1e-10
+          ],
+          "title": "Reaction Rate Constant [Mol.M-2.S-1]"
+        },
+        "Reaction rate constant activation energy [J.mol-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "default": null,
+          "description": "Activation energy of reaction rate constant in particles",
+          "examples": [
+            27010
+          ],
+          "title": "Reaction Rate Constant Activation Energy [J.Mol-1]"
+        }
+      },
+      "required": [
+        "Minimum stoichiometry",
+        "Maximum stoichiometry",
+        "Maximum concentration [mol.m-3]",
+        "Particle radius [m]",
+        "Surface area per unit volume [m-1]",
+        "Diffusivity [m2.s-1]",
+        "OCP [V]",
+        "Reaction rate constant [mol.m-2.s-1]"
+      ],
+      "title": "Particle",
+      "type": "object"
+    },
+    "State": {
+      "additionalProperties": false,
+      "properties": {
+        "Initial conditions": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InitialConditions"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "Thermal environment": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ThermalState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "Degradation": {
+          "$ref": "#/$defs/Degradation",
+          "default": null
+        }
+      },
+      "title": "State",
+      "type": "object"
+    },
+    "ThermalState": {
+      "additionalProperties": false,
+      "properties": {
+        "Ambient temperature [K]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "examples": [
+            298.15
+          ],
+          "title": "Ambient Temperature [K]"
+        },
+        "Heat transfer coefficient [W.m-2.K-1]": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "examples": [
+            10.0
+          ],
+          "title": "Heat Transfer Coefficient [W.M-2.K-1]"
+        }
+      },
+      "title": "ThermalState",
+      "type": "object"
+    },
+    "UserDefined": {
+      "additionalProperties": true,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        }
+      },
+      "title": "UserDefined",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A class to store a BPX model. Consists of a header, parameterisation, and optional\nvalidation data.",
+  "properties": {
+    "Header": {
+      "$ref": "#/$defs/Header"
+    },
+    "Parameterisation": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ParameterisationSPM"
+        },
+        {
+          "$ref": "#/$defs/Parameterisation"
+        },
+        {
+          "$ref": "#/$defs/ParameterisationPartial"
+        }
+      ],
+      "title": "Parameterisation"
+    },
+    "State": {
+      "$ref": "#/$defs/State",
+      "default": null
+    },
+    "Validation": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Experiment"
+      },
+      "default": null,
+      "title": "Validation",
+      "type": "object"
+    }
+  },
+  "required": [
+    "Header",
+    "Parameterisation"
+  ],
+  "title": "BPX",
+  "type": "object"
+}
