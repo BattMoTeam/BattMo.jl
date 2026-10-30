@@ -80,8 +80,10 @@ Jutul.local_discretization(::SolidDiffusionBc, i) = nothing
 const ActiveMaterialModel = SimulationModel{O, S} where {O <: JutulDomain, S <: ActiveMaterial}
 
 ## Create ActiveMaterial with full p2d solid diffusion
-function ActiveMaterialP2D(params::ActiveMaterialParameters, rp, N, D, scalings = Dict(); label::Union{Nothing, Symbol} = nothing)
-    data = setupSolidDiffusionDiscretization(rp, N, D)
+# The solid diffusion coefficient is not part of the discretization: it is the secondary
+# variable DiffusionCoefficient, which depends on concentration and temperature
+function ActiveMaterialP2D(params::ActiveMaterialParameters, rp, N, scalings = Dict(); label::Union{Nothing, Symbol} = nothing)
+    data = setupSolidDiffusionDiscretization(rp, N)
     discretization = P2Ddiscretization(data)
     params = convert_to_immutable_storage(params)
     return ActiveMaterialP2D{label, typeof(discretization), typeof(params), typeof(scalings)}(params, discretization, scalings)
@@ -124,8 +126,8 @@ function maximum_concentration(system::ActiveMaterial)
     return system.params[:maximum_concentration]
 end
 
-function setupSolidDiffusionDiscretization(rp, N, D)
-    rp, D = promote(rp, D)
+function setupSolidDiffusionDiscretization(rp, N)
+    rp = float(rp)
     T = typeof(rp)
 
     N = Int64(N)
@@ -160,7 +162,6 @@ function setupSolidDiffusionDiscretization(rp, N, D)
 
     data = Dict(
         :N => N,
-        :D => D,
         :rp => rp,
         :hT => hT,
         :vols => vols,
@@ -462,24 +463,24 @@ end
             tv::SolidDiffFlux,
             model::SimulationModel{<:Any, ActiveMaterialP2D{label, D, T, Di}, <:Any, <:Any},
             ParticleConcentration,
+            DiffusionCoefficient,
             ix,
         ) where {label, D, T, Di}
         s = model.system
         for cell in ix
-            @inbounds @views update_solid_flux!(SolidDiffFlux[:, cell], ParticleConcentration[:, cell], s)
+            @inbounds @views update_solid_flux!(SolidDiffFlux[:, cell], ParticleConcentration[:, cell], DiffusionCoefficient[cell], s)
         end
     end
 )
 
 
-function update_solid_flux!(flux, ParticleConcentration, system::ActiveMaterialP2D)
+function update_solid_flux!(flux, ParticleConcentration, D, system::ActiveMaterialP2D)
     # compute lithium flux in particle, using harmonic averaging. At the moment D has a constant value within particle
-    # but this is going to change.
+    # (the diffusion coefficient of the cell, evaluated at the surface concentration) but this is going to change.
 
     disc = system.discretization
     N = disc[:N]
     hT = disc[:hT]
-    D = disc[:D]
 
     @inline globFace(i::Int64) = i + 1
 
@@ -516,12 +517,12 @@ function Jutul.update_equation_in_entity!(
     hT = disc[:hT]
     vols = disc[:vols]
     div = disc[:div]
-    D = disc[:D]
 
     ParticleConcentration = @views state.ParticleConcentration[:, self_cell]
     Cp0 = @views state0.ParticleConcentration[:, self_cell]
     flux = @views state.SolidDiffFlux[:, self_cell]
     SurfaceConcentration = state.SurfaceConcentration[self_cell]
+    D = state.DiffusionCoefficient[self_cell]
 
     for i in 1:N
         eq_buf[i] = vols[i] * (ParticleConcentration[i] - Cp0[i]) / dt
@@ -551,10 +552,10 @@ function Jutul.update_equation_in_entity!(
     disc = model.system.discretization
     N = disc[:N]
     hT = disc[:hT]
-    D = disc[:D]
 
     ParticleConcentration = state.ParticleConcentration[N, self_cell]
     SurfaceConcentration = state.SurfaceConcentration[self_cell]
+    D = state.DiffusionCoefficient[self_cell]
 
     return eq_buf[] = hT[N + 1] * D * (ParticleConcentration - SurfaceConcentration)
 

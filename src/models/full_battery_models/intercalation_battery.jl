@@ -490,40 +490,18 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 
     end
 
-    refT = am_params[:reference_temperature]
-    T = get(input.cycling_protocol, "InitialTemperature", refT)
-    SOC_init = input.cycling_protocol["InitialStateOfCharge"]
-
-    theta0 = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
-    theta100 = inputparams_active_material["StoichiometricCoefficientAtSOC100"]
-    cmax = inputparams_active_material["MaximumConcentration"]
-
-
-    theta = SOC_init * (theta100 - theta0) + theta0
-    c = theta * cmax
-
     if haskey(model.settings, "TransportInSolid") && model.settings["TransportInSolid"] == "FullDiffusion"
         rp = inputparams_active_material["ParticleRadius"]
         N = Int64(input.simulation_settings[stringName * "ParticleGridPoints"])
 
-        if haskey(inputparams_active_material, "DiffusionCoefficient")
+        # The solid diffusion coefficient is evaluated during the simulation, at the
+        # surface concentration and temperature of each cell (update_diffusion_coefficient!)
+        haskey(inputparams_active_material, "DiffusionCoefficient") || error("$stringName → ActiveMaterial → DiffusionCoefficient is required for the full solid diffusion model.")
 
-            func, func_type = setup_function(base_path, inputparams_active_material["DiffusionCoefficient"], "ActiveMaterial", "DiffusionCoefficient")
+        func, func_type = setup_function(base_path, inputparams_active_material["DiffusionCoefficient"], "ActiveMaterial", "DiffusionCoefficient")
 
-            am_params[:diffusion_coefficient_func] = func
-            am_params[:diffusion_coefficient_func_type] = func_type
-
-            if func_type == :interpolator
-                D = am_params[:diffusion_coefficient_func](c / cmax)
-            elseif func_type == :expression || func_type == :function
-                D = am_params[:diffusion_coefficient_func](c, T, refT, cmax)
-            elseif func_type == :constant
-                D = am_params[:diffusion_coefficient_func]
-            else
-                error("Unrecognized function type for diffusion coefficient function: $func_type")
-            end
-
-        end
+        am_params[:diffusion_coefficient_func] = func
+        am_params[:diffusion_coefficient_func_type] = func_type
 
         if haskey(model.settings, "SEIModel") && model.settings["SEIModel"] == "Bolay" && haskey(inputparams_electrode, "Interphase")
             label = :sei
@@ -544,7 +522,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
             label = nothing
         end
 
-        sys_am = ActiveMaterialP2D(am_params, rp, N, D; label = label)
+        sys_am = ActiveMaterialP2D(am_params, rp, N; label = label)
     else
         sys_am = ActiveMaterialNoParticleDiffusion(am_params)
     end
