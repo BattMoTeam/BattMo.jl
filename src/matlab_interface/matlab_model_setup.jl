@@ -400,8 +400,10 @@ function setup_submodels(inputparams::MatlabInput)
 
             am_params[:diff_funcconstant] = true
             am_params[:diff_func] = D
+            am_params[:diffusion_coefficient_func] = D
+            am_params[:diffusion_coefficient_func_type] = :constant
 
-            sys_am = ActiveMaterialP2D(am_params, rp, N, D)
+            sys_am = ActiveMaterialP2D(am_params, rp, N)
         else
             sys_am = ActiveMaterialNoParticleDiffusion(am_params)
         end
