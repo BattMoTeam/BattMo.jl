@@ -478,6 +478,9 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
         cycling_protocol["CRate"] = params["Control"]["CRate"]
         cycling_protocol["CurrentChangeLimit"] = params["Control"]["dIdtLimit"]
         cycling_protocol["VoltageChangeLimit"] = params["Control"]["dEdtLimit"]
+        if haskey(params["Control"], "CVCurrentCutoff")
+            cycling_protocol["CVCurrentCutoff"] = params["Control"]["CVCurrentCutoff"]
+        end
     end
 
     if haskey(model_settings, "ThermalModel")
@@ -750,6 +753,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
             "upperCutoffVoltage" => get_key_value(cycling_protocol, "UpperVoltageLimit"),
             "dIdtLimit" => get_key_value(cycling_protocol, "CurrentChangeLimit"),
             "dEdtLimit" => get_key_value(cycling_protocol, "VoltageChangeLimit"),
+            "CVCurrentCutoff" => get_key_value(cycling_protocol, "CVCurrentCutoff"),
         ),
         "NegativeElectrode" => Dict(
             "use_normed_current_collector" => false,

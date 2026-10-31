@@ -14,6 +14,7 @@ using Test
         cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
         cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
         model_settings = load_model_settings(; from_file_path = file_path_model)
+        delete!(model_settings, "RampUp")
         simulation_settings = load_simulation_settings(; from_file_path = file_path_simulation)
 
         ########################################

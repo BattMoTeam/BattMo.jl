@@ -473,11 +473,14 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
             "UpperVoltageLimit" => create_property(parameter_meta, "UpperVoltageLimit"),
             "InitialControl" => create_property(parameter_meta, "InitialControl"),
             "CurrentChangeLimit" => create_property(parameter_meta, "CurrentChangeLimit"),
+            "CVCurrentCutoff" => create_property(parameter_meta, "CVCurrentCutoff"),
             "VoltageChangeLimit" => create_property(parameter_meta, "VoltageChangeLimit"),
             "AmbientTemperature" => create_property(parameter_meta, "AmbientTemperature"),
             "InitialTemperature" => create_property(parameter_meta, "InitialTemperature"),
             "Times" => create_property(parameter_meta, "Times"),
             "Currents" => create_property(parameter_meta, "Currents"),
+            "Duration" => create_property(parameter_meta, "Duration"),
+            "Steps" => create_property(parameter_meta, "Steps"),
         ),
         "required" => ["Protocol"],
         "allOf" => [
@@ -577,6 +580,24 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
                         "Currents",
                         "LowerVoltageLimit",
                         "UpperVoltageLimit",
+                    ],
+                ),
+            ),
+            Dict(
+                "if" => Dict("properties" => Dict("Protocol" => Dict("const" => "Rest"))),
+                "then" => Dict(
+                    "required" => [
+                        "InitialStateOfCharge",
+                        "Duration",
+                    ],
+                ),
+            ),
+            Dict(
+                "if" => Dict("properties" => Dict("Protocol" => Dict("const" => "Sequence"))),
+                "then" => Dict(
+                    "required" => [
+                        "InitialStateOfCharge",
+                        "Steps",
                     ],
                 ),
             ),
