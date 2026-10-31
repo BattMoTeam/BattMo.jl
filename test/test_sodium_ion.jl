@@ -4,6 +4,17 @@ using Test
 battmo_base = normpath(joinpath(pathof(BattMo) |> splitdir |> first, ".."))
 include(joinpath(battmo_base, "src/input/defaults/cell_parameters/function_parameters_chayambuka_2022.jl"))
 
+@testset "Chayambuka data tables" begin
+    @test size(data_pe_ocp, 1) == 27
+    @test size(data_ne_ocp, 1) == 54
+    @test size(data_pe_D, 1) == 142
+    @test size(data_ne_D, 1) == 163
+    @test size(data_pe_k, 1) == 140
+    @test size(data_ne_k, 1) == 163
+    @test size(data_elyte_cond, 1) == 128
+    @test size(data_elyte_diff, 1) == 136
+end
+
 @testset "sodium" begin
 
     @test begin
@@ -39,7 +50,9 @@ include(joinpath(battmo_base, "src/input/defaults/cell_parameters/function_param
         drates = [0.1, 1.4]
         delta_t = [200, 50]
         I_test = [0.0002664523159462069, 0.003730332423246896]
-        c_test = [3986.653950670727, 4146.8033577258875]
+        # The concentration-dependent solid diffusion coefficients apply during the
+        # simulation (before, they were evaluated at the initial state only)
+        c_test = [3987.378773232028, 4166.254743857964]
 
         for (i, rate) in enumerate(drates)
 

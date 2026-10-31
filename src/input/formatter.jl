@@ -328,11 +328,10 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
         cell_parameters["Cell"]["SurfaceHeatTransferCoefficient"] = params["ThermalModel"]["externalHeatTransferCoefficient"]
         cell_parameters["NegativeElectrode"]["ActiveMaterial"]["IncludeEntropyChange"] = params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["includeEntropyChange"]
         cell_parameters["NegativeElectrode"]["ActiveMaterial"]["EntropyChange"] = ne_entropy
-        cell_parameters["NegativeElectrode"]["ActiveMaterial"]["ReferenceTemperature"] = params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["referenceTemperature"]
+        cell_parameters["Cell"]["ReferenceTemperature"] = params["NegativeElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["referenceTemperature"]
 
         cell_parameters["PositiveElectrode"]["ActiveMaterial"]["IncludeEntropyChange"] = params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["includeEntropyChange"]
         cell_parameters["PositiveElectrode"]["ActiveMaterial"]["EntropyChange"] = pe_entropy
-        cell_parameters["PositiveElectrode"]["ActiveMaterial"]["ReferenceTemperature"] = params["PositiveElectrode"]["Coating"]["ActiveMaterial"]["Interface"]["referenceTemperature"]
     end
 
     if model_settings["ModelFramework"] == "P2D"
@@ -929,7 +928,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
         ),
         "Geometry" => Dict(
             "case" => geom_case,
-            "faceArea" => get_key_value(cell, "ElectrodeGeometricSurfaceArea"),
+            "faceArea" => isnothing(get_key_value(cell, "ElectrodeGeometricSurfaceArea")) ? nothing : compute_total_electrode_area(cell_parameters),
             "width" => get_key_value(cell, "ElectrodeWidth"),
             "height" => isnothing(get_key_value(cell, "ElectrodeLength")) ? get_key_value(cell, "Height") : get_key_value(cell, "ElectrodeLength"),
             "innerRadius" => get_key_value(cell, "InnerRadius"),

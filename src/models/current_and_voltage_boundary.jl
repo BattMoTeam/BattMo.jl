@@ -1049,8 +1049,9 @@ function setupRegionSwitchFlags(policy::Union{CyclingCVPolicy, CCPolicy}, state,
 
         if !ismissing(policy.cvCurrentCutoff)
             I = abs(only(state.Current))
-            before = I > policy.cvCurrentCutoff
-            after = I < policy.cvCurrentCutoff
+            current_relative_tolerance = 0.01
+            before = I > policy.cvCurrentCutoff * (1 + current_relative_tolerance)
+            after = I < policy.cvCurrentCutoff * (1 - current_relative_tolerance)
         else
             dIdt = state.Controller.dIdt
             if !ismissing(dIdt)

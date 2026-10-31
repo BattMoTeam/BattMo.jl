@@ -262,9 +262,9 @@ function pouch_grid(model, input)
     # --------------------------------------------------------
     # 8) Expand per-cell sizes
     # --------------------------------------------------------
-    cell_widths = inverse_rle(width_sizes_per_cell, segment_points)
-    cell_lengths = inverse_rle(length_sizes_per_cell, length_segments)
-    cell_heights = inverse_rle(z_sizes_per_cell, z_points_per_segment)
+    cell_widths = _expand_run_lengths(width_sizes_per_cell, segment_points)
+    cell_lengths = _expand_run_lengths(length_sizes_per_cell, length_segments)
+    cell_heights = _expand_run_lengths(z_sizes_per_cell, z_points_per_segment)
 
     Nx = length(cell_widths)
     Ny = length(cell_lengths)

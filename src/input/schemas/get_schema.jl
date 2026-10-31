@@ -136,6 +136,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
                     "Height" => create_property(parameter_meta, "Height"),
                     "ElectrodeGeometricSurfaceArea" => create_property(parameter_meta, "ElectrodeGeometricSurfaceArea"),
                     "SurfaceHeatTransferCoefficient" => create_property(parameter_meta, "SurfaceHeatTransferCoefficient"),
+                    "ReferenceTemperature" => create_property(parameter_meta, "ReferenceTemperature"),
                 ),
                 "required" => [],
             ),
