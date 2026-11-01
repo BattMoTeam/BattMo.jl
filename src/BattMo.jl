@@ -5,6 +5,7 @@ module BattMo
 # ─────────────────────────────────────────────────────────────────────────────
 using PrecompileTools                             # Precompilation optimizations
 using RuntimeGeneratedFunctions                   # Code generation
+using ForwardDiff: ForwardDiff
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -13,8 +14,7 @@ using RuntimeGeneratedFunctions                   # Code generation
 using JSON: JSON                                  # JSON parsing
 using MAT: matread
 using Markdown: parse
-using CSV                                   # CSV reading & writing
-using DataFrames
+using DelimitedFiles: readdlm
 
 # Internally exported JSONSchema functions and types
 using JSONSchema: Schema, SingleIssue
@@ -32,10 +32,9 @@ using Jutul: plot_multimodel_interactive
 # ─────────────────────────────────────────────────────────────────────────────
 # 🧮 Optimization and Adjoint solving
 # ─────────────────────────────────────────────────────────────────────────────
-using LBFGSB: lbfgsb
 using Jutul: solve_adjoint_sensitivities, optimization_config, setup_parameter_optimization
 using Jutul: devectorize_variables!
-using Optim: Optim
+using Jutul.LBFGS: unit_box_bfgs
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🧮 Mathematical & Computational Tools
@@ -46,8 +45,6 @@ using SparseArrays: AbstractSparseMatrixCSC, SparseMatrixCSC
 using SparseArrays: require_one_based_indexing, getcolptr, rowvals, nzrange, nonzeros        # Sparse matrix support
 using StaticArrays                                # Static-sized arrays
 using Statistics                                  # Basic statistical functions
-using StatsBase: inverse_rle                      # Statistical utility
-using Tullio: @tullio                             # Einstein summation notation
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -203,6 +200,7 @@ include("input/schemas/get_json_from_schema.jl")
 
 include("utils/physical_constants.jl")
 
+include("grid/run_length.jl")
 include("grid/geometries/1d.jl")
 include("grid/geometries/pouch.jl")
 include("grid/geometries/jelly_roll.jl")
@@ -214,6 +212,7 @@ include("models/full_battery_models/lithium_ion.jl")
 include("models/full_battery_models/sodium_ion.jl")
 
 include("utils/handy_functions.jl")
+include("utils/curve_analysis.jl")
 
 include("input/loader.jl")
 include("input/defaults.jl")
@@ -262,7 +261,7 @@ include("plotting/1d.jl")
 include("solver/linsolve.jl")
 
 include("grid/tensor_tools.jl")
-include("grid/remove_cells.jl") #Trenger StatsBase
+include("grid/remove_cells.jl")
 include("grid/grid_conversion.jl")
 include("grid/grid_utils.jl")
 
@@ -272,6 +271,7 @@ include("solver/precondgenneral.jl")
 include("solver/sparse_utils.jl")
 include("calibration/calibration.jl")
 include("calibration/calibration_utils.jl")
+include("calibration/equilibrium_calibration.jl")
 
 include("tools/print_info.jl")
 

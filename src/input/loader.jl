@@ -20,7 +20,7 @@ Throws an `ArgumentError` if neither `from_file_path` nor `from_default_set` is 
 function load_model_settings(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing)
     if !isnothing(from_file_path)
 
-        model_settings_instance = JSON.parsefile(from_file_path)
+        model_settings_instance = JSON.parsefile(from_file_path; dicttype = Dict{String, Any})
         return ModelSettings(model_settings_instance; source_path = from_file_path)
     elseif !isnothing(from_default_set)
 
@@ -51,7 +51,7 @@ Throws an `ArgumentError` if none of the arguments are provided.
 function load_cell_parameters(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing, from_model_template::Union{ModelConfigured, Nothing} = nothing, empty = true)
     if !isnothing(from_file_path)
 
-        cell_parameters_data = JSON.parsefile(from_file_path)
+        cell_parameters_data = JSON.parsefile(from_file_path; dicttype = Dict{String, Any})
         return CellParameters(cell_parameters_data; source_path = from_file_path)
     elseif !isnothing(from_default_set)
 
@@ -86,7 +86,7 @@ Throws an `ArgumentError` if neither `from_file_path` nor `from_default_set` is 
 function load_cycling_protocol(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing)
     if !isnothing(from_file_path)
 
-        cycling_protocol_instance = JSON.parsefile(from_file_path)
+        cycling_protocol_instance = JSON.parsefile(from_file_path; dicttype = Dict{String, Any})
         return CyclingProtocol(cycling_protocol_instance; source_path = from_file_path)
     elseif !isnothing(from_default_set)
 
@@ -117,7 +117,7 @@ Throws an `ArgumentError` if none of the arguments are provided.
 function load_simulation_settings(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing, from_model_template::Union{ModelConfigured, Nothing} = nothing, empty = false)
     if !isnothing(from_file_path)
 
-        simulation_settings_instance = JSON.parsefile(from_file_path)
+        simulation_settings_instance = JSON.parsefile(from_file_path; dicttype = Dict{String, Any})
         return SimulationSettings(simulation_settings_instance; source_path = from_file_path)
     elseif !isnothing(from_default_set)
 
@@ -154,7 +154,7 @@ Throws an `ArgumentError` if none of the arguments are provided.
 function load_solver_settings(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing, from_model_template::Union{ModelConfigured, Nothing} = nothing)
     if !isnothing(from_file_path)
         # Assuming JSON and SimulationSettings are correctly defined
-        solver_settings_instance = JSON.parsefile(from_file_path)
+        solver_settings_instance = JSON.parsefile(from_file_path; dicttype = Dict{String, Any})
         return SolverSettings(solver_settings_instance; source_path = from_file_path)
     elseif !isnothing(from_default_set)
         # Logic to load from default set (replace this with actual code)
@@ -189,7 +189,7 @@ Throws an `ArgumentError` if none of the arguments are provided.
 function load_full_simulation_input(; from_file_path::Union{String, Nothing} = nothing, from_default_set::Union{String, Nothing} = nothing)
     if !isnothing(from_file_path)
         # Assuming JSON and CyclingProtocol are correctly defined
-        full_simulation_instance = JSON.parsefile(from_file_path)
+        full_simulation_instance = JSON.parsefile(from_file_path; dicttype = Dict{String, Any})
         return FullSimulationInput(full_simulation_instance; source_path = from_file_path)
     elseif !isnothing(from_default_set)
         # Logic to load from default set (replace this with actual code)
@@ -232,7 +232,7 @@ An instance of `AdvancedDictInput`.
 """
 function load_advanced_dict_input(file_path::Union{String, Nothing} = nothing)
     # Assuming JSON and SimulationSettings are correctly defined
-    advanced_dict_instance = JSON.parsefile(file_path)
+    advanced_dict_instance = JSON.parsefile(file_path; dicttype = Dict{String, Any})
     return AdvancedDictInput(advanced_dict_instance; source_path = file_path)
 
 end

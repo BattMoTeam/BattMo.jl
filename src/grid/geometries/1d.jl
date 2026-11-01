@@ -14,7 +14,8 @@ function one_dimensional_grid(model, input)
 
     include_current_collectors = haskey(input.model_settings, "CurrentCollectors")
 
-    faceArea = cell_parameters["Cell"]["ElectrodeGeometricSurfaceArea"]
+    # ElectrodeGeometricSurfaceArea is the per-layer area, the 1D model represents all electrode pairs at once.
+    faceArea = compute_total_electrode_area(cell_parameters)
 
     function get_cell_parameter_vals(var)
         neval = cell_parameters["NegativeElectrode"]["Coating"][var]
@@ -77,7 +78,7 @@ function one_dimensional_grid(model, input)
     ns = vals["N"]
     xs = vals["thickness"]
 
-    L = inverse_rle(xs ./ ns, ns)
+    L = _expand_run_lengths(xs ./ ns, ns)
 
     mesh = CartesianMesh((sum(ns), 1, 1), (L, faceArea, 1.0))
 

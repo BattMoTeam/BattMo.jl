@@ -1,6 +1,117 @@
 using BattMo
 using Test
 
+@testset "CCCV switch ramp-up" begin
+    policy = BattMo.CyclingCVPolicy(
+        3.0,
+        4.0,
+        1.0e-4,
+        1.0e-4,
+        "charging",
+        1;
+        ImaxDischarge = 1.0,
+        ImaxCharge = 1.0,
+        use_ramp_up = true,
+        rampup_time = 100.0,
+    )
+
+    controller0 = BattMo.CcCvController()
+    controller0.ctrlType = BattMo.cc_charge1
+    controller0.time = 0.0
+    controller0.target = -1.0
+
+    controller = copy(controller0)
+
+    state0 = (
+        Controller = controller0,
+        ElectricPotential = [4.0],
+        Current = [-1.0],
+    )
+    state = (
+        Controller = controller,
+        ElectricPotential = [4.01],
+        Current = [-0.8],
+    )
+
+    BattMo.update_control_type_in_controller!(state, state0, policy, 10.0)
+
+    @test controller.ctrlType == BattMo.cv_charge2
+    @test controller.ramp_active
+    @test controller.ramp_target_is_voltage
+
+    BattMo.update_values_in_controller!(state, policy)
+
+    @test controller.target_is_voltage
+    @test controller.target ≈ 4.01
+
+    controller.time = 60.0
+    BattMo.update_values_in_controller!(state, policy)
+
+    @test 4.0 < controller.target < 4.01
+end
+
+@testset "CCCV CVCurrentCutoff" begin
+    policy = BattMo.CyclingCVPolicy(
+        3.0,
+        4.0,
+        1.0e-4,
+        1.0e-4,
+        "charging",
+        1;
+        ImaxDischarge = 1.0,
+        ImaxCharge = 1.0,
+        cv_current_cutoff = 0.05,
+    )
+
+    controller = BattMo.CcCvController()
+    controller.ctrlType = BattMo.cv_charge2
+    controller.dIdt = 1.0
+
+    before_state = (
+        Controller = controller,
+        ElectricPotential = [4.0],
+        Current = [-0.06],
+    )
+    before_flags = BattMo.setupRegionSwitchFlags(policy, before_state, BattMo.cv_charge2)
+    @test before_flags.beforeSwitchRegion
+    @test !before_flags.afterSwitchRegion
+
+    after_state = (
+        Controller = controller,
+        ElectricPotential = [4.0],
+        Current = [-0.04],
+    )
+    after_flags = BattMo.setupRegionSwitchFlags(policy, after_state, BattMo.cv_charge2)
+    @test !after_flags.beforeSwitchRegion
+    @test after_flags.afterSwitchRegion
+end
+
+@testset "CC without ramp-up keeps one small initial timestep" begin
+    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    model_settings = load_model_settings(; from_default_set = "p2d")
+    delete!(model_settings, "RampUp")
+    simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+    simulation_settings["TimeStepDuration"] = 50.0
+
+    model = LithiumIonBattery(; model_settings)
+    cycling_protocol = CyclingProtocol(
+        Dict(
+            "Protocol" => "CC",
+            "InitialStateOfCharge" => 0.5,
+            "InitialControl" => "discharging",
+            "DRate" => 0.1,
+            "TotalNumberOfCycles" => 0,
+            "LowerVoltageLimit" => 3.9,
+            "UpperVoltageLimit" => 4.1,
+        )
+    )
+
+    sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
+
+    @test sim.time_steps[1] == simulation_settings["TimeStepDuration"] / 2
+    @test sim.time_steps[2] == simulation_settings["TimeStepDuration"]
+end
+
 @testset "Crate" begin
 
     @test begin

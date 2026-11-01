@@ -38,6 +38,19 @@ function get_output_time_series(jutul_output::NamedTuple; quantities::Union{Noth
 
     states = jutul_output[:states]
 
+    if isempty(states)
+        error(
+            """
+            Simulation produced no valid states -- the solver could not complete a single timestep.
+            This typically means the initial condition already violates the cycling protocol's voltage
+            limits (e.g. InitialStateOfCharge maps to an open-circuit voltage outside
+            LowerVoltageLimit/UpperVoltageLimit given the electrode stoichiometric-window/OCV-balance
+            parameters), so the controller stops immediately and nothing gets stored. Check those
+            parameters rather than treating this as an unrelated tool/output error.
+            """
+        )
+    end
+
     # Extract data
     voltage, current = extract_time_series_data(jutul_output)
     time = extract_output_times(jutul_output)
@@ -184,7 +197,7 @@ function eval_ocp_from_system(system, c::Real, T::Real)
     params = system.params
     ocp_fun = system[:ocp_func]
     cmax = system[:maximum_concentration]
-    refT = 298.15
+    refT = get_reference_temperature(system)
     c_clamped = clamp(c, 1.0e-12, cmax - 1.0e-12)
 
     if haskey(params, :ocp_funcconstant)
@@ -333,6 +346,8 @@ function compute_voltage_breakdown(output::SimulationOutput)
             A_geo = w * l
         end
     end
+    # The cell current is shared by all electrode pairs.
+    A_geo *= compute_number_of_electrode_pairs(cell_params)
     L_n = get(cell_params["NegativeElectrode"]["Coating"], "Thickness", NaN)
     L_p = get(cell_params["PositiveElectrode"]["Coating"], "Thickness", NaN)
 
@@ -564,7 +579,7 @@ function get_output_metrics(
 
     controller = states[1][:Control][:Controller]
 
-    if isa(controller, FunctionController) || isa(controller, InputCurrentController)
+    if isa(controller, FunctionController) || isa(controller, InputCurrentController) || isa(controller, RestController)
         available_quantities = Dict()
     else
         cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : nothing

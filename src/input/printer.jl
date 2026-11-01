@@ -449,7 +449,7 @@ function read_cell_information(file::String)
         return "(File is empty or not valid JSON)"
     end
 
-    json_file = JSON.parse(content)
+    json_file = JSON.parse(content; dicttype = Dict{String, Any})
     try
         if haskey(json_file, "Cell") && haskey(json_file["Cell"], "Name")
             cell_name = String(json_file["Cell"]["Name"])
@@ -476,7 +476,7 @@ function read_meta_data(file::String)
         return "(File is empty or not valid JSON)"
     end
 
-    json_file = JSON.parse(content)
+    json_file = JSON.parse(content; dicttype = Dict{String, Any})
 
     if haskey(json_file, "Metadata") && haskey(json_file["Metadata"], "Models")
         models = json_file["Metadata"]["Models"]
@@ -514,7 +514,7 @@ function read_source_from_meta_data(file::String)
         return "(File is empty or not valid JSON)"
     end
 
-    json_file = JSON.parse(content)
+    json_file = JSON.parse(content; dicttype = Dict{String, Any})
     try
         if haskey(json_file, "Metadata") && haskey(json_file["Metadata"], "Source")
             return String(json_file["Metadata"]["Source"])
