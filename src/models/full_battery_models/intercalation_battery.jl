@@ -113,6 +113,42 @@ function setup_volume_fractions!(model_neam, model_peam, model_elyte, grids, cou
     return nothing
 end
 
+"""
+    electrolyte_bruggeman_coefficients(bruggeman)
+
+Electrolyte Bruggeman coefficients in the negative electrode, separator and positive electrode. The input is
+either one value, used in all three regions, or a dictionary with one value per region.
+"""
+function electrolyte_bruggeman_coefficients(bruggeman::Real)
+    return (NegativeElectrode = bruggeman, Separator = bruggeman, PositiveElectrode = bruggeman)
+end
+
+function electrolyte_bruggeman_coefficients(bruggeman::AbstractDict)
+    return (
+        NegativeElectrode = bruggeman["NegativeElectrode"],
+        Separator = bruggeman["Separator"],
+        PositiveElectrode = bruggeman["PositiveElectrode"],
+    )
+end
+
+"""
+    setup_electrolyte_bruggeman_coefficients!(model_elyte, grids, coupling)
+
+Store the Bruggeman coefficient of each electrolyte cell, taken from the region the cell lies in.
+"""
+function setup_electrolyte_bruggeman_coefficients!(model_elyte, grids, coupling)
+    coefficients = electrolyte_bruggeman_coefficients(model_elyte.system[:bruggeman])
+
+    bruggeman = zeros(promote_type(map(typeof, values(coefficients))...), number_of_cells(grids["Electrolyte"]))
+    bruggeman[coupling["NegativeElectrodeActiveMaterial"]["cells"]] .= coefficients.NegativeElectrode
+    bruggeman[coupling["Separator"]["cells"]] .= coefficients.Separator
+    bruggeman[coupling["PositiveElectrodeActiveMaterial"]["cells"]] .= coefficients.PositiveElectrode
+
+    model_elyte.domain.representation[:bruggemanCoefficient] = bruggeman
+
+    return nothing
+end
+
 function setup_effective_thermal_conductivities!(input, battery_models)
     cell_parameters = input.cell_parameters
 
@@ -123,9 +159,7 @@ function setup_effective_thermal_conductivities!(input, battery_models)
     end
 
     elytemodel = battery_models["Electrolyte"]
-    vf = elytemodel.domain.representation[:volumeFraction]
-    bg = cell_parameters["Electrolyte"]["BruggemanCoefficient"]
-    elytemodel.domain.representation[:effective_thermal_conductivity] = (vf .^ bg) .* cell_parameters["Electrolyte"]["ThermalConductivity"]
+    elytemodel.domain.representation[:effective_thermal_conductivity] = effective_electrolyte_thermal_conductivity(elytemodel, cell_parameters["Electrolyte"])
 
     if haskey(battery_models, "NegativeElectrodeCurrentCollector") && !isnothing(battery_models["NegativeElectrodeCurrentCollector"])
         battery_models["NegativeElectrodeCurrentCollector"].domain.representation[:effective_thermal_conductivity] = cell_parameters["NegativeElectrode"]["CurrentCollector"]["ThermalConductivity"]
@@ -156,6 +190,7 @@ function setup_submodels(model::IntercalationBattery, input, grids, couplings; g
     model_elyte = setup_electrolyte(model, input, grids)
     model_sep = setup_separator(model, input, grids)
     setup_volume_fractions!(model_neam, model_peam, model_elyte, grids, couplings["Electrolyte"])
+    setup_electrolyte_bruggeman_coefficients!(model_elyte, grids, couplings["Electrolyte"])
 
     battery_models = Dict(
         "NegativeElectrodeActiveMaterial" => model_neam,
@@ -775,7 +810,7 @@ function set_parameters(
 
     prm_elyte = Dict{Symbol, Any}()
     prm_elyte[:Temperature] = T
-    prm_elyte[:BruggemanCoefficient] = cell_parameters["Electrolyte"]["BruggemanCoefficient"]
+    prm_elyte[:BruggemanCoefficient] = multimodel[:Electrolyte].domain.representation[:bruggemanCoefficient]
 
 
     parameters[:Electrolyte] = setup_parameters(multimodel[:Electrolyte], prm_elyte)

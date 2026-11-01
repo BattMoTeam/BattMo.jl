@@ -204,7 +204,7 @@ end
 
 function effective_electrolyte_thermal_conductivity(elytemodel, elyteparams)
     vf = elytemodel.domain.representation[:volumeFraction]
-    bg = elyteparams["BruggemanCoefficient"]
+    bg = elytemodel.domain.representation[:bruggemanCoefficient]
     return (vf .^ bg) .* elyteparams["ThermalConductivity"]
 end
 
