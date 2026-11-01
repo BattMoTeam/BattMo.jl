@@ -202,9 +202,9 @@ function effective_electrolyte_heat_capacity(elytemodel, elyteparams)
     return vf .* elyteparams["Density"] .* elyteparams["SpecificHeatCapacity"]
 end
 
-function effective_electrolyte_thermal_conductivity(elytemodel, elyteparams, separatorparams)
+function effective_electrolyte_thermal_conductivity(elytemodel, elyteparams)
     vf = elytemodel.domain.representation[:volumeFraction]
-    bg = separatorparams["BruggemanCoefficient"]
+    bg = elyteparams["BruggemanCoefficient"]
     return (vf .^ bg) .* elyteparams["ThermalConductivity"]
 end
 
@@ -276,7 +276,7 @@ function setup_thermal_model(model, submodels, input, grids, global_maps)
     elyte_map = maps[string(elyte)].cellmap
     elytemodel = submodels[Symbol(elyte)]
     elyte_volumetric_heat_capacity = effective_electrolyte_heat_capacity(elytemodel, cell_parameters[string(elyte)])
-    elyte_thermal_conductivity = effective_electrolyte_thermal_conductivity(elytemodel, cell_parameters[string(elyte)], cell_parameters[string(sep)])
+    elyte_thermal_conductivity = effective_electrolyte_thermal_conductivity(elytemodel, cell_parameters[string(elyte)])
     volumetric_heat_capacity[elyte_map] .+= elyte_volumetric_heat_capacity
     thermal_conductivity[elyte_map] .+= elyte_thermal_conductivity
 
@@ -418,86 +418,3 @@ function setup_thermal_post_ministep_hook(model, input, base_hook = missing; Tem
     end
     # src, stepsources = BattMo.get_energy_source_by_type!(thermal_model, model, state, maps)
 end
-
-
-###########################################
-# The following two setups are not working
-
-# function setup_thermal_model(::Val{:simple}, inputparams::AdditionaInputFormats; N = 2, Nz = 10)
-
-# 	grid = CartesianMesh((N, N, Nz), (1.0, 1.0, 1.0))
-# 	grid = UnstructuredMesh(grid)
-
-# 	sys = ThermalSystem()
-
-# 	domain = DataDomain(grid)
-
-# 	# operators only, use geometry, not property
-# 	k = ones(number_of_cells(grid))
-
-# 	T    = compute_face_trans(domain, k)
-# 	T_hf = compute_half_face_trans(domain, k)
-# 	T_b  = compute_boundary_trans(domain, k)
-
-# 	domain[:trans, Faces()]           = T
-# 	domain[:halfTrans, HalfFaces()]   = T_hf
-# 	domain[:bcTrans, BoundaryFaces()] = T_b
-
-# 	flow = PotentialFlow(grid)
-
-# 	disc = (flow = flow,)
-# 	domain = DiscretizedDomain(domain, disc)
-
-# 	model = SimulationModel(domain, sys)
-
-# 	prm                                   = Dict{Symbol, Any}()
-# 	prm[:EffectiveVolumetricHeatCapacity]                        = inputparams["ThermalModel"]["capacity"]
-# 	prm[:EffectiveThermalConductivity]                    = inputparams["ThermalModel"]["conductivity"]
-# 	prm[:BoundaryTemperature]             = inputparams["ThermalModel"]["externalTemperature"]
-# 	prm[:SurfaceHeatTransferCoefficient] = inputparams["ThermalModel"]["externalHeatTransferCoefficient"]
-
-# 	parameters = setup_parameters(model, prm)
-
-# 	parameters[:SurfaceHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:SurfaceHeatTransferCoefficient]
-
-# 	vertfaces = [findBoundary(grid, 1, true); findBoundary(grid, 1, false)]
-# 	vertfaces = append!(vertfaces, [findBoundary(grid, 2, true); findBoundary(grid, 2, false)])
-# 	parameters[:SurfaceHeatTransferCoefficient][vertfaces] .= 0
-
-# 	return model, parameters
-
-# end
-
-
-# function setup_thermal_model(inputparams::AdditionaInputFormats;
-# 	general_ad = true,
-# 	kwargs...)
-
-# 	grids, = setup_grids_and_couplings(inputparams)
-
-# 	grid = grids["ThermalModel"]
-
-# 	thermalsystem = ThermalSystem()
-
-
-# 	model = setup_component(grid, thermalsystem;
-# 		general_ad = general_ad)
-
-
-# 	# setup the parameters (for each model, some parameters are declared, which gives the possibility to compute
-# 	# sensitivities)
-
-# 	prm                                   = Dict{Symbol, Any}()
-# 	prm[:EffectiveVolumetricHeatCapacity]                        = inputparams["ThermalModel"]["capacity"]
-# 	prm[:EffectiveThermalConductivity]                    = inputparams["ThermalModel"]["conductivity"]
-# 	prm[:BoundaryTemperature]             = inputparams["ThermalModel"]["externalTemperature"]
-# 	prm[:SurfaceHeatTransferCoefficient] = inputparams["ThermalModel"]["externalHeatTransferCoefficient"]
-
-# 	parameters = setup_parameters(model, prm)
-
-# 	# parameters[:Source]                   .= parameters[:Source].*parameters[:Volume]
-# 	parameters[:SurfaceHeatTransferCoefficient] .= model.domain.representation[:boundary_areas] .* parameters[:SurfaceHeatTransferCoefficient]
-
-# 	return model, parameters
-
-# end
