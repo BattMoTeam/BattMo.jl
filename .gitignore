@@ -50,3 +50,5 @@ docs/src/public/notebooks
 
 # codex local working artifacts
 tmp/
+
+.clineignore

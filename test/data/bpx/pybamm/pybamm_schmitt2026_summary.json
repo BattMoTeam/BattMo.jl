@@ -1,0 +1,90 @@
+{
+  "source": "https://raw.githubusercontent.com/BattMoTeam/schmitt-2026-lnmo-graphite-hydra-publication/51092701d66b8dcaa88febaa132ff877f7ebc6db/parameters/IMP5-70-120-H0B_graphite-lnmo_schmitt-2026_validation.bpx.json",
+  "pybamm_version": "26.4.4",
+  "bpx_version": "0.5.0",
+  "mesh_points": 20,
+  "output_period_s": 10.0,
+  "uniform_bruggeman_exponent": 1.5,
+  "cases": [
+    {
+      "variant": "original",
+      "current_a": 0.05,
+      "file": "pybamm_schmitt2026_original_0p05A.csv",
+      "end_time_s": 74083.81630517899,
+      "final_voltage_v": 3.500009999999998,
+      "termination": "event: Minimum voltage [V]"
+    },
+    {
+      "variant": "original",
+      "current_a": 0.2,
+      "file": "pybamm_schmitt2026_original_0p2A.csv",
+      "end_time_s": 18414.89978551707,
+      "final_voltage_v": 3.5000099999999983,
+      "termination": "event: Minimum voltage [V]"
+    },
+    {
+      "variant": "original",
+      "current_a": 0.5,
+      "file": "pybamm_schmitt2026_original_0p5A.csv",
+      "end_time_s": 7280.914688248199,
+      "final_voltage_v": 3.500009999999998,
+      "termination": "event: Minimum voltage [V]"
+    },
+    {
+      "variant": "original",
+      "current_a": 1.0,
+      "file": "pybamm_schmitt2026_original_1A.csv",
+      "end_time_s": 3566.2042647014437,
+      "final_voltage_v": 3.5000100000000005,
+      "termination": "event: Minimum voltage [V]"
+    },
+    {
+      "variant": "original",
+      "current_a": 2.0,
+      "file": "pybamm_schmitt2026_original_2A.csv",
+      "end_time_s": 1702.1178495485567,
+      "final_voltage_v": 3.5000100000000014,
+      "termination": "event: Minimum voltage [V]"
+    },
+    {
+      "variant": "uniform",
+      "current_a": 0.05,
+      "file": "pybamm_schmitt2026_uniform_0p05A.csv",
+      "end_time_s": 74091.63515794552,
+      "final_voltage_v": 3.5000100000000014,
+      "termination": "event: Minimum voltage [V]"
+    },
+    {
+      "variant": "uniform",
+      "current_a": 0.2,
+      "file": "pybamm_schmitt2026_uniform_0p2A.csv",
+      "end_time_s": 18422.770498602033,
+      "final_voltage_v": 3.5000100000000014,
+      "termination": "event: Minimum voltage [V]"
+    },
+    {
+      "variant": "uniform",
+      "current_a": 0.5,
+      "file": "pybamm_schmitt2026_uniform_0p5A.csv",
+      "end_time_s": 7288.974426317996,
+      "final_voltage_v": 3.50001,
+      "termination": "event: Minimum voltage [V]"
+    },
+    {
+      "variant": "uniform",
+      "current_a": 1.0,
+      "file": "pybamm_schmitt2026_uniform_1A.csv",
+      "end_time_s": 3577.6542112755055,
+      "final_voltage_v": 3.5000099999999987,
+      "termination": "event: Minimum voltage [V]"
+    },
+    {
+      "variant": "uniform",
+      "current_a": 2.0,
+      "file": "pybamm_schmitt2026_uniform_2A.csv",
+      "end_time_s": 1720.1409643220363,
+      "final_voltage_v": 3.500009999999999,
+      "termination": "event: Minimum voltage [V]"
+    }
+  ]
+}
