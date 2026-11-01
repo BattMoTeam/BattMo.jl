@@ -285,6 +285,7 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
             "TransferenceNumber" => params["Electrolyte"]["species"]["transferenceNumber"],
             "IonicConductivity" => cond,
             "DiffusionCoefficient" => diff,
+            "BruggemanCoefficient" => params["Electrolyte"]["bruggemanCoefficient"],
             "SpecificHeatCapacity" => params["Electrolyte"]["specificHeatCapacity"],
             "ThermalConductivity" => params["Electrolyte"]["thermalConductivity"],
         ),
@@ -910,7 +911,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
                 "transferenceNumber" => get_key_value(elyte, "TransferenceNumber"),
                 "nominalConcentration" => get_key_value(elyte, "Concentration"),
             ),
-            "bruggemanCoefficient" => get_key_value(sep, "BruggemanCoefficient"),
+            "bruggemanCoefficient" => get_key_value(elyte, "BruggemanCoefficient"),
         ),
         "Separator" => Dict(
             "porosity" => get_key_value(sep, "Porosity"),

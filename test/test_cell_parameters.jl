@@ -88,6 +88,47 @@ end
     end
 end
 
+@testset "electrolyte Bruggeman coefficient given once or per region" begin
+    # The electrolyte Bruggeman coefficient is either one value, used in all three regions, or one value per
+    # region. In the "Electrolyte" section of a cell parameter JSON file, the per-region form reads
+    #
+    #     "BruggemanCoefficient": {
+    #         "NegativeElectrode": 1.5,
+    #         "Separator": 2.0,
+    #         "PositiveElectrode": 1.5
+    #     },
+    #
+    # and in Julia it is set by
+    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    cell_parameters["Electrolyte"]["BruggemanCoefficient"] = Dict("NegativeElectrode" => 1.5, "Separator" => 2.0, "PositiveElectrode" => 1.5)
+
+    cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+    model_setup = LithiumIonBattery()
+
+    # Coefficients the electrolyte model gets in the negative electrode, separator and positive electrode
+    function bruggeman_by_region(cell_parameters)
+        sim = Simulation(model_setup, cell_parameters, cycling_protocol)
+        coefficients = sim.parameters[:Electrolyte][:BruggemanCoefficient]
+        coupling = sim.couplings["Electrolyte"]
+        regions = ("NegativeElectrodeActiveMaterial", "Separator", "PositiveElectrodeActiveMaterial")
+        return [unique(coefficients[coupling[region]["cells"]]) for region in regions]
+    end
+
+    @test bruggeman_by_region(cell_parameters) == [[1.5], [2.0], [1.5]]
+
+    # Different values in the two electrodes show that each region gets its own value
+    cell_parameters["Electrolyte"]["BruggemanCoefficient"] = Dict("NegativeElectrode" => 1.2, "Separator" => 2.0, "PositiveElectrode" => 1.7)
+    @test bruggeman_by_region(cell_parameters) == [[1.2], [2.0], [1.7]]
+
+    # One value, as in the default parameter sets, is used in all three regions
+    cell_parameters["Electrolyte"]["BruggemanCoefficient"] = 1.5
+    @test bruggeman_by_region(cell_parameters) == [[1.5], [1.5], [1.5]]
+
+    # The per-region form must name all three regions
+    cell_parameters["Electrolyte"]["BruggemanCoefficient"] = Dict("NegativeElectrode" => 1.5, "Separator" => 2.0)
+    @test_throws ErrorException bruggeman_by_region(cell_parameters)
+end
+
 @testset "Chayambuka data tables" begin
     @test size(BattMo.data_pe_ocp, 1) == 27
     @test size(BattMo.data_ne_ocp, 1) == 54

@@ -121,6 +121,7 @@
         "Concentration": 1000,
         "ChargeNumber": 1,
         "TransferenceNumber": 0.45,
+        "BruggemanCoefficient": 0.5,
         "IonicConductivity": {
             "FunctionName": "calc_elyte_cond"
         },
