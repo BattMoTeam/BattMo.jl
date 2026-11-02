@@ -144,7 +144,7 @@ couplings = output.simulation.couplings
 
 
 components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
-colors = [:gray, :green, :blue, :black]
+colors = component_color.(components)
 nothing #hide
 
 # We plot the grid

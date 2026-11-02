@@ -66,7 +66,7 @@ nothing #hide
 # Define a list of the component to iterate over in the ploting routin below
 
 components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
-colors = [:gray, :green, :blue, :black]
+colors = component_color.(components)
 nothing #hide
 
 # We plot the components

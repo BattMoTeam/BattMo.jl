@@ -65,8 +65,8 @@ function save_p4d_pouch_geometry()
 
     sim = Simulation(LithiumIonBattery(; model_settings), cell_parameters, cycling_protocol; simulation_settings)
 
-    components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeCurrentCollector", "PositiveCurrentCollector"]
-    colors = [:gray, :green, :dodgerblue, :black]
+    components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
+    colors = component_color.(components)
 
     for (i, component) in enumerate(components)
         if i == 1
@@ -121,8 +121,8 @@ function save_p4d_cylindrical_geometry()
 
     sim = Simulation(LithiumIonBattery(; model_settings), cell_parameters, cycling_protocol; simulation_settings)
 
-    components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeCurrentCollector", "PositiveCurrentCollector"]
-    colors = [:gray, :green, :dodgerblue, :black]
+    components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
+    colors = component_color.(components)
 
     for (i, component) in enumerate(components)
         if i == 1
@@ -140,7 +140,7 @@ function save_p4d_cylindrical_geometry()
         end
     end
 
-    for component in ["NegativeCurrentCollector", "PositiveCurrentCollector"]
+    for component in ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
         plot_mesh!(
             ax_edges, sim.grids[component];
             boundaryfaces = sim.couplings[component]["External"]["boundaryfaces"],

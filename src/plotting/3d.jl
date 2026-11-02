@@ -37,20 +37,20 @@ function plot_interactive_3d(output::SimulationOutput; shift = nothing, colormap
 end
 
 
-function Jutul.plot_mesh_impl(position::BattMoPosition; kwarg...)
-    return Jutul.plot_mesh_impl(position.mesh; kwarg...)
+function Jutul.plot_mesh_impl(position::BattMoPosition; color = component_color(position.component), kwarg...)
+    return Jutul.plot_mesh_impl(position.mesh; color = color, kwarg...)
 end
 
-function Jutul.plot_mesh_impl!(ax, position::BattMoPosition; kwarg...)
-    return Jutul.plot_mesh_impl!(ax, position.mesh; kwarg...)
+function Jutul.plot_mesh_impl!(ax, position::BattMoPosition; color = component_color(position.component), kwarg...)
+    return Jutul.plot_mesh_impl!(ax, position.mesh; color = color, kwarg...)
 end
 
-function Jutul.plot_mesh_edges_impl(position::BattMoPosition; kwarg...)
-    return Jutul.plot_mesh_edges_impl(position.mesh; kwarg...)
+function Jutul.plot_mesh_edges_impl(position::BattMoPosition; color = component_color(position.component), kwarg...)
+    return Jutul.plot_mesh_edges_impl(position.mesh; color = color, kwarg...)
 end
 
-function Jutul.plot_mesh_edges_impl!(ax, position::BattMoPosition; kwarg...)
-    return Jutul.plot_mesh_edges_impl!(ax, position.mesh; kwarg...)
+function Jutul.plot_mesh_edges_impl!(ax, position::BattMoPosition; color = component_color(position.component), kwarg...)
+    return Jutul.plot_mesh_edges_impl!(ax, position.mesh; color = color, kwarg...)
 end
 
 function Jutul.plot_cell_data_impl(position::BattMoPosition, data; kwarg...)

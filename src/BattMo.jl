@@ -254,6 +254,7 @@ include("output/output_format.jl")
 include("output/meta_data/variables.jl")
 include("output/printer.jl")
 
+include("plotting/component_colors.jl")
 include("plotting/makie_ext.jl")
 include("plotting/3d.jl")
 include("plotting/1d.jl")

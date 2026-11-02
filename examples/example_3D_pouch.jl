@@ -57,8 +57,8 @@ grids = sim.grids
 couplings = sim.couplings
 nothing #hide
 
-components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
-colors = [:gray, :green, :dodgerblue, :black]
+components = ["NegativeElectrodeCurrentCollector", "NegativeElectrodeActiveMaterial", "Separator", "PositiveElectrodeActiveMaterial", "PositiveElectrodeCurrentCollector"]
+colors = component_color.(components)
 nothing #hide
 
 # ## Plot the component meshes
@@ -84,7 +84,7 @@ ax_mesh.aspect = :data
 ax_mesh.azimuth[] = 5.2
 ax_mesh.elevation[] = 0.45
 
-fig_mesh
+display(GLMakie.Screen(), fig_mesh)
 
 # ## Plot mesh edges and highlight the tabs
 #
@@ -119,7 +119,7 @@ Legend(fig_edges[1, 2], [PolyElement(color = c) for c in colors], components)
 ax_edges.aspect = :data
 ax_edges.azimuth[] = 5.2
 ax_edges.elevation[] = 0.45
-fig_edges
+display(GLMakie.Screen(), fig_edges)
 
 # ## Run the simulation
 
@@ -140,7 +140,7 @@ fig_phi, ax_phi = plot_cell_data(
 ax_phi.aspect = :data
 ax_phi.title = "Negative current collector potential"
 
-fig_phi
+display(GLMakie.Screen(), fig_phi)
 
 # Surface concentration in the positive electrode active material
 fig_cs, ax_cs = plot_cell_data(
@@ -151,8 +151,6 @@ fig_cs, ax_cs = plot_cell_data(
 ax_cs.aspect = :data
 ax_cs.title = "Positive electrode surface concentration"
 
-fig_cs
-
 # Mesh edges can be overlaid on top of a cell-data plot.
 plot_mesh_edges!(
     ax_cs, output.states["PositiveElectrode"]["ActiveMaterial"]["Position"];
@@ -160,7 +158,7 @@ plot_mesh_edges!(
     linewidth = 0.5,
 )
 
-fig_cs
+display(GLMakie.Screen(), fig_cs)
 
 # ## Double coated electrodes and Multi-layer pouch geometry
 # We can also create a multi-layer pouch geometry by modifying the `Cell` parameters. The number of layers is controlled by `NumberOfLayersInParallel`, and for a single layer simulation we can also choose to have double coated electrodes by setting `DoubleCoatedElectrodes` to `true`.
@@ -201,7 +199,7 @@ Legend(fig_edges_d[1, 2], [PolyElement(color = c) for c in colors], components)
 ax_edges_d.azimuth[] = 5.2
 ax_edges_d.elevation[] = 0.45
 
-fig_edges_d
+display(GLMakie.Screen(), fig_edges_d)
 
 # Let's plot the mesh for a multi-layer pouch cell.
 cell_parameters["Cell"]["NumberOfLayersInParallel"] = 2
@@ -239,7 +237,7 @@ Legend(fig_edges_m[1, 2], [PolyElement(color = c) for c in colors], components)
 ax_edges_m.azimuth[] = 5.2
 ax_edges_m.elevation[] = 0.45
 
-fig_edges_m
+display(GLMakie.Screen(), fig_edges_m)
 
 
 # ## Interactive 3D viewer
