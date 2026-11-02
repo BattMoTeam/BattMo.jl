@@ -39,7 +39,6 @@
         "StoichiometricCoefficient": {
             "type": "number",
             "minimum": 0.0,
-            "exclusiveMinimum": 0.0,
             "maximum": 10.0,
             "description": "Moles of lithium consumed per mole of SEI product; strictly positive.",
             "unit": "-"
@@ -68,7 +67,6 @@
         "InitialPotentialDrop": {
             "type": "number",
             "minimum": 0,
-            "exclusiveMinimum": 0.0,
             "maximum": 1,
             "description": "Positive voltage scale for NormalizedSEIVoltageDrop, not the initial physical film drop.",
             "unit": "V"

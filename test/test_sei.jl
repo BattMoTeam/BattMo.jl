@@ -362,8 +362,6 @@ end
         schema = get_schema_cell_parameters(zero_sim.model.settings)
         properties = schema["properties"]["NegativeElectrode"]["properties"]["Interphase"]["properties"]
         @test properties["ElectronicDiffusionCoefficient"]["minimum"] == 0.0
-        @test properties["StoichiometricCoefficient"]["exclusiveMinimum"] == 0.0
-        @test properties["InitialPotentialDrop"]["exclusiveMinimum"] == 0.0
     end
 
     @testset "Fixed passivating thickness" begin

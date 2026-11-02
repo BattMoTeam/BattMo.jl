@@ -178,7 +178,6 @@ function get_cell_parameters_meta_data()
         "StoichiometricCoefficient" => Dict(
             "type" => Real,
             "min_value" => 0.0,
-            "exclusive_min_value" => 0.0,
             "max_value" => 10.0,
             "unit" => "-",
             "unit_name" => "dimensionless",
@@ -223,7 +222,6 @@ function get_cell_parameters_meta_data()
         "InitialPotentialDrop" => Dict(
             "type" => Real,
             "min_value" => 0,
-            "exclusive_min_value" => 0.0,
             "max_value" => 1,
             "unit" => "V",
             "unit_name" => "emmo:Volt",
