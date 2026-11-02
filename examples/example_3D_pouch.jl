@@ -63,20 +63,15 @@ nothing #hide
 
 # ## Plot the component meshes
 
+# Create figures explicitly because Jutul's non-mutating plot helpers display them immediately.
+fig_mesh = Figure(size = (1600, 900))
+ax_mesh = Axis3(fig_mesh[1, 1])
 for (i, component) in enumerate(components)
-    if i == 1
-        global fig_mesh, ax_mesh = plot_mesh(
-            grids[component];
-            color = colors[i],
-            label = component,
-        )
-    else
-        plot_mesh!(
-            ax_mesh, grids[component];
-            color = colors[i],
-            label = component,
-        )
-    end
+    plot_mesh!(
+        ax_mesh, grids[component];
+        color = colors[i],
+        label = component,
+    )
 end
 
 Legend(fig_mesh[1, 2], [PolyElement(color = c) for c in colors], components)
@@ -91,20 +86,14 @@ display(GLMakie.Screen(), fig_mesh)
 # The external couplings on the current collectors correspond to the tab faces.
 # We plot those in red on top of the mesh edges.
 
+fig_edges = Figure(size = (1600, 900))
+ax_edges = Axis3(fig_edges[1, 1])
 for (i, component) in enumerate(components)
-    if i == 1
-        global fig_edges, ax_edges = plot_mesh_edges(
-            grids[component];
-            color = colors[i],
-            label = component,
-        )
-    else
-        plot_mesh_edges!(
-            ax_edges, grids[component];
-            color = colors[i],
-            label = component,
-        )
-    end
+    plot_mesh_edges!(
+        ax_edges, grids[component];
+        color = colors[i],
+        label = component,
+    )
 end
 
 for component in ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
@@ -132,22 +121,30 @@ nothing #hide
 # be plotted directly against the corresponding component geometry.
 
 # Potential in the negative current collector
-fig_phi, ax_phi = plot_cell_data(
+fig_phi = Figure(size = (1600, 900))
+ax_phi = Axis3(fig_phi[1, 1])
+plot_phi = plot_cell_data!(
+    ax_phi,
     output.states["NegativeElectrode"]["CurrentCollector"]["Position"],
     output.states["NegativeElectrode"]["CurrentCollector"]["Potential"][end, :];
     colormap = :viridis,
 )
+Colorbar(fig_phi[2, 1], plot_phi; vertical = false)
 ax_phi.aspect = :data
 ax_phi.title = "Negative current collector potential"
 
 display(GLMakie.Screen(), fig_phi)
 
 # Surface concentration in the positive electrode active material
-fig_cs, ax_cs = plot_cell_data(
+fig_cs = Figure(size = (1600, 900))
+ax_cs = Axis3(fig_cs[1, 1])
+plot_cs = plot_cell_data!(
+    ax_cs,
     output.states["PositiveElectrode"]["ActiveMaterial"]["Position"],
     output.states["PositiveElectrode"]["ActiveMaterial"]["SurfaceConcentration"][end, :];
     colormap = :plasma,
 )
+Colorbar(fig_cs[2, 1], plot_cs; vertical = false)
 ax_cs.aspect = :data
 ax_cs.title = "Positive electrode surface concentration"
 
@@ -171,20 +168,14 @@ grids = sim.grids
 couplings = sim.couplings
 nothing #hide
 
+fig_edges_d = Figure(size = (1600, 900))
+ax_edges_d = Axis3(fig_edges_d[1, 1])
 for (i, component) in enumerate(components)
-    if i == 1
-        global fig_edges_d, ax_edges_d = plot_mesh(
-            grids[component];
-            color = colors[i],
-            label = component,
-        )
-    else
-        plot_mesh!(
-            ax_edges_d, grids[component];
-            color = colors[i],
-            label = component,
-        )
-    end
+    plot_mesh!(
+        ax_edges_d, grids[component];
+        color = colors[i],
+        label = component,
+    )
 end
 
 for component in ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
@@ -209,20 +200,14 @@ grids = sim.grids
 couplings = sim.couplings
 nothing #hide
 
+fig_edges_m = Figure(size = (1600, 900))
+ax_edges_m = Axis3(fig_edges_m[1, 1])
 for (i, component) in enumerate(components)
-    if i == 1
-        global fig_edges_m, ax_edges_m = plot_mesh(
-            grids[component];
-            color = colors[i],
-            label = component,
-        )
-    else
-        plot_mesh!(
-            ax_edges_m, grids[component];
-            color = colors[i],
-            label = component,
-        )
-    end
+    plot_mesh!(
+        ax_edges_m, grids[component];
+        color = colors[i],
+        label = component,
+    )
 end
 
 for component in ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]

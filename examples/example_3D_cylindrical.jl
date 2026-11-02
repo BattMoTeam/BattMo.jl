@@ -71,21 +71,15 @@ nothing #hide
 
 # We plot the components
 
+fig = Figure(size = (1600, 900))
+ax = Axis3(fig[1, 1])
 for (i, component) in enumerate(components)
-    if i == 1
-        global fig, ax = plot_mesh(
-            grids[component],
-            color = colors[i],
-        )
-    else
-        plot_mesh!(
-            ax,
-            grids[component],
-            color = colors[i],
-        )
-    end
+    plot_mesh!(
+        ax,
+        grids[component];
+        color = colors[i],
+    )
 end
-fig #hide
 
 # ## Plot the current collectors tabs
 
@@ -107,11 +101,10 @@ for component in components
     )
 end
 
-# fig #hide
-
 ax.azimuth[] = 4.0
 ax.elevation[] = 1.56
 
+display(GLMakie.Screen(), fig)
 fig #hide
 
 # ## Simulation

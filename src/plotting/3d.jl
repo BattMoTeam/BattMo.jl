@@ -57,6 +57,6 @@ function Jutul.plot_cell_data_impl(position::BattMoPosition, data; kwarg...)
     return Jutul.plot_cell_data_impl(position.mesh, data; kwarg...)
 end
 
-function Jutul.plot_cell_data_impl!(ax, position::BattMoPosition, data; kwarg...)
+function Jutul.plot_cell_data_impl!(ax, position::BattMoPosition, data::AbstractVecOrMat; kwarg...)
     return Jutul.plot_cell_data_impl!(ax, position.mesh, data; kwarg...)
 end
