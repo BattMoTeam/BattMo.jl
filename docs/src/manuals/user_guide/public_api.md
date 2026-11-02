@@ -22,17 +22,11 @@ A simulation can be solved by passing a [`Simulation`](@ref) object to the [`sol
 
 ### Prescribed current and charge conservation
 
-Each `InputCurrentSeries` step applies the average of the piecewise-linear input:
-`I_average * dt = integral(I_input(t), t_start..t_end)`.
-This preserves signed accumulated charge to numerical precision, including adaptive
-substeps, unless voltage limiting overrides current. Intervals crossing zero need not
-preserve separate charge/discharge totals.
+Each `InputCurrentSeries` step applies the average of the piecewise-linear input: `I_average * dt = integral(I_input(t), t_start..t_end)`.  This preserves signed accumulated charge to numerical precision, including adaptive substeps, unless voltage limiting overrides current. Intervals crossing zero need not preserve separate charge/discharge totals.
 
-Solved report endpoints store the final substep's current. Retain
-`output_substates = true` for charge accounting; use original input samples for restarts.
+Solved report endpoints store the final substep's current. Retain `output_substates = true` for charge accounting; use original input samples for restarts.
 
-Different timestep lengths produce different average currents on ramps, so exact
-charge preservation does not imply identical endpoint voltages.
+Different timestep lengths produce different average currents on ramps, so exact charge preservation does not imply identical endpoint voltages.
 
 ## Example Usage
 

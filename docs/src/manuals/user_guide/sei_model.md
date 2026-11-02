@@ -91,14 +91,6 @@ and nonnegative. Setting either growth prefactor to zero disables consumption an
 while retaining the initial film resistance. `PassivatingThickness` is optional; when
 given, it must be finite and positive.
 
-The parameter metadata uses `min_value` for an inclusive lower bound (`x >= bound`)
-and `exclusive_min_value` for a strict lower bound (`x > bound`). The schema generator
-maps these fields to JSON Schema `minimum` and `exclusiveMinimum`, respectively.
-For `StoichiometricCoefficient` and `InitialPotentialDrop`,
-`"exclusive_min_value" => 0.0` excludes zero. When both lower bounds are present, both
-constraints apply. These fields describe validation rules in BattMo's metadata; users
-do not add them to cell parameter inputs.
-
 `InitialPotentialDrop` is the normalization scale of `NormalizedSEIVoltageDrop`. The
 fresh state starts with zero physical drop; the algebraic voltage equation determines
 its value during the solve. This parameter is not an imposed initial resistance offset.
