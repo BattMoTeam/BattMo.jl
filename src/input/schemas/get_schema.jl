@@ -334,12 +334,26 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
                     "Concentration" => create_property(parameter_meta, "Concentration"),
                     "IonicConductivity" => create_property(parameter_meta, "IonicConductivity"),
                     "DiffusionCoefficient" => create_property(parameter_meta, "DiffusionCoefficient"),
+                    # One value for all regions, or one value per region
+                    "BruggemanCoefficient" => Dict(
+                        "oneOf" => [
+                            create_property(parameter_meta, "BruggemanCoefficient"),
+                            Dict(
+                                "type" => "object",
+                                "properties" => Dict(
+                                    region => create_property(parameter_meta, "BruggemanCoefficient") for region in ("NegativeElectrode", "Separator", "PositiveElectrode")
+                                ),
+                                "required" => ["NegativeElectrode", "Separator", "PositiveElectrode"],
+                                "additionalProperties" => false,
+                            ),
+                        ],
+                    ),
                     "ChargeNumber" => create_property(parameter_meta, "ChargeNumber"),
                     "TransferenceNumber" => create_property(parameter_meta, "TransferenceNumber"),
                     "SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
                     "ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
                 ),
-                "required" => ["Concentration", "Density", "DiffusionCoefficient", "IonicConductivity", "ChargeNumber", "TransferenceNumber"],
+                "required" => ["Concentration", "Density", "DiffusionCoefficient", "IonicConductivity", "BruggemanCoefficient", "ChargeNumber", "TransferenceNumber"],
             ),
         ),
         "required" => ["Cell", "NegativeElectrode", "PositiveElectrode", "Separator", "Electrolyte"],
