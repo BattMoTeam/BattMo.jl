@@ -53,7 +53,7 @@ if include_cc
     coupling_control = Dict("cells" => cells, "boundaryfaces" => faces)
     #coupling_control2 = Dict("PositiveElectrodeCurrentCollector" => Dict("cells" => ones(size(cells)), "boundaryfaces" => faces))
     if do_plot
-        plot_mesh!(ax, g, transparency = true, alpha = 0.2, color = :green)
+        plot_mesh!(ax, g, transparency = true, alpha = 0.2, color = component_color(:PositiveElectrodeCurrentCollector))
         Jutul.plot_mesh_edges!(ax, g)
         #display(GLMakie.Screen(; resolution=(1000, 500), focus_on_show=true),fig)
         #plot_mesh!(ax, g, boundaryfaces =faces, color = :red, alpha = 0.3)
@@ -72,7 +72,7 @@ if include_cc
     cells = g.boundary_faces.neighbors[faces]
     boundary = Dict("NegativeElectrodeCurrentCollector" => Dict("cells" => cells, "boundaryfaces" => faces))
     if do_plot
-        plot_mesh!(ax, g, transparency = true, alpha = 0.3, color = :green)
+        plot_mesh!(ax, g, transparency = true, alpha = 0.3, color = component_color(:NegativeElectrodeCurrentCollector))
         Jutul.plot_mesh_edges!(ax, g)
         bfaces = deepcopy(faces)
         plot_mesh!(ax, g, boundaryfaces = bfaces, color = :black, alphta = 0.2)
@@ -87,7 +87,7 @@ if include_cc
         gridnames = ["NegativeElectrode", "PositiveElectrode", "Separator"]
         for (ind, gname) in enumerate(gridnames)
             g = ugrids[gname]
-            plot_mesh!(ax, g, transparency = true, alpha = 0.3, color = :gray)
+            plot_mesh!(ax, g, transparency = true, alpha = 0.3, color = component_color(gname))
             Jutul.plot_mesh_edges!(ax, g)
         end
     end
@@ -102,7 +102,7 @@ else
     cells = g.boundary_faces.neighbors[faces]
     coupling_control = Dict("cells" => cells, "boundaryfaces" => faces)
     if do_plot
-        plot_mesh!(ax, g, transparency = true, alpha = 0.3, color = :red)
+        plot_mesh!(ax, g, transparency = true, alpha = 0.3, color = component_color(:PositiveElectrode))
         Jutul.plot_mesh_edges!(ax, g)
         plot_mesh!(ax, g, boundaryfaces = faces, color = :black, alpha = 0.3)
     end
@@ -112,7 +112,7 @@ else
     cells = g.boundary_faces.neighbors[faces]
     boundary = Dict("NegativeElectrode" => Dict("cells" => cells, "boundaryfaces" => faces))
     if do_plot
-        plot_mesh!(ax, g, transparency = true, alpha = 0.3, color = :green)
+        plot_mesh!(ax, g, transparency = true, alpha = 0.3, color = component_color(:NegativeElectrode))
         Jutul.plot_mesh_edges!(ax, g)
         plot_mesh!(ax, g, boundaryfaces = faces, color = :black)
     end
@@ -121,7 +121,7 @@ else
     ugrids["Boundary"] = boundary
     g = ugrids["Separator"]
     if do_plot
-        plot_mesh!(ax, g, transparency = true, alpha = 0.3, color = :blue)
+        plot_mesh!(ax, g, transparency = true, alpha = 0.3, color = component_color(:Separator))
         Jutul.plot_mesh_edges!(ax, g)
     end
     ##
