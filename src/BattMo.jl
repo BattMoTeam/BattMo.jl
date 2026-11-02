@@ -268,7 +268,7 @@ include("grid/grid_utils.jl")
 
 
 include("solver/solver_as_preconditioner_system.jl")
-include("solver/precondgenneral.jl")
+include("solver/precondgeneral.jl")
 include("solver/sparse_utils.jl")
 include("calibration/calibration.jl")
 include("calibration/calibration_utils.jl")

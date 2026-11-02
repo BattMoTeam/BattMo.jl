@@ -11,7 +11,7 @@ set_preferences!(BattMo, "precompile_workload" => false; force = true)
 set_preferences!(Jutul, "precompile_workload" => false; force = true)
 includet("../../src/solver_as_preconditioner.jl")
 includet("../../src/solver_as_preconditioner_system.jl")
-includet("../../src/precondgenneral.jl")
+includet("../../src/solver/precondgeneral.jl")
 
 GLMakie.closeall()
 #GLMakie.activate!()

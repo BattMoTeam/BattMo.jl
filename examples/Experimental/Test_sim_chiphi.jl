@@ -17,7 +17,7 @@ use_p2d = false
 includet("jutul_grid_utils.jl")
 includet("../../src/solver_as_preconditioner.jl")
 includet("../../src/solver_as_preconditioner_system.jl")
-includet("../../src/precondgenneral.jl")
+includet("../../src/solver/precondgeneral.jl")
 do_plot = true
 
 
