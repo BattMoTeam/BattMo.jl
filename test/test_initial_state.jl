@@ -1,7 +1,7 @@
 module InitialStateTests
 
 using BattMo, Test
-import Serialization
+using Jutul: read_results
 
 """Simulate an inclusive input-sample range, restarting its clock and optionally restoring a state."""
 function restart_simulation(output_ref, indices; initial_state = nothing)
@@ -105,13 +105,12 @@ end
             for chunk in 1:(length(boundaries) - 1)
                 indices = boundaries[chunk]:boundaries[chunk + 1]
                 simulation = restart_simulation(output_ref, indices; initial_state = restart_state)
-                output = solve(simulation; solve_options..., include_initial_state = true)
+                output_path = joinpath(directory, "chunk_$chunk")
+                solve(simulation; solve_options..., output_path)
 
-                # Save the raw endpoint without repairing it in the test.
-                endpoint = last(output.jutul_output.states)
-                checkpoint_path = joinpath(directory, "restart.jls")
-                Serialization.serialize(checkpoint_path, endpoint)
-                restart_state = Serialization.deserialize(checkpoint_path)
+                # Restart from the raw endpoint Jutul wrote to disk, without repairing it in the test.
+                states, _ = read_results(output_path; read_reports = false)
+                restart_state = last(states)
             end
         end
 
