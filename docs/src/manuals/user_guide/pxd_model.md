@@ -176,7 +176,7 @@ This table lists all required parameters from the DFN model used in BattMo.
 | ``t_+``                          |  ``t_+``                      |  ``t_+``                          | Transference number                                         | TransferenceNumber            |
 | ``z_+``                          | ``z_+``                       | ``z_+``                           | Charge number of positive ion                               | ChargeNumber            |
 | ``c_{e,0}``                          | ``c_{e,0}``                       | ``c_{e,0}``                           | Initial electrolyte concentration                           | Concentration             |
-| ``b^n``                          | ``b^s``                       | ``b^p``                           | Bruggeman coefficient (porosity scaling)                    | BruggemanCoefficient       |
+| ``b^n``                          | ``b^s``                       | ``b^p``                           | Bruggeman coefficient of the electrolyte (porosity scaling), one value or one per region | BruggemanCoefficient (Electrolyte) |
 | ``L^n``                     | ``L^s``                       | ``L^p``                           | Thickness                              | Thickness               |
 | ``r^n``                       |                        | ``r^p``                           | Radius of particles in electrode                         | ParticleRadius                 |
 

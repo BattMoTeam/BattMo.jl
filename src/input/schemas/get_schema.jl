@@ -190,6 +190,7 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
                             "InterstitialConcentration" => create_property(parameter_meta, "InterstitialConcentration"),
                             "InitialThickness" => create_property(parameter_meta, "InitialThickness"),
                             "InitialPotentialDrop" => create_property(parameter_meta, "InitialPotentialDrop"),
+                            "PassivatingThickness" => create_property(parameter_meta, "PassivatingThickness"),
                         ),
                         "required" => ["MolarVolume", "IonicConductivity", "ElectronicDiffusionCoefficient", "StoichiometricCoefficient", "InterstitialConcentration", "InitialThickness", "InitialPotentialDrop"],
                     ),
@@ -334,12 +335,26 @@ function get_schema_cell_parameters(model_settings::ModelSettings)
                     "Concentration" => create_property(parameter_meta, "Concentration"),
                     "IonicConductivity" => create_property(parameter_meta, "IonicConductivity"),
                     "DiffusionCoefficient" => create_property(parameter_meta, "DiffusionCoefficient"),
+                    # One value for all regions, or one value per region
+                    "BruggemanCoefficient" => Dict(
+                        "oneOf" => [
+                            create_property(parameter_meta, "BruggemanCoefficient"),
+                            Dict(
+                                "type" => "object",
+                                "properties" => Dict(
+                                    region => create_property(parameter_meta, "BruggemanCoefficient") for region in ("NegativeElectrode", "Separator", "PositiveElectrode")
+                                ),
+                                "required" => ["NegativeElectrode", "Separator", "PositiveElectrode"],
+                                "additionalProperties" => false,
+                            ),
+                        ],
+                    ),
                     "ChargeNumber" => create_property(parameter_meta, "ChargeNumber"),
                     "TransferenceNumber" => create_property(parameter_meta, "TransferenceNumber"),
                     "SpecificHeatCapacity" => create_property(parameter_meta, "SpecificHeatCapacity"),
                     "ThermalConductivity" => create_property(parameter_meta, "ThermalConductivity"),
                 ),
-                "required" => ["Concentration", "Density", "DiffusionCoefficient", "IonicConductivity", "ChargeNumber", "TransferenceNumber"],
+                "required" => ["Concentration", "Density", "DiffusionCoefficient", "IonicConductivity", "BruggemanCoefficient", "ChargeNumber", "TransferenceNumber"],
             ),
         ),
         "required" => ["Cell", "NegativeElectrode", "PositiveElectrode", "Separator", "Electrolyte"],
@@ -473,11 +488,14 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
             "UpperVoltageLimit" => create_property(parameter_meta, "UpperVoltageLimit"),
             "InitialControl" => create_property(parameter_meta, "InitialControl"),
             "CurrentChangeLimit" => create_property(parameter_meta, "CurrentChangeLimit"),
+            "CVCurrentCutoff" => create_property(parameter_meta, "CVCurrentCutoff"),
             "VoltageChangeLimit" => create_property(parameter_meta, "VoltageChangeLimit"),
             "AmbientTemperature" => create_property(parameter_meta, "AmbientTemperature"),
             "InitialTemperature" => create_property(parameter_meta, "InitialTemperature"),
             "Times" => create_property(parameter_meta, "Times"),
             "Currents" => create_property(parameter_meta, "Currents"),
+            "Duration" => create_property(parameter_meta, "Duration"),
+            "Steps" => create_property(parameter_meta, "Steps"),
         ),
         "required" => ["Protocol"],
         "allOf" => [
@@ -577,6 +595,24 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
                         "Currents",
                         "LowerVoltageLimit",
                         "UpperVoltageLimit",
+                    ],
+                ),
+            ),
+            Dict(
+                "if" => Dict("properties" => Dict("Protocol" => Dict("const" => "Rest"))),
+                "then" => Dict(
+                    "required" => [
+                        "InitialStateOfCharge",
+                        "Duration",
+                    ],
+                ),
+            ),
+            Dict(
+                "if" => Dict("properties" => Dict("Protocol" => Dict("const" => "Sequence"))),
+                "then" => Dict(
+                    "required" => [
+                        "InitialStateOfCharge",
+                        "Steps",
                     ],
                 ),
             ),
@@ -736,7 +772,7 @@ function get_schema_solver_settings()
                     "OutputPath" => create_property(parameter_meta, "OutputPath"),
                     "InMemoryReports" => create_property(parameter_meta, "InMemoryReports"),
                     "ReportLevel" => create_property(parameter_meta, "ReportLevel"),
-                    "OutputSubstates" => create_property(parameter_meta, "OutputSubstates"),
+                    "ExpandSubstates" => create_property(parameter_meta, "ExpandSubstates"),
                 ),
             ),
         ),

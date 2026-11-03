@@ -57,26 +57,21 @@ grids = sim.grids
 couplings = sim.couplings
 nothing #hide
 
-components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
-colors = [:gray, :green, :dodgerblue, :black]
+components = ["NegativeElectrodeCurrentCollector", "NegativeElectrodeActiveMaterial", "Separator", "PositiveElectrodeActiveMaterial", "PositiveElectrodeCurrentCollector"]
+colors = component_color.(components)
 nothing #hide
 
 # ## Plot the component meshes
 
+# Create figures explicitly because Jutul's non-mutating plot helpers display them immediately.
+fig_mesh = Figure(size = (1600, 900))
+ax_mesh = Axis3(fig_mesh[1, 1])
 for (i, component) in enumerate(components)
-    if i == 1
-        global fig_mesh, ax_mesh = plot_mesh(
-            grids[component];
-            color = colors[i],
-            label = component,
-        )
-    else
-        plot_mesh!(
-            ax_mesh, grids[component];
-            color = colors[i],
-            label = component,
-        )
-    end
+    plot_mesh!(
+        ax_mesh, grids[component];
+        color = colors[i],
+        label = component,
+    )
 end
 
 Legend(fig_mesh[1, 2], [PolyElement(color = c) for c in colors], components)
@@ -84,27 +79,21 @@ ax_mesh.aspect = :data
 ax_mesh.azimuth[] = 5.2
 ax_mesh.elevation[] = 0.45
 
-fig_mesh
+display(GLMakie.Screen(), fig_mesh)
 
 # ## Plot mesh edges and highlight the tabs
 #
 # The external couplings on the current collectors correspond to the tab faces.
 # We plot those in red on top of the mesh edges.
 
+fig_edges = Figure(size = (1600, 900))
+ax_edges = Axis3(fig_edges[1, 1])
 for (i, component) in enumerate(components)
-    if i == 1
-        global fig_edges, ax_edges = plot_mesh_edges(
-            grids[component];
-            color = colors[i],
-            label = component,
-        )
-    else
-        plot_mesh_edges!(
-            ax_edges, grids[component];
-            color = colors[i],
-            label = component,
-        )
-    end
+    plot_mesh_edges!(
+        ax_edges, grids[component];
+        color = colors[i],
+        label = component,
+    )
 end
 
 for component in ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
@@ -119,7 +108,7 @@ Legend(fig_edges[1, 2], [PolyElement(color = c) for c in colors], components)
 ax_edges.aspect = :data
 ax_edges.azimuth[] = 5.2
 ax_edges.elevation[] = 0.45
-fig_edges
+display(GLMakie.Screen(), fig_edges)
 
 # ## Run the simulation
 
@@ -132,26 +121,32 @@ nothing #hide
 # be plotted directly against the corresponding component geometry.
 
 # Potential in the negative current collector
-fig_phi, ax_phi = plot_cell_data(
+fig_phi = Figure(size = (1600, 900))
+ax_phi = Axis3(fig_phi[1, 1])
+plot_phi = plot_cell_data!(
+    ax_phi,
     output.states["NegativeElectrode"]["CurrentCollector"]["Position"],
     output.states["NegativeElectrode"]["CurrentCollector"]["Potential"][end, :];
     colormap = :viridis,
 )
+Colorbar(fig_phi[2, 1], plot_phi; vertical = false)
 ax_phi.aspect = :data
 ax_phi.title = "Negative current collector potential"
 
-fig_phi
+display(GLMakie.Screen(), fig_phi)
 
 # Surface concentration in the positive electrode active material
-fig_cs, ax_cs = plot_cell_data(
+fig_cs = Figure(size = (1600, 900))
+ax_cs = Axis3(fig_cs[1, 1])
+plot_cs = plot_cell_data!(
+    ax_cs,
     output.states["PositiveElectrode"]["ActiveMaterial"]["Position"],
     output.states["PositiveElectrode"]["ActiveMaterial"]["SurfaceConcentration"][end, :];
     colormap = :plasma,
 )
+Colorbar(fig_cs[2, 1], plot_cs; vertical = false)
 ax_cs.aspect = :data
 ax_cs.title = "Positive electrode surface concentration"
-
-fig_cs
 
 # Mesh edges can be overlaid on top of a cell-data plot.
 plot_mesh_edges!(
@@ -160,7 +155,7 @@ plot_mesh_edges!(
     linewidth = 0.5,
 )
 
-fig_cs
+display(GLMakie.Screen(), fig_cs)
 
 # ## Double coated electrodes and Multi-layer pouch geometry
 # We can also create a multi-layer pouch geometry by modifying the `Cell` parameters. The number of layers is controlled by `NumberOfLayersInParallel`, and for a single layer simulation we can also choose to have double coated electrodes by setting `DoubleCoatedElectrodes` to `true`.
@@ -173,20 +168,14 @@ grids = sim.grids
 couplings = sim.couplings
 nothing #hide
 
+fig_edges_d = Figure(size = (1600, 900))
+ax_edges_d = Axis3(fig_edges_d[1, 1])
 for (i, component) in enumerate(components)
-    if i == 1
-        global fig_edges_d, ax_edges_d = plot_mesh(
-            grids[component];
-            color = colors[i],
-            label = component,
-        )
-    else
-        plot_mesh!(
-            ax_edges_d, grids[component];
-            color = colors[i],
-            label = component,
-        )
-    end
+    plot_mesh!(
+        ax_edges_d, grids[component];
+        color = colors[i],
+        label = component,
+    )
 end
 
 for component in ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
@@ -201,7 +190,7 @@ Legend(fig_edges_d[1, 2], [PolyElement(color = c) for c in colors], components)
 ax_edges_d.azimuth[] = 5.2
 ax_edges_d.elevation[] = 0.45
 
-fig_edges_d
+display(GLMakie.Screen(), fig_edges_d)
 
 # Let's plot the mesh for a multi-layer pouch cell.
 cell_parameters["Cell"]["NumberOfLayersInParallel"] = 2
@@ -211,20 +200,14 @@ grids = sim.grids
 couplings = sim.couplings
 nothing #hide
 
+fig_edges_m = Figure(size = (1600, 900))
+ax_edges_m = Axis3(fig_edges_m[1, 1])
 for (i, component) in enumerate(components)
-    if i == 1
-        global fig_edges_m, ax_edges_m = plot_mesh(
-            grids[component];
-            color = colors[i],
-            label = component,
-        )
-    else
-        plot_mesh!(
-            ax_edges_m, grids[component];
-            color = colors[i],
-            label = component,
-        )
-    end
+    plot_mesh!(
+        ax_edges_m, grids[component];
+        color = colors[i],
+        label = component,
+    )
 end
 
 for component in ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
@@ -239,7 +222,7 @@ Legend(fig_edges_m[1, 2], [PolyElement(color = c) for c in colors], components)
 ax_edges_m.azimuth[] = 5.2
 ax_edges_m.elevation[] = 0.45
 
-fig_edges_m
+display(GLMakie.Screen(), fig_edges_m)
 
 
 # ## Interactive 3D viewer

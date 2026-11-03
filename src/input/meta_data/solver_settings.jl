@@ -266,11 +266,11 @@ function get_solver_settings_meta_data()
             "category" => "SolverSettings",
             "description" => "Level of information stored in reports when written to disk.",
         ),
-        "OutputSubstates" => Dict(
+        "ExpandSubstates" => Dict(
             "type" => Bool,
-            "variable_name" => "output_substates",
+            "variable_name" => "expand_substates",
             "category" => "SolverSettings",
-            "description" => "Store substates (between report steps) as field on each state.",
+            "description" => "Return output at every accepted solver substate instead of only at report timesteps. jutul_output.report_indices locates the report timesteps.",
         ),
     )
     return meta_data

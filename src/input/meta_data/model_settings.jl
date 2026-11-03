@@ -76,7 +76,7 @@ function get_model_settings_meta_data()
             "context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_rampup",
             "documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/ramp_up",
             "category" => "ModelSettings",
-            "description" => """Type of signal of electric current used to initialize the cell simulation. Example: "Sinusoidal".""",
+            "description" => """Type of signal used to ramp control targets. When this setting is present, RampUpTime and RampUpSteps also control extra ministeps used to resolve those ramps. Remove "RampUp" from ModelSettings to disable ramping. The extra time steps when using RampUp also appear in the output. Example: "Sinusoidal".""",
         ),
     )
 

@@ -285,6 +285,7 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
             "TransferenceNumber" => params["Electrolyte"]["species"]["transferenceNumber"],
             "IonicConductivity" => cond,
             "DiffusionCoefficient" => diff,
+            "BruggemanCoefficient" => params["Electrolyte"]["bruggemanCoefficient"],
             "SpecificHeatCapacity" => params["Electrolyte"]["specificHeatCapacity"],
             "ThermalConductivity" => params["Electrolyte"]["thermalConductivity"],
         ),
@@ -478,6 +479,9 @@ function convert_to_parameter_sets(params::AdvancedDictInput)
         cycling_protocol["CRate"] = params["Control"]["CRate"]
         cycling_protocol["CurrentChangeLimit"] = params["Control"]["dIdtLimit"]
         cycling_protocol["VoltageChangeLimit"] = params["Control"]["dEdtLimit"]
+        if haskey(params["Control"], "CVCurrentCutoff")
+            cycling_protocol["CVCurrentCutoff"] = params["Control"]["CVCurrentCutoff"]
+        end
     end
 
     if haskey(model_settings, "ThermalModel")
@@ -750,6 +754,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
             "upperCutoffVoltage" => get_key_value(cycling_protocol, "UpperVoltageLimit"),
             "dIdtLimit" => get_key_value(cycling_protocol, "CurrentChangeLimit"),
             "dEdtLimit" => get_key_value(cycling_protocol, "VoltageChangeLimit"),
+            "CVCurrentCutoff" => get_key_value(cycling_protocol, "CVCurrentCutoff"),
         ),
         "NegativeElectrode" => Dict(
             "use_normed_current_collector" => false,
@@ -906,7 +911,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
                 "transferenceNumber" => get_key_value(elyte, "TransferenceNumber"),
                 "nominalConcentration" => get_key_value(elyte, "Concentration"),
             ),
-            "bruggemanCoefficient" => get_key_value(sep, "BruggemanCoefficient"),
+            "bruggemanCoefficient" => get_key_value(elyte, "BruggemanCoefficient"),
         ),
         "Separator" => Dict(
             "porosity" => get_key_value(sep, "Porosity"),

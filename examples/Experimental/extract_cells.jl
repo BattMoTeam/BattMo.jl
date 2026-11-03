@@ -74,10 +74,10 @@ spmax = compsp[2]
 
 component = :NegativeElectrodeCurrentCollector
 grid, c, = get_cells(component)
-fig, ax = plot_mesh(grid; cells = c, color = :yellow)
+fig, ax = plot_mesh(grid; cells = c, color = component_color(component))
 
 components = [:PositiveElectrodeCurrentCollector, :NegativeElectrodeActiveMaterial, :PositiveElectrodeActiveMaterial, :Electrolyte]
-colors = [:blue, :black, :red, :magenta]
+colors = component_color.(components)
 
 for (i, component) in enumerate(components)
     let
@@ -109,9 +109,9 @@ end
 
 # get_mesh(model) = model.domain.representation.representation
 #
-# fig, ax = plot_mesh(get_mesh(model[:NegativeElectrodeActiveMaterial]); color = :black)
-# plot_mesh!(ax, get_mesh(model[:PositiveElectrodeActiveMaterial]); color = :red)
-# fig, ax = plot_mesh!(ax, get_mesh(model[:Electrolyte]); color = :green, alpha = 0.1)
+# fig, ax = plot_mesh(get_mesh(model[:NegativeElectrodeActiveMaterial]); color = component_color(:NegativeElectrodeActiveMaterial))
+# plot_mesh!(ax, get_mesh(model[:PositiveElectrodeActiveMaterial]); color = component_color(:PositiveElectrodeActiveMaterial))
+# fig, ax = plot_mesh!(ax, get_mesh(model[:Electrolyte]); color = component_color(:Electrolyte), alpha = 0.1)
 
 # 1) NeAm  -> Elyte (Eq: charge_conservation)
 #    ButlerVolmerActmatToElyteCT

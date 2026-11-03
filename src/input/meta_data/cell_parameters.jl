@@ -176,7 +176,7 @@ function get_cell_parameters_meta_data()
         ),
         "ElectronicDiffusionCoefficient" => Dict(
             "type" => Real,
-            "min_value" => 1.0e-16,
+            "min_value" => 0.0,
             "max_value" => 1.0e3,
             "unit" => "m²·s⁻¹",
             "unit_name" => "emmo:SquareMetrePerSecond",
@@ -194,7 +194,7 @@ function get_cell_parameters_meta_data()
             "unit_iri" => "https://w3id.org/emmo#Dimensionless",
             "context_type" => "StoichiometricCoefficient",
             "context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_f0667139_6428_4e3d_ac0d_08c1dd7f36ea",
-            "description" => "Ratio of the concentration of an intercalant (e.g. Li+) at a given moment, to its maximum possible concentration within a solid host material.",
+            "description" => "Moles of lithium consumed per mole of SEI product; strictly positive.",
         ),
         "InterstitialConcentration" => Dict(
             "type" => Real,
@@ -218,6 +218,17 @@ function get_cell_parameters_meta_data()
             "context_type_iri" => "https://w3id.org/emmo#EMMO_43003c86_9d15_433b_9789_ee2940920656",
             "description" => "Thickness of the SEI layer at the start of the simulation. See https://doi.org/10.1016/j.powera.2022.100083.",
         ),
+        "PassivatingThickness" => Dict(
+            "type" => Real,
+            "min_value" => 1.0e-9,
+            "max_value" => 1.0e-2,
+            "unit" => "m",
+            "unit_name" => "emmo:Metre",
+            "unit_iri" => "https://w3id.org/emmo#Metre",
+            "context_type" => "PassivatingThickness",
+            "context_type_iri" => nothing,
+            "description" => "Optional fixed thickness of the passivating SEI layer that limits electron transport. When given, the growth flux uses it instead of the film thickness, so growth does not slow down as the film thickens. The film thickness still sets the film resistance and the lithium inventory.",
+        ),
         "InitialPotentialDrop" => Dict(
             "type" => Real,
             "min_value" => 0,
@@ -227,7 +238,7 @@ function get_cell_parameters_meta_data()
             "unit_iri" => "https://w3id.org/emmo#Volt",
             "context_type" => "InitialPotentialDrop",
             "context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_654321",
-            "description" => "Electric potential difference across the SEI layer or electrode interface at the beginning of the simulation. Represents any initial voltage offset due to pre-formation or initial conditions of the cell.",
+            "description" => "Positive voltage scale for NormalizedSEIVoltageDrop, not the initial physical film drop.",
         ), "FunctionName" => Dict(
             "type" => String,
             "context_type" => "Name",
