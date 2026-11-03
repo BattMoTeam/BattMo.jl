@@ -54,7 +54,7 @@ function solve_sei(sim)
     solver_settings["NonLinearSolver"]["Tolerances"] = tolerances
     return solve(
         sim; solver_settings, info_level = -1, include_initial_state = true,
-        output_substates = true, error_on_incomplete = true,
+        expand_substates = true, error_on_incomplete = true,
     )
 end
 

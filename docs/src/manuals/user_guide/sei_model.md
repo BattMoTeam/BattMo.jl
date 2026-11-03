@@ -140,7 +140,7 @@ change in electrode balance.
 
 For a discrete balance audit, integrate the kinetic flux at every accepted backward-Euler
 endpoint, including the first interval from the initial state. Compare that independent
-integral with the thickness-derived `sei_added`. Use `output_substates = true` to retain
+integral with the thickness-derived `sei_added`. Use `expand_substates = true` to retain
 accepted substeps, omit rejected steps, and avoid counting restart boundaries twice.
 
 `sei_loss_ah` is an inventory diagnostic, not a direct prediction of delivered RPT

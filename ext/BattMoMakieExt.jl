@@ -120,8 +120,8 @@ function BattMo.plot_cell_curves_impl(cell_parameters::CellParameters; new_windo
         col = (i - 1) % ncols
 
         y = Float64[]
-        T_val = 298.15
-        refT_val = 298.15
+        refT_val = get(cell_parameters.all["Cell"], "ReferenceTemperature", BattMo.DEFAULT_REFERENCE_TEMPERATURE)
+        T_val = refT_val
 
         if isa(val, AbstractString) && haskey(param_map, param_path)
             quantity = last_key(param_path)

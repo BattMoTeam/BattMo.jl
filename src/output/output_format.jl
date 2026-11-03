@@ -197,7 +197,7 @@ function eval_ocp_from_system(system, c::Real, T::Real)
     params = system.params
     ocp_fun = system[:ocp_func]
     cmax = system[:maximum_concentration]
-    refT = 298.15
+    refT = get_reference_temperature(system)
     c_clamped = clamp(c, 1.0e-12, cmax - 1.0e-12)
 
     if haskey(params, :ocp_funcconstant)
@@ -358,6 +358,8 @@ function compute_voltage_breakdown(output::SimulationOutput)
             A_geo = w * l
         end
     end
+    # The cell current is shared by all electrode pairs.
+    A_geo *= compute_number_of_electrode_pairs(cell_params)
     L_n = get(cell_params["NegativeElectrode"]["Coating"], "Thickness", NaN)
     L_p = get(cell_params["PositiveElectrode"]["Coating"], "Thickness", NaN)
 
@@ -589,7 +591,7 @@ function get_output_metrics(
     )
     states = jutul_output[:states]
 
-    if isempty(states) || first(states)[:Control][:Controller] isa Union{FunctionController, InputCurrentController}
+    if isempty(states) || first(states)[:Control][:Controller] isa Union{FunctionController, InputCurrentController, RestController}
         # A failed first timestep must still allow returning an incomplete SimulationOutput.
         available_quantities = Dict{String, Any}()
     else

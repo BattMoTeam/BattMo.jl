@@ -50,7 +50,9 @@ end
         drates = [0.1, 1.4]
         delta_t = [200, 50]
         I_test = [0.0002664523159462069, 0.003730332423246896]
-        c_test = [3986.653950670727, 4146.8033577258875]
+        # The concentration-dependent solid diffusion coefficients apply during the
+        # simulation (before, they were evaluated at the initial state only)
+        c_test = [3987.378773232028, 4166.254743857964]
 
         for (i, rate) in enumerate(drates)
 

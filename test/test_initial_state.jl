@@ -66,13 +66,15 @@ end
         solver_settings["NonLinearSolver"]["Tolerances"] = tolerances
         solve_options = (;
             solver_settings, info_level = -1, max_timestep = 10.0,
-            always_update_secondary = true, output_substates = true, error_on_incomplete = true,
+            always_update_secondary = true, expand_substates = true, error_on_incomplete = true,
         )
         output_ref = solve(sim_ref; solve_options..., include_initial_state = true)
 
         @testset "include_initial_state" begin
             output_without_initial = solve(sim_ref; solve_options..., include_initial_state = false)
-            @test output_ref.time_series["Time"] ≈ time_ref atol = 1.0e-12 rtol = 0.0
+            # The expanded output holds every substep; the initial state precedes the report timesteps.
+            report_points = [1; 1 .+ output_ref.jutul_output.report_indices]
+            @test output_ref.time_series["Time"][report_points] ≈ time_ref atol = 1.0e-12 rtol = 0.0
             for name in ("Time", "Current", "Voltage")
                 @test output_without_initial.time_series[name] ≈
                     output_ref.time_series[name][2:end] atol = 1.0e-12 rtol = 0.0
@@ -105,7 +107,7 @@ end
                 simulation = restart_simulation(output_ref, indices; initial_state = restart_state)
                 output = solve(simulation; solve_options..., include_initial_state = true)
 
-                # Save the raw endpoint, including substeps, without repairing it in the test.
+                # Save the raw endpoint without repairing it in the test.
                 endpoint = last(output.jutul_output.states)
                 checkpoint_path = joinpath(directory, "restart.jls")
                 Serialization.serialize(checkpoint_path, endpoint)

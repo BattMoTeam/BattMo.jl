@@ -53,12 +53,7 @@ let ax, components, colors
         "PositiveElectrodeCurrentCollector",
     ]
 
-    colors = [
-        :gray,
-        :green,
-        :blue,
-        :black,
-    ]
+    colors = component_color.(components)
 
     for (i, component) in enumerate(components)
         if i == 1

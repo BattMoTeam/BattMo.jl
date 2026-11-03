@@ -123,7 +123,10 @@ function Jutul.apply!(x, prec::BattMo.BatteryGeneralPreconditioner, r)
         varprec = prec.g_varprecond
         apply!(dx, varprec.precond, r_local)
         x .+= dx
-        mul!(r_local, A, dx, -1, true)
+        # Only the post-solve of the control reads this residual
+        if prec.params["post_solve_control"] == true
+            mul!(r_local, A, dx, -1, true)
+        end
         dx .= 0.0
     end
     return if prec.params["post_solve_control"] == true

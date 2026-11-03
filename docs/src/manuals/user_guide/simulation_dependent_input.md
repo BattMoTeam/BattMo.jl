@@ -30,7 +30,7 @@ String parameters represent mathematical expressions that may depend on:
 - `c` – Local concentration  
 - `cmax` – Maximum concentration  
 - `T` – Temperature (K)
-- `refT` – Reference temperature (K)
+- `refT` – Reference temperature (K), set by `Cell` → `ReferenceTemperature` (defaults to 298.15 K)
 
 The string is parsed into a function during initialization and can be evaluated dynamically.
 
