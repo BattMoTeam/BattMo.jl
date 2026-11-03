@@ -233,6 +233,8 @@ The decomposition is based on interface values and reconstructs:
 `Voltage ≈ OCV_avg + η_conc,solid,pos + η_conc,solid,neg + η_pos + η_neg + Δϕ_e,conc + Δϕ_e,ohm + Δϕ_s,pos + Δϕ_s,neg (+ η_SEI) + Residual`
 
 where each term is returned as a time series.
+`OCV_avg` uses shell-volume-weighted concentrations in the separator-adjacent particles,
+not concentrations averaged across the entire electrodes.
 """
 function compute_voltage_breakdown(output::SimulationOutput)
 
@@ -324,6 +326,16 @@ function compute_voltage_breakdown(output::SimulationOutput)
     ne_system = output.model.multimodel[:NegativeElectrodeActiveMaterial].system
     pe_system = output.model.multimodel[:PositiveElectrodeActiveMaterial].system
 
+    has_particle_profiles = !isnothing(c_n_part) && !isnothing(c_p_part) &&
+        ndims(c_n_part) == 3 && ndims(c_p_part) == 3
+    if has_particle_profiles
+        # Use the same spherical shell volumes as the particle mass balance.
+        negative_shell_volumes = ne_system.discretization[:vols]
+        positive_shell_volumes = pe_system.discretization[:vols]
+        negative_shell_weights = negative_shell_volumes ./ sum(negative_shell_volumes)
+        positive_shell_weights = positive_shell_volumes ./ sum(positive_shell_volumes)
+    end
+
     ne_params = ne_system.params
     pe_params = pe_system.params
 
@@ -408,11 +420,11 @@ function compute_voltage_breakdown(output::SimulationOutput)
         eta_n_total = phi_n_sep - phi_e_n - U_n
         eta_p_total = phi_p_sep - phi_e_p - U_p
 
-        if !isnothing(c_n_part) && !isnothing(c_p_part) && ndims(c_n_part) == 3 && ndims(c_p_part) == 3
-            cn_profile = vec(c_n_part[i, ne_sep_idx, :])
-            cp_profile = vec(c_p_part[i, pe_sep_idx, :])
-            cn_avg = mean_finite(cn_profile)
-            cp_avg = mean_finite(cp_profile)
+        if has_particle_profiles
+            cn_profile = @view c_n_part[i, ne_sep_idx, :]
+            cp_profile = @view c_p_part[i, pe_sep_idx, :]
+            cn_avg = LinearAlgebra.dot(negative_shell_weights, cn_profile)
+            cp_avg = LinearAlgebra.dot(positive_shell_weights, cp_profile)
 
             Tn_loc = isnothing(T_n) ? 298.15 : T_n[i, ne_sep_idx]
             Tp_loc = isnothing(T_p) ? 298.15 : T_p[i, pe_sep_idx]
@@ -550,6 +562,8 @@ Computes key performance metrics from a battery simulation output, either global
   - `ChargeEnergy` (Wh)
   - `RoundTripEfficiency` (%)
 - Constructs and returns a dictionary of requested metrics (or all metrics by default).
+- Returns an empty dictionary when no states were accepted or the controller has no cycle metrics.
+  Explicitly requesting an unavailable metric still raises an error.
 
 # Returns
 A `NamedTuple` where each field is a vector containing the computed metric values (one value per cycle, or globally if no cycles are detected). Possible fields include:
@@ -577,10 +591,9 @@ function get_output_metrics(
     )
     states = jutul_output[:states]
 
-    controller = states[1][:Control][:Controller]
-
-    if isa(controller, FunctionController) || isa(controller, InputCurrentController) || isa(controller, RestController)
-        available_quantities = Dict()
+    if isempty(states) || first(states)[:Control][:Controller] isa Union{FunctionController, InputCurrentController, RestController}
+        # A failed first timestep must still allow returning an incomplete SimulationOutput.
+        available_quantities = Dict{String, Any}()
     else
         cycle_array = hasproperty(states[1][:Control][:Controller], :numberOfCycles) ? [state[:Control][:Controller].numberOfCycles for state in states] : nothing
 
@@ -630,7 +643,17 @@ function get_output_metrics(
     if isnothing(metrics)
         return available_quantities
     else
-        return Dict(q => get(available_quantities, q, error("Metric \"$q\" is not available. Available metrics are: $(join(keys(available_quantities), ", "))")))
+        for quantity in metrics
+            if !haskey(available_quantities, quantity)
+                if isempty(available_quantities)
+                    available_names = "none"
+                else
+                    available_names = join(sort!(collect(keys(available_quantities))), ", ")
+                end
+                error("Metric \"$quantity\" is not available. Available metrics are: $available_names")
+            end
+        end
+        return Dict(quantity => available_quantities[quantity] for quantity in metrics)
     end
 end
 

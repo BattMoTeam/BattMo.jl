@@ -31,7 +31,7 @@
         },
         "ElectronicDiffusionCoefficient": {
             "type": "number",
-            "minimum": 1e-16,
+            "minimum": 0.0,
             "maximum": 1000.0,
             "description": "Diffusion coefficient of electrons in a solid.",
             "unit": "m\u00b2\u00b7s\u207b\u00b9"
@@ -40,7 +40,7 @@
             "type": "number",
             "minimum": 0.0,
             "maximum": 10.0,
-            "description": "Ratio of the concentration of an intercalant (e.g. Li+) at a given moment, to its maximum possible concentration within a solid host material.",
+            "description": "Moles of lithium consumed per mole of SEI product; strictly positive.",
             "unit": "-"
         },
         "InterstitialConcentration": {
@@ -57,11 +57,18 @@
             "description": "Thickness of the SEI layer at the start of the simulation.",
             "unit": "m"
         },
+        "PassivatingThickness": {
+            "type": "number",
+            "minimum": 1e-09,
+            "maximum": 0.01,
+            "description": "Optional fixed thickness of the passivating SEI layer that limits electron transport. When given, the growth flux uses it instead of the film thickness, so growth does not slow down as the film thickens. The film thickness still sets the film resistance and the lithium inventory.",
+            "unit": "m"
+        },
         "InitialPotentialDrop": {
             "type": "number",
             "minimum": 0,
             "maximum": 1,
-            "description": "Electric potential difference across the SEI layer or electrode interface at the beginning of the simulation.",
+            "description": "Positive voltage scale for NormalizedSEIVoltageDrop, not the initial physical film drop.",
             "unit": "V"
         }
     }

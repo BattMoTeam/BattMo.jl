@@ -640,8 +640,21 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
                 "IonicConductivity",
             ]
             for fd in fds
-                am_params[Symbol(fd)] = inputparams_electrode["Interphase"][fd]
-
+                value = inputparams_electrode["Interphase"][fd]
+                nonnegative = fd in ("ElectronicDiffusionCoefficient", "InterstitialConcentration")
+                valid = value isa Real && isfinite(value) && (nonnegative ? value >= 0 : value > 0)
+                if !valid
+                    bound = nonnegative ? "nonnegative" : "positive"
+                    throw(ArgumentError("$(stringName).Interphase.$fd must be finite and $bound."))
+                end
+                am_params[Symbol(fd)] = value
+            end
+            # Optional: a fixed thickness limiting electron transport in the growth flux.
+            if haskey(inputparams_electrode["Interphase"], "PassivatingThickness")
+                value = inputparams_electrode["Interphase"]["PassivatingThickness"]
+                value isa Real && isfinite(value) && value > 0 ||
+                    throw(ArgumentError("$(stringName).Interphase.PassivatingThickness must be finite and positive."))
+                am_params[:PassivatingThickness] = value
             end
         else
             label = nothing
@@ -1184,16 +1197,35 @@ function setup_initial_state(input, model::IntercalationBattery)
     if hasproperty(input, :initial_state) && !isnothing(input.initial_state)
         # Copy to keep the physical state
         state = deepcopy(input.initial_state)
+        # A report endpoint may contain earlier adaptive substeps. They belong to the
+        # previous run and must not precede the reset clock in the new initial state.
+        pop!(state, :substates, nothing)
 
-        # Reset control
-        fresh_input = merge(input, (; initial_state = nothing))
-        fresh_state = setup_initial_state(fresh_input, model)
+        # Restart the protocol clock. Input-current continuation also needs the
+        # previous CC/CV mode because voltage-limit hysteresis depends on it, so only
+        # its time is reset. Other controllers restart from the protocol's fresh
+        # controller, which also covers controllers whose fields cannot be zeroed.
+        if haskey(state, :Control)
+            ctrl = state[:Control]
+            controller = get(ctrl, :Controller, nothing)
+            if controller isa InputCurrentController
+                controller.time = zero(controller.time)
+                ctrl[:Current] = [getInitCurrent(model.multimodel[:Control])]
+            else
+                fresh_input = merge(input, (; initial_state = nothing))
+                fresh_state = setup_initial_state(fresh_input, model)
+                ctrl[:Controller] = deepcopy(fresh_state[:Control][:Controller])
+                ctrl[:Current] = deepcopy(fresh_state[:Control][:Current])
+            end
+        end
 
-        state[:Control][:Controller] = deepcopy(fresh_state[:Control][:Controller])
-        state[:Control][:Current] = deepcopy(fresh_state[:Control][:Current])
-
-        return state
-
+        # Ordinary output omits secondary fields needed by the simulator. Allocate
+        # them through the normal initializer, keeping the controller set above.
+        initialized_state = setup_state(model.multimodel, state)
+        if haskey(state, :Control) && haskey(state[:Control], :Controller)
+            initialized_state[:Control][:Controller] = state[:Control][:Controller]
+        end
+        return initialized_state
     end
 
     multimodel = model.multimodel

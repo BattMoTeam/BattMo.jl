@@ -7,10 +7,6 @@ initial_soc = 1.0    # Starting state of charge
 upper_cutoff = 4.1   # Upper voltage limit V
 lower_cutoff = 3.5   # Lower voltage limit V
 
-# ## Helpers: trapz and RMSE
-trapz(x, y) = sum((y[1:(end - 1)] .+ y[2:end]) .* diff(x)) / 2
-rmse(x, y0, y1) = sqrt(trapz(x, (y1 .- y0) .^ 2) / (x[end] - x[1]))
-
 # Setup cell model and parameters
 model = LithiumIonBattery()
 cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
@@ -92,7 +88,7 @@ E_discharge = output_discharge.time_series["Voltage"]
 E_charge = output_charge.time_series["Voltage"]
 E_ref = output_ref.time_series["Voltage"]
 E_merge = vcat(E_discharge, E_charge[2:end])  # drop duplicate join point
-rmse_total = rmse(t_ref, E_ref, E_merge)
+rmse_total = BattMo.rmse(t_ref, E_ref, t_ref, E_merge)
 milli = 1.0e-3
 println("RMSE total: $(round(rmse_total / milli; digits = 6)) mV")
 
