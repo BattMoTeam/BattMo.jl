@@ -32,19 +32,22 @@ export component_color
 Return the component's `(red, green, blue)` tuple, with channels in `[0, 1]`.
 The tuple can be passed directly as a Makie `color`.
 
-`Electrolyte` uses the separator color for geometry plots.
+Names are case-insensitive and spaces are ignored. Short names `necc`, `neam`,
+`sep`, `peam`, and `pecc` select the negative current collector, negative active
+material, separator, positive active material, and positive current collector.
+`Electrolyte` (or `elyte`) uses the separator color for geometry plots.
 """
 function component_color(component::Union{AbstractString, Symbol})
-    name = Symbol(component)
-    if name in (:NegativeElectrodeCurrentCollector, :NegativeCurrentCollector)
+    name = lowercase(replace(String(component), " " => ""))
+    if name in ("negativeelectrodecurrentcollector", "negativecurrentcollector", "necc")
         return (0.0013282353685692549, 0.069835904057998568, 0.37952893214298428)
-    elseif name in (:NegativeElectrodeActiveMaterial, :NegativeElectrodeCoating, :NegativeElectrode)
+    elseif name in ("negativeelectrodeactivematerial", "negativeelectrodecoating", "negativeelectrode", "neam")
         return (0.18590652487535614, 0.48820275524502127, 0.65125366317890188)
-    elseif name in (:Separator, :Electrolyte)
+    elseif name in ("separator", "electrolyte", "sep", "elyte")
         return (0.92438393215110315, 0.89876971218096036, 0.88329883347047033)
-    elseif name in (:PositiveElectrodeActiveMaterial, :PositiveElectrodeCoating, :PositiveElectrode)
+    elseif name in ("positiveelectrodeactivematerial", "positiveelectrodecoating", "positiveelectrode", "peam")
         return (0.76501266999171258, 0.44521068081483917, 0.26142055070720216)
-    elseif name in (:PositiveElectrodeCurrentCollector, :PositiveCurrentCollector)
+    elseif name in ("positiveelectrodecurrentcollector", "positivecurrentcollector", "pecc")
         return (0.35042305157605391, 6.1141134250659732e-5, 0.030499162905118213)
     else
         throw(ArgumentError("Unknown battery component: $component"))
