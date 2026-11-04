@@ -49,6 +49,7 @@ function build_battmo_docs(
         "3D Pouch example" => "example_3D_pouch",
         "3D cylindrical" => "example_3D_cylindrical",
         "Calibration example" => "example_calibration",
+        "BPX parameter set" => "example_bpx",
         "SEI layer growth" => "example_sei",
         "DFN sodiun ion " => "example_chayambuka",
         "Headless UI " => "example_headless",
@@ -206,6 +207,7 @@ function build_battmo_docs(
                 "Public API" => [
                     "Input terminology" => "manuals/user_guide/terminology.md",
                     "Simulation dependent input parameters" => "manuals/user_guide/simulation_dependent_input.md",
+                    "BPX parameter sets" => "manuals/user_guide/bpx.md",
                     "Functions and types" => "manuals/user_guide/public_api.md",
                 ],
                 "Tutorials" => tutorials_markdown,
