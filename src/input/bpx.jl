@@ -1198,6 +1198,16 @@ function convert_cell_parameters(bpx_data::AbstractDict, report::ConversionRepor
         "Electrolyte" => convert_electrolyte(electrolyte_section, electrolyte_reference_concentration, lumped, reference_temperature, report),
     )
 
+    # The BPX transport efficiencies describe the electrolyte in each region. The same
+    # Bruggeman coefficients are kept for the coatings and the separator, where BattMo
+    # uses them for the solid (the effective electronic conductivity is converted with
+    # them).
+    cell_parameters["Electrolyte"]["BruggemanCoefficient"] = Dict{String, Any}(
+        "NegativeElectrode" => cell_parameters["NegativeElectrode"]["Coating"]["BruggemanCoefficient"],
+        "Separator" => cell_parameters["Separator"]["BruggemanCoefficient"],
+        "PositiveElectrode" => cell_parameters["PositiveElectrode"]["Coating"]["BruggemanCoefficient"],
+    )
+
     report_thermal_model!(report, cell_section, cell_parameters, lumped, heat_transfer_coefficient)
     report_unconverted_keys!(report, cell_section)
     report_unconverted_keys!(report, user_defined_section)
@@ -1614,6 +1624,24 @@ function add_value!(target::AbstractDict, key::String, value)
     return target
 end
 
+"""
+    electrolyte_bruggeman(parameters, region, fallback)
+
+Return the Bruggeman coefficient of the electrolyte in `region` (`"NegativeElectrode"`,
+`"Separator"` or `"PositiveElectrode"`), which sets the BPX transport efficiency:
+`Electrolyte.BruggemanCoefficient`, one value or one per region, or `fallback` (the
+coating or separator value) when it is not given.
+"""
+function electrolyte_bruggeman(parameters::TrackedParameters, region::String, fallback)
+    value = battmo_value(parameters, "Electrolyte", "BruggemanCoefficient")
+    if isa(value, AbstractDict)
+        return battmo_value(parameters, "Electrolyte", "BruggemanCoefficient", region)
+    elseif isa(value, Real)
+        return value
+    end
+    return fallback
+end
+
 function export_electrode(parameters::TrackedParameters, name::String, polarity::Symbol, initial_concentration, report::ConversionReport)
     bpx_name = polarity == :negative ? "Negative electrode" : "Positive electrode"
     place(key) = location("Parameterisation", bpx_name, key)
@@ -1647,7 +1675,7 @@ function export_electrode(parameters::TrackedParameters, name::String, polarity:
     add_value!(electrode, "Surface area per unit volume [m-1]", surface_area)
     add_value!(electrode, "Thickness [m]", get_value("Coating", "Thickness"))
     add_value!(electrode, "Porosity", porosity)
-    add_value!(electrode, "Transport efficiency", derive((p, b) -> p^b, porosity, bruggeman))
+    add_value!(electrode, "Transport efficiency", derive((p, b) -> p^b, porosity, electrolyte_bruggeman(parameters, name, bruggeman)))
 
     for (bpx_key, battmo_key) in (
             ("Diffusivity [m2.s-1]", "DiffusionCoefficient"),
@@ -1822,7 +1850,7 @@ function convert_to_bpx(cell_parameters; cycling_protocol = nothing, validate::B
     separator_porosity = battmo_value(parameters, "Separator", "Porosity")
     add_value!(separator, "Thickness [m]", battmo_value(parameters, "Separator", "Thickness"))
     add_value!(separator, "Porosity", separator_porosity)
-    add_value!(separator, "Transport efficiency", derive((p, b) -> p^b, separator_porosity, battmo_value(parameters, "Separator", "BruggemanCoefficient")))
+    add_value!(separator, "Transport efficiency", derive((p, b) -> p^b, separator_porosity, electrolyte_bruggeman(parameters, "Separator", battmo_value(parameters, "Separator", "BruggemanCoefficient"))))
 
     parameterisation = Dict{String, Any}(
         "Cell" => cell,

@@ -4,7 +4,7 @@
 
 BattMo can read BPX files into [`CellParameters`](@ref), a [`CyclingProtocol`](@ref) or a complete [`FullSimulationInput`](@ref), and write BattMo cell parameters to BPX files. This page describes how to use the BPX support, how the parameters are converted between the BPX and BattMo models, and which parts of the BPX standard are not, or only approximately, supported.
 
-BattMo supports BPX version 1.1.1. Files in the older 0.x format are converted to the 1.x layout when they are read.
+BattMo supports BPX version 1.1.1. Files in the older 0.x format, and files with a 1.x version that still use the 0.x layout, are converted to the 1.x layout when they are read (see [BPX versions](@ref bpx_versions)).
 
 ## Reading a BPX file
 
@@ -156,7 +156,7 @@ For the negative (``k = \mathrm{n}``) and positive (``k = \mathrm{p}``) electrod
 |:--|:--|:--|
 | `Thickness [m]` | `Coating.Thickness` | unchanged |
 | `Porosity` ``\varepsilon`` | `Coating.EffectiveDensity` | ``\rho (1 - \varepsilon)``, so that the solid volume fraction is ``1 - \varepsilon`` |
-| `Transport efficiency` ``\mathcal{B}`` | `Coating.BruggemanCoefficient` ``\beta`` | ``\beta = \ln \mathcal{B} / \ln \varepsilon``, from ``\mathcal{B} = \varepsilon^\beta`` |
+| `Transport efficiency` ``\mathcal{B}`` | `Electrolyte.BruggemanCoefficient["NegativeElectrode"]` / `["PositiveElectrode"]` and `Coating.BruggemanCoefficient` ``\beta`` | ``\beta = \ln \mathcal{B} / \ln \varepsilon``, from ``\mathcal{B} = \varepsilon^\beta`` (the electrolyte uses it for its transport in the electrode, the coating for the effective electronic conductivity) |
 | `Conductivity [S.m-1]` ``\sigma`` (effective) | `ElectronicConductivity` (intrinsic) of all solid components | ``\sigma / (1 - \varepsilon)^\beta`` |
 | `Surface area per unit volume [m-1]` ``b`` | `ActiveMaterial.VolumetricSurfaceArea` | unchanged |
 | `Particle radius [m]` ``R`` | `ActiveMaterial.ParticleRadius` | unchanged |
@@ -189,7 +189,7 @@ Both are equal for ``k_0 = K / (c^\mathrm{max} \sqrt{c_\mathrm{e0}})`` and ``n =
 |:--|:--|:--|
 | `Thickness [m]` | `Separator.Thickness` | unchanged |
 | `Porosity` | `Separator.Porosity` | unchanged |
-| `Transport efficiency` | `Separator.BruggemanCoefficient` | ``\ln \mathcal{B} / \ln \varepsilon`` |
+| `Transport efficiency` | `Electrolyte.BruggemanCoefficient["Separator"]` and `Separator.BruggemanCoefficient` | ``\ln \mathcal{B} / \ln \varepsilon`` |
 
 ### Electrolyte
 
@@ -251,7 +251,7 @@ The voltage cut-offs of the file still apply. The voltage and temperature data a
 
 The following choices do not change the simulated electrochemistry. The component densities and the inactive solid are reported in the info message of every import.
 
-- **Component densities.** BPX gives one lumped density for the whole cell. It is used as the density of all components (active material, inactive solid, electrolyte and separator), so cell masses and gravimetric quantities, such as the specific energy, are approximate.
+- **Component densities.** BPX gives one lumped density for the whole cell. It is used as the density of all components (active material, inactive solid, electrolyte and separator), so cell masses and gravimetric quantities, such as the specific energy, are approximate. When the file gives no density (it is only needed for the thermal model), all components get a placeholder density of 1000 kg.m-3, which BattMo needs to compute the coating volume fractions; masses are then not meaningful.
 - **Inactive solid.** BPX does not describe the binder and conductive additive. The solid that is not active material is lumped into the binder and the conductive additive has zero mass.
 - **Electrode pairs.** BPX describes the cell as ``N_\mathrm{p}`` electrode pairs of area ``A``, each with one negative coating, a separator and one positive coating, so that the current density is ``I / (A N_\mathrm{p})``. They are imported as ``N_\mathrm{p}`` single coated layers (`DoubleCoatedElectrodes = false`), which gives the same total electrode area ``A N_\mathrm{p}`` and the same coating, separator and electrolyte volumes. BPX does not say whether the real cell uses double coated electrodes, so the number of current collectors implied by the layer layout may differ from the real cell; current collectors are not part of BPX.
 
@@ -269,7 +269,7 @@ The BattMo thermal model resolves the temperature in the simulated domain, which
 
 - the heat capacity is computed for the stack volume instead of the cell volume ``\mathcal{V}`` (for the NMC example cell, 57 % of ``\mathcal{V}``);
 - the cell volume, the external surface area and the heat transfer coefficient of BPX are not used;
-- BPX 1.x has no thermal conductivity, so the BattMo `ThermalConductivity` parameters are undetermined (for 0.x files, the lumped thermal conductivity is used).
+- BPX 1.x has no thermal conductivity, so the BattMo `ThermalConductivity` parameters are left unset and must be set for a thermal simulation (for 0.x files, the lumped thermal conductivity is used). The same holds for the specific heat capacities when the file gives none.
 
 Thermal simulations therefore do not reproduce BPX. Isothermal simulations are unaffected. The import reports this difference whenever the file contains thermal parameters.
 
@@ -293,6 +293,7 @@ The export applies the inverse of the conversions above. In addition:
 
 - ``A`` is `Cell.ElectrodeGeometricSurfaceArea` and ``N_\mathrm{p}`` is the number of facing electrode pairs (`compute_number_of_electrode_pairs`): `NumberOfLayersInParallel` for single coated electrodes, and ``2 N_\mathrm{layers} - 1`` for double coated electrodes, plus one if the stack is closed off with a negative electrode. The coating layout itself is not exported.
 - The lumped density and specific heat capacity are computed from the coatings, electrolyte and separator, and the volume ``A N_\mathrm{p} L`` from the stack thickness ``L``; current collectors and casing are not included.
+- The transport efficiency of each region is computed from the Bruggeman coefficient of the electrolyte in that region (`Electrolyte.BruggemanCoefficient`, one value or one per region), or from the coating or separator Bruggeman coefficient when the electrolyte has none.
 - Electrode functions of `c` and `cmax` are rewritten as functions of the stoichiometry `x`; electrolyte functions with an Arrhenius factor written by the import are split again into a function and an activation energy.
 
 The following cannot be represented in BPX and is reported:

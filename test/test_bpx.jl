@@ -59,6 +59,11 @@ end
         # Bruggeman coefficients recovered from porosity and transport efficiency
         @test cell_parameters["NegativeElectrode"]["Coating"]["BruggemanCoefficient"] ≈ log(0.128) / log(0.253991)
         @test cell_parameters["Separator"]["BruggemanCoefficient"] ≈ log(0.3222) / log(0.47)
+        # The electrolyte gets the Bruggeman coefficient of each region
+        electrolyte_bruggeman = cell_parameters["Electrolyte"]["BruggemanCoefficient"]
+        @test electrolyte_bruggeman["NegativeElectrode"] == cell_parameters["NegativeElectrode"]["Coating"]["BruggemanCoefficient"]
+        @test electrolyte_bruggeman["Separator"] == cell_parameters["Separator"]["BruggemanCoefficient"]
+        @test electrolyte_bruggeman["PositiveElectrode"] == cell_parameters["PositiveElectrode"]["Coating"]["BruggemanCoefficient"]
 
         # The coating effective density reproduces the BPX porosity
         ne = cell_parameters["NegativeElectrode"]
@@ -366,6 +371,35 @@ end
         write_bpx(path, cell_parameters; cycling_protocol)
         reloaded = load_cell_parameters(; from_bpx_file_path = path, bpx_options = (strict = true,))
         @test approx_equal(reloaded.all, cell_parameters.all)
+
+        # The transport efficiency is that of the electrolyte, whose Bruggeman coefficient
+        # can differ from the one of the coating
+        regional = deepcopy(cell_parameters.all)
+        regional["Electrolyte"]["BruggemanCoefficient"]["NegativeElectrode"] = 2.0
+        exported = BPX.convert_to_bpx(regional; cycling_protocol)
+        @test exported["Parameterisation"]["Negative electrode"]["Transport efficiency"] ≈ 0.253991^2.0 rtol = 1.0e-5
+
+        # Round trips of parameter sets with tables, without thermal parameters, with
+        # different Bruggeman coefficients per region, zero activation energies and in the
+        # legacy layout: the export conforms to BPX and gives the same parameters and
+        # operating conditions (the metadata records the BPX version, which changes)
+        without_metadata(parameters) = Dict(k => v for (k, v) in parameters.all if k != "Metadata")
+        @testset "round trip of $(basename(path))" for path in (
+                lfp_file_path,
+                joinpath(@__DIR__, "data", "bpx", "schmitt_2026.bpx.json"),
+                joinpath(@__DIR__, "data", "bpx", "schmitt_2026_v0_layout.bpx.json"),
+            )
+            original, original_protocol = Test.collect_test_logs() do
+                load_cell_parameters(; from_bpx_file_path = path), load_cycling_protocol(; from_bpx_file_path = path)
+            end[2]
+            round_trip_path = joinpath(mktempdir(), "round_trip_BPX.json")
+            Test.collect_test_logs(() -> write_bpx(round_trip_path, original; cycling_protocol = original_protocol, strict = true))
+            reloaded, reloaded_protocol = Test.collect_test_logs() do
+                load_cell_parameters(; from_bpx_file_path = round_trip_path, bpx_options = (strict = true,)), load_cycling_protocol(; from_bpx_file_path = round_trip_path)
+            end[2]
+            @test approx_equal(without_metadata(reloaded), without_metadata(original))
+            @test approx_equal(without_metadata(reloaded_protocol), without_metadata(original_protocol))
+        end
 
         # Parameter sets that are not from BPX: BattMo features without a BPX counterpart
         # are reported

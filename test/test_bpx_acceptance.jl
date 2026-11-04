@@ -344,7 +344,11 @@ without_metadata(cell_parameters) = Dict(k => v for (k, v) in cell_parameters.al
         cell_parameters = quietly(() -> load_cell_parameters(; from_bpx_file_path = path))
         @test compute_cell_theoretical_capacity(cell_parameters) ≈ 1.0309 rtol = 1.0e-3
         result = bpx_discharge(path; current = 1.0)
-        @test result.voltage[end] ≈ 3.5 atol = 0.05
+        # The output ends one time step before the voltage cut-off, so the discharge is
+        # checked by its duration, against PyBaMM with the same file
+        summary = BattMo.JSON.parsefile(joinpath(BPX_DATA_DIR, BPX_DATASETS["schmitt_2026"]["pybamm"]["summary"]))
+        reference = only(c for c in summary["cases"] if c["variant"] == "original" && c["current_a"] == 1.0)
+        @test result.time[end] ≈ reference["end_time_s"] rtol = 0.02
     end
 
     @testset "Schmitt 2026: BattMo reproduces PyBaMM" begin
