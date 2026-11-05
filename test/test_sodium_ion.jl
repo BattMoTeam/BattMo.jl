@@ -16,58 +16,49 @@ include(joinpath(battmo_base, "src/input/defaults/cell_parameters/function_param
 end
 
 @testset "sodium" begin
+    file_path_cell = parameter_file_path("cell_parameters", "chayambuka_2022.json")
+    file_path_model = parameter_file_path("model_settings", "p2d.json")
+    file_path_cycling = parameter_file_path("cycling_protocols", "cc_discharge.json")
+    file_path_simulation = parameter_file_path("simulation_settings", "p2d.json")
 
-    @test begin
-
-        file_path_cell = parameter_file_path("cell_parameters", "chayambuka_2022.json")
-        file_path_model = parameter_file_path("model_settings", "p2d.json")
-        file_path_cycling = parameter_file_path("cycling_protocols", "cc_discharge.json")
-        file_path_simulation = parameter_file_path("simulation_settings", "p2d.json")
-
-        cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
-        cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
-        model_settings = load_model_settings(; from_file_path = file_path_model)
-        simulation_settings = load_simulation_settings(; from_file_path = file_path_simulation)
+    cell_parameters = load_cell_parameters(; from_file_path = file_path_cell)
+    cycling_protocol = load_cycling_protocol(; from_file_path = file_path_cycling)
+    model_settings = load_model_settings(; from_file_path = file_path_model)
+    simulation_settings = load_simulation_settings(; from_file_path = file_path_simulation)
 
 
-        ######### Alter model settings #########
-        model_settings["ButlerVolmer"] = "Chayambuka"
+    ######### Alter model settings #########
+    model_settings["ButlerVolmer"] = "Chayambuka"
 
-        ######### Alter cycling protocol #########
-        cycling_protocol["InitialStateOfCharge"] = 0.99
-        cycling_protocol["LowerVoltageLimit"] = 2.0
-        cycling_protocol["UpperVoltageLimit"] = 4.2
+    ######### Alter cycling protocol #########
+    cycling_protocol["InitialStateOfCharge"] = 0.99
+    cycling_protocol["LowerVoltageLimit"] = 2.0
+    cycling_protocol["UpperVoltageLimit"] = 4.2
 
-        model = SodiumIonBattery(; model_settings)
+    model = SodiumIonBattery(; model_settings)
 
-        drates = [0.1, 1.4]
-        delta_t = [200, 50]
-        I_test = [0.0002664523159462069, 0.003730332423246896]
-        # The concentration-dependent solid diffusion coefficients apply during the
-        # simulation (before, they were evaluated at the initial state only)
-        c_test = [3987.378773232028, 4166.254743857964]
+    drates = [0.1, 1.4]
+    delta_t = [200, 50]
+    I_test = [0.0002664523159462069, 0.003730332423246896]
+    # The concentration-dependent solid diffusion coefficients apply during the
+    # simulation (before, they were evaluated at the initial state only)
+    c_test = [3987.378773232028, 4166.254743857964]
 
-        for (i, rate) in enumerate(drates)
+    for (i, rate) in enumerate(drates)
 
-            cycling_protocol["DRate"] = rate
-            simulation_settings["TimeStepDuration"] = delta_t[i]
+        cycling_protocol["DRate"] = rate
+        simulation_settings["TimeStepDuration"] = delta_t[i]
 
-            sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
+        sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
 
-            output = solve(sim)
-            I = output.time_series["Current"]
-            c_pe = output.states["PositiveElectrode"]["ActiveMaterial"]["SurfaceConcentration"]
+        output = solve(sim)
+        I = output.time_series["Current"]
+        c_pe = output.states["PositiveElectrode"]["ActiveMaterial"]["SurfaceConcentration"]
 
-            @test I[end] ≈ I_test[i] atol = 1.0e-1
+        @test I[end] ≈ I_test[i] atol = 1.0e-1
 
-            @test c_pe[2, 23] ≈ c_test[i] atol = 1.0e-1
+        @test c_pe[2, 23] ≈ c_test[i] atol = 1.0e-1
 
-
-        end
-
-
-        true
 
     end
-
 end

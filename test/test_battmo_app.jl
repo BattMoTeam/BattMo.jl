@@ -158,8 +158,5 @@ end
 json_file = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/p2d_40_jl_chen2020.json")
 
 @testset "app test" begin
-    @test begin
-        runP2DBatt(json_file)
-        true
-    end
+    runP2DBatt(json_file)
 end
