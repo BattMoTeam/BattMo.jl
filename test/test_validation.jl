@@ -75,10 +75,12 @@ end
 
     solver_settings = load_solver_settings(; from_default_set = "direct")
     solver_settings["NonLinearSolver"]["MinTimestep"] = 1.0e-3
+    solver_settings["NonLinearSolver"]["MaxTimestep"] = 0.5
     solver_settings["NonLinearSolver"]["MaxResidual"] = 1.0e10
     @test BattMo.validate_parameter_set(solver_settings)
     config = BattMo.solver_configuration(sim.simulator, sim.model, input, sim.parameters; solver_settings)
     @test config[:min_timestep] == 1.0e-3
+    @test config[:max_timestep] == 0.5
     @test config[:max_residual] == 1.0e10
 
     # Objects given as keywords replace the named relaxation and time-step selectors.

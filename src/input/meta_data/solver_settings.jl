@@ -12,7 +12,7 @@ function get_solver_settings_meta_data()
             "description" => "Maximum time step cuts in a single mini step before termination of simulation.",
         ),
         "MaxTimestep" => Dict(
-            "type" => Int,
+            "type" => Real,
             "variable_name" => "max_timestep",
             "min_value" => 0,
             "max_value" => 1.0e100,
