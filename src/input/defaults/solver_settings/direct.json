@@ -6,7 +6,7 @@
         "TimestepMaxIncrease": 10.0,
         "TimestepMaxDecrease": 0.1,
         "MaxResidual": 1e20,
-        "MaxNonLinearIterations": 8,
+        "MaxNonLinearIterations": 20,
         "MinNonLinearIterations": 1,
         "FailureCutsTimesteps": true,
         "CheckBeforeSolve": true,
