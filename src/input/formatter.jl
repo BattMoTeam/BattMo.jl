@@ -526,7 +526,6 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
     ne_interphase = get_key_value(ne, "Interphase")
     ne_b = get_key_value(ne, "Binder")
     ne_cc = get_key_value(ne, "CurrentCollector")
-    ne_cc_tab = get_key_value(ne, "CurrentCollectorTab")
     ne_ca = get_key_value(ne, "ConductiveAdditive")
 
     pe = get_key_value(cell_parameters, "PositiveElectrode")
@@ -534,13 +533,10 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
     pe_am = get_key_value(pe, "ActiveMaterial")
     pe_b = get_key_value(pe, "Binder")
     pe_cc = get_key_value(pe, "CurrentCollector")
-    pe_cc_tab = get_key_value(pe, "CurrentCollectorTab")
     pe_ca = get_key_value(pe, "ConductiveAdditive")
 
     elyte = get_key_value(cell_parameters, "Electrolyte")
     sep = get_key_value(cell_parameters, "Separator")
-
-    grid_points = get_key_value(simulation_settings, "GridResolution")
 
 
     ##################
@@ -793,7 +789,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
                         "activationEnergyOfDiffusion" => get_key_value(ne_am, "ActivationEnergyOfDiffusion"),
                         "referenceDiffusionCoefficient" => get_key_value(ne_am, "DiffusionCoefficient"),
                         "particleRadius" => get_key_value(ne_am, "ParticleRadius"),
-                        "N" => get_key_value(grid_points, "NegativeElectrodeActiveMaterial"),
+                        "N" => get_key_value(simulation_settings, "NegativeElectrodeParticleGridPoints"),
                     ),
                 ),
                 "Binder" => Dict(
@@ -811,7 +807,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
                     "thermalConductivity" => get_key_value(ne_ca, "ThermalConductivity"),
                 ),
                 "thickness" => get_key_value(ne_coating, "Thickness"),
-                "N" => get_key_value(grid_points, "NegativeElectrodeCoating"),
+                "N" => get_key_value(simulation_settings, "NegativeElectrodeCoatingGridPoints"),
             ),
             "CurrentCollector" => Dict(
                 "electronicConductivity" => get_key_value(ne_cc, "ElectronicConductivity"),
@@ -819,12 +815,12 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
                 "specificHeatCapacity" => get_key_value(ne_cc, "SpecificHeatCapacity"),
                 "density" => get_key_value(ne_cc, "Density"),
                 "thickness" => get_key_value(ne_cc, "Thickness"),
-                "N" => get_key_value(grid_points, "NegativeElectrodeCurrentCollector"),
+                "N" => get_key_value(simulation_settings, "NegativeElectrodeCurrentCollectorGridPoints"),
                 "tab" => Dict(
                     "width" => get_key_value(ne_cc, "TabWidth"),
                     "height" => get_key_value(ne_cc, "TabLength"),
-                    "Nw" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabWidth"),
-                    "Nh" => get_key_value(grid_points, "NegativeElectrodeCurrentCollectorTabLength"),
+                    "Nw" => get_key_value(simulation_settings, "TabWidthGridPoints"),
+                    "Nh" => get_key_value(simulation_settings, "TabLengthGridPoints"),
                 ),
                 "tabparams" => Dict(
                     "usetab" => true,
@@ -859,7 +855,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
                         "activationEnergyOfDiffusion" => get_key_value(pe_am, "ActivationEnergyOfDiffusion"),
                         "referenceDiffusionCoefficient" => get_key_value(pe_am, "DiffusionCoefficient"),
                         "particleRadius" => get_key_value(pe_am, "ParticleRadius"),
-                        "N" => get_key_value(grid_points, "PositiveElectrodeActiveMaterial"),
+                        "N" => get_key_value(simulation_settings, "PositiveElectrodeParticleGridPoints"),
                     ),
                 ),
                 "Binder" => Dict(
@@ -877,7 +873,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
                     "thermalConductivity" => get_key_value(pe_ca, "ThermalConductivity"),
                 ),
                 "thickness" => get_key_value(pe_coating, "Thickness"),
-                "N" => get_key_value(grid_points, "PositiveElectrodeCoating"),
+                "N" => get_key_value(simulation_settings, "PositiveElectrodeCoatingGridPoints"),
             ),
             "CurrentCollector" => Dict(
                 "electronicConductivity" => get_key_value(pe_cc, "ElectronicConductivity"),
@@ -885,12 +881,12 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
                 "specificHeatCapacity" => get_key_value(pe_cc, "SpecificHeatCapacity"),
                 "density" => get_key_value(pe_cc, "Density"),
                 "thickness" => get_key_value(pe_cc, "Thickness"),
-                "N" => get_key_value(grid_points, "PositiveElectrodeCurrentCollector"),
+                "N" => get_key_value(simulation_settings, "PositiveElectrodeCurrentCollectorGridPoints"),
                 "tab" => Dict(
                     "width" => get_key_value(pe_cc, "TabWidth"),
                     "height" => get_key_value(pe_cc, "TabLength"),
-                    "Nw" => get_key_value(grid_points, "PositiveElectrodeCurrentCollectorTabWidth"),
-                    "Nh" => get_key_value(grid_points, "PositiveElectrodeCurrentCollectorTabLength"),
+                    "Nw" => get_key_value(simulation_settings, "TabWidthGridPoints"),
+                    "Nh" => get_key_value(simulation_settings, "TabLengthGridPoints"),
                 ),
                 "tabparams" => Dict(
                     "usetab" => true,
@@ -920,7 +916,7 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
             "density" => get_key_value(sep, "Density"),
             "bruggemanCoefficient" => get_key_value(sep, "BruggemanCoefficient"),
             "thickness" => get_key_value(sep, "Thickness"),
-            "N" => get_key_value(grid_points, "Separator"),
+            "N" => get_key_value(simulation_settings, "SeparatorGridPoints"),
         ),
         "ThermalModel" => Dict(
             "externalHeatTransferCoefficient" => get_key_value(cell, "HeatTransferCoefficient"),
@@ -934,10 +930,10 @@ function convert_parameter_sets_to_old_input_format(model_settings::ModelSetting
             "height" => isnothing(get_key_value(cell, "ElectrodeLength")) ? get_key_value(cell, "Height") : get_key_value(cell, "ElectrodeLength"),
             "innerRadius" => get_key_value(cell, "InnerRadius"),
             "outerRadius" => get_key_value(cell, "OuterRadius"),
-            "Nw" => get_key_value(grid_points, "ElectrodeWidth"),
-            "Nh" => get_key_value(grid_points, "ElectrodeLength"),
-            "numberOfDiscretizationCellsVertical" => get_key_value(grid_points, "Height"),
-            "numberOfDiscretizationCellsAngular" => get_key_value(grid_points, "Angular"),
+            "Nw" => get_key_value(simulation_settings, "ElectrodeWidthGridPoints"),
+            "Nh" => get_key_value(simulation_settings, "ElectrodeLengthGridPoints"),
+            "numberOfDiscretizationCellsVertical" => get_key_value(simulation_settings, "HeightGridPoints"),
+            "numberOfDiscretizationCellsAngular" => get_key_value(simulation_settings, "AngularGridPoints"),
         ),
         "TimeStepping" => Dict(
             "useRampup" => use_ramp_up,

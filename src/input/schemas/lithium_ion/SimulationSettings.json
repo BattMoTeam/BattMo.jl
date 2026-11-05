@@ -58,39 +58,11 @@
             "description": "Number of grid points along the thickness dimension of the positive electrode current collector.",
             "context_type_iri": null
         },
-        "PositiveElectrodeCurrentCollectorTabWidthGridPoints": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 1000,
-            "description": "In the current collector tab at the positive electrode, the number of grid points along the width dimension of the tab's face.",
-            "context_type_iri": null
-        },
-        "PositiveElectrodeCurrentCollectorTabLengthGridPoints": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 1000,
-            "description": "In the current collector tab at the positive electrode, the number of grid points along the length dimension of the tab's face.",
-            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
-        },
         "NegativeElectrodeCurrentCollectorGridPoints": {
             "type": "integer",
             "minimum": 1,
             "maximum": 1000,
             "description": "Number of grid points along the thickness dimension of the negative electrode current collector.",
-            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
-        },
-        "NegativeElectrodeCurrentCollectorTabWidthGridPoints": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 1000,
-            "description": "In the current collector tab at the negative electrode, the number of grid points along the width dimension of the tab's face.",
-            "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
-        },
-        "NegativeElectrodeCurrentCollectorTabLengthGridPoints": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 1000,
-            "description": "In the current collector tab at the negative electrode, the number of grid points along the length dimension of the tab's face.",
             "context_type_iri": "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_47608fd0_cc0d_457e_9141_051935029e3a"
         },
         "NegativeElectrodeParticleGridPoints": {
@@ -171,11 +143,7 @@
             "then": {
                 "required": [
                     "PositiveElectrodeCurrentCollectorGridPoints",
-                    "PositiveElectrodeCurrentCollectorTabLengthGridPoints",
-                    "PositiveElectrodeCurrentCollectorTabWidthGridPoints",
                     "NegativeElectrodeCurrentCollectorGridPoints",
-                    "NegativeElectrodeCurrentCollectorTabWidthGridPoints",
-                    "NegativeElectrodeCurrentCollectorTabLengthGridPoints",
                     "ElectrodeWidthGridPoints",
                     "ElectrodeLengthGridPoints"
                 ]
@@ -197,9 +165,7 @@
                     "HeightGridPoints",
                     "AngularGridPoints",
                     "PositiveElectrodeCurrentCollectorGridPoints",
-                    "PositiveElectrodeCurrentCollectorTabWidthGridPoints",
                     "NegativeElectrodeCurrentCollectorGridPoints",
-                    "NegativeElectrodeCurrentCollectorTabWidthGridPoints",
                     "SeparatorGridPoints"
                 ]
             }

@@ -33,13 +33,6 @@ end
         ######### Alter model settings #########
         model_settings["ButlerVolmer"] = "Chayambuka"
 
-        ######### Alter simulation settings #########
-        simulation_settings["GridResolutionNegativeElectrodeCoating"] = 8
-        simulation_settings["GridResolutionPositiveElectrodeCoating"] = 50
-        simulation_settings["GridResolutionNegativeElectrodeParticle"] = 50
-        simulation_settings["GridResolutionPositiveElectrodeParticle"] = 50
-        simulation_settings["GridResolutionSeparator"] = 5
-
         ######### Alter cycling protocol #########
         cycling_protocol["InitialStateOfCharge"] = 0.99
         cycling_protocol["LowerVoltageLimit"] = 2.0

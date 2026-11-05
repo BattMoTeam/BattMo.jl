@@ -109,7 +109,11 @@ end
 New method extending Base.iterate to enable iteration in for loops
 """
 # Extend Base.iterate() - Enable iteration (for loops)
-function Base.iterate(ps::AbstractInput, state = nothing)
+function Base.iterate(ps::AbstractInput)
+    return iterate(ps.all)
+end
+
+function Base.iterate(ps::AbstractInput, state)
     return iterate(ps.all, state)
 end
 

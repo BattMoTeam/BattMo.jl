@@ -12,7 +12,7 @@ function get_solver_settings_meta_data()
             "description" => "Maximum time step cuts in a single mini step before termination of simulation.",
         ),
         "MaxTimestep" => Dict(
-            "type" => Int,
+            "type" => Real,
             "variable_name" => "max_timestep",
             "min_value" => 0,
             "max_value" => 1.0e100,
@@ -20,12 +20,20 @@ function get_solver_settings_meta_data()
             "description" => "Maximum time step length.",
         ),
         "MinTimestep" => Dict(
-            "type" => Int,
+            "type" => Real,
             "variable_name" => "min_timestep",
             "min_value" => 0,
             "max_value" => 1000,
             "category" => "SolverSettings",
             "description" => "Minimum time step length.",
+        ),
+        "MaxResidual" => Dict(
+            "type" => Real,
+            "variable_name" => "max_residual",
+            "min_value" => 0,
+            "max_value" => 1.0e100,
+            "category" => "SolverSettings",
+            "description" => "Maximum value allowed for a residual before the simulation is terminated.",
         ),
         "TimestepMaxIncrease" => Dict(
             "type" => Real,
@@ -168,14 +176,14 @@ function get_solver_settings_meta_data()
         "TimeStepSelectors" => Dict(
             "type" => String,
             "variable_name" => "timestep_selectors",
-            "options" => ["TimestepSelector"],
+            "options" => ["TimestepSelector", "UserDefined"],
             "category" => "SolverSettings",
             "description" => "Time-step selectors that pick mini steps.",
         ),
         "Relaxation" => Dict(
             "type" => String,
             "variable_name" => "relaxation",
-            "options" => ["NoRelaxation", "SimpleRelaxation"],
+            "options" => ["NoRelaxation", "SimpleRelaxation", "UserDefined"],
             "category" => "SolverSettings",
             "description" => "Non-Linear relaxation used. Currently supports `NoRelaxation()` and `SimpleRelaxation()`.",
         ),
@@ -225,12 +233,12 @@ function get_solver_settings_meta_data()
             "category" => "SolverSettings",
             "description" => "Color for progress meter.",
         ),
-        "progress_glyphs" => Dict(
+        "ProgressGlyphs" => Dict(
             "type" => String,
             "variable_name" => "progress_glyphs",
             "options" => ["default"],
             "category" => "SolverSettings",
-            "description" => "Glyphs",
+            "description" => "Glyphs for progress meter.",
         ),
         "OutputStates" => Dict(
             "type" => Bool,

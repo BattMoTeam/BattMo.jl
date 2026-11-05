@@ -277,11 +277,11 @@ function battery_linsolve(inputparams)
 
         solver = :fgmres
 
-        set_default_input_params!(inputparams, ["Tolerance"], 1.0e-7)
+        set_default_input_params!(inputparams, ["LinearTolerance"], 1.0e-7)
         set_default_input_params!(inputparams, ["MaxLinearIterations"], 50)
         set_default_input_params!(inputparams, ["Verbosity"], 0)
 
-        tolerance = inputparams["Tolerance"]
+        tolerance = inputparams["LinearTolerance"]
         atol = 1.0e-28
         max_iterations = inputparams["MaxLinearIterations"]
         verbosity = inputparams["Verbosity"]
