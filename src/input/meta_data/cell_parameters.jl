@@ -111,6 +111,13 @@ function get_cell_parameters_meta_data()
             "context_type_iri" => "https://emmo-repo.github.io/domain-electrochemistry/electrochemistry.html#electrochemistry_56f85b19_1384_4e88_b130_cb8e7984db83",
             "description" => "Whether the electrodes are double-coated.",
         ),
+        "CloseOffWithNegativeElectrode" => Dict(
+            "type" => Bool,
+            "unit" => "-",
+            "unit_name" => "dimensionless",
+            "unit_iri" => "https://w3id.org/emmo#Dimensionless",
+            "description" => "Whether a multi-layer stack is closed off with an extra negative electrode, so that the outer positive coatings also face a counter electrode. Defaults to true for more than one layer.",
+        ),
         "Height" => Dict(
             "type" => Real,
             "min_value" => 0.01,
@@ -441,6 +448,13 @@ function get_cell_parameters_meta_data()
             "unit_name" => "emmo:VoltPerKelvin",
             "unit_iri" => "https://w3id.org/emmo#VoltPerKelvin",
             "documentation" => "https://battmo.org/BattMo.jl/dev/manuals/user_guide/simulation_dependent_input",
+        ),
+        "IncludeEntropyChange" => Dict(
+            "type" => Bool,
+            "unit" => "-",
+            "unit_name" => "dimensionless",
+            "unit_iri" => "https://w3id.org/emmo#Dimensionless",
+            "description" => "Whether the sequential thermal model includes the reversible heat from the entropy change of the active material. Defaults to true.",
         ),
         "HeatTransferCoefficient" => Dict(
             "context_type" => "CoefficientOfHeatTransfer",
