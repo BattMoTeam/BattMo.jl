@@ -63,6 +63,36 @@ end
     end
 end
 
+@testset "solver settings reach the Jutul configuration" begin
+    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+    simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+    sim = Simulation(
+        LithiumIonBattery(), cell_parameters, cycling_protocol;
+        simulation_settings, time_steps = [4.0],
+    )
+    input = (; model_settings = sim.model.settings, cell_parameters, cycling_protocol, simulation_settings)
+
+    solver_settings = load_solver_settings(; from_default_set = "direct")
+    solver_settings["NonLinearSolver"]["MinTimestep"] = 1.0e-3
+    solver_settings["NonLinearSolver"]["MaxResidual"] = 1.0e10
+    @test BattMo.validate_parameter_set(solver_settings)
+    config = BattMo.solver_configuration(sim.simulator, sim.model, input, sim.parameters; solver_settings)
+    @test config[:min_timestep] == 1.0e-3
+    @test config[:max_residual] == 1.0e10
+
+    # Objects given as keywords replace the named relaxation and time-step selectors.
+    relaxation = BattMo.SimpleRelaxation()
+    timestep_selectors = [BattMo.TimestepSelector()]
+    config = BattMo.solver_configuration(
+        sim.simulator, sim.model, input, sim.parameters;
+        solver_settings, min_timestep = 2.0e-3, relaxation, timestep_selectors,
+    )
+    @test config[:min_timestep] == 2.0e-3
+    @test config[:relaxation] === relaxation
+    @test config[:timestep_selectors] == timestep_selectors
+end
+
 @testset "simulation validation flags and accept_invalid" begin
     cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
     cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")

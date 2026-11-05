@@ -168,6 +168,7 @@
         "NonLinearSolver": {
             "MaxTimestepCuts": 10,
             "MaxTimestep": 1e12,
+            "MinTimestep": 0.0,
             "TimestepMaxIncrease": 10.0,
             "TimestepMaxDecrease": 0.1,
             "MaxResidual": 1e20,

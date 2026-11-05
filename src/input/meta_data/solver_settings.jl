@@ -20,7 +20,7 @@ function get_solver_settings_meta_data()
             "description" => "Maximum time step length.",
         ),
         "MinTimestep" => Dict(
-            "type" => Int,
+            "type" => Real,
             "variable_name" => "min_timestep",
             "min_value" => 0,
             "max_value" => 1000,
@@ -176,14 +176,14 @@ function get_solver_settings_meta_data()
         "TimeStepSelectors" => Dict(
             "type" => String,
             "variable_name" => "timestep_selectors",
-            "options" => ["TimestepSelector"],
+            "options" => ["TimestepSelector", "UserDefined"],
             "category" => "SolverSettings",
             "description" => "Time-step selectors that pick mini steps.",
         ),
         "Relaxation" => Dict(
             "type" => String,
             "variable_name" => "relaxation",
-            "options" => ["NoRelaxation", "SimpleRelaxation"],
+            "options" => ["NoRelaxation", "SimpleRelaxation", "UserDefined"],
             "category" => "SolverSettings",
             "description" => "Non-Linear relaxation used. Currently supports `NoRelaxation()` and `SimpleRelaxation()`.",
         ),

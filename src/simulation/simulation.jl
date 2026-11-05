@@ -614,7 +614,7 @@ function overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
 
                     if !isnothing(value) && !ismissing(value)
 
-                        if key == :TimeStepSelectors
+                        if key == "TimeStepSelectors"
                             if isa(value, String)
                                 solver_settings[dict_key][key] = value
                             else
@@ -622,7 +622,7 @@ function overwrite_solver_settings_kwargs!(solver_settings; kwargs...)
                                 timestep_selectors = value
                             end
 
-                        elseif key == :Relaxation
+                        elseif key == "Relaxation"
                             if isa(value, String)
                                 solver_settings[dict_key][key] = value
                             else
@@ -659,6 +659,7 @@ function kwarg_dict(; kwargs...)
         "NonLinearSolver" => Dict(
             "MaxTimestepCuts" => get(kwargs, :max_timestep_cuts, nothing),
             "MaxTimestep" => get(kwargs, :max_timestep, nothing),
+            "MinTimestep" => get(kwargs, :min_timestep, nothing),
             "TimestepMaxIncrease" => get(kwargs, :timestep_max_increase, nothing),
             "TimestepMaxDecrease" => get(kwargs, :timestep_max_decrease, nothing),
             "MaxResidual" => get(kwargs, :max_residual, nothing),
@@ -778,6 +779,8 @@ function solver_configuration(
         relax = NoRelaxation()
     elseif relaxation == "SimpleRelaxation"
         relax = SimpleRelaxation()
+    elseif relaxation == "UserDefined"
+        relax = overwritten_settings.relaxation
     else
         error("Relaxation method $(relaxation) not recognized. Only 'NoRelaxation' and 'SimpleRelaxation' are currently implemented.")
     end
@@ -785,6 +788,9 @@ function solver_configuration(
     timestep_selector = non_linear_solver["TimeStepSelectors"]
     if timestep_selector == "TimestepSelector"
         timesel = Jutul.AbstractTimestepSelector[TimestepSelector()]
+    elseif timestep_selector == "UserDefined"
+        # Copy, since a ramp-up selector may be added below.
+        timesel = Jutul.AbstractTimestepSelector[overwritten_settings.timestep_selectors...]
     else
         error("Timestep selector $(timestep_selector) not recognized. Only 'TimestepSelector' is currently implemented.")
     end
@@ -812,6 +818,7 @@ function solver_configuration(
         progress_glyphs = Symbol(verbose["ProgressGlyphs"]),
         max_timestep_cuts = non_linear_solver["MaxTimestepCuts"],
         max_timestep = non_linear_solver["MaxTimestep"],
+        min_timestep = get(non_linear_solver, "MinTimestep", 0.0),
         timestep_max_increase = non_linear_solver["TimestepMaxIncrease"],
         timestep_max_decrease = non_linear_solver["TimestepMaxDecrease"],
         max_residual = non_linear_solver["MaxResidual"],
