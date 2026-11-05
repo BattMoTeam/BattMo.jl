@@ -656,13 +656,9 @@ function get_schema_simulation_settings(model_settings)
             "PositiveElectrodeCoatingGridPoints" => create_property(parameter_meta, "PositiveElectrodeCoatingGridPoints"),
             "PositiveElectrodeParticleGridPoints" => create_property(parameter_meta, "PositiveElectrodeParticleGridPoints"),
             "PositiveElectrodeCurrentCollectorGridPoints" => create_property(parameter_meta, "PositiveElectrodeCurrentCollectorGridPoints"),
-            "PositiveElectrodeCurrentCollectorTabWidthGridPoints" => create_property(parameter_meta, "PositiveElectrodeCurrentCollectorTabWidthGridPoints"),
-            "PositiveElectrodeCurrentCollectorTabLengthGridPoints" => create_property(parameter_meta, "PositiveElectrodeCurrentCollectorTabLengthGridPoints"),
             "NegativeElectrodeCoatingGridPoints" => create_property(parameter_meta, "NegativeElectrodeCoatingGridPoints"),
             "NegativeElectrodeParticleGridPoints" => create_property(parameter_meta, "NegativeElectrodeParticleGridPoints"),
             "NegativeElectrodeCurrentCollectorGridPoints" => create_property(parameter_meta, "NegativeElectrodeCurrentCollectorGridPoints"),
-            "NegativeElectrodeCurrentCollectorTabWidth" => create_property(parameter_meta, "NegativeElectrodeCurrentCollectorTabWidthGridPoints"),
-            "NegativeElectrodeCurrentCollectorTabLengthGridPoints" => create_property(parameter_meta, "NegativeElectrodeCurrentCollectorTabLengthGridPoints"),
             "SeparatorGridPoints" => create_property(parameter_meta, "SeparatorGridPoints"), "Grid" => Dict(
                 "type" => "array",
             ),

@@ -129,10 +129,6 @@ BattMo provides component-wise mesh positions for these domains in the output, f
 | `PositiveElectrodeParticleGridPoints` | Radial resolution inside positive active-material particles. |
 | `NegativeElectrodeCurrentCollectorGridPoints` | Number of cells through the negative current collector thickness. |
 | `PositiveElectrodeCurrentCollectorGridPoints` | Number of cells through the positive current collector thickness. |
-| `NegativeElectrodeCurrentCollectorTabWidthGridPoints` | Resolution across the negative tab face. |
-| `NegativeElectrodeCurrentCollectorTabLengthGridPoints` | Resolution along the negative pouch-tab face length. |
-| `PositiveElectrodeCurrentCollectorTabWidthGridPoints` | Resolution across the positive tab face. |
-| `PositiveElectrodeCurrentCollectorTabLengthGridPoints` | Resolution along the positive pouch-tab face length. |
 
 ![P4D pouch geometry](../../assets/geometry_p4d_pouch.png)
 
@@ -183,8 +179,6 @@ As for the pouch case, outputs are provided component-wise for the resolved doma
 | `PositiveElectrodeParticleGridPoints` | Radial resolution inside positive active-material particles. |
 | `NegativeElectrodeCurrentCollectorGridPoints` | Number of cells through the negative current collector thickness. |
 | `PositiveElectrodeCurrentCollectorGridPoints` | Number of cells through the positive current collector thickness. |
-| `NegativeElectrodeCurrentCollectorTabWidthGridPoints` | Resolution across the negative tab face. |
-| `PositiveElectrodeCurrentCollectorTabWidthGridPoints` | Resolution across the positive tab face. |
 
 ![P4D cylindrical geometry](../../assets/geometry_p4d_cylindrical.png)
 
