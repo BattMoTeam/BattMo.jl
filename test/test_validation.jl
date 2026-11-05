@@ -45,6 +45,24 @@ using Test
     @test !BattMo.validate_parameter_set(invalid_settings)
 end
 
+@testset "default settings use documented keys" begin
+    # The schemas accept unknown keys, so a key that the code reads under another name passes validation.
+    schema = BattMo.get_schema_solver_settings()
+    for name in ("default", "direct", "iterative")
+        settings = load_solver_settings(; from_default_set = name)
+        for (section, values) in settings.all
+            undocumented = [key for key in keys(values) if !haskey(schema["properties"][section]["properties"], key)]
+            @test isempty(undocumented)
+        end
+    end
+    for name in ("p2d", "p4d_pouch", "p4d_cylindrical")
+        schema = BattMo.get_schema_simulation_settings(load_model_settings(; from_default_set = name))
+        settings = load_simulation_settings(; from_default_set = name)
+        undocumented = [key for key in keys(settings.all) if key != "Metadata" && !haskey(schema["properties"], key)]
+        @test isempty(undocumented)
+    end
+end
+
 @testset "simulation validation flags and accept_invalid" begin
     cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
     cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")

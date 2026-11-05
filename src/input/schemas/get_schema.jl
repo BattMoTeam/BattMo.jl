@@ -722,6 +722,7 @@ function get_schema_solver_settings()
                     "MinTimestep" => create_property(parameter_meta, "MinTimestep"),
                     "TimestepMaxIncrease" => create_property(parameter_meta, "TimestepMaxIncrease"),
                     "TimestepMaxDecrease" => create_property(parameter_meta, "TimestepMaxDecrease"),
+                    "MaxResidual" => create_property(parameter_meta, "MaxResidual"),
                     "MaxNonLinearIterations" => create_property(parameter_meta, "MaxNonLinearIterations"),
                     "MinNonLinearIterations" => create_property(parameter_meta, "MinNonLinearIterations"),
                     "FailureCutsTimesteps" => create_property(parameter_meta, "FailureCutsTimesteps"),
@@ -757,7 +758,7 @@ function get_schema_solver_settings()
                     "ASCIITerminal" => create_property(parameter_meta, "ASCIITerminal"),
                     "ID" => create_property(parameter_meta, "ID"),
                     "ProgressColor" => create_property(parameter_meta, "ProgressColor"),
-                    "progress_glyphs" => create_property(parameter_meta, "progress_glyphs"),
+                    "ProgressGlyphs" => create_property(parameter_meta, "ProgressGlyphs"),
                 ),
             ),
             "Output" => Dict(
@@ -787,14 +788,6 @@ function get_schema_solver_settings()
                 ),
                 "then" => Dict(
                     "properties" => Dict("LinearSolver" => Dict("required" => ["Verbosity", "MaxLinearIterations", "LinearTolerance"])),
-                ),
-            ),
-            Dict(
-                "if" => Dict(
-                    "properties" => Dict("LinearSolver" => Dict("properties" => Dict("Method" => Dict("const" => "UserDefined")))),
-                ),
-                "then" => Dict(
-                    "required" => Dict("LinearSolver" => Dict("required" => String[])),
                 ),
             ),
         ],

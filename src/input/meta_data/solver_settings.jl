@@ -27,6 +27,14 @@ function get_solver_settings_meta_data()
             "category" => "SolverSettings",
             "description" => "Minimum time step length.",
         ),
+        "MaxResidual" => Dict(
+            "type" => Real,
+            "variable_name" => "max_residual",
+            "min_value" => 0,
+            "max_value" => 1.0e100,
+            "category" => "SolverSettings",
+            "description" => "Maximum value allowed for a residual before the simulation is terminated.",
+        ),
         "TimestepMaxIncrease" => Dict(
             "type" => Real,
             "variable_name" => "timestep_max_increase",
@@ -225,12 +233,12 @@ function get_solver_settings_meta_data()
             "category" => "SolverSettings",
             "description" => "Color for progress meter.",
         ),
-        "progress_glyphs" => Dict(
+        "ProgressGlyphs" => Dict(
             "type" => String,
             "variable_name" => "progress_glyphs",
             "options" => ["default"],
             "category" => "SolverSettings",
-            "description" => "Glyphs",
+            "description" => "Glyphs for progress meter.",
         ),
         "OutputStates" => Dict(
             "type" => Bool,
