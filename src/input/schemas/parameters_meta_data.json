@@ -157,20 +157,6 @@
       ],
       "description": "Whether a cycling protocol starts with 'charging' or 'discharging'."
     },
-    "RestingTimeAfterCharge": {
-      "type": "number",
-      "minimum": 0.0,
-      "maximum": 1000000.0,
-      "description": "Time during which the cell is kept at open-circuit conditions after charging.",
-      "unit": "s"
-    },
-    "RestingTimeAfterDischarge": {
-      "type": "number",
-      "minimum": 0.0,
-      "maximum": 1000000.0,
-      "description": "Time during which the cell is kept at open-circuit conditions after discharging.",
-      "unit": "s"
-    },
     "TabWidth": {
       "type": "number",
       "minimum": 0.0005,
