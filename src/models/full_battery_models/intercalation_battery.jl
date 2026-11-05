@@ -452,7 +452,7 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 
     elyte = Electrolyte(params)
 
-    model_elyte = setup_component(grids["Electrolyte"], elyte, general_ad = true)
+    model_elyte = setup_component(grids["Electrolyte"], elyte, flow_discretization = input.model_settings["PotentialFlowDiscretization"])
 
     return model_elyte
 end
@@ -470,7 +470,7 @@ function setup_separator(model::IntercalationBattery, input, grids)
 
     separator = Separator(params)
 
-    model_separator = setup_component(grids["Separator"], separator, general_ad = true)
+    model_separator = setup_component(grids["Separator"], separator, flow_discretization = input.model_settings["PotentialFlowDiscretization"])
 
     return model_separator
 end
@@ -680,8 +680,8 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
     model_am = setup_component(
         grid,
         sys_am;
-        general_ad = true,
         dirichletBoundary = boundary,
+        flow_discretization = input.model_settings["PotentialFlowDiscretization"],
     )
 
     return model_am
