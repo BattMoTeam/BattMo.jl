@@ -61,7 +61,8 @@ function regularized_sqrt(x, th)
     if x <= th
         y = x / th * sqrt(th)
     else
-        y = x^0.5
+        # sqrt instead of x^0.5: a power with automatic differentiation costs several times more
+        y = sqrt(x)
     end
     return y
 end
