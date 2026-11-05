@@ -12,14 +12,11 @@ names = [
 @testset "basic tests" begin
     for name in names
         @testset "$name" begin
-            @test begin
-                fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
-                inputparams = load_advanced_dict_input(fn)
-                inputparams["TimeStepping"]["timeStepDuration"] = 200.0
+            fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/", name, ".json")
+            inputparams = load_advanced_dict_input(fn)
+            inputparams["TimeStepping"]["timeStepDuration"] = 200.0
 
-                output = run_simulation(inputparams; accept_invalid = true)
-                true
-            end
+            output = run_simulation(inputparams; accept_invalid = true)
         end
     end
 end
@@ -37,43 +34,39 @@ geometries = [
 @testset "iterative solvers" begin
     for geometry in geometries
         @testset "$geometry" begin
-            @test begin
+            inputparams_geometry = getinput(geometry)
+            inputparams_material = getinput("lithium_ion_battery_nmc_graphite.json")
+            inputparams_material["use_thermal"] = false
+            inputparams_control = getinput("cc_discharge_control.json")
 
-                inputparams_geometry = getinput(geometry)
-                inputparams_material = getinput("lithium_ion_battery_nmc_graphite.json")
-                inputparams_material["use_thermal"] = false
-                inputparams_control = getinput("cc_discharge_control.json")
-
-                inputparams = merge_input_params(
-                    [
-                        inputparams_geometry,
-                        inputparams_material,
-                        inputparams_control,
-                    ]
-                )
+            inputparams = merge_input_params(
+                [
+                    inputparams_geometry,
+                    inputparams_material,
+                    inputparams_control,
+                ]
+            )
 
 
-                cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_to_parameter_sets(inputparams)
-                solver_settings = load_solver_settings(; from_default_set = "iterative")
+            cell_parameters, cycling_protocol, model_settings, simulation_settings = convert_to_parameter_sets(inputparams)
+            solver_settings = load_solver_settings(; from_default_set = "iterative")
 
-                solver_settings["NonLinearSolver"]["MaxNonLinearIterations"] = 20
-                solver_settings["NonLinearSolver"]["ErrorOnIncomplete"] = true
+            solver_settings["NonLinearSolver"]["MaxNonLinearIterations"] = 20
+            solver_settings["NonLinearSolver"]["ErrorOnIncomplete"] = true
 
-                model_setup = LithiumIonBattery(; model_settings)
-                sim = Simulation(
-                    model_setup,
-                    cell_parameters,
-                    cycling_protocol;
-                    simulation_settings,
-                    time_steps = [1.0],
-                )
-                output = solve(
-                    sim;
-                    accept_invalid = true,
-                    solver_settings = solver_settings,
-                )
-                true
-            end
+            model_setup = LithiumIonBattery(; model_settings)
+            sim = Simulation(
+                model_setup,
+                cell_parameters,
+                cycling_protocol;
+                simulation_settings,
+                time_steps = [1.0],
+            )
+            output = solve(
+                sim;
+                accept_invalid = true,
+                solver_settings = solver_settings,
+            )
         end
     end
 end
