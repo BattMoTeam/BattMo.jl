@@ -117,17 +117,19 @@ end
     electrolyte_bruggeman_coefficients(bruggeman)
 
 Electrolyte Bruggeman coefficients in the negative electrode, separator and positive electrode. The input is
-either one value, used in all three regions, or a dictionary with one value per region.
+either one value, used in all three regions, or one value per region. The per-region dictionary of the cell
+parameters reaches this function as a `NamedTuple`, since the electrolyte parameters are stored as immutable
+storage.
 """
 function electrolyte_bruggeman_coefficients(bruggeman::Real)
     return (NegativeElectrode = bruggeman, Separator = bruggeman, PositiveElectrode = bruggeman)
 end
 
-function electrolyte_bruggeman_coefficients(bruggeman::AbstractDict)
+function electrolyte_bruggeman_coefficients(bruggeman::NamedTuple)
     return (
-        NegativeElectrode = bruggeman["NegativeElectrode"],
-        Separator = bruggeman["Separator"],
-        PositiveElectrode = bruggeman["PositiveElectrode"],
+        NegativeElectrode = bruggeman.NegativeElectrode,
+        Separator = bruggeman.Separator,
+        PositiveElectrode = bruggeman.PositiveElectrode,
     )
 end
 
