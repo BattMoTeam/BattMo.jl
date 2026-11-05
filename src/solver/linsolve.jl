@@ -78,8 +78,15 @@ function modify_equation!(lsys, maps, tfac, context) #::Jutul.DefaultContext)
 
     (mass_index, charge_index, mass_cons_map, charge_cons_map) = maps
     vals = nonzeros(lsys.jac)
-    @. vals[mass_index] -= tfac * vals[charge_index]
-    return @. lsys.r[mass_cons_map] -= tfac * lsys.r[charge_cons_map]
+    r = lsys.r
+    # Loops instead of broadcasts: a broadcast over indexed copies or aliasing views allocates
+    for (i, j) in zip(mass_index, charge_index)
+        vals[i] -= tfac * vals[j]
+    end
+    for (i, j) in zip(mass_cons_map, charge_cons_map)
+        r[i] -= tfac * r[j]
+    end
+    return
 end
 
 function modify_equation!(lsys, mass_cons_map, charge_cons_map, tfac, nc, context::ParallelCSRContext)
@@ -155,28 +162,23 @@ function fix_control!(lsys, context::ParallelCSRContext)
 end
 
 function Jutul.post_update_linearized_system!(lsys, executor, storage, model::MultiModel{:IntercalationBattery})
-    context = first(model.models).context # NB hack to get context of mulitmodel
-    return if (true)
-        # fix linear system
+    # fix linear system
+    if isnothing(storage[:eq_maps].maps)
+        context = first(model.models).context # NB hack to get context of mulitmodel
         e_models = [:Electrolyte]
-        if isnothing(storage[:eq_maps].maps)
-            mass_cons_map = setup_subset_equation_map(model, storage, e_models, :mass_conservation)
-            #phi_map = setup_subset_residual_map(model, storage, e_models, :ElectricPotential)
-            charge_cons_map = setup_subset_equation_map(model, storage, e_models, :charge_conservation)
-            (mass_ind, charge_ind) = matrix_maps(lsys, mass_cons_map, charge_cons_map, context)
-            storage[:eq_maps].maps = (mass_ind = mass_ind, charge_ind = charge_ind, mass_cons_map = mass_cons_map, charge_cons_map = charge_cons_map)
-        end
-        #C_map = setup_subset_residual_map(model, storage, e_models, :ElectrolyteConcentration)
-        #Main.@infiltrate true
+        mass_cons_map = setup_subset_equation_map(model, storage, e_models, :mass_conservation)
+        #phi_map = setup_subset_residual_map(model, storage, e_models, :ElectricPotential)
+        charge_cons_map = setup_subset_equation_map(model, storage, e_models, :charge_conservation)
+        (mass_ind, charge_ind) = matrix_maps(lsys, mass_cons_map, charge_cons_map, context)
+        # The transference factor and the context are constant: kept with the maps, so that
+        # they are not looked up in the models at every linearization
         tfac = model[:Electrolyte].system[:transference] / BattMo.FARADAY_CONSTANT
-        modify_equation!(lsys, storage[:eq_maps].maps, tfac, context)
-        ## to control reduction ?
-        #Main.@infiltrate true
-
-        fix_control!(lsys, context)
-        #Main.@infiltrate true
-        #print("hei")
+        storage[:eq_maps].maps = (mass_ind = mass_ind, charge_ind = charge_ind, mass_cons_map = mass_cons_map, charge_cons_map = charge_cons_map, tfac = tfac, context = context)
     end
+    maps = storage[:eq_maps].maps
+    modify_equation!(lsys, maps, maps.tfac, maps.context)
+    ## to control reduction ?
+    return fix_control!(lsys, maps.context)
 end
 
 

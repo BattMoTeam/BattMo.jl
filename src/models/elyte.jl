@@ -12,8 +12,8 @@ export
 
 const ElectrolyteParameters = JutulStorage
 
-struct Electrolyte{D} <: BattMoSystem where {D <: AbstractDict}
-    params::ElectrolyteParameters
+struct Electrolyte{P, D} <: BattMoSystem where {D <: AbstractDict}
+    params::P
     #
     # - bruggeman
     # - charge
@@ -28,10 +28,11 @@ struct Electrolyte{D} <: BattMoSystem where {D <: AbstractDict}
     scalings::D
 end
 
-function Electrolyte(params, scalings = Dict())
-
-    return Electrolyte{typeof(scalings)}(params, scalings)
-
+function Electrolyte(params::ElectrolyteParameters, scalings = Dict())
+    # Immutable storage gives the flux and secondary-variable kernels concretely typed
+    # parameters, as for the active material
+    params = convert_to_immutable_storage(params)
+    return Electrolyte{typeof(params), typeof(scalings)}(params, scalings)
 end
 
 # Alias for convenience

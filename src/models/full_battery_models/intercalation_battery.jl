@@ -117,17 +117,19 @@ end
     electrolyte_bruggeman_coefficients(bruggeman)
 
 Electrolyte Bruggeman coefficients in the negative electrode, separator and positive electrode. The input is
-either one value, used in all three regions, or a dictionary with one value per region.
+either one value, used in all three regions, or one value per region. The per-region dictionary of the cell
+parameters reaches this function as a `NamedTuple`, since the electrolyte parameters are stored as immutable
+storage.
 """
 function electrolyte_bruggeman_coefficients(bruggeman::Real)
     return (NegativeElectrode = bruggeman, Separator = bruggeman, PositiveElectrode = bruggeman)
 end
 
-function electrolyte_bruggeman_coefficients(bruggeman::AbstractDict)
+function electrolyte_bruggeman_coefficients(bruggeman::NamedTuple)
     return (
-        NegativeElectrode = bruggeman["NegativeElectrode"],
-        Separator = bruggeman["Separator"],
-        PositiveElectrode = bruggeman["PositiveElectrode"],
+        NegativeElectrode = bruggeman.NegativeElectrode,
+        Separator = bruggeman.Separator,
+        PositiveElectrode = bruggeman.PositiveElectrode,
     )
 end
 
@@ -452,7 +454,7 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 
     elyte = Electrolyte(params)
 
-    model_elyte = setup_component(grids["Electrolyte"], elyte, general_ad = true)
+    model_elyte = setup_component(grids["Electrolyte"], elyte, flow_discretization = input.model_settings["PotentialFlowDiscretization"])
 
     return model_elyte
 end
@@ -470,7 +472,7 @@ function setup_separator(model::IntercalationBattery, input, grids)
 
     separator = Separator(params)
 
-    model_separator = setup_component(grids["Separator"], separator, general_ad = true)
+    model_separator = setup_component(grids["Separator"], separator, flow_discretization = input.model_settings["PotentialFlowDiscretization"])
 
     return model_separator
 end
@@ -680,8 +682,8 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
     model_am = setup_component(
         grid,
         sys_am;
-        general_ad = true,
         dirichletBoundary = boundary,
+        flow_discretization = input.model_settings["PotentialFlowDiscretization"],
     )
 
     return model_am

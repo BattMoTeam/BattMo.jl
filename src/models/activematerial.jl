@@ -5,8 +5,11 @@ const ActiveMaterialParameters = JutulStorage
 
 abstract type SolidDiffusionDiscretization end
 
-struct P2Ddiscretization{T} <: SolidDiffusionDiscretization
-    data::T
+# Mutable so that models refer to the discretization data (about 0.6 KB of static arrays)
+# instead of storing it inline: every dynamically dispatched call that passes a model
+# copies the model to the heap
+mutable struct P2Ddiscretization{T} <: SolidDiffusionDiscretization
+    const data::T
     # At the moment the following keys are included :
     # N::Integer                   # Discretization size for solid diffusion
     # rp::Real                     # Particle radius
