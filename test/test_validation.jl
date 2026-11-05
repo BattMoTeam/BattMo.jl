@@ -95,6 +95,15 @@ end
     @test config[:timestep_selectors] == timestep_selectors
 end
 
+@testset "inputs iterate over their entries" begin
+    simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+    entries = Dict{String, Any}()
+    for (key, value) in simulation_settings
+        entries[key] = value
+    end
+    @test entries == simulation_settings.all
+end
+
 @testset "simulation validation flags and accept_invalid" begin
     cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
     cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
