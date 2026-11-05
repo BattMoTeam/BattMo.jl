@@ -77,3 +77,25 @@ geometries = [
         end
     end
 end
+
+@testset "conversion to the old input format" begin
+    simulation_settings = load_simulation_settings(; from_default_set = "p4d_pouch")
+    inputparams = convert_parameter_sets_to_old_input_format(
+        load_model_settings(; from_default_set = "p4d_pouch"),
+        load_cell_parameters(; from_default_set = "xu_2015"),
+        load_cycling_protocol(; from_default_set = "cc_discharge"),
+        simulation_settings,
+    )
+    for electrode in ("NegativeElectrode", "PositiveElectrode")
+        coating = inputparams[electrode]["Coating"]
+        current_collector = inputparams[electrode]["CurrentCollector"]
+        @test coating["N"] == simulation_settings["$(electrode)CoatingGridPoints"]
+        @test coating["ActiveMaterial"]["SolidDiffusion"]["N"] == simulation_settings["$(electrode)ParticleGridPoints"]
+        @test current_collector["N"] == simulation_settings["$(electrode)CurrentCollectorGridPoints"]
+        @test current_collector["tab"]["Nw"] == simulation_settings["TabWidthGridPoints"]
+        @test current_collector["tab"]["Nh"] == simulation_settings["TabLengthGridPoints"]
+    end
+    @test inputparams["Separator"]["N"] == simulation_settings["SeparatorGridPoints"]
+    @test inputparams["Geometry"]["Nw"] == simulation_settings["ElectrodeWidthGridPoints"]
+    @test inputparams["Geometry"]["Nh"] == simulation_settings["ElectrodeLengthGridPoints"]
+end
