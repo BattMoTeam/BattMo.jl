@@ -95,6 +95,38 @@ end
     @test config[:timestep_selectors] == timestep_selectors
 end
 
+@testset "default linear solver and time-step selectors" begin
+    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+    simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+    sim = Simulation(
+        LithiumIonBattery(), cell_parameters, cycling_protocol;
+        simulation_settings, time_steps = [4.0],
+    )
+    input = (; model_settings = sim.model.settings, cell_parameters, cycling_protocol, simulation_settings)
+    solver_settings = load_solver_settings(; from_default_set = "direct")
+    config = BattMo.solver_configuration(sim.simulator, sim.model, input, sim.parameters; solver_settings)
+
+    # P2D models use KLU; P4D models keep UMFPACK through Jutul's LUSolver.
+    @test config[:linear_solver] isa BattMo.Jutul.KLUSolver
+    for framework in ("P4D Pouch", "P4D Cylindrical")
+        linear_solver = BattMo.battery_linsolve(Dict{String, Any}("Method" => "Direct"); model_framework = framework)
+        @test linear_solver isa BattMo.Jutul.LUSolver
+    end
+
+    selectors = config[:timestep_selectors]
+    @test any(selector -> selector isa BattMo.Jutul.IterationTimestepSelector && selector.target == 5, selectors)
+    @test any(selectors) do selector
+        return selector isa BattMo.Jutul.VariableChangeTimestepSelector && selector.key == :ElectricPotential &&
+            selector.model_key == :Control && selector.target == 0.1 && selector.is_rel
+    end
+
+    # KLU factorizes the P2D Jacobian.
+    output = solve(sim; info_level = -1)
+    @test length(output.jutul_output.states) == 1
+    @test all(isfinite, output.time_series["Voltage"])
+end
+
 @testset "inputs iterate over their entries" begin
     simulation_settings = load_simulation_settings(; from_default_set = "p2d")
     entries = Dict{String, Any}()

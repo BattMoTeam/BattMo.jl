@@ -264,7 +264,7 @@ function setup_subset_equation_map(multi_model::MultiModel, storage, model_label
 end
 
 
-function battery_linsolve(inputparams)
+function battery_linsolve(inputparams; model_framework = nothing)
 
     set_default_input_params!(inputparams, ["Method"], "Direct")
 
@@ -273,7 +273,12 @@ function battery_linsolve(inputparams)
     if method == "Direct"
 
         set_default_input_params!(inputparams, ["MaxSize"], 1000000)
-        return LUSolver(; max_size = inputparams["MaxSize"])
+        # KLU suits the small, low-fill P2D Jacobians; 3D models keep UMFPACK through Jutul's LUSolver.
+        if model_framework == "P2D"
+            return Jutul.KLUSolver(; max_size = inputparams["MaxSize"])
+        else
+            return LUSolver(; max_size = inputparams["MaxSize"])
+        end
 
     elseif method == "Iterative"
 

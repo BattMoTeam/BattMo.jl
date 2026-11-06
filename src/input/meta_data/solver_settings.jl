@@ -93,7 +93,7 @@ function get_solver_settings_meta_data()
             "type" => String,
             "options" => ["Direct", "Iterative", "UserDefined"],
             "category" => "SolverSettings",
-            "description" => "Linear solver method.",
+            "description" => "Linear solver method. Direct uses KLU for P2D models and UMFPACK otherwise.",
         ),
         "FailureCutsTimesteps" => Dict(
             "type" => Bool,
@@ -178,7 +178,7 @@ function get_solver_settings_meta_data()
             "variable_name" => "timestep_selectors",
             "options" => ["TimestepSelector", "UserDefined"],
             "category" => "SolverSettings",
-            "description" => "Time-step selectors that pick mini steps.",
+            "description" => "Time-step selectors that pick mini steps. TimestepSelector also targets five Newton iterations and a 10 % relative change of the cell voltage per step.",
         ),
         "Relaxation" => Dict(
             "type" => String,

@@ -788,6 +788,9 @@ function solver_configuration(
     timestep_selector = non_linear_solver["TimeStepSelectors"]
     if timestep_selector == "TimestepSelector"
         timesel = Jutul.AbstractTimestepSelector[TimestepSelector()]
+        # Aim for five Newton iterations and a 10 % relative change of the cell voltage per step.
+        push!(timesel, Jutul.IterationTimestepSelector(5))
+        push!(timesel, Jutul.VariableChangeTimestepSelector(:ElectricPotential, 0.1, model = :Control))
     elseif timestep_selector == "UserDefined"
         # Copy, since a ramp-up selector may be added below.
         timesel = Jutul.AbstractTimestepSelector[overwritten_settings.timestep_selectors...]
@@ -804,7 +807,7 @@ function solver_configuration(
     if linear_solver_dict["Method"] == "UserDefined"
         linear_solver = overwritten_settings.linear_solver
     else
-        linear_solver = battery_linsolve(linear_solver_dict)
+        linear_solver = battery_linsolve(linear_solver_dict; model_framework = model.settings["ModelFramework"])
     end
 
     cfg = simulator_config(

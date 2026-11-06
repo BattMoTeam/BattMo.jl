@@ -41,6 +41,7 @@ using Jutul.LBFGS: unit_box_bfgs
 # ─────────────────────────────────────────────────────────────────────────────
 using Polynomials: fit, coeffs, Polynomial        # Polynomial fitting & manipulation
 using LinearAlgebra: LinearAlgebra                               # Linear algebra operations
+using KLU: KLU                                    # Loads Jutul's KLUSolver, the P2D direct solver
 using SparseArrays: AbstractSparseMatrixCSC, SparseMatrixCSC
 using SparseArrays: require_one_based_indexing, getcolptr, rowvals, nzrange, nonzeros        # Sparse matrix support
 using StaticArrays                                # Static-sized arrays
