@@ -348,16 +348,20 @@ function solve_and_differentiate_for_calibration(
     )
     case = setup_battmo_case(x)
     states, dt = simulate_battmo_case_for_calibration(vc, case, solver_settings)
+
     # Evaluate the objective function
     f = evaluate_calibration_objective(vc, objective, case, states, dt)
     # Solve adjoints
     if gradient
-        if !haskey(adj_cache, :storage)
+        # Case setup rebuilds the model parameters, so adjoint simulators must
+        # be rebuilt when the parameter values change.
+        if !haskey(adj_cache, :storage) || get(adj_cache, :x, nothing) != x
             adj_cache[:storage] = Jutul.AdjointsDI.setup_adjoint_storage_generic(
                 x, setup_battmo_case, states, dt, objective;
                 backend_arg...,
                 info_level = 0,
             )
+            adj_cache[:x] = copy(x)
         end
         S = adj_cache[:storage]
         g = similar(x)
