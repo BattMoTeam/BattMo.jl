@@ -62,7 +62,7 @@ end
     output = solve(
         Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
         info_level = -1,
-        output_substates = true,
+        expand_substates = true,
     )
 
     controllers = control_controller(output)
@@ -135,7 +135,7 @@ end
         Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
         solver_settings,
         info_level = -1,
-        output_substates = true,
+        expand_substates = true,
     )
 
     controllers = control_controller(output)
@@ -288,7 +288,7 @@ end
     output = solve(
         Simulation(model, cell_parameters, cycling_protocol; simulation_settings);
         info_level = -1,
-        output_substates = true,
+        expand_substates = true,
     )
 
     voltage = control_voltage(output)

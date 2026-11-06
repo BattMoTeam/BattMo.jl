@@ -40,6 +40,7 @@
         "Density": 1200,
         "ChargeNumber": 1,
         "Concentration": 1500.0,
+        "BruggemanCoefficient": 1.5,
         "SpecificHeatCapacity": 2055.0,
         "ThermalConductivity": 0.6
     },

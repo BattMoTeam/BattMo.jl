@@ -7,7 +7,7 @@ mkpath(ASSET_DIR)
 
 """
 Generate geometry figures for the documentation using the same plotting helpers
-that users see in the examples: `plot_mesh` and `plot_mesh_edges`.
+that users see in the examples: `plot_mesh!` and `plot_mesh_edges!`.
 
 This script requires a GLMakie-capable environment. In a headless Linux setup,
 run it under a virtual display such as Xvfb.
@@ -65,23 +65,17 @@ function save_p4d_pouch_geometry()
 
     sim = Simulation(LithiumIonBattery(; model_settings), cell_parameters, cycling_protocol; simulation_settings)
 
-    components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeCurrentCollector", "PositiveCurrentCollector"]
-    colors = [:gray, :green, :dodgerblue, :black]
+    components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
+    colors = component_color.(components)
 
+    fig_mesh = Figure(size = (1600, 900))
+    ax_mesh = Axis3(fig_mesh[1, 1])
     for (i, component) in enumerate(components)
-        if i == 1
-            global fig_mesh, ax_mesh = plot_mesh(
-                sim.grids[component];
-                color = colors[i],
-                label = component,
-            )
-        else
-            plot_mesh!(
-                ax_mesh, sim.grids[component];
-                color = colors[i],
-                label = component,
-            )
-        end
+        plot_mesh!(
+            ax_mesh, sim.grids[component];
+            color = colors[i],
+            label = component,
+        )
     end
 
     for (i, component) in enumerate(components)
@@ -121,26 +115,20 @@ function save_p4d_cylindrical_geometry()
 
     sim = Simulation(LithiumIonBattery(; model_settings), cell_parameters, cycling_protocol; simulation_settings)
 
-    components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeCurrentCollector", "PositiveCurrentCollector"]
-    colors = [:gray, :green, :dodgerblue, :black]
+    components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
+    colors = component_color.(components)
 
+    fig_edges = Figure(size = (1600, 900))
+    ax_edges = Axis3(fig_edges[1, 1])
     for (i, component) in enumerate(components)
-        if i == 1
-            global fig_edges, ax_edges = plot_mesh_edges(
-                sim.grids[component];
-                color = colors[i],
-                label = component,
-            )
-        else
-            plot_mesh_edges!(
-                ax_edges, sim.grids[component];
-                color = colors[i],
-                label = component,
-            )
-        end
+        plot_mesh_edges!(
+            ax_edges, sim.grids[component];
+            color = colors[i],
+            label = component,
+        )
     end
 
-    for component in ["NegativeCurrentCollector", "PositiveCurrentCollector"]
+    for component in ["NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
         plot_mesh!(
             ax_edges, sim.grids[component];
             boundaryfaces = sim.couplings[component]["External"]["boundaryfaces"],

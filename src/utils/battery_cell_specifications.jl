@@ -84,7 +84,7 @@ function computeCellMaximumEnergy(model::MultiModel; T = 298.15, capacities = mi
         cmax = model[elde].system[:maximum_concentration]
         c0 = cmax * model[elde].system[:theta100]
         cT = cmax * model[elde].system[:theta0]
-        refT = 298.15
+        refT = get_reference_temperature(model[elde].system)
         ocpfunc = model[elde].system[:ocp_func]
 
         smax = capacity / capacities[elde]

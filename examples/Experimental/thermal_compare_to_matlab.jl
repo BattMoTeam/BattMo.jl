@@ -144,27 +144,20 @@ couplings = output.simulation.couplings
 
 
 components = ["NegativeElectrodeActiveMaterial", "PositiveElectrodeActiveMaterial", "NegativeElectrodeCurrentCollector", "PositiveElectrodeCurrentCollector"]
-colors = [:gray, :green, :blue, :black]
+colors = component_color.(components)
 nothing #hide
 
 # We plot the grid
 
+fig2 = Figure(size = (1600, 900))
+ax2 = Axis3(fig2[1, 1])
 for (i, component) in enumerate(components)
-    if i == 1
-        global fig2, ax2 = plot_mesh_edges(
-            grids[component],
-            color = colors[i],
-            label = string(component)
-        )
-        # ax2.aspect = :data
-    else
-        plot_mesh_edges!(
-            ax2,
-            grids[component],
-            color = colors[i],
-            label = string(component)
-        )
-    end
+    plot_mesh_edges!(
+        ax2,
+        grids[component];
+        color = colors[i],
+        label = component,
+    )
 end
 legend_elements = [
     PolyElement(color = colors[i]) for i in eachindex(components)

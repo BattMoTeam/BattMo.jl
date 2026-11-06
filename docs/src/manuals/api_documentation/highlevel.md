@@ -43,6 +43,7 @@ run_simulation
 
 ## Plotting
 ```@docs
+component_color
 plot_dashboard
 plot_output
 plot_interactive_3d

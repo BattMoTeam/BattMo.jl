@@ -120,8 +120,8 @@ function BattMo.plot_cell_curves_impl(cell_parameters::CellParameters; new_windo
         col = (i - 1) % ncols
 
         y = Float64[]
-        T_val = 298.15
-        refT_val = 298.15
+        refT_val = get(cell_parameters.all["Cell"], "ReferenceTemperature", BattMo.DEFAULT_REFERENCE_TEMPERATURE)
+        T_val = refT_val
 
         if isa(val, AbstractString) && haskey(param_map, param_path)
             quantity = last_key(param_path)
@@ -955,19 +955,17 @@ function BattMo.plot_thermal_source_contributions_impl(
     # Accumulate each contribution in time (trapezoidal rule).
     accumulated = Dict{Symbol, Vector{Float64}}()
     for label in labels
-        p = contributions[label]
-        e = zeros(Float64, nt)
-        for i in 2:nt
-            dt = time[i] - time[i - 1]
-            e[i] = e[i - 1] + 0.5 * (p[i] + p[i - 1]) * dt
+        if nt < 2
+            accumulated[label] = zeros(Float64, nt)
+        else
+            accumulated[label] = BattMo.cumtrapz(time, contributions[label])
         end
-        accumulated[label] = e
     end
 
-    total_accumulated = zeros(Float64, nt)
-    for i in 2:nt
-        dt = time[i] - time[i - 1]
-        total_accumulated[i] = total_accumulated[i - 1] + 0.5 * (total_trace[i] + total_trace[i - 1]) * dt
+    if nt < 2
+        total_accumulated = zeros(Float64, nt)
+    else
+        total_accumulated = BattMo.cumtrapz(time, total_trace)
     end
 
     fig = Figure(size = (1400, 850))

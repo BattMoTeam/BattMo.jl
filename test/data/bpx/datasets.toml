@@ -1,0 +1,54 @@
+# Provenance of the BPX parameter sets and reference curves used by
+# test/test_bpx_acceptance.jl. Paths are relative to this directory. The sha256
+# sums are of the files with LF line endings; the tests normalise CRLF checkouts
+# before hashing.
+
+[nmc_pouch]
+title = "Parameterisation example of an NMC111|graphite 12.5 Ah pouch cell (About:Energy)"
+source = "https://github.com/FaradayInstitution/BPX/blob/1fa5ba0b69458007e716758f56cfb900e7e1f23b/examples/nmc_pouch_cell_BPX.json"
+license = "MIT"
+file = "../jsonfiles/nmc_pouch_cell_BPX.json"
+sha256 = "9fea2c5a2748ac1f09e2bb32225fe4810597611a93ea57d68ed84783188f4d03"
+notes = "Unchanged copy. Legacy BPX 0.1 layout, function strings only, the same Bruggeman exponent (1.5) in all regions."
+
+[lfp_18650]
+title = "Parameterisation example of an LFP|graphite 2 Ah cylindrical 18650 cell (About:Energy)"
+source = "https://github.com/FaradayInstitution/BPX/blob/1fa5ba0b69458007e716758f56cfb900e7e1f23b/examples/lfp_18650_cell_BPX.json"
+license = "MIT"
+file = "../jsonfiles/lfp_18650_cell_BPX.json"
+sha256 = "56d2932515637c3f899c2b6c9620ee4fcf69b71f7479782e57d7b482d143be02"
+notes = "Unchanged copy. Legacy BPX 0.1 layout."
+
+[schmitt_2026]
+title = "HYDRA graphite/LNMO validation parameter set"
+iri = "https://w3id.org/battinfo/dataset/7jnc-cjtw-5h3a-5t52"
+citation = "https://arxiv.org/abs/2601.10507"
+license = "CC-BY-4.0"
+notes = "Tabulated OCPs and electrolyte properties, regional Bruggeman exponents 1.86 / 4.53 / 1.68, no lumped thermal parameters. The Validation section is removed (make_fixtures.py); all other content is unchanged."
+
+[schmitt_2026.files.v0_layout]
+file = "schmitt_2026_v0_layout.bpx.json"
+sha256 = "569849e7e75879474e671d3a61bd42b7f3c51741d9d68e1232e3b877a6f8c664"
+conforms_to = "BPX 1.0 header, parameters in the layout before the State section"
+derived_from = "https://pub-5d124607e4b748eea681efca486508ab.r2.dev/parameter-sets/7jnc-cjtw-5h3a-5t52/v1/IMP5-70-120-H0B_graphite-lnmo_schmitt-2026_validation.bpx.json"
+derived_from_sha256 = "29717e566ad0d0acf60a1a46e2b2044d3675e44d4e414dd32bef1bdefbf025a4"
+
+[schmitt_2026.files.v1]
+file = "schmitt_2026.bpx.json"
+sha256 = "41b5bd8cf9c9376038d4ca23b5b62f704a1e72869cdbabb6482ae5572fff6c29"
+conforms_to = "BPX 1.1.0"
+derived_from = "https://pub-5d124607e4b748eea681efca486508ab.r2.dev/parameter-sets/7jnc-cjtw-5h3a-5t52/v1/IMP5-70-120-H0B_graphite-lnmo_schmitt-2026_validation.bpx-v1.json"
+derived_from_sha256 = "2e82385fd95e0d61d097b878a3a70bf6cb129afa36d8d4ae4f183699de73a92f"
+
+# PyBaMM constant current discharges of the published file (pybamm/pybamm_reference.py,
+# PyBaMM 26.4.4, bpx 0.5.0, 20 mesh points per domain, output every 10 s). "original"
+# uses the published transport efficiencies, "uniform" replaces them by porosity^1.5.
+[schmitt_2026.pybamm]
+generated_from_sha256 = "29717e566ad0d0acf60a1a46e2b2044d3675e44d4e414dd32bef1bdefbf025a4"
+summary = "pybamm/pybamm_schmitt2026_summary.json"
+
+[schmitt_2026.pybamm.curves]
+original_0p5A = { file = "pybamm/pybamm_schmitt2026_original_0p5A.csv", sha256 = "bd6325d60ff0093e53178f697ffb3b0fd34adb4881e62dc1a09fba39d8a29b25" }
+original_2A = { file = "pybamm/pybamm_schmitt2026_original_2A.csv", sha256 = "2a46cb9be80446d74af8787e53ed63cb67af514562e4f2607f853bd7a88072ac" }
+uniform_0p5A = { file = "pybamm/pybamm_schmitt2026_uniform_0p5A.csv", sha256 = "779a255b0e96c67705bdf9999a29f81814ebadd8ca6e50c4a387bdce9d8cbc89" }
+uniform_2A = { file = "pybamm/pybamm_schmitt2026_uniform_2A.csv", sha256 = "f0f7c59b9ff995cd8d20db0690fde6a018ae7ef00b9cccb47ee54a9c64730b18" }

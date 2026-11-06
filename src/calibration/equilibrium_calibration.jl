@@ -8,28 +8,6 @@ const EQUILIBRIUM_CALIBRATION_PARAMETERS = (
     ["PositiveElectrode", "ActiveMaterial", "MaximumConcentration"],
 )
 
-const EQUILIBRIUM_CALIBRATION_ACRONYMS = Dict(
-    "ActiveMaterial" => "am",
-    "Binder" => "bd",
-    "Coating" => "co",
-    "ConductiveAdditive" => "ca",
-    "Control" => "ctrl",
-    "CurrentCollector" => "cc",
-    "Electrolyte" => "elyte",
-    "Geometry" => "geom",
-    "Interface" => "itf",
-    "Interphase" => "itp",
-    "MaximumConcentration" => "cmax",
-    "NegativeElectrode" => "ne",
-    "OpenCircuitPotential" => "ocp",
-    "PositiveElectrode" => "pe",
-    "Separator" => "sep",
-    "SolidDiffusion" => "sd",
-    "StoichiometricCoefficientAtSOC0" => "theta0",
-    "StoichiometricCoefficientAtSOC100" => "theta100",
-    "TimeStepping" => "ts",
-)
-
 """
     EquilibriumCalibration(t, v, current, cell_parameters; kwargs...)
 
@@ -78,17 +56,29 @@ function EquilibriumCalibration(
         stoichiometry_bounds = (0.0, 1.0),
         concentration_factors = (0.1, 10.0),
     )
-    length(t) == length(v) || throw(ArgumentError("Time and voltage data must have equal length."))
-    length(t) >= 2 || throw(ArgumentError("At least two calibration points are required."))
-    isa(current, Number) || throw(ArgumentError("Current must be a scalar."))
-    !iszero(current) || throw(ArgumentError("Equilibrium calibration expects a nonzero signed current."))
-    np_ratio > 0 || throw(ArgumentError("The N/P ratio must be positive."))
+    if length(t) != length(v)
+        throw(ArgumentError("Time and voltage data must have equal length."))
+    end
+    if length(t) < 2
+        throw(ArgumentError("At least two calibration points are required."))
+    end
+    if !isa(current, Number)
+        throw(ArgumentError("Current must be a scalar."))
+    end
+    if iszero(current)
+        throw(ArgumentError("Equilibrium calibration expects a nonzero signed current."))
+    end
+    if !(np_ratio > 0)
+        throw(ArgumentError("The N/P ratio must be positive."))
+    end
 
     order = sortperm(t)
     t_sorted = Float64.(t[order])
     v_sorted = Float64.(v[order])
     t_sorted .-= first(t_sorted)
-    all(diff(t_sorted) .> 0) || throw(ArgumentError("Time values must be unique."))
+    if !all(diff(t_sorted) .> 0)
+        throw(ArgumentError("Time values must be unique."))
+    end
 
     parameters = deepcopy(cell_parameters)
     X0 = Float64[]
@@ -141,7 +131,7 @@ function equilibrium_active_material_volume(cell_parameters, electrode)
     coating = electrode_parameters["Coating"]
     cell = cell_parameters["Cell"]
     if haskey(cell, "ElectrodeGeometricSurfaceArea")
-        area = cell["ElectrodeGeometricSurfaceArea"]
+        area = compute_total_electrode_area(cell_parameters)
     else
         throw(ArgumentError("Only 1D geometry is currently supported for equilibrium calibration."))
     end
@@ -229,8 +219,9 @@ parameter dictionary with
 `merge_dict(parameters, exported; type = "overwrite")`.
 """
 function export_calibration_parameters(eqc::EquilibriumCalibration, x_calibrated)
-    length(x_calibrated) == length(EQUILIBRIUM_CALIBRATION_PARAMETERS) ||
+    if length(x_calibrated) != length(EQUILIBRIUM_CALIBRATION_PARAMETERS)
         throw(ArgumentError("Expected four calibrated equilibrium parameters."))
+    end
 
     cutoff_time = find_equilibrium_cutoff_time(eqc, x_calibrated)
     theta = equilibrium_stoichiometries(eqc, cutoff_time, x_calibrated)
@@ -302,10 +293,10 @@ function solve(
         obj_rel_tol = -Inf,
         optimizer_kwargs...,
     )
-    value, u, history = if print > 0
-        optimize()
+    if print > 0
+        value, u, history = optimize()
     else
-        redirect_stdout(optimize, devnull)
+        value, u, history = redirect_stdout(optimize, devnull)
     end
     x = u_to_x(u)
     eqc.Xopt = copy(x)
@@ -314,31 +305,46 @@ function solve(
     return x
 end
 
-function print_calibration_overview(eqc::EquilibriumCalibration; use_acronyms = false)
-    optimized = if ismissing(eqc.Xopt)
-        fill(missing, length(eqc.X0))
+function print_calibration_overview(eqc::EquilibriumCalibration; use_acronyms = true)
+    acronyms = Dict(
+        "ActiveMaterial" => "am",
+        "MaximumConcentration" => "cmax",
+        "NegativeElectrode" => "ne",
+        "PositiveElectrode" => "pe",
+        "StoichiometricCoefficientAtSOC100" => "theta100",
+    )
+    if ismissing(eqc.Xopt)
+        optimized = fill(missing, length(eqc.X0))
     else
-        eqc.Xopt
+        optimized = eqc.Xopt
     end
-    header = ["Parameter", "Initial value", "Bounds", "Optimized value"]
+    header = ["Parameter", "Bounds", "Initial value", "Optimized value", "Box limit hit"]
     table = Matrix{Any}(undef, length(eqc.X0), length(header))
     for i in eachindex(eqc.X0)
         parameter = EQUILIBRIUM_CALIBRATION_PARAMETERS[i]
         if use_acronyms
-            parameter = [get(EQUILIBRIUM_CALIBRATION_ACRONYMS, part, part) for part in parameter]
+            parameter = [get(acronyms, part, part) for part in parameter]
+        end
+        lower_bound = eqc.bounds.lower[i]
+        upper_bound = eqc.bounds.upper[i]
+        limit_hit = ""
+        if !ismissing(optimized[i])
+            # Match the unit-box scaling used by the optimizer, allowing for roundoff.
+            bound_tolerance = 1.0e-8 * (upper_bound - lower_bound)
+            if isapprox(optimized[i], lower_bound; atol = bound_tolerance, rtol = 0.0) ||
+                    isapprox(optimized[i], upper_bound; atol = bound_tolerance, rtol = 0.0)
+                limit_hit = "*"
+            end
         end
         table[i, :] = [
             join(parameter, "."),
+            "$lower_bound - $upper_bound",
             eqc.X0[i],
-            "$(eqc.bounds.lower[i]) - $(eqc.bounds.upper[i])",
             optimized[i],
+            limit_hit,
         ]
     end
 
-    try
-        return Jutul.PrettyTables.pretty_table(table; header = header, title = "Equilibrium calibration parameters")
-    catch
-        return Jutul.PrettyTables.pretty_table(table; column_labels = header, title = "Equilibrium calibration parameters")
-    end
+    return Jutul.PrettyTables.pretty_table(table; column_labels = header, title = "Equilibrium calibration parameters")
 
 end

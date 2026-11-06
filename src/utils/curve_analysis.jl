@@ -96,7 +96,12 @@ function rmse(
         yb = interp.(x)
     end
 
-    all(isfinite, yb) || throw(ArgumentError("Interpolated values are not finite. Check that the finer grid is within the range of the coarser grid, or use extrap=true or truncate=true."))
+    all(isfinite, yb) || throw(
+        ArgumentError(
+            "Interpolated values are not finite. Check that the finer grid is within " *
+                "the range of the coarser grid, or use extrap=true or truncate=true."
+        )
+    )
 
     # Compute L2 error on the finer grid.
     l2sq = trapz(x, @. (ya - yb)^2)

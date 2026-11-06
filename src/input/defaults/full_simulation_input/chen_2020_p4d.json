@@ -140,6 +140,7 @@
             "Concentration": 1000,
             "ChargeNumber": 1,
             "TransferenceNumber": 0.2594,
+            "BruggemanCoefficient": 1.5,
             "IonicConductivity": "0.1297*(c/1000)^3 - 2.51*(c/1000)^(1.5) + 3.329*(c/1000)",
             "DiffusionCoefficient": "8.794*10^(-11)*(c/1000)^2 - 3.972*10^(-10)*(c/1000) + 4.862*10^(-10)"
         }
@@ -159,11 +160,9 @@
         "PositiveElectrodeCoatingGridPoints": 3,
         "PositiveElectrodeParticleGridPoints": 5,
         "PositiveElectrodeCurrentCollectorGridPoints": 3,
-        "PositiveElectrodeCurrentCollectorTabWidthGridPoints": 2,
         "NegativeElectrodeCoatingGridPoints": 3,
         "NegativeElectrodeParticleGridPoints": 5,
         "NegativeElectrodeCurrentCollectorGridPoints": 3,
-        "NegativeElectrodeCurrentCollectorTabWidthGridPoints": 2,
         "SeparatorGridPoints": 3,
         "TimeStepDuration": 50,
         "RampUpTime": 10,
@@ -173,6 +172,7 @@
         "NonLinearSolver": {
             "MaxTimestepCuts": 10,
             "MaxTimestep": 1e12,
+            "MinTimestep": 0.0,
             "TimestepMaxIncrease": 10.0,
             "TimestepMaxDecrease": 0.1,
             "MaxResidual": 1e20,
@@ -209,7 +209,7 @@
             "OutputPath": "",
             "InMemoryReports": 10,
             "ReportLevel": 0,
-            "OutputSubstates": false
+            "ExpandSubstates": false
         }
     }
 }

@@ -13,9 +13,12 @@ function merge_input(base::P, new::P; type = "fill", key_path = nothing) where {
 end
 
 """
-    merge_dict(base, new; type = "fill", key_path = nothing)
+    merge_dict(base, news...; type = "fill", key_path = nothing)
 
-Recursively merge `new` into a deep copy of `base`. Later dicts take precedence.
+Recursively merge each dictionary in `news` into a deep copy of `base`, in order.
+Later dictionaries take precedence for `"overwrite"` and `"replace"`; `"fill"`
+preserves existing nonempty values. With no additional dictionaries, return a
+deep copy of `base`.
 
 The supported merge types are:
 - `"fill"`: add missing values and replace existing values that are `0` or
@@ -24,7 +27,7 @@ The supported merge types are:
 - `"replace"`: replace the entire subtree selected by `key_path`. The
   replacement must exist at the same key in `new`.
 
-`base` and `new` are not modified.
+The input dictionaries are not modified.
 
 # Examples
 

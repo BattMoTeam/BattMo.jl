@@ -61,7 +61,8 @@ function regularized_sqrt(x, th)
     if x <= th
         y = x / th * sqrt(th)
     else
-        y = x^0.5
+        # sqrt instead of x^0.5: a power with automatic differentiation costs several times more
+        y = sqrt(x)
     end
     return y
 end
@@ -235,13 +236,13 @@ function Jutul.update_cross_term_in_entity!(
     c_a_surf = state_s.SurfaceConcentration[ind_s]
     c_a = state_s.ParticleConcentration[ind_s]
     T = state_s.Temperature[ind_s]
-    c_av = mean(c_a)
-    c_av_e = mean(state_t.ElectrolyteConcentration)
 
     # overpotential
     eta = phi_a - phi_e - ocp
 
     if activematerial.params[:setting_butler_volmer] == "Chayambuka"
+        c_av = mean(c_a)
+        c_av_e = mean(state_t.ElectrolyteConcentration)
         R = reaction_rate_chayambuka(
             eta,
             c_a_surf,
@@ -317,13 +318,13 @@ function Jutul.update_cross_term_in_entity!(
     c_a_surf = state_t.SurfaceConcentration[ind_t]
     c_a = state_t.ParticleConcentration[ind_t]
     T = state_t.Temperature[ind_t]
-    c_av = mean(c_a)
-    c_av_e = mean(state_s.ElectrolyteConcentration)
 
     # overpotential
     eta = phi_a - phi_e - ocp
 
     if activematerial.params[:setting_butler_volmer] == "Chayambuka"
+        c_av = mean(c_a)
+        c_av_e = mean(state_s.ElectrolyteConcentration)
         R = reaction_rate_chayambuka(
             eta,
             c_a_surf,

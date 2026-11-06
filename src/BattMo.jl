@@ -226,6 +226,9 @@ include("input/calculator.jl")
 
 include("input/defaults/cell_parameters/function_parameters_chayambuka_2022.jl")
 include("input/defaults/cell_parameters/function_parameters_xu_2015.jl")
+include("input/bpx.jl")
+using .BPX: write_bpx
+export write_bpx
 
 include("models/thermal.jl")
 include("models/temperature_dependence.jl")
@@ -254,6 +257,7 @@ include("output/output_format.jl")
 include("output/meta_data/variables.jl")
 include("output/printer.jl")
 
+include("plotting/component_colors.jl")
 include("plotting/makie_ext.jl")
 include("plotting/3d.jl")
 include("plotting/1d.jl")
@@ -267,7 +271,7 @@ include("grid/grid_utils.jl")
 
 
 include("solver/solver_as_preconditioner_system.jl")
-include("solver/precondgenneral.jl")
+include("solver/precondgeneral.jl")
 include("solver/sparse_utils.jl")
 include("calibration/calibration.jl")
 include("calibration/calibration_utils.jl")

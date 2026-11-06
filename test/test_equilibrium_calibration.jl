@@ -1,13 +1,13 @@
 using BattMo
 using Test
-using CSV
+using DelimitedFiles
 
 
 @testset "Equilibrium calibration" begin
     data_path = joinpath(dirname(pathof(BattMo)), "..", "examples", "example_data", "Chayambuka_voltage_005C.csv")
-    data = CSV.File(data_path; header = false)
-    capacity = [Float64(row.Column1) for row in data]
-    voltage = [Float64(row.Column2) for row in data]
+    data = readdlm(data_path, ',', Float64)
+    capacity = data[:, 1]
+    voltage = data[:, 2]
     order = sortperm(capacity)
     # Downsample the measured curve for a coarse-grid machinery test.
     capacity = capacity[order][1:16:end]
@@ -37,6 +37,12 @@ using CSV
     @test all(isfinite, x_calibrated)
     @test calibrated_rmse <= initial_rmse
 
+    exported = export_calibration_parameters(calibration, x_calibrated)
+    for (index, path) in enumerate(BattMo.EQUILIBRIUM_CALIBRATION_PARAMETERS)
+        @test BattMo.get_nested_json_value(exported, path) ≈ x_calibrated[index] atol = 0.0 rtol = 1.0e-12
+    end
+    @test_throws ArgumentError export_calibration_parameters(calibration, x_calibrated[1:3])
+
     charge_calibration = EquilibriumCalibration(time, voltage, -current, cell_parameters)
     discharge_theta = BattMo.equilibrium_stoichiometries(calibration, time[2], calibration.X0)
     charge_theta = BattMo.equilibrium_stoichiometries(charge_calibration, time[2], charge_calibration.X0)
@@ -45,4 +51,6 @@ using CSV
     @test discharge_theta.positive > calibration.X0[3]
     @test charge_theta.negative > charge_calibration.X0[1]
     @test charge_theta.positive < charge_calibration.X0[3]
+
+    BattMo.print_calibration_overview(calibration)
 end

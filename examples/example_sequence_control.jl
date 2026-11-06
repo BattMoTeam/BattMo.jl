@@ -59,8 +59,8 @@ function run_sequence_case(use_rampup::Bool)
 
     model = LithiumIonBattery(; model_settings = model_settings)
     sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
-    output = solve(sim; info_level = -1, output_substates = false)
-    substate_output = solve(sim; info_level = -1, output_substates = true)
+    output = solve(sim; info_level = -1, expand_substates = false)
+    substate_output = solve(sim; info_level = -1, expand_substates = true)
 
     return (
         label = label,
@@ -149,7 +149,7 @@ if doplot
             linewidth = 3.0,
         )
 
-        # output_substates=true shows accepted solver substates, including adaptive
+        # expand_substates=true shows accepted solver substates, including adaptive
         # timestep cuts from convergence and control transitions, not only ramp-up steps.
         time = substate_output.time_series["Time"]
         scatterlines!(

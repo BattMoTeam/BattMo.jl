@@ -5,7 +5,7 @@ function setup_multimodel(model::IntercalationBattery, submodels, input; use_gro
     if !haskey(model.settings, "CurrentCollectors")
         groups = nothing
 
-        if haskey(model.settings, "ThermalModel")
+        if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Coupled"
             multimodel = MultiModel(
                 (
                     NegativeElectrodeActiveMaterial = submodels.model_neam,
@@ -113,6 +113,44 @@ function setup_volume_fractions!(model_neam, model_peam, model_elyte, grids, cou
     return nothing
 end
 
+"""
+    electrolyte_bruggeman_coefficients(bruggeman)
+
+Electrolyte Bruggeman coefficients in the negative electrode, separator and positive electrode. The input is
+either one value, used in all three regions, or one value per region. The per-region dictionary of the cell
+parameters reaches this function as a `NamedTuple`, since the electrolyte parameters are stored as immutable
+storage.
+"""
+function electrolyte_bruggeman_coefficients(bruggeman::Real)
+    return (NegativeElectrode = bruggeman, Separator = bruggeman, PositiveElectrode = bruggeman)
+end
+
+function electrolyte_bruggeman_coefficients(bruggeman::NamedTuple)
+    return (
+        NegativeElectrode = bruggeman.NegativeElectrode,
+        Separator = bruggeman.Separator,
+        PositiveElectrode = bruggeman.PositiveElectrode,
+    )
+end
+
+"""
+    setup_electrolyte_bruggeman_coefficients!(model_elyte, grids, coupling)
+
+Store the Bruggeman coefficient of each electrolyte cell, taken from the region the cell lies in.
+"""
+function setup_electrolyte_bruggeman_coefficients!(model_elyte, grids, coupling)
+    coefficients = electrolyte_bruggeman_coefficients(model_elyte.system[:bruggeman])
+
+    bruggeman = zeros(promote_type(map(typeof, values(coefficients))...), number_of_cells(grids["Electrolyte"]))
+    bruggeman[coupling["NegativeElectrodeActiveMaterial"]["cells"]] .= coefficients.NegativeElectrode
+    bruggeman[coupling["Separator"]["cells"]] .= coefficients.Separator
+    bruggeman[coupling["PositiveElectrodeActiveMaterial"]["cells"]] .= coefficients.PositiveElectrode
+
+    model_elyte.domain.representation[:bruggemanCoefficient] = bruggeman
+
+    return nothing
+end
+
 function setup_effective_thermal_conductivities!(input, battery_models)
     cell_parameters = input.cell_parameters
 
@@ -123,13 +161,7 @@ function setup_effective_thermal_conductivities!(input, battery_models)
     end
 
     elytemodel = battery_models["Electrolyte"]
-    vf = elytemodel.domain.representation[:volumeFraction]
-    if haskey(cell_parameters["Electrolyte"], "BruggemanCoefficient")
-        params[:bruggeman] = cell_parameters["Electrolyte"]["BruggemanCoefficient"]
-    else
-        params[:bruggeman] = cell_parameters["Separator"]["BruggemanCoefficient"]
-    end
-    elytemodel.domain.representation[:effective_thermal_conductivity] = (vf .^ bg) .* cell_parameters["Electrolyte"]["ThermalConductivity"]
+    elytemodel.domain.representation[:effective_thermal_conductivity] = effective_electrolyte_thermal_conductivity(elytemodel, cell_parameters["Electrolyte"])
 
     if haskey(battery_models, "NegativeElectrodeCurrentCollector") && !isnothing(battery_models["NegativeElectrodeCurrentCollector"])
         battery_models["NegativeElectrodeCurrentCollector"].domain.representation[:effective_thermal_conductivity] = cell_parameters["NegativeElectrode"]["CurrentCollector"]["ThermalConductivity"]
@@ -160,6 +192,7 @@ function setup_submodels(model::IntercalationBattery, input, grids, couplings; g
     model_elyte = setup_electrolyte(model, input, grids)
     model_sep = setup_separator(model, input, grids)
     setup_volume_fractions!(model_neam, model_peam, model_elyte, grids, couplings["Electrolyte"])
+    setup_electrolyte_bruggeman_coefficients!(model_elyte, grids, couplings["Electrolyte"])
 
     battery_models = Dict(
         "NegativeElectrodeActiveMaterial" => model_neam,
@@ -405,11 +438,7 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
     params[:transference] = inputparams_elyte["TransferenceNumber"]
     params[:charge] = inputparams_elyte["ChargeNumber"]
     params[:separator_porosity] = cell_parameters["Separator"]["Porosity"]
-    if haskey(cell_parameters["Electrolyte"], "BruggemanCoefficient")
-        params[:bruggeman] = cell_parameters["Electrolyte"]["BruggemanCoefficient"]
-    else
-        params[:bruggeman] = cell_parameters["Separator"]["BruggemanCoefficient"]
-    end
+    params[:bruggeman] = cell_parameters["Electrolyte"]["BruggemanCoefficient"]
     params[:electrolyte_density] = inputparams_elyte["Density"]
     params[:separator_density] = cell_parameters["Separator"]["Density"]
 
@@ -434,7 +463,7 @@ function setup_electrolyte(model::IntercalationBattery, input, grids)
 
     elyte = Electrolyte(params)
 
-    model_elyte = setup_component(grids["Electrolyte"], elyte, general_ad = true)
+    model_elyte = setup_component(grids["Electrolyte"], elyte, flow_discretization = input.model_settings["PotentialFlowDiscretization"])
 
     return model_elyte
 end
@@ -452,7 +481,7 @@ function setup_separator(model::IntercalationBattery, input, grids)
 
     separator = Separator(params)
 
-    model_separator = setup_component(grids["Separator"], separator, general_ad = true)
+    model_separator = setup_component(grids["Separator"], separator, flow_discretization = input.model_settings["PotentialFlowDiscretization"])
 
     return model_separator
 end
@@ -550,7 +579,7 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
     am_params[:setting_temperature_dependence] = get(model.settings, "TemperatureDependence", nothing)
     am_params[:setting_butler_volmer] = get(model.settings, "ButlerVolmer", nothing)
 
-    am_params[:reference_temperature] = 298.15
+    am_params[:reference_temperature] = get(cell_parameters["Cell"], "ReferenceTemperature", DEFAULT_REFERENCE_TEMPERATURE)
 
     if am_params[:setting_temperature_dependence] == "Arrhenius"
         am_params[:activation_energy_of_diffusion] = inputparams_active_material["ActivationEnergyOfDiffusion"]
@@ -575,7 +604,6 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
     end
 
     if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
-        am_params[:reference_temperature] = 298.15
 
         if !haskey(inputparams_active_material, "IncludeEntropyChange")
             am_params[:include_entropy_change] = true
@@ -598,40 +626,18 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 
     end
 
-    refT = 298.15
-    T = get(input.cycling_protocol, "InitialTemperature", refT)
-    SOC_init = input.cycling_protocol["InitialStateOfCharge"]
-
-    theta0 = inputparams_active_material["StoichiometricCoefficientAtSOC0"]
-    theta100 = inputparams_active_material["StoichiometricCoefficientAtSOC100"]
-    cmax = inputparams_active_material["MaximumConcentration"]
-
-
-    theta = SOC_init * (theta100 - theta0) + theta0
-    c = theta * cmax
-
     if haskey(model.settings, "TransportInSolid") && model.settings["TransportInSolid"] == "FullDiffusion"
         rp = inputparams_active_material["ParticleRadius"]
         N = Int64(input.simulation_settings[stringName * "ParticleGridPoints"])
 
-        if haskey(inputparams_active_material, "DiffusionCoefficient")
+        # The solid diffusion coefficient is evaluated during the simulation, at the
+        # surface concentration and temperature of each cell (update_diffusion_coefficient!)
+        haskey(inputparams_active_material, "DiffusionCoefficient") || error("$stringName → ActiveMaterial → DiffusionCoefficient is required for the full solid diffusion model.")
 
-            func, func_type = setup_function(base_path, inputparams_active_material["DiffusionCoefficient"], "ActiveMaterial", "DiffusionCoefficient")
+        func, func_type = setup_function(base_path, inputparams_active_material["DiffusionCoefficient"], "ActiveMaterial", "DiffusionCoefficient")
 
-            am_params[:diffusion_coefficient_func] = func
-            am_params[:diffusion_coefficient_func_type] = func_type
-
-            if func_type == :interpolator
-                D = am_params[:diffusion_coefficient_func](c / cmax)
-            elseif func_type == :expression || func_type == :function
-                D = am_params[:diffusion_coefficient_func](c, T, refT, cmax)
-            elseif func_type == :constant
-                D = am_params[:diffusion_coefficient_func]
-            else
-                error("Unrecognized function type for diffusion coefficient function: $func_type")
-            end
-
-        end
+        am_params[:diffusion_coefficient_func] = func
+        am_params[:diffusion_coefficient_func_type] = func_type
 
         if haskey(model.settings, "SEIModel") && model.settings["SEIModel"] == "Bolay" && haskey(inputparams_electrode, "Interphase")
             label = :sei
@@ -645,14 +651,27 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
                 "IonicConductivity",
             ]
             for fd in fds
-                am_params[Symbol(fd)] = inputparams_electrode["Interphase"][fd]
-
+                value = inputparams_electrode["Interphase"][fd]
+                nonnegative = fd in ("ElectronicDiffusionCoefficient", "InterstitialConcentration")
+                valid = value isa Real && isfinite(value) && (nonnegative ? value >= 0 : value > 0)
+                if !valid
+                    bound = nonnegative ? "nonnegative" : "positive"
+                    throw(ArgumentError("$(stringName).Interphase.$fd must be finite and $bound."))
+                end
+                am_params[Symbol(fd)] = value
+            end
+            # Optional: a fixed thickness limiting electron transport in the growth flux.
+            if haskey(inputparams_electrode["Interphase"], "PassivatingThickness")
+                value = inputparams_electrode["Interphase"]["PassivatingThickness"]
+                value isa Real && isfinite(value) && value > 0 ||
+                    throw(ArgumentError("$(stringName).Interphase.PassivatingThickness must be finite and positive."))
+                am_params[:PassivatingThickness] = value
             end
         else
             label = nothing
         end
 
-        sys_am = ActiveMaterialP2D(am_params, rp, N, D; label = label)
+        sys_am = ActiveMaterialP2D(am_params, rp, N; label = label)
     else
         sys_am = ActiveMaterialNoParticleDiffusion(am_params)
     end
@@ -672,8 +691,8 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
     model_am = setup_component(
         grid,
         sys_am;
-        general_ad = true,
         dirichletBoundary = boundary,
+        flow_discretization = input.model_settings["PotentialFlowDiscretization"],
     )
 
     return model_am
@@ -772,7 +791,7 @@ function set_parameters(
 
     parameters = Dict{Symbol, Any}()
 
-    refT = 298.15
+    refT = get(cell_parameters["Cell"], "ReferenceTemperature", DEFAULT_REFERENCE_TEMPERATURE)
     T = get(cycling_protocol, "InitialTemperature", refT)
 
     if haskey(model.settings, "CurrentCollectors")
@@ -815,11 +834,9 @@ function set_parameters(
 
     prm_elyte = Dict{Symbol, Any}()
     prm_elyte[:Temperature] = T
-    if haskey(cell_parameters["Electrolyte"], "BruggemanCoefficient")
-        prm_elyte[:BruggemanCoefficient] = cell_parameters["Electrolyte"]["BruggemanCoefficient"]
-    else
-        prm_elyte[:BruggemanCoefficient] = cell_parameters["Separator"]["BruggemanCoefficient"]
-    end
+    prm_elyte[:BruggemanCoefficient] = multimodel[:Electrolyte].domain.representation[:bruggemanCoefficient]
+
+
     parameters[:Electrolyte] = setup_parameters(multimodel[:Electrolyte], prm_elyte)
 
     ############################
@@ -1191,23 +1208,42 @@ function setup_initial_state(input, model::IntercalationBattery)
     if hasproperty(input, :initial_state) && !isnothing(input.initial_state)
         # Copy to keep the physical state
         state = deepcopy(input.initial_state)
+        # A report endpoint may contain earlier adaptive substeps. They belong to the
+        # previous run and must not precede the reset clock in the new initial state.
+        pop!(state, :substates, nothing)
 
-        # Reset control
-        fresh_input = merge(input, (; initial_state = nothing))
-        fresh_state = setup_initial_state(fresh_input, model)
+        # Restart the protocol clock. Input-current continuation also needs the
+        # previous CC/CV mode because voltage-limit hysteresis depends on it, so only
+        # its time is reset. Other controllers restart from the protocol's fresh
+        # controller, which also covers controllers whose fields cannot be zeroed.
+        if haskey(state, :Control)
+            ctrl = state[:Control]
+            controller = get(ctrl, :Controller, nothing)
+            if controller isa InputCurrentController
+                controller.time = zero(controller.time)
+                ctrl[:Current] = [getInitCurrent(model.multimodel[:Control])]
+            else
+                fresh_input = merge(input, (; initial_state = nothing))
+                fresh_state = setup_initial_state(fresh_input, model)
+                ctrl[:Controller] = deepcopy(fresh_state[:Control][:Controller])
+                ctrl[:Current] = deepcopy(fresh_state[:Control][:Current])
+            end
+        end
 
-        state[:Control][:Controller] = deepcopy(fresh_state[:Control][:Controller])
-        state[:Control][:Current] = deepcopy(fresh_state[:Control][:Current])
-
-        return state
-
+        # Ordinary output omits secondary fields needed by the simulator. Allocate
+        # them through the normal initializer, keeping the controller set above.
+        initialized_state = setup_state(model.multimodel, state)
+        if haskey(state, :Control) && haskey(state[:Control], :Controller)
+            initialized_state[:Control][:Controller] = state[:Control][:Controller]
+        end
+        return initialized_state
     end
 
     multimodel = model.multimodel
 
     include_cc = haskey(model.settings, "CurrentCollectors")
 
-    refT = 298.15
+    refT = get(input.cell_parameters["Cell"], "ReferenceTemperature", DEFAULT_REFERENCE_TEMPERATURE)
     T = get(input.cycling_protocol, "InitialTemperature", refT)
     SOC_init = input.cycling_protocol["InitialStateOfCharge"]
 
@@ -1217,7 +1253,7 @@ function setup_initial_state(input, model::IntercalationBattery)
         theta100 = multimodel[name].system[:theta100]
         cmax = multimodel[name].system[:maximum_concentration]
         N = multimodel[name].system.discretization[:N]
-        refT = 298.15
+        refT = multimodel[name].system.params[:reference_temperature]
 
         theta = SOC_init * (theta100 - theta0) + theta0
         c = theta * cmax
@@ -1247,13 +1283,12 @@ function setup_initial_state(input, model::IntercalationBattery)
                 entropyChange = multimodel[name].system[:entropy_change_func](c / cmax)
             elseif multimodel[name].system.params[:entropy_change_func_type] == :function || multimodel[name].system.params[:entropy_change_func_type] == :expression
                 entropyChange = multimodel[name].system[:entropy_change_func](c, cmax)
-            elseif multimodel[name].system.params[:entropychange_func_type] == :constant
+            elseif multimodel[name].system.params[:entropy_change_func_type] == :constant
                 entropyChange = multimodel[name].system[:entropy_change_func]
             else
                 error("not cover")
             end
-            refT = multimodel[name].system.params[:reference_temperature]
-            OCP = OCP + (T - refT)
+            OCP = OCP + entropyChange * (T - refT)
         end
 
         return (init, nc, OCP)
