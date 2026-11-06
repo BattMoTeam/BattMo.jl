@@ -221,7 +221,8 @@ function setup_calibration_objective(vc::VoltageCalibration)
     total_time = vc.t[end]
     function objective(model, state, dt, step_info, forces)
         t = state[:Control][:Controller].time
-        if step_info[:step] == step_info[:Nstep]
+        # The final state covers the remaining data, also when its report step is split into ministeps.
+        if step_info[:substep_global] == step_info[:Nsubstep_global]
             dt = max(dt, total_time - t)
         end
         V_obs = V_fun(t)
@@ -235,8 +236,8 @@ function voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
     return dt * (V_obs - V_sim)^2 / total_time
 end
 
-function evaluate_calibration_objective(vc::VoltageCalibration, objective, case, states, dt)
-    f = Jutul.evaluate_objective(objective, case.model, states, dt, case.forces)
+function evaluate_calibration_objective(vc::VoltageCalibration, objective, case, states, dt, step_index)
+    f = Jutul.evaluate_objective(objective, case.model, states, dt, case.forces; step_index)
     return f
 end
 
@@ -347,14 +348,15 @@ function solve_and_differentiate_for_calibration(
         gradient = true,
     )
     case = setup_battmo_case(x)
-    states, dt = simulate_battmo_case_for_calibration(vc, case, solver_settings)
+    states, dt, step_index = simulate_battmo_case_for_calibration(vc, case, solver_settings)
     # Evaluate the objective function
-    f = evaluate_calibration_objective(vc, objective, case, states, dt)
-    # Solve adjoints
+    f = evaluate_calibration_objective(vc, objective, case, states, dt, step_index)
+    # Solve adjoints on the forward ministeps, each mapped to its report step.
     if gradient
+        packed_steps = Jutul.AdjointPackedResult(states, dt, missing, step_index)
         if !haskey(adj_cache, :storage)
             adj_cache[:storage] = Jutul.AdjointsDI.setup_adjoint_storage_generic(
-                x, setup_battmo_case, states, dt, objective;
+                x, setup_battmo_case, packed_steps, objective;
                 backend_arg...,
                 info_level = 0,
             )
@@ -362,7 +364,7 @@ function solve_and_differentiate_for_calibration(
         S = adj_cache[:storage]
         g = similar(x)
         Jutul.AdjointsDI.solve_adjoint_generic!(
-            g, x, setup_battmo_case, S, states, dt, objective,
+            g, x, setup_battmo_case, S, packed_steps, objective,
         )
         # g = Jutul.AdjointsDI.solve_adjoint_generic(
         #     x, setup_battmo_case, states, dt, objective,
@@ -445,6 +447,8 @@ function simulate_battmo_case_for_calibration(
             info_level = -1,
         )
     end
+    # The adjoint must use the forward ministeps, so keep the states between report steps.
+    config[:output_substates] = true
     result = Jutul.simulate!(
         simulator,
         case.dt,
@@ -459,6 +463,7 @@ function simulate_battmo_case_for_calibration(
     #    g = fill(1e20, length(x))
     #    return (1e20, g)
     #end
-    states, dt, = Jutul.expand_to_ministeps(result)
-    return (states, dt)
+    # Ministep states and timesteps, with the report step of each ministep.
+    states, dt, step_index = Jutul.expand_to_ministeps(result)
+    return (states, dt, step_index)
 end
