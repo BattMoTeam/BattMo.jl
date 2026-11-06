@@ -71,7 +71,7 @@ function convert_to_mrst_grid(g)
 
     facenode = vcat(int_facenode, bd_facenode)
 
-    neighbors = mapreduce(x -> [x[1] x[2]], vcat, g.faces.neighbors)
+    neighbors = [first.(g.faces.neighbors) last.(g.faces.neighbors)]
     neighbors = vcat(neighbors, hcat(g.boundary_faces.neighbors, zeros(Int, length(g.boundary_faces.neighbors))))
 
     G_raw_faces = Dict()

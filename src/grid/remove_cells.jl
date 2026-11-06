@@ -46,8 +46,9 @@ function remove_cells(G_raw::AbstractDict, cells)
     G["cells"]["num"] = Int.(G["cells"]["num"])
 
 
-    all_cells = collect(1:G["cells"]["num"])
-    ind = all_cells .∈ Ref(cells)
+    # Mark the removed cells; testing each cell for membership in `cells` would be quadratic.
+    ind = falses(G["cells"]["num"])
+    ind[cells] .= true
     cellmap = map_excluding(ind)
 
     if haskey(G["cells"], "numFaces")
