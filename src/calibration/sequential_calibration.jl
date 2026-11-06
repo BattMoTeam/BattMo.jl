@@ -22,6 +22,13 @@ struct SequentialParameterGroup
     priority::Int
 end
 
+"""
+    sequential_parameter_catalog()
+
+Return the sequential calibration parameters and their cell-parameter paths.
+The regional `elyte_bg_ne`, `elyte_bg_pe`, and `elyte_bg_sep` entries require a
+regional dictionary under `Electrolyte.BruggemanCoefficient`; `elyte_bg` uses a scalar.
+"""
 function sequential_parameter_catalog()
     ne = "NegativeElectrode"
     pe = "PositiveElectrode"
@@ -57,13 +64,13 @@ function sequential_parameter_catalog()
             "elyte_bg", [["Electrolyte", "BruggemanCoefficient"]], (1.0e-10, 10.0), :linear,
         ),
         "elyte_bg_ne" => SequentialCalibrationParameter(
-            "elyte_bg_ne", [[ne, co, "BruggemanCoefficient"]], (1.0e-10, 10.0), :linear,
+            "elyte_bg_ne", [["Electrolyte", "BruggemanCoefficient", ne]], (1.0e-10, 10.0), :linear,
         ),
         "elyte_bg_pe" => SequentialCalibrationParameter(
-            "elyte_bg_pe", [[pe, co, "BruggemanCoefficient"]], (1.0e-10, 10.0), :linear,
+            "elyte_bg_pe", [["Electrolyte", "BruggemanCoefficient", pe]], (1.0e-10, 10.0), :linear,
         ),
         "elyte_bg_sep" => SequentialCalibrationParameter(
-            "elyte_bg_sep", [["Separator", "BruggemanCoefficient"]], (1.0e-10, 10.0), :linear,
+            "elyte_bg_sep", [["Electrolyte", "BruggemanCoefficient", "Separator"]], (1.0e-10, 10.0), :linear,
         ),
     )
 end
@@ -71,6 +78,7 @@ end
 function select_sequential_parameters(shortnames)
     catalog = sequential_parameter_catalog()
     names = String.(shortnames)
+    isempty(names) && throw(ArgumentError("At least one sequential calibration parameter is required."))
     length(unique(names)) == length(names) ||
         throw(ArgumentError("The shortname list contains duplicates."))
     unknown = filter(name -> !haskey(catalog, name), names)
@@ -191,11 +199,15 @@ end
 
 Evaluate the voltage objective and its adjoint gradient for the selected
 short-name parameters at their current values.
+
+`gradient` is the derivative with respect to the optimization variables: `log10(p)`
+for log-scaled parameters and `p` for linear parameters. `normalized_gradient`
+multiplies each derivative by its optimization-bound width, giving the derivative
+with respect to coordinates normalized to the unit interval.
 """
 function evaluate_sequential_sensitivities(
         sim, t, voltage, shortnames;
         solver_settings = get_default_solver_settings(sim.model),
-        validate_solver_settings = true,
         backend_arg = (
             use_sparsity = false,
             di_sparse = true,
@@ -204,20 +216,19 @@ function evaluate_sequential_sensitivities(
         ),
     )
     problem = setup_sequential_problem(sim, t, voltage, shortnames)
-    objective_value, physical_gradient = solve_and_differentiate_for_calibration(
+    objective_value, gradient = solve_and_differentiate_for_calibration(
         problem.x0,
         problem.setup_case,
         problem.calibration,
         problem.objective,
         solver_settings;
         backend_arg,
-        validate_solver_settings,
     )
-    gradient = physical_gradient .* (problem.upper .- problem.lower)
+    normalized_gradient = gradient .* (problem.upper .- problem.lower)
     return (;
         objective_value,
         gradient,
-        physical_gradient,
+        normalized_gradient,
         problem.x0,
         problem.lower,
         problem.upper,
@@ -232,7 +243,6 @@ Optimize one sequential parameter group with Jutul's bounded BFGS solver.
 function calibrate_sequential_group(
         sim, t, voltage, shortnames;
         solver_settings = get_default_solver_settings(sim.model),
-        validate_solver_settings = true,
         grad_tol = 1.0e-10,
         obj_change_tol = 1.0e-10,
         maxit = 100,
@@ -254,7 +264,6 @@ function calibrate_sequential_group(
         solver_settings;
         adj_cache = adjoint_cache,
         backend_arg,
-        validate_solver_settings,
     )
     value, x, history = Jutul.LBFGS.box_bfgs(
         copy(problem.x0),
@@ -383,6 +392,7 @@ function create_clustered_parameter_groups(
     names = String.(param_names)
     length(names) == length(sensitivities) ||
         throw(ArgumentError("Parameter names and sensitivities must have equal length."))
+    all(isfinite, sensitivities) || throw(ArgumentError("Sensitivities must be finite."))
     isempty(names) && return SequentialParameterGroup[]
 
     if strategy == :magnitude
