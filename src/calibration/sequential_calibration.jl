@@ -91,9 +91,11 @@ function select_sequential_parameters(shortnames)
             path_key = join(path, "/")
             if haskey(selected_paths, path_key)
                 other = selected_paths[path_key]
-                throw(ArgumentError(
-                    "Parameters $other and $(parameter.shortname) both update $(join(path, ".")).",
-                ))
+                throw(
+                    ArgumentError(
+                        "Parameters $other and $(parameter.shortname) both update $(join(path, ".")).",
+                    )
+                )
             end
             selected_paths[path_key] = parameter.shortname
         end
@@ -105,9 +107,11 @@ function sequential_parameter_value(cell_parameters, parameter)
     values = [get_nested_json_value(cell_parameters, path) for path in parameter.paths]
     value0 = first(values)
     if !all(value -> isapprox(value, value0), values)
-        throw(ArgumentError(
-            "Tied parameter $(parameter.shortname) has inconsistent initial values: $values",
-        ))
+        throw(
+            ArgumentError(
+                "Tied parameter $(parameter.shortname) has inconsistent initial values: $values",
+            )
+        )
     end
     return value0
 end
@@ -180,10 +184,12 @@ function setup_sequential_problem(sim, t, voltage, shortnames)
     physical_lower = [p.bounds[1] for p in parameters]
     physical_upper = [p.bounds[2] for p in parameters]
     for i in eachindex(physical_x0)
-        physical_lower[i] <= physical_x0[i] <= physical_upper[i] || throw(ArgumentError(
-            "Initial value $(physical_x0[i]) for $(parameters[i].shortname) is outside " *
-                "the bounds [$(physical_lower[i]), $(physical_upper[i])].",
-        ))
+        physical_lower[i] <= physical_x0[i] <= physical_upper[i] || throw(
+            ArgumentError(
+                "Initial value $(physical_x0[i]) for $(parameters[i].shortname) is outside " *
+                    "the bounds [$(physical_lower[i]), $(physical_upper[i])].",
+            )
+        )
     end
     x0 = [scale_sequential_parameter(p, x) for (p, x) in zip(parameters, physical_x0)]
     lower = [scale_sequential_parameter(p, x) for (p, x) in zip(parameters, physical_lower)]
@@ -302,12 +308,14 @@ function sensitivity_groups(param_names, sensitivities, high_threshold, medium_t
         indices = findall(mask)
         sort!(indices; by = i -> abs_sensitivities[i], rev = true)
         priority = length(groups) + 1
-        push!(groups, SequentialParameterGroup(
-            name,
-            param_names[indices],
-            mean(abs_sensitivities[indices]),
-            priority,
-        ))
+        push!(
+            groups, SequentialParameterGroup(
+                name,
+                param_names[indices],
+                mean(abs_sensitivities[indices]),
+                priority,
+            )
+        )
     end
     return groups
 end
@@ -320,9 +328,11 @@ function magnitude_parameter_groups(param_names, sensitivities)
         groups = SequentialParameterGroup[]
         for (priority, indices) in enumerate(Iterators.partition(eachindex(param_names), group_size))
             selected = collect(indices)
-            push!(groups, SequentialParameterGroup(
-                "Group_$priority", param_names[selected], 0.0, priority,
-            ))
+            push!(
+                groups, SequentialParameterGroup(
+                    "Group_$priority", param_names[selected], 0.0, priority,
+                )
+            )
         end
         return groups
     end
@@ -345,20 +355,24 @@ function physical_parameter_groups(param_names, sensitivities)
         indices = findall(parameter -> parameter in domain_parameters, param_names)
         isempty(indices) && continue
         union!(grouped, param_names[indices])
-        push!(groups, SequentialParameterGroup(
-            name, param_names[indices], mean(abs_sensitivities[indices]), 0,
-        ))
+        push!(
+            groups, SequentialParameterGroup(
+                name, param_names[indices], mean(abs_sensitivities[indices]), 0,
+            )
+        )
     end
     indices = findall(parameter -> !(parameter in grouped), param_names)
     if !isempty(indices)
-        push!(groups, SequentialParameterGroup(
-            "Ungrouped", param_names[indices], mean(abs_sensitivities[indices]), 0,
-        ))
+        push!(
+            groups, SequentialParameterGroup(
+                "Ungrouped", param_names[indices], mean(abs_sensitivities[indices]), 0,
+            )
+        )
     end
     sort!(groups; by = group -> group.mean_sensitivity, rev = true)
     return [
         SequentialParameterGroup(group.name, group.parameters, group.mean_sensitivity, i)
-        for (i, group) in enumerate(groups)
+            for (i, group) in enumerate(groups)
     ]
 end
 

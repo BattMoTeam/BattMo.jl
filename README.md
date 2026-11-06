@@ -48,28 +48,28 @@ You can then run the following to simulate the predefined `p2d_40` case:
 ```julia
 using BattMo, GLMakie
 
-# BattMo stores cell parameters, cycling protocols and settings in a user-friendly JSON format to facilitate reuse. For our example, we load 
-# the cell parameter set from a NMC811 vs Graphite-SiOx cell whose parameters were determined in the [Chen 2020 paper](https://doi.org/10.1149/1945-7111/ab9050). 
+# BattMo stores cell parameters, cycling protocols and settings in a user-friendly JSON format to facilitate reuse. For our example, we load
+# the cell parameter set from a NMC811 vs Graphite-SiOx cell whose parameters were determined in the [Chen 2020 paper](https://doi.org/10.1149/1945-7111/ab9050).
 # We also load an example cycling protocol for a simple Constant Current Discharge.
 
 cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
 cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
 
-# Next, we select the Lithium-Ion Battery Model setup with default model settings. 
+# Next, we select the Lithium-Ion Battery Model setup with default model settings.
 # The default Lithium-Ion Battery Model Setup selected below corresponds to a basic P2D model setup, where neither current collectors nor thermal effects are considered.
 
 model_setup = LithiumIonBattery()
 
-# Then we setup a Simulation by passing the model, cell parameters and a cycling protocol. 
+# Then we setup a Simulation by passing the model, cell parameters and a cycling protocol.
 
-# We first prepare the simulation: 
+# We first prepare the simulation:
 
 sim = Simulation(model_setup, cell_parameters, cycling_protocol);
 
-# When the simulation is prepared, there are some validation checks happening in the background, which verify whether i) the cell parameters, cycling protocol and settings are sensible and complete 
+# When the simulation is prepared, there are some validation checks happening in the background, which verify whether i) the cell parameters, cycling protocol and settings are sensible and complete
 
 # Now we can run the simulation
-output = solve(sim;)
+output = solve(sim)
 
 # The output is a SimulationOutput type storing the results of the simulation within multiple dictionaries. Let's plot the cell current and cell voltage over time and make a plot with the GLMakie package.
 
@@ -95,8 +95,8 @@ Run a 3D model and plot the results in an interactive viewer.
 ```julia
 using BattMo, GLMakie
 
-# For our example, we load 
-# the cell parameter set from of a commercial Type LP2770120 prismatic LiFePO4/graphite cell whose parameters were determined in the [xU 2015 paper](https://doi.org/10.1016/j.energy.2014.11.073). 
+# For our example, we load
+# the cell parameter set from of a commercial Type LP2770120 prismatic LiFePO4/graphite cell whose parameters were determined in the [xU 2015 paper](https://doi.org/10.1016/j.energy.2014.11.073).
 # We also load an example cycling protocol for a simple Constant Current Discharge.
 
 cell_parameters = load_cell_parameters(; from_default_set = "xu_2015")
