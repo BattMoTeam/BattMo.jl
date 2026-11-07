@@ -195,3 +195,12 @@ end
     @test result["ne_b_vf"] + result["ne_add_vf"] ≈ ne_remaining
     @test result["pe_b_vf"] + result["pe_add_vf"] ≈ pe_remaining
 end
+
+@testset "write_to_json_file writes a plain Dict" begin
+    parameters = Dict(
+        "NegativeElectrode" => Dict("ActiveMaterial" => Dict("MaximumConcentration" => 30000.0)),
+    )
+    path = joinpath(mktempdir(), "cell_parameters.json")
+    write_to_json_file(path, parameters)
+    @test load_cell_parameters(; from_file_path = path).all == parameters
+end
