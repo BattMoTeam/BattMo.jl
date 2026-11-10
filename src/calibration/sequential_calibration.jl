@@ -27,8 +27,11 @@ end
 
 """
     sequential_parameter_catalog()
+    sequential_parameter_catalog(shortnames)
 
 Return the sequential calibration parameters and their cell-parameter paths.
+Pass a collection of `shortnames` to return only those entries. Unknown names raise
+a `KeyError`. Without an argument, return the full catalog.
 The regional `elyte_bg_ne`, `elyte_bg_pe`, and `elyte_bg_sep` entries require a
 regional dictionary under `Electrolyte.BruggemanCoefficient`; `elyte_bg` uses a scalar.
 
@@ -49,13 +52,13 @@ A `:linear` scaling suits bounds within a few decades. For wider bounds, keep `:
 values near the lower bound are otherwise hard for the optimizer to resolve. Use
 `print_sequential_parameter_catalog(catalog)` to show the entries.
 """
-function sequential_parameter_catalog()
+function sequential_parameter_catalog(shortnames = nothing)
     ne = "NegativeElectrode"
     pe = "PositiveElectrode"
     am = "ActiveMaterial"
     co = "Coating"
 
-    return Dict(
+    catalog = Dict(
         "ne_j0" => SequentialCalibrationParameter(
             "ne_j0", [[ne, am, "ReactionRateConstant"]], 1.0e-13, 1.0e-6, :log,
         ),
@@ -93,6 +96,10 @@ function sequential_parameter_catalog()
             "elyte_bg_sep", [["Electrolyte", "BruggemanCoefficient", "Separator"]], 1.0e-10, 10.0, :linear,
         ),
     )
+    if !isnothing(shortnames)
+        catalog = Dict(name => catalog[name] for name in shortnames)
+    end
+    return catalog
 end
 
 """
