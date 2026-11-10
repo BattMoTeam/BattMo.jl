@@ -64,14 +64,14 @@ end
     @test isapprox(BattMo.scale_sequential_parameter(parameters[1], 1.7), 1.7; atol = 0.0, rtol = 1.0e-12)
     @test isapprox(BattMo.scale_sequential_parameter(parameters[2], 1.0e-10), -10.0; atol = 1.0e-12, rtol = 0.0)
 
-    unsupported = SequentialCalibrationParameter("unsupported", [["value"]], (1.0, 2.0), :unknown)
+    unsupported = SequentialCalibrationParameter("unsupported", [["value"]], 1.0, 2.0, :unknown)
     @test_throws ArgumentError BattMo.scale_sequential_parameter(unsupported, 1.5)
     @test_throws ArgumentError BattMo.unscale_sequential_parameter(unsupported, 1.5)
 end
 
 @testset "Tied sequential parameters" begin
     parameters = Dict("negative" => Dict("diffusion" => 2.0e-14), "positive" => Dict("diffusion" => 2.0e-14), "untouched" => Dict("value" => 3.0))
-    tied = SequentialCalibrationParameter("tied_diffusion", [["negative", "diffusion"], ["positive", "diffusion"]], (1.0e-15, 1.0e-9), :log)
+    tied = SequentialCalibrationParameter("tied_diffusion", [["negative", "diffusion"], ["positive", "diffusion"]], 1.0e-15, 1.0e-9, :log)
     @test isapprox(BattMo.sequential_parameter_value(parameters, tied), 2.0e-14; atol = 0.0, rtol = 1.0e-12)
     parameters["positive"]["diffusion"] = 3.0e-14
     @test_throws ArgumentError BattMo.sequential_parameter_value(parameters, tied)
@@ -147,6 +147,22 @@ end
         end
         @test_throws AssertionError BattMo.setup_sequential_problem(sim, time[1:2], voltage, ["ne_j0"])
         @test_throws AssertionError BattMo.setup_sequential_problem(sim, [0.0, 1.0, 1.0], voltage, ["ne_j0"])
+    end
+
+    @testset "Custom bounds and scaling in the catalog" begin
+        catalog = sequential_parameter_catalog()
+        catalog["ne_j0"].lower_bound = 1.0e-12
+        catalog["ne_j0"].upper_bound = 1.0e-8
+        catalog["elyte_bg"].scaling = :log
+        custom_problem = BattMo.setup_sequential_problem(sim, time, voltage, ["ne_j0", "elyte_bg"]; catalog)
+        @test isapprox(custom_problem.x0, [log10(initial_rate), log10(1.7)]; atol = 0.0, rtol = 1.0e-12)
+        @test isapprox(custom_problem.lower, [-12.0, -10.0]; atol = 1.0e-12, rtol = 0.0)
+        @test isapprox(custom_problem.upper, [-8.0, 1.0]; atol = 1.0e-12, rtol = 0.0)
+
+        default_catalog = sequential_parameter_catalog()
+        @test default_catalog["ne_j0"].lower_bound == 1.0e-13
+        @test default_catalog["ne_j0"].upper_bound == 1.0e-6
+        @test default_catalog["elyte_bg"].scaling == :linear
     end
 
     @testset "Independent parameter updates and group setup" begin
