@@ -2,7 +2,7 @@ using BattMo
 using Test
 
 # Keep this suite free of model construction, simulation, and optimization.
-# Numerical gradient/cache checks live in test_sequential_calibration_numerical.jl.
+# Numerical gradient/cache checks live in test_adjoints.jl.
 
 @testset "Sequential calibration helpers" begin
     catalog = sequential_parameter_catalog()
