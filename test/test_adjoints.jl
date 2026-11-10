@@ -149,9 +149,10 @@ end
     original_time = copy(time)
     original_voltage = copy(voltage)
     # A log-scaled parameter stored in the model and a linear one that is also a Jutul parameter.
-    shortnames = ["ne_D", "elyte_bg"]
-    sensitivities = evaluate_sequential_sensitivities(sim, time, voltage, shortnames; solver_settings)
-    problem = BattMo.setup_sequential_problem(sim, time, voltage, shortnames)
+    catalog = sequential_parameter_catalog(["ne_D", "elyte_bg"])
+    catalog["ne_D"].upper_bound = 1.0e-8
+    sensitivities = evaluate_sequential_sensitivities(sim, time, voltage; solver_settings, catalog)
+    problem = BattMo.setup_sequential_problem(sim, time, voltage; catalog)
     # Same differentiation settings as evaluate_sequential_sensitivities.
     backend_arg = (use_sparsity = false, di_sparse = true, single_step_sparsity = false, do_prep = true)
     objective_and_gradient(calibration_problem, x, settings; kwargs...) = BattMo.solve_and_differentiate_for_calibration(
@@ -165,9 +166,11 @@ end
         @test sensitivities.upper == problem.upper
         width = problem.upper .- problem.lower
         normalized_step = 1.0e-5
-        for i in eachindex(shortnames)
+        @test [parameter.shortname for parameter in problem.parameters] == sort!(collect(keys(catalog)))
+        @test sensitivities.upper == [10.0, -8.0]
+        for i in eachindex(problem.parameters)
             # One pair of forward solves supplies the finite differences in both coordinates.
-            step = zeros(length(shortnames))
+            step = zeros(length(catalog))
             step[i] = width[i] * normalized_step
             plus, plus_gradient = objective_and_gradient(problem, problem.x0 + step, solver_settings; gradient = false)
             minus, minus_gradient = objective_and_gradient(problem, problem.x0 - step, solver_settings; gradient = false)
@@ -202,7 +205,7 @@ end
         cached_x .+= [0.05, 0.1]
         cached_value, cached_gradient = objective_and_gradient(problem, cached_x, solver_settings; adj_cache = cache, backend_arg)
         @test cache[:storage] !== storage
-        fresh = BattMo.setup_sequential_problem(sim, time, voltage, shortnames)
+        fresh = BattMo.setup_sequential_problem(sim, time, voltage; catalog)
         fresh_value, fresh_gradient = objective_and_gradient(fresh, cached_x, solver_settings; backend_arg)
         @test !isapprox(cached_value, initial_value; atol = 1.0e-12, rtol = 1.0e-4)
         @test isapprox(cached_value, fresh_value; atol = 1.0e-12, rtol = 1.0e-8)

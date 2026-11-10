@@ -40,12 +40,12 @@ change the entries and pass the catalog to `calibrate_sequential_group` or
 `evaluate_sequential_sensitivities`. Each call returns a new catalog, for example:
 
 ```julia
-catalog = sequential_parameter_catalog()
+catalog = sequential_parameter_catalog(["ne_vsa", "pe_vsa", "pe_D"])
 catalog["ne_vsa"].lower_bound = 1.0e3
 catalog["pe_vsa"].upper_bound = 1.0e11
 catalog["pe_D"].upper_bound = 1.0e-13
 catalog["pe_D"].scaling = :linear
-result = calibrate_sequential_group(sim, t, voltage, ["ne_vsa", "pe_vsa", "pe_D"]; catalog)
+result = calibrate_sequential_group(sim, t, voltage; catalog)
 ```
 
 A `:linear` scaling suits bounds within a few decades. For wider bounds, keep `:log`, since
@@ -103,14 +103,13 @@ function sequential_parameter_catalog(shortnames = nothing)
 end
 
 """
-    print_sequential_parameter_catalog(catalog = sequential_parameter_catalog())
-    print_sequential_parameter_catalog(shortnames; catalog = sequential_parameter_catalog())
+    print_sequential_parameter_catalog(catalog)
 
 Print the bounds, scaling, and cell-parameter paths of the catalog entries, sorted by
-shortname. Pass a vector or tuple of `shortnames` to print only those entries. Use the
-`catalog` keyword to print customized bounds and scaling.
+shortname. The supplied catalog determines the entries and their customized bounds
+and scaling.
 """
-function print_sequential_parameter_catalog(catalog::AbstractDict = sequential_parameter_catalog())
+function print_sequential_parameter_catalog(catalog::AbstractDict)
     header = ["Shortname", "Lower bound", "Upper bound", "Scaling", "Cell parameter"]
     shortnames = sort!(collect(keys(catalog)))
     table = Matrix{Any}(undef, length(shortnames), length(header))
@@ -135,21 +134,9 @@ function print_sequential_parameter_catalog(catalog::AbstractDict = sequential_p
     )
 end
 
-function print_sequential_parameter_catalog(
-        shortnames::Union{AbstractVector, Tuple};
-        catalog = sequential_parameter_catalog(),
-    )
-    return print_sequential_parameter_catalog(Dict(name => catalog[name] for name in shortnames))
-end
-
-function select_sequential_parameters(shortnames; catalog = sequential_parameter_catalog())
-    names = String.(shortnames)
+function select_sequential_parameters(catalog::AbstractDict)
+    names = sort!(collect(keys(catalog)))
     isempty(names) && throw(ArgumentError("At least one sequential calibration parameter is required."))
-    length(unique(names)) == length(names) ||
-        throw(ArgumentError("The shortname list contains duplicates."))
-    unknown = filter(name -> !haskey(catalog, name), names)
-    isempty(unknown) ||
-        throw(ArgumentError("Unknown sequential calibration parameters: $(join(unknown, ", "))."))
     parameters = [catalog[name] for name in names]
     selected_paths = Dict{String, String}()
     for parameter in parameters
@@ -241,8 +228,8 @@ function setup_sequential_calibration_case(X, sim, parameters; stepix = missing)
     )
 end
 
-function setup_sequential_problem(sim, t, voltage, shortnames; catalog = sequential_parameter_catalog())
-    parameters = select_sequential_parameters(shortnames; catalog)
+function setup_sequential_problem(sim, t, voltage; catalog)
+    parameters = select_sequential_parameters(catalog)
     calibration = VoltageCalibration(t, voltage, sim)
     physical_x0 = Float64[
         sequential_parameter_value(calibration.sim.cell_parameters, p) for p in parameters
@@ -267,10 +254,10 @@ function setup_sequential_problem(sim, t, voltage, shortnames; catalog = sequent
 end
 
 """
-    evaluate_sequential_sensitivities(sim, t, voltage, shortnames; kwargs...)
+    evaluate_sequential_sensitivities(sim, t, voltage; catalog, kwargs...)
 
-Evaluate the voltage objective and its adjoint gradient for the selected
-short-name parameters at their current values.
+Evaluate the voltage objective and its adjoint gradient for the parameters in the
+supplied catalog at their current values. Returned vectors follow sorted catalog keys.
 
 `gradient` is the derivative with respect to the optimization variables: `log10(p)`
 for log-scaled parameters and `p` for linear parameters. `normalized_gradient`
@@ -279,7 +266,8 @@ with respect to coordinates normalized to the unit interval. The parameters and 
 bounds come from `catalog`, see `sequential_parameter_catalog`.
 """
 function evaluate_sequential_sensitivities(
-        sim, t, voltage, shortnames;
+        sim, t, voltage;
+        catalog,
         solver_settings = get_default_solver_settings(sim.model),
         backend_arg = (
             use_sparsity = false,
@@ -287,9 +275,8 @@ function evaluate_sequential_sensitivities(
             single_step_sparsity = false,
             do_prep = true,
         ),
-        catalog = sequential_parameter_catalog(),
     )
-    problem = setup_sequential_problem(sim, t, voltage, shortnames; catalog)
+    problem = setup_sequential_problem(sim, t, voltage; catalog)
     objective_value, gradient = solve_and_differentiate_for_calibration(
         problem.x0,
         problem.setup_case,
@@ -310,13 +297,15 @@ function evaluate_sequential_sensitivities(
 end
 
 """
-    calibrate_sequential_group(sim, t, voltage, shortnames; kwargs...)
+    calibrate_sequential_group(sim, t, voltage; catalog, kwargs...)
 
 Optimize one sequential parameter group with Jutul's bounded BFGS solver. The parameters
-and their bounds come from `catalog`, see `sequential_parameter_catalog`.
+and their bounds come from the supplied group catalog, see `sequential_parameter_catalog`.
+Returned vectors follow sorted catalog keys.
 """
 function calibrate_sequential_group(
-        sim, t, voltage, shortnames;
+        sim, t, voltage;
+        catalog,
         solver_settings = get_default_solver_settings(sim.model),
         grad_tol = 1.0e-10,
         obj_change_tol = 1.0e-10,
@@ -328,9 +317,8 @@ function calibrate_sequential_group(
             single_step_sparsity = false,
             do_prep = true,
         ),
-        catalog = sequential_parameter_catalog(),
     )
-    problem = setup_sequential_problem(sim, t, voltage, shortnames; catalog)
+    problem = setup_sequential_problem(sim, t, voltage; catalog)
     adjoint_cache = Dict()
     objective_gradient(x) = solve_and_differentiate_for_calibration(
         x,
@@ -464,16 +452,17 @@ function hybrid_parameter_groups(param_names, sensitivities)
 end
 
 """
-    create_clustered_parameter_groups(param_names, sensitivities; strategy=:hybrid_adaptive)
+    create_clustered_parameter_groups(catalog, sensitivities; strategy=:hybrid_adaptive)
 
 Create sequential optimization groups using the strategies from the MATLAB
-`createClusteredParameterGroups` helper.
+`createClusteredParameterGroups` helper. Sensitivities must follow sorted catalog keys,
+as returned by `evaluate_sequential_sensitivities`.
 """
 function create_clustered_parameter_groups(
-        param_names, sensitivities;
+        catalog::AbstractDict, sensitivities;
         strategy = :hybrid_adaptive,
     )
-    names = String.(param_names)
+    names = sort!(collect(keys(catalog)))
     length(names) == length(sensitivities) ||
         throw(ArgumentError("Parameter names and sensitivities must have equal length."))
     all(isfinite, sensitivities) || throw(ArgumentError("Sensitivities must be finite."))
