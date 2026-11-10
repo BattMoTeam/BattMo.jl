@@ -1,17 +1,20 @@
 export SequentialCalibrationParameter, SequentialParameterGroup
-export sequential_parameter_catalog, create_clustered_parameter_groups
+export sequential_parameter_catalog, print_sequential_parameter_catalog, create_clustered_parameter_groups
 export evaluate_sequential_sensitivities, calibrate_sequential_group
 
 """
     SequentialCalibrationParameter
 
 BattMo.jl representation of one short parameter name from the MATLAB
-`ParamSetter`. A parameter may update one or more cell-parameter paths.
+`ParamSetter`. A parameter may update one or more cell-parameter paths. The physical
+bounds and the scaling of the optimization variable (`:log` or `:linear`) can be changed,
+see `sequential_parameter_catalog`.
 """
-struct SequentialCalibrationParameter
+mutable struct SequentialCalibrationParameter
     shortname::String
     paths::Vector{Vector{String}}
-    bounds::Tuple{Float64, Float64}
+    lower_bound::Float64
+    upper_bound::Float64
     scaling::Symbol
 end
 
@@ -24,66 +27,116 @@ end
 
 """
     sequential_parameter_catalog()
+    sequential_parameter_catalog(shortnames)
 
 Return the sequential calibration parameters and their cell-parameter paths.
+Pass a collection of `shortnames` to return only those entries. Unknown names raise
+a `KeyError`. Without an argument, return the full catalog.
 The regional `elyte_bg_ne`, `elyte_bg_pe`, and `elyte_bg_sep` entries require a
 regional dictionary under `Electrolyte.BruggemanCoefficient`; `elyte_bg` uses a scalar.
+
+The bounds of each entry are physical values. To use other bounds or another scaling,
+change the entries and pass the catalog to `calibrate_sequential_group` or
+`evaluate_sequential_sensitivities`. Each call returns a new catalog, for example:
+
+```julia
+catalog = sequential_parameter_catalog(["ne_vsa", "pe_vsa", "pe_D"])
+catalog["ne_vsa"].lower_bound = 1.0e3
+catalog["pe_vsa"].upper_bound = 1.0e11
+catalog["pe_D"].upper_bound = 1.0e-13
+catalog["pe_D"].scaling = :linear
+result = calibrate_sequential_group(sim, t, voltage; catalog)
+```
+
+A `:linear` scaling suits bounds within a few decades. For wider bounds, keep `:log`, since
+values near the lower bound are otherwise hard for the optimizer to resolve. Use
+`print_sequential_parameter_catalog(catalog)` to show the entries.
 """
-function sequential_parameter_catalog()
+function sequential_parameter_catalog(shortnames = nothing)
     ne = "NegativeElectrode"
     pe = "PositiveElectrode"
     am = "ActiveMaterial"
     co = "Coating"
 
-    return Dict(
+    catalog = Dict(
         "ne_j0" => SequentialCalibrationParameter(
-            "ne_j0", [[ne, am, "ReactionRateConstant"]], (1.0e-13, 1.0e-6), :log,
+            "ne_j0", [[ne, am, "ReactionRateConstant"]], 1.0e-13, 1.0e-6, :log,
         ),
         "pe_j0" => SequentialCalibrationParameter(
-            "pe_j0", [[pe, am, "ReactionRateConstant"]], (1.0e-13, 1.0e-9), :log,
+            "pe_j0", [[pe, am, "ReactionRateConstant"]], 1.0e-13, 1.0e-9, :log,
         ),
         "ne_vsa" => SequentialCalibrationParameter(
-            "ne_vsa", [[ne, am, "VolumetricSurfaceArea"]], (1.0e5, 1.0e7), :log,
+            "ne_vsa", [[ne, am, "VolumetricSurfaceArea"]], 1.0e5, 1.0e7, :log,
         ),
         "pe_vsa" => SequentialCalibrationParameter(
-            "pe_vsa", [[pe, am, "VolumetricSurfaceArea"]], (1.0e4, 1.0e10), :log,
+            "pe_vsa", [[pe, am, "VolumetricSurfaceArea"]], 1.0e4, 1.0e10, :log,
         ),
         "ne_bg" => SequentialCalibrationParameter(
-            "ne_bg", [[ne, co, "BruggemanCoefficient"]], (1.0e-10, 10.0), :linear,
+            "ne_bg", [[ne, co, "BruggemanCoefficient"]], 1.0e-10, 10.0, :linear,
         ),
         "pe_bg" => SequentialCalibrationParameter(
-            "pe_bg", [[pe, co, "BruggemanCoefficient"]], (1.0e-10, 10.0), :linear,
+            "pe_bg", [[pe, co, "BruggemanCoefficient"]], 1.0e-10, 10.0, :linear,
         ),
         "ne_D" => SequentialCalibrationParameter(
-            "ne_D", [[ne, am, "DiffusionCoefficient"]], (1.0e-15, 1.0e-9), :log,
+            "ne_D", [[ne, am, "DiffusionCoefficient"]], 1.0e-15, 1.0e-9, :log,
         ),
         "pe_D" => SequentialCalibrationParameter(
-            "pe_D", [[pe, am, "DiffusionCoefficient"]], (1.0e-15, 1.0e-8), :log,
+            "pe_D", [[pe, am, "DiffusionCoefficient"]], 1.0e-15, 1.0e-8, :log,
         ),
         "elyte_bg" => SequentialCalibrationParameter(
-            "elyte_bg", [["Electrolyte", "BruggemanCoefficient"]], (1.0e-10, 10.0), :linear,
+            "elyte_bg", [["Electrolyte", "BruggemanCoefficient"]], 1.0e-10, 10.0, :linear,
         ),
         "elyte_bg_ne" => SequentialCalibrationParameter(
-            "elyte_bg_ne", [["Electrolyte", "BruggemanCoefficient", ne]], (1.0e-10, 10.0), :linear,
+            "elyte_bg_ne", [["Electrolyte", "BruggemanCoefficient", ne]], 1.0e-10, 10.0, :linear,
         ),
         "elyte_bg_pe" => SequentialCalibrationParameter(
-            "elyte_bg_pe", [["Electrolyte", "BruggemanCoefficient", pe]], (1.0e-10, 10.0), :linear,
+            "elyte_bg_pe", [["Electrolyte", "BruggemanCoefficient", pe]], 1.0e-10, 10.0, :linear,
         ),
         "elyte_bg_sep" => SequentialCalibrationParameter(
-            "elyte_bg_sep", [["Electrolyte", "BruggemanCoefficient", "Separator"]], (1.0e-10, 10.0), :linear,
+            "elyte_bg_sep", [["Electrolyte", "BruggemanCoefficient", "Separator"]], 1.0e-10, 10.0, :linear,
         ),
+    )
+    if !isnothing(shortnames)
+        catalog = Dict(name => catalog[name] for name in shortnames)
+    end
+    return catalog
+end
+
+"""
+    print_sequential_parameter_catalog(catalog)
+
+Print the bounds, scaling, and cell-parameter paths of the catalog entries, sorted by
+shortname. The supplied catalog determines the entries and their customized bounds
+and scaling.
+"""
+function print_sequential_parameter_catalog(catalog::AbstractDict)
+    header = ["Shortname", "Lower bound", "Upper bound", "Scaling", "Cell parameter"]
+    shortnames = sort!(collect(keys(catalog)))
+    table = Matrix{Any}(undef, length(shortnames), length(header))
+    for (i, shortname) in enumerate(shortnames)
+        parameter = catalog[shortname]
+        table[i, :] = [
+            shortname,
+            parameter.lower_bound,
+            parameter.upper_bound,
+            parameter.scaling,
+            join((join(path, ".") for path in parameter.paths), ", "),
+        ]
+    end
+    # Print every row and the full paths, also when the display is smaller than the table.
+    return Jutul.PrettyTables.pretty_table(
+        table;
+        column_labels = header,
+        title = "Sequential calibration parameters",
+        alignment = [:l, :r, :r, :l, :l],
+        fit_table_in_display_horizontally = false,
+        fit_table_in_display_vertically = false,
     )
 end
 
-function select_sequential_parameters(shortnames)
-    catalog = sequential_parameter_catalog()
-    names = String.(shortnames)
+function select_sequential_parameters(catalog::AbstractDict)
+    names = sort!(collect(keys(catalog)))
     isempty(names) && throw(ArgumentError("At least one sequential calibration parameter is required."))
-    length(unique(names)) == length(names) ||
-        throw(ArgumentError("The shortname list contains duplicates."))
-    unknown = filter(name -> !haskey(catalog, name), names)
-    isempty(unknown) ||
-        throw(ArgumentError("Unknown sequential calibration parameters: $(join(unknown, ", "))."))
     parameters = [catalog[name] for name in names]
     selected_paths = Dict{String, String}()
     for parameter in parameters
@@ -175,14 +228,14 @@ function setup_sequential_calibration_case(X, sim, parameters; stepix = missing)
     )
 end
 
-function setup_sequential_problem(sim, t, voltage, shortnames)
-    parameters = select_sequential_parameters(shortnames)
+function setup_sequential_problem(sim, t, voltage; catalog)
+    parameters = select_sequential_parameters(catalog)
     calibration = VoltageCalibration(t, voltage, sim)
     physical_x0 = Float64[
         sequential_parameter_value(calibration.sim.cell_parameters, p) for p in parameters
     ]
-    physical_lower = [p.bounds[1] for p in parameters]
-    physical_upper = [p.bounds[2] for p in parameters]
+    physical_lower = [p.lower_bound for p in parameters]
+    physical_upper = [p.upper_bound for p in parameters]
     for i in eachindex(physical_x0)
         physical_lower[i] <= physical_x0[i] <= physical_upper[i] || throw(
             ArgumentError(
@@ -201,18 +254,20 @@ function setup_sequential_problem(sim, t, voltage, shortnames)
 end
 
 """
-    evaluate_sequential_sensitivities(sim, t, voltage, shortnames; kwargs...)
+    evaluate_sequential_sensitivities(sim, t, voltage; catalog, kwargs...)
 
-Evaluate the voltage objective and its adjoint gradient for the selected
-short-name parameters at their current values.
+Evaluate the voltage objective and its adjoint gradient for the parameters in the
+supplied catalog at their current values. Returned vectors follow sorted catalog keys.
 
 `gradient` is the derivative with respect to the optimization variables: `log10(p)`
 for log-scaled parameters and `p` for linear parameters. `normalized_gradient`
 multiplies each derivative by its optimization-bound width, giving the derivative
-with respect to coordinates normalized to the unit interval.
+with respect to coordinates normalized to the unit interval. The parameters and their
+bounds come from `catalog`, see `sequential_parameter_catalog`.
 """
 function evaluate_sequential_sensitivities(
-        sim, t, voltage, shortnames;
+        sim, t, voltage;
+        catalog,
         solver_settings = get_default_solver_settings(sim.model),
         backend_arg = (
             use_sparsity = false,
@@ -221,7 +276,7 @@ function evaluate_sequential_sensitivities(
             do_prep = true,
         ),
     )
-    problem = setup_sequential_problem(sim, t, voltage, shortnames)
+    problem = setup_sequential_problem(sim, t, voltage; catalog)
     objective_value, gradient = solve_and_differentiate_for_calibration(
         problem.x0,
         problem.setup_case,
@@ -242,12 +297,15 @@ function evaluate_sequential_sensitivities(
 end
 
 """
-    calibrate_sequential_group(sim, t, voltage, shortnames; kwargs...)
+    calibrate_sequential_group(sim, t, voltage; catalog, kwargs...)
 
-Optimize one sequential parameter group with Jutul's bounded BFGS solver.
+Optimize one sequential parameter group with Jutul's bounded BFGS solver. The parameters
+and their bounds come from the supplied group catalog, see `sequential_parameter_catalog`.
+Returned vectors follow sorted catalog keys.
 """
 function calibrate_sequential_group(
-        sim, t, voltage, shortnames;
+        sim, t, voltage;
+        catalog,
         solver_settings = get_default_solver_settings(sim.model),
         grad_tol = 1.0e-10,
         obj_change_tol = 1.0e-10,
@@ -260,7 +318,7 @@ function calibrate_sequential_group(
             do_prep = true,
         ),
     )
-    problem = setup_sequential_problem(sim, t, voltage, shortnames)
+    problem = setup_sequential_problem(sim, t, voltage; catalog)
     adjoint_cache = Dict()
     objective_gradient(x) = solve_and_differentiate_for_calibration(
         x,
@@ -394,16 +452,17 @@ function hybrid_parameter_groups(param_names, sensitivities)
 end
 
 """
-    create_clustered_parameter_groups(param_names, sensitivities; strategy=:hybrid_adaptive)
+    create_clustered_parameter_groups(catalog, sensitivities; strategy=:hybrid_adaptive)
 
 Create sequential optimization groups using the strategies from the MATLAB
-`createClusteredParameterGroups` helper.
+`createClusteredParameterGroups` helper. Sensitivities must follow sorted catalog keys,
+as returned by `evaluate_sequential_sensitivities`.
 """
 function create_clustered_parameter_groups(
-        param_names, sensitivities;
+        catalog::AbstractDict, sensitivities;
         strategy = :hybrid_adaptive,
     )
-    names = String.(param_names)
+    names = sort!(collect(keys(catalog)))
     length(names) == length(sensitivities) ||
         throw(ArgumentError("Parameter names and sensitivities must have equal length."))
     all(isfinite, sensitivities) || throw(ArgumentError("Sensitivities must be finite."))

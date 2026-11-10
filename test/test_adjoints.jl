@@ -109,3 +109,129 @@ end
 @testset "Parameter adjoints" begin
     test_adjoints()
 end
+
+function split_step_calibration_simulation()
+    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    get!(cell_parameters["Electrolyte"], "BruggemanCoefficient", cell_parameters["Separator"]["BruggemanCoefficient"])
+
+    cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
+    cycling_protocol["InitialStateOfCharge"] = 0.8
+    cycling_protocol["LowerVoltageLimit"] = 2.0
+    cycling_protocol["DRate"] = 0.5
+
+    simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+    simulation_settings["NegativeElectrodeCoatingGridPoints"] = 3
+    simulation_settings["PositiveElectrodeCoatingGridPoints"] = 3
+    simulation_settings["NegativeElectrodeParticleGridPoints"] = 3
+    simulation_settings["PositiveElectrodeParticleGridPoints"] = 3
+    simulation_settings["SeparatorGridPoints"] = 2
+
+    # The second report step is more than ten times the first, so the solver splits it.
+    return Simulation(
+        LithiumIonBattery(),
+        cell_parameters,
+        cycling_protocol;
+        simulation_settings,
+        time_steps = [1.0, 30.0, 30.0],
+    )
+end
+
+@testset "Sequential calibration adjoints" begin
+    sim = split_step_calibration_simulation()
+    solver_settings = load_solver_settings(; from_default_set = "direct")
+    output = solve(sim; solver_settings, info_level = -1)
+    ministeps = [count(m -> m[:success], report[:ministeps]) for report in output.jutul_output.reports]
+    @test any(>(1), ministeps)
+
+    time = output.time_series["Time"]
+    voltage = output.time_series["Voltage"] .+ 1.0e-3
+    original_parameters = deepcopy(sim.cell_parameters.all)
+    original_time = copy(time)
+    original_voltage = copy(voltage)
+    # A log-scaled parameter stored in the model and a linear one that is also a Jutul parameter.
+    catalog = sequential_parameter_catalog(["ne_D", "elyte_bg"])
+    catalog["ne_D"].upper_bound = 1.0e-8
+    sensitivities = evaluate_sequential_sensitivities(sim, time, voltage; solver_settings, catalog)
+    problem = BattMo.setup_sequential_problem(sim, time, voltage; catalog)
+    # Same differentiation settings as evaluate_sequential_sensitivities.
+    backend_arg = (use_sparsity = false, di_sparse = true, single_step_sparsity = false, do_prep = true)
+    objective_and_gradient(calibration_problem, x, settings; kwargs...) = BattMo.solve_and_differentiate_for_calibration(
+        x, calibration_problem.setup_case, calibration_problem.calibration, calibration_problem.objective, settings;
+        kwargs...,
+    )
+
+    @testset "Gradients match finite differences" begin
+        @test isapprox(sensitivities.x0, problem.x0; atol = 0.0, rtol = 1.0e-12)
+        @test sensitivities.lower == problem.lower
+        @test sensitivities.upper == problem.upper
+        width = problem.upper .- problem.lower
+        normalized_step = 1.0e-5
+        @test [parameter.shortname for parameter in problem.parameters] == sort!(collect(keys(catalog)))
+        @test sensitivities.upper == [10.0, -8.0]
+        for i in eachindex(problem.parameters)
+            # One pair of forward solves supplies the finite differences in both coordinates.
+            step = zeros(length(catalog))
+            step[i] = width[i] * normalized_step
+            plus, plus_gradient = objective_and_gradient(problem, problem.x0 + step, solver_settings; gradient = false)
+            minus, minus_gradient = objective_and_gradient(problem, problem.x0 - step, solver_settings; gradient = false)
+            @test ismissing(plus_gradient) && ismissing(minus_gradient)
+            difference = (plus - minus) / (2 * step[i])
+            @test abs(difference) > 1.0e-9
+            @test isapprox(sensitivities.gradient[i], difference; atol = 0.0, rtol = 1.0e-6)
+            @test isapprox(sensitivities.normalized_gradient[i], (plus - minus) / (2 * normalized_step); atol = 0.0, rtol = 1.0e-6)
+        end
+    end
+
+    @testset "Ministep states regardless of output settings" begin
+        expanded_settings = deepcopy(solver_settings)
+        expanded_settings["Output"]["ExpandSubstates"] = true
+        _, expanded_gradient = objective_and_gradient(problem, problem.x0, expanded_settings; backend_arg)
+        @test isapprox(expanded_gradient, sensitivities.gradient; atol = 1.0e-12, rtol = 1.0e-8)
+    end
+
+    @testset "Cached adjoints at changed parameters" begin
+        cache = Dict()
+        cached_x = copy(problem.x0)
+        initial_value, initial_gradient = objective_and_gradient(problem, cached_x, solver_settings; adj_cache = cache, backend_arg)
+        @test isapprox(initial_value, sensitivities.objective_value; atol = 1.0e-12, rtol = 1.0e-8)
+        @test isapprox(initial_gradient, sensitivities.gradient; atol = 1.0e-12, rtol = 1.0e-8)
+        storage = cache[:storage]
+        repeated_value, repeated_gradient = objective_and_gradient(problem, copy(cached_x), solver_settings; adj_cache = cache, backend_arg)
+        @test cache[:storage] === storage
+        @test isapprox(repeated_value, initial_value; atol = 1.0e-12, rtol = 1.0e-8)
+        @test isapprox(repeated_gradient, initial_gradient; atol = 1.0e-12, rtol = 1.0e-8)
+
+        # Optimizers may mutate the same vector between evaluations.
+        cached_x .+= [0.05, 0.1]
+        cached_value, cached_gradient = objective_and_gradient(problem, cached_x, solver_settings; adj_cache = cache, backend_arg)
+        @test cache[:storage] !== storage
+        fresh = BattMo.setup_sequential_problem(sim, time, voltage; catalog)
+        fresh_value, fresh_gradient = objective_and_gradient(fresh, cached_x, solver_settings; backend_arg)
+        @test !isapprox(cached_value, initial_value; atol = 1.0e-12, rtol = 1.0e-4)
+        @test isapprox(cached_value, fresh_value; atol = 1.0e-12, rtol = 1.0e-8)
+        @test isapprox(cached_gradient, fresh_gradient; atol = 1.0e-12, rtol = 1.0e-8)
+    end
+
+    @testset "No completed report step" begin
+        failing_settings = deepcopy(solver_settings)
+        failing_settings["NonLinearSolver"]["MaxNonLinearIterations"] = 0
+        failing_settings["NonLinearSolver"]["MaxTimestepCuts"] = 0
+        @test_throws "did not complete any report step" objective_and_gradient(problem, problem.x0, failing_settings; gradient = false)
+    end
+
+    @testset "Remaining data time weights only the final ministep" begin
+        objective = BattMo.setup_calibration_objective(VoltageCalibration([0.0, 100.0], [4.0, 4.0], sim))
+        # Three ministeps end at 20, 40 and 60 s, and the last two share the final report step.
+        states = [
+            Jutul.JUTUL_OUTPUT_TYPE(:Control => Jutul.JUTUL_OUTPUT_TYPE(:Controller => (time = t,), :ElectricPotential => [3.9]))
+                for t in (20.0, 40.0, 60.0)
+        ]
+        value = Jutul.evaluate_objective(objective, sim.model.multimodel, states, fill(20.0, 3), missing; step_index = [1, 2, 2])
+        # The final ministep also covers the 40 s left until the data ends.
+        @test isapprox(value, (20.0 + 20.0 + 40.0) * 0.1^2 / 100.0; atol = 1.0e-14, rtol = 0.0)
+    end
+
+    @test sim.cell_parameters.all == original_parameters
+    @test time == original_time
+    @test voltage == original_voltage
+end
