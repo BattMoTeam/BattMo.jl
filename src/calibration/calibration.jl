@@ -440,6 +440,7 @@ function simulate_battmo_case_for_calibration(
             case.parameters;
             solver_settings = solver_settings,
             info_level = -1,
+            validate = false, # Validate will otherwise run at every objective evaluation
         )
     end
     # The adjoint needs the state after every ministep, also when ExpandSubstates is off.
