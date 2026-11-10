@@ -28,6 +28,21 @@ end
 Return the sequential calibration parameters and their cell-parameter paths.
 The regional `elyte_bg_ne`, `elyte_bg_pe`, and `elyte_bg_sep` entries require a
 regional dictionary under `Electrolyte.BruggemanCoefficient`; `elyte_bg` uses a scalar.
+
+The bounds of each entry are physical values, and `calibrate_sequential_group` and
+`evaluate_sequential_sensitivities` always use them. To optimize with other bounds, set up
+the problem and overwrite its bounds, which are in the optimization coordinates (`log10(p)`
+for log-scaled parameters). For example, to search `ne_vsa` between `1.0e5` and `1.0e8`:
+
+```julia
+problem = BattMo.setup_sequential_problem(sim, t, voltage, ["ne_vsa", "elyte_bg"])
+i = findfirst(p -> p.shortname == "ne_vsa", problem.parameters)
+problem.lower[i] = BattMo.scale_sequential_parameter(problem.parameters[i], 1.0e5)
+problem.upper[i] = BattMo.scale_sequential_parameter(problem.parameters[i], 1.0e8)
+```
+
+Then pass `problem.lower` and `problem.upper` to `Jutul.LBFGS.box_bfgs`, as
+`calibrate_sequential_group` does.
 """
 function sequential_parameter_catalog()
     ne = "NegativeElectrode"

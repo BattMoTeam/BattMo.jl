@@ -42,10 +42,10 @@ Represents a voltage calibration problem for a battery simulation.
   Creates a new calibration object from time vector `t`, voltage vector `v`, and a simulation `sim`.  
   Ensures time vector `t` is strictly increasing and matches length of `v`.
 
-- `VoltageCalibration(t_and_v, sim; normalize_time = false)`
+- `VoltageCalibration(t_and_v, sim; shift_time = false)`
 
   Alternative constructor that takes a 2D array `t_and_v` where the first column is time and the second is voltage.  
-  Optionally normalizes the time vector to start at zero if `normalize_time` is true.
+  Optionally shifts the time vector to start at zero if `shift_time` is true.
 
 # Example
 ```julia
@@ -56,7 +56,7 @@ calib = VoltageCalibration(t, v, sim)
 
 # or with combined data
 data = [0.0 3.7; 10.0 3.6; 20.0 3.5; 30.0 3.4]
-calib2 = VoltageCalibration(data, sim, normalize_time=true)
+calib2 = VoltageCalibration(data, sim, shift_time=true)
 ```
 """
 mutable struct VoltageCalibration <: AbstractCalibration
@@ -87,11 +87,11 @@ mutable struct VoltageCalibration <: AbstractCalibration
     end
 end
 
-function VoltageCalibration(t_and_v, sim; normalize_time = false)
+function VoltageCalibration(t_and_v, sim; shift_time = false)
     t = t_and_v[:, 1]
     v = t_and_v[:, 2]
-    if normalize_time
-        t = t .- minimum(t)  # Normalize time to start at zero
+    if shift_time
+        t = t .- minimum(t)  # Shift time to start at zero
     end
     return VoltageCalibration(t, v, sim)
 end
@@ -221,23 +221,15 @@ function setup_calibration_objective(vc::VoltageCalibration)
     total_time = vc.t[end]
     function objective(model, state, dt, step_info, forces)
         t = state[:Control][:Controller].time
-        if step_info[:step] == step_info[:Nstep]
+        # Only the last ministep covers the data after the final simulated time.
+        if step_info[:substep_global] == step_info[:Nsubstep_global]
             dt = max(dt, total_time - t)
         end
         V_obs = V_fun(t)
         V_sim = state[:Control][:ElectricPotential][1]
-        return voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
+        return dt * (V_obs - V_sim)^2 / total_time
     end
     return objective
-end
-
-function voltage_squared_error(V_obs, V_sim, dt, step_info, total_time)
-    return dt * (V_obs - V_sim)^2 / total_time
-end
-
-function evaluate_calibration_objective(vc::VoltageCalibration, objective, case, states, dt)
-    f = Jutul.evaluate_objective(objective, case.model, states, dt, case.forces)
-    return f
 end
 
 
@@ -347,17 +339,18 @@ function solve_and_differentiate_for_calibration(
         gradient = true,
     )
     case = setup_battmo_case(x)
-    states, dt = simulate_battmo_case_for_calibration(vc, case, solver_settings)
+    packed_steps = simulate_battmo_case_for_calibration(vc, case, solver_settings)
 
     # Evaluate the objective function
-    f = evaluate_calibration_objective(vc, objective, case, states, dt)
+    wrapped_objective = Jutul.adjoint_wrap_objective(objective, case.model)
+    f = Jutul.evaluate_objective(wrapped_objective, case.model, packed_steps)
     # Solve adjoints
     if gradient
         # Case setup rebuilds the model parameters, so adjoint simulators must
         # be rebuilt when the parameter values change.
         if !haskey(adj_cache, :storage) || get(adj_cache, :x, nothing) != x
             adj_cache[:storage] = Jutul.AdjointsDI.setup_adjoint_storage_generic(
-                x, setup_battmo_case, states, dt, objective;
+                x, setup_battmo_case, packed_steps, objective;
                 backend_arg...,
                 info_level = 0,
             )
@@ -366,7 +359,7 @@ function solve_and_differentiate_for_calibration(
         S = adj_cache[:storage]
         g = similar(x)
         Jutul.AdjointsDI.solve_adjoint_generic!(
-            g, x, setup_battmo_case, S, states, dt, objective,
+            g, x, setup_battmo_case, S, packed_steps, objective,
         )
         # g = Jutul.AdjointsDI.solve_adjoint_generic(
         #     x, setup_battmo_case, states, dt, objective,
@@ -449,6 +442,8 @@ function simulate_battmo_case_for_calibration(
             info_level = -1,
         )
     end
+    # The adjoint needs the state after every ministep, also when ExpandSubstates is off.
+    config[:output_substates] = true
     result = Jutul.simulate!(
         simulator,
         case.dt,
@@ -463,6 +458,10 @@ function simulate_battmo_case_for_calibration(
     #    g = fill(1e20, length(x))
     #    return (1e20, g)
     #end
-    states, dt, = Jutul.expand_to_ministeps(result)
-    return (states, dt)
+    if isempty(result.states)
+        throw(ArgumentError("The calibration simulation did not complete any report step."))
+    end
+    # Tag each ministep with its report step, so that the objective and the adjoint use
+    # exactly the steps that the solver took.
+    return Jutul.AdjointPackedResult(result, case)
 end
