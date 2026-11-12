@@ -12,7 +12,7 @@ using Test
     @test_throws ArgumentError cumtrapz([0.0], [1.0])
     @test_throws ArgumentError rmse(reverse(time), values, time, values)
 
-    voltage, differential_capacity = compute_dqdv([0.0, 1.0, 2.0], [1.0, 2.0, 3.0]; nbins = 2, smooth = false)
+    voltage, differential_capacity = dqdv([0.0, 1.0, 2.0], [1.0, 2.0, 3.0]; nbins = 2, smooth = false)
     @test voltage ≈ [1.5, 2.5] atol = 1.0e-12 rtol = 0.0
     @test differential_capacity ≈ [2 / 3, 4 / 3] atol = 1.0e-12 rtol = 0.0
 end

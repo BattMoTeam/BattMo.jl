@@ -1,4 +1,4 @@
-export trapz, cumtrapz, rmse, compute_dqdv
+export trapz, cumtrapz, rmse, dqdv
 
 """
     trapz(x, y)
@@ -134,7 +134,7 @@ function gaussian_smooth(values; sigma = 1.0, truncate = 4.0)
 end
 
 """
-    compute_dqdv(q, v; bin_size = nothing, nbins = nothing, smooth = true)
+    dqdv(q, v; bin_size = nothing, nbins = nothing, smooth = true)
 
 Compute a differential-capacity curve using an equal-width voltage histogram.
 Either `bin_size` or `nbins` must be provided. If both are provided, `nbins`
@@ -143,7 +143,7 @@ takes precedence. Gaussian smoothing with `sigma = 1` is enabled by default.
 Returns `(voltage, dqdv)`. For decreasing-voltage curves, both arrays are
 reversed and the differential capacity is negated.
 """
-function compute_dqdv(q, v; bin_size = nothing, nbins = nothing, smooth = true)
+function dqdv(q, v; bin_size = nothing, nbins = nothing, smooth = true)
     length(q) == length(v) || throw(ArgumentError("q and v must have equal length."))
     length(q) >= 2 || throw(ArgumentError("At least two points are required."))
     all(isfinite, q) && all(isfinite, v) || throw(ArgumentError("q and v must contain only finite values."))
