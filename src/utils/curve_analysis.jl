@@ -1,4 +1,4 @@
-export trapz, cumtrapz, rmse, compute_dqdv
+export trapz, cumtrapz, rmse, dqdv, dvdq
 
 """
     trapz(x, y)
@@ -133,29 +133,69 @@ function gaussian_smooth(values; sigma = 1.0, truncate = 4.0)
     ]
 end
 
+# Check a curve for dqdv or dvdq: finite values of equal length, with strictly monotonic
+# capacity that is also uniformly spaced if `uniform` is set.
+function check_capacity_curve(q, v, caller; uniform)
+    length(q) == length(v) || throw(ArgumentError("q and v must have equal length."))
+    length(q) >= 2 || throw(ArgumentError("At least two points are required."))
+    all(isfinite, q) && all(isfinite, v) || throw(ArgumentError("q and v must contain only finite values."))
+
+    dq = diff(q)
+    mean_dq = (last(q) - first(q)) / (length(q) - 1)
+    if uniform
+        # Subtracting nearby capacities can lose precision, especially for Float32.
+        dq_atol = 2 * eps(float(maximum(abs, q)))
+        uniform_q = !iszero(mean_dq) && all(
+            step -> sign(step) == sign(mean_dq) && isapprox(step, mean_dq; rtol = 1.0e-6, atol = dq_atol), dq
+        )
+        uniform_q || throw(
+            ArgumentError(
+                "q must be strictly monotonic and uniformly spaced. " *
+                    "Resample the curve onto a uniform capacity grid before calling $caller."
+            )
+        )
+    else
+        !iszero(mean_dq) && all(step -> sign(step) == sign(mean_dq), dq) ||
+            throw(ArgumentError("q must be strictly monotonic."))
+    end
+    return nothing
+end
+
+# Return the number of equal-width bins over `span`; `nbins` takes precedence over `bin_size`.
+function number_of_bins(span, bin_size, nbins)
+    isnothing(bin_size) && isnothing(nbins) && throw(ArgumentError("Either bin_size or nbins must be provided."))
+    if isnothing(nbins)
+        bin_size > 0 || throw(ArgumentError("bin_size must be positive."))
+        nbins = floor(Int, span / bin_size)
+    end
+    nbins isa Integer && nbins > 0 || throw(ArgumentError("nbins must be a positive integer."))
+    return nbins
+end
+
 """
-    compute_dqdv(q, v; bin_size = nothing, nbins = nothing, smooth = true)
+    dqdv(q, v; bin_size = nothing, nbins = nothing, smooth = true)
 
 Compute a differential-capacity curve using an equal-width voltage histogram.
+Capacity values `q` must be strictly monotonic and uniformly spaced. Increments
+are checked with relative tolerance `1e-6` and an allowance for floating-point
+roundoff; otherwise an `ArgumentError` is thrown.
 Either `bin_size` or `nbins` must be provided. If both are provided, `nbins`
 takes precedence. Gaussian smoothing with `sigma = 1` is enabled by default.
 
 Returns `(voltage, dqdv)`. For decreasing-voltage curves, both arrays are
 reversed and the differential capacity is negated.
+
+The histogram calculation follows Algorithm 1 in Eibar Flores and Simon Clark,
+"Simple and Comparable Computation of Incremental Capacity Curves",
+*Journal of The Electrochemical Society* **173**, 120520 (2026).
+[DOI: 10.1149/1945-7111/ae7e5c](https://doi.org/10.1149/1945-7111/ae7e5c).
 """
-function compute_dqdv(q, v; bin_size = nothing, nbins = nothing, smooth = true)
-    length(q) == length(v) || throw(ArgumentError("q and v must have equal length."))
-    length(q) >= 2 || throw(ArgumentError("At least two points are required."))
-    all(isfinite, q) && all(isfinite, v) || throw(ArgumentError("q and v must contain only finite values."))
-    isnothing(bin_size) && isnothing(nbins) && throw(ArgumentError("Either bin_size or nbins must be provided."))
+function dqdv(q, v; bin_size = nothing, nbins = nothing, smooth = true)
+    check_capacity_curve(q, v, "dqdv"; uniform = true)
 
     vmin, vmax = extrema(v)
     vmax > vmin || throw(ArgumentError("Voltage values must span a non-zero interval."))
-    if isnothing(nbins)
-        bin_size > 0 || throw(ArgumentError("bin_size must be positive."))
-        nbins = floor(Int, (vmax - vmin) / bin_size)
-    end
-    nbins isa Integer && nbins > 0 || throw(ArgumentError("nbins must be a positive integer."))
+    nbins = number_of_bins(vmax - vmin, bin_size, nbins)
 
     bin_width = (vmax - vmin) / nbins
     counts = zeros(Float64, nbins)
@@ -174,4 +214,43 @@ function compute_dqdv(q, v; bin_size = nothing, nbins = nothing, smooth = true)
     else
         return (reverse(bin_centers), -reverse(counts))
     end
+end
+
+"""
+    dvdq(q, v; bin_size = nothing, nbins = nothing, smooth = true)
+
+Compute a differential-voltage curve from an equal-width capacity histogram.
+Capacity and voltage are averaged over the samples in each bin, and the
+differential voltage between two neighbouring bins is the difference of their
+mean voltages divided by the difference of their mean capacities. Every sample
+contributes, so the noise of each bin mean falls with the square root of its
+sample count. Capacity values `q` must be strictly monotonic, but need not be
+uniformly spaced: placing each bin at its mean capacity keeps a linear curve
+exact for any sampling. Every bin must contain at least one sample.
+Either `bin_size` or `nbins` must be provided. If both are provided, `nbins`
+takes precedence, and at least two bins are required. Gaussian smoothing with
+`sigma = 1` is enabled by default.
+
+Returns `(capacity, dvdq)` with `nbins - 1` values, each midway between the
+mean capacities of two neighbouring bins and ordered as `q`. The differential
+voltage keeps the sign of the curve, so it is negative for a discharge against
+increasing discharged capacity.
+"""
+function dvdq(q, v; bin_size = nothing, nbins = nothing, smooth = true)
+    check_capacity_curve(q, v, "dvdq"; uniform = false)
+    nbins = number_of_bins(abs(last(q) - first(q)), bin_size, nbins)
+    nbins >= 2 || throw(ArgumentError("dvdq needs at least two bins."))
+
+    # Bins count from the start of the curve; q is monotonic, so each bin holds a contiguous range of samples.
+    bin_width = (last(q) - first(q)) / nbins
+    bins = [clamp(floor(Int, (capacity - first(q)) / bin_width) + 1, 1, nbins) for capacity in q]
+    ranges = [searchsortedfirst(bins, bin):searchsortedlast(bins, bin) for bin in 1:nbins]
+    all(!isempty, ranges) || throw(ArgumentError("Every capacity bin must contain a sample; use fewer or wider bins."))
+    mean_q = [sum(view(q, range)) / length(range) for range in ranges]
+    mean_v = [sum(view(v, range)) / length(range) for range in ranges]
+
+    differential_voltage = diff(mean_v) ./ diff(mean_q)
+    smooth && (differential_voltage = gaussian_smooth(differential_voltage))
+    capacity = (mean_q[1:(end - 1)] .+ mean_q[2:end]) ./ 2
+    return (capacity, differential_voltage)
 end
