@@ -142,6 +142,11 @@ takes precedence. Gaussian smoothing with `sigma = 1` is enabled by default.
 
 Returns `(voltage, dqdv)`. For decreasing-voltage curves, both arrays are
 reversed and the differential capacity is negated.
+
+The histogram calculation follows Algorithm 1 in Eibar Flores and Simon Clark,
+"Simple and Comparable Computation of Incremental Capacity Curves",
+*Journal of The Electrochemical Society* **173**, 120520 (2026).
+[DOI: 10.1149/1945-7111/ae7e5c](https://doi.org/10.1149/1945-7111/ae7e5c).
 """
 function dqdv(q, v; bin_size = nothing, nbins = nothing, smooth = true)
     length(q) == length(v) || throw(ArgumentError("q and v must have equal length."))
