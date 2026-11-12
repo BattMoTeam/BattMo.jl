@@ -137,6 +137,9 @@ end
     dqdv(q, v; bin_size = nothing, nbins = nothing, smooth = true)
 
 Compute a differential-capacity curve using an equal-width voltage histogram.
+Capacity values `q` must be strictly monotonic and uniformly spaced. Increments
+are checked with relative tolerance `1e-6` and an allowance for floating-point
+roundoff; otherwise an `ArgumentError` is thrown.
 Either `bin_size` or `nbins` must be provided. If both are provided, `nbins`
 takes precedence. Gaussian smoothing with `sigma = 1` is enabled by default.
 
@@ -152,6 +155,21 @@ function dqdv(q, v; bin_size = nothing, nbins = nothing, smooth = true)
     length(q) == length(v) || throw(ArgumentError("q and v must have equal length."))
     length(q) >= 2 || throw(ArgumentError("At least two points are required."))
     all(isfinite, q) && all(isfinite, v) || throw(ArgumentError("q and v must contain only finite values."))
+
+    dq = diff(q)
+    mean_dq = (last(q) - first(q)) / (length(q) - 1)
+    # Subtracting nearby capacities can lose precision, especially for Float32.
+    dq_atol = 2 * eps(float(maximum(abs, q)))
+    uniform_q = !iszero(mean_dq) && all(
+        step -> sign(step) == sign(mean_dq) && isapprox(step, mean_dq; rtol = 1.0e-6, atol = dq_atol), dq
+    )
+    uniform_q || throw(
+        ArgumentError(
+            "q must be strictly monotonic and uniformly spaced. " *
+                "Resample the curve onto a uniform capacity grid before calling dqdv."
+        )
+    )
+
     isnothing(bin_size) && isnothing(nbins) && throw(ArgumentError("Either bin_size or nbins must be provided."))
 
     vmin, vmax = extrema(v)
