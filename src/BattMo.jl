@@ -45,6 +45,7 @@ using SparseArrays: AbstractSparseMatrixCSC, SparseMatrixCSC
 using SparseArrays: require_one_based_indexing, getcolptr, rowvals, nzrange, nonzeros        # Sparse matrix support
 using StaticArrays                                # Static-sized arrays
 using Statistics                                  # Basic statistical functions
+using Random: Random                              # Sampling for sensitivity analysis
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -277,6 +278,7 @@ include("calibration/calibration.jl")
 include("calibration/calibration_utils.jl")
 include("calibration/equilibrium_calibration.jl")
 include("calibration/sequential_calibration.jl")
+include("sensitivity/sobol.jl")
 
 include("tools/print_info.jl")
 
