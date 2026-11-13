@@ -76,3 +76,18 @@ solve(vc::AbstractCalibration; kwarg...)
 free_calibration_parameter!
 print_calibration_overview
 ```
+
+## Sobol Sensitivity Analysis
+
+```@docs
+AbstractSensitivityAnalysis
+SobolSensitivity
+solve(sa::SobolSensitivity)
+free_sensitivity_parameter!
+freeze_sensitivity_parameter!
+print_sensitivity_overview
+SobolResult
+print_sobol_indices
+default_sobol_quantities
+compute_heat_generation
+```

@@ -575,6 +575,8 @@ We use a least square method for the reconstruction
 """
 function setup_flux_operator(normals::AbstractArray)
 
-    return inv(normals * transpose(normals)) * normals
+    # The pseudo-inverse also handles 1D and 2D grids, where the normals do not span all
+    # three directions. It equals the inverse when the normals do.
+    return LinearAlgebra.pinv(normals * transpose(normals)) * normals
 
 end
