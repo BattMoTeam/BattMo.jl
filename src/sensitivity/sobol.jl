@@ -20,9 +20,16 @@ order of `parameter_names`) and one column per quantity (in the order of `quanti
 - `samples`: Physical parameter values of all evaluated points, one row per simulation.
 - `values`: Quantity values of all evaluated points, one row per simulation. Failed
   simulations are `NaN`.
-- `N`: Number of base samples. The number of simulations is `N * (d + 2)`.
-- `n_valid`: Number of base samples per quantity used by the estimators. A base sample is
-  dropped when any of its `d + 2` simulations failed or returned a non-finite value.
+- `N`: For `:saltelli`, the number of base samples, and the number of simulations is
+  `N * (d + 2)`. For `:pce`, the number of simulations.
+- `n_valid`: Number of samples per quantity used by the estimators. For `:saltelli`, a base
+  sample is dropped when any of its `d + 2` simulations failed or returned a non-finite
+  value. For `:pce`, only the failed simulations are dropped.
+- `method`: The estimation method, `:saltelli` or `:pce`.
+- `pce`: For `:pce`, the fitted expansion as a named tuple `(degree, multi_indices,
+  coefficients, q2)`, otherwise `nothing`. `multi_indices` has one row per basis
+  polynomial, `coefficients` one row per basis polynomial and one column per quantity, and
+  `q2` is the leave-one-out coefficient of determination per quantity.
 """
 struct SobolResult
     parameter_names::Vector{String}
@@ -35,10 +42,12 @@ struct SobolResult
     values::Matrix{Float64}
     N::Int
     n_valid::Vector{Int}
+    method::Symbol
+    pce::Union{Nothing, NamedTuple}
 end
 
 function Base.show(io::IO, ::MIME"text/plain", result::SobolResult)
-    println(io, "SobolResult with $(length(result.parameter_names)) parameters, ", "$(length(result.quantity_names)) quantities and N = $(result.N):")
+    println(io, "SobolResult ($(result.method)) with $(length(result.parameter_names)) parameters, ", "$(length(result.quantity_names)) quantities and N = $(result.N):")
     return print_sobol_indices(io, result)
 end
 
@@ -430,6 +439,166 @@ function estimate_sobol_indices(
     return (; first_order, total_order, first_order_ci = ci_first, total_order_ci = ci_total, n_valid)
 end
 
+#####################################
+# Polynomial chaos expansion (PCE)  #
+#####################################
+
+"""
+Latin hypercube sample of `N` points in the `d`-dimensional unit cube: every column has
+exactly one point in each of the `N` intervals `[(k - 1) / N, k / N]`.
+"""
+function latin_hypercube(rng, N::Integer, d::Integer)
+    U = Matrix{Float64}(undef, N, d)
+    for i in 1:d
+        U[:, i] = (Random.randperm(rng, N) .- rand(rng, N)) ./ N
+    end
+    return U
+end
+
+"""
+Multi-indices of all `d`-variate polynomials of total degree at most `degree`, one row per
+polynomial, ordered by total degree. The first row is the constant.
+"""
+function total_degree_multi_indices(d::Integer, degree::Integer)
+    indices = Vector{Int}[]
+    function add_indices!(prefix, remaining)
+        if length(prefix) == d
+            push!(indices, copy(prefix))
+            return
+        end
+        for a in 0:remaining
+            push!(prefix, a)
+            add_indices!(prefix, remaining - a)
+            pop!(prefix)
+        end
+        return
+    end
+    add_indices!(Int[], degree)
+    sort!(indices; by = alpha -> (sum(alpha), map(-, alpha)))
+    return Matrix{Int}(permutedims(reduce(hcat, indices)))
+end
+
+"""
+Design matrix of the PCE: the products of Legendre polynomials, orthonormal for the uniform
+distribution on `[0, 1]`, evaluated at the rows of `U`.
+"""
+function pce_design_matrix(U::AbstractMatrix, multi_indices::AbstractMatrix{<:Integer})
+    N, d = size(U)
+    degree = maximum(multi_indices)
+    # legendre[:, i, n + 1] is the orthonormal polynomial of degree n in parameter i.
+    t = 2 .* U .- 1
+    legendre = ones(N, d, degree + 1)
+    degree >= 1 && (legendre[:, :, 2] .= t)
+    for n in 1:(degree - 1)
+        legendre[:, :, n + 2] .= ((2n + 1) .* t .* legendre[:, :, n + 1] .- n .* legendre[:, :, n]) ./ (n + 1)
+    end
+    for n in 0:degree
+        legendre[:, :, n + 1] .*= sqrt(2n + 1)
+    end
+    Psi = ones(N, size(multi_indices, 1))
+    for k in axes(multi_indices, 1), i in 1:d
+        a = multi_indices[k, i]
+        a > 0 && (Psi[:, k] .*= @view legendre[:, i, a + 1])
+    end
+    return Psi
+end
+
+"""
+First- and total-order Sobol indices from the coefficients of an orthonormal PCE. The
+variance of the expansion is the sum of the squared non-constant coefficients.
+"""
+function pce_sobol_indices(coefficients::AbstractVector, multi_indices::AbstractMatrix{<:Integer})
+    active = multi_indices .> 0
+    only = active .& (sum(active; dims = 2) .== 1)
+    squared = coefficients .^ 2
+    variance = sum(squared[vec(any(active; dims = 2))])
+    if !(variance > eps(Float64) * max(1.0, coefficients[1]^2))
+        d = size(multi_indices, 2)
+        return fill(NaN, d), fill(NaN, d)
+    end
+    return vec(squared' * only) ./ variance, vec(squared' * active) ./ variance
+end
+
+"""
+Least-squares fit of the PCE coefficients. Returns the coefficients, the leave-one-out
+coefficient of determination `Q² = 1 - mean(loo_residual²) / var(y)`, the QR factorisation
+of `Psi` and the residuals scaled by `1 / sqrt(1 - leverage)`, which have the variance of
+the errors.
+"""
+function fit_pce(Psi::AbstractMatrix, y::AbstractVector)
+    n, P = size(Psi)
+    F = LinearAlgebra.qr(Psi, LinearAlgebra.ColumnNorm())
+    coefficients = F \ y
+    Q = F.Q * Matrix{Float64}(LinearAlgebra.I, n, P)
+    leverage = min.(vec(sum(abs2, Q; dims = 2)), 1 - sqrt(eps(Float64)))
+    residual = y .- Psi * coefficients
+    q2 = 1 - mean(abs2, residual ./ (1 .- leverage)) / var(y)
+    return coefficients, q2, F, residual ./ sqrt.(1 .- leverage)
+end
+
+"""
+    estimate_pce_sobol_indices(U, Y; degree, bootstrap = 0, confidence = 0.95, rng)
+
+Estimate first- and total-order Sobol indices by fitting a PCE of total degree `degree` to
+quantity values `Y` (one row per point of the unit cube `U`, one column per quantity).
+Points with a non-finite value are dropped per quantity.
+
+The confidence intervals are computed with a residual bootstrap: the PCE is refitted to the
+fitted values plus residuals resampled with replacement. Resampling the points instead
+leaves only about 63% distinct points per resample, which overfits PCEs with `N ≈ 2P` and
+biases the intervals of small indices upwards.
+"""
+function estimate_pce_sobol_indices(
+        U::AbstractMatrix, Y::AbstractMatrix;
+        degree::Integer, bootstrap::Integer = 0, confidence = 0.95, rng = Random.default_rng(),
+    )
+    size(U, 1) == size(Y, 1) || throw(DimensionMismatch("U and Y must have the same number of rows."))
+    d = size(U, 2)
+    q = size(Y, 2)
+    multi_indices = total_degree_multi_indices(d, degree)
+    P = size(multi_indices, 1)
+    Psi = pce_design_matrix(U, multi_indices)
+    first_order = fill(NaN, d, q)
+    total_order = fill(NaN, d, q)
+    coefficients = fill(NaN, P, q)
+    q2 = fill(NaN, q)
+    ci_first = bootstrap > 0 ? (fill(NaN, d, q), fill(NaN, d, q)) : nothing
+    ci_total = bootstrap > 0 ? (fill(NaN, d, q), fill(NaN, d, q)) : nothing
+    n_valid = zeros(Int, q)
+    alpha = (1 - confidence) / 2
+
+    for k in 1:q
+        valid = isfinite.(@view Y[:, k])
+        n = n_valid[k] = count(valid)
+        n > P || continue
+        Psi_k, y = Psi[valid, :], Y[valid, k]
+        var(y) <= eps(Float64) * max(1.0, mean(abs.(y)))^2 && continue
+        c, q2[k], F, scaled_residual = fit_pce(Psi_k, y)
+        coefficients[:, k] = c
+        first_order[:, k], total_order[:, k] = pce_sobol_indices(c, multi_indices)
+        if bootstrap > 0
+            boot_first = Matrix{Float64}(undef, bootstrap, d)
+            boot_total = Matrix{Float64}(undef, bootstrap, d)
+            fitted = Psi_k * c
+            centred_residual = scaled_residual .- mean(scaled_residual)
+            for b in 1:bootstrap
+                y_boot = fitted .+ centred_residual[rand(rng, 1:n, n)]
+                boot_first[b, :], boot_total[b, :] = pce_sobol_indices(F \ y_boot, multi_indices)
+            end
+            for i in 1:d
+                for (ci, boot) in ((ci_first, boot_first), (ci_total, boot_total))
+                    samples = filter(isfinite, @view boot[:, i])
+                    isempty(samples) && continue
+                    ci[1][i, k] = quantile(samples, alpha)
+                    ci[2][i, k] = quantile(samples, 1 - alpha)
+                end
+            end
+        end
+    end
+    pce = (; degree = Int(degree), multi_indices, coefficients, q2)
+    return (; first_order, total_order, first_order_ci = ci_first, total_order_ci = ci_total, n_valid, pce)
+end
+
 ########################
 # Solve                #
 ########################
@@ -463,37 +632,53 @@ function evaluate_sobol_point(model, sim, solver_settings, parameter_names, valu
 end
 
 """
-    solve(sa::SobolSensitivity; N = 64, kwargs...) -> SobolResult
+    solve(sa::SobolSensitivity; method = :saltelli, N, kwargs...) -> SobolResult
 
 Compute first- and total-order Sobol indices of the quantities of `sa` with respect to its
-free parameters, using the Saltelli sampling scheme. The parameters are sampled
-independently and uniformly between their bounds, in `log10` space for `:log` scaling.
-This requires `N * (d + 2)` simulations for `d` parameters. The result is also stored in
-`sa.result`.
+free parameters. The parameters are sampled independently and uniformly between their
+bounds, in `log10` space for `:log` scaling. The result is also stored in `sa.result`.
+
+Two methods are available:
+- `:saltelli` (default): Monte Carlo estimators on the Saltelli sampling scheme. This
+  requires `N * (d + 2)` simulations for `d` parameters and makes no assumption on the
+  quantities.
+- `:pce`: Fit a polynomial chaos expansion (PCE) of total degree `degree` to `N`
+  simulations on a Latin hypercube design, and compute the indices analytically from its
+  coefficients. This needs far fewer simulations for smooth quantities. The leave-one-out
+  `Q²` of the fit, in `result.pce.q2`, measures its accuracy.
 
 # Keyword Arguments
-- `N = 64`: Number of base samples. Use a power of two with a quasi-random `sampler`.
+- `method = :saltelli`: `:saltelli` or `:pce`.
+- `N`: For `:saltelli`, the number of base samples (default 64); use a power of two with
+  a quasi-random `sampler`. For `:pce`, the number of simulations (default twice the
+  number of basis polynomials, `binomial(d + degree, degree)`), which must exceed the
+  number of basis polynomials.
+- `degree = 3`: Total degree of the PCE (`:pce` only).
 - `solver_settings`: Solver settings for every simulation.
 - `bootstrap = 100`, `confidence = 0.95`: Number of bootstrap resamples and the level of
   the confidence intervals. Set `bootstrap = 0` to skip the intervals.
 - `rng = Random.default_rng()`: Random number generator for sampling and bootstrapping.
 - `sampler = nothing`: Optional function `(N, d, rng) -> (A, B)` that returns two
   independent `N × d` matrices in the unit cube, for example from a Sobol sequence. By
-  default, `A` and `B` are uniform random samples.
+  default, `A` and `B` are uniform random samples. For `:pce`, only `A` is used, and the
+  default is a Latin hypercube sample.
 - `parallel = Threads.nthreads() > 1`: Run the simulations on all Julia threads.
 - `info_level = 0`: Print progress when `info_level >= 0`.
 
-Simulations that fail return `NaN` for every quantity. Their base samples are dropped from
-the estimators, see `SobolResult`.
+Simulations that fail return `NaN` for every quantity. They are dropped from the
+estimators, see `SobolResult`.
 
 # Example
 ```julia
 result = solve(sa; N = 128)
+result_pce = solve(sa; method = :pce, degree = 3)
 ```
 """
 function solve(
         sa::SobolSensitivity;
-        N::Integer = 64,
+        method::Symbol = :saltelli,
+        N::Union{Nothing, Integer} = nothing,
+        degree::Integer = 3,
         solver_settings = get_default_solver_settings(sa.sim.model),
         bootstrap::Integer = 100,
         confidence = 0.95,
@@ -502,7 +687,7 @@ function solve(
         parallel::Bool = Threads.nthreads() > 1,
         info_level::Integer = 0,
     )
-    N >= 2 || throw(ArgumentError("N must be at least 2."))
+    method in (:saltelli, :pce) || throw(ArgumentError("Unknown method $method. Use :saltelli or :pce."))
     isempty(sa.parameter_targets) && throw(ArgumentError("No free parameters set, unable to compute sensitivities."))
     isempty(sa.quantities) && throw(ArgumentError("No quantities set, unable to compute sensitivities."))
     sim = sa.sim
@@ -512,59 +697,59 @@ function solve(
     quantity_names = sort!(collect(keys(sa.quantities)))
     quantity_functions = [sa.quantities[name] for name in quantity_names]
 
-    A, B = isnothing(sampler) ? (rand(rng, N, d), rand(rng, N, d)) : sampler(N, d, rng)
-    size(A) == (N, d) && size(B) == (N, d) ||
-        throw(DimensionMismatch("The sampler must return two $N × $d matrices."))
-    all(x -> 0 <= x <= 1, A) && all(x -> 0 <= x <= 1, B) ||
-        throw(ArgumentError("The sampler must return values in the unit interval."))
-    unit_points = saltelli_points(A, B)
+    if method == :saltelli
+        N = something(N, 64)
+        N >= 2 || throw(ArgumentError("N must be at least 2."))
+        A, B = isnothing(sampler) ? (rand(rng, N, d), rand(rng, N, d)) : sampler(N, d, rng)
+        size(A) == (N, d) && size(B) == (N, d) ||
+            throw(DimensionMismatch("The sampler must return two $N × $d matrices."))
+        all(x -> 0 <= x <= 1, A) && all(x -> 0 <= x <= 1, B) ||
+            throw(ArgumentError("The sampler must return values in the unit interval."))
+        unit_points = saltelli_points(A, B)
+    else
+        degree >= 1 || throw(ArgumentError("The PCE degree must be at least 1."))
+        n_terms = binomial(d + degree, degree)
+        N = something(N, 2 * n_terms)
+        N > n_terms || throw(ArgumentError("N = $N must exceed the number of PCE basis polynomials, $n_terms."))
+        unit_points = isnothing(sampler) ? latin_hypercube(rng, N, d) : first(sampler(N, d, rng))
+        size(unit_points) == (N, d) || throw(DimensionMismatch("The sampler must return $N × $d matrices."))
+        all(x -> 0 <= x <= 1, unit_points) ||
+            throw(ArgumentError("The sampler must return values in the unit interval."))
+    end
     npoints = size(unit_points, 1)
     samples = Matrix{Float64}(undef, npoints, d)
     for j in 1:npoints
         samples[j, :] = unit_to_physical(targets, unit_points[j, :])
     end
 
-    quantity_values = fill(NaN, npoints, length(quantity_functions))
-    completed = Threads.Atomic{Int}(0)
-    report_every = max(1, npoints ÷ 20)
     if info_level >= 0
-        jutul_message("Sensitivity", "Starting Sobol analysis of $d parameters with $npoints simulations.", color = :green)
+        jutul_message("Sensitivity", "Starting Sobol analysis ($method) of $d parameters with $npoints simulations.", color = :green)
     end
-
-    function run_chunk(indices, chunk_model)
-        for j in indices
-            quantity_values[j, :] = evaluate_sobol_point(
-                chunk_model, sim, solver_settings, parameter_names, samples[j, :], quantity_functions,
-            )
-            n = Threads.atomic_add!(completed, 1) + 1
-            if info_level >= 0 && (n % report_every == 0 || n == npoints)
-                println("Sobol analysis: $n / $npoints simulations completed.")
-            end
-        end
-        return nothing
-    end
-
-    t_sa = @elapsed if parallel && Threads.nthreads() > 1
-        chunks = Iterators.partition(1:npoints, cld(npoints, Threads.nthreads()))
-        # Each task sets up its own model, since simulation setup updates the model.
-        tasks = [Threads.@spawn run_chunk(chunk, deepcopy(sim.model)) for chunk in chunks]
-        foreach(fetch, tasks)
-    else
-        run_chunk(1:npoints, deepcopy(sim.model))
-    end
+    t_sa = @elapsed quantity_values = run_sobol_simulations(
+        sim, solver_settings, parameter_names, samples, quantity_functions; parallel, info_level,
+    )
     if info_level >= 0
         jutul_message("Sensitivity", "Sobol analysis finished in $t_sa seconds.", color = :green)
     end
 
     n_failed = count(j -> !all(isfinite, @view quantity_values[j, :]), 1:npoints)
     if n_failed > 0
-        @warn "$n_failed of $npoints simulations failed or returned non-finite quantities. Their base samples are dropped."
+        dropped = method == :saltelli ? "Their base samples are dropped." : "They are dropped from the fit."
+        @warn "$n_failed of $npoints simulations failed or returned non-finite quantities. $dropped"
     end
 
-    estimates = estimate_sobol_indices(quantity_values, N, d; bootstrap, confidence, rng)
+    if method == :saltelli
+        estimates = estimate_sobol_indices(quantity_values, N, d; bootstrap, confidence, rng)
+        pce = nothing
+    else
+        estimates = estimate_pce_sobol_indices(unit_points, quantity_values; degree, bootstrap, confidence, rng)
+        pce = estimates.pce
+    end
     for (k, name) in enumerate(quantity_names)
         if all(isnan, @view estimates.first_order[:, k])
             @warn "Sobol indices of $name could not be estimated: too few valid samples or zero variance."
+        elseif !isnothing(pce) && pce.q2[k] < 0.9
+            @warn "The PCE of $name has a low leave-one-out Q² = $(round(pce.q2[k]; digits = 3)). Increase N or the degree."
         end
     end
 
@@ -579,8 +764,44 @@ function solve(
         quantity_values,
         N,
         estimates.n_valid,
+        method,
+        pce,
     )
     return sa.result
+end
+
+function run_sobol_simulations(sim, solver_settings, parameter_names, samples, quantity_functions; parallel, info_level)
+    npoints = size(samples, 1)
+    quantity_values = fill(NaN, npoints, length(quantity_functions))
+    completed = Threads.Atomic{Int}(0)
+    report_every = max(1, npoints ÷ 20)
+
+    function run_chunk(indices, chunk_model)
+        for j in indices
+            quantity_values[j, :] = evaluate_sobol_point(
+                chunk_model, sim, solver_settings, parameter_names, samples[j, :], quantity_functions,
+            )
+            n = Threads.atomic_add!(completed, 1) + 1
+            if info_level >= 0 && (n % report_every == 0 || n == npoints)
+                println("Sobol analysis: $n / $npoints simulations completed.")
+            end
+        end
+        return nothing
+    end
+
+    if parallel && Threads.nthreads() > 1
+        chunks = Iterators.partition(1:npoints, cld(npoints, Threads.nthreads()))
+        # Jutul threads its assembly with Polyester, which is not safe to call from
+        # several tasks at once, so the simulations run serially within each task.
+        Jutul.disable_polyester_threads() do
+            # Each task sets up its own model, since simulation setup updates the model.
+            tasks = [Threads.@spawn run_chunk(chunk, deepcopy(sim.model)) for chunk in chunks]
+            foreach(fetch, tasks)
+        end
+    else
+        run_chunk(1:npoints, deepcopy(sim.model))
+    end
+    return quantity_values
 end
 
 """
@@ -590,6 +811,17 @@ Print a table of the first- and total-order indices per quantity, with the boots
 confidence intervals when available.
 """
 print_sobol_indices(result::SobolResult) = print_sobol_indices(stdout, result)
+
+function sobol_table_title(result::SobolResult, k::Integer)
+    quantity = result.quantity_names[k]
+    if result.method == :pce
+        q2 = result.pce.q2[k]
+        q2_text = isfinite(q2) ? string(round(q2; digits = 4)) : "NaN"
+        return "Sobol indices of $quantity (PCE degree $(result.pce.degree), " *
+            "$(result.n_valid[k]) of $(result.N) samples, Q² = $q2_text)"
+    end
+    return "Sobol indices of $quantity (Saltelli, $(result.n_valid[k]) of $(result.N) base samples)"
+end
 
 function print_sobol_indices(io::IO, result::SobolResult)
     has_ci = !isnothing(result.first_order_ci)
@@ -615,7 +847,7 @@ function print_sobol_indices(io::IO, result::SobolResult)
         Jutul.PrettyTables.pretty_table(
             io, table;
             column_labels = header,
-            title = "Sobol indices of $quantity ($(result.n_valid[k]) of $(result.N) base samples)",
+            title = sobol_table_title(result, k),
             alignment = :l,
             fit_table_in_display_horizontally = false,
             fit_table_in_display_vertically = false,

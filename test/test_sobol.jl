@@ -36,6 +36,53 @@ using Test
     @test BattMo.estimate_sobol_indices(Y, N, d).n_valid == [N - 1]
 end
 
+@testset "Sobol indices from PCE" begin
+    rng = Random.Xoshiro(1234)
+
+    # The basis is orthonormal for the uniform distribution on the unit cube.
+    multi_indices = BattMo.total_degree_multi_indices(3, 3)
+    @test size(multi_indices) == (binomial(6, 3), 3)
+    @test multi_indices[1, :] == [0, 0, 0]
+    U = rand(rng, 100_000, 3)
+    Psi = BattMo.pce_design_matrix(U, multi_indices)
+    @test maximum(abs, Psi' * Psi ./ size(U, 1) - BattMo.LinearAlgebra.I) < 0.03
+
+    # Every column of a Latin hypercube sample has one point in each interval.
+    U = BattMo.latin_hypercube(rng, 10, 3)
+    @test all(sort(floor.(Int, 10 .* U[:, i])) == 0:9 for i in 1:3)
+
+    # A polynomial within the basis is recovered exactly.
+    f(u) = (u[1] - 0.5) + 2 * (u[2] - 0.5) + 3 * (u[1] - 0.5) * (u[3] - 0.5)
+    U = BattMo.latin_hypercube(rng, 30, 3)
+    Y = reshape([f(U[j, :]) for j in 1:30], :, 1)
+    estimates = BattMo.estimate_pce_sobol_indices(U, Y; degree = 2)
+    @test estimates.first_order[:, 1] ≈ [12, 48, 0] ./ 69 atol = 1.0e-10
+    @test estimates.total_order[:, 1] ≈ [21, 48, 9] ./ 69 atol = 1.0e-10
+    @test estimates.pce.q2[1] ≈ 1.0
+
+    # Ishigami function on [-π, π]^3, which is not a polynomial.
+    a, b = 7.0, 0.1
+    ishigami(x) = sin(x[1]) + a * sin(x[2])^2 + b * x[3]^4 * sin(x[1])
+    V1 = 0.5 * (1 + b * π^4 / 5)^2
+    V2 = a^2 / 8
+    V13 = b^2 * π^8 * (1 / 18 - 1 / 50)
+    V = V1 + V2 + V13
+    N = 1000
+    U = BattMo.latin_hypercube(rng, N, 3)
+    Y = reshape([ishigami(-π .+ 2π .* U[j, :]) for j in 1:N], :, 1)
+    estimates = BattMo.estimate_pce_sobol_indices(U, Y; degree = 8, bootstrap = 20, rng)
+    @test isapprox(estimates.first_order[:, 1], [V1, V2, 0.0] ./ V; atol = 0.01)
+    @test isapprox(estimates.total_order[:, 1], [V1 + V13, V2, V13] ./ V; atol = 0.01)
+    @test estimates.pce.q2[1] > 0.99
+    for (index, (lower, upper)) in ((estimates.first_order, estimates.first_order_ci), (estimates.total_order, estimates.total_order_ci))
+        @test all(lower[:, 1] .<= index[:, 1] .<= upper[:, 1])
+    end
+
+    # A failed evaluation only drops its own point.
+    Y[5, 1] = NaN
+    @test BattMo.estimate_pce_sobol_indices(U, Y; degree = 8).n_valid == [N - 1]
+end
+
 @testset "Sobol sensitivity parameters and indices" begin
     cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
     cycling_protocol = load_cycling_protocol(; from_default_set = "cc_discharge")
@@ -84,6 +131,22 @@ end
     print_sobol_indices(io, result)
     @test occursin("Sobol indices of Heat", String(take!(io)))
     print_sensitivity_overview(sa)
+    @test result.method == :saltelli && isnothing(result.pce)
+
+    result_pce = solve(sa; method = :pce, degree = 2, bootstrap = 20, info_level = -1, rng = Random.Xoshiro(1))
+    n_terms = binomial(2 + 2, 2)
+    @test result_pce.method == :pce
+    @test result_pce.N == 2 * n_terms
+    @test size(result_pce.samples) == (2 * n_terms, 2)
+    @test result_pce.n_valid == fill(2 * n_terms, 3)
+    @test size(result_pce.pce.coefficients) == (n_terms, 3)
+    @test all(result_pce.pce.q2 .> 0.9)
+    @test all(isfinite, result_pce.total_order)
+    io = IOBuffer()
+    print_sobol_indices(io, result_pce)
+    @test occursin("PCE degree 2", String(take!(io)))
+    @test_throws ArgumentError solve(sa; method = :pce, N = n_terms, info_level = -1)
+    @test_throws ArgumentError solve(sa; method = :kriging, info_level = -1)
 
     # The original simulation is unchanged.
     @test sim.cell_parameters["Separator"]["Thickness"] == cell_parameters["Separator"]["Thickness"]

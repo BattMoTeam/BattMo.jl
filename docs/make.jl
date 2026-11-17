@@ -211,6 +211,9 @@ function build_battmo_docs(
                     "BPX parameter sets" => "manuals/user_guide/bpx.md",
                     "Functions and types" => "manuals/user_guide/public_api.md",
                 ],
+                "Parameter studies" => [
+                    "Sobol sensitivity analysis" => "manuals/user_guide/sobol_sensitivity.md",
+                ],
                 "Tutorials" => tutorials_markdown,
             ],
             "Examples" => [
