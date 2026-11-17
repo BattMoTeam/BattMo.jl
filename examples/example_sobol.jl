@@ -294,15 +294,15 @@ fig_scatter = Figure(size = (220 * d, 190 * q))
 columns = reverse(order)
 axes = [
     Axis(
-            fig_scatter[k, j];
-            xscale = is_log[i] ? log10 : identity,
-            xticks = bound_ticks(targets[i]),
-            limits = ((targets[i].vmin, targets[i].vmax), nothing),
-            xlabel = labels[i],
-            ylabel = quantity_label(quantity),
-            xgridcolor = (:black, 0.08),
-            ygridcolor = (:black, 0.08),
-        )
+        fig_scatter[k, j];
+        xscale = is_log[i] ? log10 : identity,
+        xticks = bound_ticks(targets[i]),
+        limits = ((targets[i].vmin, targets[i].vmax), nothing),
+        xlabel = labels[i],
+        ylabel = quantity_label(quantity),
+        xgridcolor = (:black, 0.08),
+        ygridcolor = (:black, 0.08),
+    )
         for (k, quantity) in enumerate(result.quantity_names), (j, i) in enumerate(columns)
 ]
 for (k, quantity) in enumerate(result.quantity_names), (j, i) in enumerate(columns)
