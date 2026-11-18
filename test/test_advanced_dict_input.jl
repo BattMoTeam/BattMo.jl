@@ -35,7 +35,7 @@ geometries = [
     for geometry in geometries
         @testset "$geometry" begin
             inputparams_geometry = getinput(geometry)
-            inputparams_material = getinput("lithium_ion_battery_nmc_graphite.json")
+            inputparams_material = getinput("lithium_ion_battery_lco_graphite.json")
             inputparams_material["use_thermal"] = false
             inputparams_control = getinput("cc_discharge_control.json")
 

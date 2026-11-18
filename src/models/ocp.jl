@@ -89,7 +89,7 @@ function computeOCP_NMC811_chen_2020(c, T, refT, cmax)
 end
 
 
-## Define OCP and entropy change (dUdT) for NMC111 using polynomials
+## Define OCP and entropy change (dUdT) for LCO using polynomials
 
 const coeff1_refOCP_lco = Polynomial(
     [
@@ -123,7 +123,7 @@ const coeff2_refOCP_lco = Polynomial(
     ]
 )
 
-const coeff1_dUdT_nmc111 = Polynomial(
+const coeff1_dUdT_lco = Polynomial(
     [
         0.199521039,
         -0.928373822,
@@ -132,7 +132,7 @@ const coeff1_dUdT_nmc111 = Polynomial(
     ]
 );
 
-const coeff2_dUdT_nmc111 = Polynomial(
+const coeff2_dUdT_lco = Polynomial(
     [
         1,
         -5.661479886999997,
@@ -158,20 +158,11 @@ function computeOCP_LCO(c, T, refT, cmax)
 
 end
 
-function computeOCP_NMC111(c, T, refT, cmax)
 
-    # From Ramadass et al. 2004 (10.1149/1.1634273), same rational form as MATLAB BattMo.
+function computeEntropyChange_LCO_Torchio(c, cmax)
+    # From LIONSIMBA, Torchio et al. 2016 (10.1149/2.0291607jes).
     theta = c / cmax
-    return coeff1_refOCP_lco(theta) / coeff2_refOCP_lco(theta)
-
-end
-
-
-function computeEntropyChange_NMC111(c, cmax)
-    theta = c / cmax
-
-    """Compute Entropy Change for GenericNMC111 as function of temperature and concentration"""
-    return -1.0e-3 * coeff1_dUdT_nmc111(theta) / coeff2_dUdT_nmc111(theta)
+    return -1.0e-3 * coeff1_dUdT_lco(theta) / coeff2_dUdT_lco(theta)
 
 end
 

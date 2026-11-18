@@ -58,7 +58,7 @@ end
 ###################################################
 # Run electrochemical simulation in Julia
 
-fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/lithium_ion_battery_nmc_graphite.json")
+fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/lithium_ion_battery_lco_graphite.json")
 inputparams_material = load_advanced_dict_input(fn)
 
 fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")

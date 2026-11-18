@@ -25,7 +25,7 @@ end
 # load material parameters #
 ############################
 
-inputparams_material = getinput("lithium_ion_battery_nmc_graphite.json")
+inputparams_material = getinput("lithium_ion_battery_lco_graphite.json")
 
 ###########################
 # load control parameters #
