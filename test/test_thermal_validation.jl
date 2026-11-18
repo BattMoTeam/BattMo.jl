@@ -28,7 +28,7 @@ function get_thermal_validation_case()
     end
 
     # Julia simulation setup (same scenario as examples/Experimental/thermal_compare_to_matlab.jl)
-    fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/lithium_ion_battery_nmc_graphite.json")
+    fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/lithium_ion_battery_lco_graphite.json")
     inputparams_material = load_advanced_dict_input(fn)
 
     fn = string(dirname(pathof(BattMo)), "/../test/data/jsonfiles/3d_demo_geometry.json")
