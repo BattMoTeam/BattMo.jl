@@ -103,13 +103,15 @@ function sequential_parameter_catalog(shortnames = nothing)
 end
 
 """
+    print_sequential_parameter_catalog()
     print_sequential_parameter_catalog(catalog)
 
 Print the bounds, scaling, and cell-parameter paths of the catalog entries, sorted by
 shortname. The supplied catalog determines the entries and their customized bounds
-and scaling.
+and scaling. Without an argument, print the full default catalog of
+`sequential_parameter_catalog()`.
 """
-function print_sequential_parameter_catalog(catalog::AbstractDict)
+function print_sequential_parameter_catalog(catalog::AbstractDict = sequential_parameter_catalog())
     header = ["Shortname", "Lower bound", "Upper bound", "Scaling", "Cell parameter"]
     shortnames = sort!(collect(keys(catalog)))
     table = Matrix{Any}(undef, length(shortnames), length(header))
