@@ -370,16 +370,17 @@ function compute_cell_theoretical_capacity(params::CellParameters)
 end
 
 """
-	compute_equilibrium_energy(params::Dict; Npts=1000)
+	compute_equilibrium_energy(params::CellParameters; Npts=1000)
 
-Compute the average open-circuit voltage and equilibrium energy [Wh]
-for a Li-ion cell parameter set (e.g., Chen2020) using trapezoidal integration.
+Compute the equilibrium energy [Wh] of a cell parameter set (e.g., Chen2020): the
+theoretical capacity times the open-circuit cell voltage averaged over SOC 0 → 1,
+integrated with the trapezoidal rule at the reference temperature 298.15 K.
 
 Arguments:
-- params : Dict containing 'PositiveElectrode', 'NegativeElectrode', and 'Cell' fields
+- params : CellParameters containing 'PositiveElectrode', 'NegativeElectrode', and 'Cell' fields
 - Npts   : number of SOC points (default 1000)
 
-Returns: (Vavg, E_Wh)
+Returns: E_Wh
 """
 function compute_equilibrium_energy(params::CellParameters; Npts::Int = 1000)
     # === Retrieve cell info ===
@@ -411,7 +412,9 @@ function compute_equilibrium_energy(params::CellParameters; Npts::Int = 1000)
     # === Cell OCV function ===
     Tref = 298.15
 
-    Vcell(soc) = Up(θp(soc) * c_p_max, Tref, c_p_max, Tref) - Un(θn(soc) * c_n_max, Tref, c_n_max, Tref)
+    # OCP functions built from strings have the signature f(c, T, refT, cmax),
+    # see setup_ocp_evaluation_expression_from_string.
+    Vcell(soc) = Up(θp(soc) * c_p_max, Tref, Tref, c_p_max) - Un(θn(soc) * c_n_max, Tref, Tref, c_n_max)
 
     # === Numerical integration (trapezoidal rule) ===
     socs = range(0.0, 1.0, length = Npts)
