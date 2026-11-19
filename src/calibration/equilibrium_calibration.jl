@@ -301,7 +301,7 @@ function solve(
     x = u_to_x(u)
     eqc.Xopt = copy(x)
     eqc.history = history
-    jutul_message("Calibration", "Equilibrium calibration finished with (unweighted) RMSE $value V.", color = :green)
+    jutul_message("Calibration", "Equilibrium calibration finished with (unweighted) RMSE $value Vs^0.5.", color = :green)
     return x
 end
 
