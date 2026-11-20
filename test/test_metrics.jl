@@ -83,3 +83,38 @@ end
         output; metrics = ["DischargeCapacity", "UnknownMetric"],
     )
 end
+
+@testset "P2D output states are padded to the electrolyte grid" begin
+    # Electrode fields are placed in the electrolyte cells and padded with NaN outside their
+    # electrode; particle fields have the radial position as last dimension.
+    protocol = CyclingProtocol(
+        Dict(
+            "Protocol" => "InputCurrentSeries",
+            "Times" => [0.0, 10.0, 20.0],
+            "Currents" => [2.0, 2.0, 2.0],
+            "LowerVoltageLimit" => 2.4,
+            "UpperVoltageLimit" => 4.3,
+            "InitialStateOfCharge" => 0.5,
+        )
+    )
+    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    model_settings = load_model_settings(; from_default_set = "p2d")
+    output = solve(Simulation(LithiumIonBattery(; model_settings), cell_parameters, protocol); info_level = -1)
+    first_state = first(output.jutul_output.states)
+    last_state = last(output.jutul_output.states)
+    nt = length(output.jutul_output.states)
+    electrolyte_cells = length(first_state[:Electrolyte][:ElectrolyteConcentration])
+    negative_cells = 1:length(first_state[:NegativeElectrodeActiveMaterial][:SurfaceConcentration])
+    positive_cells = (electrolyte_cells - length(first_state[:PositiveElectrodeActiveMaterial][:SurfaceConcentration]) + 1):electrolyte_cells
+
+    surface = output.states["NegativeElectrode"]["ActiveMaterial"]["SurfaceConcentration"]
+    @test size(surface) == (nt, electrolyte_cells)
+    @test all(isnan, surface[:, (last(negative_cells) + 1):end])
+    @test surface[end, negative_cells] == last_state[:NegativeElectrodeActiveMaterial][:SurfaceConcentration]
+
+    particles = output.states["PositiveElectrode"]["ActiveMaterial"]["ParticleConcentration"]
+    radial_cells = size(first_state[:PositiveElectrodeActiveMaterial][:ParticleConcentration], 1)
+    @test size(particles) == (nt, electrolyte_cells, radial_cells)
+    @test all(isnan, particles[:, 1:(first(positive_cells) - 1), :])
+    @test particles[end, positive_cells, :] == transpose(last_state[:PositiveElectrodeActiveMaterial][:ParticleConcentration])
+end
