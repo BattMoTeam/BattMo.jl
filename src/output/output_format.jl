@@ -1074,6 +1074,9 @@ function get_padded_states(jutul_output::NamedTuple)
     for (i, state) in enumerate(states)
         padded_state = Dict{Symbol, Any}()
         for model_key in model_keys
+            # States reduced by a Jutul output_function can lack submodels; as in
+            # extract_spatial_data, their quantities are then not output.
+            haskey(state, model_key) || continue
             nc = ncells[model_key]
             padded_model_state = Dict{Symbol, Any}()
             for (k, v) in state[model_key]
