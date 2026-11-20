@@ -1203,6 +1203,18 @@ function Jutul.update_extra_state_fields!(storage, model::SimulationModel{Curren
 end
 
 """
+The input current target is the input averaged over the step, so it is known before the first
+linearization. Jutul updates extra state fields only from the second iteration of a step on,
+which would leave the previous step's target in the first linearization and cost one Newton
+iteration per step. Other policies keep their update: switching rules such as the CCCV current
+rate (I - I0) / dt are meaningless before the first Newton update.
+"""
+function Jutul.update_before_step!(storage, system::CurrentAndVoltageSystem{<:InputCurrentPolicy}, model, dt, forces; kwarg...)
+    update_controller!(storage.state, storage.state0, system.policy, dt)
+    return storage
+end
+
+"""
 We need to add the specific treatment of the controller variables
 """
 function Jutul.reset_state_to_previous_state!(

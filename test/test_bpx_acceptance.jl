@@ -274,6 +274,12 @@ without_metadata(cell_parameters) = Dict(k => v for (k, v) in cell_parameters.al
         data = set_bpx_temperature!(read_bpx_json(bpx_fixture("nmc_pouch")), T)
         reference_temperature = data["Parameterisation"]["Cell"]["Reference temperature [K]"]
         @test T != reference_temperature
+        # The fixture gives the activation energies as integers and halving them gives floats.
+        # Both files use floats, since the number type is part of the model type and the
+        # second simulation would otherwise compile the model again.
+        for electrode in ("Negative electrode", "Positive electrode"), key in ("Reaction rate constant activation energy [J.mol-1]", "Diffusivity activation energy [J.mol-1]")
+            data["Parameterisation"][electrode][key] = float(data["Parameterisation"][electrode][key])
+        end
 
         # The same rate constants and diffusivities at T, written with half the activation energies
         halved = deepcopy(data)
@@ -317,14 +323,16 @@ without_metadata(cell_parameters) = Dict(k => v for (k, v) in cell_parameters.al
 
         # The same OCPs at T, with the entropic term written into the OCP functions
         folded = deepcopy(data)
-        # The OCPs without their temperature dependence
-        plain = deepcopy(data)
         for electrode in ("Negative electrode", "Positive electrode")
             section = folded["Parameterisation"][electrode]
             section["OCP [V]"] = "($(section["OCP [V]"])) + ($(T - reference_temperature)) * ($(section["Entropic change coefficient [V.K-1]"]))"
             section["Entropic change coefficient [V.K-1]"] = 0.0
-            plain["Parameterisation"][electrode]["Entropic change coefficient [V.K-1]"] = 0.0
         end
+        # Without the positive electrode term. Only a number changes, so this simulation
+        # reuses the model compiled for the given file; changing the negative electrode
+        # coefficient, a function string, would compile a new model.
+        without_positive_term = deepcopy(data)
+        without_positive_term["Parameterisation"]["Positive electrode"]["Entropic change coefficient [V.K-1]"] = 0.0
 
         # The OCP with the entropic term folded in stays at T, while the sequential thermal
         # model, which BattMo only supports in P4D, applies the term at the simulated
@@ -334,8 +342,8 @@ without_metadata(cell_parameters) = Dict(k => v for (k, v) in cell_parameters.al
         discharge(data) = bpx_discharge(write_bpx_json(data); drate = 1.0, model_settings, simulation_settings)
         given = discharge(data)
         with_folded_term = discharge(folded)
-        without_term = discharge(plain)
-        @test max_voltage_difference(with_folded_term, without_term) > 5.0e-3
+        without_term = discharge(without_positive_term)
+        @test max_voltage_difference(given, without_term) > 5.0e-3
         @test max_voltage_difference(given, with_folded_term) < 0.5e-3
     end
 
@@ -343,11 +351,13 @@ without_metadata(cell_parameters) = Dict(k => v for (k, v) in cell_parameters.al
         path = bpx_fixture("schmitt_2026", "v1")
         cell_parameters = quietly(() -> load_cell_parameters(; from_bpx_file_path = path))
         @test compute_cell_theoretical_capacity(cell_parameters) ≈ 1.0309 rtol = 1.0e-3
-        result = bpx_discharge(path; current = 1.0)
         # The output ends one time step before the voltage cut-off, so the discharge is
         # checked by its duration, against PyBaMM with the same file
         summary = BattMo.JSON.parsefile(joinpath(BPX_DATA_DIR, BPX_DATASETS["schmitt_2026"]["pybamm"]["summary"]))
         reference = only(c for c in summary["cases"] if c["variant"] == "original" && c["current_a"] == 1.0)
+        # At the resolution of the PyBaMM comparison below: the particle grid size is part
+        # of the model type, so both testsets then use the same compiled model
+        result = bpx_discharge(path; current = 1.0, simulation_settings = pybamm_comparison_settings(reference["end_time_s"]))
         @test result.time[end] ≈ reference["end_time_s"] rtol = 0.02
     end
 
