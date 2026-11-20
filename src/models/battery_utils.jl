@@ -190,9 +190,9 @@ end
 
 
 function Jutul.apply_boundary_conditions!(storage, parameters, model::BattMoModel)
-    equations_storage = storage.equations
-    equations = model.equations
-    for (eq, eq_s) in zip(values(equations), equations_storage)
+    # Typed equation definitions: the loop is unrolled, instead of dispatching at run time
+    # and copying the model to the heap for every equation at every linearization
+    Jutul.foreach_definition(storage.equation_definitions, storage.equations) do key, eq, eq_s
         apply_bc_to_equation!(storage, parameters, model, eq, eq_s)
     end
     return
@@ -200,42 +200,28 @@ end
 
 
 function apply_bc_to_equation!(storage, parameters, model::BattMoModel, eq::ConservationLaw{:Charge}, eq_s)
-
-    acc = get_diagonal_entries(eq, eq_s)
-    state = storage.state
-
-    return apply_boundary_potential!(acc, state, parameters, model, eq)
-
+    domain = model.domain
+    if Jutul.hasentity(domain, BoundaryDirichletFaces()) && count_active_entities(domain, BoundaryDirichletFaces()) > 0
+        acc = get_diagonal_entries(eq, eq_s)
+        data_domain = model.data_domain
+        add_boundary_potential_flux!(acc, storage.state, data_domain[:bcDirHalfTrans], data_domain[:bcDirCells], data_domain[:bcDirInds])
+    end
+    return
 end
 
 apply_bc_to_equation!(storage, parameters, model::BattMoModel, eq, eq_s) = nothing
 
-function apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw{:Charge})
-
-    return if Jutul.hasentity(model.domain, BoundaryDirichletFaces())
-
-        nc = count_active_entities(model.domain, BoundaryDirichletFaces())
-
-        if nc > 0
-
-            bcdirhalftrans = model.data_domain[:bcDirHalfTrans]
-            bcdircells = model.data_domain[:bcDirCells]
-            bcdirinds = model.data_domain[:bcDirInds]
-
-            ElectricPotential = state[:ElectricPotential]
-            BoundaryVoltage = state[:BoundaryVoltage]
-            conductivity = state[:ElectronicConductivity]
-
-            for (ht, c, i) in zip(bcdirhalftrans, bcdircells, bcdirinds)
-                @inbounds acc[c] += conductivity[c] * ht * (ElectricPotential[c] - value(BoundaryVoltage[i]))
-            end
-
-        end
-
+# Function barrier: neither the state nor the boundary data can be inferred from the storage
+# and the data domain, so the loop is compiled here for their concrete types.
+function add_boundary_potential_flux!(acc, state, half_transmissibilities, cells, boundary_indices)
+    potential = state.ElectricPotential
+    boundary_voltage = state.BoundaryVoltage
+    conductivity = state.ElectronicConductivity
+    for (half_transmissibility, cell, boundary_index) in zip(half_transmissibilities, cells, boundary_indices)
+        @inbounds acc[cell] += conductivity[cell] * half_transmissibility * (potential[cell] - value(boundary_voltage[boundary_index]))
     end
+    return acc
 end
-
-apply_boundary_potential!(acc, state, parameters, model::BattMoModel, eq::ConservationLaw) = nothing
 
 function setup_half_trans_faces(domain)
 

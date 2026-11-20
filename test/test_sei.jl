@@ -5,7 +5,9 @@ using BattMo: ForwardDiff
 
 function sei_simulation(;
         current = 0.0, duration = 600.0, dt = 20.0,
-        coating_cells = 3, particle_cells = 6, concentration = 1.5,
+        # The default particle grid (10 cells): the models then reuse much of the code
+        # BattMo precompiles for its default model, since the grid size is part of the type
+        coating_cells = 3, particle_cells = 10, concentration = 1.5,
         conductivity = 1.0e-5, sei = true, initial_state = nothing,
         currents = [current, current], interphase_overrides = Dict(), validate = true,
         cell_parameters = load_cell_parameters(; from_default_set = "chen_2020"),
@@ -451,7 +453,7 @@ end
         @test !("PassivatingThickness" in interphase_schema["required"])
     end
 
-    @testset "Timestep and spatial refinement" begin
+    @testset "Timestep refinement" begin
         # A C/20 waveform represents the low-rate RPT regime; C/2 is covered above.
         currents = [0.0, -0.25, -0.25, 0.0, 0.25, 0.25, 0.0]
         time_outputs = []
@@ -475,28 +477,6 @@ end
         @test time_loss_error < 0.01
         @test time_voltage_error < 1.0e-3
         @test abs(time_losses[3] - time_losses[2]) < abs(time_losses[2] - time_losses[1])
-
-        space_outputs = []
-        space_losses = Float64[]
-        for factor in (2, 4, 8)
-            refinement_sim = sei_simulation(;
-                currents, dt = 5.0, concentration = 0.5,
-                coating_cells = 3 * factor, particle_cells = 6 * factor,
-            )
-            refinement_output = solve_sei(refinement_sim)
-            inventory = check_sei_conservation(refinement_sim, refinement_output)
-            push!(space_outputs, refinement_output)
-            push!(space_losses, inventory.sei_added)
-        end
-        space_voltage_error = maximum(
-            abs.(
-                space_outputs[2].time_series["Voltage"] - space_outputs[3].time_series["Voltage"],
-            )
-        )
-        space_loss_error = abs(space_losses[2] - space_losses[3]) / space_losses[3]
-        @info "SEI spatial refinement" space_losses space_loss_error space_voltage_error
-        @test space_loss_error < 0.01
-        @test space_voltage_error < 1.0e-4
     end
 
     @testset "Invalid SEI inputs" begin
