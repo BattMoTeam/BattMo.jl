@@ -712,9 +712,8 @@ function get_output_states(
 
     # Initialize available quantities (consistent key type = String)
     if input["ModelSettings"]["ModelFramework"] == "P2D"
-        padded_states = get_padded_states(jutul_output)
         x = get_x_coords(jutul_output.multimodel)
-        output_data = extract_spatial_data(padded_states)
+        output_data = extract_spatial_data(jutul_output[:states]; layout = padded_cell_layout(jutul_output.multimodel))
         component_positions = get_component_positions_1d(grids)
 
         available_quantities = Dict{String, Any}(
@@ -894,7 +893,14 @@ function get_r_coords(input::FullSimulationInput)
 end
 
 
-function extract_spatial_data(states::Vector)
+"""
+    extract_spatial_data(states::Vector; layout = nothing)
+
+Spatially resolved output quantities as arrays with time as the first dimension. With a
+`layout` from `padded_cell_layout`, the fields of the 1D components are placed in the cells of a
+common grid and padded with NaN outside their component.
+"""
+function extract_spatial_data(states::Vector; layout = nothing)
     # Map from quantity names to symbol chains used to extract data
     var_map = Dict(
         "NegativeElectrodeActiveMaterialSurfaceConcentration" => [:NegativeElectrodeActiveMaterial, :SurfaceConcentration],
@@ -940,50 +946,15 @@ function extract_spatial_data(states::Vector)
 
     output_data = Dict{String, Any}()
 
-    for q in keys(var_map)
-
-        # Validate if the quantity exists in the known map
-        @assert haskey(var_map, q) "Quantity \"$q\" is not a valid or supported variable."
-
-        # Check if the variable actually exists in the first state
-        chain = var_map[q]
-        try
-            _ = foldl(getindex, chain; init = states[1])
-        catch
-            # Skip quantity if not available
+    for (q, chain) in var_map
+        if isnothing(layout)
+            data = stacked_state_values(states, chain)
+        else
+            data = padded_state_values(states, chain, layout)
+        end
+        # Skip quantities that are not available
+        if isnothing(data)
             continue
-        end
-
-
-        # Extract one sample to determine shape
-
-        sample = foldl(getindex, chain; init = states[1])
-        nt = length(states)
-        sample_dims = size(sample)
-        nd = ndims(sample)
-
-        # Preallocate array with shape (nt, ...)
-        data = Array{eltype(sample)}(undef, (nt, sample_dims...))
-
-        # Fill the array using appropriate slicing
-        for (i, state) in enumerate(states)
-            value = foldl(getindex, chain; init = state)
-
-            if nd == 0
-                data[i] = value
-            elseif nd == 1
-                data[i, :] = value
-            elseif nd == 2
-                data[i, :, :] = value
-            else
-                error("Unsupported number of dimensions: $nd")
-            end
-        end
-
-
-        if nd == 2
-            perm = (1, reverse(2:(nd + 1))...)  # Keep time as first dim, reverse the rest
-            data = permutedims(data, perm)
         end
 
         if size(data, 2) == 1
@@ -997,6 +968,72 @@ function extract_spatial_data(states::Vector)
     return output_data
 end
 
+function stacked_state_values(states, chain)
+    # Check if the variable actually exists in the first state
+    sample = try
+        foldl(getindex, chain; init = states[1])
+    catch
+        return nothing
+    end
+
+    nt = length(states)
+    sample_dims = size(sample)
+    nd = ndims(sample)
+
+    # Preallocate array with shape (nt, ...)
+    data = Array{eltype(sample)}(undef, (nt, sample_dims...))
+
+    # Fill the array using appropriate slicing
+    for (i, state) in enumerate(states)
+        value = foldl(getindex, chain; init = state)
+
+        if nd == 0
+            data[i] = value
+        elseif nd == 1
+            data[i, :] = value
+        elseif nd == 2
+            data[i, :, :] = value
+        else
+            error("Unsupported number of dimensions: $nd")
+        end
+    end
+
+    if nd == 2
+        perm = (1, reverse(2:(nd + 1))...)  # Keep time as first dim, reverse the rest
+        data = permutedims(data, perm)
+    end
+    return data
+end
+
+function padded_state_values(states, chain, layout)
+    model_key, field = chain
+    cells = get(layout.cells, model_key, nothing)
+    if isempty(states) || isnothing(cells) || !haskey(states[1][model_key], field)
+        return nothing
+    end
+    return padded_state_values(states, model_key, field, cells, layout.number_of_cells, states[1][model_key][field])
+end
+
+# Function barrier: the type of the field in all states is known from the first one.
+function padded_state_values(states, model_key, field, cells, number_of_cells, sample::T) where {T}
+    nt = length(states)
+    if sample isa AbstractVector && length(sample) == length(cells)
+        data = fill(NaN, nt, number_of_cells)
+        for (i, state) in enumerate(states)
+            data[i, cells] = state[model_key][field]::T
+        end
+    elseif sample isa AbstractMatrix && size(sample, 2) == length(cells)
+        # Particle fields: time, cell and radial position
+        data = fill(NaN, nt, number_of_cells, size(sample, 1))
+        for (i, state) in enumerate(states)
+            data[i, cells, :] = transpose(state[model_key][field]::T)
+        end
+    else
+        return nothing
+    end
+    return data
+end
+
 
 function get_x_coords(model::MultiModel{:IntercalationBattery})
 
@@ -1006,9 +1043,13 @@ function get_x_coords(model::MultiModel{:IntercalationBattery})
     return primitives.points[:, 1]
 end
 
-function get_padded_states(jutul_output::NamedTuple)
-    multimodel = jutul_output.multimodel
-    states = jutul_output[:states]
+"""
+    padded_cell_layout(multimodel)
+
+Placement of the 1D components of a P2D model in the common output grid: the cell range of
+every component and the total number of cells.
+"""
+function padded_cell_layout(multimodel)
     supported_model_keys = (
         :NegativeElectrodeCurrentCollector,
         :NegativeElectrodeActiveMaterial,
@@ -1016,38 +1057,15 @@ function get_padded_states(jutul_output::NamedTuple)
         :PositiveElectrodeActiveMaterial,
         :PositiveElectrodeCurrentCollector,
     )
-    model_keys = [k for k in supported_model_keys if haskey(multimodel.models, k)]
-
-    n = length(model_keys)
-    ncells = Dict{Symbol, Any}()
-    active = BitArray(undef, n)
-    active .= false
-    total_number_of_cells = 0
-    for (i, k) in enumerate(model_keys)
-        pp = physical_representation(multimodel[k].data_domain)
-        if pp isa CurrentAndVoltageDomain
-            keep = false
-        else
-            gg = multimodel[k].domain.representation
-            nc = maximum(size(gg[:volumes]))
-            ncells[k] = nc
-            keep = true
+    ncells = Dict{Symbol, Int}()
+    for k in supported_model_keys
+        if haskey(multimodel.models, k) && !(physical_representation(multimodel[k].data_domain) isa CurrentAndVoltageDomain)
+            ncells[k] = maximum(size(multimodel[k].domain.representation[:volumes]))
         end
-        active[i] = keep
     end
-    model_keys = model_keys[active]
 
-    # Setup some dicts
-    padded_state = Dict{Symbol, Any}()
     start_idx = Dict{Symbol, Int}()
-    end_idx = Dict{Symbol, Int}()
-    for k in model_keys
-        padded_state[k] = Dict{Symbol, Any}()
-    end
-
-    # Get start indices
-    # mykeys = [:NegativeElectrodeCurrentCollector, :NegativeElectrodeActiveMaterial, :Electrolyte, :PositiveElectrodeActiveMaterial, :PositiveElectrodeCurrentCollector]
-    if :NegativeElectrodeCurrentCollector in model_keys
+    if haskey(ncells, :NegativeElectrodeCurrentCollector)
         start_idx[:NegativeElectrodeCurrentCollector] = 1
         start_idx[:NegativeElectrodeActiveMaterial] = ncells[:NegativeElectrodeCurrentCollector] + 1
     else
@@ -1057,48 +1075,12 @@ function get_padded_states(jutul_output::NamedTuple)
     start_idx[:Electrolyte] = start_idx[:NegativeElectrodeActiveMaterial]
     start_idx[:PositiveElectrodeActiveMaterial] = ncells[:Electrolyte] - ncells[:PositiveElectrodeActiveMaterial] + 1
 
-    if :PositiveElectrodeCurrentCollector in model_keys
+    if haskey(ncells, :PositiveElectrodeCurrentCollector)
         start_idx[:PositiveElectrodeCurrentCollector] = ncells[:Electrolyte] + 1
     end
 
-    for k in model_keys
-        end_idx[k] = start_idx[k] + ncells[k] - 1
-    end
-
-
-    total_number_of_cells = maximum(values(end_idx))
-
-    padded_states = Vector{Any}(undef, size(states))
-    # Find all possible state fields
-
-    for (i, state) in enumerate(states)
-        padded_state = Dict{Symbol, Any}()
-        for model_key in model_keys
-            nc = ncells[model_key]
-            padded_model_state = Dict{Symbol, Any}()
-            for (k, v) in state[model_key]
-                valid_vector = v isa AbstractVector && length(v) == nc
-                valid_matrix = v isa AbstractMatrix && size(v, 2) == nc
-
-                if valid_vector
-                    data = zeros(total_number_of_cells)
-                    data .= NaN
-                    data[start_idx[model_key]:end_idx[model_key]] = state[model_key][k]
-                elseif valid_matrix
-                    data = zeros(size(v, 1), total_number_of_cells)
-                    data .= NaN
-                    data[:, start_idx[model_key]:end_idx[model_key]] = state[model_key][k]
-                end
-
-                padded_model_state[k] = data
-            end
-            padded_state[model_key] = padded_model_state
-        end
-
-        padded_states[i] = padded_state
-    end
-    return padded_states
-
+    cells = Dict(k => start_idx[k]:(start_idx[k] + ncells[k] - 1) for k in keys(ncells))
+    return (cells = cells, number_of_cells = maximum(last, values(cells)))
 end
 
 function extract_time_series_data(jutul_output::NamedTuple)
