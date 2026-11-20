@@ -1049,9 +1049,11 @@ function get_scalings(model, parameters)
 
             # We use the same scaling as for the coating multiplied by the conductivity ration
             cc = cc_mapping[elde]
-            coef = parameters[cc][:ElectronicConductivity] / parameters[elde][:ElectronicConductivity]
+            # The conductivities are cell vectors: divide one value of each, since `/` of two
+            # vectors is a least-squares solve that returns a dense matrix of both lengths.
+            coef = first(parameters[cc][:ElectronicConductivity]) / first(parameters[elde][:ElectronicConductivity])
 
-            scaling = (model_label = cc, equation_label = :charge_conservation, value = F * coef[1] * volRefs[elde] * RvolRef)
+            scaling = (model_label = cc, equation_label = :charge_conservation, value = F * coef * volRefs[elde] * RvolRef)
             push!(scalings, scaling)
 
         end
