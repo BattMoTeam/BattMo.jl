@@ -25,7 +25,8 @@ end
 	find common elements between two mappings
 """
 function find_common(map_grid1, map_grid2)
-    common_ground = intersect(map_grid1, map_grid2)
+    # Look up in a Set: membership tests on a Vector would make this quadratic in the map sizes.
+    common_ground = intersect(Set(map_grid1), map_grid2)
     entity1 = findall(x -> x ∈ common_ground, map_grid1)
     entity2 = findall(x -> x ∈ common_ground, map_grid2)
     if isempty(entity1)
@@ -52,11 +53,11 @@ function setup_couplings(components, grids, global_maps)
 
         for (ind2, comp2) in enumerate(components)
 
-            intersection = find_coupling(global_maps[comp1], global_maps[comp2], [comp1, comp2])
-
             intersection_tmp = Dict() # intersection
 
             if ind1 != ind2
+
+                intersection = find_coupling(global_maps[comp1], global_maps[comp2], [comp1, comp2])
 
                 cells = intersection["cells"]
                 faces = intersection["faces"]

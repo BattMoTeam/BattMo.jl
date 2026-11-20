@@ -200,6 +200,54 @@ end
     @test any(abs.(current) .< 1.0e-8)
 end
 
+@testset "Sequence protocol RateCapacity overrides C-rate conversion" begin
+    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    model_settings = load_model_settings(; from_default_set = "p2d")
+    delete!(model_settings, "RampUp")
+    simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+
+    model = LithiumIonBattery(; model_settings)
+    cycling_protocol = CyclingProtocol(
+        Dict(
+            "Protocol" => "Sequence",
+            "InitialStateOfCharge" => 0.5,
+            "RateCapacity" => 3.0,
+            "Steps" => [
+                Dict(
+                    "Protocol" => "CC",
+                    "InitialControl" => "discharging",
+                    "DRate" => 0.5,
+                    "TotalNumberOfCycles" => 0,
+                    "LowerVoltageLimit" => 3.0,
+                    "UpperVoltageLimit" => 4.2,
+                ),
+                Dict(
+                    "Protocol" => "CCCV",
+                    "InitialControl" => "charging",
+                    "CRate" => 2.0,
+                    "DRate" => 0.25,
+                    "TotalNumberOfCycles" => 1,
+                    "LowerVoltageLimit" => 3.0,
+                    "UpperVoltageLimit" => 4.2,
+                    "CurrentChangeLimit" => 1.0e-4,
+                    "VoltageChangeLimit" => 1.0e-4,
+                ),
+            ],
+        )
+    )
+
+    sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
+    sequence_policy = sim.model.multimodel[:Control].system.policy
+    cc_policy = BattMo.sequence_step_policy(sequence_policy.steps[1])
+    cccv_policy = BattMo.sequence_step_policy(sequence_policy.steps[2])
+
+    @test isapprox(cc_policy.ImaxDischarge, 1.5)
+    @test isapprox(cccv_policy.ImaxDischarge, 0.75)
+    @test isapprox(cccv_policy.ImaxCharge, 6.0)
+    @test isapprox(only(sim.parameters[:Control][:ImaxDischarge]), 1.5)
+    @test isapprox(only(sim.parameters[:Control][:ImaxCharge]), 6.0)
+end
+
 @testset "Sequence protocol advances through CC discharge Rest and CC charge" begin
     cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
     model_settings = load_model_settings(; from_default_set = "p2d")
@@ -253,6 +301,7 @@ end
 
     @test !isempty(discharge)
     @test !isempty(rest)
+    @test length(rest) > 2
     @test !isempty(charge)
 
     if !isempty(discharge)

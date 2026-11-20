@@ -36,7 +36,7 @@ function update_json_input(;
     """Update json input file with a new function expression for the following quantities:
     	- openCircuitPotential
     	- Electrolyte conductivity
-    	- Electrolyte diffusion coefficient 
+    	- Electrolyte diffusion coefficient
     """
 
     if isa(interpolation_object, String)
@@ -144,7 +144,6 @@ function update_json_input(;
     else
         error("ValueError: The y_name: '$y_name'is not recognized by the 'update_json_input' function. Please enter 'openCircuitPotential', 'ionicConductivity' or 'diffusionCoefficient'.")
     end
-
     if new_file_path !== nothing
         open(new_file_path, "w") do io
             JSON.json(io, json_data; pretty = 4)
@@ -155,7 +154,6 @@ function update_json_input(;
             JSON.json(io, json_data; pretty = 4)
         end
     end
-
 
     return expression
 
