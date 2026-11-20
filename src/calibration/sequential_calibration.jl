@@ -249,6 +249,11 @@ function setup_sequential_problem(sim, t, voltage; catalog)
     physical_lower = [p.lower_bound for p in parameters]
     physical_upper = [p.upper_bound for p in parameters]
     for i in eachindex(physical_x0)
+        # A value that BFGS left at a bound can come back from the optimization coordinate
+        # (log10 for log scaling) just outside it; clamp such round-off to the bound.
+        for bound in (physical_lower[i], physical_upper[i])
+            abs(physical_x0[i] - bound) <= 1.0e-6 * abs(bound) && (physical_x0[i] = bound)
+        end
         physical_lower[i] <= physical_x0[i] <= physical_upper[i] || throw(
             ArgumentError(
                 "Initial value $(physical_x0[i]) for $(parameters[i].shortname) is outside " *
