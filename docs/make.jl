@@ -49,6 +49,7 @@ function build_battmo_docs(
         "3D Pouch example" => "example_3D_pouch",
         "3D cylindrical" => "example_3D_cylindrical",
         "Calibration example" => "example_calibration",
+        "Sobol sensitivity analysis" => "example_sobol",
         "BPX parameter set" => "example_bpx",
         "SEI layer growth" => "example_sei",
         "DFN sodiun ion " => "example_chayambuka",
@@ -209,6 +210,9 @@ function build_battmo_docs(
                     "Simulation dependent input parameters" => "manuals/user_guide/simulation_dependent_input.md",
                     "BPX parameter sets" => "manuals/user_guide/bpx.md",
                     "Functions and types" => "manuals/user_guide/public_api.md",
+                ],
+                "Parameter studies" => [
+                    "Sobol sensitivity analysis" => "manuals/user_guide/sobol_sensitivity.md",
                 ],
                 "Tutorials" => tutorials_markdown,
             ],
