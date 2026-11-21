@@ -1008,7 +1008,9 @@ end
 function padded_state_values(states, chain, layout)
     model_key, field = chain
     cells = get(layout.cells, model_key, nothing)
-    if isempty(states) || isnothing(cells) || !haskey(states[1][model_key], field)
+    # States reduced by a Jutul output_function can lack submodels; their quantities are
+    # then not output.
+    if isempty(states) || isnothing(cells) || !haskey(states[1], model_key) || !haskey(states[1][model_key], field)
         return nothing
     end
     return padded_state_values(states, model_key, field, cells, layout.number_of_cells, states[1][model_key][field])

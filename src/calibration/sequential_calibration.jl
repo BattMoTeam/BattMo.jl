@@ -34,6 +34,10 @@ Pass a collection of `shortnames` to return only those entries. Unknown names ra
 a `KeyError`. Without an argument, return the full catalog.
 The regional `elyte_bg_ne`, `elyte_bg_pe`, and `elyte_bg_sep` entries require a
 regional dictionary under `Electrolyte.BruggemanCoefficient`; `elyte_bg` uses a scalar.
+`ne_sigma` and `pe_sigma` are the electronic conductivities of the active materials. The
+effective conductivity of a coating is (solid volume fraction)^b times the volume average of
+its component conductivities, with b from `ne_bg` or `pe_bg`, so b alone can at most reach
+that average; calibrate the conductivity to go beyond it, and not both with b.
 
 The bounds of each entry are physical values. To use other bounds or another scaling,
 change the entries and pass the catalog to `calibrate_sequential_group` or
@@ -76,6 +80,12 @@ function sequential_parameter_catalog(shortnames = nothing)
         ),
         "pe_bg" => SequentialCalibrationParameter(
             "pe_bg", [[pe, co, "BruggemanCoefficient"]], 1.0e-10, 10.0, :linear,
+        ),
+        "ne_sigma" => SequentialCalibrationParameter(
+            "ne_sigma", [[ne, am, "ElectronicConductivity"]], 1.0e-1, 1.0e4, :log,
+        ),
+        "pe_sigma" => SequentialCalibrationParameter(
+            "pe_sigma", [[pe, am, "ElectronicConductivity"]], 1.0e-3, 1.0e3, :log,
         ),
         "ne_D" => SequentialCalibrationParameter(
             "ne_D", [[ne, am, "DiffusionCoefficient"]], 1.0e-15, 1.0e-9, :log,
@@ -239,6 +249,11 @@ function setup_sequential_problem(sim, t, voltage; catalog)
     physical_lower = [p.lower_bound for p in parameters]
     physical_upper = [p.upper_bound for p in parameters]
     for i in eachindex(physical_x0)
+        # A value that BFGS left at a bound can come back from the optimization coordinate
+        # (log10 for log scaling) just outside it; clamp such round-off to the bound.
+        for bound in (physical_lower[i], physical_upper[i])
+            abs(physical_x0[i] - bound) <= 1.0e-6 * abs(bound) && (physical_x0[i] = bound)
+        end
         physical_lower[i] <= physical_x0[i] <= physical_upper[i] || throw(
             ArgumentError(
                 "Initial value $(physical_x0[i]) for $(parameters[i].shortname) is outside " *
@@ -404,7 +419,7 @@ end
 function physical_parameter_groups(param_names, sensitivities)
     domains = (
         ("Electrode_Kinetics", ["ne_vsa", "pe_vsa", "ne_j0", "pe_j0"]),
-        ("Electrode_Transport", ["ne_bg", "pe_bg"]),
+        ("Electrode_Transport", ["ne_bg", "pe_bg", "ne_sigma", "pe_sigma"]),
         ("Electrolyte_Transport", ["elyte_bg", "elyte_bg_ne", "elyte_bg_pe", "elyte_bg_sep"]),
         ("Solid_Diffusion", ["ne_D", "pe_D"]),
     )

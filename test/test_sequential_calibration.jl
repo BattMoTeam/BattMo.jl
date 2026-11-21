@@ -10,6 +10,9 @@ using Test
     @test haskey(catalog, "ne_j0")
     @test catalog["ne_j0"].scaling == :log
     @test catalog["ne_bg"].scaling == :linear
+    @test catalog["ne_sigma"].paths == [["NegativeElectrode", "ActiveMaterial", "ElectronicConductivity"]]
+    @test catalog["pe_sigma"].paths == [["PositiveElectrode", "ActiveMaterial", "ElectronicConductivity"]]
+    @test catalog["pe_sigma"].scaling == :log
 
     groups = create_clustered_parameter_groups(
         sequential_parameter_catalog(["ne_j0", "pe_j0", "ne_D", "pe_D"]),
