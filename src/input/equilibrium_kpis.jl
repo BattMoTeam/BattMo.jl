@@ -370,16 +370,17 @@ function compute_cell_theoretical_capacity(params::CellParameters)
 end
 
 """
-	compute_equilibrium_energy(params::Dict; Npts=1000)
+	compute_equilibrium_energy(params::CellParameters; Npts=1000)
 
-Compute the average open-circuit voltage and equilibrium energy [Wh]
-for a Li-ion cell parameter set (e.g., Chen2020) using trapezoidal integration.
+Compute the equilibrium energy [Wh] of a cell parameter set (e.g., Chen2020): the
+theoretical capacity times the open-circuit cell voltage averaged over SOC 0 → 1,
+integrated with the trapezoidal rule at the reference temperature 298.15 K.
 
 Arguments:
-- params : Dict containing 'PositiveElectrode', 'NegativeElectrode', and 'Cell' fields
+- params : CellParameters containing 'PositiveElectrode', 'NegativeElectrode', and 'Cell' fields
 - Npts   : number of SOC points (default 1000)
 
-Returns: (Vavg, E_Wh)
+Returns: E_Wh
 """
 function compute_equilibrium_energy(params::CellParameters; Npts::Int = 1000)
     # === Retrieve cell info ===
@@ -389,20 +390,23 @@ function compute_equilibrium_energy(params::CellParameters; Npts::Int = 1000)
     neg = params["NegativeElectrode"]["ActiveMaterial"]
     θn_SOC0 = neg["StoichiometricCoefficientAtSOC0"]
     θn_SOC100 = neg["StoichiometricCoefficientAtSOC100"]
-    Un_expr = neg["OpenCircuitPotential"]
     c_n_max = neg["MaximumConcentration"]
 
     # === Positive electrode ===
     pos = params["PositiveElectrode"]["ActiveMaterial"]
     θp_SOC0 = pos["StoichiometricCoefficientAtSOC0"]
     θp_SOC100 = pos["StoichiometricCoefficientAtSOC100"]
-    Up_expr = pos["OpenCircuitPotential"]
     c_p_max = pos["MaximumConcentration"]
 
-
-    # === Build OCP functions from the stored expressions ===
-    Un = build_function(Un_expr)
-    Up = build_function(Up_expr)
+    # === OCP functions ===
+    # Shared with the equilibrium calibration: handles string expressions, function names
+    # (resolved relative to the parameter file) and tabulated data, and calls each with
+    # the right signature (f(c, T, refT, cmax), or f(θ) for tabulated data).
+    Un = setup_equilibrium_ocp(params, "NegativeElectrode")
+    Up = setup_equilibrium_ocp(params, "PositiveElectrode")
+    if Un.type == :constant || Up.type == :constant
+        error("Open circuit potential should not be constant.")
+    end
 
     # === Stoichiometry mappings ===
     θn(soc) = θn_SOC0 + (θn_SOC100 - θn_SOC0) * soc
@@ -411,7 +415,7 @@ function compute_equilibrium_energy(params::CellParameters; Npts::Int = 1000)
     # === Cell OCV function ===
     Tref = 298.15
 
-    Vcell(soc) = Up(θp(soc) * c_p_max, Tref, c_p_max, Tref) - Un(θn(soc) * c_n_max, Tref, c_n_max, Tref)
+    Vcell(soc) = evaluate_equilibrium_ocp(Up, θp(soc), c_p_max, Tref) - evaluate_equilibrium_ocp(Un, θn(soc), c_n_max, Tref)
 
     # === Numerical integration (trapezoidal rule) ===
     socs = range(0.0, 1.0, length = Npts)
@@ -426,38 +430,4 @@ function compute_equilibrium_energy(params::CellParameters; Npts::Int = 1000)
     E_Wh = integral * C
 
     return E_Wh
-end
-
-function build_function(ocp)
-
-    if isa(ocp, Real)
-        error("Open circuit potential should not be constant.")
-
-    elseif isa(ocp, String)
-        ocp_exp = ocp
-        exp = setup_ocp_evaluation_expression_from_string(ocp_exp)
-        ocp_fun = @RuntimeGeneratedFunction(exp)
-
-
-    elseif haskey(ocp, "FunctionName")
-
-        funcname = ocp["FunctionName"]
-
-        if haskey(ocp, "FilePath")
-            rawpath = ocp["FilePath"]
-            funcpath = joinpath(base_path, normalize_path(rawpath))
-        else
-            funcpath = nothing
-        end
-
-        ocp_fun = setup_function_from_function_name(funcname; file_path = funcpath)
-
-
-    else
-        data_x = ocp["x"]
-        data_y = ocp["y"]
-        ocp_fun = get_1d_interpolator(data_x, data_y, cap_endpoints = false)
-
-    end
-    return ocp_fun
 end
