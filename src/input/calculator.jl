@@ -17,7 +17,7 @@ function calculate_effective_density(input::CellParameters, ne_vf, pe_vf)
     pe_add_mf = input["PositiveElectrode"]["ConductiveAdditive"]["MassFraction"]
 
     ne_effective_density = ne_vf * (ne_am_mf * ne_am_density + ne_b_mf * ne_b_density + ne_add_mf * ne_add_density)
-    pe_effective_density = pe_vf * (pe_am_mf * pe_am_density + pe_b_mf * ne_b_density + pe_add_mf * pe_add_density)
+    pe_effective_density = pe_vf * (pe_am_mf * pe_am_density + pe_b_mf * pe_b_density + pe_add_mf * pe_add_density)
 
     return ne_effective_density, pe_effective_density
 
@@ -54,7 +54,7 @@ function calculate_mass_fractions_and_effective_density_from_volume_fractions!(i
 
     # --- Effective densities ---
     ne_effective_density = ne_vf * (ne_am_mf * ne_am_density + ne_b_mf * ne_b_density + ne_add_mf * ne_add_density)
-    pe_effective_density = pe_vf * (pe_am_mf * pe_am_density + pe_b_mf * ne_b_density + pe_add_mf * pe_add_density)
+    pe_effective_density = pe_vf * (pe_am_mf * pe_am_density + pe_b_mf * pe_b_density + pe_add_mf * pe_add_density)
 
     # Store results back into the input dictionary
     input["NegativeElectrode"]["ActiveMaterial"]["MassFraction"] = ne_am_mf
