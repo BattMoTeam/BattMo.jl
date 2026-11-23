@@ -748,7 +748,7 @@ function compute_effective_heat_capacity(comodel, coinputparams)
         specific_heat_capacity += coinputparams[compname]["MassFraction"] * coinputparams[compname]["SpecificHeatCapacity"]
     end
 
-    effective_heat_capacity = comodel[:volume_fraction] * comodel[:effective_density] * specific_heat_capacity
+    effective_heat_capacity = comodel[:effective_density] * specific_heat_capacity
 
     return effective_heat_capacity
 
