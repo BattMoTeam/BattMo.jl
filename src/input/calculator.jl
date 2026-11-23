@@ -16,8 +16,10 @@ function calculate_effective_density(input::CellParameters, ne_vf, pe_vf)
     ne_add_mf = input["NegativeElectrode"]["ConductiveAdditive"]["MassFraction"]
     pe_add_mf = input["PositiveElectrode"]["ConductiveAdditive"]["MassFraction"]
 
-    ne_effective_density = ne_vf * (ne_am_mf * ne_am_density + ne_b_mf * ne_b_density + ne_add_mf * ne_add_density)
-    pe_effective_density = pe_vf * (pe_am_mf * pe_am_density + pe_b_mf * pe_b_density + pe_add_mf * pe_add_density)
+    # Solid mass per coating volume: the solid volume fraction divided by the solid volume per unit
+    # mass, the inverse of compute_volume_fraction
+    ne_effective_density = ne_vf / (ne_am_mf / ne_am_density + ne_b_mf / ne_b_density + ne_add_mf / ne_add_density)
+    pe_effective_density = pe_vf / (pe_am_mf / pe_am_density + pe_b_mf / pe_b_density + pe_add_mf / pe_add_density)
 
     return ne_effective_density, pe_effective_density
 
@@ -53,8 +55,9 @@ function calculate_mass_fractions_and_effective_density_from_volume_fractions!(i
     pe_add_mf = pe_mass_Add / pe_mass_sum
 
     # --- Effective densities ---
-    ne_effective_density = ne_vf * (ne_am_mf * ne_am_density + ne_b_mf * ne_b_density + ne_add_mf * ne_add_density)
-    pe_effective_density = pe_vf * (pe_am_mf * pe_am_density + pe_b_mf * pe_b_density + pe_add_mf * pe_add_density)
+    # Solid volume fraction times the solid density, i.e. the component mass over the component volume
+    ne_effective_density = ne_vf * ne_mass_sum / (ne_am_vf + ne_b_vf + ne_add_vf)
+    pe_effective_density = pe_vf * pe_mass_sum / (pe_am_vf + pe_b_vf + pe_add_vf)
 
     # Store results back into the input dictionary
     input["NegativeElectrode"]["ActiveMaterial"]["MassFraction"] = ne_am_mf
