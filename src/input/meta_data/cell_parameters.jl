@@ -346,7 +346,7 @@ function get_cell_parameters_meta_data()
         "ElectronicConductivity" => Dict(
             "context_type" => "ElectricConductivity",
             "context_type_iri" => "https://w3id.org/emmo#EMMO_cde4368c_1d4d_4c94_8548_604749523c6d",
-            "max_value" => 1.0e9,
+            "max_value" => 1.0e12,
             "min_value" => 1.0e-20,
             "description" => "Measure of a material's ability to conduct an electric current.",
             "type" => Real,
@@ -470,7 +470,7 @@ function get_cell_parameters_meta_data()
         "NominalCapacity" => Dict(
             "context_type" => "NominalCapacity",
             "context_type_iri" => "https://w3id.org/emmo/domain/electrochemistry#electrochemistry_8abde9d0_84f6_4b4f_a87e_86028a397100",
-            "max_value" => 50,
+            "max_value" => 1000.0,
             "min_value" => 0.0001,
             "description" => "Expected charge capacity of a cell under standard conditions, as defined by the manufacturer.",
             "is_shown_to_user" => false,
