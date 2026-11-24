@@ -346,7 +346,7 @@ function get_cell_parameters_meta_data()
         "ElectronicConductivity" => Dict(
             "context_type" => "ElectricConductivity",
             "context_type_iri" => "https://w3id.org/emmo#EMMO_cde4368c_1d4d_4c94_8548_604749523c6d",
-            "max_value" => 1.0e9,
+            "max_value" => 1.0e12,
             "min_value" => 1.0e-20,
             "description" => "Measure of a material's ability to conduct an electric current.",
             "type" => Real,

@@ -39,7 +39,7 @@
         "ElectronicConductivity": {
             "type": "number",
             "minimum": 1e-20,
-            "maximum": 1e9,
+            "maximum": 1e12,
             "description": "Measure of a material's ability to conduct an electric current.",
             "context_type": "ElectricConductivity",
             "context_type_iri": "https://w3id.org/emmo#EMMO_cde4368c_1d4d_4c94_8548_604749523c6d",
