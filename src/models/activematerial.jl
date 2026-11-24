@@ -432,7 +432,7 @@ end
         function_type = model.system.params[:reaction_rate_constant_func_type]
 
 
-        Ea = hasproperty(model.system.params, :activation_energy_of_reaction) ? model.system.params[:activation_energy_of_reaction] : 0.0
+        Ea = haskey(model.system.params, :activation_energy_of_reaction) ? model.system.params[:activation_energy_of_reaction] : 0.0
 
         cmax = model.system.params[:maximum_concentration]
         temperature_dependence_model = Symbol(model.system.params[:setting_temperature_dependence])
