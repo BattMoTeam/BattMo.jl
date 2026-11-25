@@ -338,6 +338,10 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
                 ImaxDischarge = max(ImaxDischarge, Idis)
                 ImaxCharge = max(ImaxCharge, Ichg)
 
+                # An optional relative VoltageTolerance widens the band around the voltage limit in which a time step
+                # may end the step; near an empty or full electrode the default band can be too narrow to land in.
+                tolerance = get(step, "VoltageTolerance", nothing)
+                tolerances = isnothing(tolerance) ? (;) : (; tolerances = Dict("discharging" => tolerance, "charging" => tolerance))
                 step_policy = CCPolicy(
                     get(step, "TotalNumberOfCycles", 0),
                     step["InitialControl"],
@@ -347,13 +351,16 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
                     ImaxDischarge = Idis,
                     ImaxCharge = Ichg,
                     T = promote_type(typeof(Idis), typeof(Ichg), typeof(step["LowerVoltageLimit"]), typeof(step["UpperVoltageLimit"])),
+                    tolerances...,
                 )
                 if use_ramp_up
                     Imax = step["InitialControl"] == "charging" ? Ichg : Idis
                     tup = Float64(input.simulation_settings["RampUpTime"])
                     step_policy.current_function = time -> currentFun(time, Imax, tup)
                 end
-                push!(steps, PolicyStep(step_policy))
+                # An optional duration ends the step at a fixed time. With ramp-up, part of the charge passes at the
+                # start of the next step, as the current ramps from the CC value.
+                push!(steps, PolicyStep(step_policy; duration = get(step, "Duration", nothing)))
 
             elseif step_protocol == "CCCV"
                 DRate = step["DRate"]
@@ -386,7 +393,15 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
                     tup = Float64(input.simulation_settings["RampUpTime"])
                     step_policy.current_function = time -> currentFun(time, Imax, tup)
                 end
-                push!(steps, PolicyStep(step_policy))
+                # Optionally, the step ends when the current of its CV phase reaches the cutoff (a charge only).
+                end_after_cv = get(step, "EndAfterConstantVoltage", false)
+                if end_after_cv && ismissing(cv_current_cutoff)
+                    error("A CCCV sequence step with EndAfterConstantVoltage needs a CVCurrentCutoff.")
+                end
+                if end_after_cv && step["InitialControl"] != "charging"
+                    error("A CCCV sequence step with EndAfterConstantVoltage must have InitialControl charging.")
+                end
+                push!(steps, PolicyStep(step_policy; duration = get(step, "Duration", nothing), end_after_cv))
 
             elseif step_protocol == "Rest"
                 push!(steps, PolicyStep(RestPolicy(step["Duration"])))
