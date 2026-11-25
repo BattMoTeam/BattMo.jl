@@ -441,3 +441,55 @@ end
 
     @test !sim_without_ramp.model.multimodel[:Control].system.policy.use_ramp_up
 end
+
+@testset "Sequence steps with a duration" begin
+    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    model_settings = load_model_settings(; from_default_set = "p2d")
+    simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+    solver_settings = load_solver_settings(; from_default_set = "direct")
+    solver_settings["NonLinearSolver"]["MaxTimestep"] = 60.0
+    model = LithiumIonBattery(; model_settings)
+
+    function run_steps(steps; initial_soc)
+        protocol = CyclingProtocol(Dict("Protocol" => "Sequence", "InitialStateOfCharge" => initial_soc, "Steps" => steps))
+        output = solve(Simulation(model, cell_parameters, protocol; simulation_settings); solver_settings, info_level = -1, expand_substates = true)
+        controllers = control_controller(output)
+        step_start(k) = controllers[findfirst(==(k), sequence_step_index(output))].step_start_time
+        return (; step_start, voltage = control_voltage(output), step_index = sequence_step_index(output))
+    end
+    rest = Dict("Protocol" => "Rest", "Duration" => 300.0)
+
+    # A step of zero duration would still take a full time step.
+    zero_rest = CyclingProtocol(Dict("Protocol" => "Sequence", "InitialStateOfCharge" => 0.5, "Steps" => [Dict("Protocol" => "Rest", "Duration" => 0.0)]))
+    @test_throws ErrorException Simulation(model, cell_parameters, zero_rest; simulation_settings)
+
+    # A CC discharge with a duration longer than it takes to reach its voltage limit ends at the limit, with a warning.
+    limit = 3.5
+    cc = Dict(
+        "Protocol" => "CC",
+        "InitialControl" => "discharging",
+        "DRate" => 1.0,
+        "LowerVoltageLimit" => limit,
+        "UpperVoltageLimit" => 4.2,
+        "Duration" => 3600.0,
+    )
+    result = @test_logs (:warn, r"reached its voltage limit") match_mode = :any run_steps([cc, rest]; initial_soc = 0.5)
+    @test result.step_start(2) - result.step_start(1) < 3600.0
+    @test isapprox(result.voltage[findfirst(==(2), result.step_index)], limit; rtol = 1.0e-3)
+
+    # A CCCV charge with a duration shorter than its CC phase ends at the duration.
+    cccv = Dict(
+        "Protocol" => "CCCV",
+        "InitialControl" => "charging",
+        "CRate" => 1.0,
+        "DRate" => 1.0,
+        "LowerVoltageLimit" => 3.0,
+        "UpperVoltageLimit" => 4.1,
+        "CurrentChangeLimit" => 1.0e-4,
+        "VoltageChangeLimit" => 1.0e-4,
+        "Duration" => 600.0,
+    )
+    result = run_steps([cccv, rest]; initial_soc = 0.3)
+    @test isapprox(result.step_start(2) - result.step_start(1), 600.0; atol = 1.0e-3)
+    @test result.voltage[findfirst(==(2), result.step_index)] < 4.1
+end

@@ -353,7 +353,9 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
                     tup = Float64(input.simulation_settings["RampUpTime"])
                     step_policy.current_function = time -> currentFun(time, Imax, tup)
                 end
-                push!(steps, PolicyStep(step_policy))
+                # An optional duration ends the step at a fixed time. With ramp-up, part of the charge passes at the
+                # start of the next step, as the current ramps from the CC value.
+                push!(steps, PolicyStep(step_policy; duration = get(step, "Duration", nothing)))
 
             elseif step_protocol == "CCCV"
                 DRate = step["DRate"]
@@ -386,7 +388,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
                     tup = Float64(input.simulation_settings["RampUpTime"])
                     step_policy.current_function = time -> currentFun(time, Imax, tup)
                 end
-                push!(steps, PolicyStep(step_policy))
+                push!(steps, PolicyStep(step_policy; duration = get(step, "Duration", nothing)))
 
             elseif step_protocol == "Rest"
                 push!(steps, PolicyStep(RestPolicy(step["Duration"])))

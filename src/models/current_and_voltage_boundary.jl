@@ -71,8 +71,23 @@ Jutul.number_of_cells(::CurrentAndVoltageDomain) = 1
 
 abstract type AbstractSequenceStep end
 
-struct PolicyStep{P <: AbstractPolicy} <: AbstractSequenceStep
+"""
+    PolicyStep(policy; duration = nothing)
+
+A step of a `SequencePolicy`. Besides the end condition of its `policy`, the step can end after `duration` seconds
+(the duration of a rest policy by default).
+"""
+struct PolicyStep{P <: AbstractPolicy, D <: Union{Nothing, Real}} <: AbstractSequenceStep
     policy::P
+    duration::D
+end
+
+function PolicyStep(policy::AbstractPolicy; duration = policy isa RestPolicy ? policy.duration : nothing)
+    # A step ends at the earliest after its first time step, so a step without time would still take one.
+    if !isnothing(duration) && duration <= 0
+        error("The duration of a sequence step must be positive, got $duration.")
+    end
+    return PolicyStep(policy, duration)
 end
 
 mutable struct RestPolicy{R} <: AbstractPolicy
@@ -741,10 +756,8 @@ function initialize_sequence_step_controller!(controller::SequenceController, st
     return controller.dIdt = missing
 end
 
-# A rest step is complete once its step-local duration has elapsed.
-function sequence_step_complete(policy::RestPolicy, controller, state)
-    return controller.time - controller.step_start_time >= policy.duration
-end
+# A rest step only ends by its step duration (see sequence_step_complete for a PolicyStep).
+sequence_step_complete(policy::RestPolicy, controller, state) = false
 
 # A CC step is complete when its voltage limit or cycle count condition is reached.
 function sequence_step_complete(policy::CCPolicy, controller, state)
@@ -764,6 +777,35 @@ end
 # A CCCV step is complete when its requested cycle count has been reached.
 function sequence_step_complete(policy::CyclingCVPolicy, controller, state)
     return controller.numberOfCycles >= policy.numberOfCycles
+end
+
+# A time-limited step ends when less than this is left [s]. Time steps cut at report times can leave a sliver of the
+# step; ending there avoids a tiny extra time step, and the next step starts at the nominal end (advance_sequence_step!).
+const SEQUENCE_STEP_TIME_TOLERANCE = 1.0e-3
+
+"""
+    remaining_step_time(step, controller)
+
+Time left in the active sequence step [s] when the step has a `duration`, otherwise `nothing`.
+"""
+function remaining_step_time(step::PolicyStep, controller)
+    isnothing(step.duration) && return nothing
+    return step.duration - (controller.time - controller.step_start_time)
+end
+
+# A step is complete when its time is up or when its policy is complete.
+function sequence_step_complete(step::PolicyStep, controller, state)
+    remaining = remaining_step_time(step, controller)
+    if !isnothing(remaining) && remaining <= SEQUENCE_STEP_TIME_TOLERANCE
+        return true
+    end
+    complete = sequence_step_complete(step.policy, controller, state)
+    # For a CC step with a duration (e.g. a fixed charge in SoC-window cycling), the voltage limit is a safeguard;
+    # reaching it means the step did not pass the charge it was meant to.
+    if complete && !isnothing(remaining) && step.policy isa CCPolicy && step.policy.numberOfCycles == 0
+        @warn "Sequence step $(controller.step_index) (CC) reached its voltage limit $(round(remaining; digits = 1)) s before the end of its duration." maxlog = 10
+    end
+    return complete
 end
 
 # A sequence is complete when the active step index has advanced past the final step.
@@ -813,8 +855,15 @@ function advance_sequence_step!(controller::SequenceController, policy::Sequence
     previous_target = controller.target
     previous_target_is_voltage = controller.target_is_voltage
 
+    # A time-limited step that ends within the tolerance ends at its nominal time, so that durations stay exact over
+    # many steps.
+    remaining = remaining_step_time(policy.steps[controller.step_index], controller)
+    if !isnothing(remaining) && abs(remaining) <= SEQUENCE_STEP_TIME_TOLERANCE
+        controller.step_start_time = controller.time + remaining
+    else
+        controller.step_start_time = controller.time
+    end
     controller.step_index += 1
-    controller.step_start_time = controller.time
     if !sequence_complete(policy, controller)
         initialize_sequence_step_controller!(controller, active_sequence_policy(policy, controller))
         nominal = sequence_nominal_target(active_sequence_policy(policy, controller), controller)
@@ -2010,7 +2059,7 @@ function Jutul.update_after_step!(storage, domain::CurrentAndVoltageDomain, mode
             update_cycle_count!(ctrl, ctrl0, step_policy.initialControl)
         end
 
-        if sequence_step_complete(step_policy, ctrl, storage.state)
+        if sequence_step_complete(policy.steps[ctrl.step_index], ctrl, storage.state)
             advance_sequence_step!(ctrl, policy)
         end
 

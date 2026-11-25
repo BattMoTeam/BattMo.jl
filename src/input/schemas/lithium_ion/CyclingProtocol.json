@@ -162,7 +162,7 @@
             "type": "number",
             "minimum": 0.0,
             "maximum": 1000000000.0,
-            "description": "Duration of a rest protocol or rest sequence step, in seconds.",
+            "description": "Duration of a rest protocol or rest sequence step, in seconds. In a CC or CCCV sequence step, an optional time limit: the step ends after this time unless its own end condition comes first. With ramp-up, part of the charge of a CC step passes at the start of the next step, as the current ramps from the CC value.",
             "unit": "s"
         },
         "Steps": {
@@ -171,7 +171,7 @@
                 "type": "object"
             },
             "minItems": 1,
-            "description": "Ordered list of cycling protocol steps used by the Sequence protocol."
+            "description": "Ordered list of cycling protocol steps used by the Sequence protocol. Each step is a dictionary with the keys of its protocol; CC and CCCV steps may have a Duration."
         }
     },
     "required": [

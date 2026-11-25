@@ -21,6 +21,43 @@ function Jutul.pick_next_timestep(sel::ControlRampTimestepSelector, sim, config,
     return dT
 end
 
+"""
+    SequenceStepTimestepSelector(policy)
+
+Time steps for a `SequencePolicy`. While the active step ends after a set time (a rest step, or a step with a
+duration), the time left is divided into equal steps no longer than the maximum time step of the simulator and twice
+the previous step, so that the last one ends the step on time instead of overshooting it.
+"""
+mutable struct SequenceStepTimestepSelector{P} <: Jutul.AbstractTimestepSelector
+    policy::P
+    # The last time step picked. Jutul limits how fast a time step may shrink, which would overshoot a step that a cut
+    # at a report time has left short, so valid_timestep, applied after that limit, enforces it.
+    timestep::Float64
+end
+
+SequenceStepTimestepSelector(policy) = SequenceStepTimestepSelector(policy, Inf)
+
+function Jutul.pick_first_timestep(sel::SequenceStepTimestepSelector, sim, config, dT, forces)
+    return sel.timestep = sequence_step_timestep(sel, sim, config[:max_timestep])
+end
+
+Jutul.pick_cut_timestep(::SequenceStepTimestepSelector, sim, config, dt, dT, forces, reports, cut_count) = dt
+Jutul.valid_timestep(sel::SequenceStepTimestepSelector, dt) = min(dt, sel.timestep)
+
+function Jutul.pick_next_timestep(sel::SequenceStepTimestepSelector, sim, config, dt_prev, dT, forces, reports, current_reports, step_index, new_step)
+    return sel.timestep = sequence_step_timestep(sel, sim, min(config[:max_timestep], 2 * dt_prev))
+end
+
+function sequence_step_timestep(sel::SequenceStepTimestepSelector, sim, longest)
+    controller = Jutul.get_simulator_storage(sim).state.Control.Controller
+    sequence_complete(sel.policy, controller) && return Inf
+    remaining = remaining_step_time(sel.policy.steps[controller.step_index], controller)
+    if isnothing(remaining) || remaining <= SEQUENCE_STEP_TIME_TOLERANCE
+        return Inf
+    end
+    return remaining / ceil(remaining / longest)
+end
+
 function control_rampup_time(policy)
     if policy isa Union{CyclingCVPolicy, SequencePolicy}
         return policy.rampup_time
@@ -799,6 +836,9 @@ function solver_configuration(
     if !isnothing(rampup_steps) && rampup_steps > 0 && control_ramp_time > 0
         ramp_dt = Float64(control_ramp_time) / rampup_steps
         push!(timesel, ControlRampTimestepSelector(ramp_dt))
+    end
+    if multimodel[:Control].system.policy isa SequencePolicy
+        push!(timesel, SequenceStepTimestepSelector(multimodel[:Control].system.policy))
     end
 
     if linear_solver_dict["Method"] == "UserDefined"
