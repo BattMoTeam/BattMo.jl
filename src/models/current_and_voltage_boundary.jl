@@ -72,22 +72,24 @@ Jutul.number_of_cells(::CurrentAndVoltageDomain) = 1
 abstract type AbstractSequenceStep end
 
 """
-    PolicyStep(policy; duration = nothing)
+    PolicyStep(policy; duration = nothing, end_after_cv = false)
 
 A step of a `SequencePolicy`. Besides the end condition of its `policy`, the step can end after `duration` seconds
-(the duration of a rest policy by default).
+(the duration of a rest policy by default), or, for a CCCV step, when the current of its constant-voltage phase has
+fallen below the cutoff, before the policy would switch to discharge.
 """
 struct PolicyStep{P <: AbstractPolicy, D <: Union{Nothing, Real}} <: AbstractSequenceStep
     policy::P
     duration::D
+    end_after_cv::Bool
 end
 
-function PolicyStep(policy::AbstractPolicy; duration = policy isa RestPolicy ? policy.duration : nothing)
+function PolicyStep(policy::AbstractPolicy; duration = policy isa RestPolicy ? policy.duration : nothing, end_after_cv = false)
     # A step ends at the earliest after its first time step, so a step without time would still take one.
     if !isnothing(duration) && duration <= 0
         error("The duration of a sequence step must be positive, got $duration.")
     end
-    return PolicyStep(policy, duration)
+    return PolicyStep(policy, duration, end_after_cv)
 end
 
 mutable struct RestPolicy{R} <: AbstractPolicy
@@ -793,11 +795,17 @@ function remaining_step_time(step::PolicyStep, controller)
     return step.duration - (controller.time - controller.step_start_time)
 end
 
-# A step is complete when its time is up or when its policy is complete.
+# A step is complete when its time is up, when a CCCV step that ends after its constant-voltage phase has reached
+# the current cutoff, or when its policy is complete.
 function sequence_step_complete(step::PolicyStep, controller, state)
     remaining = remaining_step_time(step, controller)
     if !isnothing(remaining) && remaining <= SEQUENCE_STEP_TIME_TOLERANCE
         return true
+    end
+    if step.end_after_cv && step.policy isa CyclingCVPolicy && controller.ctrlType == cv_charge2
+        # The policy switches to discharge in the time step after one that ends within the switch band around the
+        # cutoff (time steps that jump past the band are cut), so ending the step in the band avoids the switch.
+        return !setupRegionSwitchFlags(step.policy, state, cv_charge2).beforeSwitchRegion
     end
     complete = sequence_step_complete(step.policy, controller, state)
     # For a CC step with a duration (e.g. a fixed charge in SoC-window cycling), the voltage limit is a safeguard;

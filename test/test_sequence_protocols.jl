@@ -540,3 +540,123 @@ end
         @test limit * (1 - tolerance) <= voltage[discharge_end] <= limit
     end
 end
+
+@testset "Sequence cycle with a charge-only CCCV step and a fixed-charge CC step" begin
+    # One cycle of the kind used for SoC-window cycling: CC-CV charge to a voltage until a current cutoff, rest,
+    # discharge of a fixed charge (a CC step with a duration), rest.
+    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    model_settings = load_model_settings(; from_default_set = "p2d")
+    simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+    solver_settings = load_solver_settings(; from_default_set = "direct")
+    solver_settings["NonLinearSolver"]["MaxTimestep"] = 30.0
+    model = LithiumIonBattery(; model_settings)
+
+    capacity = 5.0
+    cutoff = capacity / 20
+    discharge_rate = 1.0
+    discharge_duration = 600.0
+    rests = (300.0, 400.0)
+    cycling_protocol = CyclingProtocol(
+        Dict(
+            "Protocol" => "Sequence",
+            "InitialStateOfCharge" => 0.3,
+            "RateCapacity" => capacity,
+            "Steps" => [
+                Dict(
+                    "Protocol" => "CCCV",
+                    "InitialControl" => "charging",
+                    "CRate" => 1.0,
+                    "DRate" => discharge_rate,
+                    "LowerVoltageLimit" => 3.0,
+                    "UpperVoltageLimit" => 3.9,
+                    "CurrentChangeLimit" => 1.0e-4,
+                    "VoltageChangeLimit" => 1.0e-4,
+                    "CVCurrentCutoff" => cutoff,
+                    "EndAfterConstantVoltage" => true,
+                ),
+                Dict("Protocol" => "Rest", "Duration" => rests[1]),
+                Dict(
+                    "Protocol" => "CC",
+                    "InitialControl" => "discharging",
+                    "DRate" => discharge_rate,
+                    "LowerVoltageLimit" => 2.5,
+                    "UpperVoltageLimit" => 4.2,
+                    "Duration" => discharge_duration,
+                ),
+                Dict("Protocol" => "Rest", "Duration" => rests[2]),
+            ],
+        )
+    )
+
+    sim = Simulation(model, cell_parameters, cycling_protocol; simulation_settings)
+    output = solve(sim; solver_settings, info_level = -1, expand_substates = true)
+
+    controllers = control_controller(output)
+    step_index = sequence_step_index(output)
+    time = [controller.time for controller in controllers]
+    current = control_current(output)
+    voltage = control_voltage(output)
+    @test step_index[end] == 5
+
+    # The state in which a step's end condition is met already carries the next step index, so step k ends at the
+    # first state of step k + 1.
+    first_state(k) = findfirst(==(k), step_index)
+
+    # The charge ends in its CV phase at the cutoff, without a switch to discharge.
+    charge_end = first_state(2)
+    @test all(current[1:charge_end] .<= 1.0e-10)
+    @test isapprox(voltage[charge_end], 3.9; rtol = 1.0e-3)
+    @test isapprox(-current[charge_end], cutoff; rtol = 1.0e-2)
+
+    # The step ends once the CV current is within the band around the cutoff in which the policy would switch to
+    # discharge in the next time step, so that it never does.
+    charge_step = sim.model.multimodel[:Control].system.policy.steps[1]
+    cv_controller = controllers[charge_end - 1]
+    @test cv_controller.ctrlType == BattMo.cv_charge2
+    cv_state(I) = (Current = [-I], ElectricPotential = [3.9], Controller = cv_controller)
+    @test BattMo.sequence_step_complete(charge_step, cv_controller, cv_state(1.005 * cutoff))
+    @test !BattMo.sequence_step_complete(charge_step, cv_controller, cv_state(1.02 * cutoff))
+
+    # Rest and discharge steps last their durations.
+    step_start(k) = controllers[first_state(k)].step_start_time
+    @test isapprox(step_start(3) - step_start(2), rests[1]; atol = 1.0e-3)
+    @test isapprox(step_start(4) - step_start(3), discharge_duration; atol = 1.0e-3)
+    @test isapprox(step_start(5) - step_start(4), rests[2]; atol = 1.0e-3)
+    @test isapprox(time[end], step_start(5); atol = 1.0e-3)
+
+    # The discharge passes a fixed charge. The ramp at its start is given back at the start of the next rest. The
+    # current of each implicit time step is its end value, so the charge is a sum, not a trapezoidal integral.
+    passed = sum(current[i] * (time[i] - time[i - 1]) for i in (charge_end + 1):length(time))
+    @test isapprox(passed, discharge_rate * capacity * discharge_duration; rtol = 1.0e-4)
+end
+
+@testset "Sequence CCCV step rejects invalid input" begin
+    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    model_settings = load_model_settings(; from_default_set = "p2d")
+    simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+    model = LithiumIonBattery(; model_settings)
+
+    function cccv_simulation(changes)
+        step = Dict(
+            "Protocol" => "CCCV",
+            "InitialControl" => "charging",
+            "CRate" => 1.0,
+            "DRate" => 1.0,
+            "LowerVoltageLimit" => 3.0,
+            "UpperVoltageLimit" => 3.9,
+            "CurrentChangeLimit" => 1.0e-4,
+            "VoltageChangeLimit" => 1.0e-4,
+            "CVCurrentCutoff" => 0.25,
+            "EndAfterConstantVoltage" => true,
+        )
+        merge!(step, changes)
+        protocol = CyclingProtocol(Dict("Protocol" => "Sequence", "InitialStateOfCharge" => 0.7, "Steps" => [step]))
+        return Simulation(model, cell_parameters, protocol; simulation_settings)
+    end
+
+    @test cccv_simulation(Dict()) isa Simulation
+    # A CCCV step that starts with a discharge is in its discharge phase from the start, so it would end after its
+    # first time step.
+    @test_throws ErrorException cccv_simulation(Dict("InitialControl" => "discharging"))
+    @test_throws ErrorException cccv_simulation(Dict("CVCurrentCutoff" => nothing))
+end

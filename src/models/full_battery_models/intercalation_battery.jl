@@ -393,7 +393,15 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
                     tup = Float64(input.simulation_settings["RampUpTime"])
                     step_policy.current_function = time -> currentFun(time, Imax, tup)
                 end
-                push!(steps, PolicyStep(step_policy; duration = get(step, "Duration", nothing)))
+                # Optionally, the step ends when the current of its CV phase reaches the cutoff (a charge only).
+                end_after_cv = get(step, "EndAfterConstantVoltage", false)
+                if end_after_cv && ismissing(cv_current_cutoff)
+                    error("A CCCV sequence step with EndAfterConstantVoltage needs a CVCurrentCutoff.")
+                end
+                if end_after_cv && step["InitialControl"] != "charging"
+                    error("A CCCV sequence step with EndAfterConstantVoltage must have InitialControl charging.")
+                end
+                push!(steps, PolicyStep(step_policy; duration = get(step, "Duration", nothing), end_after_cv))
 
             elseif step_protocol == "Rest"
                 push!(steps, PolicyStep(RestPolicy(step["Duration"])))

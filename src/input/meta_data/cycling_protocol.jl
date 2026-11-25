@@ -183,9 +183,13 @@ function get_cycling_protocol_meta_data()
             "description" => "Relative width of the band around the voltage limit of a CC sequence step in which a time step may end the step (default 1e-4). A wider band helps when the voltage changes fast near an empty or full electrode.",
             "unit" => "1",
         ),
+        "EndAfterConstantVoltage" => Dict(
+            "type" => Bool,
+            "description" => "If true, a CCCV sequence step that starts with a charge ends when the current of its constant-voltage phase reaches CVCurrentCutoff, instead of going on to discharge. Requires CVCurrentCutoff.",
+        ),
         "Steps" => Dict(
             "type" => Vector,
-            "description" => "Ordered list of cycling protocol steps used by the Sequence protocol. Each step is a dictionary with the keys of its protocol; CC and CCCV steps may have a Duration, and CC steps a VoltageTolerance.",
+            "description" => "Ordered list of cycling protocol steps used by the Sequence protocol. Each step is a dictionary with the keys of its protocol; CC and CCCV steps may have a Duration, CC steps a VoltageTolerance, and CCCV steps EndAfterConstantVoltage.",
         ),
     )
 

@@ -500,6 +500,7 @@ function get_schema_cycling_protocol(model_settings::ModelSettings)
             "Currents" => create_property(parameter_meta, "Currents"),
             "Duration" => create_property(parameter_meta, "Duration"),
             "VoltageTolerance" => create_property(parameter_meta, "VoltageTolerance"),
+            "EndAfterConstantVoltage" => create_property(parameter_meta, "EndAfterConstantVoltage"),
             "Steps" => create_property(parameter_meta, "Steps"),
         ),
         "required" => ["Protocol"],
