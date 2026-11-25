@@ -83,7 +83,7 @@ Every import and export collects its findings and reports them in two messages:
   |:--|:--|
   | Violations of the BPX standard | The data does not conform to the BPX schema, or a file with a 1.x version uses the 0.x layout (see [BPX versions](@ref bpx_versions)). All violations are listed, with their location in the file. A function string that is not a BPX expression is an error (see [Function strings](@ref bpx_function_strings)). |
   | Inconsistencies within the BPX data | The data conforms to the schema but is not self-consistent (see [Validation](@ref bpx_validation)). |
-  | BPX features that BattMo does not support | Parts of the parameter set that are ignored, e.g. OCP hysteresis or a degradation state. |
+  | BPX features that BattMo does not support | Parts of the parameter set that are ignored, e.g. a degradation state. |
   | Differences between the BPX and BattMo models | The BattMo model differs from the BPX model, e.g. the thermal model, so that simulations do not reproduce BPX. |
   | Keys that are not part of the BPX standard | Ignored keys (reported as schema violations when the file is validated). |
   | Parameters that could not be determined | BattMo parameters for which the BPX data is missing. They are set to `0.0` and must be set before simulating; the validation of the simulation input flags the ones the selected model needs. Missing specific heat capacities, thermal conductivities and activation energies, which only thermal simulations or the Arrhenius temperature dependence use, are left unset instead and listed in the info message. |
@@ -273,6 +273,10 @@ The BattMo thermal model resolves the temperature in the simulated domain, which
 
 Thermal simulations therefore do not reproduce BPX. Isothermal simulations are unaffected. The import reports this difference whenever the file contains thermal parameters.
 
+### OCP hysteresis
+
+The two OCP branches (`OCP (lithiation) [V]`, `OCP (delithiation) [V]`) become `OpenCircuitPotentialLithiation` and `OpenCircuitPotentialDelithiation` of the active material, and the `OCP hysteresis decay constant` becomes the decay rate of both directions (`HysteresisDecayRateLithiation`, `HysteresisDecayRateDelithiation`), as in PyBaMM. The initial hysteresis states go to the cycling protocol (`InitialHysteresisStateNegativeElectrode`, `InitialHysteresisStatePositiveElectrode`). The model setting `OCPHysteresis = "OneState"` switches the hysteresis model on; the full simulation input converted from a BPX file sets it when the file gives OCP hysteresis. The equilibrium `OCP [V]` is kept as `OpenCircuitPotential`. An electrode that gives the branches without the decay constant, or the reverse, is reported, and its equilibrium OCP is used. See the [OCP hysteresis](@ref ocp_hysteresis) section of the user guide.
+
 ### Reduced models
 
 BPX files for the SPMe or SPM model are converted as they are, but BattMo simulates the full P2D (DFN) model with them, so the results differ from an SPMe or SPM simulation. An SPM parameter set has no electrolyte and transport parameters; the corresponding BattMo parameters are reported as undetermined.
@@ -282,7 +286,7 @@ BPX files for the SPMe or SPM model are converted as they are, but BattMo simula
 | Feature | Behaviour |
 |:--|:--|
 | Blended electrodes (`"Particle"` node with several particle types) | Error: BattMo models a single active material per electrode. |
-| OCP hysteresis (`OCP (lithiation) [V]`, `OCP (delithiation) [V]`, `OCP hysteresis decay constant`, initial hysteresis states) | Reported and ignored; the equilibrium `OCP [V]` is used. |
+| Export of OCP hysteresis | The branches and decay rates are reported as not exported. |
 | Degradation state (`LAM`, `LLI`) | A non-zero degradation state is reported and ignored; the parameters of the unaged reference cell are used. |
 | `Validation` data | The current of an experiment can be used for the cycling protocol (`experiment` option); the voltage and temperature data are not used. |
 | `User-defined` parameters | Reported and not interpreted, except the lumped thermal conductivity of converted 0.x files. |
@@ -311,7 +315,8 @@ The following parts of the BPX standard are not supported, or could be supported
 - **Thermal model.** The lumped BPX thermal model could be reproduced in a 1D simulation by scaling the component densities by ``\mathcal{V} / (A N_\mathrm{p} L)`` and setting `SurfaceHeatTransferCoefficient` to ``h_\mathrm{ext} \mathcal{A}`` divided by the cooled area of the simulation grid.
 - **Validation data.** The voltage curves of the `Validation` section could be used directly for calibration, and the experiments could be split into constant current and rest steps instead of a sampled current series.
 - **Degradation state.** LAM and LLI could be supported by scaling the surface area per unit volume and recomputing the stoichiometry limits from the voltage cut-offs (BPX equations 16–17).
-- **Blended electrodes and OCP hysteresis** require extensions of the BattMo models.
+- **Blended electrodes** require an extension of the BattMo models.
+- **OCP hysteresis** could also be exported (branches, a decay constant when both decay rates are the same constant, and the initial states).
 - **Updating to new BPX versions** requires regenerating the bundled schema (see `src/input/bpx_schema/README.md`) and, when new parameters are introduced, extending the conversion.
 
 ## [Functions](@id bpx_functions)

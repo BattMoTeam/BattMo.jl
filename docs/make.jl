@@ -202,6 +202,7 @@ function build_battmo_docs(
                     "Geometries" => "manuals/user_guide/geometries.md",
                     "Ramp up" => "manuals/user_guide/ramp_up.md",
                     "SEI" => "manuals/user_guide/sei_model.md",
+                    "OCP hysteresis" => "manuals/user_guide/ocp_hysteresis.md",
                     "Temperature dependence" => "manuals/user_guide/arrhenius.md",
                 ],
                 "Public API" => [

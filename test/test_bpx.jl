@@ -286,6 +286,25 @@ end
         @test occursin("1.0 / 308.15", converted_warm["Electrolyte"]["IonicConductivity"])
     end
 
+    @testset "OCP hysteresis" begin
+        bpx = nmc_v1()
+        negative = bpx["Parameterisation"]["Negative electrode"]
+        negative["OCP (lithiation) [V]"] = 0.1
+        negative["OCP (delithiation) [V]"] = 0.12
+        negative["OCP hysteresis decay constant"] = 10.0
+        bpx["State"]["Initial conditions"]["Initial hysteresis state: Negative electrode"] = -1.0
+        converted = BPX.parse_bpx_to_cell_parameters(bpx; strict = true)
+        am = converted["NegativeElectrode"]["ActiveMaterial"]
+        @test am["OpenCircuitPotentialLithiation"] == 0.1
+        @test am["OpenCircuitPotentialDelithiation"] == 0.12
+        # One decay constant in BPX, the rate of both directions (as in PyBaMM)
+        @test am["HysteresisDecayRateLithiation"] == am["HysteresisDecayRateDelithiation"] == 10.0
+        @test !haskey(converted["PositiveElectrode"]["ActiveMaterial"], "OpenCircuitPotentialLithiation")
+        full = BPX.parse_bpx_to_full_simulation_input(bpx)
+        @test full["ModelSettings"]["OCPHysteresis"] == "OneState"
+        @test full["CyclingProtocol"]["InitialHysteresisStateNegativeElectrode"] == -1.0
+    end
+
     @testset "unsupported BPX features" begin
         # Blended electrodes cannot be represented
         blended = nmc_v1()
@@ -295,12 +314,12 @@ end
         foreach(k -> delete!(pe, k), particle_keys)
         @test_throws "blended electrode" BPX.parse_bpx_to_cell_parameters(blended)
 
-        # OCP hysteresis: the equilibrium OCP is used
-        hysteresis = nmc_v1()
-        hysteresis["Parameterisation"]["Negative electrode"]["OCP (lithiation) [V]"] = 0.1
-        hysteresis["Parameterisation"]["Negative electrode"]["OCP (delithiation) [V]"] = 0.12
-        hysteresis["Parameterisation"]["Negative electrode"]["OCP hysteresis decay constant"] = 10.0
-        converted = @test_logs (:warn, r"BattMo has no OCP hysteresis model") match_mode = :any BPX.parse_bpx_to_cell_parameters(hysteresis; strict = true)
+        # OCP hysteresis without the decay constant: the equilibrium OCP is used
+        incomplete = nmc_v1()
+        incomplete["Parameterisation"]["Negative electrode"]["OCP (lithiation) [V]"] = 0.1
+        incomplete["Parameterisation"]["Negative electrode"]["OCP (delithiation) [V]"] = 0.12
+        converted = @test_logs (:warn, r"OCP hysteresis needs both OCP branches and the decay constant") match_mode = :any BPX.parse_bpx_to_cell_parameters(incomplete; strict = true)
+        @test !haskey(converted["NegativeElectrode"]["ActiveMaterial"], "OpenCircuitPotentialLithiation")
         @test occursin("(c / cmax)", converted["NegativeElectrode"]["ActiveMaterial"]["OpenCircuitPotential"])
 
         # Degradation state

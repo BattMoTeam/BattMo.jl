@@ -1133,6 +1133,11 @@ function get_scalings(model, parameters)
 
         end
 
+        if has_ocp_hysteresis(model[elde])
+            # The residual is a change of the dimensionless hysteresis state.
+            push!(scalings, (model_label = elde, equation_label = :hysteresis, value = 1.0))
+        end
+
     end
 
     return scalings

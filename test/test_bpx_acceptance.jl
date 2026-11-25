@@ -388,4 +388,56 @@ without_metadata(cell_parameters) = Dict(k => v for (k, v) in cell_parameters.al
         end
     end
 
+    @testset "Schmitt 2026 with OCP hysteresis: BattMo reproduces PyBaMM" begin
+        # The variant of pybamm/pybamm_hysteresis_reference.py: negative-electrode OCP branches
+        # 10 mV below and above the OCP table, decay constant 20, initial state -1.
+        data = read_bpx_json(bpx_fixture("schmitt_2026", "v1"))
+        negative = data["Parameterisation"]["Negative electrode"]
+        ocp = negative["OCP [V]"]
+        negative["OCP (lithiation) [V]"] = Dict("x" => ocp["x"], "y" => ocp["y"] .- 0.01)
+        negative["OCP (delithiation) [V]"] = Dict("x" => ocp["x"], "y" => ocp["y"] .+ 0.01)
+        negative["OCP hysteresis decay constant"] = 20.0
+        data["State"]["Initial conditions"]["Initial hysteresis state: Negative electrode"] = -1.0
+        path = write_bpx_json(data)
+        cell_parameters, bpx_protocol = quietly() do
+            load_cell_parameters(; from_bpx_file_path = path), load_cycling_protocol(; from_bpx_file_path = path)
+        end
+        @test bpx_protocol["InitialHysteresisStateNegativeElectrode"] == -1.0
+
+        entry = BPX_DATASETS["schmitt_2026"]["pybamm"]["curves"]["hysteresis"]
+        table, _ = readdlm(joinpath(BPX_DATA_DIR, entry["file"]), ',', Float64; header = true)
+        time, with_hysteresis, without_hysteresis = table[:, 1], table[:, 2], table[:, 3]
+
+        # From full charge: 0.5 A discharge for 40 min, 15 min rest, 0.5 A charge for 20 min, 15 min rest
+        switches = [2400.0, 3300.0, 4500.0]
+        protocol = CyclingProtocol(
+            Dict(
+                "Protocol" => "InputCurrentSeries",
+                "Times" => [0.0, 2400.0, 2400.001, 3300.0, 3300.001, 4500.0, 4500.001, 5400.0],
+                "Currents" => [0.5, 0.5, 0.0, 0.0, -0.5, -0.5, 0.0, 0.0],
+                "LowerVoltageLimit" => bpx_protocol["LowerVoltageLimit"],
+                "UpperVoltageLimit" => bpx_protocol["UpperVoltageLimit"],
+                "InitialStateOfCharge" => bpx_protocol["InitialStateOfCharge"],
+                "InitialHysteresisStateNegativeElectrode" => bpx_protocol["InitialHysteresisStateNegativeElectrode"],
+            )
+        )
+        settings = pybamm_comparison_settings(time[end])
+        curves = map((true, false)) do hysteresis
+            model_settings = bpx_model_settings()
+            hysteresis && (model_settings["OCPHysteresis"] = "OneState")
+            sim = Simulation(LithiumIonBattery(; model_settings), cell_parameters, protocol; simulation_settings = settings, time_steps = fill(10.0, 540))
+            as_curve(solve(sim; info_level = -1, include_initial_state = true))
+        end
+
+        # The effect of the hysteresis, the difference of the voltages with and without it, cancels
+        # the differences between the two base models. It is compared away from the current switches.
+        effect(curve_with, curve_without, t) = interpolate_linear(curve_with.time, curve_with.voltage, t) - interpolate_linear(curve_without.time, curve_without.voltage, t)
+        away = [k for k in eachindex(time) if time[k] >= 30.0 && all(abs(time[k] - s) > 30.0 for s in switches)]
+        largest = maximum(abs(effect(curves..., time[k]) - (with_hysteresis[k] - without_hysteresis[k])) for k in away)
+        rmse = voltage_rmse(curves[1], (time = time, voltage = with_hysteresis); t_start = 30.0)
+        @info "OCP hysteresis against PyBaMM" largest_effect_difference_mV = 1000 * largest voltage_rmse_mV = 1000 * rmse
+        @test largest < 0.5e-3
+        @test rmse < 5.0e-3
+    end
+
 end

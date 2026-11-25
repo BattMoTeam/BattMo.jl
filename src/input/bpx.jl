@@ -57,6 +57,8 @@ const PROTOCOL_PARAMETERS = [
     ("Cell", "Lower voltage cut-off [V]", "LowerVoltageLimit"),
     ("Cell", "Upper voltage cut-off [V]", "UpperVoltageLimit"),
     ("Initial conditions", "Initial state-of-charge", "InitialStateOfCharge"),
+    ("Initial conditions", "Initial hysteresis state: Negative electrode", "InitialHysteresisStateNegativeElectrode"),
+    ("Initial conditions", "Initial hysteresis state: Positive electrode", "InitialHysteresisStatePositiveElectrode"),
     ("Initial conditions", "Initial temperature [K]", "InitialTemperature"),
     ("Thermal environment", "Ambient temperature [K]", "AmbientTemperature"),
 ]
@@ -876,9 +878,9 @@ function convert_state(state::AbstractDict, report::ConversionReport)
     end
     for electrode in ("Negative electrode", "Positive electrode")
         key = "Initial hysteresis state: $electrode"
-        if has_parameter(initial_conditions, key)
-            get_parameter(initial_conditions, key)
-            add!(report, :unsupported, "State → Initial conditions → $key: OCP hysteresis is not supported (see the hysteresis parameters).")
+        value = get(initial_conditions.data, key, nothing)
+        if !isnothing(value) && !isa(value, Real)
+            add!(report, :unsupported, "State → Initial conditions → $key: an initial hysteresis state per particle phase (blended electrodes) is not supported.")
         end
     end
 
@@ -937,6 +939,32 @@ function convert_activation_energy(section::BPXSection, key::String, report::Con
     return energy
 end
 
+"""
+    convert_hysteresis(section, report) -> Dict
+
+The OCP hysteresis of a BPX electrode as BattMo active material parameters: the two OCP
+branches, and the decay constant as the decay rate of both directions (as in PyBaMM). Without
+both branches and the decay constant there is none, and the equilibrium OCP is used.
+"""
+function convert_hysteresis(section::BPXSection, report::ConversionReport)
+    given = filter(key -> has_parameter(section, key), HYSTERESIS_PARAMETERS)
+    values = Dict(key => get_parameter(section, key) for key in given)
+    isempty(given) && return Dict{String, Any}()
+    if length(given) < length(HYSTERESIS_PARAMETERS)
+        add!(report, :unsupported, "$(section.name) → $(join(given, ", ")): OCP hysteresis needs both OCP branches and the decay constant; the equilibrium OCP (\"OCP [V]\") is used for both lithiation and delithiation.")
+        return Dict{String, Any}()
+    end
+    add!(report, :notes, "$(section.name): the OCP branches and the hysteresis decay constant are converted for OCP hysteresis, which the model setting OCPHysteresis = \"OneState\" switches on.")
+    branch(key) = convert_bpx_function(values[key], "(c / cmax)", report, location(section.name, key))
+    decay = values["OCP hysteresis decay constant"]
+    return Dict{String, Any}(
+        "OpenCircuitPotentialLithiation" => branch("OCP (lithiation) [V]"),
+        "OpenCircuitPotentialDelithiation" => branch("OCP (delithiation) [V]"),
+        "HysteresisDecayRateLithiation" => decay,
+        "HysteresisDecayRateDelithiation" => decay,
+    )
+end
+
 function convert_electrode(section::BPXSection, polarity::Symbol, electrolyte_reference_concentration, lumped, report::ConversionReport)
     porosity = get_parameter(section, "Porosity")
     transport_efficiency = get_parameter(section, "Transport efficiency")
@@ -992,11 +1020,7 @@ function convert_electrode(section::BPXSection, polarity::Symbol, electrolyte_re
         "ActivationEnergyOfReaction" => convert_activation_energy(section, "Reaction rate constant activation energy [J.mol-1]", report),
     )
 
-    hysteresis_keys = filter(key -> has_parameter(section, key), HYSTERESIS_PARAMETERS)
-    if !isempty(hysteresis_keys)
-        foreach(key -> get_parameter(section, key), hysteresis_keys)
-        add!(report, :unsupported, "$(section.name) → $(join(hysteresis_keys, ", ")): BattMo has no OCP hysteresis model; the equilibrium OCP (\"OCP [V]\") is used for both lithiation and delithiation.")
-    end
+    merge!(active_material, convert_hysteresis(section, report))
 
     # BPX gives the effective electronic conductivity of the porous coating, while
     # BattMo expects the intrinsic material conductivity
@@ -1470,6 +1494,11 @@ function parse_bpx_to_full_simulation_input(
 
     model = get(get(bpx_data, "Header", Dict()), "Model", "DFN")
     add!(report, :notes, "The model, simulation and solver settings are the BattMo defaults for the P2D (DFN) model" * (model == "DFN" ? "." : ", also for this $model parameter set."))
+    model_settings = BattMoModule.load_model_settings(; from_default_set = "p2d").all
+    if any(name -> haskey(cell_parameters[name]["ActiveMaterial"], "OpenCircuitPotentialLithiation"), ("NegativeElectrode", "PositiveElectrode"))
+        model_settings["OCPHysteresis"] = "OneState"
+        add!(report, :notes, "ModelSettings: OCPHysteresis = \"OneState\", since the BPX input gives OCP hysteresis.")
+    end
     emit_report(report)
 
     return Dict{String, Any}(
@@ -1478,7 +1507,7 @@ function parse_bpx_to_full_simulation_input(
             "Description" => "Simulation input converted from a BPX parameter set.",
         ),
         "BaseModel" => "LithiumIonBattery",
-        "ModelSettings" => BattMoModule.load_model_settings(; from_default_set = "p2d").all,
+        "ModelSettings" => model_settings,
         "CellParameters" => cell_parameters,
         "CyclingProtocol" => cycling_protocol,
         "SimulationSettings" => BattMoModule.load_simulation_settings(; from_default_set = "p2d").all,
