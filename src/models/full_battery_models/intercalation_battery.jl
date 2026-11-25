@@ -338,6 +338,10 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
                 ImaxDischarge = max(ImaxDischarge, Idis)
                 ImaxCharge = max(ImaxCharge, Ichg)
 
+                # An optional relative VoltageTolerance widens the band around the voltage limit in which a time step
+                # may end the step; near an empty or full electrode the default band can be too narrow to land in.
+                tolerance = get(step, "VoltageTolerance", nothing)
+                tolerances = isnothing(tolerance) ? (;) : (; tolerances = Dict("discharging" => tolerance, "charging" => tolerance))
                 step_policy = CCPolicy(
                     get(step, "TotalNumberOfCycles", 0),
                     step["InitialControl"],
@@ -347,6 +351,7 @@ function setup_control_model(input, model_neam, model_peam; T = Float64)
                     ImaxDischarge = Idis,
                     ImaxCharge = Ichg,
                     T = promote_type(typeof(Idis), typeof(Ichg), typeof(step["LowerVoltageLimit"]), typeof(step["UpperVoltageLimit"])),
+                    tolerances...,
                 )
                 if use_ramp_up
                     Imax = step["InitialControl"] == "charging" ? Ichg : Idis

@@ -176,9 +176,16 @@ function get_cycling_protocol_meta_data()
             "description" => "Duration of a rest protocol or rest sequence step. In a CC or CCCV sequence step, an optional time limit: the step ends after this time unless its own end condition comes first. With ramp-up, part of the charge of a CC step passes at the start of the next step, as the current ramps from the CC value.",
             "unit" => "s",
         ),
+        "VoltageTolerance" => Dict(
+            "type" => Real,
+            "min_value" => 0.0,
+            "max_value" => 0.1,
+            "description" => "Relative width of the band around the voltage limit of a CC sequence step in which a time step may end the step (default 1e-4). A wider band helps when the voltage changes fast near an empty or full electrode.",
+            "unit" => "1",
+        ),
         "Steps" => Dict(
             "type" => Vector,
-            "description" => "Ordered list of cycling protocol steps used by the Sequence protocol. Each step is a dictionary with the keys of its protocol; CC and CCCV steps may have a Duration.",
+            "description" => "Ordered list of cycling protocol steps used by the Sequence protocol. Each step is a dictionary with the keys of its protocol; CC and CCCV steps may have a Duration, and CC steps a VoltageTolerance.",
         ),
     )
 

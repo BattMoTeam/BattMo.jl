@@ -493,3 +493,50 @@ end
     @test isapprox(result.step_start(2) - result.step_start(1), 600.0; atol = 1.0e-3)
     @test result.voltage[findfirst(==(2), result.step_index)] < 4.1
 end
+
+@testset "Sequence CC step ends within its VoltageTolerance band" begin
+    # A 1C discharge to an empty electrode with long time steps: the voltage falls by tens of mV per time step near
+    # the end, so a time step must end within a band around the limit; a wider band makes that possible.
+    cell_parameters = load_cell_parameters(; from_default_set = "chen_2020")
+    model_settings = load_model_settings(; from_default_set = "p2d")
+    simulation_settings = load_simulation_settings(; from_default_set = "p2d")
+    solver_settings = load_solver_settings(; from_default_set = "direct")
+    solver_settings["NonLinearSolver"]["MaxTimestep"] = 120.0
+    model = LithiumIonBattery(; model_settings)
+
+    tolerance = 1.0e-2
+    limit = 3.0
+    cycling_protocol = CyclingProtocol(
+        Dict(
+            "Protocol" => "Sequence",
+            "InitialStateOfCharge" => 0.9,
+            "Steps" => [
+                Dict(
+                    "Protocol" => "CC",
+                    "InitialControl" => "discharging",
+                    "DRate" => 1.0,
+                    "LowerVoltageLimit" => limit,
+                    "UpperVoltageLimit" => 4.2,
+                    "VoltageTolerance" => tolerance,
+                ),
+                # Longer than a report step, so that the report step with the end of the discharge is stored.
+                Dict("Protocol" => "Rest", "Duration" => 1800.0),
+            ],
+        )
+    )
+
+    output = solve(
+        Simulation(model, cell_parameters, cycling_protocol; simulation_settings, time_steps = fill(900.0, 8));
+        solver_settings,
+        info_level = -1,
+        expand_substates = true,
+    )
+
+    step_index = sequence_step_index(output)
+    voltage = control_voltage(output)
+    discharge_end = findfirst(==(2), step_index)
+    @test !isnothing(discharge_end)
+    if !isnothing(discharge_end)
+        @test limit * (1 - tolerance) <= voltage[discharge_end] <= limit
+    end
+end
