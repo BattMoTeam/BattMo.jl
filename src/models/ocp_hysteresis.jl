@@ -2,6 +2,10 @@
 # One-state OCP hysteresis of an active material, as PyBaMM's "one-state hysteresis" model #
 ############################################################################################
 
+# Same model as OneStateHysteresisOpenCircuitPotential in PyBaMM (Sulzer et al., J. Open Res.
+# Softw. 9 (2021) 14, doi:10.5334/jors.309), which follows Axen et al., J. Energy Storage 48
+# (2022) 103985, doi:10.1016/j.est.2022.103985.
+
 export HysteresisState, HystereticOpenCircuitPotential, HysteresisEquation
 
 """

@@ -3,7 +3,7 @@
 The open-circuit potential of many electrode materials, graphite among them, is not the same
 after lithiation and after delithiation: after a charge a cell rests at a higher voltage than
 after a discharge to the same state of charge. BattMo models this with the one-state
-hysteresis model of PyBaMM ("one-state hysteresis", after Axen et al.), for each electrode
+hysteresis model of PyBaMM [sulzer2021](@cite) ("one-state hysteresis", after [axen2022](@cite)), for each electrode
 whose active material gives two OCP branches.
 
 ## Model
