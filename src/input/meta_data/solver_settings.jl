@@ -93,7 +93,7 @@ function get_solver_settings_meta_data()
             "type" => String,
             "options" => ["Direct", "Iterative", "UserDefined"],
             "category" => "SolverSettings",
-            "description" => "Linear solver method.",
+            "description" => "Linear solver method. \"Direct\" uses the sparse direct solver KLU.",
         ),
         "FailureCutsTimesteps" => Dict(
             "type" => Bool,

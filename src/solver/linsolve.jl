@@ -273,7 +273,7 @@ function battery_linsolve(inputparams)
     if method == "Direct"
 
         set_default_input_params!(inputparams, ["MaxSize"], 1000000)
-        return LUSolver(; max_size = inputparams["MaxSize"])
+        return KLUSolver(; max_size = inputparams["MaxSize"])
 
     elseif method == "Iterative"
 
