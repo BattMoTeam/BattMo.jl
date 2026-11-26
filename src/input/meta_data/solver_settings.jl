@@ -93,7 +93,7 @@ function get_solver_settings_meta_data()
             "type" => String,
             "options" => ["Direct", "Iterative", "UserDefined"],
             "category" => "SolverSettings",
-            "description" => "Linear solver method. \"Direct\" uses the sparse direct solver KLU.",
+            "description" => "Linear solver method. \"Direct\" uses the sparse direct solver KLU for P2D models and UMFPACK for P4D models.",
         ),
         "FailureCutsTimesteps" => Dict(
             "type" => Bool,
