@@ -152,7 +152,8 @@ using Jutul: get_submodel_offsets, submodels_symbols
 # ─────────────────────────────────────────────────────────────────────────────
 using Jutul: JutulPreconditioner
 using Jutul: LinearizedSystem, LinearOperator
-using Jutul: LUSolver
+using Jutul: KLUSolver, LUSolver
+using KLU: KLU                                    # Loads Jutul's KLUSolver extension
 using Jutul: NoRelaxation, SimpleRelaxation
 using Jutul: TimestepSelector
 

@@ -844,7 +844,7 @@ function solver_configuration(
     if linear_solver_dict["Method"] == "UserDefined"
         linear_solver = overwritten_settings.linear_solver
     else
-        linear_solver = battery_linsolve(linear_solver_dict)
+        linear_solver = battery_linsolve(multimodel, linear_solver_dict)
     end
 
     cfg = simulator_config(

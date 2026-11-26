@@ -264,7 +264,25 @@ function setup_subset_equation_map(multi_model::MultiModel, storage, model_label
 end
 
 
-function battery_linsolve(inputparams)
+"""
+    Jutul.select_linear_solver(model::MultiModel{:IntercalationBattery}; max_size = 1_000_000, kwarg...)
+
+Select the sparse direct solver of a battery model: KLU for P2D and UMFPACK (`LUSolver`) for P4D.
+The LU factors of a P2D Jacobian stay sparse, which suits KLU. The in-plane coupling of a P4D grid
+causes fill-in, which the multifrontal factorization of UMFPACK handles faster. Jutul also uses this
+method where it sets up a solver itself, as for the adjoint solves of a calibration.
+"""
+function Jutul.select_linear_solver(model::MultiModel{:IntercalationBattery}; max_size = 1_000_000, kwarg...)
+    # The electrolyte of a P2D model is a chain of cells, with one interior face fewer than cells.
+    electrolyte = model[:Electrolyte].domain
+    if number_of_faces(electrolyte) == number_of_cells(electrolyte) - 1
+        return KLUSolver(; max_size)
+    else
+        return LUSolver(; max_size)
+    end
+end
+
+function battery_linsolve(model, inputparams)
 
     set_default_input_params!(inputparams, ["Method"], "Direct")
 
@@ -273,7 +291,7 @@ function battery_linsolve(inputparams)
     if method == "Direct"
 
         set_default_input_params!(inputparams, ["MaxSize"], 1000000)
-        return LUSolver(; max_size = inputparams["MaxSize"])
+        return Jutul.select_linear_solver(model; max_size = inputparams["MaxSize"])
 
     elseif method == "Iterative"
 
