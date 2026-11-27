@@ -35,12 +35,15 @@ Represents a voltage calibration problem for a battery simulation.
 - `history::Any`  
   Stores the optimization process history, including iteration details and convergence info.
 
+- `weights::Any`  
+  Nonnegative weight of each data point, or `nothing` for equal weights (see `setup_calibration_objective`).
+
 # Constructors
 
-- `VoltageCalibration(t, v, sim)`
+- `VoltageCalibration(t, v, sim; weights = nothing)`
 
   Creates a new calibration object from time vector `t`, voltage vector `v`, and a simulation `sim`.  
-  Ensures time vector `t` is strictly increasing and matches length of `v`.
+  Ensures time vector `t` is strictly increasing and matches length of `v`, and `weights`, if given.
 
 - `VoltageCalibration(t_and_v, sim; shift_time = false)`
 
@@ -72,28 +75,39 @@ mutable struct VoltageCalibration <: AbstractCalibration
     calibrated_cell_parameters::Any
     "History of the optimization process, containing information about the optimization steps."
     history::Any
+    "Weight of each data point, or `nothing` for equal weights."
+    weights::Any
     """
-    	VoltageCalibration(t, v, sim)
+    	VoltageCalibration(t, v, sim; weights = nothing)
 
     Set up calibration for a voltage calibration problem for given time vector
-    `t` and voltage vector `v` and a `Simulation` instance `sim`
+    `t` and voltage vector `v` and a `Simulation` instance `sim`. The optional
+    `weights` give each data point a nonnegative weight in the objective, see
+    `setup_calibration_objective`.
     """
-    function VoltageCalibration(t, v, sim)
+    function VoltageCalibration(t, v, sim; weights = nothing)
         @assert length(t) == length(v)
         for i in 2:length(t)
             @assert t[i] > t[i - 1]
         end
-        return new(t, v, deepcopy(sim), Dict{Vector{String}, Any}(), missing, missing)
+        if !isnothing(weights)
+            length(weights) == length(t) || throw(ArgumentError("Weights and data must have equal length."))
+            all(w -> isfinite(w) && w >= 0, weights) || throw(ArgumentError("Weights must be finite and nonnegative."))
+            weights = Float64.(weights)
+            sum(weights[i] * (t[i + 1] - t[i]) for i in 1:(length(t) - 1)) > 0 ||
+                throw(ArgumentError("The weights must be positive on some interval of the data."))
+        end
+        return new(t, v, deepcopy(sim), Dict{Vector{String}, Any}(), missing, missing, weights)
     end
 end
 
-function VoltageCalibration(t_and_v, sim; shift_time = false)
+function VoltageCalibration(t_and_v, sim; shift_time = false, weights = nothing)
     t = t_and_v[:, 1]
     v = t_and_v[:, 2]
     if shift_time
         t = t .- minimum(t)  # Shift time to start at zero
     end
-    return VoltageCalibration(t, v, sim)
+    return VoltageCalibration(t, v, sim; weights)
 end
 
 """
@@ -215,10 +229,31 @@ function set_calibration_parameter!(vc::AbstractCalibration, parameter_name::Vec
     return set_nested_json_value!(vc.sim.cell_parameters, parameter_name, value)
 end
 
+"""
+    setup_calibration_objective(vc::VoltageCalibration)
+
+Objective of a voltage calibration: the time average of the squared difference between the
+measured and the simulated voltage, summed over the ministeps of the simulation.
+
+Without weights, the average is over the time of the data, `vc.t[end]`. With `vc.weights`, the
+weight of data point `i` holds from `vc.t[i]` to `vc.t[i + 1]`, and the last one after
+`vc.t[end]`; each ministep takes the weight at its midpoint, and the sum is divided by the
+integral of the weights over the data. Weights of zero leave intervals out of the fit, and a
+weight of one over the duration of a step makes every step count equally.
+"""
 function setup_calibration_objective(vc::VoltageCalibration)
     # Set up the objective function
     V_fun = get_1d_interpolator(vc.t, vc.v, cap_endpoints = true)
     total_time = vc.t[end]
+    weights = vc.weights
+    if isnothing(weights)
+        weight_at = t -> 1.0
+        normalization = total_time
+    else
+        data_time = vc.t
+        weight_at = t -> weights[clamp(searchsortedlast(data_time, t), 1, length(weights))]
+        normalization = sum(weights[i] * (data_time[i + 1] - data_time[i]) for i in 1:(length(data_time) - 1))
+    end
     function objective(model, state, dt, step_info, forces)
         t = state[:Control][:Controller].time
         # Only the last ministep covers the data after the final simulated time.
@@ -227,7 +262,7 @@ function setup_calibration_objective(vc::VoltageCalibration)
         end
         V_obs = V_fun(t)
         V_sim = state[:Control][:ElectricPotential][1]
-        return dt * (V_obs - V_sim)^2 / total_time
+        return weight_at(t - dt / 2) * dt * (V_obs - V_sim)^2 / normalization
     end
     return objective
 end
