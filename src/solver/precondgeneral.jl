@@ -4,15 +4,7 @@ function Jutul.update_preconditioner!(prec::BattMo.BatteryGeneralPreconditioner,
     # Let the rest be (?)
     A = lsys.jac
     r = lsys.r
-    setup = false
-    if isnothing(prec.data)
-        setup = true
-    else
-        # NB should probably not be here
-        if A != prec.data.A
-            setup = false
-        end
-    end
+    setup = isnothing(prec.data)
     #Main.@infiltrate true
     if setup
         @tic "setup genneral precond" begin
@@ -36,7 +28,10 @@ function Jutul.update_preconditioner!(prec::BattMo.BatteryGeneralPreconditioner,
                 #update_local_preconditioner!(varprecond.precond, A, r, eq_map, var_map, executor)
             end
             ndof = length(r)
-            prec.data = (maps = maps, allvars = (r = zeros(ndof), x = zeros(ndof)), n = ndof, A = A)
+            # In block mode, the correction before the global stage is zero outside the variables of the blocks and the
+            # control, the last unknown, so the residual update needs only these columns of A.
+            columns = sort!(unique!(vcat(ndof, (map.var.ix for map in maps)...)))
+            prec.data = (maps = maps, allvars = (r = zeros(ndof), x = zeros(ndof)), n = ndof, A = A, columns = columns)
         end
         #    for (i,varprecond) in enumerate(prec.varpreconds)
         #         #eq_map = copy(prec.data.maps[i].eq_map)
@@ -49,8 +44,9 @@ function Jutul.update_preconditioner!(prec::BattMo.BatteryGeneralPreconditioner,
         precond = prec.g_varprecond
         @tic "update global preconditioner" update_preconditioner!(precond.precond, lsys, context, model, storage, recorder, executor)
     else
-        #Main.@infiltrate !(A == prec.data.A)
-        @assert A == prec.data.A
+        # The linear system updates its matrix in place, so it is still the matrix of the setup. Comparing the values
+        # instead would read the whole matrix.
+        @assert A === prec.data.A
     end
     #prec.data.A = A
     for (i, varprecond) in enumerate(prec.varpreconds)
@@ -72,68 +68,74 @@ Jutul.operator_nrows(p::BattMo.BatteryGeneralPreconditioner) = p.data.n
 
 function Jutul.apply!(x, prec::BattMo.BatteryGeneralPreconditioner, r)
     A = prec.data.A
+    method = prec.params["method"]
+    @assert method == "block" || method == "seq"
+    dx = prec.data.allvars.x
+    r_local = prec.data.allvars.r
     x .= 0
-    dx = prec.data.allvars.x #copy(x) # maybe move to storage
-    dx .= 0.0
-    r_local = prec.data.allvars.r #copy(r) # maby move to storage
     r_local .= r
     if prec.params["pre_solve_control"] == true
-        solve_for_current!(x, prec.data.A, r_local)
+        solve_for_current!(x, A, r_local)
     end
-    #println(x)
-    #println(r_local)
-
+    if method == "seq"
+        # dx holds the correction of one block and is zero outside its variables
+        dx .= 0
+    end
     for (i, varprecond) in enumerate(prec.varpreconds)
-        var = prec.data.maps[i].var # contain storage and index
-        dx .= 0.0
-        precond = varprecond.precond
-        precond = prec.varpreconds[i].precond
-        if false
-            println("Apply preconditioner for")
-            println("Equations", varprecond.eq)
-            println("Variables ", varprecond.var)
-            println("Models ", varprecond.models)
-            #println(precond)
+        var = prec.data.maps[i].var # The indices of the block and its local storage
+        apply_local_preconditioner!(x, varprecond.precond, r_local, var)
+        if method == "seq"
+            # The blocks do not overlap: subtract the product with the correction of this block from the residual
+            block_correction = view(dx, var.ix)
+            block_correction .= var.x
+            subtract_product!(r_local, A, dx, var.ix)
+            block_correction .= 0
         end
-        apply_local_preconditioner!(dx, precond, r_local, var)
-        #println(dx)
-        x .+= dx
-        if prec.params["method"] == "seq"
-            ## assumes non overlapping variables
-            mul!(r_local, A, dx, -1, true)
-            dx .= 0.0
-        else
-            @assert prec.params["method"] == "block"
-            dx .= 0.0
-        end
-        #println(x)
-        #println(r_local)
     end
-    ## if block we need to update residual before global preconditioner
-    #println(x)
-    if prec.params["method"] == "block"
+    if method == "block"
+        # The residual of the corrections of all blocks before the global stage
         r_local .= r
-        mul!(r_local, A, x, -1, true)
-        dx .= 0.0
+        subtract_product!(r_local, A, x, prec.data.columns)
     end
-    #println(x)
-    #println(r_local)
-    #error()
     if !isnothing(prec.g_varprecond)
-        varprec = prec.g_varprecond
-        apply!(dx, varprec.precond, r_local)
+        dx .= 0
+        apply!(dx, prec.g_varprecond.precond, r_local)
         x .+= dx
         # Only the post-solve of the control reads this residual
         if prec.params["post_solve_control"] == true
             mul!(r_local, A, dx, -1, true)
         end
-        dx .= 0.0
     end
-    return if prec.params["post_solve_control"] == true
-        solve_for_current!(x, prec.data.A, r_local)
+    if prec.params["post_solve_control"] == true
+        solve_for_current!(x, A, r_local)
     end
-    #println(x)
-    #println(r_local)
+    return x
+end
+
+"""
+    subtract_product!(r, A, x, columns)
+
+Subtract `A * x` from `r` for an `x` that is zero outside `columns`. A CSC matrix is read in these columns only; for
+sorted `columns`, the sums are those of the product with the whole matrix.
+"""
+function subtract_product!(r, A::SparseMatrixCSC, x, columns)
+    @assert length(r) == size(A, 1) && length(x) == size(A, 2)
+    rows = rowvals(A)
+    values = nonzeros(A)
+    for column in columns
+        # Fused as in the product of SparseArrays, so that the sums are the same
+        minus_x = -x[column]
+        @inbounds for position in nzrange(A, column)
+            row = rows[position]
+            r[row] = muladd(values[position], minus_x, r[row])
+        end
+    end
+    return r
+end
+
+# Other formats, such as Jutul's CSR matrix, do not store the columns contiguously
+function subtract_product!(r, A, x, columns)
+    return mul!(r, A, x, -1, true)
 end
 
 function solve_for_current!(x, A, r_local)
@@ -201,12 +203,21 @@ function update_local_preconditioner!(varprec, A, r, ind_eq, ind_var, executor)
     #NB ok??
     #Jutul.update_preconditioner!(prec, A_s, view(r, ix), DefaultContext(), executor)
 end
+
+"""
+    apply_local_preconditioner!(x, prec, r, S)
+
+Apply the preconditioner `prec` of one block to the residual `r` at the indices `S.ix` and add the result to `x` there.
+The local residual and result stay in `S.r` and `S.x`.
+"""
 function apply_local_preconditioner!(x, prec, r, S)
     r_i = S.r
     x_i = S.x
     x_i .= 0.0
     ix = S.ix
-    @. r_i = r[ix]
+    r_i .= view(r, ix)
     apply!(x_i, prec, r_i)
-    return @. x[ix] = x_i
+    x_block = view(x, ix)
+    x_block .+= x_i
+    return x
 end
