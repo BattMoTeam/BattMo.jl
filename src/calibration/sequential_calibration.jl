@@ -240,9 +240,9 @@ function setup_sequential_calibration_case(X, sim, parameters; stepix = missing)
     )
 end
 
-function setup_sequential_problem(sim, t, voltage; catalog, weights = nothing)
+function setup_sequential_problem(sim, t, voltage; catalog)
     parameters = select_sequential_parameters(catalog)
-    calibration = VoltageCalibration(t, voltage, sim; weights)
+    calibration = VoltageCalibration(t, voltage, sim)
     physical_x0 = Float64[
         sequential_parameter_value(calibration.sim.cell_parameters, p) for p in parameters
     ]
@@ -271,11 +271,10 @@ function setup_sequential_problem(sim, t, voltage; catalog, weights = nothing)
 end
 
 """
-    evaluate_sequential_sensitivities(sim, t, voltage; catalog, weights = nothing, kwargs...)
+    evaluate_sequential_sensitivities(sim, t, voltage; catalog, kwargs...)
 
 Evaluate the voltage objective and its adjoint gradient for the parameters in the
 supplied catalog at their current values. Returned vectors follow sorted catalog keys.
-The optional `weights` of the data points enter the objective as in `VoltageCalibration`.
 
 `gradient` is the derivative with respect to the optimization variables: `log10(p)`
 for log-scaled parameters and `p` for linear parameters. `normalized_gradient`
@@ -286,7 +285,6 @@ bounds come from `catalog`, see `sequential_parameter_catalog`.
 function evaluate_sequential_sensitivities(
         sim, t, voltage;
         catalog,
-        weights = nothing,
         solver_settings = get_default_solver_settings(sim.model),
         backend_arg = (
             use_sparsity = false,
@@ -295,7 +293,7 @@ function evaluate_sequential_sensitivities(
             do_prep = true,
         ),
     )
-    problem = setup_sequential_problem(sim, t, voltage; catalog, weights)
+    problem = setup_sequential_problem(sim, t, voltage; catalog)
     objective_value, gradient = solve_and_differentiate_for_calibration(
         problem.x0,
         problem.setup_case,
@@ -316,17 +314,15 @@ function evaluate_sequential_sensitivities(
 end
 
 """
-    calibrate_sequential_group(sim, t, voltage; catalog, weights = nothing, kwargs...)
+    calibrate_sequential_group(sim, t, voltage; catalog, kwargs...)
 
 Optimize one sequential parameter group with Jutul's bounded BFGS solver. The parameters
 and their bounds come from the supplied group catalog, see `sequential_parameter_catalog`.
-The optional `weights` of the data points enter the objective as in `VoltageCalibration`.
 Returned vectors follow sorted catalog keys.
 """
 function calibrate_sequential_group(
         sim, t, voltage;
         catalog,
-        weights = nothing,
         solver_settings = get_default_solver_settings(sim.model),
         grad_tol = 1.0e-10,
         obj_change_tol = 1.0e-10,
@@ -339,7 +335,7 @@ function calibrate_sequential_group(
             do_prep = true,
         ),
     )
-    problem = setup_sequential_problem(sim, t, voltage; catalog, weights)
+    problem = setup_sequential_problem(sim, t, voltage; catalog)
     adjoint_cache = Dict()
     objective_gradient(x) = solve_and_differentiate_for_calibration(
         x,
