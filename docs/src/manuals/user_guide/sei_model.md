@@ -47,35 +47,6 @@ Particle diffusion still uses `R` alone. At open circuit, particles can release 
 that feeds SEI growth while the net external current remains zero. Adding a separate
 particle consumption sink would count that loss twice.
 
-## Fixed passivating thickness
-
-By default, the current film thickness `L` limits the flux. The optional
-`PassivatingThickness`, `L_p`, replaces `L` in the flux only. With
-`g = exp(-F*eta_sei/(R_gas*T)) * (1 - F*U_sei/(2*R_gas*T))`, `L0 = InitialThickness`,
-and `E` the time integral of `g`:
-
-```text
-Default:      N_raw = De*ce0/L   * g   =>  L^2 = L0^2 + 2*(V_m/s)*De*ce0*E
-Fixed layer:  N_raw = De*ce0/L_p * g   =>  L   = L0   + (V_m/s)*(De*ce0/L_p)*E
-```
-
-With the default, growth slows down as the film thickens. With a fixed layer, a compact
-inner layer of thickness `L_p` controls electron transport, and the consumed lithium forms
-a porous outer layer, so the growth rate does not depend on `L`. The film thickness `L`
-still evolves and sets the film resistance and the lithium inventory. Lithium loss
-determines only `De*ce0/L_p`: fix `L_p`, for example at `InitialThickness`, and fit the
-growth prefactor. The SEI mass-equation tolerance then scales with `De*ce0/L_p`.
-
-The fixed layer follows the layered picture of the SEI: a heterogeneous film
-[peled1997](@cite) with a dense inorganic inner layer and a porous outer layer that
-lithium crosses easily [lu2011, shi2012](@cite). Continuum growth models reproduce such a
-dual-layer morphology [single2016](@cite). In the interstitial theory, growth that does
-not depend on the film thickness is the reaction-limited regime [vonkolzenberg2020](@cite).
-Capacity-fade models with a kinetically limited solvent-reduction side reaction behave the
-same way [ramadass2004, safari2009](@cite). The option suits data in which lithium loss
-grows nearly linearly with exposure; cycling data often deviate from the `t^0.5` growth of
-the default law [attia2020, keil2020](@cite).
-
 ## Film resistance and inputs
 
 The ionic film drop uses the intercalation current crossing the film:
@@ -88,8 +59,7 @@ eta_intercalation = phi_s - phi_e - OCP - U_sei
 `InitialThickness`, `MolarVolume`, `StoichiometricCoefficient`, `IonicConductivity`, and
 `InitialPotentialDrop` must be finite and positive. The growth prefactors must be finite
 and nonnegative. Setting either growth prefactor to zero disables consumption and growth
-while retaining the initial film resistance. `PassivatingThickness` is optional; when
-given, it must be finite and positive.
+while retaining the initial film resistance.
 
 `InitialPotentialDrop` is the normalization scale of `NormalizedSEIVoltageDrop`. The
 fresh state starts with zero physical drop; the algebraic voltage equation determines
