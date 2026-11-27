@@ -20,6 +20,14 @@ function get_model_settings_meta_data()
             "description" => """Which SEI model is used. For instance: "Bolay" """,
             "documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/sei_model",
         ),
+        "OCPHysteresis" => Dict(
+            "type" => String,
+            "options" => ["OneState"],
+            "category" => "ModelSettings",
+            "context_type_iri" => nothing,
+            "description" => """OCP hysteresis model. "OneState": PyBaMM's one-state hysteresis, for every electrode whose ActiveMaterial gives OpenCircuitPotentialLithiation and OpenCircuitPotentialDelithiation.""",
+            "documentation" => "https://battmoteam.github.io/BattMo.jl/dev/manuals/user_guide/ocp_hysteresis",
+        ),
         "PotentialFlowDiscretization" => Dict(
             "type" => String,
             "options" => ["GeneralAD", "TwoPointDiscretization"],

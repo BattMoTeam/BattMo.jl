@@ -193,12 +193,17 @@ function effective_net_reaction_overpotential(
     return sgn * eta_mag
 end
 
-function eval_ocp_from_system(system, c::Real, T::Real)
+function eval_ocp_from_system(system, c::Real, T::Real; hysteresis_state = nothing)
     params = system.params
     ocp_fun = system[:ocp_func]
     cmax = system[:maximum_concentration]
     refT = get_reference_temperature(system)
     c_clamped = clamp(c, 1.0e-12, cmax - 1.0e-12)
+
+    # With OCP hysteresis the electrode is on the blend of its branches at its hysteresis state.
+    if !isnothing(hysteresis_state) && system isa ActiveMaterial && has_ocp_hysteresis(system)
+        return hysteretic_ocp(params, c_clamped, T, hysteresis_state)
+    end
 
     if haskey(params, :ocp_funcconstant)
         return ocp_fun
@@ -284,6 +289,8 @@ function compute_voltage_breakdown(output::SimulationOutput)
     c_p_part = get_state("PositiveElectrodeActiveMaterialParticleConcentration"; required = false)
     T_n = get_state("NegativeElectrodeActiveMaterialTemperature"; required = false)
     T_p = get_state("PositiveElectrodeActiveMaterialTemperature"; required = false)
+    h_n = get_state("NegativeElectrodeActiveMaterialHysteresisState"; required = false)
+    h_p = get_state("PositiveElectrodeActiveMaterialHysteresisState"; required = false)
 
     nsteps = min(
         length(time_series["Time"]),
@@ -429,8 +436,10 @@ function compute_voltage_breakdown(output::SimulationOutput)
             Tn_loc = isnothing(T_n) ? 298.15 : T_n[i, ne_sep_idx]
             Tp_loc = isnothing(T_p) ? 298.15 : T_p[i, pe_sep_idx]
 
-            U_n_avg = eval_ocp_from_system(ne_system, cn_avg, Tn_loc)
-            U_p_avg = eval_ocp_from_system(pe_system, cp_avg, Tp_loc)
+            hn_loc = isnothing(h_n) ? nothing : h_n[i, ne_sep_idx]
+            hp_loc = isnothing(h_p) ? nothing : h_p[i, pe_sep_idx]
+            U_n_avg = eval_ocp_from_system(ne_system, cn_avg, Tn_loc; hysteresis_state = hn_loc)
+            U_p_avg = eval_ocp_from_system(pe_system, cp_avg, Tp_loc; hysteresis_state = hp_loc)
 
             ocv_average[i] = U_p_avg - U_n_avg
             conc_solid_pos[i] = U_p - U_p_avg
@@ -921,6 +930,8 @@ function extract_spatial_data(states::Vector; layout = nothing)
         "PositiveElectrodeActiveMaterialTemperature" => [:PositiveElectrodeActiveMaterial, :Temperature],
         "NegativeElectrodeActiveMaterialOpenCircuitPotential" => [:NegativeElectrodeActiveMaterial, :OpenCircuitPotential],
         "PositiveElectrodeActiveMaterialOpenCircuitPotential" => [:PositiveElectrodeActiveMaterial, :OpenCircuitPotential],
+        "NegativeElectrodeActiveMaterialHysteresisState" => [:NegativeElectrodeActiveMaterial, :HysteresisState],
+        "PositiveElectrodeActiveMaterialHysteresisState" => [:PositiveElectrodeActiveMaterial, :HysteresisState],
         "NegativeElectrodeActiveMaterialCharge" => [:NegativeElectrodeActiveMaterial, :Charge],
         "NegativeElectrodeCurrentCollectorCharge" => [:NegativeElectrodeCurrentCollector, :Charge],
         "ElectrolyteCharge" => [:Electrolyte, :Charge],

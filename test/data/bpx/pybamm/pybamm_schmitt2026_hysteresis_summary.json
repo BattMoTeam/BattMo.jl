@@ -1,0 +1,17 @@
+{
+  "source": "schmitt_2026.bpx.json",
+  "pybamm_version": "26.11.0.0",
+  "steps": [
+    "Discharge at 0.5 A for 40 minutes",
+    "Rest for 15 minutes",
+    "Charge at 0.5 A for 20 minutes",
+    "Rest for 15 minutes"
+  ],
+  "offset_V": 0.01,
+  "decay_constant": 20.0,
+  "initial_hysteresis_state": -1.0,
+  "mesh_points": 20,
+  "output_period_s": 10.0,
+  "points": 541,
+  "largest_effect_V": 0.009999999984914965
+}

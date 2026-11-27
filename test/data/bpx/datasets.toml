@@ -52,3 +52,8 @@ original_0p5A = { file = "pybamm/pybamm_schmitt2026_original_0p5A.csv", sha256 =
 original_2A = { file = "pybamm/pybamm_schmitt2026_original_2A.csv", sha256 = "2a46cb9be80446d74af8787e53ed63cb67af514562e4f2607f853bd7a88072ac" }
 uniform_0p5A = { file = "pybamm/pybamm_schmitt2026_uniform_0p5A.csv", sha256 = "779a255b0e96c67705bdf9999a29f81814ebadd8ca6e50c4a387bdce9d8cbc89" }
 uniform_2A = { file = "pybamm/pybamm_schmitt2026_uniform_2A.csv", sha256 = "f0f7c59b9ff995cd8d20db0690fde6a018ae7ef00b9cccb47ee54a9c64730b18" }
+# OCP hysteresis: the v1 file with negative-electrode OCP branches 10 mV below and above the OCP,
+# decay constant 20 and initial hysteresis state -1, with and without PyBaMM's one-state
+# hysteresis model (pybamm/pybamm_hysteresis_reference.py, PyBaMM 26.11.0.0, bpx 1.1.1; summary in
+# pybamm/pybamm_schmitt2026_hysteresis_summary.json).
+hysteresis = { file = "pybamm/pybamm_schmitt2026_hysteresis.csv", sha256 = "b1764c14730c83fe1bced5a46906db101ee2f9a06fc9c5b45cb7d6e48c00e6f8" }

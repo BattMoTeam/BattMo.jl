@@ -275,6 +275,25 @@ end
 # Update secondary variables #
 ##############################
 
+"""
+    evaluate_ocp_function(func, func_type, c, T, refT, cmax)
+
+Value at concentration `c` and temperature `T` of an open-circuit potential given as input: a
+constant, a table of the stoichiometry `c / cmax`, or a function or expression of
+`(c, T, refT, cmax)`. The branches and decay rates of OCP hysteresis take the same forms.
+"""
+function evaluate_ocp_function(func, func_type, c, T, refT, cmax)
+    if func_type == :interpolator
+        return func(c / cmax)
+    elseif func_type == :expression || func_type == :function
+        return func(c, T, refT, cmax)
+    elseif func_type == :constant
+        return func
+    else
+        error("Open Circuit Potential function type not recognized")
+    end
+end
+
 @jutul_secondary(
     function update_vocp!(
             OpenCircuitPotential,
@@ -294,22 +313,7 @@ end
 
         for cell in ix
 
-            if function_type == :interpolator
-
-                @inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell] / cmax)
-
-            elseif function_type == :expression || function_type == :function
-
-                @inbounds OpenCircuitPotential[cell] = ocp_func(SurfaceConcentration[cell], Temperature[cell], refT, cmax)
-
-            elseif function_type == :constant
-
-                @inbounds OpenCircuitPotential[cell] = ocp_func
-
-            else
-                error("Open Circuit Potential function type not recognized")
-
-            end
+            @inbounds OpenCircuitPotential[cell] = evaluate_ocp_function(ocp_func, function_type, SurfaceConcentration[cell], Temperature[cell], refT, cmax)
 
         end
 

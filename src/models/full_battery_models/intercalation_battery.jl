@@ -188,6 +188,9 @@ function setup_submodels(model::IntercalationBattery, input, grids, couplings; g
 
     model_neam = setup_active_material(model, :NegativeElectrodeActiveMaterial, input, grids, couplings)
     model_peam = setup_active_material(model, :PositiveElectrodeActiveMaterial, input, grids, couplings)
+    if get(model.settings, "OCPHysteresis", nothing) == "OneState" && !any(has_ocp_hysteresis, (model_neam, model_peam))
+        throw(ArgumentError("OCPHysteresis is \"OneState\", but neither ActiveMaterial gives $(OCP_HYSTERESIS_INPUT.ocp_lithiation) and $(OCP_HYSTERESIS_INPUT.ocp_delithiation)."))
+    end
 
     model_elyte = setup_electrolyte(model, input, grids)
     model_sep = setup_separator(model, input, grids)
@@ -618,6 +621,12 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
 
     end
 
+    hysteresis = get(model.settings, "OCPHysteresis", nothing) == "OneState" &&
+        setup_ocp_hysteresis_parameters!(am_params, inputparams_active_material, base_path, stringName)
+    if hysteresis && get(model.settings, "TransportInSolid", nothing) != "FullDiffusion"
+        throw(ArgumentError("OCP hysteresis of $stringName needs the full solid diffusion model (TransportInSolid = \"FullDiffusion\")."))
+    end
+
     if haskey(model.settings, "ThermalModel") && model.settings["ThermalModel"] == "Sequential"
 
         if !haskey(inputparams_active_material, "IncludeEntropyChange")
@@ -702,6 +711,9 @@ function setup_active_material(model::IntercalationBattery, name::Symbol, input,
         dirichletBoundary = boundary,
         flow_discretization = input.model_settings["PotentialFlowDiscretization"],
     )
+    if hysteresis
+        add_ocp_hysteresis!(model_am)
+    end
 
     return model_am
 
@@ -1276,14 +1288,14 @@ function setup_initial_state(input, model::IntercalationBattery)
             init[:NormalizedSEIVoltageDrop] = zeros(nc)
         end
 
-        if multimodel[name].system.params[:ocp_func_type] == :interpolator
-            OCP = multimodel[name].system[:ocp_func](c / cmax)
-        elseif multimodel[name].system.params[:ocp_func_type] == :function || multimodel[name].system.params[:ocp_func_type] == :expression
-            OCP = multimodel[name].system[:ocp_func](c, T, refT, cmax)
-        elseif multimodel[name].system.params[:ocp_func_type] == :constant
-            OCP = multimodel[name].system[:ocp_func]
+        system = multimodel[name].system
+        if has_ocp_hysteresis(system)
+            # Defaults to 0, the mean of the two branches, as in PyBaMM.
+            h0 = float(get(input.cycling_protocol, "InitialHysteresisState" * replace(string(name), "ActiveMaterial" => ""), 0.0))
+            init[:HysteresisState] = fill(h0, nc)
+            OCP = hysteretic_ocp(system.params, c, T, h0)
         else
-            error("not cover")
+            OCP = evaluate_ocp_function(system[:ocp_func], system.params[:ocp_func_type], c, T, refT, cmax)
         end
 
         if multimodel[name].system.params[:include_entropy_change]
