@@ -355,6 +355,15 @@ function solve_and_differentiate_for_calibration(
                 info_level = 0,
             )
             adj_cache[:x] = copy(x)
+            # The adjoint uses each linear solve as it is, without the residual check of a Newton
+            # iteration. A refactorization of KLU keeps the pivot order of its first factorization and
+            # can give a singular or a silently wrong solve, so the adjoint factorizes afresh. Forward
+            # simulations keep the refactorization, whose errors Newton corrects.
+            adjoint_config = adj_cache[:storage][:forward_config]
+            adjoint_solver = adjoint_config[:linear_solver]
+            if adjoint_solver isa KLUSolver && adjoint_solver.reuse_memory
+                adjoint_config[:linear_solver] = KLUSolver(; max_size = adjoint_solver.max_size, reuse_memory = false)
+            end
         end
         S = adj_cache[:storage]
         g = similar(x)
